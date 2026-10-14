@@ -22,6 +22,11 @@ the window stays open with an alert; try closing again. This also saves the Nest
 state when Settings is visible in the shared window. Closing does not answer a
 waiting permission or stop a run.
 
+The size switch and **Back to the island** wait for the Chat's initial draft to
+restore and for pending saves. Repeated clicks while changing views share one
+attempt. If saving or changing the view fails, the Nest keeps the draft and shows
+an alert; try the same control again.
+
 In a short Chat window, the composer uses less space and the empty conversation's
 suggestions scroll if needed. This applies to wide windows too, keeping the title
 bar's controls and the footer reachable.

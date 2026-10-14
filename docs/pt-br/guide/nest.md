@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 84f79502436e -->
+<!-- source: b9cb2c688095 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -22,6 +22,11 @@ rascunho do Chat, da navegação e das buscas nos registros. Se salvar ou fechar
 falhar, a janela continua aberta com um aviso; tente fechar de novo. Isso também
 salva o estado do Nest quando as Configurações estão visíveis na janela compartilhada.
 Fechar não responde uma permissão pendente nem interrompe uma execução.
+
+O seletor de tamanho e **Back to the island** esperam a restauração inicial do
+rascunho do Chat e os salvamentos pendentes. Cliques repetidos durante a troca de
+tela usam uma tentativa só. Se salvar ou mudar a tela falhar, o Nest mantém o
+rascunho e mostra um aviso; tente o mesmo controle de novo.
 
 Em uma janela baixa do Chat, o compositor ocupa menos espaço e as sugestões da
 conversa vazia rolam quando necessário. Isso também vale para janelas largas,

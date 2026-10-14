@@ -31,6 +31,9 @@ After merging #354 on 2026-10-14, the user accepted Flock filter/detail retentio
 and the reachable clear action in short windows. The By project slice below is
 the next continuity repair; the broader desktop pass still gates UX6.
 
+The user accepted By project retention in #355 on 2026-10-14. That PR remains
+open for a batch of transition and Flock diff fixes, each in its own commit.
+
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
 | UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Accepted by the user on 2026-10-14 |
@@ -232,6 +235,14 @@ Renderer checks cover these interactions with controlled data. The user's
 The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
+
+- [x] Wait for initial Chat restoration before size/return actions; serialize
+  repeated size requests and show a translated failure with retry. Native system
+  close retains a separate guard so a close emitted by Mini/Quick during a size
+  command cannot be dropped. `check-nest-close.mjs` checks both paths, competing
+  size requests, failed saves/native actions, recovery and nested close. In the
+  app, click Mini/Quick immediately on opening Chat, repeat clicks during the
+  transition and confirm the draft survives; retry after a failed save.
 
 - [x] Retain By project search independently of History/Audit in native
   app-session memory. Wait for pending saves before Nest close/Quick return;
