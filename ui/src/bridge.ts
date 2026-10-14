@@ -618,6 +618,7 @@ export const Bridge = {
   connectionsPlaceSet: (place: ConnectionsPlace) => invoke<void>("nest_connections_place_set", { place }),
   nestTabSet: (tab: string) => invoke<void>("nest_tab_set", { tab }),
   recordQuery: (tab: "history" | "audit", query?: string) => invoke<string>("nest_record_query", { tab, query: query ?? null }),
+  projectQuery: (query?: string) => invoke<string>("nest_record_query", { tab: "projects", query: query ?? null }),
   flockPlace: () => invoke<FlockPlace | null>("nest_flock_place", { place: null }),
   flockPlaceSet: (place: FlockPlace) => invoke<void>("nest_flock_place", { place }),
   closeNest: () => invoke<void>("nest_close"),

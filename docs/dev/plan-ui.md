@@ -27,6 +27,10 @@ After merging #353 on 2026-10-14, the user reported validating its saved system
 close, explicit model-read retry and short/wide Chat repairs. This accepts those
 slices; the remaining UX6 state and desktop checks below still gate the milestone.
 
+After merging #354 on 2026-10-14, the user accepted Flock filter/detail retention
+and the reachable clear action in short windows. The By project slice below is
+the next continuity repair; the broader desktop pass still gates UX6.
+
 | Phase | Delivered | Remaining |
 | --- | --- | --- |
 | UX1-UX3 | Named controls, keyboard tabs, narrow layouts, Memory return, compact targets and shared usage thresholds | Accepted by the user on 2026-10-14 |
@@ -228,6 +232,23 @@ Renderer checks cover these interactions with controlled data. The user's
 The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
+
+- [x] Retain By project search independently of History/Audit in native
+  app-session memory. Wait for pending saves before Nest close/Quick return;
+  restoration leaves newer typing alone. Clear stays cleared on recreation,
+  failed saves retry without another edit, and an active query remains editable
+  when all projects leave. Search changes do not reload projects or weekly data
+  and never apply memory sharing or select a session.
+
+Project validation: `node scripts/check-project-search.mjs` exercises project,
+branch and agent filtering, refresh/focus, deferred and ordered saves,
+recreation, clear/focus, late reads, failure/retry and empty-project retention.
+Native checks keep the three queries separate and bounded and reject writes
+from Settings. In the app, search Activity > By project by name, branch or agent,
+return to Quick and reopen; repeat with Alt+F4 and confirm the query and matching
+cards. Enter a query with no results, Clear filters, close/reopen and confirm it
+stays cleared without changing History or Audit searches. This does not close
+the broader desktop ownership and geometry acceptance below.
 
 - [x] Retain Flock search, Needs you and detail tab in native app-session memory.
   Flush before closing or returning to the island, restore without overwriting

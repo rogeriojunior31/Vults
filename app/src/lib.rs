@@ -458,6 +458,9 @@ mod label_tests {
         assert!(policies::from_settings(nest.as_ref()).is_err());
         assert!(nest_record_query(settings.as_ref().clone(), "history".into(), Some("test".into())).is_err());
         assert!(nest_record_query(island.as_ref().clone(), "audit".into(), Some("test".into())).is_err());
+        assert!(
+            nest_record_query(settings.as_ref().clone(), "projects".into(), Some("test".into())).is_err()
+        );
         assert!(nest_close(settings.as_ref().clone()).is_err());
         assert!(nest_close(island.as_ref().clone()).is_err());
         assert!(nest_flock_place(settings.as_ref().clone(), None).is_err());
@@ -506,14 +509,22 @@ mod tests {
         assert_eq!(searches.query("history", None).unwrap(), "");
         searches.query("history", Some(" Alpha ".into())).unwrap();
         searches.query("audit", Some("git status".into())).unwrap();
+        searches.query("projects", Some("feature/login".into())).unwrap();
         assert_eq!(searches.query("history", None).unwrap(), " Alpha ");
         assert_eq!(searches.query("audit", None).unwrap(), "git status");
+        assert_eq!(searches.query("projects", None).unwrap(), "feature/login");
         assert!(searches.query("cost", Some("bad".into())).is_err());
         searches.query("history", Some("\u{754c}".repeat(4096))).unwrap();
         assert!(searches.query("history", Some("x".repeat(4097))).is_err());
         assert_eq!(searches.query("history", None).unwrap(), "\u{754c}".repeat(4096));
         searches.query("history", Some(String::new())).unwrap();
         assert_eq!(searches.query("history", None).unwrap(), "");
+        assert_eq!(searches.query("audit", None).unwrap(), "git status");
+        assert_eq!(searches.query("projects", None).unwrap(), "feature/login");
+        assert!(searches.query("projects", Some("x".repeat(4097))).is_err());
+        assert_eq!(searches.query("projects", None).unwrap(), "feature/login");
+        searches.query("projects", Some(String::new())).unwrap();
+        assert_eq!(searches.query("projects", None).unwrap(), "");
         assert_eq!(searches.query("audit", None).unwrap(), "git status");
     }
 
@@ -694,6 +705,7 @@ static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 struct RecordQueries {
     history: String,
     audit: String,
+    projects: String,
 }
 
 impl RecordQueries {
@@ -701,6 +713,7 @@ impl RecordQueries {
         let kept = match tab {
             "history" => &mut self.history,
             "audit" => &mut self.audit,
+            "projects" => &mut self.projects,
             _ => return Err("Unknown record search.".into()),
         };
         if let Some(query) = query {
@@ -716,6 +729,7 @@ impl RecordQueries {
 static RECORD_QUERIES: std::sync::Mutex<RecordQueries> = std::sync::Mutex::new(RecordQueries {
     history: String::new(),
     audit: String::new(),
+    projects: String::new(),
 });
 
 /// Navigation only, kept until the app exits; no records or permissions are changed.

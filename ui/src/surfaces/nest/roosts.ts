@@ -31,6 +31,7 @@ function section(title: string, ...rows: (Node | null)[]): HTMLElement | null {
 }
 
 export interface RoostsBackend {
+  query?: (value?: string) => Promise<string>;
   load(): Promise<RoostView[]>;
   /** The change that lets Claude Code read the roost's AGENTS.md, to show before writing. */
   preview(key: string): Promise<SharePreview>;
@@ -205,7 +206,7 @@ const said = (r: RoostView) =>
   [r.name, ...r.trees.flatMap((x) => [x.path, x.branch ?? ""]), ...r.sessions.map((s) => s.agent)].join(" ").toLowerCase();
 
 /** The tab's body; `load` asks for the roosts again (on opening the tab, and as the flock moves). */
-export function createRoosts(backend: RoostsBackend): { element: HTMLElement; refresh: () => void } {
+export function createRoosts(backend: RoostsBackend): { element: HTMLElement; refresh: () => void; flush: () => Promise<void> } {
   const element = el("div", { class: "roosts" });
   const cards = el("div", { class: "roost-list" });
   let roosts: RoostView[] = [];
@@ -215,6 +216,9 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
   // flock's refreshes (every second or so while agents work) never take the focus from it.
   const search = el("input", { class: "project-search" });
   search.type = "search";
+  search.maxLength = 4096;
+  let edited = false;
+  let saved: Promise<void> = Promise.resolve();
   search.placeholder = t("Find a project, branch or agent…");
   search.setAttribute("aria-label", t("Find a project, branch or agent…"));
   const count = el("span");
@@ -239,7 +243,7 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
       ? `${roosts.length === 1 ? t("1 project") : t("{n} projects", { n: roosts.length })} · ${trees === 1 ? t("1 worktree") : t("{n} worktrees", { n: trees })}`
       : "";
     barsHost.replaceChildren(...[bars(lastWeek, roosts)].filter((b): b is HTMLElement => b !== null));
-    search.hidden = !roosts.length;
+    search.hidden = !roosts.length && !search.value;
     cards.replaceChildren(
       ...(roosts.length
         ? shown.length
@@ -254,7 +258,7 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
                   text: t("Clear filters"),
                   onclick: () => {
                     search.value = "";
-                    paint();
+                    change();
                     search.focus();
                   },
                 }),
@@ -263,7 +267,17 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
         : [el("p", { class: "board-empty", text: t("No roosts yet: a roost is a repository an agent session works in.") })]),
     );
   };
-  search.addEventListener("input", paint);
+  const change = () => {
+    edited = true;
+    paint();
+    const value = search.value;
+    if (backend.query) saved = saved.catch(() => {}).then(() => backend.query?.(value)).then(() => {});
+    void saved.catch(() => {});
+  };
+  search.addEventListener("input", change);
+  const restored = backend.query?.().then(value => {
+    if (!edited) { search.value = value; paint(); }
+  }).catch(() => {});
   let asked = 0;
   // One ask at a time: each reads the sessions' repositories, and a slow disk must not pile them up.
   let busy = false;
@@ -303,5 +317,9 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
       done,
     );
   };
-  return { element, refresh };
+  return { element, refresh, flush: async () => {
+    await restored;
+    saved = saved.catch(async () => { if (backend.query) await backend.query(search.value); });
+    await saved;
+  } };
 }
