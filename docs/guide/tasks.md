@@ -114,8 +114,12 @@ its waiting card away. On a task with a session, **Hand off to Codex** (or to Cl
 ### Other agents
 
 **Start with another agent…** lists the agents installed here that speak the [Agent Client
-Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI and Kimi Code. One
-works in the task's clone the same way, logged in with its own account. Vults offers it no files
+Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI and Kimi Code.
+Choose one, then click **Start with** beside the selector to run the task. Changing
+the choice, including with keyboard arrows, sends nothing. It stays with that task
+when the list refreshes. If the selected agent is no longer available, the choice
+clears and Start waits for another selection; it never substitutes another agent.
+The agent works in the task's clone the same way, logged in with its own account. Vults offers it no files
 and no terminal of its own: it uses its own tools and asks before each one that writes, runs or
 fetches, and each ask is an island card, answered only for that once, never with the agent's own
 "always". A change to a file outside the clone, or in its `.git`, a command run elsewhere, a move or

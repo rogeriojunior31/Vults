@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: 42796cc52b65 -->
+<!-- source: 15438388423b -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -128,8 +128,12 @@ sessão escreve o pacote, e o outro começa dele.
 ### Outros agentes
 
 **Start with another agent…** lista os agentes instalados aqui que falam o [Agent Client
-Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI e Kimi Code. Um deles
-trabalha no clone da tarefa do mesmo jeito, logado com a própria conta. O Vults não oferece arquivos
+Protocol](https://agentclientprotocol.com): OpenCode, Qwen Code, Copilot CLI e Kimi Code.
+Escolha um e clique em **Começar com** ao lado do seletor para executar a tarefa. Mudar
+a opção, inclusive com as setas do teclado, não envia nada. A escolha fica com aquela tarefa
+quando a lista atualiza. Se o agente escolhido não estiver mais disponível, a opção
+é limpa e Começar aguarda outra seleção; outro agente nunca é usado em seu lugar.
+O agente trabalha no clone da tarefa do mesmo jeito, logado com a própria conta. O Vults não oferece arquivos
 nem terminal próprios: ele usa as ferramentas dele e pede antes de cada uma que escreve, roda ou
 busca algo, e cada pedido é um card da ilha, respondido só daquela vez, nunca com o "sempre" do
 próprio agente. Uma mudança num arquivo fora do clone, ou no `.git` dele, um comando rodado em outro

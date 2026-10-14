@@ -1,5 +1,8 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Agent for {task}": "{task} 的智能体",
+  "Start with {agent}": "用 {agent} 开始",
+  "Start with another agent": "用其他智能体开始",
   "Issue for {task}": "{task} 的议题",
   "Linking…": "正在关联…",
   "Unlinking…": "正在取消关联…",

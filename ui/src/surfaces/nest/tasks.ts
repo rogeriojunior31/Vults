@@ -159,6 +159,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let draft: { goal: string; criteria: string; where: string | null } | null = null;
   let creating = false;
   const issueRequests = new Map<number, "link" | "open" | "unlink">();
+  const chosenAgents = new Map<number, Engine>();
   let deleting: number | null = null;
   let removing: number | null = null;
   let focusAfterRefresh: string | null = null;
@@ -353,8 +354,12 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       parts.push(button(t("Start with Claude Code"), () => backend.start(task.id, "claude"), true));
       parts.push(button(t("Start with Codex"), () => backend.start(task.id, "codex")));
       const others = backend.agents();
+      const chosen = others.find(a => a.name === chosenAgents.get(task.id));
+      if (!chosen) chosenAgents.delete(task.id);
       if (others.length) {
         const pick = el("select", { class: "task-select" });
+        pick.setAttribute("aria-label", t("Agent for {task}", { task: task.goal }));
+        pick.setAttribute("data-fid", `other-agent:${task.id}`);
         const head = el("option", { text: t("Start with another agent…") });
         head.value = "";
         pick.append(head);
@@ -363,10 +368,31 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
           o.value = a.name;
           pick.append(o);
         }
-        pick.addEventListener("change", () => {
-          if (pick.value) act(backend.start(task.id, pick.value as Engine));
+        pick.value = chosen?.name ?? "";
+        const start = el("button", {
+          class: "btn small",
+          text: chosen ? t("Start with {agent}", { agent: chosen.title }) : t("Start with another agent"),
+          onclick: () => {
+            if (!pick.value) return;
+            const agent = backend.agents().find(a => a.name === pick.value);
+            if (!agent) {
+              message = t("That agent can't run here.");
+              refresh();
+              return;
+            }
+            act(backend.start(task.id, agent.name));
+          },
         });
-        parts.push(pick);
+        start.setAttribute("data-fid", `other-start:${task.id}`);
+        start.disabled = !chosen;
+        pick.addEventListener("change", () => {
+          const agent = others.find(a => a.name === pick.value);
+          if (agent) chosenAgents.set(task.id, agent.name);
+          else chosenAgents.delete(task.id);
+          start.disabled = !agent;
+          start.textContent = agent ? t("Start with {agent}", { agent: agent.title }) : t("Start with another agent");
+        });
+        parts.push(pick, start);
       }
     }
     if (task.hasWorktree && !task.running) {

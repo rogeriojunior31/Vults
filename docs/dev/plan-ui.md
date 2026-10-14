@@ -149,6 +149,10 @@ controls remain tied to K4, and new specialist Chat remains tied to UX8.
 - [x] Retain issue-link drafts until success, including focus/selection on list
   refresh. Give the field a task-specific name and prevent overlapping Link,
   Open an issue and Unlink requests for the same task; failures allow retry.
+- [x] Separate selecting another installed task agent from starting its run.
+  Keyboard selection sends nothing, the explicit Start names the chosen agent,
+  and list refresh retains the task's choice/focus. A missing agent clears the
+  choice and cannot silently substitute another executor.
 - [ ] Tasks: goal/status/next step first; lifecycle and maintenance under labeled
   disclosure. Preserve issue actions, criteria, budget, run/workspace handling,
   continuation, handoff, independent review and confirmation for removal.
@@ -192,6 +196,7 @@ In the real app, repeat the following at 480 x 360 and a normal Room width:
 | Task removal | Arm Delete or Remove its folder, cancel by button or Escape, then repeat using keyboard | Cancellation calls no backend, affects only that task/action and returns focus; a held Enter does not confirm; running tasks cannot be deleted |
 | Task list failure | Edit a New task draft, open a card's More actions, reproduce a list-load failure and Retry | Cards and the draft remain with an explicit stale-list warning; focus/selection and disclosure choice survive; Retry only reloads; a failed first load never says No tasks |
 | Task issue | Type an invalid issue in More actions, select text, refresh and Link; correct it and retry | The field keeps its draft/focus/selection, errors retain the text, and pending issue controls reject competing requests; success shows Issue/Unlink and only then clears the saved draft |
+| Task agent | On a task without a session, choose an installed agent using arrows, refresh, then click its Start; remove that agent from the available list and repeat | Selection alone sends nothing; Start uses that task's chosen agent; focus/choice survive refresh; missing availability clears the choice without switching executors |
 
 Renderer checks cover these interactions with controlled data. Native window
 behavior and a visual pass in the desktop app still require acceptance; these

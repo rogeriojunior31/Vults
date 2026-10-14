@@ -1,5 +1,8 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Agent for {task}": "Agente para {task}",
+  "Start with {agent}": "Começar com {agent}",
+  "Start with another agent": "Começar com outro agente",
   "Issue for {task}": "Issue de {task}",
   "Linking…": "Vinculando…",
   "Unlinking…": "Desvinculando…",
