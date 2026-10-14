@@ -239,6 +239,10 @@ The native ownership and geometry checks below remain under UX6.
 
 ## UX6 - continuity with native ownership
 
+- [x] Reject delayed Chat permission shortcuts while its surface is hidden,
+  minimized, detached, in another tab or disabled. The shared Chat check covers
+  Quick and Nest, and verifies one explicit visible decision exactly once.
+
 - [x] A live update to the same Chat owner still restores that owner's executor,
   folder, saved history and running state, while leaving the newer card/event visible. A
   completed turn stays completed; an opened/reset/sent conversation blocks the

@@ -166,3 +166,28 @@ for (const surface of ["island", "nest"]) {
   assert.deepEqual(raceWrites.at(-1), kept, "The current run retains its bound source and draft");
 }
 console.log("check-chat-models: late initial conversation retains live turn, pending card, newer draft/source in both surfaces");
+
+for (const surface of ["island", "nest"]) {
+  const decisions = [];
+  const card = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {},
+    decide: (id, answer) => decisions.push([id, answer]),
+  }, () => {}, { window: surface });
+  card.element.isConnected = true; card.element.offsetParent = {};
+  card.toggle(true);
+  card.receive({ kind: "permission", id: "visible-only", tool: "Bash", target: "git status",
+    description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+  document.hidden = true;
+  assert.equal(card.answerWaiting(true), false, "A delayed shortcut cannot answer in a minimized/hidden surface");
+  document.hidden = false; card.element.offsetParent = null;
+  assert.equal(card.answerWaiting(true), false, "A card in a hidden tab cannot take a shortcut");
+  card.element.offsetParent = {}; card.element.isConnected = false;
+  assert.equal(card.answerWaiting(true), false, "A destroyed surface cannot take a shortcut");
+  card.element.isConnected = true; card.setEnabled(false);
+  assert.equal(card.answerWaiting(true), false);
+  assert.deepEqual(decisions, []);
+  card.setEnabled(true); card.toggle(true);
+  assert.equal(card.answerWaiting(false), true);
+  assert.equal(card.answerWaiting(false), false);
+  assert.deepEqual(decisions, [["visible-only", "deny"]], "One explicit decision answers the visible card once");
+}
+console.log("check-chat-models: hidden/minimized/detached/disabled card shortcuts rejected, visible decision once");
