@@ -1,8 +1,29 @@
 # Activity
 
 The Nest's **Activity → Week** shows what your agents did: a week's recap and the last year as a
-grid; **Settings → Activity** shows the same page. It
-is counted on this computer, from a local history that Vults keeps as your agents work.
+grid. **Settings → Activity** keeps the history controls and an **Open Activity** button;
+the recap and calendar have one home in the Nest. Activity is counted on this computer,
+from a local history that Vults keeps as your agents work.
+
+The Nest groups Activity into six views, with the same navigation and summary style:
+
+- **Week**: totals, time per day, the yearly grid and a recap to save. Select a day to read its
+  exact duration; **How activity is counted** explains the counting rules.
+- **By project**: time per repository, worktrees, sessions, pull requests and project memory.
+- **History**: finished turns grouped by project, with the result, agent, counts and duration.
+- **Cost**: today's budget, plan windows, the last two weeks of cost and tokens, and cost by project.
+- **Traces**: Zeca's chat turns and their tool calls, with status, time and available token counts.
+- **Audit**: who answered, the result and the complete command or target, grouped by project.
+
+History and Audit show the latest 200 records. Their summaries describe the records loaded in
+that view, and searching filters the list without changing those totals. Project headings show
+the number of matching records. Navigation, search and resizing do not modify the stored history.
+
+The island's compact **Week** preview uses the same summary style: the week and its dates at the
+top, four totals and time by project (up to four projects), or a small daily chart when no project
+is named. The arrows switch between the previous week and this week; **Open in the Nest** opens
+the full Activity view. Hours in the top summary are rounded; hover that figure for the full
+duration. An unread week shows a loading or error message instead of zero totals.
 
 ## What a turn is
 
@@ -33,7 +54,7 @@ Windows it goes to your Pictures folder), and nothing is uploaded.
 From 08:00 on Monday, the island tells last week in one line (*Last week: 41 turns, 6 h 20 min
 with your agents, most on site.*), once, if your agents had a turn that week. It shows as the line
 after a screen lock does in each preset ([The island](island.md#while-you-were-away)), never in
-*Paused*. **Open Activity** shows the whole week in Settings; it and **×** both mark it read.
+*Paused*. **Open Activity** shows the whole week in the Nest; it and **×** both mark it read.
 
 ## The grid
 

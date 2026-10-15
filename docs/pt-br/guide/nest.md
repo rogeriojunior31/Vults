@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 43e1389dec7c -->
+<!-- source: e68a556df54a -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -10,6 +10,19 @@ clique duplo ocupa a tela) e as bordas e os cantos o redimensionam. Ele abre gra
 (até 1180 × 820, dentro da tela), e depois no tamanho em que você o deixou. Ela volta quando o Nest fecha ou volta para **Quick** ou **Mini**. Um
 card que espera é respondido onde você está: no Nest enquanto você está nele (a janela dele tem o
 foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
+
+Tarefas, Atividade e Conexões usam o mesmo fundo preto, cards elevados, escala de títulos
+e controles neutros. Conexões usa a navegação segmentada de Atividade; Tarefas e Conexões
+compartilham os estilos de botões e campos. As cores de status mantêm seus significados,
+com controles legíveis também nas tarefas finalizadas.
+
+As telas de leitura usam os mesmos painéis de carregamento, conteúdo vazio, busca sem resultado
+e erro, com uma explicação curta e a próxima ação disponível. A primeira leitura não mostra
+registros vazios nem resumos zerados enquanto carrega. Se a atualização de Atividade falhar,
+os últimos registros, projetos ou resumo semanal continuam visíveis com um aviso de possível
+desatualização e **Try again**; uma falha na primeira leitura encerra o aviso de carregamento
+e oferece nova tentativa. Erros técnicos de leitura ficam em **Technical details**. Tentar
+de novo só lê a tela; nunca executa tarefa, responde permissão nem altera o histórico.
 
 Minimizar o Nest devolve a ilha e seus atalhos de aprovação. Abrir o Nest de novo
 restaura a janela; minimizar não altera o tamanho salvo da Sala.
@@ -45,14 +58,25 @@ config de um agente, uma chave, uma política ou um celular, e nunca mostram tex
 seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
 **Alt+1** a **Alt+5** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
-desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), **Zeca's look** abre a página dele nas
+desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.
+
+Os interruptores e seletores de Configurações mostram salvando, salvo ou uma falha local.
+Enquanto a linha salva, novas mudanças esperam mesmo se a página atualizar. Uma falha
+restaura a escolha anterior; uma gravação malsucedida nunca aparece como concluída.
 
 **Ctrl+K**, no Nest ou na ilha aberta (quando ela tem o teclado: aberta com Ctrl+Alt+Space, ou no
 chat dela), abre a paleta: digite para pular para uma sessão, para
 começar `/task`, `/delegate`, `/continue` ou `/remember` no chat (com o Zeca ligado), ou para abrir uma
 aba. Ela nunca responde um card: uma sessão que espera por você só leva até o card dela.
+
+As Configurações usam um título por página e agrupam os controles relacionados de
+forma consistente. A referência de atalhos em Geral e o diagnóstico de capacidades
+em Agentes abrem sob demanda. Chat e voz mantém as explicações extensas de setup,
+acesso e API junto dos controles em **Mais**. Explicações abertas e a posição de
+rolagem sobrevivem a atualizações; um campo focado mantém o texto ainda não salvo
+e sua seleção durante uma atualização não relacionada.
 
 ## Flock
 
@@ -65,6 +89,13 @@ in front** (ou **Let the flock choose**), e silenciar, fixar ou esconder o proje
 um card espera, só a **Activity** e o diff daquela sessão podem aparecer.
 Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam por você, e **Find a
 session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora.
+
+A ave selecionada e seu card compartilham uma marca clara de seleção. Nomes de
+projetos ocupam até duas linhas; passar o mouse num card mostra nome completo,
+branch, agente e estado. **Needs you** inclui o total de sessões aguardando no bando,
+mesmo durante uma busca. O card de detalhes separa o título do projeto de agente e
+estado, e as abas usam uma entrada breve só quando você as troca; atualizações ao
+vivo não a repetem. Movimento reduzido e pausa manual pulam essa entrada.
 
 A busca, o filtro **Needs you** e a aba de detalhes continuam onde você deixou
 ao fechar e reabrir o Nest ou voltar para a ilha, até sair do Vults. **Clear
@@ -119,9 +150,14 @@ e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece
 são respondidos aqui também, com **Deny**, **Allow** e **Always in this chat**, como na ilha.
 A barra de título traz o título da conversa, a pílula do motor (como na ilha: o motor na cor dele e
 o modelo; o menu dela traz os motores, os modelos e o esforço), a pasta e dois botões de painel. O
-campo de texto tem um clipe: os arquivos que você escolhe vão para este chat, como soltar na ilha. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais
-novas, a atual marcada, e **+ New conversation** (os dois esperam enquanto o Zeca responde); um
-clique continua uma delas. O da direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
+campo de texto tem um clipe: os arquivos que você escolhe vão para este chat, como soltar na ilha. O botão de painel à esquerda abre **Recent**: uma coluna numa janela larga ou no Full,
+ou uma visão própria com **Back to Chat** no Room estreito. As conversas são agrupadas por data,
+com projeto, executor e horário abaixo do título; a conversa atual fica marcada.
+**Search conversations** busca localmente em todos os títulos, pastas e executores carregados,
+inclusive além das primeiras 30 conversas. **Show more** revela o restante. A busca fica neste
+computador ao fechar e reabrir o Nest. **+ New conversation** e a troca de conversa esperam
+enquanto o Zeca responde. Se a atualização falhar, a última lista fica disponível com **Try again**.
+O botão à direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
 que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)). Antes de
 qualquer mensagem, o compositor espera no meio com algumas perguntas para começar. Sem o Zeca não há
 aba Chat.
@@ -169,18 +205,36 @@ até você sair do Vults. Em uma janela estreita, o detalhe selecionado abre de 
 Voltar retorna à lista filtrada. Se o item desaparecer, a lista abre no lugar dele.
 Uma confirmação de merge ainda pendente é descartada ao fechar o Nest.
 
-Um chip para cada conector que você ligou, com quantas linhas ele tem; **+** abre **Settings →
-Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez (ou por que a última
-consulta falhou), um filtro de repositório (**All repos** ou um deles) e **↻ Refresh** para consultar
-de novo (no máximo uma vez por minuto). No GitHub, quatro abas com a contagem: **Inbox** (o que
-espera por você: revisões pedidas a você, seus pull requests falhando, devolvidos ou prontos para
-merge, um branch padrão falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos
-seus branches padrão; em vermelho com quantos falham) e **Releases** (a mais recente de cada
-repositório). Uma linha escolhida aparece ao lado: o repositório, o branch, o tamanho
-(`+120 −40 · 6 files`), quem revisou ou foi chamado, quando mudou pela última vez, cada check um a um
-(uma barra enquanto rodam), um comando `gh` para olhar mais de perto com **Copy** (o Vults nunca o
-roda), **Open in GitHub ↗** e as ações da linha, como na ilha ([O card do
-GitHub](connectors.md#the-github-card)); uma linha marcada com **✓ Seen** fica esmaecida aqui. **Add a connection** lista cada conector
-do Vults que está desligado, com o que ele observa; **Turn on in Settings…** e **Manage
-connections** abrem **Settings → Connectors**, o único lugar que liga um conector
-([Conectores](connectors.md)).
+O conector escolhido tem um único cabeçalho: a última sincronização (ou por que falhou),
+**↻ Refresh** para consultar de novo (no máximo uma vez por minuto) e **Manage connections** para
+**Settings → Connectors**. O seletor aparece só quando vários conectores têm cards. Um conector
+ligado aguardando seu primeiro card mostra a espera ou o erro com Atualizar e Configurações;
+um status que não pôde ser lido oferece **Try again**, sem tratar o conector como desligado.
+Quando o limite diário de requisições se esgota, o motivo da espera fica explícito.
+
+No GitHub, quatro abas mantêm suas contagens: **Inbox** (o que espera por você: revisões pedidas
+a você, seus pull requests falhando, devolvidos ou prontos para merge e um branch padrão
+falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos seus branches padrão;
+em vermelho com quantos falham) e **Releases** (a mais recente de cada repositório). A busca
+filtra a aba carregada por título, referência, repositório, branch ou autor, junto do filtro
+**All repos**. Ela não faz requisições de rede. A busca fica neste computador ao reabrir;
+**Clear filters** restaura a lista.
+
+A lista e o detalhe selecionado rolam de forma independente; as atualizações normais mantêm as
+posições de leitura, o foco da busca e os detalhes expandidos. Em janelas estreitas, **Voltar** ou
+**Esc** retorna do detalhe para a linha selecionada. Com foco na busca, **Esc** limpa o texto;
+uma confirmação de merge pendente é fechada primeiro. Selecionar, buscar ou expandir nunca executa uma ação.
+
+O item selecionado mostra título, branch, autor e tamanho (`+120 −40 · 6 files`) antes das ações,
+incluindo **Open in GitHub ↗**, como na ilha ([O card do GitHub](connectors.md#the-github-card)).
+As ações e a confirmação explícita de merge vêm antes dos checks. Os checks aprovados começam
+fechados; os que estão rodando ou acabaram de falhar abrem, com falhas primeiro, contagem e barra
+de progresso durante a execução. A escolha manual de expandir ou fechar permanece nas
+atualizações sem mudança de estado. Checks falhando têm prioridade sobre o rótulo de aprovação.
+**Technical details**, quando presente, mantém informações da atualização e um comando `gh` com
+**Copy** e aviso para tentar de novo em caso de falha (o Vults nunca o executa).
+
+Uma atualização que falha mantém as linhas atuais e permite tentar de novo. **✓ Seen** deixa o
+título mais discreto sem esmaecer o status ou as ações. **Add a connection** lista só conectores
+suportados que estão comprovadamente desligados; **Turn on in Settings…** e **Manage connections**
+abrem o único lugar que liga um conector ([Conectores](connectors.md)).

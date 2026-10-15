@@ -43,6 +43,11 @@ const nest = createNest(
       openSettings: () => void Bridge.openSettings("chat"),
       engines: () => Bridge.chatEngines(),
       pickFiles: (title) => Bridge.chatPickFiles(title),
+      voice: {
+        start: (tap) => Bridge.voiceStart(tap),
+        stop: () => Bridge.voiceStop(),
+        cancel: () => void Bridge.voiceCancel(),
+      },
     },
     roosts: {
       query: Bridge.projectQuery,
@@ -196,6 +201,10 @@ void Bridge.mediaNow().then((now) => nest.setMedia(now), () => {});
 // The Nest's paperclip: the files it picked, never the island's.
 Bridge.onFiles((d) => d.to === "nest" && nest.chat.attach(d.copied, d.refused));
 Bridge.onChatSync((s) => nest.chat.sync(s));
+Bridge.onVoiceLevel((level) => nest.chat.voiceLevel(level));
+Bridge.onVoiceSilence(() => nest.chat.voiceSilence());
+Bridge.onVoicePartial((text) => nest.chat.voicePartial(text));
+void Bridge.voiceStatus().then((v) => nest.chat.setVoiceReady(v.ready), () => {});
 // The sessions' folders, for a new conversation (the view comes now, then with each change).
 let lastView: Parameters<typeof nest.view>[0] | null = null;
 // The hour turning changes what the habitat's idle birds do (sunning, sleeping).
@@ -231,6 +240,7 @@ Bridge.onSettings((s) => {
   if (s.api !== undefined) nest.chat.setApi(s.api);
   if (s.nativeChat !== undefined) nest.chat.setNative(s.nativeChat);
   if (s.chatAccess !== undefined) nest.chat.setAccess(s.chatAccess);
+  if (s.voice !== undefined) nest.chat.setVoiceReady(s.voice);
 });
 // The flock's flights molt in summer, as on the island.
 setMolt(moltSeason(new Date()));

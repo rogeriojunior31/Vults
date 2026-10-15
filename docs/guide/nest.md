@@ -10,6 +10,18 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 **Quick** or **Mini**. A card that waits is answered where you are: in the Nest while you are in it
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
+Tasks, Activity and Connections share the same black page background, raised cards,
+heading scale and neutral controls. Connections uses Activity's segmented navigation;
+Tasks and Connections use the same button and field treatment. Status colors keep
+their existing meaning, including readable finished-task controls.
+
+Read views use the same loading, empty, filtered and error panels, with a short explanation
+and the available next action. A first read does not show empty records or zero summaries
+while loading. If refreshing Activity fails, its last loaded records, projects or recap stay
+visible with an out-of-date warning and **Try again**; a first-read failure stops the loading
+message and offers retry. Raw read errors stay under **Technical details**. Retrying only reads
+the view; it never runs a task, answers a permission or changes history settings.
+
 Minimizing the Nest returns the island and its approval shortcuts. Opening the Nest
 again restores the window; minimizing does not change its saved Room size.
 
@@ -44,14 +56,24 @@ agent's config, a key, a policy or a phone, and it never shows an agent's text. 
 the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
 pill. **Alt+1** to **Alt+5** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
-switches him (as **Settings → Flock & Zeca → Zeca** does), **Zeca's look** opens his page in
+switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.
+
+Settings switches and choice controls show saving, saved or a local failure message.
+While a row is saving, repeated changes wait even if Settings refreshes. A failed save
+restores the previous choice; it never reports success for an unsuccessful write.
 
 **Ctrl+K**, in the Nest or the open island (when it has the keyboard: opened with Ctrl+Alt+Space, or
 in its chat), opens the palette: type to jump to a session, to start
 `/task`, `/delegate`, `/continue` or `/remember` in the chat (with Zeca on), or to open a tab. It
 never answers a card: a session that waits for you only leads to its card.
+
+Settings uses one page heading and groups related controls consistently. General's
+keyboard reference and Agents' capability diagnostics open on demand. Chat & voice
+keeps extended setup, access and API explanations beside their controls under **More**.
+Open explanations and the scroll position survive refreshes; a focused input keeps
+its unsaved text and selection during an unrelated update.
 
 ## Flock
 
@@ -64,6 +86,13 @@ the menu key, or **Shift+F10**) opens its quick actions, as on the island: **Ope
 waits, only that session's **Activity** and diff can show.
 Under them, **Session details**: **Needs you** keeps only the sessions waiting for you, and **Find a
 session…** reads projects, repositories, branches, agents and what each is doing now.
+
+The selected bird and its card share a light selection mark. Project names have
+up to two lines; hovering over a card shows its full name, branch, agent and state.
+**Needs you** includes the total waiting count across the flock, even while searching.
+The detail card separates the project heading from its agent and state, and detail
+tabs use a brief entrance only when you switch them; live updates do not replay it.
+Reduced motion and manual pause skip that entrance.
 
 The search, **Needs you** filter and detail tab stay where you left them when you
 close and reopen the Nest or return to the island, until Vults exits. **Clear
@@ -114,9 +143,14 @@ are answered here too, with **Deny**, **Allow** and **Always in this chat**, as 
 The title bar holds the conversation's title, the engine pill (as on the island: the engine in its
 color and its model; its menu holds the engines, the models and the effort), the folder, and two
 panel buttons. The composer has a paperclip: the files you pick go to this chat, as a drop on the
-island does. In a wide window or Full, the left one shows **Recent**: your newest 30 conversations, the
-one going on marked, and **+ New conversation** (both wait while Zeca replies); a click goes on with
-one. The right one opens **Memory**, what Zeca remembers, beside the conversation: what waits for
+island does. The left panel button opens **Recent**: a sidebar in a wide window or Full,
+or a separate view with **Back to Chat** in a narrow Room. Conversations are grouped by date,
+with their project, executor and time below the title; the current conversation is marked.
+**Search conversations** searches all loaded titles, folders and executors locally, including
+conversations past the initial 30. **Show more** reveals the rest. The search stays on this
+computer when the Nest closes and reopens. **+ New conversation** and switching to another
+conversation wait while Zeca replies. A failed update keeps the last list and offers **Try again**.
+The right button opens **Memory**, what Zeca remembers, beside the conversation: what waits for
 your yes, the files and their history ([Zeca's memory](memory.md)). Before anything is said, the
 composer waits in the middle with a few questions to start. Without Zeca there is no Chat tab.
 
@@ -161,16 +195,33 @@ item until Vults exits. In a narrow window, the selected detail opens again; Bac
 returns to the filtered list. If the item disappears, the list opens instead.
 An unfinished merge confirmation is discarded when the Nest closes.
 
-A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
-Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed), a
-repository filter (**All repos** or one of them), and **↻ Refresh** to ask again (at most once a
-minute). For GitHub, four tabs with their counts: **Inbox** (what waits on you: reviews asked of
-you, your pull requests failing, sent back or ready to merge, a default branch failing; how many
-are new), **Pull requests**, **Actions** (your default branches' checks; red with how many fail)
-and **Releases** (each repository's latest). A row picked shows beside them: its repository, branch,
-size (`+120 −40 · 6 files`), who reviewed or is asked, when it last changed, each check one by one
-(a bar while they run), a `gh` command to look closer with **Copy** (Vults never runs it), **Open in
-GitHub ↗**, and the row's actions, as on the island ([The GitHub card](connectors.md#the-github-card));
-a row marked **✓ Seen** dims here. **Add a connection** lists each connector Vults has that is off, with what it
-watches; **Turn on in Settings…** and **Manage connections** open **Settings → Connectors**, the
-only place that turns one on ([Connectors](connectors.md)).
+The chosen connector has one header: its last sync (or why it failed), **↻ Refresh** to ask again
+(at most once a minute), and **Manage connections** for **Settings → Connectors**. A selector
+appears only when several connectors have cards. An enabled connector awaiting its first card
+shows its waiting/error state with Refresh and Settings; an unreadable status offers **Try again**
+without treating the connector as off. A spent daily request budget says why checks are waiting.
+
+For GitHub, four tabs keep their counts: **Inbox** (what waits on you: reviews asked of you, your
+pull requests failing, sent back or ready to merge, and a default branch failing; how many are
+new), **Pull requests**, **Actions** (your default branches' checks; red with how many fail) and
+**Releases** (each repository's latest). Search filters the loaded tab by title, reference,
+repository, branch or author, alongside the **All repos** filter. It makes no network request.
+The search stays on this computer across reopening; **Clear filters** restores the list.
+
+The list and selected detail scroll independently; ordinary polling keeps their reading
+positions, search focus and expanded details. At narrow widths, **Back** or **Esc** returns from
+the detail to its selected row. With focus in Search, **Esc** clears its query; an unfinished
+merge confirmation is dismissed first. Selecting, searching or expanding never performs an action.
+
+A selected row puts its title, branch, author and size (`+120 −40 · 6 files`) before its actions,
+including **Open in GitHub ↗**, as on the island ([The GitHub card](connectors.md#the-github-card)).
+Actions and the explicit merge confirmation come before the check list. Successful checks start
+collapsed; running or newly failing checks open, failed checks first, with a count and a progress
+bar while running. Manual disclosure choices survive unchanged polling. Failing checks take
+priority over an approval badge. **Technical details**, when present, keeps update information
+and a `gh` command with **Copy** and retry feedback (Vults never runs it).
+
+A failed refresh keeps the current rows and allows another attempt. **✓ Seen** marks a quieter
+title without fading its status or actions. **Add a connection** lists only supported connectors
+known to be off; **Turn on in Settings…** and **Manage connections** open the only place that
+turns one on ([Connectors](connectors.md)).

@@ -6,6 +6,9 @@ import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
+import { Clock } from "../../clock";
+import { FOCUS_SCENE, Scene } from "../../island/scene";
+import { setZecaLook, setZecaSpecies } from "../../island/flock";
 import { icon } from "../../island/icons";
 import { agentName, statusText } from "../../island/views";
 import { renderFull } from "../../island/markdown";
@@ -105,9 +108,16 @@ function costPart(
   budget: { element: HTMLElement; refresh: () => void },
   usage: { element: HTMLElement; refresh: () => void },
 ): { element: HTMLElement; refresh: () => void } {
+  const title = el("h2");
+  const about = el("p");
   return {
-    element: el("div", { class: "nest-cost" }, budget.element, usage.element),
+    element: el("div", { class: "nest-cost" },
+      el("header", { class: "activity-heading" }, el("div", {}, title, about)),
+      budget.element, usage.element,
+    ),
     refresh: () => {
+      title.textContent = t("Cost");
+      about.textContent = t("Your plan windows, recorded cost and daily budget on this computer.");
       budget.refresh();
       usage.refresh();
     },
@@ -120,9 +130,13 @@ export function createNest(
   zeca: boolean,
   startFull = false,
 ): Nest {
+  const portrait = new Scene(FOCUS_SCENE);
+  portrait.setActive(false);
+  let mounted = false;
   // A change in the conversation (a message, New, another one opened) may change Recent.
   let recentTimer: number | undefined;
   const chatChanged = () => {
+    if (mounted) paintPortrait();
     window.clearTimeout(recentTimer);
     recentTimer = window.setTimeout(() => refreshRecent(), 400);
   };
@@ -130,6 +144,14 @@ export function createNest(
     window: "nest",
     render: renderFull,
   });
+  const portraitButton = el("button", { class: "chat-character", onclick: () => {
+    if (chat.clip(Clock.now()) === "idle" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      && !document.body.classList.contains("still")) portrait.react("hello");
+  } }, el("span", { class: "perch" }, portrait.canvas));
+  portraitButton.addEventListener("pointerenter", () => portrait.lookAt("front"));
+  portraitButton.addEventListener("pointerleave", () => portrait.lookAt(null));
+  portrait.canvas.setAttribute("aria-hidden", "true");
+  chat.perchSlot.append(portraitButton);
   const flock = createFlock({
     ...backend.flock,
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
@@ -180,9 +202,14 @@ export function createNest(
     memoryButton.classList.toggle("on", open);
     memoryButton.setAttribute("aria-pressed", String(open));
     if (open) {
+      if (window.innerWidth <= 1100) setRecent(false);
       memory.refresh();
-      if (matchMedia("(max-width: 600px)").matches) memoryBack.focus();
+      if (matchMedia("(max-width: 600px)").matches) {
+        chat.cancelVoice();
+        memoryBack.focus();
+      }
     } else if (returnFocus) memoryButton.focus();
+    if (mounted) paintPortrait();
   };
   memoryButton.addEventListener("click", () => setMemory(memoryPane.hasAttribute("hidden")));
   memoryBack.addEventListener("click", () => setMemory(false, true));
@@ -190,11 +217,12 @@ export function createNest(
   // Recent, beside the conversation in a wide window: the saved ones and a new one.
   const recent = createRecent({
     list: () => chat.conversations(),
-    open: (id) => chat.openConversation(id),
-    fresh: () => chat.newConversation(),
+    open: (id) => { chat.openConversation(id); if (!wide.matches) setRecent(false, true); },
+    fresh: () => { chat.newConversation(); if (!wide.matches) setRecent(false, true); },
     busy: () => chat.isBusy(),
+    close: () => setRecent(false, true),
   });
-  /** Recent is only shown in a wide window: asked for only then. */
+  /** A sidebar when wide, a separate view on explicit request when narrow. */
   const wide = window.matchMedia("(min-width: 900px)");
   // The title bar, as the prototype draws it: the conversations' column, the conversation's title,
   // the chat's own pickers (moved here from its head) and the Memory panel.
@@ -202,13 +230,12 @@ export function createNest(
   const recentButton = el("button", {
     class: "chat-ico recent-toggle",
     onclick: () => {
-      const hide = !chatPane.classList.contains("no-recent");
-      chatPane.classList.toggle("no-recent", hide);
-      recentButton.setAttribute("aria-pressed", String(!hide));
-      refreshRecent();
+      setRecent(wide.matches ? chatPane.classList.contains("no-recent") : !chatPane.classList.contains("recent-open"));
     },
   }, icon("sideLeft", 15, 1.6));
-  recentButton.setAttribute("aria-pressed", "true");
+  recentButton.setAttribute("aria-pressed", String(wide.matches));
+  recentButton.setAttribute("aria-controls", "nest-recent");
+  recent.element.id = "nest-recent";
   /** The conversation going on, for the title: asked with Recent, whatever the window's width. */
   let titled = 0;
   const refreshTitle = () => {
@@ -223,9 +250,14 @@ export function createNest(
   const refreshRecent = () => {
     if (tab !== "chat") return;
     refreshTitle();
-    if (wide.matches && !chatPane.classList.contains("no-recent")) recent.refresh();
+    if (wide.matches && !chatPane.classList.contains("no-recent") || !wide.matches && chatPane.classList.contains("recent-open")) recent.refresh();
   };
-  wide.addEventListener("change", refreshRecent);
+  wide.addEventListener("change", () => {
+    recentButton.setAttribute("aria-pressed", String(wide.matches ? !chatPane.classList.contains("no-recent") : chatPane.classList.contains("recent-open")));
+    refreshRecent();
+    if (!wide.matches && !chatPane.classList.contains("recent-open") && recent.element.contains(document.activeElement)) recentButton.focus();
+    if (mounted) paintPortrait();
+  });
   const chatPane = el(
     "div",
     { class: "nest-chat" },
@@ -247,6 +279,21 @@ export function createNest(
       memoryPane,
     ),
   );
+
+  function setRecent(open: boolean, returnFocus = false): void {
+    if (open && window.innerWidth <= 1100) setMemory(false);
+    if (wide.matches) chatPane.classList.toggle("no-recent", !open);
+    else {
+      chatPane.classList.toggle("recent-open", open);
+      if (open) chat.cancelVoice();
+    }
+    recentButton.setAttribute("aria-pressed", String(open));
+    if (open) {
+      recent.refresh();
+      recent.element.querySelector<HTMLInputElement>(".nest-recent-search")?.focus();
+    } else if (returnFocus) recentButton.focus();
+    if (mounted) paintPortrait();
+  }
 
   const subButtons = SUBS.map((id) => {
     const b = el("button", { class: "nest-sub", onclick: () => showSub(id) });
@@ -282,7 +329,7 @@ export function createNest(
     tasks: el("div", { class: "nest-pane nest-tasks" }, tasks.element),
     chat: chatPane,
     activity: activityPane,
-    connections: el("div", { class: "nest-pane" }, connections.element),
+    connections: el("div", { class: "nest-pane nest-connections-pane" }, connections.element),
   };
   for (const id of TABS) {
     panes[id].id = `nest-pane-${id}`;
@@ -319,6 +366,16 @@ export function createNest(
   let last: ViewModel | null = null;
   let sub: Sub = "week";
   const currentPlace = () => tab === "activity" ? sub : tab;
+  const portraitSpace = window.matchMedia("(min-height: 481px)");
+  const portraitNarrow = window.matchMedia("(max-width: 600px)");
+  function paintPortrait(): void {
+    portrait.setActive(zecaOn && tab === "chat" && !document.hidden && !last?.locked
+      && root.isConnected && portraitSpace.matches && !(portraitNarrow.matches && !memoryPane.hidden)
+      && (wide.matches || !chatPane.classList.contains("recent-open")));
+    portrait.update([], null, zecaOn ? { clip: chat.clip(Clock.now()), agent: chat.agent() } : null);
+  }
+  portraitSpace.addEventListener("change", paintPortrait);
+  portraitNarrow.addEventListener("change", paintPortrait);
   let navigationReady = false;
   let placeSaved: Promise<void> = Promise.resolve();
   const rememberPlace = () => {
@@ -331,7 +388,12 @@ export function createNest(
   function showSub(id: Sub): void {
     sub = id;
     for (const s of SUBS) subPanes[s].hidden = s !== id;
-    subButtons.forEach((b) => b.classList.toggle("on", b.dataset.sub === id));
+    subButtons.forEach((b) => {
+      const selected = b.dataset.sub === id;
+      b.classList.toggle("on", selected);
+      b.setAttribute("aria-pressed", String(selected));
+      if (selected) b.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
     parts[id].refresh();
     rememberPlace();
   }
@@ -350,9 +412,12 @@ export function createNest(
     if (id === "chat") {
       chat.toggle(true);
       refreshRecent();
-    }
+    } else chat.toggle(false);
+    paintPortrait();
   }
   const relabel = () => {
+    portraitButton.setAttribute("aria-label", t("Greet Zeca"));
+    portraitButton.title = t("Greet Zeca");
     const subWords: Record<Sub, string> = {
       week: t("Week"),
       projects: t("By project"),
@@ -425,15 +490,23 @@ export function createNest(
     ...TABS.map((id) => panes[id]),
     foot.element,
   );
+  mounted = true;
   setZeca(zeca);
   show("flock");
   navigationReady = true;
 
   // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
-  document.addEventListener("visibilitychange", () => flock.setActive(tab === "flock" && !document.hidden && !last?.locked));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) chat.cancelVoice();
+    flock.setActive(tab === "flock" && !document.hidden && !last?.locked);
+    paintPortrait();
+  });
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    if (v.locked) chat.cancelVoice();
+    setZecaLook(v.look ?? null);
+    paintPortrait();
     head.setDnd(!!v.dnd);
     head.setCounts({
       sessions: v.sessions.length,
@@ -502,6 +575,15 @@ export function createNest(
   // Alt+1 to 5 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
   // leaves Full for the size before it. Neither while typing, composing or speaking.
   window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !e.isComposing && !e.defaultPrevented && tab === "chat" && chat.cancelVoice()) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Escape" && !e.isComposing && !e.defaultPrevented && paletteHost.hidden && tab === "chat" && !wide.matches && chatPane.classList.contains("recent-open")) {
+      e.preventDefault();
+      setRecent(false, true);
+      return;
+    }
     const typing = (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]");
     if (e.isComposing || e.defaultPrevented || typing) return;
     // Esc closes an open palette first, wherever the focus went.
@@ -516,7 +598,6 @@ export function createNest(
       return;
     }
     if (e.key === "Escape" && full) {
-      if (chat.cancelVoice()) return;
       e.preventDefault();
       backend.size("room", currentPlace());
       return;
@@ -536,6 +617,7 @@ export function createNest(
   setFull(startFull);
   return {
     flushState: async () => {
+      chat.cancelVoice();
       await chat.flushDraft();
       await connections.flush();
       await flock.flush();
@@ -554,13 +636,25 @@ export function createNest(
     setFull,
     setSound: head.setSound,
     setMedia: head.setMedia,
-    setSpecies: foot.setSpecies,
+    setSpecies: (id) => {
+      setZecaSpecies(id);
+      foot.setSpecies(id);
+      paintPortrait();
+    },
     usageChanged: flock.usageChanged,
     setKeys: (keys) => {
       chat.setKeys(keys);
       flock.setKeys(keys);
     },
     shortcut: (id) => {
+      if (id === "talk" || id === "talk-up") {
+        if (id === "talk" && zecaOn && !document.hidden && !last?.locked && root.isConnected) {
+          if (portraitNarrow.matches) setMemory(false);
+          show("chat");
+        }
+        if (tab === "chat" && !document.hidden && !last?.locked && root.isConnected) chat.holdToTalk(id === "talk");
+        return;
+      }
       if (id !== "allow" && id !== "deny") return;
       const allow = id === "allow";
       if (tab === "chat") chat.answerWaiting(allow);

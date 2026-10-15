@@ -42,7 +42,10 @@ it without starting work or submitting the draft. A failed first load shows an
 error rather than claiming there are no tasks. Action errors stay visible until
 another action succeeds or you open New task.
 
-Each card keeps its goal, status, next criterion and Start, Go on or Stop visible.
+Each card leads with its goal and status, followed by a criteria progress bar and the
+next unfinished criterion. **Running** describes the agent's execution separately from
+the task's lifecycle status: finishing a turn does not mark the task done. Start,
+Go on or Stop stay visible; project and cost are supporting context.
 List updates and successful edits keep keyboard focus on that task's status,
 owner or criterion. If the focused control disappears, focus returns to its
 More actions, or New task when the card has left the list. Updates do not take

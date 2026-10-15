@@ -30,7 +30,7 @@ class Element {
   }
   querySelectorAll(tags) { return this.children.flatMap(node => [ ...(tags.split(",").map(tag => tag.trim()).includes(node.tag) ? [node] : []), ...node.querySelectorAll(tags) ]); }
 }
-globalThis.document = { createElement: tag => new Element(tag), body: new Element("body") };
+globalThis.document = { createElementNS: (_ns, tag) => new Element(tag), createElement: tag => new Element(tag), body: new Element("body") };
 // Focus IDs here contain only known letters, digits, hyphens and colons inside an attribute.
 globalThis.CSS = { escape: value => value };
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
@@ -60,6 +60,10 @@ const maintenance = () => nodes(tasks.element).find(node => node.className === "
 const button = text => nodes(tasks.element).find(node => node.tag === "button" && node.textContent === text);
 const click = async text => { const node = button(text); assert.ok(node, text); node.listeners.click(); await tick(); };
 assert.equal(maintenance().open, false);
+const progress = nodes(tasks.element).find(node => node.tag === "progress");
+assert.equal(progress.max, 1);
+assert.equal(progress.value, 0);
+assert.ok(nodes(tasks.element).some(node => node.tag === "h3" && node.textContent === "Fix login"));
 assert.ok(tasks.element.textContent.includes("This turn ended"));
 assert.ok(!nodes(maintenance()).includes(button("Go on")), "Continuation must stay outside disclosure");
 assert.ok(nodes(maintenance()).includes(button("Start fresh")));
@@ -137,6 +141,7 @@ assert.deepEqual(calls.pop(), ["removeWorktree", 7]);
 task = { ...task, running: true, canStart: false };
 await refresh();
 assert.ok(!tasks.element.textContent.includes("This turn ended"));
+assert.equal(nodes(tasks.element).find(node => node.className === "task-execution running").textContent, "Running");
 assert.ok(!nodes(maintenance()).includes(button("Stop")));
 assert.equal(button("Remove its folder"), undefined);
 assert.equal(button("Delete").disabled, true);
@@ -250,6 +255,8 @@ assert.ok(tasks.element.textContent.includes("No tasks."), "An actual empty resp
 assert.equal(field("task-load-error"), undefined);
 const unreadable = createTasks({ ...backend, load: async () => { throw "Database unavailable."; } });
 unreadable.refresh();
+assert.ok(nodes(unreadable.element).some(node => node.className === "view-state loading"));
+assert.ok(!unreadable.element.textContent.includes("No tasks."));
 await tick();
 assert.ok(unreadable.element.textContent.includes("Tasks could not load. Try again."));
 assert.ok(!unreadable.element.textContent.includes("No tasks."), "An unreadable list must not claim to be empty");

@@ -40,6 +40,7 @@ jobs:
           node scripts/check-nest-close.mjs
           node scripts/check-chat-models.mjs
           node scripts/check-flock-place.mjs
+          node scripts/check-settings-ui.mjs
           node scripts/check-project-search.mjs
           node scripts/check-task-actions.mjs
           node scripts/check-surface-continuity.mjs

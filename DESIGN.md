@@ -62,7 +62,8 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   prototype's paired widths (560/680/760 px), Mini height (56 px) and Quick height
   (600 px) are layout references until native window, zoom, placement and input
   region validation lands. Production currently uses Mini 340 x 38 and Quick
-  440 px internally; display scaling must be accounted for.
+  440 CSS px internally (492 in Chat), with a 1.14 UI zoom inside the fixed 720 x 640
+  logical-pixel overlay; display scaling must be accounted for.
 - Settings remains the configuration destination. Present the destination clearly
   when another surface needs a privileged setting.
 
@@ -107,10 +108,14 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   Group source, context and memory controls together; avoid duplicating them above
   and below the transcript.
 - Keep an editable draft, attachments and Send visible. Quick provides at least
-  two comfortable draft lines when height allows; the minimum Nest uses a smaller
-  composer while retaining at least 40 px of transcript space.
-- Suggested prompts fill a draft and leave sending to the user. Show them in the
-  empty state; a growing transcript should not compete with a persistent row of
+  one comfortable draft line that grows with its content, with a small animated
+  companion beside conversation actions and the executor beside the draft. The
+  minimum Nest uses a smaller composer while retaining at least 40 px of transcript space.
+- Empty Quick Chat stays short, with its greeting beside Zeca. Actual messages grow
+  its transcript up to the overlay limit. Selectors overlay the existing surface;
+  opening or loading them never reserves extra chat height.
+- Suggested prompts fill a draft and leave sending to the user. Show them only
+  in Room's empty state; a growing transcript should not compete with a persistent row of
   the same prompts.
 - Keep history, context and memory on the existing conversation. Looking at
   another conversation preserves each one's own draft and bound source.

@@ -1,6 +1,4 @@
-// Settings → Activity (docs/guide/activity.md): a week's recap, the year's grid, and the local
-// history's switch. Counts only, read from this computer. No Tauri here: `on` says what to do, so the
-// lab can draw it with made-up weeks.
+// Shared Activity calendar and history controls. Room owns the recap; Settings owns retention.
 import type { AgentKind, GridDay, WeekView } from "../../view.gen";
 import { NAME_BY_KIND } from "../../agents";
 import { el } from "../../dom";
@@ -75,83 +73,6 @@ export function weekLabel(monday: string, sunday: string): string {
   return `${short(monday)} – ${end}, ${b.getFullYear()}`;
 }
 
-function stat(value: string, label: string, sub?: string): HTMLElement {
-  return el(
-    "div",
-    { class: "stat" },
-    el("div", { class: "stat-value", text: value }),
-    el("div", { class: "stat-label", text: sub ? `${label} · ${sub}` : label }),
-  );
-}
-
-function weekCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLElement {
-  const w = a.week;
-  const i = a.weeks.indexOf(w.monday);
-  const older = i >= 0 && i < a.weeks.length - 1 ? a.weeks[i + 1] : null;
-  const newer = i > 0 ? a.weeks[i - 1] : null;
-  const nav = (text: string, label: string, to: string | null) => {
-    const b = el("button", { class: "btn week-nav", text, onclick: () => to && on.week(to) });
-    b.title = label;
-    b.setAttribute("aria-label", label);
-    if (!to) b.setAttribute("disabled", "");
-    return b;
-  };
-  const head = el(
-    "div",
-    { class: "card-head" },
-    el("div", { class: "card-title", text: i === 0 ? t("This week · {range}", { range: weekLabel(w.monday, w.sunday) }) : weekLabel(w.monday, w.sunday) }),
-    el("div", { class: "week-navs" }, nav("‹", t("Older week"), older), nav("›", t("Newer week"), newer)),
-  );
-  if (!w.turns) return el("section", { class: "card week" }, head, el("p", { class: "note", text: w.headline }));
-  const most = [
-    w.top_agent
-      ? w.top_project
-        ? t("Most turns: {agent} on {project}", { agent: t(AGENT[w.top_agent]), project: w.top_project })
-        : t("Most turns: {agent}", { agent: t(AGENT[w.top_agent]) })
-      : null,
-    w.busiest_day ? t("Busiest: {day}", { day: weekday(w.busiest_day) }) : null,
-    t("Longest turn: {time}", { time: duration(w.longest_secs) }),
-  ].filter((x): x is string => !!x);
-  const top = Math.max(1, ...w.days);
-  const names = weekdays();
-  const bars = el(
-    "div",
-    { class: "week-bars" },
-    ...w.days.map((secs, d) => {
-      const fill = el("div", { class: "week-bar-fill" });
-      fill.style.height = `${Math.round((secs / top) * 100)}%`;
-      const bar = el("div", { class: "week-bar" }, el("div", { class: "week-bar-track" }, fill), el("span", { text: names[d] }));
-      bar.title = `${names[d]}: ${duration(secs)}`;
-      return bar;
-    }),
-  );
-  return el(
-    "section",
-    { class: "card week" },
-    head,
-    el("p", { class: "week-headline", text: w.headline }),
-    el(
-      "div",
-      { class: "stats" },
-      stat(duration(w.active_secs), t("with your agents")),
-      stat(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps })),
-      stat(`+${w.added} −${w.removed}`, t("lines"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files })),
-      stat(String(w.commands), w.commands === 1 ? t("command") : t("commands")),
-      stat(String(w.allowed + w.denied + w.answered), t("answers"), t("{allowed} allowed, {denied} denied", { allowed: w.allowed, denied: w.denied })),
-      stat(String(w.failed), w.failed === 1 ? t("turn failed") : t("turns failed")),
-    ),
-    bars,
-    el("p", { class: "row-about week-most", text: most.join(" · ") }),
-    el(
-      "div",
-      { class: "actions week-share" },
-      view.saved ? el("span", { class: `note${view.saved.ok ? " ok" : " error"}`, text: view.saved.text }) : null,
-      el("label", { class: "project-choice" }, toggle(view.hideProjects, async (hide) => on.hideProjects(hide)), el("span", { text: t("Hide project names") })),
-      button(t("Save as image…"), () => on.saveImage()),
-    ),
-  );
-}
-
 function cellsOf(days: { day: string; level: number; title: string }[]): HTMLElement {
   return el(
     "div",
@@ -213,7 +134,7 @@ export function gridCard(a: Activity, view: ActivityView, on: ActivityActions): 
 }
 
 /** Keep a history, and clear it (asking first). */
-export function historyCard(a: Activity | null, view: ActivityView, on: ActivityActions): HTMLElement {
+export function historyCard(a: Activity | null, view: Pick<ActivityView, "confirming">, on: Pick<ActivityActions, "history" | "confirmClear" | "clear">): HTMLElement {
   const confirming = view.confirming;
   const clear = confirming
     ? el(
@@ -237,17 +158,4 @@ export function historyCard(a: Activity | null, view: ActivityView, on: Activity
       clear,
     ),
   );
-}
-
-/** The page. */
-export function activityPage(a: Activity | null, view: ActivityView, on: ActivityActions): HTMLElement[] {
-  return [
-    el("h1", { text: t("Activity") }),
-    el("p", {
-      class: "lede",
-      text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer."),
-    }),
-    ...(a ? [weekCard(a, view, on), gridCard(a, view, on)] : [el("section", { class: "card" }, el("p", { class: "note", text: t("Reading the history…") }))]),
-    historyCard(a, view, on),
-  ];
 }

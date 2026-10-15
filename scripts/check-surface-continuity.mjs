@@ -7,7 +7,7 @@ const nodes = node => [node, ...node.children.flatMap(nodes)];
 class Element {
   children = []; listeners = {}; attributes = {}; dataset = {}; style = { setProperty() {} };
   className = ""; value = ""; hidden = false; scrollTop = 0;
-  constructor(tag) { this.tag = tag; }
+  constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); }
   classList = {
     contains: name => this.className.split(" ").includes(name),
     add: name => { if (!this.classList.contains(name)) this.className += ` ${name}`; },
@@ -32,7 +32,9 @@ class Element {
   removeAttribute(name) { delete this.attributes[name]; }
   hasAttribute(name) { return name === "hidden" ? this.hidden : name in this.attributes; }
   toggleAttribute(name, force) { if (force) this.setAttribute(name, ""); else this.removeAttribute(name); }
+  click() { if (!this.disabled) this.fire("click"); }
   matches(selector) {
+    if (selector.includes(",")) return selector.split(",").some(value => this.matches(value.trim()));
     const attr = selector.match(/\[([^=\]]+)(?:="([^"]*)")?\]/);
     if (attr) { const value = attr[1].startsWith("data-") ? this.dataset[attr[1].slice(5)] : this.getAttribute(attr[1]); if (attr[2] !== undefined ? value !== attr[2] : value === undefined) return false; }
     const plain = selector.replace(/\[[^\]]*\]/g, "");
@@ -47,12 +49,13 @@ class Element {
   focus() { document.activeElement = this; }
   setSelectionRange() {}
   scrollTo() {}
+  scrollIntoView(options) { this.scrolledIntoView = options; }
   getBoundingClientRect() { return { left: 0, top: 0, width: 480, height: 200 }; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
-  attachShadow() { const shadow = new Element("shadow"); shadow.parentElement = this; return shadow; }
+  attachShadow() { const shadow = new Element("shadow"); shadow.parentElement = this; this.shadowRoot = shadow; return shadow; }
   toDataURL() { return "data:image/png;base64,"; }
 }
-const windowEvents = {}, documentEvents = {}, storage = new Map();
+const windowEvents = {}, documentEvents = {}, storage = new Map(), mediaChanges = [];
 globalThis.document = { hidden: false, body: new Element("body"),
   createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag),
   createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; },
@@ -63,7 +66,12 @@ globalThis.document = { hidden: false, body: new Element("body"),
 globalThis.window = { innerWidth: 480, innerHeight: 640,
   setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
   addEventListener: (event, fn) => (windowEvents[event] ??= []).push(fn),
-  matchMedia: query => ({ matches: query.includes("min-width") ? window.innerWidth >= 900 : window.innerWidth <= 600, addEventListener() {} }),
+  matchMedia: query => ({ get matches() {
+    const rule = query.match(/(min|max)-(width|height):\s*(\d+)px/);
+    if (!rule) return false;
+    const value = rule[2] === "width" ? window.innerWidth : window.innerHeight;
+    return rule[1] === "min" ? value >= Number(rule[3]) : value <= Number(rule[3]);
+  }, addEventListener: (_event, fn) => mediaChanges.push({ query, fn }) }),
 };
 globalThis.matchMedia = window.matchMedia;
 globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
@@ -77,21 +85,31 @@ const source = path => JSON.stringify(`${root}src/${path}`.replaceAll("\\", "/")
 const bundles = await build({ configFile: false, root, logLevel: "silent",
   plugins: [{ name: "continuity-entry", resolveId: id => id.endsWith("continuity-entry") ? "\0continuity-entry" : null,
     load: id => id === "\0continuity-entry" ? `
+      export { createMemory } from ${source("surfaces/nest/memory.ts")};
+      export { createConnections } from ${source("surfaces/nest/connections.ts")};
+      export { createRecent } from ${source("surfaces/nest/recent.ts")};
+      export { createWeek } from ${source("surfaces/nest/week.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
+      export { Scene } from ${source("island/scene.ts")};
+      export { Clock } from ${source("clock.ts")};
       export { savedClose, savedTransition } from ${source("surfaces/nest/close.ts")};
       export * as fsm from ${source("island/fsm.ts")};
       export * as dock from ${source("island/dock.ts")};` : null }],
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createNest, ChatPanel, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const scenes = new WeakMap(), active = new WeakMap();
+const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
+Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
+Scene.prototype.setActive = function (on) { active.set(this.canvas, on); return activateScene.call(this, on); };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const visibility = hidden => { document.hidden = hidden; for (const fn of documentEvents.visibilitychange ?? []) fn(); };
 const row = { item: "org/alpha#7", group: "to-review", name: "org/alpha#7", title: "Review alpha", checks: null, review: null, link: true, merge: false,
-  facts: { repo: "org/alpha", branch: "feature/alpha", diff: null, author: null, reviewers: [], updated: null, runs: [], release: null, command: null } };
+  facts: { repo: "org/alpha", branch: "feature/alpha", diff: null, author: null, reviewers: [], updated: 1_770_000_000, runs: [], release: null, command: null } };
 
-for (const width of [480, 1180]) {
+for (const width of [480, 760, 900, 1180]) {
   window.innerWidth = width;
   for (const presence of ["island", "panel", "quiet"]) {
     fsm.setPresence(presence); fsm.setNestOpen(false); fsm.setNestHolds(false);
@@ -101,7 +119,7 @@ for (const width of [480, 1180]) {
     const view = { sessions: [session], alerts: [], focus: { agent: "codex", id: "owned-run" }, front: { agent: "codex", id: "owned-run" },
       approval: { agent: "codex", session: "owned-run", request: "pending-request", tool: "Bash", target: "git status", description: "Current permission", questions: [], queue: 1, always: false },
       boards: [{ connector: "github", rows: [row] }] };
-    const originalView = structuredClone(view), actions = [];
+    const originalView = structuredClone(view), actions = [], voiceCalls = [];
     let draft = { text: "Unsent", files: ["/inbox/note.txt"], folder: "/work/alpha", provider: "codex" };
     let place = "audit", flockPlace = { query: "Alpha", onlyNeeds: true, detail: "context", change: null };
     let connectionPlace = { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 };
@@ -111,6 +129,8 @@ for (const width of [480, 1180]) {
     const chat = from => ({ current: async () => current, draft: async () => structuredClone(draft),
       saveDraft: async value => { if (saveFails) throw new Error("Draft save unavailable."); draft = structuredClone(value); (from === "nest" ? quick : nest?.chat)?.sync({ kind: "draft", from, draft }); },
       models: async () => [], pick: async () => ({}), conversations: async () => [], keyboard() {},
+      voice: { start: async tap => { voiceCalls.push(["start", from, tap]); },
+        stop: async () => { voiceCalls.push(["stop", from]); return ""; }, cancel: () => voiceCalls.push(["cancel", from]) },
       ...Object.fromEntries(["send", "reset", "open", "decide", "stop"].map(name => [name, () => { actions.push(`chat:${name}`); throw new Error(`Unexpected ${name}`); }])),
     });
     quick = new ChatPanel(chat("island"), () => {});
@@ -145,20 +165,112 @@ for (const width of [480, 1180]) {
     const resize = savedTransition(() => nest.flushState(), () => { transitionErrors++; });
     await mount(true); hiddenIsland();
     assert.equal(nest.current(), "audit");
+    const auditTab = nodes(page).find(node => node.dataset.sub === "audit");
+    assert.equal(auditTab.attributes["aria-pressed"], "true");
+    assert.deepEqual(auditTab.scrolledIntoView, { block: "nearest", inline: "nearest" }, "Restoring a sub-tab keeps its selection visible in the navigation strip");
     nest.open("chat"); nest.chat.draft("More context");
+    const character = nest.chat.perchSlot.querySelector(".chat-character");
+    const canvas = character.querySelector("canvas");
+    const portrait = scenes.get(canvas);
+    assert.ok(portrait, "Room uses the production animated scene in the chat's own perch");
+    assert.equal(active.get(canvas), true);
+    Clock.freeze(Clock.now() + 1000);
+    assert.equal(portrait.playing("zeca"), "think", "A restored running conversation animates its own companion");
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "think", "Greeting never replaces an active reply");
+    nest.chat.load({ ...current, busy: false });
+    Clock.freeze(Clock.now() + 1000);
+    document.body.classList.add("still");
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "idle", "Paused motion does not play a greeting");
+    document.body.classList.remove("still");
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "hello");
+    nest.chat.receive({ kind: "permission", id: "portrait-card", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "question", "A waiting card outranks a cosmetic reaction");
+    assert.deepEqual(actions, [], "The companion's reaction never sends, starts or answers anything");
+    nest.chat.load(current);
+    Clock.freeze(null);
+    nest.chat.setVoiceReady(true);
+    nest.open("flock"); nest.shortcut("talk"); await tick();
+    assert.equal(nest.current(), "chat", "Room's talk shortcut opens its own chat");
+    assert.deepEqual(voiceCalls.at(-1), ["start", "nest", false]);
+    nest.shortcut("talk-up"); await tick();
+    assert.deepEqual(voiceCalls.at(-1), ["stop", "nest"]);
+    const mic = nest.chat.element.querySelector(".mic");
+    const area = nest.chat.element.querySelector("textarea");
+    mic.fire("click"); await tick();
+    const speakingEscape = { key: "Escape", target: area, preventDefault() { this.defaultPrevented = true; } };
+    for (const fn of windowEvents.keydown ?? []) fn(speakingEscape);
+    assert.deepEqual(voiceCalls.at(-1), ["cancel", "nest"], "Escape cancels speech even with focus on the hidden input in Room");
+    assert.equal(speakingEscape.defaultPrevented, true);
+    assert.equal(nest.current(), "chat");
+    for (const leave of [() => nest.open("flock"), () => visibility(true), () => nest.view({ ...view, locked: true }), () => nest.flushState()]) {
+      mic.fire("click"); await tick();
+      await leave();
+      assert.deepEqual(voiceCalls.at(-1), ["cancel", "nest"], "Leaving, hiding, locking or saving the surface cancels recording");
+      const calls = voiceCalls.length;
+      nest.shortcut("talk-up"); await tick();
+      assert.equal(voiceCalls.length, calls, "A late release never transcribes a cancelled recording");
+      visibility(false); nest.view(view); nest.open("chat");
+    }
+    visibility(true); assert.equal(active.get(canvas), false);
+    visibility(false); assert.equal(active.get(canvas), true);
+    if (width < 600) {
+      page.querySelector(".nest-memory-toggle").fire("click");
+      assert.equal(active.get(canvas), false, "Memory hides the narrow conversation and stops its portrait");
+      page.querySelector(".nest-memory-back").fire("click");
+      assert.equal(active.get(canvas), true);
+    }
+    nest.view({ ...view, locked: true }); assert.equal(active.get(canvas), false);
+    nest.view(view); assert.equal(active.get(canvas), true);
+    window.innerHeight = 360;
+    for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
+    assert.equal(active.get(canvas), false, "Short windows stop drawing the hidden portrait");
+    window.innerHeight = 640;
+    for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
+    assert.equal(active.get(canvas), true);
+    const beforeHistory = structuredClone(draft);
+    page.querySelector(".recent-toggle").fire("click");
+    if (width < 900) {
+      assert.equal(page.querySelector(".nest-chat").classList.contains("recent-open"), true);
+      assert.equal(active.get(canvas), false, "Narrow history stops the hidden portrait");
+      assert.equal(document.activeElement, page.querySelector(".nest-recent-search"));
+      page.querySelector(".nest-recent-back").fire("click");
+      assert.equal(page.querySelector(".nest-chat").classList.contains("recent-open"), false);
+      assert.equal(active.get(canvas), true);
+      assert.equal(document.activeElement, page.querySelector(".recent-toggle"));
+    } else {
+      assert.equal(page.querySelector(".nest-chat").classList.contains("no-recent"), true);
+      page.querySelector(".recent-toggle").fire("click");
+      assert.equal(page.querySelector(".nest-chat").classList.contains("no-recent"), false);
+    }
+    assert.deepEqual(draft, beforeHistory, "History navigation never rewrites the draft or files");
     const expectedDraft = { ...draft, text: "Unsent\n\nMore context" };
     for (const full of [true, false, true, false]) {
       page.querySelector(full ? ".nest-fullscreen" : '[data-size="room"]').fire("click"); await requested;
       assert.equal(page.classList.contains("full"), full); assert.deepEqual(draft, expectedDraft);
+      assert.equal(nest.chat.perchSlot.querySelector("canvas"), canvas, "Room/Full keeps the same scene and animation phase");
     }
     page.querySelector(".nest-fullscreen").fire("click"); await requested;
     const escape = { key: "Escape", target: page, preventDefault() { this.defaultPrevented = true; } };
     for (const fn of windowEvents.keydown ?? []) fn(escape);
     await requested; assert.equal(page.classList.contains("full"), false); assert.equal(nest.current(), "chat");
     nest.open("connections"); await nest.flushState();
+    assert.equal(active.get(canvas), false, "Leaving Chat stops its renderer");
     assert.deepEqual(connectionPlace, { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 });
     if (width >= 900) assert.equal(page.querySelector('[data-fid="row:org/alpha#7"]').getAttribute("aria-pressed"), "true");
     else assert.ok(page.textContent.includes("Review alpha"), "Narrow recreation restores the selected connection detail");
+    const technical = page.querySelector(".conn-technical");
+    assert.ok(technical, "Selected connections expose technical details separately");
+    assert.ok(!technical.open);
+    technical.open = true;
+    const changedView = structuredClone(view);
+    changedView.boards[0].rows[0].title = "Review alpha updated";
+    nest.view(changedView);
+    assert.equal(page.querySelector(".conn-technical").open, true, "Polling retains expanded technical context");
+    nest.view(view);
     nest.open("audit");
     saveFails = true;
     page.querySelector('[data-size="quick"]').fire("click"); await requested;
@@ -193,4 +305,227 @@ for (const width of [480, 1180]) {
     page.remove(); fsm.setNestOpen(false); fsm.setNestHolds(false); machine.unpin(0);
   }
 }
-console.log("check-surface-continuity: ok (480/1180, Island/Panel/Quiet, Room/Full/Quick/Mini, failed save/retry, saved recreation, minimize/restore, Zeca off, source/draft/files/filters/connection/owner, no actions)");
+console.log("check-surface-continuity: ok (480/760/900/1180, Island/Panel/Quiet, Room/Full/Quick/Mini, failed save/retry, saved recreation, minimize/restore, Zeca off, source/draft/files/filters/connection/owner, no actions)");
+
+// A retained search field filters the whole local list, including entries past the first page.
+const requests = [], opened = [];
+let recentBusy = false;
+const recent = createRecent({ list: () => new Promise((resolve, reject) => requests.push({ resolve, reject })),
+  open: id => opened.push(id), fresh: () => opened.push("fresh"), busy: () => recentBusy });
+document.body.replaceChildren(recent.element);
+const now = new Date();
+const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+const rows = Array.from({ length: 35 }, (_, i) => ({ id: i, title: i === 34 ? "Old login failure" : `Conversation ${i}`, label: i === 34 ? "Codex" : "API", folder: i === 34 ? "/work/legacy" : "/work/current", updatedMs: i === 34 ? yesterday.getTime() : now.getTime() - i * 1000, current: i === 0 }));
+recent.refresh();
+assert.ok(recent.element.textContent.includes("Loading"));
+requests.at(-1).resolve(rows); await tick();
+assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 30);
+assert.ok(recent.element.querySelector('[aria-current="true"]'));
+const search = recent.element.querySelector("input"); search.value = "legacy"; search.focus(); search.fire("input");
+assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 1);
+assert.ok(recent.element.textContent.includes("Yesterday"));
+assert.equal(document.activeElement, search);
+recent.element.querySelector(".nest-recent-row").fire("click"); assert.deepEqual(opened, [34]);
+search.value = "Codex"; search.fire("input"); assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 1);
+search.value = "missing"; search.fire("input"); assert.ok(recent.element.textContent.includes("No conversations match"));
+search.value = "legacy"; search.fire("input");
+recent.refresh(); requests.at(-1).reject(new Error("Offline")); await tick();
+assert.ok(recent.element.textContent.includes("The last loaded list may be out of date"));
+assert.ok(recent.element.textContent.includes("Old login failure"));
+assert.equal(search.value, "legacy"); assert.equal(document.activeElement, search);
+const recreatedRecent = createRecent({ list: async () => rows, open() {}, fresh() {}, busy: () => false });
+assert.equal(recreatedRecent.element.querySelector("input").value, "legacy", "Closing and recreating Nest keeps the local history search");
+recent.element.querySelector(".nest-recent-status").querySelector("button").fire("click");
+assert.equal(recent.element.querySelector(".nest-recent-status").querySelector("button").disabled, true);
+requests.at(-1).resolve(rows); await tick();
+assert.ok(!recent.element.textContent.includes("The last loaded list"));
+recentBusy = true; recent.refresh(); requests.at(-1).resolve(rows); await tick();
+recent.element.querySelector(".nest-recent-row").fire("click");
+assert.deepEqual(opened, [34], "Even an old row cannot switch conversations during a turn");
+recentBusy = false; search.value = ""; search.fire("input");
+recent.element.querySelectorAll("button").find(n => n.textContent === "Show more").fire("click");
+assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 35);
+recent.refresh(); const olderRequest = requests.at(-1); recent.refresh();
+requests.at(-1).resolve(rows); await tick(); olderRequest.reject(new Error("Obsolete")); await tick();
+assert.ok(!recent.element.textContent.includes("The last loaded list"));
+console.log("check-surface-continuity: Recent local search, date groups, pagination, busy guard, retained query/focus, stale list/retry and response ordering");
+
+// Only the explicit second click merges; updates and retry never perform this action.
+window.innerWidth = 480;
+const polls = [], merges = [];
+const connections = createConnections({ status: async () => [], refresh: () => new Promise((resolve, reject) => polls.push({ resolve, reject })),
+  onMerged() {}, merge: async (...args) => { merges.push(args); }, settings() {}, open() {}, zeca: () => null });
+const mergeRow = { ...row, group: "yours", checks: "passing", merge: true,
+  facts: { ...row.facts, runs: [{ name: "CI", state: "passed" }] } };
+connections.update({ boards: [{ connector: "github", rows: [mergeRow] }] });
+document.body.replaceChildren(connections.element); await tick();
+connections.element.querySelector(".conn-row").fire("click");
+const at = id => connections.element.querySelector(`[data-fid="act:${id}"]`);
+assert.ok(connections.element.querySelector(".conn-check-summary").textContent.includes("1 of 1 passed"));
+assert.equal(connections.element.querySelector(".conn-technical").contains(at("merge")), false);
+at("merge").fire("click"); assert.equal(merges.length, 0);
+at("merge-cancel").fire("click"); assert.equal(merges.length, 0);
+at("merge").fire("click"); const confirmation = at("merge-yes"); confirmation.fire("click"); confirmation.fire("click");
+await tick(); assert.equal(merges.length, 1, "A stale confirmation cannot submit a duplicate merge");
+at("refresh").fire("click"); at("refresh").fire("click"); assert.equal(polls.length, 1);
+assert.equal(at("refresh").getAttribute("aria-busy"), "true");
+polls[0].reject(new Error("Offline")); await tick();
+assert.ok(connections.element.textContent.includes("Connections could not update"));
+at("refresh").fire("click"); polls[1].resolve(); await tick();
+assert.ok(!connections.element.textContent.includes("Connections could not update"));
+assert.equal(merges.length, 1);
+console.log("check-surface-continuity: Connections check/action hierarchy, explicit merge/cancel, duplicate guards, refresh error/retry");
+
+const memoryReads = [], memoryWrites = [], decisions = [];
+const memory = createMemory({ load: () => new Promise((resolve, reject) => memoryReads.push({ resolve, reject })),
+  decide: (...args) => new Promise((resolve, reject) => { memoryWrites.push(args); decisions.push({ resolve, reject }); }),
+  undo: async id => { memoryWrites.push(["undo", id]); } });
+const memoryHost = new Element("aside"); memoryHost.append(memory.element); document.body.replaceChildren(memoryHost);
+let memoryView = { on: true, files: [{ place: "user", path: "/memory/user.md", facts: ["Prefers short answers"], used: 90, limit: 100 }],
+  pending: [{ id: 7, op: "replace", place: "user", folder: "/work/alpha", old: "Short answers", new: "Concise answers with evidence", reason: "Your preference", source: "tool" }],
+  history: [{ id: "ours", message: "Remember preference", by: "you", seconds: 1 }, { id: "external", message: "Manual edit", by: "other", seconds: 2 }],
+  accepted: 1, rejected: 0, night: { day: "2026-10-15", debrief: "Yesterday's review" } };
+const memoryButton = id => memory.element.querySelector(`[data-fid="${id}"]`);
+memory.refresh(); assert.ok(memory.element.textContent.includes("Loading"));
+memoryReads.at(-1).resolve(memoryView); await tick();
+assert.ok(memory.element.textContent.indexOf("Waiting for you") < memory.element.textContent.indexOf("Yesterday's review"));
+assert.ok(memory.element.textContent.includes("Current memoryShort answers"));
+assert.ok(memory.element.textContent.includes("Proposed memoryConcise answers"));
+assert.equal(memory.element.querySelectorAll(".memory-commit").filter(n => n.querySelector("button")).length, 1, "External edits never acquire Undo");
+const fileDisclosure = memory.element.querySelector(".memory-file"); fileDisclosure.open = false;
+memory.element.querySelector(".memory-history").open = true;
+memoryHost.scrollTop = 140;
+memory.refresh(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.equal(memory.element.querySelector(".memory-file").open, false);
+assert.equal(memory.element.querySelector(".memory-history").open, true);
+assert.equal(memoryHost.scrollTop, 140);
+assert.deepEqual(memoryWrites, [], "Loading and disclosing memory never accepts or reverts a change");
+memoryButton("accept:7").focus(); memoryButton("accept:7").fire("click"); document.activeElement = document.body; await tick();
+assert.deepEqual(memoryWrites, [[7, true]]);
+assert.equal(memoryButton("reject:7").disabled, true);
+memoryButton("reject:7").fire("click"); await tick(); assert.equal(memoryWrites.length, 1);
+memory.refresh(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.equal(memoryButton("accept:7").disabled, true, "An external refresh cannot unlock a pending decision");
+decisions[0].reject("Cannot save this memory."); await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.ok(memory.element.textContent.includes("Cannot save this memory."));
+assert.equal(memoryButton("accept:7").disabled, false);
+assert.equal(document.activeElement, memoryButton("accept:7"), "The pending action regains focus after a failed write");
+memory.refresh(); memoryReads.at(-1).reject(new Error("Offline")); await tick();
+assert.ok(memory.element.textContent.includes("The last loaded view may be out of date"));
+assert.ok(memory.element.textContent.includes("Concise answers"));
+assert.ok(memory.element.textContent.includes("Cannot save this memory."));
+memoryButton("retry").fire("click"); assert.equal(memoryButton("retry").disabled, true);
+memoryReads.at(-1).resolve(memoryView); await tick();
+assert.ok(!memory.element.textContent.includes("The last loaded view"));
+memoryButton("accept:7").focus(); memoryButton("accept:7").fire("click"); document.activeElement = document.body; await tick();
+memoryView = { ...memoryView, pending: [] }; decisions[1].resolve(); await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.equal(memoryButton("accept:7"), null); assert.equal(document.activeElement.className, "memory-heading");
+memory.refresh(); const obsolete = memoryReads.at(-1); memory.refresh();
+memoryReads.at(-1).resolve(memoryView); await tick(); obsolete.reject(new Error("Obsolete")); await tick();
+assert.ok(!memory.element.textContent.includes("The last loaded view"));
+console.log("check-surface-continuity: Memory proposal/fact/history hierarchy, explicit decisions, pending guard across refresh, stale/error/retry, retained disclosures/scroll/focus and response ordering");
+
+// Connections searches the loaded snapshot and retains both reading panes through a poll.
+storage.delete("vults.connections-query");
+window.innerWidth = 1180;
+const connectionReads = [], connectionEffects = [];
+const connectionUI = createConnections({ status: () => new Promise((resolve, reject) => connectionReads.push({ resolve, reject })),
+  refresh: async () => { connectionEffects.push("refresh"); }, onMerged() {}, merge: async () => { connectionEffects.push("merge"); },
+  open: () => connectionEffects.push("open"), settings: () => connectionEffects.push("settings"), zeca: () => null });
+const second = { ...row, item: "org/beta#9", name: "org/beta#9", title: "An old useful result", facts: { ...row.facts, repo: "org/beta", branch: "fix/needle", author: "river" } };
+let connectionView = { boards: [{ connector: "github", rows: [mergeRow, second] }] };
+const healthy = [{ id: "github", enabled: true, lastOk: Date.now() / 1000, error: null, watching: 2, overBudget: false }];
+const cHost = new Element("main"); cHost.append(connectionUI.element); document.body.replaceChildren(cHost);
+connectionUI.update(connectionView); connectionReads.at(-1).resolve(healthy); await tick();
+const cAt = id => connectionUI.element.querySelector(`[data-fid="${id}"]`);
+assert.equal(connectionUI.element.querySelectorAll(".conn-chip").length, 0, "A single connection is named once, with one settings entry point");
+assert.equal(connectionUI.element.querySelectorAll('[data-fid="act:manage"]').length, 1);
+const cSearch = connectionUI.element.querySelector(".conn-search");
+assert.equal(cSearch.getAttribute("aria-label"), "Search connections");
+cSearch.focus(); cSearch.value = "needle"; cSearch.fire("input");
+assert.equal(connectionUI.element.querySelectorAll(".conn-row").length, 1);
+assert.equal(connectionUI.element.querySelector(".conn-row").getAttribute("aria-pressed"), "true");
+assert.equal(document.activeElement, cSearch);
+assert.ok(connectionUI.element.textContent.includes("Results: 1 of 2"));
+cSearch.value = "@missing"; cSearch.fire("input");
+assert.ok(connectionUI.element.textContent.includes("No items match your search"));
+assert.equal(connectionUI.element.querySelector(".conn-detail"), null);
+connectionUI.element.querySelectorAll("button").find(b => b.textContent === "Clear filters").fire("click");
+assert.equal(cSearch.value, ""); assert.equal(document.activeElement, cSearch);
+cAt("act:repo").value = "org/beta"; cAt("act:repo").fire("change");
+assert.equal(connectionUI.element.querySelectorAll(".conn-row").length, 1);
+cAt("act:repo").value = ""; cAt("act:repo").fire("change");
+cAt("row:org/alpha#7").fire("click");
+assert.equal(connectionUI.element.querySelector(".conn-check-list").open, false, "Successful checks start collapsed");
+const detailBefore = connectionUI.element.querySelector(".conn-detail");
+assert.ok(nodes(detailBefore).indexOf(cAt("act:merge")) < nodes(detailBefore).indexOf(cAt("act:checks")), "Actions precede an arbitrarily long check list");
+connectionUI.element.querySelector(".conn-list").scrollTop = 120;
+detailBefore.scrollTop = 75; cAt("act:technical").parentElement.open = true;
+connectionUI.redraw();
+assert.equal(connectionUI.element.querySelector(".conn-list").scrollTop, 120);
+assert.equal(connectionUI.element.querySelector(".conn-detail").scrollTop, 75);
+assert.equal(cAt("act:technical").parentElement.open, true);
+connectionView = { boards: [{ connector: "github", rows: [{ ...mergeRow, checks: "failing", review: "approved", merge: false,
+  facts: { ...mergeRow.facts, runs: [{ name: "Fine", state: "passed" }, { name: "Very long failed check name", state: "failed" }] } }, second] }] };
+connectionUI.update(connectionView); connectionReads.at(-1).resolve(healthy); await tick();
+assert.equal(connectionUI.element.querySelector(".conn-check-list").open, true, "Newly failing checks become visible even after success was collapsed");
+assert.equal(cAt("row:org/alpha#7").querySelector(".conn-tag").textContent, "Checks failing", "A review approval cannot conceal failing checks");
+assert.ok(connectionUI.element.querySelector(".conn-check").classList.contains("failed"));
+assert.equal(cAt("act:merge"), null, "Only the real row offers merge");
+connectionUI.element.querySelector(".conn-check-list").open = false; connectionUI.redraw();
+assert.equal(connectionUI.element.querySelector(".conn-check-list").open, false, "Manual disclosure choice survives an unchanged status");
+const outsideControl = new Element("button"); outsideControl.dataset.fid = "act:open"; document.body.append(outsideControl); outsideControl.focus();
+connectionUI.redraw(); assert.equal(document.activeElement, outsideControl, "A poll cannot steal focus from another region");
+cSearch.value = "river"; cSearch.fire("input"); assert.equal(connectionUI.element.querySelectorAll(".conn-row").length, 1);
+assert.equal(connectionUI.element.querySelector(".conn-list").scrollTop, 0);
+connectionUI.refresh(); connectionReads.at(-1).reject(new Error("Status offline")); await tick();
+assert.ok(connectionUI.element.textContent.includes("Connection status could not load"));
+assert.ok(connectionUI.element.textContent.includes("An old useful result"));
+assert.equal(connectionUI.element.querySelector(".conn-search"), cSearch);
+cAt("act:status-retry").fire("click"); const obsoleteStatus = connectionReads.at(-1);
+cAt("act:status-retry").fire("click"); connectionReads.at(-1).resolve(healthy); await tick();
+obsoleteStatus.reject(new Error("Obsolete")); await tick();
+assert.equal(connectionUI.element.querySelector(".view-state.error"), null);
+assert.deepEqual(connectionEffects, [], "Search, filtering, disclosing and local status retry perform no external action");
+window.innerWidth = 480; connectionUI.redraw(); cAt("row:org/beta#9").fire("click");
+assert.ok(cAt("act:back-detail"));
+connectionUI.element.fire("keydown", { key: "Escape", preventDefault() {}, stopPropagation() {} });
+assert.equal(connectionUI.element.querySelector(".conn-detail"), null);
+assert.equal(document.activeElement, cAt("row:org/beta#9"));
+cSearch.focus(); connectionUI.element.fire("keydown", { key: "Escape", target: cSearch, isComposing: true, preventDefault() {}, stopPropagation() {} });
+assert.equal(cSearch.value, "river");
+connectionUI.element.fire("keydown", { key: "Escape", target: cSearch, preventDefault() {}, stopPropagation() {} });
+assert.equal(cSearch.value, ""); assert.equal(document.activeElement, cSearch);
+storage.delete("vults.connections-query");
+const unknownReads = [];
+const unknownUI = createConnections({ status: () => new Promise((resolve, reject) => unknownReads.push({ resolve, reject })), refresh: async () => {},
+  onMerged() {}, merge: async () => {}, open() {}, settings() {}, zeca: () => null });
+unknownUI.update({ boards: [] }); unknownReads.at(-1).reject(new Error("Unavailable")); await tick();
+assert.equal(unknownUI.element.querySelector(".nest-add"), null, "An unreadable status never claims the connector is off");
+unknownUI.element.querySelector('[data-fid="act:status-retry"]').fire("click"); unknownReads.at(-1).resolve(healthy); await tick();
+assert.ok(unknownUI.element.querySelector(".conn-waiting"));
+assert.equal(unknownUI.element.querySelector(".nest-add"), null);
+console.log("check-surface-continuity: Connections search/filter/empty states, independent scroll, explicit actions, check priority/disclosures, narrow Escape and stale status ordering without side effects");
+
+
+// Week failures stop loading, keep a known recap and cannot replace a newer read.
+const weekReads = [], weekEffects = [];
+const weekUI = createWeek({ activity: () => new Promise((resolve, reject) => weekReads.push({ resolve, reject })),
+  github: async () => ({ state: "off" }), saveImage: async () => { weekEffects.push("save"); return null; },
+  setHistory: async () => { weekEffects.push("history"); }, clear: async () => { weekEffects.push("clear"); }, connectors: () => weekEffects.push("settings") });
+const weekPage = weekUI.element.shadowRoot.querySelector(".page");
+weekUI.refresh(); assert.ok(weekPage.textContent.includes("Reading the history"));
+weekReads[0].reject(new Error("History unavailable")); await tick();
+assert.ok(weekPage.textContent.includes("Could not load This week"));
+assert.ok(!weekPage.textContent.includes("Reading the history"));
+const weekRetry = weekPage.querySelectorAll("button").find(b => b.textContent === "Try again");
+weekRetry.focus(); weekRetry.fire("click"); weekRetry.fire("click"); assert.equal(weekReads.length, 2);
+const recap = { history: true, today: "2026-10-15", weeks: ["2026-10-12"], grid: [],
+  week: { monday: "2026-10-12", sunday: "2026-10-18", turns: 0, headline: "Known recap", projects: [], days: [0, 0, 0, 0, 0, 0, 0] } };
+weekReads[1].resolve(recap); await tick(); assert.ok(weekPage.textContent.includes("Known recap"));
+weekUI.refresh(); weekReads[2].reject(new Error("Stale recap")); await tick();
+assert.ok(weekPage.textContent.includes("Known recap")); assert.ok(weekPage.textContent.includes("last loaded view is kept"));
+weekUI.refresh(); const oldWeek = weekReads.at(-1); weekUI.refresh(); weekReads.at(-1).resolve(recap); await tick();
+oldWeek.reject(new Error("Obsolete")); await tick(); assert.equal(weekPage.querySelector(".view-state.error"), null);
+assert.deepEqual(weekEffects, [], "Retrying the recap never clears, exports or changes history settings");
+console.log("check-surface-continuity: Week initial error/retry, retained recap and obsolete read rejection without setting/export actions");

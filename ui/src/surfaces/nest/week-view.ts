@@ -3,58 +3,50 @@
 // to inspect) beside *Keep a small recap*; the year's grid and the history's switches under them.
 // Only what this computer counted: no figure the history does not hold.
 import { el } from "../../dom";
-import { t } from "../../i18n";
+import { locale, t } from "../../i18n";
 import { AGENT, duration, gridCard, historyCard, weekday, weekdays, weekLabel, type Activity, type ActivityActions, type ActivityView } from "../settings/activity";
 import { button, toggle } from "../settings/pieces";
+import { viewState } from "./view-state";
 
 /** The prototype's look for this page, over the settings pages' own (both in the Week's shadow root). */
 export const WEEK_CSS = `
-.screen-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 8px; }
-.screen-kicker { margin-bottom: 7px; font: 9px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: #9da29b; }
-.screen-heading h2 { margin: 0; font-size: 25px; font-weight: 550; line-height: 1.3; letter-spacing: -0.85px; }
-.screen-heading p { margin: 7px 0 0; font-size: 12px; line-height: 1.65; color: var(--fg-dim); }
-.screen-actions { display: flex; gap: 8px; }
-.screen-actions button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid #3a3d44; border-radius: 6px; background: none; color: var(--fg); font-size: 13px; cursor: pointer; }
-.screen-actions button:disabled { opacity: 0.4; cursor: default; }
-.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid #292c32; border-radius: 8px; background: #101114; }
-.metric { padding: 20px; border-right: 1px solid #292c32; min-width: 0; }
-.metric:last-child { border-right: 0; }
-.metric strong { display: block; font-size: 27px; font-weight: 500; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
-.metric span { font-size: 11px; color: var(--fg-dim); }
-.metric small { display: block; margin-top: 9px; font: 9px var(--mono); color: #a0b495; }
-.screen-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr); gap: 16px; }
-.surface-card, .card { min-width: 0; padding: 20px; border: 1px solid #292b31; border-radius: 8px; background: #101114; }
-.surface-card h3 { margin: 0; font-size: 15px; font-weight: 550; letter-spacing: -0.2px; }
-.surface-card p { margin: 6px 0 0; font-size: 12px; line-height: 1.8; color: var(--fg-dim); }
-.week-chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; height: 170px; margin-top: 20px; }
-.day-column { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; padding: 0 3px; border: 0; border-radius: 5px; background: none; color: var(--fg-dim); cursor: pointer; font: inherit; }
-.bar-track { display: flex; align-items: flex-end; width: 100%; max-width: 30px; height: 100%; border-radius: 3px; background: #1d2025; }
-.bar-fill { width: 100%; border-radius: 2px; background: #6f8266; transition: height 0.25s, background 0.15s; }
-.day-column:hover .bar-fill, .day-column[aria-pressed="true"] .bar-fill { background: #b1c4a1; }
-.day-column span { font: 10px var(--mono); }
-.day-column[aria-pressed="true"] span { color: #d3dfc9; }
-.chart-detail { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #23262b; font-size: 11px; color: var(--fg-dim); }
-.chart-detail strong { font-weight: 550; color: var(--fg); }
-.surface-card .week-most { margin-top: 12px; font-size: 11px; color: var(--fg-dim); }
-.lede { margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg-dim); }
-.recap-card .share-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-bottom: 15px; border-bottom: 1px solid #23262b; }
+.activity-heading, .activity-summary { margin-bottom: 0; }
+.screen-actions { display: flex; flex: none; gap: 4px; padding: 4px; border-radius: 999px; background: var(--raised); }
+.screen-actions button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: none; color: var(--fg); font-size: 20px; cursor: pointer; }
+.screen-actions button:hover:not(:disabled) { background: var(--float); }
+.screen-actions button:disabled { opacity: 0.35; cursor: default; }
+.activity-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.screen-columns { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
+.card { min-width: 0; padding: 20px; border-color: var(--border); border-radius: var(--radius-card); background: var(--panel); }
+.week-chart { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; height: 180px; margin-top: 24px; }
+.day-column { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; padding: 6px 4px; border: 0; border-radius: var(--radius-control); background: none; color: var(--fg-dim); cursor: pointer; font: inherit; transition: background-color var(--motion-fast) var(--ease-out); }
+.day-column:hover, .day-column[aria-pressed="true"] { background: var(--raised); }
+.bar-track { display: flex; align-items: flex-end; flex: 1; width: 100%; max-width: 28px; min-height: 0; border-radius: 6px; background: var(--raised); }
+.bar-fill { width: 100%; border-radius: 6px; background: var(--fg-muted); transition: height var(--motion-enter) var(--ease-out), background-color var(--motion-fast) var(--ease-out); }
+.day-column:hover .bar-fill, .day-column[aria-pressed="true"] .bar-fill { background: var(--mark); }
+.day-column span { font-size: 11px; font-variant-numeric: tabular-nums; }
+.day-column .day-total { font: 11px var(--mono); white-space: nowrap; }
+.day-column[aria-pressed="true"] span { color: var(--fg); }
+.chart-detail { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 16px; padding: 12px; border-radius: var(--radius-control); background: var(--raised); color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart-detail strong { color: var(--fg); font-weight: 600; }
+.week-most { margin: 12px 0 0; }
+.recap-card .share-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 16px 0; border-top: 1px solid var(--border); }
 .recap-card .share-row strong { display: block; font-size: 12px; font-weight: 550; }
-.recap-card .share-row small { font-size: 10px; color: var(--fg-dim); }
-.recap-card > .btn { width: 100%; min-height: 36px; margin-top: 18px; border: 1px solid #3a3d44; border-radius: 6px; background: none; color: var(--fg); font-size: 12px; font-weight: 500; }
-.recap-card > .btn:hover { border-color: #6b7065; background: #1c1e22; }
-.recap-card .note { margin-top: 10px; }
-.card-head .card-title { font-size: 15px; font-weight: 550; }
+.recap-card .share-row small { color: var(--fg-dim); font-size: 11px; }
+.recap-card > .btn { width: 100%; min-height: 36px; margin-top: 8px; border: 0; border-radius: var(--radius-control); background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 600; }
+.recap-card > .btn:hover { background: var(--mark); }
+.recap-card .note { margin-top: 12px; }
+.card-head .card-title { font-size: 14px; font-weight: 600; }
 @media (max-width: 760px) {
-  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .metric:nth-child(2) { border-right: 0; }
-  .metric:nth-child(-n + 2) { border-bottom: 1px solid #292c32; }
+  .activity-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .screen-columns { grid-template-columns: 1fr; }
 }
+@media (max-width: 600px) { .card { padding: 16px; } .week-chart { gap: 4px; } }
 `;
 
 /** The page; `day` is the day shown under the bars (Monday is 0), `pick` changes it. */
 export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityActions, day: number | null, pick: (d: number) => void): HTMLElement[] {
-  if (!a) return [el("section", { class: "surface-card" }, el("p", { text: t("Reading the history…") }))];
+  if (!a) return [viewState("loading", t("Reading the history…"))];
   const w = a.week;
   const i = a.weeks.indexOf(w.monday);
   const older = i >= 0 && i < a.weeks.length - 1 ? a.weeks[i + 1] : null;
@@ -68,21 +60,21 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
   };
   const heading = el(
     "header",
-    { class: "screen-heading" },
+    { class: "activity-heading" },
     el(
       "div",
       {},
-      el("div", { class: "screen-kicker", text: t("Activity / on this computer") }),
+      el("div", { class: "activity-eyebrow", text: t("Activity / on this computer") }),
       el("h2", { text: i === 0 ? t("This week") : weekLabel(w.monday, w.sunday) }),
       i === 0 ? el("p", { text: weekLabel(w.monday, w.sunday) }) : null,
     ),
     el("div", { class: "screen-actions" }, nav("‹", t("Older week"), older), nav("›", t("Newer week"), newer)),
   );
   // What is counted, and that nothing leaves: said once, under the heading.
-  const lede = el("p", { class: "lede", text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.") });
-  if (!w.turns) return [heading, lede, el("section", { class: "surface-card" }, el("p", { text: w.headline })), gridCard(a, view, on), historyCard(a, view, on)];
+  const lede = el("details", { class: "activity-privacy" }, el("summary", { text: t("How activity is counted") }), el("p", { text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.") }));
+  if (!w.turns) return [heading, lede, viewState("empty", w.headline), gridCard(a, view, on), historyCard(a, view, on)];
   const metric = (value: string, label: string, small: string) =>
-    el("div", { class: "metric" }, el("strong", { text: value }), el("span", { text: label }), el("small", { text: small }));
+    el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }), el("small", { text: small }));
   const names = weekdays();
   const top = Math.max(1, ...w.days);
   // A week with turns but no time counted has no busiest day: nothing is picked until asked.
@@ -94,7 +86,10 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
     ...w.days.map((secs, d) => {
       const fill = el("div", { class: "bar-fill" });
       fill.style.height = `${Math.round((secs / top) * 100)}%`;
-      const b = el("button", { class: "day-column", onclick: () => pick(d) }, el("div", { class: "bar-track" }, fill), el("span", { text: names[d] }));
+      const total = !secs ? "—" : secs < 60 ? t("<1 min") : secs < 3600
+        ? t("{m} min", { m: Math.floor(secs / 60) })
+        : t("{h} h", { h: (secs / 3600).toLocaleString(locale(), { maximumFractionDigits: 1 }) });
+      const b = el("button", { class: "day-column", onclick: () => pick(d) }, el("span", { class: "day-total", text: total }), el("div", { class: "bar-track" }, fill), el("span", { text: names[d] }));
       b.dataset.day = String(d);
       b.title = `${names[d]}: ${duration(secs)}`;
       b.setAttribute("aria-label", b.title);
@@ -118,7 +113,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
     el("p", { class: "week-headline", text: w.headline }),
     el(
       "div",
-      { class: "metric-grid" },
+      { class: "activity-summary" },
       metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) })),
       metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps })),
       metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files })),
@@ -133,13 +128,12 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
     ),
     // The period and its totals answer first; the counting policy can stay nearby without
     // interrupting the scan.
-    lede,
     el(
       "div",
       { class: "screen-columns" },
       el(
         "section",
-        { class: "surface-card" },
+        { class: "activity-card" },
         el("h3", { text: t("Time with the flock") }),
         chart,
         el("div", { class: "chart-detail" }, shown === null ? null : el("strong", { text: `${names[shown]} · ${duration(w.days[shown])}` }), el("span", { text: t("Select a day to inspect") })),
@@ -147,7 +141,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
       ),
       el(
         "section",
-        { class: "surface-card recap-card" },
+        { class: "activity-card recap-card" },
         el("h3", { text: t("Keep a small recap") }),
         el("p", { text: t("Time, turns and decisions from this computer. Choose how much to share.") }),
         // A label around the switch: its words are its name.
@@ -162,6 +156,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
       ),
     ),
     gridCard(a, view, on),
+    lede,
     historyCard(a, view, on),
   ];
 }

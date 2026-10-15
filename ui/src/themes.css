@@ -37,7 +37,29 @@
   --mark: #e2e6da; /* the pressed size, the chosen tab's underline */
   --chrome-icon: #adb2bb; /* the header's icon buttons */
 
+  --input: #0f1013;
+  --control-border: #2c2f35;
+  --border-hover: #3a3d44;
+  --focus-border: color-mix(in srgb, var(--accent) 45%, var(--control-border));
+  --focus-shadow: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
+  --radius-control: 7px;
+  --radius-card: 10px;
+  --radius-code: 12px;
+  --radius-composer: 20px;
+  --radius-message: 18px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-fast: 160ms;
+  --motion-enter: 220ms;
+  --ease-shine: cubic-bezier(0.714, 0.121, 0.211, 0.888);
+
   --font: Inter, system-ui, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", monospace;
   color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-enter: 0ms;
+  }
 }

@@ -374,7 +374,9 @@ export function createNestFoot(on: NestFootActions): NestFoot {
   const relabel = () => {
     zecaButton.textContent = zeca ? t("Zeca on · optional") : t("Zeca off");
     zecaButton.setAttribute("aria-pressed", String(zeca));
-    lookButton.textContent = t("Zeca's look");
+    lookButton.replaceChildren(icon("pencil", 14));
+    lookButton.title = t("Zeca's look");
+    lookButton.setAttribute("aria-label", t("Zeca's look"));
     lookButton.hidden = !zeca;
     terminal.replaceChildren(
       icon("terminal", 13),
@@ -399,8 +401,7 @@ export function createNestFoot(on: NestFootActions): NestFoot {
       "footer",
       { class: "app-footer" },
       el("span", { class: "companion" }, canvas, zecaButton, lookButton),
-      terminal,
-      island,
+      el("span", { class: "footer-actions" }, terminal, island),
     ),
     setZeca: (z) => {
       zeca = z;

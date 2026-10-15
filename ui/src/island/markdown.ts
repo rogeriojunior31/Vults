@@ -1,84 +1,25 @@
-// Just enough Markdown for chat replies: fenced code (with a copy button), inline code, bold, and
-// lists. Built as DOM nodes, never innerHTML, so a reply can't inject anything.
+// Chat Markdown is built as DOM nodes, never HTML. Links are text and never followed.
 import { el } from "../dom";
 import { t } from "../i18n";
-
-/** `**bold**` and `` `code` `` inside one line. */
-function inline(text: string): Node[] {
-  const out: Node[] = [];
-  const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*)/g;
-  let last = 0;
-  for (const m of text.matchAll(re)) {
-    if (m.index! > last) out.push(document.createTextNode(text.slice(last, m.index)));
-    const token = m[0];
-    if (token.startsWith("`")) out.push(el("code", { text: token.slice(1, -1) }));
-    else out.push(el("strong", { text: token.slice(2, -2) }));
-    last = m.index! + token.length;
-  }
-  if (last < text.length) out.push(document.createTextNode(text.slice(last)));
-  return out;
-}
+import { copyTextButton } from "../clipboard";
 
 /** A fenced block: its language (the fence's first word) and Copy over the code. */
 function codeBlock(code: string, info = ""): HTMLElement {
   const lang = info.trim().split(/\s+/)[0] ?? "";
-  const copy = el("button", {
-    class: "copy",
-    text: t("Copy"),
-    onclick: () => {
-      void navigator.clipboard?.writeText(code).then(() => {
-        copy.textContent = t("Copied");
-        window.setTimeout(() => (copy.textContent = t("Copy")), 1200);
-      });
-    },
-  });
+  const copy = copyTextButton(code, "copy", t("Copy code"));
+  const pre = el("pre", { text: code });
+  pre.tabIndex = 0;
+  pre.setAttribute("role", "region");
+  pre.setAttribute("aria-label", lang ? t("Code in {language}", { language: lang }) : t("Code"));
   return el(
     "div",
     { class: "codeblock" },
     el("div", { class: "code-head" }, el("span", { class: "code-lang", text: lang }), copy),
-    el("pre", { text: code }),
+    pre,
   );
 }
 
-export function renderLite(text: string): DocumentFragment {
-  const frag = document.createDocumentFragment();
-  // Fences split the text; an unclosed fence (still streaming) is code to the end.
-  // The capture keeps each fence's info: [text, info, code, text, …].
-  const parts = text.split(/^```([^\n]*)\n?/m);
-  parts.forEach((part, i) => {
-    if (i % 3 === 1) return;
-    if (i % 3 === 2) {
-      frag.append(codeBlock(part.replace(/\n$/, ""), parts[i - 1]));
-      return;
-    }
-    let list: HTMLElement | null = null;
-    let para: string[] = [];
-    const flush = () => {
-      if (para.length) frag.append(el("p", {}, ...inline(para.join("\n"))));
-      para = [];
-    };
-    for (const line of part.split("\n")) {
-      const item = /^\s*(?:[-*•]|\d+[.)])\s+(.*)$/.exec(line);
-      if (item) {
-        flush();
-        list ??= el("ul", {});
-        list.append(el("li", {}, ...inline(item[1])));
-        continue;
-      }
-      if (list) {
-        frag.append(list);
-        list = null;
-      }
-      if (line.trim() === "") flush();
-      else para.push(line);
-    }
-    flush();
-    if (list) frag.append(list);
-  });
-  return frag;
-}
-
-/** `[label](url)`, `*italic*` and `_italic_` too, for the Nest's full Markdown. A link is never
+/** `[label](url)`, `*italic*` and `_italic_` too, for full chat replies. A link is never
  *  followed: its label shows with the address beside it, to copy. */
 function inlineFull(text: string): Node[] {
   const out: Node[] = [];
@@ -106,8 +47,7 @@ function cells(line: string): string[] {
 
 const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
 
-/** Everything a reply may use in the Nest: headings, quotes, rules, tables, numbered and plain
- *  lists, emphasis and links (shown, never followed), on top of what `renderLite` reads. */
+/** The same readable reply structure in Quick and Room, including incomplete streamed fences. */
 export function renderFull(text: string): DocumentFragment {
   const frag = document.createDocumentFragment();
   // The capture keeps each fence's info: [text, info, code, text, …].
@@ -149,7 +89,11 @@ export function renderFull(text: string): DocumentFragment {
           body.append(el("tr", {}, ...cells(lines[n]).map((c) => el("td", {}, ...inlineFull(c)))));
         n--;
         table.append(body);
-        frag.append(el("div", { class: "table" }, table));
+        const region = el("div", { class: "table" }, table);
+        region.tabIndex = 0;
+        region.setAttribute("role", "region");
+        region.setAttribute("aria-label", t("Table"));
+        frag.append(region);
         continue;
       }
       if (/^\s*>/.test(line)) {

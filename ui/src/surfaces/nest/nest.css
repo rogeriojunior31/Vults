@@ -1,6 +1,8 @@
 /* The chat panel's look comes from the island; the Nest lays it out as a whole window. */
 @import "../../island/island.css";
 @import "./head.css";
+@import "./activity.css";
+@import "./view-state.css";
 
 /* The chat panel's own ground: its code blocks and cards are drawn against it. */
 /* The window is transparent: the page draws the prototype's frame, rounded, with its border. */
@@ -19,9 +21,9 @@ body {
   height: 100vh;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid #24262c;
+  border: 1px solid var(--chrome-line);
   border-radius: 13px;
-  background: var(--panel);
+  background: var(--bg);
 }
 /* Full: the whole screen, square. */
 #nest.full {
@@ -40,6 +42,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
 .nest-chat-body {
   flex: 1;
@@ -105,9 +108,9 @@ body {
   flex: none;
   width: 30px;
   height: 30px;
-  border: 1px solid #2b2e33;
+  border: none;
   border-radius: 7px;
-  background: #101114;
+  background: var(--float);
   color: var(--chrome-icon);
 }
 .chat-ico:hover,
@@ -134,22 +137,22 @@ body {
   margin: 0;
   padding: 0;
 }
-/* The pickers as the prototype's bordered controls. */
+/* The title bar groups the pickers; quiet fills keep their labels distinct. */
 .chat-titlebar .chat-head > * > .place,
 .chat-titlebar .chat-head > .ghost,
 .chat-titlebar .chat-head > .history-box > .ghost {
   box-sizing: border-box;
   min-height: 30px;
   padding: 4px 10px;
-  border: 1px solid #3a3d44;
+  border: none;
   border-radius: 6px;
-  background: #0f1013;
+  background: var(--float);
   font-size: 12px;
   color: var(--fg);
 }
 .chat-titlebar .chat-head > .ghost:hover,
 .chat-titlebar .chat-head > * > .place:hover {
-  border-color: #6b7065;
+  background: var(--raised);
 }
 /* At the window's right, the pickers' menus open leftwards: from their left edge they would run
    past it. */
@@ -157,18 +160,8 @@ body {
   right: 0;
   left: auto;
 }
-/* Wide, Recent lists the conversations: the chat's own list button would say it twice. */
-@media (min-width: 900px) {
-  .nest-chat:not(.no-recent) .chat-titlebar .history-box {
-    display: none;
-  }
-}
-/* Between 900 and 1100 px with Memory open, Recent gives way, and so does its button. */
-@media (max-width: 1100px) {
-  .nest-chat:has(.nest-memory:not([hidden])) .chat-titlebar .recent-toggle {
-    display: none;
-  }
-}
+/* One history entry point opens either the sidebar or the narrow view. */
+.chat-titlebar .history-box { display: none; }
 /* Narrow, the pickers take a line of their own under the title. */
 @media (max-width: 760px) {
   .chat-titlebar {
@@ -180,15 +173,8 @@ body {
     justify-content: flex-start;
   }
 }
-/* Recent shows only in a wide window: its button too. */
-@media (max-width: 899px) {
-  .chat-titlebar .recent-toggle {
-    display: none;
-  }
-}
-/* Recent hidden by its button (the title bar's left icon). */
-.nest-chat.no-recent .nest-recent {
-  display: none;
+@media (min-width: 900px) {
+  .nest-chat.no-recent .nest-recent { display: none; }
 }
 /* The gear: Settings. */
 /* Activity: its sub-tabs, then the part chosen. */
@@ -197,44 +183,80 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
-/* Activity's parts, underlined as the prototype's detail tabs. */
+/* One navigation track; narrow windows scroll it instead of adding a second header row. */
 .nest-subs {
   display: flex;
   flex: none;
-  flex-wrap: wrap;
-  gap: 18px;
-  padding: 0 26px;
-  border-bottom: 1px solid #1d1f24;
+  align-self: flex-start;
+  gap: 4px;
+  max-width: calc(100% - 48px);
+  box-sizing: border-box;
+  overflow-x: auto;
+  margin: 16px 24px 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--float);
+  scrollbar-width: thin;
 }
 .nest-sub {
-  position: relative;
-  padding: 12px 0 11px;
+  flex: none;
+  min-height: 32px;
+  padding: 6px 14px;
+  border-radius: 999px;
   color: var(--fg-dim);
   font-size: 12px;
   line-height: 1.2;
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
 .nest-sub:hover {
   color: var(--fg);
 }
 .nest-sub.on {
   color: var(--fg);
+  background: var(--raised);
 }
-.nest-sub.on::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: #b1b8a5;
+/* Workspace cards and actions share Activity's surface hierarchy. */
+.task, .task-spend, .conn-detail, .conn-waiting, .nest-connections .nest-add {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--panel);
 }
+.tasks > .activity-heading, .nest-connections > .activity-heading { margin-bottom: 0; }
+.tasks > .activity-heading { flex-wrap: wrap; }
+.tasks > .activity-heading .proposal-actions { flex-wrap: wrap; }
+.nest-connections > .nest-subs { max-width: 100%; margin: 0; }
+.tasks .btn, .task-spend .btn, .nest-connections :is(button.outline, button.primary) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--raised);
+  color: var(--fg);
+  font: 500 12px/1.4 var(--font);
+  white-space: normal;
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
+}
+.tasks .btn:hover:not(:disabled), .task-spend .btn:hover:not(:disabled), .nest-connections .outline:hover:not(:disabled) { background: var(--border-hover); }
+.tasks .btn.primary, .nest-connections button.primary { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.tasks .btn.primary:hover:not(:disabled), .nest-connections button.primary:hover:not(:disabled) { background: var(--fg-bright); }
+.tasks .btn:disabled, .task-spend .btn:disabled, .nest-connections :is(button.outline, button.primary):disabled { opacity: 0.5; cursor: default; }
+.task-select, .task-issue-input, .task-budget-input, .task-goal-input, .task-criteria-input, .conn-repo { box-sizing: border-box; }
+:is(.task-select, .task-issue-input, .task-budget-input, .task-goal-input, .task-criteria-input, .conn-repo):focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-shadow); outline: none; }
+
 /* Connections (the prototype's): connector chips, the chosen one's head and tabs, its rows by
    group beside the one picked. */
 .nest-connections {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 .conn-chips {
   display: flex;
@@ -247,26 +269,22 @@ body {
   gap: 8px;
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid #2b2e33;
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: #101114;
+  background: var(--float);
   font-size: 12px;
   color: var(--fg-dim);
 }
 .conn-chip.on {
-  border-color: #3a3d44;
+  border-color: var(--border-hover);
   background: var(--raised);
   color: var(--fg);
-}
-.conn-chip.add {
-  padding: 0 11px;
-  font-size: 14px;
 }
 .conn-count {
   padding: 1px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  font: 9px var(--mono);
+  background: var(--raised);
+  font: 11px/1.5 var(--mono);
 }
 .conn-head {
   display: flex;
@@ -274,15 +292,10 @@ body {
   justify-content: space-between;
   gap: 14px;
 }
-.conn-head h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 550;
-  letter-spacing: -0.6px;
-}
 .conn-status {
   margin: 6px 0 0;
-  font: 10px var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
   color: var(--fg-dim);
 }
 .conn-status::before {
@@ -302,43 +315,6 @@ body {
   flex-wrap: wrap;
   gap: 8px;
 }
-.nest-connections .outline {
-  min-height: 30px;
-  padding: 5px 11px;
-  border: 1px solid #3a3d44;
-  border-radius: 6px;
-  font-size: 11px;
-}
-.nest-connections .outline:hover:not(:disabled) {
-  border-color: #6b7065;
-  background: var(--raised);
-}
-.nest-connections .outline:disabled {
-  opacity: 0.5;
-}
-.nest-connections .primary {
-  min-height: 32px;
-  margin-top: 16px;
-  padding: 7px 12px;
-  border-radius: 6px;
-  background: #e8eae4;
-  color: #111;
-  font-size: 12px;
-  font-weight: 650;
-}
-.conn-tabs .detail-tab.on {
-  background: none;
-  color: var(--fg);
-}
-.conn-tabs .detail-tab.on::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: #b1b8a5;
-}
 .conn-body {
   display: grid;
   gap: 16px;
@@ -346,7 +322,7 @@ body {
 @media (min-width: 900px) {
   .conn-body {
     grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
-    align-items: start;
+    align-items: stretch;
   }
 }
 .conn-list {
@@ -357,20 +333,20 @@ body {
 }
 .conn-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   width: 100%;
-  padding: 10px 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radius-control);
   text-align: left;
 }
 .conn-row:hover {
-  background: #17191d;
+  background: var(--float);
 }
 .conn-row.on {
-  border-color: #2c2e35;
   background: var(--raised);
+  box-shadow: inset 2px 0 var(--mark);
 }
 .conn-row svg,
 .conn-detail-head svg {
@@ -397,55 +373,81 @@ body {
 }
 .conn-row-words strong {
   overflow: hidden;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .conn-row-words small {
-  font: 10px var(--mono);
+  font: 13px var(--font);
   color: var(--fg-dim);
 }
 .conn-tag {
   flex: none;
   padding: 2px 7px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  font: 9px var(--mono);
+  background: var(--raised);
+  font: 11px/1.5 var(--mono);
   color: var(--fg-dim);
 }
 .conn-tag.approved,
 .conn-tag.passing {
-  background: #22c55e14;
-  color: #71dc94;
+  background: color-mix(in srgb, var(--ok) 8%, transparent);
+  color: var(--ok);
 }
 .conn-tag.changes,
 .conn-tag.failing {
-  background: #f4505e14;
-  color: #ff8d97;
+  background: color-mix(in srgb, var(--error-text) 8%, transparent);
+  color: var(--error-text);
 }
 .conn-tag.requested {
-  background: #8fb4e814;
-  color: #8fb4e8;
+  background: var(--raised);
+  color: var(--fg);
 }
 .conn-tag.latest {
-  background: #9aa3ff14;
-  color: #9aa3ff;
+  background: var(--raised);
+  color: var(--fg);
 }
 .conn-tag.prerelease {
-  background: #f5a52414;
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
   color: var(--warn);
 }
 .conn-tag.running {
-  background: #f5a52414;
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
   color: var(--warn);
 }
 .conn-detail {
-  padding: 18px 20px;
-  border: 1px solid #292b31;
-  border-radius: 8px;
-  background: #101114;
+  min-width: 0;
+  padding: 20px;
+  overflow-wrap: anywhere;
 }
+.conn-technical {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.conn-technical > summary {
+  cursor: pointer;
+  min-height: 32px;
+  padding: 12px 0 4px;
+  color: var(--fg-dim);
+}
+.conn-technical .context-dl { margin-top: 12px; }
+.conn-review, .conn-check-summary {
+  margin: 8px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+}
+.conn-check-summary { font-variant-numeric: tabular-nums; }
+.conn-row-words small { overflow-wrap: anywhere; line-height: 1.6; }
+.conn-row-words strong { line-height: 1.5; }
+.conn-detail-head { flex-wrap: wrap; }
+.conn-detail-head .conn-tag { margin-left: auto; }
+.conn-technical .conn-cmd { border: none; }
+.conn-technical .conn-cmd code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.conn-cmd button { min-width: 32px; min-height: 32px; }
 .conn-detail-head {
   display: flex;
   align-items: center;
@@ -455,14 +457,66 @@ body {
 }
 .conn-detail h3 {
   margin: 12px 0 16px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
+}
+/* The frame stays available while the list and selected item scroll independently. */
+.nest-pane.nest-connections-pane { display: flex; overflow: hidden; }
+.nest-connections { flex: 1; min-height: 0; min-width: 0; overflow-y: auto; scrollbar-width: thin; }
+.conn-head, .conn-tabs, .conn-toolbar, .conn-chips { flex: none; }
+.conn-status.pending::before { background: var(--fg-muted); }
+.conn-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.conn-search-box { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 0; padding: 0 10px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--input); color: var(--fg-dim); }
+.conn-search-box:focus-within { border-color: var(--focus-border); box-shadow: var(--focus-shadow); }
+.conn-search:focus-visible { outline: none; }
+.conn-search-box > svg { flex: none; }
+.conn-search { width: 100%; min-width: 0; min-height: 34px; padding: 6px 0; box-sizing: border-box; border: 0; background: transparent; color: var(--fg); font: 13px var(--font); }
+.conn-search::placeholder { color: var(--fg-muted); }
+.conn-results { color: var(--fg-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.conn-body { flex: 1 0 80px; min-height: 80px; grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+.conn-body:not(:has(> .conn-detail)) { grid-template-columns: minmax(0, 1fr); }
+.conn-list, .conn-detail { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.conn-list { padding: 2px; }
+.conn-list .records-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-inline: 12px; }
+.conn-list .records-head .conn-count { background: transparent; }
+.conn-row { margin-bottom: 4px; transition: background-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out); }
+.conn-row > svg { margin-top: 3px; }
+.conn-row-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.conn-seen { font-size: 10px; color: var(--fg-dim); }
+.conn-context { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 16px; font: 11px/1.6 var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-dim); }
+.conn-check-list { margin-top: 20px; border-top: 1px solid var(--border); }
+.conn-check-list > summary { display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; color: var(--fg); font-size: 12px; }
+.conn-check-list > summary::after { content: "+"; margin-left: auto; color: var(--fg-dim); }
+.conn-check-list[open] > summary::after { content: "−"; }
+.conn-check-list .conn-check-summary { margin: 0; color: var(--fg-dim); }
+.conn-check-list .conn-checks { border: 0; padding-top: 4px; }
+.conn-check-list .conn-check { align-items: baseline; padding-block: 4px; line-height: 1.5; }
+.conn-check-list .conn-check span:first-of-type { white-space: normal; overflow-wrap: anywhere; }
+.conn-waiting, .nest-connections .nest-add { padding: 20px; }
+.conn-waiting h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.conn-waiting p { color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
+.nest-connections :is(.conn-detail, .conn-list):focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (max-width: 760px) {
+  .conn-head { flex-direction: row; flex-wrap: wrap; }
+  .conn-actions { width: auto; }
+  .conn-toolbar .conn-repo { flex: 1 1 150px; }
+  .conn-toolbar .conn-results { margin-left: auto; }
+}
+@media (max-height: 480px) {
+  .nest-connections { gap: 6px; }
+  .nest-connections .conn-head { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  .nest-connections .conn-actions { width: auto; }
+  .nest-connections .conn-head h2 { font-size: 16px; }
+  .nest-connections .conn-status { margin-top: 2px; }
 }
 /* The whole window is the chat: none of the island's card around it. */
 .nest-chat .chat {
-  display: flex;
+  display: grid;
   flex: 1;
   min-height: 0;
+  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: 16px;
   width: auto;
   height: auto;
   padding: 10px 16px 14px;
@@ -470,10 +524,18 @@ body {
   border-radius: 0;
   background: transparent;
 }
-/* Zeca sits on the island; here the conversation takes the whole width. */
+/* A separate perch keeps the companion visible while only the transcript scrolls. */
 .nest-chat .chat-perch {
-  display: none;
+  display: block;
+  align-self: start;
+  width: 112px;
+  height: 108px;
+  margin-top: 16px;
 }
+.nest-chat .chat:has(.log > .hint:first-child) .chat-perch { align-self: center; margin-top: 0; }
+.nest-chat .chat-character { position: relative; width: 112px; height: 108px; border-radius: var(--radius-card); }
+.nest-chat .chat-character .perch { left: 0; top: 0; transform: none; }
+.nest-chat .chat-character:hover { background: var(--float); }
 .nest-chat .chat-main {
   flex: 1;
   min-height: 0;
@@ -486,10 +548,11 @@ body {
    window's whole width is hard to follow. The log itself stays wide, so its scrollbar keeps to the
    window's edge. */
 .nest-chat .log {
+  box-sizing: border-box;
   max-height: none;
   height: 100%;
-  gap: 14px;
-  padding: 6px max(4px, calc((100% - 720px) / 2)) 12px;
+  gap: 20px;
+  padding: 20px max(4px, calc((100% - 720px) / 2)) 24px;
   font-size: 14px;
 }
 .nest-chat .msg.zeca {
@@ -497,7 +560,7 @@ body {
 }
 /* A new turn starts a little apart from the reply before it. */
 .nest-chat .msg.you:not(:first-child) {
-  margin-top: 10px;
+  margin-top: 12px;
 }
 /* A turn's reply signed: Zeca's figure, his name and the engine that wrote it. */
 .nest-chat .msg-who {
@@ -525,7 +588,7 @@ body {
   overflow: hidden;
   margin: 10px 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-code);
 }
 .nest-chat .code-head {
   position: static;
@@ -535,7 +598,7 @@ body {
   gap: 8px;
   padding: 4px 6px 4px 12px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--float);
 }
 .nest-chat .code-lang {
   display: block;
@@ -558,46 +621,43 @@ body {
   max-width: 720px;
   margin: 6px auto 0;
   color: var(--fg-muted);
-  font-size: 11px;
+  font: 13px var(--font);
   text-align: center;
 }
-/* The composer, the prototype's rounded box: the words on top, the mic and send under them. */
+/* One writing surface contains the draft, file cards and its own action row. */
 .nest-chat .composer {
-  flex-wrap: wrap;
-  align-items: center;
   width: 100%;
   max-width: 720px;
   margin: 8px auto 0;
-  padding: 12px 14px 10px;
-  border: 1px solid #2c2e35;
-  border-radius: 12px;
-  background: #0f1013;
+  padding: 16px 16px 12px;
   box-sizing: border-box;
 }
-.nest-chat .composer:focus-within {
-  border-color: #6b7065;
-}
 .nest-chat .composer .wave {
-  box-shadow: none;
+  height: 64px;
 }
 .nest-chat .composer textarea {
-  flex: 1 0 100%;
   /* A Nest has room for a thought before it becomes a message. */
-  min-height: 44px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  min-height: 64px;
   font-size: 14px;
 }
-.nest-chat .composer .wave {
-  flex: 1 0 100%;
+.nest-chat .suggestions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.nest-chat .composer .send {
-  width: 28px;
-  height: 28px;
-  margin-left: auto;
-  border-radius: 6px;
+.nest-chat .suggestion {
+  align-items: flex-start;
+  min-height: 64px;
+  padding: 12px;
+  line-height: 1.5;
+}
+.nest-chat .suggestion > svg:first-child {
+  display: none;
+}
+.nest-chat .chat-greeting {
+  font-size: 20px;
+}
+@media (max-width: 600px) {
+  .nest-chat .suggestions { grid-template-columns: 1fr; }
+  .nest-chat .suggestion { min-height: 36px; padding: 8px 12px; }
 }
 /* A short Nest keeps both the message box and its footer reachable. */
 @media (max-height: 480px) {
@@ -610,90 +670,55 @@ body {
     gap: 4px;
   }
   .nest-chat .chat {
+    grid-template-columns: minmax(0, 1fr);
     padding: 0 12px;
   }
+  .nest-chat .chat-perch { display: none; }
+  .nest-chat .chat-main { gap: 4px; }
   .nest-chat .composer {
     margin-top: 0;
-    padding: 3px 8px;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
   }
   .nest-chat .composer textarea {
     min-height: 24px;
+    max-height: 48px;
+    padding: 0;
   }
+  .nest-chat .composer-tools :is(.send, .attach, .mic) { height: 28px; }
+  .nest-chat .composer-tools :is(.send, .mic) { width: 28px; }
+  .nest-chat .composer .chips { display: flex; max-height: 32px; gap: 6px; padding: 0; }
+  .nest-chat .composer .chips:empty { display: none; }
+  .nest-chat .composer .chip { flex: none; width: 180px; height: 32px; box-sizing: border-box; padding: 2px 6px; align-items: center; }
+  .nest-chat .file-info { max-height: 28px; overflow-y: auto; }
+  .nest-chat .file-icon { width: 20px; height: 28px; }
+  .nest-chat .log { padding-top: 4px; padding-bottom: 4px; gap: 12px; }
+  .nest-chat .log-box { min-height: 40px; }
+  .nest-chat .composer .wave { height: 24px; }
   .nest-chat .composer-hint {
     display: none;
   }
 }
-/* A conversation with nothing said yet (its log holds only the hint): the composer waits in the
-   middle, the hint and the suggestions under it, as in the prototype. */
+/* Empty conversations introduce the actions above the composer, in the same reading column. */
 .nest-chat .chat-main:has(.log > .hint:first-child) {
   justify-content: safe center;
 }
 .nest-chat .chat-main:has(.log > .hint:first-child) .log-box {
   flex: 0 1 auto;
   overflow-y: auto;
-  order: 1;
   max-width: 720px;
   width: 100%;
-  margin: 10px auto 0;
+  margin: 0 auto 12px;
 }
 .nest-chat .chat-main:has(.log > .hint:first-child) .log {
   height: auto;
 }
-/* The full Markdown's blocks. */
-.nest-chat .msg.zeca h3,
-.nest-chat .msg.zeca h4,
-.nest-chat .msg.zeca h5,
-.nest-chat .msg.zeca h6 {
-  margin: 10px 0 4px;
-  color: var(--fg-bright);
+@media (max-height: 480px) {
+  .nest-chat .chat-main:has(.log > .hint:first-child) .log-box { margin: 0 auto; }
 }
-.nest-chat .msg.zeca h3 {
-  font-size: 15px;
-}
-.nest-chat .msg.zeca h4,
-.nest-chat .msg.zeca h5,
-.nest-chat .msg.zeca h6 {
-  font-size: 13.5px;
-}
-.nest-chat .msg.zeca blockquote {
-  margin: 6px 0;
-  padding-left: 10px;
-  border-left: 3px solid var(--border);
-  color: var(--fg-dim);
-  white-space: pre-wrap;
-}
-.nest-chat .msg.zeca hr {
-  margin: 10px 0;
-  border: none;
-  border-top: 1px solid var(--border);
-}
-.nest-chat .msg.zeca ol {
-  margin: 4px 0;
-  padding-left: 22px;
-}
-.nest-chat .msg.zeca .table {
-  overflow-x: auto;
-  margin: 6px 0;
-}
-.nest-chat .msg.zeca table {
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-.nest-chat .msg.zeca th,
-.nest-chat .msg.zeca td {
-  padding: 4px 9px;
-  border: 1px solid var(--border);
-  text-align: left;
-}
-.nest-chat .msg.zeca th {
-  color: var(--fg-bright);
-}
-.nest-chat .msg.zeca .link {
-  text-decoration: underline;
-}
-.nest-chat .msg.zeca .link-url {
-  color: var(--fg-muted);
-  font-size: 11.5px;
+@media (max-height: 400px) {
+  .nest-chat .composer textarea { max-height: 24px; }
 }
 /* The Roosts and Memory tabs: a list that scrolls inside the window. */
 /* Each tab's pane, and each of Activity's parts: a list that scrolls inside the window. */
@@ -702,7 +727,7 @@ body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 18px 26px 24px;
+  padding: 20px 24px 24px;
 }
 .nest-pane[hidden],
 .nest-part[hidden],
@@ -721,9 +746,10 @@ body {
 }
 .roost {
   padding: 18px 20px;
-  border: 1px solid #292b31;
-  border-radius: 8px;
-  background: #101114;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--panel);
 }
 .roost-head {
   display: flex;
@@ -741,30 +767,22 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-bright);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 600;
 }
 .roost-tree {
   display: flex;
-  gap: 10px;
-  font-size: 11.5px;
-  color: var(--fg-muted);
-}
-.roost-path {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.roost-branch {
-  flex: none;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: var(--radius-control);
+  background: var(--float);
+  font: 12px/1.5 var(--mono);
   color: var(--fg-dim);
 }
+.roost-path { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.roost-branch { min-width: 0; color: var(--fg); overflow-wrap: anywhere; }
 .roost-part h4 {
   margin: 10px 0 2px;
   font-size: 11px;
@@ -807,58 +825,50 @@ body {
 .nest-memory[hidden] {
   display: none;
 }
-.memory.busy button {
-  pointer-events: none;
-  opacity: 0.6;
-}
-.memory {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.memory-part h4 {
-  margin: 12px 0 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.proposal {
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-.proposal-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 11.5px;
-  color: var(--fg-muted);
-}
-.proposal-place {
-  color: var(--fg-bright);
-  font-weight: 600;
-}
-.proposal-diff {
-  margin: 6px 0;
-  font-family: var(--mono, monospace);
-  font-size: 12px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.diff-old {
-  color: var(--error-text);
-}
-.diff-new {
-  color: var(--ok);
-}
-.proposal-reason {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--fg-dim);
-}
+/* Proposals lead; saved facts and history disclose their own detail. */
+.memory { display: flex; flex-direction: column; gap: 20px; }
+.memory-heading-group { display: flex; flex-direction: column; gap: 6px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.memory-heading { margin: 0; font-size: 18px; font-weight: 600; color: var(--fg); }
+.memory-heading-group p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg-dim); }
+.memory-part { min-width: 0; }
+.memory-part h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--fg); }
+.memory-count { flex: none; padding: 1px 6px; border-radius: 6px; background: var(--raised); font: 11px/1.5 var(--mono); color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.memory-proposals > h4 .memory-count { color: var(--warn); }
+.memory-state:empty { display: none; }
+.memory-state p { margin: 0 0 8px; font-size: 12px; line-height: 1.6; }
+.memory-empty { margin: 0; color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
+.memory .proposal { margin-bottom: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--float); }
+.memory .proposal-head { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.memory .proposal-place { color: var(--fg); font-weight: 600; overflow-wrap: anywhere; }
+.memory .proposal-source { color: var(--fg-dim); font-size: 11px; }
+.memory-folder { margin: 8px 0; color: var(--fg-dim); font: 11px/1.6 var(--mono); overflow-wrap: anywhere; }
+.memory .proposal-diff { display: grid; gap: 12px; margin: 16px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.memory-change-label { display: block; font: 11px/1.5 var(--font); color: var(--fg-dim); margin-bottom: 4px; }
+.memory-change p { margin: 0; padding-left: 10px; border-left: 2px solid currentColor; font: 12px/1.6 var(--font); }
+.memory .diff-old { color: var(--error-text); }
+.memory .diff-new { color: var(--ok); }
+.memory .proposal-reason { margin: 0 0 12px; color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
+.memory .proposal-actions { flex-wrap: wrap; }
+.memory .btn { min-height: 32px; padding: 6px 10px; border: 0; border-radius: var(--radius-control); background: var(--raised); font-size: 12px; }
+.memory .btn.primary { background: var(--accent); color: var(--on-accent); }
+.memory .btn:disabled { opacity: 0.5; cursor: wait; }
+.memory :is(button, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.memory-file { margin: 0 0 8px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--float); }
+.memory-file-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; cursor: pointer; font-size: 12px; color: var(--fg); }
+.memory-file-head > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.memory-file-body { padding: 0 12px 12px; }
+.memory-progress { appearance: none; width: 100%; height: 4px; border: 0; border-radius: 999px; overflow: hidden; background: var(--raised); }
+.memory-progress::-webkit-progress-bar { background: var(--raised); }
+.memory-progress::-webkit-progress-value { background: var(--mark); }
+.memory-progress::-moz-progress-bar { background: var(--mark); }
+.memory-progress.warning::-webkit-progress-value { background: var(--warn); }
+.memory-progress.critical::-webkit-progress-value { background: var(--error-text); }
+.memory-progress.warning::-moz-progress-bar { background: var(--warn); }
+.memory-progress.critical::-moz-progress-bar { background: var(--error-text); }
+.memory :is(.memory-history, .memory-night) { border-top: 1px solid var(--border); padding-top: 12px; }
+.memory :is(.memory-history, .memory-night) > summary { display: flex; align-items: center; justify-content: space-between; min-height: 32px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--fg-dim); }
+.memory-commit-text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.memory .memory-commit-msg { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 .proposal-actions {
   display: flex;
   gap: 8px;
@@ -877,25 +887,9 @@ body {
 .memory-note {
   color: var(--error-text);
 }
-.memory-file {
-  margin-bottom: 8px;
-}
-.memory-file-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--fg-bright);
-}
-.memory-used {
-  color: var(--fg-muted);
-  font-size: 11px;
-}
-.memory-file ul {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  font-size: 12px;
-  color: var(--fg);
-}
+.memory-used { color: var(--fg-dim); font-size: 11px; font-variant-numeric: tabular-nums; margin: 0 0 8px; }
+.memory-file ul { margin: 12px 0 0; padding-left: 18px; color: var(--fg); font-size: 12px; line-height: 1.6; }
+.memory-file li + li { margin-top: 8px; }
 .memory-commit {
   display: flex;
   align-items: center;
@@ -936,37 +930,94 @@ body {
   flex-direction: column;
   gap: 12px;
 }
-.task-load-error .board-empty {
-  color: var(--error-text);
-  overflow-wrap: anywhere;
-}
-/* L8: the tasks in the prototype's cards, though it draws no Tasks tab of its own. */
+/* Goal, completion and execution are separate reading levels. */
 .task {
-  padding: 16px 20px;
-  border: 1px solid #292b31;
-  border-radius: 8px;
-  background: #101114;
+  padding: 20px;
+  min-width: 0;
 }
-.task.done,
-.task.dropped {
-  opacity: 0.6;
+.task:is(.done, .dropped) .task-goal { color: var(--fg-dim); }
+.task-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
 }
 .task-goal {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   font-size: 14px;
+  line-height: 1.5;
   font-weight: 600;
+  overflow-wrap: anywhere;
   color: var(--fg);
 }
+.task-status {
+  flex: none;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+.task.blocked .task-status { color: var(--error-text); }
+.task.done .task-status { color: var(--ok); }
+.task-progress-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}
+.task-progress {
+  appearance: none;
+  border: none;
+  width: 96px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.task-progress::-webkit-progress-bar { background: var(--raised); }
+.task-progress::-webkit-progress-value { background: var(--mark); }
+.task-progress::-moz-progress-bar { background: var(--mark); }
+.task-execution { margin-left: auto; color: var(--fg); }
+.task-execution::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
 .task-next {
-  margin: 8px 0 0;
-  color: var(--fg);
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.task-next > span { color: var(--fg-dim); flex: none; }
+.task-next > strong { font-weight: 500; color: var(--fg); min-width: 0; }
+.task-context {
+  margin: 8px 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 .task-criterion {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   font-size: 12px;
-  padding: 2px 0;
+  padding: 6px 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
+.task-check { flex: none; margin-top: 3px; }
 .task-criterion.met span {
   color: var(--fg-muted);
   text-decoration: line-through;
@@ -987,13 +1038,13 @@ body {
   color: var(--fg-dim);
 }
 .task-select {
-  min-height: 30px;
+  min-height: 34px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--fg);
-  background: #141518;
-  border: 1px solid #303239;
-  border-radius: 6px;
+  background: var(--input);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
   padding: 4px 8px;
 }
 .task-select-field {
@@ -1019,9 +1070,9 @@ body {
   font: inherit;
   font-size: 13px;
   color: var(--fg);
-  background: #141518;
-  border: 1px solid #303239;
-  border-radius: 6px;
+  background: var(--input);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
   padding: 8px 10px;
   resize: vertical;
 }
@@ -1033,13 +1084,13 @@ body {
 }
 .task-issue-input,
 .task-budget-input {
-  min-height: 30px;
+  min-height: 34px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--fg);
-  background: #141518;
-  border: 1px solid #303239;
-  border-radius: 6px;
+  background: var(--input);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
   padding: 4px 8px;
   width: 170px;
 }
@@ -1050,9 +1101,6 @@ body {
 .task-spend {
   margin: 6px 0 8px;
   padding: 16px 20px;
-  border: 1px solid #292b31;
-  border-radius: 8px;
-  background: #101114;
 }
 .task-spend.over {
   border-color: var(--warn);
@@ -1080,114 +1128,58 @@ body {
   white-space: pre-wrap;
   color: var(--fg);
 }
-/* The records (W11): Activity's History, Cost, Traces and Audit. */
-/* As the prototype's lists: a mono kicker over rows parted by a hairline, no box around each. */
-.records {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-.records-search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.records-search input {
-  flex: 1;
-  min-width: 0;
-}
-.records-search button {
-  flex-shrink: 0;
-}
-.records-head {
-  margin: 22px 0 6px;
-  color: #9da29b;
-  font: 9px var(--mono);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.records-head:first-child {
-  margin-top: 4px;
-}
-.record {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-  padding: 12px 2px;
-  border-bottom: 1px solid #22242a;
-  font-size: 12px;
-  min-width: 0;
-}
-.record.child {
-  margin-left: 18px;
-}
-.record-when,
-.record-meta {
-  color: var(--fg-muted);
-}
-.record-who {
-  color: var(--fg-bright);
-  font-weight: 600;
-}
-.record-what {
-  color: var(--fg);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.record-target {
-  flex-basis: 100%;
-  color: var(--fg);
-  font-size: 11px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.usage-bar {
-  flex: 1;
-  min-width: 80px;
-  max-width: 260px;
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  align-self: center;
-}
-.usage-bar {
-  position: relative;
-}
-/* The daily budget, on each day's bar. */
-.usage-mark {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--warn);
-  opacity: 0.8;
-}
-.usage-fill {
-  display: block;
-  height: 100%;
-  background: #6f8266;
-}
-.usage-fill.over {
-  background: var(--warn);
-}
-.usage-fill.warning {
-  background: var(--warn);
-}
-.usage-fill.critical {
-  background: var(--error);
-}
-.usage-status {
-  font: 10px var(--mono);
-  color: var(--fg-muted);
-}
-.usage-status.warning {
-  color: var(--warn);
-}
-.usage-status.critical {
-  color: var(--error);
+/* Records share a reading order: operation and result, context, then time and counts. */
+.records { display: flex; flex-direction: column; gap: 16px; }
+.records-content { display: contents; }
+.records-content > .activity-heading { order: -2; margin-bottom: 0; }
+.records-content > .activity-summary { order: -1; margin-bottom: 0; }
+.records-search { display: flex; align-items: center; gap: 8px; }
+.records-search input { flex: 1; min-width: 0; min-height: 36px; border-color: var(--control-border); background: var(--input); font-size: 13px; }
+.records-search button { flex-shrink: 0; min-height: 36px; }
+.records-search input:focus { border-color: var(--focus-border); box-shadow: var(--focus-shadow); outline: none; }
+.record-group, .usage-section { overflow: hidden; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--panel); }
+.records-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--fg); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.record-count { flex: none; color: var(--fg-dim); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
+.record { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 16px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.record-group > .record:last-child, .usage-section > .record:last-child { border-bottom: 0; }
+.record-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.record-title, .record-context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
+.record-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; text-align: right; }
+.record-when, .record-meta { color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.record-when { font-size: 11px; }
+.record-duration { color: var(--fg); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+.record-who { color: var(--fg); font-size: 12px; font-weight: 550; }
+.record-what { min-width: 0; color: var(--fg); font-weight: 550; overflow-wrap: anywhere; }
+.record-status { padding: 3px 7px; border-radius: 6px; background: var(--raised); color: var(--fg-dim); font-size: 11px; line-height: 1.4; }
+.record-status.passing { background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
+.record-status.failing { background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error-text); }
+.record-target { grid-column: 1 / -1; padding: 10px 12px; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.record.child { margin-left: 24px; border-left: 1px solid var(--control-border); }
+.usage-section .record { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.usage-section > .board-empty { padding: 12px 16px; }
+.usage-bar { position: relative; flex: 1; align-self: center; min-width: 80px; max-width: 340px; height: 8px; overflow: hidden; border-radius: 999px; background: var(--raised); }
+.usage-mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--warn); }
+.usage-fill { display: block; height: 100%; border-radius: inherit; background: var(--mark); }
+.usage-fill.over, .usage-fill.warning { background: var(--warn); }
+.usage-fill.critical { background: var(--error); }
+.usage-status { color: var(--fg-dim); font-size: 11px; }
+.usage-status.warning { color: var(--warn); }
+.usage-status.critical { color: var(--error-text); }
+.nest-activity .nest-part:not(.nest-week-part) { padding: 20px 24px 24px; }
+.nest-cost > .task-spend.over { border-color: var(--warn); }
+.nest-cost .task-spend-line { font-size: 14px; line-height: 1.6; }
+.nest-cost .task-budget-input { min-height: 32px; box-sizing: border-box; border-color: var(--control-border); background: var(--input); font-size: 13px; }
+.nest-cost .task-budget-label { color: var(--fg-dim); font-size: 12px; }
+@media (max-width: 600px) {
+  .nest-subs { max-width: calc(100% - 32px); margin: 16px 16px 0; }
+  .nest-activity .nest-part:not(.nest-week-part) { padding: 16px; }
+  .nest-pane:not(.nest-flock-pane) { padding: 16px; }
+  .task, .task-spend, .conn-detail, .conn-waiting, .nest-connections .nest-add { padding: 16px; }
+  .record { gap: 8px; padding: 12px; }
+  .record-title { align-items: flex-start; }
+  .record-aside { max-width: 100px; }
+  .record.child { margin-left: 12px; }
+  .records-head { padding: 12px; }
 }
 /* The size switch, between the tabs and the gear. */
 /* The Flock (ADR 0021), with the Living Flock prototype's Panel measures: the stage edge to edge,
@@ -1204,17 +1196,17 @@ body {
   position: relative;
   flex: none;
   overflow: hidden;
-  border-bottom: 1px solid #282e32;
+  border-bottom: 1px solid var(--border);
   background: radial-gradient(ellipse at 50% 45%, #202d2b4a, transparent 72%), linear-gradient(#080b0c, #030405);
 }
 .habitat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   padding: 12px 19px 0;
-  color: #9aabae;
-  font: 9px var(--mono);
+  color: var(--fg-dim);
+  font: 11px var(--font);
 }
 .habitat-heading {
   display: flex;
@@ -1223,8 +1215,8 @@ body {
 }
 .habitat-heading strong {
   font-weight: 500;
-  font-size: 10px;
-  color: #bac6bd;
+  font-size: 12px;
+  color: var(--fg);
 }
 .legend-dot {
   display: inline-block;
@@ -1247,10 +1239,24 @@ body {
   height: 100%;
   border-radius: 10px;
   background: none;
+  transition: background-color var(--motion-fast) var(--ease-out);
 }
-/* The card under it marks the one in front; the sky only answers the pointer. */
+/* Match the card's selection without moving or scaling its bird. */
+.habitat-sky .habitat-bird::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--mark);
+  opacity: 0;
+}
+.habitat-sky .habitat-bird.front { background: color-mix(in srgb, var(--mark) 4%, transparent); }
+.habitat-sky .habitat-bird.front::after { opacity: 1; }
 .habitat-sky .habitat-bird:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--mark) 7%, transparent);
 }
 .habitat-sky .badge {
   pointer-events: none;
@@ -1262,21 +1268,34 @@ body {
 .roost-cards {
   display: grid;
   gap: 8px;
-  padding: 0 18px 4px;
+  padding: 0 18px 12px;
 }
 .roost-card {
+  position: relative;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 10px;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--radius-card);
   text-align: left;
+  transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out);
 }
 .roost-card:hover {
-  border-color: #64796555;
+  background: var(--float);
+  border-color: var(--border);
 }
 .roost-card[aria-pressed="true"] {
-  border-color: #9fad8d55;
-  background: #c3d2b70a;
+  border-color: var(--border-hover);
+  background: var(--raised);
+}
+.roost-card[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--mark);
 }
 .roost-label {
   display: flex;
@@ -1285,25 +1304,40 @@ body {
   gap: 7px;
 }
 .roost-label strong {
+  display: -webkit-box;
+  min-width: 0;
   overflow: hidden;
-  font-size: 11px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
   font-weight: 550;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .roost-label .marker {
   font-size: 12px;
   color: var(--warn);
 }
 .roost-sub {
-  padding-top: 2px;
-  font-size: 9px;
-  color: #9cacb6;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-top: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fg-dim);
 }
+.roost-sub::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.roost-sub:is(.tone-warn, .tone-ask) { color: var(--warn); }
+.roost-sub.tone-fail { color: var(--error-text); }
+.roost-sub.tone-ok { color: var(--ok); }
 .roost-agent {
-  padding-top: 3px;
-  font: 8px var(--mono);
+  overflow: hidden;
+  padding-top: 4px;
+  font: 11px/1.4 var(--font);
   color: var(--bird-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .roost-cards.empty {
   display: block;
@@ -1316,60 +1350,63 @@ body {
 .filtered-note .outline {
   margin-top: 8px;
 }
-.habitat-selected {
-  margin: 0;
-  padding: 2px 19px 11px;
-  font: 9px var(--mono);
-  color: #9aabae;
-}
 .flock-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 15px;
-  padding: 13px 20px 13px;
-  border-bottom: 1px solid #1d1f24;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
 }
 .flock-toolbar h2 {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 550;
   letter-spacing: -0.2px;
   white-space: nowrap;
 }
 .flock-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 .attention-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
   padding: 5px 8px;
   border: 1px solid transparent;
-  border-radius: 5px;
-  font-size: 11px;
+  border-radius: var(--radius-control);
+  font-size: 12px;
   color: var(--fg-dim);
   white-space: nowrap;
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
+.attention-filter:hover { background: var(--raised); color: var(--fg); }
+.attention-count { min-width: 20px; padding: 2px 4px; border-radius: 999px; background: var(--raised); color: var(--fg); font-size: 11px; font-variant-numeric: tabular-nums; }
 .attention-filter[aria-pressed="true"] {
-  border-color: #705727;
-  background: #f5a5240b;
-  color: #e9bd73;
+  border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+  color: var(--warn);
 }
 .app-search .nest-search {
   width: 230px;
-  height: 30px;
+  height: 32px;
   padding: 5px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #0f1013;
+  border-radius: var(--radius-control);
+  background: var(--input);
   color: var(--fg);
-  font: 11px var(--font);
+  font: 12px var(--font);
 }
 .app-body {
   display: grid;
   flex: 1;
-  grid-template-columns: 290px minmax(0, 1fr);
+  grid-template-columns: clamp(240px, 28vw, 290px) minmax(0, 1fr);
   align-items: stretch;
   min-height: 300px;
 }
@@ -1384,24 +1421,24 @@ body {
 }
 .focus-block {
   min-width: 0;
-  padding: 22px 20px;
-  border-right: 1px solid #292b31;
-  background: #0b0c0e;
+  padding: 16px;
+  border-right: 1px solid var(--border);
+  background: var(--float);
 }
 .focus-block:has(.tone-warn) {
-  background: radial-gradient(ellipse at 0% 100%, #f5a52412, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--warn) 7%, transparent), transparent 60%), var(--float);
 }
 .focus-block:has(.tone-ask) {
-  background: radial-gradient(ellipse at 0% 100%, #22d3ee10, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--info) 6%, transparent), transparent 60%), var(--float);
 }
 .focus-block:has(.tone-ok) {
-  background: radial-gradient(ellipse at 0% 100%, #22c55e10, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--ok) 6%, transparent), transparent 60%), var(--float);
 }
 .focus-block:has(.tone-fail) {
-  background: radial-gradient(ellipse at 0% 100%, #ff8d970f, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--error-text) 6%, transparent), transparent 60%), var(--float);
 }
 .app-card {
-  --tone: #3a3d44;
+  --tone: var(--border-hover);
   min-width: 0;
 }
 .app-card.tone-warn {
@@ -1412,11 +1449,13 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.4;
 }
 .agent-tag {
   display: flex;
   align-items: center;
+  gap: 6px;
 }
 .agent-dot {
   display: inline-block;
@@ -1426,20 +1465,29 @@ body {
   background: currentColor;
 }
 .card-name {
-  font-size: 13px;
-  font-weight: 650;
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
   color: var(--fg);
 }
 .ed-chip {
   padding: 1px 5px;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 4px;
-  font: 9px var(--mono);
+  background: var(--raised);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .card-verb {
   color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
 }
+.card-state { padding: 2px 8px; border-radius: 999px; background: var(--raised); }
+.app-card:is(.tone-warn, .tone-ask) .card-state { color: var(--warn); }
+.app-card.tone-ok .card-state { color: var(--ok); }
+.app-card.tone-fail .card-state { color: var(--error-text); }
 .card-side {
   display: flex;
   align-items: center;
@@ -1451,7 +1499,8 @@ body {
   border-radius: 9px;
   background: color-mix(in srgb, var(--tone) 18%, transparent);
   color: var(--tone);
-  font: 10px var(--mono);
+  font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 .card-words {
   margin: 12px 0 0;
@@ -1467,21 +1516,21 @@ body {
   gap: 8px;
   margin-top: 13px;
   padding: 11px 10px;
-  border: 1px solid #30323a;
-  border-radius: 6px;
-  background: #111215;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-card);
+  background: var(--input);
 }
 .command code {
   min-width: 0;
-  font: 11px/1.7 var(--mono);
+  font: 12px/1.7 var(--mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.command .outline {
-  min-height: 25px;
-  padding: 3px 5px;
+.nest-flock-tab .command > .outline {
+  min-height: 28px;
+  padding: 3px 6px;
   border: 0;
-  font-size: 9px;
+  font-size: 11px;
 }
 .app-card-actions {
   display: flex;
@@ -1499,26 +1548,26 @@ body {
 .nest-flock-tab .outline {
   min-height: 32px;
   padding: 7px 12px;
-  border: 1px solid #3a3d44;
-  border-radius: 6px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-control);
   font-size: 12px;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out);
 }
 .nest-flock-tab .outline:hover {
-  border-color: #6b7065;
+  border-color: var(--focus-border);
   background: var(--raised);
 }
 .nest-flock-tab .primary {
   min-height: 32px;
   padding: 7px 12px;
-  border-radius: 6px;
-  background: #e8eae4;
-  color: #111;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 650;
 }
 .nest-flock-tab .primary:hover {
-  background: #fff;
+  background: var(--fg-bright);
 }
 /* The card's Allow / Deny carry their keys, as on the island (ADR 0021). */
 .app-card-actions button {
@@ -1546,42 +1595,54 @@ body {
 }
 .details-pane {
   min-width: 0;
-  padding: 17px 20px 20px;
-  background: #000;
+  padding: 12px 16px 16px;
+  background: var(--bg);
 }
 .detail-tabs {
   display: flex;
   align-items: center;
-  gap: 18px;
-  border-bottom: 1px solid #292b31;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--border);
 }
 .detail-tab {
   position: relative;
-  padding: 7px 0 12px;
+  flex: none;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
   font-size: 12px;
   color: var(--fg-dim);
   white-space: nowrap;
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
+.detail-tab:hover { background: var(--float); color: var(--fg); }
 .detail-tab[aria-selected="true"] {
   color: var(--fg);
+  background: var(--float);
 }
 .detail-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
   right: 0;
-  bottom: -1px;
+  bottom: 0;
   left: 0;
   height: 2px;
-  background: #b1b8a5;
+  background: var(--mark);
 }
 .detail-count {
   margin-left: 5px;
-  font: 9px var(--mono);
-  color: #71dc94;
+  font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ok);
 }
 .detail-content {
-  padding-top: 16px;
+  padding-top: 12px;
 }
+.detail-content.detail-enter { animation: flock-detail-in var(--motion-fast) var(--ease-out); }
+body.still .detail-content.detail-enter { animation: none; }
+@keyframes flock-detail-in { from { opacity: 0.55; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .diff-toolbar {
   display: flex;
   align-items: center;
@@ -1596,9 +1657,9 @@ body {
   padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #0f1013;
+  background: var(--input);
   color: var(--fg);
-  font: 10px var(--mono);
+  font: 11px var(--mono);
 }
 .diff-toolbar .outline {
   min-height: 29px;
@@ -1612,14 +1673,14 @@ body {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
-  font: 9px var(--mono);
-  color: #a0a6ae;
+  font: 11px var(--mono);
+  color: var(--fg-dim);
 }
 .diff-block {
   overflow: hidden;
-  border: 1px solid #2a2d32;
-  border-radius: 6px;
-  background: #0c0d0f;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--float);
 }
 .diff-row {
   display: flex;
@@ -1633,6 +1694,7 @@ body {
 .diff-row .ln {
   flex: none;
   min-width: 17px;
+  font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--fg-dim);
   user-select: none;
@@ -1738,12 +1800,12 @@ body {
     grid-template-columns: 1fr;
   }
   .focus-block {
-    padding: 19px 16px;
+    padding: 16px;
     border-right: 0;
-    border-bottom: 1px solid #292b31;
+    border-bottom: 1px solid var(--border);
   }
   .details-pane {
-    padding: 18px 16px 20px;
+    padding: 12px 16px 16px;
   }
   .flock-toolbar {
     flex-wrap: wrap;
@@ -1757,20 +1819,17 @@ body {
   }
   .app-search .nest-search {
     width: 145px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .habitat-sky {
     margin: 0 10px;
   }
   .roost-cards {
     gap: 3px;
-    padding: 0 10px 4px;
+    padding: 0 10px 12px;
   }
   .roost-card {
-    padding: 6px 4px;
-  }
-  .roost-agent {
-    display: none;
+    padding: 8px 6px;
   }
 }
 /* A waiting decision matters more than the sky in the smallest Nest. */
@@ -1791,6 +1850,8 @@ body {
   .focus-block {
     padding: 12px 14px;
   }
+  .card-name { margin-bottom: 6px; font-size: 16px; }
+  .app-card-head { font-size: 11px; }
   .app-card .command {
     margin-top: 8px;
     padding: 6px 10px;
@@ -1802,35 +1863,8 @@ body {
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
 .tasks-roost {
   margin: 14px 0 -2px;
-  font: 9px var(--mono);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #9da29b;
-}
-/* The tab's buttons as the prototype's: bordered outlines, a light primary (and Cost's budget). */
-.task-spend .btn,
-.nest-tasks .btn {
-  min-height: 30px;
-  padding: 5px 11px;
-  border: 1px solid #3a3d44;
-  border-radius: 6px;
-  background: none;
-  font-size: 11.5px;
-}
-.task-spend .btn:hover:not(:disabled),
-.nest-tasks .btn:hover:not(:disabled) {
-  border-color: #6b7065;
-  background: var(--raised);
-}
-.nest-tasks .btn.primary:hover:not(:disabled) {
-  border-color: var(--fg-bright);
-  background: var(--fg-bright);
-}
-.nest-tasks .btn.primary {
-  border-color: #e8eae4;
-  background: #e8eae4;
-  color: #111;
-  font-weight: 650;
+  font: 500 12px var(--font);
+  color: var(--fg-dim);
 }
 .task-rounds-line {
   display: flex;
@@ -1859,73 +1893,77 @@ body {
 .task-round.none {
   background: var(--info);
 }
-/* The Chat's Recent (U9): beside the conversation in a wide window only. */
-.nest-recent {
-  display: none;
-}
+/* Recent keeps its search stable while only the results scroll. */
+.nest-recent { display: none; }
 @media (min-width: 900px) {
   .nest-recent {
     order: -1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    flex: none;
-    width: 230px;
+    gap: 8px;
+    flex: 0 0 248px;
     min-height: 0;
-    overflow-y: auto;
-    padding: 12px 11px 16px;
+    padding: 16px 12px;
     border-right: 1px solid var(--chrome-line);
+    background: var(--chrome);
   }
 }
-.nest-new-chat.outline {
-  width: 100%;
+.nest-recent-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.nest-recent-actions .nest-new-chat { flex: 1; }
+.nest-new-chat.outline, .nest-recent .outline {
   min-height: 32px;
-  margin-bottom: 14px;
   padding: 7px 12px;
-  border: 1px solid #3a3d44;
+  border: 0;
   border-radius: 6px;
-  font-size: 11px;
-}
-.nest-new-chat.outline:hover:not(:disabled) {
-  border-color: #6b7065;
   background: var(--raised);
+  font-size: 12px;
 }
-.nest-recent-head {
-  margin: 0 0 4px 8px;
-  font: 9px var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
+.nest-recent-search {
+  flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--float);
+  color: var(--fg);
+  font: 12px var(--font);
 }
+.nest-recent-search::placeholder { color: var(--fg-muted); }
+.nest-recent-head { margin: 8px 8px 0; font-size: 12px; font-weight: 600; color: var(--fg-dim); }
 .nest-recent-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .nest-recent-row {
   display: grid;
-  gap: 4px;
-  padding: 10px 9px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  flex: none;
+  padding: 10px;
   border-radius: 6px;
   text-align: left;
   font-size: 12px;
+  background: transparent;
+  transition: background-color var(--motion-fast) var(--ease-out);
 }
-.nest-recent-row:hover {
-  background: #17191d;
-}
-.nest-recent-row.current {
-  background: var(--raised);
-}
-.nest-recent-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--fg);
-}
-.nest-recent-meta {
-  font-size: 10px;
-  color: var(--fg-dim);
-}
+.nest-recent-row:hover { background: var(--float); }
+.nest-recent-row.current { background: var(--raised); }
+.nest-recent-row.current .nest-recent-title { font-weight: 600; }
+.nest-recent-title { grid-column: 1 / -1; color: var(--fg); }
+.nest-recent-title, .nest-recent-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nest-recent-meta, .nest-recent-time { font-size: 11px; color: var(--fg-dim); }
+.nest-recent-time { font-variant-numeric: tabular-nums; }
+.nest-recent-day { margin: 12px 10px 4px; font-size: 11px; font-weight: 500; color: var(--fg-muted); flex: none; }
+.nest-recent-status { font-size: 12px; color: var(--fg-dim); line-height: 1.5; }
+.nest-recent-status:empty, .nest-recent-status[hidden] { display: none; }
+.nest-recent-back { display: none; }
 /* With Memory open too, the conversation needs the room Recent would take, until it is wide. */
 @media (max-width: 1100px) {
   .nest-chat-body:has(> .nest-memory:not([hidden])) > .nest-recent {
@@ -2089,7 +2127,7 @@ body {
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #27292e;
+  border-top: 1px solid var(--border);
   font-size: 13px;
   color: var(--fg);
 }
@@ -2101,30 +2139,28 @@ body {
   font-size: 12px;
   color: var(--error-text);
 }
-.conn-row.seen {
-  opacity: 0.55;
-}
+.conn-row.seen .conn-row-words strong { color: var(--fg-dim); }
 /* The prototype's GitHub view: a count on each tab (red when Actions fail), the repository filter,
    the checks one by one, a bar while they run, and the command to copy. */
-.conn-tabs .detail-tab b {
+.conn-tabs .nest-sub b {
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 8px;
-  background: #1d2024;
+  background: var(--raised);
   font: 10px var(--mono);
   color: var(--fg-dim);
 }
-.conn-tabs .detail-tab b.hot {
-  background: #ff5d6c26;
-  color: #ff8b95;
+.conn-tabs .nest-sub b.hot {
+  background: color-mix(in srgb, var(--error-text) 12%, transparent);
+  color: var(--error-text);
 }
 .conn-repo {
-  min-height: 30px;
+  min-height: 34px;
   padding: 5px 9px;
-  border: 1px solid #3a3d44;
-  border-radius: 6px;
-  background: #121317;
-  font-size: 11px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--input);
+  font: 13px var(--font);
   color: var(--fg);
 }
 .conn-prog {
@@ -2132,19 +2168,19 @@ body {
   margin: 2px 0 12px;
   overflow: hidden;
   border-radius: 2px;
-  background: #1d2024;
+  background: var(--raised);
 }
 .conn-prog b {
   display: block;
   height: 100%;
-  background: #f5a524;
+  background: var(--warn);
 }
 .conn-checks {
   display: grid;
   gap: 7px;
   margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px solid #1d1f24;
+  border-top: 1px solid var(--border);
 }
 .conn-check {
   display: flex;
@@ -2158,16 +2194,16 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #7c818b;
+  background: var(--fg-muted);
 }
 .conn-check.passed i {
-  background: #22c55e;
+  background: var(--ok);
 }
 .conn-check.failed i {
-  background: #ff5d6c;
+  background: var(--error-text);
 }
 .conn-check.running i {
-  background: #f5a524;
+  background: var(--warn);
 }
 .conn-check span:first-of-type {
   overflow: hidden;
@@ -2186,15 +2222,15 @@ body {
   gap: 8px;
   margin-top: 14px;
   padding: 6px 8px;
-  border: 1px solid #1d1f24;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #07080a;
+  background: var(--bg-deep);
   font: 10px var(--mono);
-  color: #b8c2b4;
+  color: var(--fg-dim);
 }
 .conn-cmd::before {
   content: "$";
-  color: #5f6a5c;
+  color: var(--fg-muted);
 }
 .conn-cmd code {
   flex: 1;
@@ -2240,20 +2276,10 @@ body {
 }
 /* Activity › By project, as the prototype draws it: the week's time per project, a search, the
    projects, and the way to their preferences. */
-.act-projects-head {
-  display: flex;
-  justify-content: space-between;
-  margin: 0 0 10px;
-  font: 500 10px var(--mono);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--fg-muted);
-}
-.act-bars {
-  display: grid;
-  gap: 7px;
-  margin-bottom: 14px;
-}
+.roosts .activity-heading { margin-bottom: 0; }
+.roosts .activity-heading > div > span { display: block; margin-top: 8px; color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.act-bars { display: grid; gap: 12px; margin: 4px 0; }
+.act-bars h3 { margin-bottom: 4px; }
 .act-bar {
   display: grid;
   grid-template-columns: minmax(90px, 160px) minmax(0, 1fr) 70px;
@@ -2270,34 +2296,33 @@ body {
   height: 6px;
   overflow: hidden;
   border-radius: 3px;
-  background: #1d2024;
+  background: var(--raised);
 }
 .act-bar > div b {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: #8fb38a;
+  background: var(--mark);
 }
 .act-bar > span:last-child {
-  font: 10px var(--mono);
-  color: var(--fg-muted);
+  font: 12px var(--mono);
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 .roosts .project-search {
   width: 100%;
-  max-width: 360px;
-  margin-bottom: 14px;
+  box-sizing: border-box;
+  min-height: 36px;
+  margin: 4px 0;
   padding: 7px 10px;
-  border: 1px solid #2b2e33;
-  border-radius: 7px;
-  background: #0b0c0e;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--input);
   font: inherit;
   color: var(--fg);
 }
-.roost-list {
-  display: grid;
-  gap: 12px;
-}
+.roost-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); align-items: start; gap: 16px; }
 .roosts .small-note {
   display: flex;
   flex-wrap: wrap;
@@ -2356,7 +2381,8 @@ body {
   background: var(--raised);
 }
 .habitat-summary {
-  font: 10px var(--mono);
+  font: 11px var(--font);
+  font-variant-numeric: tabular-nums;
   color: var(--fg-muted);
 }
 /* The header's extras, by the switch: the song with its controls, the moon (the prototype's). */
@@ -2408,9 +2434,6 @@ body {
   align-items: center;
   gap: 7px;
 }
-.nest-chat .composer .attach {
-  margin-right: auto;
-}
 /* Narrow, the pill sits at the left: its menu opens rightwards, inside the window. */
 @media (max-width: 760px) {
   .nest-chat .chat-titlebar .chat-head .engine-box .menu {
@@ -2418,3 +2441,57 @@ body {
     left: 0;
   }
 }
+
+/* Narrow Room uses the same retained history, without squeezing the composer beside it. */
+@media (max-width: 899px) {
+  .nest-chat.recent-open .nest-recent {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px 16px;
+    background: var(--chrome);
+  }
+  .nest-chat.recent-open .nest-chat-main { display: none; }
+  .nest-recent-back {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    white-space: nowrap;
+    min-height: 32px;
+    padding: 4px 0;
+    font-size: 12px;
+    color: var(--fg);
+  }
+  .nest-recent-search { max-width: none; }
+}
+@media (max-width: 760px) {
+  .task-heading { flex-wrap: wrap; gap: 6px 12px; }
+  .task-goal { flex-basis: 100%; }
+  .tasks-roost { margin-top: 8px; }
+  .conn-head { flex-direction: column; gap: 12px; }
+  .conn-actions { width: 100%; }
+  .conn-repo { flex: 1; min-width: 0; max-width: 100%; }
+  .conn-row { flex-wrap: wrap; gap: 8px; }
+  .conn-row-words { flex-basis: calc(100% - 28px); }
+  .conn-row > .conn-tag { margin-left: 24px; font-size: 11px; }
+  .conn-row-words strong { white-space: normal; overflow-wrap: anywhere; }
+  .chat-titlebar .chat-head { min-width: 0; }
+  .nest-chat .chat-head > .engine-box { flex: 0 1 auto; min-width: 0; max-width: calc(100% - 80px); }
+  .nest-chat .engine-box .place.model { max-width: 100%; }
+}
+@media (max-height: 480px) {
+  .nest-chat.recent-open .nest-recent { gap: 4px; padding: 4px 12px; }
+  .nest-recent-head { display: none; }
+  .nest-recent-back { min-height: 28px; }
+}
+
+:where(.tasks, .nest-connections, .nest-recent) :is(button, input, select, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.memory details > summary::after { content: "+"; flex: none; margin-left: auto; padding-left: 8px; color: var(--fg-muted); font: 14px var(--mono); }
+.memory details[open] > summary::after { content: "−"; }

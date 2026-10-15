@@ -6,7 +6,9 @@
 import type { BoardView, ConnectorStatus, ConnectionsPlace } from "../../bridge";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
-import { t, tk } from "../../i18n";
+import { locale, t, tk } from "../../i18n";
+import { copyTextButton } from "../../clipboard";
+import { viewState } from "./view-state";
 import { ago, CHECKS, GROUPS, question, staleNote, tag } from "../../island/board";
 import { isSeen, markSeen, onSeen } from "../../island/seen";
 import { icon } from "../../island/icons";
@@ -79,7 +81,11 @@ const stateOf = (r: RowView): string => (r.checks === "failing" || r.review === 
 /** Every row carries a word at its end, as in the prototype: the card's own, else its checks, else
  *  that a review waits. */
 const label = (r: RowView): { text: string; kind: string } | null =>
-  r.facts.release ? { text: t(RELEASE[r.facts.release]), kind: r.facts.release } : tag(r) ?? (r.checks ? { text: t(CHECKS[r.checks]), kind: r.checks } : r.group === "to-review" ? { text: t("Review requested"), kind: "requested" } : null);
+  r.facts.release ? { text: t(RELEASE[r.facts.release]), kind: r.facts.release }
+    : r.checks === "failing" ? { text: t(CHECKS.failing), kind: "failing" }
+    : r.review === "changes" ? tag(r)
+    : r.checks === "running" ? { text: t(CHECKS.running), kind: "running" }
+    : tag(r) ?? (r.checks ? { text: t(CHECKS[r.checks]), kind: r.checks } : r.group === "to-review" ? { text: t("Review requested"), kind: "requested" } : null);
 
 /** Marks a control so the keyboard focus comes back to it when the tab is drawn again. */
 function fid<E extends HTMLElement>(e: E, id: string): E {
@@ -96,6 +102,10 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   flush: () => Promise<void>;
 } {
   const element = el("div", { class: "nest-connections" });
+  const search = fid(el("input", { class: "conn-search" }), "act:search");
+  search.type = "search";
+  const searchKey = "vults.connections-query";
+  try { search.value = localStorage.getItem(searchKey) ?? ""; } catch { /* Filtering remains local without storage. */ }
   let view: ViewModel | null = null;
   let status = new Map<string, ConnectorStatus>();
   /** The status answered once: until then nothing is offered, so an enabled connector that has
@@ -105,13 +115,12 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   let tab: Tab | null = null;
   /** One repository's rows only (`owner/repo`), or all of them. */
   let repo: string | null = null;
-  /** The row whose command was just copied, for the button to say so a moment. */
-  let copied: string | null = null;
   /** The connector shown, and the row picked in it. */
   let chosen: string | null = null;
   let picked: string | null = null;
   /** At narrow widths a selected row becomes its own view. */
   let detailOpen = false;
+  let listTop = 0;
   let restored = !actions.loadPlace;
   let saved: Promise<void> = Promise.resolve();
   const remember = () => {
@@ -120,6 +129,11 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     void saved.catch(() => {});
   };
   let refreshing = false;
+  let refreshError = false;
+  let statusFailed = false;
+  let statusAsked = 0;
+  const disclosures = new Map<string, HTMLDetailsElement>();
+  const checkDisclosures = new Map<string, HTMLDetailsElement>();
   /** The row whose merge is being confirmed, and how each merge asked for here went. */
   let asking: string | null = null;
   const merges = new Map<string, { state: "running" | "merged" } | { state: "refused"; error: string }>();
@@ -137,6 +151,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     b.style.width = `${Math.round(part * 100)}%`;
     const line = el("div", { class: "conn-prog" }, b);
     line.setAttribute("role", "progressbar");
+    line.setAttribute("aria-valuemin", "0");
+    line.setAttribute("aria-valuemax", "100");
     line.setAttribute("aria-valuenow", String(Math.round(part * 100)));
     line.setAttribute("aria-label", t("Checks done"));
     return line;
@@ -166,7 +182,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           },
         },
         icon(iconOf(r), 15, 1.6),
-        el("span", { class: "conn-row-words" }, el("strong", { text: r.title }), el("small", { text: sub(r) })),
+        el("span", { class: "conn-row-words" }, el("strong", { text: r.title }),
+          el("span", { class: "conn-row-meta" }, el("small", { text: sub(r) }), isSeen(b.connector, r) ? el("span", { class: "conn-seen", text: t("✓ Seen") }) : null)),
         end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null,
       ),
       `row:${r.item}`,
@@ -190,20 +207,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
             [t("State"), f.release ? t(RELEASE[f.release]) : null],
             [f.release === "draft" ? t("Created") : t("Published"), when],
           ]
-        : r.group === "branches"
-          ? [
-              [t("Branch"), f.branch],
-              [t("Checks"), checks],
-              [t("Updated"), when],
-            ]
-          : [
-              [t("Author"), f.author ? `@${f.author}` : null],
-              [t("Branch"), f.branch],
-              [t("Diff"), diffLine(r)],
-              [t("Reviews"), reviewLine(r) ?? (r.review ? tag(r)?.text ?? null : null)],
-              [t("Checks"), f.runs.length ? null : checks],
-              [t("Updated"), when],
-            ];
+        : [[t("Updated"), when]];
     // While checks run, how many are done.
     const done = f.runs.filter((c) => c.state !== "running" && c.state !== "waiting").length;
     const progress = r.checks === "running" && f.runs.length ? done / f.runs.length : null;
@@ -221,7 +225,11 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       go.disabled = busy(merging);
       acts.push(go);
     }
-    if (q && ask) acts.push(fid(el("button", { class: r.merge ? "outline" : "primary", text: q.label, onclick: () => ask(q.text) }), "act:zeca"));
+    if (q && ask) {
+      const button = fid(el("button", { class: r.merge ? "outline" : "primary", text: q.label, onclick: () => ask(q.text) }), "act:zeca");
+      button.setAttribute("aria-label", q.name);
+      acts.push(button);
+    }
     if (r.link) acts.push(fid(el("button", { class: acts.length ? "outline" : "primary", text: t("Open in {name} ↗", { name: name(b.connector) }), onclick: () => actions.open(b.connector, r.item) }), "act:open"));
     // A release never reaches Quick: nothing for ✓ to clear.
     if (r.group !== "releases" && !isSeen(b.connector, r)) {
@@ -242,6 +250,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
                 class: "primary",
                 text: t("Merge"),
                 onclick: () => {
+                  if (asking !== k || busy(merges.get(k))) return;
                   asking = null;
                   merges.set(k, { state: "running" });
                   actions.merge(b.connector, r.item).catch(() => {
@@ -255,7 +264,37 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
             ),
           )
         : null;
-    return el(
+    const technical = el("details", { class: "conn-technical" },
+      fid(el("summary", { text: t("Technical details") }), "act:technical"),
+      el("dl", { class: "context-dl" }, ...facts.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
+    );
+    const commandView = command
+      ? el(
+          "div",
+          { class: "conn-cmd" },
+          el("code", { text: command }),
+          fid(copyTextButton(command, "outline conn-copy", t("Copy command")), "act:copy"),
+        )
+      : null;
+    if (commandView) technical.append(commandView);
+    technical.open = disclosures.get(k)?.open ?? false;
+    disclosures.set(k, technical);
+    const checkList = f.runs.length ? el("details", { class: "conn-check-list" },
+      fid(el("summary", {}, el("span", { text: r.checks ? t(CHECKS[r.checks]) : t("Checks") }), el("span", { class: "conn-check-summary", text: checks! })), "act:checks"),
+      progress !== null ? bar(progress) : null,
+      el("div", { class: "conn-checks" },
+        ...[...f.runs].sort((a, b) => Number(b.state === "failed") - Number(a.state === "failed"))
+          .map(c => el("div", { class: `conn-check ${c.state}` }, el("i"), el("span", { text: c.name }), el("span", { text: t(RUN[c.state]) })))),
+    ) : null;
+    if (checkList) {
+      const before = checkDisclosures.get(k);
+      const state = r.checks ?? "unknown";
+      checkList.open = before?.dataset.state === state ? before.open : r.checks !== "passing";
+      checkList.dataset.state = state;
+      checkDisclosures.set(k, checkList);
+    }
+    const context = r.group === "releases" ? [] : [f.branch, f.author ? `@${f.author}` : null, diffLine(r)].filter((x): x is string => !!x);
+    const panel = el(
       "section",
       { class: `conn-detail ${stateOf(r)}` },
       narrow
@@ -275,48 +314,33 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         : null,
       el("div", { class: "conn-detail-head" }, icon(iconOf(r), 14, 1.6), el("span", { text: ref }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
       el("h3", { text: r.title }),
-      el("dl", { class: "context-dl" }, ...facts.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
-      progress !== null ? bar(progress) : null,
-      f.runs.length
-        ? el(
-            "div",
-            { class: "conn-checks" },
-            ...f.runs.map((c) => el("div", { class: `conn-check ${c.state}` }, el("i"), el("span", { text: c.name }), el("span", { text: t(RUN[c.state]) }))),
-          )
-        : null,
+      context.length ? el("div", { class: "conn-context" }, ...context.map(text => el("span", { text }))) : null,
+      reviewLine(r) ? el("p", { class: "conn-review", text: reviewLine(r)! }) : null,
       acts.length ? el("div", { class: "conn-acts" }, ...acts) : null,
       confirm,
       merging?.state === "refused" ? el("p", { class: "conn-refused", text: t("GitHub did not merge it: {error}", { error: merging.error }) }) : null,
-      command
-        ? el(
-            "div",
-            { class: "conn-cmd" },
-            el("code", { text: command }),
-            fid(
-              el("button", {
-                text: copied === k ? t("Copied") : t("Copy"),
-                onclick: () =>
-                  void navigator.clipboard
-                    ?.writeText(command)
-                    .then(() => {
-                      copied = k;
-                      draw();
-                      window.setTimeout(() => {
-                        if (copied === k) (copied = null), draw();
-                      }, 1500);
-                    })
-                    .catch(() => {}),
-              }),
-              "act:copy",
-            ),
-          )
-        : null,
+      checkList ?? (checks ? el("p", { class: "conn-check-summary", text: checks }) : null),
+      command || facts.some(([, value]) => !!value) ? technical : null,
     );
+    fid(panel, "act:detail");
+    panel.dataset.item = r.item;
+    panel.tabIndex = 0;
+    panel.setAttribute("aria-label", r.title);
+    panel.setAttribute("role", "region");
+    return panel;
   };
 
-  const draw = () => {
+  const draw = (resetList = false) => {
     if (!restored || !view) return;
-    const had = (document.activeElement as HTMLElement | null)?.dataset?.fid ?? null;
+    const active = document.activeElement as HTMLElement | null;
+    const had = active && element.contains(active) ? active.dataset.fid : null;
+    const scroll = element.parentElement?.scrollTop;
+    listTop = resetList ? 0 : element.querySelector<HTMLElement>(".conn-list")?.scrollTop ?? listTop;
+    const oldDetail = element.querySelector<HTMLElement>(".conn-detail");
+    const detailScroll = oldDetail?.scrollTop ?? 0;
+    const query = search.value.trim().toLocaleLowerCase(locale());
+    search.placeholder = t("Search title, repository or branch");
+    search.setAttribute("aria-label", t("Search connections"));
     // A merge whose row left the card is done with; one the core no longer offers (its checks ran
     // again, a push moved its head) got no answer, so it may be asked again once it is green.
     for (const [k, m] of [...merges]) {
@@ -358,7 +382,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           ),
         )
       : null;
-    const chips = all.length
+    const chips = all.length > 1
       ? el(
           "div",
           { class: "conn-chips" },
@@ -375,7 +399,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
                     repo = null;
                     tab = null;
                     remember();
-                    draw();
+                    draw(true);
                   },
                 },
                 icon("pull", 13, 1.6),
@@ -388,20 +412,15 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
             c.setAttribute("aria-pressed", String(b.connector === chosen));
             return c;
           }),
-          fid(el("button", { class: "conn-chip add", text: "+", onclick: actions.settings }), "chip:add"),
         )
       : null;
-    if (chips) {
-      const plus = chips.lastElementChild as HTMLElement;
-      plus.title = t("Manage connections");
-      plus.setAttribute("aria-label", t("Manage connections"));
-    }
     let body: HTMLElement[] = [];
     if (board) {
       const st = status.get(board.connector);
       const now = Date.now() / 1000;
       const stale = st ? staleNote(st, now) : null;
-      const line = stale ?? (st?.lastOk ? t("Synced {age}", { age: ago(st.lastOk, now) }) : null);
+      const line = stale ?? (st?.overBudget ? t("Daily request limit reached. Checks resume when the budget resets.")
+        : st?.lastOk ? t("Synced {age}", { age: ago(st.lastOk, now) }) : t("Waiting for the first check"));
       // The repositories it has rows for, in the order GitHub gave them.
       const repos = [...new Set(board.rows.flatMap((r) => (r.facts.repo ? [r.facts.repo] : [])))];
       if (repo && !repos.includes(repo)) repo = null;
@@ -415,13 +434,13 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           el(
             "button",
             {
-              class: `detail-tab nest-filter${id === shown ? " on" : ""}`,
+              class: `nest-sub nest-filter${id === shown ? " on" : ""}`,
               onclick: () => {
                 tab = id;
                 picked = null;
                 detailOpen = false;
                 remember();
-                draw();
+                draw(true);
               },
             },
             el("span", { text: word }),
@@ -432,7 +451,9 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         b.setAttribute("aria-pressed", String(id === shown));
         return b;
       };
-      const rows = mine.filter(TABS[shown]);
+      const inTab = mine.filter(TABS[shown]);
+      const rows = inTab.filter(r => !query || [r.title, r.name, r.facts.repo, r.facts.branch, r.facts.author ? `@${r.facts.author}` : null].filter(Boolean)
+        .join(" ").toLocaleLowerCase(locale()).includes(query));
       const heads =
         shown === "inbox"
           ? INBOX.map((g) => ({ label: t(g.label), has: g.has }))
@@ -447,25 +468,25 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       }
       const groups = heads.flatMap((g) => {
         const these = rows.filter(g.has);
-        return these.length ? [...(g.label ? [el("div", { class: "records-head", text: g.label })] : []), ...these.map((r) => row(board, r))] : [];
+        return these.length ? [...(g.label ? [el("div", { class: "records-head" }, el("span", { text: g.label }), el("span", { class: "conn-count", text: String(these.length) }))] : []), ...these.map((r) => row(board, r))] : [];
       });
-      const empty = shown === "inbox" ? t("Nothing needs you right now.") : repo ? t("Nothing here for this repository.") : t("Nothing open right now.");
+      const empty = query ? t("No items match your search.") : shown === "inbox" ? t("Nothing needs you right now.") : repo ? t("Nothing here for this repository.") : t("Nothing open right now.");
       const emptyRow = () =>
-        el(
-          "p",
-          { class: "board-empty" },
-          el("span", { text: empty }),
-          repo
+        viewState("empty", query ? t("No results") : empty,
+          query ? empty : undefined,
+          repo || query
             ? el("button", {
                 class: "outline",
                 text: t("Clear filters"),
                 onclick: () => {
                   repo = null;
+                  search.value = "";
+                  rememberQuery();
                   picked = null;
                   detailOpen = false;
                   remember();
-                  draw();
-                  element.querySelector<HTMLElement>(".conn-repo")?.focus();
+                  draw(true);
+                  search.focus();
                 },
               })
             : null,
@@ -484,7 +505,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           picked = null;
           detailOpen = false;
           remember();
-          draw();
+          draw(true);
         });
       }
       const pick = rows.find((r) => r.item === picked);
@@ -493,59 +514,94 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       const refresh = fid(
         el("button", {
           class: "outline",
-          text: t("↻ Refresh"),
-          onclick: () => {
-            if (refreshing) return;
-            refreshing = true;
-            void actions.refresh().finally(() => {
-              refreshing = false;
-              readStatus();
-            });
-          },
+          text: refreshing ? t("Checking…") : t("↻ Refresh"),
+          onclick: poll,
         }),
         "act:refresh",
       );
+      refresh.setAttribute("aria-busy", String(refreshing));
+      const failure = refreshError ? viewState("error", t("Connections could not update. Try again."), t("The last loaded view is kept and may be out of date.")) : null;
       body = [
+        ...(failure ? [failure] : []),
         el(
           "header",
-          { class: "conn-head" },
-          el("div", {}, el("h2", { text: name(board.connector) }), line ? el("p", { class: `conn-status${stale ? " stale" : ""}`, text: line }) : null),
-          el("div", { class: "conn-actions" }, pickRepo, refresh, fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), "act:manage")),
+          { class: "activity-heading conn-head" },
+          el("div", {}, el("h2", { text: name(board.connector) }), el("p", { class: `conn-status${stale || st?.overBudget ? " stale" : st?.lastOk ? "" : " pending"}`, text: line })),
+          el("div", { class: "conn-actions" }, refresh, fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), "act:manage")),
         ),
         el(
           "nav",
-          { class: "detail-tabs conn-tabs" },
+          { class: "nest-subs conn-tabs" },
           tabButton("inbox", t("Inbox"), fresh ? t("{n} new", { n: fresh }) : null),
           tabButton("prs", t("Pull requests"), String(count("prs"))),
           tabButton("runs", t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),
           tabButton("rels", t("Releases"), String(count("rels"))),
         ),
+        el("div", { class: "conn-toolbar" }, el("div", { class: "conn-search-box" }, icon("search", 15, 1.8), search), pickRepo,
+          el("span", { class: "conn-results", text: t("Results: {shown} of {total}", { shown: rows.length, total: inTab.length }) })),
         (() => {
           const narrow = window.innerWidth < 900;
           const showDetail = !!pick && (!narrow || detailOpen);
           return el(
             "div",
             { class: `conn-body${showDetail && narrow ? " detail-open" : ""}` },
-            narrow && showDetail ? null : el("div", { class: "conn-list" }, ...(groups.length ? groups : [emptyRow()])),
+            narrow && showDetail ? null : (() => {
+              const list = el("div", { class: "conn-list" }, ...(groups.length ? groups : [emptyRow()]));
+              fid(list, "act:list");
+              list.tabIndex = 0;
+              list.setAttribute("aria-label", t("Connections"));
+              list.setAttribute("role", "region");
+              return list;
+            })(),
             showDetail ? detail(board, pick!, narrow) : null,
           );
         })(),
       ];
     }
+    const statusWarning = statusFailed ? viewState("error", t("Connection status could not load. Try again."), undefined,
+      fid(el("button", { class: "outline", text: t("Try again"), onclick: readStatus }), "act:status-retry")) : null;
+    statusWarning?.setAttribute("role", "alert");
     element.replaceChildren(
+      ...(statusWarning ? [statusWarning] : []),
+      ...(!board && refreshError ? [viewState("error", t("Connections could not update. Try again."))] : []),
       ...(chips ? [chips] : []),
       ...body,
-      ...pending.map((c) => el("p", { class: "board-empty", text: t("{name} is on; its card shows after its first check.", { name: c.name }) })),
+      ...pending.map(c => el("section", { class: "conn-waiting" },
+        el("h3", { text: c.name }),
+        el("p", { text: t("{name} is on; its card shows after its first check.", { name: c.name }) }),
+        status.get(c.id)?.error ? el("p", { class: "conn-refused", text: status.get(c.id)!.error! })
+          : status.get(c.id)?.overBudget ? el("p", { class: "conn-status stale", text: t("Daily request limit reached. Checks resume when the budget resets.") }) : null,
+        el("div", { class: "conn-actions" },
+          fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),
+          fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), `manage:${c.id}`)))),
       ...(add ? [add] : []),
-      ...(!board && !add ? [el("p", { class: "board-empty" }, el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }))] : []),
+      ...(!board && !add && !pending.length && !statusFailed ? [viewState("loading", t("Checking connections…"))] : []),
     );
+    element.setAttribute("aria-busy", String(refreshing));
+    const list = element.querySelector<HTMLElement>(".conn-list");
+    if (list) list.scrollTop = listTop;
+    const nextDetail = element.querySelector<HTMLElement>(".conn-detail");
+    if (nextDetail && nextDetail.dataset.item === oldDetail?.dataset.item) nextDetail.scrollTop = detailScroll;
+    if (scroll !== undefined && element.parentElement) element.parentElement.scrollTop = scroll;
     if (had) {
       // A button gone or disabled by its own click (Cancel, Merge, ✓) hands the focus to the
       // detail's next action, not to the page.
       const at = (id: string) => element.querySelector<HTMLButtonElement>(`[data-fid="${CSS.escape(id)}"]:not(:disabled)`);
-      (at(had) ?? (had.startsWith("act:") ? (at("act:merge") ?? at("act:zeca") ?? at("act:open")) : null))?.focus();
+      (at(had) ?? (had.startsWith("act:") ? (at("act:merge") ?? at("act:zeca") ?? at("act:open")) : null))?.focus({ preventScroll: true });
     }
   };
+  const rememberQuery = () => { try { localStorage.setItem(searchKey, search.value); } catch { /* Keep the current search usable. */ } };
+  search.addEventListener("input", () => { asking = null; rememberQuery(); draw(true); });
+  element.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || e.isComposing || e.keyCode === 229 || e.defaultPrevented) return;
+    if (asking) { asking = null; draw(); element.querySelector<HTMLElement>('[data-fid="act:merge"]')?.focus(); }
+    else if (detailOpen && window.innerWidth < 900) {
+      detailOpen = false; remember(); draw();
+      element.querySelector<HTMLElement>(`[data-fid="row:${CSS.escape(picked ?? "")}"]`)?.focus();
+    } else if (e.target === search && search.value) { search.value = ""; rememberQuery(); draw(true); search.focus(); }
+    else return;
+    e.preventDefault(); e.stopPropagation();
+  });
   // CSS and the list/detail DOM must switch at the same breakpoint.
   matchMedia("(min-width: 900px)").addEventListener("change", () => draw());
   void actions.loadPlace?.().then((place) => {
@@ -559,17 +615,31 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   });
   /** Reads when each connector last synced (and why a poll failed): the head says it as a fact. */
   const readStatus = () => {
+    const mine = ++statusAsked;
     void actions.status().then(
       (all) => {
+        if (mine !== statusAsked) return;
         status = new Map(all.map((c) => [c.id, c]));
         known = true;
+        statusFailed = false;
         draw();
       },
       () => {
-        known = true;
+        if (mine !== statusAsked) return;
+        statusFailed = true;
         draw();
       },
     );
+  };
+  const poll = () => {
+    if (refreshing) return;
+    refreshing = true;
+    void actions.refresh().then(() => { refreshError = false; }, () => { refreshError = true; }).finally(() => {
+      refreshing = false;
+      readStatus();
+      draw();
+    });
+    draw();
   };
   // "Synced 2 min ago" ages while the tab is open; a failed poll changes no row. Asked again each
   // minute, only while the tab is in sight.

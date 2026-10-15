@@ -493,7 +493,7 @@ pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {
     tracing::info!(on, "Zeca");
     if !on {
         crate::chat::stop(&app);
-        crate::voice::voice_cancel(app.clone());
+        crate::voice::cancel(&app);
     }
     crate::tray::refresh_menu(&app);
     let _ = app.emit("settings", serde_json::json!({ "zeca": on }));

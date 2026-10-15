@@ -2,6 +2,9 @@
 // the same page Settings drew, in a shadow root with the settings pages' own look so their names
 // never meet the island's.
 import pagesCss from "../settings/pages.css?inline";
+import activityCss from "./activity.css?inline";
+import stateCss from "./view-state.css?inline";
+import { viewState } from "./view-state";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { nestWeek, WEEK_CSS } from "./week-view";
@@ -24,7 +27,8 @@ export interface WeekBackend {
 }
 
 const HOST = `:host { display: block; color: var(--fg); font: 13.5px/1.5 var(--font); }
-.page { padding: 22px 26px 32px; display: flex; flex-direction: column; gap: 18px; }`;
+.page { padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 600px) { .page { padding: 16px; } }`;
 
 /** A page drawn with the settings pages' look, inside `host`. */
 export function settingsPage(host: HTMLElement, extra = ""): HTMLElement {
@@ -40,7 +44,7 @@ export function createWeek(backend: WeekBackend): {
   refresh: () => void;
 } {
   const element = el("div", { class: "nest-week" });
-  const page = settingsPage(element, WEEK_CSS);
+  const page = settingsPage(element, activityCss + WEEK_CSS + stateCss);
   /** The day shown under the bars; null shows the busiest. */
   let day: number | null = null;
   let activity: Activity | null = null;
@@ -50,28 +54,52 @@ export function createWeek(backend: WeekBackend): {
   let confirming = false;
   let hideProjects = false;
   let saved: { ok: boolean; text: string } | null = null;
+  let asked = 0;
+  let loading = false;
+  let failed = false;
+  let failure: string | null = null;
 
+  const retry = el("button", { onclick: () => { if (!loading) void read(); } });
+  page.tabIndex = -1;
   const render = () => {
+    const active = (page.getRootNode?.() as ShadowRoot | undefined)?.activeElement ?? document.activeElement;
+    const returning = active === retry;
     // Its pane scrolls, not the page: keep where the user was.
     const scroller = element.parentElement;
     const scroll = scroller?.scrollTop ?? 0;
+    retry.textContent = loading ? t("Loading") : t("Try again");
+    retry.setAttribute("aria-busy", String(loading));
+    page.setAttribute("aria-busy", String(loading));
+    page.setAttribute("aria-label", t("Activity"));
     page.replaceChildren(
-      ...nestWeek(activity, { tab, github, confirming, hideProjects, saved }, on, day, (d) => {
+      ...(failed ? [viewState("error", t("Could not load {name}.", { name: t("This week") }),
+        activity ? t("The last loaded view is kept and may be out of date.") : t("Try again to read the data saved on this computer."), retry, failure)] : []),
+      ...(!activity ? failed ? [] : [viewState("loading", t("Reading the history…"))] : nestWeek(activity, { tab, github, confirming, hideProjects, saved }, on, day, (d) => {
         day = d;
         render();
         // The page was drawn again: the keyboard stays on the day picked.
         page.querySelector<HTMLElement>(`.day-column[data-day="${d}"]`)?.focus();
-      }),
+      })),
     );
     if (scroller) scroller.scrollTop = scroll;
+    if (returning) (failed ? retry : page).focus({ preventScroll: true });
   };
   const read = async () => {
-    try {
-      activity = await backend.activity(monday);
-    } catch {
-      activity = null;
-    }
+    const mine = ++asked;
+    loading = true;
     render();
+    try {
+      const next = await backend.activity(monday);
+      if (mine !== asked) return;
+      activity = next;
+      failed = false;
+    } catch (error) {
+      if (mine !== asked) return;
+      failed = true;
+      failure = String(error);
+    } finally {
+      if (mine === asked) { loading = false; render(); }
+    }
   };
   const on: ActivityActions = {
     week: (m) => {
@@ -125,6 +153,7 @@ export function createWeek(backend: WeekBackend): {
     },
     clear: async () => {
       await backend.clear();
+      activity = null;
       confirming = false;
       monday = null;
       await read();

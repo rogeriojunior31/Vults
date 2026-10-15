@@ -421,6 +421,11 @@ renderer-only results cannot close this task. **Reference:** B05, R04, C01/C06.
 
 ## UX7 - shared extension, native feature work
 
+A bounded Chat-only refinement was implemented on 2026-10-15 at the user's request
+([delivery record](#quick-chat-proportions---2026-10-15)). ADR 0021 now describes its
+width and zoom within the current fixed overlay. This does not implement the
+paired Mini/Quick width selector or close the desktop acceptance below.
+
 - [ ] Reconcile the requested wider Mini/Quick with ADR 0021's fixed overlay and
   four-size contract before landing runtime changes. Keep Room and Full behavior.
 - [ ] Implement paired width selection and restoration, with display scaling,
@@ -641,3 +646,232 @@ Current reference command:
 ```sh
 npm run tauri dev
 ```
+
+
+## Six-part UI refinement - 2026-10-15
+
+Requested as one complete batch on `feat/ui-component-polish`. All six renderer
+slices below are implemented. This is refinement of UX1-UX6, not UX7's native
+geometry change or the future workspaces. Retain production themes, sprites,
+permissions and execution owners; add no dependency.
+
+| Order / owner | Implementation | Renderer acceptance |
+| --- | --- | --- |
+| 1 / UX4-UX5 Tasks | Goal heading, native named criteria progress, separate lifecycle and execution status, next criterion, secondary project/cost context; retain criteria and maintenance | `check-task-actions.mjs`: start/continue/stop, criteria, explicit agent choice, confirmations, drafts and focus |
+| 2 / UX5 Connections | Title, review/check summary and primary actions first; technical facts/command in retained native details | `check-surface-continuity.mjs`: selected detail and filters, expanded context through poll, check/action order, explicit merge/cancel and duplicate guard |
+| 3 / UX1-UX2 Frame | Shared header icons and footer targets, readable footer, pencil for appearance; short windows reclaim navigation height | Existing Settings and Nest production-renderer checks retain actions, accessible labels and selected navigation; native target/overflow review below |
+| 4 / UX4 Chat history | Stable local search across all loaded rows, date groups, project/executor/time, current selection, initial 30 and Show more | Production Recent check: query/focus, empty and filtered states, older result, more rows, busy guard, stale-list retry and obsolete responses |
+| 5 / UX1-UX5 Feedback | Row-local saving/saved/error for switches and choices, rollback and pending state across repaint; explicit refresh failure in Connections; history loading/retry | Settings check holds/rejects real control writes across renderer refresh, including segmented and select rollback; Connections tests refresh guard/error/retry |
+| 6 / UX2-UX6 Continuity | Same history as a separate narrow Room view, one history entry point, Back/Escape and focus return; stop hidden portrait, preserve query on recreation; long task/connection labels | Integrated check now exercises 480/760/900/1180 widths and 360 px height, mode changes, files/source/draft, filters, hidden/off Zeca and retained scene |
+
+Implementation used the existing native controls, DOM helpers, semantic colors and
+motion tokens. Each slice passed its relevant production-renderer check and the
+TypeScript/Vite build before the next dependent change. New strings have pt-BR,
+Spanish and Chinese translations; Nest and Tasks guides are mirrored in pt-BR.
+
+Desktop acceptance remains the user's next step. Tooling can launch Tauri here
+but exposes no native application surface for visual inspection. Do not interpret
+DOM mock checks as measured WebKit layout. In the running application, review:
+
+1. Tasks with no criteria, mixed completion, a running agent, blocked output and
+   long goals; use Start/Go on/Stop only on intended work and confirm deletions.
+2. Connections Inbox and PRs, failing/passing checks, technical disclosure, narrow
+   Back, repository filter and refresh failure. Merge still needs explicit consent.
+3. Header/footer in Portuguese at 480x360, 760x640 and Full: separate targets,
+   keyboard focus, readable counts and no horizontal page overflow.
+4. Chat history search by project/title/executor, an old result beyond 30 rows,
+   empty search, current conversation, Show more and Back to Chat. Close and reopen
+   Nest to check query retention, without sending the draft.
+5. Slow or failed settings writes: one pending operation, readable local feedback,
+   restored selection on failure and focus return without taking focus from another field.
+6. Mini/Quick/Room/Full with many sessions, attachments, long paths, reduced motion
+   and Zeca off; check native input regions, sprite scale, retained drafts and at
+   least 40 px of transcript in the minimum Nest.
+
+The final repository gates are the build, renderer checks (including Settings,
+project search and continuity), fmt/clippy, workspace tests, evals, brand/English/
+i18n/layers/network/README checks and diff whitespace. Rust tests use
+`TMPDIR=/var/tmp` because an unrelated `/tmp/.git` fixture prevents their temporary
+repositories from initializing in the default directory.
+
+Automated result for this batch: the TypeScript/Vite build, all nine renderer
+scripts and repository policy checks pass; Rust fmt/clippy pass, with 864 workspace
+tests and 8 eval tests passing. Native visual acceptance remains open as described
+above; no browser or native screenshot result is implied.
+
+
+## Quick Chat proportions - 2026-10-15
+
+User requested the fifth suggestion: rebalance the Compact's space for Zeca,
+conversation and controls. Delivered on `feat/ui-component-polish`, retaining
+Mini, Flock placement, assets, integer sprite scales and existing interaction owners.
+
+- Chat uses 492 CSS px (561 logical px after the existing 1.14 zoom); the other
+  Quick tabs keep 440 CSS px (502 logical px). Zeca's existing 112x108 scene gets
+  a clear 128x112 slot. The title has its own full line above executor/actions.
+- A populated or thinking conversation fills the available height up to 556 CSS
+  px. The transcript uses the remainder instead of the old 200/120 px caps.
+  An empty chat keeps its natural content height. The draft remains bounded and
+  multiple attachments use a horizontal strip rather than additional rows.
+- One production geometry module owns zoom and available bounds. The mapped
+  native surface stays 720x640; the initial Tauri configuration now agrees with
+  that existing runtime size. A smaller viewport lowers the CSS limits before
+  synchronous measurement. Top/bottom docking uses the measured rectangle.
+- Short viewports prioritize reading and sending and pause the hidden portrait;
+  the existing scene resumes when space returns. Overflow keeps a scroll path
+  to actions if attention/news and a large draft exhaust the available height.
+- ADR 0021, the UI rules and Chat guide describe the bounded change; the public
+  changes have reviewed Portuguese mirrors and updated source marks.
+
+Validation: build/typecheck, the production geometry check (normal/wider widths,
+smaller viewports, 1/1.25/1.5/2 display-scale bounds, native configuration agreement,
+exact top/bottom input rectangles and hidden click-through), Chat checks (empty,
+thinking, restored conversation, IME, streaming/manual scroll, drafts, files and
+voice), and the integrated surface continuity check. Full repository gates run
+before the local commit.
+
+Desktop review remains required in the reopened Tauri: compare Flock and Chat,
+open the engine/history/folder/access menus, try long drafts and several files,
+check the swallowing/voice clips, fold/reopen and move between Quick and Room.
+Confirm click-through outside the wider shape and bottom-panel placement on the
+real compositor. Renderer mocks and geometry arithmetic do not measure WebKit
+layout or prove the compositor's native input behavior.
+
+
+## Chat, permissions, Memory and selectors - 2026-10-15
+
+The next four UI suggestions are implemented on `feat/ui-component-polish`.
+They reuse the existing theme, motion, DOM and action owners with no dependency.
+
+| Slice | Implementation | Production-renderer acceptance |
+| --- | --- | --- |
+| Active conversation | One safe full Markdown renderer for Quick and Room; shared readable headings, lists, quotes, tables and code; named keyboard-scroll regions; shared copy feedback with failure/retry | Chat check exercises both surfaces, inert links/HTML, copy guard/recovery and retained draft; existing stream cooldown and IME checks still pass |
+| Permission cards | Permission state, operation and full folder; readable command region, separated scope warning, cautious primary action when no exact-call rule is offered or outside content was read | Chat check verifies full command/scope, warning and no invented Always action; existing hidden/disabled/late shortcut and explicit decision checks retain authority |
+| Memory | Proposals before saved facts/debrief/history; labeled Current/Proposed text, explicit removal; retained native disclosures, usage bars; pending writes, stale read warning and retry | Continuity check holds/rejects real writes, refreshes during a pending action, checks errors/retry, obsolete reads, retained scroll/disclosures/focus and no writes on opening |
+| Selectors | One open panel, common selected treatment and targets; named controlled regions; arrows/Home/End, Escape return and outside dismissal; retain focused choice and unfinished rename/caret across reads | Chat check exercises both surfaces through a delayed model read, four competing panels, text editing, IME, keyboard dismissal, explicit folder selection and no implicit execution/access change |
+
+Public Chat and Memory guides and all three UI translations accompany the change.
+The build, all renderer checks and full repository gates run before the local commit.
+Native visual acceptance remains for the user in the reopened Tauri: review rich
+replies and horizontal table/code scrolling, a real permission's complete operation,
+Memory with pending/saved/empty content, and the four selectors in Quick and Room.
+No screenshot or measured WebKit layout claim is implied by DOM checks.
+
+Automated acceptance: TypeScript/Vite build, all nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass. Brand, English, i18n, layer, network,
+README translation and whitespace checks pass. Chat/Memory mirror marks match.
+Tauri starts on this branch and binds all nine global shortcuts; desktop visual
+acceptance remains with the user.
+
+
+## Connections workspace refinement - 2026-10-15
+
+User requested a focused Connections UI pass on `feat/ui-component-polish`.
+The production connector, action and merge owners remain authoritative; no
+connector, network polling behavior or permission is invented by the renderer.
+
+- One service header with sync/wait/error/budget state, Refresh and Settings;
+  show connector selection only for multiple cards and preserve enabled/waiting
+  versus known-off versus failed local status reads. Ignore obsolete status reads.
+- A retained local search filters title, reference, repository, branch and author
+  within the current subsection alongside the repository filter. Show result and
+  section counts, explicit empty results and Clear filters. No network search.
+- The list and detail have bounded independent scroll regions with keyboard focus.
+  Polls retain reading positions and disclosure state; narrow Back/Escape returns
+  to the selected row. A short frame keeps a scroll fallback to its controls.
+- Put branch/author/diff and explicit actions before checks. Passing checks start
+  collapsed; a newly running/failing state opens the list with failed checks first.
+  Retain a manual disclosure choice while state is unchanged. A failing check's
+  label takes precedence over an approval; seen rows retain readable status/actions.
+- Technical detail has update metadata and a copy-only command with the shared
+  copy failure/retry feedback; omit empty technical sections. The existing merge
+  confirmation, refusal and duplicate guards remain intact. Escape only cancels.
+
+The production continuity check exercises search by branch and author, clear/repo
+filters, empty results, stable input/focus, two scroll positions, status-change
+check priority, manual disclosures, explicit merge availability, narrow Escape/IME,
+local status failures/retry and obsolete read rejection without external actions.
+The Nest guide has a reviewed Portuguese mirror and UI strings in all catalogs.
+
+Native acceptance remains with the user in Tauri: compare Room and Full with a
+long list, many checks and long names; try search, clear, independent scrolling,
+Back/Escape, reduced motion, empty/waiting/stale states and explicit actions.
+Renderer checks do not measure WebKit layout or prove native compositor behavior.
+
+Automated acceptance: build/typecheck, all nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass, along with brand, English, i18n,
+layer, network, README translation and whitespace checks. Tauri remains running
+on this branch and received the updated renderer through Vite. Native visual
+acceptance is still pending the user's review.
+
+
+## Workspace theme alignment - 2026-10-15
+
+The user identified Tasks and Connections as visually different from the rest of
+Vults. The Nest frame still used the card surface as its page background, while
+Activity and Chat had explicit black canvases; Tasks also retained a local palette
+and button overrides. This pass keeps the current branch and interaction owners.
+
+- Use the existing page-background role for the Nest. Tasks/Connections cards and
+  the shared spend card use Activity's panel, border and radius roles.
+- Reuse the Activity heading and segmented navigation. Give Tasks its page heading;
+  remove Connections' separate service-icon heading and underline-tab styles.
+- Share neutral secondary/primary button rules and token-based input/focus roles
+  between Tasks and Connections. Remove their old palettes and late overrides.
+  Keep warning borders and execution/approval meanings; finished cards dim their
+  title without fading controls or statuses.
+- Align the page margins and compact card padding with Activity. No new theme,
+  dependency, action, persistence or permission behavior is introduced.
+
+Validation uses the existing production-renderer checks, including task creation,
+criteria, confirmations, failed writes, Connections filters, polling, focus and
+narrow continuity, plus the build and complete repository gates. This presentation
+pass adds no implementation-mirroring tests. Tauri receives the changes through
+Vite; user review of the real Room/Full theme and short/narrow layout remains open.
+
+Automated result: TypeScript/Vite build, nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass. Brand, English, i18n, layers,
+network, README translation and whitespace checks pass; the Nest mirror mark
+matches. The running Tauri process received the updated UI through Vite.
+
+
+## Empty, loading and read-error states - 2026-10-15
+
+The user selected the first follow-up: consistent empty/loading/error feedback.
+A small production DOM renderer and stylesheet provide one neutral panel with a
+state icon, title, optional explanation, explicit action and closed technical
+error disclosure. It uses the existing theme and icons, also inside Week's shadow
+root. Tasks, Connections, records, By project, Week, Memory and Recent reuse it.
+No third-party assets, dependency or background action is added.
+
+- Tasks shows its initial read instead of an empty list, retains its existing
+  draft/failure recovery, and names the empty state and available creation path.
+- Records distinguishes loading, history off, actual emptiness and no filter
+  match. History, Audit, Traces and Usage keep the last successful snapshot and
+  totals on a read failure, with an explicit guarded retry and stale warning.
+- By project now reports failed reads rather than silently dropping them. A
+  known list and query remain editable, with the existing serialized/queued reads.
+- Week reports errors instead of staying in its null/loading view, retains its
+  last recap on refresh failure, and rejects obsolete reads. Successful clearing
+  drops the old in-memory recap before reading back. Retry never clears or exports.
+- Memory, Recent and Connections share the same panel treatment while retaining
+  their existing permission, selection, loading, refresh and disclosure owners.
+  Missing cost data says that no cost was recorded rather than implying no spend.
+
+Existing production checks cover Tasks' initial loading and failure/draft/retry.
+Records checks now hold/reject reads for all four views, preserve snapshots and
+summaries, guard retry and reject obsolete responses. By project checks initial
+error/retry and stale-list retention without project actions. The integrated Week
+check covers cold failure, explicit retry, a retained recap and read ordering,
+with zero history-setting/clear/export actions. The public Nest guide and all UI
+catalogs accompany the change.
+
+Tauri remains available through the existing dev process. Native acceptance is
+still the user's review: compare empty/filtered/waiting/error states in Room and
+Full, open technical details, retry, and check short/narrow views and keyboard
+focus. DOM checks do not measure WebKit layout or the native compositor.
+
+Automated result: TypeScript/Vite build, nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass. Brand, English, i18n, layer,
+network, README translation and whitespace checks pass; the Nest mirror source
+mark matches. The running Tauri process received the updated renderer via Vite.

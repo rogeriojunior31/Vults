@@ -14,6 +14,7 @@ import type { WeekView } from "../view.gen";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
+import { OPEN_ZOOM, quickBounds, quickPixels } from "./geometry";
 import { idleClip, setMusic } from "./behavior";
 import { onDayPart } from "./daypart";
 import { ChatPanel, type ChatBackend } from "./chat";
@@ -120,11 +121,6 @@ export interface Actions {
 /** Quick's short views (ADR 0021): this week, the gear's settings, and Connections with none on. */
 type QuickKind = "activity" | "settings" | "connections";
 
-/** Quick (ADR 0021): the open island's width, in its own CSS pixels (before its zoom). */
-const OPEN_WIDTH = 440;
-/** The open island drawn larger, words and buttons alike (the user's ask, 2026-10-12): about 500
- *  pixels wide on screen. Its scenes compensate, so the birds stay crisp at their pixel size. */
-const OPEN_ZOOM = 1.14;
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
 /** An open connector's card asks how its polls go this often: the view carries rows, not errors,
@@ -324,6 +320,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const topNeeds = el("div", { class: "need-strip top" });
   const inner = el("div", { class: "layer inner" }, headerSlot, topNeeds, main, alertsSlot);
   inner.style.setProperty("zoom", String(OPEN_ZOOM));
+  let boundsShown = "";
+  const fitQuick = () => {
+    const bounds = quickBounds(window.innerWidth, window.innerHeight);
+    const signature = `${bounds.width}|${bounds.chatWidth}|${bounds.height}`;
+    if (signature === boundsShown) return;
+    boundsShown = signature;
+    inner.style.setProperty("--quick-width", `${bounds.width}px`);
+    inner.style.setProperty("--quick-chat-width", `${bounds.chatWidth}px`);
+    inner.style.setProperty("--quick-height", `${bounds.height}px`);
+    inner.classList.toggle("chat-tight", bounds.height < 430);
+  };
+  fitQuick();
   const countdown = el("div", { class: "countdown" });
   root.replaceChildren(compact, inner, countdown);
   root.after(sky.canvas);
@@ -1280,7 +1288,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const awake = !v.locked;
     compactScene.setActive(awake && mode === "compact");
     // Zeca is on the focus card or in the chat: drawn either way while the island is open.
-    focusScene.setActive(awake && mode === "open" && !board && !quick && (!atRest || chatShown || picking));
+    focusScene.setActive(awake && mode === "open" && !board && !quick && (!atRest || chatShown || picking)
+      && (!chatShown || !inner.classList.contains("chat-tight")));
     // The flock shows at rest; a session (or a card) takes its place, its sessions as dots.
     const listShown = others.length > 0;
     habitatScene.setActive(awake && mode === "open" && !chatShown && !board && !quick && !picking && listShown && atRest);
@@ -1498,7 +1507,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   }
   // Scale/output changes move the CSS box even when the island keeps the same size.
   // Measure synchronously: WebKit may suspend animation frames while this surface is hidden.
-  window.addEventListener("resize", () => reshape(fsm.mode));
+  window.addEventListener("resize", () => { fitQuick(); render(raw); });
 
   /**
    * Puts the chat or the overview in the island's body. Only when it is not there already: taking
@@ -1581,14 +1590,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // What a look would answer: a question or a card, a failure, a bird gone quiet for too long.
     const wanting = sessions.filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud");
     strip.hidden = !wanting.length;
-    strip.replaceChildren(
-      ...wanting.map((s) => {
-        const failed = s.status === "failed" || s.attention === "failed";
-        const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
-        b.title = [s.project || agentName(s), statusText(s)].join(" · ");
-        return b;
-      }),
-    );
+    const tags = wanting.map((s) => {
+      const failed = s.status === "failed" || s.attention === "failed";
+      const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
+      b.title = [s.project || agentName(s), statusText(s)].join(" · ");
+      return b;
+    });
+    strip.replaceChildren(...(strip === topNeeds ? [el("div", { class: "need-tags" }, ...tags)] : tags));
   }
 
   /** In a session: the way back to the flock, and a dot per session in the agent's color, the one
@@ -1900,17 +1908,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (mode === "hidden") return { w: HIDDEN_W, h: 0, r: RADIUS.compact };
     if (mode === "compact")
       return { w: COMPACT_W, h: COMPACT_H, r: RADIUS.compact };
-    // On screen, its zoom included: the shape and the input region are screen pixels. Not its
-    // bounding box: that holds the opening's scale(0.97), measured before the transition runs.
+    // Layout dimensions include the zoom explicitly; the frame and input region use screen pixels.
     return {
-      w: Math.ceil(inner.offsetWidth * OPEN_ZOOM),
-      h: Math.ceil(inner.offsetHeight * OPEN_ZOOM),
+      ...quickPixels(inner.offsetWidth, inner.offsetHeight),
       r: RADIUS.open,
     };
   }
 
   /** Moves the shape toward the mode's size, and tells the window which part takes the pointer. */
   function reshape(mode: Mode): void {
+    if (mode === "open" && main.contains(chat.element)) chat.fitContents();
     const t = target(mode);
     const now = performance.now();
     if (calm()) {
@@ -2221,4 +2228,4 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
 }
 
-export { OPEN_WIDTH };
+export { OPEN_WIDTH } from "./geometry";

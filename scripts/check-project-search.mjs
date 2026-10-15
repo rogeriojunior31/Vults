@@ -14,7 +14,7 @@ class Element {
   setAttribute() {}
   focus() { document.activeElement = this; }
 }
-globalThis.document = { createElement: tag => new Element(tag) };
+globalThis.document = { createElementNS: (_ns, tag) => new Element(tag), createElement: tag => new Element(tag) };
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
 const bundles = await build({ configFile: false, root, logLevel: "silent", build: {
   write: false, minify: false, lib: { entry: `${root}src/surfaces/nest/roosts.ts`, formats: ["es"] },
@@ -93,3 +93,23 @@ assert.equal(input(late).hidden, true);
 assert.equal(kept, "");
 assert.deepEqual(actions, [], "Restoring filters must not open projects, focus sessions or apply memory sharing");
 console.log("check-project-search: ok (branch/agent filters, refresh/focus, ordered/deferred saves, recreation, clear/focus, late read, failure/retry, empty projects, no extra data reads or actions)");
+
+const projectReads = [];
+const feedback = createRoosts({ ...backend, query: undefined,
+  load: () => new Promise((resolve, reject) => projectReads.push({ resolve, reject })) });
+feedback.refresh();
+assert.ok(feedback.element.textContent.includes("Loading By project"));
+assert.ok(!feedback.element.textContent.includes("No projects yet"));
+projectReads[0].reject(new Error("Projects unavailable")); await tick();
+assert.ok(feedback.element.textContent.includes("Could not load By project"));
+assert.ok(!feedback.element.textContent.includes("Loading By project"));
+const retryProject = () => nodes(feedback.element).find(n => n.tag === "button" && n.textContent === "Try again");
+retryProject().focus(); retryProject().listeners.click();
+projectReads[1].resolve([{ name: "Kept", key: "kept", checks: null, checksItem: null, cost: null,
+  trees: [{ path: "/work/kept", branch: "main" }], sessions: [], prs: [], memory: [], agents: "none" }]); await tick();
+assert.deepEqual(names(feedback), ["Kept"]);
+feedback.refresh(); projectReads[2].reject(new Error("Stale projects")); await tick();
+assert.deepEqual(names(feedback), ["Kept"]);
+assert.ok(feedback.element.textContent.includes("last loaded view is kept"));
+assert.deepEqual(actions, []);
+console.log("check-project-search: initial loading/error/retry and cached project retention without actions");

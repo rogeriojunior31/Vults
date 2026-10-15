@@ -13,6 +13,7 @@ import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
 import { money, usageLabel, usageLevel } from "./budget";
+import { viewState } from "./view-state";
 
 export interface RecordsBackend {
   history(): Promise<HistoryView>;
@@ -105,6 +106,18 @@ function line(parts: (HTMLElement | null)[], cls = ""): HTMLElement {
 
 const span = (text: string, cls: string) => el("span", { class: cls, text });
 
+function heading(title: string, about: string): HTMLElement {
+  return el("header", { class: "activity-heading" }, el("div", {}, el("h2", { text: title }), el("p", { text: about })));
+}
+
+function summary(...values: [string, string][]): HTMLElement {
+  return el("div", { class: "activity-summary" },
+    span(t("Summary of loaded records"), "activity-summary-label"),
+    ...values.map(([value, label]) =>
+    el("div", { class: "activity-stat" }, el("strong", { text: value }), span(label, "")),
+  ));
+}
+
 const clamp = (percent: number) => `${Math.max(0, Math.min(100, Math.round(percent)))}%`;
 
 /** A bar filled to `percent`, with `cls` on its fill, and a tick at `mark` (the budget) if any. */
@@ -129,12 +142,12 @@ function turnLine(r: TurnRow): HTMLElement {
     .filter(Boolean)
     .join(" · ");
   return line([
-    span(when(r.end * 1000), "record-when"),
-    span(agentName(r.agent), "record-who"),
-    span(r.project || t("No project"), "record-what"),
-    span(duration(r.secs), "record-meta"),
-    span(counts, "record-meta"),
-    r.failed ? span(t("Failed"), "row-tag failing") : null,
+    el("div", { class: "record-body" },
+      el("div", { class: "record-title" }, span(r.project || t("No project"), "record-what"),
+        span(r.failed ? t("Failed") : t("Done"), `record-status ${r.failed ? "failing" : "passing"}`)),
+      el("div", { class: "record-context" }, span(agentName(r.agent), "record-who"), span(counts, "record-meta")),
+    ),
+    el("div", { class: "record-aside" }, span(duration(r.secs), "record-duration"), span(when(r.end * 1000), "record-when")),
   ]);
 }
 
@@ -145,16 +158,12 @@ function auditLine(r: AuditRow): HTMLElement {
     r.act === "always-allow" ||
     r.act === "allow-in-conversation";
   return line([
+    el("div", { class: "record-body" },
+      el("div", { class: "record-title" }, span(r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor, "record-who"),
+        span(act, `record-status ${positive ? "passing" : r.act === "deny" ? "failing" : ""}`)),
+      span([agentName(r.agent), r.project].filter(Boolean).join(" · "), "record-meta"),
+    ),
     span(when(r.at * 1000), "record-when"),
-    span(r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor, "record-who"),
-    span(
-      act,
-      `row-tag ${positive ? "passing" : r.act === "deny" ? "failing" : ""}`,
-    ),
-    span(
-      [agentName(r.agent), r.project].filter(Boolean).join(" · "),
-      "record-meta",
-    ),
     el("code", {
       class: "record-target",
       text: [r.tool, r.target].filter(Boolean).join(" · "),
@@ -177,15 +186,19 @@ function traceLine(r: TraceRow): HTMLElement {
       : null;
   return line(
     [
-      span(when(r.startMs), "record-when"),
-      el("code", { class: "record-what", text: r.name }),
-      span(
-        r.status in words ? t(words[r.status]) : r.status,
-        `row-tag ${r.status === "ok" ? "passing" : r.status === "error" || r.status === "denied" ? "failing" : ""}`,
+      el("div", { class: "record-body" },
+        el("div", { class: "record-title" },
+          el("code", { class: "record-what", text: r.name }),
+          span(r.status in words ? t(words[r.status]) : r.status,
+            `record-status ${r.status === "ok" ? "passing" : r.status === "error" || r.status === "denied" ? "failing" : ""}`),
+        ),
+        el("div", { class: "record-context" },
+          span(r.kind === "execute_tool" ? t("Tool call") : t("Chat turn"), "record-meta"),
+          used ? span(used, "record-meta") : null,
+          r.costUsd !== null ? span(money(r.costUsd), "record-meta") : null,
+        ),
       ),
-      span(took(r.ms), "record-meta"),
-      used ? span(used, "record-meta") : null,
-      r.costUsd !== null ? span(money(r.costUsd), "record-meta") : null,
+      el("div", { class: "record-aside" }, span(took(r.ms), "record-duration"), span(when(r.startMs), "record-when")),
     ],
     r.child ? "child" : "",
   );
@@ -203,12 +216,9 @@ function usageBody(u: UsageView): HTMLElement[] {
         ]),
       )
     : [
-        el("p", {
-          class: "board-empty",
-          text: t(
+        viewState("empty", t("No plan usage yet"), t(
             "No plan has told its usage yet: Claude Code's comes with its status line, Codex's with its meter in Settings.",
-          ),
-        }),
+          )),
       ];
   const top = Math.max(...u.days.map((d) => d.usd), u.budget ?? 0, 0.01);
   const days = u.days.length
@@ -237,10 +247,7 @@ function usageBody(u: UsageView): HTMLElement[] {
         ]),
       )
     : [
-        el("p", {
-          class: "board-empty",
-          text: t("Nothing spent in the last two weeks."),
-        }),
+        viewState("empty", t("No costs recorded in the last two weeks.")),
       ];
   const roosts = u.roosts.length
     ? u.roosts.map((r) =>
@@ -256,35 +263,39 @@ function usageBody(u: UsageView): HTMLElement[] {
         ]),
       )
     : [
-        el("p", {
-          class: "board-empty",
-          text: t("No roost has spent anything yet."),
-        }),
+        viewState("empty", t("No project costs recorded yet.")),
       ];
   return [
-    el("h4", { class: "records-head", text: t("Your plans") }),
-    ...plans,
-    el("h4", {
-      class: "records-head",
-      text:
-        u.budget !== null
-          ? t("The last two weeks, against your {budget} a day", {
-              budget: money(u.budget),
-            })
-          : t("The last two weeks"),
-    }),
-    ...days,
-    u.subscription
-      ? el("p", {
-          class: "board-empty",
-          text: t(
-            "On a subscription this is at API prices: your plan does not charge it.",
-          ),
-        })
-      : null,
-    el("h4", { class: "records-head", text: t("By roost") }),
-    ...roosts,
-  ].filter((p): p is HTMLElement => p !== null);
+    summary(
+      [money(u.days.reduce((n, day) => n + day.usd, 0)), t("Recorded cost · last two weeks")],
+      [tokens(u.days.reduce((n, day) => n + day.tokens, 0)), t("Tokens · last two weeks")],
+      [String(u.windows.length), t("Plan windows")],
+    ),
+    el("section", { class: "usage-section" },
+      el("h4", { class: "records-head", text: t("Your plans") }),
+      ...plans,
+    ),
+    el("section", { class: "usage-section" },
+      el("h4", {
+        class: "records-head",
+        text:
+          u.budget !== null
+            ? t("The last two weeks, against your {budget} a day", { budget: money(u.budget) })
+            : t("The last two weeks"),
+      }),
+      ...days,
+      u.subscription
+        ? el("p", {
+            class: "board-empty",
+            text: t("On a subscription this is at API prices: your plan does not charge it."),
+          })
+        : null,
+    ),
+    el("section", { class: "usage-section" },
+      el("h4", { class: "records-head", text: t("By roost") }),
+      ...roosts,
+    ),
+  ];
 }
 
 /** One tab: what `load` brings, drawn by `draw`; asked again each time the tab opens. */
@@ -296,7 +307,8 @@ function tab<T>(
   query?: RecordsBackend["query"],
 ): { element: HTMLElement; refresh: () => void; flush: () => Promise<void> } {
   const element = el("div", { class: `records ${cls}` });
-  const content = el("div");
+  const content = el("div", { class: "records-content" });
+  const status = el("div", { class: "records-state" });
   const search = document.createElement("input");
   search.type = "search";
   search.maxLength = 4096;
@@ -304,8 +316,25 @@ function tab<T>(
   search.setAttribute("aria-label", t("Search records"));
   search.placeholder = t("Search records");
   let loaded: T | undefined;
+  let loading = false;
+  let failed = false;
+  let failure: string | null = null;
+  const names: Record<string, string> = { history: tk("History"), usage: tk("Cost"), traces: tk("Traces"), audit: tk("Audit") };
+  const retry = el("button", { onclick: () => { if (!loading) refresh(); } });
+  element.tabIndex = -1;
   const paint = () => {
+    element.setAttribute("aria-label", t(names[cls]));
+    const returning = document.activeElement === retry;
     if (loaded !== undefined) content.replaceChildren(...draw(loaded, search.value.trim().toLocaleLowerCase(locale())));
+    element.setAttribute("aria-busy", String(loading));
+    status.replaceChildren();
+    if (failed) {
+      retry.textContent = loading ? t("Loading") : t("Try again");
+      retry.setAttribute("aria-busy", String(loading));
+      status.append(viewState("error", loaded !== undefined ? t("Could not update {name}.", { name: t(names[cls]) }) : t("Could not load {name}.", { name: t(names[cls]) }),
+        loaded !== undefined ? t("The last loaded view is kept and may be out of date.") : t("Try again to read the data saved on this computer."), retry, failure));
+    } else if (loading && loaded === undefined) status.append(viewState("loading", t("Loading {name}…", { name: t(names[cls]) })));
+    if (returning) (failed ? retry : searchable ? search : element).focus({ preventScroll: true });
   };
   let edited = false;
   let saved: Promise<void> = Promise.resolve();
@@ -329,26 +358,30 @@ function tab<T>(
     search.focus();
   } });
   if (searchable) element.append(el("div", { class: "records-search" }, search, clear));
-  element.append(content);
+  element.append(status, content);
   let asked = 0;
   const refresh = () => {
     search.setAttribute("aria-label", t("Search records"));
     search.placeholder = t("Search records");
     clear.textContent = t("Clear filters");
     const mine = ++asked;
+    loading = true;
+    paint();
     void load().then(
       (v) => {
         if (mine === asked) {
           loaded = v;
+          failed = false;
+          loading = false;
           paint();
         }
       },
       (e) => {
         if (mine === asked) {
-          loaded = undefined;
-          content.replaceChildren(
-            el("p", { class: "board-empty", text: String(e) }),
-          );
+          failed = true;
+          loading = false;
+          failure = String(e);
+          paint();
         }
       },
     );
@@ -372,30 +405,30 @@ function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => H
     groups.set(project, entries);
   }
   return groups.size
-    ? [...groups].flatMap(([project, entries]) => [el("h4", { class: "records-head", text: project }), ...entries])
-    : [el("p", { class: "board-empty", text: t("No records match. Clear filters to see all records.") })];
+    ? [...groups].map(([project, entries]) => el("section", { class: "record-group" },
+        el("h4", { class: "records-head" }, span(project, ""), span(entries.length === 1 ? t("1 record") : t("{n} records", { n: entries.length }), "record-count")), ...entries))
+    : [viewState("empty", t("No results"), t("No records match. Clear filters to see all records."))];
 }
 
 export function createHistory(load: () => Promise<HistoryView>, query?: RecordsBackend["query"]) {
   return tab("history", load, (h, query) => {
     return [
-      el("p", {
-        class: "board-empty",
-        text: h.on
+      heading(t("History"), h.on
           ? t(
               "Each finished turn of your agents, counted on this computer. The week's recap and the year's grid are in Settings, Activity.",
             )
           : t(
               "Settings, Activity keeps no history now: turn it on there to see your agents' turns here.",
-            ),
-      }),
+            )),
+      summary(
+        [String(h.turns.length), t("Kept turns")],
+        [String(h.turns.reduce((n, turn) => n + turn.commands, 0)), t("Recorded commands")],
+        [String(h.turns.filter(turn => turn.failed).length), t("Failed turns")],
+      ),
       ...(h.turns.length
         ? groupedRows(h.turns, turnLine, query)
         : [
-            el("p", {
-              class: "board-empty",
-              text: t("No finished turn is kept yet."),
-            }),
+            viewState("empty", h.on ? t("No finished turn is kept yet.") : t("History is off"), h.on ? t("Finished agent turns will appear here.") : undefined),
           ]),
     ];
   }, true, query);
@@ -407,34 +440,35 @@ export function createUsage(load: () => Promise<UsageView>) {
 
 export function createTraces(load: () => Promise<TraceRow[]>) {
   return tab("traces", load, (rows) => [
-    el("p", {
-      class: "board-empty",
-      text: t(
+    heading(t("Traces"), t(
         "Zeca's own work, kept 30 days: each chat turn with its model, tokens and cost, and under it each tool card, with how long it waited for an answer.",
-      ),
-    }),
+      )),
+    summary(
+      [String(rows.filter(row => row.kind !== "execute_tool").length), t("Chat turns")],
+      [String(rows.filter(row => row.kind === "execute_tool").length), t("Tool calls")],
+      [String(rows.filter(row => row.status === "error" || row.status === "denied").length), t("Failed or denied")],
+    ),
     ...(rows.length
       ? rows.map(traceLine)
-      : [el("p", { class: "board-empty", text: t("No traces yet.") })]),
+      : [viewState("empty", t("No traces yet."), t("Chat turns and tool calls will appear here after Zeca works."))]),
   ]);
 }
 
 export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"]) {
   return tab("audit", load, (rows, query) => {
     return [
-      el("p", {
-        class: "board-empty",
-        text: t(
+      heading(t("Audit"), t(
           "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
-        ),
-      }),
+        )),
+      summary(
+        [String(rows.length), t("Audit entries")],
+        [String(rows.filter(row => ["allow", "always-allow", "allow-in-conversation"].includes(row.act)).length), t("Allowed")],
+        [String(rows.filter(row => row.act === "deny").length), t("Denied")],
+      ),
       ...(rows.length
         ? groupedRows(rows, auditLine, query)
         : [
-            el("p", {
-              class: "board-empty",
-              text: t("No card was answered yet."),
-            }),
+            viewState("empty", t("No card was answered yet."), t("Permission answers will appear here. Opening this view answers nothing.")),
           ]),
     ];
   }, true, query);
