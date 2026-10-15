@@ -9,12 +9,11 @@ import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
-import { button, diff, row, toggle } from "./pieces";
+import { button, diff, disclosure, row, toggle } from "./pieces";
 import { policiesSection, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
-import { activityPage, type Activity, type ActivityActions, type GithubGrid, type GridTab } from "./activity";
-import { recapPng } from "./recap-image";
+import { historyCard, type Activity, type ActivityActions } from "./activity";
 import { phoneEvent, phonePage, refreshPhone } from "./phone";
 import { Sound } from "../../sound";
 import { icon, type IconName } from "../../island/icons";
@@ -238,70 +237,18 @@ function approvalsPage(): HTMLElement[] {
 }
 
 let activity: Activity | null = null;
-/** The week shown on Activity: this week's until the user pages. */
-let activityWeek: string | null = null;
 let clearing = false;
-let gridTab: GridTab = "agents";
-let hideProjects = false;
-let saved: { ok: boolean; text: string } | null = null;
-let github: GithubGrid | null = null;
-
-async function refreshGithub(): Promise<void> {
-  github = null;
-  render();
-  try {
-    github = await Bridge.githubCalendar();
-  } catch (e) {
-    github = { state: "error", message: String(e) };
-  }
-  if (page === "activity") render();
-}
 
 async function refreshActivity(): Promise<void> {
   try {
-    activity = await Bridge.activity(activityWeek);
+    activity = await Bridge.activity(null);
   } catch {
     activity = null;
   }
   if (page === "activity") render();
 }
 
-const activityActions: ActivityActions = {
-  week: (monday) => {
-    activityWeek = monday;
-    saved = null;
-    void refreshActivity();
-  },
-  tab: (tab) => {
-    gridTab = tab;
-    if (tab === "github") void refreshGithub();
-    else render();
-  },
-  hideProjects: (on) => {
-    hideProjects = on;
-  },
-  saveImage: () => {
-    if (!activity) return;
-    const week = activity.week;
-    void recapPng(week, { hideProjects })
-      .then((png) => Bridge.saveRecapImage(`vults-week-${week.monday}.png`, png))
-      .then(
-        (path) => {
-          saved = path ? { ok: true, text: t("Saved to {path}", { path }) } : null;
-          render();
-        },
-        (e) => {
-          saved = { ok: false, text: t("Not saved: {error}", { error: String(e) }) };
-          render();
-        },
-      );
-  },
-  connectors: () => {
-    page = "connectors";
-    navigated = true;
-    location.hash = "connectors";
-    render();
-  },
+const activityActions: Pick<ActivityActions, "history" | "confirmClear" | "clear"> = {
   history: async (on) => {
     await Bridge.setHistory(on);
     if (activity) activity = { ...activity, history: on };
@@ -313,7 +260,6 @@ const activityActions: ActivityActions = {
   clear: async () => {
     await Bridge.clearHistory();
     clearing = false;
-    activityWeek = null;
     await refreshActivity();
   },
 };
@@ -708,9 +654,10 @@ function agentsPage(): HTMLElement[] {
     ...AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message).map((a) =>
       agentCard(a.kind, a.name),
     ),
-    el("h2", { text: t("What each agent can do") }),
-    el("p", { class: "lede", text: t("What this computer has of each agent, and what it can do with Vults: what the router and your policies lean on.") }),
-    doctor.element,
+    disclosure(t("What each agent can do"),
+      el("p", { class: "note", text: t("What this computer has of each agent, and what it can do with Vults: what the router and your policies lean on.") }),
+      doctor.element,
+    ),
   ];
 }
 
@@ -732,6 +679,11 @@ function connectorsPage(): HTMLElement[] {
     ...(presence === "paused" ? [el("p", { class: "note", text: t("Paused: connectors do not check anything until you pick another presence in General.") })] : []),
     ...CONNECTORS.map((c) => {
       const st = connectorStatus.get(c.id);
+      const control = toggle(st?.enabled ?? false, async (on) => {
+        await Bridge.connectorEnable(c.id, on);
+        await refreshConnectors();
+      });
+      control.setAttribute("aria-label", c.name);
       const state = !st?.enabled
         ? badge(t("Off"), "off")
         : st.overBudget
@@ -751,11 +703,8 @@ function connectorsPage(): HTMLElement[] {
           el(
             "div",
             { class: "head-right" },
-            state,
-            toggle(st?.enabled ?? false, async (on) => {
-              await Bridge.connectorEnable(c.id, on);
-              await refreshConnectors();
-            }),
+            st?.enabled ? state : null,
+            control,
           ),
         ),
         el("p", { class: "row-about", text: t(c.about) }),
@@ -924,17 +873,17 @@ function generalPage(): HTMLElement[] {
         }),
       ),
     ),
-    el(
+    disclosure(t("Keyboard shortcuts"), el(
       "section",
       { class: "card rows" },
-      row(t("Allow / Deny from anywhere"), t("Ctrl+Alt+Y and Ctrl+Alt+N answer the card on the island. Change the keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
-      row(t("Talk to the chat"), t("Hold Ctrl+Alt+V to speak to Zeca from anywhere, once a voice model is set up in Chat & voice."), el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
-      row(t("Next / previous session"), t("Ctrl+Alt+J and Ctrl+Alt+K put the next or the previous session in front, in the flock's order. A card waiting for you stays in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
-      row(t("Open the island"), t("Ctrl+Alt+Space unfolds the island from anywhere, and hands it the keys until it folds: ↑ ↓ sessions, Enter the terminal, M actions, Y / N or a number to answer the card on screen, C the chat, Esc back to your window."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
-      row(t("Change size"), t("Ctrl+Alt+1, 2 and 3 switch to Mini (the pill), Quick (the island) and Room (the Nest) from anywhere; Full is the Nest's own switch."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
-      row(t("Command palette"), t("Ctrl+K in Quick (with the island holding the keys) and in the Nest: jump to a session, start a /task, /delegate, /continue or /remember, or open a tab. A session that waits leads to the island."), el("span", { class: "kbd", text: "Ctrl+K" })),
-      row(t("The Nest's tabs"), t("In the Nest, Alt+1 to Alt+5 pick Flock, Tasks, Chat, Activity and Connections; Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
-    ),
+      row(t("Allow / Deny from anywhere"), t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
+      row(t("Talk to the chat"), t("Hold to speak after choosing a voice model in Chat & voice."), el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
+      row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
+      row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
+      row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
+      row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
+      row(t("The Nest's tabs"), t("Choose Flock, Tasks, Chat, Activity or Connections. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
+    )),
   ];
 }
 
@@ -967,7 +916,7 @@ function chatPage(): HTMLElement[] {
   });
 
   const rows: (HTMLElement | null)[] = [
-    row(t("Provider"), t("Where the API chat sends your messages."), select),
+    row(t("Provider"), t("API messages go to this provider. This mode cannot run commands or edit files."), select, t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.")),
   ];
   if (p) {
     rows.push(row(...keyRow(p, done)));
@@ -980,22 +929,23 @@ function chatPage(): HTMLElement[] {
     ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock & Zeca): no chat or voice until you turn him back on.") })]),
     el("p", {
       class: "lede",
-      text: t("The chat on the island talks through the Claude Code or Codex CLI you are logged into, on your own subscription. It can also use a provider's API with your own key, or a model running on this machine."),
+      text: t("Claude Code and Codex use your CLI login and subscription. API providers use your own key or a local model."),
     }),
     el(
       "section",
       { class: "card rows" },
       row(
         t("Your Claude Code and Codex setup"),
-        t("The chat's CLI reads your own setup, as in your terminal: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Cards still ask before every command or edit your rules don't allow. Off, it reads none of it. Applies to the next conversation."),
+        t("Use your CLI instructions, skills and tools. Changes apply to the next conversation."),
         toggle(nativeChat, async (on) => {
           await Bridge.setNativeChat(on);
           nativeChat = on;
         }),
+        t("The chat's CLI reads your own setup, as in your terminal: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Cards still ask before every command or edit your rules don't allow. Off, it reads none of it. Applies to the next conversation."),
       ),
       row(
         t("Who answers Zeca's cards"),
-        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
+        t("Choose who approves commands and edits. Destructive commands always ask; every answer is audited."),
         segmented<ChatAccess>(
           [
             { value: "ask", label: t("Asks first") },
@@ -1009,6 +959,7 @@ function chatPage(): HTMLElement[] {
             render();
           },
         ),
+        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
       ),
       ...(chatAccess === "full"
         ? [
@@ -1078,17 +1029,6 @@ function chatPage(): HTMLElement[] {
     ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
     el("h2", { text: t("Voice") }),
     el("section", { class: "card rows" }, ...voiceRows()),
-    el(
-      "section",
-      { class: "card" },
-      el(
-        "p",
-        { class: "note" },
-        document.createTextNode(
-          t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider."),
-        ),
-      ),
-    ),
   ];
 }
 
@@ -1482,7 +1422,6 @@ function flockPage(): HTMLElement[] {
         }),
       ),
     ),
-    el("h2", { text: "Zeca" }),
     el(
       "section",
       { class: "card rows" },
@@ -1527,6 +1466,7 @@ function flockPage(): HTMLElement[] {
 
 /** The page last drawn: a re-render of it keeps the scroll, a new page starts at the top. */
 let drawn: Page | null = null;
+const expanded = new Map<Page, Set<string>>();
 
 /** Draws the page again when it is the phone's (its rows refresh on their own). */
 function renderPhone(): void {
@@ -1534,6 +1474,11 @@ function renderPhone(): void {
 }
 
 function render(): void {
+  const scroll = page === drawn ? (root.querySelector("main.page")?.scrollTop ?? 0) : 0;
+  if (drawn) expanded.set(drawn, new Set([...root.querySelectorAll<HTMLDetailsElement>("details")].filter(node => node.open).map(node => node.dataset.setting ?? "")));
+  const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+  const focus = drawn === page && active && root.contains(active) && active.dataset.setting ? active : null;
+  const editable = focus && (focus.tagName === "TEXTAREA" || (focus.tagName === "INPUT" && !["checkbox", "range"].includes(focus.type))) && !focus.readOnly;
   head.setZeca(zeca);
   head.setSound(sounds);
   foot.setZeca(zeca);
@@ -1550,7 +1495,10 @@ function render(): void {
             : page === "projects"
               ? projectsPage()
             : page === "activity"
-              ? activityPage(activity, { tab: gridTab, github, confirming: clearing, hideProjects, saved }, activityActions)
+              ? [el("h1", { text: t("Activity") }),
+                el("p", { class: "lede", text: t("Choose what stays on this computer. Recaps and records are in Activity.") }),
+                el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week"))),
+                historyCard(activity, { confirming: clearing }, activityActions)]
             : page === "connectors"
               ? connectorsPage()
             : page === "phone"
@@ -1606,10 +1554,22 @@ function render(): void {
     picker.append(option);
   }
   picker.addEventListener("change", () => choosePage(picker.value as Page));
-  const scroll = page === drawn ? (root.querySelector("main.page")?.scrollTop ?? 0) : 0;
-  const main = el("main", { class: "page" }, el("div", { class: "page-kicker", text: t("Settings") }), ...content);
+  const title = content.find(node => node.tagName === "H1");
+  const intro = content.find(node => node.classList.contains("lede"));
+  const main = el("main", { class: `page${page !== drawn ? " page-enter" : ""}` },
+    el("header", { class: "settings-heading" }, title ?? null, intro ?? null),
+    ...content.filter(node => node !== title && node !== intro));
+  for (const node of main.querySelectorAll<HTMLDetailsElement>("details")) node.open = expanded.get(page)?.has(node.dataset.setting ?? "") ?? false;
   root.replaceChildren(picker, nav, main);
   main.scrollTop = scroll;
+  if (focus) {
+    const next = [...main.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-setting]")].find(node => node.dataset.setting === focus.dataset.setting && node.tagName === focus.tagName);
+    if (next) {
+      if (editable) next.value = focus.value;
+      next.focus({ preventScroll: true });
+      if (editable && focus.selectionStart !== null) next.setSelectionRange(focus.selectionStart, focus.selectionEnd);
+    }
+  }
   drawn = page;
   const logo = root.querySelector<HTMLImageElement>("img.logo");
   if (logo) logo.src = "/icon.png";

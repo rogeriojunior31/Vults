@@ -21,9 +21,15 @@ export function row(title: string, about: string, control: HTMLElement, more?: s
   const titleId = `settings-row-title-${++rowNumber}`;
   const titleElement = el("div", { class: "row-title", text: title });
   titleElement.id = titleId;
-  if (control.matches("input, select, textarea, button")) {
-    control.setAttribute("aria-labelledby", titleId);
-  }
+  const description = el("div", { class: "row-about", text: about });
+  description.id = `${titleId}-about`;
+  if (!control.matches("input, select, textarea, button")) control.setAttribute("role", "group");
+  control.setAttribute("aria-labelledby", titleId);
+  control.setAttribute("aria-describedby", description.id);
+  const fields = control.matches("input, select, textarea, button") ? [control] : [...control.querySelectorAll<HTMLElement>("input, select, textarea, button")];
+  fields.forEach((field, i) => { field.dataset.setting = `${title}:${i}`; });
+  const details = more ? el("details", { class: "row-more" }, el("summary", { text: t("More") }), el("p", { text: more })) : null;
+  if (details) details.dataset.setting = title;
   return el(
     "div",
     { class: "row" },
@@ -31,11 +37,17 @@ export function row(title: string, about: string, control: HTMLElement, more?: s
       "div",
       { class: "row-text" },
       titleElement,
-      el("div", { class: "row-about", text: about }),
-      more ? el("details", { class: "row-more" }, el("summary", { text: t("More") }), el("p", { text: more })) : null,
+      description,
+      details,
     ),
     control,
   );
+}
+
+export function disclosure(title: string, ...content: HTMLElement[]): HTMLDetailsElement {
+  const details = el("details", { class: "settings-disclosure" }, el("summary", { text: title }), el("div", { class: "disclosure-body" }, ...content));
+  details.dataset.setting = title;
+  return details;
 }
 
 export function button(text: string, onclick: () => void, primary = false): HTMLElement {

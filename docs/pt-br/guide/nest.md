@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 892f3b3c5240 -->
+<!-- source: 947d0e9152e7 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -53,6 +53,13 @@ ilha.
 chat dela), abre a paleta: digite para pular para uma sessão, para
 começar `/task`, `/delegate`, `/continue` ou `/remember` no chat (com o Zeca ligado), ou para abrir uma
 aba. Ela nunca responde um card: uma sessão que espera por você só leva até o card dela.
+
+As Configurações usam um título por página e agrupam os controles relacionados de
+forma consistente. A referência de atalhos em Geral e o diagnóstico de capacidades
+em Agentes abrem sob demanda. Chat e voz mantém as explicações extensas de setup,
+acesso e API junto dos controles em **Mais**. Explicações abertas e a posição de
+rolagem sobrevivem a atualizações; um campo focado mantém o texto ainda não salvo
+e sua seleção durante uma atualização não relacionada.
 
 ## Flock
 

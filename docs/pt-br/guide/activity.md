@@ -1,9 +1,10 @@
 # Atividade
-<!-- source: 9294ef795aae -->
+<!-- source: 24b4fc3b1413 -->
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
-ano numa grade; **Settings → Activity** mostra a mesma página. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
-enquanto os seus agentes trabalham.
+ano numa grade. **Settings → Activity** mantém os controles de histórico e um botão
+**Open Activity**; o resumo e o calendário ficam no Nest. Tudo é contado neste
+computador, a partir de um histórico local que o Vults guarda enquanto os seus agentes trabalham.
 
 O Nest organiza Atividade em seis telas, com o mesmo estilo de navegação e resumo:
 
@@ -65,7 +66,7 @@ A partir das 08:00 de segunda, a ilha conta a semana passada numa linha (*Last w
 20 min with your agents, most on site.*), uma vez, se os seus agentes tiveram algum turno naquela
 semana. Ela aparece em cada preset como a linha que vem depois de uma tela bloqueada
 ([A ilha](island.md#while-you-were-away)), nunca no *Paused*. **Open Activity** mostra a semana
-inteira no Settings; ele e o **×** a marcam como lida.
+inteira no Nest; ele e o **×** a marcam como lida.
 
 <a id="the-grid"></a>
 

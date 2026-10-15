@@ -84,13 +84,6 @@ button:focus-visible,
   flex-direction: column;
   gap: 14px;
 }
-.page-kicker {
-  margin-bottom: -10px;
-  font: 11px var(--mono);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--fg-muted);
-}
 h1 {
   margin: 0;
   font-size: 20px;

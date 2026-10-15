@@ -31,7 +31,7 @@ const island = createIsland(document.getElementById("island")!, {
   dismissDigest: () => void Bridge.digestDismiss(),
   dismissRecap: () => void Bridge.recapDismiss(),
   openActivity: () => {
-    void Bridge.openSettings("activity");
+    void changeView(() => Bridge.openNest("week"));
     void Bridge.recapDismiss();
   },
   stepDiff: (agent, id, step) => Bridge.stepDiff(agent, id, step).catch(() => null),

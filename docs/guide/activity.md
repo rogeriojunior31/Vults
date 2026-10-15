@@ -1,8 +1,9 @@
 # Activity
 
 The Nest's **Activity → Week** shows what your agents did: a week's recap and the last year as a
-grid; **Settings → Activity** shows the same page. It
-is counted on this computer, from a local history that Vults keeps as your agents work.
+grid. **Settings → Activity** keeps the history controls and an **Open Activity** button;
+the recap and calendar have one home in the Nest. Activity is counted on this computer,
+from a local history that Vults keeps as your agents work.
 
 The Nest groups Activity into six views, with the same navigation and summary style:
 
@@ -53,7 +54,7 @@ Windows it goes to your Pictures folder), and nothing is uploaded.
 From 08:00 on Monday, the island tells last week in one line (*Last week: 41 turns, 6 h 20 min
 with your agents, most on site.*), once, if your agents had a turn that week. It shows as the line
 after a screen lock does in each preset ([The island](island.md#while-you-were-away)), never in
-*Paused*. **Open Activity** shows the whole week in Settings; it and **×** both mark it read.
+*Paused*. **Open Activity** shows the whole week in the Nest; it and **×** both mark it read.
 
 ## The grid
 

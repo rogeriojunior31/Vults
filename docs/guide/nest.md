@@ -53,6 +53,12 @@ in its chat), opens the palette: type to jump to a session, to start
 `/task`, `/delegate`, `/continue` or `/remember` in the chat (with Zeca on), or to open a tab. It
 never answers a card: a session that waits for you only leads to its card.
 
+Settings uses one page heading and groups related controls consistently. General's
+keyboard reference and Agents' capability diagnostics open on demand. Chat & voice
+keeps extended setup, access and API explanations beside their controls under **More**.
+Open explanations and the scroll position survive refreshes; a focused input keeps
+its unsaved text and selection during an unrelated update.
+
 ## Flock
 
 The flock across the window, three times its size, each bird over a card with its session's
