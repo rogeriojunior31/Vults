@@ -50,7 +50,7 @@ jobs:
       - name: cargo-fuzz
         run: cargo "+$NIGHTLY" install cargo-fuzz --version "$CARGO_FUZZ" --locked
       - name: Corpus from the last run
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: fuzz/corpus/${{ matrix.target }}
           key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
@@ -65,7 +65,7 @@ jobs:
         run: cargo "+$NIGHTLY" fuzz run ${{ matrix.target }} corpus/${{ matrix.target }} -- -max_total_time=$SECONDS_PER_TARGET
       - name: Keep the crash
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: crash-${{ matrix.target }}
           path: fuzz/artifacts/
