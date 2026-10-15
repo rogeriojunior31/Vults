@@ -762,3 +762,44 @@ Automated acceptance: TypeScript/Vite build, all nine renderer checks, fmt/clipp
 README translation and whitespace checks pass. Chat/Memory mirror marks match.
 Tauri starts on this branch and binds all nine global shortcuts; desktop visual
 acceptance remains with the user.
+
+
+## Connections workspace refinement - 2026-10-15
+
+User requested a focused Connections UI pass on `feat/ui-component-polish`.
+The production connector, action and merge owners remain authoritative; no
+connector, network polling behavior or permission is invented by the renderer.
+
+- One service header with sync/wait/error/budget state, Refresh and Settings;
+  show connector selection only for multiple cards and preserve enabled/waiting
+  versus known-off versus failed local status reads. Ignore obsolete status reads.
+- A retained local search filters title, reference, repository, branch and author
+  within the current subsection alongside the repository filter. Show result and
+  section counts, explicit empty results and Clear filters. No network search.
+- The list and detail have bounded independent scroll regions with keyboard focus.
+  Polls retain reading positions and disclosure state; narrow Back/Escape returns
+  to the selected row. A short frame keeps a scroll fallback to its controls.
+- Put branch/author/diff and explicit actions before checks. Passing checks start
+  collapsed; a newly running/failing state opens the list with failed checks first.
+  Retain a manual disclosure choice while state is unchanged. A failing check's
+  label takes precedence over an approval; seen rows retain readable status/actions.
+- Technical detail has update metadata and a copy-only command with the shared
+  copy failure/retry feedback; omit empty technical sections. The existing merge
+  confirmation, refusal and duplicate guards remain intact. Escape only cancels.
+
+The production continuity check exercises search by branch and author, clear/repo
+filters, empty results, stable input/focus, two scroll positions, status-change
+check priority, manual disclosures, explicit merge availability, narrow Escape/IME,
+local status failures/retry and obsolete read rejection without external actions.
+The Nest guide has a reviewed Portuguese mirror and UI strings in all catalogs.
+
+Native acceptance remains with the user in Tauri: compare Room and Full with a
+long list, many checks and long names; try search, clear, independent scrolling,
+Back/Escape, reduced motion, empty/waiting/stale states and explicit actions.
+Renderer checks do not measure WebKit layout or prove native compositor behavior.
+
+Automated acceptance: build/typecheck, all nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass, along with brand, English, i18n,
+layer, network, README translation and whitespace checks. Tauri remains running
+on this branch and received the updated renderer through Vite. Native visual
+acceptance is still pending the user's review.

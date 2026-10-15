@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 2d66bc10da9f -->
+<!-- source: f1c31ced1bdc -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -192,19 +192,36 @@ até você sair do Vults. Em uma janela estreita, o detalhe selecionado abre de 
 Voltar retorna à lista filtrada. Se o item desaparecer, a lista abre no lugar dele.
 Uma confirmação de merge ainda pendente é descartada ao fechar o Nest.
 
-Um chip para cada conector que você ligou, com quantas linhas ele tem; **+** abre **Settings →
-Connectors**. Embaixo, o conector escolhido: quando sincronizou pela última vez (ou por que a última
-consulta falhou), um filtro de repositório (**All repos** ou um deles) e **↻ Refresh** para consultar
-de novo (no máximo uma vez por minuto). No GitHub, quatro abas com a contagem: **Inbox** (o que
-espera por você: revisões pedidas a você, seus pull requests falhando, devolvidos ou prontos para
-merge, um branch padrão falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos
-seus branches padrão; em vermelho com quantos falham) e **Releases** (a mais recente de cada
-repositório). O item selecionado prioriza título, revisão, checks e ações, incluindo
-**Open in GitHub ↗**, como na ilha ([O card do GitHub](connectors.md#the-github-card)).
-**Technical details** expande autor, branch, tamanho (`+120 −40 · 6 files`), horário da
-atualização e um comando `gh` com **Copy** (o Vults nunca o roda). A seção continua aberta
-durante as atualizações. Se a atualização manual falhar, as linhas atuais continuam disponíveis
-com a opção de tentar de novo; uma linha marcada com **✓ Seen** fica esmaecida aqui. **Add a connection** lista cada conector
-do Vults que está desligado, com o que ele observa; **Turn on in Settings…** e **Manage
-connections** abrem **Settings → Connectors**, o único lugar que liga um conector
-([Conectores](connectors.md)).
+O conector escolhido tem um único cabeçalho: a última sincronização (ou por que falhou),
+**↻ Refresh** para consultar de novo (no máximo uma vez por minuto) e **Manage connections** para
+**Settings → Connectors**. O seletor aparece só quando vários conectores têm cards. Um conector
+ligado aguardando seu primeiro card mostra a espera ou o erro com Atualizar e Configurações;
+um status que não pôde ser lido oferece **Try again**, sem tratar o conector como desligado.
+Quando o limite diário de requisições se esgota, o motivo da espera fica explícito.
+
+No GitHub, quatro abas mantêm suas contagens: **Inbox** (o que espera por você: revisões pedidas
+a você, seus pull requests falhando, devolvidos ou prontos para merge e um branch padrão
+falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos seus branches padrão;
+em vermelho com quantos falham) e **Releases** (a mais recente de cada repositório). A busca
+filtra a aba carregada por título, referência, repositório, branch ou autor, junto do filtro
+**All repos**. Ela não faz requisições de rede. A busca fica neste computador ao reabrir;
+**Clear filters** restaura a lista.
+
+A lista e o detalhe selecionado rolam de forma independente; as atualizações normais mantêm as
+posições de leitura, o foco da busca e os detalhes expandidos. Em janelas estreitas, **Voltar** ou
+**Esc** retorna do detalhe para a linha selecionada. Com foco na busca, **Esc** limpa o texto;
+uma confirmação de merge pendente é fechada primeiro. Selecionar, buscar ou expandir nunca executa uma ação.
+
+O item selecionado mostra título, branch, autor e tamanho (`+120 −40 · 6 files`) antes das ações,
+incluindo **Open in GitHub ↗**, como na ilha ([O card do GitHub](connectors.md#the-github-card)).
+As ações e a confirmação explícita de merge vêm antes dos checks. Os checks aprovados começam
+fechados; os que estão rodando ou acabaram de falhar abrem, com falhas primeiro, contagem e barra
+de progresso durante a execução. A escolha manual de expandir ou fechar permanece nas
+atualizações sem mudança de estado. Checks falhando têm prioridade sobre o rótulo de aprovação.
+**Technical details**, quando presente, mantém informações da atualização e um comando `gh` com
+**Copy** e aviso para tentar de novo em caso de falha (o Vults nunca o executa).
+
+Uma atualização que falha mantém as linhas atuais e permite tentar de novo. **✓ Seen** deixa o
+título mais discreto sem esmaecer o status ou as ações. **Add a connection** lista só conectores
+suportados que estão comprovadamente desligados; **Turn on in Settings…** e **Manage connections**
+abrem o único lugar que liga um conector ([Conectores](connectors.md)).

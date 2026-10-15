@@ -106,7 +106,7 @@ Scene.prototype.setActive = function (on) { active.set(this.canvas, on); return 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const visibility = hidden => { document.hidden = hidden; for (const fn of documentEvents.visibilitychange ?? []) fn(); };
 const row = { item: "org/alpha#7", group: "to-review", name: "org/alpha#7", title: "Review alpha", checks: null, review: null, link: true, merge: false,
-  facts: { repo: "org/alpha", branch: "feature/alpha", diff: null, author: null, reviewers: [], updated: null, runs: [], release: null, command: null } };
+  facts: { repo: "org/alpha", branch: "feature/alpha", diff: null, author: null, reviewers: [], updated: 1_770_000_000, runs: [], release: null, command: null } };
 
 for (const width of [480, 760, 900, 1180]) {
   window.innerWidth = width;
@@ -423,3 +423,85 @@ memory.refresh(); const obsolete = memoryReads.at(-1); memory.refresh();
 memoryReads.at(-1).resolve(memoryView); await tick(); obsolete.reject(new Error("Obsolete")); await tick();
 assert.ok(!memory.element.textContent.includes("The last loaded view"));
 console.log("check-surface-continuity: Memory proposal/fact/history hierarchy, explicit decisions, pending guard across refresh, stale/error/retry, retained disclosures/scroll/focus and response ordering");
+
+// Connections searches the loaded snapshot and retains both reading panes through a poll.
+storage.delete("vults.connections-query");
+window.innerWidth = 1180;
+const connectionReads = [], connectionEffects = [];
+const connectionUI = createConnections({ status: () => new Promise((resolve, reject) => connectionReads.push({ resolve, reject })),
+  refresh: async () => { connectionEffects.push("refresh"); }, onMerged() {}, merge: async () => { connectionEffects.push("merge"); },
+  open: () => connectionEffects.push("open"), settings: () => connectionEffects.push("settings"), zeca: () => null });
+const second = { ...row, item: "org/beta#9", name: "org/beta#9", title: "An old useful result", facts: { ...row.facts, repo: "org/beta", branch: "fix/needle", author: "river" } };
+let connectionView = { boards: [{ connector: "github", rows: [mergeRow, second] }] };
+const healthy = [{ id: "github", enabled: true, lastOk: Date.now() / 1000, error: null, watching: 2, overBudget: false }];
+const cHost = new Element("main"); cHost.append(connectionUI.element); document.body.replaceChildren(cHost);
+connectionUI.update(connectionView); connectionReads.at(-1).resolve(healthy); await tick();
+const cAt = id => connectionUI.element.querySelector(`[data-fid="${id}"]`);
+assert.equal(connectionUI.element.querySelectorAll(".conn-chip").length, 0, "A single connection is named once, with one settings entry point");
+assert.equal(connectionUI.element.querySelectorAll('[data-fid="act:manage"]').length, 1);
+const cSearch = connectionUI.element.querySelector(".conn-search");
+assert.equal(cSearch.getAttribute("aria-label"), "Search connections");
+cSearch.focus(); cSearch.value = "needle"; cSearch.fire("input");
+assert.equal(connectionUI.element.querySelectorAll(".conn-row").length, 1);
+assert.equal(connectionUI.element.querySelector(".conn-row").getAttribute("aria-pressed"), "true");
+assert.equal(document.activeElement, cSearch);
+assert.ok(connectionUI.element.textContent.includes("Results: 1 of 2"));
+cSearch.value = "@missing"; cSearch.fire("input");
+assert.ok(connectionUI.element.textContent.includes("No items match your search"));
+assert.equal(connectionUI.element.querySelector(".conn-detail"), null);
+connectionUI.element.querySelectorAll("button").find(b => b.textContent === "Clear filters").fire("click");
+assert.equal(cSearch.value, ""); assert.equal(document.activeElement, cSearch);
+cAt("act:repo").value = "org/beta"; cAt("act:repo").fire("change");
+assert.equal(connectionUI.element.querySelectorAll(".conn-row").length, 1);
+cAt("act:repo").value = ""; cAt("act:repo").fire("change");
+cAt("row:org/alpha#7").fire("click");
+assert.equal(connectionUI.element.querySelector(".conn-check-list").open, false, "Successful checks start collapsed");
+const detailBefore = connectionUI.element.querySelector(".conn-detail");
+assert.ok(nodes(detailBefore).indexOf(cAt("act:merge")) < nodes(detailBefore).indexOf(cAt("act:checks")), "Actions precede an arbitrarily long check list");
+connectionUI.element.querySelector(".conn-list").scrollTop = 120;
+detailBefore.scrollTop = 75; cAt("act:technical").parentElement.open = true;
+connectionUI.redraw();
+assert.equal(connectionUI.element.querySelector(".conn-list").scrollTop, 120);
+assert.equal(connectionUI.element.querySelector(".conn-detail").scrollTop, 75);
+assert.equal(cAt("act:technical").parentElement.open, true);
+connectionView = { boards: [{ connector: "github", rows: [{ ...mergeRow, checks: "failing", review: "approved", merge: false,
+  facts: { ...mergeRow.facts, runs: [{ name: "Fine", state: "passed" }, { name: "Very long failed check name", state: "failed" }] } }, second] }] };
+connectionUI.update(connectionView); connectionReads.at(-1).resolve(healthy); await tick();
+assert.equal(connectionUI.element.querySelector(".conn-check-list").open, true, "Newly failing checks become visible even after success was collapsed");
+assert.equal(cAt("row:org/alpha#7").querySelector(".conn-tag").textContent, "Checks failing", "A review approval cannot conceal failing checks");
+assert.ok(connectionUI.element.querySelector(".conn-check").classList.contains("failed"));
+assert.equal(cAt("act:merge"), null, "Only the real row offers merge");
+connectionUI.element.querySelector(".conn-check-list").open = false; connectionUI.redraw();
+assert.equal(connectionUI.element.querySelector(".conn-check-list").open, false, "Manual disclosure choice survives an unchanged status");
+const outsideControl = new Element("button"); outsideControl.dataset.fid = "act:open"; document.body.append(outsideControl); outsideControl.focus();
+connectionUI.redraw(); assert.equal(document.activeElement, outsideControl, "A poll cannot steal focus from another region");
+cSearch.value = "river"; cSearch.fire("input"); assert.equal(connectionUI.element.querySelectorAll(".conn-row").length, 1);
+assert.equal(connectionUI.element.querySelector(".conn-list").scrollTop, 0);
+connectionUI.refresh(); connectionReads.at(-1).reject(new Error("Status offline")); await tick();
+assert.ok(connectionUI.element.textContent.includes("Connection status could not load"));
+assert.ok(connectionUI.element.textContent.includes("An old useful result"));
+assert.equal(connectionUI.element.querySelector(".conn-search"), cSearch);
+cAt("act:status-retry").fire("click"); const obsoleteStatus = connectionReads.at(-1);
+cAt("act:status-retry").fire("click"); connectionReads.at(-1).resolve(healthy); await tick();
+obsoleteStatus.reject(new Error("Obsolete")); await tick();
+assert.equal(connectionUI.element.querySelector(".conn-status-error"), null);
+assert.deepEqual(connectionEffects, [], "Search, filtering, disclosing and local status retry perform no external action");
+window.innerWidth = 480; connectionUI.redraw(); cAt("row:org/beta#9").fire("click");
+assert.ok(cAt("act:back-detail"));
+connectionUI.element.fire("keydown", { key: "Escape", preventDefault() {}, stopPropagation() {} });
+assert.equal(connectionUI.element.querySelector(".conn-detail"), null);
+assert.equal(document.activeElement, cAt("row:org/beta#9"));
+cSearch.focus(); connectionUI.element.fire("keydown", { key: "Escape", target: cSearch, isComposing: true, preventDefault() {}, stopPropagation() {} });
+assert.equal(cSearch.value, "river");
+connectionUI.element.fire("keydown", { key: "Escape", target: cSearch, preventDefault() {}, stopPropagation() {} });
+assert.equal(cSearch.value, ""); assert.equal(document.activeElement, cSearch);
+storage.delete("vults.connections-query");
+const unknownReads = [];
+const unknownUI = createConnections({ status: () => new Promise((resolve, reject) => unknownReads.push({ resolve, reject })), refresh: async () => {},
+  onMerged() {}, merge: async () => {}, open() {}, settings() {}, zeca: () => null });
+unknownUI.update({ boards: [] }); unknownReads.at(-1).reject(new Error("Unavailable")); await tick();
+assert.equal(unknownUI.element.querySelector(".nest-add"), null, "An unreadable status never claims the connector is off");
+unknownUI.element.querySelector('[data-fid="act:status-retry"]').fire("click"); unknownReads.at(-1).resolve(healthy); await tick();
+assert.ok(unknownUI.element.querySelector(".conn-waiting"));
+assert.equal(unknownUI.element.querySelector(".nest-add"), null);
+console.log("check-surface-continuity: Connections search/filter/empty states, independent scroll, explicit actions, check priority/disclosures, narrow Escape and stale status ordering without side effects");

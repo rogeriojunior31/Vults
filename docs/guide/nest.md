@@ -183,18 +183,33 @@ item until Vults exits. In a narrow window, the selected detail opens again; Bac
 returns to the filtered list. If the item disappears, the list opens instead.
 An unfinished merge confirmation is discarded when the Nest closes.
 
-A chip for each connector you turned on, with how many rows it has; **+** opens **Settings →
-Connectors**. Under it, the chosen connector: when it last synced (or why its last poll failed), a
-repository filter (**All repos** or one of them), and **↻ Refresh** to ask again (at most once a
-minute). For GitHub, four tabs with their counts: **Inbox** (what waits on you: reviews asked of
-you, your pull requests failing, sent back or ready to merge, a default branch failing; how many
-are new), **Pull requests**, **Actions** (your default branches' checks; red with how many fail)
-and **Releases** (each repository's latest). A selected row prioritizes its title, review,
-checks and actions, including **Open in GitHub ↗**, as on the island
-([The GitHub card](connectors.md#the-github-card)). **Technical details** expands its author,
-branch, size (`+120 −40 · 6 files`), update time and a `gh` command with **Copy**
-(Vults never runs it). This disclosure stays open across polling updates. A failed manual
-refresh keeps the current rows and offers another attempt;
-a row marked **✓ Seen** dims here. **Add a connection** lists each connector Vults has that is off, with what it
-watches; **Turn on in Settings…** and **Manage connections** open **Settings → Connectors**, the
-only place that turns one on ([Connectors](connectors.md)).
+The chosen connector has one header: its last sync (or why it failed), **↻ Refresh** to ask again
+(at most once a minute), and **Manage connections** for **Settings → Connectors**. A selector
+appears only when several connectors have cards. An enabled connector awaiting its first card
+shows its waiting/error state with Refresh and Settings; an unreadable status offers **Try again**
+without treating the connector as off. A spent daily request budget says why checks are waiting.
+
+For GitHub, four tabs keep their counts: **Inbox** (what waits on you: reviews asked of you, your
+pull requests failing, sent back or ready to merge, and a default branch failing; how many are
+new), **Pull requests**, **Actions** (your default branches' checks; red with how many fail) and
+**Releases** (each repository's latest). Search filters the loaded tab by title, reference,
+repository, branch or author, alongside the **All repos** filter. It makes no network request.
+The search stays on this computer across reopening; **Clear filters** restores the list.
+
+The list and selected detail scroll independently; ordinary polling keeps their reading
+positions, search focus and expanded details. At narrow widths, **Back** or **Esc** returns from
+the detail to its selected row. With focus in Search, **Esc** clears its query; an unfinished
+merge confirmation is dismissed first. Selecting, searching or expanding never performs an action.
+
+A selected row puts its title, branch, author and size (`+120 −40 · 6 files`) before its actions,
+including **Open in GitHub ↗**, as on the island ([The GitHub card](connectors.md#the-github-card)).
+Actions and the explicit merge confirmation come before the check list. Successful checks start
+collapsed; running or newly failing checks open, failed checks first, with a count and a progress
+bar while running. Manual disclosure choices survive unchanged polling. Failing checks take
+priority over an approval badge. **Technical details**, when present, keeps update information
+and a `gh` command with **Copy** and retry feedback (Vults never runs it).
+
+A failed refresh keeps the current rows and allows another attempt. **✓ Seen** marks a quieter
+title without fading its status or actions. **Add a connection** lists only supported connectors
+known to be off; **Turn on in Settings…** and **Manage connections** open the only place that
+turns one on ([Connectors](connectors.md)).

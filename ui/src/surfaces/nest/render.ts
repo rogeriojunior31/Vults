@@ -329,7 +329,7 @@ export function createNest(
     tasks: el("div", { class: "nest-pane nest-tasks" }, tasks.element),
     chat: chatPane,
     activity: activityPane,
-    connections: el("div", { class: "nest-pane" }, connections.element),
+    connections: el("div", { class: "nest-pane nest-connections-pane" }, connections.element),
   };
   for (const id of TABS) {
     panes[id].id = `nest-pane-${id}`;

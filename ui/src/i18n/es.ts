@@ -1,5 +1,14 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Copy command": "Copiar comando",
+  "Search title, repository or branch": "Buscar título, repositorio o rama",
+  "Search connections": "Buscar en conexiones",
+  "Daily request limit reached. Checks resume when the budget resets.": "Se alcanzó el límite diario de solicitudes. Las comprobaciones se reanudan cuando se restablece el presupuesto.",
+  "Waiting for the first check": "Esperando la primera comprobación",
+  "No items match your search.": "Ningún elemento coincide con tu búsqueda.",
+  "Results: {shown} of {total}": "Resultados: {shown} de {total}",
+  "Connection status could not load. Try again.": "No se pudo cargar el estado de la conexión. Inténtalo de nuevo.",
+  "Checking connections…": "Comprobando conexiones…",
   "Copy failed. Try again.": "No se pudo copiar. Inténtalo de nuevo.",
   "Copy code": "Copiar código",
   "Copy reply": "Copiar respuesta",
@@ -1029,8 +1038,6 @@ export default {
   "Created": "Creada",
   "Published": "Publicada",
   "Updated": "Actualizado",
-  "Author": "Autor",
-  "Diff": "Diff",
   "Nothing needs you right now.": "Nada te necesita ahora.",
   "Nothing here for this repository.": "Nada aquí para este repositorio.",
   "All repos": "Todos los repos",

@@ -1,5 +1,14 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Copy command": "复制命令",
+  "Search title, repository or branch": "搜索标题、仓库或分支",
+  "Search connections": "搜索连接",
+  "Daily request limit reached. Checks resume when the budget resets.": "已达到每日请求上限。预算重置后将恢复检查。",
+  "Waiting for the first check": "等待首次检查",
+  "No items match your search.": "没有符合搜索条件的项目。",
+  "Results: {shown} of {total}": "结果：{shown} / {total}",
+  "Connection status could not load. Try again.": "无法加载连接状态，请重试。",
+  "Checking connections…": "正在检查连接…",
   "Copy failed. Try again.": "复制失败，请重试。",
   "Copy code": "复制代码",
   "Copy reply": "复制回复",
@@ -1029,8 +1038,6 @@ export default {
   "Created": "创建于",
   "Published": "发布于",
   "Updated": "更新于",
-  "Author": "作者",
-  "Diff": "差异",
   "Nothing needs you right now.": "现在没有需要你处理的事。",
   "Nothing here for this repository.": "这个仓库没有内容。",
   "All repos": "所有仓库",
