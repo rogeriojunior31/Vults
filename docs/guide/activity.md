@@ -18,6 +18,12 @@ History and Audit show the latest 200 records. Their summaries describe the reco
 that view, and searching filters the list without changing those totals. Project headings show
 the number of matching records. Navigation, search and resizing do not modify the stored history.
 
+The island's compact **Week** preview uses the same summary style: the week and its dates at the
+top, four totals and time by project (up to four projects), or a small daily chart when no project
+is named. The arrows switch between the previous week and this week; **Open in the Nest** opens
+the full Activity view. Hours in the top summary are rounded; hover that figure for the full
+duration. An unread week shows a loading or error message instead of zero totals.
+
 ## What a turn is
 
 A turn is what one prompt set going, until the agent stops. For each one Vults keeps when it ran,

@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 276b279dc9d4 -->
+<!-- source: 9294ef795aae -->
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
 ano numa grade; **Settings → Activity** mostra a mesma página. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
@@ -18,6 +18,13 @@ O Nest organiza Atividade em seis telas, com o mesmo estilo de navegação e res
 Histórico e Auditoria mostram os 200 registros mais recentes. Seus resumos descrevem os registros
 carregados naquela tela, e a busca filtra a lista sem alterar esses totais. Os títulos dos projetos
 mostram a quantidade de registros encontrados. Navegar, buscar e redimensionar não modificam o histórico guardado.
+
+A prévia compacta de **Week** na ilha usa o mesmo estilo de resumo: a semana e suas datas no topo,
+quatro totais e o tempo por projeto (até quatro projetos), ou um pequeno gráfico diário quando
+nenhum projeto tem nome. As setas alternam entre a semana anterior e a atual; **Open in the Nest**
+abre a tela completa de Atividade. As horas no resumo do topo são arredondadas; passe o mouse no
+valor para ver a duração completa. Uma semana ainda não lida mostra uma mensagem de carregamento
+ou erro em vez de totais zerados.
 
 <a id="what-a-turn-is"></a>
 

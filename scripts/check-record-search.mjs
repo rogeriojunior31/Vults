@@ -206,3 +206,41 @@ assert.deepEqual(actions, [["day", 3]]);
 week.replaceChildren(...nestWeek({ ...activity, week: { ...activity.week, days: [0, 0, 0, 0, 0, 0, 0] } }, view, on, null, () => {}));
 assert.ok(nodes(week).filter(node => node.className === "day-column").every(node => node.attributes["aria-pressed"] === "false"), "No counted time means no invented busiest day");
 console.log("check-record-search: week day labels, exact detail names, busiest day, explicit selection and zero-time guard");
+
+const quickBundle = await build({ configFile: false, root, logLevel: "silent", build: {
+  write: false, minify: false, lib: { entry: `${root}src/island/quick.ts`, formats: ["es"] },
+} });
+const quickChunk = quickBundle[0].output.find(part => part.type === "chunk");
+const { weekQuick } = await import(`data:text/javascript;base64,${Buffer.from(quickChunk.code).toString("base64")}`);
+const quickActions = [];
+const open = () => quickActions.push("open");
+const nav = { previous: false, go: previous => quickActions.push(previous) };
+const quickWeek = { ...activity.week, projects: Array.from({ length: 5 }, (_, i) => ({ name: `Project ${i}`, secs: (5 - i) * 60 })) };
+const quick = weekQuick(quickWeek, true, open, false, nav);
+const quickFigures = node => nodes(node).filter(node => node.className === "quick-stat").map(node => node.children[0].textContent);
+assert.deepEqual(quickFigures(quick), ["2.5 h", "2", "+10 −2", "3"]);
+assert.equal(nodes(quick).find(node => node.className === "quick-stat").title, "2 h 31 min");
+assert.equal(count(quick, "quick-bar"), 4, "The compact preview keeps at most four projects");
+assert.ok(!quick.textContent.includes("Project 4"));
+const weekButtons = nodes(quick).filter(node => node.className.startsWith("quick-week-btn"));
+assert.deepEqual(weekButtons.map(node => node.attributes["aria-pressed"]), ["false", "true"]);
+assert.deepEqual(weekButtons.map(node => node.attributes["aria-label"]), ["Previous week", "This week"]);
+assert.deepEqual(quickActions, [], "Rendering the compact view never navigates or changes history");
+weekButtons[0].listeners.click();
+weekButtons[1].listeners.click();
+nodes(quick).find(node => node.className === "quick-foot").children[0].listeners.click();
+assert.deepEqual(quickActions, [true, false, "open"]);
+for (const failed of [false, true]) {
+  const unread = weekQuick(null, true, open, failed, nav);
+  assert.deepEqual(quickFigures(unread), [], "Unavailable measurements never show zero totals");
+  assert.ok(unread.textContent.includes(failed ? "Could not read it." : "Reading…"));
+}
+const off = weekQuick({ ...quickWeek, turns: 0, active_secs: 0, projects: [] }, false, open, false, nav);
+assert.equal(quickFigures(off)[0], "0 min");
+assert.equal(count(off, "quick-weeks"), 0);
+assert.ok(off.textContent.includes("local history is off"));
+const byDay = weekQuick({ ...quickWeek, active_secs: 30, projects: [], days: [0, 0, 0, 0, 0, 0, 0] }, true, open);
+assert.equal(quickFigures(byDay)[0], "<1 min");
+assert.equal(count(byDay, "quick-day-column"), 7);
+assert.ok(nodes(byDay).filter(node => node.className === "quick-fill").every(node => node.style.height === "0%"));
+console.log("check-record-search: compact week totals/full duration, four-project preview, explicit navigation, loading/error/off states, zero and day fallback");

@@ -4,8 +4,9 @@
 import type { Flock, Presence } from "../bridge";
 import { el } from "../dom";
 import { duration } from "../duration";
-import { currentLang, t, tk } from "../i18n";
+import { currentLang, locale, t, tk } from "../i18n";
 import type { WeekView } from "../view.gen";
+import { weekLabel } from "../surfaces/settings/activity";
 import { icon } from "./icons";
 
 function foot(label: string, open: () => void): HTMLElement {
@@ -56,26 +57,28 @@ export function weekQuick(
         class: "quick-note",
         text: t("The local history is off: Settings, Activity."),
       });
-  const head = el(
-    "div",
-    { class: "quick-head" },
-    el("span", { text: t("Activity") }),
-    el("span", { class: "quick-when", text: nav?.previous ? t("Previous week") : t("This week") }),
-  );
   const weeks =
     nav && history
       ? el(
           "div",
           { class: "quick-weeks" },
-          weekButton(`‹ ${t("Previous week")}`, t("Previous week"), nav.previous, () => nav.go(true)),
-          weekButton(t("This week"), t("This week"), !nav.previous, () => nav.go(false)),
+          weekButton("‹", t("Previous week"), nav.previous, () => nav.go(true)),
+          weekButton("›", t("This week"), !nav.previous, () => nav.go(false)),
         )
       : null;
+  const head = el("div", { class: "quick-head" },
+    el("div", {},
+      el("h2", { text: nav?.previous ? t("Previous week") : t("This week") }),
+      week ? el("p", { class: "quick-range", text: weekLabel(week.monday, week.sunday) }) : null,
+    ),
+    weeks,
+  );
   if (week === null)
     return el(
       "div",
       { class: "card quick quick-week" },
       head,
+      off,
       el("p", {
         class: "quick-note",
         text: failed ? t("Could not read it.") : t("Reading…"),
@@ -88,9 +91,11 @@ export function weekQuick(
     const row = el(
       "div",
       { class: "quick-bar" },
-      el("span", { class: "quick-day", text: name }),
+      el("div", { class: "quick-bar-head" },
+        el("span", { class: "quick-day", text: name }),
+        el("span", { class: "quick-secs", text: secs ? duration(secs) : "–" }),
+      ),
       el("span", { class: "quick-track" }, fill),
-      el("span", { class: "quick-secs", text: secs ? duration(secs) : "–" }),
     );
     row.title = name;
     return row;
@@ -98,11 +103,33 @@ export function weekQuick(
   // By project, as the prototype draws it (the most first, four at most); a week of turns with no
   // project named falls back to its days.
   const projects = week.projects.slice(0, PROJECTS_SHOWN);
-  const days = !week.turns
-    ? [el("p", { class: "quick-note", text: week.headline })]
+  const time = week.active_secs === 0 ? t("{m} min", { m: 0 }) : week.active_secs < 60 ? t("<1 min") : week.active_secs < 3600
+    ? duration(week.active_secs)
+    : t("{h} h", { h: (week.active_secs / 3600).toLocaleString(locale(), { maximumFractionDigits: 1 }) });
+  const active = stat(time, t("with your agents"));
+  active.title = duration(week.active_secs);
+  const breakdown = !week.turns
+    ? el("p", { class: "quick-note quick-week-empty", text: week.headline })
     : projects.length
-      ? [el("div", { class: "quick-label", text: t("By project") }), ...projects.map((p) => bar(p.name, p.secs, projects[0].secs))]
-      : [el("div", { class: "quick-label", text: t("By day") }), ...week.days.map((secs, i) => bar(dayName(week.monday, i), secs, Math.max(...week.days)))];
+      ? el("section", { class: "quick-breakdown" },
+          el("h3", { class: "quick-label", text: t("By project") }),
+          el("div", { class: "quick-projects" }, ...projects.map((p) => bar(p.name, p.secs, projects[0].secs))),
+        )
+      : el("section", { class: "quick-breakdown" },
+          el("h3", { class: "quick-label", text: t("By day") }),
+          el("div", { class: "quick-days" }, ...week.days.map((secs, i) => {
+            const fill = el("span", { class: "quick-fill" });
+            fill.style.height = `${Math.round(secs / Math.max(1, ...week.days) * 100)}%`;
+            const day = el("div", { class: "quick-day-column" },
+              el("span", { class: "quick-track" }, fill),
+              el("span", { text: dayName(week.monday, i) }),
+            );
+            day.title = `${dayName(week.monday, i)}: ${duration(secs)}`;
+            day.setAttribute("role", "img");
+            day.setAttribute("aria-label", day.title);
+            return day;
+          })),
+        );
   return el(
     "div",
     { class: "card quick quick-week" },
@@ -111,13 +138,12 @@ export function weekQuick(
     el(
       "div",
       { class: "quick-stats" },
-      stat(duration(week.active_secs), t("with your agents")),
+      active,
       stat(String(week.turns), week.turns === 1 ? t("turn") : t("turns")),
       stat(`+${week.added} −${week.removed}`, t("lines")),
       stat(String(week.allowed + week.denied + week.answered), t("answers")),
     ),
-    ...days,
-    weeks,
+    breakdown,
     foot(t("Open in the Nest"), open),
   );
 }
