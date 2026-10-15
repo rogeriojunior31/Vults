@@ -203,7 +203,10 @@ export function createNest(
     memoryButton.setAttribute("aria-pressed", String(open));
     if (open) {
       memory.refresh();
-      if (matchMedia("(max-width: 600px)").matches) memoryBack.focus();
+      if (matchMedia("(max-width: 600px)").matches) {
+        chat.cancelVoice();
+        memoryBack.focus();
+      }
     } else if (returnFocus) memoryButton.focus();
     if (mounted) paintPortrait();
   };
@@ -387,7 +390,7 @@ export function createNest(
     if (id === "chat") {
       chat.toggle(true);
       refreshRecent();
-    }
+    } else chat.toggle(false);
     paintPortrait();
   }
   const relabel = () => {
@@ -472,12 +475,14 @@ export function createNest(
 
   // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
   document.addEventListener("visibilitychange", () => {
+    if (document.hidden) chat.cancelVoice();
     flock.setActive(tab === "flock" && !document.hidden && !last?.locked);
     paintPortrait();
   });
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    if (v.locked) chat.cancelVoice();
     setZecaLook(v.look ?? null);
     paintPortrait();
     head.setDnd(!!v.dnd);
@@ -548,6 +553,10 @@ export function createNest(
   // Alt+1 to 5 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
   // leaves Full for the size before it. Neither while typing, composing or speaking.
   window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !e.isComposing && !e.defaultPrevented && tab === "chat" && chat.cancelVoice()) {
+      e.preventDefault();
+      return;
+    }
     const typing = (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]");
     if (e.isComposing || e.defaultPrevented || typing) return;
     // Esc closes an open palette first, wherever the focus went.
@@ -562,7 +571,6 @@ export function createNest(
       return;
     }
     if (e.key === "Escape" && full) {
-      if (chat.cancelVoice()) return;
       e.preventDefault();
       backend.size("room", currentPlace());
       return;
@@ -582,6 +590,7 @@ export function createNest(
   setFull(startFull);
   return {
     flushState: async () => {
+      chat.cancelVoice();
       await chat.flushDraft();
       await connections.flush();
       await flock.flush();
@@ -611,6 +620,14 @@ export function createNest(
       flock.setKeys(keys);
     },
     shortcut: (id) => {
+      if (id === "talk" || id === "talk-up") {
+        if (id === "talk" && zecaOn && !document.hidden && !last?.locked && root.isConnected) {
+          if (portraitNarrow.matches) setMemory(false);
+          show("chat");
+        }
+        if (tab === "chat" && !document.hidden && !last?.locked && root.isConnected) chat.holdToTalk(id === "talk");
+        return;
+      }
       if (id !== "allow" && id !== "deny") return;
       const allow = id === "allow";
       if (tab === "chat") chat.answerWaiting(allow);

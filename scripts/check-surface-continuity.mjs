@@ -113,7 +113,7 @@ for (const width of [480, 1180]) {
     const view = { sessions: [session], alerts: [], focus: { agent: "codex", id: "owned-run" }, front: { agent: "codex", id: "owned-run" },
       approval: { agent: "codex", session: "owned-run", request: "pending-request", tool: "Bash", target: "git status", description: "Current permission", questions: [], queue: 1, always: false },
       boards: [{ connector: "github", rows: [row] }] };
-    const originalView = structuredClone(view), actions = [];
+    const originalView = structuredClone(view), actions = [], voiceCalls = [];
     let draft = { text: "Unsent", files: ["/inbox/note.txt"], folder: "/work/alpha", provider: "codex" };
     let place = "audit", flockPlace = { query: "Alpha", onlyNeeds: true, detail: "context", change: null };
     let connectionPlace = { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 };
@@ -123,6 +123,8 @@ for (const width of [480, 1180]) {
     const chat = from => ({ current: async () => current, draft: async () => structuredClone(draft),
       saveDraft: async value => { if (saveFails) throw new Error("Draft save unavailable."); draft = structuredClone(value); (from === "nest" ? quick : nest?.chat)?.sync({ kind: "draft", from, draft }); },
       models: async () => [], pick: async () => ({}), conversations: async () => [], keyboard() {},
+      voice: { start: async tap => { voiceCalls.push(["start", from, tap]); },
+        stop: async () => { voiceCalls.push(["stop", from]); return ""; }, cancel: () => voiceCalls.push(["cancel", from]) },
       ...Object.fromEntries(["send", "reset", "open", "decide", "stop"].map(name => [name, () => { actions.push(`chat:${name}`); throw new Error(`Unexpected ${name}`); }])),
     });
     quick = new ChatPanel(chat("island"), () => {});
@@ -184,6 +186,29 @@ for (const width of [480, 1180]) {
     assert.deepEqual(actions, [], "The companion's reaction never sends, starts or answers anything");
     nest.chat.load(current);
     Clock.freeze(null);
+    nest.chat.setVoiceReady(true);
+    nest.open("flock"); nest.shortcut("talk"); await tick();
+    assert.equal(nest.current(), "chat", "Room's talk shortcut opens its own chat");
+    assert.deepEqual(voiceCalls.at(-1), ["start", "nest", false]);
+    nest.shortcut("talk-up"); await tick();
+    assert.deepEqual(voiceCalls.at(-1), ["stop", "nest"]);
+    const mic = nest.chat.element.querySelector(".mic");
+    const area = nest.chat.element.querySelector("textarea");
+    mic.fire("click"); await tick();
+    const speakingEscape = { key: "Escape", target: area, preventDefault() { this.defaultPrevented = true; } };
+    for (const fn of windowEvents.keydown ?? []) fn(speakingEscape);
+    assert.deepEqual(voiceCalls.at(-1), ["cancel", "nest"], "Escape cancels speech even with focus on the hidden input in Room");
+    assert.equal(speakingEscape.defaultPrevented, true);
+    assert.equal(nest.current(), "chat");
+    for (const leave of [() => nest.open("flock"), () => visibility(true), () => nest.view({ ...view, locked: true }), () => nest.flushState()]) {
+      mic.fire("click"); await tick();
+      await leave();
+      assert.deepEqual(voiceCalls.at(-1), ["cancel", "nest"], "Leaving, hiding, locking or saving the surface cancels recording");
+      const calls = voiceCalls.length;
+      nest.shortcut("talk-up"); await tick();
+      assert.equal(voiceCalls.length, calls, "A late release never transcribes a cancelled recording");
+      visibility(false); nest.view(view); nest.open("chat");
+    }
     visibility(true); assert.equal(active.get(canvas), false);
     visibility(false); assert.equal(active.get(canvas), true);
     if (width < 600) {

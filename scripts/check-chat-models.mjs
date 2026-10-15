@@ -376,3 +376,72 @@ for (const surface of ["island", "nest"]) {
   assert.equal(chat.clip(Infinity), "idle");
 }
 console.log("check-chat-models: both companions retain streaming thought, decision priority, voice, transcription and attachment expressions");
+
+// Load Room's real entry point: a working ChatPanel alone cannot catch missing native wiring.
+const voiceEvents = {}, voiceCalls = [], voiceDrafts = [];
+const voiceRoot = new Element("main");
+document.getElementById = () => voiceRoot;
+document.documentElement = new Element("html");
+globalThis.location = { hash: "#chat" };
+globalThis.voiceTestCreateNest = (_root, backend) => {
+  const chat = new ChatPanel(backend.chat, () => {}, { window: "nest" });
+  const noop = () => {};
+  return globalThis.voiceTestNest = { chat, current: () => "chat", open: noop, setFull: noop,
+    setZeca: on => chat.setEnabled(on), setSound: noop, setSpecies: noop, setKeys: noop, setMedia: noop,
+    memoryChanged: noop, usageChanged: noop, tasksChanged: noop, relabel: noop, view: noop, shortcut: noop };
+};
+globalThis.voiceTestBridge = new Proxy({}, { get: (_target, name) => {
+  if (name.startsWith("on")) return cb => { voiceEvents[name] = cb; return Promise.resolve(); };
+  return async (...args) => {
+    switch (name) {
+      case "voiceStatus": return { ready: true };
+      case "voiceStart": voiceCalls.push(["start", ...args]); return;
+      case "voiceStop": voiceCalls.push(["stop"]); return "Spoken words";
+      case "voiceCancel": voiceCalls.push(["cancel"]); return;
+      case "chatSend": assert.fail("Dictation never sends a message");
+      case "chatDraftSet": voiceDrafts.push(args[0]); return;
+      case "chatDraft": return { text: "Existing draft", files: [], folder: "/work", provider: "claude" };
+      case "chatCurrent": return null;
+      case "chatModels": case "taskAgents": return [];
+      case "chatPick": case "shortcutKeys": return {};
+      case "apiKeyStatus": return { ready: false, label: "API" };
+      case "appSettings": return { lang: "en", zeca: true };
+      default: return;
+    }
+  };
+} });
+const entryBundles = await build({ configFile: false, root, logLevel: "silent",
+  plugins: [{ name: "room-voice-native-mock", enforce: "pre", resolveId(id, importer) {
+    if (/\/bridge(?:\.ts)?$/.test(id)) return "\0voice-bridge";
+    if (id === "./render" && importer?.endsWith("/nest/main.ts")) return "\0voice-nest";
+  }, load(id) {
+    if (id === "\0voice-bridge") return "export const Bridge = globalThis.voiceTestBridge;";
+    if (id === "\0voice-nest") return "export const createNest = globalThis.voiceTestCreateNest;";
+  } }], build: { write: false, minify: false, lib: { entry: `${root}src/surfaces/nest/main.ts`, formats: ["es"] } },
+});
+const entryChunk = entryBundles[0].output.find(part => part.type === "chunk");
+await import(`data:text/javascript;base64,${Buffer.from(entryChunk.code).toString("base64")}`);
+await tick();
+const roomChat = globalThis.voiceTestNest.chat;
+const roomMic = nodes(roomChat.element).find(node => node.classList.contains("mic"));
+const roomInput = nodes(roomChat.element).find(node => node.tag === "textarea");
+assert.equal(roomMic.hidden, false, "A configured microphone is visible in Room after its native status read");
+roomMic.listeners.click(); await tick();
+assert.deepEqual(voiceCalls, [["start", true]], "Room starts its real native tap-to-talk binding");
+voiceEvents.onVoiceLevel(0.8);
+voiceEvents.onVoicePartial("Words so far");
+assert.ok(roomChat.element.textContent.includes("Words so far"));
+assert.equal(roomInput.hidden, true);
+voiceEvents.onVoiceSilence(); await tick();
+assert.deepEqual(voiceCalls.at(-1), ["stop"], "Silence stops the Room recording");
+assert.equal(roomInput.value, "Existing draft Spoken words");
+assert.equal(roomInput.hidden, false);
+await roomChat.flushDraft();
+assert.equal(voiceDrafts.at(-1).text, roomInput.value, "Transcription remains a saved editable draft");
+roomMic.listeners.click(); await tick();
+voiceEvents.onSettings({ voice: false });
+assert.equal(roomMic.hidden, true);
+assert.deepEqual(voiceCalls.at(-1), ["cancel"], "Turning voice off cancels Room's recording");
+voiceEvents.onSettings({ voice: true });
+assert.equal(roomMic.hidden, false);
+console.log("check-chat-models: real Room entry wires voice status/settings, microphone, preview, silence, transcription draft and cancellation");

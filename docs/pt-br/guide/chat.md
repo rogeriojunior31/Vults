@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: e324777cd0e2 -->
+<!-- source: bdec15303d1e -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro completo ao lado dos controles do chat da ilha e ao lado da conversa no Nest: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -158,6 +158,9 @@ tanto no Nest quanto na ilha.
 - Ou segure **Ctrl+Alt+V** de qualquer lugar: o chat abre e o Zeca escuta enquanto você segura
   (pausas nunca o interrompem); soltar transforma tudo em texto. A tecla pode ser trocada em
   Configurações do Sistema → Atalhos.
+- Em Sala ou Tela cheia, o atalho usa o chat dessa janela enquanto ela tem foco.
+  As barras de volume e a prévia da fala também ficam nela. Sair do Chat, ocultar
+  ou fechar a janela, ou bloquear a tela cancela uma gravação ativa.
 - **Esc** enquanto ele escuta descarta a gravação. Uma gravação para sozinha depois de um minuto.
 - **Language you speak** (idioma que você fala) segue o do seu sistema; escolha outro, ou *Detect
   it each time*. Um idioma fixo é muito mais confiável em frases curtas. O *Base* é fraco fora do

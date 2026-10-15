@@ -795,6 +795,7 @@ export class ChatPanel {
 
   toggle(open = !this.open): void {
     if (open && !this.enabled) return;
+    if (!open) this.cancelVoice();
     if (open === this.open) return;
     this.open = open;
     this.paintDrop();

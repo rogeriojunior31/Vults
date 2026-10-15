@@ -576,6 +576,40 @@ mod tests {
         assert!(!super::update_nest_focus(&mut state, Some(false), Some(false)));
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn talk_release_returns_to_its_recording_surface_after_focus_changes() {
+        let talk_nest = super::AtomicBool::new(false);
+        assert_eq!(
+            super::shortcut_target("talk", true, true, &talk_nest),
+            super::NEST
+        );
+        assert_eq!(
+            super::shortcut_target("talk", false, false, &talk_nest),
+            super::NEST
+        );
+        assert_eq!(
+            super::shortcut_target("allow", true, false, &talk_nest),
+            super::ISLAND
+        );
+        assert_eq!(
+            super::shortcut_target("deny", true, true, &talk_nest),
+            super::NEST
+        );
+        assert_eq!(
+            super::shortcut_target("talk", true, false, &talk_nest),
+            super::ISLAND
+        );
+        assert_eq!(
+            super::shortcut_target("talk", false, true, &talk_nest),
+            super::ISLAND
+        );
+        assert_eq!(
+            super::shortcut_target("open", true, true, &talk_nest),
+            super::ISLAND
+        );
+    }
+
     #[test]
     fn island_return_waits_for_saved_close_and_uses_the_final_route_once() {
         use tauri::Listener;
@@ -672,8 +706,7 @@ fn shortcut_keys(state: tauri::State<'_, ShortcutKeys>) -> std::collections::BTr
 
 /// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
 /// core; the rest go to the island, which decides whether a card is on screen to answer (a press
-/// with nothing waiting does nothing). Allow and Deny go to the Nest instead while the user is in
-/// it (ADR 0021).
+/// with nothing waiting does nothing). Allow, Deny and Talk go to the Nest while the user is in it.
 #[cfg(target_os = "linux")]
 fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;
@@ -681,6 +714,7 @@ fn listen_shortcuts(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let emit = app.clone();
         let keys = app.clone();
+        let talk_nest = AtomicBool::new(false);
         let result = vults_platform::shortcuts::listen(
             vults_brand::BUNDLE_ID,
             move |bound| {
@@ -713,12 +747,7 @@ fn listen_shortcuts(app: &AppHandle) {
                 // The talk key is the chat's mic: nothing to hold with Zeca off.
                 if let Some(event) = vults_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
                 {
-                    // Allow and Deny answer the card where the user is (ADR 0021).
-                    let to = if matches!(id, "allow" | "deny") && NEST_HOLDS.load(Ordering::Relaxed) {
-                        NEST
-                    } else {
-                        ISLAND
-                    };
+                    let to = shortcut_target(id, down, NEST_HOLDS.load(Ordering::Relaxed), &talk_nest);
                     let _ = emit.emit_to(to, "shortcut", event);
                 }
             },
@@ -728,6 +757,22 @@ fn listen_shortcuts(app: &AppHandle) {
             tracing::warn!("global shortcuts unavailable: {e}");
         }
     });
+}
+
+/// Talk release belongs to its press even if focus moved; decisions follow the current surface.
+#[cfg(target_os = "linux")]
+fn shortcut_target(id: &str, down: bool, in_nest: bool, talk_nest: &AtomicBool) -> &'static str {
+    let nest = match id {
+        "talk" => {
+            if down {
+                talk_nest.store(in_nest, Ordering::Relaxed);
+            }
+            talk_nest.load(Ordering::Relaxed)
+        }
+        "allow" | "deny" => in_nest,
+        _ => false,
+    };
+    if nest { NEST } else { ISLAND }
 }
 
 /// For the island's hello; none when the account only has a login name.

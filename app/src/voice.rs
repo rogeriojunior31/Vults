@@ -1,4 +1,4 @@
-//! Push-to-talk for the chat. Off until the user downloads a model in Settings; then the island's
+//! Push-to-talk for the chat. Off until the user downloads a model in Settings; then the chat's
 //! mic records into memory and whisper.cpp transcribes it here. The text goes into the chat's
 //! input for the user to read before sending.
 
@@ -11,11 +11,11 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use vults_voice::{AutoStop, MODELS, Recorder, Transcriber, VAD};
 
-use crate::{ISLAND, paths, settings};
+use crate::{paths, settings};
 
 #[derive(Debug, Default)]
 pub struct VoiceState {
-    recording: Mutex<Option<Recorder>>,
+    recording: Mutex<Option<(String, Recorder)>>,
     /// The loaded model, by id: loading it again for every question would cost more than the
     /// transcription.
     loaded: Mutex<Option<(String, Arc<Transcriber>)>>,
@@ -51,7 +51,8 @@ fn language_of(locale: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::language_of;
+    use super::{language_of, take_recording};
+    use std::sync::Mutex;
 
     #[test]
     fn a_locale_names_its_language() {
@@ -60,6 +61,22 @@ mod tests {
         assert_eq!(language_of("C.UTF-8"), None);
         assert_eq!(language_of("POSIX"), None);
     }
+
+    #[test]
+    fn only_the_recording_webview_can_stop_or_cancel_it() {
+        let recording = Mutex::new(Some((crate::NEST.to_owned(), 7)));
+        assert_eq!(take_recording(&recording, crate::ISLAND), None);
+        assert_eq!(take_recording(&recording, crate::NEST), Some(7));
+        assert_eq!(take_recording(&recording, crate::NEST), None);
+    }
+}
+
+fn take_recording<T>(recording: &Mutex<Option<(String, T)>>, target: &str) -> Option<T> {
+    recording
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .take_if(|(owner, _)| owner == target)
+        .map(|(_, recorder)| recorder)
 }
 
 fn models_dir() -> PathBuf {
@@ -213,9 +230,9 @@ fn announce(app: &AppHandle) {
 }
 
 /// `tap`: started by a click, so it ends by itself when the user stops talking (`voice-silence`
-/// tells the island, which stops it as a click would). Held down (the shortcut): only the key ends it.
+/// tells the recording's webview, which stops it as a click would). Held down: only the key ends it.
 #[tauri::command]
-pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
+pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) -> Result<(), String> {
     // The mic serves Zeca's chat only (ADR 0018).
     if !crate::settings::zeca(&app) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
@@ -225,59 +242,50 @@ pub fn voice_start(app: AppHandle, tap: Option<bool>) -> Result<(), String> {
     }
     // Never waited on: this recording goes without it, the next one has it.
     tauri::async_runtime::spawn(fetch_vad());
+    let target = window.label().to_string();
     let auto = vults_voice::vad_path(&models_dir())
         .filter(|_| tap == Some(true))
         .map(|vad| {
-            let island = app.clone();
+            let (events, target) = (app.clone(), target.clone());
             AutoStop {
                 vad,
                 ended: Box::new(move || {
-                    let _ = island.emit_to(ISLAND, "voice-silence", ());
+                    let _ = events.emit_to(target.as_str(), "voice-silence", ());
                 }),
             }
         });
     // A recording still going is dropped first, so its preview never shows in this one.
-    drop(
-        app.state::<VoiceState>()
-            .recording
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .take(),
-    );
+    cancel(&app);
     let levels = app.clone();
+    let levels_target = target.clone();
     let mut recorder = Recorder::start(
         move |level| {
-            let _ = levels.emit_to(ISLAND, "voice-level", level);
+            let _ = levels.emit_to(levels_target.as_str(), "voice-level", level);
         },
         auto,
     )?;
     // The text so far, dimmed, while the user speaks (on a GPU only); the final text replaces it.
     if let Some(id) = settings::voice_model(&app) {
-        let (loader, island) = (app.clone(), app.clone());
+        let (loader, events) = (app.clone(), app.clone());
         recorder.preview(
             move || transcriber(&loader, &id),
             language(&app),
             move |text| {
-                let _ = island.emit_to(ISLAND, "voice-partial", text);
+                let _ = events.emit_to(target.as_str(), "voice-partial", text);
             },
         );
     }
     *app.state::<VoiceState>()
         .recording
         .lock()
-        .unwrap_or_else(|e| e.into_inner()) = Some(recorder);
+        .unwrap_or_else(|e| e.into_inner()) = Some((window.label().to_owned(), recorder));
     Ok(())
 }
 
 /// Stops recording and returns what was said.
 #[tauri::command]
-pub async fn voice_stop(app: AppHandle) -> Result<String, String> {
-    let recorder = app
-        .state::<VoiceState>()
-        .recording
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .take();
+pub async fn voice_stop(app: AppHandle, window: tauri::Webview) -> Result<String, String> {
+    let recorder = take_recording(&app.state::<VoiceState>().recording, window.label());
     let Some(recorder) = recorder else {
         return Ok(String::new());
     };
@@ -295,8 +303,16 @@ pub async fn voice_stop(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn voice_cancel(app: AppHandle) {
+pub fn voice_cancel(app: AppHandle, window: tauri::Webview) {
     // Dropping the recorder stops it and throws the audio away.
+    drop(take_recording(
+        &app.state::<VoiceState>().recording,
+        window.label(),
+    ));
+}
+
+/// Zeca off, or a new recording: stop the microphone regardless of its surface.
+pub fn cancel(app: &AppHandle) {
     drop(
         app.state::<VoiceState>()
             .recording

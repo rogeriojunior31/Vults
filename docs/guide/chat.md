@@ -133,6 +133,9 @@ and *Large v3 Turbo* understand accents and names better). A mic appears beside 
 - Or hold **Ctrl+Alt+V** from anywhere: the chat opens and Zeca listens while you hold it (pauses
   never stop it); letting go turns it into text. The key can be changed in System Settings →
   Shortcuts.
+- In Room or Full, the shortcut uses that window's chat while it has focus. Its
+  waveform and speech preview stay there too. Leaving Chat, hiding or closing
+  the window, or locking the screen cancels an active recording.
 - **Esc** while it listens throws the recording away. A recording stops by itself after a minute.
 - **Language you speak** follows your system's; pick another, or *Detect it each time*. A fixed
   language is far more reliable on short phrases. *Base* is weak outside English: in Portuguese use
