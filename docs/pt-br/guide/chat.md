@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 0b11bec47692 -->
+<!-- source: 65fe635c9380 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -11,10 +11,13 @@ Seu menu abre para cima usando a largura do rodapé, com uma única área de rol
 longas e opções de motor, modelo e esforço que quebram linha. Uma conversa iniciada explica
 seu modelo fixado dentro do menu, sem uma dica flutuante cobrindo as opções.
 O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos após o zoom).
-O companheiro usa as animações existentes numa escala legível de pixels de 2x no Quick.
-**Perguntar ao Zeca** aparece apenas numa conversa vazia, com um título menor; ele não permanece
-acima das mensagens. O chat do Quick mantém a mesma altura enquanto o menu de motor abre,
-recebe as opções de modelo e fecha; o menu fica sobre a conversa, sem deslocá-la.
+O chat vazio no Quick fica baixo: o Zeca usa seu retrato original em 3x ao lado de
+**Perguntar ao Zeca**, com o rascunho e os controles logo abaixo. O título some e o retrato
+passa para 2x quando chegam mensagens. A superfície cresce com o conteúdo real da conversa
+até atingir a altura disponível da ilha; então só a conversa rola. Começar uma conversa
+vazia libera a altura anterior. Abrir, carregar e fechar o menu de motor não muda essa altura:
+o menu fica sobre a conversa e rola dentro do espaço acima do rodapé. Uma área baixa mantém
+o mesmo dimensionamento por conteúdo e controles menores.
 A linha de uso e mídia não aparece nesse chat. Os chips de notificação só ocupam espaço quando
 há itens reais: entram com expansão e somem completamente quando vazios, respeitando a redução
 de movimento. Contêineres de alertas vazios não deixam espaçamento. A conversa usa a altura disponível,

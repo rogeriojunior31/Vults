@@ -111,6 +111,9 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   one comfortable draft line that grows with its content, with a small animated
   companion beside conversation actions and the executor beside the draft. The
   minimum Nest uses a smaller composer while retaining at least 40 px of transcript space.
+- Empty Quick Chat stays short, with its greeting beside Zeca. Actual messages grow
+  its transcript up to the overlay limit. Selectors overlay the existing surface;
+  opening or loading them never reserves extra chat height.
 - Suggested prompts fill a draft and leave sending to the user. Show them only
   in Room's empty state; a growing transcript should not compete with a persistent row of
   the same prompts.

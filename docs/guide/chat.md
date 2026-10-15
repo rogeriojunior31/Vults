@@ -10,10 +10,13 @@ Its menu opens upward across the footer width, with one scroll area for long lis
 and wrapping engine, model and effort options. A started conversation explains its pinned
 model inside the menu rather than covering the choices with a tooltip.
 Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
-The companion uses its existing animations at a readable 2x pixel scale in Quick.
-**Ask Zeca** appears only in an empty conversation, at a smaller title size; it does not
-remain above your messages. Quick Chat keeps the same surface height while the engine menu
-opens, receives model choices and closes; the menu overlays the transcript instead of moving it.
+An empty Quick Chat stays short: Zeca uses his original 3x portrait beside **Ask Zeca**,
+with the draft and controls directly below. The title disappears and his portrait uses 2x
+when messages arrive. The surface grows with the actual transcript until it reaches the
+available overlay height, then only the transcript scrolls. Starting an empty conversation
+releases the previous transcript height. Opening, loading and closing the engine menu does
+not change that height: the menu overlays the conversation and scrolls within the space
+above its footer. A short viewport keeps the same content sizing and smaller controls.
 The usage/media sub-row is omitted from this chat. Notification chips take space only when
 there are actual items: they expand into view and disappear completely when empty, with reduced
 motion respected. Empty alert containers leave no gap. The transcript uses the available height

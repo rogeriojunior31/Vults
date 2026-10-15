@@ -1917,6 +1917,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   /** Moves the shape toward the mode's size, and tells the window which part takes the pointer. */
   function reshape(mode: Mode): void {
+    if (mode === "open" && main.contains(chat.element)) chat.fitContents();
     const t = target(mode);
     const now = performance.now();
     if (calm()) {

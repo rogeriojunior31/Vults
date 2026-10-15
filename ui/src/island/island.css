@@ -3240,7 +3240,7 @@ button.ghost:hover {
 /* The chat gets a wider reading column inside the existing native overlay. */
 #island .inner:has(.main > .chat) {
   width: var(--quick-chat-width, 492px);
-  height: var(--quick-height, 556px);
+  height: auto;
   gap: 0;
 }
 #island .inner:has(.main > .chat) .header-sub,
@@ -3251,9 +3251,10 @@ button.ghost:hover {
   animation: chat-notice-in var(--motion-enter) var(--ease-out);
 }
 #island .need-tags { display: flex; flex: 1; flex-wrap: wrap; min-height: 0; gap: 6px; overflow: hidden; }
+/* The island's existing spring owns size; measure the notification at its full height. */
 @keyframes chat-notice-in {
-  from { grid-template-rows: 0fr; padding-block: 0; opacity: 0; }
-  to { grid-template-rows: 1fr; padding-block: 8px; opacity: 1; }
+  from { transform: translateY(-4px); opacity: 0; }
+  to { transform: none; opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   #island .inner:has(.main > .chat) .need-strip.top { animation: none; }
@@ -3273,7 +3274,9 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 #island .main:has(> .chat) { display: flex; flex: 1; overflow-y: auto; }
 #island .chat-main { min-height: 0; }
 #island .chat :is(.chat-head, .chat-foot) { flex: none; }
-#island .chat .log-box { flex: 1 1 64px; min-height: 64px; }
+#island .chat .log-box { flex: 0 1 auto; height: var(--chat-content-height, 0px); min-height: 0; }
+#island .chat.has-messages .log-box { min-height: 40px; }
+#island .chat:not(.has-messages):not(.chat-api) .log-box { display: none; }
 #island .chat .composer { flex: none; }
 #island .chat-perch {
   position: absolute;
@@ -3307,6 +3310,11 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 }
 #island .chat .hint { padding: 4px; }
 #island .chat .chat-greeting { margin: 0; font-size: 14px; line-height: 1.4; }
+#island .chat-head > .chat-greeting { margin-right: auto; }
+#island .chat-head > .chat-greeting[hidden] { display: none; }
+#island .chat:not(.has-messages) .chat-head { min-height: 108px; padding-left: 120px; }
+#island .chat:not(.has-messages) .chat-perch { width: 112px; height: 108px; }
+#island .chat:not(.has-messages) .chat-perch .perch { transform: none; }
 #island .chat-head > .ghost,
 #island .chat-head > .history-box > .ghost { min-width: 28px; min-height: 28px; padding: 4px 6px; }
 #island .chat .suggestions:empty { display: none; }
@@ -3522,7 +3530,7 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
   top: auto;
   bottom: calc(100% + 8px);
   min-width: 0;
-  max-height: min(280px, calc(var(--quick-height, 556px) - 150px));
+  max-height: min(280px, var(--chat-menu-height, 140px));
   overflow-x: hidden;
   overflow-y: auto;
   box-sizing: border-box;
@@ -3622,12 +3630,12 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .card.entering, .card.leaving, .tick.current .tick-text) { animation: none; }
 
 /* A short surface prioritizes reading and sending; the same scene resumes when space returns. */
-#island .inner.chat-tight:has(.main > .chat) { height: var(--quick-height); gap: 4px; }
+#island .inner.chat-tight:has(.main > .chat) { gap: 4px; }
 #island .chat-tight .chat { padding-top: 4px; }
 #island .chat-tight .chat-perch { display: none; }
-#island .chat-tight .chat-head { min-height: 32px; padding-left: 0; gap: 4px; }
+#island .chat-tight .chat .chat-head { min-height: 32px; padding-left: 0; gap: 4px; }
 #island .chat-tight .chat-main { gap: 4px; }
-#island .chat-tight .chat .log-box { min-height: 40px; flex-basis: 40px; }
+#island .chat-tight .chat.has-messages .log-box { min-height: 40px; }
 #island .chat-tight .chat .composer { gap: 4px; padding: 6px 8px; }
 #island .chat-tight .chat .composer textarea { min-height: 32px; max-height: 52px; }
 #island .chat-tight .chat .composer .wave { height: 32px; }

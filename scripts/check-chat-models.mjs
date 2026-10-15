@@ -9,7 +9,7 @@ class Element {
   attributes = {};
   dataset = {};
   className = "";
-  style = {};
+  style = { setProperty(name, value) { this[name] = value; } };
   value = "";
   classList = {
     contains: name => this.className.split(" ").includes(name),
@@ -26,7 +26,7 @@ class Element {
   querySelectorAll(selector) { return nodes(this).slice(1).filter(node => node.matches(selector)); }
   click() { if (!this.disabled) this.listeners.click?.({ target: this }); }
   setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
-  querySelector(tag) { return nodes(this).find(node => node.tag === tag) ?? null; }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null; }
   append(...nodes) { for (const node of nodes) node.parentElement = this; this.children.push(...nodes); }
   prepend(...nodes) { for (const node of nodes) node.parentElement = this; this.children.unshift(...nodes); }
   replaceChildren(...nodes) { this.text = ""; this.children = []; this.append(...nodes); }
@@ -357,11 +357,11 @@ console.log("check-chat-models: Room-only editable suggestions, both file picker
 for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {}, { window: surface });
   await tick();
-  const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting");
+  const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting" && !node.hidden);
   const engine = nodes(chat.element).find(node => node.className === "model-box engine-box");
   assert.equal(engine.parentElement.className, surface === "island" ? "chat-foot" : "chat-head", "Only Quick moves its executor beside the draft; Room keeps its existing header");
   assert.equal(greetings().length, 1, "The recipient is introduced once");
-  assert.equal(greetings()[0].parentElement.className, "hint", "The greeting belongs to the empty state, never the persistent header");
+  assert.equal(greetings()[0].parentElement.className, surface === "island" ? "chat-head" : "hint", "Quick introduces the empty conversation beside its companion; Room keeps its empty state");
   assert.equal(chat.element.classList.contains("has-messages"), false, "An empty chat has no message-state marker");
   chat.load({ ...conversation, busy: true, lines: [] });
   assert.equal(chat.element.classList.contains("has-messages"), true, "Thinking already reserves the conversation space");
@@ -379,6 +379,38 @@ for (const surface of ["island", "nest"]) {
   assert.equal(chat.element.classList.contains("has-messages"), true, "Restored messages get the full conversation height");
 }
 console.log("check-chat-models: both surfaces keep the greeting in the empty state only, API capability notice survives");
+
+{
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {});
+  await tick();
+  chat.element.isConnected = true;
+  chat.element.clientHeight = 300;
+  chat.element.querySelector(".chat-foot").offsetHeight = 40;
+  const log = chat.element.querySelector(".log");
+  let contentHeight = 80;
+  Object.defineProperty(log, "scrollHeight", { get: () => log.style.height === "auto" ? contentHeight : Math.max(contentHeight, 200) });
+  chat.fitContents();
+  assert.equal(chat.element.style["--chat-content-height"], "0px", "An empty Quick never reserves a transcript viewport");
+  chat.load({ ...conversation, lines: [{ who: "zeca", text: "Short reply" }] });
+  log.scrollTop = 11; log.listeners.wheel();
+  chat.fitContents();
+  assert.equal(chat.element.style["--chat-content-height"], "80px", "Short content is measured independently of its previous viewport height");
+  assert.equal(log.scrollTop, 11, "Sizing respects a manual reading position");
+  assert.equal(chat.element.style["--chat-menu-height"], "244px", "The menu is limited by the current surface, not the maximum overlay size");
+  const trigger = nodes(chat.element).find(node => node.classList.contains("model"));
+  trigger.click(); await tick(); chat.fitContents();
+  assert.equal(chat.element.style["--chat-content-height"], "80px", "Opening and loading model choices does not enlarge the chat");
+  trigger.click(); chat.fitContents();
+  assert.equal(chat.element.style["--chat-content-height"], "80px", "Closing the selector does not shrink the transcript");
+  contentHeight = 4000; chat.fitContents();
+  assert.equal(chat.element.style["--chat-content-height"], "4000px", "Long replies retain their intrinsic size for the bounded flex viewport");
+  chat.load({ ...conversation, started: false, lines: [] }); chat.fitContents();
+  assert.equal(chat.element.style["--chat-content-height"], "0px", "A new empty conversation releases the previous transcript height");
+  const room = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {}, { window: "nest" });
+  room.element.isConnected = true; room.fitContents();
+  assert.equal(room.element.style["--chat-content-height"], undefined, "Quick sizing never changes Room");
+}
+console.log("check-chat-models: Quick grows with content, clears empty height, bounds selectors without resize, preserves manual reading and leaves Room unchanged");
 
 for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {} }, () => {}, { window: surface });

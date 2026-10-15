@@ -521,6 +521,7 @@ export class ChatPanel {
       ? el(
           "div",
           { class: "chat-head" },
+          this.greeting,
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
           ...(this.backend.openNest ? [this.nestButton()] : []),
@@ -1218,6 +1219,21 @@ export class ChatPanel {
     else this.jump.classList.add("on");
   }
 
+  /** Measure content before the island measures its native hit region; menus never size the log. */
+  fitContents(): void {
+    if (!this.compact || !this.element.isConnected) return;
+    const top = this.log.scrollTop;
+    const height = this.log.style.height;
+    this.log.style.height = "auto";
+    const content = this.messages.length || this.busy || this.provider === "api" ? this.log.scrollHeight : 0;
+    this.log.style.height = height;
+    this.element.style.setProperty("--chat-content-height", `${Math.ceil(content)}px`);
+    const foot = this.element.querySelector<HTMLElement>(".chat-foot");
+    this.element.style.setProperty("--chat-menu-height", `${Math.max(0, this.element.clientHeight - (foot?.offsetHeight ?? 0) - 16)}px`);
+    this.log.scrollTop = this.following && performance.now() - this.lastScrollInput >= SCROLL_COOLDOWN_MS
+      ? this.log.scrollHeight : top;
+  }
+
   // ── Painting ─────────────────────────────────────────────────────────────
 
   private grow(): void {
@@ -1913,6 +1929,7 @@ export class ChatPanel {
 
   private paint(): void {
     this.element.classList.toggle("has-messages", this.messages.length > 0 || this.busy);
+    this.greeting.hidden = this.compact && (this.messages.length > 0 || this.busy);
     this.paintHead();
     this.paintVoice();
     const last = this.messages[this.messages.length - 1];
@@ -1925,14 +1942,14 @@ export class ChatPanel {
       ...(this.messages.length
         ? this.nodes
         : [
-            el("div", { class: "hint" },
-              this.greeting,
-              ...(this.compact && this.provider !== "api" ? [] : [el("p", { text:
+            ...(this.compact && this.provider !== "api" ? [] : [el("div", { class: "hint" },
+              this.compact ? null : this.greeting,
+              el("p", { text:
                 this.provider === "api"
                   ? t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.")
                   : t("Ask anything, or drop a file on the island."),
-              })]),
-            ),
+              }),
+            )]),
             el(
               "div",
               { class: "suggestions" },
