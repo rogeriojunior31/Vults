@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 51db6a353587 -->
+<!-- source: 9a2d9524740a -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro completo ao lado dos controles do chat da ilha e ao lado da conversa no Nest: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -20,8 +20,11 @@ Os motores vêm em dois grupos, **Your setup** (os
 CLIs do Claude Code e do Codex, cada um *Signed in*, *Installed* ou *Not installed*: o Vults só olha
 se o CLI e o arquivo de login dele estão lá, nunca os lê) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),
 com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
-também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
-ponto dele; a conversa continua lá quando você volta.
+também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** primeiro fecha um seletor aberto e depois fecha o chat; a conversa continua lá quando você volta.
+Só um seletor fica aberto por vez. **↑/↓** no botão abre a lista e foca uma opção;
+**↑/↓**, **Home** e **End** percorrem as opções sem aplicá-las. **Enter** ou um clique escolhe;
+**Esc** devolve o foco ao botão. Clicar fora fecha a lista. O carregamento dos modelos mantém
+na opção o foco, e as atualizações preservam um título de conversa ainda em edição.
 
 Numa conversa CLI vazia, os cartões de perguntas preenchem o rascunho e focam o campo.
 Edite antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
@@ -143,7 +146,10 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   botão *↓ new text* para voltar ao fim.
 - **Copy** embaixo da última resposta copia ela inteira, no Markdown em que foi escrita; uma resposta
   mais antiga mostra o botão quando o ponteiro passa sobre ela. Um bloco de código tem o seu próprio
-  **Copy**.
+  **Copy**. Se a cópia falhar, o botão avisa e permite tentar de novo.
+- Tanto Quick quanto Room mostram títulos, listas, citações, código e tabelas. Código e tabelas
+  largas têm uma área de rolagem própria que aceita foco pelo teclado. Links continuam como
+  texto, com o endereço ao lado do rótulo.
 - Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
   vez.
 - Enquanto um turno roda, *Thinking…* avisa, com os segundos depois que ele passa de três.
@@ -194,7 +200,10 @@ deles antes de serem usados.
 - Todo comando e toda edição aparecem na conversa como um card igual ao da própria ilha: o que o Zeca
   pretende fazer, o comando inteiro ou o arquivo com suas linhas **+/−**, e **Deny** e **Allow** lado
   a lado com suas teclas (**Ctrl+Alt+N** / **Ctrl+Alt+Y** respondem de qualquer lugar). Nada roda até você
-  responder, e um card que ninguém responde é um não.
+  responder, e um card que ninguém responde é um não. O card informa sua pasta e o estado da permissão,
+  com a operação completa em uma área rolável. **Deny** ganha destaque quando o backend não
+  oferece uma regra para a chamada exata ou a conversa leu conteúdo de fora; a decisão e a
+  disponibilidade de **Always in this chat** continuam com o responsável atual pelas permissões.
 - Depois que a conversa lê conteúdo de fora (uma página ou busca na web, um comando que rodou
   `curl`, `git pull` ou `gh`, uma ferramenta MCP que não seja as do `vults-zeca`, o
   servidor que o Vults entrega ao Claude Code do chat), todo card seguinte avisa em vermelho: uma página pode trazer palavras

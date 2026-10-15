@@ -1,5 +1,5 @@
 # A memória do Zeca
-<!-- source: b306c21a1296 -->
+<!-- source: e4587cd8196f -->
 
 O Zeca pode lembrar de você, dos seus projetos e do que os seus agentes fizeram. Essa memória fica
 desligada até você ligá-la, é guardada neste computador, e só você a escreve.
@@ -48,11 +48,20 @@ chat por API também pode pedir mais com a ferramenta `recall`, e sugerir um fat
   <fato>`** no projeto em que a conversa está. **`/forget <palavras>`** remove o único fato que as
   contém (com vários, ele os lista).
 - **O que o Zeca propõe** espera na **Memory** ao lado do Chat do Nest, com para onde vai (um projeto pelo nome
-  e pela pasta) e a mudança como um diff: **Remember** guarda, **Turn down** descarta.
+  e pela pasta). As propostas aparecem primeiro, com **Current memory** e **Proposed memory**
+  separados: **Remember** salva uma adição ou substituição, **Accept removal** remove o fato
+  exibido, e **Turn down** descarta a proposta.
 - A Memory também lista o que ele lembra, arquivo por arquivo com o quanto cada um está cheio,
   e o histórico: quem escreveu cada mudança (você, ou o Zeca com o seu sim) e **Undo**, que a
   desfaz numa mudança nova (recusado quando uma mudança depois mexeu no mesmo arquivo; nunca
-  oferecido numa que o Vults não escreveu).
+  oferecido numa que o Vults não escreveu). Os arquivos salvos, o relato da noite e o histórico
+  expandem de forma independente e mantêm seu estado aberto e a posição de leitura ao atualizar.
+  Cada arquivo mostra a quantidade de fatos e o uso de caracteres, com um aviso perto do limite.
+
+Enquanto uma decisão está sendo salva, a ação continua pendente até a memória ser lida de novo.
+Se a gravação falhar, o erro permanece visível. Se a leitura falhar, **Try again** permite repetir
+mantendo a última visualização com um aviso de que ela pode estar desatualizada; abrir ou expandir
+Memory nunca aceita uma proposta.
 
 Um fato nunca entra duas vezes: o `/remember` e toda proposta são recusados quando outro fato já
 diz isso, sem contar maiúsculas, espaços e o ponto final, e o mesmo fato decidido no último mês não

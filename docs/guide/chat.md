@@ -20,7 +20,11 @@ setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not i
 looks whether the CLI and its login file are there, never reads them) and **Vults harness** (the
 API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation, and so does switching to
 another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
-closes the chat from anywhere in it; the conversation is still there when you come back.
+first dismisses an open selector, then closes the chat; the conversation is still there when you come back.
+Only one selector opens at a time. **↑/↓** on its trigger opens it and focuses a choice;
+**↑/↓**, **Home** and **End** move between choices without applying them. **Enter** or a click
+chooses; **Esc** returns focus to the trigger. Clicking outside dismisses it. Model reads
+retain the focused choice, and refreshes preserve an unfinished conversation title.
 
 In an empty CLI conversation, the question cards fill the draft and focus the
 input. Edit it before pressing **Send** or **Enter**; clicking a suggestion does not send it.
@@ -124,7 +128,10 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a
   *↓ new text* button to jump back to the end.
 - **Copy** under the latest reply copies all of it, as the Markdown it was written in; an older
-  reply shows it when the pointer is over it. A code block has its own **Copy**.
+  reply shows it when the pointer is over it. A code block has its own **Copy**. A failed copy
+  says so and can be retried.
+- Both Quick and Room show headings, lists, quotes, code and tables. Code and wide tables have
+  their own keyboard-focusable scrolling area. Links stay text, with their address beside the label.
 - A turn that fails says why, with **Try again**: it sends the same words and files once more.
 - While a turn runs, *Thinking…* says so, with its seconds once it takes longer than three.
 - In the Nest the conversation reads in one column as wide as the composer, however wide the window.
@@ -167,7 +174,10 @@ before they are used.
 - Every command and every edit shows up in the conversation as a card like the island's own: what
   Zeca means to do, the whole command or the file with its **+/−** lines, and **Deny** and **Allow**
   side by side with their keys (**Ctrl+Alt+N** / **Ctrl+Alt+Y** answer it from anywhere). Nothing runs until you
-  answer, and a card nobody answers is a no.
+  answer, and a card nobody answers is a no. The card names its folder and permission state,
+  with the complete operation in a scrollable area. **Deny** is emphasized when the backend
+  offers no exact-call rule or the conversation has read outside content; the decision and
+  **Always in this chat** eligibility still belong to the existing permission owner.
 - Once the conversation has read content from outside (a web page or search, a command that ran
   `curl` or `git pull` or `gh`, an MCP tool other than those of `vults-zeca`, the server Vults gives the chat's Claude Code), every card
   after it says so in red: a page can carry words written to steer Zeca, so read what the card asks

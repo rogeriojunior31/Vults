@@ -37,13 +37,13 @@ const SOURCES: Record<MemoryView["pending"][number]["source"], string> = {
 };
 
 /** The debrief Zeca's last sleep left: a model's reading of the days' summaries, said as such. */
-function night(v: MemoryView): HTMLElement | null {
+function night(v: MemoryView): HTMLDetailsElement | null {
   const n = v.night;
   if (!n?.debrief) return null;
   return el(
-    "section",
+    "details",
     { class: "memory-part memory-night" },
-    el("h4", { text: t("While you were away") }),
+    el("summary", { text: t("While you were away") }),
     el("p", { class: "memory-night-line", text: t("Zeca's reading of the last days' summaries:") }),
     el("p", { class: "memory-debrief", text: n.debrief }),
   );
@@ -59,124 +59,135 @@ const BY: Record<MemoryView["history"][number]["by"], string> = {
 
 export function createMemory(backend: MemoryBackend): { element: HTMLElement; refresh: () => void } {
   const element = el("div", { class: "memory" });
+  const disclosures = new Map<string, HTMLDetailsElement>();
   let asked = 0;
+  let loaded: MemoryView | null = null;
   let note: string | null = null;
-  // One answer at a time: a second click waits for the first to land.
+  let failed = false;
+  let loading = false;
   let acting = false;
+  let returning: string | null = null;
+
+  const keep = (key: string, details: HTMLDetailsElement, open = false) => {
+    details.open = disclosures.get(key)?.open ?? open;
+    disclosures.set(key, details);
+    return details;
+  };
+  const identify = <T extends HTMLElement>(node: T, id: string): T => { node.dataset.fid = id; return node; };
+  const action = (id: string, text: string, run: () => void, primary = false) => {
+    const button = identify(el("button", { class: `btn${primary ? " primary" : ""}`, text, onclick: run }), id);
+    button.disabled = acting || loading;
+    return button;
+  };
+  const count = (n: number) => el("span", { class: "memory-count", text: String(n) });
+  const heading = (label: string, n: number) => el("h4", {}, el("span", { text: label }), count(n));
 
   const act = (work: () => Promise<void>) => {
-    if (acting) return;
+    if (acting || loading) return;
     acting = true;
     note = null;
-    element.classList.add("busy");
-    void work()
-      .catch((e: unknown) => {
-        const text = String(e);
-        note = ERRORS.has(text) ? t(text) : text;
-      })
-      .finally(() => {
-        acting = false;
-        element.classList.remove("busy");
-        refresh();
-      });
+    paint();
+    void Promise.resolve().then(work).catch((error: unknown) => {
+      const text = String(error);
+      note = ERRORS.has(text) ? t(text) : text;
+    }).then(() => refresh()).finally(() => { acting = false; paint(); });
   };
 
   const pending = (v: MemoryView): HTMLElement => {
-    const rows = v.pending.map((p) => {
-      const diff = el("div", { class: "proposal-diff" });
-      if (p.old) diff.append(el("div", { class: "diff-old", text: `- ${p.old}` }));
-      if (p.new) diff.append(el("div", { class: "diff-new", text: `+ ${p.new}` }));
-      return el(
-        "article",
-        { class: "proposal" },
-        el(
-          "header",
-          { class: "proposal-head" },
-          el("span", { class: "proposal-place", text: p.folder ? `${place(p.place)} · ${p.folder}` : place(p.place) }),
-          el("span", { class: "proposal-source", text: t(SOURCES[p.source]) }),
-        ),
-        diff,
+    const rows = v.pending.map(p => {
+      const change = (label: string, text: string, className: string) => el("div", { class: `memory-change ${className}` },
+        el("span", { class: "memory-change-label", text: label }), el("p", { text }));
+      return el("article", { class: "proposal" },
+        el("header", { class: "proposal-head" },
+          el("span", { class: "proposal-place", text: place(p.place) }),
+          el("span", { class: "proposal-source", text: t(SOURCES[p.source]) })),
+        p.folder ? el("p", { class: "memory-folder", text: p.folder }) : null,
+        el("div", { class: "proposal-diff" },
+          p.old ? change(t("Current memory"), p.old, "diff-old") : null,
+          p.new ? change(t("Proposed memory"), p.new, "diff-new")
+            : change(t("Proposed memory"), t("Remove this memory."), "diff-old")),
         p.reason ? el("p", { class: "proposal-reason", text: p.reason }) : null,
-        el(
-          "div",
-          { class: "proposal-actions" },
-          el("button", { class: "btn primary", text: t("Remember"), onclick: () => act(() => backend.decide(p.id, true)) }),
-          el("button", { class: "btn", text: t("Turn down"), onclick: () => act(() => backend.decide(p.id, false)) }),
-        ),
-      );
+        el("div", { class: "proposal-actions" },
+          action(`accept:${p.id}`, p.op === "remove" ? t("Accept removal") : t("Remember"), () => act(() => backend.decide(p.id, true)), true),
+          action(`reject:${p.id}`, t("Turn down"), () => act(() => backend.decide(p.id, false)))));
     });
     const decided = v.accepted + v.rejected;
-    return el(
-      "section",
-      { class: "memory-part" },
-      el("h4", { text: t("Waiting for you") }),
-      ...(rows.length ? rows : [el("p", { class: "board-empty", text: t("Nothing waits.") })]),
-      decided ? el("p", { class: "memory-rate", text: t("{a} of {n} accepted in the last 90 days.", { a: v.accepted, n: decided }) }) : null,
-    );
+    return el("section", { class: "memory-part memory-proposals" },
+      heading(t("Waiting for you"), v.pending.length),
+      ...(rows.length ? rows : [el("p", { class: "memory-empty", text: t("Nothing waits.") })]),
+      decided ? el("p", { class: "memory-rate", text: t("{a} of {n} accepted in the last 90 days.", { a: v.accepted, n: decided }) }) : null);
   };
 
-  const files = (v: MemoryView): HTMLElement =>
-    el(
-      "section",
-      { class: "memory-part" },
-      el("h4", { text: t("What Zeca remembers") }),
-      ...(v.files.some((f) => f.facts.length)
-        ? v.files
-            .filter((f) => f.facts.length)
-            .map((f) =>
-              el(
-                "div",
-                { class: "memory-file" },
-                el(
-                  "div",
-                  { class: "memory-file-head" },
-                  el("span", { text: place(f.place) }),
-                  el("span", { class: "memory-used", text: t("{used} of {limit} characters", { used: f.used, limit: f.limit }) }),
-                ),
-                el("ul", {}, ...f.facts.map((x) => el("li", { text: x }))),
-              ),
-            )
-        : [el("p", { class: "board-empty", text: t("Nothing yet. Type /remember in the chat, or accept what Zeca proposes.") })]),
-    );
+  const files = (v: MemoryView): HTMLElement => {
+    const nonempty = v.files.filter(f => f.facts.length);
+    return el("section", { class: "memory-part" }, heading(t("What Zeca remembers"), nonempty.reduce((n, f) => n + f.facts.length, 0)),
+      ...(nonempty.length ? nonempty.map(f => {
+        const usage = t("{used} of {limit} characters", { used: f.used, limit: f.limit });
+        const progress = f.limit > 0 ? el("progress", { class: `memory-progress${f.used / f.limit >= 0.9 ? " critical" : f.used / f.limit >= 0.7 ? " warning" : ""}` }) : null;
+        if (progress) { progress.max = f.limit; progress.value = f.used; progress.setAttribute("aria-label", usage); }
+        return keep(`file:${f.path}`, el("details", { class: "memory-file" },
+          identify(el("summary", { class: "memory-file-head" }, el("span", { text: place(f.place) }), count(f.facts.length)), `file:${f.path}`),
+          el("div", { class: "memory-file-body" }, el("p", { class: "memory-used", text: usage }), progress,
+            el("ul", {}, ...f.facts.map(text => el("li", { text }))))), nonempty.length === 1);
+      }) : [el("p", { class: "memory-empty", text: t("Nothing yet. Type /remember in the chat, or accept what Zeca proposes.") })]));
+  };
 
-  const history = (v: MemoryView): HTMLElement | null =>
-    v.history.length
-      ? el(
-          "section",
-          { class: "memory-part" },
-          el("h4", { text: t("History") }),
-          ...v.history.map((c) =>
-            el(
-              "div",
-              { class: "memory-commit" },
-              el("span", { class: "memory-commit-msg", text: c.message }),
-              el("span", { class: "memory-commit-by", text: t(BY[c.by]) }),
-              // Never on a commit Vults did not write: its earlier text was the writer's choice.
-              c.by === "other" ? null : el("button", { class: "btn small", text: t("Undo"), onclick: () => act(() => backend.undo(c.id)) }),
-            ),
-          ),
-        )
-      : null;
+  const history = (v: MemoryView): HTMLDetailsElement | null => v.history.length ? keep("history", el("details", { class: "memory-part memory-history" },
+    identify(el("summary", {}, el("span", { text: t("History") }), count(v.history.length)), "history"),
+    ...v.history.map(c => el("div", { class: "memory-commit" },
+      el("div", { class: "memory-commit-text" }, el("span", { class: "memory-commit-msg", text: c.message }), el("span", { class: "memory-commit-by", text: t(BY[c.by]) })),
+      c.by === "other" ? null : action(`undo:${c.id}`, t("Undo"), () => act(() => backend.undo(c.id))))))) : null;
 
-  const refresh = () => {
+  function paint(): void {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && element.contains(active)) returning = active.dataset.fid ?? null;
+    else if (active && active !== document.body) returning = null;
+    const scroll = element.parentElement?.scrollTop;
+    const title = el("h3", { class: "memory-heading", text: t("Memory") });
+    title.tabIndex = -1;
+    const state = el("div", { class: "memory-state" });
+    state.setAttribute("role", "status");
+    if (acting) state.append(el("p", { text: t("Saving…") }));
+    else if (loading && !loaded) state.append(el("p", { text: t("Loading") }));
+    if (note) state.append(el("p", { class: "memory-note", text: note }));
+    if (failed) {
+      state.append(el("p", { class: "memory-note", text: loaded ? t("Memory could not update. The last loaded view may be out of date.") : t("Memory could not load. Try again.") }),
+        action("retry", t("Try again"), () => { if (!loading && !acting) void refresh(); }));
+    }
+    const parts: HTMLElement[] = [el("header", { class: "memory-heading-group" }, title,
+      el("p", { text: t("Review what Zeca keeps for future conversations.") })), state];
+    if (loaded?.on) {
+      const overnight = night(loaded);
+      const changes = history(loaded);
+      parts.push(pending(loaded), files(loaded));
+      if (overnight) parts.push(keep("night", overnight));
+      if (changes) parts.push(changes);
+    } else if (loaded) parts.push(el("p", { class: "memory-empty", text: t("Zeca's memory is off. Turn it on in Settings, Chat & voice, Memory.") }));
+    element.setAttribute("aria-busy", String(acting || loading));
+    element.replaceChildren(...parts);
+    if (scroll !== undefined && element.parentElement) element.parentElement.scrollTop = scroll;
+    if (returning) {
+      const target = element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(returning)}"]`);
+      if (target && !(target as HTMLButtonElement).disabled) { target.focus({ preventScroll: true }); returning = null; }
+      else if (!acting && !loading) { title.focus({ preventScroll: true }); returning = null; }
+    }
+  }
+
+  async function refresh(): Promise<void> {
     const mine = ++asked;
-    void backend.load().then(
-      (v) => {
-        if (mine !== asked) return;
-        if (!v.on) {
-          element.replaceChildren(el("p", { class: "board-empty", text: t("Zeca's memory is off. Turn it on in Settings, Chat & voice, Memory.") }));
-          return;
-        }
-        element.replaceChildren(
-          ...(note ? [el("p", { class: "memory-note", text: note })] : []),
-          ...(night(v) ? [night(v)!] : []),
-          pending(v),
-          files(v),
-          ...(history(v) ? [history(v)!] : []),
-        );
-      },
-      () => {},
-    );
-  };
-  return { element, refresh };
+    loading = true;
+    paint();
+    try {
+      const next = await backend.load();
+      if (mine !== asked) return;
+      loaded = next;
+      failed = false;
+    } catch {
+      if (mine !== asked) return;
+      failed = true;
+    } finally {
+      if (mine === asked) { loading = false; paint(); }
+    }
+  }
+  return { element, refresh: () => { void refresh(); } };
 }

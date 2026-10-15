@@ -39,11 +39,19 @@ which only writes a proposal.
   <fact>`** to the project the conversation is in. **`/forget <words>`** removes the one fact that
   holds them (with several, it lists them).
 - **What Zeca proposes** waits in the **Memory** beside the Nest's Chat, with where it goes (a project by its
-  name and folder) and the change as a diff: **Remember** saves it, **Turn down** drops it.
+  name and folder). Proposals come first, with **Current memory** and **Proposed memory**
+  separated: **Remember** saves an addition or replacement, **Accept removal** removes the
+  shown fact, and **Turn down** drops the proposal.
 - The Memory also lists what he remembers, file by file with how full each is, and the history:
   who wrote each change (you, or Zeca with your yes) and **Undo**, which takes it back in a new
   change (refused when a later change touched the same file; never offered on one Vults did not
-  write).
+  write). Saved files, the overnight debrief and history expand independently and retain
+  their open state and reading position when refreshed. Each file shows its fact count and
+  character usage, with a warning near its limit.
+
+While a decision is saving, the action stays pending until memory is read back. A failed
+write keeps its error visible. A failed read offers **Try again** and retains the last loaded
+view with a warning that it may be out of date; opening or expanding Memory never accepts a proposal.
 
 A fact never gets in twice: `/remember` and every proposal are refused when another fact already
 says it, case, spaces and the final stop aside, and the same fact decided in the last month is not

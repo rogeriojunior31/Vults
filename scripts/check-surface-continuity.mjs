@@ -7,7 +7,7 @@ const nodes = node => [node, ...node.children.flatMap(nodes)];
 class Element {
   children = []; listeners = {}; attributes = {}; dataset = {}; style = { setProperty() {} };
   className = ""; value = ""; hidden = false; scrollTop = 0;
-  constructor(tag) { this.tag = tag; }
+  constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); }
   classList = {
     contains: name => this.className.split(" ").includes(name),
     add: name => { if (!this.classList.contains(name)) this.className += ` ${name}`; },
@@ -32,7 +32,9 @@ class Element {
   removeAttribute(name) { delete this.attributes[name]; }
   hasAttribute(name) { return name === "hidden" ? this.hidden : name in this.attributes; }
   toggleAttribute(name, force) { if (force) this.setAttribute(name, ""); else this.removeAttribute(name); }
+  click() { if (!this.disabled) this.fire("click"); }
   matches(selector) {
+    if (selector.includes(",")) return selector.split(",").some(value => this.matches(value.trim()));
     const attr = selector.match(/\[([^=\]]+)(?:="([^"]*)")?\]/);
     if (attr) { const value = attr[1].startsWith("data-") ? this.dataset[attr[1].slice(5)] : this.getAttribute(attr[1]); if (attr[2] !== undefined ? value !== attr[2] : value === undefined) return false; }
     const plain = selector.replace(/\[[^\]]*\]/g, "");
@@ -83,6 +85,7 @@ const source = path => JSON.stringify(`${root}src/${path}`.replaceAll("\\", "/")
 const bundles = await build({ configFile: false, root, logLevel: "silent",
   plugins: [{ name: "continuity-entry", resolveId: id => id.endsWith("continuity-entry") ? "\0continuity-entry" : null,
     load: id => id === "\0continuity-entry" ? `
+      export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
@@ -95,7 +98,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -371,3 +374,52 @@ at("refresh").fire("click"); polls[1].resolve(); await tick();
 assert.ok(!connections.element.textContent.includes("Connections could not update"));
 assert.equal(merges.length, 1);
 console.log("check-surface-continuity: Connections check/action hierarchy, explicit merge/cancel, duplicate guards, refresh error/retry");
+
+const memoryReads = [], memoryWrites = [], decisions = [];
+const memory = createMemory({ load: () => new Promise((resolve, reject) => memoryReads.push({ resolve, reject })),
+  decide: (...args) => new Promise((resolve, reject) => { memoryWrites.push(args); decisions.push({ resolve, reject }); }),
+  undo: async id => { memoryWrites.push(["undo", id]); } });
+const memoryHost = new Element("aside"); memoryHost.append(memory.element); document.body.replaceChildren(memoryHost);
+let memoryView = { on: true, files: [{ place: "user", path: "/memory/user.md", facts: ["Prefers short answers"], used: 90, limit: 100 }],
+  pending: [{ id: 7, op: "replace", place: "user", folder: "/work/alpha", old: "Short answers", new: "Concise answers with evidence", reason: "Your preference", source: "tool" }],
+  history: [{ id: "ours", message: "Remember preference", by: "you", seconds: 1 }, { id: "external", message: "Manual edit", by: "other", seconds: 2 }],
+  accepted: 1, rejected: 0, night: { day: "2026-10-15", debrief: "Yesterday's review" } };
+const memoryButton = id => memory.element.querySelector(`[data-fid="${id}"]`);
+memory.refresh(); assert.ok(memory.element.textContent.includes("Loading"));
+memoryReads.at(-1).resolve(memoryView); await tick();
+assert.ok(memory.element.textContent.indexOf("Waiting for you") < memory.element.textContent.indexOf("Yesterday's review"));
+assert.ok(memory.element.textContent.includes("Current memoryShort answers"));
+assert.ok(memory.element.textContent.includes("Proposed memoryConcise answers"));
+assert.equal(memory.element.querySelectorAll(".memory-commit").filter(n => n.querySelector("button")).length, 1, "External edits never acquire Undo");
+const fileDisclosure = memory.element.querySelector(".memory-file"); fileDisclosure.open = false;
+memory.element.querySelector(".memory-history").open = true;
+memoryHost.scrollTop = 140;
+memory.refresh(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.equal(memory.element.querySelector(".memory-file").open, false);
+assert.equal(memory.element.querySelector(".memory-history").open, true);
+assert.equal(memoryHost.scrollTop, 140);
+assert.deepEqual(memoryWrites, [], "Loading and disclosing memory never accepts or reverts a change");
+memoryButton("accept:7").focus(); memoryButton("accept:7").fire("click"); document.activeElement = document.body; await tick();
+assert.deepEqual(memoryWrites, [[7, true]]);
+assert.equal(memoryButton("reject:7").disabled, true);
+memoryButton("reject:7").fire("click"); await tick(); assert.equal(memoryWrites.length, 1);
+memory.refresh(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.equal(memoryButton("accept:7").disabled, true, "An external refresh cannot unlock a pending decision");
+decisions[0].reject("Cannot save this memory."); await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.ok(memory.element.textContent.includes("Cannot save this memory."));
+assert.equal(memoryButton("accept:7").disabled, false);
+assert.equal(document.activeElement, memoryButton("accept:7"), "The pending action regains focus after a failed write");
+memory.refresh(); memoryReads.at(-1).reject(new Error("Offline")); await tick();
+assert.ok(memory.element.textContent.includes("The last loaded view may be out of date"));
+assert.ok(memory.element.textContent.includes("Concise answers"));
+assert.ok(memory.element.textContent.includes("Cannot save this memory."));
+memoryButton("retry").fire("click"); assert.equal(memoryButton("retry").disabled, true);
+memoryReads.at(-1).resolve(memoryView); await tick();
+assert.ok(!memory.element.textContent.includes("The last loaded view"));
+memoryButton("accept:7").focus(); memoryButton("accept:7").fire("click"); document.activeElement = document.body; await tick();
+memoryView = { ...memoryView, pending: [] }; decisions[1].resolve(); await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.equal(memoryButton("accept:7"), null); assert.equal(document.activeElement.className, "memory-heading");
+memory.refresh(); const obsolete = memoryReads.at(-1); memory.refresh();
+memoryReads.at(-1).resolve(memoryView); await tick(); obsolete.reject(new Error("Obsolete")); await tick();
+assert.ok(!memory.element.textContent.includes("The last loaded view"));
+console.log("check-surface-continuity: Memory proposal/fact/history hierarchy, explicit decisions, pending guard across refresh, stale/error/retry, retained disclosures/scroll/focus and response ordering");

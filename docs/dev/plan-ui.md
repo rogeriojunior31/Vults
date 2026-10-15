@@ -736,3 +736,29 @@ check the swallowing/voice clips, fold/reopen and move between Quick and Room.
 Confirm click-through outside the wider shape and bottom-panel placement on the
 real compositor. Renderer mocks and geometry arithmetic do not measure WebKit
 layout or prove the compositor's native input behavior.
+
+
+## Chat, permissions, Memory and selectors - 2026-10-15
+
+The next four UI suggestions are implemented on `feat/ui-component-polish`.
+They reuse the existing theme, motion, DOM and action owners with no dependency.
+
+| Slice | Implementation | Production-renderer acceptance |
+| --- | --- | --- |
+| Active conversation | One safe full Markdown renderer for Quick and Room; shared readable headings, lists, quotes, tables and code; named keyboard-scroll regions; shared copy feedback with failure/retry | Chat check exercises both surfaces, inert links/HTML, copy guard/recovery and retained draft; existing stream cooldown and IME checks still pass |
+| Permission cards | Permission state, operation and full folder; readable command region, separated scope warning, cautious primary action when no exact-call rule is offered or outside content was read | Chat check verifies full command/scope, warning and no invented Always action; existing hidden/disabled/late shortcut and explicit decision checks retain authority |
+| Memory | Proposals before saved facts/debrief/history; labeled Current/Proposed text, explicit removal; retained native disclosures, usage bars; pending writes, stale read warning and retry | Continuity check holds/rejects real writes, refreshes during a pending action, checks errors/retry, obsolete reads, retained scroll/disclosures/focus and no writes on opening |
+| Selectors | One open panel, common selected treatment and targets; named controlled regions; arrows/Home/End, Escape return and outside dismissal; retain focused choice and unfinished rename/caret across reads | Chat check exercises both surfaces through a delayed model read, four competing panels, text editing, IME, keyboard dismissal, explicit folder selection and no implicit execution/access change |
+
+Public Chat and Memory guides and all three UI translations accompany the change.
+The build, all renderer checks and full repository gates run before the local commit.
+Native visual acceptance remains for the user in the reopened Tauri: review rich
+replies and horizontal table/code scrolling, a real permission's complete operation,
+Memory with pending/saved/empty content, and the four selectors in Quick and Room.
+No screenshot or measured WebKit layout claim is implied by DOM checks.
+
+Automated acceptance: TypeScript/Vite build, all nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass. Brand, English, i18n, layer, network,
+README translation and whitespace checks pass. Chat/Memory mirror marks match.
+Tauri starts on this branch and binds all nine global shortcuts; desktop visual
+acceptance remains with the user.

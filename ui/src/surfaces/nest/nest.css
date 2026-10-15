@@ -686,62 +686,6 @@ body {
 @media (max-height: 400px) {
   .nest-chat .composer textarea { max-height: 24px; }
 }
-/* The full Markdown's blocks. */
-.nest-chat .msg.zeca h3,
-.nest-chat .msg.zeca h4,
-.nest-chat .msg.zeca h5,
-.nest-chat .msg.zeca h6 {
-  margin: 10px 0 4px;
-  color: var(--fg-bright);
-}
-.nest-chat .msg.zeca h3 {
-  font-size: 15px;
-}
-.nest-chat .msg.zeca h4,
-.nest-chat .msg.zeca h5,
-.nest-chat .msg.zeca h6 {
-  font-size: 13.5px;
-}
-.nest-chat .msg.zeca blockquote {
-  margin: 6px 0;
-  padding-left: 10px;
-  border-left: 3px solid var(--border);
-  color: var(--fg-dim);
-  white-space: pre-wrap;
-}
-.nest-chat .msg.zeca hr {
-  margin: 10px 0;
-  border: none;
-  border-top: 1px solid var(--border);
-}
-.nest-chat .msg.zeca ol {
-  margin: 4px 0;
-  padding-left: 22px;
-}
-.nest-chat .msg.zeca .table {
-  overflow-x: auto;
-  margin: 6px 0;
-}
-.nest-chat .msg.zeca table {
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-.nest-chat .msg.zeca th,
-.nest-chat .msg.zeca td {
-  padding: 4px 9px;
-  border: 1px solid var(--border);
-  text-align: left;
-}
-.nest-chat .msg.zeca th {
-  color: var(--fg-bright);
-}
-.nest-chat .msg.zeca .link {
-  text-decoration: underline;
-}
-.nest-chat .msg.zeca .link-url {
-  color: var(--fg-muted);
-  font-size: 11.5px;
-}
 /* The Roosts and Memory tabs: a list that scrolls inside the window. */
 /* Each tab's pane, and each of Activity's parts: a list that scrolls inside the window. */
 .nest-pane,
@@ -847,58 +791,50 @@ body {
 .nest-memory[hidden] {
   display: none;
 }
-.memory.busy button {
-  pointer-events: none;
-  opacity: 0.6;
-}
-.memory {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.memory-part h4 {
-  margin: 12px 0 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.proposal {
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-.proposal-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 11.5px;
-  color: var(--fg-muted);
-}
-.proposal-place {
-  color: var(--fg-bright);
-  font-weight: 600;
-}
-.proposal-diff {
-  margin: 6px 0;
-  font-family: var(--mono, monospace);
-  font-size: 12px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.diff-old {
-  color: var(--error-text);
-}
-.diff-new {
-  color: var(--ok);
-}
-.proposal-reason {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--fg-dim);
-}
+/* Proposals lead; saved facts and history disclose their own detail. */
+.memory { display: flex; flex-direction: column; gap: 20px; }
+.memory-heading-group { display: flex; flex-direction: column; gap: 6px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.memory-heading { margin: 0; font-size: 18px; font-weight: 600; color: var(--fg); }
+.memory-heading-group p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg-dim); }
+.memory-part { min-width: 0; }
+.memory-part h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--fg); }
+.memory-count { flex: none; padding: 1px 6px; border-radius: 6px; background: var(--raised); font: 11px/1.5 var(--mono); color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.memory-proposals > h4 .memory-count { color: var(--warn); }
+.memory-state:empty { display: none; }
+.memory-state p { margin: 0 0 8px; font-size: 12px; line-height: 1.6; }
+.memory-empty { margin: 0; color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
+.memory .proposal { margin-bottom: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--float); }
+.memory .proposal-head { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.memory .proposal-place { color: var(--fg); font-weight: 600; overflow-wrap: anywhere; }
+.memory .proposal-source { color: var(--fg-dim); font-size: 11px; }
+.memory-folder { margin: 8px 0; color: var(--fg-dim); font: 11px/1.6 var(--mono); overflow-wrap: anywhere; }
+.memory .proposal-diff { display: grid; gap: 12px; margin: 16px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.memory-change-label { display: block; font: 11px/1.5 var(--font); color: var(--fg-dim); margin-bottom: 4px; }
+.memory-change p { margin: 0; padding-left: 10px; border-left: 2px solid currentColor; font: 12px/1.6 var(--font); }
+.memory .diff-old { color: var(--error-text); }
+.memory .diff-new { color: var(--ok); }
+.memory .proposal-reason { margin: 0 0 12px; color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
+.memory .proposal-actions { flex-wrap: wrap; }
+.memory .btn { min-height: 32px; padding: 6px 10px; border: 0; border-radius: var(--radius-control); background: var(--raised); font-size: 12px; }
+.memory .btn.primary { background: var(--accent); color: var(--on-accent); }
+.memory .btn:disabled { opacity: 0.5; cursor: wait; }
+.memory :is(button, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.memory-file { margin: 0 0 8px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--float); }
+.memory-file-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; cursor: pointer; font-size: 12px; color: var(--fg); }
+.memory-file-head > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.memory-file-body { padding: 0 12px 12px; }
+.memory-progress { appearance: none; width: 100%; height: 4px; border: 0; border-radius: 999px; overflow: hidden; background: var(--raised); }
+.memory-progress::-webkit-progress-bar { background: var(--raised); }
+.memory-progress::-webkit-progress-value { background: var(--mark); }
+.memory-progress::-moz-progress-bar { background: var(--mark); }
+.memory-progress.warning::-webkit-progress-value { background: var(--warn); }
+.memory-progress.critical::-webkit-progress-value { background: var(--error-text); }
+.memory-progress.warning::-moz-progress-bar { background: var(--warn); }
+.memory-progress.critical::-moz-progress-bar { background: var(--error-text); }
+.memory :is(.memory-history, .memory-night) { border-top: 1px solid var(--border); padding-top: 12px; }
+.memory :is(.memory-history, .memory-night) > summary { display: flex; align-items: center; justify-content: space-between; min-height: 32px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--fg-dim); }
+.memory-commit-text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.memory .memory-commit-msg { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 .proposal-actions {
   display: flex;
   gap: 8px;
@@ -917,25 +853,9 @@ body {
 .memory-note {
   color: var(--error-text);
 }
-.memory-file {
-  margin-bottom: 8px;
-}
-.memory-file-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--fg-bright);
-}
-.memory-used {
-  color: var(--fg-muted);
-  font-size: 11px;
-}
-.memory-file ul {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  font-size: 12px;
-  color: var(--fg);
-}
+.memory-used { color: var(--fg-dim); font-size: 11px; font-variant-numeric: tabular-nums; margin: 0 0 8px; }
+.memory-file ul { margin: 12px 0 0; padding-left: 18px; color: var(--fg); font-size: 12px; line-height: 1.6; }
+.memory-file li + li { margin-top: 8px; }
 .memory-commit {
   display: flex;
   align-items: center;
@@ -2581,3 +2501,6 @@ body.still .detail-content.detail-enter { animation: none; }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+.memory details > summary::after { content: "+"; flex: none; margin-left: auto; padding-left: 8px; color: var(--fg-muted); font: 14px var(--mono); }
+.memory details[open] > summary::after { content: "−"; }

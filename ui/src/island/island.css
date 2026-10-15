@@ -3606,3 +3606,60 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 #island .chat-tight .chat .suggestion { min-height: 40px; padding: 6px; }
 #island .chat-tight .chat .drop-zone { padding-left: 0; }
 #island .chat-tight .chat .engine-box .model-column { max-height: 100px; }
+
+/* Rich replies use one reading rhythm in both chat surfaces. */
+.chat .msg.zeca { line-height: 1.65; overflow-wrap: anywhere; min-width: 0; }
+.chat .msg.zeca :is(p, ul, ol, blockquote, .table, .codeblock) + :is(p, ul, ol, blockquote, .table, .codeblock) { margin-top: 12px; }
+.chat .msg.zeca :is(h3, h4, h5, h6) { margin: 16px 0 8px; line-height: 1.4; color: var(--fg); }
+.chat .msg.zeca h3 { font-size: 15px; }
+.chat .msg.zeca :is(h4, h5, h6) { font-size: 13px; }
+.chat .msg.zeca :is(ul, ol) { margin-bottom: 0; padding-left: 20px; }
+.chat .msg.zeca li + li { margin-top: 4px; }
+.chat .msg.zeca blockquote { margin-inline: 0; padding: 4px 12px; border-left: 2px solid var(--border-hover); color: var(--fg-dim); }
+.chat .msg.zeca hr { margin: 16px 0; border: 0; border-top: 1px solid var(--border); }
+.chat .msg.zeca .table { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid var(--border); border-radius: var(--radius-card); }
+.chat .msg.zeca table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.chat .msg.zeca :is(th, td) { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+.chat .msg.zeca th { color: var(--fg); background: var(--float); font-weight: 600; }
+.chat .msg.zeca tr:last-child td { border-bottom: 0; }
+.chat .msg.zeca .link { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+.chat .msg.zeca .link-url { color: var(--fg-dim); font-size: 11px; overflow-wrap: anywhere; }
+.chat .codeblock { margin: 12px 0; background: var(--float); }
+.chat .code-head { min-height: 32px; }
+.chat .codeblock pre { padding: 12px; line-height: 1.6; tab-size: 2; }
+.chat :is(.table, .codeblock pre, .ask > .code):focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.chat .msg-tools { margin-top: 8px; }
+
+/* Pending permissions keep their operation and scope above the decision. */
+.chat .ask { gap: 12px; padding: 16px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border)); border-radius: var(--radius-card); background: var(--float); }
+.chat .ask > .who { align-items: center; justify-content: space-between; gap: 12px; }
+.chat .ask-heading { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.chat .ask-state { font-size: 11px; color: var(--warn); }
+.chat .ask .who .label { font-size: 14px; font-weight: 600; color: var(--fg); }
+.chat .ask .diff { flex: none; font-variant-numeric: tabular-nums; font: 11px var(--mono); }
+.chat .ask-context { display: flex; gap: 8px; align-items: baseline; font-size: 11px; color: var(--fg-dim); }
+.chat .ask-context > span { flex: none; }
+.chat .ask-context > code { min-width: 0; font: 11px/1.6 var(--mono); overflow-wrap: anywhere; color: var(--fg); }
+.chat .ask > .code { margin: 0; padding: 12px; max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: 0; border-radius: var(--radius-control); background: var(--bg-deep); font: 12px/1.6 var(--mono); }
+.chat .ask .ask-what { color: var(--fg-dim); line-height: 1.6; }
+.chat .ask .ask-outside { border-radius: var(--radius-control); background: color-mix(in srgb, var(--error-text) 9%, transparent); padding: 8px 10px; line-height: 1.5; }
+.chat .ask .actions { gap: 8px; margin-top: 0; }
+.chat .ask .actions > .btn { min-height: 38px; border: 0; }
+.chat .ask .actions > .btn.secondary { background: var(--raised); color: var(--fg); }
+.chat .ask .actions > .btn:nth-child(3) { min-height: 32px; background: transparent; color: var(--fg-dim); }
+.chat .ask:is(.allow, .deny) { border-color: var(--border); background: transparent; }
+.chat .ask:is(.allow, .deny) .ask-state { color: var(--fg-dim); }
+
+/* Shared selectors have one selection marker and retain native button focus. */
+.chat .menu { max-width: min(440px, calc(100vw - 32px)); border-radius: var(--radius-card); }
+.chat .menu :is(.menu-item, .saved-open) { min-height: 32px; box-sizing: border-box; border: 0; border-radius: var(--radius-control); }
+.chat .menu .menu-item { white-space: normal; overflow-wrap: anywhere; }
+.chat .menu .menu-item:is(:hover, :focus-visible) { background: var(--raised); color: var(--fg); }
+.chat .menu .menu-item.on { background: var(--raised); box-shadow: inset 2px 0 var(--mark); }
+.chat .menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.chat .model-column { min-width: 0; flex: 1 1 120px; overscroll-behavior: contain; scrollbar-width: thin; }
+.chat .menu-label { padding-block: 6px; }
+.chat .menu .access-item { gap: 4px; padding-block: 10px; }
+.chat .saved-row { background: transparent; }
+.chat .saved-row.on { background: var(--raised); box-shadow: inset 2px 0 var(--mark); }
+.chat .saved-row .ghost.icon { min-width: 28px; min-height: 32px; justify-content: center; align-items: center; border: 0; }

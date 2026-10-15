@@ -17,10 +17,15 @@ class Element {
     remove: name => { this.className = this.className.split(" ").filter(value => value !== name).join(" "); },
     toggle: (name, on = !this.classList.contains(name)) => this.classList[on ? "add" : "remove"](name),
   };
-  constructor(tag) { this.tag = tag; }
+  constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return (this.text ?? "") + this.children.map(node => node.textContent).join(""); }
   get childNodes() { return this.children; }
+  contains(node) { return nodes(this).includes(node); }
+  matches(selector) { return selector.split(",").some(value => value.trim().startsWith(".") ? this.classList.contains(value.trim().slice(1)) : this.tag === value.trim()); }
+  querySelectorAll(selector) { return nodes(this).slice(1).filter(node => node.matches(selector)); }
+  click() { if (!this.disabled) this.listeners.click?.({ target: this }); }
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   querySelector(tag) { return nodes(this).find(node => node.tag === tag) ?? null; }
   append(...nodes) { for (const node of nodes) node.parentElement = this; this.children.push(...nodes); }
   prepend(...nodes) { for (const node of nodes) node.parentElement = this; this.children.unshift(...nodes); }
@@ -35,7 +40,8 @@ class Element {
   getContext() { return { clearRect() {}, fillRect() {} }; }
   toDataURL() { return "data:image/png;base64,"; }
 }
-globalThis.document = { createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag),
+const documentEvents = {};
+globalThis.document = { body: new Element("body"), addEventListener: (event, fn) => (documentEvents[event] ??= []).push(fn), createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag),
   createDocumentFragment: () => new Element("fragment"),
   createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; } };
 globalThis.window = globalThis;
@@ -449,3 +455,93 @@ assert.deepEqual(voiceCalls.at(-1), ["cancel"], "Turning voice off cancels Room'
 voiceEvents.onSettings({ voice: true });
 assert.equal(roomMic.hidden, false);
 console.log("check-chat-models: real Room entry wires voice status/settings, microphone, preview, silence, transcription draft and cancellation");
+
+// Rich replies keep links inert, expose local scrolling and copy failures without touching drafts.
+let clipboardCalls = 0, failClipboard = true;
+Object.defineProperty(globalThis, "navigator", { configurable: true, value: { clipboard: { writeText: async () => {
+  clipboardCalls++; if (failClipboard) throw new Error("Clipboard unavailable");
+} } } });
+for (const surface of ["island", "nest"]) {
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {}, { window: surface });
+  await tick();
+  chat.draft("Keep my next question");
+  const body = "# Result\n\n| File | Status |\n| --- | --- |\n| app.ts | ready |\n\n```ts\nconst value = 1;\n```\n\n[Link](https://example.test) <script>never execute</script>";
+  chat.load({ ...conversation, busy: false, lines: [{ who: "zeca", text: body }] });
+  const rendered = nodes(chat.element);
+  assert.ok(rendered.some(n => n.tag === "h3")); assert.ok(rendered.some(n => n.tag === "table"));
+  assert.ok(!rendered.some(n => n.tag === "a" || n.tag === "script"));
+  const table = rendered.find(n => n.className === "table");
+  assert.equal(table.tabIndex, 0); assert.equal(table.attributes["aria-label"], "Table");
+  const code = rendered.find(n => n.tag === "pre");
+  assert.equal(code.tabIndex, 0); assert.equal(code.attributes["aria-label"], "Code in ts");
+  const copy = rendered.find(n => n.className === "copy");
+  assert.equal(copy.attributes["aria-label"], "Copy code");
+  failClipboard = true; const before = clipboardCalls;
+  copy.listeners.click(); copy.listeners.click(); await tick();
+  assert.equal(clipboardCalls, before + 1); assert.ok(copy.textContent.includes("Copy failed"));
+  failClipboard = false; copy.listeners.click(); await tick(); assert.ok(copy.textContent.includes("Copied"));
+  assert.equal(nodes(chat.element).find(n => n.tag === "textarea").value, "Keep my next question");
+  chat.receive({ kind: "permission", id: "layout-scope", tool: "Bash", target: "rm /work/old", description: "Remove old output", full: "rm /work/old", added: 0, removed: 0, always: false, outside: "Web" });
+  const permission = nodes(chat.element).find(n => n.className === "ask");
+  assert.ok(permission.textContent.includes("Permission required"));
+  assert.ok(permission.textContent.includes("Folder")); assert.ok(permission.textContent.includes("rm /work/old"));
+  assert.ok(permission.textContent.includes("content from outside"));
+  const deny = nodes(permission).find(n => n.tag === "button" && n.textContent === "Deny");
+  assert.ok(deny.className.includes("primary"));
+  assert.ok(!permission.textContent.includes("Always in this chat"));
+}
+console.log("check-chat-models: rich replies in both surfaces, inert links/HTML, named scrolling, copy failure/retry, visible permission scope and cautious primary action");
+
+// Selectors navigate without choosing; asynchronous repaints retain the actual focused choice.
+for (const surface of ["island", "nest"]) {
+  let resolveModels, menuActions = 0;
+  const menuChat = new ChatPanel({
+    models: () => new Promise(resolve => { resolveModels = resolve; }), pick: async () => ({}),
+    conversations: async () => [{ id: 42, title: "Saved question", folder: "/work/alpha", label: "Claude Code", current: false }],
+    send: async () => { menuActions++; }, decide: () => { menuActions++; },
+    setPick: async () => { menuActions++; }, setAccess: async () => { menuActions++; },
+    reset: async () => { menuActions++; return "claude"; }, openSettings: () => { menuActions++; },
+  }, () => {}, { window: surface });
+  menuChat.element.isConnected = true;
+  menuChat.setFolders([{ cwd: "/work/alpha", project: "alpha" }, { cwd: "/work/beta", project: "beta" }], "/work/alpha");
+  menuChat.draft("Next question stays here"); await tick();
+  const menuFor = suffix => nodes(menuChat.element).find(n => n.id?.endsWith(`-${suffix}`));
+  const triggerFor = suffix => nodes(menuChat.element).find(n => n.attributes["aria-controls"] === menuFor(suffix).id);
+  const pressed = key => ({ key, target: document.activeElement, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
+  const modelTrigger = triggerFor("model"), folderTrigger = triggerFor("folder"), historyTrigger = triggerFor("history"), accessTrigger = triggerFor("access");
+  modelTrigger.focus(); const down = pressed("ArrowDown"); modelTrigger.listeners.keydown(down); await tick();
+  const engineChoice = document.activeElement;
+  assert.equal(engineChoice.dataset.choice, "engine:claude"); assert.equal(down.prevented, true);
+  resolveModels([{ id: "sonnet", label: "Sonnet", efforts: [] }]); await tick();
+  assert.equal(document.activeElement.dataset.choice, "engine:claude");
+  assert.notEqual(document.activeElement, engineChoice, "A replaced menu row regains focus after the model read");
+  const modelMenu = menuFor("model"); modelMenu.listeners.keydown(pressed("End"));
+  assert.equal(document.activeElement, modelMenu.querySelectorAll("button").at(-1));
+  modelMenu.listeners.keydown(pressed("Home")); assert.equal(document.activeElement.dataset.choice, "engine:claude");
+  accessTrigger.click(); assert.equal(modelTrigger.attributes["aria-expanded"], "false");
+  assert.equal(accessTrigger.attributes["aria-expanded"], "true");
+  assert.ok(menuFor("access").querySelectorAll("button").length >= 3);
+  folderTrigger.click(); assert.equal(accessTrigger.attributes["aria-expanded"], "false");
+  assert.equal(folderTrigger.attributes["aria-expanded"], "true");
+  historyTrigger.click(); await tick(); assert.equal(folderTrigger.attributes["aria-expanded"], "false");
+  assert.equal(historyTrigger.attributes["aria-expanded"], "true");
+  let history = menuFor("history"); history.querySelectorAll("button").find(n => n.dataset.choice === "rename-button:42").click(); await tick();
+  let rename = menuFor("history").querySelector("input"); rename.value = "Unfinished title"; rename.setSelectionRange(4, 8); rename.focus();
+  menuChat.relabel(); await tick(); rename = menuFor("history").querySelector("input");
+  assert.equal(rename.value, "Unfinished title"); assert.equal(rename.selectionStart, 4); assert.equal(rename.selectionEnd, 8);
+  const arrowInText = pressed("ArrowDown"); menuFor("history").listeners.keydown(arrowInText);
+  assert.equal(arrowInText.prevented, undefined, "Editing a title retains normal text-key behavior");
+  const composingEscape = { ...pressed("Escape"), isComposing: true }; menuChat.element.listeners.keydown(composingEscape);
+  assert.equal(historyTrigger.attributes["aria-expanded"], "true");
+  const escape = pressed("Escape"); menuChat.element.listeners.keydown(escape);
+  assert.equal(escape.stopped, true, "Escape dismisses the selector before reaching the surface close handler");
+  assert.equal(document.activeElement, historyTrigger); assert.equal(historyTrigger.attributes["aria-expanded"], "false");
+  folderTrigger.click();
+  const folderMenu = menuFor("folder"); const beta = folderMenu.querySelectorAll("button").find(n => n.dataset.choice === "folder:/work/beta");
+  assert.equal(beta.title, "/work/beta"); beta.focus(); beta.click(); assert.equal(document.activeElement, folderTrigger);
+  modelTrigger.click(); for (const listener of documentEvents.pointerdown) listener({ target: document.body });
+  assert.equal(modelTrigger.attributes["aria-expanded"], "false");
+  assert.equal(nodes(menuChat.element).find(n => n.tag === "textarea").value, "Next question stays here");
+  assert.equal(menuActions, 0, "Browsing, focusing and dismissing selectors never sends, grants access or opens Settings");
+}
+console.log("check-chat-models: both selectors retain focus/rename caret across reads, one open panel, keyboard/IME/Escape/outside dismissal and no implicit actions");

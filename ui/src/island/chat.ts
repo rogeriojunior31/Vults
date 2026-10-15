@@ -10,7 +10,8 @@ import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDel
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
-import { renderLite } from "./markdown";
+import { renderFull } from "./markdown";
+import { copyTextButton } from "../clipboard";
 import { t, tk } from "../i18n";
 
 export interface ChatBackend {
@@ -222,7 +223,10 @@ function asks(tool: string): string {
 const folderName = (cwd: string) =>
   cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
 
+let chatNumber = 0;
+
 export class ChatPanel {
+  private readonly menuId = `chat-menu-${++chatNumber}`;
   private draftEdited = false;
   private draftSaved: Promise<void> = Promise.resolve();
   private restored = false;
@@ -408,7 +412,7 @@ export class ChatPanel {
     this.place.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
       this.menuOpen = !this.menuOpen;
-      this.modelOpen = this.accessOpen = false;
+      this.modelOpen = this.accessOpen = this.historyOpen = false;
       this.paintHead();
       this.changed();
     });
@@ -416,7 +420,7 @@ export class ChatPanel {
     this.historyButton.addEventListener("click", () => {
       if (this.busy) return;
       this.historyOpen = !this.historyOpen;
-      this.menuOpen = this.modelOpen = false;
+      this.menuOpen = this.modelOpen = this.accessOpen = false;
       this.renaming = this.deleting = null;
       if (this.historyOpen) void this.loadSaved();
       this.paintHead();
@@ -425,14 +429,14 @@ export class ChatPanel {
     this.accessButton.addEventListener("click", () => {
       if (this.provider === "api") return;
       this.accessOpen = !this.accessOpen;
-      this.menuOpen = this.modelOpen = false;
+      this.menuOpen = this.modelOpen = this.historyOpen = false;
       this.paintHead();
       this.changed();
     });
     this.modelButton.addEventListener("click", () => {
       // It is the engine's pill too, in both windows: the engine can change whatever was said.
       this.modelOpen = !this.modelOpen;
-      this.menuOpen = this.accessOpen = false;
+      this.menuOpen = this.accessOpen = this.historyOpen = false;
       // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
       if (this.modelOpen && !this.started) {
         if (this.modelsFailed[this.provider]) this.models[this.provider] = undefined;
@@ -456,6 +460,43 @@ export class ChatPanel {
       }
       this.paintHead();
       this.changed();
+    });
+    for (const { id, menu, trigger } of this.menuPanels()) {
+      menu.id = `${this.menuId}-${id}`;
+      menu.setAttribute("role", "region");
+      trigger.setAttribute("aria-controls", menu.id);
+      trigger.addEventListener("keydown", event => {
+        if (event.isComposing || event.keyCode === 229 || !["ArrowDown", "ArrowUp"].includes(event.key)) return;
+        event.preventDefault();
+        if (!menu.classList.contains("on")) trigger.click();
+        queueMicrotask(() => {
+          if (!menu.classList.contains("on")) return;
+          const buttons = [...menu.querySelectorAll<HTMLButtonElement>("button")].filter(button => !button.disabled);
+          (event.key === "ArrowUp" ? buttons.at(-1) : buttons[0])?.focus();
+        });
+      });
+      menu.addEventListener("keydown", event => {
+        if (event.isComposing || event.keyCode === 229 || (event.target as HTMLElement)?.matches("input, textarea")) return;
+        if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+        const buttons = [...menu.querySelectorAll<HTMLButtonElement>("button")].filter(button => !button.disabled);
+        if (!buttons.length) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
+          : (current + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next].focus();
+      });
+    }
+    this.element.addEventListener("keydown", event => {
+      if (event.key !== "Escape" || event.isComposing || event.keyCode === 229 || event.defaultPrevented || this.voice !== "off") return;
+      if (this.closeMenus(true)) { event.preventDefault(); event.stopPropagation(); }
+    });
+    document.addEventListener("pointerdown", event => {
+      if (!this.element.isConnected) return;
+      const target = event.target as Node | null;
+      if (this.menuPanels().some(({ menu, trigger }) => menu.contains(target) || trigger.contains(target))) return;
+      this.closeMenus();
     });
     const pauseFollow = () => {
       this.lastScrollInput = performance.now();
@@ -992,7 +1033,7 @@ export class ChatPanel {
       this.busy = true;
       this.turnSince = Clock.now();
       this.started = true;
-      this.menuOpen = this.modelOpen = this.historyOpen = false;
+      this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
       this.paint();
       this.toEnd();
       this.changed();
@@ -1133,7 +1174,7 @@ export class ChatPanel {
     this.files = [];
     this.provider = provider;
     this.busy = false;
-    this.historyOpen = false;
+    this.menuOpen = this.accessOpen = this.historyOpen = false;
     // The folder's pick for new conversations, not the one just left.
     this.picksFor = undefined;
     this.messages = [];
@@ -1211,7 +1252,7 @@ export class ChatPanel {
       const b = el("div", { class: `msg zeca${last && !this.busy ? " settled" : ""}` });
       // In the Nest's wide column a turn's reply is signed, so each one reads apart from the next.
       if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who === "you") b.append(this.signature());
-      b.append((this.opts.render ?? renderLite)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
+      b.append((this.opts.render ?? renderFull)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
       return b;
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
@@ -1272,15 +1313,24 @@ export class ChatPanel {
       deny: t("Denied"),
       always: t("Allowed for this conversation"),
     };
+    const operation = el("pre", { class: "code", text: m.full ? `${m.tool} · ${m.full}` : m.target });
+    operation.tabIndex = 0;
+    operation.setAttribute("role", "region");
+    operation.setAttribute("aria-label", t("Code"));
     return el(
       "div",
       { class: `ask${m.answer ? ` ${m.answer === "always" ? "allow" : m.answer}` : ""}` },
       el(
         "div",
         { class: "who" },
-        el("span", { class: "label", text: asks(m.tool) }),
+        el("span", { class: "ask-heading" },
+          el("span", { class: "ask-state", text: m.answer ? t("Permission answered") : t("Permission required") }),
+          el("span", { class: "label", text: asks(m.tool) }),
+        ),
         diff,
       ),
+      el("div", { class: "ask-context" }, el("span", { text: t("Folder") }),
+        el("code", { text: this.folder ?? t("An empty folder") })),
       ...(m.outside
         ? [
             el("div", {
@@ -1292,10 +1342,7 @@ export class ChatPanel {
       ...(m.description
         ? [el("div", { class: "ask-what", text: m.description })]
         : []),
-      el("pre", {
-        class: "code",
-        text: m.full ? `${m.tool} · ${m.full}` : m.target,
-      }),
+      operation,
       m.answer
         ? el(
             "div",
@@ -1306,8 +1353,8 @@ export class ChatPanel {
         : el(
             "div",
             { class: "actions" },
-            button(t("Deny"), "secondary", "deny", this.keys.deny),
-            button(t("Allow"), "primary", "allow", this.keys.allow),
+            button(t("Deny"), !m.always || m.outside ? "primary" : "secondary", "deny", this.keys.deny),
+            button(t("Allow"), !m.always || m.outside ? "secondary" : "primary", "allow", this.keys.allow),
             m.always ? always : null,
           ),
     );
@@ -1364,7 +1411,7 @@ export class ChatPanel {
       this.input.value = "";
       this.files = [];
     }
-    this.historyOpen = false;
+    this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
     if (!preserveLive) this.busy = false;
     this.provider = c.provider;
     // Pinned to its API provider, whatever Settings chose since.
@@ -1421,6 +1468,8 @@ export class ChatPanel {
       if (this.renaming === c.id) {
         const input = document.createElement("input");
         input.className = "rename";
+        input.setAttribute("aria-label", t("Rename"));
+        input.dataset.choice = `rename:${c.id}`;
         input.value = c.title;
         input.addEventListener("keydown", (e) => {
           if (e.isComposing || e.keyCode === 229) return;
@@ -1472,15 +1521,17 @@ export class ChatPanel {
         remove.append(icon("close", 12, 2.2));
         remove.title = t("Delete");
       }
+      this.choice(edit, `rename-button:${c.id}`);
+      this.choice(remove, `delete:${c.id}`);
       return el(
         "div",
         { class: `saved-row${c.current ? " on" : ""}` },
-        el(
+        this.choice(el(
           "button",
           { class: "saved-open", onclick: () => void this.openSaved(c.id) },
           el("span", { class: "saved-title", text: c.title }),
           el("span", { class: "saved-where", text: where }),
-        ),
+        ), `conversation:${c.id}`),
         edit,
         remove,
       );
@@ -1503,15 +1554,9 @@ export class ChatPanel {
 
   /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
   private copyButton(text: string): HTMLElement {
-    const label = el("span", { text: t("Copy") });
-    const b = el("button", { class: "msg-tool" }, icon("copy", 12, 2), label);
-    b.addEventListener("click", () => {
-      void navigator.clipboard?.writeText(text).then(() => {
-        label.textContent = t("Copied");
-        window.setTimeout(() => (label.textContent = t("Copy")), 1200);
-      }, () => {});
-    });
-    return b;
+    const button = copyTextButton(text, "msg-tool", t("Copy reply"));
+    button.prepend(icon("copy", 12, 2));
+    return button;
   }
 
   /** The paperclip: the file chooser, the files then swallowed as a drop's. */
@@ -1633,7 +1678,7 @@ export class ChatPanel {
       );
       if (p === "api")
         b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat & voice.", { provider: this.api.label });
-      return b;
+      return this.choice(b, `engine:${p}`, p === this.provider);
     };
     const providers = this.providers();
     const harness = providers.filter((p) => p === "api");
@@ -1673,15 +1718,15 @@ export class ChatPanel {
       ? Object.keys(EFFORTS).filter((e) => choices.every((m) => m.efforts.includes(e)))
       : Object.keys(EFFORTS);
     const efforts = current ? current.efforts : pick.model ? [] : this.provider === "claude" ? Object.keys(EFFORTS) : shared;
-    const item = (text: string, on: boolean, next: ChatPick) =>
-      el("button", { class: `menu-item${on ? " on" : ""}`, text, onclick: () => this.choose(next) });
+    const item = (text: string, on: boolean, next: ChatPick, key: string) =>
+      this.choice(el("button", { class: `menu-item${on ? " on" : ""}`, text, onclick: () => this.choose(next) }), key, on);
     this.modelMenu.replaceChildren(
       ...engines,
       el(
         "div",
         { class: "model-column" },
         el("span", { class: "menu-label", text: t("Model") }),
-        item(t("Default model"), !pick.model, { effort: pick.effort }),
+        item(t("Default model"), !pick.model, { effort: pick.effort }, "model:default"),
         ...(this.modelsFailed[this.provider]
           ? [el("span", { class: "menu-label", text: t("{name} did not list its models.", { name: this.name(this.provider) }) })]
           : []),
@@ -1689,15 +1734,15 @@ export class ChatPanel {
           item(m.label, m.id === pick.model, {
             model: m.id,
             effort: pick.effort && m.efforts.includes(pick.effort) ? pick.effort : null,
-          }),
+          }, `model:${m.id}`),
         ),
       ),
       el(
         "div",
         { class: "model-column" },
         el("span", { class: "menu-label", text: t("Effort") }),
-        item(t("Default effort"), !pick.effort, { model: pick.model }),
-        ...efforts.map((e) => item(t(EFFORTS[e] ?? e), e === pick.effort, { model: pick.model, effort: e })),
+        item(t("Default effort"), !pick.effort, { model: pick.model }, "effort:default"),
+        ...efforts.map((e) => item(t(EFFORTS[e] ?? e), e === pick.effort, { model: pick.model, effort: e }, `effort:${e}`)),
       ),
     );
   }
@@ -1717,7 +1762,7 @@ export class ChatPanel {
       ...ACCESS.map((a) => {
         // More access is given in Settings, like a policy: from here, the item leads there.
         const more = rank(a.id) > rank(this.access);
-        return el(
+        const button = el(
           "button",
           {
             class: `menu-item access-item${a.id === this.access ? " on" : ""}`,
@@ -1737,11 +1782,42 @@ export class ChatPanel {
           el("span", { class: "access-about", text: t(a.about) }),
           ...(more ? [el("span", { class: "access-more", text: t("Choose it in Settings →") })] : []),
         );
+        return this.choice(button, `access:${a.id}`, a.id === this.access);
       }),
     );
   }
 
+  private menuPanels(): { id: string; menu: HTMLElement; trigger: HTMLElement; name: string }[] {
+    return [
+      { id: "folder", menu: this.menu, trigger: this.place, name: t("Folder") },
+      { id: "model", menu: this.modelMenu, trigger: this.modelButton, name: t("Model") },
+      { id: "access", menu: this.accessMenu, trigger: this.accessButton, name: t("Who answers the cards") },
+      { id: "history", menu: this.historyMenu, trigger: this.historyButton, name: t("Conversations") },
+    ];
+  }
+
+  private closeMenus(returnFocus = false): boolean {
+    const open = this.menuPanels().find(({ menu }) => menu.classList.contains("on"));
+    if (!open) return false;
+    this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
+    this.renaming = this.deleting = null;
+    this.paintHead();
+    if (returnFocus) open.trigger.focus();
+    this.changed();
+    return true;
+  }
+
+  private choice<T extends HTMLElement>(button: T, key: string, selected?: boolean): T {
+    button.dataset.choice = key;
+    if (selected !== undefined) button.setAttribute("aria-pressed", String(selected));
+    return button;
+  }
+
   private paintHead(): void {
+    const active = document.activeElement as HTMLInputElement | null;
+    const panel = active ? this.menuPanels().find(({ menu }) => menu.contains(active)) : null;
+    const choice = panel ? active?.dataset.choice : null;
+    const draft = panel && active?.tagName === "INPUT" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
     this.loadPicks();
     // The API chat has no tools, so it works nowhere in particular.
     const api = this.provider === "api";
@@ -1766,8 +1842,8 @@ export class ChatPanel {
     ];
     this.menu.classList.toggle("on", this.menuOpen && !this.started && !api);
     this.menu.replaceChildren(
-      ...choices.map((cwd) =>
-        el("button", {
+      ...choices.map((cwd) => {
+        const button = el("button", {
           class: `menu-item${cwd === this.folder ? " on" : ""}`,
           text: cwd ? folderName(cwd) : t("An empty folder"),
           onclick: () => {
@@ -1778,10 +1854,28 @@ export class ChatPanel {
             this.paintHead();
             this.changed();
           },
-        }),
-      ),
+        });
+        button.title = cwd ?? t("An empty folder");
+        return this.choice(button, `folder:${cwd ?? "empty"}`, cwd === this.folder);
+      }),
     );
     this.paintHistory();
+    for (const { id, menu, trigger, name } of this.menuPanels()) {
+      trigger.setAttribute("aria-expanded", String(menu.classList.contains("on")));
+      menu.setAttribute("aria-label", name);
+      for (const control of menu.querySelectorAll<HTMLElement>("button, input")) control.dataset.choice ??= `${id}:${control.textContent}`;
+    }
+    if (choice && panel?.menu.classList.contains("on")) {
+      const next = [...panel.menu.querySelectorAll<HTMLElement>("button, input")].find(control => control.dataset.choice === choice);
+      if (next) {
+        if (draft) {
+          const input = next as HTMLInputElement;
+          input.value = draft.value;
+          if (draft.start !== null && draft.end !== null) input.setSelectionRange(draft.start, draft.end);
+        }
+        next.focus({ preventScroll: true });
+      } else panel.trigger.focus();
+    } else if (choice && panel && !panel.trigger.hidden) panel.trigger.focus();
   }
 
   private paintSend(): void {
