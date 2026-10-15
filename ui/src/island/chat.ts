@@ -359,6 +359,7 @@ export class ChatPanel {
   private readonly chips = el("div", { class: "chips" });
   /** The Nest has the room to say how the composer's keys work. */
   private readonly composerHint = el("p", { class: "composer-hint" });
+  private readonly attachLabel = el("span");
   private readonly input = document.createElement("textarea");
   private readonly send = el("button", {
     class: "send",
@@ -502,10 +503,12 @@ export class ChatPanel {
       { class: "chat-main" },
       head,
       el("div", { class: "log-box" }, this.log, this.jump),
-      this.chips,
-      compact
-        ? el("div", { class: "composer" }, this.attachButton(), this.mic, this.input, this.wave, this.send)
-        : el("div", { class: "composer" }, this.input, this.wave, this.attachButton(), this.mic, this.send),
+      el("div", { class: "composer" },
+        this.chips,
+        this.input,
+        this.wave,
+        el("div", { class: "composer-tools" }, this.attachButton(), this.mic, this.send),
+      ),
       compact ? null : this.composerHint,
       compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setup) : null,
     );
@@ -522,6 +525,9 @@ export class ChatPanel {
     this.input.setAttribute("aria-label", t("Ask Zeca…"));
     this.log.setAttribute("aria-label", t("Chat"));
     this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.");
+    this.attachLabel.textContent = t("Attach a file");
+    this.chips.setAttribute("role", "group");
+    this.chips.setAttribute("aria-label", t("Attachments"));
     this.setup.setAttribute("aria-label", t("Your setup"));
     this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
     this.historyButton.title = t("Conversations");
@@ -752,6 +758,7 @@ export class ChatPanel {
       this.mic.replaceChildren(glyph === "stop" ? icon("stop", 12, 2.4) : icon("mic", 16, 2));
     }
     this.mic.title = this.voice === "listening" ? t("Stop and transcribe") : t("Speak");
+    this.mic.setAttribute("aria-label", this.mic.title);
     this.mic.toggleAttribute("disabled", this.voice === "transcribing");
     this.input.hidden = on;
     this.wave.hidden = !on;
@@ -1507,7 +1514,7 @@ export class ChatPanel {
 
   /** The paperclip: the file chooser, the files then swallowed as a drop's. */
   private attachButton(): HTMLElement {
-    const b = el("button", { class: "attach", onclick: () => this.backend.pickFiles?.(t("Attach a file")) }, icon("clip", 15, 1.8));
+    const b = el("button", { class: "attach", onclick: () => this.backend.pickFiles?.(t("Attach a file")) }, icon("clip", 16, 1.8), this.attachLabel);
     b.title = t("Attach a file");
     b.setAttribute("aria-label", t("Attach a file"));
     return b;
@@ -1779,6 +1786,7 @@ export class ChatPanel {
       stop ? icon("stop", 12, 2.4) : icon("chevron", 14, 2.4),
     );
     this.send.title = stop ? t("Stop") : t("Send (Enter)");
+    this.send.setAttribute("aria-label", this.send.title);
     this.send.toggleAttribute(
       "disabled",
       !stop && !this.input.value.trim() && !this.files.length,
@@ -1818,20 +1826,20 @@ export class ChatPanel {
       ...(this.messages.length
         ? this.nodes
         : [
-            el("p", {
-              class: "hint",
-              text:
+            el("div", { class: "hint" },
+              el("h2", { class: "chat-greeting", text: t("Ask Zeca") }),
+              el("p", { text:
                 this.provider === "api"
                   ? t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.")
                   : t("Ask anything, or drop a file on the island."),
-            }),
+              }),
+            ),
             el(
               "div",
               { class: "suggestions" },
               ...(this.provider === "api" ? [] : SUGGESTIONS).map((q) =>
                 el("button", {
                   class: "suggestion",
-                  text: t(q),
                   onclick: () => {
                     this.input.value = t(q);
                     this.keepDraft();
@@ -1839,7 +1847,7 @@ export class ChatPanel {
                     this.grow();
                     this.input.focus();
                   },
-                }),
+                }, icon("chat", 16), el("span", { text: t(q) }), icon("chevron", 13)),
               ),
             ),
           ]),
@@ -1849,15 +1857,25 @@ export class ChatPanel {
     const attachments = this.files.map((file) => {
       const kept = this.attachmentNodes.get(file);
       if (kept) {
-        kept.querySelector("button")?.setAttribute("aria-label", t("Remove"));
+        kept.querySelector("button")?.setAttribute("aria-label", t("Remove {name}", { name: shortName(file) }));
+        const kind = kept.querySelector("small");
+        if (kind && !kind.dataset.extension) kind.textContent = t("File");
         return kept;
       }
-      const remove = el("button", { class: "ghost", text: "×", onclick: () => {
+      const remove = el("button", { class: "ghost", onclick: () => {
         this.files = this.files.filter(path => path !== file);
         this.keepDraft(); this.paint(); this.changed();
-      } });
-      remove.setAttribute("aria-label", t("Remove"));
-      const chip = el("span", { class: "chip attachment-enter" }, icon("file", 14), el("span", { text: shortName(file) }), remove);
+      } }, icon("close", 14));
+      remove.setAttribute("aria-label", t("Remove {name}", { name: shortName(file) }));
+      const name = shortName(file);
+      const extension = name.match(/^.+\.([a-z\d]{1,10})$/i)?.[1]?.toUpperCase();
+      const kind = el("small", { text: extension ?? t("File") });
+      if (extension) kind.dataset.extension = extension;
+      const chip = el("div", { class: "chip attachment-enter" },
+        el("span", { class: "file-icon" }, icon("file", 20)),
+        el("span", { class: "file-info" }, el("span", { text: name }), kind),
+        remove,
+      );
       chip.title = file;
       this.attachmentNodes.set(file, chip);
       return chip;

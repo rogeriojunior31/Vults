@@ -1021,4 +1021,7 @@ export default {
   "Vults runs the loop with your key": "O Vults roda o loop com a sua chave",
   "Engines in Settings ›": "Motores em Settings ›",
   "Ready": "Pronto",
+  "Attachments": "Anexos",
+  "Remove {name}": "Remover {name}",
+  "File": "Arquivo",
 } satisfies Record<string, string>;

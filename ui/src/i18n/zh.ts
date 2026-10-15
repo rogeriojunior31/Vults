@@ -1021,4 +1021,7 @@ export default {
   "Vults runs the loop with your key": "Vults 用你的密钥运行循环",
   "Engines in Settings ›": "在 Settings 中管理引擎 ›",
   "Ready": "就绪",
+  "Attachments": "附件",
+  "Remove {name}": "移除 {name}",
+  "File": "文件",
 } satisfies Record<string, string>;

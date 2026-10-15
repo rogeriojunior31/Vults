@@ -40,6 +40,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
 .nest-chat-body {
   flex: 1;
@@ -486,10 +487,11 @@ body {
    window's whole width is hard to follow. The log itself stays wide, so its scrollbar keeps to the
    window's edge. */
 .nest-chat .log {
+  box-sizing: border-box;
   max-height: none;
   height: 100%;
-  gap: 14px;
-  padding: 6px max(4px, calc((100% - 720px) / 2)) 12px;
+  gap: 20px;
+  padding: 20px max(4px, calc((100% - 720px) / 2)) 24px;
   font-size: 14px;
 }
 .nest-chat .msg.zeca {
@@ -497,7 +499,7 @@ body {
 }
 /* A new turn starts a little apart from the reply before it. */
 .nest-chat .msg.you:not(:first-child) {
-  margin-top: 10px;
+  margin-top: 12px;
 }
 /* A turn's reply signed: Zeca's figure, his name and the engine that wrote it. */
 .nest-chat .msg-who {
@@ -561,47 +563,40 @@ body {
   font-size: 11px;
   text-align: center;
 }
-/* The composer, the prototype's rounded box: the words on top, the mic and send under them. */
+/* One writing surface contains the draft, file cards and its own action row. */
 .nest-chat .composer {
-  flex-wrap: wrap;
-  align-items: center;
   width: 100%;
   max-width: 720px;
   margin: 8px auto 0;
-  padding: 12px 14px 10px;
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-composer);
-  background: var(--input);
+  padding: 16px 16px 12px;
   box-sizing: border-box;
 }
-.nest-chat .composer:hover {
-  border-color: var(--border-hover);
-}
-.nest-chat .composer:focus-within {
-  border-color: var(--focus-border);
-  box-shadow: var(--focus-shadow);
-}
 .nest-chat .composer .wave {
-  box-shadow: none;
+  height: 64px;
 }
 .nest-chat .composer textarea {
-  flex: 1 0 100%;
   /* A Nest has room for a thought before it becomes a message. */
-  min-height: 44px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  min-height: 64px;
   font-size: 14px;
 }
-.nest-chat .composer .wave {
-  flex: 1 0 100%;
+.nest-chat .suggestions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.nest-chat .composer .send {
-  width: 28px;
-  height: 28px;
-  margin-left: auto;
-  border-radius: 6px;
+.nest-chat .suggestion {
+  align-items: flex-start;
+  min-height: 64px;
+  padding: 12px;
+  line-height: 1.5;
+}
+.nest-chat .suggestion > svg:first-child {
+  display: none;
+}
+.nest-chat .chat-greeting {
+  font-size: 20px;
+}
+@media (max-width: 600px) {
+  .nest-chat .suggestions { grid-template-columns: 1fr; }
+  .nest-chat .suggestion { min-height: 36px; padding: 8px 12px; }
 }
 /* A short Nest keeps both the message box and its footer reachable. */
 @media (max-height: 480px) {
@@ -616,33 +611,51 @@ body {
   .nest-chat .chat {
     padding: 0 12px;
   }
+  .nest-chat .chat-main { gap: 4px; }
   .nest-chat .composer {
     margin-top: 0;
-    padding: 3px 8px;
+    gap: 4px;
+    padding: 4px 8px;
     border-radius: 12px;
   }
   .nest-chat .composer textarea {
     min-height: 24px;
+    max-height: 48px;
+    padding: 0;
   }
+  .nest-chat .composer-tools :is(.send, .attach, .mic) { height: 28px; }
+  .nest-chat .composer-tools :is(.send, .mic) { width: 28px; }
+  .nest-chat .composer .chips { display: flex; max-height: 32px; gap: 6px; padding: 0; }
+  .nest-chat .composer .chips:empty { display: none; }
+  .nest-chat .composer .chip { flex: none; width: 180px; height: 32px; box-sizing: border-box; padding: 2px 6px; align-items: center; }
+  .nest-chat .file-info { max-height: 28px; overflow-y: auto; }
+  .nest-chat .file-icon { width: 20px; height: 28px; }
+  .nest-chat .log { padding-top: 4px; padding-bottom: 4px; gap: 12px; }
+  .nest-chat .log-box { min-height: 40px; }
+  .nest-chat .composer .wave { height: 24px; }
   .nest-chat .composer-hint {
     display: none;
   }
 }
-/* A conversation with nothing said yet (its log holds only the hint): the composer waits in the
-   middle, the hint and the suggestions under it, as in the prototype. */
+/* Empty conversations introduce the actions above the composer, in the same reading column. */
 .nest-chat .chat-main:has(.log > .hint:first-child) {
   justify-content: safe center;
 }
 .nest-chat .chat-main:has(.log > .hint:first-child) .log-box {
   flex: 0 1 auto;
   overflow-y: auto;
-  order: 1;
   max-width: 720px;
   width: 100%;
-  margin: 10px auto 0;
+  margin: 0 auto 12px;
 }
 .nest-chat .chat-main:has(.log > .hint:first-child) .log {
   height: auto;
+}
+@media (max-height: 480px) {
+  .nest-chat .chat-main:has(.log > .hint:first-child) .log-box { margin: 0 auto; }
+}
+@media (max-height: 400px) {
+  .nest-chat .composer textarea { max-height: 24px; }
 }
 /* The full Markdown's blocks. */
 .nest-chat .msg.zeca h3,
@@ -2416,9 +2429,6 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-}
-.nest-chat .composer .attach {
-  margin-right: auto;
 }
 /* Narrow, the pill sits at the left: its menu opens rightwards, inside the window. */
 @media (max-width: 760px) {

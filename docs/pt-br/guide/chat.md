@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: abdeeb5878d5 -->
+<!-- source: b5970658b6c1 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -12,8 +12,11 @@ com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma con
 também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** fecha o chat de qualquer
 ponto dele; a conversa continua lá quando você volta.
 
-Numa conversa CLI vazia, uma pergunta sugerida preenche o rascunho e foca o campo.
+Numa conversa CLI vazia, os cartões de perguntas preenchem o rascunho e focam o campo.
 Edite antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
+O compositor agrupa os cartões de arquivos acima da área de escrita, com Anexar, o microfone
+opcional e Enviar em uma linha própria abaixo dela. Suas mensagens ficam em balões à direita;
+as respostas seguem na coluna da conversa.
 
 O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há chat nem microfone, o atalho
 de fala não faz nada e os arquivos soltos na ilha não são aceitos. Veja
@@ -136,8 +139,8 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 ## Falando em vez de digitar
 
 Ligue uma vez em **Settings → Chat & voice → Voice**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
-e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece no campo (ao lado
-do botão de enviar no Nest, ao lado do clipe na ilha).
+e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece ao lado de Anexar na barra de ações do compositor,
+tanto no Nest quanto na ilha.
 
 - Clique no microfone e fale. Ele para sozinho depois de cerca de 1,5 s de silêncio após as suas
   palavras, ou quando você clica de novo; as palavras caem no campo de entrada para você ler e
@@ -210,8 +213,9 @@ total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é da
 
 Clique no clipe do chat para escolher arquivos, ou arraste um sobre a ilha e solte na área onde o
 Zeca espera de bico aberto. Nos dois casos ele engole o arquivo, um urubu o leva até o outro lado
-enquanto uma barra enche, e ele entra na sua próxima mensagem: um chip sobre o campo (**×** o
-retira). Clique no campo para escrever sobre ele. Você pode enviá-lo sem texto para perguntar o
+enquanto uma barra enche, e ele entra na sua próxima mensagem: um cartão dentro do compositor com o nome
+e a extensão do arquivo (**×** o retira). Nomes longos quebram linha, e uma lista longa de arquivos rola
+dentro do compositor. Clique no campo para escrever sobre ele. Você pode enviá-lo sem texto para perguntar o
 que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
 a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; uma pasta, ou um arquivo
 com mais de 20 MB, é recusado com uma linha dizendo por quê.

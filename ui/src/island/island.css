@@ -1835,25 +1835,32 @@ body.still .compact.needs::after {
   align-self: flex-end;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-width: 85%;
-  padding: 8px 12px;
-  border-radius: var(--radius-message);
+  gap: 8px;
+  max-width: 82%;
+  padding: 12px 16px;
+  border-radius: var(--radius-message) var(--radius-message) 6px var(--radius-message);
   background: var(--raised);
   color: var(--fg-bright);
 }
 .msg.you .files {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
-.file {
+.msg.you .file {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border-radius: var(--radius-control);
+  background: var(--float);
+  font-size: 12px;
   color: var(--fg-dim);
 }
+.msg.you .file svg { flex: none; }
+.msg.you .file span { min-width: 0; overflow-wrap: anywhere; }
 .msg.zeca {
   align-self: stretch;
   color: var(--fg);
@@ -1987,9 +1994,14 @@ body.still .compact.needs::after {
   color: var(--fg-dim);
 }
 .chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 6px;
+  max-height: 132px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 2px;
 }
 .chips:empty {
   display: none;
@@ -2198,24 +2210,51 @@ button.ghost:hover {
 }
 .composer {
   display: flex;
-  align-items: flex-end;
-  gap: 6px;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-composer);
+  background: var(--panel);
   transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
+}
+.composer:hover { border-color: var(--border-hover); }
+.composer:focus-within { border-color: var(--focus-border); box-shadow: var(--focus-shadow); }
+.composer-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
 }
 /* The composer owns the border; its secondary actions use quiet fills. */
 .composer .mic:not(.on) {
   box-shadow: none;
 }
 .composer textarea {
-  flex: 1;
-  line-height: 1.4;
-  max-height: 140px;
+  flex: none;
+  width: 100%;
+  min-height: 52px;
+  max-height: 132px;
+  padding: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.5;
+  box-shadow: none;
+}
+.composer .wave {
+  flex: none;
+  height: 52px;
+  box-shadow: none;
 }
 .send {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
   flex: none;
   border-radius: 50%;
   background: var(--accent);
@@ -2434,21 +2473,30 @@ button.ghost:hover {
   }
 }
 .suggestions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 6px;
 }
 .suggestion {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: var(--radius-card);
+  background: var(--float);
   color: var(--fg-dim);
   font-size: 12px;
+  text-align: left;
 }
+.suggestion > svg { flex: none; }
+.suggestion > svg:last-child { margin-left: auto; }
 .suggestion:hover {
   color: var(--fg-bright);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--raised);
 }
+.chat-greeting { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -0.4px; color: var(--fg); }
+.chat .hint { padding: 8px 4px; text-align: left; line-height: 1.5; }
+.chat .hint p { margin: 0; }
 
 /* Zeca's looks (looks.ts): he stays on his perch at the left, wearing the look under the pointer;
    the looks sit in their groups at the right. */
@@ -3230,12 +3278,19 @@ button.ghost:hover {
 /* The island's chat in the prototype's compact form: flat, Zeca small at the head's start, the
    engine and conversations up top, the composer in one box, the folder and model under it. */
 #island .chat {
+  flex: 1;
+  min-height: 0;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   padding: 10px 4px 4px;
   background: transparent;
   border: 0;
   border-radius: 0;
 }
+#island .main:has(> .chat) { display: flex; }
+#island .chat-main { min-height: 0; }
+#island .chat :is(.chat-head, .chat-foot) { flex: none; }
+#island .chat .log-box { flex: 1; min-height: 40px; }
 #island .chat-perch {
   position: absolute;
   left: 4px;
@@ -3265,12 +3320,8 @@ button.ghost:hover {
   flex: 1 1 auto;
 }
 #island .composer {
-  align-items: center;
-  gap: 2px;
-  padding: 4px 4px 4px 6px;
-  border: 1px solid var(--control-border);
-  border-radius: 12px;
-  background: var(--input);
+  padding: 10px;
+  border-radius: var(--radius-composer);
 }
 #island .chat .composer textarea,
 #island .chat .composer textarea:focus {
@@ -3284,6 +3335,10 @@ button.ghost:hover {
   border-color: var(--focus-border);
   box-shadow: var(--focus-shadow);
 }
+#island .chat .log { height: 100%; max-height: 200px; gap: 12px; padding: 4px; box-sizing: border-box; }
+#island .chat:has(.chips:not(:empty)) .log { max-height: 120px; }
+#island .chat:has(.chips:not(:empty)) .chips { max-height: 80px; }
+#island .chat:has(.chips:not(:empty)) .composer textarea { max-height: 80px; }
 /* The zone takes the whole chat, Zeca inside it at its left. */
 #island .drop-zone {
   inset: 4px;
@@ -3310,13 +3365,16 @@ button.ghost:hover {
   display: block;
 }
 .attach {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   flex: none;
-  width: 32px;
+  padding: 0 8px;
   height: 32px;
   border-radius: 8px;
   color: var(--fg-muted);
+  font-size: 12px;
 }
 .attach:hover {
   background: var(--raised);
@@ -3509,10 +3567,22 @@ button.ghost:hover {
 }
 .message-enter { animation: message-in var(--motion-enter) var(--ease-out); }
 .attachment-enter { animation: attachment-in var(--motion-enter) var(--ease-out); }
-.chat .chip { max-width: 100%; padding: 4px 4px 4px 8px; background: var(--raised); border-radius: 10px; color: var(--fg-dim); font-weight: 400; white-space: normal; }
-.chat .chip > svg { flex: none; color: var(--fg-dim); }
-.chat .chip > span { min-width: 0; overflow-wrap: anywhere; }
-.chat .chip > button { flex: none; min-width: 24px; min-height: 24px; padding: 0; border: 0; border-radius: 6px; }
+.chat .chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  background: var(--raised);
+  border-radius: var(--radius-card);
+  color: var(--fg);
+  font-weight: 400;
+  white-space: normal;
+}
+.chat .file-icon { display: grid; place-items: center; flex: none; width: 28px; height: 32px; color: var(--fg-dim); }
+.chat .file-info { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
+.chat .file-info small { color: var(--fg-dim); font: 10px var(--mono); }
+.chat .chip > button { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--fg-dim); }
 .chat .chip > button:hover { background: var(--float); color: var(--fg); }
 .chat-foot .menu.on { transform-origin: bottom center; }
 /* Feather only content above the reading position; pending decisions and keyboard focus stay clear. */

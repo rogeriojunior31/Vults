@@ -11,8 +11,11 @@ API, *Ready* with a key or a local model), with **Engines in Settings ›** unde
 another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
 closes the chat from anywhere in it; the conversation is still there when you come back.
 
-In an empty CLI conversation, a suggested question fills the draft and focuses the
+In an empty CLI conversation, the question cards fill the draft and focus the
 input. Edit it before pressing **Send** or **Enter**; clicking a suggestion does not send it.
+The composer groups file cards above the writing area, with Attach, the optional microphone
+and Send in a separate row below it. Your messages sit in bubbles on the right; replies
+read in the conversation column.
 
 The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no chat, no microphone
 and the talk shortcut does nothing, and files dropped on the island are not taken. See
@@ -113,7 +116,7 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 ## Speaking instead of typing
 
 Turn it on once in **Settings → Chat & voice → Voice**: download a model (*Base* is 60 MB and quick; *Small*
-and *Large v3 Turbo* understand accents and names better). A mic appears in the composer (by the send button in the Nest, by the paperclip on the island).
+and *Large v3 Turbo* understand accents and names better). A mic appears beside Attach in the composer's action row, both in the Nest and on the island.
 
 - Click the mic and speak. It stops by itself after about 1.5 s of quiet after your words, or when
   you click again; the words land in the input for you to read and fix, then **Enter** sends them.
@@ -177,8 +180,9 @@ shows the choice; from there you can only give access back. More access is given
 
 Click the chat's paperclip to pick files, or drag one over the island and drop it on the zone where
 Zeca waits with his bill open. Either way he swallows it, a vulture carries it across while a bar
-fills, and it joins your next message: a chip over the input (**×** takes it off). Click the input
-to write about it. You can send it with no text to ask what it is.
+fills, and it joins your next message: a card inside the composer with its name and file extension
+(**×** takes it off). Long names wrap, and a long list of files scrolls inside the composer.
+Click the input to write about it. You can send it with no text to ask what it is.
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
 deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
 

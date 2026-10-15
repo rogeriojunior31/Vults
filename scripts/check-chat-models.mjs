@@ -287,7 +287,7 @@ for (const surface of ["island", "nest"]) {
     const chips = nodes(chat.element).find(node => node.className === "chips");
     const file = chips.children[0];
     assert.ok(file.classList.contains("attachment-enter"));
-    assert.equal(file.querySelector("button").attributes["aria-label"], "Remove");
+    assert.equal(file.querySelector("button").attributes["aria-label"], "Remove note.txt");
     chat.receive({ kind: "tool", tool: "Read" });
     assert.equal(chips.children[0], file, "Stream repaint retains the attachment's node and animation");
     file.querySelector("button").listeners.click();
@@ -297,3 +297,41 @@ for (const surface of ["island", "nest"]) {
   } finally { window.setTimeout = timeout; }
 }
 console.log("check-chat-models: live message entrance once, stable streaming bubble/attachment, named removal, saved history without replay in both surfaces");
+
+for (const surface of ["island", "nest"]) {
+  const picked = [], drafts = [];
+  let sends = 0;
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}),
+    keyboard() {},
+    pickFiles: title => picked.push(title), saveDraft: async draft => { drafts.push(draft); },
+    send: async () => { sends++; },
+  }, () => {}, { window: surface });
+  await tick();
+  const all = nodes(chat.element);
+  const input = all.find(node => node.tag === "textarea");
+  const composer = all.find(node => node.className === "composer");
+  const tools = all.find(node => node.className === "composer-tools");
+  const suggestion = all.find(node => node.className === "suggestion");
+  suggestion.listeners.click();
+  const draft = input.value;
+  assert.ok(draft.includes("project"));
+  assert.equal(document.activeElement, input);
+  assert.equal(sends, 0, "A suggestion only prepares the editable draft");
+  tools.children[0].listeners.click();
+  assert.deepEqual(picked, ["Attach a file"]);
+  chat.attach(["/inbox/123-project.plan.md", "/work/.gitignore", "/work/README", "/work/design.review.png"]);
+  const files = nodes(composer).find(node => node.className === "chips");
+  assert.equal(input.parentElement, composer);
+  assert.equal(files.parentElement, composer, "File cards belong to the same draft surface");
+  assert.equal(files.attributes["aria-label"], "Attachments");
+  assert.equal(tools.parentElement, composer);
+  assert.deepEqual(files.children.map(file => file.querySelector("small").textContent), ["MD", "File", "File", "PNG"]);
+  assert.ok(files.children[0].textContent.includes("project.plan.md"), "Inbox timestamps stay out of the visible name");
+  files.children[1].querySelector("button").listeners.click();
+  await chat.flushDraft();
+  assert.equal(input.value, draft, "Removing one file keeps the text and other files");
+  assert.deepEqual(drafts.at(-1).files, ["/inbox/123-project.plan.md", "/work/README", "/work/design.review.png"]);
+  assert.equal(tools.children.at(-1).attributes["aria-label"], "Send (Enter)");
+  assert.equal(sends, 0, "Choosing or removing files never sends the draft");
+}
+console.log("check-chat-models: both composers keep suggestions editable, file picker, real file labels, individual removal and saved draft");
