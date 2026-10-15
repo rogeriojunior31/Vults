@@ -7,6 +7,7 @@ import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { statusWords } from "../../island/views";
 import { money } from "./budget";
+import { viewState } from "./view-state";
 
 const CHECKS = {
   passing: tk("Checks passing"),
@@ -210,7 +211,11 @@ const said = (r: RoostView) =>
 export function createRoosts(backend: RoostsBackend): { element: HTMLElement; refresh: () => void; flush: () => Promise<void> } {
   const element = el("div", { class: "roosts" });
   const cards = el("div", { class: "roost-list" });
+  const feedback = el("div", { class: "roost-feedback" });
   let roosts: RoostView[] = [];
+  let loaded = false;
+  let failed = false;
+  let failure: string | null = null;
   let lastWeek: WeekView | null = null;
   let weekAt = 0;
   // The prototype's search: a project, a branch or an agent. Built once and never moved, so the
@@ -227,11 +232,14 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
   const about = el("p");
   const note = el("span");
   const preferences = el("button", { class: "link-btn", onclick: () => backend.preferences() });
+  const retry = el("button", { onclick: () => { if (!busy) refresh(); } });
+  title.tabIndex = -1;
   const barsHost = el("div");
   element.append(
     el("header", { class: "activity-heading" }, el("div", {}, title, about, count)),
     barsHost,
     search,
+    feedback,
     cards,
     el(
       "p",
@@ -241,12 +249,21 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
     ),
   );
   const paint = () => {
+    const returning = document.activeElement === retry;
     title.textContent = t("By project");
     about.textContent = t("Repositories, worktrees and the sessions working in each one.");
     note.textContent = t("Each project's bird, and whether it is muted, pinned or hidden, are its preferences.");
     preferences.textContent = t("Preferences ↗");
     search.placeholder = t("Find a project, branch or agent…");
     search.setAttribute("aria-label", search.placeholder);
+    element.setAttribute("aria-busy", String(busy));
+    feedback.replaceChildren();
+    if (failed) {
+      retry.textContent = busy ? t("Loading") : t("Try again");
+      retry.setAttribute("aria-busy", String(busy));
+      feedback.append(viewState("error", t("Could not load {name}.", { name: t("By project") }),
+        loaded ? t("The last loaded view is kept and may be out of date.") : t("Try again to read the data saved on this computer."), retry, failure));
+    } else if (!loaded && busy) feedback.append(viewState("loading", t("Loading {name}…", { name: t("By project") })));
     const q = search.value.trim().toLowerCase();
     const shown = q ? roosts.filter((r) => said(r).includes(q)) : roosts;
     const trees = roosts.reduce((n, r) => n + r.trees.length, 0);
@@ -256,14 +273,11 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
     barsHost.replaceChildren(...[bars(lastWeek, roosts)].filter((b): b is HTMLElement => b !== null));
     search.hidden = !roosts.length && !search.value;
     cards.replaceChildren(
-      ...(roosts.length
+      ...(!loaded ? [] : roosts.length
         ? shown.length
           ? shown.map((r) => roost(r, backend, refresh, hold))
           : [
-              el(
-                "p",
-                { class: "board-empty" },
-                el("span", { text: t("No project matches.") }),
+              viewState("empty", t("No project matches."), undefined,
                 el("button", {
                   class: "outline",
                   text: t("Clear filters"),
@@ -275,8 +289,9 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
                 }),
               ),
             ]
-        : [el("p", { class: "board-empty", text: t("No roosts yet: a roost is a repository an agent session works in.") })]),
+        : [viewState("empty", t("No projects yet"), t("No roosts yet: a roost is a repository an agent session works in."))]),
     );
+    if (returning) (failed ? retry : search.hidden ? title : search).focus({ preventScroll: true });
   };
   const change = () => {
     edited = true;
@@ -305,6 +320,7 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
       return;
     }
     busy = true;
+    if (!loaded || failed) paint();
     const mine = ++asked;
     const done = () => {
       busy = false;
@@ -321,11 +337,19 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
         // An older answer that came late never replaces a newer one.
         if (mine !== asked) return;
         roosts = list;
+        loaded = true;
+        failed = false;
         if (!fresh) weekAt = Date.now();
         lastWeek = week;
         paint();
       },
-      done,
+      (error) => {
+        done();
+        if (mine !== asked) return;
+        failed = true;
+        failure = String(error);
+        paint();
+      },
     );
   };
   return { element, refresh, flush: async () => {

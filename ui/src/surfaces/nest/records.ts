@@ -13,6 +13,7 @@ import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
 import { money, usageLabel, usageLevel } from "./budget";
+import { viewState } from "./view-state";
 
 export interface RecordsBackend {
   history(): Promise<HistoryView>;
@@ -215,12 +216,9 @@ function usageBody(u: UsageView): HTMLElement[] {
         ]),
       )
     : [
-        el("p", {
-          class: "board-empty",
-          text: t(
+        viewState("empty", t("No plan usage yet"), t(
             "No plan has told its usage yet: Claude Code's comes with its status line, Codex's with its meter in Settings.",
-          ),
-        }),
+          )),
       ];
   const top = Math.max(...u.days.map((d) => d.usd), u.budget ?? 0, 0.01);
   const days = u.days.length
@@ -249,10 +247,7 @@ function usageBody(u: UsageView): HTMLElement[] {
         ]),
       )
     : [
-        el("p", {
-          class: "board-empty",
-          text: t("Nothing spent in the last two weeks."),
-        }),
+        viewState("empty", t("No costs recorded in the last two weeks.")),
       ];
   const roosts = u.roosts.length
     ? u.roosts.map((r) =>
@@ -268,10 +263,7 @@ function usageBody(u: UsageView): HTMLElement[] {
         ]),
       )
     : [
-        el("p", {
-          class: "board-empty",
-          text: t("No roost has spent anything yet."),
-        }),
+        viewState("empty", t("No project costs recorded yet.")),
       ];
   return [
     summary(
@@ -316,6 +308,7 @@ function tab<T>(
 ): { element: HTMLElement; refresh: () => void; flush: () => Promise<void> } {
   const element = el("div", { class: `records ${cls}` });
   const content = el("div", { class: "records-content" });
+  const status = el("div", { class: "records-state" });
   const search = document.createElement("input");
   search.type = "search";
   search.maxLength = 4096;
@@ -323,8 +316,25 @@ function tab<T>(
   search.setAttribute("aria-label", t("Search records"));
   search.placeholder = t("Search records");
   let loaded: T | undefined;
+  let loading = false;
+  let failed = false;
+  let failure: string | null = null;
+  const names: Record<string, string> = { history: tk("History"), usage: tk("Cost"), traces: tk("Traces"), audit: tk("Audit") };
+  const retry = el("button", { onclick: () => { if (!loading) refresh(); } });
+  element.tabIndex = -1;
   const paint = () => {
+    element.setAttribute("aria-label", t(names[cls]));
+    const returning = document.activeElement === retry;
     if (loaded !== undefined) content.replaceChildren(...draw(loaded, search.value.trim().toLocaleLowerCase(locale())));
+    element.setAttribute("aria-busy", String(loading));
+    status.replaceChildren();
+    if (failed) {
+      retry.textContent = loading ? t("Loading") : t("Try again");
+      retry.setAttribute("aria-busy", String(loading));
+      status.append(viewState("error", loaded !== undefined ? t("Could not update {name}.", { name: t(names[cls]) }) : t("Could not load {name}.", { name: t(names[cls]) }),
+        loaded !== undefined ? t("The last loaded view is kept and may be out of date.") : t("Try again to read the data saved on this computer."), retry, failure));
+    } else if (loading && loaded === undefined) status.append(viewState("loading", t("Loading {name}…", { name: t(names[cls]) })));
+    if (returning) (failed ? retry : searchable ? search : element).focus({ preventScroll: true });
   };
   let edited = false;
   let saved: Promise<void> = Promise.resolve();
@@ -348,26 +358,30 @@ function tab<T>(
     search.focus();
   } });
   if (searchable) element.append(el("div", { class: "records-search" }, search, clear));
-  element.append(content);
+  element.append(status, content);
   let asked = 0;
   const refresh = () => {
     search.setAttribute("aria-label", t("Search records"));
     search.placeholder = t("Search records");
     clear.textContent = t("Clear filters");
     const mine = ++asked;
+    loading = true;
+    paint();
     void load().then(
       (v) => {
         if (mine === asked) {
           loaded = v;
+          failed = false;
+          loading = false;
           paint();
         }
       },
       (e) => {
         if (mine === asked) {
-          loaded = undefined;
-          content.replaceChildren(
-            el("p", { class: "board-empty", text: String(e) }),
-          );
+          failed = true;
+          loading = false;
+          failure = String(e);
+          paint();
         }
       },
     );
@@ -393,7 +407,7 @@ function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => H
   return groups.size
     ? [...groups].map(([project, entries]) => el("section", { class: "record-group" },
         el("h4", { class: "records-head" }, span(project, ""), span(entries.length === 1 ? t("1 record") : t("{n} records", { n: entries.length }), "record-count")), ...entries))
-    : [el("p", { class: "board-empty", text: t("No records match. Clear filters to see all records.") })];
+    : [viewState("empty", t("No results"), t("No records match. Clear filters to see all records."))];
 }
 
 export function createHistory(load: () => Promise<HistoryView>, query?: RecordsBackend["query"]) {
@@ -414,10 +428,7 @@ export function createHistory(load: () => Promise<HistoryView>, query?: RecordsB
       ...(h.turns.length
         ? groupedRows(h.turns, turnLine, query)
         : [
-            el("p", {
-              class: "board-empty",
-              text: t("No finished turn is kept yet."),
-            }),
+            viewState("empty", h.on ? t("No finished turn is kept yet.") : t("History is off"), h.on ? t("Finished agent turns will appear here.") : undefined),
           ]),
     ];
   }, true, query);
@@ -439,7 +450,7 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
     ),
     ...(rows.length
       ? rows.map(traceLine)
-      : [el("p", { class: "board-empty", text: t("No traces yet.") })]),
+      : [viewState("empty", t("No traces yet."), t("Chat turns and tool calls will appear here after Zeca works."))]),
   ]);
 }
 
@@ -457,10 +468,7 @@ export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBack
       ...(rows.length
         ? groupedRows(rows, auditLine, query)
         : [
-            el("p", {
-              class: "board-empty",
-              text: t("No card was answered yet."),
-            }),
+            viewState("empty", t("No card was answered yet."), t("Permission answers will appear here. Opening this view answers nothing.")),
           ]),
     ];
   }, true, query);

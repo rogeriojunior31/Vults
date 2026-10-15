@@ -22,9 +22,9 @@ class Element {
   getAttribute(name) { return this.attributes[name] ?? null; }
   hasAttribute(name) { return name in this.attributes; }
   matches(tags) { return tags.split(",").some(tag => tag.trim() === this.tag); }
-  focus() { globalThis.focused = this; }
+  focus() { globalThis.focused = document.activeElement = this; }
 }
-globalThis.document = { createElement: tag => new Element(tag) };
+globalThis.document = { createElementNS: (_ns, tag) => new Element(tag), createElement: tag => new Element(tag) };
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
 const bundles = await build({ configFile: false, root, logLevel: "silent", build: {
   write: false, minify: false,
@@ -78,7 +78,7 @@ const empty = createHistory(async () => ({ on: false, turns: [] }));
 empty.refresh();
 await tick();
 assert.ok(empty.element.textContent.includes("turn it on there"));
-assert.ok(empty.element.textContent.includes("No finished turn"));
+assert.ok(empty.element.textContent.includes("History is off"));
 const kept = { history: "failed", audit: "git status" };
 const writes = [];
 const query = async (tab, value) => {
@@ -246,3 +246,35 @@ assert.equal(quickFigures(byDay)[0], "<1 min");
 assert.equal(count(byDay, "quick-day-column"), 7);
 assert.ok(nodes(byDay).filter(node => node.className === "quick-fill").every(node => node.style.height === "0%"));
 console.log("check-record-search: compact week totals/full duration, four-project preview, explicit navigation, loading/error/off states, zero and day fallback");
+
+// Failed reads retain the last snapshot for every record surface and retry only on request.
+for (const [make, snapshot, rowsExpected] of [
+  [createHistory, { on: true, turns }, 2],
+  [createAudit, [{ project: "Retained", agent: "codex", at: 1, actor: "human", act: "deny", tool: "Bash", target: "git status", consent: null }], 1],
+  [createTraces, [{ kind: "chat", name: "Retained trace", status: "ok", startMs: 1, ms: 1, child: false, input: null, output: null, costUsd: null }], 1],
+  [createUsage, { windows: [], days: [], roosts: [], budget: null, subscription: false }, 0],
+]) {
+  const pending = [];
+  const part = make(() => new Promise((resolve, reject) => pending.push({ resolve, reject })));
+  part.refresh(); assert.equal(count(part.element, "view-state loading"), 1);
+  assert.deepEqual(figures(part.element), [], "Loading is not a zero-value summary");
+  pending[0].reject(new Error("Disk unavailable")); await tick();
+  assert.equal(count(part.element, "view-state error"), 1);
+  assert.equal(count(part.element, "view-state loading"), 0);
+  const retry = nodes(part.element).find(n => n.tag === "button" && n.textContent === "Try again");
+  const detail = nodes(part.element).find(n => n.className === "view-state-detail");
+  assert.notEqual(detail.open, true, "Raw errors start inside a closed disclosure");
+  retry.focus(); retry.listeners.click(); retry.listeners.click();
+  assert.equal(pending.length, 2, "A pending retry cannot duplicate a read");
+  pending[1].resolve(snapshot); await tick();
+  assert.equal(count(part.element, "view-state error"), 0); assert.equal(count(part.element, "record"), rowsExpected);
+  const before = figures(part.element);
+  part.refresh(); pending[2].reject(new Error("Refresh unavailable")); await tick();
+  assert.equal(count(part.element, "record"), rowsExpected);
+  assert.deepEqual(figures(part.element), before);
+  assert.ok(part.element.textContent.includes("last loaded view is kept"));
+  part.refresh(); const obsolete = pending.at(-1); part.refresh(); pending.at(-1).resolve(snapshot); await tick();
+  obsolete.reject(new Error("Obsolete error")); await tick();
+  assert.equal(count(part.element, "view-state error"), 0);
+}
+console.log("check-record-search: all record surfaces distinguish loading/error/empty, retain snapshots and summaries, explicit guarded retry and obsolete response rejection");

@@ -2,6 +2,7 @@
 import type { ConversationView } from "../../bridge";
 import { el } from "../../dom";
 import { locale, t } from "../../i18n";
+import { viewState } from "./view-state";
 
 export interface RecentActions {
   list: () => Promise<ConversationView[]>;
@@ -68,8 +69,8 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
     if (failed) {
       const retry = el("button", { class: "outline", text: loading ? t("Loading") : t("Try again"), onclick: () => { if (!loading) refresh(); } });
       retry.disabled = loading;
-      status.append(el("p", { text: rows ? t("Conversations could not update. The last loaded list may be out of date.") : t("Conversations could not load. Try again.") }), retry);
-    } else if (loading && rows === null) status.textContent = t("Loading");
+      status.append(viewState("error", rows ? t("Conversations could not update. The last loaded list may be out of date.") : t("Conversations could not load. Try again."), undefined, retry));
+    } else if (loading && rows === null) status.append(viewState("loading", t("Loading")));
     const parts: HTMLElement[] = [];
     let previousDay = "";
     for (const c of shown) {
@@ -89,7 +90,7 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
       parts.push(button);
     }
     if (rows !== null && !matches.length) {
-      parts.push(el("p", { class: "board-empty", text: query ? t("No conversations match your search.") : t("No conversations yet.") }));
+      parts.push(viewState("empty", query ? t("No conversations match your search.") : t("No conversations yet.")));
       if (query) parts.push(el("button", { class: "outline", text: t("Clear filters"), onclick: () => { search.value = ""; rememberQuery(); expanded = false; paint(); search.focus(); } }));
     }
     if (!expanded && matches.length > SHOWN) parts.push(el("button", { class: "outline", text: t("Show more"), onclick: () => { expanded = true; paint(); list.querySelectorAll<HTMLElement>(".nest-recent-row")[SHOWN]?.focus(); } }));

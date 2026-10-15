@@ -52,7 +52,7 @@ class Element {
   scrollIntoView(options) { this.scrolledIntoView = options; }
   getBoundingClientRect() { return { left: 0, top: 0, width: 480, height: 200 }; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
-  attachShadow() { const shadow = new Element("shadow"); shadow.parentElement = this; return shadow; }
+  attachShadow() { const shadow = new Element("shadow"); shadow.parentElement = this; this.shadowRoot = shadow; return shadow; }
   toDataURL() { return "data:image/png;base64,"; }
 }
 const windowEvents = {}, documentEvents = {}, storage = new Map(), mediaChanges = [];
@@ -88,6 +88,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
+      export { createWeek } from ${source("surfaces/nest/week.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
       export { Scene } from ${source("island/scene.ts")};
@@ -98,7 +99,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -484,7 +485,7 @@ assert.equal(connectionUI.element.querySelector(".conn-search"), cSearch);
 cAt("act:status-retry").fire("click"); const obsoleteStatus = connectionReads.at(-1);
 cAt("act:status-retry").fire("click"); connectionReads.at(-1).resolve(healthy); await tick();
 obsoleteStatus.reject(new Error("Obsolete")); await tick();
-assert.equal(connectionUI.element.querySelector(".conn-status-error"), null);
+assert.equal(connectionUI.element.querySelector(".view-state.error"), null);
 assert.deepEqual(connectionEffects, [], "Search, filtering, disclosing and local status retry perform no external action");
 window.innerWidth = 480; connectionUI.redraw(); cAt("row:org/beta#9").fire("click");
 assert.ok(cAt("act:back-detail"));
@@ -505,3 +506,26 @@ unknownUI.element.querySelector('[data-fid="act:status-retry"]').fire("click"); 
 assert.ok(unknownUI.element.querySelector(".conn-waiting"));
 assert.equal(unknownUI.element.querySelector(".nest-add"), null);
 console.log("check-surface-continuity: Connections search/filter/empty states, independent scroll, explicit actions, check priority/disclosures, narrow Escape and stale status ordering without side effects");
+
+
+// Week failures stop loading, keep a known recap and cannot replace a newer read.
+const weekReads = [], weekEffects = [];
+const weekUI = createWeek({ activity: () => new Promise((resolve, reject) => weekReads.push({ resolve, reject })),
+  github: async () => ({ state: "off" }), saveImage: async () => { weekEffects.push("save"); return null; },
+  setHistory: async () => { weekEffects.push("history"); }, clear: async () => { weekEffects.push("clear"); }, connectors: () => weekEffects.push("settings") });
+const weekPage = weekUI.element.shadowRoot.querySelector(".page");
+weekUI.refresh(); assert.ok(weekPage.textContent.includes("Reading the history"));
+weekReads[0].reject(new Error("History unavailable")); await tick();
+assert.ok(weekPage.textContent.includes("Could not load This week"));
+assert.ok(!weekPage.textContent.includes("Reading the history"));
+const weekRetry = weekPage.querySelectorAll("button").find(b => b.textContent === "Try again");
+weekRetry.focus(); weekRetry.fire("click"); weekRetry.fire("click"); assert.equal(weekReads.length, 2);
+const recap = { history: true, today: "2026-10-15", weeks: ["2026-10-12"], grid: [],
+  week: { monday: "2026-10-12", sunday: "2026-10-18", turns: 0, headline: "Known recap", projects: [], days: [0, 0, 0, 0, 0, 0, 0] } };
+weekReads[1].resolve(recap); await tick(); assert.ok(weekPage.textContent.includes("Known recap"));
+weekUI.refresh(); weekReads[2].reject(new Error("Stale recap")); await tick();
+assert.ok(weekPage.textContent.includes("Known recap")); assert.ok(weekPage.textContent.includes("last loaded view is kept"));
+weekUI.refresh(); const oldWeek = weekReads.at(-1); weekUI.refresh(); weekReads.at(-1).resolve(recap); await tick();
+oldWeek.reject(new Error("Obsolete")); await tick(); assert.equal(weekPage.querySelector(".view-state.error"), null);
+assert.deepEqual(weekEffects, [], "Retrying the recap never clears, exports or changes history settings");
+console.log("check-surface-continuity: Week initial error/retry, retained recap and obsolete read rejection without setting/export actions");

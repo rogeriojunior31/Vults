@@ -4,6 +4,7 @@
 import type { MemoryView } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
+import { viewState } from "./view-state";
 
 export interface MemoryBackend {
   load(): Promise<MemoryView>;
@@ -114,7 +115,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
     const decided = v.accepted + v.rejected;
     return el("section", { class: "memory-part memory-proposals" },
       heading(t("Waiting for you"), v.pending.length),
-      ...(rows.length ? rows : [el("p", { class: "memory-empty", text: t("Nothing waits.") })]),
+      ...(rows.length ? rows : [viewState("empty", t("Nothing waits."))]),
       decided ? el("p", { class: "memory-rate", text: t("{a} of {n} accepted in the last 90 days.", { a: v.accepted, n: decided }) }) : null);
   };
 
@@ -129,7 +130,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
           identify(el("summary", { class: "memory-file-head" }, el("span", { text: place(f.place) }), count(f.facts.length)), `file:${f.path}`),
           el("div", { class: "memory-file-body" }, el("p", { class: "memory-used", text: usage }), progress,
             el("ul", {}, ...f.facts.map(text => el("li", { text }))))), nonempty.length === 1);
-      }) : [el("p", { class: "memory-empty", text: t("Nothing yet. Type /remember in the chat, or accept what Zeca proposes.") })]));
+      }) : [viewState("empty", t("Nothing yet."), t("Nothing yet. Type /remember in the chat, or accept what Zeca proposes."))]));
   };
 
   const history = (v: MemoryView): HTMLDetailsElement | null => v.history.length ? keep("history", el("details", { class: "memory-part memory-history" },
@@ -148,11 +149,11 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
     const state = el("div", { class: "memory-state" });
     state.setAttribute("role", "status");
     if (acting) state.append(el("p", { text: t("Saving…") }));
-    else if (loading && !loaded) state.append(el("p", { text: t("Loading") }));
+    else if (loading && !loaded) state.append(viewState("loading", t("Loading")));
     if (note) state.append(el("p", { class: "memory-note", text: note }));
     if (failed) {
-      state.append(el("p", { class: "memory-note", text: loaded ? t("Memory could not update. The last loaded view may be out of date.") : t("Memory could not load. Try again.") }),
-        action("retry", t("Try again"), () => { if (!loading && !acting) void refresh(); }));
+      state.append(viewState("error", loaded ? t("Memory could not update. The last loaded view may be out of date.") : t("Memory could not load. Try again."), undefined,
+        action("retry", t("Try again"), () => { if (!loading && !acting) void refresh(); })));
     }
     const parts: HTMLElement[] = [el("header", { class: "memory-heading-group" }, title,
       el("p", { text: t("Review what Zeca keeps for future conversations.") })), state];
@@ -162,7 +163,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
       parts.push(pending(loaded), files(loaded));
       if (overnight) parts.push(keep("night", overnight));
       if (changes) parts.push(changes);
-    } else if (loaded) parts.push(el("p", { class: "memory-empty", text: t("Zeca's memory is off. Turn it on in Settings, Chat & voice, Memory.") }));
+    } else if (loaded) parts.push(viewState("empty", t("Zeca's memory is off. Turn it on in Settings, Chat & voice, Memory.")));
     element.setAttribute("aria-busy", String(acting || loading));
     element.replaceChildren(...parts);
     if (scroll !== undefined && element.parentElement) element.parentElement.scrollTop = scroll;

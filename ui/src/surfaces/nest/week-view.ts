@@ -6,6 +6,7 @@ import { el } from "../../dom";
 import { locale, t } from "../../i18n";
 import { AGENT, duration, gridCard, historyCard, weekday, weekdays, weekLabel, type Activity, type ActivityActions, type ActivityView } from "../settings/activity";
 import { button, toggle } from "../settings/pieces";
+import { viewState } from "./view-state";
 
 /** The prototype's look for this page, over the settings pages' own (both in the Week's shadow root). */
 export const WEEK_CSS = `
@@ -45,7 +46,7 @@ export const WEEK_CSS = `
 
 /** The page; `day` is the day shown under the bars (Monday is 0), `pick` changes it. */
 export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityActions, day: number | null, pick: (d: number) => void): HTMLElement[] {
-  if (!a) return [el("section", { class: "activity-card" }, el("p", { text: t("Reading the history…") }))];
+  if (!a) return [viewState("loading", t("Reading the history…"))];
   const w = a.week;
   const i = a.weeks.indexOf(w.monday);
   const older = i >= 0 && i < a.weeks.length - 1 ? a.weeks[i + 1] : null;
@@ -71,7 +72,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
   );
   // What is counted, and that nothing leaves: said once, under the heading.
   const lede = el("details", { class: "activity-privacy" }, el("summary", { text: t("How activity is counted") }), el("p", { text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.") }));
-  if (!w.turns) return [heading, lede, el("section", { class: "activity-card" }, el("p", { text: w.headline })), gridCard(a, view, on), historyCard(a, view, on)];
+  if (!w.turns) return [heading, lede, viewState("empty", w.headline), gridCard(a, view, on), historyCard(a, view, on)];
   const metric = (value: string, label: string, small: string) =>
     el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }), el("small", { text: small }));
   const names = weekdays();

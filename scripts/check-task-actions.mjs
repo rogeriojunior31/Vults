@@ -30,7 +30,7 @@ class Element {
   }
   querySelectorAll(tags) { return this.children.flatMap(node => [ ...(tags.split(",").map(tag => tag.trim()).includes(node.tag) ? [node] : []), ...node.querySelectorAll(tags) ]); }
 }
-globalThis.document = { createElement: tag => new Element(tag), body: new Element("body") };
+globalThis.document = { createElementNS: (_ns, tag) => new Element(tag), createElement: tag => new Element(tag), body: new Element("body") };
 // Focus IDs here contain only known letters, digits, hyphens and colons inside an attribute.
 globalThis.CSS = { escape: value => value };
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
@@ -255,6 +255,8 @@ assert.ok(tasks.element.textContent.includes("No tasks."), "An actual empty resp
 assert.equal(field("task-load-error"), undefined);
 const unreadable = createTasks({ ...backend, load: async () => { throw "Database unavailable."; } });
 unreadable.refresh();
+assert.ok(nodes(unreadable.element).some(node => node.className === "view-state loading"));
+assert.ok(!unreadable.element.textContent.includes("No tasks."));
 await tick();
 assert.ok(unreadable.element.textContent.includes("Tasks could not load. Try again."));
 assert.ok(!unreadable.element.textContent.includes("No tasks."), "An unreadable list must not claim to be empty");

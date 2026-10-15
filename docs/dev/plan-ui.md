@@ -833,3 +833,45 @@ Automated result: TypeScript/Vite build, nine renderer checks, fmt/clippy,
 864 workspace tests and 8 eval tests pass. Brand, English, i18n, layers,
 network, README translation and whitespace checks pass; the Nest mirror mark
 matches. The running Tauri process received the updated UI through Vite.
+
+
+## Empty, loading and read-error states - 2026-10-15
+
+The user selected the first follow-up: consistent empty/loading/error feedback.
+A small production DOM renderer and stylesheet provide one neutral panel with a
+state icon, title, optional explanation, explicit action and closed technical
+error disclosure. It uses the existing theme and icons, also inside Week's shadow
+root. Tasks, Connections, records, By project, Week, Memory and Recent reuse it.
+No third-party assets, dependency or background action is added.
+
+- Tasks shows its initial read instead of an empty list, retains its existing
+  draft/failure recovery, and names the empty state and available creation path.
+- Records distinguishes loading, history off, actual emptiness and no filter
+  match. History, Audit, Traces and Usage keep the last successful snapshot and
+  totals on a read failure, with an explicit guarded retry and stale warning.
+- By project now reports failed reads rather than silently dropping them. A
+  known list and query remain editable, with the existing serialized/queued reads.
+- Week reports errors instead of staying in its null/loading view, retains its
+  last recap on refresh failure, and rejects obsolete reads. Successful clearing
+  drops the old in-memory recap before reading back. Retry never clears or exports.
+- Memory, Recent and Connections share the same panel treatment while retaining
+  their existing permission, selection, loading, refresh and disclosure owners.
+  Missing cost data says that no cost was recorded rather than implying no spend.
+
+Existing production checks cover Tasks' initial loading and failure/draft/retry.
+Records checks now hold/reject reads for all four views, preserve snapshots and
+summaries, guard retry and reject obsolete responses. By project checks initial
+error/retry and stale-list retention without project actions. The integrated Week
+check covers cold failure, explicit retry, a retained recap and read ordering,
+with zero history-setting/clear/export actions. The public Nest guide and all UI
+catalogs accompany the change.
+
+Tauri remains available through the existing dev process. Native acceptance is
+still the user's review: compare empty/filtered/waiting/error states in Room and
+Full, open technical details, retry, and check short/narrow views and keyboard
+focus. DOM checks do not measure WebKit layout or the native compositor.
+
+Automated result: TypeScript/Vite build, nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass. Brand, English, i18n, layer,
+network, README translation and whitespace checks pass; the Nest mirror source
+mark matches. The running Tauri process received the updated renderer via Vite.

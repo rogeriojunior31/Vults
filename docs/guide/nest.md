@@ -15,6 +15,13 @@ heading scale and neutral controls. Connections uses Activity's segmented naviga
 Tasks and Connections use the same button and field treatment. Status colors keep
 their existing meaning, including readable finished-task controls.
 
+Read views use the same loading, empty, filtered and error panels, with a short explanation
+and the available next action. A first read does not show empty records or zero summaries
+while loading. If refreshing Activity fails, its last loaded records, projects or recap stay
+visible with an out-of-date warning and **Try again**; a first-read failure stops the loading
+message and offers retry. Raw read errors stay under **Technical details**. Retrying only reads
+the view; it never runs a task, answers a permission or changes history settings.
+
 Minimizing the Nest returns the island and its approval shortcuts. Opening the Nest
 again restores the window; minimizing does not change its saved Room size.
 

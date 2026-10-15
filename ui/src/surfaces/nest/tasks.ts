@@ -7,6 +7,7 @@ import { AGENTS } from "../../agents";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { money, spentLine } from "./budget";
+import { viewState } from "./view-state";
 
 export interface TasksBackend {
   /** Zeca is on: `/task` in the chat is a way in too. */
@@ -153,6 +154,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   let asked = 0;
   let loaded: { rows: TaskRow[]; spent: SpendToday | null } | null = null;
   let loadError: string | null = null;
+  let loading = false;
   let retry: HTMLButtonElement | null = null;
   let disabledFocus: string | null = null;
   /** The New task form's text, kept while the list is drawn again; null while it is closed. */
@@ -614,11 +616,9 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     retry = loadError === null ? null : el("button", { class: "btn small", text: t("Try again"), onclick: refresh });
     retry?.setAttribute("data-fid", "reload");
     const failure = loadError === null ? null : el("section", { class: "task-load-error" },
-      el("p", { class: "board-empty", text: loaded
+      viewState("error", loaded
         ? t("Tasks could not update. The last loaded list may be out of date.")
-        : t("Tasks could not load. Try again.") }),
-      el("p", { class: "board-empty", text: loadError }),
-      retry,
+        : t("Tasks could not load. Try again."), undefined, retry, loadError),
     );
     failure?.setAttribute("role", "alert");
     const open = rows.filter((r) => r.status !== "done" && r.status !== "dropped");
@@ -638,18 +638,16 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
         })),
       ),
       failure,
+      loading && !loaded && !failure ? viewState("loading", t("Loading {name}…", { name: t("Tasks") })) : null,
       spend(spent),
       message ? el("p", { class: "board-empty task-message", text: message }) : null,
       draft ? form(draft) : null,
-      ...(!loaded && loadError !== null ? [] : open.length || draft
+      ...(!loaded && (loadError !== null || loading) ? [] : open.length || draft
         ? byRoost(open).flatMap((g) => [el("h4", { class: "tasks-roost", text: g.roost || t("No project") }), ...g.tasks.map(card)])
         : [
-            el("p", {
-              class: "board-empty",
-              text: backend.zeca()
+            viewState("empty", t("No tasks yet"), backend.zeca()
                 ? t("No tasks. Type /task in the chat, then the goal and a line per criterion.")
-                : t("No tasks. New task keeps one: its goal and what done means."),
-            }),
+                : t("No tasks. New task keeps one: its goal and what done means.")),
           ]),
       ...(closed && rest.length ? [el("h4", { class: "tasks-finished", text: t("Finished") }), ...rest.map(card)] : []),
     ];
@@ -663,6 +661,7 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       ? [(active as HTMLInputElement).selectionStart, (active as HTMLInputElement).selectionEnd] as const
       : null;
     element.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null));
+    element.setAttribute("aria-busy", String(loading));
     let next: HTMLElement | null = null;
     if (editing && active) next = element.querySelector<HTMLElement>(`.task-new ${active.tagName.toLowerCase()}`);
     else if (returning) {
@@ -679,22 +678,27 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
 
   function refresh(): void {
     const mine = ++asked;
+    loading = true;
+    element.setAttribute("aria-busy", "true");
     if (retry) {
       // Disabling the focused retry can move native focus to the body while loading.
       if (document.activeElement === retry) disabledFocus = "reload";
       retry.disabled = true;
     }
+    if (!loaded && loadError === null && !draft) paint([], null);
     const today = backend.today().catch(() => null);
     void backend.load(closed).then(
       async (rows) => {
         const spent = await today;
         if (mine !== asked) return;
         loaded = { rows, spent };
+        loading = false;
         loadError = null;
         paint(rows, spent);
       },
       (e) => {
         if (mine !== asked) return;
+        loading = false;
         loadError = said(e);
         paint(loaded?.rows ?? [], loaded?.spent ?? null);
       },

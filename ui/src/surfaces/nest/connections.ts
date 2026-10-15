@@ -8,6 +8,7 @@ import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { copyTextButton } from "../../clipboard";
+import { viewState } from "./view-state";
 import { ago, CHECKS, GROUPS, question, staleNote, tag } from "../../island/board";
 import { isSeen, markSeen, onSeen } from "../../island/seen";
 import { icon } from "../../island/icons";
@@ -471,10 +472,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       });
       const empty = query ? t("No items match your search.") : shown === "inbox" ? t("Nothing needs you right now.") : repo ? t("Nothing here for this repository.") : t("Nothing open right now.");
       const emptyRow = () =>
-        el(
-          "p",
-          { class: "board-empty" },
-          el("span", { text: empty }),
+        viewState("empty", query ? t("No results") : empty,
+          query ? empty : undefined,
           repo || query
             ? el("button", {
                 class: "outline",
@@ -521,8 +520,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         "act:refresh",
       );
       refresh.setAttribute("aria-busy", String(refreshing));
-      const failure = refreshError ? el("p", { class: "conn-refused", text: t("Connections could not update. Try again.") }) : null;
-      failure?.setAttribute("role", "alert");
+      const failure = refreshError ? viewState("error", t("Connections could not update. Try again."), t("The last loaded view is kept and may be out of date.")) : null;
       body = [
         ...(failure ? [failure] : []),
         el(
@@ -560,13 +558,12 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         })(),
       ];
     }
-    const statusWarning = statusFailed ? el("div", { class: "conn-status-error" },
-      el("p", { text: t("Connection status could not load. Try again.") }),
+    const statusWarning = statusFailed ? viewState("error", t("Connection status could not load. Try again."), undefined,
       fid(el("button", { class: "outline", text: t("Try again"), onclick: readStatus }), "act:status-retry")) : null;
     statusWarning?.setAttribute("role", "alert");
     element.replaceChildren(
       ...(statusWarning ? [statusWarning] : []),
-      ...(!board && refreshError ? [el("p", { class: "conn-refused", text: t("Connections could not update. Try again.") })] : []),
+      ...(!board && refreshError ? [viewState("error", t("Connections could not update. Try again."))] : []),
       ...(chips ? [chips] : []),
       ...body,
       ...pending.map(c => el("section", { class: "conn-waiting" },
@@ -578,7 +575,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),
           fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), `manage:${c.id}`)))),
       ...(add ? [add] : []),
-      ...(!board && !add && !pending.length && !statusFailed ? [el("p", { class: "board-empty", text: t("Checking connections…") })] : []),
+      ...(!board && !add && !pending.length && !statusFailed ? [viewState("loading", t("Checking connections…"))] : []),
     );
     element.setAttribute("aria-busy", String(refreshing));
     const list = element.querySelector<HTMLElement>(".conn-list");
