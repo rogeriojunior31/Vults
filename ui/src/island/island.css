@@ -3405,22 +3405,29 @@ button.ghost:hover {
   overflow-y: auto;
   scrollbar-width: thin;
 }
-/* The island's engine pill, as the prototype draws it: the engine in its color, then its model. */
+/* Quick's engine is a quiet two-line control; its model no longer stretches the whole header. */
 #island .place.model.engine {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   max-width: 100%;
-  min-height: 30px;
-  padding: 0 10px;
-  border: 1px solid #2c2f35;
+  min-height: 40px;
+  padding: 4px 6px;
+  border: 0;
   border-radius: 8px;
-  background: #111214;
+  background: transparent;
   font-size: 12.5px;
 }
-#island .place.model.engine:hover {
-  border-color: #3a3d44;
+#island .place.model.engine:hover,
+#island .place.model.engine[aria-expanded="true"] {
+  background: var(--raised);
 }
+.engine-labels { display: contents; }
+#island .engine-labels { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+#island .engine-labels > span { max-width: 100%; }
+#island .engine-labels .engine-name { font-size: 13px; font-weight: 550; line-height: 1.3; }
+#island .engine-labels .engine-model { color: var(--fg-dim); font-size: 11px; line-height: 1.3; }
+#island .place.model.engine > svg { flex: none; color: var(--fg-muted); }
 .engine-dot {
   flex: none;
   width: 7px;
@@ -3457,7 +3464,7 @@ button.ghost:hover {
   flex: 0 1 auto;
 }
 #island .chat-head > .engine-box .place.model {
-  max-width: 260px;
+  max-width: 190px;
 }
 #island .engine-box .menu-item {
   display: flex;

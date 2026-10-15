@@ -1,11 +1,12 @@
 # Conversando com o Zeca
-<!-- source: b5970658b6c1 -->
+<!-- source: 81fac0abf2ca -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
 no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
 você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
-de API que você configurou, veja abaixo); na ilha é um botão só, *● Claude Code · Default model ▾*,
-cujo menu traz o motor, o modelo e o esforço. Os motores vêm em dois grupos, **Your setup** (os
+de API que você configurou, veja abaixo); na ilha um controle compacto mostra o motor acima
+do modelo, com fundo ao passar o mouse ou enquanto está aberto. Seu menu traz o motor, o modelo
+e o esforço. Os motores vêm em dois grupos, **Your setup** (os
 CLIs do Claude Code e do Codex, cada um *Signed in*, *Installed* ou *Not installed*: o Vults só olha
 se o CLI e o arquivo de login dele estão lá, nunca os lê) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),
 com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor

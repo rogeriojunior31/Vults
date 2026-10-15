@@ -1589,16 +1589,18 @@ export class ChatPanel {
     const model = pick.model ? (current?.label ?? pick.model) : t("Default model");
     const label = pick.effort ? `${model} · ${t(EFFORTS[pick.effort] ?? pick.effort)}` : model;
     {
-      // The prototype's one pill, on the island and in the Nest: the engine in its color, then its
-      // model; the menu holds all three.
+      // One control retains the engine, model and effort; Quick stacks its labels to save width.
       this.modelButton.classList.add("engine");
       this.modelButton.replaceChildren(
         el("span", { class: `engine-dot ${this.agent()}` }),
-        el("span", { class: "engine-name", text: this.engineName(this.provider) }),
-        ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
+        el("span", { class: "engine-labels" },
+          el("span", { class: "engine-name", text: this.engineName(this.provider) }),
+          ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
+        ),
         icon("chevronDown", 11, 2.2),
       );
       this.modelButton.setAttribute("aria-label", api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label }));
+      this.modelButton.setAttribute("aria-expanded", String(this.modelOpen));
     }
     this.modelButton.title = this.started
       ? t("A conversation keeps its model; New starts another.")

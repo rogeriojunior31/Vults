@@ -3,8 +3,9 @@
 Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits at
 the start of the conversation (small at the top of the island's chat, large in the Nest's): he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
-API provider you set up, see below); on the island it is one pill, *● Claude Code · Default model ▾*,
-whose menu holds the engine, the model and the effort. Its engines come in two groups, **Your
+API provider you set up, see below); on the island one compact control shows the engine above
+its model, with a background on hover or while open. Its menu holds the engine, model and effort.
+Its engines come in two groups, **Your
 setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
 looks whether the CLI and its login file are there, never reads them) and **Vults harness** (the
 API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation, and so does switching to
@@ -31,7 +32,7 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 
 ## Model and effort
 
-Beside the folder (on the island, in the pill at the top), *Default model ▾* picks the model and how hard it thinks, for Claude and for
+Beside the folder (on the island, in the control at the top), *Default model ▾* picks the model and how hard it thinks, for Claude and for
 Codex. Claude offers Opus, Sonnet and Haiku (Claude Code's names for the latest of each); Codex
 lists the models your own `codex` offers, asked the first time you open the picker with Codex.
 The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**
