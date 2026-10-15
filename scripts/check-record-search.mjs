@@ -19,6 +19,8 @@ class Element {
   replaceChildren(...nodes) { this.text = ""; this.children = nodes; }
   addEventListener(event, listener) { this.listeners[event] = listener; }
   setAttribute(name, value) { this.attributes[name] = value; }
+  getAttribute(name) { return this.attributes[name] ?? null; }
+  hasAttribute(name) { return name in this.attributes; }
   matches(tags) { return tags.split(",").some(tag => tag.trim() === this.tag); }
   focus() { globalThis.focused = this; }
 }

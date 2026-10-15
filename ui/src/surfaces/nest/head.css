@@ -53,8 +53,8 @@
 .header-icon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 7px;
   color: var(--chrome-icon);
   flex: none;
@@ -149,22 +149,32 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 20px;
+  padding: 6px 16px;
   background: var(--chrome);
   border-top: 1px solid var(--chrome-line);
-  font: 10px/1.4 var(--font);
+  font: 12px/1.4 var(--font);
   color: var(--fg-dim);
 }
 .app-footer button {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 10px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
   color: var(--fg-dim);
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
 .app-footer button:hover:not(:disabled) {
   color: var(--fg);
+  background: var(--raised);
 }
+.footer-actions { display: flex; align-items: center; gap: 8px; }
+.app-footer .zeca-look { justify-content: center; min-width: 32px; }
+.app-footer .foot-island { color: var(--fg); }
+.app-footer .nest-zeca[aria-pressed="false"] { color: var(--fg-muted); }
 .app-footer button:disabled {
   opacity: 0.45;
   cursor: default;
@@ -203,8 +213,17 @@
     display: none;
   }
   .app-footer {
-    padding: 10px 14px;
+    padding: 4px 8px;
+    gap: 4px;
   }
+  .app-footer button { font-size: 11px; padding: 4px 6px; }
+  .companion, .footer-actions { gap: 2px; }
+  .app-header .size-switch .size { min-height: 28px; }
+}
+@media (max-height: 480px) {
+  .app-footer { padding-top: 2px; padding-bottom: 2px; }
+  .suite-nav { min-height: 36px; }
+  .suite-tab { min-height: 35px; padding-top: 8px; padding-bottom: 8px; }
 }
 /* The window's grips (edges.ts): thin bands on its border, corners a little larger. */
 .resize-edge {

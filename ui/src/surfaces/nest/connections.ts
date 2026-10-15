@@ -120,6 +120,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     void saved.catch(() => {});
   };
   let refreshing = false;
+  let refreshError = false;
+  const disclosures = new Map<string, HTMLDetailsElement>();
   /** The row whose merge is being confirmed, and how each merge asked for here went. */
   let asking: string | null = null;
   const merges = new Map<string, { state: "running" | "merged" } | { state: "refused"; error: string }>();
@@ -200,8 +202,6 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
               [t("Author"), f.author ? `@${f.author}` : null],
               [t("Branch"), f.branch],
               [t("Diff"), diffLine(r)],
-              [t("Reviews"), reviewLine(r) ?? (r.review ? tag(r)?.text ?? null : null)],
-              [t("Checks"), f.runs.length ? null : checks],
               [t("Updated"), when],
             ];
     // While checks run, how many are done.
@@ -242,6 +242,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
                 class: "primary",
                 text: t("Merge"),
                 onclick: () => {
+                  if (asking !== k || busy(merges.get(k))) return;
                   asking = null;
                   merges.set(k, { state: "running" });
                   actions.merge(b.connector, r.item).catch(() => {
@@ -255,6 +256,37 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
             ),
           )
         : null;
+    const technical = el("details", { class: "conn-technical" },
+      fid(el("summary", { text: t("Technical details") }), "act:technical"),
+      el("dl", { class: "context-dl" }, ...facts.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
+    );
+    const commandView = command
+      ? el(
+          "div",
+          { class: "conn-cmd" },
+          el("code", { text: command }),
+          fid(
+            el("button", {
+              text: copied === k ? t("Copied") : t("Copy"),
+              onclick: () =>
+                void navigator.clipboard
+                  ?.writeText(command)
+                  .then(() => {
+                    copied = k;
+                    draw();
+                    window.setTimeout(() => {
+                      if (copied === k) (copied = null), draw();
+                    }, 1500);
+                  })
+                  .catch(() => {}),
+            }),
+            "act:copy",
+          ),
+        )
+      : null;
+    if (commandView) technical.append(commandView);
+    technical.open = disclosures.get(k)?.open ?? false;
+    disclosures.set(k, technical);
     return el(
       "section",
       { class: `conn-detail ${stateOf(r)}` },
@@ -275,7 +307,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         : null,
       el("div", { class: "conn-detail-head" }, icon(iconOf(r), 14, 1.6), el("span", { text: ref }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
       el("h3", { text: r.title }),
-      el("dl", { class: "context-dl" }, ...facts.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
+      reviewLine(r) ? el("p", { class: "conn-review", text: reviewLine(r)! }) : null,
+      checks ? el("p", { class: "conn-check-summary", text: checks }) : null,
       progress !== null ? bar(progress) : null,
       f.runs.length
         ? el(
@@ -287,30 +320,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       acts.length ? el("div", { class: "conn-acts" }, ...acts) : null,
       confirm,
       merging?.state === "refused" ? el("p", { class: "conn-refused", text: t("GitHub did not merge it: {error}", { error: merging.error }) }) : null,
-      command
-        ? el(
-            "div",
-            { class: "conn-cmd" },
-            el("code", { text: command }),
-            fid(
-              el("button", {
-                text: copied === k ? t("Copied") : t("Copy"),
-                onclick: () =>
-                  void navigator.clipboard
-                    ?.writeText(command)
-                    .then(() => {
-                      copied = k;
-                      draw();
-                      window.setTimeout(() => {
-                        if (copied === k) (copied = null), draw();
-                      }, 1500);
-                    })
-                    .catch(() => {}),
-              }),
-              "act:copy",
-            ),
-          )
-        : null,
+      technical,
     );
   };
 
@@ -493,19 +503,25 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       const refresh = fid(
         el("button", {
           class: "outline",
-          text: t("↻ Refresh"),
+          text: refreshing ? t("Checking…") : t("↻ Refresh"),
           onclick: () => {
             if (refreshing) return;
             refreshing = true;
-            void actions.refresh().finally(() => {
+            void actions.refresh().then(() => { refreshError = false; }, () => { refreshError = true; }).finally(() => {
               refreshing = false;
               readStatus();
+              draw();
             });
+            draw();
           },
         }),
         "act:refresh",
       );
+      refresh.setAttribute("aria-busy", String(refreshing));
+      const failure = refreshError ? el("p", { class: "conn-refused", text: t("Connections could not update. Try again.") }) : null;
+      failure?.setAttribute("role", "alert");
       body = [
+        ...(failure ? [failure] : []),
         el(
           "header",
           { class: "conn-head" },

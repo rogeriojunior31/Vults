@@ -9,7 +9,7 @@ import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
-import { button, diff, disclosure, row, toggle } from "./pieces";
+import { button, diff, disclosure, row, saveSetting, toggle } from "./pieces";
 import { policiesSection, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
@@ -337,20 +337,22 @@ function projectsPage(): HTMLElement[] {
 /** A row of choices, one on. */
 function segmented<T>(choices: { value: T; label: string }[], current: T, change: (v: T) => Promise<void>): HTMLElement {
   const box = el("div", { class: "segmented" });
-  const paint = (on: T) =>
-    box.replaceChildren(
-      ...choices.map((c) =>
-        el("button", {
-          class: c.value === on ? "on" : "",
-          text: c.label,
-          onclick: () => {
-            if (c.value === on) return;
-            paint(c.value);
-            void change(c.value).catch(() => paint(on));
-          },
-        }),
-      ),
-    );
+  const buttons = choices.map(c => {
+    const button = el("button", { text: c.label, onclick: () => {
+      if (button.getAttribute("aria-pressed") === "true" || box.getAttribute("aria-busy") === "true") return;
+      const before = choices[buttons.findIndex(button => button.getAttribute("aria-pressed") === "true")]?.value ?? current;
+      paint(c.value);
+      saveSetting(box, () => change(c.value), () => paint(before));
+    } });
+    return button;
+  });
+  box.append(...buttons);
+  const paint = (value: T) => {
+    buttons.forEach((button, i) => {
+      button.classList.toggle("on", choices[i].value === value);
+      button.setAttribute("aria-pressed", String(choices[i].value === value));
+    });
+  };
   paint(current);
   return box;
 }
@@ -368,15 +370,12 @@ function dropdown<T>(
     option.selected = c.value === current;
     box.append(option);
   }
-  let on = current;
+  box.dataset.savedValue = String(choices.findIndex(c => c.value === current));
   box.addEventListener("change", () => {
+    if (box.getAttribute("aria-busy") === "true") return;
     const next = choices[Number(box.value)]!.value;
-    const before = on;
-    on = next;
-    void change(next).catch(() => {
-      on = before;
-      box.value = String(choices.findIndex((c) => c.value === before));
-    });
+    const before = box.dataset.savedValue!;
+    saveSetting(box, () => change(next), () => { box.value = before; });
   });
   return box;
 }

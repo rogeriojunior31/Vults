@@ -641,3 +641,55 @@ Current reference command:
 ```sh
 npm run tauri dev
 ```
+
+
+## Six-part UI refinement - 2026-10-15
+
+Requested as one complete batch on `feat/ui-component-polish`. All six renderer
+slices below are implemented. This is refinement of UX1-UX6, not UX7's native
+geometry change or the future workspaces. Retain production themes, sprites,
+permissions and execution owners; add no dependency.
+
+| Order / owner | Implementation | Renderer acceptance |
+| --- | --- | --- |
+| 1 / UX4-UX5 Tasks | Goal heading, native named criteria progress, separate lifecycle and execution status, next criterion, secondary project/cost context; retain criteria and maintenance | `check-task-actions.mjs`: start/continue/stop, criteria, explicit agent choice, confirmations, drafts and focus |
+| 2 / UX5 Connections | Title, review/check summary and primary actions first; technical facts/command in retained native details | `check-surface-continuity.mjs`: selected detail and filters, expanded context through poll, check/action order, explicit merge/cancel and duplicate guard |
+| 3 / UX1-UX2 Frame | Shared header icons and footer targets, readable footer, pencil for appearance; short windows reclaim navigation height | Existing Settings and Nest production-renderer checks retain actions, accessible labels and selected navigation; native target/overflow review below |
+| 4 / UX4 Chat history | Stable local search across all loaded rows, date groups, project/executor/time, current selection, initial 30 and Show more | Production Recent check: query/focus, empty and filtered states, older result, more rows, busy guard, stale-list retry and obsolete responses |
+| 5 / UX1-UX5 Feedback | Row-local saving/saved/error for switches and choices, rollback and pending state across repaint; explicit refresh failure in Connections; history loading/retry | Settings check holds/rejects real control writes across renderer refresh, including segmented and select rollback; Connections tests refresh guard/error/retry |
+| 6 / UX2-UX6 Continuity | Same history as a separate narrow Room view, one history entry point, Back/Escape and focus return; stop hidden portrait, preserve query on recreation; long task/connection labels | Integrated check now exercises 480/760/900/1180 widths and 360 px height, mode changes, files/source/draft, filters, hidden/off Zeca and retained scene |
+
+Implementation used the existing native controls, DOM helpers, semantic colors and
+motion tokens. Each slice passed its relevant production-renderer check and the
+TypeScript/Vite build before the next dependent change. New strings have pt-BR,
+Spanish and Chinese translations; Nest and Tasks guides are mirrored in pt-BR.
+
+Desktop acceptance remains the user's next step. Tooling can launch Tauri here
+but exposes no native application surface for visual inspection. Do not interpret
+DOM mock checks as measured WebKit layout. In the running application, review:
+
+1. Tasks with no criteria, mixed completion, a running agent, blocked output and
+   long goals; use Start/Go on/Stop only on intended work and confirm deletions.
+2. Connections Inbox and PRs, failing/passing checks, technical disclosure, narrow
+   Back, repository filter and refresh failure. Merge still needs explicit consent.
+3. Header/footer in Portuguese at 480x360, 760x640 and Full: separate targets,
+   keyboard focus, readable counts and no horizontal page overflow.
+4. Chat history search by project/title/executor, an old result beyond 30 rows,
+   empty search, current conversation, Show more and Back to Chat. Close and reopen
+   Nest to check query retention, without sending the draft.
+5. Slow or failed settings writes: one pending operation, readable local feedback,
+   restored selection on failure and focus return without taking focus from another field.
+6. Mini/Quick/Room/Full with many sessions, attachments, long paths, reduced motion
+   and Zeca off; check native input regions, sprite scale, retained drafts and at
+   least 40 px of transcript in the minimum Nest.
+
+The final repository gates are the build, renderer checks (including Settings,
+project search and continuity), fmt/clippy, workspace tests, evals, brand/English/
+i18n/layers/network/README checks and diff whitespace. Rust tests use
+`TMPDIR=/var/tmp` because an unrelated `/tmp/.git` fixture prevents their temporary
+repositories from initializing in the default directory.
+
+Automated result for this batch: the TypeScript/Vite build, all nine renderer
+scripts and repository policy checks pass; Rust fmt/clippy pass, with 864 workspace
+tests and 8 eval tests passing. Native visual acceptance remains open as described
+above; no browser or native screenshot result is implied.

@@ -16,6 +16,12 @@ Agent coverage has its own board, [plan-every-agent.md](plan-every-agent.md).
 Requested 2026-10-13, following the Compact/Nest review. Prioritize existing-feature repairs.
 The detailed tasks, dependencies, acceptance criteria and audit mapping are in
 [UI implementation sequence](plan-ui.md); [DESIGN.md](../../DESIGN.md) holds UI rules.
+The 2026-10-15 six-part refinement batch is implemented on
+`feat/ui-component-polish`: Tasks, Connections, shared frame, searchable Chat
+history, control feedback and narrow/wide continuity. Its detailed delivery and
+pending desktop review are in [the batch record](plan-ui.md#six-part-ui-refinement---2026-10-15).
+This does not close native acceptance or begin UX7.
+
 These IDs are new; completed W/U/L steps stay in Done. UI-only refinements do not
 reopen shipped features, and the R3/tag gate below keeps its existing scope.
 

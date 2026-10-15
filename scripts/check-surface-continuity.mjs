@@ -83,6 +83,8 @@ const source = path => JSON.stringify(`${root}src/${path}`.replaceAll("\\", "/")
 const bundles = await build({ configFile: false, root, logLevel: "silent",
   plugins: [{ name: "continuity-entry", resolveId: id => id.endsWith("continuity-entry") ? "\0continuity-entry" : null,
     load: id => id === "\0continuity-entry" ? `
+      export { createConnections } from ${source("surfaces/nest/connections.ts")};
+      export { createRecent } from ${source("surfaces/nest/recent.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
       export { Scene } from ${source("island/scene.ts")};
@@ -93,7 +95,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -103,7 +105,7 @@ const visibility = hidden => { document.hidden = hidden; for (const fn of docume
 const row = { item: "org/alpha#7", group: "to-review", name: "org/alpha#7", title: "Review alpha", checks: null, review: null, link: true, merge: false,
   facts: { repo: "org/alpha", branch: "feature/alpha", diff: null, author: null, reviewers: [], updated: null, runs: [], release: null, command: null } };
 
-for (const width of [480, 1180]) {
+for (const width of [480, 760, 900, 1180]) {
   window.innerWidth = width;
   for (const presence of ["island", "panel", "quiet"]) {
     fsm.setPresence(presence); fsm.setNestOpen(false); fsm.setNestHolds(false);
@@ -225,6 +227,22 @@ for (const width of [480, 1180]) {
     window.innerHeight = 640;
     for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
     assert.equal(active.get(canvas), true);
+    const beforeHistory = structuredClone(draft);
+    page.querySelector(".recent-toggle").fire("click");
+    if (width < 900) {
+      assert.equal(page.querySelector(".nest-chat").classList.contains("recent-open"), true);
+      assert.equal(active.get(canvas), false, "Narrow history stops the hidden portrait");
+      assert.equal(document.activeElement, page.querySelector(".nest-recent-search"));
+      page.querySelector(".nest-recent-back").fire("click");
+      assert.equal(page.querySelector(".nest-chat").classList.contains("recent-open"), false);
+      assert.equal(active.get(canvas), true);
+      assert.equal(document.activeElement, page.querySelector(".recent-toggle"));
+    } else {
+      assert.equal(page.querySelector(".nest-chat").classList.contains("no-recent"), true);
+      page.querySelector(".recent-toggle").fire("click");
+      assert.equal(page.querySelector(".nest-chat").classList.contains("no-recent"), false);
+    }
+    assert.deepEqual(draft, beforeHistory, "History navigation never rewrites the draft or files");
     const expectedDraft = { ...draft, text: "Unsent\n\nMore context" };
     for (const full of [true, false, true, false]) {
       page.querySelector(full ? ".nest-fullscreen" : '[data-size="room"]').fire("click"); await requested;
@@ -240,6 +258,15 @@ for (const width of [480, 1180]) {
     assert.deepEqual(connectionPlace, { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 });
     if (width >= 900) assert.equal(page.querySelector('[data-fid="row:org/alpha#7"]').getAttribute("aria-pressed"), "true");
     else assert.ok(page.textContent.includes("Review alpha"), "Narrow recreation restores the selected connection detail");
+    const technical = page.querySelector(".conn-technical");
+    assert.ok(technical, "Selected connections expose technical details separately");
+    assert.ok(!technical.open);
+    technical.open = true;
+    const changedView = structuredClone(view);
+    changedView.boards[0].rows[0].title = "Review alpha updated";
+    nest.view(changedView);
+    assert.equal(page.querySelector(".conn-technical").open, true, "Polling retains expanded technical context");
+    nest.view(view);
     nest.open("audit");
     saveFails = true;
     page.querySelector('[data-size="quick"]').fire("click"); await requested;
@@ -274,4 +301,73 @@ for (const width of [480, 1180]) {
     page.remove(); fsm.setNestOpen(false); fsm.setNestHolds(false); machine.unpin(0);
   }
 }
-console.log("check-surface-continuity: ok (480/1180, Island/Panel/Quiet, Room/Full/Quick/Mini, failed save/retry, saved recreation, minimize/restore, Zeca off, source/draft/files/filters/connection/owner, no actions)");
+console.log("check-surface-continuity: ok (480/760/900/1180, Island/Panel/Quiet, Room/Full/Quick/Mini, failed save/retry, saved recreation, minimize/restore, Zeca off, source/draft/files/filters/connection/owner, no actions)");
+
+// A retained search field filters the whole local list, including entries past the first page.
+const requests = [], opened = [];
+let recentBusy = false;
+const recent = createRecent({ list: () => new Promise((resolve, reject) => requests.push({ resolve, reject })),
+  open: id => opened.push(id), fresh: () => opened.push("fresh"), busy: () => recentBusy });
+document.body.replaceChildren(recent.element);
+const now = new Date();
+const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+const rows = Array.from({ length: 35 }, (_, i) => ({ id: i, title: i === 34 ? "Old login failure" : `Conversation ${i}`, label: i === 34 ? "Codex" : "API", folder: i === 34 ? "/work/legacy" : "/work/current", updatedMs: i === 34 ? yesterday.getTime() : now.getTime() - i * 1000, current: i === 0 }));
+recent.refresh();
+assert.ok(recent.element.textContent.includes("Loading"));
+requests.at(-1).resolve(rows); await tick();
+assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 30);
+assert.ok(recent.element.querySelector('[aria-current="true"]'));
+const search = recent.element.querySelector("input"); search.value = "legacy"; search.focus(); search.fire("input");
+assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 1);
+assert.ok(recent.element.textContent.includes("Yesterday"));
+assert.equal(document.activeElement, search);
+recent.element.querySelector(".nest-recent-row").fire("click"); assert.deepEqual(opened, [34]);
+search.value = "Codex"; search.fire("input"); assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 1);
+search.value = "missing"; search.fire("input"); assert.ok(recent.element.textContent.includes("No conversations match"));
+search.value = "legacy"; search.fire("input");
+recent.refresh(); requests.at(-1).reject(new Error("Offline")); await tick();
+assert.ok(recent.element.textContent.includes("The last loaded list may be out of date"));
+assert.ok(recent.element.textContent.includes("Old login failure"));
+assert.equal(search.value, "legacy"); assert.equal(document.activeElement, search);
+const recreatedRecent = createRecent({ list: async () => rows, open() {}, fresh() {}, busy: () => false });
+assert.equal(recreatedRecent.element.querySelector("input").value, "legacy", "Closing and recreating Nest keeps the local history search");
+recent.element.querySelector(".nest-recent-status").querySelector("button").fire("click");
+assert.equal(recent.element.querySelector(".nest-recent-status").querySelector("button").disabled, true);
+requests.at(-1).resolve(rows); await tick();
+assert.ok(!recent.element.textContent.includes("The last loaded list"));
+recentBusy = true; recent.refresh(); requests.at(-1).resolve(rows); await tick();
+recent.element.querySelector(".nest-recent-row").fire("click");
+assert.deepEqual(opened, [34], "Even an old row cannot switch conversations during a turn");
+recentBusy = false; search.value = ""; search.fire("input");
+recent.element.querySelectorAll("button").find(n => n.textContent === "Show more").fire("click");
+assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 35);
+recent.refresh(); const olderRequest = requests.at(-1); recent.refresh();
+requests.at(-1).resolve(rows); await tick(); olderRequest.reject(new Error("Obsolete")); await tick();
+assert.ok(!recent.element.textContent.includes("The last loaded list"));
+console.log("check-surface-continuity: Recent local search, date groups, pagination, busy guard, retained query/focus, stale list/retry and response ordering");
+
+// Only the explicit second click merges; updates and retry never perform this action.
+window.innerWidth = 480;
+const polls = [], merges = [];
+const connections = createConnections({ status: async () => [], refresh: () => new Promise((resolve, reject) => polls.push({ resolve, reject })),
+  onMerged() {}, merge: async (...args) => { merges.push(args); }, settings() {}, open() {}, zeca: () => null });
+const mergeRow = { ...row, group: "yours", checks: "passing", merge: true,
+  facts: { ...row.facts, runs: [{ name: "CI", state: "passed" }] } };
+connections.update({ boards: [{ connector: "github", rows: [mergeRow] }] });
+document.body.replaceChildren(connections.element); await tick();
+connections.element.querySelector(".conn-row").fire("click");
+const at = id => connections.element.querySelector(`[data-fid="act:${id}"]`);
+assert.ok(connections.element.querySelector(".conn-check-summary").textContent.includes("1 of 1 passed"));
+assert.equal(connections.element.querySelector(".conn-technical").contains(at("merge")), false);
+at("merge").fire("click"); assert.equal(merges.length, 0);
+at("merge-cancel").fire("click"); assert.equal(merges.length, 0);
+at("merge").fire("click"); const confirmation = at("merge-yes"); confirmation.fire("click"); confirmation.fire("click");
+await tick(); assert.equal(merges.length, 1, "A stale confirmation cannot submit a duplicate merge");
+at("refresh").fire("click"); at("refresh").fire("click"); assert.equal(polls.length, 1);
+assert.equal(at("refresh").getAttribute("aria-busy"), "true");
+polls[0].reject(new Error("Offline")); await tick();
+assert.ok(connections.element.textContent.includes("Connections could not update"));
+at("refresh").fire("click"); polls[1].resolve(); await tick();
+assert.ok(!connections.element.textContent.includes("Connections could not update"));
+assert.equal(merges.length, 1);
+console.log("check-surface-continuity: Connections check/action hierarchy, explicit merge/cancel, duplicate guards, refresh error/retry");

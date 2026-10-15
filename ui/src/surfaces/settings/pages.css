@@ -774,3 +774,10 @@ code {
 .nav, .segmented button {
   transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
+
+/* Save feedback belongs to the shared controls, including Activity history. */
+
+.setting-feedback { display: block; margin-top: 6px; font-size: 11px; line-height: 1.5; color: var(--fg-dim); }
+.setting-feedback:empty { display: none; }
+.setting-feedback.error { color: var(--error-text); }
+[aria-busy="true"].toggle, [aria-busy="true"] .toggle { cursor: progress; }

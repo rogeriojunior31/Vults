@@ -202,6 +202,7 @@ export function createNest(
     memoryButton.classList.toggle("on", open);
     memoryButton.setAttribute("aria-pressed", String(open));
     if (open) {
+      if (window.innerWidth <= 1100) setRecent(false);
       memory.refresh();
       if (matchMedia("(max-width: 600px)").matches) {
         chat.cancelVoice();
@@ -216,11 +217,12 @@ export function createNest(
   // Recent, beside the conversation in a wide window: the saved ones and a new one.
   const recent = createRecent({
     list: () => chat.conversations(),
-    open: (id) => chat.openConversation(id),
-    fresh: () => chat.newConversation(),
+    open: (id) => { chat.openConversation(id); if (!wide.matches) setRecent(false, true); },
+    fresh: () => { chat.newConversation(); if (!wide.matches) setRecent(false, true); },
     busy: () => chat.isBusy(),
+    close: () => setRecent(false, true),
   });
-  /** Recent is only shown in a wide window: asked for only then. */
+  /** A sidebar when wide, a separate view on explicit request when narrow. */
   const wide = window.matchMedia("(min-width: 900px)");
   // The title bar, as the prototype draws it: the conversations' column, the conversation's title,
   // the chat's own pickers (moved here from its head) and the Memory panel.
@@ -228,13 +230,12 @@ export function createNest(
   const recentButton = el("button", {
     class: "chat-ico recent-toggle",
     onclick: () => {
-      const hide = !chatPane.classList.contains("no-recent");
-      chatPane.classList.toggle("no-recent", hide);
-      recentButton.setAttribute("aria-pressed", String(!hide));
-      refreshRecent();
+      setRecent(wide.matches ? chatPane.classList.contains("no-recent") : !chatPane.classList.contains("recent-open"));
     },
   }, icon("sideLeft", 15, 1.6));
-  recentButton.setAttribute("aria-pressed", "true");
+  recentButton.setAttribute("aria-pressed", String(wide.matches));
+  recentButton.setAttribute("aria-controls", "nest-recent");
+  recent.element.id = "nest-recent";
   /** The conversation going on, for the title: asked with Recent, whatever the window's width. */
   let titled = 0;
   const refreshTitle = () => {
@@ -249,9 +250,14 @@ export function createNest(
   const refreshRecent = () => {
     if (tab !== "chat") return;
     refreshTitle();
-    if (wide.matches && !chatPane.classList.contains("no-recent")) recent.refresh();
+    if (wide.matches && !chatPane.classList.contains("no-recent") || !wide.matches && chatPane.classList.contains("recent-open")) recent.refresh();
   };
-  wide.addEventListener("change", refreshRecent);
+  wide.addEventListener("change", () => {
+    recentButton.setAttribute("aria-pressed", String(wide.matches ? !chatPane.classList.contains("no-recent") : chatPane.classList.contains("recent-open")));
+    refreshRecent();
+    if (!wide.matches && !chatPane.classList.contains("recent-open") && recent.element.contains(document.activeElement)) recentButton.focus();
+    if (mounted) paintPortrait();
+  });
   const chatPane = el(
     "div",
     { class: "nest-chat" },
@@ -273,6 +279,21 @@ export function createNest(
       memoryPane,
     ),
   );
+
+  function setRecent(open: boolean, returnFocus = false): void {
+    if (open && window.innerWidth <= 1100) setMemory(false);
+    if (wide.matches) chatPane.classList.toggle("no-recent", !open);
+    else {
+      chatPane.classList.toggle("recent-open", open);
+      if (open) chat.cancelVoice();
+    }
+    recentButton.setAttribute("aria-pressed", String(open));
+    if (open) {
+      recent.refresh();
+      recent.element.querySelector<HTMLInputElement>(".nest-recent-search")?.focus();
+    } else if (returnFocus) recentButton.focus();
+    if (mounted) paintPortrait();
+  }
 
   const subButtons = SUBS.map((id) => {
     const b = el("button", { class: "nest-sub", onclick: () => showSub(id) });
@@ -349,7 +370,8 @@ export function createNest(
   const portraitNarrow = window.matchMedia("(max-width: 600px)");
   function paintPortrait(): void {
     portrait.setActive(zecaOn && tab === "chat" && !document.hidden && !last?.locked
-      && root.isConnected && portraitSpace.matches && !(portraitNarrow.matches && !memoryPane.hidden));
+      && root.isConnected && portraitSpace.matches && !(portraitNarrow.matches && !memoryPane.hidden)
+      && (wide.matches || !chatPane.classList.contains("recent-open")));
     portrait.update([], null, zecaOn ? { clip: chat.clip(Clock.now()), agent: chat.agent() } : null);
   }
   portraitSpace.addEventListener("change", paintPortrait);
@@ -555,6 +577,11 @@ export function createNest(
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !e.isComposing && !e.defaultPrevented && tab === "chat" && chat.cancelVoice()) {
       e.preventDefault();
+      return;
+    }
+    if (e.key === "Escape" && !e.isComposing && !e.defaultPrevented && paletteHost.hidden && tab === "chat" && !wide.matches && chatPane.classList.contains("recent-open")) {
+      e.preventDefault();
+      setRecent(false, true);
       return;
     }
     const typing = (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]");

@@ -449,6 +449,13 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
   const card = (task: TaskRow): HTMLElement => {
     const met = task.criteria.filter((c) => c.done).length;
     const next = task.criteria.find((c) => !c.done);
+    const progressLabel = task.criteria.length ? t("{met} of {all} met", { met, all: task.criteria.length }) : t("No criteria");
+    const progress = task.criteria.length ? el("progress", { class: "task-progress" }) : null;
+    if (progress) {
+      progress.max = task.criteria.length;
+      progress.value = met;
+      progress.setAttribute("aria-label", progressLabel);
+    }
     const sure = deleting === task.id;
     const actions = run(task);
     const reply = task.reply
@@ -533,20 +540,17 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
       { class: `task ${task.status}` },
       el(
         "header",
-        { class: "roost-head" },
-        el("span", { class: "task-goal", text: task.goal }),
-        el("span", { class: "row-tag task-status", text: t(STATUS[task.status] ?? task.status) }),
-        task.running ? el("span", { class: "row-tag running", text: t("Running") }) : null,
-        el("span", {
-          class: "row-tag",
-          text: task.criteria.length ? t("{met} of {all} met", { met, all: task.criteria.length }) : t("No criteria"),
-        }),
+        { class: "task-heading" },
+        el("h3", { class: "task-goal", text: task.goal }),
+        el("span", { class: "task-status", text: t(STATUS[task.status] ?? task.status) }),
       ),
+      el("div", { class: "task-progress-line" }, progress, el("span", { text: progressLabel }),
+        task.running ? el("span", { class: "task-execution running", text: t("Running") }) : null),
       task.route && routed(task.route) ? el("p", { class: "board-empty task-route", text: routed(task.route)! }) : null,
       task.reviewRound ? rounds(task.reviewRound, task.reviewVerdict) : null,
-      next ? el("p", { class: "board-empty task-next", text: `${t("Next")}: ${next.text}` }) : null,
+      next ? el("p", { class: "task-next" }, el("span", { text: t("Next") }), el("strong", { text: next.text })) : null,
       el("p", {
-        class: "board-empty",
+        class: "task-context",
         text: [
           task.roost || task.folder || t("No project"),
           task.costUsd !== null ? t("Cost {cost}", { cost: money(task.costUsd) }) : null,

@@ -1,5 +1,5 @@
 # Tarefas
-<!-- source: 97886802f806 -->
+<!-- source: 552f0b794170 -->
 
 Uma tarefa é um objetivo com os critérios que dizem que ela está pronta, guardada neste computador,
 que o Vults pode passar para um agente trabalhando num clone só dele. A aba **Tasks** do Nest as lista
@@ -47,7 +47,10 @@ recarrega sem iniciar trabalho nem enviar o rascunho. Uma falha no primeiro carr
 mostra um erro em vez de afirmar que não há tarefas. Erros de ações continuam visíveis até
 outra ação ter sucesso ou você abrir Nova tarefa.
 
-Cada card mantém o objetivo, o estado, o próximo critério e Iniciar, Continuar ou Parar visíveis.
+Cada card destaca objetivo e estado, seguidos de uma barra de progresso dos critérios e do
+próximo critério pendente. **Em execução** descreve a execução do agente separadamente do
+ciclo da tarefa: terminar um turno não marca a tarefa como concluída. Iniciar,
+Continuar ou Parar permanecem visíveis; projeto e custo ficam como contexto de apoio.
 Atualizações da lista e edições salvas mantêm o foco do teclado no estado,
 responsável ou critério daquela tarefa. Se o controle focado desaparecer, o foco
 volta para Mais ações, ou Nova tarefa quando o card sair da lista. Atualizações

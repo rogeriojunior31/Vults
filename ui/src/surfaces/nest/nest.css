@@ -159,18 +159,8 @@ body {
   right: 0;
   left: auto;
 }
-/* Wide, Recent lists the conversations: the chat's own list button would say it twice. */
-@media (min-width: 900px) {
-  .nest-chat:not(.no-recent) .chat-titlebar .history-box {
-    display: none;
-  }
-}
-/* Between 900 and 1100 px with Memory open, Recent gives way, and so does its button. */
-@media (max-width: 1100px) {
-  .nest-chat:has(.nest-memory:not([hidden])) .chat-titlebar .recent-toggle {
-    display: none;
-  }
-}
+/* One history entry point opens either the sidebar or the narrow view. */
+.chat-titlebar .history-box { display: none; }
 /* Narrow, the pickers take a line of their own under the title. */
 @media (max-width: 760px) {
   .chat-titlebar {
@@ -182,15 +172,8 @@ body {
     justify-content: flex-start;
   }
 }
-/* Recent shows only in a wide window: its button too. */
-@media (max-width: 899px) {
-  .chat-titlebar .recent-toggle {
-    display: none;
-  }
-}
-/* Recent hidden by its button (the title bar's left icon). */
-.nest-chat.no-recent .nest-recent {
-  display: none;
+@media (min-width: 900px) {
+  .nest-chat.no-recent .nest-recent { display: none; }
 }
 /* The gear: Settings. */
 /* Activity: its sub-tabs, then the part chosen. */
@@ -402,7 +385,7 @@ body {
 }
 .conn-row-words strong {
   overflow: hidden;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -446,11 +429,40 @@ body {
   color: var(--warn);
 }
 .conn-detail {
-  padding: 18px 20px;
-  border: 1px solid #292b31;
-  border-radius: 8px;
-  background: #101114;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--float);
+  overflow-wrap: anywhere;
 }
+.conn-technical {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.conn-technical > summary {
+  cursor: pointer;
+  min-height: 32px;
+  padding: 12px 0 4px;
+  color: var(--fg-dim);
+}
+.conn-technical .context-dl { margin-top: 12px; }
+.conn-review, .conn-check-summary {
+  margin: 8px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+}
+.conn-check-summary { font-variant-numeric: tabular-nums; }
+.conn-detail .conn-acts > .outline { border: 0; background: var(--raised); }
+.conn-row-words small { overflow-wrap: anywhere; line-height: 1.6; }
+.conn-row-words strong { line-height: 1.5; }
+.conn-detail-head { flex-wrap: wrap; }
+.conn-detail-head .conn-tag { margin-left: auto; }
+.conn-technical .conn-cmd { border: none; }
+.conn-technical .conn-cmd code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.conn-cmd button { min-width: 32px; min-height: 32px; }
 .conn-detail-head {
   display: flex;
   align-items: center;
@@ -968,33 +980,100 @@ body {
   color: var(--error-text);
   overflow-wrap: anywhere;
 }
-/* L8: the tasks in the prototype's cards, though it draws no Tasks tab of its own. */
+/* Goal, completion and execution are separate reading levels. */
 .task {
-  padding: 16px 20px;
-  border: 1px solid #292b31;
-  border-radius: 8px;
-  background: #101114;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--float);
+  min-width: 0;
 }
 .task.done,
 .task.dropped {
-  opacity: 0.6;
+  opacity: 0.65;
+}
+.task-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
 }
 .task-goal {
-  font-size: 14px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
   font-weight: 600;
+  overflow-wrap: anywhere;
   color: var(--fg);
 }
+.task-status {
+  flex: none;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+.task.blocked .task-status { color: var(--error-text); }
+.task.done .task-status { color: var(--ok); }
+.task-progress-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}
+.task-progress {
+  appearance: none;
+  border: none;
+  width: 96px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.task-progress::-webkit-progress-bar { background: var(--raised); }
+.task-progress::-webkit-progress-value { background: var(--mark); }
+.task-progress::-moz-progress-bar { background: var(--mark); }
+.task-execution { margin-left: auto; color: var(--fg); }
+.task-execution::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
 .task-next {
-  margin: 8px 0 0;
-  color: var(--fg);
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.task-next > span { color: var(--fg-dim); flex: none; }
+.task-next > strong { font-weight: 500; color: var(--fg); min-width: 0; }
+.task-context {
+  margin: 8px 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 .task-criterion {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   font-size: 12px;
-  padding: 2px 0;
+  padding: 6px 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
+.task-check { flex: none; margin-top: 3px; }
 .task-criterion.met span {
   color: var(--fg-muted);
   text-decoration: line-through;
@@ -1842,10 +1921,8 @@ body.still .detail-content.detail-enter { animation: none; }
 /* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
 .tasks-roost {
   margin: 14px 0 -2px;
-  font: 9px var(--mono);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #9da29b;
+  font: 500 12px var(--font);
+  color: var(--fg-dim);
 }
 /* The tab's buttons as the prototype's: bordered outlines, a light primary (and Cost's budget). */
 .task-spend .btn,
@@ -1899,73 +1976,77 @@ body.still .detail-content.detail-enter { animation: none; }
 .task-round.none {
   background: var(--info);
 }
-/* The Chat's Recent (U9): beside the conversation in a wide window only. */
-.nest-recent {
-  display: none;
-}
+/* Recent keeps its search stable while only the results scroll. */
+.nest-recent { display: none; }
 @media (min-width: 900px) {
   .nest-recent {
     order: -1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    flex: none;
-    width: 230px;
+    gap: 8px;
+    flex: 0 0 248px;
     min-height: 0;
-    overflow-y: auto;
-    padding: 12px 11px 16px;
+    padding: 16px 12px;
     border-right: 1px solid var(--chrome-line);
+    background: var(--chrome);
   }
 }
-.nest-new-chat.outline {
-  width: 100%;
+.nest-recent-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.nest-recent-actions .nest-new-chat { flex: 1; }
+.nest-new-chat.outline, .nest-recent .outline {
   min-height: 32px;
-  margin-bottom: 14px;
   padding: 7px 12px;
-  border: 1px solid #3a3d44;
+  border: 0;
   border-radius: 6px;
-  font-size: 11px;
-}
-.nest-new-chat.outline:hover:not(:disabled) {
-  border-color: #6b7065;
   background: var(--raised);
+  font-size: 12px;
 }
-.nest-recent-head {
-  margin: 0 0 4px 8px;
-  font: 9px var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
+.nest-recent-search {
+  flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--float);
+  color: var(--fg);
+  font: 12px var(--font);
 }
+.nest-recent-search::placeholder { color: var(--fg-muted); }
+.nest-recent-head { margin: 8px 8px 0; font-size: 12px; font-weight: 600; color: var(--fg-dim); }
 .nest-recent-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .nest-recent-row {
   display: grid;
-  gap: 4px;
-  padding: 10px 9px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  flex: none;
+  padding: 10px;
   border-radius: 6px;
   text-align: left;
   font-size: 12px;
+  background: transparent;
+  transition: background-color var(--motion-fast) var(--ease-out);
 }
-.nest-recent-row:hover {
-  background: #17191d;
-}
-.nest-recent-row.current {
-  background: var(--raised);
-}
-.nest-recent-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--fg);
-}
-.nest-recent-meta {
-  font-size: 10px;
-  color: var(--fg-dim);
-}
+.nest-recent-row:hover { background: var(--float); }
+.nest-recent-row.current { background: var(--raised); }
+.nest-recent-row.current .nest-recent-title { font-weight: 600; }
+.nest-recent-title { grid-column: 1 / -1; color: var(--fg); }
+.nest-recent-title, .nest-recent-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nest-recent-meta, .nest-recent-time { font-size: 11px; color: var(--fg-dim); }
+.nest-recent-time { font-variant-numeric: tabular-nums; }
+.nest-recent-day { margin: 12px 10px 4px; font-size: 11px; font-weight: 500; color: var(--fg-muted); flex: none; }
+.nest-recent-status { font-size: 12px; color: var(--fg-dim); line-height: 1.5; }
+.nest-recent-status:empty, .nest-recent-status[hidden] { display: none; }
+.nest-recent-back { display: none; }
 /* With Memory open too, the conversation needs the room Recent would take, until it is wide. */
 @media (max-width: 1100px) {
   .nest-chat-body:has(> .nest-memory:not([hidden])) > .nest-recent {
@@ -2444,4 +2525,59 @@ body.still .detail-content.detail-enter { animation: none; }
     right: auto;
     left: 0;
   }
+}
+
+/* Narrow Room uses the same retained history, without squeezing the composer beside it. */
+@media (max-width: 899px) {
+  .nest-chat.recent-open .nest-recent {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px 16px;
+    background: var(--chrome);
+  }
+  .nest-chat.recent-open .nest-chat-main { display: none; }
+  .nest-recent-back {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    white-space: nowrap;
+    min-height: 32px;
+    padding: 4px 0;
+    font-size: 12px;
+    color: var(--fg);
+  }
+  .nest-recent-search { max-width: none; }
+}
+@media (max-width: 760px) {
+  .task { padding: 16px; }
+  .task-heading { flex-wrap: wrap; gap: 6px 12px; }
+  .task-goal { flex-basis: 100%; }
+  .tasks-roost { margin-top: 8px; }
+  .conn-head { flex-direction: column; gap: 12px; }
+  .conn-actions { width: 100%; }
+  .conn-repo { flex: 1; min-width: 0; max-width: 100%; }
+  .conn-detail { padding: 16px; }
+  .conn-row { flex-wrap: wrap; gap: 8px; }
+  .conn-row-words { flex-basis: calc(100% - 28px); }
+  .conn-row > .conn-tag { margin-left: 24px; font-size: 11px; }
+  .conn-row-words strong { white-space: normal; overflow-wrap: anywhere; }
+  .chat-titlebar .chat-head { min-width: 0; }
+  .nest-chat .chat-head > .engine-box { flex: 0 1 auto; min-width: 0; max-width: calc(100% - 80px); }
+  .nest-chat .engine-box .place.model { max-width: 100%; }
+}
+@media (max-height: 480px) {
+  .nest-chat.recent-open .nest-recent { gap: 4px; padding: 4px 12px; }
+  .nest-recent-head { display: none; }
+  .nest-recent-back { min-height: 28px; }
+}
+
+.task .btn:not(.primary) { border-color: transparent; background: var(--raised); }
+.task .btn:not(.primary):hover:not(:disabled) { border-color: transparent; background: var(--panel); }
+:where(.tasks, .nest-connections, .nest-recent) :is(button, input, select, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

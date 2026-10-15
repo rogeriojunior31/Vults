@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 947d0e9152e7 -->
+<!-- source: 2d66bc10da9f -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -45,9 +45,13 @@ config de um agente, uma chave, uma política ou um celular, e nunca mostram tex
 seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
 **Alt+1** a **Alt+5** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
-desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), **Zeca's look** abre a página dele nas
+desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.
+
+Os interruptores e seletores de Configurações mostram salvando, salvo ou uma falha local.
+Enquanto a linha salva, novas mudanças esperam mesmo se a página atualizar. Uma falha
+restaura a escolha anterior; uma gravação malsucedida nunca aparece como concluída.
 
 **Ctrl+K**, no Nest ou na ilha aberta (quando ela tem o teclado: aberta com Ctrl+Alt+Space, ou no
 chat dela), abre a paleta: digite para pular para uma sessão, para
@@ -133,9 +137,14 @@ e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece
 são respondidos aqui também, com **Deny**, **Allow** e **Always in this chat**, como na ilha.
 A barra de título traz o título da conversa, a pílula do motor (como na ilha: o motor na cor dele e
 o modelo; o menu dela traz os motores, os modelos e o esforço), a pasta e dois botões de painel. O
-campo de texto tem um clipe: os arquivos que você escolhe vão para este chat, como soltar na ilha. Numa janela larga ou no Full, o da esquerda mostra **Recent**: as suas 30 conversas mais
-novas, a atual marcada, e **+ New conversation** (os dois esperam enquanto o Zeca responde); um
-clique continua uma delas. O da direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
+campo de texto tem um clipe: os arquivos que você escolhe vão para este chat, como soltar na ilha. O botão de painel à esquerda abre **Recent**: uma coluna numa janela larga ou no Full,
+ou uma visão própria com **Back to Chat** no Room estreito. As conversas são agrupadas por data,
+com projeto, executor e horário abaixo do título; a conversa atual fica marcada.
+**Search conversations** busca localmente em todos os títulos, pastas e executores carregados,
+inclusive além das primeiras 30 conversas. **Show more** revela o restante. A busca fica neste
+computador ao fechar e reabrir o Nest. **+ New conversation** e a troca de conversa esperam
+enquanto o Zeca responde. Se a atualização falhar, a última lista fica disponível com **Try again**.
+O botão à direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
 que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)). Antes de
 qualquer mensagem, o compositor espera no meio com algumas perguntas para começar. Sem o Zeca não há
 aba Chat.
@@ -190,11 +199,12 @@ de novo (no máximo uma vez por minuto). No GitHub, quatro abas com a contagem: 
 espera por você: revisões pedidas a você, seus pull requests falhando, devolvidos ou prontos para
 merge, um branch padrão falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos
 seus branches padrão; em vermelho com quantos falham) e **Releases** (a mais recente de cada
-repositório). Uma linha escolhida aparece ao lado: o repositório, o branch, o tamanho
-(`+120 −40 · 6 files`), quem revisou ou foi chamado, quando mudou pela última vez, cada check um a um
-(uma barra enquanto rodam), um comando `gh` para olhar mais de perto com **Copy** (o Vults nunca o
-roda), **Open in GitHub ↗** e as ações da linha, como na ilha ([O card do
-GitHub](connectors.md#the-github-card)); uma linha marcada com **✓ Seen** fica esmaecida aqui. **Add a connection** lista cada conector
+repositório). O item selecionado prioriza título, revisão, checks e ações, incluindo
+**Open in GitHub ↗**, como na ilha ([O card do GitHub](connectors.md#the-github-card)).
+**Technical details** expande autor, branch, tamanho (`+120 −40 · 6 files`), horário da
+atualização e um comando `gh` com **Copy** (o Vults nunca o roda). A seção continua aberta
+durante as atualizações. Se a atualização manual falhar, as linhas atuais continuam disponíveis
+com a opção de tentar de novo; uma linha marcada com **✓ Seen** fica esmaecida aqui. **Add a connection** lista cada conector
 do Vults que está desligado, com o que ele observa; **Turn on in Settings…** e **Manage
 connections** abrem **Settings → Connectors**, o único lugar que liga um conector
 ([Conectores](connectors.md)).

@@ -44,9 +44,13 @@ agent's config, a key, a policy or a phone, and it never shows an agent's text. 
 the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
 pill. **Alt+1** to **Alt+5** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
-switches him (as **Settings → Flock & Zeca → Zeca** does), **Zeca's look** opens his page in
+switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.
+
+Settings switches and choice controls show saving, saved or a local failure message.
+While a row is saving, repeated changes wait even if Settings refreshes. A failed save
+restores the previous choice; it never reports success for an unsuccessful write.
 
 **Ctrl+K**, in the Nest or the open island (when it has the keyboard: opened with Ctrl+Alt+Space, or
 in its chat), opens the palette: type to jump to a session, to start
@@ -127,9 +131,14 @@ are answered here too, with **Deny**, **Allow** and **Always in this chat**, as 
 The title bar holds the conversation's title, the engine pill (as on the island: the engine in its
 color and its model; its menu holds the engines, the models and the effort), the folder, and two
 panel buttons. The composer has a paperclip: the files you pick go to this chat, as a drop on the
-island does. In a wide window or Full, the left one shows **Recent**: your newest 30 conversations, the
-one going on marked, and **+ New conversation** (both wait while Zeca replies); a click goes on with
-one. The right one opens **Memory**, what Zeca remembers, beside the conversation: what waits for
+island does. The left panel button opens **Recent**: a sidebar in a wide window or Full,
+or a separate view with **Back to Chat** in a narrow Room. Conversations are grouped by date,
+with their project, executor and time below the title; the current conversation is marked.
+**Search conversations** searches all loaded titles, folders and executors locally, including
+conversations past the initial 30. **Show more** reveals the rest. The search stays on this
+computer when the Nest closes and reopens. **+ New conversation** and switching to another
+conversation wait while Zeca replies. A failed update keeps the last list and offers **Try again**.
+The right button opens **Memory**, what Zeca remembers, beside the conversation: what waits for
 your yes, the files and their history ([Zeca's memory](memory.md)). Before anything is said, the
 composer waits in the middle with a few questions to start. Without Zeca there is no Chat tab.
 
@@ -180,10 +189,12 @@ repository filter (**All repos** or one of them), and **↻ Refresh** to ask aga
 minute). For GitHub, four tabs with their counts: **Inbox** (what waits on you: reviews asked of
 you, your pull requests failing, sent back or ready to merge, a default branch failing; how many
 are new), **Pull requests**, **Actions** (your default branches' checks; red with how many fail)
-and **Releases** (each repository's latest). A row picked shows beside them: its repository, branch,
-size (`+120 −40 · 6 files`), who reviewed or is asked, when it last changed, each check one by one
-(a bar while they run), a `gh` command to look closer with **Copy** (Vults never runs it), **Open in
-GitHub ↗**, and the row's actions, as on the island ([The GitHub card](connectors.md#the-github-card));
+and **Releases** (each repository's latest). A selected row prioritizes its title, review,
+checks and actions, including **Open in GitHub ↗**, as on the island
+([The GitHub card](connectors.md#the-github-card)). **Technical details** expands its author,
+branch, size (`+120 −40 · 6 files`), update time and a `gh` command with **Copy**
+(Vults never runs it). This disclosure stays open across polling updates. A failed manual
+refresh keeps the current rows and offers another attempt;
 a row marked **✓ Seen** dims here. **Add a connection** lists each connector Vults has that is off, with what it
 watches; **Turn on in Settings…** and **Manage connections** open **Settings → Connectors**, the
 only place that turns one on ([Connectors](connectors.md)).

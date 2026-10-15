@@ -5,7 +5,7 @@ import { build } from "vite";
 const nodes = node => [node, ...node.children.flatMap(nodes)];
 class Element {
   children = []; listeners = {}; attributes = {}; dataset = {}; style = { setProperty() {} };
-  className = ""; value = ""; open = false; scrollTop = 0; selectionStart = null; selectionEnd = null;
+  className = ""; value = ""; open = false; disabled = false; scrollTop = 0; selectionStart = null; selectionEnd = null;
   constructor(tag) { this.tagName = tag.toUpperCase(); }
   classList = {
     contains: name => this.className.split(" ").includes(name),
@@ -37,13 +37,18 @@ class Element {
   querySelectorAll(selector) { return nodes(this).slice(1).filter(n => n.matches(selector)); }
   querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null; }
   setAttribute(name, value) { this.attributes[name] = value; }
-  getAttribute(name) { return this.attributes[name]; }
+  get isConnected() { return this === document.body || !!this.parentElement?.isConnected; }
+  getAttribute(name) { return this.attributes[name] ?? null; }
+  hasAttribute(name) { return name in this.attributes; }
+  closest(selector) { return this.matches(selector) ? this : this.parentElement?.closest(selector) ?? null; }
   addEventListener(name, fn) { (this.listeners[name] ??= []).push(fn); }
   fire(name, event = {}) { for (const fn of this.listeners[name] ?? []) fn({ target: this, ...event }); }
   focus() { document.activeElement = this; }
   setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
 }
+const pendingSettings = [];
+let holdSettings = false;
 const root = new Element("div"), events = {}, writes = [], routes = [];
 root.id = "settings";
 globalThis.document = { body: new Element("body"), documentElement: new Element("html"),
@@ -67,6 +72,10 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   return async (...args) => {
     switch (name) {
       case "appSettings": return settings;
+      case "setWidget": case "setPresence": case "setSounds":
+        writes.push([name, ...args]);
+        if (holdSettings) return new Promise((resolve, reject) => pendingSettings.push({ resolve, reject }));
+        return;
       case "nestIsFull": return false;
       case "monitors": case "connectorsStatus": case "rulesList": case "policiesList": case "agentsDoctor": return [];
       case "projectPrefs": return {};
@@ -146,3 +155,47 @@ for (const label of ["Approvals", "Projects", "Connectors", "Phone", "Flock & Ze
 }
 assert.deepEqual(writes, []);
 console.log("check-settings-ui: all ten pages, single headings, disclosed diagnostics/shortcuts, retained scroll/focus/draft, Activity routing and explicit history confirmation");
+
+await go("General");
+const soundsRow = () => page().querySelectorAll(".row").find(n => n.querySelector(".row-title")?.textContent === "Sounds");
+const soundsControl = () => soundsRow().querySelector("input");
+holdSettings = true;
+const oldSound = soundsControl().checked;
+soundsControl().checked = !oldSound; soundsControl().fire("change"); await tick();
+assert.equal(pendingSettings.length, 1);
+assert.equal(soundsControl().disabled, true);
+assert.ok(soundsRow().textContent.includes("Saving"));
+events.onSettings({ volume: 60 });
+assert.equal(soundsControl().disabled, true, "A settings refresh cannot unlock a pending write");
+assert.equal(soundsControl().checked, !oldSound, "A pending choice stays visible through repaint");
+soundsControl().fire("change"); await tick(); assert.equal(pendingSettings.length, 1);
+pendingSettings[0].reject(new Error("Cannot write settings")); await tick();
+assert.equal(soundsControl().disabled, false);
+assert.equal(soundsControl().checked, oldSound);
+assert.ok(soundsRow().textContent.includes("Your previous choice is restored"));
+soundsControl().checked = !oldSound; soundsControl().fire("change"); await tick();
+pendingSettings[1].resolve(); await tick();
+assert.equal(soundsControl().disabled, false);
+assert.ok(soundsRow().textContent.includes("Saved."));
+console.log("check-settings-ui: localized saving/saved/failure, rollback and pending guard across row repaint");
+
+const rowNamed = name => page().querySelectorAll(".row").find(n => n.querySelector(".row-title")?.textContent === name);
+const presenceButtons = () => rowNamed("Presence").querySelectorAll("button");
+presenceButtons().find(n => n.textContent === "Panel").fire("click"); await tick();
+assert.equal(presenceButtons().find(n => n.textContent === "Panel").getAttribute("aria-pressed"), "true");
+assert.ok(presenceButtons().every(n => n.disabled));
+events.onSettings({ volume: 65 });
+assert.ok(presenceButtons().every(n => n.disabled));
+pendingSettings.at(-1).reject(new Error("Cannot save presence")); await tick();
+assert.equal(presenceButtons().find(n => n.textContent === "Island").getAttribute("aria-pressed"), "true");
+assert.ok(presenceButtons().every(n => !n.disabled));
+const widget = () => rowNamed("Corner widget").querySelector("select");
+widget().value = "2"; widget().fire("change"); await tick();
+events.onSettings({ volume: 70 });
+assert.equal(widget().value, "2"); assert.equal(widget().disabled, true);
+pendingSettings.at(-1).resolve(); await tick();
+widget().value = "3"; widget().fire("change"); await tick();
+pendingSettings.at(-1).reject(new Error("Cannot save corner")); await tick();
+assert.equal(widget().value, "2", "Select rollback uses the last successful choice after a pending repaint");
+assert.equal(widget().disabled, false);
+console.log("check-settings-ui: segmented selection and dropdown rollback survive pending repaint");
