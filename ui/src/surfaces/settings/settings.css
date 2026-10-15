@@ -17,7 +17,7 @@ body {
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid #24262c;
+  border: 1px solid var(--chrome-line);
   border-radius: 13px;
   background: var(--bg-deep);
 }

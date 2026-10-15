@@ -11,13 +11,21 @@ class Element {
   className = "";
   style = {};
   value = "";
-  classList = { add() {}, remove() {}, toggle() {} };
+  classList = {
+    contains: name => this.className.split(" ").includes(name),
+    add: name => { if (!this.classList.contains(name)) this.className += ` ${name}`; },
+    remove: name => { this.className = this.className.split(" ").filter(value => value !== name).join(" "); },
+    toggle: (name, on = !this.classList.contains(name)) => this.classList[on ? "add" : "remove"](name),
+  };
   constructor(tag) { this.tag = tag; }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return (this.text ?? "") + this.children.map(node => node.textContent).join(""); }
-  append(...nodes) { this.children.push(...nodes); }
-  prepend(...nodes) { this.children.unshift(...nodes); }
-  replaceChildren(...nodes) { this.text = ""; this.children = nodes; }
+  get childNodes() { return this.children; }
+  querySelector(tag) { return nodes(this).find(node => node.tag === tag) ?? null; }
+  append(...nodes) { for (const node of nodes) node.parentElement = this; this.children.push(...nodes); }
+  prepend(...nodes) { for (const node of nodes) node.parentElement = this; this.children.unshift(...nodes); }
+  replaceChildren(...nodes) { this.text = ""; this.children = []; this.append(...nodes); }
+  replaceWith(node) { this.parentElement.children.splice(this.parentElement.children.indexOf(this), 1, node); node.parentElement = this.parentElement; }
   addEventListener(event, fn) { this.listeners[event] = fn; }
   setAttribute(name, value) { this.attributes[name] = value; }
   toggleAttribute() {}
@@ -191,3 +199,101 @@ for (const surface of ["island", "nest"]) {
   assert.deepEqual(decisions, [["visible-only", "deny"]], "One explicit decision answers the visible card once");
 }
 console.log("check-chat-models: hidden/minimized/detached/disabled card shortcuts rejected, visible decision once");
+
+// Real ChatPanel events: composition must not send, and stream updates must respect reading.
+const realNow = performance.now.bind(performance);
+const inertTimeout = window.setTimeout;
+let now = 1000;
+performance.now = () => now;
+try {
+  for (const surface of ["island", "nest"]) {
+    let sent = 0;
+    const panel = new ChatPanel({ models: async () => [], pick: async () => ({}),
+      send: async () => { sent++; },
+    }, () => {}, { window: surface });
+    await tick();
+    const all = nodes(panel.element);
+    const input = all.find(node => node.tag === "textarea");
+    const log = all.find(node => node.className === "log");
+    const jump = all.find(node => node.className === "jump-end");
+    input.value = "Keep composing";
+    for (const event of [{ isComposing: true }, { keyCode: 229 }, { shiftKey: true }]) {
+      input.listeners.keydown({ key: "Enter", preventDefault() { assert.fail("Composition or Shift+Enter must stay native"); }, ...event });
+      await tick();
+      assert.equal(sent, 0);
+      assert.equal(input.value, "Keep composing");
+    }
+    assert.equal(input.attributes["aria-label"], "Ask Zeca…");
+    assert.equal(log.tabIndex, 0, "The transcript must support keyboard scrolling");
+    input.listeners.keydown({ key: "Enter", preventDefault() {} });
+    await tick();
+    assert.equal(sent, 1, "Plain Enter still sends once");
+    panel.receive({ kind: "done" });
+    log.scrollHeight = 1000; log.clientHeight = 200; log.scrollTop = 800;
+    panel.receive({ kind: "text", text: "A reply" });
+    assert.equal(log.scrollTop, 1000, "New text follows the end while pinned");
+
+    for (const [event, detail] of [["wheel", {}], ["touchmove", {}], ["pointerdown", {}], ["keydown", { key: "PageUp" }]]) {
+      const queued = [];
+      window.setTimeout = (fn, ms) => { queued.push({ fn, ms }); return queued.length; };
+      log.scrollTop = 800; log.listeners.scroll();
+      panel.receive({ kind: "text", text: " More" });
+      const repaint = queued.find(timer => timer.ms === 80);
+      assert.ok(repaint, "A stream repaint must be pending before manual input");
+      log.listeners[event](detail);
+      log.listeners.scroll(); // A near-bottom scroll event can arrive during the cooldown.
+      now += 100;
+      repaint.fn();
+      assert.equal(log.scrollTop, 800, `${event}: a queued repaint cannot steal the viewport during the cooldown`);
+      now += 51;
+      panel.receive({ kind: "tool", tool: "Read" });
+      assert.equal(log.scrollTop, 1000, `${event}: follow resumes at the end after the cooldown`);
+
+      log.listeners[event](detail);
+      log.scrollTop = 600; log.listeners.scroll();
+      now += 1000;
+      panel.receive({ kind: "tool", tool: "Read" });
+      assert.equal(log.scrollTop, 600, "Reading older content stays unpinned after the cooldown");
+      jump.listeners.click();
+      assert.equal(log.scrollTop, 1000, "The explicit jump always returns to the latest content");
+      panel.receive({ kind: "text", text: "Next reply" });
+    }
+    window.setTimeout = inertTimeout;
+  }
+} finally {
+  performance.now = realNow;
+  window.setTimeout = inertTimeout;
+}
+console.log("check-chat-models: both surfaces retain IME/Shift+Enter drafts, plain Enter, keyboard transcript, queued stream cooldown, manual reading and explicit jump");
+
+for (const surface of ["island", "nest"]) {
+  const scheduled = [];
+  const timeout = window.setTimeout;
+  window.setTimeout = (fn, ms) => { scheduled.push({ fn, ms }); return scheduled.length; };
+  try {
+    const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {} }, () => {}, { window: surface });
+    await tick();
+    chat.receive({ kind: "text", text: "New reply" });
+    const log = nodes(chat.element).find(node => node.classList.contains("log"));
+    const bubble = log.children[0];
+    assert.ok(bubble.classList.contains("message-enter"));
+    chat.receive({ kind: "text", text: " keeps streaming" });
+    scheduled.find(timer => timer.ms === 80).fn();
+    assert.equal(log.children[0], bubble, "A stream update retains the animated bubble itself");
+    assert.ok(bubble.textContent.includes("keeps streaming"));
+    chat.relabel();
+    assert.ok(!log.children[0].classList.contains("message-enter"), "A repaint never replays old message entrances");
+    chat.attach(["/inbox/1-note.txt"]);
+    const chips = nodes(chat.element).find(node => node.className === "chips");
+    const file = chips.children[0];
+    assert.ok(file.classList.contains("attachment-enter"));
+    assert.equal(file.querySelector("button").attributes["aria-label"], "Remove");
+    chat.receive({ kind: "tool", tool: "Read" });
+    assert.equal(chips.children[0], file, "Stream repaint retains the attachment's node and animation");
+    file.querySelector("button").listeners.click();
+    assert.equal(chips.children.length, 0);
+    chat.load({ ...conversation, lines: [{ who: "you", text: "Saved question", files: [] }, { who: "zeca", text: "Saved answer" }], busy: false });
+    assert.ok(log.children.every(node => !node.classList.contains("message-enter")), "Restoring history never animates old messages as new");
+  } finally { window.setTimeout = timeout; }
+}
+console.log("check-chat-models: live message entrance once, stable streaming bubble/attachment, named removal, saved history without replay in both surfaces");

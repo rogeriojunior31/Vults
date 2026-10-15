@@ -204,6 +204,7 @@ const STREAM_MS = 80;
 const SHOW_ELAPSED_MS = 3000;
 /** Closer than this to the end of the log counts as reading the end: new text keeps it in view. */
 const FOLLOW_PX = 28;
+const SCROLL_COOLDOWN_MS = 150;
 const REFUSED: Record<Refused["reason"], (name: string) => string> = {
   folder: (n) => t("{name} is a folder. Drop the files inside it instead.", { name: n }),
   "too-big": (n) => t("{name} is over 20 MB, too big to read whole.", { name: n }),
@@ -291,6 +292,8 @@ export class ChatPanel {
   private messages: Message[] = [];
   /** The rendered messages, one node per message. */
   private nodes: HTMLElement[] = [];
+  private readonly appeared = new WeakSet<Message>();
+  private readonly attachmentNodes = new Map<string, HTMLElement>();
   private files: string[] = [];
   private busy = false;
   /** When the turn running now began, for the thinking line's seconds. */
@@ -346,6 +349,8 @@ export class ChatPanel {
   private readonly newButton = el("button", { class: "ghost", onclick: () => this.ask("new") });
   private readonly historyMenu = el("div", { class: "menu history-menu" });
   private readonly log = el("div", { class: "log" });
+  private following = true;
+  private lastScrollInput = -Infinity;
   private readonly jump = el("button", {
     class: "jump-end",
     text: t("↓ new text"),
@@ -386,6 +391,7 @@ export class ChatPanel {
     this.input.rows = 1;
     this.setup.setAttribute("role", "img");
     this.input.addEventListener("keydown", (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -449,8 +455,22 @@ export class ChatPanel {
       this.paintHead();
       this.changed();
     });
+    const pauseFollow = () => {
+      this.lastScrollInput = performance.now();
+      this.following = false;
+    };
+    this.log.tabIndex = 0;
+    this.log.setAttribute("role", "region");
+    this.log.addEventListener("wheel", pauseFollow, { passive: true });
+    this.log.addEventListener("touchmove", pauseFollow, { passive: true });
+    this.log.addEventListener("pointerdown", pauseFollow);
+    this.log.addEventListener("keydown", (e) => {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(e.key)) pauseFollow();
+    });
     this.log.addEventListener("scroll", () => {
-      if (this.atEnd()) this.jump.classList.remove("on");
+      this.following = this.atEnd();
+      this.log.classList.toggle("scrolled", this.log.scrollTop > 2);
+      if (this.following) this.jump.classList.remove("on");
     });
     // On the island the chat takes the prototype's compact form: the engine and the conversations
     // up top, the folder and the model under the composer, a paperclip for a file.
@@ -499,6 +519,8 @@ export class ChatPanel {
    *  says which one, so the first call comes from there too. */
   relabel(): void {
     this.input.placeholder = t("Ask Zeca…");
+    this.input.setAttribute("aria-label", t("Ask Zeca…"));
+    this.log.setAttribute("aria-label", t("Chat"));
     this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.");
     this.setup.setAttribute("aria-label", t("Your setup"));
     this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
@@ -864,7 +886,7 @@ export class ChatPanel {
     this.conversationVersion++;
     if (d.kind === "done" || d.kind === "stopped" || d.kind === "error") this.liveEnded = true;
     const last = this.messages[this.messages.length - 1];
-    const follow = this.atEnd();
+    const follow = this.following && this.atEnd();
     if (d.kind === "text") {
       if (last?.who === "zeca" && !last.error) {
         // Streaming: only the message being written changes. Tokens come many a second, and each
@@ -876,7 +898,7 @@ export class ChatPanel {
             this.streaming = undefined;
             // Reset or rebuilt meanwhile: whatever painted last already shows it.
             if (this.messages[i] !== last) return;
-            const follow = this.atEnd();
+            const follow = this.following && this.atEnd();
             this.replace(i);
             this.after(follow);
             this.changed();
@@ -1134,13 +1156,17 @@ export class ChatPanel {
   }
 
   private toEnd(): void {
+    this.following = true;
+    this.lastScrollInput = -Infinity;
     this.log.scrollTop = this.log.scrollHeight;
+    this.log.classList.toggle("scrolled", this.log.scrollTop > 2);
     this.jump.classList.remove("on");
   }
 
   /** After the log changed: keep following the end, or say there is more below. */
   private after(follow: boolean): void {
-    if (follow) this.toEnd();
+    // Check again after a queued stream repaint: user input outranks the earlier snapshot.
+    if (follow && this.following && performance.now() - this.lastScrollInput >= SCROLL_COOLDOWN_MS) this.toEnd();
     else this.jump.classList.add("on");
   }
 
@@ -1157,6 +1183,13 @@ export class ChatPanel {
   }
 
   private node(m: Message): HTMLElement {
+    const node = this.messageNode(m);
+    if (!this.appeared.has(m) && (m.who === "you" || (m.who === "zeca" && !m.error))) node.classList.add("message-enter");
+    this.appeared.add(m);
+    return node;
+  }
+
+  private messageNode(m: Message): HTMLElement {
     if (m.who === "zeca") {
       const last = m === this.messages[this.messages.length - 1];
       if (m.error) {
@@ -1274,8 +1307,9 @@ export class ChatPanel {
   /** Re-renders one message in place. */
   private replace(i: number): void {
     const next = this.node(this.messages[i]);
-    this.nodes[i]?.replaceWith(next);
-    this.nodes[i] = next;
+    // Keep the bubble itself: streaming must not cancel and restart its entrance.
+    const current = this.nodes[i];
+    if (current) current.replaceChildren(...Array.from(next.childNodes));
   }
 
   /** The API choice only while a key is saved (or while its conversation is open). */
@@ -1339,6 +1373,7 @@ export class ChatPanel {
       if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
       return { who: "zeca", text: l.text };
     });
+    for (const message of saved) this.appeared.add(message);
     if (preserveLive) {
       // The owner is unchanged: bind its source without replacing newer cards or ending events.
       this.messages = [...saved, ...this.messages];
@@ -1362,6 +1397,7 @@ export class ChatPanel {
         this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: w.outside });
     }
     if (clearDraft) this.keepDraft();
+    for (const message of this.messages) this.appeared.add(message);
     this.paint();
     this.toEnd();
     this.changed();
@@ -1378,6 +1414,7 @@ export class ChatPanel {
         input.className = "rename";
         input.value = c.title;
         input.addEventListener("keydown", (e) => {
+          if (e.isComposing || e.keyCode === 229) return;
           if (e.key === "Enter") {
             e.preventDefault();
             const title = input.value.trim();
@@ -1808,26 +1845,26 @@ export class ChatPanel {
           ]),
       ...(waiting && this.thinking ? [this.thinking] : []),
     );
-    this.chips.replaceChildren(
-      ...this.files.map((f) =>
-        el(
-          "span",
-          { class: "chip" },
-          icon("file", 11),
-          el("span", { text: shortName(f) }),
-          el("button", {
-            class: "ghost",
-            text: "×",
-            onclick: () => {
-              this.files = this.files.filter((x) => x !== f);
-              this.keepDraft();
-              this.paint();
-              this.changed();
-            },
-          }),
-        ),
-      ),
-    );
+    for (const path of this.attachmentNodes.keys()) if (!this.files.includes(path)) this.attachmentNodes.delete(path);
+    const attachments = this.files.map((file) => {
+      const kept = this.attachmentNodes.get(file);
+      if (kept) {
+        kept.querySelector("button")?.setAttribute("aria-label", t("Remove"));
+        return kept;
+      }
+      const remove = el("button", { class: "ghost", text: "×", onclick: () => {
+        this.files = this.files.filter(path => path !== file);
+        this.keepDraft(); this.paint(); this.changed();
+      } });
+      remove.setAttribute("aria-label", t("Remove"));
+      const chip = el("span", { class: "chip attachment-enter" }, icon("file", 14), el("span", { text: shortName(file) }), remove);
+      chip.title = file;
+      this.attachmentNodes.set(file, chip);
+      return chip;
+    });
+    if (attachments.length !== this.chips.children.length || attachments.some((node, i) => this.chips.children[i] !== node)) {
+      this.chips.replaceChildren(...attachments);
+    }
     this.paintSend();
   }
 }

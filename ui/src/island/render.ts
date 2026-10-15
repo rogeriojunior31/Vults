@@ -1900,8 +1900,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (mode === "hidden") return { w: HIDDEN_W, h: 0, r: RADIUS.compact };
     if (mode === "compact")
       return { w: COMPACT_W, h: COMPACT_H, r: RADIUS.compact };
-    // On screen, its zoom included: the shape and the input region are screen pixels. Not its
-    // bounding box: that holds the opening's scale(0.97), measured before the transition runs.
+    // Layout dimensions include the zoom explicitly; the frame and input region use screen pixels.
     return {
       w: Math.ceil(inner.offsetWidth * OPEN_ZOOM),
       h: Math.ceil(inner.offsetHeight * OPEN_ZOOM),

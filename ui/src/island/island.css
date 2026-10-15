@@ -58,8 +58,7 @@ button:focus-visible,
   cursor: pointer;
 }
 
-/* Two layers, one shown: the compact pill and the open island. The one leaving fades out quickly;
-   the one arriving waits for it, then fades and grows into place. */
+/* Layers cross-fade; the renderer grows the frame without a second scale blurring its sprites. */
 .layer {
   position: absolute;
   top: 0;
@@ -67,19 +66,13 @@ button:focus-visible,
   box-sizing: border-box;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-50%) scale(0.97);
-  transform-origin: 50% 0;
-  transition:
-    opacity 0.16s ease-in,
-    transform 0.16s ease-in;
+  transform: translateX(-50%);
+  transition: opacity var(--motion-fast) var(--ease-out);
 }
 .layer.on {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(-50%);
-  transition:
-    opacity 0.3s 0.16s ease-out,
-    transform 0.3s 0.16s cubic-bezier(0.3, 1.2, 0.4, 1);
+  transition: opacity var(--motion-enter) var(--ease-out);
 }
 .inner {
   display: flex;
@@ -389,8 +382,8 @@ body.still .compact.needs::after {
   border-radius: 7px;
   color: var(--fg-dim);
   transition:
-    background 0.15s,
-    color 0.15s;
+    background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
 }
 .tab-count {
   padding: 1px 4px;
@@ -610,10 +603,10 @@ body.still .compact.needs::after {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  animation: card-out 0.16s ease-in forwards;
+  animation: card-out var(--motion-fast) var(--ease-out) forwards;
 }
 .card.entering {
-  animation: card-in 0.3s 0.08s cubic-bezier(0.3, 1.2, 0.4, 1) backwards;
+  animation: card-in var(--motion-enter) var(--ease-out) backwards;
 }
 @keyframes card-out {
   to {
@@ -623,7 +616,6 @@ body.still .compact.needs::after {
 @keyframes card-in {
   from {
     opacity: 0;
-    transform: scale(0.98);
   }
 }
 
@@ -1095,11 +1087,11 @@ body.still .compact.needs::after {
   font-size: 12.5px;
   font-weight: 500;
   transition:
-    background 0.12s ease-out,
-    transform 0.08s ease-out;
+    background-color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 .btn:active {
-  transform: scale(0.94);
+  transform: scale(0.98);
 }
 .btn.primary {
   background: var(--accent);
@@ -1202,13 +1194,13 @@ body.still .compact.needs::after {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: shimmer 2.2s linear infinite;
+  animation: shimmer 2.8s var(--ease-shine) infinite;
 }
 @keyframes shimmer {
-  from {
+  0%, 15% {
     background-position: 130% 0;
   }
-  to {
+  85%, 100% {
     background-position: -130% 0;
   }
 }
@@ -1767,10 +1759,12 @@ body.still .compact.needs::after {
   background: var(--float);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 .menu.on {
   display: flex;
+  transform-origin: top center;
+  animation: popover-in var(--motion-fast) var(--ease-out);
 }
 .menu-item {
   padding: 5px 9px;
@@ -1811,6 +1805,8 @@ body.still .compact.needs::after {
   gap: 8px;
   user-select: text;
   scrollbar-width: thin;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
 }
 .jump-end {
   position: absolute;
@@ -1841,9 +1837,9 @@ body.still .compact.needs::after {
   flex-direction: column;
   gap: 4px;
   max-width: 85%;
-  padding: 7px 11px;
-  border-radius: 14px 14px 5px 14px;
-  background: rgba(255, 255, 255, 0.13);
+  padding: 8px 12px;
+  border-radius: var(--radius-message);
+  background: var(--raised);
   color: var(--fg-bright);
 }
 .msg.you .files {
@@ -1993,7 +1989,7 @@ body.still .compact.needs::after {
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 .chips:empty {
   display: none;
@@ -2204,6 +2200,11 @@ button.ghost:hover {
   display: flex;
   align-items: flex-end;
   gap: 6px;
+  transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
+}
+/* The composer owns the border; its secondary actions use quiet fills. */
+.composer .mic:not(.on) {
+  box-shadow: none;
 }
 .composer textarea {
   flex: 1;
@@ -2236,6 +2237,7 @@ button.ghost:hover {
 }
 .mic:hover {
   color: var(--fg-bright);
+  background: var(--raised);
 }
 .mic.on {
   color: var(--fg-bright);
@@ -2341,35 +2343,51 @@ button.ghost:hover {
 .codeblock {
   position: relative;
   margin: 6px 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-code);
 }
 .codeblock pre {
   margin: 0;
   padding: 8px 10px;
   max-height: 180px;
   overflow: auto;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 8px;
-  font: 12px/1.45 var(--mono);
+  background: var(--bg-deep);
+  border-radius: 0;
+  font: 12px/1.5 var(--mono);
   white-space: pre;
 }
-/* On the island the head floats over the code's corner, the language left out: the room is the
-   code's. The Nest draws it as a bar (nest.css). */
+/* Keep Copy above the text so long code never runs underneath its control. */
 .code-head {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--float);
 }
 .code-lang {
-  display: none;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-muted);
+  font: 11px var(--mono);
 }
 .copy {
-  padding: 1px 7px;
-  border-radius: 5px;
+  flex: none;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: var(--radius-control);
   font-size: 11px;
   color: var(--fg-dim);
-  background: rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 .copy:hover {
+  background: var(--raised);
   color: var(--fg-bright);
 }
 .typing {
@@ -2395,7 +2413,7 @@ button.ghost:hover {
   height: 6px;
   border-radius: 50%;
   background: var(--fg-muted);
-  animation: typing 1.2s ease-in-out infinite;
+  animation: typing 1.2s var(--ease-out) infinite;
 }
 .typing i:nth-child(2) {
   animation-delay: 0.15s;
@@ -3250,17 +3268,21 @@ button.ghost:hover {
   align-items: center;
   gap: 2px;
   padding: 4px 4px 4px 6px;
-  border: 1px solid #2c2f35;
+  border: 1px solid var(--control-border);
   border-radius: 12px;
-  background: #0d0e10;
+  background: var(--input);
 }
 #island .chat .composer textarea,
 #island .chat .composer textarea:focus {
-  border-color: transparent;
+  border: none;
   background: transparent;
 }
+#island .composer:hover {
+  border-color: var(--border-hover);
+}
 #island .composer:focus-within {
-  border-color: #3a3d44;
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-shadow);
 }
 /* The zone takes the whole chat, Zeca inside it at its left. */
 #island .drop-zone {
@@ -3297,7 +3319,7 @@ button.ghost:hover {
   color: var(--fg-muted);
 }
 .attach:hover {
-  background: #1c1e22;
+  background: var(--raised);
   color: var(--fg);
 }
 .chat-foot {
@@ -3471,3 +3493,42 @@ button.ghost:hover {
   background: var(--ok);
   transform: translateX(14px);
 }
+
+/* Entrances use the same easing as the shared controls; sprites keep their own director. */
+@keyframes popover-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes message-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes attachment-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.message-enter { animation: message-in var(--motion-enter) var(--ease-out); }
+.attachment-enter { animation: attachment-in var(--motion-enter) var(--ease-out); }
+.chat .chip { max-width: 100%; padding: 4px 4px 4px 8px; background: var(--raised); border-radius: 10px; color: var(--fg-dim); font-weight: 400; white-space: normal; }
+.chat .chip > svg { flex: none; color: var(--fg-dim); }
+.chat .chip > span { min-width: 0; overflow-wrap: anywhere; }
+.chat .chip > button { flex: none; min-width: 24px; min-height: 24px; padding: 0; border: 0; border-radius: 6px; }
+.chat .chip > button:hover { background: var(--float); color: var(--fg); }
+.chat-foot .menu.on { transform-origin: bottom center; }
+/* Feather only content above the reading position; pending decisions and keyboard focus stay clear. */
+.log.scrolled {
+  mask-image: linear-gradient(to bottom, transparent 0px,
+    rgba(0, 0, 0, 0.05) 2.4px, rgba(0, 0, 0, 0.18) 5.12px,
+    rgba(0, 0, 0, 0.38) 8px, rgba(0, 0, 0, 0.64) 10.88px,
+    rgba(0, 0, 0, 0.88) 13.6px, black 16px);
+}
+.log:focus-within, .log:has(.ask:not(.allow):not(.deny)) { mask-image: none; }
+.chat :is(.place, .attach, .mic, .suggestion, .send), .tab, .copy {
+  transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .message-enter, .attachment-enter, .menu.on, .typing i,
+  .card.entering, .card.leaving, .tick.current .tick-text { animation: none; }
+}
+body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
+.card.entering, .card.leaving, .tick.current .tick-text) { animation: none; }

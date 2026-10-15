@@ -25,17 +25,17 @@ button:focus-visible,
   flex: none;
   padding: 20px 12px;
   overflow-y: auto;
-  background: #0b0c0e;
-  border-right: 1px solid #25272d;
+  background: var(--chrome);
+  border-right: 1px solid var(--border);
   box-sizing: border-box;
 }
 .nav-group {
   margin: 13px 0 0;
   padding: 6px 10px 7px;
-  font: 8px var(--mono);
+  font: 11px var(--mono);
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: #888f99;
+  color: var(--fg-muted);
 }
 .nav-group:first-child {
   margin-top: 0;
@@ -57,7 +57,7 @@ button:focus-visible,
   flex: none;
 }
 .nav:hover {
-  background: #17191d;
+  background: var(--float);
   color: var(--fg);
 }
 .nav.on {
@@ -86,14 +86,14 @@ button:focus-visible,
 }
 .page-kicker {
   margin-bottom: -10px;
-  font: 9px var(--mono);
+  font: 11px var(--mono);
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #9da29b;
+  color: var(--fg-muted);
 }
 h1 {
   margin: 0;
-  font-size: 25px;
+  font-size: 20px;
   font-weight: 550;
   letter-spacing: -0.85px;
   color: var(--fg-bright);
@@ -120,9 +120,9 @@ h2 {
   flex-direction: column;
   gap: 10px;
   padding: 20px;
-  background: #101114;
-  border: 1px solid #292b31;
-  border-radius: 8px;
+  background: var(--float);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
 }
 .card-head {
   display: flex;
@@ -166,7 +166,7 @@ code {
   overflow-wrap: anywhere;
 }
 .row + .row {
-  border-top: 1px solid #27292f;
+  border-top: 1px solid var(--border);
 }
 .row-title {
   font-size: 13px;
@@ -177,7 +177,7 @@ code {
 .row-about {
   max-width: 62ch;
   margin: 4px 0 0;
-  color: #9fa5af;
+  color: var(--fg-dim);
   font-size: 11.5px;
   line-height: 1.65;
 }
@@ -240,26 +240,27 @@ code {
   justify-content: flex-end;
   gap: 8px;
 }
-/* The prototype's buttons: a bordered outline, and a light primary. */
+/* Quiet secondary fills sit inside the cards' single grouping border. */
 .btn {
   min-height: 32px;
   padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #3a3d44;
-  background: none;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  background: var(--raised);
   color: var(--fg);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out);
 }
 .btn:hover {
-  border-color: #6b7065;
-  background: var(--raised);
+  border-color: var(--border-hover);
+  background: var(--panel);
 }
 .btn.primary {
-  background: #e8eae4;
-  border-color: #e8eae4;
-  color: #111;
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
   font-weight: 650;
 }
 .btn.primary:hover {
@@ -278,14 +279,15 @@ code {
   min-height: 32px;
   padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid #303239;
-  background: #141518;
+  border: 1px solid var(--control-border);
+  background: var(--input);
   color: var(--fg-bright);
   font: 12.5px var(--mono);
   outline: none;
+  transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
 }
 .field:focus {
-  border-color: var(--accent);
+  border-color: var(--focus-border);
 }
 @media (max-width: 650px) {
   #settings {
@@ -301,9 +303,9 @@ code {
     min-height: 32px;
     margin: 8px 14px 0;
     padding: 5px 8px;
-    border: 1px solid #303239;
-    border-radius: 6px;
-    background: #141518;
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-control);
+    background: var(--input);
     color: var(--fg-bright);
     font: 12px var(--font);
   }
@@ -410,11 +412,11 @@ code {
   width: 34px;
   height: 20px;
   margin: 0;
-  border: 1px solid #444750;
+  border: 1px solid var(--border-hover);
   border-radius: 999px;
-  background: #22252b;
+  background: var(--raised);
   cursor: pointer;
-  transition: background 0.18s, border-color 0.18s;
+  transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out);
   box-sizing: border-box;
 }
 .toggle::after {
@@ -425,15 +427,15 @@ code {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #b2b7c1;
-  transition: transform 0.18s cubic-bezier(0.32, 1.22, 0.42, 1);
+  background: var(--fg-dim);
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 .toggle:checked {
-  border-color: #e9ede4;
-  background: #e9ede4;
+  border-color: var(--mark);
+  background: var(--mark);
 }
 .toggle:checked::after {
-  background: #1a211a;
+  background: var(--on-accent);
 }
 .toggle:checked::after {
   transform: translateX(14px);
@@ -768,4 +770,14 @@ code {
   flex: none;
   width: 66px;
   image-rendering: pixelated;
+}
+
+.btn:disabled, .field:disabled, .toggle:disabled, .segmented button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn:disabled:hover { border-color: transparent; background: var(--raised); }
+.btn.primary:disabled:hover { background: var(--accent); }
+.nav, .segmented button {
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }

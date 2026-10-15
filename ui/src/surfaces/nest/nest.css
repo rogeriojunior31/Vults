@@ -19,7 +19,7 @@ body {
   height: 100vh;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid #24262c;
+  border: 1px solid var(--chrome-line);
   border-radius: 13px;
   background: var(--panel);
 }
@@ -105,9 +105,9 @@ body {
   flex: none;
   width: 30px;
   height: 30px;
-  border: 1px solid #2b2e33;
+  border: none;
   border-radius: 7px;
-  background: #101114;
+  background: var(--float);
   color: var(--chrome-icon);
 }
 .chat-ico:hover,
@@ -134,22 +134,22 @@ body {
   margin: 0;
   padding: 0;
 }
-/* The pickers as the prototype's bordered controls. */
+/* The title bar groups the pickers; quiet fills keep their labels distinct. */
 .chat-titlebar .chat-head > * > .place,
 .chat-titlebar .chat-head > .ghost,
 .chat-titlebar .chat-head > .history-box > .ghost {
   box-sizing: border-box;
   min-height: 30px;
   padding: 4px 10px;
-  border: 1px solid #3a3d44;
+  border: none;
   border-radius: 6px;
-  background: #0f1013;
+  background: var(--float);
   font-size: 12px;
   color: var(--fg);
 }
 .chat-titlebar .chat-head > .ghost:hover,
 .chat-titlebar .chat-head > * > .place:hover {
-  border-color: #6b7065;
+  background: var(--raised);
 }
 /* At the window's right, the pickers' menus open leftwards: from their left edge they would run
    past it. */
@@ -525,7 +525,7 @@ body {
   overflow: hidden;
   margin: 10px 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-code);
 }
 .nest-chat .code-head {
   position: static;
@@ -535,7 +535,7 @@ body {
   gap: 8px;
   padding: 4px 6px 4px 12px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--float);
 }
 .nest-chat .code-lang {
   display: block;
@@ -569,13 +569,17 @@ body {
   max-width: 720px;
   margin: 8px auto 0;
   padding: 12px 14px 10px;
-  border: 1px solid #2c2e35;
-  border-radius: 12px;
-  background: #0f1013;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-composer);
+  background: var(--input);
   box-sizing: border-box;
 }
+.nest-chat .composer:hover {
+  border-color: var(--border-hover);
+}
 .nest-chat .composer:focus-within {
-  border-color: #6b7065;
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-shadow);
 }
 .nest-chat .composer .wave {
   box-shadow: none;
@@ -615,6 +619,7 @@ body {
   .nest-chat .composer {
     margin-top: 0;
     padding: 3px 8px;
+    border-radius: 12px;
   }
   .nest-chat .composer textarea {
     min-height: 24px;
@@ -1385,23 +1390,23 @@ body {
 .focus-block {
   min-width: 0;
   padding: 22px 20px;
-  border-right: 1px solid #292b31;
-  background: #0b0c0e;
+  border-right: 1px solid var(--border);
+  background: var(--float);
 }
 .focus-block:has(.tone-warn) {
-  background: radial-gradient(ellipse at 0% 100%, #f5a52412, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--warn) 7%, transparent), transparent 60%), var(--float);
 }
 .focus-block:has(.tone-ask) {
-  background: radial-gradient(ellipse at 0% 100%, #22d3ee10, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--info) 6%, transparent), transparent 60%), var(--float);
 }
 .focus-block:has(.tone-ok) {
-  background: radial-gradient(ellipse at 0% 100%, #22c55e10, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--ok) 6%, transparent), transparent 60%), var(--float);
 }
 .focus-block:has(.tone-fail) {
-  background: radial-gradient(ellipse at 0% 100%, #ff8d970f, transparent 60%), #0b0c0e;
+  background: radial-gradient(ellipse at 0% 100%, color-mix(in srgb, var(--error-text) 6%, transparent), transparent 60%), var(--float);
 }
 .app-card {
-  --tone: #3a3d44;
+  --tone: var(--border-hover);
   min-width: 0;
 }
 .app-card.tone-warn {
@@ -1426,15 +1431,16 @@ body {
   background: currentColor;
 }
 .card-name {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--fg);
 }
 .ed-chip {
   padding: 1px 5px;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 4px;
-  font: 9px var(--mono);
+  background: var(--raised);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .card-verb {
@@ -1451,7 +1457,8 @@ body {
   border-radius: 9px;
   background: color-mix(in srgb, var(--tone) 18%, transparent);
   color: var(--tone);
-  font: 10px var(--mono);
+  font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 .card-words {
   margin: 12px 0 0;
@@ -1467,21 +1474,21 @@ body {
   gap: 8px;
   margin-top: 13px;
   padding: 11px 10px;
-  border: 1px solid #30323a;
-  border-radius: 6px;
-  background: #111215;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-card);
+  background: var(--input);
 }
 .command code {
   min-width: 0;
-  font: 11px/1.7 var(--mono);
+  font: 12px/1.7 var(--mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.command .outline {
-  min-height: 25px;
-  padding: 3px 5px;
+.nest-flock-tab .command > .outline {
+  min-height: 28px;
+  padding: 3px 6px;
   border: 0;
-  font-size: 9px;
+  font-size: 11px;
 }
 .app-card-actions {
   display: flex;
@@ -1499,26 +1506,26 @@ body {
 .nest-flock-tab .outline {
   min-height: 32px;
   padding: 7px 12px;
-  border: 1px solid #3a3d44;
-  border-radius: 6px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-control);
   font-size: 12px;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background-color var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out);
 }
 .nest-flock-tab .outline:hover {
-  border-color: #6b7065;
+  border-color: var(--focus-border);
   background: var(--raised);
 }
 .nest-flock-tab .primary {
   min-height: 32px;
   padding: 7px 12px;
-  border-radius: 6px;
-  background: #e8eae4;
-  color: #111;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 650;
 }
 .nest-flock-tab .primary:hover {
-  background: #fff;
+  background: var(--fg-bright);
 }
 /* The card's Allow / Deny carry their keys, as on the island (ADR 0021). */
 .app-card-actions button {
@@ -1572,12 +1579,13 @@ body {
   bottom: -1px;
   left: 0;
   height: 2px;
-  background: #b1b8a5;
+  background: var(--mark);
 }
 .detail-count {
   margin-left: 5px;
-  font: 9px var(--mono);
-  color: #71dc94;
+  font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ok);
 }
 .detail-content {
   padding-top: 16px;
@@ -1596,9 +1604,9 @@ body {
   padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #0f1013;
+  background: var(--input);
   color: var(--fg);
-  font: 10px var(--mono);
+  font: 11px var(--mono);
 }
 .diff-toolbar .outline {
   min-height: 29px;
@@ -1612,14 +1620,14 @@ body {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
-  font: 9px var(--mono);
-  color: #a0a6ae;
+  font: 11px var(--mono);
+  color: var(--fg-dim);
 }
 .diff-block {
   overflow: hidden;
-  border: 1px solid #2a2d32;
-  border-radius: 6px;
-  background: #0c0d0f;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--float);
 }
 .diff-row {
   display: flex;
@@ -1633,6 +1641,7 @@ body {
 .diff-row .ln {
   flex: none;
   min-width: 17px;
+  font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--fg-dim);
   user-select: none;

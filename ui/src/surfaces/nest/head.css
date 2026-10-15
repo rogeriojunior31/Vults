@@ -45,9 +45,10 @@
   flex: 1;
 }
 .session-count {
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .header-icon {
   display: grid;
@@ -57,6 +58,7 @@
   border-radius: 7px;
   color: var(--chrome-icon);
   flex: none;
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
 .header-icon:hover,
 .header-icon[aria-pressed="true"] {
@@ -65,29 +67,29 @@
 .nest-sizes {
   flex: none;
 }
-/* The prototype's switch in the Nest: bordered, the size in use in the light mark. */
+/* One track frames the size choices; each choice retains its 24 px target. */
 .app-header .size-switch {
   gap: 2px;
   margin: 0;
   padding: 3px;
-  border: 1px solid #2b2e33;
-  border-radius: 7px;
-  background: #101114;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--float);
 }
 .app-header .size-switch .size {
   padding: 6px 7px;
-  border-radius: 4px;
-  font-size: 9px;
+  border-radius: 9999px;
+  font-size: 11px;
   line-height: 1;
-  color: #a6acb6;
+  color: var(--fg-dim);
 }
 .app-header .size-switch .size:hover:not(.on) {
-  background: #282c30;
+  background: var(--raised);
   color: var(--fg-bright);
 }
 .app-header .size-switch .size.on {
   background: var(--mark);
-  color: #16201a;
+  color: var(--on-accent);
 }
 .suite-nav {
   display: flex;
@@ -99,7 +101,7 @@
   overflow-x: auto;
   scrollbar-width: none;
   background: var(--chrome);
-  border-bottom: 1px solid #23252a;
+  border-bottom: 1px solid var(--chrome-line);
   font: 13px/1.4 var(--font);
 }
 .suite-tab {
@@ -115,10 +117,10 @@
   color: var(--soft);
 }
 .suite-tab:hover {
-  color: #e7e9ee;
+  color: var(--fg);
 }
 .suite-tab.on {
-  color: #f3f4f5;
+  color: var(--fg);
 }
 .suite-tab.on::after {
   content: "";
@@ -132,9 +134,10 @@
 .suite-tab .nav-count {
   padding: 1px 5px;
   border-radius: 3px;
-  background: #f5a52416;
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
   color: var(--warn);
-  font: 9px var(--mono);
+  font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 /* Settings sits at the right end. */
 .suite-tab.nest-gear {
@@ -148,7 +151,7 @@
   gap: 12px;
   padding: 10px 20px;
   background: var(--chrome);
-  border-top: 1px solid #24262c;
+  border-top: 1px solid var(--chrome-line);
   font: 10px/1.4 var(--font);
   color: var(--fg-dim);
 }
