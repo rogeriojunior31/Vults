@@ -265,7 +265,6 @@ export function createNest(
       "header",
       { class: "chat-titlebar" },
       recentButton,
-      chat.perchSlot,
       chatTitle,
       // The chat's pickers and buttons, moved once: they keep their listeners and repaint in place.
       chat.element.querySelector(".chat-head") ?? el("span"),

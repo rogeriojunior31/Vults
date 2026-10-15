@@ -1,17 +1,23 @@
 # Conversando com o Zeca
-<!-- source: 92445d0ce356 -->
+<!-- source: 0b11bec47692 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
-poleiro pequeno e animado no cabeçalho do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
-você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
+poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
+você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no seletor de motor (ou o provedor
 de API que você configurou, veja abaixo); na ilha um controle compacto mostra o motor acima
 do modelo, com fundo ao passar o mouse ou enquanto está aberto. Seu menu traz o motor, o modelo
-e o esforço. O motor e as ações da conversa dividem uma linha ao lado do Zeca.
-O menu do motor usa toda a largura do chat.
+e o esforço. No Quick, as ações da conversa ficam ao lado do Zeca, e o motor fica abaixo do rascunho.
+Seu menu abre para cima usando a largura do rodapé, com uma única área de rolagem para listas
+longas e opções de motor, modelo e esforço que quebram linha. Uma conversa iniciada explica
+seu modelo fixado dentro do menu, sem uma dica flutuante cobrindo as opções.
 O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos após o zoom).
-O companheiro usa um espaço de 40 px no cabeçalho e as animações existentes numa escala menor de pixels.
+O companheiro usa as animações existentes numa escala legível de pixels de 2x no Quick.
 **Perguntar ao Zeca** aparece apenas numa conversa vazia, com um título menor; ele não permanece
-acima das mensagens. Quando há mensagens ou o Zeca está pensando, a conversa usa a altura disponível,
+acima das mensagens. O chat do Quick mantém a mesma altura enquanto o menu de motor abre,
+recebe as opções de modelo e fecha; o menu fica sobre a conversa, sem deslocá-la.
+A linha de uso e mídia não aparece nesse chat. Os chips de notificação só ocupam espaço quando
+há itens reais: entram com expansão e somem completamente quando vazios, respeitando a redução
+de movimento. Contêineres de alertas vazios não deixam espaçamento. A conversa usa a altura disponível,
 sem limitar as respostas a 200 px. Os anexos rolam numa faixa horizontal, o rascunho tem altura
 limitada e as mensagens mantêm sua própria área de rolagem. Uma área baixa esconde e pausa o retrato
 para priorizar leitura e envio; voltar a uma área mais alta retoma a mesma cena.
@@ -26,9 +32,9 @@ Só um seletor fica aberto por vez. **↑/↓** no botão abre a lista e foca um
 **Esc** devolve o foco ao botão. Clicar fora fecha a lista. O carregamento dos modelos mantém
 na opção o foco, e as atualizações preservam um título de conversa ainda em edição.
 
-Numa conversa CLI vazia, os cartões de perguntas preenchem o rascunho e focam o campo.
+Numa conversa CLI vazia no Room, os cartões de perguntas preenchem o rascunho e focam o campo.
 Edite antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
-O compositor começa com uma linha de escrita e cresce conforme você digita, até o limite de altura.
+No Quick, o compositor começa com uma linha de escrita e cresce conforme você digita, até o limite de altura.
 O clipe, o microfone opcional e Enviar ficam ao lado do rascunho; o clipe mantém o nome acessível
 e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própria acima dele. Suas mensagens ficam em balões à direita;
 as respostas seguem na coluna da conversa.
@@ -52,7 +58,7 @@ vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
 
 ## Modelo e esforço
 
-Ao lado da pasta (na ilha, no botão do topo), *Default model ▾* escolhe o modelo e o quanto ele pensa, para o Claude e para o
+Ao lado da pasta (na ilha, no botão abaixo do rascunho), *Default model ▾* escolhe o modelo e o quanto ele pensa, para o Claude e para o
 Codex. O Claude oferece Opus, Sonnet e Haiku (os nomes do Claude Code para o mais recente de cada
 um); o Codex lista os modelos que o seu próprio `codex` oferece, perguntados na primeira vez que você
 abre o seletor com o Codex. O esforço vai de **Low** a **Max**, só com os que o modelo escolhido
@@ -78,8 +84,7 @@ A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vult
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
 ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
 
-O Zeca fica no cabeçalho enquanto a conversa rola, deixando toda a coluna da conversa
-para suas mensagens e o compositor. Passe o mouse nele para chamar sua atenção, ou
+O Zeca fica no poleiro enquanto a conversa rola. Passe o mouse nele para chamar sua atenção, ou
 clique em **Cumprimentar o Zeca** para ele acenar enquanto está ocioso. Pensamento, voz, perguntas
 e arquivos usam as mesmas animações da ilha; um cumprimento nunca responde a um card. Em janelas
 baixas, o poleiro recolhe para manter o compositor e as ações acessíveis. A animação para de desenhar
@@ -264,7 +269,7 @@ escrita: o Claude por `claude -p`, o Codex por um único `codex app-server` de l
 ### Sua configuração
 
 O chat lê a sua própria configuração do Claude Code e do Codex, como no seu terminal: seu
-`CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão (um ícone de pessoa no topo avisa).
+`CLAUDE.md`, skills, servidores MCP, hooks e regras de permissão (um ícone de pessoa junto aos controles do chat avisa).
 As configurações e os servidores do `.mcp.json` de um projeto só entram numa pasta em que você já
 confiou no Claude Code; o `CLAUDE.md` dele é lido de qualquer jeito. As suas regras de permissão
 valem em qualquer pasta. Os cards continuam perguntando o que suas regras não liberam, seja qual for
@@ -291,7 +296,7 @@ Veja [Segurança](../safety.md) para o resto.
 
 O chat também pode usar a API de um provedor com a sua própria chave, ou um modelo rodando na sua
 máquina. Em **Settings → Chat & voice**, escolha o **Provider**, cole a chave dele e escolha um **Model**; o
-nome do provedor então aparece no topo do chat, ao lado de Claude e Codex.
+nome do provedor então aparece no seletor de motor do chat, ao lado de Claude e Codex.
 
 | Provedor | Chave | Observações |
 |---|---|---|

@@ -106,13 +106,13 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
 
 - Use a short header for recipient, executor, conversation history and creation.
   Group source, context and memory controls together; avoid duplicating them above
-  and below the transcript. Zeca shares the header in a small slot; do not reserve
-  a portrait column or keep an empty-state title above a populated conversation.
+  and below the transcript.
 - Keep an editable draft, attachments and Send visible. Quick provides at least
-  one comfortable draft line that grows with its content. Keep its actions beside
-  the draft and retain at least 40 px of transcript space in the minimum Nest.
-- Suggested prompts fill a draft and leave sending to the user. Show them in the
-  empty state; a growing transcript should not compete with a persistent row of
+  one comfortable draft line that grows with its content, with a small animated
+  companion beside conversation actions and the executor beside the draft. The
+  minimum Nest uses a smaller composer while retaining at least 40 px of transcript space.
+- Suggested prompts fill a draft and leave sending to the user. Show them only
+  in Room's empty state; a growing transcript should not compete with a persistent row of
   the same prompts.
 - Keep history, context and memory on the existing conversation. Looking at
   another conversation preserves each one's own draft and bound source.

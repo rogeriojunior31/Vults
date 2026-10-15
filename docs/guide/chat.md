@@ -1,16 +1,23 @@
 # Chatting with Zeca
 
 Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca has a
-small animated perch in the chat header: he thinks while the reply comes, tilts his head when he asks you
-something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
+perch beside the chat: he thinks while the reply comes, tilts his head when he asks you
+something, and swallows the files you give him. Pick **Claude** or **Codex** in the engine control (or the
 API provider you set up, see below); on the island one compact control shows the engine above
 its model, with a background on hover or while open. Its menu holds the engine, model and effort.
-The engine and conversation actions share one row beside Zeca. The engine menu uses the full chat width.
+In Quick, conversation actions stay beside Zeca, and the engine sits below the draft.
+Its menu opens upward across the footer width, with one scroll area for long lists
+and wrapping engine, model and effort options. A started conversation explains its pinned
+model inside the menu rather than covering the choices with a tooltip.
 Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
-The companion uses a 40 px header slot and the existing animations at a smaller pixel scale.
+The companion uses its existing animations at a readable 2x pixel scale in Quick.
 **Ask Zeca** appears only in an empty conversation, at a smaller title size; it does not
-remain above your messages. Once a conversation has messages or is thinking, it uses the
-available height instead of capping replies at 200 px. Attachments scroll in a horizontal strip,
+remain above your messages. Quick Chat keeps the same surface height while the engine menu
+opens, receives model choices and closes; the menu overlays the transcript instead of moving it.
+The usage/media sub-row is omitted from this chat. Notification chips take space only when
+there are actual items: they expand into view and disappear completely when empty, with reduced
+motion respected. Empty alert containers leave no gap. The transcript uses the available height
+instead of capping replies at 200 px. Attachments scroll in a horizontal strip,
 the draft stays bounded, and messages keep their own scroll area. A short viewport hides
 and pauses the portrait to prioritize reading and sending; returning to a taller viewport
 resumes the same scene.
@@ -26,9 +33,9 @@ Only one selector opens at a time. **↑/↓** on its trigger opens it and focus
 chooses; **Esc** returns focus to the trigger. Clicking outside dismisses it. Model reads
 retain the focused choice, and refreshes preserve an unfinished conversation title.
 
-In an empty CLI conversation, the question cards fill the draft and focus the
+In an empty Room CLI conversation, the question cards fill the draft and focus the
 input. Edit it before pressing **Send** or **Enter**; clicking a suggestion does not send it.
-The composer starts with one writing line and grows as you type, up to its height limit.
+In Quick, the composer starts with one writing line and grows as you type, up to its height limit.
 The paperclip, optional microphone and Send sit beside the draft; the paperclip keeps its
 **Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies
 read in the conversation column.
@@ -47,7 +54,7 @@ wire, or an empty folder of its own. Once the conversation starts it stays there
 
 ## Model and effort
 
-Beside the folder (on the island, in the control at the top), *Default model ▾* picks the model and how hard it thinks, for Claude and for
+Beside the folder (on the island, in the control below the draft), *Default model ▾* picks the model and how hard it thinks, for Claude and for
 Codex. Claude offers Opus, Sonnet and Haiku (Claude Code's names for the latest of each); Codex
 lists the models your own `codex` offers, asked the first time you open the picker with Codex.
 The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**
@@ -68,8 +75,7 @@ The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own 
 there too. **Memory**, beside it, shows what Zeca
 remembers.
 
-Zeca stays in the title bar while the transcript scrolls, leaving the full conversation
-column for your messages and the composer. Hover over him to get his attention, or
+Zeca stays on his perch while the transcript scrolls. Hover over him to get his attention, or
 click **Greet Zeca** to wave while he is idle. Thinking, voice, questions and files use the same
 animations as the island; a greeting never answers a card. In short windows the perch folds away
 to keep the composer and actions reachable. The animation stops drawing when Chat is hidden,
@@ -227,7 +233,7 @@ Claude through `claude -p`, Codex through one long-lived `codex app-server`.
 ### Your setup
 
 The chat reads your own Claude Code and Codex setup, as in your terminal: your `CLAUDE.md`, skills,
-MCP servers, hooks and allow rules (a person icon at the top says so). A project's own settings and
+MCP servers, hooks and allow rules (a person icon beside the chat controls says so). A project's own settings and
 `.mcp.json` servers join only in a folder you already trusted in Claude Code; its `CLAUDE.md` is
 read either way. Your allow rules apply in every folder. Cards still ask whatever your rules don't
 allow, whatever `defaultMode` your settings set, and your hooks never make the chat show up as an

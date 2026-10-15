@@ -1590,14 +1590,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // What a look would answer: a question or a card, a failure, a bird gone quiet for too long.
     const wanting = sessions.filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud");
     strip.hidden = !wanting.length;
-    strip.replaceChildren(
-      ...wanting.map((s) => {
-        const failed = s.status === "failed" || s.attention === "failed";
-        const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
-        b.title = [s.project || agentName(s), statusText(s)].join(" · ");
-        return b;
-      }),
-    );
+    const tags = wanting.map((s) => {
+      const failed = s.status === "failed" || s.attention === "failed";
+      const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
+      b.title = [s.project || agentName(s), statusText(s)].join(" · ");
+      return b;
+    });
+    strip.replaceChildren(...(strip === topNeeds ? [el("div", { class: "need-tags" }, ...tags)] : tags));
   }
 
   /** In a session: the way back to the flock, and a dot per session in the agent's color, the one

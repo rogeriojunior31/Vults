@@ -515,13 +515,12 @@ export class ChatPanel {
       this.log.classList.toggle("scrolled", this.log.scrollTop > 2);
       if (this.following) this.jump.classList.remove("on");
     });
-    // Quick keeps the executor beside Zeca; source and access stay by the draft.
+    // Quick keeps conversation actions beside Zeca and the executor beside the draft.
     const compact = this.compact;
     const head = compact
       ? el(
           "div",
           { class: "chat-head" },
-          el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu),
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
           ...(this.backend.openNest ? [this.nestButton()] : []),
@@ -550,7 +549,7 @@ export class ChatPanel {
         el("div", { class: "composer-tools" }, this.attachButton(), this.mic, this.send),
       ),
       compact ? null : this.composerHint,
-      compact ? el("div", { class: "chat-foot" }, el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setup) : null,
+      compact ? el("div", { class: "chat-foot" }, el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu), el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setup) : null,
     );
     this.drop.prepend(dashes());
     this.element.append(this.perchSlot, main, this.drop);
@@ -1648,7 +1647,7 @@ export class ChatPanel {
       this.modelButton.setAttribute("aria-label", api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label }));
       this.modelButton.setAttribute("aria-expanded", String(this.modelOpen));
     }
-    this.modelButton.title = this.started
+    this.modelButton.title = this.compact ? "" : this.started
       ? t("A conversation keeps its model; New starts another.")
       : t("The model and effort for new conversations in this folder.");
     this.modelMenu.classList.toggle("on", this.modelOpen);
@@ -1708,6 +1707,7 @@ export class ChatPanel {
     ];
     // A conversation keeps its model, and the API chat has none to pick: only the engines then.
     if (this.started || api) {
+      if (this.compact && this.started) engines[0].append(el("p", { class: "model-menu-note", text: t("A conversation keeps its model; New starts another.") }));
       this.modelMenu.replaceChildren(...engines);
       return;
     }
@@ -1936,7 +1936,7 @@ export class ChatPanel {
             el(
               "div",
               { class: "suggestions" },
-              ...(this.provider === "api" ? [] : SUGGESTIONS).map((q) =>
+              ...(this.compact || this.provider === "api" ? [] : SUGGESTIONS).map((q) =>
                 el("button", {
                   class: "suggestion",
                   onclick: () => {

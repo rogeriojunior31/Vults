@@ -323,7 +323,13 @@ for (const surface of ["island", "nest"]) {
   const composer = all.find(node => node.className === "composer");
   const tools = all.find(node => node.className === "composer-tools");
   const suggestion = all.find(node => node.className === "suggestion");
-  suggestion.listeners.click();
+  if (surface === "nest") {
+    assert.ok(suggestion, "Room keeps its editable suggested prompts");
+    suggestion.listeners.click();
+  } else {
+    assert.equal(suggestion, undefined, "Quick leaves suggested prompts to Room");
+    chat.draft("Question about this project");
+  }
   const draft = input.value;
   assert.ok(draft.includes("project"));
   assert.equal(document.activeElement, input);
@@ -346,15 +352,17 @@ for (const surface of ["island", "nest"]) {
   assert.equal(tools.children.at(-1).attributes["aria-label"], "Send (Enter)");
   assert.equal(sends, 0, "Choosing or removing files never sends the draft");
 }
-console.log("check-chat-models: both composers keep suggestions editable, file picker, real file labels, individual removal and saved draft");
+console.log("check-chat-models: Room-only editable suggestions, both file pickers, real file labels, individual removal and saved draft");
 
 for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {}, { window: surface });
   await tick();
   const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting");
+  const engine = nodes(chat.element).find(node => node.className === "model-box engine-box");
+  assert.equal(engine.parentElement.className, surface === "island" ? "chat-foot" : "chat-head", "Only Quick moves its executor beside the draft; Room keeps its existing header");
   assert.equal(greetings().length, 1, "The recipient is introduced once");
   assert.equal(greetings()[0].parentElement.className, "hint", "The greeting belongs to the empty state, never the persistent header");
-  assert.equal(chat.element.classList.contains("has-messages"), false, "An empty chat keeps its natural height");
+  assert.equal(chat.element.classList.contains("has-messages"), false, "An empty chat has no message-state marker");
   chat.load({ ...conversation, busy: true, lines: [] });
   assert.equal(chat.element.classList.contains("has-messages"), true, "Thinking already reserves the conversation space");
   chat.load({ ...conversation, provider: "api", started: false, busy: false, lines: [] });
@@ -364,6 +372,10 @@ for (const surface of ["island", "nest"]) {
   assert.ok(!chat.element.textContent.includes("can't run commands or open your project"));
   assert.equal(greetings().length, 0, "Both surfaces leave the reading area to messages once the conversation starts");
   assert.ok(chat.element.textContent.includes("Saved reply"));
+  const trigger = nodes(engine).find(node => node.classList.contains("model"));
+  trigger.listeners.click();
+  assert.equal(trigger.title === "", surface === "island", "Quick explains a pinned model inside its menu, without a hovering tooltip blocking choices");
+  assert.ok(nodes(engine).some(node => node.textContent.includes("A conversation keeps its model")) === (surface === "island"));
   assert.equal(chat.element.classList.contains("has-messages"), true, "Restored messages get the full conversation height");
 }
 console.log("check-chat-models: both surfaces keep the greeting in the empty state only, API capability notice survives");
@@ -510,12 +522,16 @@ for (const surface of ["island", "nest"]) {
   const triggerFor = suffix => nodes(menuChat.element).find(n => n.attributes["aria-controls"] === menuFor(suffix).id);
   const pressed = key => ({ key, target: document.activeElement, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
   const modelTrigger = triggerFor("model"), folderTrigger = triggerFor("folder"), historyTrigger = triggerFor("history"), accessTrigger = triggerFor("access");
+  const transcript = nodes(menuChat.element).find(n => n.className === "log");
+  transcript.scrollTop = 96;
+  const transcriptContent = [...transcript.children];
   modelTrigger.focus(); const down = pressed("ArrowDown"); modelTrigger.listeners.keydown(down); await tick();
   const engineChoice = document.activeElement;
   assert.equal(engineChoice.dataset.choice, "engine:claude"); assert.equal(down.prevented, true);
   resolveModels([{ id: "sonnet", label: "Sonnet", efforts: [] }]); await tick();
   assert.equal(document.activeElement.dataset.choice, "engine:claude");
   assert.notEqual(document.activeElement, engineChoice, "A replaced menu row regains focus after the model read");
+  assert.deepEqual(transcript.children, transcriptContent, "Opening and loading the model selector never rebuilds the transcript");
   const modelMenu = menuFor("model"); modelMenu.listeners.keydown(pressed("End"));
   assert.equal(document.activeElement, modelMenu.querySelectorAll("button").at(-1));
   modelMenu.listeners.keydown(pressed("Home")); assert.equal(document.activeElement.dataset.choice, "engine:claude");
@@ -543,6 +559,7 @@ for (const surface of ["island", "nest"]) {
   modelTrigger.click(); for (const listener of documentEvents.pointerdown) listener({ target: document.body });
   assert.equal(modelTrigger.attributes["aria-expanded"], "false");
   assert.equal(nodes(menuChat.element).find(n => n.tag === "textarea").value, "Next question stays here");
+  assert.equal(transcript.scrollTop, 96, "Opening, loading and dismissing selectors retains the reading position");
   assert.equal(menuActions, 0, "Browsing, focusing and dismissing selectors never sends, grants access or opens Settings");
 }
 console.log("check-chat-models: both selectors retain focus/rename caret across reads, one open panel, keyboard/IME/Escape/outside dismissal and no implicit actions");
