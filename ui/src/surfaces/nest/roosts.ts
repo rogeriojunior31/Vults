@@ -190,7 +190,8 @@ function bars(week: WeekView | null, list: RoostView[]): HTMLElement | null {
   const most = rows[0].secs;
   return el(
     "div",
-    { class: "act-bars" },
+    { class: "activity-card act-bars" },
+    el("h3", { text: t("Time with the flock") }),
     ...rows.map((row) => {
       const fill = el("b");
       fill.style.width = `${Math.round((row.secs / Math.max(1, most)) * 100)}%`;
@@ -222,20 +223,30 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
   search.placeholder = t("Find a project, branch or agent…");
   search.setAttribute("aria-label", t("Find a project, branch or agent…"));
   const count = el("span");
+  const title = el("h2");
+  const about = el("p");
+  const note = el("span");
+  const preferences = el("button", { class: "link-btn", onclick: () => backend.preferences() });
   const barsHost = el("div");
   element.append(
-    el("h3", { class: "act-projects-head" }, el("span", { text: t("By project") }), count),
+    el("header", { class: "activity-heading" }, el("div", {}, title, about, count)),
     barsHost,
     search,
     cards,
     el(
       "p",
       { class: "small-note" },
-      el("span", { text: t("Each project's bird, and whether it is muted, pinned or hidden, are its preferences.") }),
-      el("button", { class: "link-btn", text: t("Preferences ↗"), onclick: () => backend.preferences() }),
+      note,
+      preferences,
     ),
   );
   const paint = () => {
+    title.textContent = t("By project");
+    about.textContent = t("Repositories, worktrees and the sessions working in each one.");
+    note.textContent = t("Each project's bird, and whether it is muted, pinned or hidden, are its preferences.");
+    preferences.textContent = t("Preferences ↗");
+    search.placeholder = t("Find a project, branch or agent…");
+    search.setAttribute("aria-label", search.placeholder);
     const q = search.value.trim().toLowerCase();
     const shown = q ? roosts.filter((r) => said(r).includes(q)) : roosts;
     const trees = roosts.reduce((n, r) => n + r.trees.length, 0);

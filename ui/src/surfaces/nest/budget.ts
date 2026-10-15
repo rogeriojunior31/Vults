@@ -69,6 +69,7 @@ export function createBudget(backend: BudgetBackend, saved: () => void = () => {
     input.min = "0";
     input.step = "0.5";
     input.placeholder = t("No budget");
+    input.setAttribute("aria-label", t("Daily budget in US dollars"));
     input.value = draft ?? (today.budget !== null ? String(today.budget) : "");
     input.addEventListener("input", () => (draft = input.value));
     element.replaceChildren(

@@ -105,9 +105,16 @@ function costPart(
   budget: { element: HTMLElement; refresh: () => void },
   usage: { element: HTMLElement; refresh: () => void },
 ): { element: HTMLElement; refresh: () => void } {
+  const title = el("h2");
+  const about = el("p");
   return {
-    element: el("div", { class: "nest-cost" }, budget.element, usage.element),
+    element: el("div", { class: "nest-cost" },
+      el("header", { class: "activity-heading" }, el("div", {}, title, about)),
+      budget.element, usage.element,
+    ),
     refresh: () => {
+      title.textContent = t("Cost");
+      about.textContent = t("Your plan windows, recorded cost and daily budget on this computer.");
       budget.refresh();
       usage.refresh();
     },
@@ -331,7 +338,12 @@ export function createNest(
   function showSub(id: Sub): void {
     sub = id;
     for (const s of SUBS) subPanes[s].hidden = s !== id;
-    subButtons.forEach((b) => b.classList.toggle("on", b.dataset.sub === id));
+    subButtons.forEach((b) => {
+      const selected = b.dataset.sub === id;
+      b.classList.toggle("on", selected);
+      b.setAttribute("aria-pressed", String(selected));
+      if (selected) b.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
     parts[id].refresh();
     rememberPlace();
   }

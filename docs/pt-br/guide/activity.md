@@ -1,9 +1,23 @@
 # Atividade
-<!-- source: 4b18018f6928 -->
+<!-- source: 276b279dc9d4 -->
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
 ano numa grade; **Settings → Activity** mostra a mesma página. Tudo é contado neste computador, a partir de um histórico local que o Vults guarda
 enquanto os seus agentes trabalham.
+
+O Nest organiza Atividade em seis telas, com o mesmo estilo de navegação e resumo:
+
+- **Week**: totais, tempo por dia, a grade anual e um resumo para salvar. Selecione um dia para
+  ler a duração exata; **Como a atividade é contada** explica as regras de contagem.
+- **By project**: tempo por repositório, worktrees, sessões, pull requests e memória do projeto.
+- **History**: turnos concluídos agrupados por projeto, com resultado, agente, contagens e duração.
+- **Cost**: orçamento de hoje, janelas dos planos, custo e tokens das últimas duas semanas e custo por projeto.
+- **Traces**: turnos do chat do Zeca e suas chamadas de ferramentas, com estado, tempo e contagens de tokens disponíveis.
+- **Audit**: quem respondeu, o resultado e o comando ou alvo completo, agrupados por projeto.
+
+Histórico e Auditoria mostram os 200 registros mais recentes. Seus resumos descrevem os registros
+carregados naquela tela, e a busca filtra a lista sem alterar esses totais. Os títulos dos projetos
+mostram a quantidade de registros encontrados. Navegar, buscar e redimensionar não modificam o histórico guardado.
 
 <a id="what-a-turn-is"></a>
 

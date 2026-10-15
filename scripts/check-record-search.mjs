@@ -9,13 +9,17 @@ class Element {
   value = "";
   className = "";
   text = "";
+  style = {};
+  dataset = {};
+  attributes = {};
   constructor(tag) { this.tag = tag; }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return this.text + this.children.map(node => node.textContent).join(""); }
   append(...nodes) { this.children.push(...nodes); }
   replaceChildren(...nodes) { this.text = ""; this.children = nodes; }
   addEventListener(event, listener) { this.listeners[event] = listener; }
-  setAttribute() {}
+  setAttribute(name, value) { this.attributes[name] = value; }
+  matches(tags) { return tags.split(",").some(tag => tag.trim() === this.tag); }
   focus() { globalThis.focused = this; }
 }
 globalThis.document = { createElement: tag => new Element(tag) };
@@ -25,7 +29,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent", build
   lib: { entry: `${root}src/surfaces/nest/records.ts`, formats: ["es"] },
 } });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createHistory, createAudit } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createHistory, createAudit, createTraces, createUsage } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const nodes = element => [element, ...element.children.flatMap(nodes)];
 const count = (element, cls) => nodes(element).filter(node => node.className === cls).length;
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -139,3 +143,66 @@ await retry.flush();
 assert.equal(kept.history, "Beta", "Retry closing must save the retained query without another edit");
 assert.equal(retryInput.value, "Beta");
 console.log("check-record-search: ok (groups, status, command, clear/focus, refresh, recreation, save ordering, late read, error retention, empty, no extra record queries)");
+
+const figures = element => nodes(element).filter(node => node.className === "activity-stat").map(node => node.children[0].textContent);
+assert.deepEqual(figures(history.element), ["2", "0", "1"], "History summarizes only the returned turns");
+search("Alpha");
+assert.deepEqual(figures(history.element), ["2", "0", "1"], "Filtering the list does not recalculate loaded-record totals");
+assert.equal(nodes(history.element).find(node => node.className === "record-count").textContent, "1 record");
+
+const auditSummary = createAudit(async () => [
+  { project: "Alpha", agent: "codex", at: 100, actor: "policy", act: "allow", tool: "Bash", target: "git diff -- src/file.ts", consent: 37 },
+  { project: "Alpha", agent: "codex", at: 101, actor: "human", act: "deny", tool: "Bash", target: "rm secret.txt", consent: null },
+]);
+auditSummary.refresh(); await tick();
+assert.deepEqual(figures(auditSummary.element), ["2", "1", "1"]);
+assert.ok(auditSummary.element.textContent.includes("git diff -- src/file.ts"));
+assert.ok(auditSummary.element.textContent.includes("Policy accepted as #37"));
+assert.equal(nodes(auditSummary.element).find(node => node.className === "record-count").textContent, "2 records");
+
+const traces = createTraces(async () => [
+  { kind: "chat", name: "chat model", status: "ok", startMs: 100, ms: 1500, child: false, input: 100, output: 30, costUsd: 0.5 },
+  ...["denied", "error"].map(status => ({ kind: "execute_tool", name: `execute_tool ${status}`, status, startMs: 101, ms: 25, child: true, input: null, output: null, costUsd: null })),
+]);
+traces.refresh(); await tick();
+assert.deepEqual(figures(traces.element), ["1", "2", "2"]);
+assert.equal(count(traces.element, "record child"), 2, "Tool rows retain their parent indentation");
+assert.ok(traces.element.textContent.includes("100 in, 30 out"));
+assert.ok(!traces.element.textContent.includes("0 in, 0 out"), "Missing token counts are never invented");
+
+const usage = createUsage(async () => ({
+  windows: [{ agent: "codex", minutes: 300, used_percent: 70 }, { agent: "claude", minutes: 10080, used_percent: 95 }],
+  days: [{ day: "2026-10-14", usd: 1.25, tokens: 100 }, { day: "2026-10-15", usd: 2.75, tokens: 200 }],
+  roosts: [], budget: 2, subscription: true,
+}));
+usage.refresh(); await tick();
+assert.deepEqual(figures(usage.element), ["$4.00", "300", "2"]);
+assert.ok(usage.element.textContent.includes("your plan does not charge it"));
+assert.equal(count(usage.element, "usage-fill warning"), 1);
+assert.equal(count(usage.element, "usage-fill critical"), 1);
+assert.equal(count(usage.element, "usage-fill over"), 1);
+console.log("check-record-search: loaded totals, filtered group counts, full audited command/consent, trace hierarchy, missing tokens, usage totals and warning thresholds");
+
+const weekBundle = await build({ configFile: false, root, logLevel: "silent", build: {
+  write: false, minify: false, lib: { entry: `${root}src/surfaces/nest/week-view.ts`, formats: ["es"] },
+} });
+const weekChunk = weekBundle[0].output.find(part => part.type === "chunk");
+const { nestWeek } = await import(`data:text/javascript;base64,${Buffer.from(weekChunk.code).toString("base64")}`);
+const actions = [];
+const on = Object.fromEntries(["week", "tab", "connectors", "hideProjects", "saveImage", "history", "confirmClear", "clear"].map(name => [name, () => actions.push(name)]));
+const activity = { history: true, today: "2026-10-15", weeks: ["2026-10-12", "2026-10-05"], grid: [], week: {
+  monday: "2026-10-12", sunday: "2026-10-18", headline: "Recorded on this computer", turns: 2, active_secs: 9090, days: [0, 30, 60, 3600, 5400, 0, 0],
+  longest_secs: 5400, steps: 5, files: 1, added: 10, removed: 2, allowed: 1, denied: 1, answered: 1, top_agent: null, top_project: null, busiest_day: null,
+} };
+const view = { tab: "agents", github: null, confirming: false, hideProjects: false, saved: null };
+const week = new Element("main");
+week.append(...nestWeek(activity, view, on, null, day => actions.push(["day", day])));
+assert.deepEqual(nodes(week).filter(node => node.className === "day-total").map(node => node.textContent), ["—", "<1 min", "1 min", "1 h", "1.5 h", "—", "—"]);
+const dayButtons = nodes(week).filter(node => node.className === "day-column");
+assert.equal(dayButtons[4].attributes["aria-pressed"], "true");
+assert.deepEqual(actions, [], "Rendering the redesign never shares, clears history or changes a setting");
+dayButtons[3].listeners.click();
+assert.deepEqual(actions, [["day", 3]]);
+week.replaceChildren(...nestWeek({ ...activity, week: { ...activity.week, days: [0, 0, 0, 0, 0, 0, 0] } }, view, on, null, () => {}));
+assert.ok(nodes(week).filter(node => node.className === "day-column").every(node => node.attributes["aria-pressed"] === "false"), "No counted time means no invented busiest day");
+console.log("check-record-search: week day labels, exact detail names, busiest day, explicit selection and zero-time guard");

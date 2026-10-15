@@ -4,6 +4,20 @@ The Nest's **Activity → Week** shows what your agents did: a week's recap and 
 grid; **Settings → Activity** shows the same page. It
 is counted on this computer, from a local history that Vults keeps as your agents work.
 
+The Nest groups Activity into six views, with the same navigation and summary style:
+
+- **Week**: totals, time per day, the yearly grid and a recap to save. Select a day to read its
+  exact duration; **How activity is counted** explains the counting rules.
+- **By project**: time per repository, worktrees, sessions, pull requests and project memory.
+- **History**: finished turns grouped by project, with the result, agent, counts and duration.
+- **Cost**: today's budget, plan windows, the last two weeks of cost and tokens, and cost by project.
+- **Traces**: Zeca's chat turns and their tool calls, with status, time and available token counts.
+- **Audit**: who answered, the result and the complete command or target, grouped by project.
+
+History and Audit show the latest 200 records. Their summaries describe the records loaded in
+that view, and searching filters the list without changing those totals. Project headings show
+the number of matching records. Navigation, search and resizing do not modify the stored history.
+
 ## What a turn is
 
 A turn is what one prompt set going, until the agent stops. For each one Vults keeps when it ran,

@@ -2,6 +2,7 @@
 // the same page Settings drew, in a shadow root with the settings pages' own look so their names
 // never meet the island's.
 import pagesCss from "../settings/pages.css?inline";
+import activityCss from "./activity.css?inline";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { nestWeek, WEEK_CSS } from "./week-view";
@@ -24,7 +25,8 @@ export interface WeekBackend {
 }
 
 const HOST = `:host { display: block; color: var(--fg); font: 13.5px/1.5 var(--font); }
-.page { padding: 22px 26px 32px; display: flex; flex-direction: column; gap: 18px; }`;
+.page { padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 600px) { .page { padding: 16px; } }`;
 
 /** A page drawn with the settings pages' look, inside `host`. */
 export function settingsPage(host: HTMLElement, extra = ""): HTMLElement {
@@ -40,7 +42,7 @@ export function createWeek(backend: WeekBackend): {
   refresh: () => void;
 } {
   const element = el("div", { class: "nest-week" });
-  const page = settingsPage(element, WEEK_CSS);
+  const page = settingsPage(element, activityCss + WEEK_CSS);
   /** The day shown under the bars; null shows the busiest. */
   let day: number | null = null;
   let activity: Activity | null = null;

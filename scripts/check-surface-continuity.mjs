@@ -47,6 +47,7 @@ class Element {
   focus() { document.activeElement = this; }
   setSelectionRange() {}
   scrollTo() {}
+  scrollIntoView(options) { this.scrolledIntoView = options; }
   getBoundingClientRect() { return { left: 0, top: 0, width: 480, height: 200 }; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
   attachShadow() { const shadow = new Element("shadow"); shadow.parentElement = this; return shadow; }
@@ -145,6 +146,9 @@ for (const width of [480, 1180]) {
     const resize = savedTransition(() => nest.flushState(), () => { transitionErrors++; });
     await mount(true); hiddenIsland();
     assert.equal(nest.current(), "audit");
+    const auditTab = nodes(page).find(node => node.dataset.sub === "audit");
+    assert.equal(auditTab.attributes["aria-pressed"], "true");
+    assert.deepEqual(auditTab.scrolledIntoView, { block: "nearest", inline: "nearest" }, "Restoring a sub-tab keeps its selection visible in the navigation strip");
     nest.open("chat"); nest.chat.draft("More context");
     const expectedDraft = { ...draft, text: "Unsent\n\nMore context" };
     for (const full of [true, false, true, false]) {

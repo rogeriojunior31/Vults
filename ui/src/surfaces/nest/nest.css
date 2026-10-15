@@ -1,6 +1,7 @@
 /* The chat panel's look comes from the island; the Nest lays it out as a whole window. */
 @import "../../island/island.css";
 @import "./head.css";
+@import "./activity.css";
 
 /* The chat panel's own ground: its code blocks and cards are drawn against it. */
 /* The window is transparent: the page draws the prototype's frame, rounded, with its border. */
@@ -198,37 +199,40 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
-/* Activity's parts, underlined as the prototype's detail tabs. */
+/* One navigation track; narrow windows scroll it instead of adding a second header row. */
 .nest-subs {
   display: flex;
   flex: none;
-  flex-wrap: wrap;
-  gap: 18px;
-  padding: 0 26px;
-  border-bottom: 1px solid #1d1f24;
+  align-self: flex-start;
+  gap: 4px;
+  max-width: calc(100% - 48px);
+  box-sizing: border-box;
+  overflow-x: auto;
+  margin: 16px 24px 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--float);
+  scrollbar-width: thin;
 }
 .nest-sub {
-  position: relative;
-  padding: 12px 0 11px;
+  flex: none;
+  min-height: 32px;
+  padding: 6px 14px;
+  border-radius: 999px;
   color: var(--fg-dim);
   font-size: 12px;
   line-height: 1.2;
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
 .nest-sub:hover {
   color: var(--fg);
 }
 .nest-sub.on {
   color: var(--fg);
-}
-.nest-sub.on::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: #b1b8a5;
+  background: var(--raised);
 }
 /* Connections (the prototype's): connector chips, the chosen one's head and tabs, its rows by
    group beside the one picked. */
@@ -739,9 +743,10 @@ body {
 }
 .roost {
   padding: 18px 20px;
-  border: 1px solid #292b31;
-  border-radius: 8px;
-  background: #101114;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--panel);
 }
 .roost-head {
   display: flex;
@@ -759,30 +764,22 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-bright);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 600;
 }
 .roost-tree {
   display: flex;
-  gap: 10px;
-  font-size: 11.5px;
-  color: var(--fg-muted);
-}
-.roost-path {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.roost-branch {
-  flex: none;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: var(--radius-control);
+  background: var(--float);
+  font: 12px/1.5 var(--mono);
   color: var(--fg-dim);
 }
+.roost-path { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.roost-branch { min-width: 0; color: var(--fg); overflow-wrap: anywhere; }
 .roost-part h4 {
   margin: 10px 0 2px;
   font-size: 11px;
@@ -1098,114 +1095,57 @@ body {
   white-space: pre-wrap;
   color: var(--fg);
 }
-/* The records (W11): Activity's History, Cost, Traces and Audit. */
-/* As the prototype's lists: a mono kicker over rows parted by a hairline, no box around each. */
-.records {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-.records-search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.records-search input {
-  flex: 1;
-  min-width: 0;
-}
-.records-search button {
-  flex-shrink: 0;
-}
-.records-head {
-  margin: 22px 0 6px;
-  color: #9da29b;
-  font: 9px var(--mono);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.records-head:first-child {
-  margin-top: 4px;
-}
-.record {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-  padding: 12px 2px;
-  border-bottom: 1px solid #22242a;
-  font-size: 12px;
-  min-width: 0;
-}
-.record.child {
-  margin-left: 18px;
-}
-.record-when,
-.record-meta {
-  color: var(--fg-muted);
-}
-.record-who {
-  color: var(--fg-bright);
-  font-weight: 600;
-}
-.record-what {
-  color: var(--fg);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.record-target {
-  flex-basis: 100%;
-  color: var(--fg);
-  font-size: 11px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.usage-bar {
-  flex: 1;
-  min-width: 80px;
-  max-width: 260px;
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  align-self: center;
-}
-.usage-bar {
-  position: relative;
-}
-/* The daily budget, on each day's bar. */
-.usage-mark {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--warn);
-  opacity: 0.8;
-}
-.usage-fill {
-  display: block;
-  height: 100%;
-  background: #6f8266;
-}
-.usage-fill.over {
-  background: var(--warn);
-}
-.usage-fill.warning {
-  background: var(--warn);
-}
-.usage-fill.critical {
-  background: var(--error);
-}
-.usage-status {
-  font: 10px var(--mono);
-  color: var(--fg-muted);
-}
-.usage-status.warning {
-  color: var(--warn);
-}
-.usage-status.critical {
-  color: var(--error);
+/* Records share a reading order: operation and result, context, then time and counts. */
+.records { display: flex; flex-direction: column; gap: 16px; }
+.records-content { display: contents; }
+.records-content > .activity-heading { order: -2; margin-bottom: 0; }
+.records-content > .activity-summary { order: -1; margin-bottom: 0; }
+.records-search { display: flex; align-items: center; gap: 8px; }
+.records-search input { flex: 1; min-width: 0; min-height: 36px; border-color: var(--control-border); background: var(--input); font-size: 13px; }
+.records-search button { flex-shrink: 0; min-height: 36px; }
+.records-search input:focus { border-color: var(--focus-border); box-shadow: var(--focus-shadow); outline: none; }
+.record-group, .usage-section { overflow: hidden; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--panel); }
+.records-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--fg); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.record-count { flex: none; color: var(--fg-dim); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
+.record { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 16px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.record-group > .record:last-child, .usage-section > .record:last-child { border-bottom: 0; }
+.record-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.record-title, .record-context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
+.record-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; text-align: right; }
+.record-when, .record-meta { color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.record-when { font-size: 11px; }
+.record-duration { color: var(--fg); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+.record-who { color: var(--fg); font-size: 12px; font-weight: 550; }
+.record-what { min-width: 0; color: var(--fg); font-weight: 550; overflow-wrap: anywhere; }
+.record-status { padding: 3px 7px; border-radius: 6px; background: var(--raised); color: var(--fg-dim); font-size: 11px; line-height: 1.4; }
+.record-status.passing { background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
+.record-status.failing { background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error-text); }
+.record-target { grid-column: 1 / -1; padding: 10px 12px; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.record.child { margin-left: 24px; border-left: 1px solid var(--control-border); }
+.usage-section .record { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.usage-section > .board-empty { padding: 12px 16px; }
+.usage-bar { position: relative; flex: 1; align-self: center; min-width: 80px; max-width: 340px; height: 8px; overflow: hidden; border-radius: 999px; background: var(--raised); }
+.usage-mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--warn); }
+.usage-fill { display: block; height: 100%; border-radius: inherit; background: var(--mark); }
+.usage-fill.over, .usage-fill.warning { background: var(--warn); }
+.usage-fill.critical { background: var(--error); }
+.usage-status { color: var(--fg-dim); font-size: 11px; }
+.usage-status.warning { color: var(--warn); }
+.usage-status.critical { color: var(--error-text); }
+.nest-activity .nest-part:not(.nest-week-part) { padding: 20px 24px 24px; }
+.nest-cost > .task-spend { padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--panel); }
+.nest-cost > .task-spend.over { border-color: var(--warn); }
+.nest-cost .task-spend-line { font-size: 14px; line-height: 1.6; }
+.nest-cost .task-budget-input { min-height: 32px; box-sizing: border-box; border-color: var(--control-border); background: var(--input); font-size: 13px; }
+.nest-cost .task-budget-label { color: var(--fg-dim); font-size: 12px; }
+@media (max-width: 600px) {
+  .nest-subs { max-width: calc(100% - 32px); margin: 16px 16px 0; }
+  .nest-activity .nest-part:not(.nest-week-part) { padding: 16px; }
+  .record { gap: 8px; padding: 12px; }
+  .record-title { align-items: flex-start; }
+  .record-aside { max-width: 100px; }
+  .record.child { margin-left: 12px; }
+  .records-head { padding: 12px; }
 }
 /* The size switch, between the tabs and the gear. */
 /* The Flock (ADR 0021), with the Living Flock prototype's Panel measures: the stage edge to edge,
@@ -2262,20 +2202,10 @@ body {
 }
 /* Activity › By project, as the prototype draws it: the week's time per project, a search, the
    projects, and the way to their preferences. */
-.act-projects-head {
-  display: flex;
-  justify-content: space-between;
-  margin: 0 0 10px;
-  font: 500 10px var(--mono);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--fg-muted);
-}
-.act-bars {
-  display: grid;
-  gap: 7px;
-  margin-bottom: 14px;
-}
+.roosts .activity-heading { margin-bottom: 0; }
+.roosts .activity-heading > div > span { display: block; margin-top: 8px; color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.act-bars { display: grid; gap: 12px; margin: 4px 0; }
+.act-bars h3 { margin-bottom: 4px; }
 .act-bar {
   display: grid;
   grid-template-columns: minmax(90px, 160px) minmax(0, 1fr) 70px;
@@ -2292,34 +2222,33 @@ body {
   height: 6px;
   overflow: hidden;
   border-radius: 3px;
-  background: #1d2024;
+  background: var(--raised);
 }
 .act-bar > div b {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: #8fb38a;
+  background: var(--mark);
 }
 .act-bar > span:last-child {
-  font: 10px var(--mono);
-  color: var(--fg-muted);
+  font: 12px var(--mono);
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 .roosts .project-search {
   width: 100%;
-  max-width: 360px;
-  margin-bottom: 14px;
+  box-sizing: border-box;
+  min-height: 36px;
+  margin: 4px 0;
   padding: 7px 10px;
-  border: 1px solid #2b2e33;
-  border-radius: 7px;
-  background: #0b0c0e;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--input);
   font: inherit;
   color: var(--fg);
 }
-.roost-list {
-  display: grid;
-  gap: 12px;
-}
+.roost-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); align-items: start; gap: 16px; }
 .roosts .small-note {
   display: flex;
   flex-wrap: wrap;
