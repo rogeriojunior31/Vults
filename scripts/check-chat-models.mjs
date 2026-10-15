@@ -336,6 +336,7 @@ for (const surface of ["island", "nest"]) {
   assert.equal(files.parentElement, composer, "File cards belong to the same draft surface");
   assert.equal(files.attributes["aria-label"], "Attachments");
   assert.equal(tools.parentElement, composer);
+  assert.equal(tools.children[0].attributes["aria-label"], "Attach a file", "The icon-only file picker keeps its explicit accessible name");
   assert.deepEqual(files.children.map(file => file.querySelector("small").textContent), ["MD", "File", "File", "PNG"]);
   assert.ok(files.children[0].textContent.includes("project.plan.md"), "Inbox timestamps stay out of the visible name");
   files.children[1].querySelector("button").listeners.click();
@@ -352,7 +353,7 @@ for (const surface of ["island", "nest"]) {
   await tick();
   const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting");
   assert.equal(greetings().length, 1, "The recipient is introduced once");
-  assert.equal(greetings()[0].parentElement.className, surface === "island" ? "chat-head" : "hint");
+  assert.equal(greetings()[0].parentElement.className, "hint", "The greeting belongs to the empty state, never the persistent header");
   assert.equal(chat.element.classList.contains("has-messages"), false, "An empty chat keeps its natural height");
   chat.load({ ...conversation, busy: true, lines: [] });
   assert.equal(chat.element.classList.contains("has-messages"), true, "Thinking already reserves the conversation space");
@@ -361,11 +362,11 @@ for (const surface of ["island", "nest"]) {
   assert.ok(chat.element.textContent.includes("can't run commands or open your project"), "The API capability notice stays visible");
   chat.load({ ...conversation, lines: [{ who: "zeca", text: "Saved reply" }] });
   assert.ok(!chat.element.textContent.includes("can't run commands or open your project"));
-  assert.equal(greetings().length, surface === "island" ? 1 : 0, "Quick retains its recipient while Nest uses its existing titlebar");
+  assert.equal(greetings().length, 0, "Both surfaces leave the reading area to messages once the conversation starts");
   assert.ok(chat.element.textContent.includes("Saved reply"));
   assert.equal(chat.element.classList.contains("has-messages"), true, "Restored messages get the full conversation height");
 }
-console.log("check-chat-models: Quick header introduces the recipient once, Nest retains its empty state, API capability notice survives");
+console.log("check-chat-models: both surfaces keep the greeting in the empty state only, API capability notice survives");
 
 for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {} }, () => {}, { window: surface });

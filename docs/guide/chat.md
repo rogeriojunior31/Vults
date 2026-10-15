@@ -1,19 +1,19 @@
 # Chatting with Zeca
 
 Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca has a
-full perch beside the island chat's controls and beside the Nest's conversation: he thinks while the reply comes, tilts his head when he asks you
+small animated perch in the chat header: he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
 API provider you set up, see below); on the island one compact control shows the engine above
 its model, with a background on hover or while open. Its menu holds the engine, model and effort.
-The island groups the greeting, engine and conversation actions beside Zeca, leaving
-the space below for suggestions and replies. The engine menu uses the full chat width.
-Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom),
-with the title above the executor and conversation actions. The sprite keeps its
-existing pixel scale and has a clear margin beside the controls. Once a conversation
-has messages or is thinking, it uses the available height instead of capping replies
-at 200 px. Attachments scroll in a horizontal strip, the draft stays bounded, and
-messages keep their own scroll area. A short viewport hides and pauses the portrait
-to prioritize reading and sending; returning to a taller viewport resumes the same scene.
+The engine and conversation actions share one row beside Zeca. The engine menu uses the full chat width.
+Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
+The companion uses a 40 px header slot and the existing animations at a smaller pixel scale.
+**Ask Zeca** appears only in an empty conversation, at a smaller title size; it does not
+remain above your messages. Once a conversation has messages or is thinking, it uses the
+available height instead of capping replies at 200 px. Attachments scroll in a horizontal strip,
+the draft stays bounded, and messages keep their own scroll area. A short viewport hides
+and pauses the portrait to prioritize reading and sending; returning to a taller viewport
+resumes the same scene.
 
 Its engines come in two groups, **Your
 setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
@@ -28,8 +28,9 @@ retain the focused choice, and refreshes preserve an unfinished conversation tit
 
 In an empty CLI conversation, the question cards fill the draft and focus the
 input. Edit it before pressing **Send** or **Enter**; clicking a suggestion does not send it.
-The composer groups file cards above the writing area, with Attach, the optional microphone
-and Send in a separate row below it. Your messages sit in bubbles on the right; replies
+The composer starts with one writing line and grows as you type, up to its height limit.
+The paperclip, optional microphone and Send sit beside the draft; the paperclip keeps its
+**Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies
 read in the conversation column.
 
 The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no chat, no microphone
@@ -67,7 +68,8 @@ The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own 
 there too. **Memory**, beside it, shows what Zeca
 remembers.
 
-Zeca stays on his perch while the transcript scrolls. Hover over him to get his attention, or
+Zeca stays in the title bar while the transcript scrolls, leaving the full conversation
+column for your messages and the composer. Hover over him to get his attention, or
 click **Greet Zeca** to wave while he is idle. Thinking, voice, questions and files use the same
 animations as the island; a greeting never answers a card. In short windows the perch folds away
 to keep the composer and actions reachable. The animation stops drawing when Chat is hidden,

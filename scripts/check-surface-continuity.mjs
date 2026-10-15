@@ -170,6 +170,7 @@ for (const width of [480, 760, 900, 1180]) {
     assert.deepEqual(auditTab.scrolledIntoView, { block: "nearest", inline: "nearest" }, "Restoring a sub-tab keeps its selection visible in the navigation strip");
     nest.open("chat"); nest.chat.draft("More context");
     const character = nest.chat.perchSlot.querySelector(".chat-character");
+    assert.equal(nest.chat.perchSlot.parentElement.className, "chat-titlebar", "The retained companion shares the header instead of taking a transcript column");
     const canvas = character.querySelector("canvas");
     const portrait = scenes.get(canvas);
     assert.ok(portrait, "Room uses the production animated scene in the chat's own perch");

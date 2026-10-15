@@ -1,19 +1,19 @@
 # Conversando com o Zeca
-<!-- source: 9a2d9524740a -->
+<!-- source: 92445d0ce356 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
-poleiro completo ao lado dos controles do chat da ilha e ao lado da conversa no Nest: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
+poleiro pequeno e animado no cabeçalho do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
 você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
 de API que você configurou, veja abaixo); na ilha um controle compacto mostra o motor acima
 do modelo, com fundo ao passar o mouse ou enquanto está aberto. Seu menu traz o motor, o modelo
-e o esforço. A ilha agrupa o título, o motor e as ações da conversa ao lado do Zeca,
-deixando o espaço abaixo para sugestões e respostas. O menu do motor usa toda a largura do chat.
-O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos
-após o zoom), com o título acima do executor e das ações da conversa. O sprite mantém
-sua escala de pixels e ganha uma margem livre ao lado dos controles. Quando há mensagens
-ou o Zeca está pensando, a conversa usa a altura disponível, sem limitar as respostas
-a 200 px. Os anexos rolam numa faixa horizontal, o rascunho tem altura limitada e as
-mensagens mantêm sua própria área de rolagem. Uma área baixa esconde e pausa o retrato
+e o esforço. O motor e as ações da conversa dividem uma linha ao lado do Zeca.
+O menu do motor usa toda a largura do chat.
+O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos após o zoom).
+O companheiro usa um espaço de 40 px no cabeçalho e as animações existentes numa escala menor de pixels.
+**Perguntar ao Zeca** aparece apenas numa conversa vazia, com um título menor; ele não permanece
+acima das mensagens. Quando há mensagens ou o Zeca está pensando, a conversa usa a altura disponível,
+sem limitar as respostas a 200 px. Os anexos rolam numa faixa horizontal, o rascunho tem altura
+limitada e as mensagens mantêm sua própria área de rolagem. Uma área baixa esconde e pausa o retrato
 para priorizar leitura e envio; voltar a uma área mais alta retoma a mesma cena.
 
 Os motores vêm em dois grupos, **Your setup** (os
@@ -28,8 +28,9 @@ na opção o foco, e as atualizações preservam um título de conversa ainda em
 
 Numa conversa CLI vazia, os cartões de perguntas preenchem o rascunho e focam o campo.
 Edite antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
-O compositor agrupa os cartões de arquivos acima da área de escrita, com Anexar, o microfone
-opcional e Enviar em uma linha própria abaixo dela. Suas mensagens ficam em balões à direita;
+O compositor começa com uma linha de escrita e cresce conforme você digita, até o limite de altura.
+O clipe, o microfone opcional e Enviar ficam ao lado do rascunho; o clipe mantém o nome acessível
+e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própria acima dele. Suas mensagens ficam em balões à direita;
 as respostas seguem na coluna da conversa.
 
 O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há chat nem microfone, o atalho
@@ -77,7 +78,8 @@ A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vult
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
 ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
 
-O Zeca fica no poleiro enquanto a conversa rola. Passe o mouse nele para chamar sua atenção, ou
+O Zeca fica no cabeçalho enquanto a conversa rola, deixando toda a coluna da conversa
+para suas mensagens e o compositor. Passe o mouse nele para chamar sua atenção, ou
 clique em **Cumprimentar o Zeca** para ele acenar enquanto está ocioso. Pensamento, voz, perguntas
 e arquivos usam as mesmas animações da ilha; um cumprimento nunca responde a um card. Em janelas
 baixas, o poleiro recolhe para manter o compositor e as ações acessíveis. A animação para de desenhar

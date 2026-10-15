@@ -515,13 +515,12 @@ export class ChatPanel {
       this.log.classList.toggle("scrolled", this.log.scrollTop > 2);
       if (this.following) this.jump.classList.remove("on");
     });
-    // Quick keeps the greeting and executor beside Zeca; source and access stay by the draft.
+    // Quick keeps the executor beside Zeca; source and access stay by the draft.
     const compact = this.compact;
     const head = compact
       ? el(
           "div",
           { class: "chat-head" },
-          this.greeting,
           el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu),
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
@@ -1926,14 +1925,14 @@ export class ChatPanel {
       ...(this.messages.length
         ? this.nodes
         : [
-            ...(this.compact && this.provider !== "api" ? [] : [el("div", { class: "hint" },
-              this.compact ? null : this.greeting,
-              el("p", { text:
+            el("div", { class: "hint" },
+              this.greeting,
+              ...(this.compact && this.provider !== "api" ? [] : [el("p", { text:
                 this.provider === "api"
                   ? t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.")
                   : t("Ask anything, or drop a file on the island."),
-              }),
-            )]),
+              })]),
+            ),
             el(
               "div",
               { class: "suggestions" },
