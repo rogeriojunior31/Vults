@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 43e1389dec7c -->
+<!-- source: 892f3b3c5240 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -65,6 +65,13 @@ in front** (ou **Let the flock choose**), e silenciar, fixar ou esconder o proje
 um card espera, só a **Activity** e o diff daquela sessão podem aparecer.
 Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam por você, e **Find a
 session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora.
+
+A ave selecionada e seu card compartilham uma marca clara de seleção. Nomes de
+projetos ocupam até duas linhas; passar o mouse num card mostra nome completo,
+branch, agente e estado. **Needs you** inclui o total de sessões aguardando no bando,
+mesmo durante uma busca. O card de detalhes separa o título do projeto de agente e
+estado, e as abas usam uma entrada breve só quando você as troca; atualizações ao
+vivo não a repetem. Movimento reduzido e pausa manual pulam essa entrada.
 
 A busca, o filtro **Needs you** e a aba de detalhes continuam onde você deixou
 ao fechar e reabrir o Nest ou voltar para a ilha, até sair do Vults. **Clear

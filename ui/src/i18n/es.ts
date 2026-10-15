@@ -899,7 +899,6 @@ export default {
   "Status": "Estado",
   "Zeca reads this session's steps and changes, and answers in the Chat. He never answers a card.": "Zeca lee los pasos y los cambios de esta sesión y responde en el Chat. Nunca responde una tarjeta.",
   "Clear filters": "Quitar filtros",
-  "Selected: {name}": "Seleccionada: {name}",
   "Changes": "Cambios",
   "Zeca": "Zeca",
   "7d": "7d",

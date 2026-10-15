@@ -65,6 +65,13 @@ waits, only that session's **Activity** and diff can show.
 Under them, **Session details**: **Needs you** keeps only the sessions waiting for you, and **Find a
 session…** reads projects, repositories, branches, agents and what each is doing now.
 
+The selected bird and its card share a light selection mark. Project names have
+up to two lines; hovering over a card shows its full name, branch, agent and state.
+**Needs you** includes the total waiting count across the flock, even while searching.
+The detail card separates the project heading from its agent and state, and detail
+tabs use a brief entrance only when you switch them; live updates do not replay it.
+Reduced motion and manual pause skip that entrance.
+
 The search, **Needs you** filter and detail tab stay where you left them when you
 close and reopen the Nest or return to the island, until Vults exits. **Clear
 filters** in the search toolbar clears the search and Needs you, keeping the detail tab. If Zeca is off,

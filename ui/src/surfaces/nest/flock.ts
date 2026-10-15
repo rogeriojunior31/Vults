@@ -148,7 +148,6 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const sky = el("div", { class: "habitat-sky" }, scene.canvas, badges);
   const heading = el("strong");
   const roosts = el("div", { class: "roost-cards" });
-  const selected = el("p", { class: "habitat-selected" });
   // The prototype's count by the heading: who is out on a web sortie, who sits on the wire.
   const summary = el("span", { class: "habitat-summary" });
   const habitat = el(
@@ -157,13 +156,14 @@ export function createFlock(on: FlockActions & FlockAsk): {
     el("header", { class: "habitat-header" }, el("div", { class: "habitat-heading" }, el("span", { class: "legend-dot" }), heading), summary),
     sky,
     roosts,
-    selected,
   );
   const title = el("h2");
   const search = el("input", { class: "nest-search" });
   search.type = "search";
   search.maxLength = 4096;
   const needs = el("button", { class: "attention-filter" });
+  const needsCount = el("span", { class: "attention-count" });
+  needsCount.setAttribute("aria-hidden", "true");
   const clear = el("button", { class: "outline", onclick: () => {
     search.value = "";
     onlyNeeds = false;
@@ -348,6 +348,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         b.style.width = `${slot.width + 8}px`;
         b.title = label;
         b.setAttribute("aria-label", label);
+        b.setAttribute("aria-pressed", String(!!front && key(front) === slot.key));
         const kind = badgeOf(s);
         const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
         if (badge) {
@@ -388,9 +389,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
     menuOn(b, s);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
+    b.title = [s.project || agentName(s), s.branch, agentName(s), statusText(s)].filter(Boolean).join(" · ");
     b.append(
       el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
-      el("div", { class: "roost-sub", text: statusText(s) }),
+      el("div", { class: `roost-sub ${tone(s)}`, text: statusText(s) }),
       el("div", { class: "roost-agent", text: agentName(s) }),
     );
     return b;
@@ -514,20 +516,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const question = ask && ask.questions.length ? ask : null;
     const permission = ask && !question ? ask : null;
     const command = permission ? [permission.tool, permission.full ?? permission.target].filter(Boolean).join(" · ") : null;
-    const tag = el("span", { class: "agent-tag" }, el("span", { class: "agent-dot" }));
+    const tag = el("span", { class: "agent-tag" }, el("span", { class: "agent-dot" }), el("span", { text: agentName(s) }));
     tag.style.color = colorOf(s.agent);
     tag.title = agentName(s);
     return el(
       "div",
       { class: `app-card ${tone(s)}` },
+      el("h3", { class: "card-name", text: s.project || agentName(s) }),
       el(
         "div",
         { class: "app-card-head" },
         tag,
-        el("strong", { class: "card-name", text: s.project || agentName(s) }),
         s.editor ? el("span", { class: "ed-chip", text: s.editor }) : null,
-        // With the ticker under it the head says no step: the ticker does (the prototype's head).
-        ticker ? null : el("span", { class: "card-verb", text: statusText(s) }),
+        el("span", { class: "card-verb card-state", text: statusText(s) }),
         // Working: its subagents, steps so far and cost at API prices, as the prototype's head says.
         s.status === "working" && s.subagents > 0
           ? el("span", { class: "card-verb", text: s.subagents === 1 ? t("+1 subagent") : t("+{n} subagents", { n: s.subagents }) })
@@ -705,8 +706,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     drawSky();
     const front = frontOf(v);
     const shown = visible(v);
-    // The selected session says what is in front; its detail tabs carry the rest on demand.
-    title.textContent = front ? `${front.project || agentName(front)} · ${statusText(front)}` : t("Session details");
+    const attention = v.sessions.filter(needsYou).length;
+    needsCount.textContent = String(attention);
+    needs.setAttribute("aria-label", attention === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: attention }));
     clear.hidden = !search.value && !onlyNeeds;
     roosts.replaceChildren(
       ...(shown.length
@@ -729,7 +731,6 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ]),
     );
     roosts.classList.toggle("empty", !shown.length);
-    selected.textContent = front ? t("Selected: {name}", { name: front.project || agentName(front) }) : "";
     // With less motion nobody flies: they all sit on the wire.
     const out = calmNow() ? 0 : v.sessions.filter((s) => s.status === "working" && s.activity === "web").length;
     summary.textContent = v.sessions.length ? t("{out} in flight · {on} on the wire", { out, on: v.sessions.length - out }) : "";
@@ -762,6 +763,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
               text: word,
               onclick: () => {
                 detail = id;
+                if (!calmNow()) detailBody.classList.add("detail-enter");
                 remember();
                 draw();
               },
@@ -827,16 +829,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
     title.textContent = t("Session details");
     search.placeholder = t("Find a session…");
     search.setAttribute("aria-label", t("Find a session…"));
-    needs.textContent = t("Needs you");
+    needs.replaceChildren(el("span", { text: t("Needs you") }), needsCount);
     clear.textContent = t("Clear filters");
     needs.setAttribute("aria-pressed", String(onlyNeeds));
     detailTabs.setAttribute("aria-label", t("Session details"));
   };
+  detailBody.addEventListener("animationend", () => detailBody.classList.remove("detail-enter"));
+  detailBody.addEventListener("animationcancel", () => detailBody.classList.remove("detail-enter"));
   detailTabs.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     const ids = [...detailTabs.querySelectorAll<HTMLElement>(".detail-tab")].map((b) => b.id.replace("nest-detail-", "") as Detail);
     const at = ids.indexOf(detail);
     detail = ids[(at + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length];
+    if (!calmNow()) detailBody.classList.add("detail-enter");
     remember();
     e.preventDefault();
     draw();

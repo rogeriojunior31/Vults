@@ -899,7 +899,6 @@ export default {
   "Status": "状态",
   "Zeca reads this session's steps and changes, and answers in the Chat. He never answers a card.": "Zeca 会读取这个会话的步骤和更改，并在聊天中回答。他从不回答卡片。",
   "Clear filters": "清除筛选",
-  "Selected: {name}": "已选择：{name}",
   "Changes": "更改",
   "Zeca": "Zeca",
   "7d": "7天",
