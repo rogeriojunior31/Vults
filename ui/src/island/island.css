@@ -3238,7 +3238,7 @@ button.ghost:hover {
   border-top: 0;
   border-bottom: 1px solid #1d1f24;
 }
-/* Zeca keeps the full 3x scene in Quick; the chat controls sit beside his animation runway. */
+/* The greeting and executor share Zeca's full 3x scene instead of reserving an empty row. */
 #island .chat {
   flex: 1;
   min-height: 0;
@@ -3272,19 +3272,23 @@ button.ghost:hover {
   display: none;
 }
 #island .chat-head {
-  flex-wrap: nowrap;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto);
+  align-content: center;
+  gap: 4px;
   min-height: 108px;
   padding-left: 120px;
+  box-sizing: border-box;
 }
 #island .chat .hint { padding: 4px; }
-#island .chat .chat-greeting { margin: 0; font-size: 16px; }
-#island .chat:not(.chat-api) .hint p { display: none; }
+#island .chat .chat-greeting { grid-column: 1; grid-row: 1; min-width: 0; margin: 0; font-size: 18px; line-height: 1.25; }
+#island .chat-head > :is(.history-box, .ghost) { grid-row: 1; }
+#island .chat-head > .ghost,
+#island .chat-head > .history-box > .ghost { min-width: 28px; min-height: 28px; padding: 4px 6px; }
 #island .chat .suggestions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 #island .chat .suggestion { display: block; min-height: 52px; box-sizing: border-box; padding: 8px; line-height: 1.4; }
 #island .chat .suggestion > svg { display: none; }
-#island .chat-gap {
-  flex: 1 1 auto;
-}
 #island .composer {
   padding: 10px;
   border-radius: var(--radius-composer);
@@ -3461,14 +3465,18 @@ button.ghost:hover {
   color: var(--fg-muted);
 }
 #island .chat-head > .engine-box {
-  position: relative;
+  position: static;
+  grid-column: 1 / -1;
+  grid-row: 2;
   order: 0;
   min-width: 0;
   flex: 0 1 auto;
 }
 #island .chat-head > .engine-box .place.model {
-  max-width: 190px;
+  max-width: 100%;
+  margin-left: -6px;
 }
+#island .engine-box > .menu { left: 0; right: 0; }
 #island .engine-box .menu-item {
   display: flex;
   align-items: center;
@@ -3476,6 +3484,8 @@ button.ghost:hover {
 }
 /* Under the pill, the island's edge is near: each column scrolls before it. */
 #island .engine-box .model-column {
+  flex: 1;
+  min-width: 0;
   max-height: 150px;
 }
 /* Quick's Activity: this week or the one before (the prototype's two buttons). */

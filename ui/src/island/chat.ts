@@ -282,6 +282,7 @@ export class ChatPanel {
   readonly element = el("section", { class: "chat" });
   /** The island moves its perch here; the Nest keeps its own scene in the same slot. */
   readonly perchSlot = el("div", { class: "chat-perch" });
+  private readonly greeting = el("h2", { class: "chat-greeting" });
   private open = false;
   private provider: ChatProvider = "claude";
   /** The API chat: offered only while it can be used (a key saved, or a local model). */
@@ -473,15 +474,14 @@ export class ChatPanel {
       this.log.classList.toggle("scrolled", this.log.scrollTop > 2);
       if (this.following) this.jump.classList.remove("on");
     });
-    // On the island the chat takes the prototype's compact form: the engine and the conversations
-    // up top, the folder and the model under the composer, a paperclip for a file.
+    // Quick keeps the greeting and executor beside Zeca; source and access stay by the draft.
     const compact = this.compact;
     const head = compact
       ? el(
           "div",
           { class: "chat-head" },
+          this.greeting,
           el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu),
-          el("span", { class: "chat-gap" }),
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
           ...(this.backend.openNest ? [this.nestButton()] : []),
@@ -521,6 +521,7 @@ export class ChatPanel {
   /** Its words again: the language is known now, or changed. The panel is built before the app
    *  says which one, so the first call comes from there too. */
   relabel(): void {
+    this.greeting.textContent = t("Ask Zeca");
     this.input.placeholder = t("Ask Zeca…");
     this.input.setAttribute("aria-label", t("Ask Zeca…"));
     this.log.setAttribute("aria-label", t("Chat"));
@@ -1829,14 +1830,14 @@ export class ChatPanel {
       ...(this.messages.length
         ? this.nodes
         : [
-            el("div", { class: "hint" },
-              el("h2", { class: "chat-greeting", text: t("Ask Zeca") }),
+            ...(this.compact && this.provider !== "api" ? [] : [el("div", { class: "hint" },
+              this.compact ? null : this.greeting,
               el("p", { text:
                 this.provider === "api"
                   ? t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.")
                   : t("Ask anything, or drop a file on the island."),
               }),
-            ),
+            )]),
             el(
               "div",
               { class: "suggestions" },

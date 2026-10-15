@@ -5,6 +5,8 @@ full perch beside the island chat's controls and beside the Nest's conversation:
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
 API provider you set up, see below); on the island one compact control shows the engine above
 its model, with a background on hover or while open. Its menu holds the engine, model and effort.
+The island groups the greeting, engine and conversation actions beside Zeca, leaving
+the space below for suggestions and replies. The engine menu uses the full chat width.
 Its engines come in two groups, **Your
 setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
 looks whether the CLI and its login file are there, never reads them) and **Vults harness** (the

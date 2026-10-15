@@ -342,6 +342,22 @@ for (const surface of ["island", "nest"]) {
 console.log("check-chat-models: both composers keep suggestions editable, file picker, real file labels, individual removal and saved draft");
 
 for (const surface of ["island", "nest"]) {
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {}, { window: surface });
+  await tick();
+  const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting");
+  assert.equal(greetings().length, 1, "The recipient is introduced once");
+  assert.equal(greetings()[0].parentElement.className, surface === "island" ? "chat-head" : "hint");
+  chat.load({ ...conversation, provider: "api", started: false });
+  assert.equal(greetings().length, 1, "The API notice does not duplicate the recipient");
+  assert.ok(chat.element.textContent.includes("can't run commands or open your project"), "The API capability notice stays visible");
+  chat.load({ ...conversation, lines: [{ who: "zeca", text: "Saved reply" }] });
+  assert.ok(!chat.element.textContent.includes("can't run commands or open your project"));
+  assert.equal(greetings().length, surface === "island" ? 1 : 0, "Quick retains its recipient while Nest uses its existing titlebar");
+  assert.ok(chat.element.textContent.includes("Saved reply"));
+}
+console.log("check-chat-models: Quick header introduces the recipient once, Nest retains its empty state, API capability notice survives");
+
+for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {} }, () => {}, { window: surface });
   await tick();
   chat.load({ ...conversation, busy: true, lines: [{ who: "zeca", text: "A reply already streaming" }] });
