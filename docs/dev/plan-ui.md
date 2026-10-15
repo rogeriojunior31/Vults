@@ -421,6 +421,11 @@ renderer-only results cannot close this task. **Reference:** B05, R04, C01/C06.
 
 ## UX7 - shared extension, native feature work
 
+A bounded Chat-only refinement was implemented on 2026-10-15 at the user's request
+([delivery record](#quick-chat-proportions---2026-10-15)). ADR 0021 now describes its
+width and zoom within the current fixed overlay. This does not implement the
+paired Mini/Quick width selector or close the desktop acceptance below.
+
 - [ ] Reconcile the requested wider Mini/Quick with ADR 0021's fixed overlay and
   four-size contract before landing runtime changes. Keep Room and Full behavior.
 - [ ] Implement paired width selection and restoration, with display scaling,
@@ -693,3 +698,41 @@ Automated result for this batch: the TypeScript/Vite build, all nine renderer
 scripts and repository policy checks pass; Rust fmt/clippy pass, with 864 workspace
 tests and 8 eval tests passing. Native visual acceptance remains open as described
 above; no browser or native screenshot result is implied.
+
+
+## Quick Chat proportions - 2026-10-15
+
+User requested the fifth suggestion: rebalance the Compact's space for Zeca,
+conversation and controls. Delivered on `feat/ui-component-polish`, retaining
+Mini, Flock placement, assets, integer sprite scales and existing interaction owners.
+
+- Chat uses 492 CSS px (561 logical px after the existing 1.14 zoom); the other
+  Quick tabs keep 440 CSS px (502 logical px). Zeca's existing 112x108 scene gets
+  a clear 128x112 slot. The title has its own full line above executor/actions.
+- A populated or thinking conversation fills the available height up to 556 CSS
+  px. The transcript uses the remainder instead of the old 200/120 px caps.
+  An empty chat keeps its natural content height. The draft remains bounded and
+  multiple attachments use a horizontal strip rather than additional rows.
+- One production geometry module owns zoom and available bounds. The mapped
+  native surface stays 720x640; the initial Tauri configuration now agrees with
+  that existing runtime size. A smaller viewport lowers the CSS limits before
+  synchronous measurement. Top/bottom docking uses the measured rectangle.
+- Short viewports prioritize reading and sending and pause the hidden portrait;
+  the existing scene resumes when space returns. Overflow keeps a scroll path
+  to actions if attention/news and a large draft exhaust the available height.
+- ADR 0021, the UI rules and Chat guide describe the bounded change; the public
+  changes have reviewed Portuguese mirrors and updated source marks.
+
+Validation: build/typecheck, the production geometry check (normal/wider widths,
+smaller viewports, 1/1.25/1.5/2 display-scale bounds, native configuration agreement,
+exact top/bottom input rectangles and hidden click-through), Chat checks (empty,
+thinking, restored conversation, IME, streaming/manual scroll, drafts, files and
+voice), and the integrated surface continuity check. Full repository gates run
+before the local commit.
+
+Desktop review remains required in the reopened Tauri: compare Flock and Chat,
+open the engine/history/folder/access menus, try long drafts and several files,
+check the swallowing/voice clips, fold/reopen and move between Quick and Room.
+Confirm click-through outside the wider shape and bottom-panel placement on the
+real compositor. Renderer mocks and geometry arithmetic do not measure WebKit
+layout or prove the compositor's native input behavior.

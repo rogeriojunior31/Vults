@@ -62,7 +62,8 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   prototype's paired widths (560/680/760 px), Mini height (56 px) and Quick height
   (600 px) are layout references until native window, zoom, placement and input
   region validation lands. Production currently uses Mini 340 x 38 and Quick
-  440 px internally; display scaling must be accounted for.
+  440 CSS px internally (492 in Chat), with a 1.14 UI zoom inside the fixed 720 x 640
+  logical-pixel overlay; display scaling must be accounted for.
 - Settings remains the configuration destination. Present the destination clearly
   when another surface needs a privileged setting.
 

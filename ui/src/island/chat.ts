@@ -1819,6 +1819,7 @@ export class ChatPanel {
   }
 
   private paint(): void {
+    this.element.classList.toggle("has-messages", this.messages.length > 0 || this.busy);
     this.paintHead();
     this.paintVoice();
     const last = this.messages[this.messages.length - 1];

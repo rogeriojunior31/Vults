@@ -19,7 +19,10 @@ meant to steer whatever reads them.
   rule). Surfaces choose clips, icons, colors and sounds, from one small view model (a projection
   per surface only when a payload grows), and speak only in `Intent`s through the same commands.
 - **Four sizes**: **Mini** is the pill (340 x 38, the flock and no text: news reaches it only as a
-  body, a color or a motion). **Quick** is the island (440 px wide) inside the fixed layer surface.
+  body, a color or a motion). **Quick** is the island inside the fixed 720 x 640 logical-pixel
+  layer surface: 440 CSS px wide normally, 492 CSS px in Chat, before the UI's 1.14 zoom
+  (502 and 561 logical px respectively). Height stays within 556 CSS px (634 after zoom),
+  clamped further if the viewport is smaller. Only the measured visible rectangle takes input.
   **Room** is the Nest window, resizable down to 480 x 360 px with no maximum, first opened large
   within the screen. **Full** is the Nest maximized or in full screen; Esc returns to the size
   before it. The layer-shell overlay never grows past its fixed size.
@@ -96,3 +99,8 @@ meant to steer whatever reads them.
   Nest's window; checks go by webview label.
 - 0024, 2026-10-12: the island steps aside while the Nest is open.
 - 0030, 2026-10-12: the Nest answers a card too, while the user is in it.
+
+- 2026-10-15: Chat uses a wider Quick composition within the existing fixed overlay.
+  Geometry accounts for zoom once and clamps to the viewport before measurement.
+  Initial native configuration matches the runtime's 720 x 640 size; Mini and the
+  other Quick tabs retain their widths. User-selectable paired widths remain future work.

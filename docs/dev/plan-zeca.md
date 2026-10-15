@@ -21,6 +21,9 @@ The 2026-10-15 six-part refinement batch is implemented on
 history, control feedback and narrow/wide continuity. Its detailed delivery and
 pending desktop review are in [the batch record](plan-ui.md#six-part-ui-refinement---2026-10-15).
 This does not close native acceptance or begin UX7.
+The subsequent [Quick Chat proportions](plan-ui.md#quick-chat-proportions---2026-10-15)
+refinement is implemented within the fixed overlay, with ADR 0021 reconciled;
+paired Mini/Quick width selection and desktop acceptance remain separate.
 
 These IDs are new; completed W/U/L steps stay in Done. UI-only refinements do not
 reopen shipped features, and the R3/tag gate below keeps its existing scope.

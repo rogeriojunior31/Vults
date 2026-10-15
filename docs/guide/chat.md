@@ -7,6 +7,14 @@ API provider you set up, see below); on the island one compact control shows the
 its model, with a background on hover or while open. Its menu holds the engine, model and effort.
 The island groups the greeting, engine and conversation actions beside Zeca, leaving
 the space below for suggestions and replies. The engine menu uses the full chat width.
+Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom),
+with the title above the executor and conversation actions. The sprite keeps its
+existing pixel scale and has a clear margin beside the controls. Once a conversation
+has messages or is thinking, it uses the available height instead of capping replies
+at 200 px. Attachments scroll in a horizontal strip, the draft stays bounded, and
+messages keep their own scroll area. A short viewport hides and pauses the portrait
+to prioritize reading and sending; returning to a taller viewport resumes the same scene.
+
 Its engines come in two groups, **Your
 setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
 looks whether the CLI and its login file are there, never reads them) and **Vults harness** (the

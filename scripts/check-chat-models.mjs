@@ -347,13 +347,17 @@ for (const surface of ["island", "nest"]) {
   const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting");
   assert.equal(greetings().length, 1, "The recipient is introduced once");
   assert.equal(greetings()[0].parentElement.className, surface === "island" ? "chat-head" : "hint");
-  chat.load({ ...conversation, provider: "api", started: false });
+  assert.equal(chat.element.classList.contains("has-messages"), false, "An empty chat keeps its natural height");
+  chat.load({ ...conversation, busy: true, lines: [] });
+  assert.equal(chat.element.classList.contains("has-messages"), true, "Thinking already reserves the conversation space");
+  chat.load({ ...conversation, provider: "api", started: false, busy: false, lines: [] });
   assert.equal(greetings().length, 1, "The API notice does not duplicate the recipient");
   assert.ok(chat.element.textContent.includes("can't run commands or open your project"), "The API capability notice stays visible");
   chat.load({ ...conversation, lines: [{ who: "zeca", text: "Saved reply" }] });
   assert.ok(!chat.element.textContent.includes("can't run commands or open your project"));
   assert.equal(greetings().length, surface === "island" ? 1 : 0, "Quick retains its recipient while Nest uses its existing titlebar");
   assert.ok(chat.element.textContent.includes("Saved reply"));
+  assert.equal(chat.element.classList.contains("has-messages"), true, "Restored messages get the full conversation height");
 }
 console.log("check-chat-models: Quick header introduces the recipient once, Nest retains its empty state, API capability notice survives");
 

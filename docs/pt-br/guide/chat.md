@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: bdec15303d1e -->
+<!-- source: 51db6a353587 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro completo ao lado dos controles do chat da ilha e ao lado da conversa no Nest: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -8,6 +8,14 @@ de API que você configurou, veja abaixo); na ilha um controle compacto mostra o
 do modelo, com fundo ao passar o mouse ou enquanto está aberto. Seu menu traz o motor, o modelo
 e o esforço. A ilha agrupa o título, o motor e as ações da conversa ao lado do Zeca,
 deixando o espaço abaixo para sugestões e respostas. O menu do motor usa toda a largura do chat.
+O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos
+após o zoom), com o título acima do executor e das ações da conversa. O sprite mantém
+sua escala de pixels e ganha uma margem livre ao lado dos controles. Quando há mensagens
+ou o Zeca está pensando, a conversa usa a altura disponível, sem limitar as respostas
+a 200 px. Os anexos rolam numa faixa horizontal, o rascunho tem altura limitada e as
+mensagens mantêm sua própria área de rolagem. Uma área baixa esconde e pausa o retrato
+para priorizar leitura e envio; voltar a uma área mais alta retoma a mesma cena.
+
 Os motores vêm em dois grupos, **Your setup** (os
 CLIs do Claude Code e do Codex, cada um *Signed in*, *Installed* ou *Not installed*: o Vults só olha
 se o CLI e o arquivo de login dele estão lá, nunca os lê) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),

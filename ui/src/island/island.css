@@ -78,10 +78,9 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 440px;
-  /* Never past the island's fixed surface (app/src/runtime.rs ISLAND_SIZE), its zoom (render.ts
-     OPEN_ZOOM) included: 556 x 1.14 = 634 on screen. Past it, the body scrolls. */
-  max-height: 556px;
+  width: var(--quick-width, 440px);
+  /* geometry.ts accounts for zoom before the native input rectangle is measured. */
+  max-height: var(--quick-height, 556px);
   padding: 6px 10px 10px;
 }
 
@@ -3238,7 +3237,10 @@ button.ghost:hover {
   border-top: 0;
   border-bottom: 1px solid #1d1f24;
 }
-/* The greeting and executor share Zeca's full 3x scene instead of reserving an empty row. */
+/* The chat gets a wider reading column inside the existing native overlay. */
+#island .inner:has(.main > .chat) { width: var(--quick-chat-width, 492px); }
+#island .inner:has(.main > .chat.has-messages) { height: var(--quick-height, 556px); }
+/* Zeca and the controls keep their space; only the transcript scrolls. */
 #island .chat {
   flex: 1;
   min-height: 0;
@@ -3249,23 +3251,24 @@ button.ghost:hover {
   border: 0;
   border-radius: 0;
 }
-#island .main:has(> .chat) { display: flex; }
+#island .main:has(> .chat) { display: flex; flex: 1; overflow-y: auto; }
 #island .chat-main { min-height: 0; }
 #island .chat :is(.chat-head, .chat-foot) { flex: none; }
-#island .chat .log-box { flex: 1; min-height: 40px; }
+#island .chat .log-box { flex: 1 1 64px; min-height: 64px; }
+#island .chat .composer { flex: none; }
 #island .chat-perch {
   position: absolute;
   left: 0;
   top: 6px;
-  width: 112px;
-  height: 108px;
+  width: 128px;
+  height: 112px;
   min-height: 0;
   overflow: visible;
   pointer-events: none;
 }
 #island .chat-perch .perch {
-  left: 0;
-  top: 0;
+  left: 8px;
+  top: 2px;
   transform: none;
 }
 #island .chat-perch .perch .glow {
@@ -3276,14 +3279,14 @@ button.ghost:hover {
   display: grid;
   grid-template-columns: minmax(0, 1fr) repeat(3, auto);
   align-content: center;
-  gap: 4px;
-  min-height: 108px;
-  padding-left: 120px;
+  gap: 8px 4px;
+  min-height: 112px;
+  padding-left: 136px;
   box-sizing: border-box;
 }
 #island .chat .hint { padding: 4px; }
-#island .chat .chat-greeting { grid-column: 1; grid-row: 1; min-width: 0; margin: 0; font-size: 18px; line-height: 1.25; }
-#island .chat-head > :is(.history-box, .ghost) { grid-row: 1; }
+#island .chat .chat-greeting { grid-column: 1 / -1; grid-row: 1; min-width: 0; margin: 0; font-size: 18px; line-height: 1.25; }
+#island .chat-head > :is(.history-box, .ghost) { grid-row: 2; }
 #island .chat-head > .ghost,
 #island .chat-head > .history-box > .ghost { min-width: 28px; min-height: 28px; padding: 4px 6px; }
 #island .chat .suggestions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -3305,10 +3308,24 @@ button.ghost:hover {
   border-color: var(--focus-border);
   box-shadow: var(--focus-shadow);
 }
-#island .chat .log { height: 100%; max-height: 200px; gap: 12px; padding: 4px; box-sizing: border-box; }
-#island .chat:has(.chips:not(:empty)) .log { max-height: 120px; }
-#island .chat:has(.chips:not(:empty)) .chips { max-height: 80px; }
-#island .chat:has(.chips:not(:empty)) .composer textarea { max-height: 80px; }
+#island .chat .log { height: 100%; max-height: none; gap: 12px; padding: 4px; box-sizing: border-box; }
+#island .chat .composer textarea { min-height: 52px; max-height: 96px; }
+#island .chat .chips {
+  display: flex;
+  flex-wrap: nowrap;
+  max-height: 60px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+#island .chat .chips:empty { display: none; }
+#island .chat .chip { flex: 0 0 188px; max-height: 56px; overflow: hidden; scroll-snap-align: start; }
+#island .chat .file-info { max-height: 44px; overflow-y: auto; }
+#island .chat-foot > .place-box { flex: 1; }
+#island .chat-foot > .place-box > .place { max-width: 100%; }
+#island .chat-foot .place { min-height: 28px; box-sizing: border-box; }
+#island .chat-foot > .setup { flex: none; }
 /* The zone takes the whole chat, Zeca inside it at its left. */
 #island .drop-zone {
   inset: 4px;
@@ -3466,7 +3483,7 @@ button.ghost:hover {
 }
 #island .chat-head > .engine-box {
   position: static;
-  grid-column: 1 / -1;
+  grid-column: 1;
   grid-row: 2;
   order: 0;
   min-width: 0;
@@ -3572,3 +3589,20 @@ button.ghost:hover {
 }
 body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .card.entering, .card.leaving, .tick.current .tick-text) { animation: none; }
+
+/* A short surface prioritizes reading and sending; the same scene resumes when space returns. */
+#island .inner.chat-tight:has(.main > .chat) { height: var(--quick-height); gap: 4px; }
+#island .chat-tight .chat { padding-top: 4px; }
+#island .chat-tight .chat-perch { display: none; }
+#island .chat-tight .chat-head { min-height: 64px; padding-left: 0; gap: 4px; }
+#island .chat-tight .chat-main { gap: 4px; }
+#island .chat-tight .chat .log-box { min-height: 40px; flex-basis: 40px; }
+#island .chat-tight .chat .composer { gap: 4px; padding: 6px 8px; }
+#island .chat-tight .chat .composer textarea { min-height: 36px; max-height: 52px; }
+#island .chat-tight .chat .composer .wave { height: 36px; }
+#island .chat-tight .chat .chips { max-height: 36px; }
+#island .chat-tight .chat .chip { height: 36px; padding: 2px 6px; box-sizing: border-box; }
+#island .chat-tight .chat .file-info { max-height: 28px; }
+#island .chat-tight .chat .suggestion { min-height: 40px; padding: 6px; }
+#island .chat-tight .chat .drop-zone { padding-left: 0; }
+#island .chat-tight .chat .engine-box .model-column { max-height: 100px; }

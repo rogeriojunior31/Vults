@@ -1,5 +1,5 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: e2af473098a8 -->
+<!-- source: bfcedb139961 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023, da 0024 e da 0030.
@@ -25,8 +25,11 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   único view model pequeno (uma projeção por superfície só quando um payload cresce), e falam só em
   `Intent`s, pelos mesmos comandos.
 - **Quatro tamanhos**: **Mini** é a pílula (340 x 38, o bando e nenhum texto: novidades chegam a
-  ela só como corpo, cor ou movimento). **Quick** é a ilha (440 px de largura) dentro da superfície
-  de camada fixa. **Room** é a janela do Nest, redimensionável a partir de 480 x 360 px, sem máximo, que na
+  ela só como corpo, cor ou movimento). **Quick** é a ilha dentro da superfície de camada fixa
+  de 720 x 640 pixels lógicos: normalmente com 440 CSS px de largura e 492 CSS px no Chat,
+  antes do zoom de 1,14 da interface (502 e 561 pixels lógicos, respectivamente).
+  A altura fica dentro de 556 CSS px (634 após o zoom), reduzida quando a área disponível
+  é menor. Só o retângulo visível medido recebe entrada. **Room** é a janela do Nest, redimensionável a partir de 480 x 360 px, sem máximo, que na
   primeira vez abre grande dentro da tela. **Full** é o Nest maximizado ou em tela cheia; Esc volta
   ao tamanho anterior. A sobreposição de layer-shell nunca passa do seu tamanho fixo.
 - **As superfícies em repouso são superfícies de camada** mapeadas uma vez num tamanho fixo, cada
@@ -111,3 +114,9 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   janela do Nest; as verificações vão pelo label da webview.
 - 0024, 2026-10-12: a ilha sai enquanto o Nest está aberto.
 - 0030, 2026-10-12: o Nest também responde um card, enquanto o usuário está nele.
+
+- 2026-10-15: o Chat usa uma composição Quick mais larga dentro da superfície fixa atual.
+  A geometria aplica o zoom uma única vez e limita as dimensões à área disponível antes
+  da medição. A configuração nativa inicial acompanha os 720 x 640 do runtime; Mini
+  e as outras abas do Quick mantêm suas larguras. Larguras pareadas escolhidas pelo
+  usuário continuam como trabalho futuro.
