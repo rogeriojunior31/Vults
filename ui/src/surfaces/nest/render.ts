@@ -6,6 +6,9 @@ import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
 import { ChatPanel, type ChatBackend } from "../../island/chat";
+import { Clock } from "../../clock";
+import { FOCUS_SCENE, Scene } from "../../island/scene";
+import { setZecaLook, setZecaSpecies } from "../../island/flock";
 import { icon } from "../../island/icons";
 import { agentName, statusText } from "../../island/views";
 import { renderFull } from "../../island/markdown";
@@ -127,9 +130,13 @@ export function createNest(
   zeca: boolean,
   startFull = false,
 ): Nest {
+  const portrait = new Scene(FOCUS_SCENE);
+  portrait.setActive(false);
+  let mounted = false;
   // A change in the conversation (a message, New, another one opened) may change Recent.
   let recentTimer: number | undefined;
   const chatChanged = () => {
+    if (mounted) paintPortrait();
     window.clearTimeout(recentTimer);
     recentTimer = window.setTimeout(() => refreshRecent(), 400);
   };
@@ -137,6 +144,14 @@ export function createNest(
     window: "nest",
     render: renderFull,
   });
+  const portraitButton = el("button", { class: "chat-character", onclick: () => {
+    if (chat.clip(Clock.now()) === "idle" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      && !document.body.classList.contains("still")) portrait.react("hello");
+  } }, el("span", { class: "perch" }, portrait.canvas));
+  portraitButton.addEventListener("pointerenter", () => portrait.lookAt("front"));
+  portraitButton.addEventListener("pointerleave", () => portrait.lookAt(null));
+  portrait.canvas.setAttribute("aria-hidden", "true");
+  chat.perchSlot.append(portraitButton);
   const flock = createFlock({
     ...backend.flock,
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
@@ -190,6 +205,7 @@ export function createNest(
       memory.refresh();
       if (matchMedia("(max-width: 600px)").matches) memoryBack.focus();
     } else if (returnFocus) memoryButton.focus();
+    if (mounted) paintPortrait();
   };
   memoryButton.addEventListener("click", () => setMemory(memoryPane.hasAttribute("hidden")));
   memoryBack.addEventListener("click", () => setMemory(false, true));
@@ -326,6 +342,15 @@ export function createNest(
   let last: ViewModel | null = null;
   let sub: Sub = "week";
   const currentPlace = () => tab === "activity" ? sub : tab;
+  const portraitSpace = window.matchMedia("(min-height: 481px)");
+  const portraitNarrow = window.matchMedia("(max-width: 600px)");
+  function paintPortrait(): void {
+    portrait.setActive(zecaOn && tab === "chat" && !document.hidden && !last?.locked
+      && root.isConnected && portraitSpace.matches && !(portraitNarrow.matches && !memoryPane.hidden));
+    portrait.update([], null, zecaOn ? { clip: chat.clip(Clock.now()), agent: chat.agent() } : null);
+  }
+  portraitSpace.addEventListener("change", paintPortrait);
+  portraitNarrow.addEventListener("change", paintPortrait);
   let navigationReady = false;
   let placeSaved: Promise<void> = Promise.resolve();
   const rememberPlace = () => {
@@ -363,8 +388,11 @@ export function createNest(
       chat.toggle(true);
       refreshRecent();
     }
+    paintPortrait();
   }
   const relabel = () => {
+    portraitButton.setAttribute("aria-label", t("Greet Zeca"));
+    portraitButton.title = t("Greet Zeca");
     const subWords: Record<Sub, string> = {
       week: t("Week"),
       projects: t("By project"),
@@ -437,15 +465,21 @@ export function createNest(
     ...TABS.map((id) => panes[id]),
     foot.element,
   );
+  mounted = true;
   setZeca(zeca);
   show("flock");
   navigationReady = true;
 
   // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
-  document.addEventListener("visibilitychange", () => flock.setActive(tab === "flock" && !document.hidden && !last?.locked));
+  document.addEventListener("visibilitychange", () => {
+    flock.setActive(tab === "flock" && !document.hidden && !last?.locked);
+    paintPortrait();
+  });
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    setZecaLook(v.look ?? null);
+    paintPortrait();
     head.setDnd(!!v.dnd);
     head.setCounts({
       sessions: v.sessions.length,
@@ -566,7 +600,11 @@ export function createNest(
     setFull,
     setSound: head.setSound,
     setMedia: head.setMedia,
-    setSpecies: foot.setSpecies,
+    setSpecies: (id) => {
+      setZecaSpecies(id);
+      foot.setSpecies(id);
+      paintPortrait();
+    },
     usageChanged: flock.usageChanged,
     setKeys: (keys) => {
       chat.setKeys(keys);

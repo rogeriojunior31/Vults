@@ -3238,8 +3238,7 @@ button.ghost:hover {
   border-top: 0;
   border-bottom: 1px solid #1d1f24;
 }
-/* The island's chat in the prototype's compact form: flat, Zeca small at the head's start, the
-   engine and conversations up top, the composer in one box, the folder and model under it. */
+/* Zeca keeps the full 3x scene in Quick; the chat controls sit beside his animation runway. */
 #island .chat {
   flex: 1;
   min-height: 0;
@@ -3256,29 +3255,33 @@ button.ghost:hover {
 #island .chat .log-box { flex: 1; min-height: 40px; }
 #island .chat-perch {
   position: absolute;
-  left: 4px;
+  left: 0;
   top: 6px;
-  width: 36px;
-  height: 36px;
+  width: 112px;
+  height: 108px;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: none;
 }
 #island .chat-perch .perch {
-  left: -2px;
-  top: -4px;
-  transform: scale(0.36);
-  transform-origin: 0 0;
+  left: 0;
+  top: 0;
+  transform: none;
 }
-#island .chat-perch .perch::before,
 #island .chat-perch .perch .glow {
   display: none;
 }
 #island .chat-head {
   flex-wrap: nowrap;
-  min-height: 32px;
-  padding-left: 42px;
+  min-height: 108px;
+  padding-left: 120px;
 }
+#island .chat .hint { padding: 4px; }
+#island .chat .chat-greeting { margin: 0; font-size: 16px; }
+#island .chat:not(.chat-api) .hint p { display: none; }
+#island .chat .suggestions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+#island .chat .suggestion { display: block; min-height: 52px; box-sizing: border-box; padding: 8px; line-height: 1.4; }
+#island .chat .suggestion > svg { display: none; }
 #island .chat-gap {
   flex: 1 1 auto;
 }

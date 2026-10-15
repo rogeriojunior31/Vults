@@ -1,8 +1,8 @@
 # Conversando com o Zeca
-<!-- source: 81fac0abf2ca -->
+<!-- source: 5c0d53d316ab -->
 
-Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca fica
-no começo da conversa (pequeno no topo do chat da ilha, grande no do Nest): ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
+Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
+poleiro completo ao lado dos controles do chat da ilha e ao lado da conversa no Nest: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
 você e engole os arquivos que você dá a ele. Escolha **Claude** ou **Codex** no topo (ou o provedor
 de API que você configurou, veja abaixo); na ilha um controle compacto mostra o motor acima
 do modelo, com fundo ao passar o mouse ou enquanto está aberto. Seu menu traz o motor, o modelo
@@ -63,6 +63,12 @@ enviar, começar ou abrir outra conversa, ou sair do Vults.
 A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
 ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
+
+O Zeca fica no poleiro enquanto a conversa rola. Passe o mouse nele para chamar sua atenção, ou
+clique em **Cumprimentar o Zeca** para ele acenar enquanto está ocioso. Pensamento, voz, perguntas
+e arquivos usam as mesmas animações da ilha; um cumprimento nunca responde a um card. Em janelas
+baixas, o poleiro recolhe para manter o compositor e as ações acessíveis. A animação para de desenhar
+quando o Chat está oculto, a janela está minimizada ou a tela está bloqueada.
 
 <a id="continuing-a-session"></a>
 

@@ -1043,4 +1043,5 @@ export default {
   "Summary of loaded records": "已加载记录汇总",
   "<1 min": "<1 分钟",
   "1 record": "1 条记录",
+  "Greet Zeca": "向 Zeca 打招呼",
 } satisfies Record<string, string>;

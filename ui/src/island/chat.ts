@@ -280,7 +280,7 @@ export class ChatPanel {
     this.changed();
   }
   readonly element = el("section", { class: "chat" });
-  /** Zeca's place: the island moves his perch in here while the chat shows. */
+  /** The island moves its perch here; the Nest keeps its own scene in the same slot. */
   readonly perchSlot = el("div", { class: "chat-perch" });
   private open = false;
   private provider: ChatProvider = "claude";
@@ -622,7 +622,7 @@ export class ChatPanel {
     if (last?.who === "ask" && !last.answer) return "question";
     if (this.voice === "listening") return "listen";
     if (this.voice === "transcribing") return "think";
-    if (this.busy && (!last || last.who === "you")) return "think";
+    if (this.busy) return "think";
     return "idle";
   }
 
@@ -1743,6 +1743,7 @@ export class ChatPanel {
     this.loadPicks();
     // The API chat has no tools, so it works nowhere in particular.
     const api = this.provider === "api";
+    this.element.classList.toggle("chat-api", api);
     this.place.hidden = api;
     this.setup.hidden = api || !this.native;
     this.paintModel(api);

@@ -465,9 +465,12 @@ body {
 }
 /* The whole window is the chat: none of the island's card around it. */
 .nest-chat .chat {
-  display: flex;
+  display: grid;
   flex: 1;
   min-height: 0;
+  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: 16px;
   width: auto;
   height: auto;
   padding: 10px 16px 14px;
@@ -475,10 +478,18 @@ body {
   border-radius: 0;
   background: transparent;
 }
-/* Zeca sits on the island; here the conversation takes the whole width. */
+/* A separate perch keeps the companion visible while only the transcript scrolls. */
 .nest-chat .chat-perch {
-  display: none;
+  display: block;
+  align-self: start;
+  width: 112px;
+  height: 108px;
+  margin-top: 16px;
 }
+.nest-chat .chat:has(.log > .hint:first-child) .chat-perch { align-self: center; margin-top: 0; }
+.nest-chat .chat-character { position: relative; width: 112px; height: 108px; border-radius: var(--radius-card); }
+.nest-chat .chat-character .perch { left: 0; top: 0; transform: none; }
+.nest-chat .chat-character:hover { background: var(--float); }
 .nest-chat .chat-main {
   flex: 1;
   min-height: 0;
@@ -613,8 +624,10 @@ body {
     gap: 4px;
   }
   .nest-chat .chat {
+    grid-template-columns: minmax(0, 1fr);
     padding: 0 12px;
   }
+  .nest-chat .chat-perch { display: none; }
   .nest-chat .chat-main { gap: 4px; }
   .nest-chat .composer {
     margin-top: 0;

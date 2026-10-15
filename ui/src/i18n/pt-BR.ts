@@ -1043,4 +1043,5 @@ export default {
   "Summary of loaded records": "Resumo dos registros carregados",
   "<1 min": "<1 min",
   "1 record": "1 registro",
+  "Greet Zeca": "Cumprimentar o Zeca",
 } satisfies Record<string, string>;

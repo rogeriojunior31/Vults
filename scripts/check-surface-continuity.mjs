@@ -53,7 +53,7 @@ class Element {
   attachShadow() { const shadow = new Element("shadow"); shadow.parentElement = this; return shadow; }
   toDataURL() { return "data:image/png;base64,"; }
 }
-const windowEvents = {}, documentEvents = {}, storage = new Map();
+const windowEvents = {}, documentEvents = {}, storage = new Map(), mediaChanges = [];
 globalThis.document = { hidden: false, body: new Element("body"),
   createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag),
   createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; },
@@ -64,7 +64,12 @@ globalThis.document = { hidden: false, body: new Element("body"),
 globalThis.window = { innerWidth: 480, innerHeight: 640,
   setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
   addEventListener: (event, fn) => (windowEvents[event] ??= []).push(fn),
-  matchMedia: query => ({ matches: query.includes("min-width") ? window.innerWidth >= 900 : window.innerWidth <= 600, addEventListener() {} }),
+  matchMedia: query => ({ get matches() {
+    const rule = query.match(/(min|max)-(width|height):\s*(\d+)px/);
+    if (!rule) return false;
+    const value = rule[2] === "width" ? window.innerWidth : window.innerHeight;
+    return rule[1] === "min" ? value >= Number(rule[3]) : value <= Number(rule[3]);
+  }, addEventListener: (_event, fn) => mediaChanges.push({ query, fn }) }),
 };
 globalThis.matchMedia = window.matchMedia;
 globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
@@ -80,13 +85,19 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
     load: id => id === "\0continuity-entry" ? `
       export { createNest } from ${source("surfaces/nest/render.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
+      export { Scene } from ${source("island/scene.ts")};
+      export { Clock } from ${source("clock.ts")};
       export { savedClose, savedTransition } from ${source("surfaces/nest/close.ts")};
       export * as fsm from ${source("island/fsm.ts")};
       export * as dock from ${source("island/dock.ts")};` : null }],
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createNest, ChatPanel, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const scenes = new WeakMap(), active = new WeakMap();
+const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
+Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
+Scene.prototype.setActive = function (on) { active.set(this.canvas, on); return activateScene.call(this, on); };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const visibility = hidden => { document.hidden = hidden; for (const fn of documentEvents.visibilitychange ?? []) fn(); };
 const row = { item: "org/alpha#7", group: "to-review", name: "org/alpha#7", title: "Review alpha", checks: null, review: null, link: true, merge: false,
@@ -150,16 +161,57 @@ for (const width of [480, 1180]) {
     assert.equal(auditTab.attributes["aria-pressed"], "true");
     assert.deepEqual(auditTab.scrolledIntoView, { block: "nearest", inline: "nearest" }, "Restoring a sub-tab keeps its selection visible in the navigation strip");
     nest.open("chat"); nest.chat.draft("More context");
+    const character = nest.chat.perchSlot.querySelector(".chat-character");
+    const canvas = character.querySelector("canvas");
+    const portrait = scenes.get(canvas);
+    assert.ok(portrait, "Room uses the production animated scene in the chat's own perch");
+    assert.equal(active.get(canvas), true);
+    Clock.freeze(Clock.now() + 1000);
+    assert.equal(portrait.playing("zeca"), "think", "A restored running conversation animates its own companion");
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "think", "Greeting never replaces an active reply");
+    nest.chat.load({ ...current, busy: false });
+    Clock.freeze(Clock.now() + 1000);
+    document.body.classList.add("still");
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "idle", "Paused motion does not play a greeting");
+    document.body.classList.remove("still");
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "hello");
+    nest.chat.receive({ kind: "permission", id: "portrait-card", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+    character.fire("click");
+    assert.equal(portrait.playing("zeca"), "question", "A waiting card outranks a cosmetic reaction");
+    assert.deepEqual(actions, [], "The companion's reaction never sends, starts or answers anything");
+    nest.chat.load(current);
+    Clock.freeze(null);
+    visibility(true); assert.equal(active.get(canvas), false);
+    visibility(false); assert.equal(active.get(canvas), true);
+    if (width < 600) {
+      page.querySelector(".nest-memory-toggle").fire("click");
+      assert.equal(active.get(canvas), false, "Memory hides the narrow conversation and stops its portrait");
+      page.querySelector(".nest-memory-back").fire("click");
+      assert.equal(active.get(canvas), true);
+    }
+    nest.view({ ...view, locked: true }); assert.equal(active.get(canvas), false);
+    nest.view(view); assert.equal(active.get(canvas), true);
+    window.innerHeight = 360;
+    for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
+    assert.equal(active.get(canvas), false, "Short windows stop drawing the hidden portrait");
+    window.innerHeight = 640;
+    for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
+    assert.equal(active.get(canvas), true);
     const expectedDraft = { ...draft, text: "Unsent\n\nMore context" };
     for (const full of [true, false, true, false]) {
       page.querySelector(full ? ".nest-fullscreen" : '[data-size="room"]').fire("click"); await requested;
       assert.equal(page.classList.contains("full"), full); assert.deepEqual(draft, expectedDraft);
+      assert.equal(nest.chat.perchSlot.querySelector("canvas"), canvas, "Room/Full keeps the same scene and animation phase");
     }
     page.querySelector(".nest-fullscreen").fire("click"); await requested;
     const escape = { key: "Escape", target: page, preventDefault() { this.defaultPrevented = true; } };
     for (const fn of windowEvents.keydown ?? []) fn(escape);
     await requested; assert.equal(page.classList.contains("full"), false); assert.equal(nest.current(), "chat");
     nest.open("connections"); await nest.flushState();
+    assert.equal(active.get(canvas), false, "Leaving Chat stops its renderer");
     assert.deepEqual(connectionPlace, { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 });
     if (width >= 900) assert.equal(page.querySelector('[data-fid="row:org/alpha#7"]').getAttribute("aria-pressed"), "true");
     else assert.ok(page.textContent.includes("Review alpha"), "Narrow recreation restores the selected connection detail");

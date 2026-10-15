@@ -1,7 +1,7 @@
 # Chatting with Zeca
 
-Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca sits at
-the start of the conversation (small at the top of the island's chat, large in the Nest's): he thinks while the reply comes, tilts his head when he asks you
+Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca has a
+full perch beside the island chat's controls and beside the Nest's conversation: he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** at the top (or the
 API provider you set up, see below); on the island one compact control shows the engine above
 its model, with a background on hover or while open. Its menu holds the engine, model and effort.
@@ -52,6 +52,12 @@ The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own 
 **Chat** tab is the same conversation, wide, with replies in full Markdown; its cards are answered
 there too. **Memory**, beside it, shows what Zeca
 remembers.
+
+Zeca stays on his perch while the transcript scrolls. Hover over him to get his attention, or
+click **Greet Zeca** to wave while he is idle. Thinking, voice, questions and files use the same
+animations as the island; a greeting never answers a card. In short windows the perch folds away
+to keep the composer and actions reachable. The animation stops drawing when Chat is hidden,
+the window is minimized or the screen is locked.
 
 Unsent text, attachments and the chosen folder follow you between the island and Nest.
 Returning from the Nest's Chat opens Chat in Quick. Drafts stay in memory until you

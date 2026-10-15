@@ -340,3 +340,23 @@ for (const surface of ["island", "nest"]) {
   assert.equal(sends, 0, "Choosing or removing files never sends the draft");
 }
 console.log("check-chat-models: both composers keep suggestions editable, file picker, real file labels, individual removal and saved draft");
+
+for (const surface of ["island", "nest"]) {
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {} }, () => {}, { window: surface });
+  await tick();
+  chat.load({ ...conversation, busy: true, lines: [{ who: "zeca", text: "A reply already streaming" }] });
+  assert.equal(chat.clip(performance.now()), "think", "Thinking continues through streamed words, not only before the first one");
+  chat.receive({ kind: "permission", id: "expression-only", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+  chat.showVoice("listening");
+  assert.equal(chat.clip(performance.now()), "question", "A pending decision keeps the question pose");
+  chat.receive({ kind: "stopped" });
+  assert.equal(chat.clip(performance.now()), "listen");
+  chat.showVoice("transcribing");
+  assert.equal(chat.clip(performance.now()), "think");
+  chat.showVoice("off");
+  assert.equal(chat.clip(performance.now()), "idle");
+  chat.attach(["/inbox/note.txt"]);
+  assert.equal(chat.clip(0), "swallow");
+  assert.equal(chat.clip(Infinity), "idle");
+}
+console.log("check-chat-models: both companions retain streaming thought, decision priority, voice, transcription and attachment expressions");
