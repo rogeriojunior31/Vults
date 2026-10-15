@@ -803,3 +803,33 @@ Automated acceptance: build/typecheck, all nine renderer checks, fmt/clippy,
 layer, network, README translation and whitespace checks. Tauri remains running
 on this branch and received the updated renderer through Vite. Native visual
 acceptance is still pending the user's review.
+
+
+## Workspace theme alignment - 2026-10-15
+
+The user identified Tasks and Connections as visually different from the rest of
+Vults. The Nest frame still used the card surface as its page background, while
+Activity and Chat had explicit black canvases; Tasks also retained a local palette
+and button overrides. This pass keeps the current branch and interaction owners.
+
+- Use the existing page-background role for the Nest. Tasks/Connections cards and
+  the shared spend card use Activity's panel, border and radius roles.
+- Reuse the Activity heading and segmented navigation. Give Tasks its page heading;
+  remove Connections' separate service-icon heading and underline-tab styles.
+- Share neutral secondary/primary button rules and token-based input/focus roles
+  between Tasks and Connections. Remove their old palettes and late overrides.
+  Keep warning borders and execution/approval meanings; finished cards dim their
+  title without fading controls or statuses.
+- Align the page margins and compact card padding with Activity. No new theme,
+  dependency, action, persistence or permission behavior is introduced.
+
+Validation uses the existing production-renderer checks, including task creation,
+criteria, confirmations, failed writes, Connections filters, polling, focus and
+narrow continuity, plus the build and complete repository gates. This presentation
+pass adds no implementation-mirroring tests. Tauri receives the changes through
+Vite; user review of the real Room/Full theme and short/narrow layout remains open.
+
+Automated result: TypeScript/Vite build, nine renderer checks, fmt/clippy,
+864 workspace tests and 8 eval tests pass. Brand, English, i18n, layers,
+network, README translation and whitespace checks pass; the Nest mirror mark
+matches. The running Tauri process received the updated UI through Vite.

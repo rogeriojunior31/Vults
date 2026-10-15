@@ -10,6 +10,11 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 **Quick** or **Mini**. A card that waits is answered where you are: in the Nest while you are in it
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
+Tasks, Activity and Connections share the same black page background, raised cards,
+heading scale and neutral controls. Connections uses Activity's segmented navigation;
+Tasks and Connections use the same button and field treatment. Status colors keep
+their existing meaning, including readable finished-task controls.
+
 Minimizing the Nest returns the island and its approval shortcuts. Opening the Nest
 again restores the window; minimizing does not change its saved Room size.
 

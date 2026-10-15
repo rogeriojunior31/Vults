@@ -272,7 +272,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           "div",
           { class: "conn-cmd" },
           el("code", { text: command }),
-          fid(copyTextButton(command, "conn-copy", t("Copy command")), "act:copy"),
+          fid(copyTextButton(command, "outline conn-copy", t("Copy command")), "act:copy"),
         )
       : null;
     if (commandView) technical.append(commandView);
@@ -433,7 +433,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           el(
             "button",
             {
-              class: `detail-tab nest-filter${id === shown ? " on" : ""}`,
+              class: `nest-sub nest-filter${id === shown ? " on" : ""}`,
               onclick: () => {
                 tab = id;
                 picked = null;
@@ -527,14 +527,13 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         ...(failure ? [failure] : []),
         el(
           "header",
-          { class: "conn-head" },
-          el("div", { class: "conn-identity" }, el("span", { class: "conn-service-icon" }, icon("pull", 20, 1.6)),
-            el("div", {}, el("h2", { text: name(board.connector) }), el("p", { class: `conn-status${stale || st?.overBudget ? " stale" : st?.lastOk ? "" : " pending"}`, text: line }))),
+          { class: "activity-heading conn-head" },
+          el("div", {}, el("h2", { text: name(board.connector) }), el("p", { class: `conn-status${stale || st?.overBudget ? " stale" : st?.lastOk ? "" : " pending"}`, text: line })),
           el("div", { class: "conn-actions" }, refresh, fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), "act:manage")),
         ),
         el(
           "nav",
-          { class: "detail-tabs conn-tabs" },
+          { class: "nest-subs conn-tabs" },
           tabButton("inbox", t("Inbox"), fresh ? t("{n} new", { n: fresh }) : null),
           tabButton("prs", t("Pull requests"), String(count("prs"))),
           tabButton("runs", t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),

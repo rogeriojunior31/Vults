@@ -626,16 +626,16 @@ export function createTasks(backend: TasksBackend): { element: HTMLElement; refr
     const parts: (HTMLElement | null)[] = [
       el(
         "div",
-        { class: "proposal-actions" },
-        create,
-        el("button", {
+        { class: "activity-heading" },
+        el("h2", { text: t("Tasks") }),
+        el("div", { class: "proposal-actions" }, create, el("button", {
           class: "btn small",
           text: closed ? t("Hide finished") : t("Show finished"),
           onclick: () => {
             closed = !closed;
             refresh();
           },
-        }),
+        })),
       ),
       failure,
       spend(spent),

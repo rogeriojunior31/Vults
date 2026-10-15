@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: f1c31ced1bdc -->
+<!-- source: 51c616a4589b -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -10,6 +10,11 @@ clique duplo ocupa a tela) e as bordas e os cantos o redimensionam. Ele abre gra
 (até 1180 × 820, dentro da tela), e depois no tamanho em que você o deixou. Ela volta quando o Nest fecha ou volta para **Quick** ou **Mini**. Um
 card que espera é respondido onde você está: no Nest enquanto você está nele (a janela dele tem o
 foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
+
+Tarefas, Atividade e Conexões usam o mesmo fundo preto, cards elevados, escala de títulos
+e controles neutros. Conexões usa a navegação segmentada de Atividade; Tarefas e Conexões
+compartilham os estilos de botões e campos. As cores de status mantêm seus significados,
+com controles legíveis também nas tarefas finalizadas.
 
 Minimizar o Nest devolve a ilha e seus atalhos de aprovação. Abrir o Nest de novo
 restaura a janela; minimizar não altera o tamanho salvo da Sala.
