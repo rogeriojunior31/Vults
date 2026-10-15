@@ -978,7 +978,7 @@ export class ChatPanel {
 
   /** Answers the permission waiting in the chat, if one is; for the global shortcuts. */
   answerWaiting(allow: boolean): boolean {
-    if (!this.open) return false;
+    if (!this.open || !this.enabled || document.hidden || !this.element.isConnected || this.element.offsetParent === null) return false;
     const waiting = [...this.messages]
       .reverse()
       .find((m): m is Ask => m.who === "ask" && !m.answer);
