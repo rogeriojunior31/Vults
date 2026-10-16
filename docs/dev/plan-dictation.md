@@ -38,7 +38,7 @@ and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) (model clean-up is a
 | R3 | Wake word: no | **Still no.** Hands-free is a double tap on the key. Zeca's 8 s follow-up mic is off by default | Keeps ADR 0028; no always-open mic |
 | R4 | X3 a voice per vult dropped | Stays dropped; reconsider after V6 | Speaking depends on the opt-in realtime model |
 | R5 | No meetings in the plan | **Meetings in V5**, opt-in per recording, mic and the PipeWire monitor | Useful, but the heaviest part (diarization) |
-| R6 | `DESIGN.md`: Settings is where configuration lives | **Settled 2026-10-16: the area owns its settings.** Dictation has its own side list (Voice, Your words, System) with Settings, Styles, Voice commands, Talk with Zeca and Diagnostics among its pages; Settings › Chat & voice links to Dictation › Settings; the voice model stays in Chat & voice, shared with the chat. `DESIGN.md` gets a line for it (V0.3) | The user's review: the side list reads better and shows more than tabs plus a Settings category; one owner per value |
+| R6 | `DESIGN.md`: Settings is where configuration lives | **Settled 2026-10-16 (revised the same day): Settings › Dictation owns every value**, with Diagnostics at its end; Activity › Dictation holds the figures. The area's side list keeps the work (Dictation, Voice commands, Talk with Zeca, Meetings, Dictionary, Snippets, Styles) and links to both. The voice model stays in Chat & voice, shared with the chat | The `DESIGN.md` rule holds unchanged; one owner per value, and figures sit with the other figures |
 | R7 | Each request on the user's behalf has its own switch | **Off by default**: model clean-up (and with it styles, "Write in" and agent sessions in English), meeting summaries, Zeca's voice. Off, the clean-up group shows only its switch | Rule 4 and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) |
 | R8 | The island sees: the flock, badges by shape, a click opens Compact | **The island stays the flock.** Dictation draws a grey line over it only while active; no idle hint, no buttons (no Undo); color only on badge shapes; a card's amber edge still shows. A caption under it carries what the line cannot (what was heard, a cut line), with no buttons, and goes with the dictation | The approved island (P2, P9) and D5 |
 | R9 | Moving around by voice (C11) waits for K8's realtime model | **Voice commands, local (V8)**: their own key; a parser and a name resolver with no model move around the flock, read what Vults knows and quiet projects, with a 90 s memory ("and docs too", "undo"); never type into an app, never answer a card. Not understood: say so, or (a choice) send it to Zeca as a chat message | Instant, free and offline; K8 then reuses it before the model. The same aliases as Your words |
@@ -495,8 +495,8 @@ flock session. Local only, no model clean-up.
   read error); i18n check.
 - Needs: V1.13, V0.3, V0.9.
 
-**V1.15 Dictation › Settings** (M)
-- Build: settings keys and the area's Settings page (R6):
+**V1.15 Settings › Dictation** (M)
+- Build: settings keys and a Settings category (R6), linked from the area's side list:
   - key: bound key shown, "Change in KDE…" opens System Settings › Shortcuts;
   - mode (hold + double tap / hold only), Space lock, Esc cancel, paste again key;
   - agents: deliver into session, send automatically, spoken code (V1.16);
@@ -671,15 +671,16 @@ flock session. Local only, no model clean-up.
 - Port: definitions from [PT] 262-278.
 - Tests: a percentile helper; post-cancel rows excluded.
 
-**V4.2 Statistics page** (M)
-- Build: week/month/all; words, time saved (`max(0, words/45 − secs/60)`), wpm (0 under 1 s), daily bars,
+**V4.2 Activity › Dictation** (M)
+- Build: a Dictation tab in Activity (R6), linked from the area's side list, and dictated words as a figure
+  in Activity's week; week/month/all; words, time saved (`max(0, words/45 − secs/60)`), wpm (0 under 1 s), daily bars,
   top apps. No streaks or records.
 - Port: [TLP] 400-403, [DD] 294-303.
 - Reuse Activity's chart pieces and the `DESIGN.md` rule "missing measurements are unknown, not zero".
 - Tests: math table tests (Rust); renderer check.
 
 **V4.3 Diagnostics** (M)
-- Build: the *Diagnostics* page under System:
+- Build: a *Diagnostics* section at the end of Settings › Dictation:
   - a mic test (bands, noise floor in dB, verdict);
   - the stage table (V4.1);
   - counters: loops cut, plan B used, "Copied" outcomes;
