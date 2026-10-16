@@ -2,58 +2,29 @@
   const root = document.getElementById('vults-ui-proposal');
   if (!root) return;
   const A = VultsProposalAssets;
-  A.setLang('pt-BR');
-  const copy = {
-    'Interactive prototype': ['Proposta interativa', 'Propuesta interactiva', '\u4ea4\u4e92\u539f\u578b'],
-    'Sample data': ['Dados de exemplo', 'Datos de ejemplo', '\u793a\u4f8b\u6570\u636e'],
-    'Tasks in Room': ['Tasks na Sala', 'Tareas en Sala', '\u623f\u95f4\u4e2d\u7684\u4efb\u52a1'],
-    'Connections in Room': ['Conex\u00f5es na Sala', 'Conexiones en Sala', '\u623f\u95f4\u4e2d\u7684\u8fde\u63a5'],
-    'Settings in Room': ['Configura\u00e7\u00f5es na Sala', 'Ajustes en Sala', '\u623f\u95f4\u4e2d\u7684\u8bbe\u7f6e'],
-    'Open settings in Room': ['Abrir configura\u00e7\u00f5es na Sala', 'Abrir ajustes en Sala', '\u5728\u623f\u95f4\u4e2d\u6253\u5f00\u8bbe\u7f6e'],
-    'Back to Compact': ['Voltar ao Compact', 'Volver a Compact', '\u8fd4\u56de Compact'],
-    'Empty': ['Vazio', 'Vac\u00edo', '\u7a7a\u767d'],
-    'Conversation': ['Conversa', 'Conversaci\u00f3n', '\u5bf9\u8bdd'],
-    'Models': ['Modelos', 'Modelos', '\u6a21\u578b'],
-    'Notification': ['Notifica\u00e7\u00e3o', 'Notificaci\u00f3n', '\u901a\u77e5'],
-    'Your project, one conversation away.': ['Seu projeto, a uma conversa de dist\u00e2ncia.', 'Tu proyecto, a una conversaci\u00f3n.', '\u901a\u8fc7\u5bf9\u8bdd\u4e86\u89e3\u4f60\u7684\u9879\u76ee\u3002'],
-    'A session needs you': ['Uma sess\u00e3o precisa de voc\u00ea', 'Una sesi\u00f3n te necesita', '\u4e00\u4e2a\u4f1a\u8bdd\u9700\u8981\u4f60'],
-    'Project context': ['Contexto do projeto', 'Contexto del proyecto', '\u9879\u76ee\u4e0a\u4e0b\u6587'],
-    'Context consulted': ['Contexto consultado', 'Contexto consultado', '\u5df2\u67e5\u9605\u4e0a\u4e0b\u6587'],
-    'Project files read': ['Arquivos do projeto lidos', 'Archivos del proyecto le\u00eddos', '\u5df2\u8bfb\u53d6\u9879\u76ee\u6587\u4ef6'],
-    'Recent changes checked': ['Altera\u00e7\u00f5es recentes consultadas', 'Cambios recientes consultados', '\u5df2\u67e5\u770b\u6700\u8fd1\u66f4\u6539'],
-    'Local prototype only': ['Somente nesta pr\u00e9via', 'Solo en esta vista previa', '\u4ec5\u5728\u6b64\u9884\u89c8\u4e2d'],
-    'Ready to continue': ['Pronto para continuar', 'Listo para continuar', '\u53ef\u4ee5\u7ee7\u7eed'],
-    'In progress': ['Em andamento', 'En curso', '\u8fdb\u884c\u4e2d'],
-    'For review': ['Para revisar', 'Para revisar', '\u5f85\u5ba1\u67e5'],
-    'All tasks': ['Todas as tarefas', 'Todas las tareas', '\u6240\u6709\u4efb\u52a1'],
-    'The next useful action, before maintenance.': ['A pr\u00f3xima a\u00e7\u00e3o, antes da manuten\u00e7\u00e3o.', 'La pr\u00f3xima acci\u00f3n, antes del mantenimiento.', '\u4f18\u5148\u663e\u793a\u4e0b\u4e00\u4e2a\u6709\u7528\u7684\u64cd\u4f5c\u3002'],
-    'Refine the chat composer': ['Refinar o compositor do chat', 'Refinar el compositor del chat', '\u6539\u8fdb\u804a\u5929\u8f93\u5165\u533a'],
-    'Make model selection easier': ['Facilitar a escolha de modelos', 'Facilitar la selecci\u00f3n de modelos', '\u7b80\u5316\u6a21\u578b\u9009\u62e9'],
-    'Review the connection checks': ['Revisar os checks das conex\u00f5es', 'Revisar las comprobaciones de conexiones', '\u5ba1\u67e5\u8fde\u63a5\u68c0\u67e5'],
-    'Keep the draft on one surface': ['Manter o rascunho em uma superf\u00edcie', 'Mantener el borrador en una superficie', '\u5728\u540c\u4e00\u533a\u57df\u4fdd\u7559\u8349\u7a3f'],
-    'Keep the transcript readable': ['Manter a conversa leg\u00edvel', 'Mantener legible la conversaci\u00f3n', '\u4fdd\u6301\u5bf9\u8bdd\u6613\u8bfb'],
-    'Preserve keyboard navigation': ['Preservar a navega\u00e7\u00e3o por teclado', 'Conservar la navegaci\u00f3n con teclado', '\u4fdd\u7559\u952e\u76d8\u5bfc\u822a'],
-    'Nothing here matches your search.': ['Nada aqui corresponde \u00e0 busca.', 'No hay coincidencias con la b\u00fasqueda.', '\u6ca1\u6709\u5339\u914d\u7684\u7ed3\u679c\u3002'],
-    'Review changes before merging.': ['Revise as altera\u00e7\u00f5es antes do merge.', 'Revisa los cambios antes de fusionar.', '\u5408\u5e76\u524d\u8bf7\u5ba1\u67e5\u66f4\u6539\u3002'],
-    'Checks and review, without hunting through details.': ['Checks e revis\u00e3o, sem procurar entre detalhes.', 'Comprobaciones y revisi\u00f3n, sin buscar entre detalles.', '\u6e05\u6670\u5c55\u793a\u68c0\u67e5\u4e0e\u5ba1\u67e5\u3002'],
-    'Keep Zeca close, without crowding the conversation.': ['Zeca por perto, sem apertar a conversa.', 'Zeca cerca, sin apretar la conversaci\u00f3n.', '\u8ba9 Zeca \u4fdd\u6301\u5728\u8eab\u8fb9\uff0c\u540c\u65f6\u7559\u8db3\u5bf9\u8bdd\u7a7a\u95f4\u3002'],
-    'Essential controls first.': ['O essencial vem primeiro.', 'Lo esencial primero.', '\u4f18\u5148\u663e\u793a\u5fc5\u8981\u63a7\u4ef6\u3002'],
-    'Use the existing animations.': ['Usar as anima\u00e7\u00f5es existentes.', 'Usar las animaciones existentes.', '\u4f7f\u7528\u73b0\u6709\u52a8\u753b\u3002'],
-    'Every command asks first.': ['Cada comando pede permiss\u00e3o.', 'Cada comando pide permiso.', '\u6bcf\u4e2a\u547d\u4ee4\u90fd\u4f1a\u5148\u8be2\u95ee\u3002'],
-    'The saved conversation stays on this computer.': ['A conversa salva fica neste computador.', 'La conversaci\u00f3n guardada permanece en este equipo.', '\u5df2\u4fdd\u5b58\u7684\u5bf9\u8bdd\u4ec5\u5b58\u50a8\u5728\u6b64\u7535\u8111\u4e0a\u3002'],
-    'The reply stays in a clean reading column.': ['A resposta fica em uma coluna de leitura limpa.', 'La respuesta queda en una columna de lectura limpia.', '\u56de\u7b54\u663e\u793a\u5728\u7b80\u6d01\u7684\u9605\u8bfb\u680f\u4e2d\u3002'],
-    'The model, files and send action share the composer.': ['Modelo, arquivos e envio ficam no compositor.', 'Modelo, archivos y env\u00edo comparten el compositor.', '\u6a21\u578b\u3001\u6587\u4ef6\u548c\u53d1\u9001\u6309\u94ae\u5171\u7528\u8f93\u5165\u533a\u3002'],
-    'Supporting activity opens only when you need it.': ['A atividade de apoio abre quando voc\u00ea precisar.', 'La actividad de apoyo se abre cuando la necesitas.', '\u9700\u8981\u65f6\u624d\u5c55\u5f00\u8f85\u52a9\u6d3b\u52a8\u3002'],
-    'I reviewed the recent changes.': ['Revisei as altera\u00e7\u00f5es recentes.', 'Revis\u00e9 los cambios recientes.', '\u6211\u5df2\u5ba1\u67e5\u6700\u8fd1\u7684\u66f4\u6539\u3002'],
-    'This question stays in the prototype.': ['Essa pergunta fica somente no prot\u00f3tipo.', 'Esta pregunta permanece en el prototipo.', '\u6b64\u95ee\u9898\u4ec5\u4fdd\u7559\u5728\u539f\u578b\u4e2d\u3002'],
-    'Appearance': ['Apar\u00eancia', 'Apariencia', '\u5916\u89c2'],
-    'Advanced': ['Avan\u00e7ado', 'Avanzado', '\u9ad8\u7ea7'],
-    'Saved': ['Salvo', 'Guardado', '\u5df2\u4fdd\u5b58'],
-    'Start over': ['Come\u00e7ar de novo', 'Empezar de nuevo', '\u91cd\u65b0\u5f00\u59cb'],
-  };
-  const extraCopy = /* EXTRA_COPY */;
+  const copy = /* EXTRA_COPY */;
+  const LANGUAGES = ['en','pt-BR','es','zh'];
   let language = 'pt-BR';
-  const L = text => { const index=['pt-BR','es','zh'].indexOf(language); return index<0?text:(copy[text]?.[index] ?? extraCopy[text]?.[index] ?? A.t(text)); };
+  A.setLang(language);
+  // Sample data (projects, commands, paths, model names) is shown as is; everything else must be translated.
+  const missing = new Set();
+  const RAW = /^(?:(?:npm|git|cargo|gh|curl|pnpm) .*|LM Studio|Large v3 Turbo|Portugu.s \(Brasil\)|[\w-]*[.@#/:~_+][\w.@#/:~+-]*|[\w-]*\d[\w-]*|[\w.-]+ · [\w.-]+|\$?[\d.,]+%?|\S*[/`$=|<>]\S*|v?\d[\d.]*)$/;
+  const L = text => {
+    if (text===undefined||text===null) return text;
+    text = String(text);
+    const index = ['pt-BR','es','zh'].indexOf(language);
+    if (index<0) return text;
+    const found = copy[text]?.[index];
+    if (found) return found;
+    const shared = A.t(text);
+    if (shared!==text) return shared;
+    if (/[A-Za-z]{2}/.test(text) && !RAW.test(text) && !NAMES.has(text) && !rawText.has(text)) missing.add(text);
+    return text;
+  };
+  const rawText = new Set();
+  // Names stay as they are in every language.
+  const NAMES = new Set(['Vults','Zeca','Compact','Lab','GitHub','Codex','Claude Code','OpenCode','Qwen Code','Copilot CLI','Kimi Code','Cursor','Factory Droid','Antigravity','Gemini CLI','Anthropic','OpenAI','OpenRouter','Ollama','Google','Groq','DeepSeek','Mistral','xAI','Brave','Tavily','SearXNG','Sonnet','Opus','Haiku','Markdown','PDF','Bash','Read','frontend','docs','api','infra','design','Relay','Direct','English','Portugu\u00eas','Espa\u00f1ol','tmux','kitty']);
+  const raw = text => { rawText.add(String(text)); return String(text); };
   const $ = selector => root.querySelector(selector);
   const $$ = selector => [...root.querySelectorAll(selector)];
   const el = (tag, cls, text, ...children) => {
@@ -69,9 +40,10 @@
     b.addEventListener('click', action); return b;
   };
   const iconButton = (name, label, action) => {
-    const b = button(null, 'icon-action', action, label); b.append(A.icon(name, 15)); return b;
+    const b = button(null, 'icon-action', action, label); b.append(A.icon(name, 15)); b.setAttribute('data-tooltip',L(label)); return b;
   };
-  const prefs = { motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, spacing: 12 };
+  const kbd = text => el('kbd',null,null,document.createTextNode(text));
+  const prefs = { motion: !matchMedia('(prefers-reduced-motion: reduce)').matches };
   const springs = { snappy: { k:600, c:30, m:.6 }, gentle: { k:220, c:24, m:1 }, bouncy: { k:400, c:25, m:.8 } };
   function frames(preset, dy = 6, scale = .98, duration = 300) {
     const { k,c,m } = springs[preset], a=c/(2*m), w=Math.sqrt(k/m-a*a);
@@ -82,13 +54,12 @@
     });
   }
   function enter(node, preset='snappy', dy=6, scale=.98) {
-    if (!prefs.motion || !node.animate) return;
+    if (!prefs.motion || !node?.animate) return;
     node.animate(frames(preset,dy,scale), { duration:300, fill:'none' });
   }
   const windowEl = $('.product-window'), chatEl = $('.chat-view'), log = $('.transcript');
-  function resizeFrom() { positionOpenMenus(); }
-  const input = $('textarea'), popover = $('.model-popover'), history = $('.history-popover');
-  const state = { area:'chat', mode:'quick', scenario:'ready', activity:'week', category:'general', conversation:'current', example:'empty', engine:'Claude Code', model:'Default model', effort:'Default effort', files:[], messages:[], busy:false, voice:false, notice:false };
+  const input = $('textarea'), popover = $('.model-popover'), history = $('.history-popover'), commands = $('.command-popover'), actionMenu = $('.action-menu');
+  const state = { area:'chat', mode:'quick', scenario:'ready', activity:'week', category:'general', conversation:'current', example:'empty', engine:'claude', model:'Default model', effort:'Default effort', files:[], messages:[], queued:[], busy:false, voice:false, notice:false, memoryPanel:false, lastSent:'' };
   let restoring = true;
   const AREAS=['summary','flock','chat','tasks','activity','connections','settings','memory','review'];
   const original = window.openai?.widgetState;
@@ -99,107 +70,160 @@
   }
   const scene = new A.Scene(A.FOCUS_SCENE);
   scene.canvas.setAttribute('aria-hidden','true'); $('.portrait').append(scene.canvas);
+  // A paused scene still needs one drawn frame, so reduced motion shows the birds standing still.
+  function still(target){ if (!prefs.motion) window.setTimeout(() => target.setActive(false),60); }
   function paintBird(clip) {
-    scene.update([],null,{ clip:clip ?? (state.busy?'think':state.voice?'listen':'idle'),agent:state.engine==='Codex'?'codex':'claude' });
+    scene.update([],null,{ clip:clip ?? (state.busy?'think':state.voice?'listen':'idle'),agent:engineInfo().agent });
     scene.setActive(settings.zeca && state.area==='chat' && state.mode!=='mini' && !windowEl.classList.contains('very-short') && !(windowEl.classList.contains('workspace')&&windowEl.classList.contains('tight')) && !document.hidden);
-    if (!prefs.motion) window.setTimeout(() => scene.setActive(false),0);
+    still(scene);
   }
   $('.portrait').addEventListener('click',() => { if (prefs.motion && !state.busy && !state.voice) scene.react('hello'); });
   $('.portrait').addEventListener('pointerenter',() => { if (prefs.motion) scene.lookAt('front'); });
   $('.portrait').addEventListener('pointerleave',() => { if (prefs.motion) scene.lookAt(null); });
   document.addEventListener('visibilitychange',() => paintBird());
+
+  /* Engines: your own CLI setup first, then the Vults harness with an API key (Settings › Chat & voice). */
+  const ENGINES = [
+    {id:'claude',group:'Your setup',name:'Claude Code',agent:'claude',status:'Signed in',models:['Default model','Sonnet','Opus','Haiku'],usage:42},
+    {id:'codex',group:'Your setup',name:'Codex',agent:'codex',status:'Installed',models:['Default model','GPT-6.1-Sol','GPT-6-Astra','GPT-6-Sol'],usage:76},
+    {id:'anthropic',group:'API',name:'Anthropic',agent:'claude',status:'Key saved',models:['Opus','Sonnet','Haiku']},
+    {id:'openrouter',group:'API',name:'OpenRouter',agent:'other',status:'Key saved',models:['deepseek-v4','qwen3-coder','kimi-k2.5']},
+    {id:'ollama',group:'API',name:'Ollama',agent:'other',status:'Local',models:['qwen3-coder:30b','gpt-oss:20b']},
+    {id:'openai',group:'API',name:'OpenAI',agent:'codex',status:'No key',models:[]},
+  ];
+  const engineInfo = (id=state.engine) => ENGINES.find(e=>e.id===id)??ENGINES[0];
+  const EFFORTS = ['Default effort','Low','Medium','High'];
+
   for (const node of $$('[data-word]')) node.textContent=L(node.dataset.word);
-  $('.product-head-actions').append(iconButton('sound','Sounds',() => changedSetting('sounds',!settings.sounds)),iconButton('search','Search',() => openPalette()),iconButton('fullscreen','Full screen',() => setMode(state.mode==='full'?'room':'full')));
   const modelTrigger = button(null,'model-trigger',() => toggleModels(), 'Model and effort');
   modelTrigger.setAttribute('aria-expanded','false'); modelTrigger.setAttribute('aria-controls','vults-proposal-model-menu');
   popover.id='vults-proposal-model-menu';
-  const attach = iconButton('clip','Attach a file',() => { if (!state.files.length) state.files.push('design-notes.md'); paintFiles(); paintBird('swallow'); window.setTimeout(() => paintBird(),1400); });
-  const mic = iconButton('mic','Voice',() => { state.voice=!state.voice; input.hidden=state.voice; $('.voice-preview').hidden=!state.voice; mic.setAttribute('aria-pressed',String(state.voice)); if(!state.voice&&!input.value.trim()){input.value=L('Review the layout');input.dispatchEvent(new Event('input'));} paintBird();remember(); });
+  const attach = iconButton('clip','Attach a file',() => addFile('design-notes.md'));
+  const mic = iconButton('mic','Voice (Ctrl+Alt+V)',() => toggleVoice());
   const send = button(null,'send-action',() => submit(), 'Send (Enter)'); send.append(A.icon('chevron',15));
   $('.composer-left').append(attach,modelTrigger); $('.composer-right').append(mic,send);
   const historyTrigger = iconButton('list','Conversations',() => toggleHistory());
   history.id='vults-proposal-history';historyTrigger.setAttribute('aria-expanded','false');historyTrigger.setAttribute('aria-controls',history.id);
-  $('.chat-actions').append(historyTrigger, iconButton('plus','New',() => newConversation()));
-  $('.context-folder').append(A.icon('folder',12),button('Vults','folder-trigger',() => openFolder()),A.icon('chevronDown',10));
-  $('.context-access').append(A.icon('person',12),button('Asks first','access-trigger',() => {state.category='chat';setArea('settings','room');},'Open chat access settings in Room'));
-  input.placeholder=L('Ask Zeca…'); input.setAttribute('aria-label',L('Ask Zeca…'));
-  input.addEventListener('input',() => { input.style.height='auto'; input.style.height=Math.min(90,input.scrollHeight)+'px'; send.disabled=!state.busy&&!input.value.trim()&&!state.files.length; remember(); });
+  const memoryTrigger = iconButton('sideRight','Memory',() => toggleMemoryPanel());memoryTrigger.classList.add('memory-trigger');
+  $('.chat-actions').append(historyTrigger, memoryTrigger, iconButton('plus','New conversation',() => newConversation()));
+  $('.context-folder').append(A.icon('folder',12),button('Vults','folder-trigger',() => openFolder(),'Folder for this conversation'),A.icon('chevronDown',10));
+  $('.context-access').append(A.icon('person',12),button('Asks first','access-trigger',() => openAccess(),"Who answers Zeca's cards"));
+  input.placeholder=L('Ask Zeca… / for commands, @ for a session'); input.setAttribute('aria-label',L('Message'));
+  input.addEventListener('input',() => { input.style.height='auto'; input.style.height=Math.min(state.mode==='quick'?90:220,input.scrollHeight)+'px'; paintSend(); paintCommands(); remember(); });
   input.addEventListener('keydown',event => {
     if (event.isComposing || event.keyCode===229) return;
-    if (event.key==='Enter'&&!event.shiftKey) { event.preventDefault(); submit(); }
+    if (!commands.hidden && ['ArrowDown','ArrowUp','Enter','Tab','Escape'].includes(event.key)) { commandKey(event); return; }
+    if (event.key==='ArrowUp' && !input.value && state.lastSent) { event.preventDefault(); input.value=state.lastSent; input.dispatchEvent(new Event('input')); return; }
+    if (event.key==='Enter'&&!event.shiftKey) { event.preventDefault(); submit(true); }
   });
-  const sampleQuestion = () => L('What changed recently?');
+  const composer = $('.composer-surface');
+  composer.addEventListener('dragover',event => { event.preventDefault?.(); composer.classList.add('dropping'); });
+  composer.addEventListener('dragleave',() => composer.classList.remove('dropping'));
+  composer.addEventListener('drop',event => { event.preventDefault?.(); composer.classList.remove('dropping'); addFile(event.dataTransfer?.files?.[0]?.name ?? 'screenshot.png'); });
+  function addFile(name) {
+    if (!settings.zeca) { toast('Turn Zeca on to share files.'); return; }
+    if (!state.files.includes(name)) state.files.push(raw(name));
+    state.files=state.files.slice(0,4); paintFiles(); paintBird('swallow'); window.setTimeout(() => paintBird(),1400); remember();
+  }
   function details(title, rows, cls='run-details') {
     const d=el('details',cls), s=el('summary',null,null,A.icon('chevron',12),el('span',null,title));
     const body=el('div','run-body');
-    rows.forEach(text => body.append(el('div',null,null,A.icon('check',12),el('span',null,text))));
+    rows.forEach(row => body.append(typeof row==='string'?el('div',null,null,A.icon('check',12),el('span',null,row)):row));
     d.append(s,body); d.addEventListener('toggle',() => { if (d.open) enter(body,'gentle',-3,1); });
     return d;
+  }
+  function toolRow(name,args,result){ return el('div','tool-row',null,el('code',null,raw(name+'('+args+')')),el('span',null,result)); }
+  function replyTools(m) {
+    const rows = m.tools ?? [toolRow('flock_list','',phrase('{n} sessions',{n:sessions.length})),toolRow('recall','"recent changes"','1 note from Vults')];
+    return details(phrase(rows.length===1?'Used 1 tool · {s} s':'Used {n} tools · {s} s',{n:rows.length,s:m.seconds??'0.4'}),rows,'run-details tool-details');
   }
   function paintConversation() {
     const readingTop=log.scrollTop;
     chatEl.classList.toggle('populated',state.messages.length>0||state.busy);
     const title=$('.intro-copy h2'), caption=$('.intro-caption');
     title.textContent=state.messages.length||state.busy?'Zeca':L('Ask Zeca');
-    caption.textContent=state.messages.length||state.busy?L('Project context'):L('Your project, one conversation away.');
+    caption.textContent=state.messages.length||state.busy?phrase('{engine} · {folder}',{engine:engineInfo().name,folder:settings.chatFolder}):L('Your agents and your projects, one conversation away.');
     log.replaceChildren();
-    for (const m of state.messages) {
-      if (m.who==='you') log.append(el('div','message you',m.text));
-      else {
-        log.append(details('Context consulted',['Project files read','Recent changes checked']));
-        const reply=el('div','message reply',null,el('div','message-signature',null,el('span','agent-dot'),el('span',null,'Zeca')),el('p',null,m.text));
-        if (m.sample) {
-          const list=el('ul');
-          ['The reply stays in a clean reading column.','The model, files and send action share the composer.','Supporting activity opens only when you need it.'].forEach(text => list.append(el('li',null,text)));
-          reply.append(list);
-        }
-        reply.append(el('div','message-tools',null,button('Copy','',() => { toast('Copied in this prototype'); })));
-        log.append(reply);
-      }
-    }
-    if (state.busy) {
-      const thinking=el('div','message-signature',null,el('span','live-dot'),el('span',null,'Thinking…'));
-      log.append(thinking);
-    }
-    send.disabled=!state.busy&&!input.value.trim()&&!state.files.length;
-    send.setAttribute('aria-label',L(state.busy?'Stop':'Send (Enter)'));
-    send.replaceChildren(A.icon(state.busy?'stop':'chevron',15));
-    log.scrollTop=readingTop;
+    state.messages.forEach((m,index) => {
+      if (m.who==='you') { log.append(el('div','message you',m.text)); return; }
+      if (m.who==='card') { log.append(chatCard(m)); return; }
+      if (m.tools!==false) log.append(replyTools(m));
+      const reply=el('div','message reply',null,el('div','message-signature',null,el('span','agent-dot '+engineInfo().agent),el('span',null,'Zeca'),el('small',null,raw(m.model??modelLabel()))),el('p',null,m.text));
+      if (m.list) { const list=el('ul'); m.list.forEach(text => list.append(el('li',null,text))); reply.append(list); }
+      if (m.link) reply.append(el('div','inline-actions',null,button(m.link.label,'quiet-control',m.link.action)));
+      const tools=el('div','message-tools',null,button('Copy','',() => copyText(m.text)));
+      if (index===state.messages.length-1) tools.append(button('Try again','',() => retry()));
+      reply.append(tools); log.append(reply);
+    });
+    if (state.busy) log.append(el('div','message-signature thinking',null,el('span','live-dot'),el('span',null,phrase('Thinking… {n} s',{n:2}))));
+    const queue=$('.queue-strip');queue.replaceChildren(...state.queued.map(text=>el('span','queued',null,A.icon('list',11),el('span',null,phrase('Queued: {text}',{text})))));
+    paintSend(); log.scrollTop=readingTop;
     paintBird(); paintModelTrigger(); paintSuggestions();
+  }
+  function paintSend() {
+    const empty=!input.value.trim()&&!state.files.length;
+    send.disabled=!state.busy&&empty;
+    const stop=state.busy&&empty;
+    send.setAttribute('aria-label',L(stop?'Stop':state.busy?'Queue this message':'Send (Enter)'));
+    send.replaceChildren(A.icon(stop?'stop':'chevron',15));
+  }
+  function copyText(text) {
+    const done=() => toast('Copied');
+    try { navigator.clipboard.writeText(L(text)).then(done,() => toast('Select the text to copy it.')); } catch { toast('Select the text to copy it.'); }
   }
   function paintFiles() {
     const host=$('.attachment-strip'); host.replaceChildren();
     state.files.forEach(name => {
-      const item=el('div','attachment',null,A.icon('file',18),el('div',null,null,button(name,'attachment-open',() => openEditor(name,el('pre','diff-preview','# '+name+'\n\n'+L('Keep the transcript readable')))),el('small',null,'Markdown')));
-      item.append(iconButton('close','Remove',() => { state.files=[]; paintFiles(); }));
+      const kind=name.endsWith('.png')?'Image':name.endsWith('.pdf')?'PDF':'Markdown';
+      const item=el('div','attachment',null,A.icon('file',18),el('div',null,null,button(name,'attachment-open',() => openEditor(name,el('pre','diff-preview',raw('# '+name+'\n\n- Keep the Now inbox to actionable rows.\n- Compact answers, Lab investigates.')))),el('small',null,kind)));
+      item.append(iconButton('close','Remove',() => { state.files=state.files.filter(f=>f!==name); paintFiles(); }));
       host.append(item); enter(item,'bouncy',0,.92);
     });
-    send.disabled=!state.busy&&!input.value.trim()&&!state.files.length;
+    paintSend();
+  }
+  const modelLabel = () => { const e=engineInfo(); const model=state.model==='Default model'?e.name:state.model; return state.effort==='Default effort'?model:model+' · '+L(state.effort); };
+  function ring(percent) {
+    const ns='http://www.w3.org/2000/svg', svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 16 16');svg.setAttribute('class','usage-ring '+(percent>=90?'critical':percent>=70?'warning':''));svg.setAttribute('width','14');svg.setAttribute('height','14');
+    const track=document.createElementNS(ns,'circle'),value=document.createElementNS(ns,'circle');
+    for (const c of [track,value]) { c.setAttribute('cx','8');c.setAttribute('cy','8');c.setAttribute('r','6');c.setAttribute('fill','none');c.setAttribute('stroke-width','2'); }
+    track.setAttribute('class','ring-track');value.setAttribute('class','ring-value');value.setAttribute('stroke-dasharray',(percent/100*37.7).toFixed(1)+' 37.7');value.setAttribute('transform','rotate(-90 8 8)');
+    svg.append(track,value);return svg;
   }
   function paintModelTrigger() {
-    modelTrigger.replaceChildren(el('span','agent-dot'+(state.engine==='Codex'?' codex':'')),el('span','model-text',state.model==='Default model'?state.engine:state.model),A.icon('chevronDown',11));
+    const e=engineInfo();
+    modelTrigger.replaceChildren(el('span','agent-dot '+e.agent),el('span','model-text',null,document.createTextNode(modelLabel())),...(e.usage!==undefined?[ring(e.usage)]:[]),A.icon('chevronDown',11));
+    modelTrigger.setAttribute('data-tooltip',e.usage!==undefined?phrase('{name} plan: {n}% used',{name:e.name,n:e.usage}):L('Billed to your API key'));
   }
   function modelChoices() {
     const list=$('.model-options'); list.replaceChildren();
-    $('.engine-select').value=state.engine;
-    $('.engine-select').disabled=state.messages.length>0||state.busy;
-    $('.model-popover-foot').hidden=state.messages.length>0;
-    if (state.messages.length) {
-      list.append(el('p','pinned-model',"A conversation keeps its model; New starts another."),button('New','quiet-control',() => { closeModels(); newConversation(); toggleModels(true); }));
-      return;
+    const locked=state.messages.length>0||state.busy;
+    if (locked) {
+      list.append(el('p','pinned-model',"A conversation keeps its engine and model; New starts another."),button('New conversation','quiet-control',() => { closeModels(); newConversation(); toggleModels(true); }));
+      $('.model-popover-foot').hidden=true;return;
     }
-    const models=state.engine==='Codex'?['Default model','GPT-6.1-Sol','GPT-6-Astra','GPT-6-Sol']:['Default model','Sonnet','Opus','Haiku'];
-    models.forEach(name => {
+    $('.model-popover-foot').hidden=false;
+    for (const group of ['Your setup','API']) {
+      const grid=el('div','engine-grid');list.append(el('small','menu-group',group),grid);
+      ENGINES.filter(e=>e.group===group).forEach(e => {
+        const choice=key(button(null,'engine-option',() => { state.engine=e.id; state.model=e.models[0]; modelChoices(); paintModelTrigger(); paintBird(); positionOpenMenus(); remember(); }),'engine-'+e.id);
+        choice.disabled=!e.models.length;choice.setAttribute('aria-pressed',String(state.engine===e.id));
+        choice.append(el('span','agent-dot '+e.agent),el('span',null,raw(e.name)),...(e.usage!==undefined?[el('small','counter',raw(e.usage+'%'))]:[]));choice.setAttribute('data-tooltip',L(e.status));
+        grid.append(choice);
+      });
+    }
+    if (engineInfo().group==='API' && settings.provider==='CLI') list.append(el('p','pane-note','The Vults harness bills your API key. Zeca keeps the same tools.'));
+    list.append(el('small','menu-group','Model'));
+    engineInfo().models.forEach(name => {
       const choice=button(null,'model-option',() => { state.model=name; paintModelTrigger(); closeModels(); remember(); });
       choice.setAttribute('aria-pressed',String(state.model===name));
       choice.append(el('span','check-space',null,...(state.model===name?[A.icon('check',13)]:[])),el('span',null,name));
-      if (name==='Default model') choice.append(el('small',null,state.engine));
+      if (name==='Default model') choice.append(el('small',null,'Your CLI default'));
       list.append(choice);
     });
   }
   function toggleModels(force) {
     const open=force ?? modelTrigger.getAttribute('aria-expanded')!=='true';
-    closeMenu(history,historyTrigger,false,false);
+    closeMenu(history,historyTrigger,false,false);closeCommands();
     if (!open) { closeModels(); return; }
     modelChoices();
     openMenu(popover,modelTrigger);
@@ -208,15 +232,8 @@
   function closeModels(returnFocus=true,animate=true) { closeMenu(popover,modelTrigger,returnFocus,animate); }
   $('.model-close').append(A.icon('close',13)); $('.model-close').setAttribute('aria-label',L('Close'));
   $('.model-close').addEventListener('click',() => closeModels());
-  $('.engine-select').addEventListener('change',event => {
-    if(state.messages.length||state.busy){event.target.value=state.engine;return;}
-    const next=event.target.value;
-    state.engine=next; state.model='Default model'; modelChoices(); paintModelTrigger(); paintBird();
-    positionOpenMenus();
-    remember();
-  });
-  ['Default effort','Low','Medium','High'].forEach(word => $('.effort-select').append(el('option',null,word)));
-  $('.effort-select').addEventListener('change',event => { state.effort=event.target.value; remember(); });
+  EFFORTS.forEach(word => { const o=el('option',null,word);o.value=word;$('.effort-select').append(o); });
+  $('.effort-select').addEventListener('change',event => { state.effort=event.target.value; paintModelTrigger(); remember(); });
   popover.addEventListener('keydown',event => {
     if (event.isComposing || event.keyCode===229 || event.target.tagName==='SELECT') return;
     if (!['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
@@ -224,41 +241,122 @@
     event.preventDefault(); const i=choices.indexOf(document.activeElement);
     choices[event.key==='Home'?0:event.key==='End'?choices.length-1:(i+(event.key==='ArrowDown'?1:-1)+choices.length)%choices.length].focus();
   });
+
+  /* Slash commands and @ mentions. A command never answers a card. */
+  const COMMANDS = [
+    ['/task','Create a task from this goal','/task '],
+    ['/delegate','Hand the goal to an agent (codex or claude)','/delegate codex '],
+    ['/continue','Resume a stopped session (within 10 minutes)','/continue'],
+    ['/remember','Save a fact to Zeca\'s memory','/remember '],
+    ['/forget','Remove a fact from Zeca\'s memory','/forget '],
+  ];
+  let commandIndex=0, commandRows=[];
+  function paintCommands() {
+    const value=input.value, slash=/^\/\w*$/.exec(value), mention=/(?:^|\s)@(\w*)$/.exec(value);
+    if (!slash && !mention) { closeCommands(); return; }
+    commandRows = slash
+      ? COMMANDS.filter(([name])=>name.startsWith(value)).map(([name,about,insert])=>({label:name,about,apply:() => insert}))
+      : sessions.filter(s=>s.project.toLowerCase().startsWith(mention[1].toLowerCase())).slice(0,6).map(s=>({label:'@'+s.project,about:raw(labelFor(s.agent)+' · '+L(sessionBrief(s))),apply:() => value.slice(0,value.length-mention[1].length-1)+'@'+s.project+' '}));
+    if (!commandRows.length) { closeCommands(); return; }
+    commandIndex=Math.min(commandIndex,commandRows.length-1);
+    commands.replaceChildren(el('small','menu-group',slash?'Commands':'Sessions'),...commandRows.map((row,i) => {
+      const b=button(null,'command-option',() => pickCommand(i));b.setAttribute('aria-selected',String(i===commandIndex));b.setAttribute('role','option');
+      b.append(el('code',null,raw(row.label)),el('small',null,row.about));return b;
+    }));
+    commands.setAttribute('role','listbox');
+    if (commands.hidden) openMenu(commands,input); else positionMenu(commands,input);
+  }
+  function pickCommand(i) { const row=commandRows[i]; if (!row) return; input.value=row.apply(); closeCommands(); input.focus(); input.dispatchEvent(new Event('input')); }
+  function commandKey(event) {
+    event.preventDefault();
+    if (event.key==='Escape') { closeCommands(); return; }
+    if (event.key==='Enter'||event.key==='Tab') { pickCommand(commandIndex); return; }
+    commandIndex=(commandIndex+(event.key==='ArrowDown'?1:-1)+commandRows.length)%commandRows.length;paintCommands();
+  }
+  function closeCommands() { if (!commands.hidden) closeMenu(commands,input,false,false); commandIndex=0; }
+
   function toggleHistory() {
     closeModels(false,false);
     if (history.getAttribute('data-open')==='true') {closeMenu(history,historyTrigger,true);return;}
-    history.replaceChildren(el('div','model-popover-head','Conversations',iconButton('close','Close',() => closeMenu(history,historyTrigger,true))));
-    saveConversation();conversations.forEach(c=>history.append(button(c.title,'',()=>{closeMenu(history,historyTrigger,false,false);openConversation(c.id);})));
-    history.append(button('New','quiet-control',()=>{closeMenu(history,historyTrigger,false,false);newConversation();}));
-    openMenu(history,historyTrigger);
+    paintHistoryMenu();openMenu(history,historyTrigger);
+  }
+  function paintHistoryMenu() {
+    history.replaceChildren(el('div','model-popover-head',null,el('strong',null,'Conversations'),iconButton('close','Close',() => closeMenu(history,historyTrigger,true))));
+    saveConversation();conversations.slice(0,8).forEach(c=>history.append(conversationRow(c,() => closeMenu(history,historyTrigger,false,false))));
+    history.append(button('New conversation','quiet-control',()=>{closeMenu(history,historyTrigger,false,false);newConversation();}));
   }
   document.addEventListener('pointerdown',event => {
     if (!popover.hidden&&!popover.contains(event.target)&&!modelTrigger.contains(event.target)) closeModels(false);
     if (!history.hidden&&!history.contains(event.target)&&!historyTrigger.contains(event.target)) closeMenu(history,historyTrigger,false);
+    if (!commands.hidden&&!commands.contains(event.target)&&event.target!==input) closeCommands();
+    if (!actionMenu.hidden&&!actionMenu.contains(event.target)&&!menuOwner?.contains(event.target)) closeActionMenu(false);
   });
+
+  /* Chat examples. Each one is a state the real chat reaches. */
+  const sampleQuestion = () => raw(L('What changed recently?'));
   function showExample(example) {
-    const before=windowEl.getBoundingClientRect().height;
     clearTimeout(replyTimer);
     state.voice=false; input.hidden=false; $('.voice-preview').hidden=true; mic.setAttribute('aria-pressed','false');
-    state.example=example; state.busy=example==='thinking'; state.notice=example==='notification';
+    state.example=example; state.busy=example==='thinking'; state.notice=example==='notification'; state.queued=[];
     state.messages=['conversation','thinking','notification'].includes(example)?[{who:'you',text:sampleQuestion()}]:[];
-    if (example==='conversation'||example==='notification') state.messages.push({who:'zeca',text:'I reviewed the recent changes.',sample:true});
+    if (example==='conversation'||example==='notification') state.messages.push(SAMPLE_REPLY());
+    if (example==='permission'||example==='outside') {
+      const outside=example==='outside';
+      state.messages=[{who:'you',text:outside?'Install the linter the docs page recommends':'Show me the last commits in Vults'},
+        {who:'zeca',text:outside?'The page recommends piping its install script to the shell. I need your answer first.':'I need to read the git log for that.',tools:[toolRow(outside?'web_fetch':'session_detail',outside?'"lint.example.dev/install"':'"Vults"',outside?'1 page read':'branch feat/compact-now')],seconds:outside?'1.2':'0.3'},
+        {who:'card',id:'chat-card-'+example,tool:outside?'Bash':'Bash',command:outside?'curl -fsSL lint.example.dev/install | sh':'git log --oneline -5',cwd:'~/Projects/Vults',outside,answer:null}];
+    }
     closeModels(false,false);closeMenu(history,historyTrigger,false,false);
-    paintConversation(); paintNotice();
-    resizeFrom(before);
+    paintConversation(); paintNotice(); log.scrollTop=log.scrollHeight;
     $$('[data-example]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.example===example)));
     if (example==='models') toggleModels(true);
     remember();
   }
+  const SAMPLE_REPLY = () => ({who:'zeca',text:'Two sessions changed files in the last hour.',list:['frontend (Claude Code) edited ui/src/chat.ts: the reply keeps its scroll while it streams.','Vults (Codex) added the Now inbox and is waiting to run the build.'],tools:[toolRow('flock_list','','6 sessions'),toolRow('session_detail','"frontend"','8 steps, 1 subagent'),toolRow('session_detail','"Vults"','waiting for permission')],seconds:'0.6'});
+  function chatCard(m) {
+    const card=requestCard({id:m.id,agent:'zeca',project:'Vults',step:m.command,cwd:m.cwd,tool:m.tool,status:'approval',outside:m.outside,chat:true},'chat',answer => {
+      m.answer=answer;
+      if (answer!=='Denied') state.messages.push({who:'zeca',text:m.outside?'Installed. The script added lint-pro to your PATH.':'The last five commits are on feat/compact-now; the newest adds the Now inbox.',tools:[toolRow('bash','"'+m.command+'"',m.outside?'exit 0':'5 lines')],seconds:'0.2'});
+      paintConversation();remember();
+    });
+    if (m.answer) return el('div','card-outcome',null,A.icon(m.answer==='Denied'?'close':'check',13),el('span',null,phrase('{answer}: {command}',{answer:L(m.answer),command:m.command})));
+    return card;
+  }
   let replyTimer;
-  function submit() {
-    if (state.busy) { clearTimeout(replyTimer); state.busy=false; paintConversation(); return; }
-    const text=input.value.trim(); if (!text&&!state.files.length) return;
-    const before=windowEl.getBoundingClientRect().height;
-    closeModels(false); state.messages.push({who:'you',text:text||'design-notes.md'}); state.busy=true;
-    input.value=''; input.style.height='auto'; state.files=[]; paintFiles(); paintConversation();resizeFrom(before);log.scrollTop=log.scrollHeight;
-    replyTimer=window.setTimeout(() => { const before=windowEl.getBoundingClientRect().height, top=log.scrollTop, follow=log.scrollHeight-log.scrollTop-log.clientHeight<40 && Date.now()-lastManualScroll>=150; state.busy=false; state.messages.push({who:'zeca',text:'This question stays in the prototype.',sample:false}); paintConversation();resizeFrom(before);enter(log.lastElementChild,'gentle');log.scrollTop=follow?log.scrollHeight:top;remember(); },1400);
+  function retry() {
+    const last=[...state.messages].reverse().find(m=>m.who==='you');if (!last||state.busy) return;
+    const at=state.messages.lastIndexOf(last);state.messages=state.messages.slice(0,at);input.value=last.text;submit();
+  }
+  function submit(fromKeyboard=false) {
+    const text=input.value.trim();
+    if (state.busy) {
+      if (text) { state.queued.push(raw(text)); input.value=''; paintConversation(); remember(); return; }
+      if (fromKeyboard) return;
+      clearTimeout(replyTimer); state.busy=false; paintConversation(); return;
+    }
+    if (!text&&!state.files.length) return;
+    closeModels(false); closeCommands();
+    const files=state.files.length?' ('+state.files.join(', ')+')':'';
+    state.messages.push({who:'you',text:raw((text||L('Here is a file'))+files)}); state.lastSent=text; state.busy=true;
+    input.value=''; input.style.height='auto'; state.files=[]; paintFiles(); paintConversation();log.scrollTop=log.scrollHeight;
+    const reply=commandReply(text);
+    replyTimer=window.setTimeout(() => {
+      const top=log.scrollTop, follow=log.scrollHeight-log.scrollTop-log.clientHeight<40 && Date.now()-lastManualScroll>=150;
+      state.busy=false; state.messages.push(reply); paintConversation();enter(log.lastElementChild,'gentle');log.scrollTop=follow?log.scrollHeight:top;
+      if (state.queued.length) { input.value=state.queued.shift(); submit(); }
+      remember();
+    },1400);
     remember();
+  }
+  function commandReply(text) {
+    const [name,...rest]=text.split(' '), arg=rest.join(' ').trim();
+    if (name==='/task'&&arg) { const row=newTask(arg,settings.chatFolder); return {who:'zeca',text:phrase('Task created: {goal}. It waits in Tasks until you start it.',{goal:arg}),tools:false,link:{label:'Open in Tasks',action:() => openTask(row.id)}}; }
+    if (name==='/delegate') { const [agent,...goal]=rest; const row=newTask(goal.join(' ')||L('Follow up on this conversation'),settings.chatFolder,agent==='claude'?'Claude Code':'Codex'); row.status='Doing'; row.router=phrase('Delegated to {agent}: you asked for it.',{agent:row.engine}); return {who:'zeca',text:phrase('Delegated to {agent}. You will see its bird on the wire.',{agent:row.engine}),tools:false,link:{label:'Open in Tasks',action:() => openTask(row.id)}}; }
+    if (name==='/continue') return {who:'zeca',text:'No stopped Claude or Codex session in the last 10 minutes.',tools:false};
+    if (name==='/remember'&&arg) { memory.facts.push({id:'fact-'+Date.now(),place:settings.chatFolder,text:raw(arg)}); return {who:'zeca',text:phrase('Remembered for {place}.',{place:settings.chatFolder}),tools:false,link:{label:'Open Memory',action:() => openMemory()}}; }
+    if (name==='/forget'&&arg) { const before=memory.facts.length; memory.facts=memory.facts.filter(f=>!L(f.text).toLowerCase().includes(arg.toLowerCase())); return {who:'zeca',text:before>memory.facts.length?'Forgotten.':'Nothing in memory matches that.',tools:false}; }
+    if (/@\w+/.test(text)) { const s=sessions.find(s=>text.includes('@'+s.project)); if (s) return {who:'zeca',text:phrase('{project} ({agent}): {brief}.',{project:s.project,agent:labelFor(s.agent),brief:L(sessionBrief(s))}),tools:[toolRow('session_detail','"'+s.project+'"',raw(L(sessionBrief(s))))],seconds:'0.2'}; }
+    return {who:'zeca',text:'This prototype answers with sample data. In the app, Zeca reads the flock, your memory and the connectors he may use.',seconds:'0.4'};
   }
   let noticeAnimation;
   function paintNotice() {
@@ -271,14 +369,23 @@
     noticeAnimation.finished.then(()=>{slot.hidden=!state.notice;slot.inert=!state.notice;}).catch(()=>{});
   }
   $('.notice-close').append(A.icon('close',12)); $('.notice-close').setAttribute('aria-label',L('Dismiss'));
-  $('.notice-close').addEventListener('click',() => { const before=windowEl.getBoundingClientRect().height;state.notice=false;paintNotice();resizeFrom(before); });
+  $('.notice-close').addEventListener('click',() => { state.notice=false;paintNotice(); });
+  $('.notice-open').addEventListener('click',() => { state.notice=false;paintNotice();views.sessionSelected=flockFacts().needs[0]?.id??views.sessionSelected;setArea('flock',state.mode==='quick'?'quick':'room'); });
+  function toggleVoice() {
+    if (!settings.voice) { toast('Voice is off in Settings.'); return; }
+    state.voice=!state.voice; input.hidden=state.voice; $('.voice-preview').hidden=!state.voice; mic.setAttribute('aria-pressed',String(state.voice));
+    $('.voice-partial').textContent=state.voice?L('Review the lay…'):'';
+    if(!state.voice&&!input.value.trim()){input.value=L('Review the layout of the Now inbox');input.dispatchEvent(new Event('input'));}
+    paintBird();remember();
+  }
   let toastTimer;
   function toast(text) { const host=$('.feedback');host.textContent=L(text);host.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(() => host.hidden=true,1800); }
-  function confirm(title,about,action) {
+  // Only a destructive action gets the danger style; a merge or a removal of sample data does not.
+  function confirm(title,about,action,variant='default',label=title) {
     const overlay=$('.dialog-overlay'), dialog=$('.confirmation'), previous=document.activeElement;
     dialog.querySelector('h2').textContent=L(title); dialog.querySelector('p').textContent=L(about);
     const cancel=button('Cancel','quiet-control',() => close());
-    const yes=button(title,'danger',() => { action();close(); });
+    const yes=button(label,variant==='danger'?'danger':'primary',() => { action();close(); });
     function close() { overlay.hidden=true;previous?.isConnected?previous.focus():$('.product-nav button')?.focus(); }
     $('.confirmation-actions').replaceChildren(cancel,yes); overlay.hidden=false; enter(dialog,'gentle',8,.98);cancel.focus();
     overlay.onkeydown=event => {
@@ -290,30 +397,45 @@
   root.addEventListener('keydown',event => {
     if (event.isComposing||event.keyCode===229||event.defaultPrevented) return;
     if (event.key==='Escape') {
-      if (!popover.hidden) { event.preventDefault();closeModels(); }
+      if (!actionMenu.hidden) { event.preventDefault();closeActionMenu(true); }
+      else if (!popover.hidden) { event.preventDefault();closeModels(); }
       else if (!history.hidden) { event.preventDefault();closeMenu(history,historyTrigger,true); }
-      else if (state.voice) { state.voice=false;input.hidden=false;$('.voice-preview').hidden=true;paintBird(); }
+      else if (state.voice) { state.voice=false;input.hidden=false;$('.voice-preview').hidden=true;mic.setAttribute('aria-pressed','false');paintBird(); }
+      else if (state.mode==='full') { event.preventDefault();setMode('room'); }
     }
   });
-  function pageHeading(title,about,action) { return el('div','page-title',null,el('div',null,null,el('h2',null,title),el('p',null,about)),action); }
+  function pageHeading(title,about,...actions) { return el('div','page-title',null,el('div',null,null,el('h2',null,title),about?el('p',null,about):null),actions.length?el('div','page-actions',null,...actions):null); }
   function search(label,action) {
     const field=el('input');field.type='search';field.placeholder=L(label);field.setAttribute('aria-label',L(label));field.addEventListener('input',() => action(field.value));
     return el('label','search-field',null,A.icon('search',14),field);
   }
-  function segment(items,onChange) {
-    const host=el('div','segment');
-    items.forEach((word,i) => { const b=button(word,'',() => { for (const node of host.children) node.setAttribute('aria-pressed',String(node===b));enter(b,'snappy',0,.96);onChange(word); });b.setAttribute('aria-pressed',String(i===0));host.append(b); });
+  // Filters: a segmented control. Navigation between views uses tabs() instead (two patterns, no more).
+  function segment(items,onChange,current) {
+    const host=el('div','segment');host.setAttribute('role','group');
+    items.forEach((item,i) => { const [value,label]=Array.isArray(item)?item:[item,item]; const b=button(label,'',() => { for (const node of host.children) node.setAttribute('aria-pressed',String(node===b));enter(b,'snappy',0,.96);onChange(value); });b.dataset.value=value;b.setAttribute('aria-pressed',String(current===undefined?i===0:current===value));host.append(b); });
     return host;
   }
-  function setting(title,about,control) { return el('div','setting-row',null,el('div','setting-copy',null,el('strong',null,title),el('small',null,about)),control); }
+  function tabs(items,current,onChange,label,cls='') {
+    const host=el('nav','tabs '+cls);host.setAttribute('role','tablist');host.setAttribute('aria-label',L(label));
+    items.forEach(([id,text,count]) => {
+      const b=key(button(null,'',() => onChange(id,false)),'tab-'+id);b.setAttribute('role','tab');b.setAttribute('aria-selected',String(id===current));b.tabIndex=id===current?0:-1;
+      b.append(el('span',null,text));if (count) b.append(el('span','tab-count counter',null,document.createTextNode(String(count))));host.append(b);
+    });
+    host.addEventListener('keydown',event => {
+      if (event.isComposing||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();const at=items.findIndex(([id])=>id===current);
+      const next=event.key==='Home'?0:event.key==='End'?items.length-1:(at+(event.key==='ArrowRight'?1:-1)+items.length)%items.length;onChange(items[next][0],true);
+    });
+    return host;
+  }
+  function setting(title,about,control) { return el('div','setting-row',null,el('div','setting-copy',null,el('strong',null,title),about?el('small',null,about):null),control); }
   /* WORKSPACE_LOGIC */
-  $$('[data-area]').forEach(b => b.addEventListener('click',() => setArea(b.dataset.area,b.dataset.mode ?? 'room')));
+  $$('[data-area]').forEach(b => b.addEventListener('click',() => { if (b.dataset.scenario) setScenarioQuiet(b.dataset.scenario); setArea(b.dataset.area,b.dataset.mode ?? 'room'); }));
   $$('[data-size]').forEach(b => b.addEventListener('click',() => setMode(b.dataset.size)));
-  $('.mini-strip').addEventListener('click',() => setMode('quick'));
   $('.scenario-select').addEventListener('change',() => setScenario($('.scenario-select').value));
+  $('.language-select').addEventListener('change',() => setLanguage($('.language-select').value));
   $('.viewport-select').addEventListener('change',() => {const stage=$('.review-stage');stage.classList.toggle('narrow',$('.viewport-select').value==='narrow');stage.classList.toggle('short',$('.viewport-select').value==='short');layoutSurface(true);resizeCompactFlock();paintBird();});
-  $('.return-compact').addEventListener('click',() => setMode('quick'));
-  $$('[data-example]').forEach(b => b.addEventListener('click',() => showExample(b.dataset.example)));
+  $$('[data-example]').forEach(b => b.addEventListener('click',() => { if (state.area!=='chat') setArea('chat',state.mode==='mini'?'quick':state.mode); showExample(b.dataset.example); }));
   window.addEventListener('openai:set_globals',event => {
     const saved=event.detail?.globals?.widgetState?.modelContent;
     if (saved?.area && AREAS.includes(saved.area)) {
@@ -322,9 +444,6 @@
   });
   restorePrototype(original);paintFiles();paintConversation();setArea(state.area,state.mode);
   restoring=false;
-  if (globalThis.Tweak) {
-    const tweak=new Tweak({container:root,onChange:() => {root.classList.toggle('motion-off',!prefs.motion);$('.chat-view').style.padding=prefs.spacing+'px';paintBird();}});
-    tweak.addToggle(prefs,'motion',{label:'Animations'});
-    tweak.addSlider(prefs,'spacing',{label:'Spacing',min:8,max:16,step:2,unit:'px'});
-  }
+  // verify.mjs drives the same entry points a reviewer clicks.
+  window.__vultsPrototype={setArea,setMode,setScenario,showExample,setLanguage,missing:() => [...missing],state,sessions,tasks,views,settings};
 })();

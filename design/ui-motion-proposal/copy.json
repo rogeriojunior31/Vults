@@ -2,1591 +2,3771 @@
   "Flock in Room": [
     "Flock na Sala",
     "Flock en Sala",
-    "\u623f\u95f4\u4e2d\u7684\u9e1f\u7fa4"
+    "房间中的鸟群"
   ],
   "Chat in Room": [
     "Chat na Sala",
     "Chat en Sala",
-    "\u623f\u95f4\u4e2d\u7684\u804a\u5929"
+    "房间中的聊天"
   ],
   "Activity in Room": [
     "Atividade na Sala",
     "Actividad en Sala",
-    "\u623f\u95f4\u4e2d\u7684\u6d3b\u52a8"
+    "房间中的活动"
   ],
   "Review & releases": [
-    "Revis\u00e3o e releases",
-    "Revisi\u00f3n y versiones",
-    "\u8bc4\u5ba1\u4e0e\u53d1\u5e03"
+    "Revisão e releases",
+    "Revisión y versiones",
+    "评审与发布"
   ],
   "Design review": [
-    "Revis\u00e3o do prot\u00f3tipo",
-    "Revisi\u00f3n del prototipo",
-    "\u539f\u578b\u8bc4\u5ba1"
+    "Revisão do protótipo",
+    "Revisión del prototipo",
+    "原型评审"
   ],
   "Example state": [
     "Estado de exemplo",
     "Estado de ejemplo",
-    "\u793a\u4f8b\u72b6\u6001"
+    "示例状态"
   ],
   "Preview size": [
-    "Tamanho da pr\u00e9via",
-    "Tama\u00f1o de la vista previa",
-    "\u9884\u89c8\u5c3a\u5bf8"
+    "Tamanho da prévia",
+    "Tamaño de la vista previa",
+    "预览尺寸"
   ],
   "Narrow": [
     "Estreito",
     "Estrecho",
-    "\u7a84\u7a97\u53e3"
+    "窄窗口"
   ],
   "Short": [
     "Baixo",
     "Bajo",
-    "\u4f4e\u7a97\u53e3"
+    "低窗口"
   ],
   "Ready": [
     "Pronto",
     "Listo",
-    "\u5c31\u7eea"
+    "就绪"
   ],
   "Your sessions and the next useful action.": [
-    "Suas sess\u00f5es e a pr\u00f3xima a\u00e7\u00e3o \u00fatil.",
-    "Tus sesiones y la pr\u00f3xima acci\u00f3n \u00fatil.",
-    "\u4f1a\u8bdd\u4e0e\u4e0b\u4e00\u6b65\u64cd\u4f5c\u3002"
+    "Suas sessões e a próxima ação útil.",
+    "Tus sesiones y la próxima acción útil.",
+    "会话与下一步操作。"
   ],
   "Live session birds": [
-    "Urubus das sess\u00f5es",
+    "Urubus das sessões",
     "Aves de las sesiones",
-    "\u4f1a\u8bdd\u9e1f\u7fa4"
+    "会话鸟群"
   ],
   "All sessions": [
-    "Todas as sess\u00f5es",
+    "Todas as sessões",
     "Todas las sesiones",
-    "\u6240\u6709\u4f1a\u8bdd"
+    "所有会话"
   ],
   "Run the project build": [
     "Compilar o projeto",
     "Compilar el proyecto",
-    "\u6784\u5efa\u9879\u76ee"
+    "构建项目"
   ],
   "Simulated decision only": [
-    "Decis\u00e3o simulada nesta pr\u00e9via",
-    "Decisi\u00f3n simulada en esta vista previa",
-    "\u4ec5\u6a21\u62df\u51b3\u5b9a"
+    "Decisão simulada nesta prévia",
+    "Decisión simulada en esta vista previa",
+    "仅模拟决定"
   ],
   "Simulated execution only": [
-    "Execu\u00e7\u00e3o simulada nesta pr\u00e9via",
-    "Ejecuci\u00f3n simulada en esta vista previa",
-    "\u4ec5\u6a21\u62df\u6267\u884c"
+    "Execução simulada nesta prévia",
+    "Ejecución simulada en esta vista previa",
+    "仅模拟执行"
   ],
   "The example run failed. Review its output before continuing.": [
-    "A execu\u00e7\u00e3o de exemplo falhou. Revise a sa\u00edda antes de continuar.",
-    "La ejecuci\u00f3n de ejemplo fall\u00f3. Revisa la salida antes de continuar.",
-    "\u793a\u4f8b\u8fd0\u884c\u5931\u8d25\u3002\u7ee7\u7eed\u524d\u8bf7\u68c0\u67e5\u8f93\u51fa\u3002"
+    "A execução de exemplo falhou. Revise a saída antes de continuar.",
+    "La ejecución de ejemplo falló. Revisa la salida antes de continuar.",
+    "示例运行失败。继续前请检查输出。"
   ],
   "Terminal actions are simulated.": [
-    "As a\u00e7\u00f5es do terminal s\u00e3o simuladas.",
+    "As ações do terminal são simuladas.",
     "Las acciones de terminal son simuladas.",
-    "\u7ec8\u7aef\u64cd\u4f5c\u4e3a\u6a21\u62df\u64cd\u4f5c\u3002"
+    "终端操作为模拟操作。"
   ],
   "Could not update this view.": [
-    "N\u00e3o foi poss\u00edvel atualizar esta tela.",
+    "Não foi possível atualizar esta tela.",
     "No se pudo actualizar esta vista.",
-    "\u65e0\u6cd5\u66f4\u65b0\u6b64\u89c6\u56fe\u3002"
+    "无法更新此视图。"
   ],
   "Your draft and selections stay here.": [
-    "Seu rascunho e suas sele\u00e7\u00f5es continuam aqui.",
+    "Seu rascunho e suas seleções continuam aqui.",
     "Tu borrador y tus selecciones se conservan.",
-    "\u8349\u7a3f\u548c\u9009\u62e9\u4f1a\u4fdd\u7559\u3002"
+    "草稿和选择会保留。"
   ],
   "This is an example empty state.": [
-    "Este \u00e9 um exemplo de tela sem dados.",
-    "Este es un ejemplo de vista vac\u00eda.",
-    "\u8fd9\u662f\u7a7a\u72b6\u6001\u793a\u4f8b\u3002"
+    "Este é um exemplo de tela sem dados.",
+    "Este es un ejemplo de vista vacía.",
+    "这是空状态示例。"
   ],
   "Show sample data": [
     "Mostrar dados de exemplo",
     "Mostrar datos de ejemplo",
-    "\u663e\u793a\u793a\u4f8b\u6570\u636e"
+    "显示示例数据"
   ],
   "Saved in this prototype": [
-    "Salvo nesta pr\u00e9via",
+    "Salvo nesta prévia",
     "Guardado en esta vista previa",
-    "\u5df2\u4fdd\u5b58\u5728\u539f\u578b\u4e2d"
+    "已保存在原型中"
   ],
   "Copied in this prototype": [
-    "C\u00f3pia simulada nesta pr\u00e9via",
+    "Cópia simulada nesta prévia",
     "Copia simulada en esta vista previa",
-    "\u539f\u578b\u4e2d\u7684\u590d\u5236\u793a\u4f8b"
+    "原型中的复制示例"
   ],
   "Current conversation": [
     "Conversa atual",
-    "Conversaci\u00f3n actual",
-    "\u5f53\u524d\u5bf9\u8bdd"
+    "Conversación actual",
+    "当前对话"
   ],
   "Stop the current turn first.": [
     "Pare o turno atual primeiro.",
-    "Det\u00e9n el turno actual primero.",
-    "\u8bf7\u5148\u505c\u6b62\u5f53\u524d\u8f6e\u6b21\u3002"
+    "Detén el turno actual primero.",
+    "请先停止当前轮次。"
   ],
   "Criteria, one per line": [
-    "Crit\u00e9rios, um por linha",
-    "Criterios, uno por l\u00ednea",
-    "\u6761\u4ef6\uff0c\u6bcf\u884c\u4e00\u4e2a"
+    "Critérios, um por linha",
+    "Criterios, uno por línea",
+    "条件，每行一个"
   ],
   "Creating a task does not start an agent.": [
-    "Criar uma tarefa n\u00e3o inicia um agente.",
+    "Criar uma tarefa não inicia um agente.",
     "Crear una tarea no inicia un agente.",
-    "\u521b\u5efa\u4efb\u52a1\u4e0d\u4f1a\u542f\u52a8\u4ee3\u7406\u3002"
+    "创建任务不会启动代理。"
   ],
   "Enter a goal first.": [
     "Preencha o objetivo primeiro.",
     "Escribe un objetivo primero.",
-    "\u8bf7\u5148\u586b\u5199\u76ee\u6807\u3002"
+    "请先填写目标。"
   ],
   "Choose a project first.": [
     "Escolha um projeto primeiro.",
     "Elige un proyecto primero.",
-    "\u8bf7\u5148\u9009\u62e9\u9879\u76ee\u3002"
+    "请先选择项目。"
   ],
   "Enter a command first.": [
     "Preencha o comando primeiro.",
     "Escribe un comando primero.",
-    "\u8bf7\u5148\u586b\u5199\u547d\u4ee4\u3002"
+    "请先填写命令。"
   ],
   "No criteria yet. Add them in Edit task.": [
-    "Ainda sem crit\u00e9rios. Adicione em Editar tarefa.",
-    "Sin criterios todav\u00eda. A\u00f1\u00e1delos en Editar tarea.",
-    "\u5c1a\u65e0\u6761\u4ef6\uff0c\u8bf7\u5728\u7f16\u8f91\u4efb\u52a1\u4e2d\u6dfb\u52a0\u3002"
+    "Ainda sem critérios. Adicione em Editar tarefa.",
+    "Sin criterios todavía. Añádelos en Editar tarea.",
+    "尚无条件，请在编辑任务中添加。"
   ],
   "Linked issue": [
     "Issue vinculada",
     "Issue vinculada",
-    "\u5df2\u5173\u8054\u8bae\u9898"
+    "已关联议题"
   ],
   "GitHub issue URL": [
     "URL da issue no GitHub",
     "URL de la issue en GitHub",
-    "GitHub \u8bae\u9898\u94fe\u63a5"
+    "GitHub 议题链接"
   ],
   "Enter a GitHub issue URL.": [
     "Preencha uma URL de issue do GitHub.",
     "Escribe una URL de issue de GitHub.",
-    "\u8bf7\u586b\u5199 GitHub \u8bae\u9898\u94fe\u63a5\u3002"
+    "请填写 GitHub 议题链接。"
   ],
   "Only this example task is removed.": [
-    "Somente esta tarefa de exemplo ser\u00e1 removida.",
-    "Solo se eliminar\u00e1 esta tarea de ejemplo.",
-    "\u4ec5\u79fb\u9664\u6b64\u793a\u4f8b\u4efb\u52a1\u3002"
+    "Somente esta tarefa de exemplo será removida.",
+    "Solo se eliminará esta tarea de ejemplo.",
+    "仅移除此示例任务。"
   ],
   "Only the example workspace is removed. The task stays.": [
-    "Somente o workspace de exemplo ser\u00e1 removido. A tarefa continua.",
-    "Solo se eliminar\u00e1 el espacio de ejemplo. La tarea permanece.",
-    "\u4ec5\u79fb\u9664\u793a\u4f8b\u5de5\u4f5c\u533a\uff0c\u4efb\u52a1\u4f1a\u4fdd\u7559\u3002"
+    "Somente o workspace de exemplo será removido. A tarefa continua.",
+    "Solo se eliminará el espacio de ejemplo. La tarea permanece.",
+    "仅移除示例工作区，任务会保留。"
   ],
   "Sample data refreshed": [
     "Dados de exemplo atualizados",
     "Datos de ejemplo actualizados",
-    "\u793a\u4f8b\u6570\u636e\u5df2\u5237\u65b0"
+    "示例数据已刷新"
   ],
   "No connection news yet.": [
-    "Ainda sem novidades das conex\u00f5es.",
-    "A\u00fan no hay novedades de conexiones.",
-    "\u5c1a\u65e0\u8fde\u63a5\u52a8\u6001\u3002"
+    "Ainda sem novidades das conexões.",
+    "Aún no hay novedades de conexiones.",
+    "尚无连接动态。"
   ],
   "Release notes and links appear here.": [
-    "Notas de vers\u00e3o e links aparecem aqui.",
-    "Las notas de versi\u00f3n y enlaces aparecen aqu\u00ed.",
-    "\u6b64\u5904\u663e\u793a\u53d1\u884c\u8bf4\u660e\u548c\u94fe\u63a5\u3002"
+    "Notas de versão e links aparecem aqui.",
+    "Las notas de versión y enlaces aparecen aquí.",
+    "此处显示发行说明和链接。"
   ],
   "Release preview": [
-    "Pr\u00e9via de release",
-    "Vista previa de versi\u00f3n",
-    "\u53d1\u5e03\u9884\u89c8"
+    "Prévia de release",
+    "Vista previa de versión",
+    "发布预览"
   ],
   "No release was published by this prototype.": [
-    "Nenhuma release foi publicada por este prot\u00f3tipo.",
-    "Este prototipo no public\u00f3 ninguna versi\u00f3n.",
-    "\u6b64\u539f\u578b\u672a\u53d1\u5e03\u4efb\u4f55\u7248\u672c\u3002"
+    "Nenhuma release foi publicada por este protótipo.",
+    "Este prototipo no publicó ninguna versión.",
+    "此原型未发布任何版本。"
   ],
   "Merged in prototype": [
     "Merge simulado",
-    "Fusi\u00f3n simulada",
-    "\u5df2\u6a21\u62df\u5408\u5e76"
+    "Fusión simulada",
+    "已模拟合并"
   ],
   "This only merges the example item. No GitHub action is sent.": [
-    "Isso s\u00f3 altera o item de exemplo. Nenhuma a\u00e7\u00e3o \u00e9 enviada ao GitHub.",
-    "Solo cambia el elemento de ejemplo. No se env\u00eda ninguna acci\u00f3n a GitHub.",
-    "\u4ec5\u5408\u5e76\u793a\u4f8b\u6761\u76ee\uff0c\u4e0d\u5411 GitHub \u53d1\u9001\u64cd\u4f5c\u3002"
+    "Isso só altera o item de exemplo. Nenhuma ação é enviada ao GitHub.",
+    "Solo cambia el elemento de ejemplo. No se envía ninguna acción a GitHub.",
+    "仅合并示例条目，不向 GitHub 发送操作。"
   ],
   "GitHub is off": [
     "GitHub desligado",
     "GitHub desactivado",
-    "GitHub \u5df2\u5173\u95ed"
+    "GitHub 已关闭"
   ],
   "Open connector settings": [
-    "Abrir configura\u00e7\u00f5es de conectores",
+    "Abrir configurações de conectores",
     "Abrir ajustes de conectores",
-    "\u6253\u5f00\u8fde\u63a5\u5668\u8bbe\u7f6e"
+    "打开连接器设置"
   ],
   "Your work, with useful context.": [
-    "Seu trabalho, com contexto \u00fatil.",
-    "Tu trabajo, con contexto \u00fatil.",
-    "\u5de5\u4f5c\u4e0e\u76f8\u5173\u4e0a\u4e0b\u6587\u3002"
+    "Seu trabalho, com contexto útil.",
+    "Tu trabajo, con contexto útil.",
+    "工作与相关上下文。"
   ],
   "No activity yet.": [
     "Ainda sem atividade.",
-    "A\u00fan no hay actividad.",
-    "\u5c1a\u65e0\u6d3b\u52a8\u3002"
+    "Aún no hay actividad.",
+    "尚无活动。"
   ],
   "Open activity settings": [
-    "Abrir configura\u00e7\u00f5es de atividade",
+    "Abrir configurações de atividade",
     "Abrir ajustes de actividad",
-    "\u6253\u5f00\u6d3b\u52a8\u8bbe\u7f6e"
+    "打开活动设置"
   ],
   "Agent turns": [
     "Turnos dos agentes",
     "Turnos de agentes",
-    "\u4ee3\u7406\u8f6e\u6b21"
+    "代理轮次"
   ],
   "Agent turns by day": [
     "Turnos dos agentes por dia",
-    "Turnos de agentes por d\u00eda",
-    "\u6bcf\u65e5\u4ee3\u7406\u8f6e\u6b21"
+    "Turnos de agentes por día",
+    "每日代理轮次"
   ],
   "{day}: {n} turns": [
     "{day}: {n} turnos",
     "{day}: {n} turnos",
-    "{day}\uff1a{n} \u8f6e"
+    "{day}：{n} 轮"
   ],
   "Week {n}": [
     "Semana {n}",
     "Semana {n}",
-    "\u7b2c {n} \u5468"
+    "第 {n} 周"
   ],
   "All numbers in this prototype are sample data.": [
-    "Todos os n\u00fameros desta pr\u00e9via s\u00e3o exemplos.",
-    "Todos los n\u00fameros de esta vista previa son ejemplos.",
-    "\u6b64\u539f\u578b\u4e2d\u7684\u6240\u6709\u6570\u503c\u5747\u4e3a\u793a\u4f8b\u3002"
+    "Todos os números desta prévia são exemplos.",
+    "Todos los números de esta vista previa son ejemplos.",
+    "此原型中的所有数值均为示例。"
   ],
   "Export example recap": [
     "Exportar resumo de exemplo",
     "Exportar resumen de ejemplo",
-    "\u5bfc\u51fa\u793a\u4f8b\u6458\u8981"
+    "导出示例摘要"
   ],
   "Recorded API estimates are separate from subscription usage.": [
-    "Estimativas de API s\u00e3o separadas do uso da assinatura.",
-    "Las estimaciones de API se separan del uso de la suscripci\u00f3n.",
-    "API \u4f30\u7b97\u4e0e\u8ba2\u9605\u7528\u91cf\u5206\u522b\u663e\u793a\u3002"
+    "Estimativas de API são separadas do uso da assinatura.",
+    "Las estimaciones de API se separan del uso de la suscripción.",
+    "API 估算与订阅用量分别显示。"
   ],
   "Edit budget": [
-    "Editar or\u00e7amento",
+    "Editar orçamento",
     "Editar presupuesto",
-    "\u7f16\u8f91\u9884\u7b97"
+    "编辑预算"
   ],
   "Recorded estimate": [
     "Estimativa registrada",
-    "Estimaci\u00f3n registrada",
-    "\u5df2\u8bb0\u5f55\u4f30\u7b97"
+    "Estimación registrada",
+    "已记录估算"
   ],
   "Not reported": [
-    "N\u00e3o informado",
+    "Não informado",
     "No informado",
-    "\u672a\u62a5\u544a"
+    "未报告"
   ],
   "Enter a positive amount.": [
     "Preencha um valor positivo.",
     "Escribe un importe positivo.",
-    "\u8bf7\u8f93\u5165\u6b63\u6570\u91d1\u989d\u3002"
+    "请输入正数金额。"
   ],
   "Only this example memory is removed.": [
-    "Somente esta mem\u00f3ria de exemplo ser\u00e1 removida.",
-    "Solo se eliminar\u00e1 este recuerdo de ejemplo.",
-    "\u4ec5\u79fb\u9664\u6b64\u793a\u4f8b\u8bb0\u5fc6\u3002"
+    "Somente esta memória de exemplo será removida.",
+    "Solo se eliminará este recuerdo de ejemplo.",
+    "仅移除此示例记忆。"
   ],
   "Remove memory": [
-    "Remover mem\u00f3ria",
+    "Remover memória",
     "Eliminar recuerdo",
-    "\u79fb\u9664\u8bb0\u5fc6"
+    "移除记忆"
   ],
   "Open memory settings": [
-    "Abrir configura\u00e7\u00f5es de mem\u00f3ria",
+    "Abrir configurações de memória",
     "Abrir ajustes de memoria",
-    "\u6253\u5f00\u8bb0\u5fc6\u8bbe\u7f6e"
+    "打开记忆设置"
   ],
   "Remembered": [
     "Memorizado",
     "Recordado",
-    "\u5df2\u8bb0\u4f4f"
+    "已记住"
   ],
   "Turned down": [
     "Recusado",
     "Rechazado",
-    "\u5df2\u62d2\u7edd"
+    "已拒绝"
   ],
   "No settings loaded.": [
-    "Nenhuma configura\u00e7\u00e3o carregada.",
+    "Nenhuma configuração carregada.",
     "No hay ajustes cargados.",
-    "\u672a\u52a0\u8f7d\u8bbe\u7f6e\u3002"
+    "未加载设置。"
   ],
   "Language & sound": [
     "Idioma e som",
     "Idioma y sonido",
-    "\u8bed\u8a00\u4e0e\u58f0\u97f3"
+    "语言与声音"
   ],
   "The language used across Vults.": [
     "Idioma usado em todo o Vults.",
     "Idioma utilizado en todo Vults.",
-    "Vults \u4f7f\u7528\u7684\u8bed\u8a00\u3002"
+    "Vults 使用的语言。"
   ],
   "Short cues for attention and completed work.": [
-    "Sons curtos para aten\u00e7\u00e3o e trabalho conclu\u00eddo.",
-    "Sonidos breves para atenci\u00f3n y trabajo terminado.",
-    "\u63d0\u9192\u548c\u5de5\u4f5c\u5b8c\u6210\u65f6\u7684\u77ed\u63d0\u793a\u97f3\u3002"
+    "Sons curtos para atenção e trabalho concluído.",
+    "Sonidos breves para atención y trabajo terminado.",
+    "提醒和工作完成时的短提示音。"
   ],
   "Preview controls do not play audio.": [
-    "Os controles desta pr\u00e9via n\u00e3o reproduzem \u00e1udio.",
+    "Os controles desta prévia não reproduzem áudio.",
     "Los controles de esta vista previa no reproducen audio.",
-    "\u9884\u89c8\u63a7\u4ef6\u4e0d\u4f1a\u64ad\u653e\u97f3\u9891\u3002"
+    "预览控件不会播放音频。"
   ],
   "Show local media controls when enabled.": [
-    "Mostrar controles de m\u00eddia local quando ativado.",
+    "Mostrar controles de mídia local quando ativado.",
     "Mostrar controles de medios locales al activarlo.",
-    "\u542f\u7528\u65f6\u663e\u793a\u672c\u5730\u5a92\u4f53\u63a7\u4ef6\u3002"
+    "启用时显示本地媒体控件。"
   ],
   "Island behavior": [
     "Comportamento da ilha",
     "Comportamiento de la isla",
-    "\u6d6e\u5c9b\u884c\u4e3a"
+    "浮岛行为"
   ],
   "Seconds after the pointer leaves.": [
-    "Segundos ap\u00f3s o ponteiro sair.",
+    "Segundos após o ponteiro sair.",
     "Segundos tras salir el puntero.",
-    "\u6307\u9488\u79bb\u5f00\u540e\u7684\u79d2\u6570\u3002"
+    "指针离开后的秒数。"
   ],
   "Open the island when the pointer rests on it.": [
     "Abrir a ilha ao manter o ponteiro sobre ela.",
     "Abrir la isla al dejar el puntero encima.",
-    "\u6307\u9488\u505c\u7559\u65f6\u6253\u5f00\u6d6e\u5c9b\u3002"
+    "指针停留时打开浮岛。"
   ],
   "Open Vults when you log in.": [
-    "Abrir o Vults ao iniciar a sess\u00e3o.",
-    "Abrir Vults al iniciar sesi\u00f3n.",
-    "\u767b\u5f55\u65f6\u6253\u5f00 Vults\u3002"
+    "Abrir o Vults ao iniciar a sessão.",
+    "Abrir Vults al iniciar sesión.",
+    "登录时打开 Vults。"
   ],
   "Attention": [
-    "Aten\u00e7\u00e3o",
-    "Atenci\u00f3n",
-    "\u63d0\u9192"
+    "Atenção",
+    "Atención",
+    "提醒"
   ],
   "Desktop notifications in Panel mode.": [
-    "Notifica\u00e7\u00f5es do desktop no modo Painel.",
+    "Notificações do desktop no modo Painel.",
     "Notificaciones de escritorio en modo Panel.",
-    "\u9762\u677f\u6a21\u5f0f\u4e0b\u7684\u684c\u9762\u901a\u77e5\u3002"
+    "面板模式下的桌面通知。"
   ],
   "Read plan usage only when enabled.": [
-    "Consultar o uso do plano s\u00f3 quando ativado.",
+    "Consultar o uso do plano só quando ativado.",
     "Consultar el uso del plan solo al activarlo.",
-    "\u4ec5\u5728\u542f\u7528\u65f6\u8bfb\u53d6\u8ba1\u5212\u7528\u91cf\u3002"
+    "仅在启用时读取计划用量。"
   ],
   "Your CLI setup": [
-    "Suas configura\u00e7\u00f5es de CLI",
-    "Tu configuraci\u00f3n de CLI",
-    "CLI \u8bbe\u7f6e"
+    "Suas configurações de CLI",
+    "Tu configuración de CLI",
+    "CLI 设置"
   ],
   "Changes apply to the next conversation.": [
-    "Mudan\u00e7as valem para a pr\u00f3xima conversa.",
-    "Los cambios se aplican a la pr\u00f3xima conversaci\u00f3n.",
-    "\u66f4\u6539\u5e94\u7528\u4e8e\u4e0b\u4e00\u6b21\u5bf9\u8bdd\u3002"
+    "Mudanças valem para a próxima conversa.",
+    "Los cambios se aplican a la próxima conversación.",
+    "更改应用于下一次对话。"
   ],
   "Every answer is audited. Destructive commands always ask.": [
-    "Toda resposta \u00e9 auditada. Comandos destrutivos sempre pedem permiss\u00e3o.",
+    "Toda resposta é auditada. Comandos destrutivos sempre pedem permissão.",
     "Todas las respuestas se auditan. Los comandos destructivos siempre piden permiso.",
-    "\u6240\u6709\u51b3\u5b9a\u5747\u6709\u5ba1\u8ba1\u8bb0\u5f55\u3002\u7834\u574f\u6027\u547d\u4ee4\u59cb\u7ec8\u8be2\u95ee\u3002"
+    "所有决定均有审计记录。破坏性命令始终询问。"
   ],
   "This preview changes only the example access mode. Destructive commands still ask.": [
-    "Esta pr\u00e9via muda apenas o acesso de exemplo. Comandos destrutivos continuam pedindo permiss\u00e3o.",
+    "Esta prévia muda apenas o acesso de exemplo. Comandos destrutivos continuam pedindo permissão.",
     "Esta vista previa solo cambia el acceso de ejemplo. Los comandos destructivos siguen pidiendo permiso.",
-    "\u6b64\u9884\u89c8\u4ec5\u66f4\u6539\u793a\u4f8b\u8bbf\u95ee\u6a21\u5f0f\u3002\u7834\u574f\u6027\u547d\u4ee4\u4ecd\u4f1a\u8be2\u95ee\u3002"
+    "此预览仅更改示例访问模式。破坏性命令仍会询问。"
   ],
   "Keep a local journal. Recalled facts join the conversation.": [
-    "Manter um di\u00e1rio local. Mem\u00f3rias recuperadas entram na conversa.",
-    "Mantener un diario local. Los recuerdos recuperados se a\u00f1aden a la conversaci\u00f3n.",
-    "\u4fdd\u7559\u672c\u5730\u65e5\u5fd7\uff0c\u68c0\u7d22\u7684\u8bb0\u5fc6\u4f1a\u52a0\u5165\u5bf9\u8bdd\u3002"
+    "Manter um diário local. Memórias recuperadas entram na conversa.",
+    "Mantener un diario local. Los recuerdos recuperados se añaden a la conversación.",
+    "保留本地日志，检索的记忆会加入对话。"
   ],
   "Uses your subscription for a daily summary; up to 8 requests a day.": [
-    "Usa sua assinatura para resumir o dia; at\u00e9 8 pedidos por dia.",
-    "Usa tu suscripci\u00f3n para el resumen diario; hasta 8 solicitudes al d\u00eda.",
-    "\u4f7f\u7528\u8ba2\u9605\u751f\u6210\u6bcf\u65e5\u6458\u8981\uff0c\u6bcf\u5929\u6700\u591a 8 \u6b21\u8bf7\u6c42\u3002"
+    "Usa sua assinatura para resumir o dia; até 8 pedidos por dia.",
+    "Usa tu suscripción para el resumen diario; hasta 8 solicitudes al día.",
+    "使用订阅生成每日摘要，每天最多 8 次请求。"
   ],
   "Proposals wait for your review; up to 20 requests a day.": [
-    "Propostas aguardam sua revis\u00e3o; at\u00e9 20 pedidos por dia.",
-    "Las propuestas esperan tu revisi\u00f3n; hasta 20 solicitudes al d\u00eda.",
-    "\u63d0\u8bae\u7b49\u5f85\u5ba1\u6838\uff0c\u6bcf\u5929\u6700\u591a 20 \u6b21\u8bf7\u6c42\u3002"
+    "Propostas aguardam sua revisão; até 20 pedidos por dia.",
+    "Las propuestas esperan tu revisión; hasta 20 solicitudes al día.",
+    "提议等待审核，每天最多 20 次请求。"
   ],
   "Proposed merges wait for you; up to 4 requests a day.": [
-    "Propostas de uni\u00e3o aguardam voc\u00ea; at\u00e9 4 pedidos por dia.",
-    "Las propuestas de combinaci\u00f3n esperan tu revisi\u00f3n; hasta 4 solicitudes al d\u00eda.",
-    "\u5408\u5e76\u63d0\u8bae\u7b49\u5f85\u786e\u8ba4\uff0c\u6bcf\u5929\u6700\u591a 4 \u6b21\u8bf7\u6c42\u3002"
+    "Propostas de união aguardam você; até 4 pedidos por dia.",
+    "Las propuestas de combinación esperan tu revisión; hasta 4 solicitudes al día.",
+    "合并提议等待确认，每天最多 4 次请求。"
   ],
   "Uses your local embedding model.": [
     "Usa seu modelo local de embeddings.",
     "Usa tu modelo local de embeddings.",
-    "\u4f7f\u7528\u672c\u5730\u5d4c\u5165\u6a21\u578b\u3002"
+    "使用本地嵌入模型。"
   ],
   "Review memories": [
-    "Revisar mem\u00f3rias",
+    "Revisar memórias",
     "Revisar recuerdos",
-    "\u5ba1\u6838\u8bb0\u5fc6"
+    "审核记忆"
   ],
   "Inspect proposals and saved facts.": [
     "Revisar propostas e fatos salvos.",
     "Revisar propuestas y hechos guardados.",
-    "\u68c0\u67e5\u63d0\u8bae\u548c\u5df2\u4fdd\u5b58\u8bb0\u5fc6\u3002"
+    "检查提议和已保存记忆。"
   ],
   "Open Memory": [
-    "Abrir Mem\u00f3ria",
+    "Abrir Memória",
     "Abrir Memoria",
-    "\u6253\u5f00\u8bb0\u5fc6"
+    "打开记忆"
   ],
   "Transcription is local. This prototype simulates microphone activity.": [
-    "A transcri\u00e7\u00e3o \u00e9 local. Esta pr\u00e9via simula a atividade do microfone.",
-    "La transcripci\u00f3n es local. Esta vista previa simula el micr\u00f3fono.",
-    "\u8f6c\u5f55\u5728\u672c\u5730\u5b8c\u6210\u3002\u6b64\u539f\u578b\u6a21\u62df\u9ea6\u514b\u98ce\u6d3b\u52a8\u3002"
+    "A transcrição é local. Esta prévia simula a atividade do microfone.",
+    "La transcripción es local. Esta vista previa simula el micrófono.",
+    "转录在本地完成。此原型模拟麦克风活动。"
   ],
   "Example local model, already available.": [
-    "Modelo local de exemplo, j\u00e1 dispon\u00edvel.",
+    "Modelo local de exemplo, já disponível.",
     "Modelo local de ejemplo, ya disponible.",
-    "\u793a\u4f8b\u672c\u5730\u6a21\u578b\uff0c\u5df2\u53ef\u7528\u3002"
+    "示例本地模型，已可用。"
   ],
   "Show voice example": [
     "Mostrar exemplo de voz",
     "Mostrar ejemplo de voz",
-    "\u663e\u793a\u8bed\u97f3\u793a\u4f8b"
+    "显示语音示例"
   ],
   "API & web": [
     "API e web",
     "API y web",
-    "API \u4e0e\u7f51\u9875"
+    "API 与网页"
   ],
   "External content never grants permission. No requests leave this prototype.": [
-    "Conte\u00fado externo nunca concede permiss\u00f5es. Esta pr\u00e9via n\u00e3o envia pedidos.",
-    "El contenido externo no concede permisos. Esta vista previa no env\u00eda solicitudes.",
-    "\u5916\u90e8\u5185\u5bb9\u4e0d\u6388\u4e88\u6743\u9650\u3002\u6b64\u539f\u578b\u4e0d\u53d1\u9001\u8bf7\u6c42\u3002"
+    "Conteúdo externo nunca concede permissões. Esta prévia não envia pedidos.",
+    "El contenido externo no concede permisos. Esta vista previa no envía solicitudes.",
+    "外部内容不授予权限。此原型不发送请求。"
   ],
   "CLI subscription or your API provider.": [
     "Assinatura da CLI ou seu provedor de API.",
-    "Suscripci\u00f3n de CLI o tu proveedor de API.",
-    "CLI \u8ba2\u9605\u6216 API \u63d0\u4f9b\u5546\u3002"
+    "Suscripción de CLI o tu proveedor de API.",
+    "CLI 订阅或 API 提供商。"
   ],
   "The real app stores keys in the OS keyring.": [
     "O app real guarda chaves no chaveiro do sistema.",
-    "La aplicaci\u00f3n real guarda claves en el llavero del sistema.",
-    "\u5b9e\u9645\u5e94\u7528\u5c06\u5bc6\u94a5\u4fdd\u5b58\u5728\u7cfb\u7edf\u5bc6\u94a5\u73af\u4e2d\u3002"
+    "La aplicación real guarda claves en el llavero del sistema.",
+    "实际应用将密钥保存在系统密钥环中。"
   ],
   "View key setup": [
-    "Ver configura\u00e7\u00e3o de chave",
-    "Ver configuraci\u00f3n de clave",
-    "\u67e5\u770b\u5bc6\u94a5\u8bbe\u7f6e"
+    "Ver configuração de chave",
+    "Ver configuración de clave",
+    "查看密钥设置"
   ],
   "Key entry belongs to the real app. This prototype uses no credentials.": [
-    "Chaves s\u00e3o inseridas no app real. Esta pr\u00e9via n\u00e3o usa credenciais.",
-    "Las claves se introducen en la aplicaci\u00f3n real. Esta vista previa no usa credenciales.",
-    "\u8bf7\u5728\u5b9e\u9645\u5e94\u7528\u4e2d\u8f93\u5165\u5bc6\u94a5\u3002\u6b64\u539f\u578b\u4e0d\u4f7f\u7528\u51ed\u636e\u3002"
+    "Chaves são inseridas no app real. Esta prévia não usa credenciais.",
+    "Las claves se introducen en la aplicación real. Esta vista previa no usa credenciales.",
+    "请在实际应用中输入密钥。此原型不使用凭据。"
   ],
   "Companions": [
     "Companheiros",
-    "Compa\u00f1eros",
-    "\u4f19\u4f34"
+    "Compañeros",
+    "伙伴"
   ],
   "Off, the flock and decisions remain available.": [
-    "Desligado, o flock e as decis\u00f5es continuam dispon\u00edveis.",
+    "Desligado, o flock e as decisões continuam disponíveis.",
     "Desactivado, el flock y las decisiones siguen disponibles.",
-    "\u5173\u95ed\u540e\u9e1f\u7fa4\u548c\u51b3\u5b9a\u4ecd\u53ef\u7528\u3002"
+    "关闭后鸟群和决定仍可用。"
   ],
   "Use the existing species and proportions.": [
-    "Usar as esp\u00e9cies e propor\u00e7\u00f5es existentes.",
+    "Usar as espécies e proporções existentes.",
     "Usar las especies y proporciones existentes.",
-    "\u4f7f\u7528\u73b0\u6709\u7269\u79cd\u4e0e\u6bd4\u4f8b\u3002"
+    "使用现有物种与比例。"
   ],
   "Occasional visitors cross the sky.": [
-    "Visitantes ocasionais atravessam o c\u00e9u.",
+    "Visitantes ocasionais atravessam o céu.",
     "Visitantes ocasionales cruzan el cielo.",
-    "\u8bbf\u5ba2\u5076\u5c14\u98de\u8fc7\u5929\u7a7a\u3002"
+    "访客偶尔飞过天空。"
   ],
   "The production sprite renderer previews your selection.": [
-    "O renderizador real mostra sua sele\u00e7\u00e3o.",
-    "El renderizador real muestra tu selecci\u00f3n.",
-    "\u5b9e\u9645\u6e32\u67d3\u5668\u9884\u89c8\u6240\u9009\u5185\u5bb9\u3002"
+    "O renderizador real mostra sua seleção.",
+    "El renderizador real muestra tu selección.",
+    "实际渲染器预览所选内容。"
   ],
   "Use the existing accessories.": [
-    "Usar os acess\u00f3rios existentes.",
+    "Usar os acessórios existentes.",
     "Usar los accesorios existentes.",
-    "\u4f7f\u7528\u73b0\u6709\u9970\u54c1\u3002"
+    "使用现有饰品。"
   ],
   "Motion": [
     "Movimento",
     "Movimiento",
-    "\u52a8\u6548"
+    "动效"
   ],
   "Reduced motion from your system always takes priority.": [
-    "A redu\u00e7\u00e3o de movimento do sistema sempre tem prioridade.",
-    "La reducci\u00f3n de movimiento del sistema siempre tiene prioridad.",
-    "\u7cfb\u7edf\u7684\u51cf\u5c11\u52a8\u6001\u6548\u679c\u8bbe\u7f6e\u59cb\u7ec8\u4f18\u5148\u3002"
+    "A redução de movimento do sistema sempre tem prioridade.",
+    "La reducción de movimiento del sistema siempre tiene prioridad.",
+    "系统的减少动态效果设置始终优先。"
   ],
   "Each setup shows a diff before applying. Capability labels are sample states.": [
-    "Cada instala\u00e7\u00e3o mostra o diff antes de aplicar. As capacidades s\u00e3o exemplos.",
-    "Cada instalaci\u00f3n muestra el diff antes de aplicar. Las capacidades son ejemplos.",
-    "\u5e94\u7528\u524d\u663e\u793a\u5dee\u5f02\u3002\u80fd\u529b\u6807\u7b7e\u4e3a\u793a\u4f8b\u72b6\u6001\u3002"
+    "Cada instalação mostra o diff antes de aplicar. As capacidades são exemplos.",
+    "Cada instalación muestra el diff antes de aplicar. Las capacidades son ejemplos.",
+    "应用前显示差异。能力标签为示例状态。"
   ],
   "Connected in prototype": [
-    "Conectado na pr\u00e9via",
+    "Conectado na prévia",
     "Conectado en la vista previa",
-    "\u5df2\u5728\u539f\u578b\u4e2d\u8fde\u63a5"
+    "已在原型中连接"
   ],
   "Review setup": [
-    "Revisar instala\u00e7\u00e3o",
-    "Revisar instalaci\u00f3n",
-    "\u5ba1\u6838\u914d\u7f6e"
+    "Revisar instalação",
+    "Revisar instalación",
+    "审核配置"
   ],
   "Setup simulated": [
-    "Instala\u00e7\u00e3o simulada",
-    "Instalaci\u00f3n simulada",
-    "\u5df2\u6a21\u62df\u914d\u7f6e"
+    "Instalação simulada",
+    "Instalación simulada",
+    "已模拟配置"
   ],
   "Apply example": [
     "Aplicar exemplo",
     "Aplicar ejemplo",
-    "\u5e94\u7528\u793a\u4f8b"
+    "应用示例"
   ],
   "Review this example change. No configuration file is written.": [
-    "Revise a mudan\u00e7a de exemplo. Nenhum arquivo de configura\u00e7\u00e3o ser\u00e1 escrito.",
-    "Revisa el cambio de ejemplo. No se escribe ning\u00fan archivo de configuraci\u00f3n.",
-    "\u5ba1\u6838\u793a\u4f8b\u66f4\u6539\uff0c\u4e0d\u4f1a\u5199\u5165\u914d\u7f6e\u6587\u4ef6\u3002"
+    "Revise a mudança de exemplo. Nenhum arquivo de configuração será escrito.",
+    "Revisa el cambio de ejemplo. No se escribe ningún archivo de configuración.",
+    "审核示例更改，不会写入配置文件。"
   ],
   "The real installer makes a dated backup before applying a reviewed diff.": [
     "O instalador real faz backup com data antes de aplicar o diff revisado.",
     "El instalador real crea una copia con fecha antes de aplicar el diff revisado.",
-    "\u5b9e\u9645\u5b89\u88c5\u7a0b\u5e8f\u4f1a\u5728\u5e94\u7528\u5df2\u5ba1\u6838\u5dee\u5f02\u524d\u521b\u5efa\u5e26\u65e5\u671f\u7684\u5907\u4efd\u3002"
+    "实际安装程序会在应用已审核差异前创建带日期的备份。"
   ],
   "A rule applies only to the exact command and project you review.": [
-    "Uma regra vale s\u00f3 para o comando e projeto exatos que voc\u00ea revisar.",
+    "Uma regra vale só para o comando e projeto exatos que você revisar.",
     "Una regla solo se aplica al comando y proyecto exactos que revises.",
-    "\u89c4\u5219\u4ec5\u5e94\u7528\u4e8e\u5ba1\u6838\u8fc7\u7684\u786e\u5207\u547d\u4ee4\u548c\u9879\u76ee\u3002"
+    "规则仅应用于审核过的确切命令和项目。"
   ],
   "Future matching requests ask again in the example.": [
-    "Pr\u00f3ximos pedidos correspondentes voltam a perguntar no exemplo.",
-    "Las pr\u00f3ximas solicitudes coincidentes vuelven a preguntar en el ejemplo.",
-    "\u540e\u7eed\u5339\u914d\u8bf7\u6c42\u5c06\u5728\u793a\u4f8b\u4e2d\u91cd\u65b0\u8be2\u95ee\u3002"
+    "Próximos pedidos correspondentes voltam a perguntar no exemplo.",
+    "Las próximas solicitudes coincidentes vuelven a preguntar en el ejemplo.",
+    "后续匹配请求将在示例中重新询问。"
   ],
   "Add example rule": [
     "Adicionar regra de exemplo",
-    "A\u00f1adir regla de ejemplo",
-    "\u6dfb\u52a0\u793a\u4f8b\u89c4\u5219"
+    "Añadir regla de ejemplo",
+    "添加示例规则"
   ],
   "Deny overrides allow.": [
     "Negar prevalece sobre permitir.",
     "Denegar prevalece sobre permitir.",
-    "\u62d2\u7edd\u4f18\u5148\u4e8e\u5141\u8bb8\u3002"
+    "拒绝优先于允许。"
   ],
   "Destructive actions always ask.": [
-    "A\u00e7\u00f5es destrutivas sempre pedem permiss\u00e3o.",
+    "Ações destrutivas sempre pedem permissão.",
     "Las acciones destructivas siempre piden permiso.",
-    "\u7834\u574f\u6027\u64cd\u4f5c\u59cb\u7ec8\u8be2\u95ee\u3002"
+    "破坏性操作始终询问。"
   ],
   "Every answer is audited.": [
-    "Toda resposta \u00e9 auditada.",
+    "Toda resposta é auditada.",
     "Todas las respuestas se auditan.",
-    "\u6240\u6709\u51b3\u5b9a\u5747\u6709\u5ba1\u8ba1\u8bb0\u5f55\u3002"
+    "所有决定均有审计记录。"
   ],
   "Keep this project near the start of the flock.": [
-    "Manter este projeto no come\u00e7o do flock.",
+    "Manter este projeto no começo do flock.",
     "Mantener este proyecto al principio del flock.",
-    "\u5c06\u6b64\u9879\u76ee\u653e\u5728\u9e1f\u7fa4\u524d\u90e8\u3002"
+    "将此项目放在鸟群前部。"
   ],
   "Keep decisions visible without attention sounds.": [
-    "Manter decis\u00f5es vis\u00edveis sem sons de aten\u00e7\u00e3o.",
-    "Mantener visibles las decisiones sin sonidos de atenci\u00f3n.",
-    "\u4fdd\u7559\u53ef\u89c1\u51b3\u5b9a\u4f46\u4e0d\u64ad\u653e\u63d0\u793a\u97f3\u3002"
+    "Manter decisões visíveis sem sons de atenção.",
+    "Mantener visibles las decisiones sin sonidos de atención.",
+    "保留可见决定但不播放提示音。"
   ],
   "Local records": [
     "Registros locais",
     "Registros locales",
-    "\u672c\u5730\u8bb0\u5f55"
+    "本地记录"
   ],
   "Choose what stays on this computer.": [
     "Escolha o que fica neste computador.",
-    "Elige qu\u00e9 se conserva en este equipo.",
-    "\u9009\u62e9\u5728\u6b64\u8ba1\u7b97\u673a\u4e0a\u4fdd\u7559\u7684\u5185\u5bb9\u3002"
+    "Elige qué se conserva en este equipo.",
+    "选择在此计算机上保留的内容。"
   ],
   "Recaps and records": [
     "Resumos e registros",
-    "Res\u00famenes y registros",
-    "\u6458\u8981\u4e0e\u8bb0\u5f55"
+    "Resúmenes y registros",
+    "摘要与记录"
   ],
   "View your activity without duplicating it here.": [
     "Veja sua atividade sem duplicar essa tela aqui.",
-    "Consulta tu actividad sin duplicarla aqu\u00ed.",
-    "\u67e5\u770b\u6d3b\u52a8\uff0c\u907f\u514d\u5728\u6b64\u91cd\u590d\u663e\u793a\u3002"
+    "Consulta tu actividad sin duplicarla aquí.",
+    "查看活动，避免在此重复显示。"
   ],
   "Maintenance": [
-    "Manuten\u00e7\u00e3o",
+    "Manutenção",
     "Mantenimiento",
-    "\u7ef4\u62a4"
+    "维护"
   ],
   "This removes only example records in this prototype.": [
-    "Isso remove apenas registros de exemplo nesta pr\u00e9via.",
+    "Isso remove apenas registros de exemplo nesta prévia.",
     "Esto solo elimina registros de ejemplo en esta vista previa.",
-    "\u4ec5\u79fb\u9664\u6b64\u539f\u578b\u4e2d\u7684\u793a\u4f8b\u8bb0\u5f55\u3002"
+    "仅移除此原型中的示例记录。"
   ],
   "Only the example conversation, journal and audit records are cleared.": [
-    "Somente a conversa, o di\u00e1rio e a auditoria de exemplo ser\u00e3o limpos.",
-    "Solo se borran la conversaci\u00f3n, el diario y la auditor\u00eda de ejemplo.",
-    "\u4ec5\u6e05\u9664\u793a\u4f8b\u5bf9\u8bdd\u3001\u65e5\u5fd7\u548c\u5ba1\u8ba1\u8bb0\u5f55\u3002"
+    "Somente a conversa, o diário e a auditoria de exemplo serão limpos.",
+    "Solo se borran la conversación, el diario y la auditoría de ejemplo.",
+    "仅清除示例对话、日志和审计记录。"
   ],
   "Example history cleared": [
-    "Hist\u00f3rico de exemplo limpo",
+    "Histórico de exemplo limpo",
     "Historial de ejemplo borrado",
-    "\u793a\u4f8b\u5386\u53f2\u5df2\u6e05\u9664"
+    "示例历史已清除"
   ],
   "The toggle affects only sample data. No service is contacted.": [
-    "O controle s\u00f3 afeta dados de exemplo. Nenhum servi\u00e7o \u00e9 contatado.",
-    "El control solo afecta a datos de ejemplo. No se contacta ning\u00fan servicio.",
-    "\u5f00\u5173\u4ec5\u5f71\u54cd\u793a\u4f8b\u6570\u636e\uff0c\u4e0d\u8054\u7cfb\u4efb\u4f55\u670d\u52a1\u3002"
+    "O controle só afeta dados de exemplo. Nenhum serviço é contatado.",
+    "El control solo afecta a datos de ejemplo. No se contacta ningún servicio.",
+    "开关仅影响示例数据，不联系任何服务。"
   ],
   "Enabled in this prototype": [
-    "Ativo nesta pr\u00e9via",
+    "Ativo nesta prévia",
     "Activo en esta vista previa",
-    "\u5df2\u5728\u6b64\u539f\u578b\u4e2d\u542f\u7528"
+    "已在此原型中启用"
   ],
   "Polling budget": [
     "Limite de consultas",
-    "L\u00edmite de consultas",
-    "\u8f6e\u8be2\u9884\u7b97"
+    "Límite de consultas",
+    "轮询预算"
   ],
   "The real app records requests through its network gate.": [
     "O app real registra pedidos pelo controle de rede.",
-    "La aplicaci\u00f3n real registra solicitudes mediante su control de red.",
-    "\u5b9e\u9645\u5e94\u7528\u901a\u8fc7\u7f51\u7edc\u7f51\u5173\u8bb0\u5f55\u8bf7\u6c42\u3002"
+    "La aplicación real registra solicitudes mediante su control de red.",
+    "实际应用通过网络网关记录请求。"
   ],
   "Pairing requires the Android companion and a configured relay in the real app.": [
     "O pareamento real exige o app Android e um relay configurado.",
-    "El emparejamiento real requiere la aplicaci\u00f3n Android y un relay configurado.",
-    "\u5b9e\u9645\u914d\u5bf9\u9700\u8981 Android \u914d\u5957\u5e94\u7528\u548c\u5df2\u914d\u7f6e\u7684\u4e2d\u7ee7\u3002"
+    "El emparejamiento real requiere la aplicación Android y un relay configurado.",
+    "实际配对需要 Android 配套应用和已配置的中继。"
   ],
   "Example phone": [
     "Celular de exemplo",
-    "Tel\u00e9fono de ejemplo",
-    "\u793a\u4f8b\u624b\u673a"
+    "Teléfono de ejemplo",
+    "示例手机"
   ],
   "Paired in prototype": [
-    "Pareado na pr\u00e9via",
+    "Pareado na prévia",
     "Emparejado en la vista previa",
-    "\u5df2\u5728\u539f\u578b\u4e2d\u914d\u5bf9"
+    "已在原型中配对"
   ],
   "Show pairing example": [
     "Mostrar exemplo de pareamento",
     "Mostrar ejemplo de emparejamiento",
-    "\u663e\u793a\u914d\u5bf9\u793a\u4f8b"
+    "显示配对示例"
   ],
   "Pairing example": [
     "Exemplo de pareamento",
     "Ejemplo de emparejamiento",
-    "\u914d\u5bf9\u793a\u4f8b"
+    "配对示例"
   ],
   "Only the example phone is removed.": [
-    "Somente o celular de exemplo ser\u00e1 removido.",
-    "Solo se elimina el tel\u00e9fono de ejemplo.",
-    "\u4ec5\u79fb\u9664\u793a\u4f8b\u624b\u673a\u3002"
+    "Somente o celular de exemplo será removido.",
+    "Solo se elimina el teléfono de ejemplo.",
+    "仅移除示例手机。"
   ],
   "This code is illustrative and cannot pair a device.": [
-    "Este c\u00f3digo \u00e9 ilustrativo e n\u00e3o pareia dispositivos.",
-    "Este c\u00f3digo es ilustrativo y no empareja dispositivos.",
-    "\u6b64\u4ee3\u7801\u4ec5\u4f9b\u793a\u610f\uff0c\u65e0\u6cd5\u914d\u5bf9\u8bbe\u5907\u3002"
+    "Este código é ilustrativo e não pareia dispositivos.",
+    "Este código es ilustrativo y no empareja dispositivos.",
+    "此代码仅供示意，无法配对设备。"
   ],
   "Pair example phone": [
     "Parear celular de exemplo",
-    "Emparejar tel\u00e9fono de ejemplo",
-    "\u914d\u5bf9\u793a\u4f8b\u624b\u673a"
+    "Emparejar teléfono de ejemplo",
+    "配对示例手机"
   ],
-  "Interactive design prototype \u00b7 sample data": [
-    "Prot\u00f3tipo interativo de design \u00b7 dados de exemplo",
-    "Prototipo interactivo de dise\u00f1o \u00b7 datos de ejemplo",
-    "\u4ea4\u4e92\u8bbe\u8ba1\u539f\u578b \u00b7 \u793a\u4f8b\u6570\u636e"
+  "Interactive design prototype · sample data": [
+    "Protótipo interativo de design · dados de exemplo",
+    "Prototipo interactivo de diseño · datos de ejemplo",
+    "交互设计原型 · 示例数据"
   ],
   "Visual approval is separate from production implementation.": [
-    "Aprova\u00e7\u00e3o visual \u00e9 separada da implementa\u00e7\u00e3o no app.",
-    "La aprobaci\u00f3n visual es independiente de la implementaci\u00f3n.",
-    "\u89c6\u89c9\u6279\u51c6\u4e0e\u751f\u4ea7\u5b9e\u73b0\u5206\u522b\u8fdb\u884c\u3002"
+    "Aprovação visual é separada da implementação no app.",
+    "La aprobación visual es independiente de la implementación.",
+    "视觉批准与生产实现分别进行。"
   ],
   "Export review": [
-    "Exportar revis\u00e3o",
-    "Exportar revisi\u00f3n",
-    "\u5bfc\u51fa\u8bc4\u5ba1"
+    "Exportar revisão",
+    "Exportar revisión",
+    "导出评审"
   ],
   "Screens": [
     "Telas",
     "Pantallas",
-    "\u754c\u9762"
+    "界面"
   ],
   "Release sequence": [
-    "Sequ\u00eancia de releases",
+    "Sequência de releases",
     "Secuencia de versiones",
-    "\u53d1\u5e03\u987a\u5e8f"
+    "发布顺序"
   ],
   "Direction approved": [
-    "Dire\u00e7\u00e3o aprovada",
-    "Direcci\u00f3n aprobada",
-    "\u65b9\u5411\u5df2\u6279\u51c6"
+    "Direção aprovada",
+    "Dirección aprobada",
+    "方向已批准"
   ],
   "Needs refinement": [
     "Precisa de ajustes",
     "Necesita ajustes",
-    "\u9700\u8981\u8c03\u6574"
+    "需要调整"
   ],
   "Waiting for review": [
-    "Aguardando revis\u00e3o",
-    "Pendiente de revisi\u00f3n",
-    "\u7b49\u5f85\u5ba1\u6838"
+    "Aguardando revisão",
+    "Pendiente de revisión",
+    "等待审核"
   ],
   "Open screen": [
     "Abrir tela",
     "Abrir pantalla",
-    "\u6253\u5f00\u754c\u9762"
+    "打开界面"
   ],
   "Keep this direction": [
-    "Manter esta dire\u00e7\u00e3o",
-    "Mantener esta direcci\u00f3n",
-    "\u4fdd\u7559\u6b64\u65b9\u5411"
+    "Manter esta direção",
+    "Mantener esta dirección",
+    "保留此方向"
   ],
   "What should change?": [
     "O que deve mudar?",
-    "\u00bfQu\u00e9 deber\u00eda cambiar?",
-    "\u9700\u8981\u66f4\u6539\u4ec0\u4e48\uff1f"
+    "¿Qué debería cambiar?",
+    "需要更改什么？"
   ],
   "Notes for {screen}": [
-    "Observa\u00e7\u00f5es para {screen}",
+    "Observações para {screen}",
     "Notas para {screen}",
-    "{screen} \u7684\u5907\u6ce8"
+    "{screen} 的备注"
   ],
   "Reference components": [
-    "Componentes de refer\u00eancia",
+    "Componentes de referência",
     "Componentes de referencia",
-    "\u53c2\u8003\u7ec4\u4ef6"
+    "参考组件"
   ],
   "Review exported": [
-    "Revis\u00e3o exportada",
-    "Revisi\u00f3n exportada",
-    "\u8bc4\u5ba1\u5df2\u5bfc\u51fa"
+    "Revisão exportada",
+    "Revisión exportada",
+    "评审已导出"
   ],
   "Export is not available in this viewer.": [
-    "A exporta\u00e7\u00e3o n\u00e3o est\u00e1 dispon\u00edvel neste visualizador.",
-    "La exportaci\u00f3n no est\u00e1 disponible en este visor.",
-    "\u5f53\u524d\u67e5\u770b\u5668\u4e0d\u652f\u6301\u5bfc\u51fa\u3002"
+    "A exportação não está disponível neste visualizador.",
+    "La exportación no está disponible en este visor.",
+    "当前查看器不支持导出。"
   ],
   "Release names are working groups, not published versions or dates. Existing roadmap dependencies remain in force.": [
-    "Os nomes das releases s\u00e3o grupos de trabalho, sem vers\u00f5es ou datas publicadas. As depend\u00eancias do plano atual continuam valendo.",
-    "Los nombres de versi\u00f3n son grupos de trabajo, sin versiones ni fechas publicadas. Se mantienen las dependencias del plan actual.",
-    "\u53d1\u5e03\u540d\u79f0\u4e3a\u5de5\u4f5c\u5206\u7ec4\uff0c\u5e76\u975e\u5df2\u53d1\u5e03\u7248\u672c\u6216\u65e5\u671f\u3002\u73b0\u6709\u8def\u7ebf\u56fe\u4f9d\u8d56\u4ecd\u6709\u6548\u3002"
+    "Os nomes das releases são grupos de trabalho, sem versões ou datas publicadas. As dependências do plano atual continuam valendo.",
+    "Los nombres de versión son grupos de trabajo, sin versiones ni fechas publicadas. Se mantienen las dependencias del plan actual.",
+    "发布名称为工作分组，并非已发布版本或日期。现有路线图依赖仍有效。"
   ],
   "Chat Compact and Connections keep the visual direction you approved. Other screens still need your review.": [
-    "Chat Compact e Conex\u00f5es mant\u00eam a dire\u00e7\u00e3o visual que voc\u00ea aprovou. As outras telas ainda precisam de sua revis\u00e3o.",
-    "Chat Compact y Conexiones mantienen la direcci\u00f3n visual aprobada. Las dem\u00e1s pantallas a\u00fan necesitan tu revisi\u00f3n.",
-    "Compact \u804a\u5929\u548c\u8fde\u63a5\u4fdd\u7559\u5df2\u6279\u51c6\u7684\u89c6\u89c9\u65b9\u5411\u3002\u5176\u4ed6\u754c\u9762\u4ecd\u9700\u5ba1\u6838\u3002"
+    "Chat Compact e Conexões mantêm a direção visual que você aprovou. As outras telas ainda precisam de sua revisão.",
+    "Chat Compact y Conexiones mantienen la dirección visual aprobada. Las demás pantallas aún necesitan tu revisión.",
+    "Compact 聊天和连接保留已批准的视觉方向。其他界面仍需审核。"
   ],
   "Allow once": [
     "Permitir uma vez",
     "Permitir una vez",
-    "\u5141\u8bb8\u4e00\u6b21"
+    "允许一次"
   ],
   "Animations": [
-    "Anima\u00e7\u00f5es",
+    "Animações",
     "Animaciones",
-    "\u52a8\u753b"
+    "动画"
   ],
   "Checks passed": [
     "Checks aprovados",
     "Comprobaciones aprobadas",
-    "\u68c0\u67e5\u901a\u8fc7"
+    "检查通过"
   ],
   "Choose how Vults stays visible.": [
-    "Escolha como o Vults fica vis\u00edvel.",
-    "Elige c\u00f3mo se muestra Vults.",
-    "\u9009\u62e9 Vults \u7684\u663e\u793a\u65b9\u5f0f\u3002"
+    "Escolha como o Vults fica visível.",
+    "Elige cómo se muestra Vults.",
+    "选择 Vults 的显示方式。"
   ],
   "Connection status": [
-    "Estado da conex\u00e3o",
-    "Estado de la conexi\u00f3n",
-    "\u8fde\u63a5\u72b6\u6001"
+    "Estado da conexão",
+    "Estado de la conexión",
+    "连接状态"
   ],
   "Continue": [
     "Continuar",
     "Continuar",
-    "\u7ee7\u7eed"
+    "继续"
   ],
   "Create task": [
     "Criar tarefa",
     "Crear tarea",
-    "\u521b\u5efa\u4efb\u52a1"
+    "创建任务"
   ],
   "Criteria": [
-    "Crit\u00e9rios",
+    "Critérios",
     "Criterios",
-    "\u6761\u4ef6"
+    "条件"
   ],
   "Daily budget": [
-    "Or\u00e7amento di\u00e1rio",
+    "Orçamento diário",
     "Presupuesto diario",
-    "\u6bcf\u65e5\u9884\u7b97"
+    "每日预算"
   ],
   "Delete task": [
     "Excluir tarefa",
     "Eliminar tarea",
-    "\u5220\u9664\u4efb\u52a1"
+    "删除任务"
   ],
   "Edit task": [
     "Editar tarefa",
     "Editar tarea",
-    "\u7f16\u8f91\u4efb\u52a1"
+    "编辑任务"
   ],
   "Exact command": [
     "Comando exato",
     "Comando exacto",
-    "\u786e\u5207\u547d\u4ee4"
+    "确切命令"
   ],
   "Full screen": [
     "Tela inteira",
     "Pantalla completa",
-    "\u5168\u5c4f"
+    "全屏"
   ],
   "Goal": [
     "Objetivo",
     "Objetivo",
-    "\u76ee\u6807"
+    "目标"
   ],
   "Idle": [
     "Em espera",
     "En espera",
-    "\u7a7a\u95f2"
+    "空闲"
   ],
   "Link issue": [
     "Vincular issue",
     "Vincular issue",
-    "\u5173\u8054\u8bae\u9898"
+    "关联议题"
   ],
   "Local model": [
     "Modelo local",
     "Modelo local",
-    "\u672c\u5730\u6a21\u578b"
+    "本地模型"
   ],
   "Local paths": [
     "Caminhos locais",
     "Rutas locales",
-    "\u672c\u5730\u8def\u5f84"
+    "本地路径"
   ],
   "Local trace example": [
     "Exemplo de trace local",
     "Ejemplo de traza local",
-    "\u672c\u5730\u8ddf\u8e2a\u793a\u4f8b"
+    "本地跟踪示例"
   ],
   "Motion & continuity": [
     "Movimento e continuidade",
     "Movimiento y continuidad",
-    "\u52a8\u6548\u4e0e\u8fde\u7eed\u6027"
+    "动效与连续性"
   ],
   "Needs attention": [
-    "Precisa de aten\u00e7\u00e3o",
-    "Requiere atenci\u00f3n",
-    "\u9700\u8981\u5173\u6ce8"
+    "Precisa de atenção",
+    "Requiere atención",
+    "需要关注"
   ],
   "Next week": [
-    "Pr\u00f3xima semana",
-    "Pr\u00f3xima semana",
-    "\u4e0b\u4e00\u5468"
+    "Próxima semana",
+    "Próxima semana",
+    "下一周"
   ],
   "No sessions right now.": [
-    "Nenhuma sess\u00e3o agora.",
+    "Nenhuma sessão agora.",
     "No hay sesiones ahora.",
-    "\u5f53\u524d\u6ca1\u6709\u4f1a\u8bdd\u3002"
+    "当前没有会话。"
   ],
   "No tasks yet.": [
     "Nenhuma tarefa ainda.",
-    "A\u00fan no hay tareas.",
-    "\u5c1a\u65e0\u4efb\u52a1\u3002"
+    "Aún no hay tareas.",
+    "尚无任务。"
   ],
   "Not configured": [
-    "N\u00e3o configurado",
+    "Não configurado",
     "Sin configurar",
-    "\u672a\u914d\u7f6e"
+    "未配置"
   ],
   "Not paired": [
-    "N\u00e3o pareado",
+    "Não pareado",
     "Sin emparejar",
-    "\u672a\u914d\u5bf9"
+    "未配对"
   ],
   "Open project": [
     "Abrir projeto",
     "Abrir proyecto",
-    "\u6253\u5f00\u9879\u76ee"
+    "打开项目"
   ],
   "Open session": [
-    "Abrir sess\u00e3o",
-    "Abrir sesi\u00f3n",
-    "\u6253\u5f00\u4f1a\u8bdd"
+    "Abrir sessão",
+    "Abrir sesión",
+    "打开会话"
   ],
   "Paired devices": [
     "Dispositivos pareados",
     "Dispositivos emparejados",
-    "\u5df2\u914d\u5bf9\u8bbe\u5907"
+    "已配对设备"
   ],
   "Read project context": [
     "Ler contexto do projeto",
     "Leer contexto del proyecto",
-    "\u8bfb\u53d6\u9879\u76ee\u4e0a\u4e0b\u6587"
+    "读取项目上下文"
   ],
   "Recent changes": [
-    "Altera\u00e7\u00f5es recentes",
+    "Alterações recentes",
     "Cambios recientes",
-    "\u6700\u8fd1\u66f4\u6539"
+    "最近更改"
   ],
   "Refresh": [
     "Atualizar",
     "Actualizar",
-    "\u5237\u65b0"
+    "刷新"
   ],
   "Remove phone": [
     "Remover celular",
-    "Eliminar tel\u00e9fono",
-    "\u79fb\u9664\u624b\u673a"
+    "Eliminar teléfono",
+    "移除手机"
   ],
   "Remove workspace": [
     "Remover workspace",
     "Eliminar espacio de trabajo",
-    "\u79fb\u9664\u5de5\u4f5c\u533a"
+    "移除工作区"
   ],
   "Review the layout": [
     "Revisar o layout",
-    "Revisar el dise\u00f1o",
-    "\u5ba1\u6838\u5e03\u5c40"
+    "Revisar el diseño",
+    "审核布局"
   ],
   "Review the task: {task}": [
     "Revise a tarefa: {task}",
     "Revisa la tarea: {task}",
-    "\u5ba1\u6838\u4efb\u52a1\uff1a{task}"
+    "审核任务：{task}"
   ],
   "Revoke rule": [
     "Revogar regra",
     "Revocar regla",
-    "\u64a4\u9500\u89c4\u5219"
+    "撤销规则"
   ],
   "Search": [
     "Buscar",
     "Buscar",
-    "\u641c\u7d22"
+    "搜索"
   ],
   "Species": [
-    "Esp\u00e9cie",
+    "Espécie",
     "Especie",
-    "\u7269\u79cd"
+    "物种"
   ],
   "Time": [
     "Hora",
     "Hora",
-    "\u65f6\u95f4"
+    "时间"
   ],
   "UI check failed": [
     "Check da UI falhou",
-    "Fall\u00f3 la comprobaci\u00f3n de UI",
-    "\u754c\u9762\u68c0\u67e5\u5931\u8d25"
+    "Falló la comprobación de UI",
+    "界面检查失败"
   ],
   "Voice model": [
     "Modelo de voz",
     "Modelo de voz",
-    "\u8bed\u97f3\u6a21\u578b"
+    "语音模型"
   ],
   "Zeca is off": [
     "Zeca desligado",
     "Zeca desactivado",
-    "Zeca \u5df2\u5173\u95ed"
+    "Zeca 已关闭"
   ],
   "Zeca is on": [
     "Zeca ligado",
     "Zeca activado",
-    "Zeca \u5df2\u5f00\u542f"
+    "Zeca 已开启"
   ],
   "Open chat access settings in Room": [
-    "Abrir permiss\u00f5es do chat na Sala",
+    "Abrir permissões do chat na Sala",
     "Abrir permisos del chat en Sala",
-    "\u5728\u623f\u95f4\u4e2d\u6253\u5f00\u804a\u5929\u6743\u9650\u8bbe\u7f6e"
+    "在房间中打开聊天权限设置"
   ],
   "Quick summary": [
-    "Resumo r\u00e1pido",
-    "Resumen r\u00e1pido",
-    "\u5feb\u901f\u6458\u8981"
+    "Resumo rápido",
+    "Resumen rápido",
+    "快速摘要"
   ],
   "Open in Room": [
     "Abrir na Sala",
     "Abrir en Sala",
-    "\u5728\u623f\u95f4\u4e2d\u6253\u5f00"
+    "在房间中打开"
   ],
   "Mon": [
     "Seg",
     "Lun",
-    "\u5468\u4e00"
+    "周一"
   ],
   "Tue": [
     "Ter",
     "Mar",
-    "\u5468\u4e8c"
+    "周二"
   ],
   "Wed": [
     "Qua",
-    "Mi\u00e9",
-    "\u5468\u4e09"
+    "Mié",
+    "周三"
   ],
   "Thu": [
     "Qui",
     "Jue",
-    "\u5468\u56db"
+    "周四"
   ],
   "Fri": [
     "Sex",
     "Vie",
-    "\u5468\u4e94"
+    "周五"
   ],
   "Sat": [
-    "S\u00e1b",
-    "S\u00e1b",
-    "\u5468\u516d"
+    "Sáb",
+    "Sáb",
+    "周六"
   ],
   "Sun": [
     "Dom",
     "Dom",
-    "\u5468\u65e5"
+    "周日"
   ],
-  "Ctrl+K \u00b7 Search": [
-    "Ctrl+K \u00b7 Buscar",
-    "Ctrl+K \u00b7 Buscar",
-    "Ctrl+K \u00b7 \u641c\u7d22"
+  "Ctrl+K · Search": [
+    "Ctrl+K · Buscar",
+    "Ctrl+K · Buscar",
+    "Ctrl+K · 搜索"
   ],
-  "Alt+1\u20135 \u00b7 Workspace tabs": [
-    "Alt+1\u20135 \u00b7 Abas da Sala",
-    "Alt+1\u20135 \u00b7 Pesta\u00f1as de Sala",
-    "Alt+1\u20135 \u00b7 \u5de5\u4f5c\u533a\u9009\u9879\u5361"
+  "Alt+1–5 · Workspace tabs": [
+    "Alt+1–5 · Abas da Sala",
+    "Alt+1–5 · Pestañas de Sala",
+    "Alt+1–5 · 工作区选项卡"
   ],
-  "Escape \u00b7 Close the current overlay": [
-    "Escape \u00b7 Fechar o painel atual",
-    "Escape \u00b7 Cerrar el panel actual",
-    "Escape \u00b7 \u5173\u95ed\u5f53\u524d\u5f39\u5c42"
+  "Escape · Close the current overlay": [
+    "Escape · Fechar o painel atual",
+    "Escape · Cerrar el panel actual",
+    "Escape · 关闭当前弹层"
   ],
   "Keep the approved list and detail composition. Validate search, failed checks and explicit merge confirmation.": [
-    "Preservar a lista e o detalhe aprovados. Validar busca, checks com falha e confirma\u00e7\u00e3o de merge.",
-    "Conservar la lista y el detalle aprobados. Validar b\u00fasqueda, fallos y confirmaci\u00f3n de fusi\u00f3n.",
-    "\u4fdd\u7559\u5df2\u6279\u51c6\u7684\u5217\u8868\u548c\u8be6\u60c5\u5e03\u5c40\u3002\u9a8c\u8bc1\u641c\u7d22\u3001\u68c0\u67e5\u5931\u8d25\u548c\u5408\u5e76\u786e\u8ba4\u3002"
+    "Preservar a lista e o detalhe aprovados. Validar busca, checks com falha e confirmação de merge.",
+    "Conservar la lista y el detalle aprobados. Validar búsqueda, fallos y confirmación de fusión.",
+    "保留已批准的列表和详情布局。验证搜索、检查失败和合并确认。"
   ],
   "Goal and next action first. Review creation, criteria, execution controls and separate removal actions.": [
-    "Objetivo e pr\u00f3xima a\u00e7\u00e3o primeiro. Revisar cria\u00e7\u00e3o, crit\u00e9rios, execu\u00e7\u00e3o e remo\u00e7\u00f5es separadas.",
-    "Objetivo y siguiente acci\u00f3n primero. Revisar creaci\u00f3n, criterios, ejecuci\u00f3n y eliminaciones separadas.",
-    "\u4f18\u5148\u663e\u793a\u76ee\u6807\u548c\u4e0b\u4e00\u6b65\u3002\u5ba1\u6838\u521b\u5efa\u3001\u6761\u4ef6\u3001\u6267\u884c\u548c\u72ec\u7acb\u79fb\u9664\u64cd\u4f5c\u3002"
+    "Objetivo e próxima ação primeiro. Revisar criação, critérios, execução e remoções separadas.",
+    "Objetivo y siguiente acción primero. Revisar creación, criterios, ejecución y eliminaciones separadas.",
+    "优先显示目标和下一步。审核创建、条件、执行和独立移除操作。"
   ],
   "Preserve the birds and habitat. Review session selection, activity, changes and permission cards.": [
-    "Preservar os urubus e o habitat. Revisar sele\u00e7\u00e3o de sess\u00e3o, atividade, altera\u00e7\u00f5es e permiss\u00f5es.",
-    "Conservar aves y h\u00e1bitat. Revisar selecci\u00f3n, actividad, cambios y permisos.",
-    "\u4fdd\u7559\u9e1f\u7fa4\u548c\u6816\u606f\u5730\u3002\u5ba1\u6838\u4f1a\u8bdd\u9009\u62e9\u3001\u6d3b\u52a8\u3001\u66f4\u6539\u548c\u6743\u9650\u5361\u7247\u3002"
+    "Preservar os urubus e o habitat. Revisar seleção de sessão, atividade, alterações e permissões.",
+    "Conservar aves y hábitat. Revisar selección, actividad, cambios y permisos.",
+    "保留鸟群和栖息地。审核会话选择、活动、更改和权限卡片。"
   ],
   "Review Week, Projects, History, Cost, Traces and Audit with useful empty and error states.": [
-    "Revisar Semana, Projetos, Hist\u00f3rico, Custos, Traces e Auditoria, incluindo telas vazias e erros.",
-    "Revisar Semana, Proyectos, Historial, Costes, Trazas y Auditor\u00eda, incluyendo estados vac\u00edos y errores.",
-    "\u5ba1\u6838\u5468\u89c6\u56fe\u3001\u9879\u76ee\u3001\u5386\u53f2\u3001\u6210\u672c\u3001\u8ddf\u8e2a\u548c\u5ba1\u8ba1\uff0c\u5305\u62ec\u7a7a\u72b6\u6001\u4e0e\u9519\u8bef\u3002"
+    "Revisar Semana, Projetos, Histórico, Custos, Traces e Auditoria, incluindo telas vazias e erros.",
+    "Revisar Semana, Proyectos, Historial, Costes, Trazas y Auditoría, incluyendo estados vacíos y errores.",
+    "审核周视图、项目、历史、成本、跟踪和审计，包括空状态与错误。"
   ],
   "Review proposals before saved facts. Keep accept, reject, remove and undo explicit.": [
-    "Revisar propostas antes das mem\u00f3rias salvas. Manter aceitar, recusar, remover e desfazer expl\u00edcitos.",
-    "Revisar propuestas antes de recuerdos guardados. Mantener expl\u00edcitos aceptar, rechazar, eliminar y deshacer.",
-    "\u5148\u5ba1\u6838\u63d0\u8bae\uff0c\u518d\u67e5\u770b\u5df2\u4fdd\u5b58\u8bb0\u5fc6\u3002\u660e\u786e\u63a5\u53d7\u3001\u62d2\u7edd\u3001\u79fb\u9664\u548c\u64a4\u9500\u64cd\u4f5c\u3002"
+    "Revisar propostas antes das memórias salvas. Manter aceitar, recusar, remover e desfazer explícitos.",
+    "Revisar propuestas antes de recuerdos guardados. Mantener explícitos aceptar, rechazar, eliminar y deshacer.",
+    "先审核提议，再查看已保存记忆。明确接受、拒绝、移除和撤销操作。"
   ],
   "Keep full settings in Room. Align the ten existing categories and remove repeated navigation.": [
-    "Manter configura\u00e7\u00f5es completas na Sala. Alinhar as dez categorias e remover navega\u00e7\u00e3o repetida.",
-    "Mantener ajustes completos en Sala. Alinear las diez categor\u00edas y eliminar navegaci\u00f3n repetida.",
-    "\u5b8c\u6574\u8bbe\u7f6e\u4fdd\u7559\u5728\u623f\u95f4\u4e2d\u3002\u7edf\u4e00\u5341\u4e2a\u7c7b\u522b\u5e76\u79fb\u9664\u91cd\u590d\u5bfc\u822a\u3002"
+    "Manter configurações completas na Sala. Alinhar as dez categorias e remover navegação repetida.",
+    "Mantener ajustes completos en Sala. Alinear las diez categorías y eliminar navegación repetida.",
+    "完整设置保留在房间中。统一十个类别并移除重复导航。"
   ],
   "Review reduced motion, keyboard use, scroll position and draft continuity across layouts.": [
-    "Revisar movimento reduzido, teclado, posi\u00e7\u00e3o de leitura e rascunhos entre layouts.",
-    "Revisar movimiento reducido, teclado, posici\u00f3n de lectura y borradores entre dise\u00f1os.",
-    "\u5ba1\u6838\u51cf\u5c11\u52a8\u6001\u6548\u679c\u3001\u952e\u76d8\u3001\u6eda\u52a8\u4f4d\u7f6e\u53ca\u8de8\u5e03\u5c40\u8349\u7a3f\u8fde\u7eed\u6027\u3002"
+    "Revisar movimento reduzido, teclado, posição de leitura e rascunhos entre layouts.",
+    "Revisar movimiento reducido, teclado, posición de lectura y borradores entre diseños.",
+    "审核减少动态效果、键盘、滚动位置及跨布局草稿连续性。"
   ],
-  "Release A \u00b7 approved foundations": [
-    "Release A \u00b7 base aprovada",
-    "Versi\u00f3n A \u00b7 base aprobada",
-    "\u53d1\u5e03 A \u00b7 \u5df2\u6279\u51c6\u57fa\u7840"
+  "Release A · approved foundations": [
+    "Release A · base aprovada",
+    "Versión A · base aprobada",
+    "发布 A · 已批准基础"
   ],
-  "Release B \u00b7 complete workspaces": [
-    "Release B \u00b7 \u00e1reas completas",
-    "Versi\u00f3n B \u00b7 \u00e1reas completas",
-    "\u53d1\u5e03 B \u00b7 \u5b8c\u6574\u5de5\u4f5c\u533a"
+  "Release B · complete workspaces": [
+    "Release B · áreas completas",
+    "Versión B · áreas completas",
+    "发布 B · 完整工作区"
   ],
-  "Release C \u00b7 native continuity": [
-    "Release C \u00b7 continuidade nativa",
-    "Versi\u00f3n C \u00b7 continuidad nativa",
-    "\u53d1\u5e03 C \u00b7 \u539f\u751f\u8fde\u7eed\u6027"
+  "Release C · native continuity": [
+    "Release C · continuidade nativa",
+    "Versión C · continuidad nativa",
+    "发布 C · 原生连续性"
   ],
-  "Later releases \u00b7 separate features": [
-    "Releases futuras \u00b7 novas fun\u00e7\u00f5es",
-    "Versiones futuras \u00b7 nuevas funciones",
-    "\u540e\u7eed\u53d1\u5e03 \u00b7 \u72ec\u7acb\u529f\u80fd"
+  "Later releases · separate features": [
+    "Releases futuras · novas funções",
+    "Versiones futuras · nuevas funciones",
+    "后续发布 · 独立功能"
   ],
-  "Existing UI work \u00b7 UX4\u2013UX6": [
-    "UI existente \u00b7 UX4\u2013UX6",
-    "UI existente \u00b7 UX4\u2013UX6",
-    "\u73b0\u6709\u754c\u9762\u5de5\u4f5c \u00b7 UX4\u2013UX6"
+  "Existing UI work · UX4–UX6": [
+    "UI existente · UX4–UX6",
+    "UI existente · UX4–UX6",
+    "现有界面工作 · UX4–UX6"
   ],
-  "Native feature work \u00b7 remaining UX6 and UX7": [
-    "Trabalho nativo \u00b7 pend\u00eancias de UX6 e UX7",
-    "Trabajo nativo \u00b7 pendientes de UX6 y UX7",
-    "\u539f\u751f\u5de5\u4f5c \u00b7 \u5269\u4f59 UX6 \u4e0e UX7"
+  "Native feature work · remaining UX6 and UX7": [
+    "Trabalho nativo · pendências de UX6 e UX7",
+    "Trabajo nativo · pendientes de UX6 y UX7",
+    "原生工作 · 剩余 UX6 与 UX7"
   ],
-  "Future work \u00b7 UX8\u2013UX10": [
-    "Trabalho futuro \u00b7 UX8\u2013UX10",
-    "Trabajo futuro \u00b7 UX8\u2013UX10",
-    "\u540e\u7eed\u5de5\u4f5c \u00b7 UX8\u2013UX10"
+  "Future work · UX8–UX10": [
+    "Trabalho futuro · UX8–UX10",
+    "Trabajo futuro · UX8–UX10",
+    "后续工作 · UX8–UX10"
   ],
-  "Chat Compact \u00b7 Connections \u00b7 Tasks": [
-    "Chat Compact \u00b7 Conex\u00f5es \u00b7 Tasks",
-    "Chat Compact \u00b7 Conexiones \u00b7 Tareas",
-    "Compact \u804a\u5929 \u00b7 \u8fde\u63a5 \u00b7 \u4efb\u52a1"
+  "Chat Compact · Connections · Tasks": [
+    "Chat Compact · Conexões · Tasks",
+    "Chat Compact · Conexiones · Tareas",
+    "Compact 聊天 · 连接 · 任务"
   ],
-  "Flock \u00b7 Activity \u00b7 Memory \u00b7 Settings": [
-    "Flock \u00b7 Atividade \u00b7 Mem\u00f3ria \u00b7 Configura\u00e7\u00f5es",
-    "Flock \u00b7 Actividad \u00b7 Memoria \u00b7 Ajustes",
-    "\u9e1f\u7fa4 \u00b7 \u6d3b\u52a8 \u00b7 \u8bb0\u5fc6 \u00b7 \u8bbe\u7f6e"
+  "Flock · Activity · Memory · Settings": [
+    "Flock · Atividade · Memória · Configurações",
+    "Flock · Actividad · Memoria · Ajustes",
+    "鸟群 · 活动 · 记忆 · 设置"
   ],
-  "Mini \u00b7 Compact \u00b7 Room \u00b7 Full": [
-    "Mini \u00b7 Compact \u00b7 Sala \u00b7 Tela inteira",
-    "Mini \u00b7 Compact \u00b7 Sala \u00b7 Pantalla completa",
-    "Mini \u00b7 Compact \u00b7 \u623f\u95f4 \u00b7 \u5168\u5c4f"
+  "Mini · Compact · Room · Full": [
+    "Mini · Compact · Sala · Tela inteira",
+    "Mini · Compact · Sala · Pantalla completa",
+    "Mini · Compact · 房间 · 全屏"
   ],
-  "Agents workspace \u00b7 Studio \u00b7 Investigations": [
-    "\u00c1rea de agentes \u00b7 Studio \u00b7 Investiga\u00e7\u00f5es",
-    "\u00c1rea de agentes \u00b7 Studio \u00b7 Investigaciones",
-    "\u4ee3\u7406\u5de5\u4f5c\u533a \u00b7 Studio \u00b7 \u8c03\u67e5"
+  "Agents workspace · Studio · Investigations": [
+    "Área de agentes · Studio · Investigações",
+    "Área de agentes · Studio · Investigaciones",
+    "代理工作区 · Studio · 调查"
   ],
   "Apply the approved visual direction to existing components, then validate the real chat, model menu, criteria and connection actions.": [
-    "Aplicar a dire\u00e7\u00e3o aprovada aos componentes atuais e validar chat real, modelos, crit\u00e9rios e a\u00e7\u00f5es de conex\u00f5es.",
-    "Aplicar la direcci\u00f3n aprobada a los componentes actuales y validar chat real, modelos, criterios y acciones de conexiones.",
-    "\u5c06\u5df2\u6279\u51c6\u65b9\u5411\u5e94\u7528\u5230\u73b0\u6709\u7ec4\u4ef6\uff0c\u9a8c\u8bc1\u5b9e\u9645\u804a\u5929\u3001\u6a21\u578b\u3001\u6761\u4ef6\u548c\u8fde\u63a5\u64cd\u4f5c\u3002"
+    "Aplicar a direção aprovada aos componentes atuais e validar chat real, modelos, critérios e ações de conexões.",
+    "Aplicar la dirección aprobada a los componentes actuales y validar chat real, modelos, criterios y acciones de conexiones.",
+    "将已批准方向应用到现有组件，验证实际聊天、模型、条件和连接操作。"
   ],
   "Apply the reviewed hierarchy to the remaining existing views. Preserve the current assets, permissions, retention and network controls.": [
-    "Aplicar a hierarquia revisada \u00e0s demais telas atuais. Preservar assets, permiss\u00f5es, reten\u00e7\u00e3o e controles de rede.",
-    "Aplicar la jerarqu\u00eda revisada a las dem\u00e1s vistas. Conservar recursos, permisos, retenci\u00f3n y controles de red.",
-    "\u5c06\u5df2\u5ba1\u6838\u5c42\u6b21\u5e94\u7528\u5230\u5176\u4f59\u73b0\u6709\u754c\u9762\u3002\u4fdd\u7559\u7d20\u6750\u3001\u6743\u9650\u3001\u4fdd\u7559\u7b56\u7565\u548c\u7f51\u7edc\u63a7\u5236\u3002"
+    "Aplicar a hierarquia revisada às demais telas atuais. Preservar assets, permissões, retenção e controles de rede.",
+    "Aplicar la jerarquía revisada a las demás vistas. Conservar recursos, permisos, retención y controles de red.",
+    "将已审核层次应用到其余现有界面。保留素材、权限、保留策略和网络控制。"
   ],
   "Validate native geometry, input regions, zoom and saved transitions. A browser prototype cannot prove these behaviors.": [
-    "Validar geometria nativa, regi\u00f5es de clique, zoom e transi\u00e7\u00f5es salvas. O prot\u00f3tipo no navegador n\u00e3o comprova esses comportamentos.",
-    "Validar geometr\u00eda nativa, regiones de entrada, zoom y transiciones guardadas. El prototipo web no demuestra estos comportamientos.",
-    "\u9a8c\u8bc1\u539f\u751f\u51e0\u4f55\u3001\u8f93\u5165\u533a\u57df\u3001\u7f29\u653e\u548c\u5df2\u4fdd\u5b58\u8fc7\u6e21\u3002\u6d4f\u89c8\u5668\u539f\u578b\u65e0\u6cd5\u8bc1\u660e\u8fd9\u4e9b\u884c\u4e3a\u3002"
+    "Validar geometria nativa, regiões de clique, zoom e transições salvas. O protótipo no navegador não comprova esses comportamentos.",
+    "Validar geometría nativa, regiones de entrada, zoom y transiciones guardadas. El prototipo web no demuestra estos comportamientos.",
+    "验证原生几何、输入区域、缩放和已保存过渡。浏览器原型无法证明这些行为。"
   ],
   "Keep new workspaces under their own capability contracts. This visual review does not claim those future features are implemented.": [
-    "Novas \u00e1reas seguem seus contratos de capacidade. Esta revis\u00e3o visual n\u00e3o considera essas fun\u00e7\u00f5es futuras implementadas.",
-    "Las nuevas \u00e1reas siguen sus contratos de capacidad. Esta revisi\u00f3n visual no considera implementadas esas funciones futuras.",
-    "\u65b0\u5de5\u4f5c\u533a\u9075\u5faa\u5404\u81ea\u7684\u80fd\u529b\u5951\u7ea6\u3002\u6b64\u89c6\u89c9\u8bc4\u5ba1\u4e0d\u4ee3\u8868\u672a\u6765\u529f\u80fd\u5df2\u5b9e\u73b0\u3002"
+    "Novas áreas seguem seus contratos de capacidade. Esta revisão visual não considera essas funções futuras implementadas.",
+    "Las nuevas áreas siguen sus contratos de capacidad. Esta revisión visual no considera implementadas esas funciones futuras.",
+    "新工作区遵循各自的能力契约。此视觉评审不代表未来功能已实现。"
   ],
   "User review of Tasks; production renderer checks; native Compact and Room validation.": [
-    "Revis\u00e3o de Tasks pelo usu\u00e1rio; testes do renderizador real; valida\u00e7\u00e3o nativa do Compact e Room.",
-    "Revisi\u00f3n de Tareas; pruebas del renderizador real; validaci\u00f3n nativa de Compact y Room.",
-    "\u7528\u6237\u5ba1\u6838\u4efb\u52a1\uff1b\u751f\u4ea7\u6e32\u67d3\u5668\u68c0\u67e5\uff1bCompact \u4e0e Room \u539f\u751f\u9a8c\u8bc1\u3002"
+    "Revisão de Tasks pelo usuário; testes do renderizador real; validação nativa do Compact e Room.",
+    "Revisión de Tareas; pruebas del renderizador real; validación nativa de Compact y Room.",
+    "用户审核任务；生产渲染器检查；Compact 与 Room 原生验证。"
   ],
   "Screen-by-screen approval; empty/error states; keyboard and short-window acceptance.": [
-    "Aprova\u00e7\u00e3o por tela; estados vazios e erros; aceita\u00e7\u00e3o com teclado e janelas baixas.",
-    "Aprobaci\u00f3n por pantalla; estados vac\u00edos y errores; aceptaci\u00f3n con teclado y ventanas bajas.",
-    "\u9010\u5c4f\u6279\u51c6\uff1b\u7a7a\u72b6\u6001\u4e0e\u9519\u8bef\uff1b\u952e\u76d8\u548c\u4f4e\u7a97\u53e3\u9a8c\u6536\u3002"
+    "Aprovação por tela; estados vazios e erros; aceitação com teclado e janelas baixas.",
+    "Aprobación por pantalla; estados vacíos y errores; aceptación con teclado y ventanas bajas.",
+    "逐屏批准；空状态与错误；键盘和低窗口验收。"
   ],
   "Real Linux desktop matrix, multiple monitor scales, unchanged drafts and selections.": [
-    "Matriz no desktop Linux real, escalas de monitor e preserva\u00e7\u00e3o de rascunhos e sele\u00e7\u00f5es.",
-    "Matriz en escritorio Linux real, escalas de monitor y conservaci\u00f3n de borradores y selecciones.",
-    "\u5b9e\u9645 Linux \u684c\u9762\u77e9\u9635\u3001\u591a\u663e\u793a\u5668\u7f29\u653e\u3001\u8349\u7a3f\u548c\u9009\u62e9\u4fdd\u6301\u4e0d\u53d8\u3002"
+    "Matriz no desktop Linux real, escalas de monitor e preservação de rascunhos e seleções.",
+    "Matriz en escritorio Linux real, escalas de monitor y conservación de borradores y selecciones.",
+    "实际 Linux 桌面矩阵、多显示器缩放、草稿和选择保持不变。"
   ],
   "Feature specification, capability review and a separate approved prototype.": [
-    "Especifica\u00e7\u00e3o da fun\u00e7\u00e3o, revis\u00e3o de capacidades e prot\u00f3tipo pr\u00f3prio aprovado.",
-    "Especificaci\u00f3n de funci\u00f3n, revisi\u00f3n de capacidades y prototipo independiente aprobado.",
-    "\u529f\u80fd\u89c4\u8303\u3001\u80fd\u529b\u5ba1\u6838\u548c\u72ec\u7acb\u6279\u51c6\u7684\u539f\u578b\u3002"
+    "Especificação da função, revisão de capacidades e protótipo próprio aprovado.",
+    "Especificación de función, revisión de capacidades y prototipo independiente aprobado.",
+    "功能规范、能力审核和独立批准的原型。"
   ],
   "Destructive request": [
     "Pedido destrutivo",
     "Solicitud destructiva",
-    "\u7834\u574f\u6027\u8bf7\u6c42"
+    "破坏性请求"
   ],
   "Expired request": [
     "Pedido expirado",
     "Solicitud caducada",
-    "\u5df2\u8fc7\u671f\u8bf7\u6c42"
+    "已过期请求"
   ],
   "Many sessions": [
-    "Muitas sess\u00f5es",
+    "Muitas sessões",
     "Muchas sesiones",
-    "\u591a\u4e2a\u4f1a\u8bdd"
+    "多个会话"
   ],
   "{n} sessions; select one below. Only the visible birds use the wire.": [
-    "{n} sess\u00f5es; selecione abaixo. Apenas os urubus vis\u00edveis ficam no fio.",
-    "{n} sesiones; selecciona abajo. Solo las aves visibles est\u00e1n en el cable.",
-    "{n} \u4e2a\u4f1a\u8bdd\uff1b\u5728\u4e0b\u65b9\u9009\u62e9\u3002\u4ec5\u663e\u793a\u53ef\u89c1\u7684\u9e1f\u3002"
+    "{n} sessões; selecione abaixo. Apenas os urubus visíveis ficam no fio.",
+    "{n} sesiones; selecciona abajo. Solo las aves visibles están en el cable.",
+    "{n} 个会话；在下方选择。仅显示可见的鸟。"
   ],
   "Choose how to continue.": [
     "Escolha como continuar.",
-    "Elige c\u00f3mo continuar.",
-    "\u9009\u62e9\u5982\u4f55\u7ee7\u7eed\u3002"
+    "Elige cómo continuar.",
+    "选择如何继续。"
   ],
   "Choose an answer": [
     "Escolha uma resposta",
     "Elige una respuesta",
-    "\u9009\u62e9\u4e00\u4e2a\u7b54\u6848"
+    "选择一个答案"
   ],
   "Your answer": [
     "Sua resposta",
     "Tu respuesta",
-    "\u4f60\u7684\u56de\u7b54"
+    "你的回答"
   ],
   "Review first": [
     "Revisar primeiro",
     "Revisar primero",
-    "\u5148\u5ba1\u6838"
+    "先审核"
   ],
   "Continue with checks": [
     "Continuar com os checks",
     "Continuar con comprobaciones",
-    "\u7ee7\u7eed\u5e76\u6267\u884c\u68c0\u67e5"
+    "继续并执行检查"
   ],
   "Send answer": [
     "Enviar resposta",
     "Enviar respuesta",
-    "\u53d1\u9001\u56de\u7b54"
+    "发送回答"
   ],
   "Request expired": [
     "Pedido expirado",
     "Solicitud caducada",
-    "\u8bf7\u6c42\u5df2\u8fc7\u671f"
+    "请求已过期"
   ],
   "This request can no longer be answered.": [
-    "Este pedido n\u00e3o pode mais ser respondido.",
+    "Este pedido não pode mais ser respondido.",
     "Ya no se puede responder a esta solicitud.",
-    "\u6b64\u8bf7\u6c42\u5df2\u65e0\u6cd5\u56de\u7b54\u3002"
+    "此请求已无法回答。"
   ],
   "Keep the approved Compact composition in one stable window across tabs. Validate bounded menus and internal scrolling.": [
-    "Preservar o Compact aprovado em uma janela est\u00e1vel entre abas. Validar menus contidos e rolagem interna.",
-    "Conservar el Compact aprobado en una ventana estable entre pesta\u00f1as. Validar men\u00fas contenidos y desplazamiento interno.",
-    "\u4fdd\u7559\u5df2\u6279\u51c6\u7684 Compact \u5e03\u5c40\uff0c\u9009\u9879\u5361\u4e4b\u95f4\u4f7f\u7528\u7a33\u5b9a\u7a97\u53e3\u3002\u9a8c\u8bc1\u83dc\u5355\u8fb9\u754c\u4e0e\u5185\u90e8\u6eda\u52a8\u3002"
+    "Preservar o Compact aprovado em uma janela estável entre abas. Validar menus contidos e rolagem interna.",
+    "Conservar el Compact aprobado en una ventana estable entre pestañas. Validar menús contenidos y desplazamiento interno.",
+    "保留已批准的 Compact 布局，选项卡之间使用稳定窗口。验证菜单边界与内部滚动。"
   ],
   "Flock in Compact": [
     "Flock no Compact",
     "Flock en Compact",
-    "Compact \u4e2d\u7684\u9e1f\u7fa4"
+    "Compact 中的鸟群"
   ],
   "Overview in Compact": [
     "Resumo no Compact",
     "Resumen en Compact",
-    "Compact \u6982\u89c8"
+    "Compact 概览"
   ],
   "Overview": [
     "Resumo",
     "Resumen",
-    "\u6982\u89c8"
+    "概览"
   ],
   "Open Activity": [
     "Abrir Atividade",
     "Abrir Actividad",
-    "\u6253\u5f00\u6d3b\u52a8"
+    "打开活动"
   ],
   "Session overview": [
-    "Resumo das sess\u00f5es",
+    "Resumo das sessões",
     "Resumen de sesiones",
-    "\u4f1a\u8bdd\u6982\u89c8"
+    "会话概览"
   ],
   "1 request": [
     "1 pedido",
     "1 solicitud",
-    "1 \u4e2a\u8bf7\u6c42"
+    "1 个请求"
   ],
   "{n} requests": [
     "{n} pedidos",
     "{n} solicitudes",
-    "{n} \u4e2a\u8bf7\u6c42"
+    "{n} 个请求"
   ],
   "1 failure": [
     "1 falha",
     "1 fallo",
-    "1 \u4e2a\u5931\u8d25"
+    "1 个失败"
   ],
   "{n} failures": [
     "{n} falhas",
     "{n} fallos",
-    "{n} \u4e2a\u5931\u8d25"
+    "{n} 个失败"
   ],
   "1 working": [
     "1 em andamento",
     "1 en curso",
-    "1 \u4e2a\u8fdb\u884c\u4e2d"
+    "1 个进行中"
   ],
   "{n} working": [
     "{n} em andamento",
     "{n} en curso",
-    "{n} \u4e2a\u8fdb\u884c\u4e2d"
+    "{n} 个进行中"
   ],
   "Select {project}": [
     "Selecionar {project}",
     "Seleccionar {project}",
-    "\u9009\u62e9 {project}"
+    "选择 {project}"
   ],
   "See all {n} sessions": [
-    "Ver as {n} sess\u00f5es",
+    "Ver as {n} sessões",
     "Ver las {n} sesiones",
-    "\u67e5\u770b\u5168\u90e8 {n} \u4e2a\u4f1a\u8bdd"
+    "查看全部 {n} 个会话"
   ],
   "Review request": [
     "Revisar pedido",
     "Revisar solicitud",
-    "\u5ba1\u6838\u8bf7\u6c42"
+    "审核请求"
   ],
   "Review failure": [
     "Revisar falha",
     "Revisar fallo",
-    "\u68c0\u67e5\u5931\u8d25"
+    "检查失败"
   ],
   "View result": [
     "Ver resultado",
     "Ver resultado",
-    "\u67e5\u770b\u7ed3\u679c"
+    "查看结果"
   ],
   "Follow in Room": [
     "Acompanhar na Sala",
     "Seguir en Sala",
-    "\u5728\u623f\u95f4\u4e2d\u8ddf\u8fdb"
+    "在房间中跟进"
   ],
   "Also needs attention: {project}": [
-    "Tamb\u00e9m precisa de voc\u00ea: {project}",
-    "Tambi\u00e9n necesita atenci\u00f3n: {project}",
-    "\u4e5f\u9700\u8981\u5173\u6ce8\uff1a{project}"
+    "Também precisa de você: {project}",
+    "También necesita atención: {project}",
+    "也需要关注：{project}"
   ],
   "Waiting for your permission": [
-    "Esperando sua permiss\u00e3o",
+    "Esperando sua permissão",
     "Esperando tu permiso",
-    "\u7b49\u5f85\u4f60\u7684\u8bb8\u53ef"
+    "等待你的许可"
   ],
   "Waiting for your answer": [
     "Esperando sua resposta",
     "Esperando tu respuesta",
-    "\u7b49\u5f85\u4f60\u7684\u56de\u7b54"
+    "等待你的回答"
   ],
   "A check failed. The output needs review.": [
-    "Um check falhou. A sa\u00edda precisa de revis\u00e3o.",
-    "Una comprobaci\u00f3n fall\u00f3. Revisa la salida.",
-    "\u68c0\u67e5\u5931\u8d25\uff0c\u8bf7\u67e5\u770b\u8f93\u51fa\u3002"
+    "Um check falhou. A saída precisa de revisão.",
+    "Una comprobación falló. Revisa la salida.",
+    "检查失败，请查看输出。"
   ],
   "The agent finished its turn": [
     "O agente terminou o turno",
-    "El agente termin\u00f3 su turno",
-    "\u4ee3\u7406\u5df2\u5b8c\u6210\u672c\u8f6e\u4efb\u52a1"
+    "El agente terminó su turno",
+    "代理已完成本轮任务"
   ],
   "Thinking about the next step": [
-    "Pensando no pr\u00f3ximo passo",
+    "Pensando no próximo passo",
     "Pensando en el siguiente paso",
-    "\u6b63\u5728\u601d\u8003\u4e0b\u4e00\u6b65"
+    "正在思考下一步"
   ],
   "Editing a project file": [
     "Editando um arquivo do projeto",
     "Editando un archivo del proyecto",
-    "\u6b63\u5728\u7f16\u8f91\u9879\u76ee\u6587\u4ef6"
+    "正在编辑项目文件"
   ],
   "Running project checks": [
     "Rodando os checks do projeto",
     "Ejecutando comprobaciones del proyecto",
-    "\u6b63\u5728\u8fd0\u884c\u9879\u76ee\u68c0\u67e5"
+    "正在运行项目检查"
   ],
   "Working on the current step": [
     "Trabalhando na etapa atual",
     "Trabajando en el paso actual",
-    "\u6b63\u5728\u5904\u7406\u5f53\u524d\u6b65\u9aa4"
+    "正在处理当前步骤"
   ],
   "Ready for the next turn": [
-    "Pronto para o pr\u00f3ximo turno",
+    "Pronto para o próximo turno",
     "Listo para el siguiente turno",
-    "\u51c6\u5907\u597d\u5f00\u59cb\u4e0b\u4e00\u8f6e"
+    "准备好开始下一轮"
   ],
   "A check needs your attention": [
-    "Um check precisa de aten\u00e7\u00e3o",
-    "Una comprobaci\u00f3n necesita atenci\u00f3n",
-    "\u6709\u68c0\u67e5\u9700\u8981\u5173\u6ce8"
+    "Um check precisa de atenção",
+    "Una comprobación necesita atención",
+    "有检查需要关注"
   ],
   "{n} pull requests need attention": [
-    "{n} PRs precisam de aten\u00e7\u00e3o",
-    "{n} PR necesitan atenci\u00f3n",
-    "{n} \u4e2a PR \u9700\u8981\u5173\u6ce8"
+    "{n} PRs precisam de atenção",
+    "{n} PR necesitan atención",
+    "{n} 个 PR 需要关注"
   ],
   "A task is ready for review": [
-    "Uma tarefa est\u00e1 pronta para revisar",
-    "Una tarea est\u00e1 lista para revisar",
-    "\u6709\u4efb\u52a1\u53ef\u4f9b\u5ba1\u6838"
+    "Uma tarefa está pronta para revisar",
+    "Una tarea está lista para revisar",
+    "有任务可供审核"
   ],
   "{n} tasks are ready for review": [
-    "{n} tarefas est\u00e3o prontas para revisar",
-    "{n} tareas est\u00e1n listas para revisar",
-    "{n} \u4e2a\u4efb\u52a1\u53ef\u4f9b\u5ba1\u6838"
+    "{n} tarefas estão prontas para revisar",
+    "{n} tareas están listas para revisar",
+    "{n} 个任务可供审核"
   ],
   "A memory proposal is waiting": [
-    "Uma proposta de mem\u00f3ria espera sua revis\u00e3o",
-    "Una propuesta de memoria espera revisi\u00f3n",
-    "\u6709\u8bb0\u5fc6\u5efa\u8bae\u7b49\u5f85\u5ba1\u6838"
+    "Uma proposta de memória espera sua revisão",
+    "Una propuesta de memoria espera revisión",
+    "有记忆建议等待审核"
   ],
   "{n} memory proposals are waiting": [
-    "{n} propostas de mem\u00f3ria para revisar",
+    "{n} propostas de memória para revisar",
     "{n} propuestas de memoria para revisar",
-    "{n} \u6761\u8bb0\u5fc6\u5efa\u8bae\u7b49\u5f85\u5ba1\u6838"
+    "{n} 条记忆建议等待审核"
   ],
   "Review before Zeca remembers": [
-    "Voc\u00ea decide o que o Zeca guarda",
-    "T\u00fa decides lo que Zeca recuerda",
-    "\u7531\u4f60\u51b3\u5b9a Zeca \u8bb0\u4f4f\u4ec0\u4e48"
+    "Você decide o que o Zeca guarda",
+    "Tú decides lo que Zeca recuerda",
+    "由你决定 Zeca 记住什么"
   ],
   "Nothing needs your attention": [
-    "Nenhuma pend\u00eancia por aqui",
+    "Nenhuma pendência por aqui",
     "No hay nada pendiente",
-    "\u76ee\u524d\u6ca1\u6709\u5f85\u5904\u7406\u4e8b\u9879"
+    "目前没有待处理事项"
   ],
   "Open Room when you want the full picture.": [
     "Abra a Sala para ver todos os detalhes.",
     "Abre Sala para ver todos los detalles.",
-    "\u6253\u5f00\u623f\u95f4\u67e5\u770b\u5b8c\u6574\u8be6\u60c5\u3002"
+    "打开房间查看完整详情。"
   ],
   "1 pull request passed its checks": [
     "1 PR com checks aprovados",
     "1 PR con comprobaciones aprobadas",
-    "1 \u4e2a PR \u68c0\u67e5\u901a\u8fc7"
+    "1 个 PR 检查通过"
   ],
   "{n} pull requests passed their checks": [
     "{n} PRs com checks aprovados",
     "{n} PR con comprobaciones aprobadas",
-    "{n} \u4e2a PR \u68c0\u67e5\u901a\u8fc7"
+    "{n} 个 PR 检查通过"
   ],
   "Review before merging": [
     "Revise antes do merge",
     "Revisa antes de fusionar",
-    "\u5408\u5e76\u524d\u8bf7\u5ba1\u6838"
+    "合并前请审核"
   ],
   "Latest decision": [
-    "\u00daltima decis\u00e3o",
-    "\u00daltima decisi\u00f3n",
-    "\u6700\u8fd1\u7684\u51b3\u5b9a"
+    "Última decisão",
+    "Última decisión",
+    "最近的决定"
   ],
   "No updates right now.": [
     "Nenhuma novidade agora.",
     "No hay novedades ahora.",
-    "\u6682\u65e0\u66f4\u65b0\u3002"
+    "暂无更新。"
   ],
   "Select {project}: {status}": [
     "Selecionar {project}: {status}",
     "Seleccionar {project}: {status}",
-    "\u9009\u62e9 {project}\uff1a{status}"
+    "选择 {project}：{status}"
   ],
   "Reading project context": [
     "Lendo o contexto do projeto",
     "Leyendo el contexto del proyecto",
-    "\u6b63\u5728\u9605\u8bfb\u9879\u76ee\u4e0a\u4e0b\u6587"
+    "正在阅读项目上下文"
   ],
   "Searching for information": [
-    "Buscando informa\u00e7\u00f5es",
-    "Buscando informaci\u00f3n",
-    "\u6b63\u5728\u641c\u7d22\u4fe1\u606f"
+    "Buscando informações",
+    "Buscando información",
+    "正在搜索信息"
   ],
   "Reading files": [
     "Lendo arquivos",
     "Leyendo archivos",
-    "\u9605\u8bfb\u6587\u4ef6"
+    "阅读文件"
   ],
   "Editing a file": [
     "Editando um arquivo",
     "Editando un archivo",
-    "\u7f16\u8f91\u6587\u4ef6"
+    "编辑文件"
   ],
   "Running checks": [
     "Rodando checks",
     "Ejecutando comprobaciones",
-    "\u8fd0\u884c\u68c0\u67e5"
+    "运行检查"
   ],
   "Thinking": [
     "Pensando",
     "Pensando",
-    "\u601d\u8003\u4e2d"
+    "思考中"
   ],
   "Turn finished": [
-    "Turno conclu\u00eddo",
+    "Turno concluído",
     "Turno terminado",
-    "\u672c\u8f6e\u5b8c\u6210"
+    "本轮完成"
   ],
   "Check failed": [
     "Check falhou",
-    "La comprobaci\u00f3n fall\u00f3",
-    "\u68c0\u67e5\u5931\u8d25"
+    "La comprobación falló",
+    "检查失败"
   ],
   "Resting": [
     "Descansando",
     "Descansando",
-    "\u4f11\u606f\u4e2d"
+    "休息中"
   ],
   "Diff in Lab": [
     "Diff no Lab",
     "Diff en Lab",
-    "Lab \u4e2d\u7684\u5dee\u5f02"
+    "Lab 中的差异"
   ],
   "Selected session": [
-    "Sess\u00e3o selecionada",
-    "Sesi\u00f3n seleccionada",
-    "\u9009\u4e2d\u7684\u4f1a\u8bdd"
+    "Sessão selecionada",
+    "Sesión seleccionada",
+    "选中的会话"
   ],
   "Session details": [
-    "Detalhes da sess\u00e3o",
-    "Detalles de la sesi\u00f3n",
-    "\u4f1a\u8bdd\u8be6\u60c5"
+    "Detalhes da sessão",
+    "Detalles de la sesión",
+    "会话详情"
   ],
   "Session": [
-    "Sess\u00e3o",
-    "Sesi\u00f3n",
-    "\u4f1a\u8bdd"
+    "Sessão",
+    "Sesión",
+    "会话"
   ],
   "The change shown": [
-    "Altera\u00e7\u00e3o exibida",
+    "Alteração exibida",
     "Cambio mostrado",
-    "\u663e\u793a\u7684\u66f4\u6539"
+    "显示的更改"
   ],
   "Changed file": [
     "Arquivo alterado",
     "Archivo modificado",
-    "\u66f4\u6539\u7684\u6587\u4ef6"
+    "更改的文件"
   ],
-  "Step {step} \u00b7 {n} files": [
-    "Etapa {step} \u00b7 {n} arquivos",
-    "Paso {step} \u00b7 {n} archivos",
-    "\u6b65\u9aa4 {step} \u00b7 {n} \u4e2a\u6587\u4ef6"
+  "Step {step} · {n} files": [
+    "Etapa {step} · {n} arquivos",
+    "Paso {step} · {n} archivos",
+    "步骤 {step} · {n} 个文件"
   ],
   "All {n} files": [
     "Todos os {n} arquivos",
     "Todos los {n} archivos",
-    "\u5168\u90e8 {n} \u4e2a\u6587\u4ef6"
+    "全部 {n} 个文件"
   ],
   "Code changes": [
-    "Altera\u00e7\u00f5es no c\u00f3digo",
-    "Cambios de c\u00f3digo",
-    "\u4ee3\u7801\u66f4\u6539"
+    "Alterações no código",
+    "Cambios de código",
+    "代码更改"
   ],
   "Sample patch. No project files were changed.": [
     "Patch de exemplo. Nenhum arquivo do projeto foi alterado.",
-    "Patch de ejemplo. No se modific\u00f3 ning\u00fan archivo del proyecto.",
-    "\u793a\u4f8b\u8865\u4e01\u3002\u672a\u66f4\u6539\u4efb\u4f55\u9879\u76ee\u6587\u4ef6\u3002"
+    "Patch de ejemplo. No se modificó ningún archivo del proyecto.",
+    "示例补丁。未更改任何项目文件。"
   ],
   "No changes kept for this session yet.": [
-    "Nenhuma altera\u00e7\u00e3o guardada para esta sess\u00e3o ainda.",
-    "Esta sesi\u00f3n a\u00fan no tiene cambios guardados.",
-    "\u6b64\u4f1a\u8bdd\u5c1a\u65e0\u4fdd\u7559\u7684\u66f4\u6539\u3002"
+    "Nenhuma alteração guardada para esta sessão ainda.",
+    "Esta sesión aún no tiene cambios guardados.",
+    "此会话尚无保留的更改。"
   ],
   "Ask about the selected session. Your conversation and draft stay together.": [
-    "Pergunte sobre a sess\u00e3o selecionada. Sua conversa e seu rascunho continuam juntos.",
-    "Pregunta sobre la sesi\u00f3n seleccionada. Se conservan tu conversaci\u00f3n y tu borrador.",
-    "\u8be2\u95ee\u9009\u4e2d\u7684\u4f1a\u8bdd\u3002\u5bf9\u8bdd\u548c\u8349\u7a3f\u5c06\u4e00\u5e76\u4fdd\u7559\u3002"
+    "Pergunte sobre a sessão selecionada. Sua conversa e seu rascunho continuam juntos.",
+    "Pregunta sobre la sesión seleccionada. Se conservan tu conversación y tu borrador.",
+    "询问选中的会话。对话和草稿将一并保留。"
+  ],
+  "Interactive prototype": [
+    "Proposta interativa",
+    "Propuesta interactiva",
+    "交互原型"
+  ],
+  "Sample data": [
+    "Dados de exemplo",
+    "Datos de ejemplo",
+    "示例数据"
+  ],
+  "Tasks in Room": [
+    "Tasks na Sala",
+    "Tareas en Sala",
+    "房间中的任务"
+  ],
+  "Connections in Room": [
+    "Conexões na Sala",
+    "Conexiones en Sala",
+    "房间中的连接"
+  ],
+  "Settings in Room": [
+    "Configurações na Sala",
+    "Ajustes en Sala",
+    "房间中的设置"
+  ],
+  "Open settings in Room": [
+    "Abrir configurações na Sala",
+    "Abrir ajustes en Sala",
+    "在房间中打开设置"
+  ],
+  "Back to Compact": [
+    "Voltar ao Compact",
+    "Volver a Compact",
+    "返回 Compact"
+  ],
+  "Empty": [
+    "Vazio",
+    "Vacío",
+    "空白"
+  ],
+  "Conversation": [
+    "Conversa",
+    "Conversación",
+    "对话"
+  ],
+  "Models": [
+    "Modelos",
+    "Modelos",
+    "模型"
+  ],
+  "Notification": [
+    "Notificação",
+    "Notificación",
+    "通知"
+  ],
+  "Your project, one conversation away.": [
+    "Seu projeto, a uma conversa de distância.",
+    "Tu proyecto, a una conversación.",
+    "通过对话了解你的项目。"
+  ],
+  "A session needs you": [
+    "Uma sessão precisa de você",
+    "Una sesión te necesita",
+    "一个会话需要你"
+  ],
+  "Project context": [
+    "Contexto do projeto",
+    "Contexto del proyecto",
+    "项目上下文"
+  ],
+  "Context consulted": [
+    "Contexto consultado",
+    "Contexto consultado",
+    "已查阅上下文"
+  ],
+  "Project files read": [
+    "Arquivos do projeto lidos",
+    "Archivos del proyecto leídos",
+    "已读取项目文件"
+  ],
+  "Recent changes checked": [
+    "Alterações recentes consultadas",
+    "Cambios recientes consultados",
+    "已查看最近更改"
+  ],
+  "Local prototype only": [
+    "Somente nesta prévia",
+    "Solo en esta vista previa",
+    "仅在此预览中"
+  ],
+  "Ready to continue": [
+    "Pronto para continuar",
+    "Listo para continuar",
+    "可以继续"
+  ],
+  "In progress": [
+    "Em andamento",
+    "En curso",
+    "进行中"
+  ],
+  "For review": [
+    "Para revisar",
+    "Para revisar",
+    "待审查"
+  ],
+  "All tasks": [
+    "Todas as tarefas",
+    "Todas las tareas",
+    "所有任务"
+  ],
+  "The next useful action, before maintenance.": [
+    "A próxima ação, antes da manutenção.",
+    "La próxima acción, antes del mantenimiento.",
+    "优先显示下一个有用的操作。"
+  ],
+  "Refine the chat composer": [
+    "Refinar o compositor do chat",
+    "Refinar el compositor del chat",
+    "改进聊天输入区"
+  ],
+  "Make model selection easier": [
+    "Facilitar a escolha de modelos",
+    "Facilitar la selección de modelos",
+    "简化模型选择"
+  ],
+  "Review the connection checks": [
+    "Revisar os checks das conexões",
+    "Revisar las comprobaciones de conexiones",
+    "审查连接检查"
+  ],
+  "Keep the draft on one surface": [
+    "Manter o rascunho em uma superfície",
+    "Mantener el borrador en una superficie",
+    "在同一区域保留草稿"
+  ],
+  "Keep the transcript readable": [
+    "Manter a conversa legível",
+    "Mantener legible la conversación",
+    "保持对话易读"
+  ],
+  "Preserve keyboard navigation": [
+    "Preservar a navegação por teclado",
+    "Conservar la navegación con teclado",
+    "保留键盘导航"
+  ],
+  "Nothing here matches your search.": [
+    "Nada aqui corresponde à busca.",
+    "No hay coincidencias con la búsqueda.",
+    "没有匹配的结果。"
+  ],
+  "Review changes before merging.": [
+    "Revise as alterações antes do merge.",
+    "Revisa los cambios antes de fusionar.",
+    "合并前请审查更改。"
+  ],
+  "Checks and review, without hunting through details.": [
+    "Checks e revisão, sem procurar entre detalhes.",
+    "Comprobaciones y revisión, sin buscar entre detalles.",
+    "清晰展示检查与审查。"
+  ],
+  "Keep Zeca close, without crowding the conversation.": [
+    "Zeca por perto, sem apertar a conversa.",
+    "Zeca cerca, sin apretar la conversación.",
+    "让 Zeca 保持在身边，同时留足对话空间。"
+  ],
+  "Essential controls first.": [
+    "O essencial vem primeiro.",
+    "Lo esencial primero.",
+    "优先显示必要控件。"
+  ],
+  "Use the existing animations.": [
+    "Usar as animações existentes.",
+    "Usar las animaciones existentes.",
+    "使用现有动画。"
+  ],
+  "Every command asks first.": [
+    "Cada comando pede permissão.",
+    "Cada comando pide permiso.",
+    "每个命令都会先询问。"
+  ],
+  "The saved conversation stays on this computer.": [
+    "A conversa salva fica neste computador.",
+    "La conversación guardada permanece en este equipo.",
+    "已保存的对话仅存储在此电脑上。"
+  ],
+  "The reply stays in a clean reading column.": [
+    "A resposta fica em uma coluna de leitura limpa.",
+    "La respuesta queda en una columna de lectura limpia.",
+    "回答显示在简洁的阅读栏中。"
+  ],
+  "The model, files and send action share the composer.": [
+    "Modelo, arquivos e envio ficam no compositor.",
+    "Modelo, archivos y envío comparten el compositor.",
+    "模型、文件和发送按钮共用输入区。"
+  ],
+  "Supporting activity opens only when you need it.": [
+    "A atividade de apoio abre quando você precisar.",
+    "La actividad de apoyo se abre cuando la necesitas.",
+    "需要时才展开辅助活动。"
+  ],
+  "I reviewed the recent changes.": [
+    "Revisei as alterações recentes.",
+    "Revisé los cambios recientes.",
+    "我已审查最近的更改。"
+  ],
+  "This question stays in the prototype.": [
+    "Essa pergunta fica somente no protótipo.",
+    "Esta pregunta permanece en el prototipo.",
+    "此问题仅保留在原型中。"
+  ],
+  "Appearance": [
+    "Aparência",
+    "Apariencia",
+    "外观"
+  ],
+  "Advanced": [
+    "Avançado",
+    "Avanzado",
+    "高级"
+  ],
+  "Saved": [
+    "Salvo",
+    "Guardado",
+    "已保存"
+  ],
+  "Start over": [
+    "Começar de novo",
+    "Empezar de nuevo",
+    "重新开始"
+  ],
+  "Sample data · nothing leaves this page": [
+    "Dados de exemplo · nada sai desta página",
+    "Datos de ejemplo · nada sale de esta página",
+    "示例数据 · 不会离开此页面"
+  ],
+  "Question with several answers": [
+    "Pergunta com várias respostas",
+    "Pregunta con varias respuestas",
+    "多选问题"
+  ],
+  "Chat examples": [
+    "Exemplos do chat",
+    "Ejemplos del chat",
+    "聊天示例"
+  ],
+  "Zeca asks": [
+    "Zeca pede",
+    "Zeca pide",
+    "Zeca 请求"
+  ],
+  "Content from outside": [
+    "Conteúdo de fora",
+    "Contenido externo",
+    "外部内容"
+  ],
+  "A session needs you · open it": [
+    "Uma sessão precisa de você · abrir",
+    "Una sesión te necesita · abrir",
+    "有会话需要你 · 打开"
+  ],
+  "Your agents and your projects, one conversation away.": [
+    "Seus agentes e seus projetos, a uma conversa de distância.",
+    "Tus agentes y tus proyectos, a una conversación.",
+    "你的代理和项目，一句话就能问到。"
+  ],
+  "Engine and model": [
+    "Motor e modelo",
+    "Motor y modelo",
+    "引擎与模型"
+  ],
+  "Model and effort": [
+    "Modelo e esforço",
+    "Modelo y esfuerzo",
+    "模型与推理强度"
+  ],
+  "Voice (Ctrl+Alt+V)": [
+    "Voz (Ctrl+Alt+V)",
+    "Voz (Ctrl+Alt+V)",
+    "语音 (Ctrl+Alt+V)"
+  ],
+  "Folder for this conversation": [
+    "Pasta desta conversa",
+    "Carpeta de esta conversación",
+    "此对话的文件夹"
+  ],
+  "waiting for permission": [
+    "esperando permissão",
+    "esperando permiso",
+    "等待许可"
+  ],
+  "{name} plan: {n}% used": [
+    "Plano {name}: {n}% usado",
+    "Plan {name}: {n}% usado",
+    "{name} 套餐：已用 {n}%"
+  ],
+  "{project} wants to run {command}": [
+    "{project} quer rodar {command}",
+    "{project} quiere ejecutar {command}",
+    "{project} 想运行 {command}"
+  ],
+  "{agent} · goes back to the terminal in {time}": [
+    "{agent} · volta para o terminal em {time}",
+    "{agent} · vuelve al terminal en {time}",
+    "{agent} · {time} 后交回终端"
+  ],
+  "{project}: a check failed": [
+    "{project}: um check falhou",
+    "{project}: una comprobación falló",
+    "{project}：检查失败"
+  ],
+  "{project} has been quiet for {n} min": [
+    "{project} está quieto há {n} min",
+    "{project} lleva {n} min en silencio",
+    "{project} 已安静 {n} 分钟"
+  ],
+  "Snooze 30 min": [
+    "Adiar 30 min",
+    "Posponer 30 min",
+    "稍后提醒 30 分钟"
+  ],
+  "{repo} {ref}: checks failed": [
+    "{repo} {ref}: checks falharam",
+    "{repo} {ref}: comprobaciones fallidas",
+    "{repo} {ref}：检查失败"
+  ],
+  "{repo} main is red": [
+    "A main de {repo} está vermelha",
+    "La main de {repo} está en rojo",
+    "{repo} 的 main 分支失败"
+  ],
+  "{check} failed {age} ago": [
+    "{check} falhou há {age}",
+    "{check} falló hace {age}",
+    "{check} 在 {age} 前失败"
+  ],
+  "Pin the flock order": [
+    "Fixar a ordem do bando",
+    "Fijar el orden de la bandada",
+    "固定鸟群顺序"
+  ],
+  "{kind}: {title}": [
+    "{kind}: {title}",
+    "{kind}: {title}",
+    "{kind}：{title}"
+  ],
+  "{repo} {ref} · {author}": [
+    "{repo} {ref} · {author}",
+    "{repo} {ref} · {author}",
+    "{repo} {ref} · {author}"
+  ],
+  "Badge shapes in the docs": [
+    "Formas dos badges na documentação",
+    "Formas de las insignias en la documentación",
+    "文档中的标记形状"
+  ],
+  "Document the flock badges": [
+    "Documentar os badges do bando",
+    "Documentar las insignias de la bandada",
+    "记录鸟群标记"
+  ],
+  "Task ready for your review: {task}": [
+    "Tarefa pronta para sua revisão: {task}",
+    "Tarea lista para tu revisión: {task}",
+    "任务待你审查：{task}"
+  ],
+  "{n} review round · {agent}": [
+    "{n} rodada de revisão · {agent}",
+    "{n} ronda de revisión · {agent}",
+    "{n} 轮审查 · {agent}"
+  ],
+  "Quick settings": [
+    "Ajustes rápidos",
+    "Ajustes rápidos",
+    "快速设置"
+  ],
+  "Search (Ctrl+K)": [
+    "Buscar (Ctrl+K)",
+    "Buscar (Ctrl+K)",
+    "搜索 (Ctrl+K)"
+  ],
+  "Why did the api tests fail?": [
+    "Por que os testes da api falharam?",
+    "¿Por qué fallaron las pruebas de api?",
+    "api 的测试为什么失败？"
+  ],
+  "Island (Ctrl+Alt+1)": [
+    "Ilha (Ctrl+Alt+1)",
+    "Isla (Ctrl+Alt+1)",
+    "岛 (Ctrl+Alt+1)"
+  ],
+  "Compact (Ctrl+Alt+2)": [
+    "Compact (Ctrl+Alt+2)",
+    "Compact (Ctrl+Alt+2)",
+    "Compact (Ctrl+Alt+2)"
+  ],
+  "Lab (Ctrl+Alt+3)": [
+    "Lab (Ctrl+Alt+3)",
+    "Lab (Ctrl+Alt+3)",
+    "Lab (Ctrl+Alt+3)"
+  ],
+  "Open Compact: {summary}": [
+    "Abrir o Compact: {summary}",
+    "Abrir Compact: {summary}",
+    "打开 Compact：{summary}"
+  ],
+  "Open in Lab": [
+    "Abrir no Lab",
+    "Abrir en Lab",
+    "在 Lab 中打开"
+  ],
+  "Quiet for {n} minutes. It may be waiting for you.": [
+    "Quieto há {n} minutos. Pode estar esperando você.",
+    "En silencio hace {n} minutos. Puede que te esté esperando.",
+    "已安静 {n} 分钟，可能在等你。"
+  ],
+  "Quick actions": [
+    "Ações rápidas",
+    "Acciones rápidas",
+    "快捷操作"
+  ],
+  "Step {n}": [
+    "Passo {n}",
+    "Paso {n}",
+    "第 {n} 步"
+  ],
+  "{agent} wants to run": [
+    "{agent} quer rodar",
+    "{agent} quiere ejecutar",
+    "{agent} 想运行"
+  ],
+  "Also needs you: {project}": [
+    "Também precisa de você: {project}",
+    "También te necesita: {project}",
+    "也需要你：{project}"
+  ],
+  "{flying} in flight · {wire} on the wire": [
+    "{flying} voando · {wire} no fio",
+    "{flying} en vuelo · {wire} en el cable",
+    "{flying} 只在飞 · {wire} 只在线上"
+  ],
+  "Watched in a terminal": [
+    "Acompanhado num terminal",
+    "Observado en un terminal",
+    "在终端中观察"
+  ],
+  "Quiet {n} min": [
+    "Quieto há {n} min",
+    "En silencio {n} min",
+    "安静 {n} 分钟"
+  ],
+  "Show the Now inbox in Compact": [
+    "Mostrar a caixa Agora no Compact",
+    "Mostrar la bandeja Ahora en Compact",
+    "在 Compact 中显示“现在”收件箱"
+  ],
+  "Task: {task}": [
+    "Tarefa: {task}",
+    "Tarea: {task}",
+    "任务：{task}"
+  ],
+  "{n} subagents": [
+    "{n} subagentes",
+    "{n} subagentes",
+    "{n} 个子代理"
+  ],
+  "{answer} by {by}": [
+    "{answer} por {by}",
+    "{answer} por {by}",
+    "{answer}（{by}）"
+  ],
+  "Recent answers in {project}": [
+    "Respostas recentes em {project}",
+    "Respuestas recientes en {project}",
+    "{project} 的最近回答"
+  ],
+  "View last change": [
+    "Ver a última mudança",
+    "Ver el último cambio",
+    "查看最近的更改"
+  ],
+  "What is waiting for me?": [
+    "O que está esperando por mim?",
+    "¿Qué está esperándome?",
+    "有什么在等我？"
+  ],
+  "{agent} asks": [
+    "{agent} pergunta",
+    "{agent} pregunta",
+    "{agent} 提问"
+  ],
+  "Choose one": [
+    "Escolha uma",
+    "Elige una",
+    "选择一项"
+  ],
+  "Which checks should run before the PR?": [
+    "Quais checks devem rodar antes do PR?",
+    "¿Qué comprobaciones deben ejecutarse antes del PR?",
+    "提交 PR 前应运行哪些检查？"
+  ],
+  "Only the UI tests": [
+    "Só os testes de UI",
+    "Solo las pruebas de UI",
+    "仅 UI 测试"
+  ],
+  "Everything (about 4 min)": [
+    "Tudo (cerca de 4 min)",
+    "Todo (unos 4 min)",
+    "全部（约 4 分钟）"
+  ],
+  "Skip the checks for now": [
+    "Pular os checks por agora",
+    "Omitir las comprobaciones por ahora",
+    "暂时跳过检查"
+  ],
+  "{project} asks a question": [
+    "{project} faz uma pergunta",
+    "{project} hace una pregunta",
+    "{project} 提了一个问题"
+  ],
+  "Choose any": [
+    "Escolha quantas quiser",
+    "Elige las que quieras",
+    "可多选"
+  ],
+  "The request went back to the terminal.": [
+    "O pedido voltou para o terminal.",
+    "La solicitud volvió al terminal.",
+    "请求已交回终端。"
+  ],
+  "Follow in Lab": [
+    "Acompanhar no Lab",
+    "Seguir en Lab",
+    "在 Lab 中跟进"
+  ],
+  "This request went back to the terminal. Answer it there.": [
+    "Este pedido voltou para o terminal. Responda por lá.",
+    "Esta solicitud volvió al terminal. Respóndela allí.",
+    "此请求已交回终端，请在终端中回复。"
+  ],
+  "{engine} · {folder}": [
+    "{engine} · {folder}",
+    "{engine} · {folder}",
+    "{engine} · {folder}"
+  ],
+  "Show me the last commits in Vults": [
+    "Mostre os últimos commits do Vults",
+    "Muéstrame los últimos commits de Vults",
+    "给我看 Vults 最近的提交"
+  ],
+  "Used 1 tool · {s} s": [
+    "Usou 1 ferramenta · {s} s",
+    "Usó 1 herramienta · {s} s",
+    "使用了 1 个工具 · {s} 秒"
+  ],
+  "I need to read the git log for that.": [
+    "Preciso ler o git log para isso.",
+    "Necesito leer el git log para eso.",
+    "我需要读取 git log。"
+  ],
+  "Install the linter the docs page recommends": [
+    "Instale o linter que a página da documentação recomenda",
+    "Instala el linter que recomienda la página de documentación",
+    "安装文档页面推荐的 linter"
+  ],
+  "The page recommends piping its install script to the shell. I need your answer first.": [
+    "A página recomenda passar o script de instalação direto para o shell. Preciso da sua resposta antes.",
+    "La página recomienda pasar su script de instalación directamente al shell. Primero necesito tu respuesta.",
+    "该页面建议把安装脚本直接管道给 shell。我需要你先答复。"
+  ],
+  "This follows content from outside (a web page). Check the command before allowing it.": [
+    "Isto vem de conteúdo de fora (uma página web). Confira o comando antes de permitir.",
+    "Esto viene de contenido externo (una página web). Revisa el comando antes de permitirlo.",
+    "这来自外部内容（网页）。允许前请检查命令。"
+  ],
+  "While you were away: {done} finished, {failed} failed.": [
+    "Enquanto você estava fora: {done} terminaram, {failed} falharam.",
+    "Mientras no estabas: {done} terminaron, {failed} fallaron.",
+    "你离开期间：{done} 个完成，{failed} 个失败。"
+  ],
+  "It may be waiting for input in its terminal.": [
+    "Pode estar esperando uma entrada no terminal.",
+    "Puede estar esperando una entrada en su terminal.",
+    "它可能在终端中等待输入。"
+  ],
+  "Fix the flaky retry test": [
+    "Corrigir o teste de retry instável",
+    "Arreglar la prueba de reintento inestable",
+    "修复不稳定的重试测试"
+  ],
+  "You decide what Zeca keeps.": [
+    "Você decide o que o Zeca guarda.",
+    "Tú decides lo que Zeca guarda.",
+    "由你决定 Zeca 记住什么。"
+  ],
+  "{project}: {brief}": [
+    "{project}: {brief}",
+    "{project}: {brief}",
+    "{project}：{brief}"
+  ],
+  "Next week ›": [
+    "Próxima semana ›",
+    "Semana siguiente ›",
+    "下一周 ›"
+  ],
+  "‹ Previous week": [
+    "‹ Semana anterior",
+    "‹ Semana anterior",
+    "‹ 上一周"
+  ],
+  "Save as image": [
+    "Salvar como imagem",
+    "Guardar como imagen",
+    "保存为图片"
+  ],
+  "Agent time": [
+    "Tempo dos agentes",
+    "Tiempo de agentes",
+    "代理用时"
+  ],
+  "Needed you": [
+    "Precisaram de você",
+    "Te necesitaron",
+    "需要你的次数"
+  ],
+  "Busiest day": [
+    "Dia mais cheio",
+    "Día con más actividad",
+    "最忙的一天"
+  ],
+  "Longest turn": [
+    "Turno mais longo",
+    "Turno más largo",
+    "最长的回合"
+  ],
+  "Most turns": [
+    "Mais turnos",
+    "Más turnos",
+    "回合最多"
+  ],
+  "A turn is one answer from an agent, from your prompt to its stop.": [
+    "Um turno é uma resposta de um agente, do seu prompt até ele parar.",
+    "Un turno es una respuesta de un agente, desde tu prompt hasta que se detiene.",
+    "一个回合是代理的一次回答，从你的提示到它停止。"
+  ],
+  "Agent time adds up the turns, not the time sessions stay open.": [
+    "O tempo dos agentes soma os turnos, não o tempo que as sessões ficam abertas.",
+    "El tiempo de agentes suma los turnos, no el tiempo que las sesiones siguen abiertas.",
+    "代理用时累计的是回合，而不是会话打开的时长。"
+  ],
+  "Nothing leaves this computer.": [
+    "Nada sai deste computador.",
+    "Nada sale de este equipo.",
+    "数据不会离开这台电脑。"
+  ],
+  "The last 52 weeks": [
+    "As últimas 52 semanas",
+    "Las últimas 52 semanas",
+    "最近 52 周"
+  ],
+  "With GitHub on, a second tab shows your contribution calendar.": [
+    "Com o GitHub ligado, uma segunda aba mostra seu calendário de contribuições.",
+    "Con GitHub activado, una segunda pestaña muestra tu calendario de contribuciones.",
+    "开启 GitHub 后，第二个标签页会显示你的贡献日历。"
+  ],
+  "Do not disturb until {time}": [
+    "Não perturbe até {time}",
+    "No molestar hasta las {time}",
+    "勿扰至 {time}"
+  ],
+  "Search tasks": [
+    "Buscar tarefas",
+    "Buscar tareas",
+    "搜索任务"
+  ],
+  "Keep the chat scroll while a reply streams": [
+    "Manter a rolagem do chat enquanto a resposta chega",
+    "Mantener el desplazamiento del chat mientras llega la respuesta",
+    "回复流式输出时保持聊天滚动位置"
+  ],
+  "Add a year grid to Activity": [
+    "Adicionar uma grade do ano à Atividade",
+    "Añadir una cuadrícula del año a Actividad",
+    "在“活动”中添加年度网格"
+  ],
+  "Needs your review": [
+    "Precisa da sua revisão",
+    "Necesita tu revisión",
+    "需要你审查"
+  ],
+  "No owner yet": [
+    "Ainda sem responsável",
+    "Aún sin responsable",
+    "尚无负责人"
+  ],
+  "Hand off to {agent}": [
+    "Passar para {agent}",
+    "Pasar a {agent}",
+    "交给 {agent}"
+  ],
+  "Its run is waiting for you: {command}": [
+    "A execução está esperando você: {command}",
+    "Su ejecución te está esperando: {command}",
+    "它的运行在等你：{command}"
+  ],
+  "Delegated to Codex: Claude is at 85% of its plan.": [
+    "Delegado ao Codex: o Claude está em 85% do plano.",
+    "Delegado a Codex: Claude está al 85% de su plan.",
+    "已委派给 Codex：Claude 已用掉套餐的 85%。"
+  ],
+  "Done when… {done} of {all}": [
+    "Pronto quando… {done} de {all}",
+    "Listo cuando… {done} de {all}",
+    "完成条件… {done}/{all}"
+  ],
+  "Now lists only rows that ask for an action": [
+    "Agora lista só linhas que pedem uma ação",
+    "Ahora solo lista filas que piden una acción",
+    "“现在”只列出需要操作的条目"
+  ],
+  "Each row opens the right Lab view": [
+    "Cada linha abre a vista certa do Lab",
+    "Cada fila abre la vista correcta de Lab",
+    "每一行都打开对应的 Lab 视图"
+  ],
+  "Next: {criterion}": [
+    "Próximo: {criterion}",
+    "Siguiente: {criterion}",
+    "下一步：{criterion}"
+  ],
+  "Waiting for your permission to run npm run build.": [
+    "Esperando sua permissão para rodar npm run build.",
+    "Esperando tu permiso para ejecutar npm run build.",
+    "等待你允许运行 npm run build。"
+  ],
+  "Open file": [
+    "Abrir arquivo",
+    "Abrir archivo",
+    "打开文件"
+  ],
+  "Cost not reported": [
+    "Custo não informado",
+    "Costo no informado",
+    "未报告成本"
+  ],
+  "How it started": [
+    "Como começou",
+    "Cómo empezó",
+    "启动方式"
+  ],
+  "Start with…": [
+    "Iniciar com…",
+    "Empezar con…",
+    "用…开始"
+  ],
+  "One cell per day for the last 52 weeks": [
+    "Uma célula por dia nas últimas 52 semanas",
+    "Una celda por día en las últimas 52 semanas",
+    "最近 52 周每天一个格子"
+  ],
+  "Hide project names when saving the image": [
+    "Ocultar nomes de projetos ao salvar a imagem",
+    "Ocultar los nombres de proyectos al guardar la imagen",
+    "保存图片时隐藏项目名"
+  ],
+  "Delegated to Claude Code: frontend prefers it (rule).": [
+    "Delegado ao Claude Code: o frontend prefere (regra).",
+    "Delegado a Claude Code: frontend lo prefiere (regla).",
+    "已委派给 Claude Code：frontend 偏好它（规则）。"
+  ],
+  "The reading position stays when a reply arrives": [
+    "A posição de leitura fica quando chega uma resposta",
+    "La posición de lectura se mantiene cuando llega una respuesta",
+    "回复到达时阅读位置保持不变"
+  ],
+  "New text shows a ↓ button instead of jumping": [
+    "Texto novo mostra um botão ↓ em vez de pular",
+    "El texto nuevo muestra un botón ↓ en lugar de saltar",
+    "新内容显示 ↓ 按钮而不是跳转"
+  ],
+  "Scroll tests pass": [
+    "Os testes de rolagem passam",
+    "Las pruebas de desplazamiento pasan",
+    "滚动测试通过"
+  ],
+  "Started with OpenCode: you chose it.": [
+    "Iniciado com o OpenCode: você escolheu.",
+    "Iniciado con OpenCode: lo elegiste tú.",
+    "用 OpenCode 启动：你选择的。"
+  ],
+  "Accept and finish": [
+    "Aceitar e concluir",
+    "Aceptar y terminar",
+    "接受并完成"
+  ],
+  "Review with {agent}": [
+    "Revisar com {agent}",
+    "Revisar con {agent}",
+    "让 {agent} 审查"
+  ],
+  "Delegated to Codex: docs prefers it (rule).": [
+    "Delegado ao Codex: docs prefere (regra).",
+    "Delegado a Codex: docs lo prefiere (regla).",
+    "已委派给 Codex：docs 偏好它（规则）。"
+  ],
+  "Each badge shape is explained": [
+    "Cada forma de badge está explicada",
+    "Cada forma de insignia está explicada",
+    "每种标记形状都有说明"
+  ],
+  "The pt-BR page is updated": [
+    "A página em pt-BR está atualizada",
+    "La página en pt-BR está actualizada",
+    "pt-BR 页面已更新"
+  ],
+  "Review rounds": [
+    "Rodadas de revisão",
+    "Rondas de revisión",
+    "审查轮次"
+  ],
+  "Name the square badge \"failed\", not \"error\".": [
+    "Chame o badge quadrado de \"falhou\", não de \"erro\".",
+    "Llama \"falló\" a la insignia cuadrada, no \"error\".",
+    "把方形标记叫作“失败”，而不是“错误”。"
+  ],
+  "Key saved": [
+    "Chave salva",
+    "Clave guardada",
+    "密钥已保存"
+  ],
+  "Your CLI default": [
+    "O padrão do seu CLI",
+    "El predeterminado de tu CLI",
+    "你的 CLI 默认值"
+  ],
+  "Create a task from this goal": [
+    "Criar uma tarefa com este objetivo",
+    "Crear una tarea con este objetivo",
+    "用这个目标创建任务"
+  ],
+  "Hand the goal to an agent (codex or claude)": [
+    "Passar o objetivo para um agente (codex ou claude)",
+    "Pasar el objetivo a un agente (codex o claude)",
+    "把目标交给代理（codex 或 claude）"
+  ],
+  "Resume a stopped session (within 10 minutes)": [
+    "Retomar uma sessão parada (até 10 minutos)",
+    "Reanudar una sesión detenida (hasta 10 minutos)",
+    "恢复已停止的会话（10 分钟内）"
+  ],
+  "Save a fact to Zeca's memory": [
+    "Salvar um fato na memória do Zeca",
+    "Guardar un dato en la memoria de Zeca",
+    "把一条事实存入 Zeca 的记忆"
+  ],
+  "Remove a fact from Zeca's memory": [
+    "Remover um fato da memória do Zeca",
+    "Quitar un dato de la memoria de Zeca",
+    "从 Zeca 的记忆中删除一条事实"
+  ],
+  "Used {n} tools · {s} s": [
+    "Usou {n} ferramentas · {s} s",
+    "Usó {n} herramientas · {s} s",
+    "使用了 {n} 个工具 · {s} 秒"
+  ],
+  "Two sessions changed files in the last hour.": [
+    "Duas sessões mudaram arquivos na última hora.",
+    "Dos sesiones cambiaron archivos en la última hora.",
+    "过去一小时有两个会话修改了文件。"
+  ],
+  "Vults (Codex) added the Now inbox and is waiting to run the build.": [
+    "Vults (Codex) adicionou a caixa Agora e está esperando para rodar o build.",
+    "Vults (Codex) añadió la bandeja Ahora y espera para ejecutar el build.",
+    "Vults（Codex）添加了“现在”收件箱，正在等待运行构建。"
+  ],
+  "Thinking… {n} s": [
+    "Pensando… {n} s",
+    "Pensando… {n} s",
+    "思考中… {n} 秒"
+  ],
+  "Waiting · {n}": [
+    "Esperando · {n}",
+    "Esperando · {n}",
+    "等待中 · {n}"
+  ],
+  "New memory": [
+    "Nova memória",
+    "Nueva memoria",
+    "新记忆"
+  ],
+  "Run npm run build before asking for a review.": [
+    "Rodar npm run build antes de pedir revisão.",
+    "Ejecutar npm run build antes de pedir una revisión.",
+    "请求审查前先运行 npm run build。"
+  ],
+  "Prefers replies in Brazilian Portuguese.": [
+    "Prefere respostas em português do Brasil.",
+    "Prefiere respuestas en portugués de Brasil.",
+    "偏好巴西葡萄牙语回复。"
+  ],
+  "Tests run on Jest.": [
+    "Os testes rodam no Jest.",
+    "Las pruebas se ejecutan en Jest.",
+    "测试运行在 Jest 上。"
+  ],
+  "Tests run on Vitest.": [
+    "Os testes rodam no Vitest.",
+    "Las pruebas se ejecutan en Vitest.",
+    "测试运行在 Vitest 上。"
+  ],
+  "Accept change": [
+    "Aceitar mudança",
+    "Aceptar cambio",
+    "接受更改"
+  ],
+  "Merge with a merge commit, never squash.": [
+    "Fazer merge com merge commit, nunca squash.",
+    "Fusionar con un merge commit, nunca squash.",
+    "用合并提交合并，绝不 squash。"
+  ],
+  "Reviews every PR before merging.": [
+    "Revisa todo PR antes do merge.",
+    "Revisa cada PR antes de fusionar.",
+    "合并前会审查每个 PR。"
+  ],
+  "Overnight, Zeca merged two notes about the Vults build and proposes one change.": [
+    "Durante a noite, o Zeca juntou duas notas sobre o build do Vults e propõe uma mudança.",
+    "Durante la noche, Zeca unió dos notas sobre el build de Vults y propone un cambio.",
+    "夜间 Zeca 合并了两条关于 Vults 构建的笔记，并提议一处修改。"
+  ],
+  "Synced {age} · {used} of {budget} requests today": [
+    "Sincronizado {age} · {used} de {budget} requisições hoje",
+    "Sincronizado {age} · {used} de {budget} solicitudes hoy",
+    "{age}同步 · 今日 {used}/{budget} 次请求"
+  ],
+  "For you": [
+    "Para você",
+    "Para ti",
+    "给你"
+  ],
+  "For Zeca": [
+    "Para o Zeca",
+    "Para Zeca",
+    "给 Zeca"
+  ],
+  "Search title, ref, repo, branch or author": [
+    "Buscar título, ref, repositório, branch ou autor",
+    "Buscar título, ref, repositorio, rama o autor",
+    "搜索标题、编号、仓库、分支或作者"
+  ],
+  "{section} · {n} new": [
+    "{section} · {n} novos",
+    "{section} · {n} nuevos",
+    "{section} · {n} 条新"
+  ],
+  "Pull requests": [
+    "Pull requests",
+    "Pull requests",
+    "拉取请求"
+  ],
+  "Open in GitHub ↗": [
+    "Abrir no GitHub ↗",
+    "Abrir en GitHub ↗",
+    "在 GitHub 中打开 ↗"
+  ],
+  "Merges the exact green commit.": [
+    "Faz merge exatamente do commit verde.",
+    "Fusiona exactamente el commit en verde.",
+    "合并的正是通过检查的那个提交。"
+  ],
+  "Checks · {n}": [
+    "Checks · {n}",
+    "Comprobaciones · {n}",
+    "检查 · {n}"
+  ],
+  "Copy-only. Vults never runs a command you type here.": [
+    "Só para copiar. O Vults nunca roda um comando digitado aqui.",
+    "Solo para copiar. Vults nunca ejecuta un comando escrito aquí.",
+    "仅供复制。Vults 不会运行你在这里输入的命令。"
+  ],
+  "What Zeca may read or do with GitHub. Each tool has its own switch and leaves a trace. Acting always asks you first.": [
+    "O que o Zeca pode ler ou fazer com o GitHub. Cada ferramenta tem sua chave e deixa um rastro. Agir sempre pede a você antes.",
+    "Lo que Zeca puede leer o hacer con GitHub. Cada herramienta tiene su interruptor y deja un rastro. Actuar siempre te pregunta antes.",
+    "Zeca 可以通过 GitHub 读取或执行的内容。每个工具都有独立开关并留下记录。执行操作前总会先问你。"
+  ],
+  "Let Zeca use {tool}": [
+    "Deixar o Zeca usar {tool}",
+    "Dejar que Zeca use {tool}",
+    "允许 Zeca 使用 {tool}"
+  ],
+  "Your PRs, their checks and review requests, from the last sync.": [
+    "Seus PRs, os checks e pedidos de revisão, da última sincronização.",
+    "Tus PR, sus comprobaciones y solicitudes de revisión, de la última sincronización.",
+    "来自上次同步的你的 PR、检查和审查请求。"
+  ],
+  "Last used {when} · {n} calls today": [
+    "Último uso {when} · {n} chamadas hoje",
+    "Último uso {when} · {n} llamadas hoy",
+    "上次使用 {when} · 今日 {n} 次调用"
+  ],
+  "Acts, asks first": [
+    "Age, pergunta antes",
+    "Actúa, pregunta antes",
+    "执行前先询问"
+  ],
+  "Opens an issue for a task. Asks you first, every time.": [
+    "Abre uma issue para uma tarefa. Pergunta a você antes, sempre.",
+    "Abre una issue para una tarea. Te pregunta antes, siempre.",
+    "为任务创建 issue。每次都会先问你。"
+  ],
+  "Squash and merge a PR with green checks. Always asks you.": [
+    "Squash e merge de um PR com checks verdes. Sempre pergunta a você.",
+    "Squash y fusión de un PR con comprobaciones en verde. Siempre te pregunta.",
+    "压缩合并检查通过的 PR。总会先问你。"
+  ],
+  "Budget for Zeca": [
+    "Orçamento do Zeca",
+    "Presupuesto de Zeca",
+    "Zeca 的配额"
+  ],
+  "His GitHub reads count against the connector's 3,000 daily requests.": [
+    "As leituras dele no GitHub contam nas 3.000 requisições diárias do conector.",
+    "Sus lecturas de GitHub cuentan en las 3.000 solicitudes diarias del conector.",
+    "他的 GitHub 读取计入该连接器每日 3,000 次请求的额度。"
+  ],
+  "Search projects": [
+    "Buscar projetos",
+    "Buscar proyectos",
+    "搜索项目"
+  ],
+  "{time} this week · {n} sessions · today {today} · total {total}": [
+    "{time} nesta semana · {n} sessões · hoje {today} · total {total}",
+    "{time} esta semana · {n} sesiones · hoy {today} · total {total}",
+    "本周 {time} · {n} 个会话 · 今日 {today} · 总计 {total}"
+  ],
+  "Finished turns, counts only. The latest 200.": [
+    "Turnos terminados, só contagens. Os últimos 200.",
+    "Turnos terminados, solo recuentos. Los últimos 200.",
+    "已完成的回合，仅计数。最近 200 条。"
+  ],
+  "Search turns": [
+    "Buscar turnos",
+    "Buscar turnos",
+    "搜索回合"
+  ],
+  "API estimates only. At 80% you get a notification; when it is spent, new task starts wait. Running turns finish.": [
+    "Só estimativas de API. Em 80% você recebe um aviso; quando acaba, novas tarefas esperam. Turnos em andamento terminam.",
+    "Solo estimaciones de API. Al 80% recibes un aviso; cuando se agota, las tareas nuevas esperan. Los turnos en curso terminan.",
+    "仅为 API 估算。达到 80% 时会通知你；用完后新任务需等待，进行中的回合会完成。"
+  ],
+  "{n}% of the 5 h window": [
+    "{n}% da janela de 5 h",
+    "{n}% de la ventana de 5 h",
+    "5 小时窗口的 {n}%"
+  ],
+  "Two weeks": [
+    "Duas semanas",
+    "Dos semanas",
+    "两周"
+  ],
+  "Amber at 70% · red at 90%. Subscription plans are not billed per token.": [
+    "Âmbar em 70% · vermelho em 90%. Planos de assinatura não cobram por token.",
+    "Ámbar al 70% · rojo al 90%. Los planes de suscripción no se cobran por token.",
+    "70% 变琥珀色 · 90% 变红色。订阅套餐不按 token 计费。"
+  ],
+  "Zeca's chat turns: model, tokens, cost and each tool call with its wait. Kept 30 days.": [
+    "Turnos do chat do Zeca: modelo, tokens, custo e cada chamada de ferramenta com sua espera. Guardados por 30 dias.",
+    "Turnos del chat de Zeca: modelo, tokens, costo y cada llamada a herramienta con su espera. Se guardan 30 días.",
+    "Zeca 聊天回合：模型、token、成本以及每次工具调用的等待时间。保留 30 天。"
+  ],
+  "{time} · {model} · {tokens} tokens · {cost}": [
+    "{time} · {model} · {tokens} tokens · {cost}",
+    "{time} · {model} · {tokens} tokens · {cost}",
+    "{time} · {model} · {tokens} token · {cost}"
+  ],
+  "Who answered each card: you, your phone, an Always rule or a policy. Append-only, kept 90 days.": [
+    "Quem respondeu cada card: você, seu celular, uma regra Sempre ou uma política. Só cresce, guardado por 90 dias.",
+    "Quién respondió cada tarjeta: tú, tu teléfono, una regla Siempre o una política. Solo se añade, se guarda 90 días.",
+    "谁回答了每张卡片：你、你的手机、“总是”规则或策略。只追加，保留 90 天。"
+  ],
+  "Search answers and commands": [
+    "Buscar respostas e comandos",
+    "Buscar respuestas y comandos",
+    "搜索回答和命令"
+  ],
+  "Always rule": [
+    "Regra Sempre",
+    "Regla Siempre",
+    "“总是”规则"
+  ],
+  "Island: the pill at the top. Panel: a notification instead. Quiet: only cards. Paused: cards go back to the terminal.": [
+    "Ilha: a pílula no topo. Painel: uma notificação no lugar. Quieto: só cards. Pausado: os cards voltam para o terminal.",
+    "Isla: la píldora arriba. Panel: una notificación en su lugar. Silencio: solo tarjetas. En pausa: las tarjetas vuelven al terminal.",
+    "岛：顶部的胶囊。面板：改用通知。安静：只显示卡片。暂停：卡片交回终端。"
+  ],
+  "Follow the pointer": [
+    "Seguir o ponteiro",
+    "Seguir el puntero",
+    "跟随指针"
+  ],
+  "Which monitor holds the island.": [
+    "Em qual monitor a ilha fica.",
+    "En qué monitor está la isla.",
+    "岛显示在哪个显示器上。"
+  ],
+  "A small flock in a corner of the desktop.": [
+    "Um bando pequeno num canto da área de trabalho.",
+    "Una bandada pequeña en una esquina del escritorio.",
+    "桌面角落里的小鸟群。"
+  ],
+  "Desktop notifications in Panel: finished, failed, needs you, gone quiet.": [
+    "Notificações no modo Painel: terminou, falhou, precisa de você, ficou quieto.",
+    "Notificaciones en Panel: terminó, falló, te necesita, en silencio.",
+    "面板模式下的桌面通知：完成、失败、需要你、变安静。"
+  ],
+  "Short cues for attention and finished work.": [
+    "Sons curtos para atenção e trabalho concluído.",
+    "Sonidos cortos para atención y trabajo terminado.",
+    "提醒和完成时的简短提示音。"
+  ],
+  "Cards still wait for you; nothing makes a sound or pulses.": [
+    "Os cards continuam esperando; nada toca som nem pulsa.",
+    "Las tarjetas siguen esperando; nada suena ni parpadea.",
+    "卡片仍会等你；不会发声或闪烁。"
+  ],
+  "Show what is playing and its controls (MPRIS).": [
+    "Mostrar o que está tocando e os controles (MPRIS).",
+    "Mostrar lo que suena y sus controles (MPRIS).",
+    "显示正在播放的内容及其控制（MPRIS）。"
+  ],
+  "Plan usage": [
+    "Uso do plano",
+    "Uso del plan",
+    "套餐用量"
+  ],
+  "Claude Code through its status line; Codex checked every 5 minutes.": [
+    "Claude Code pela status line; Codex consultado a cada 5 minutos.",
+    "Claude Code por su línea de estado; Codex consultado cada 5 minutos.",
+    "Claude Code 通过状态栏获取；Codex 每 5 分钟检查一次。"
+  ],
+  "Language & desktop": [
+    "Idioma e área de trabalho",
+    "Idioma y escritorio",
+    "语言与桌面"
+  ],
+  "Ctrl+Alt+V · Hold to talk": [
+    "Ctrl+Alt+V · Segure para falar",
+    "Ctrl+Alt+V · Mantén para hablar",
+    "Ctrl+Alt+V · 按住说话"
+  ],
+  "Ctrl+Alt+Space · Keyboard mode": [
+    "Ctrl+Alt+Espaço · Modo teclado",
+    "Ctrl+Alt+Espacio · Modo teclado",
+    "Ctrl+Alt+空格 · 键盘模式"
+  ],
+  "Alt+1–5 · Lab tabs": [
+    "Alt+1–5 · Abas do Lab",
+    "Alt+1–5 · Pestañas de Lab",
+    "Alt+1–5 · Lab 标签页"
+  ],
+  "Esc · Close, or leave full screen": [
+    "Esc · Fechar, ou sair da tela cheia",
+    "Esc · Cerrar, o salir de pantalla completa",
+    "Esc · 关闭或退出全屏"
+  ],
+  "The CLI reads your CLAUDE.md, skills, MCP servers and hooks. Applies to the next conversation.": [
+    "O CLI lê seu CLAUDE.md, skills, servidores MCP e hooks. Vale na próxima conversa.",
+    "El CLI lee tu CLAUDE.md, skills, servidores MCP y hooks. Se aplica en la próxima conversación.",
+    "CLI 会读取你的 CLAUDE.md、技能、MCP 服务器和钩子。下次对话生效。"
+  ],
+  "API provider": [
+    "Provedor de API",
+    "Proveedor de API",
+    "API 提供方"
+  ],
+  "For the Vults harness. Models load live from the provider.": [
+    "Para o harness do Vults. Os modelos vêm direto do provedor.",
+    "Para el harness de Vults. Los modelos se cargan del proveedor.",
+    "用于 Vults 框架。模型从提供方实时加载。"
+  ],
+  "API key": [
+    "Chave de API",
+    "Clave de API",
+    "API 密钥"
+  ],
+  "A local journal, kept 90 days with secrets removed.": [
+    "Um diário local, guardado por 90 dias sem segredos.",
+    "Un diario local, guardado 90 días sin secretos.",
+    "本地日志，保留 90 天并去除机密。"
+  ],
+  "Up to 8 requests a day on your subscription.": [
+    "Até 8 requisições por dia na sua assinatura.",
+    "Hasta 8 solicitudes al día con tu suscripción.",
+    "每天最多使用你的订阅 8 次请求。"
+  ],
+  "Proposals wait for you; up to 20 a day.": [
+    "As propostas esperam por você; até 20 por dia.",
+    "Las propuestas te esperan; hasta 20 al día.",
+    "提议会等你确认；每天最多 20 条。"
+  ],
+  "Merges notes overnight and leaves a debrief; up to 4 a day.": [
+    "Junta notas durante a noite e deixa um resumo; até 4 por dia.",
+    "Une notas durante la noche y deja un resumen; hasta 4 al día.",
+    "夜间合并笔记并留下总结；每天最多 4 次。"
+  ],
+  "Uses a local Ollama embedding model.": [
+    "Usa um modelo de embeddings local do Ollama.",
+    "Usa un modelo de embeddings local de Ollama.",
+    "使用本地 Ollama 嵌入模型。"
+  ],
+  "whisper.cpp on this computer; nothing is sent.": [
+    "whisper.cpp neste computador; nada é enviado.",
+    "whisper.cpp en este equipo; no se envía nada.",
+    "在本机运行 whisper.cpp；不会发送任何数据。"
+  ],
+  "Downloaded once and checked.": [
+    "Baixado uma vez e verificado.",
+    "Se descarga una vez y se verifica.",
+    "只下载一次并校验。"
+  ],
+  "Search and read pages. Page content never answers a card.": [
+    "Buscar e ler páginas. O conteúdo de uma página nunca responde um card.",
+    "Buscar y leer páginas. El contenido de una página nunca responde una tarjeta.",
+    "搜索并阅读网页。网页内容绝不会回答卡片。"
+  ],
+  "Brave and Tavily need a key; SearXNG needs its URL.": [
+    "Brave e Tavily precisam de chave; o SearXNG precisa da URL.",
+    "Brave y Tavily necesitan clave; SearXNG necesita su URL.",
+    "Brave 和 Tavily 需要密钥；SearXNG 需要它的 URL。"
+  ],
+  "Off, the flock, cards, shortcuts and connectors keep working.": [
+    "Desligado, o bando, os cards, os atalhos e os conectores continuam funcionando.",
+    "Apagado, la bandada, las tarjetas, los atajos y los conectores siguen funcionando.",
+    "关闭后，鸟群、卡片、快捷键和连接器仍正常工作。"
+  ],
+  "Zeca's species": [
+    "Espécie do Zeca",
+    "Especie de Zeca",
+    "Zeca 的物种"
+  ],
+  "Auto follows the calendar.": [
+    "Automático segue o calendário.",
+    "Automático sigue el calendario.",
+    "自动模式跟随日历。"
+  ],
+  "Now and then a visitor crosses the sky.": [
+    "De vez em quando um visitante cruza o céu.",
+    "De vez en cuando un visitante cruza el cielo.",
+    "偶尔会有访客飞过天空。"
+  ],
+  "Your system's reduced motion always wins.": [
+    "O movimento reduzido do sistema sempre vence.",
+    "La reducción de movimiento del sistema siempre gana.",
+    "系统的减少动态效果设置始终优先。"
+  ],
+  "Each install shows a diff, keeps a dated backup and waits for your click.": [
+    "Cada instalação mostra um diff, guarda um backup datado e espera seu clique.",
+    "Cada instalación muestra un diff, guarda una copia fechada y espera tu clic.",
+    "每次安装都会显示差异、保留带日期的备份并等你点击。"
+  ],
+  "Not set up": [
+    "Não configurado",
+    "Sin configurar",
+    "未设置"
+  ],
+  "Its own prompt": [
+    "No próprio prompt",
+    "Su propio prompt",
+    "在自己的提示中"
+  ],
+  "In the terminal": [
+    "No terminal",
+    "En el terminal",
+    "在终端中"
+  ],
+  "Each rule matches one agent, tool, target and folder exactly. Destructive commands never get one.": [
+    "Cada regra vale exatamente para um agente, ferramenta, alvo e pasta. Comandos destrutivos nunca ganham uma.",
+    "Cada regla coincide exactamente con un agente, herramienta, objetivo y carpeta. Los comandos destructivos nunca tienen una.",
+    "每条规则精确匹配一个代理、工具、目标和文件夹。破坏性命令永远不会有规则。"
+  ],
+  "Always rules": [
+    "Regras Sempre",
+    "Reglas Siempre",
+    "“总是”规则"
+  ],
+  "A deny beats an allow. Allow applies to Claude Code only. Destructive actions always ask.": [
+    "Um negar vence um permitir. Permitir vale só para o Claude Code. Ações destrutivas sempre perguntam.",
+    "Un denegar gana a un permitir. Permitir solo aplica a Claude Code. Las acciones destructivas siempre preguntan.",
+    "拒绝优先于允许。允许仅适用于 Claude Code。破坏性操作总会询问。"
+  ],
+  "Every folder": [
+    "Todas as pastas",
+    "Todas las carpetas",
+    "所有文件夹"
+  ],
+  "New policy…": [
+    "Nova política…",
+    "Nueva política…",
+    "新建策略…"
+  ],
+  "The flock chooses": [
+    "O bando escolhe",
+    "La bandada elige",
+    "由鸟群选择"
+  ],
+  "Kept near the start of the wire.": [
+    "Fica perto do começo do fio.",
+    "Se queda cerca del inicio del cable.",
+    "保持在线的开头附近。"
+  ],
+  "Cards still wait; no sounds or pulses.": [
+    "Os cards continuam esperando; sem sons nem pulsos.",
+    "Las tarjetas siguen esperando; sin sonidos ni parpadeos.",
+    "卡片仍会等待；没有声音或闪烁。"
+  ],
+  "Off the wire until you show it again.": [
+    "Fora do fio até você mostrar de novo.",
+    "Fuera del cable hasta que lo vuelvas a mostrar.",
+    "在你重新显示前不会出现在线上。"
+  ],
+  "Forget this project": [
+    "Esquecer este projeto",
+    "Olvidar este proyecto",
+    "忘记此项目"
+  ],
+  "Its preferences go; its history stays in Activity.": [
+    "As preferências saem; o histórico fica na Atividade.",
+    "Sus preferencias se borran; su historial queda en Actividad.",
+    "偏好会被删除；历史仍保留在“活动”中。"
+  ],
+  "Turns, traces and the week stay on this computer.": [
+    "Turnos, traces e a semana ficam neste computador.",
+    "Turnos, trazas y la semana se quedan en este equipo.",
+    "回合、追踪记录和周报都保存在这台电脑上。"
+  ],
+  "Removes turns, conversations, journal and traces. Memory, policies, phones, tasks and costs stay.": [
+    "Remove turnos, conversas, diário e traces. Memória, políticas, celulares, tarefas e custos ficam.",
+    "Elimina turnos, conversaciones, diario y trazas. Memoria, políticas, teléfonos, tareas y costos se quedan.",
+    "删除回合、对话、日志和追踪记录。记忆、策略、手机、任务和成本会保留。"
+  ],
+  "Calls gh every 5 minutes, or every minute while checks run.": [
+    "Chama o gh a cada 5 minutos, ou a cada minuto enquanto checks rodam.",
+    "Llama a gh cada 5 minutos, o cada minuto mientras corren comprobaciones.",
+    "每 5 分钟调用一次 gh，检查运行时每分钟一次。"
+  ],
+  "Signed in as {user} · synced {n} min ago": [
+    "Conectado como {user} · sincronizado há {n} min",
+    "Sesión iniciada como {user} · sincronizado hace {n} min",
+    "已登录为 {user} · {n} 分钟前同步"
+  ],
+  "Every request goes through the network gate and leaves a trace.": [
+    "Toda requisição passa pelo portão de rede e deixa um rastro.",
+    "Cada solicitud pasa por la puerta de red y deja un rastro.",
+    "每个请求都经过网络关口并留下记录。"
+  ],
+  "Deny needs nothing; Allow and Always need the phone's biometrics.": [
+    "Negar não precisa de nada; Permitir e Sempre precisam da biometria do celular.",
+    "Denegar no necesita nada; Permitir y Siempre necesitan la biometría del teléfono.",
+    "拒绝无需验证；允许和“总是”需要手机生物识别。"
+  ],
+  "Relay works from anywhere; direct needs the same network.": [
+    "O relay funciona de qualquer lugar; o direto precisa da mesma rede.",
+    "El relay funciona desde cualquier lugar; el directo necesita la misma red.",
+    "中继在任何地方都可用；直连需要同一网络。"
+  ],
+  "Relay URL": [
+    "URL do relay",
+    "URL del relay",
+    "中继 URL"
+  ],
+  "The QR code is valid for 2 minutes.": [
+    "O QR code vale por 2 minutos.",
+    "El código QR vale 2 minutos.",
+    "二维码 2 分钟内有效。"
+  ],
+  "No phone paired.": [
+    "Nenhum celular pareado.",
+    "Ningún teléfono emparejado.",
+    "未配对手机。"
+  ],
+  "A flock watching your coding agents. MIT licensed; no telemetry.": [
+    "Um bando de olho nos seus agentes de código. Licença MIT; sem telemetria.",
+    "Una bandada que vigila a tus agentes de código. Licencia MIT; sin telemetría.",
+    "一群盯着你编程代理的鸟。MIT 许可；无遥测。"
+  ],
+  "Review this prototype": [
+    "Revisar este protótipo",
+    "Revisar este prototipo",
+    "审阅此原型"
+  ],
+  "Mark each screen. Your notes stay in this prototype.": [
+    "Marque cada tela. Suas notas ficam neste protótipo.",
+    "Marca cada pantalla. Tus notas se quedan en este prototipo.",
+    "标记每个页面。你的备注保存在此原型中。"
+  ],
+  "Island sees, Compact acts, Lab leads. Each level shows more of the same thing, never a copy.": [
+    "A Ilha vê, o Compact age, o Lab conduz. Cada nível mostra mais da mesma coisa, nunca uma cópia.",
+    "La Isla ve, Compact actúa, Lab dirige. Cada nivel muestra más de lo mismo, nunca una copia.",
+    "岛负责看，Compact 负责做，Lab 负责主导。每一级展示同一事物的更多细节，而不是副本。"
+  ],
+  "See only: badges by shape, the pulse, usage hairlines. A click opens Compact.": [
+    "Só ver: badges por forma, o pulso, as linhas de uso. Um clique abre o Compact.",
+    "Solo ver: insignias por forma, el pulso, las líneas de uso. Un clic abre Compact.",
+    "只用于查看：按形状的标记、脉冲、用量细线。点击打开 Compact。"
+  ],
+  "Approved direction. Now with engines, commands, tools and Zeca's own cards.": [
+    "Direção aprovada. Agora com motores, comandos, ferramentas e os cards do próprio Zeca.",
+    "Dirección aprobada. Ahora con motores, comandos, herramientas y las tarjetas de Zeca.",
+    "已批准的方向。现在加入了引擎、命令、工具和 Zeca 自己的卡片。"
+  ],
+  "Compact · Flock and the card": [
+    "Compact · Bando e o card",
+    "Compact · Bandada y la tarjeta",
+    "Compact · 鸟群与卡片"
+  ],
+  "One card in three densities: Always, 1 of N, countdown and question choices.": [
+    "Um card em três densidades: Sempre, 1 de N, contagem regressiva e opções de pergunta.",
+    "Una tarjeta en tres densidades: Siempre, 1 de N, cuenta atrás y opciones de pregunta.",
+    "一张卡片三种密度：总是、第 1/N 个、倒计时和问题选项。"
+  ],
+  "One inbox for everything that asks for an action. Quick settings in the gear.": [
+    "Uma caixa para tudo que pede uma ação. Ajustes rápidos na engrenagem.",
+    "Una bandeja para todo lo que pide una acción. Ajustes rápidos en el engranaje.",
+    "一个收件箱汇集所有需要操作的事项。齿轮里是快速设置。"
+  ],
+  "Lab · Flock and Tasks": [
+    "Lab · Bando e Tarefas",
+    "Lab · Bandada y Tareas",
+    "Lab · 鸟群与任务"
+  ],
+  "The same list and detail for a session and a task run.": [
+    "A mesma lista e detalhe para uma sessão e uma execução de tarefa.",
+    "La misma lista y detalle para una sesión y una ejecución de tarea.",
+    "会话和任务运行使用同一套列表与详情。"
+  ],
+  "Approved direction. Now with a face for you and a face for Zeca.": [
+    "Direção aprovada. Agora com uma face para você e outra para o Zeca.",
+    "Dirección aprobada. Ahora con una cara para ti y otra para Zeca.",
+    "已批准的方向。现在分为“给你”和“给 Zeca”两面。"
+  ],
+  "Week, projects, history, cost, traces and audit with the app's real figures.": [
+    "Semana, projetos, histórico, custo, traces e auditoria com os números reais do app.",
+    "Semana, proyectos, historial, costo, trazas y auditoría con las cifras reales de la app.",
+    "周报、项目、历史、成本、追踪和审计，使用应用的真实数据项。"
+  ],
+  "Every setting the app has, behind the gear.": [
+    "Todos os ajustes do app, atrás da engrenagem.",
+    "Todos los ajustes de la app, tras el engranaje.",
+    "应用的所有设置都在齿轮后面。"
+  ],
+  "Reduced motion, keyboard use, scroll position and drafts across Island, Compact and Lab.": [
+    "Movimento reduzido, teclado, posição de rolagem e rascunhos entre Ilha, Compact e Lab.",
+    "Movimiento reducido, teclado, posición de desplazamiento y borradores entre Isla, Compact y Lab.",
+    "在岛、Compact 和 Lab 之间的减少动态、键盘操作、滚动位置和草稿。"
+  ],
+  "retry::backs_off passes 20 times in a row": [
+    "retry::backs_off passa 20 vezes seguidas",
+    "retry::backs_off pasa 20 veces seguidas",
+    "retry::backs_off 连续通过 20 次"
+  ],
+  "An empty folder": [
+    "Uma pasta vazia",
+    "Una carpeta vacía",
+    "一个空文件夹"
+  ],
+  "Chat": [
+    "Chat",
+    "Chat",
+    "聊天"
+  ],
+  "Question": [
+    "Pergunta",
+    "Pregunta",
+    "问题"
+  ],
+  "Normal": [
+    "Normal",
+    "Normal",
+    "正常"
+  ],
+  "Engines": [
+    "Motores",
+    "Motores",
+    "引擎"
+  ],
+  "Message": [
+    "Mensagem",
+    "Mensaje",
+    "消息"
+  ],
+  "Mentioned": [
+    "Mencionado",
+    "Mencionado",
+    "被提及"
+  ],
+  "Details": [
+    "Detalhes",
+    "Detalles",
+    "详情"
+  ],
+  "Traces": [
+    "Traces",
+    "Trazas",
+    "追踪"
+  ],
+  "Open": [
+    "Abertas",
+    "Abiertas",
+    "进行中"
+  ],
+  "Branch": [
+    "Branch",
+    "Rama",
+    "分支"
+  ],
+  "Editor": [
+    "Editor",
+    "Editor",
+    "编辑器"
+  ],
+  "Clone": [
+    "Clone",
+    "Clon",
+    "克隆"
+  ],
+  "Issue": [
+    "Issue",
+    "Issue",
+    "Issue"
+  ],
+  "Local": [
+    "Local",
+    "Local",
+    "本地"
+  ],
+  "Commands": [
+    "Comandos",
+    "Comandos",
+    "命令"
+  ],
+  "Remembers": [
+    "Lembra",
+    "Recuerda",
+    "记得"
+  ],
+  "Current": [
+    "Atual",
+    "Actual",
+    "当前"
+  ],
+  "Proposed": [
+    "Proposto",
+    "Propuesto",
+    "提议"
+  ],
+  "Actions": [
+    "Actions",
+    "Actions",
+    "Actions"
+  ],
+  "Releases": [
+    "Releases",
+    "Versiones",
+    "发布"
+  ],
+  "Reads": [
+    "Lê",
+    "Lee",
+    "读取"
+  ],
+  "Never": [
+    "Nunca",
+    "Nunca",
+    "从未"
+  ],
+  "Result": [
+    "Resultado",
+    "Resultado",
+    "结果"
+  ],
+  "Turn": [
+    "Turno",
+    "Turno",
+    "回合"
+  ],
+  "Tokens": [
+    "Tokens",
+    "Tokens",
+    "Token"
+  ],
+  "Asked": [
+    "Perguntou",
+    "Preguntó",
+    "已询问"
+  ],
+  "Policy": [
+    "Política",
+    "Política",
+    "策略"
+  ],
+  "Answer": [
+    "Resposta",
+    "Respuesta",
+    "回答"
+  ],
+  "Command": [
+    "Comando",
+    "Comando",
+    "命令"
+  ],
+  "Volume": [
+    "Volume",
+    "Volumen",
+    "音量"
+  ],
+  "Base": [
+    "Base",
+    "Base",
+    "Base"
+  ],
+  "Small": [
+    "Small",
+    "Small",
+    "Small"
+  ],
+  "Retired": [
+    "Aposentado",
+    "Retirado",
+    "已停用"
+  ],
+  "Diffs": [
+    "Diffs",
+    "Diffs",
+    "差异"
+  ],
+  "Sandbox": [
+    "Sandbox",
+    "Sandbox",
+    "沙盒"
+  ],
+  "Accepted": [
+    "Aceita",
+    "Aceptada",
+    "已接受"
+  ],
+  "Bird": [
+    "Pássaro",
+    "Pájaro",
+    "鸟"
+  ],
+  "Transport": [
+    "Transporte",
+    "Transporte",
+    "传输方式"
+  ],
+  "Pair…": [
+    "Parear…",
+    "Emparejar…",
+    "配对…"
+  ],
+  "Error": [
+    "Erro",
+    "Error",
+    "错误"
+  ],
+  "General": [
+    "Geral",
+    "General",
+    "通用"
+  ],
+  "Leave full screen (Esc)": [
+    "Sair da tela cheia (Esc)",
+    "Salir de pantalla completa (Esc)",
+    "退出全屏 (Esc)"
+  ],
+  "Do not disturb is off": [
+    "Não perturbe desligado",
+    "No molestar desactivado",
+    "勿扰已关闭"
+  ],
+  "Allowed. The agent continues.": [
+    "Permitido. O agente continua.",
+    "Permitido. El agente continúa.",
+    "已允许。代理继续执行。"
+  ],
+  "Always allowed. Settings › Approvals lists the rule.": [
+    "Sempre permitido. Ajustes › Aprovações lista a regra.",
+    "Siempre permitido. Ajustes › Aprobaciones muestra la regla.",
+    "已设为总是允许。设置 › 审批中可看到该规则。"
+  ],
+  "Denied. The agent gets your answer.": [
+    "Negado. O agente recebe sua resposta.",
+    "Denegado. El agente recibe tu respuesta.",
+    "已拒绝。代理会收到你的答复。"
+  ],
+  "Answer sent. The agent continues.": [
+    "Resposta enviada. O agente continua.",
+    "Respuesta enviada. El agente continúa.",
+    "已发送回答。代理继续执行。"
+  ],
+  "The question went back to the terminal.": [
+    "A pergunta voltou para o terminal.",
+    "La pregunta volvió al terminal.",
+    "问题已交回终端。"
+  ],
+  "Released": [
+    "Devolvida",
+    "Devuelta",
+    "已交回"
+  ],
+  "{project} · {agent}": [
+    "{project} · {agent}",
+    "{project} · {agent}",
+    "{project} · {agent}"
+  ],
+  "This project": [
+    "Este projeto",
+    "Este proyecto",
+    "此项目"
+  ],
+  "Mute project": [
+    "Silenciar projeto",
+    "Silenciar proyecto",
+    "静音项目"
+  ],
+  "Hide project": [
+    "Ocultar projeto",
+    "Ocultar proyecto",
+    "隐藏项目"
+  ],
+  "Raised the {editor} pane for {project}": [
+    "Painel do {editor} de {project} trazido para frente",
+    "Panel de {editor} de {project} traído al frente",
+    "已切到 {project} 的 {editor} 窗格"
+  ],
+  "See all {n} in Lab": [
+    "Ver todas as {n} no Lab",
+    "Ver las {n} en Lab",
+    "在 Lab 中查看全部 {n} 个"
+  ],
+  "All marked as seen": [
+    "Tudo marcado como visto",
+    "Todo marcado como visto",
+    "已全部标为已读"
+  ],
+  "Sent: keep going.": [
+    "Enviado: continue.",
+    "Enviado: sigue.",
+    "已发送：继续。"
+  ],
+  "Last {n} steps": [
+    "Últimos {n} passos",
+    "Últimos {n} pasos",
+    "最近 {n} 步"
+  ],
+  "Start with": [
+    "Iniciar com",
+    "Empezar con",
+    "用…开始"
+  ],
+  "Started with {agent}: you chose it.": [
+    "Iniciado com {agent}: você escolheu.",
+    "Iniciado con {agent}: lo elegiste tú.",
+    "用 {agent} 启动：你选择的。"
+  ],
+  "Started with {agent}. Its bird joins the wire.": [
+    "Iniciado com {agent}. O pássaro dele entra no fio.",
+    "Iniciado con {agent}. Su pájaro se une al cable.",
+    "已用 {agent} 启动。它的鸟加入了线上。"
+  ],
+  "Stopped by you.": [
+    "Parado por você.",
+    "Detenido por ti.",
+    "已被你停止。"
+  ],
+  "Stopped. Go on resumes it.": [
+    "Parado. Continuar retoma.",
+    "Detenido. Continuar lo reanuda.",
+    "已停止。点“继续”可恢复。"
+  ],
+  "Going on in the same session.": [
+    "Continuando na mesma sessão.",
+    "Continuando en la misma sesión.",
+    "在同一会话中继续。"
+  ],
+  "Looks right; the translation matches.": [
+    "Parece certo; a tradução bate.",
+    "Se ve bien; la traducción coincide.",
+    "看起来没问题；译文一致。"
+  ],
+  "Round {n} by {agent}": [
+    "Rodada {n} por {agent}",
+    "Ronda {n} por {agent}",
+    "第 {n} 轮，由 {agent}"
+  ],
+  "Task done": [
+    "Tarefa concluída",
+    "Tarea terminada",
+    "任务完成"
+  ],
+  "Done when…, one per line": [
+    "Pronto quando…, um por linha",
+    "Listo cuando…, uno por línea",
+    "完成条件…，每行一条"
+  ],
+  "Task saved": [
+    "Tarefa salva",
+    "Tarea guardada",
+    "任务已保存"
+  ],
+  "Mark as {status}": [
+    "Marcar como {status}",
+    "Marcar como {status}",
+    "标记为{status}"
+  ],
+  "Link an issue": [
+    "Vincular uma issue",
+    "Vincular una issue",
+    "关联 issue"
+  ],
+  "Open an issue on GitHub": [
+    "Abrir uma issue no GitHub",
+    "Abrir una issue en GitHub",
+    "在 GitHub 上新建 issue"
+  ],
+  "Remove its folder…": [
+    "Remover a pasta…",
+    "Eliminar su carpeta…",
+    "删除它的文件夹…"
+  ],
+  "Delete task…": [
+    "Excluir tarefa…",
+    "Eliminar tarea…",
+    "删除任务…"
+  ],
+  "Checks failed": [
+    "Checks falharam",
+    "Comprobaciones fallidas",
+    "检查失败"
+  ],
+  "Merging waits for green checks.": [
+    "O merge espera checks verdes.",
+    "La fusión espera comprobaciones en verde.",
+    "需要检查通过才能合并。"
+  ],
+  "Merges {ref} at its green commit. The action is traced.": [
+    "Faz merge de {ref} no commit verde. A ação fica registrada.",
+    "Fusiona {ref} en su commit en verde. La acción queda registrada.",
+    "在通过检查的提交上合并 {ref}。该操作会被记录。"
+  ],
+  "Synced with GitHub": [
+    "Sincronizado com o GitHub",
+    "Sincronizado con GitHub",
+    "已与 GitHub 同步"
+  ],
+  "Refreshed less than a minute ago.": [
+    "Atualizado há menos de um minuto.",
+    "Actualizado hace menos de un minuto.",
+    "不到一分钟前刚刷新过。"
+  ],
+  "Zeca may use it": [
+    "O Zeca pode usar",
+    "Zeca puede usarlo",
+    "Zeca 可以使用"
+  ],
+  "Task created: {goal}. It waits in Tasks until you start it.": [
+    "Tarefa criada: {goal}. Ela espera em Tarefas até você iniciar.",
+    "Tarea creada: {goal}. Espera en Tareas hasta que la inicies.",
+    "已创建任务：{goal}。它会在“任务”中等你启动。"
+  ],
+  "Open in Tasks": [
+    "Abrir em Tarefas",
+    "Abrir en Tareas",
+    "在“任务”中打开"
+  ],
+  "{project} ({agent}): {brief}.": [
+    "{project} ({agent}): {brief}.",
+    "{project} ({agent}): {brief}.",
+    "{project}（{agent}）：{brief}。"
+  ],
+  "Remembered for {place}.": [
+    "Lembrado para {place}.",
+    "Recordado para {place}.",
+    "已为 {place} 记住。"
+  ],
+  "Queue this message": [
+    "Pôr esta mensagem na fila",
+    "Poner este mensaje en cola",
+    "将此消息加入队列"
+  ],
+  "Queued: {text}": [
+    "Na fila: {text}",
+    "En cola: {text}",
+    "已排队：{text}"
+  ],
+  "{answer}: {command}": [
+    "{answer}: {command}",
+    "{answer}: {command}",
+    "{answer}：{command}"
+  ],
+  "Allowed. Zeca continues.": [
+    "Permitido. O Zeca continua.",
+    "Permitido. Zeca continúa.",
+    "已允许。Zeca 继续执行。"
+  ],
+  "Name": [
+    "Nome",
+    "Nombre",
+    "名称"
+  ],
+  "Rename conversation": [
+    "Renomear conversa",
+    "Renombrar conversación",
+    "重命名对话"
+  ],
+  "Next you see the change as a diff and accept it with a click.": [
+    "Em seguida você vê a mudança como diff e aceita com um clique.",
+    "Después verás el cambio como diff y lo aceptarás con un clic.",
+    "接下来你会以差异形式查看更改，并点击接受。"
+  ],
+  "Edit policy": [
+    "Editar política",
+    "Editar política",
+    "编辑策略"
+  ],
+  "Review diff": [
+    "Revisar diff",
+    "Revisar diff",
+    "查看差异"
+  ],
+  "Review the change. A dated backup is kept before anything is written; other hooks stay in place.": [
+    "Revise a mudança. Um backup datado é guardado antes de qualquer escrita; os outros hooks continuam.",
+    "Revisa el cambio. Se guarda una copia fechada antes de escribir nada; los demás hooks se mantienen.",
+    "请检查更改。写入前会保留带日期的备份；其他钩子保持不变。"
+  ],
+  "Review the policy": [
+    "Revisar a política",
+    "Revisar la política",
+    "检查策略"
+  ],
+  "Policy accepted": [
+    "Política aceita",
+    "Política aceptada",
+    "策略已接受"
+  ],
+  "Always allowed": [
+    "Sempre permitido",
+    "Siempre permitido",
+    "总是允许"
+  ],
+  "Now": [
+    "Agora",
+    "Ahora",
+    "现在"
+  ],
+  "All": [
+    "Todas",
+    "Todas",
+    "全部"
+  ],
+  "1 quiet": [
+    "1 quieto",
+    "1 en silencio",
+    "1 个安静"
+  ],
+  "{n} quiet": [
+    "{n} quietos",
+    "{n} en silencio",
+    "{n} 个安静"
+  ],
+  "Ask Zeca… / for commands, @ for a session": [
+    "Pergunte ao Zeca… / para comandos, @ para uma sessão",
+    "Pregunta a Zeca… / para comandos, @ para una sesión",
+    "问 Zeca… 输入 / 查看命令，@ 指定会话"
+  ],
+  "Your policy asks first for builds outside src/": [
+    "Sua política pergunta antes para builds fora de src/",
+    "Tu política pregunta antes para builds fuera de src/",
+    "你的策略要求 src/ 之外的构建先询问"
+  ],
+  "npm run build passes": [
+    "npm run build passa",
+    "npm run build pasa",
+    "npm run build 通过"
+  ],
+  "Today: ${spent} of ${budget}": [
+    "Hoje: ${spent} de ${budget}",
+    "Hoy: ${spent} de ${budget}",
+    "今日：${spent} / ${budget}"
+  ],
+  "{section} · 1 new": [
+    "{section} · 1 novo",
+    "{section} · 1 nuevo",
+    "{section} · 1 条新"
+  ],
+  "assertion failed: elapsed >= 200ms (was 140ms)": [
+    "assertion failed: elapsed >= 200ms (was 140ms)",
+    "assertion failed: elapsed >= 200ms (was 140ms)",
+    "assertion failed: elapsed >= 200ms (was 140ms)"
+  ],
+  "$0.42 · 31k tokens": [
+    "$0.42 · 31k tokens",
+    "$0.42 · 31k tokens",
+    "$0.42 · 31k tokens"
+  ],
+  "API": [
+    "API",
+    "API",
+    "API"
+  ],
+  "Read docs/guide/flock.md": [
+    "Read docs/guide/flock.md",
+    "Read docs/guide/flock.md",
+    "Read docs/guide/flock.md"
+  ],
+  "DP-1 · 2560×1440": [
+    "DP-1 · 2560×1440",
+    "DP-1 · 2560×1440",
+    "DP-1 · 2560×1440"
+  ],
+  "eDP-1 · 1920×1200": [
+    "eDP-1 · 1920×1200",
+    "eDP-1 · 1920×1200",
+    "eDP-1 · 1920×1200"
+  ],
+  "6 sessions": [
+    "6 sessões",
+    "6 sesiones",
+    "6 个会话"
+  ],
+  "8 steps, 1 subagent": [
+    "8 passos, 1 subagente",
+    "8 pasos, 1 subagente",
+    "8 步，1 个子代理"
+  ],
+  "branch feat/compact-now": [
+    "branch feat/compact-now",
+    "rama feat/compact-now",
+    "分支 feat/compact-now"
+  ],
+  "1 page read": [
+    "1 página lida",
+    "1 página leída",
+    "读取了 1 个页面"
+  ],
+  "1 subagent": [
+    "1 subagente",
+    "1 subagente",
+    "1 个子代理"
+  ],
+  "3 h 12 min": [
+    "3 h 12 min",
+    "3 h 12 min",
+    "3 小时 12 分钟"
+  ],
+  "24 min · frontend": [
+    "24 min · frontend",
+    "24 min · frontend",
+    "24 分钟 · frontend"
+  ],
+  "Editing ui/src/chat.ts: the follow check now waits 150 ms after a manual scroll.": [
+    "Editando ui/src/chat.ts: a checagem de acompanhar agora espera 150 ms após uma rolagem manual.",
+    "Editando ui/src/chat.ts: la comprobación de seguimiento ahora espera 150 ms tras un desplazamiento manual.",
+    "正在编辑 ui/src/chat.ts：跟随检查现在会在手动滚动后等待 150 毫秒。"
+  ],
+  "Updated docs/guide/flock.md and its translation. Ready for your review.": [
+    "Atualizei docs/guide/flock.md e a tradução. Pronto para sua revisão.",
+    "Actualicé docs/guide/flock.md y su traducción. Listo para tu revisión.",
+    "已更新 docs/guide/flock.md 及其译文，等待你审查。"
+  ],
+  "frontend (Claude Code) edited ui/src/chat.ts: the reply keeps its scroll while it streams.": [
+    "frontend (Claude Code) editou ui/src/chat.ts: a resposta mantém a rolagem enquanto chega.",
+    "frontend (Claude Code) editó ui/src/chat.ts: la respuesta mantiene su posición mientras llega.",
+    "frontend（Claude Code）编辑了 ui/src/chat.ts：回复流式输出时保持滚动位置。"
+  ],
+  "4 h 10 min": [
+    "4 h 10 min",
+    "4 h 10 min",
+    "4 小时 10 分钟"
+  ],
+  "2 h 05 min": [
+    "2 h 05 min",
+    "2 h 05 min",
+    "2 小时 05 分钟"
+  ],
+  "40 min": [
+    "40 min",
+    "40 min",
+    "40 分钟"
+  ],
+  "25 min": [
+    "25 min",
+    "25 min",
+    "25 分钟"
+  ],
+  "30 min": [
+    "30 min",
+    "30 min",
+    "30 分钟"
+  ],
+  "12 steps · 8 min": [
+    "12 passos · 8 min",
+    "12 pasos · 8 min",
+    "12 步 · 8 分钟"
+  ],
+  "6 steps · 4 min": [
+    "6 passos · 4 min",
+    "6 pasos · 4 min",
+    "6 步 · 4 分钟"
+  ],
+  "21 steps · 24 min": [
+    "21 passos · 24 min",
+    "21 pasos · 24 min",
+    "21 步 · 24 分钟"
+  ],
+  "By": [
+    "Por",
+    "Por",
+    "由"
+  ],
+  "No": [
+    "Não",
+    "No",
+    "否"
+  ],
+  "Ctrl+Alt+Y / N · Allow or deny the front card": [
+    "Ctrl+Alt+Y / N · Permitir ou negar o card da frente",
+    "Ctrl+Alt+Y / N · Permitir o denegar la tarjeta del frente",
+    "Ctrl+Alt+Y / N · 允许或拒绝最前面的卡片"
+  ],
+  "Ctrl+Alt+J / K · Next or previous session": [
+    "Ctrl+Alt+J / K · Próxima ou sessão anterior",
+    "Ctrl+Alt+J / K · Sesión siguiente o anterior",
+    "Ctrl+Alt+J / K · 下一个或上一个会话"
+  ],
+  "Ctrl+Alt+1 / 2 / 3 · Island, Compact, Lab": [
+    "Ctrl+Alt+1 / 2 / 3 · Ilha, Compact, Lab",
+    "Ctrl+Alt+1 / 2 / 3 · Isla, Compact, Lab",
+    "Ctrl+Alt+1 / 2 / 3 · 岛、Compact、Lab"
+  ],
+  "≈ ${cost} at API prices": [
+    "≈ ${cost} a preços de API",
+    "≈ ${cost} a precios de API",
+    "按 API 价格约 ${cost}"
+  ],
+  "ACP": [
+    "ACP",
+    "ACP",
+    "ACP"
+  ],
+  "Creating a task does not start an agent. It runs in its own clone on a vults/task branch.": [
+    "Criar uma tarefa não inicia um agente. Ela roda num clone próprio, numa branch vults/task.",
+    "Crear una tarea no inicia un agente. Se ejecuta en su propio clon, en una rama vults/task.",
+    "创建任务不会启动代理。它会在自己的克隆中、在 vults/task 分支上运行。"
+  ],
+  "5 lines": [
+    "5 linhas",
+    "5 líneas",
+    "5 行"
+  ],
+  "The last five commits are on feat/compact-now; the newest adds the Now inbox.": [
+    "Os últimos cinco commits estão em feat/compact-now; o mais novo adiciona a caixa Agora.",
+    "Los últimos cinco commits están en feat/compact-now; el más nuevo añade la bandeja Ahora.",
+    "最近五个提交都在 feat/compact-now 上；最新的一个添加了“现在”收件箱。"
+  ],
+  "Installed. The script added lint-pro to your PATH.": [
+    "Instalado. O script adicionou o lint-pro ao seu PATH.",
+    "Instalado. El script añadió lint-pro a tu PATH.",
+    "已安装。脚本把 lint-pro 加入了你的 PATH。"
+  ],
+  "exit 0": [
+    "exit 0",
+    "exit 0",
+    "exit 0"
+  ],
+  "Gone quiet": [
+    "Quietos",
+    "En silencio",
+    "已安静"
   ]
 }

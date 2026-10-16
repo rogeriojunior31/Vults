@@ -14,6 +14,7 @@ const result = await build({
       export { Scene, FOCUS_SCENE, COMPACT_SCENE, HABITAT_SCENE, NEST_HABITAT_SCENE } from ${JSON.stringify(root + 'src/island/scene.ts')};
       export { assignSpecies, setZeca, setZecaLook, setZecaSpecies } from ${JSON.stringify(root + 'src/island/flock.ts')};
       export { SPECIES } from ${JSON.stringify(root + 'src/character/flock/index.ts')};
+      export { LOOK_GROUPS } from ${JSON.stringify(root + 'src/character/looks.ts')};
       export { AGENTS } from ${JSON.stringify(root + 'src/agents.ts')};
       export { icon } from ${JSON.stringify(root + 'src/island/icons.ts')};
       export { t, setLang } from ${JSON.stringify(root + 'src/i18n/index.ts')};
@@ -28,13 +29,14 @@ const theme = (await readFile(new URL('../../ui/src/themes.css', here), 'utf8'))
   .replaceAll(':root', '#vults-ui-proposal').replaceAll('[data-theme="black"]', '#vults-ui-proposal');
 const template = await readFile(new URL('template.html', here), 'utf8');
 const logic = await readFile(new URL('preview.js', here), 'utf8');
-const workspace = await readFile(new URL('workspace.js', here), 'utf8');
-const compact = await readFile(new URL('compact.js', here), 'utf8');
-const lab = await readFile(new URL('lab.js', here), 'utf8');
+// Modules share the workspace's scope; their order is the order they are read in.
+const MODULES = ['cards.js','island.js','compact.js','lab.js','connections.js','records.js','settings.js','memory.js'];
+const modules = (await Promise.all(MODULES.map(name => readFile(new URL(name, here), 'utf8')))).join('\n');
+const workspace = (await readFile(new URL('workspace.js', here), 'utf8')).replace('/* MODULES */', () => modules);
 const extraCopy = await readFile(new URL('copy.json', here), 'utf8');
 const fragment = template.replace('/* PRODUCTION_THEME */', () => theme)
   .replace('/* PRODUCTION_ASSETS */', () => assets.replaceAll('</script', '<\\/script'))
-  .replace('/* PROPOSAL_LOGIC */', () => logic.replace('/* WORKSPACE_LOGIC */', () => workspace.replace('/* COMPACT_LOGIC */', () => compact).replace('/* LAB_LOGIC */', () => lab))
+  .replace('/* PROPOSAL_LOGIC */', () => logic.replace('/* WORKSPACE_LOGIC */', () => workspace)
     .replace('/* EXTRA_COPY */', () => extraCopy.replace(/[^\x00-\x7f]/g, char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'))));
 if (Buffer.byteLength(fragment) > 1_000_000) throw new Error('Prototype exceeds inline size limit.');
 for (const match of fragment.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Script(match[1]);
