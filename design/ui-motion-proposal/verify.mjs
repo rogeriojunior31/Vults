@@ -268,6 +268,7 @@ P.showExample('conversation');assert.ok(find('.tool-details'));assert.ok(all('.m
 P.setArea('chat','room');assert.ok(find('.conversation-row .row-tools'));
 find('[data-label="Rename"]').click();type(find('.editor-content input'),'Renamed');submitEditor();assert.ok(text('.room-recent').includes('Renamed'));
 
+P.setArea('tasks','room');P.setArea('connections','room');assert.equal(find('.workspace-view').classList.contains('task-board'),false,'Leaving Tasks leaves no grid behind.');
 /* Every Lab side panel is flexible. */
 for(const [area,id] of [['flock','flock-list'],['chat','recent'],['connections','conn'],['settings','settings']]){
   P.views.connectionFace='you';P.setArea(area,'room');const fold=find('[data-key="fold-'+id+'"]');assert.ok(fold,'The '+id+' panel can fold.');
@@ -303,6 +304,29 @@ assert.ok(text('.activity-content').includes('npm run lint'),'Card answers appea
 /* Island. */
 P.setMode('mini');assert.equal(find('.product-window').hidden,true);assert.ok(find('.mini-strip canvas'));
 find('.mini-strip').click();assert.equal(P.state.mode,'quick');assert.equal(P.state.area,'flock','The island opens Compact on whoever needs you.');
+
+/* Small Lab: one pane, with the list and detail retaining their own position. */
+assert.equal(find('.prototype-tools').getAttribute('open'),undefined,'Demo controls start folded.');
+const stage=find('.review-stage');stage.clientWidth=1200;
+change(find('.viewport-select'),'narrow');P.setArea('flock','room');find('[data-key="nav-flock"]').click();
+assert.ok(find('.product-window.single-pane'));assert.equal(find('.list-detail.detail-open'),null);
+type(find('.lab-list .search-field input'),'front');find('.lab-list').scrollTop=120;
+find('[data-key="session-2"]').click();assert.ok(find('.list-detail.detail-open'));
+assert.equal(document.activeElement,find('[data-key="back-to-list"]'),'Opening detail focuses its return action.');
+find('[data-key="tab-diff"]').click();find('.lab-diff-scroll').scrollTop=240;
+find('[data-key="back-to-list"]').click();
+assert.equal(find('.list-detail.detail-open'),null);assert.equal(find('.lab-list').scrollTop,120);
+assert.equal(find('.lab-list .search-field input').value,'front');assert.equal(document.activeElement,find('[data-key="session-2"]'));
+find('[data-key="session-2"]').click();assert.equal(find('.lab-diff-scroll').scrollTop,240);
+change(find('.viewport-select'),'normal');assert.equal(find('.product-window.single-pane'),null);
+assert.equal(P.views.sessionSelected,'session-2');assert.equal(find('.lab-diff-scroll').scrollTop,240);
+change(find('.viewport-select'),'short');assert.ok(find('.product-window.single-pane'),'A short Lab also uses one pane.');
+P.setArea('tasks','room');find('[data-key="nav-tasks"]').click();find('.task-side').scrollTop=80;
+find('[data-key="task-1"]').click();assert.ok(find('.list-detail.detail-open'));
+find('[data-key="back-to-list"]').click();assert.equal(find('.task-side').scrollTop,80);assert.equal(P.views.taskSelected,'task-1');
+P.views.sessionQuery='';change(find('.viewport-select'),'normal');
+P.setMode('quick');P.setMode('room');
+assert.ok(animations.filter(a=>a.element===find('.surface-shell')).every(a=>a.options.duration<=200),'Surface changes finish within 200 ms.');
 
 const coverage=execFileSync(process.execPath,[fileURLToPath(import.meta.url),'--coverage',...process.argv.filter(a=>a==='--missing')],{encoding:'utf8'});assert.ok(coverage.includes('coverage ok'),coverage);
 const manifest=JSON.parse(readFileSync(new URL('features.json',import.meta.url),'utf8')).features;

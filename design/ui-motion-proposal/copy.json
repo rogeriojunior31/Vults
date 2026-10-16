@@ -4333,5 +4333,20 @@
     "Rodar os testes de UI para o terceiro critério passar.",
     "Ejecutar las pruebas de UI para que pase el tercer criterio.",
     "运行 UI 测试以通过第三个条件。"
+  ],
+  "Prototype controls": [
+    "Controles do protótipo",
+    "Controles del prototipo",
+    "原型控件"
+  ],
+  "Back to sessions": [
+    "Voltar às sessões",
+    "Volver a las sesiones",
+    "返回会话列表"
+  ],
+  "Back to tasks": [
+    "Voltar às tarefas",
+    "Volver a las tareas",
+    "返回任务列表"
   ]
 }

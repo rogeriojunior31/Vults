@@ -35,7 +35,6 @@
     }
     signal(facts.needs,'1 request','{n} requests','needs','needs');signal(facts.failed,'1 failure','{n} failures','failed','failed');signal(facts.working,'1 working','{n} working','working','working');
     if(facts.quiet.length)signal(facts.quiet,'1 quiet','{n} quiet','quiet','quiet');
-    signals.append(key(button('Open in Lab','compact-open',()=>setArea('flock','room')),'compact-open-lab'));
     host.append(signals,stage,focus,footer);const flock=mountFlock(stage,'quick',visible);stage.append(picks);
     picks.style.gridTemplateColumns='repeat('+visible.length+',minmax(0,1fr))';
     visible.forEach(s=>{const b=key(button(null,'compact-bird-pick',()=>select(s)),s.id);b.append(el('span',null,s.project));b.setAttribute('aria-label',phrase('Select {project}: {status}',{project:s.project,status:L(sessionBrief(s))}));b.setAttribute('data-tooltip',L(sessionBrief(s)));bindBirdFocus(b,flock,s);picks.append(b);});

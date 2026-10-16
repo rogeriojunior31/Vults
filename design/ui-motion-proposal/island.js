@@ -25,7 +25,7 @@
       const stage=scene.canvas.getBoundingClientRect(),anchors=new Map();
       for(const at of scene.anchors())anchors.set(at.key,{x:stage.left-box.left-left+at.x,y:stage.top-box.top+at.y,scale:at.scale});
       sky.place(anchors,{left:0,top:0,width,height:Math.round(host.clientHeight||box.height),radius:kind==='mini'?20:0});
-      sky.update(list.filter(soaring).map(s=>({...s,status:'idle'})),!document.hidden);
+      sky.update(list.filter(soaring).map(s=>({...s,status:'idle'})),flockVisible());
       onPlace?.();
     };
     place();skyPlacers.set(kind,place);

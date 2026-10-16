@@ -44,18 +44,9 @@
   };
   const kbd = text => el('kbd',null,null,document.createTextNode(text));
   const prefs = { motion: !matchMedia('(prefers-reduced-motion: reduce)').matches };
-  const springs = { snappy: { k:600, c:30, m:.6 }, gentle: { k:220, c:24, m:1 }, bouncy: { k:400, c:25, m:.8 } };
-  function frames(preset, dy = 6, scale = .98, duration = 300) {
-    const { k,c,m } = springs[preset], a=c/(2*m), w=Math.sqrt(k/m-a*a);
-    return Array.from({ length:31 }, (_,i) => {
-      const time=i/30*duration/1000;
-      const p=i===30?1:1-Math.exp(-a*time)*(Math.cos(w*time)+a/w*Math.sin(w*time));
-      return { opacity:Math.max(0,Math.min(1,p)), transform:`translateY(${dy*(1-p)}px) scale(${scale+(1-scale)*p})` };
-    });
-  }
   function enter(node, preset='snappy', dy=6, scale=.98) {
     if (!prefs.motion || !node?.animate) return;
-    node.animate(frames(preset,dy,scale), { duration:300, fill:'none' });
+    node.animate([{opacity:0,transform:`translateY(${dy}px) scale(${scale})`},{opacity:1,transform:'none'}], { duration:preset==='gentle'?200:160, easing:'cubic-bezier(0.16,1,0.3,1)', fill:'none' });
   }
   const windowEl = $('.product-window'), chatEl = $('.chat-view'), log = $('.transcript');
   const input = $('textarea'), popover = $('.model-popover'), history = $('.history-popover'), commands = $('.command-popover'), actionMenu = $('.action-menu');
@@ -68,7 +59,8 @@
     if (restoring) return;
     window.openai?.setWidgetState?.({ modelContent:{ area:state.area, mode:state.mode, activity:state.activity, category:state.category, example:state.example, engine:state.engine, model:state.model }, privateContent:snapshot() }).catch(() => {});
   }
-  const scene = new A.Scene(A.FOCUS_SCENE);
+  // A 3x scene divisible by three keeps the same director crisp at 1x, 2x and 3x.
+  const scene = new A.Scene({...A.FOCUS_SCENE,width:114,zeca:{...A.FOCUS_SCENE.zeca,x:21}});
   scene.canvas.setAttribute('aria-hidden','true'); $('.portrait').append(scene.canvas);
   // A paused scene still needs one drawn frame, so reduced motion shows the birds standing still.
   function still(target){ if (!prefs.motion) window.setTimeout(() => target.setActive(false),60); }
@@ -421,7 +413,7 @@
     const before=slot.hidden?0:slot.getBoundingClientRect().height;noticeAnimation?.cancel();slot.setAttribute('data-open',String(state.notice));slot.inert=!state.notice;
     if(!prefs.motion||restoring){slot.hidden=!state.notice;return;}
     slot.hidden=false;slot.inert=!state.notice;const height=state.notice?Math.min(80,slot.scrollHeight):0;
-    noticeAnimation=slot.animate([{height:before+'px',opacity:shown?1:0},{height:height+'px',opacity:state.notice?1:0}],{duration:220,easing:'cubic-bezier(0.16,1,0.3,1)'});
+    noticeAnimation=slot.animate([{height:before+'px',opacity:shown?1:0},{height:height+'px',opacity:state.notice?1:0}],{duration:180,easing:'cubic-bezier(0.16,1,0.3,1)'});
     noticeAnimation.finished.then(()=>{slot.hidden=!state.notice;slot.inert=!state.notice;}).catch(()=>{});
   }
   $('.notice-close').append(A.icon('close',12)); $('.notice-close').setAttribute('aria-label',L('Dismiss'));
@@ -491,6 +483,7 @@
   $('.scenario-select').addEventListener('change',() => setScenario($('.scenario-select').value));
   $('.language-select').addEventListener('change',() => setLanguage($('.language-select').value));
   $('.viewport-select').addEventListener('change',() => {const stage=$('.review-stage');stage.classList.toggle('narrow',$('.viewport-select').value==='narrow');stage.classList.toggle('short',$('.viewport-select').value==='short');layoutSurface(true);resizeCompactFlock();paintBird();});
+  $('.prototype-tools').addEventListener('toggle',()=>{layoutSurface();resizeCompactFlock();paintBird();});
   $$('[data-example]').forEach(b => b.addEventListener('click',() => { if (state.area!=='chat') setArea('chat',state.mode==='mini'?'quick':state.mode); showExample(b.dataset.example); }));
   window.addEventListener('openai:set_globals',event => {
     const saved=event.detail?.globals?.widgetState?.modelContent;

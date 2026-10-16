@@ -103,7 +103,7 @@
       }
       if(!found.length)rows.append(el('p','pane-note','Nothing here matches your search.'),button('Clear filters','quiet-control',()=>{views.sessionQuery='';setArea('flock',state.mode);}));
     }
-    function select(s){captureLabPosition();views.sessionSelected=s.id;remember();setArea('flock',state.mode);host.querySelector('[data-key="'+s.id+'"]')?.focus({preventScroll:true});}
+    function select(s){views.sessionSelected=s.id;views.detailOpen.flock=true;setArea('flock',state.mode);focusDetail(host,s.id);}
     paintRows();
     const s=sessions.find(s=>s.id===views.sessionSelected)??facts.ordered[0];if(!s)return;
     if(!DETAIL_TABS.some(([id])=>id===views.flockDetail)||!settings.zeca&&views.flockDetail==='zeca')views.flockDetail='session';
@@ -112,6 +112,7 @@
     detail.append(el('header','detail-head',null,el('div',null,null,el('h3',null,s.project),el('span','task-meta',null,el('span',null,raw(labelFor(s.agent)+' · '+s.branch)),sessionChip(s))),el('div','page-actions',null,...(task?[key(button(null,'task-link',()=>openTask(task.id)),'task-link')]:[]),more)));
     if(task)detail.querySelector('.task-link').append(A.icon('tasks',13),el('span',null,phrase('Task: {task}',{task:L(task.title)})));
     detailPanel(detail,{id:s.id,tabs:DETAIL_TABS,current:views.flockDetail,onTab:tab=>{views.flockDetail=tab;remember();setArea('flock',state.mode);},render:(panel,setScroll)=>sessionTab(panel,s,views.flockDetail,setScroll)});
+    listDetail(host,list,detail,s.id,'Back to sessions');
   }
   function sessionTab(panel,s,tab,setScroll){
     if(tab==='session'){
@@ -149,7 +150,7 @@
     return 'queued';
   }
   function newTask(title,repo,engine=''){const row={id:'task-'+(tasks.length+1),title:raw(title),repo,engine,status:'To do',onWire:false,run:null,criteria:[],checks:[],checked:[],issue:'',router:'',cost:'',rounds:[]};tasks.unshift(row);return row;}
-  function openTask(id,tab='run'){views.taskSelected=id;views.taskDetail=tab==='review'?'run':tab;views.taskQuery='';setArea('tasks',state.mode==='full'?'full':'room');}
+  function openTask(id,tab='run'){views.detailOpen.tasks=true;views.taskSelected=id;views.taskDetail=tab==='review'?'run':tab;views.taskQuery='';setArea('tasks',state.mode==='full'?'full':'room');}
   function editTask(row) {
     const draft=row?{title:L(row.title),repo:row.repo,criteria:row.criteria.map(L).join('\n')}:taskDraft;
     const title=field('Goal',draft.title,'text',value=>{draft.title=value;remember();}),project=choose('Project',['Vults','frontend','docs','api','infra'],draft.repo,value=>{draft.repo=value;remember();}),criteria=field('Done when…, one per line',draft.criteria,'textarea',value=>{draft.criteria=value;remember();});
@@ -217,13 +218,14 @@
   const TASK_GROUPS=[['needs','Needs you','needs'],['running','Running','working'],['queued','Queued','quiet'],['done','Finished','done']];
   function renderTasks(host){
     host.classList.add('task-board');
+    function select(row){views.taskSelected=row.id;views.detailOpen.tasks=true;setArea('tasks',state.mode);focusDetail(host,row.id);}
     const side=el('aside','task-side'),main=el('section','task-main');host.append(side,main);
     const add=key(button(null,'primary task-new',()=>editTask(),'New task'),'new-task');add.append(A.icon('plus',14),el('span',null,'New task'));
     const headRow=el('div','task-side-head',null,el('strong',null,'Tasks'),el('span','counter',null,document.createTextNode(String(tasks.filter(t=>!['Done','Dropped'].includes(t.status)).length))));
     side.append(headRow,add);
-    const panel=flexible(host,side,'tasks',{def:300,min:220,max:460,label:'Tasks',head:fold=>{headRow.append(fold);return headRow;},rail:()=>{const r=el('div','rail-marks');r.append(key(iconButton('plus','New task',()=>editTask()),'rail-new-task'));tasks.filter(t=>!['Done','Dropped'].includes(t.status)).slice(0,8).forEach(row=>{const line=taskLine(row);const b=key(button(null,'rail-dot',()=>{views.taskSelected=row.id;remember();setArea('tasks',state.mode);},row.title),'rail-'+row.id);b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.append(el('span','shape shape-'+line.shape));r.append(b);});return r;}});
+    flexible(host,side,'tasks',{def:300,min:220,max:460,label:'Tasks',head:fold=>{headRow.append(fold);return headRow;},rail:()=>{const r=el('div','rail-marks');r.append(key(iconButton('plus','New task',()=>editTask()),'rail-new-task'));tasks.filter(t=>!['Done','Dropped'].includes(t.status)).slice(0,8).forEach(row=>{const line=taskLine(row);const b=key(button(null,'rail-dot',()=>select(row),row.title),'rail-'+row.id);b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.append(el('span','shape shape-'+line.shape));r.append(b);});return r;}});
     if(stageState(main,'No tasks yet.',button('New task','quiet-control',()=>editTask())))return;
-    if(!panel.folded){const finder=search('Search tasks',value=>{views.taskQuery=value;paintList();remember();});finder.querySelector('input').value=views.taskQuery;side.append(finder);}
+    {const finder=search('Search tasks',value=>{views.taskQuery=value;paintList();remember();});finder.querySelector('input').value=views.taskQuery;side.append(finder);}
     const list=el('nav','task-groups');list.setAttribute('aria-label',L('Tasks'));side.append(list,el('p','task-budget counter',phrase('Today: ${spent} of ${budget}',{spent:'2.40',budget:Number(settings.dailyBudget).toFixed(2)})));
     function paintList(){
       list.replaceChildren();
@@ -232,7 +234,7 @@
         const section=el('section','task-group tone-'+tone);section.append(el('h3',null,null,el('span','shape shape-'+tone),el('span','group-label',label),el('span','group-count counter',null,document.createTextNode(String(rows.length)))));
         rows.forEach(row=>{
           const line=taskLine(row),stage=taskStage(row);
-          const b=key(button(null,'task-item',()=>{views.taskSelected=row.id;remember();setArea('tasks',state.mode);},row.title),row.id);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);
+          const b=key(button(null,'task-item',()=>select(row),row.title),row.id);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);
           const steps=el('span','task-steps');steps.setAttribute('aria-hidden','true');STAGES.forEach((_,i)=>steps.append(el('span',i<stage.at||stage.at===5?'done':i===stage.at?(stage.failed?'failed':stage.needs?'needs':'current'):'')));
           b.append(el('span','task-avatar',null,el('span','agent-dot '+(AGENT_KIND[row.engine]??'other'))),el('span','task-item-copy',null,el('strong',null,row.title),el('small','task-line tone-'+line.tone,null,el('span','shape shape-'+line.shape),el('span',null,null,document.createTextNode(line.text))),el('small',null,null,document.createTextNode([row.repo,row.engine||L('No owner yet')].join(' · '))),steps));
           section.append(b);
@@ -278,4 +280,5 @@
       else if(tab==='context')panel.append(contextList([['Project',row.repo],['Branch',r?.branch??'vults/'+row.id],['Clone',r?.cwd??'Created when it starts'],['Owner',row.engine||'No owner yet'],['On the wire',row.onWire?'Yes':'No'],['Issue',row.issue||'None'],['Cost',row.cost||'Not started']]));
       else zecaTab(panel,row.repo,[phrase('Review the task: {task}',{task:L(row.title)})]);
     }});
+    listDetail(host,side,main,row.id,'Back to tasks');
   }

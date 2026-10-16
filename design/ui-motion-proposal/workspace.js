@@ -2,7 +2,7 @@
     rules:[{agent:'Codex',tool:'Bash',target:'npm run build',cwd:'~/Projects/Vults'},{agent:'Claude Code',tool:'Read',target:'docs/**',cwd:'~/Projects/docs'}],
     policies:[{id:'global',scope:'Every folder',text:'deny command "git push --force*"\nask class network\nallow tool Read'},{id:'vults',scope:'~/Projects/Vults',text:'allow command "npm run build"\nallow command "cargo test*"\nask class write outside "src/**"'}],
     keys:{anthropic:true,openrouter:true,openai:false}, githubSeen:{} };
-  const views = { taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'run', panels:{}, skipped:[], showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionGroup:'state', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
+  const views = { detailOpen:{}, listScroll:{}, taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'run', panels:{}, skipped:[], showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionGroup:'state', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
   // Sessions you opened in a terminal: the flock watches them.
   const sessions = [
     {id:'session-1',agent:'codex',project:'Vults',status:'approval',activity:'run',why:'Build the project to check the Now inbox before the review.',step:'npm run build',step_count:12,subagents:0,branch:'feat/compact-now',cost:0.42,steps:['Read docs/dev/plan-ui.md','Edit ui/src/island/now.ts','Edit ui/src/island/render.ts','Run npm run build']},
@@ -85,16 +85,19 @@
     const availableWidth=Math.max(0,(stage.clientWidth||box.width||1168)-24);
     const availableHeight=preview==='short'?360:Math.max(280,(window.innerHeight||1000)-Math.max(0,box.top)-20);
     const next=A.fitSurface(state.mode,preview==='narrow'?Math.min(480,availableWidth):availableWidth,availableHeight);
+    const singlePane=next.width<=760||next.height<460;
+    if(windowEl.classList.contains('single-pane')!==singlePane)captureLabPosition();
     const measured=surface.getBoundingClientRect(),previous={width:measured.width,height:measured.height,radius:Number.parseFloat(window.getComputedStyle?.(surface).borderTopLeftRadius)||lastSurface?.radius||next.radius};
     surfaceAnimation?.cancel();contentAnimation?.cancel();
     for(const name of ['width','height'])surface.style[name]=next[name]+'px';surface.style.borderRadius=next.radius+'px';surface.setAttribute('data-mode',state.mode);
     windowEl.style.width=Math.max(0,next.width-2)+'px';windowEl.style.height=Math.max(0,next.height-2)+'px';windowEl.style.left='50%';windowEl.style.transform='translateX(-50%)';
     windowEl.classList.toggle('tight',next.height<(state.mode==='quick'?380:460));windowEl.classList.toggle('very-short',next.height<360);surface.setAttribute('data-dimensions',next.width+'x'+next.height);
     if(animate&&lastSurface&&prefs.motion&&surface.animate&&(Math.abs(previous.width-next.width)>1||Math.abs(previous.height-next.height)>1)){
-      surfaceAnimation=surface.animate(A.surfaceFrames(previous,next),{duration:480,fill:'none'});
+      surfaceAnimation=surface.animate(A.surfaceFrames(previous,next),{duration:200,easing:'cubic-bezier(0.16,1,0.3,1)',fill:'none'});
       const content=state.mode==='mini'?$('.mini-strip'):windowEl;
-      contentAnimation=content.animate([{opacity:0,translate:'0 4px'},{opacity:1,translate:'0 0'}],{duration:200,delay:70,easing:'cubic-bezier(0.16,1,0.3,1)',fill:'backwards'});
+      contentAnimation=content.animate([{opacity:.65},{opacity:1}],{duration:160,fill:'none'});
     }
+    windowEl.classList.toggle('single-pane',singlePane);
     lastSurface=next;positionOpenMenus();resizeFlock();
   }
   const menuAnimations=new Map();
@@ -178,6 +181,7 @@
   log.addEventListener('wheel',() => lastManualScroll=Date.now(),{passive:true});
   log.addEventListener('touchstart',() => lastManualScroll=Date.now(),{passive:true});
   log.addEventListener('pointerdown',() => lastManualScroll=Date.now());
+  function flockVisible(){return !document.hidden&&!(state.area==='flock'&&['room','full'].includes(state.mode)&&windowEl.classList.contains('single-pane'));}
   function resizeFlock(){flockResize();}
   function stopScenes() {for(const scene of activeScenes) scene.setActive(false);activeScenes=[];flockObserver?.disconnect();flockResize=() => {};}
   function mountFlock(host,kind='lab',source=sessions,onLayout) {
@@ -191,7 +195,7 @@
       const scale=layout.vults.scale, room=kind==='mini'?8:Math.max(1,Math.floor(width/(scale*32)));
       const shown=source.slice(0,Math.min(source.length,room)), gutter=kind==='mini'?48:0, available=width-gutter;
       scene.resize(width,shown.length,i=>({x:Math.round(gutter+(i+.5)*available/shown.length-scale*12),wire:layout.vults.at(0).wire}));
-      scene.update(shown,null,kind==='mini'&&settings.zeca?{clip:'idle',agent:'codex'}:null);scene.setActive(!document.hidden&&(kind==='mini'||!windowEl.classList.contains('tight')));
+      scene.update(shown,null,kind==='mini'&&settings.zeca?{clip:'idle',agent:'codex'}:null);scene.setActive(flockVisible()&&(kind==='mini'||!windowEl.classList.contains('tight')));
       onLayout?.(scene,shown,width);
       still(scene);
     };
@@ -199,7 +203,7 @@
     if (typeof ResizeObserver!=='undefined') {flockObserver=new ResizeObserver(update);flockObserver.observe(host);}
     return scene;
   }
-  document.addEventListener('visibilitychange',()=> {for(const scene of activeScenes)scene.setActive(!document.hidden&&prefs.motion);});
+  document.addEventListener('visibilitychange',()=> {for(const scene of activeScenes)scene.setActive(flockVisible()&&prefs.motion);});
   // Empty chat: what Zeca suggests depends on the flock. A suggestion fills the draft, it never sends.
   function paintSuggestions() {
     const suggestions=$('.room-suggestions');suggestions.replaceChildren();
@@ -285,8 +289,8 @@
   function openPalette() {
     const content=el('div','palette'), list=el('div','palette-list');let close;
     const rows=[
-      ...sessions.map(s=>({group:'Sessions',label:s.project+' · '+labelFor(s.agent),hint:L(sessionBrief(s)),run:()=>{views.sessionSelected=s.id;setArea('flock','room');}})),
-      ...flockFacts().needs.map(s=>({group:'Cards',label:phrase('Review the card from {project}',{project:s.project}),hint:'Opens it; answering stays a click',run:()=>{views.sessionSelected=s.id;views.flockDetail='session';setArea('flock','room');}})),
+      ...sessions.map(s=>({group:'Sessions',label:s.project+' · '+labelFor(s.agent),hint:L(sessionBrief(s)),run:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;setArea('flock','room');}})),
+      ...flockFacts().needs.map(s=>({group:'Cards',label:phrase('Review the card from {project}',{project:s.project}),hint:'Opens it; answering stays a click',run:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='session';setArea('flock','room');}})),
       ...COMMANDS.map(([name,about,insert])=>({group:'Commands',label:raw(name),hint:about,run:()=>prepareChat(insert)})),
       ...[['flock','Flock'],['chat','Chat'],['tasks','Tasks'],['connections','Connections'],['activity','Activity'],['memory','Memory'],['settings','Settings']].map(([area,label])=>({group:'Go to',label,hint:'Lab',run:()=>area==='settings'?openSettings():area==='memory'?openMemory():setArea(area,'room')})),
     ];
@@ -330,6 +334,25 @@
     handle.addEventListener('dblclick',()=>{p.w=def;p.folded=false;apply();remember();});
     apply();
     return p;
+  }
+  function listDetail(host,list,detail,selected,label){
+    const area=state.area;
+    host.classList.add('list-detail');list.classList.add('detail-list');detail.classList.add('detail-content');
+    host.classList.toggle('detail-open',!!views.detailOpen[area]);
+    const back=key(button(null,'list-back',()=>{
+      views.detailOpen[area]=false;setArea(area,state.mode);
+      host.querySelector('[data-key="'+selected+'"]')?.focus({preventScroll:true});
+    }),'back-to-list');back.append(A.icon('chevron',14),el('span',null,label));detail.prepend(back);
+    list.scrollTop=views.listScroll[area]??0;
+    const captureDetail=captureLabPosition;
+    captureLabPosition=()=>{
+      const single=windowEl.classList.contains('single-pane');
+      if(!single||host.classList.contains('detail-open'))captureDetail();
+      if(!single||!host.classList.contains('detail-open'))views.listScroll[area]=list.scrollTop;
+    };
+  }
+  function focusDetail(host,selected){
+    host.querySelector(windowEl.classList.contains('single-pane')?'[data-key="back-to-list"]':'[data-key="'+selected+'"]')?.focus({preventScroll:true});
   }
   /* MODULES */
   const SCREEN_REVIEW=[
@@ -376,7 +399,7 @@
     const items=state.mode==='quick'?COMPACT_NAV:LAB_NAV, current=state.area==='memory'?'chat':state.area;
     items.forEach(([glyph,label,target])=>{
       const nextMode=state.mode==='quick'?'quick':state.mode==='full'?'full':'room';
-      const b=key(button(null,'',()=>setArea(target,nextMode),label),'nav-'+target);b.append(A.icon(glyph,15),el('span','nav-label',label));
+      const b=key(button(null,'',()=>{views.detailOpen[target]=false;setArea(target,nextMode);},label),'nav-'+target);b.append(A.icon(glyph,15),el('span','nav-label',label));
       const count=navCount(target);if(count)b.append(el('span','nav-count counter',null,document.createTextNode(String(count))));
       b.disabled=target==='chat'&&!settings.zeca;b.setAttribute('aria-pressed',String(target===current));
       if(target===current){b.classList.add('selected-area');selected=el('span','nav-current');selected.setAttribute('aria-hidden','true');b.prepend(selected);}nav.append(b);
@@ -410,6 +433,7 @@
     if(area==='summary'&&['room','full'].includes(mode))area='flock';
     if(!settings.zeca&&area==='chat')area='flock';
     const previous=state.area,previousMode=state.mode;if(previous==='chat'&&previousMode!=='mini')views.chatScroll=log.scrollTop;
+    if(['room','full'].includes(mode)&&previousMode==='quick'&&area==='flock')views.detailOpen.flock=true;
     if(previousMode==='quick')views.quickArea=previous;else if(['room','full'].includes(previousMode)&&previous!=='review')views.roomArea=previous;
     state.area=area;state.mode=mode;closeModels(false,false);closeMenu(history,historyTrigger,false,false);closeCommands();closeActionMenu(false);stopScenes();
     $$('[data-flock-example]').forEach(option=>option.hidden=!['flock','summary','tasks'].includes(area)&&mode!=='mini');
@@ -428,7 +452,7 @@
     $$('[data-area]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.area===area&&(!b.dataset.mode||b.dataset.mode===mode||(b.dataset.mode==='room'&&mode==='full')))));
     $$('[data-size]').forEach(b=>{const on=b.dataset.size===mode||(b.dataset.size==='room'&&mode==='full');b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
     layoutSurface(!restoring&&previousMode!==mode);
-    const workspace=$('.workspace-view');workspace.replaceChildren();workspace.classList.remove('compact-flock','compact-summary','lab-flock','lab-split');paintNav();paintChrome();
+    const workspace=$('.workspace-view');workspace.replaceChildren();workspace.classList.remove('compact-flock','compact-summary','lab-flock','lab-split','with-sky','task-board','list-detail','detail-open');paintNav();paintChrome();
     paintNeedsStrip();
     if(mini)renderIsland($('.mini-strip'));
     else if(chat){
@@ -446,8 +470,8 @@
   function paintNeedsStrip(){
     const strip=$('.needs-strip');strip.replaceChildren();
     const room=['room','full'].includes(state.mode);
-    const rows=[...flockFacts().needs.map(s=>({s,shape:s.status==='question'?'question':'needs',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.flockDetail='session';setArea('flock',state.mode);}})),
-      ...flockFacts().failed.map(s=>({s,shape:'failed',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.flockDetail='activity';setArea('flock',state.mode);}})),
+    const rows=[...flockFacts().needs.map(s=>({s,shape:s.status==='question'?'question':'needs',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='session';setArea('flock',state.mode);}})),
+      ...flockFacts().failed.map(s=>({s,shape:'failed',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='activity';setArea('flock',state.mode);}})),
       ...tasks.filter(t=>['approval','question'].includes(t.run?.status)).map(t=>({s:t.run,shape:'needs',label:phrase('Task: {task}',{task:L(t.title)}),open:()=>openTask(t.id)}))].filter(r=>!isSkipped(r.s));
     strip.hidden=!room||state.area==='flock'||state.area==='review'||!rows.length;
     if(strip.hidden)return;
@@ -483,4 +507,4 @@
     if(event.altKey&&['1','2','3','4','5'].includes(event.key)){event.preventDefault();setArea(LAB_NAV[Number(event.key)-1][2],state.mode==='full'?'full':'room');return;}
     if(event.ctrlKey&&event.altKey&&['1','2','3'].includes(event.key)){event.preventDefault();setMode(['mini','quick','room'][Number(event.key)-1]);}
   });
-  const media=matchMedia('(prefers-reduced-motion: reduce)');media.addEventListener?.('change',()=>{prefs.motion=settings.animations&&!media.matches;root.classList.toggle('motion-off',!prefs.motion);if(!prefs.motion)settleMotion();paintBird();for(const scene of activeScenes)scene.setActive(prefs.motion&&!document.hidden);});
+  const media=matchMedia('(prefers-reduced-motion: reduce)');media.addEventListener?.('change',()=>{prefs.motion=settings.animations&&!media.matches;root.classList.toggle('motion-off',!prefs.motion);if(!prefs.motion)settleMotion();paintBird();for(const scene of activeScenes)scene.setActive(prefs.motion&&flockVisible());});

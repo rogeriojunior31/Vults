@@ -25,10 +25,5 @@ export function placePopover(surface, anchor, contentHeight, headerBottom, room=
 }
 
 export function surfaceFrames(from,to) {
-  // The gentle canonical spring changes the shell; text and sprites keep their drawing scale.
-  const k=220,c=24,m=1,a=c/(2*m),w=Math.sqrt(k/m-a*a),duration=480;
-  return Array.from({length:33},(_,i)=>{
-    const time=i/32*duration/1000,p=i===32?1:Math.max(0,Math.min(1,1-Math.exp(-a*time)*(Math.cos(w*time)+a/w*Math.sin(w*time))));
-    return {width:(from.width+(to.width-from.width)*p)+'px',height:(from.height+(to.height-from.height)*p)+'px',borderRadius:(from.radius+(to.radius-from.radius)*p)+'px'};
-  });
+  return [from,to].map(size=>({width:size.width+'px',height:size.height+'px',borderRadius:size.radius+'px'}));
 }
