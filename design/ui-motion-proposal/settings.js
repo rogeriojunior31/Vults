@@ -28,7 +28,7 @@
     if(stageState(host,'No settings loaded.'))return;
     const categories=el('nav','settings-categories'),content=el('div','settings-content');categories.setAttribute('aria-label',L('Settings'));let last;
     CATEGORIES.forEach(([id,label,group])=>{if(last!==group){categories.append(el('small',null,group));last=group;}const b=key(button(label,'',()=>{state.category=id;paint();remember();}),id);categories.append(b);});
-    host.append(el('div','settings-grid',null,categories,content));paint();
+    const grid=el('div','settings-grid',null,categories,content);host.append(grid);flexible(grid,categories,'settings',{def:176,min:140,max:300,label:'Settings'});paint();
     function paint(){
       stopScenes();content.replaceChildren();for(const b of categories.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.key===state.category));
       const title=CATEGORIES.find(([id])=>id===state.category)?.[1]??'General';content.append(el('h3','settings-title',title));

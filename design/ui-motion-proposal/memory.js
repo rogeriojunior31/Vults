@@ -4,6 +4,7 @@
     host.hidden=!room||!state.memoryPanel||state.area!=='chat';$('.chat-shell').classList.toggle('with-memory',!host.hidden);memoryTrigger.setAttribute('aria-pressed',String(!host.hidden));
     if(host.hidden)return;
     host.replaceChildren(el('div','recent-head',null,el('h3',null,'Memory'),iconButton('close','Close',()=>toggleMemoryPanel(false))));
+    flexible($('.chat-shell'),host,'memory',{side:'right',def:300,min:240,max:540,label:'Memory'});
     if(!settings.memory){host.append(el('section','empty-state',null,el('h3',null,"Zeca's memory is off."),button('Open memory settings','quiet-control',()=>openSettings('chat'))));return;}
     if(memory.debrief&&settings.sleep)host.append(el('p','memory-debrief',null,A.icon('moon',12),el('span',null,memory.debrief)));
     host.append(segment([['Waiting for you',phrase('Waiting · {n}',{n:memory.pending.length})],['What Zeca remembers','Remembers'],['History','History']],value=>{views.memoryTab=value;paintMemoryPanel();remember();},views.memoryTab));

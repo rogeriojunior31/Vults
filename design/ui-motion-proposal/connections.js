@@ -17,7 +17,9 @@
     const sections=segment(SECTIONS.map(([id,label])=>[id,counts[id]?phrase(counts[id]===1?'{section} · 1 new':'{section} · {n} new',{section:L(label),n:counts[id]}):label]),value=>{views.connectionSection=value;views.connectionSelected='';paint();remember();},views.connectionSection);
     const markAll=key(button('Mark all seen','',()=>{for(const r of github[views.connectionSection])settings.githubSeen[r.id]=true;setArea('connections',state.mode);}),'connections-mark-all');
     const list=el('div','connection-list'),detail=el('article','connection-detail');
-    host.append(el('div','workspace-toolbar',null,sections,finder,markAll),el('div','connection-columns',null,list,detail));
+    const columns=el('div','connection-columns',null,list,detail);host.append(el('div','workspace-toolbar',null,sections,finder,markAll),columns);
+    // The list repaints its rows, so its edge is added back each time.
+    const edge=()=>flexible(columns,list,'conn',{def:420,min:280,max:680,label:'List'});
     function paint(){
       list.replaceChildren();const rows=github[views.connectionSection]??[];
       const found=rows.filter(row=>[L(row.title),row.repo,row.id,row.ref,row.branch,row.author].join(' ').toLowerCase().includes(views.connectionQuery.toLowerCase()));
@@ -27,7 +29,7 @@
         b.append(el('span','shape shape-'+(row.checks?checkTone(row.checks):fresh?'news':'quiet')),el('div','connection-copy',null,el('strong',null,row.title),el('small',null,null,document.createTextNode([row.repo,row.ref??(views.connectionSection==='pulls'?row.id:''),row.kind?L(row.kind):'',row.age?phrase('{age} ago',{age:row.age}):''].filter(Boolean).join(' · ')))),...(fresh?[el('span','new-dot','New')]:[]));list.append(b);
       });
       if(!found.length){list.append(el('p','pane-note','Nothing here matches your search.'),button('Clear filters','quiet-control',()=>{views.connectionQuery='';finder.querySelector('input').value='';paint();}));detail.replaceChildren();return;}
-      const selected=found.find(row=>row.id===views.connectionSelected)??found[0];views.connectionSelected=selected.id;paintDetail(selected);
+      const selected=found.find(row=>row.id===views.connectionSelected)??found[0];views.connectionSelected=selected.id;paintDetail(selected);edge();
     }
     function paintDetail(row){
       detail.replaceChildren();const section=views.connectionSection;

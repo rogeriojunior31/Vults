@@ -229,8 +229,9 @@ assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false,'A task run is not on
 find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.ok(P.sessions.some(s=>s.id==='run-task-2'),'Show it on the wire puts its bird there.');
 P.setArea('flock','room');find('[data-key="run-task-2"]').click();assert.ok(find('[data-key="task-link"]'),'A run on the wire links back to its task.');
 P.setArea('tasks','room');find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false);
-find('[data-key="task-fold"]').click();assert.ok(find('.task-side.collapsed'),'The task list folds to a rail.');find('[data-key="task-fold"]').click();
-const handle=find('.task-resize');keydown(handle,'ArrowRight');assert.equal(P.views.taskSidebar,300,'The list resizes from the keyboard.');
+find('[data-key="fold-tasks"]').click();assert.ok(find('.task-side.folded'),'The task list folds to a rail.');find('[data-key="fold-tasks"]').click();
+const handle=find('.task-side .flex-handle');keydown(handle,'ArrowRight');assert.equal(P.views.panels.tasks.w,320,'The list resizes from the keyboard.');
+assert.ok(all('.task-line').length>=5,'Each task says where it is in the list.');
 find('[data-key="task-5"]').click();find('[data-key="task-start"]').click();find('[data-key="codex"]').click();
 const started=P.tasks.find(t=>t.id==='task-5');assert.equal(started.status,'Doing');assert.ok(started.run,'Starting a task gives it a run.');
 find('[data-key="task-stop"]').click();assert.equal(started.status,'Blocked');find('[data-key="task-go-on"]').click();assert.equal(started.status,'Doing');
@@ -261,9 +262,25 @@ type(box,'/remember Ship the island first');keydown(box,'Enter');runTimers();ass
 P.showExample('thinking');type(box,'one more thing');keydown(box,'Enter');assert.ok(find('.queued'),'A message sent during a reply waits in the queue.');
 P.showExample('permission');assert.ok(find('.request-card.density-chat'));assert.ok(find('[data-key="always"]').textContent.includes('Sempre nesta conversa'));find('[data-key="allow"]').click();assert.ok(find('.card-outcome'),'The chat card resolves in place.');
 P.showExample('outside');assert.ok(find('.request-reason.danger-text'));assert.equal(find('[data-key="always"]'),null,'Piping a download to the shell is destructive.');
-P.showExample('conversation');assert.ok(find('.tool-details'));assert.ok(all('.message-tools button').length>=2);
+P.showExample('conversation');assert.ok(find('.tool-details'));assert.ok(all('.message-tools button').length>=1);
 P.setArea('chat','room');assert.ok(find('.conversation-row .row-tools'));
 find('[data-label="Rename"]').click();type(find('.editor-content input'),'Renamed');submitEditor();assert.ok(text('.room-recent').includes('Renamed'));
+
+/* Every Lab side panel is flexible. */
+for(const [area,id] of [['flock','flock-list'],['chat','recent'],['connections','conn'],['settings','settings']]){
+  P.views.connectionFace='you';P.setArea(area,'room');const fold=find('[data-key="fold-'+id+'"]');assert.ok(fold,'The '+id+' panel can fold.');
+  fold.click();assert.ok(find('.flexible.folded'),'Folding '+id+' leaves a rail.');find('[data-key="rail-'+id+'"]').click();assert.equal(find('.flexible.folded'),null);
+  const edge=fold.parentElement;keydown(edge,'ArrowRight');assert.ok(P.views.panels[id].w>0,'The '+id+' panel resizes.');
+}
+
+/* Zeca as a companion: he greets with the flock, suggests from it, notices, and reacts. */
+P.setArea('chat','quick');P.showExample('empty');assert.ok(/Boa|Bom/.test(text('.intro-copy h2')),'Zeca greets by the time of day.');assert.ok(text('.intro-caption').includes('Vults'),'The greeting says what the flock needs.');
+assert.ok(find('[data-key="s-card"]'),'Suggestions follow the flock.');find('[data-key="s-card"]').click();assert.ok(find('.chat-view textarea').value.includes('Vults'),'A suggestion fills the draft; it never sends.');type(find('.chat-view textarea'),'');
+P.showExample('conversation');assert.ok(find('.zeca-note'),'Zeca notes what needs you inside the conversation.');assert.ok(find('.reply-chips'));
+find('[data-key="chip-card"]').click();assert.equal(P.state.area,'flock','A follow-up can open the card; it never answers it.');
+P.setArea('chat','quick');type(find('.chat-view textarea'),'hi');assert.equal(sceneUpdates.get(find('.portrait canvas'))[2].clip,'listen','Zeca listens while you type.');
+type(find('.chat-view textarea'),'Why did api fail?');keydown(find('.chat-view textarea'),'Enter');assert.ok(['search','think'].includes(sceneUpdates.get(find('.portrait canvas'))[2].clip),'Zeca searches, then thinks.');runTimers();
+assert.ok(text('.transcript').includes('cargo test -p api'),'He answers from the flock.');assert.ok(find('[data-key="chip-f-task"]'));
 
 /* Memory. */
 P.setArea('memory','room');const pending=all('.room-memory .memory-change').length;assert.equal(pending,3);
@@ -271,7 +288,7 @@ assert.ok(find('.memory-change .diff-remove'),'A change shows current versus pro
 find('[data-key="proposal-1"] [data-key="remember"]').click();assert.equal(all('.room-memory .memory-change').length,2);
 
 /* Settings: every category, policies through a diff. */
-P.setArea('settings','room');assert.equal(all('.settings-categories button').length,10);
+P.setArea('settings','room');assert.equal(all('.settings-categories button').filter(b=>!b.classList.contains('flex-toggle')&&!b.classList.contains('flex-rail')).length,10);
 for(const name of ['general','chat','flock','agents','approvals','projects','activity','connectors','phone','about']){find('.settings-categories [data-key="'+name+'"]').click();assert.ok(find('.settings-content').children.length>1,'Settings '+name+' has content.');}
 find('.settings-categories [data-key="approvals"]').click();all('.settings-content button').find(b=>b.textContent==='Editar').click();type(find('.editor-content textarea'),'allow command "npm run build"\nallow command "npm test"');submitEditor();runTimers();
 assert.ok(find('.editor-content .diff-add'),'A policy change is reviewed as a diff.');submitEditor();assert.ok(P.settings.policies[0].text.includes('npm test'));

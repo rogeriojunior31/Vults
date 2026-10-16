@@ -85,6 +85,7 @@
     const searcher=search('Find a session…',q=>{views.sessionQuery=q;paintRows();remember();});searcher.querySelector('input').value=views.sessionQuery;
     const filter=segment([['All sessions','All'],['Needs you','Needs you'],['Working','Working'],['Quiet','Gone quiet']],value=>{views.sessionFilter=value;paintRows();remember();},views.sessionFilter);
     const rows=el('div','lab-rows');list.append(el('div','workspace-toolbar',null,filter,searcher),rows);
+    flexible(host,list,'flock-list',{def:380,min:260,max:560,label:'Sessions'});
     function matches(s){return (s.project+' '+labelFor(s.agent)).toLowerCase().includes(views.sessionQuery.toLowerCase())&&(views.sessionFilter==='All sessions'||views.sessionFilter==='Needs you'&&(facts.needs.includes(s)||s.status==='failed')||views.sessionFilter==='Working'&&facts.working.includes(s)||views.sessionFilter==='Quiet'&&(s.quiet||s.status==='idle'));}
     function paintRows(){
       rows.replaceChildren();const found=facts.ordered.filter(s=>!settings['hide-'+s.project]&&matches(s));
@@ -192,28 +193,39 @@
     ])),'task-more');
     actions.push(more);return actions;
   }
+  // One line that says where a task is, in the list's own words.
+  function taskLine(row){
+    const r=row.run;
+    if(row.status==='Done')return {tone:'done',shape:'done',text:L('Done')};
+    if(row.status==='Dropped')return {tone:'quiet',shape:'quiet',text:L('Dropped')};
+    if(row.review==='waiting')return {tone:'needs',shape:'needs',text:phrase('Your review · round {n}',{n:row.rounds.length})};
+    if(['approval','question'].includes(r?.status))return {tone:'needs',shape:'needs',text:phrase('Waiting for you · {command}',{command:r.step})};
+    if(row.status==='Blocked'||r?.status==='failed')return {tone:'failed',shape:'failed',text:row.checks.includes('failed')?L('A check failed'):L('Stopped')};
+    if(row.status==='Doing')return {tone:'working',shape:'working',text:phrase('Running · step {n}',{n:r?.step_count??1})};
+    return {tone:'quiet',shape:'quiet',text:L('Queued')};
+  }
   const TASK_GROUPS=[['needs','Needs you','needs'],['running','Running','working'],['queued','Queued','quiet'],['done','Finished','done']];
   function renderTasks(host){
-    host.classList.add('task-board');host.style.setProperty('--task-sidebar',(views.taskSidebarCollapsed?56:views.taskSidebar)+'px');
-    const side=el('aside','task-side'+(views.taskSidebarCollapsed?' collapsed':'')),handle=el('div','task-resize'),main=el('section','task-main');host.append(side,handle,main);
-    // The sidebar folds to a rail and its edge drags; arrows resize it from the keyboard too.
-    handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-label',L('Resize the task list'));handle.tabIndex=0;handle.setAttribute('aria-valuenow',String(views.taskSidebar));
-    const resize=width=>{views.taskSidebar=Math.max(220,Math.min(420,Math.round(width)));views.taskSidebarCollapsed=false;host.style.setProperty('--task-sidebar',views.taskSidebar+'px');handle.setAttribute('aria-valuenow',String(views.taskSidebar));};
-    handle.addEventListener('pointerdown',event=>{const start=event.clientX,from=views.taskSidebar;handle.setPointerCapture?.(event.pointerId);const move=e=>resize(from+e.clientX-start);const up=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);remember();};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);});
-    handle.addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault?.();resize(views.taskSidebar+(event.key==='ArrowRight'?20:-20));remember();}});
-    const fold=key(iconButton(views.taskSidebarCollapsed?'sideRight':'sideLeft',views.taskSidebarCollapsed?'Show the task list':'Fold the task list',()=>{views.taskSidebarCollapsed=!views.taskSidebarCollapsed;remember();setArea('tasks',state.mode);}),'task-fold');
+    host.classList.add('task-board');
+    const side=el('aside','task-side'),main=el('section','task-main');host.append(side,main);
     const add=key(button(null,'primary task-new',()=>editTask(),'New task'),'new-task');add.append(A.icon('plus',14),el('span',null,'New task'));
-    side.append(el('div','task-side-head',null,el('strong',null,'Tasks'),fold),add);
+    side.append(el('div','task-side-head',null,el('strong',null,'Tasks'),el('span','counter',null,document.createTextNode(String(tasks.filter(t=>!['Done','Dropped'].includes(t.status)).length)))),add);
+    const panel=flexible(host,side,'tasks',{def:300,min:220,max:460,rail:60,label:'Tasks',keep:true});
     if(stageState(main,'No tasks yet.',button('New task','quiet-control',()=>editTask())))return;
-    if(!views.taskSidebarCollapsed){const finder=search('Search tasks',value=>{views.taskQuery=value;paintList();remember();});finder.querySelector('input').value=views.taskQuery;side.append(finder);}
+    if(!panel.folded){const finder=search('Search tasks',value=>{views.taskQuery=value;paintList();remember();});finder.querySelector('input').value=views.taskQuery;side.append(finder);}
     const list=el('nav','task-groups');list.setAttribute('aria-label',L('Tasks'));side.append(list,el('p','task-budget counter',phrase('Today: ${spent} of ${budget}',{spent:'2.40',budget:Number(settings.dailyBudget).toFixed(2)})));
     function paintList(){
       list.replaceChildren();
       for(const [group,label,tone] of TASK_GROUPS){
         const rows=tasks.filter(t=>taskGroup(t)===group&&(L(t.title)+' '+t.repo).toLowerCase().includes(views.taskQuery.toLowerCase()));if(!rows.length)continue;
-        const section=el('section','task-group');section.append(el('h3',null,null,el('span','shape shape-'+tone),el('span','group-label',label),el('span','counter',null,document.createTextNode(String(rows.length)))));
-        rows.forEach(row=>{const b=key(button(null,'task-item',()=>{views.taskSelected=row.id;remember();setArea('tasks',state.mode);},row.title),row.id);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.setAttribute('data-tooltip',L(row.title));
-          b.append(el('span','agent-dot '+(AGENT_KIND[row.engine]??'other')),el('span','task-item-copy',null,el('strong',null,row.title),el('small',null,null,document.createTextNode([row.repo,row.engine||L('No owner yet')].join(' · ')))));section.append(b);});
+        const section=el('section','task-group tone-'+tone);section.append(el('h3',null,null,el('span','shape shape-'+tone),el('span','group-label',label),el('span','group-count counter',null,document.createTextNode(String(rows.length)))));
+        rows.forEach(row=>{
+          const line=taskLine(row),stage=taskStage(row);
+          const b=key(button(null,'task-item',()=>{views.taskSelected=row.id;remember();setArea('tasks',state.mode);},row.title),row.id);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);
+          const steps=el('span','task-steps');steps.setAttribute('aria-hidden','true');STAGES.forEach((_,i)=>steps.append(el('span',i<stage.at||stage.at===5?'done':i===stage.at?(stage.failed?'failed':stage.needs?'needs':'current'):'')));
+          b.append(el('span','task-avatar tone-'+line.tone,null,el('span','agent-dot '+(AGENT_KIND[row.engine]??'other'))),el('span','task-item-copy',null,el('strong',null,row.title),el('small','task-line tone-'+line.tone,null,el('span','shape shape-'+line.shape),el('span',null,null,document.createTextNode(line.text))),el('small',null,null,document.createTextNode([row.repo,row.engine||L('No owner yet')].join(' · '))),steps));
+          section.append(b);
+        });
         list.append(section);
       }
       if(!list.children.length)list.append(el('p','pane-note','Nothing here matches your search.'));

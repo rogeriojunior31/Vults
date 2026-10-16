@@ -4003,5 +4003,220 @@
     "Desvincular {issue}",
     "Desvincular {issue}",
     "取消关联 {issue}"
+  ],
+  "Good morning": [
+    "Bom dia",
+    "Buenos días",
+    "早上好"
+  ],
+  "Good afternoon": [
+    "Boa tarde",
+    "Buenas tardes",
+    "下午好"
+  ],
+  "Good evening": [
+    "Boa noite",
+    "Buenas noches",
+    "晚上好"
+  ],
+  "Good morning, {name}": [
+    "Bom dia, {name}",
+    "Buenos días, {name}",
+    "早上好，{name}"
+  ],
+  "Good afternoon, {name}": [
+    "Boa tarde, {name}",
+    "Buenas tardes, {name}",
+    "下午好，{name}"
+  ],
+  "Good evening, {name}": [
+    "Boa noite, {name}",
+    "Buenas noches, {name}",
+    "晚上好，{name}"
+  ],
+  "{project} is waiting for you and {failed}'s checks failed.": [
+    "{project} está esperando você e os checks de {failed} falharam.",
+    "{project} te está esperando y las comprobaciones de {failed} fallaron.",
+    "{project} 在等你，{failed} 的检查失败了。"
+  ],
+  "{project} is waiting for you.": [
+    "{project} está esperando você.",
+    "{project} te está esperando.",
+    "{project} 在等你。"
+  ],
+  "{project}'s checks failed.": [
+    "Os checks de {project} falharam.",
+    "Las comprobaciones de {project} fallaron.",
+    "{project} 的检查失败了。"
+  ],
+  "{n} agents are working. I am keeping an eye on them.": [
+    "{n} agentes estão trabalhando. Estou de olho neles.",
+    "{n} agentes están trabajando. Los estoy vigilando.",
+    "{n} 个代理正在工作，我在帮你盯着。"
+  ],
+  "The flock is quiet. What are we doing?": [
+    "O bando está quieto. O que vamos fazer?",
+    "La bandada está tranquila. ¿Qué hacemos?",
+    "鸟群很安静。我们做点什么？"
+  ],
+  "What does {project} want to run?": [
+    "O que {project} quer rodar?",
+    "¿Qué quiere ejecutar {project}?",
+    "{project} 想运行什么？"
+  ],
+  "Why did {project} fail?": [
+    "Por que {project} falhou?",
+    "¿Por qué falló {project}?",
+    "{project} 为什么失败？"
+  ],
+  "Resize {panel}": [
+    "Redimensionar {panel}",
+    "Cambiar el tamaño de {panel}",
+    "调整 {panel} 宽度"
+  ],
+  "Fold {panel}": [
+    "Recolher {panel}",
+    "Plegar {panel}",
+    "收起 {panel}"
+  ],
+  "Show {panel}": [
+    "Mostrar {panel}",
+    "Mostrar {panel}",
+    "展开 {panel}"
+  ],
+  "What changed today?": [
+    "O que mudou hoje?",
+    "¿Qué cambió hoy?",
+    "今天有什么变化？"
+  ],
+  "What do you want to remember?": [
+    "O que você quer lembrar?",
+    "¿Qué quieres recordar?",
+    "你想记住什么？"
+  ],
+  "Waiting for you · {command}": [
+    "Esperando você · {command}",
+    "Esperándote · {command}",
+    "等你处理 · {command}"
+  ],
+  "Your review · round {n}": [
+    "Sua revisão · rodada {n}",
+    "Tu revisión · ronda {n}",
+    "待你审查 · 第 {n} 轮"
+  ],
+  "A check failed": [
+    "Um check falhou",
+    "Una comprobación falló",
+    "有检查失败"
+  ],
+  "Running · step {n}": [
+    "Rodando · passo {n}",
+    "En curso · paso {n}",
+    "运行中 · 第 {n} 步"
+  ],
+  "Stopped": [
+    "Parada",
+    "Detenida",
+    "已停止"
+  ],
+  "Dropped": [
+    "Descartada",
+    "Descartada",
+    "已放弃"
+  ],
+  "Done": [
+    "Concluída",
+    "Terminada",
+    "已完成"
+  ],
+  "{project} is waiting for you: {agent} wants to run {command}.": [
+    "{project} está esperando você: {agent} quer rodar {command}.",
+    "{project} te está esperando: {agent} quiere ejecutar {command}.",
+    "{project} 在等你：{agent} 想运行 {command}。"
+  ],
+  "Why does {project} want to run {command}?": [
+    "Por que {project} quer rodar {command}?",
+    "¿Por qué {project} quiere ejecutar {command}?",
+    "{project} 为什么要运行 {command}？"
+  ],
+  "{project}'s checks failed. I can read the output with you.": [
+    "Os checks de {project} falharam. Posso ler a saída com você.",
+    "Las comprobaciones de {project} fallaron. Puedo leer la salida contigo.",
+    "{project} 的检查失败了。我可以和你一起看输出。"
+  ],
+  "noticed": [
+    "percebeu",
+    "notó",
+    "注意到"
+  ],
+  "Show me the card": [
+    "Mostre o card",
+    "Muéstrame la tarjeta",
+    "给我看卡片"
+  ],
+  "What is it for?": [
+    "Para que serve?",
+    "¿Para qué es?",
+    "这是做什么的？"
+  ],
+  "Read it with me": [
+    "Leia comigo",
+    "Léelo conmigo",
+    "和我一起看"
+  ],
+  "Open frontend's changes": [
+    "Abrir as mudanças do frontend",
+    "Abrir los cambios de frontend",
+    "打开 frontend 的更改"
+  ],
+  "Show Vults' card": [
+    "Mostrar o card do Vults",
+    "Mostrar la tarjeta de Vults",
+    "显示 Vults 的卡片"
+  ],
+  "List": [
+    "Lista",
+    "Lista",
+    "列表"
+  ],
+  "Sessions": [
+    "Sessões",
+    "Sesiones",
+    "会话"
+  ],
+  "Open its output": [
+    "Abrir a saída",
+    "Abrir su salida",
+    "打开它的输出"
+  ],
+  "Make it a task": [
+    "Virar uma tarefa",
+    "Convertir en tarea",
+    "转成任务"
+  ],
+  "{project} stopped at {command}: {output}": [
+    "{project} parou em {command}: {output}",
+    "{project} se detuvo en {command}: {output}",
+    "{project} 停在 {command}：{output}"
+  ],
+  "Tell me more": [
+    "Conte mais",
+    "Cuéntame más",
+    "再多说一点"
+  ],
+  "From memory: {fact}": [
+    "Da memória: {fact}",
+    "De la memoria: {fact}",
+    "来自记忆：{fact}"
+  ],
+  "Anytime. I am here.": [
+    "Sempre que precisar. Estou aqui.",
+    "Cuando quieras. Aquí estoy.",
+    "随时都在。"
+  ],
+  "failed at step {n}": [
+    "falhou no passo {n}",
+    "falló en el paso {n}",
+    "在第 {n} 步失败"
   ]
 }

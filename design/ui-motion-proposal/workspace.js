@@ -2,7 +2,7 @@
     rules:[{agent:'Codex',tool:'Bash',target:'npm run build',cwd:'~/Projects/Vults'},{agent:'Claude Code',tool:'Read',target:'docs/**',cwd:'~/Projects/docs'}],
     policies:[{id:'global',scope:'Every folder',text:'deny command "git push --force*"\nask class network\nallow tool Read'},{id:'vults',scope:'~/Projects/Vults',text:'allow command "npm run build"\nallow command "cargo test*"\nask class write outside "src/**"'}],
     keys:{anthropic:true,openrouter:true,openai:false}, githubSeen:{} };
-  const views = { taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'run', taskSidebar:280, taskSidebarCollapsed:false, skipped:[], showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
+  const views = { taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'run', panels:{}, skipped:[], showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
   // Sessions you opened in a terminal: the flock watches them.
   const sessions = [
     {id:'session-1',agent:'codex',project:'Vults',status:'approval',activity:'run',step:'npm run build',step_count:12,subagents:0,branch:'feat/compact-now',cost:0.42,steps:['Read docs/dev/plan-ui.md','Edit ui/src/island/now.ts','Edit ui/src/island/render.ts','Run npm run build']},
@@ -200,11 +200,14 @@
     return scene;
   }
   document.addEventListener('visibilitychange',()=> {for(const scene of activeScenes)scene.setActive(!document.hidden&&prefs.motion);});
+  // Empty chat: what Zeca suggests depends on the flock. A suggestion fills the draft, it never sends.
   function paintSuggestions() {
     const suggestions=$('.room-suggestions');suggestions.replaceChildren();
-    suggestions.hidden=state.mode==='quick'||state.mode==='mini'||state.messages.length>0||state.busy;
-    if(!suggestions.hidden)suggestions.append(el('p','suggest-title','Ask about your agents, your projects or anything on your desktop.'));
-    if(!suggestions.hidden) ['What changed recently?','Why did the api tests fail?','What is waiting for me?'].forEach(word=>suggestions.append(button(word,'',()=> {input.value=L(word);input.dispatchEvent(new Event('input'));input.focus();})));
+    suggestions.hidden=state.mode==='mini'||state.messages.length>0||state.busy||!settings.zeca;
+    if(suggestions.hidden)return;
+    const room=state.mode!=='quick';
+    if(room)suggestions.append(el('p','suggest-title','Ask about your agents, your projects or anything on your desktop.'));
+    companionSuggestions().slice(0,room?4:2).forEach(c=>suggestions.append(key(button(c.label,'',()=>{if(c.go){c.go();return;}input.value=L(c.send);input.dispatchEvent(new Event('input'));input.focus();}),c.id)));
   }
   function stageState(host,emptyTitle,emptyAction) {
     if(!['empty','loading','error'].includes(state.scenario))return false;
@@ -260,6 +263,7 @@
     const list=el('div','recent-list');host.append(list);
     function paintList(){list.replaceChildren();const found=conversations.filter(c=>L(c.title).toLowerCase().includes(views.recentQuery.toLowerCase()));if(found.length)list.append(el('small','menu-group','Today'));found.forEach(c=>list.append(conversationRow(c)));if(!found.length)list.append(el('p','pane-note','Nothing here matches your search.'));}
     paintList();
+    if(['room','full'].includes(state.mode))flexible($('.chat-shell'),host,'recent',{def:220,min:160,max:380,label:'Conversations'});
   }
   function newConversation() {
     if(state.busy){toast('Stop the current turn first.');return;}
@@ -291,6 +295,39 @@
   function openSettings(category){if(category)state.category=category;setArea('settings',state.mode==='full'?'full':'room');}
   function openMemory(){state.memoryPanel=true;views.memoryTab=memory.pending.length?'Waiting for you':'What Zeca remembers';setArea('chat',state.mode==='full'?'full':'room');}
   function toggleMemoryPanel(force){state.memoryPanel=force??!state.memoryPanel;paintMemoryPanel();remember();}
+  /* Every side panel in the Lab is flexible: drag its edge (or use the arrow keys on it), double-click to
+     reset, or fold it to a rail. Widths are kept per panel. */
+  function flexible(container,panel,id,{side='left',min=180,max=480,def=280,rail:railSize=44,label='Panel',keep=false}={}){
+    if(typeof views.panels!=='object'||!views.panels)views.panels={};
+    const p=views.panels[id]??={w:def,folded:false};
+    for(const old of [...panel.children])if(old.classList.contains('flex-handle')||old.classList.contains('flex-rail'))old.remove();
+    panel.classList.add('flexible','flex-'+side);panel.classList.toggle('flex-keep',keep);
+    const handle=el('div','flex-handle');handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-label',phrase('Resize {panel}',{panel:L(label)}));handle.setAttribute('aria-valuemin',String(min));handle.setAttribute('aria-valuemax',String(max));handle.tabIndex=0;
+    const toggle=key(button(null,'flex-toggle',()=>{p.folded=!p.folded;apply();remember();}),'fold-'+id);
+    const rail=key(button(null,'flex-rail',()=>{p.folded=false;apply();remember();}),'rail-'+id);rail.append(A.icon(side==='left'?'sideRight':'sideLeft',14),el('span',null,label));
+    handle.append(toggle);panel.append(handle,...(keep?[]:[rail]));
+    function apply(){
+      container.style.setProperty('--'+id+'-w',(p.folded?railSize:p.w)+'px');panel.classList.toggle('folded',p.folded);handle.setAttribute('aria-valuenow',String(p.w));
+      const name=p.folded?phrase('Show {panel}',{panel:L(label)}):phrase('Fold {panel}',{panel:L(label)});toggle.setAttribute('aria-label',name);toggle.setAttribute('data-tooltip',name);
+      // The arrow points where the panel will go.
+      toggle.replaceChildren(A.icon('chevron',12));toggle.classList.toggle('flip',p.folded!==(side==='left'));
+    }
+    const resize=width=>{p.w=Math.max(min,Math.min(max,Math.round(width)));p.folded=false;apply();};
+    handle.addEventListener('pointerdown',event=>{
+      if(event.target!==handle)return;
+      const start=event.clientX,from=p.w;handle.setPointerCapture?.(event.pointerId);handle.classList.add('dragging');
+      const move=e=>resize(from+(e.clientX-start)*(side==='left'?1:-1));
+      const up=()=>{handle.classList.remove('dragging');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);remember();};
+      handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);
+    });
+    handle.addEventListener('keydown',event=>{
+      if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault?.();resize(p.w+((event.key==='ArrowRight')===(side==='left')?20:-20));remember();}
+      if(event.key==='Enter'&&event.target===handle){p.folded=!p.folded;apply();remember();}
+    });
+    handle.addEventListener('dblclick',()=>{p.w=def;p.folded=false;apply();remember();});
+    apply();
+    return p;
+  }
   /* MODULES */
   const SCREEN_REVIEW=[
     {id:'island',label:'Island',open:()=>setMode('mini'),scope:'See only: badges by shape, the pulse, usage hairlines. A click opens Compact.'},
@@ -388,7 +425,7 @@
     paintNeedsStrip();
     if(mini)renderIsland($('.mini-strip'));
     else if(chat){
-      paintRecent();paintConversation();paintMemoryPanel();log.scrollTop=views.chatScroll;mic.hidden=!settings.voice;
+      companionNotes();paintRecent();paintConversation();paintMemoryPanel();log.scrollTop=views.chatScroll;mic.hidden=!settings.voice;
       if(state.scenario==='error')log.prepend(el('div','pane-note state-error','Could not update this view.'),button('Try again','quiet-control',()=> {state.scenario='ready';setArea('chat',state.mode);}));
     }
     else if(mode==='quick'&&area==='flock')renderCompactFlock(workspace);

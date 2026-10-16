@@ -520,6 +520,17 @@
    "expect": ".detail-tabs"
   },
   {
+   "id": "lab-flexible",
+   "area": "Lab",
+   "feature": "Every side panel resizes, resets on double-click and folds to a rail",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".flexible .flex-handle"
+  },
+  {
    "id": "lab-diff",
    "area": "Lab",
    "feature": "Diff reader: steps, files, totals, open the file at its change",
@@ -570,13 +581,13 @@
   {
    "id": "tasks-sidebar",
    "area": "Tasks",
-   "feature": "A task list that folds to a rail and resizes",
+   "feature": "A task list that folds to a rail and resizes; each row says where its task is",
    "status": "new",
    "at": {
     "mode": "room",
     "area": "tasks"
    },
-   "expect": ".task-resize"
+   "expect": ".task-side .flex-handle"
   },
   {
    "id": "tasks-timeline",
@@ -934,6 +945,65 @@
     "example": "notification"
    },
    "expect": ".notice-open"
+  },
+  {
+   "id": "zeca-greeting",
+   "area": "Zeca",
+   "feature": "Zeca greets by the time of day and says what the flock needs",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": ".intro-caption"
+  },
+  {
+   "id": "zeca-suggestions",
+   "area": "Zeca",
+   "feature": "Suggestions follow the flock (a card waiting, a failure, the day)",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": "[data-key=\"s-card\"]"
+  },
+  {
+   "id": "zeca-notes",
+   "area": "Zeca",
+   "feature": "Zeca notices what needs you and says it in the conversation",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "conversation"
+   },
+   "expect": ".zeca-note"
+  },
+  {
+   "id": "zeca-followups",
+   "area": "Zeca",
+   "feature": "Follow-ups under each reply: open, ask, make it a task",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "conversation"
+   },
+   "expect": ".reply-chips"
+  },
+  {
+   "id": "zeca-moods",
+   "area": "Zeca",
+   "feature": "Zeca listens while you type, searches, thinks, speaks, waits with you on a card",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".portrait canvas"
   },
   {
    "id": "memory-panel",

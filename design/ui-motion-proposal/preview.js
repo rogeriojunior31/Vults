@@ -72,8 +72,20 @@
   scene.canvas.setAttribute('aria-hidden','true'); $('.portrait').append(scene.canvas);
   // A paused scene still needs one drawn frame, so reduced motion shows the birds standing still.
   function still(target){ if (!prefs.motion) window.setTimeout(() => target.setActive(false),60); }
+  /* Zeca is a companion: his clip follows the conversation (listening while you type, searching while a
+     tool runs, thinking, speaking as the reply lands, waiting with you on a card). */
+  let moodTimer, typingTimer;
+  const waitingCard = () => state.messages.some(m=>m.who==='card'&&!m.answer);
+  function zecaClip() {
+    if (state.mood) return state.mood;
+    if (state.busy) return state.toolPhase?'search':'think';
+    if (state.voice||state.typing) return 'listen';
+    if (waitingCard()) return 'approval';
+    return 'idle';
+  }
+  function zecaDo(clip,ms=1400) { clearTimeout(moodTimer); state.mood=clip; paintBird(); moodTimer=window.setTimeout(()=>{ state.mood=null; paintBird(); },ms); }
   function paintBird(clip) {
-    scene.update([],null,{ clip:clip ?? (state.busy?'think':state.voice?'listen':'idle'),agent:engineInfo().agent });
+    scene.update([],null,{ clip:clip ?? zecaClip(),agent:engineInfo().agent });
     scene.setActive(settings.zeca && state.area==='chat' && state.mode!=='mini' && !windowEl.classList.contains('very-short') && !(windowEl.classList.contains('workspace')&&windowEl.classList.contains('tight')) && !document.hidden);
     still(scene);
   }
@@ -109,7 +121,7 @@
   $('.context-folder').append(A.icon('folder',12),button('Vults','folder-trigger',() => openFolder(),'Folder for this conversation'),A.icon('chevronDown',10));
   $('.context-access').append(A.icon('person',12),button('Asks first','access-trigger',() => openAccess(),"Who answers Zeca's cards"));
   input.placeholder=L('Ask Zeca… / for commands, @ for a session'); input.setAttribute('aria-label',L('Message'));
-  input.addEventListener('input',() => { input.style.height='auto'; input.style.height=Math.min(state.mode==='quick'?90:220,input.scrollHeight)+'px'; paintSend(); paintCommands(); remember(); });
+  input.addEventListener('input',() => { if (input.value.trim()&&(!state.typing||state.mood)) { state.typing=true; state.mood=null; clearTimeout(moodTimer); paintBird(); } clearTimeout(typingTimer); typingTimer=window.setTimeout(()=>{ state.typing=false; paintBird(); },1500); input.style.height='auto'; input.style.height=Math.min(state.mode==='quick'?90:220,input.scrollHeight)+'px'; paintSend(); paintCommands(); remember(); });
   input.addEventListener('keydown',event => {
     if (event.isComposing || event.keyCode===229) return;
     if (!commands.hidden && ['ArrowDown','ArrowUp','Enter','Tab','Escape'].includes(event.key)) { commandKey(event); return; }
@@ -141,16 +153,21 @@
     const readingTop=log.scrollTop;
     chatEl.classList.toggle('populated',state.messages.length>0||state.busy);
     const title=$('.intro-copy h2'), caption=$('.intro-caption');
-    title.textContent=state.messages.length||state.busy?'Zeca':L('Ask Zeca');
-    caption.textContent=state.messages.length||state.busy?phrase('{engine} · {folder}',{engine:engineInfo().name,folder:settings.chatFolder}):L('Your agents and your projects, one conversation away.');
+    title.textContent=state.messages.length||state.busy?'Zeca':greeting();
+    caption.textContent=state.messages.length||state.busy?phrase('{engine} · {folder}',{engine:engineInfo().name,folder:settings.chatFolder}):flockLine();
     log.replaceChildren();
+    // Follow-ups stay on the latest reply, even when a note from Zeca came after it.
+    const lastReply=state.messages.map((m,i)=>m.who==='zeca'&&!m.note?i:-1).reduce((a,b)=>Math.max(a,b),-1);
     state.messages.forEach((m,index) => {
       if (m.who==='you') { log.append(el('div','message you',m.text)); return; }
       if (m.who==='card') { log.append(chatCard(m)); return; }
+      if (m.note) { log.append(noteBubble(m,index)); return; }
       if (m.tools!==false) log.append(replyTools(m));
       const reply=el('div','message reply',null,el('div','message-signature',null,el('span','agent-dot '+engineInfo().agent),el('span',null,'Zeca'),el('small',null,raw(m.model??modelLabel()))),el('p',null,m.text));
       if (m.list) { const list=el('ul'); m.list.forEach(text => list.append(el('li',null,text))); reply.append(list); }
       if (m.link) reply.append(el('div','inline-actions',null,button(m.link.label,'quiet-control',m.link.action)));
+      if (m.memory) { const fact=memory.facts.find(f=>f.id===m.memory); if (fact) reply.append(button(null,'memory-note',()=>openMemory()));reply.querySelector('.memory-note')?.append(A.icon('sideRight',11),el('span',null,phrase('From memory: {fact}',{fact:L(fact.text)}))); }
+      if (m.chips&&index===lastReply&&!state.busy) reply.append(el('div','reply-chips',null,...m.chips.map(c=>key(button(c.label,'reply-chip',()=>followUp(c)),'chip-'+c.id))));
       const tools=el('div','message-tools',null,button('Copy','',() => copyText(m.text)));
       if (index===state.messages.length-1) tools.append(button('Try again','',() => retry()));
       reply.append(tools); log.append(reply);
@@ -299,7 +316,7 @@
     state.voice=false; input.hidden=false; $('.voice-preview').hidden=true; mic.setAttribute('aria-pressed','false');
     state.example=example; state.busy=example==='thinking'; state.notice=example==='notification'; state.queued=[];
     state.messages=['conversation','thinking','notification'].includes(example)?[{who:'you',text:sampleQuestion()}]:[];
-    if (example==='conversation'||example==='notification') state.messages.push(SAMPLE_REPLY());
+    if (example==='conversation'||example==='notification') { state.messages.push(SAMPLE_REPLY()); noticed.clear(); companionNotes(); }
     if (example==='permission'||example==='outside') {
       const outside=example==='outside';
       state.messages=[{who:'you',text:outside?'Install the linter the docs page recommends':'Show me the last commits in Vults'},
@@ -312,15 +329,54 @@
     if (example==='models') toggleModels(true);
     remember();
   }
-  const SAMPLE_REPLY = () => ({who:'zeca',text:'Two sessions changed files in the last hour.',list:['frontend (Claude Code) edited ui/src/chat.ts: the reply keeps its scroll while it streams.','Vults (Codex) added the Now inbox and is waiting to run the build.'],tools:[toolRow('flock_list','','6 sessions'),toolRow('session_detail','"frontend"','8 steps, 1 subagent'),toolRow('session_detail','"Vults"','waiting for permission')],seconds:'0.6'});
+  const SAMPLE_REPLY = () => ({who:'zeca',chips:[{id:'diff',label:"Open frontend's changes",go:()=>{views.sessionSelected='session-2';views.flockDetail='diff';setArea('flock','room');}},{id:'card',label:"Show Vults' card",go:()=>{views.sessionSelected='session-1';setArea('flock',state.mode==='quick'?'quick':'room');}}],text:'Two sessions changed files in the last hour.',list:['frontend (Claude Code) edited ui/src/chat.ts: the reply keeps its scroll while it streams.','Vults (Codex) added the Now inbox and is waiting to run the build.'],tools:[toolRow('flock_list','','6 sessions'),toolRow('session_detail','"frontend"','8 steps, 1 subagent'),toolRow('session_detail','"Vults"','waiting for permission')],seconds:'0.6'});
   function chatCard(m) {
     const card=requestCard({id:m.id,agent:'zeca',project:'Vults',step:m.command,cwd:m.cwd,tool:m.tool,status:'approval',outside:m.outside,chat:true},'chat',answer => {
-      m.answer=answer;
+      m.answer=answer; zecaDo(answer==='Denied'?'preen':'done',1400);
       if (answer!=='Denied') state.messages.push({who:'zeca',text:m.outside?'Installed. The script added lint-pro to your PATH.':'The last five commits are on feat/compact-now; the newest adds the Now inbox.',tools:[toolRow('bash','"'+m.command+'"',m.outside?'exit 0':'5 lines')],seconds:'0.2'});
       paintConversation();remember();
     });
     if (m.answer) return el('div','card-outcome',null,A.icon(m.answer==='Denied'?'close':'check',13),el('span',null,phrase('{answer}: {command}',{answer:L(m.answer),command:m.command})));
     return card;
+  }
+  // Zeca speaks first when something in the flock is worth your time; each event once.
+  function noteBubble(m,index) {
+    const bubble=el('div','zeca-note',null,el('div','message-signature',null,el('span','agent-dot zeca'),el('span',null,'Zeca'),el('small',null,'noticed')),el('p',null,m.text));
+    if (m.chips) bubble.append(el('div','reply-chips',null,...m.chips.map(c=>key(button(c.label,'reply-chip',()=>followUp(c)),'chip-'+c.id))));
+    return bubble;
+  }
+  const noticed=new Set();
+  function companionNotes() {
+    if (!settings.zeca||!state.messages.length) return;
+    const f=flockFacts(),notes=[];
+    for (const s of f.needs) notes.push({key:'needs:'+s.id+':'+s.step,text:phrase('{project} is waiting for you: {agent} wants to run {command}.',{project:s.project,agent:labelFor(s.agent),command:s.step}),chips:[{id:'card-'+s.id,label:'Show me the card',go:()=>{views.sessionSelected=s.id;setArea('flock',state.mode==='quick'?'quick':'room');}},{id:'why-'+s.id,label:'What is it for?',send:phrase('Why does {project} want to run {command}?',{project:s.project,command:s.step})}]});
+    for (const s of f.failed) notes.push({key:'failed:'+s.id,text:phrase('{project}\'s checks failed. I can read the output with you.',{project:s.project}),chips:[{id:'fail-'+s.id,label:'Read it with me',send:phrase('Why did {project} fail?',{project:s.project})}]});
+    for (const n of notes) if (!noticed.has(n.key)) { noticed.add(n.key); state.messages.push({who:'zeca',note:true,text:n.text,chips:n.chips}); }
+  }
+  function followUp(c) {
+    if (c.go) { c.go(); return; }
+    input.value=L(c.send); input.dispatchEvent(new Event('input')); submit();
+  }
+  function greeting() {
+    const hour=new Date().getHours(),part=hour<5?'Good evening':hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+    return settings.firstName?phrase(part+', {name}',{name:settings.firstName}):L(part);
+  }
+  function flockLine() {
+    const f=flockFacts();
+    if (f.needs.length&&f.failed.length) return phrase('{project} is waiting for you and {failed}\'s checks failed.',{project:f.needs[0].project,failed:f.failed[0].project});
+    if (f.needs.length) return phrase('{project} is waiting for you.',{project:f.needs[0].project});
+    if (f.failed.length) return phrase('{project}\'s checks failed.',{project:f.failed[0].project});
+    if (f.working.length) return phrase('{n} agents are working. I am keeping an eye on them.',{n:f.working.length});
+    return L('The flock is quiet. What are we doing?');
+  }
+  // Suggestions follow the flock: a card waiting, a failure, then the day.
+  function companionSuggestions() {
+    const f=flockFacts(),out=[];
+    if (f.needs[0]) out.push({id:'s-card',label:phrase('What does {project} want to run?',{project:f.needs[0].project}),send:phrase('What does {project} want to run?',{project:f.needs[0].project})});
+    if (f.failed[0]) out.push({id:'s-fail',label:phrase('Why did {project} fail?',{project:f.failed[0].project}),send:phrase('Why did {project} fail?',{project:f.failed[0].project})});
+    out.push({id:'s-day',label:'What changed today?',send:'What changed today?'});
+    if (memory.pending.length) out.push({id:'s-memory',label:'What do you want to remember?',go:()=>openMemory()});
+    return out;
   }
   let replyTimer;
   function retry() {
@@ -340,9 +396,13 @@
     state.messages.push({who:'you',text:raw((text||L('Here is a file'))+files)}); state.lastSent=text; state.busy=true;
     input.value=''; input.style.height='auto'; state.files=[]; paintFiles(); paintConversation();log.scrollTop=log.scrollHeight;
     const reply=commandReply(text);
+    if (/\b(thanks|thank you|obrigad|gracias|valeu)/i.test(text)) { reply.text='Anytime. I am here.'; reply.tools=false; reply.thanks=true; }
+    state.toolPhase=reply.tools!==false; paintBird();
+    window.setTimeout(()=>{ state.toolPhase=false; if (state.busy) paintBird(); },700);
     replyTimer=window.setTimeout(() => {
       const top=log.scrollTop, follow=log.scrollHeight-log.scrollTop-log.clientHeight<40 && Date.now()-lastManualScroll>=150;
       state.busy=false; state.messages.push(reply); paintConversation();enter(log.lastElementChild,'gentle');log.scrollTop=follow?log.scrollHeight:top;
+      zecaDo(reply.thanks?'dance':'speak',reply.thanks?2200:1600);
       if (state.queued.length) { input.value=state.queued.shift(); submit(); }
       remember();
     },1400);
@@ -356,7 +416,9 @@
     if (name==='/remember'&&arg) { memory.facts.push({id:'fact-'+Date.now(),place:settings.chatFolder,text:raw(arg)}); return {who:'zeca',text:phrase('Remembered for {place}.',{place:settings.chatFolder}),tools:false,link:{label:'Open Memory',action:() => openMemory()}}; }
     if (name==='/forget'&&arg) { const before=memory.facts.length; memory.facts=memory.facts.filter(f=>!L(f.text).toLowerCase().includes(arg.toLowerCase())); return {who:'zeca',text:before>memory.facts.length?'Forgotten.':'Nothing in memory matches that.',tools:false}; }
     if (/@\w+/.test(text)) { const s=sessions.find(s=>text.includes('@'+s.project)); if (s) return {who:'zeca',text:phrase('{project} ({agent}): {brief}.',{project:s.project,agent:labelFor(s.agent),brief:L(sessionBrief(s))}),tools:[toolRow('session_detail','"'+s.project+'"',raw(L(sessionBrief(s))))],seconds:'0.2'}; }
-    return {who:'zeca',text:'This prototype answers with sample data. In the app, Zeca reads the flock, your memory and the connectors he may use.',seconds:'0.4'};
+    const failed=sessions.find(s=>s.status==='failed'&&text.includes(s.project));
+    if (failed) return {who:'zeca',text:phrase('{project} stopped at {command}: {output}',{project:failed.project,command:failed.step,output:failed.output.split('\n').pop()}),tools:[toolRow('session_detail','"'+failed.project+'"',phrase('failed at step {n}',{n:failed.step_count}))],seconds:'0.5',chips:[{id:'f-open',label:'Open its output',go:()=>{views.sessionSelected=failed.id;views.flockDetail='activity';setArea('flock','room');}},{id:'f-task',label:'Make it a task',send:'/task Fix '+failed.step+' in '+failed.project}]};
+    return {who:'zeca',text:'This prototype answers with sample data. In the app, Zeca reads the flock, your memory and the connectors he may use.',seconds:'0.4',memory:'fact-1',chips:[{id:'more',label:'Tell me more',send:'Tell me more'}]};
   }
   let noticeAnimation;
   function paintNotice() {
