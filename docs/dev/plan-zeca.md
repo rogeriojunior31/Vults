@@ -5,11 +5,95 @@ first, then the decisions and guarantees that hold, then an index of every finis
 are never reused; code comments cite them as `plan-zeca <ID>`, so a finished id stays in **Done**.
 Agent coverage has its own board, [plan-every-agent.md](plan-every-agent.md).
 
-0.2.0 is tagged after the R3 smoke; everything else ships as 0.2.x
+0.2.0 is tagged when N2 is done, after the R3 smoke; one release per stage of the
+[order of work](#order-of-work-2026-10-16), 0.2.x after it
 ([ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md), amended by
 [0021](../adr/0021-four-sizes-one-nest.md)). Linux first; Android is the one exception.
 
 ## Left to do
+
+### Order of work (2026-10-16)
+
+Set by the user on 2026-10-16. The UI prototype (`design/ui-motion-proposal` on
+`design/prototype-visual-pass`) is the target for every page; each stage starts when the one
+before it is accepted. Every section below this one keeps its rows; the stage column says when
+they are taken.
+
+| Stage | Release | What | Rows it takes | Done when |
+| --- | --- | --- | --- | --- |
+| N0 | 0.1.9 | Tasks leave Vults completely | W3, W4, W5, W6, W8 removed; W7 and W9 kept | No `/task`, `/delegate`, Tasks tab, run, review or router code left; `/continue` and the day's spend still work |
+| N1 | 0.1.9 | Pages and theme as the prototype draws them | UX6's desktop matrix, the frame and the pages Chat and Flock do not own | Each page matches the prototype side by side at 480, 760 and 1180 px, in light and dark |
+| N2 | 0.2.0 | Flock and Chat working, UI and backend | The prototype's `new` Flock, Lab, Chat and Zeca features | Every one of them is `shipped` in `features.json`, with native evidence |
+| N3 | 0.2.1 | Dictation | V0 to V8 ([plan-dictation.md](plan-dictation.md)), with Z6, M7 and K8 brought in where a phase needs them | Each phase's own criterion |
+| N4 | 0.2.2 | The rest of the roadmap, refined against the new UI | UX7 to UX12, Zeca proactive, the Flock board, Mobile, More agents, Follow-ups, Later | Each row's own criterion |
+
+**Releases** (set by the user on 2026-10-16): one release per stage, tagged after its R3 smoke.
+N0 and N1 ship together as 0.1.9, N2 is 0.2.0, then N3 is 0.2.1 and N4 is 0.2.2. A fix needed
+between two stages is the next patch, and the stages after it move up by one.
+
+#### N0 Remove Tasks
+
+Tasks (W3) and what only they use go: runs in their own clone (W4), the handoff through a
+context pack (W5), the review loop (W6), the router behind `/delegate` (W8). The shipped
+migrations 14 to 20 are never edited; their tables stay and are no longer read, and a later
+migration may drop them after a release. One PR per slice, each passing the full CI.
+
+| # | Slice | Removes | Keeps |
+| --- | --- | --- | --- |
+| N0.1 | ADR | A new ADR: Tasks leave Vults, and 0.2.0 moves from wave 4 to N2; it amends 0018, 0020 and 0021 (Surfaces, D7, D8, the R3 smoke) | — |
+| N0.2 | Surfaces | The Nest's Tasks tab (`surfaces/nest/tasks.ts`, its CSS, `budget.ts` moved), `/task` and `/delegate` in the chat and the palette, "Open Tasks", their strings in the three languages, `scripts/check-task-actions.mjs` and its CI step | The day's spend and its budget: the figures in Activity › Cost, the value in Settings |
+| N0.3 | App | `app/src/tasks.rs`, the `task_*` commands, `runs.rs`' task start, fresh start, stop, review and worktree removal, `tasks-changed` | `/continue` (W7, `handoff.rs`): its driver code moves out of `runs.rs` into its own module; D8 still stops only what Vults started |
+| N0.4 | Crates | `store::tasks` readers and writers, `zeca::router`, `zeca::review` and the review evals | The migrations; spend rows already written as `task:N` stay readable |
+| N0.5 | Protocol and core | `VULTS_TASK` and the take-off it drives in `core::view`, with the protocol note it needs | `VULTS_ZECA` and the driver's own channel for `/continue` |
+| N0.6 | Docs | `guide/tasks.md` (and pt-BR), the Tasks parts of the Nest, Chat, Island, Activity, Approvals and Other agents guides, the settings and protocol reference, `site.json` | The GitHub issue template named Task (it is about issues, not the feature) |
+
+Done when `rg -i '\btasks?\b'` finds only the kept items above, async tasks and the shipped
+migrations, and the desktop shows the Nest with Flock, Chat, Connections and Activity.
+
+#### N1 Pages and theme
+
+The prototype's rule: one shared frame (controls, page header, states), each tab with its own
+layout, color only for status. Chat and Flock (Compact and Lab) keep their current look and are
+not reworked here; N1 changes their frame only.
+
+| # | Slice | From the prototype |
+| --- | --- | --- |
+| N1.1 | Theme and frame | Tokens and type scale into `DESIGN.md` and the UI; the page header with one filled action; figure tiles, cards, selects with the app's chevron; empty, loading and read-error states; side panels that resize, reset on double-click and fold to a rail (`lab-flexible`) |
+| N1.2 | Activity | The week as a dashboard: figures against last week, turns by agent, record cards, a labelled year; Cost holds the spend that left the Tasks tab |
+| N1.3 | Connections | A triage inbox: repo marks, check bars, a strong detail header, diff bar, checks in view; one filled action; Refresh on the sync line |
+| N1.4 | Settings | Groups as cards, categories with icons and a larger title; Settings owns every value, Activity every figure |
+| N1.5 | Acceptance | UX6's [desktop matrix](plan-ui.md#ux6-final-desktop-acceptance), then each page side by side with the prototype |
+
+#### N2 Flock and Chat
+
+Each item ships with its real source of state; a mocked value in the prototype becomes a read in
+`core` or `app`, or the item waits. Rules do not move: a card is answered only by a click, a rule
+or a policy, and no preset leaves a card unseen (D5).
+
+| # | Item | Prototype id | Backend it needs |
+| --- | --- | --- | --- |
+| N2.1 | Skip a card for now; the Needs you strip folds when nothing is left | `card-skip`, `needs-skip` | A `Skip` intent in `core` that reorders and never answers; the rule-2 test |
+| N2.2 | Now: one inbox for everything that asks for an action | `now-inbox` | One `Attention` list in the `ViewModel` (D3) |
+| N2.3 | An idle bird stays green 30 s, then circles in the island's sky | `island-sky` | Idle time per session in `core` |
+| N2.4 | The Lab session: overview (running time, cost, context used, recent steps, changed files), rows with agent, step and minutes and a context line, bird names on the wire, status chips over the list | Lab › Flock | Context use and running time per session from the agents' own records; changed files from the step diffs |
+| N2.5 | Plan usage ring on the model | `chat-usage` | The plan windows Vults already reads, per provider |
+| N2.6 | `@` a session or project in the chat | `chat-mentions` | Zeca's flock reads, scoped to what was named |
+| N2.7 | The dense Lab chat | `chat-lab-dense` | — |
+| N2.8 | Zeca greets by the time of day, suggestions follow the flock, follow-ups under each reply | `zeca-greeting`, `zeca-suggestions`, `zeca-followups` | Rules in `core` for what is offered; none is an unasked line (K1) |
+| N2.9 | Zeca's moods while you type, search, think, speak and wait on a card | `zeca-moods` | The chat's turn states; K7's flock mood stays in N4 |
+
+#### N3 Dictation
+
+The phases of [plan-dictation.md](plan-dictation.md), in this order: V0 (its open R and Q
+answered first), V1, V2, V4, V8, V3 (after Z6), V5, V7 (after M7), V6 (= K8). The Dictation tab,
+Settings › Dictation and Activity › Dictation land on the N1 frame.
+
+#### N4 The rest
+
+Taken in the order of the sections below, each redrawn on the new UI before it lands: UX7 to
+UX12, Zeca proactive (without K8), the Flock board, Mobile, More agents, Follow-ups and Later.
+Two prototype items wait here: the Connections face for Zeca (`conn-face-zeca`) and the card's
+risk line (`card-risk`, K3).
 
 ### UI delivery sequence
 
@@ -54,20 +138,20 @@ independent.
 | --- | --- | --- |
 | UX6 | Implementation and automated continuity integration complete | Final desktop PR acceptance; B05 |
 | UX7 | Shared wider Mini/Quick extension | UX6; reconcile ADR 0021, display scale and fixed-overlay/input-region limits |
-| UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged; preserve TaskRow/run/review and current session pipeline |
+| UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged, after N0; built on the current session pipeline |
 | UX9 | Studio skill library/import/reimport and verified tool connections | New feature after UX8; native storage and reviewed configuration contracts |
 | UX10 | Scoped investigations, retained evidence and implementation/review handoff | Later feature; one verified route before engine expansion |
 | UX11 | Debrief, risk/batches/questions, routines, proposals, moods/voice/ACP and observed-cost views | Alongside K1-K8/K10, M7, W2/W9b and the original Flock board |
-| UX12 | Registry-backed agent support and Android permission/task/service views | Alongside Every agent and L3-L5; G1/G2 remain proposed |
+| UX12 | Registry-backed agent support and Android permission/service views | Alongside Every agent and L3-L5; G1/G2 remain proposed |
 
 Check the review's findings against the current head in the running application.
 Mocked features and synthetic runs are references, not native completion evidence.
 
-### 0.2.0 gate
+### Release gate
 
 - [ ] **R3 smoke** in the real app, by a person at the desktop: the island, a card, the chat, voice,
-  GitHub, and the Nest with a task, its run and its review, on the Living Flock UI.
-- [ ] **Tag 0.2.0** ([releasing.md](releasing.md)).
+  GitHub, and the Nest, on the Living Flock UI as refined by N1 (Tasks left in N0).
+- [ ] **Tag** the stage's release: 0.1.9 after N1, 0.2.0 after N2 ([releasing.md](releasing.md)).
 
 ### Flock board
 
@@ -103,11 +187,11 @@ card), #27 `nomes` (species names in the four languages), #46 `som` (hisses and 
 | # | Step | Needs | Done when |
 |---|---|---|---|
 | K1 | Attention engine for his lines: now, debrief or never; at most 4 unasked lines an hour; silent in full screen or focus; presence from the screen lock. Never delays or hides a card | S3 | A `core` test: with the budget spent, a card still opens the island (ADR 0021, D5) |
-| K2 | Debrief on return and the day's opening: the away digest (C5), tasks and memory, written by Zeca, in Quick's reserved slot (U6) | K1, M4, W3 | The debrief is opened on most returns |
+| K2 | Debrief on return and the day's opening: the away digest (C5) and memory, written by Zeca, in Quick's reserved slot (U6) | K1, M4 | The debrief is opened on most returns |
 | K3 | Card explanation: a risk line and an out-of-scope warning per permission; obvious reads approved in a batch, always with a click | Z6, W1 | Average time a card waits goes down |
-| K4 | Routines: morning brief, nightly CI, dependencies, watching a page (each through the gate, ADR 0019) | G9, W3 | A routine made in the chat, editable in the Nest |
+| K4 | Routines: morning brief, nightly CI, dependencies, watching a page (each through the gate, ADR 0019) | G9 | A routine made in the chat, editable in the Nest |
 | K5 | Learning from the flock: a command denied 3 times, a correction repeated to agents, the same CI step failing → a roost proposal or an `AGENTS.md` diff | M6, M9 | At least one useful proposal per week of use |
-| K6 | Skills in the `SKILL.md` format; writing to `~/.claude/skills` follows rule 3 | M6 | A skill Zeca wrote used by Claude in a task |
+| K6 | Skills in the `SKILL.md` format; writing to `~/.claude/skills` follows rule 3 | M6 | A skill Zeca wrote used by Claude in a session |
 | K7 | Mood from the flock (calm, alert, worried, celebrating) drives animation and tone; he looks at the bird he talks about | K1 | A running-app review per mood |
 | K8 | Voice on the same brain: an opt-in realtime model (replaces C9), open mic (P9), moving-around commands (C11); never answers a card | Z6, G9 | A spoken question uses `flock_list` |
 | K10 | Zeca as an ACP agent: Zed, JetBrains and Neovim talk to him, with memory and the flock | M7 | A Zeca session in Zed answers about the flock |
@@ -115,13 +199,13 @@ card), #27 `nomes` (species names in the four languages), #46 `som` (hisses and 
 ### Mobile (wave 6)
 
 The desktop is the source of truth and the one that acts; Android only decides; the relay is
-blind. On the phone: deny and dismiss without biometrics; approve, answer, hand off, accept a task
-and a service action with biometrics. Sending a message or moving money is not in the protocol.
+blind. On the phone: deny and dismiss without biometrics; approve, answer, hand off and take a
+service action with biometrics. Sending a message or moving money is not in the protocol.
 
 | # | Step | Needs | Done when |
 |---|---|---|---|
 | L3 | Android MVP in Kotlin/Compose over the Rust core (UniFFI, `cargo-ndk`): pair, see the flock, deny, approve and answer with a Keystore key that needs `BIOMETRIC_STRONG` per use; push through UnifiedPush, FCM as fallback. Brings **key attestation**: the desktop still takes the phone's word for which key needs biometrics (L1) | L2 | An approval at 100 s works; past 108 s it is refused (`limits::SERVER_DECISION_TIMEOUT`) |
-| L4 | Handoff, tasks and Zeca's proposals from the phone; the screen lock takes Zeca to the phone (Live Updates on Android 16+), unlocking waits 30 s | L3, W3, W7 | A task accepted on the phone shows in the Tasks tab |
+| L4 | Handoff and Zeca's proposals from the phone; the screen lock takes Zeca to the phone (Live Updates on Android 16+), unlocking waits 30 s | L3, W7 | A proposal accepted on the phone shows in the Nest |
 | L5 | Service actions through `connectors`, GitHub first (re-run CI, approve a PR), with the same one-time token | L3 | An action offered more than 5 min ago is refused |
 
 L2 leftovers: an audit line for a pairing and a revoke; one answer per device at a time when two
@@ -138,7 +222,6 @@ recorded Cursor session (C1), C5 (Amp, Pi, Hermes), C6 (Crush, Goose, Grok Build
 - **W9b**: cost from the OTLP telemetry Claude Code and Codex export, received on loopback only, for
   the sessions Vults only watches; the agents' telemetry settings go through the installer's diff,
   backup and click. Done when a watched Codex session's tokens count in the day.
-- **W6**: watch the review loop live in the app with real hooks on (a fix round, round two).
 - **M7**: `ask_user`, a card answered with text; the `vults-zeca` MCP for Codex (it reads MCP only
   from its own config, so rule 3 applies).
 - **W2**: other agents' shells carry a working folder (`workdir`, `directory`) and searches may name
@@ -154,9 +237,9 @@ recorded Cursor session (C1), C5 (Amp, Pi, Hermes), C6 (Crush, Goose, Grok Build
   find out whether wry keeps the webview or WebKit caches the process.
 - **Qwen `write_file` diff**: Qwen sends a unified diff in `tool_response.returnDisplay.fileDiff`;
   the hook could turn it into hunks.
-- **Live checks**: Codex's card round trip in its TUI (it hangs in a headless pty); a task's Codex
-  call where its own hook also fires (either card answers, the other is released: fail-closed);
-  Antigravity (not on npm, fixtures only); OpenCode's race between the plugin and its own TUI
+- **Live checks**: Codex's card round trip in its TUI (it hangs in a headless pty); a `/continue`
+  Codex call where its own hook also fires (either card answers, the other is released:
+  fail-closed); Antigravity (not on npm, fixtures only); OpenCode's race between the plugin and its own TUI
   prompt (whichever answers first wins).
 
 ### Later
@@ -180,6 +263,10 @@ ours may make Codex ask again for a later hook.
 X5 voice dictionary and cloud transcription, X8 perch together; W10's Gemini CLI check (Gemini CLI
 retired, #310).
 
+**Dropped (2026-10-16):** Tasks (W3) and what only they used: runs in their own clone (W4), the
+handoff through a context pack (W5), the review loop and its live check (W6), the router behind
+`/delegate` (W8). Their ids stay in Done; N0 removes the code.
+
 ## Decisions
 
 Each settles a conflict between earlier plans, a review and the code.
@@ -193,7 +280,7 @@ Each settles a conflict between earlier plans, a review and the code.
 | Layers | Zeca's brain is the `zeca` crate (Connect), never depending on `vults-core`; his body stays in Experience; `check-layers.sh` reads `cargo metadata` |
 | Agent drivers | The `AgentDriver` trait in `agents` (Core, no tokio), implemented in `chat`, injected by `app` |
 | Zeca's own work | Never a session: his CLI carries `VULTS_ZECA=1`, the hook marks the event, `core` routes it to the chat |
-| Surfaces | One Nest window, built when opened (D6): Flock, Tasks, Chat, Activity, Connections, plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md)) |
+| Surfaces | One Nest window, built when opened (D6): Flock, Chat, Connections, Activity (Tasks left in N0), plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md)) |
 | Permissions | Zeca never answers one; only a policy the user wrote may allow or deny (ADR 0004); destructive always asks (ADR 0004) |
 | Requests nobody asked for | ADR 0019: each off by default, its own switch, budget and local trace, through one gate in `app` |
 | A phone approving | ADR 0004: a `BIOMETRIC_STRONG` signature counts as a click; D1 is "the island and the phone" |
@@ -220,10 +307,10 @@ Design decisions from the road to 0.2; `caps.rs`, the core's tests and ADRs cite
   at once, saved *Always* rules answer nothing and connectors stop.
 - **D6. One live webview at rest.** The island always lives; the widget while chosen; the palette,
   the Nest and Settings are built when opened and closed when done.
-- **D7. Zeca is a layer, not the core.** With him off the flock, cards, notifications, connectors,
-  tasks and the Nest (without Chat) all work.
-- **D8. No *Stop* until an agent offers one.** Vults stops only the sessions it started (W4); the
-  menu shows only what works.
+- **D7. Zeca is a layer, not the core.** With him off the flock, cards, notifications, connectors
+  and the Nest (without Chat) all work.
+- **D8. No *Stop* until an agent offers one.** Vults stops only the sessions it started (W4; after
+  N0, only `/continue`); the menu shows only what works.
 
 **C7, how a watched agent could be stopped** (research 2026-10-08). Never a signal: SIGINT ends
 Claude Code's whole session and Codex and agy exit too, orphaning children. Claude Code: our
