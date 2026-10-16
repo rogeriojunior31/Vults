@@ -6043,5 +6043,40 @@
     "Testar",
     "Probar",
     "测试"
+  ],
+  "Context": [
+    "Contexto",
+    "Contexto",
+    "上下文"
+  ],
+  "Cost": [
+    "Custo",
+    "Costo",
+    "成本"
+  ],
+  "Recent steps": [
+    "Últimos passos",
+    "Últimos pasos",
+    "最近步骤"
+  ],
+  "All steps": [
+    "Todos os passos",
+    "Todos los pasos",
+    "全部步骤"
+  ],
+  "See the changes": [
+    "Ver as mudanças",
+    "Ver los cambios",
+    "查看更改"
+  ],
+  "+{n} more": [
+    "+{n} outros",
+    "+{n} más",
+    "还有 {n} 个"
+  ],
+  "Changed files · {n}": [
+    "Arquivos alterados · {n}",
+    "Archivos cambiados · {n}",
+    "已更改文件 · {n}"
   ]
 }

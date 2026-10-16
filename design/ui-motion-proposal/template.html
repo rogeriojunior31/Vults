@@ -609,7 +609,38 @@
 #vults-ui-proposal .workspace-view.lab-split.with-sky:has(.lab-detail .request-card) { grid-template-rows:100px minmax(0,1fr); }
 #vults-ui-proposal .lab-sky { grid-column:1 / -1; position:relative; overflow:hidden; border-bottom:1px solid var(--border); background:linear-gradient(var(--bg),var(--chrome)); }
 #vults-ui-proposal .lab-wire { position:absolute; left:16px; right:16px; bottom:18px; height:96px; overflow:visible; }
-#vults-ui-proposal .sky-note { position:absolute; left:20px; bottom:4px; margin:0; font-size:12px; color:var(--fg-dim); }
+#vults-ui-proposal .sky-tally { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin:0 0 10px; }
+#vults-ui-proposal .sky-signal { display:inline-flex; align-items:center; gap:6px; min-height:24px; padding:0 9px; border-radius:999px; background:color-mix(in srgb,var(--raised) 70%,transparent); font-size:12px; color:var(--fg-dim); }
+#vults-ui-proposal .sky-signal.tone-needs { color:var(--warn); } #vults-ui-proposal .sky-signal.tone-failed { color:var(--error-text); }
+#vults-ui-proposal .sky-note { flex-basis:100%; margin:4px 2px 0; font-size:11px; color:var(--fg-muted); }
+#vults-ui-proposal .lab-bird-name { position:absolute; left:0; right:0; bottom:-19px; overflow:hidden; color:var(--fg-muted); font-size:11px; text-align:center; white-space:nowrap; text-overflow:ellipsis; pointer-events:none; }
+#vults-ui-proposal .lab-bird-target[aria-pressed=true] .lab-bird-name,#vults-ui-proposal .lab-bird-target:hover .lab-bird-name { color:var(--fg); }
+#vults-ui-proposal .session-row.linked { background:color-mix(in srgb,var(--raised) 60%,transparent); }
+#vults-ui-proposal .session-row.with-meter { position:relative; }
+#vults-ui-proposal .session-row.with-meter::after { content:''; position:absolute; left:28px; right:10px; bottom:3px; height:2px; border-radius:1px; background:linear-gradient(90deg,color-mix(in srgb,var(--fg) 22%,transparent) var(--ctx),transparent var(--ctx)); }
+#vults-ui-proposal .session-overview { display:grid; gap:10px; margin:14px 0; }
+#vults-ui-proposal .ov-meters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+#vults-ui-proposal .ov-meter { padding:10px 12px; border-radius:10px; background:var(--panel); }
+#vults-ui-proposal .ov-meter small { display:block; color:var(--fg-muted); font-size:11px; }
+#vults-ui-proposal .ov-meter strong { display:block; margin-top:2px; font-size:16px; font-weight:600; }
+#vults-ui-proposal .ov-bar { display:block; height:3px; margin-top:8px; border-radius:2px; background:var(--raised); overflow:hidden; }
+#vults-ui-proposal .ov-bar i { display:block; height:100%; background:var(--fg-dim); }
+#vults-ui-proposal .ov-card { border:1px solid var(--border); border-radius:10px; padding:4px 12px 8px; }
+#vults-ui-proposal .ov-card header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+#vults-ui-proposal .ov-card header .lab-panel-title { margin:6px 0; }
+#vults-ui-proposal .ov-card header button { min-height:26px; padding:0 6px; color:var(--fg-dim); font-size:12px; }
+#vults-ui-proposal .ov-steps { list-style:none; margin:0; padding:0; position:relative; }
+#vults-ui-proposal .ov-steps li { display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:10px; align-items:center; padding:5px 0; color:var(--fg-dim); }
+#vults-ui-proposal .ov-steps li code { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:12px; }
+#vults-ui-proposal .ov-steps li small { color:var(--fg-muted); font-size:11px; }
+#vults-ui-proposal .ov-steps li.now { color:var(--fg); }
+#vults-ui-proposal .ov-step-icon { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:6px; background:var(--raised); color:var(--fg-dim); }
+#vults-ui-proposal .ov-steps li.now .ov-step-icon { color:var(--fg); box-shadow:0 0 0 1px var(--fg-muted); }
+#vults-ui-proposal .ov-files { list-style:none; margin:0; padding:0; }
+#vults-ui-proposal .ov-files li { display:grid; grid-template-columns:14px minmax(0,1fr) auto; gap:8px; align-items:center; padding:4px 0; color:var(--fg-dim); font-size:12px; }
+#vults-ui-proposal .ov-files li code { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+#vults-ui-proposal .ov-files li.ov-more { display:block; color:var(--fg-muted); padding-left:22px; }
+@media(max-width:760px) { #vults-ui-proposal .ov-meters { grid-template-columns:1fr 1fr; } #vults-ui-proposal .sky-tally .sky-note { display:none; } }
 
 /* Group counts in the Lab lists */
 #vults-ui-proposal .group-count { margin-left:auto; min-width:18px; padding:0 5px; border-radius:9px; background:var(--raised); color:var(--fg-dim); font-size:12px; line-height:16px; text-align:center; }

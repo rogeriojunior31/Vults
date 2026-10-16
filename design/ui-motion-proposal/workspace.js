@@ -15,7 +15,6 @@
     {id:'session-6',agent:'qwen',project:'infra',status:'working',activity:null,step:'Waiting for input',step_count:2,subagents:0,branch:'chore/ci-cache',cost:null,quiet:16,steps:['Read .github/workflows/ci.yml','Waiting for input']},
   ].map(s => ({...s,cwd:'~/Projects/'+s.project,attention:s.status==='approval'?'needs-you':'quiet',card:s.status==='approval',waiting:s.status==='approval',raise:true,note:null,editor:s.agent==='claude'?'kitty':'tmux',bird_chosen:false,roost:s.project,started:'Watched in a terminal',pending:s.status==='approval'?2:0,restSince:s.rest?Date.now()-s.rest*1000:null}));
   A.assignSpecies(sessions);
-  // A task's run is an agent Vults started on its own, in a clone; it joins the wire only when you ask.
   const github = {
     synced:2, requests:41, budget:3000, refreshedAt:0,
     inbox:[

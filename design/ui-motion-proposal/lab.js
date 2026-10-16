@@ -76,10 +76,14 @@
       targets.replaceChildren();for(const slot of scene.slots()){
         const s=shown.find(v=>v.agent+':'+v.id===slot.key);if(!s)continue;
         const b=key(button(null,'lab-bird-target',()=>select(s)),'bird-'+s.id);
-        b.style.left=Math.max(0,slot.x-8)+'px';b.style.width=slot.width+16+'px';b.setAttribute('aria-label',phrase('Select {project}: {status}',{project:s.project,status:L(sessionBrief(s))}));b.setAttribute('aria-pressed',String(views.sessionSelected===s.id));b.setAttribute('data-tooltip',s.project);bindBirdFocus(b,scene,s);targets.append(b);
+        b.style.left=Math.max(0,slot.x-8)+'px';b.style.width=slot.width+16+'px';b.setAttribute('aria-label',phrase('Select {project}: {status}',{project:s.project,status:L(sessionBrief(s))}));b.setAttribute('aria-pressed',String(views.sessionSelected===s.id));b.setAttribute('data-tooltip',L(sessionBrief(s)));bindBirdFocus(b,scene,s);
+        b.append(el('span','lab-bird-name',null,document.createTextNode(s.project)));linkRow(b,s);targets.append(b);
       }
     });stage.append(targets);
-    const note=el('p','sky-note');band.append(note);
+    // The counts sit on top of the list, where they never cover a bird.
+    const tally=el('div','sky-tally'),note=el('span','sky-note');list.append(tally);
+    for(const [rows,one,many,shape] of [[facts.needs,'1 request','{n} requests','needs'],[facts.failed,'1 failure','{n} failures','failed'],[facts.working,'1 working','{n} working','working'],[facts.quiet,'1 quiet','{n} quiet','quiet']])if(rows.length){const b=key(button(null,'sky-signal tone-'+shape,()=>select(rows[0])),'sky-'+shape);b.append(el('span','shape shape-'+shape),el('span','counter',phrase(rows.length===1?one:many,{n:rows.length})));tally.append(b);}
+    tally.append(note);
     const count=()=>{const flying=wire.filter(soaring).length;note.textContent=phrase('{flying} resting in the sky · {wire} on the wire',{flying,wire:wire.length-flying});};
     attachSky('lab',band,flock,wire,count);
     const searcher=search('Search…',q=>{views.sessionQuery=q;paintRows();remember();});searcher.querySelector('input').value=views.sessionQuery;
@@ -90,7 +94,8 @@
     const GROUPS=[['pinned','Pinned','quiet'],['needs','Needs you','needs'],['working','Working','working'],['quiet','Gone quiet','quiet'],['sky','In the sky','done']];
     function row(s){
       const b=key(button(null,'session-row',()=>select(s)),s.id);b.setAttribute('aria-pressed',String(s.id===views.sessionSelected));bindBirdFocus(b,flock,s);
-      b.append(el('span','agent-dot '+s.agent),el('span','session-copy',null,el('strong',null,s.project),el('small',null,s.task?raw(labelFor(s.agent)+' · '+L(s.started)):labelFor(s.agent))),soaring(s)?chip('done','In the sky'):sessionChip(s));
+      b.append(el('span','agent-dot '+s.agent),el('span','session-copy',null,el('strong',null,s.project),el('small',null,null,document.createTextNode([labelFor(s.agent),phrase('Step {n}',{n:s.step_count}),phrase('{n} min',{n:sessionMinutes(s)})].join(' · ')))),soaring(s)?chip('done','In the sky'):sessionChip(s));
+      b.style.setProperty('--ctx',contextUsed(s)+'%');b.classList.add('with-meter');
       if(settings['pin-'+s.project])b.append(A.icon('pin',11));return b;
     }
     function paintRows(){
@@ -103,6 +108,8 @@
       }
       if(!found.length)rows.append(el('p','pane-note','Nothing here matches your search.'),button('Clear filters','quiet-control',()=>{views.sessionQuery='';setArea('flock',state.mode);}));
     }
+    // A bird on the wire lights its row, as the row already lights its bird.
+    function linkRow(target,s){const on=v=>()=>rows.querySelector('[data-key="'+s.id+'"]')?.classList.toggle('linked',v);target.addEventListener('pointerenter',on(true));target.addEventListener('pointerleave',on(false));target.addEventListener('focus',on(true));target.addEventListener('blur',on(false));}
     function select(s){views.sessionSelected=s.id;views.detailOpen.flock=true;setArea('flock',state.mode);focusDetail(host,s.id);}
     paintRows();
     const s=sessions.find(s=>s.id===views.sessionSelected)??facts.ordered[0];if(!s)return;
@@ -112,6 +119,29 @@
     detailPanel(detail,{id:s.id,tabs:DETAIL_TABS,current:views.flockDetail,onTab:tab=>{views.flockDetail=tab;remember();setArea('flock',state.mode);},render:(panel,setScroll)=>sessionTab(panel,s,views.flockDetail,setScroll)});
     listDetail(host,list,detail,s.id,'Back to sessions');
   }
+  // Sample figures for a session: minutes running and how much of its context is used.
+  const sessionMinutes=s=>Math.round(s.step_count*1.5)+(s.subagents?4:0);
+  const contextUsed=s=>Math.min(92,18+s.step_count*6);
+  const STEP_ICONS=[['Read','file'],['Edit','pencil'],['Run','terminal'],['Search','search'],['Subagent','flock'],['Think','chat'],['Waiting','pause']];
+  // The Session tab's overview: figures, the last steps and the changed files, each with a way to the full tab.
+  function sessionOverview(s){
+    const go=tab=>()=>{views.flockDetail=tab;remember();setArea('flock',state.mode);};
+    const meter=(label,value,pct)=>el('div','ov-meter',null,el('small',null,label),el('strong','counter',null,document.createTextNode(value)),pct==null?null:el('span','ov-bar',null,(()=>{const i=el('i');i.style.width=pct+'%';return i;})()));
+    const box=el('div','session-overview');
+    box.append(el('div','ov-meters',null,meter('Running',phrase('{n} min',{n:sessionMinutes(s)})),meter('Cost',s.cost?'≈ $'+s.cost.toFixed(2):L('Not reported')),meter('Context',contextUsed(s)+'%',contextUsed(s))));
+    const steps=el('ol','ov-steps');const last=s.steps.slice(-4);
+    last.forEach((text,i)=>{const icon=(STEP_ICONS.find(([verb])=>text.startsWith(verb))??[0,'list'])[1],n=s.step_count-last.length+i+1,now=i===last.length-1;
+      steps.append(el('li',now?'now':null,null,el('span','ov-step-icon',null,A.icon(icon,12)),el('code',null,null,document.createTextNode(text)),el('small','counter',null,document.createTextNode(now&&s.status==='working'?L('now'):phrase('Step {n}',{n})))));});
+    box.append(el('section','ov-card',null,el('header',null,null,el('h3','lab-panel-title','Recent steps'),key(button('All steps','',go('activity')),'ov-all-steps')),steps));
+    const changes=labChangesFor(s);
+    if(changes){
+      const files=changes.at(-1).files,count=(f,sign)=>f.hunks.reduce((n,h)=>n+h.lines.filter(l=>l.startsWith(sign)).length,0),list=el('ul','ov-files');
+      files.slice(0,4).forEach(f=>list.append(el('li',null,null,A.icon('file',12),el('code',null,null,document.createTextNode(f.path.split('/').pop())),el('small',null,null,el('span','diff-add',null,document.createTextNode('+'+count(f,'+'))),el('span','diff-del',null,document.createTextNode(' −'+count(f,'-')))))));
+      if(files.length>4)list.append(el('li','ov-more',null,document.createTextNode(phrase('+{n} more',{n:files.length-4}))));
+      box.append(el('section','ov-card',null,el('header',null,null,el('h3','lab-panel-title',phrase('Changed files · {n}',{n:files.length})),key(button('See the changes','',go('diff')),'ov-see-changes')),list));
+    }
+    return box;
+  }
   function sessionTab(panel,s,tab,setScroll){
     if(tab==='session'){
       panel.append(el('p','detail-brief',sessionBrief(s)),el('p','compact-meta counter',null,document.createTextNode([phrase('Step {n}',{n:s.step_count}),...(s.subagents?[phrase(s.subagents===1?'1 subagent':'{n} subagents',{n:s.subagents})]:[]),s.cost?'≈ $'+s.cost.toFixed(2):L('Cost not reported')].join(' · '))));
@@ -119,6 +149,7 @@
       else if(['approval','question'].includes(s.status)||state.scenario==='expired'&&s.id==='session-1')panel.append(requestCard(s,'lab',()=>setArea(state.area,state.mode)));
       if(s.quiet)panel.append(quietActions(s));
       if(s.status==='failed')panel.append(el('h3','lab-panel-title','What it said last'),el('pre','diff-preview',null,document.createTextNode(s.output)));
+      panel.append(sessionOverview(s));
       panel.append(el('div','inline-actions',null,button('Open terminal','quiet-control',()=>toast(phrase('Raised the {editor} pane for {project}',{editor:s.editor,project:s.project}))),...(labChangesFor(s)?[button('View last change','quiet-control',()=>{views.flockDetail='diff';setArea(state.area,state.mode);})]:[])));
     }
     else if(tab==='diff')paintDiff(panel,s,setScroll);
