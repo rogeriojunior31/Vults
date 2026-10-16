@@ -5,7 +5,8 @@
   const checkTone=value=>value==='passed'?'done':value==='failed'?'failed':'working';
   function renderConnections(host) {
     const refresh=key(button('Refresh','quiet-control',()=>{if(Date.now()-github.refreshedAt<60000){toast('Refreshed less than a minute ago.');return;}github.refreshedAt=Date.now();github.synced=0;github.requests++;setArea('connections',state.mode);toast('Synced with GitHub');}),'refresh');
-    host.append(pageHeading('Connections',null,refresh,key(button('Add a connection','',()=>openCatalog()),'add-connection')));
+    const markAll=key(button('Mark all seen','',()=>{for(const r of github[views.connectionSection]??[])settings.githubSeen[r.id]=true;setArea('connections',state.mode);}),'connections-mark-all');
+    host.append(pageHeading('Connections',null,markAll,refresh,key(button('Add a connection','',()=>openCatalog()),'add-connection')));
     const picker=el('div','connector-chips');CONNECTORS.forEach(c=>{const b=key(button(null,'connector-chip',()=>{}),'connector-'+c.id);b.setAttribute('aria-pressed','true');b.append(A.icon('pull',13),el('span',null,raw(c.name)),el('span','shape shape-'+(settings.github?'done':'quiet')));picker.append(b);});host.append(picker);
     if(!settings.github){host.append(el('section','empty-state',null,el('h3',null,'GitHub is off'),el('p',null,'Turn it on to see your pull requests and checks. Vults then calls gh every 5 minutes, within its daily budget.'),button('Open connector settings','quiet-control',()=>openSettings('connectors'))));return;}
     host.append(el('p','sync-line pane-note',phrase('Synced {age} · {used} of {budget} requests today',{age:github.synced?phrase('{n} min ago',{n:github.synced}):L('just now'),used:github.requests,budget:'3,000'})));
@@ -15,9 +16,8 @@
     const counts=Object.fromEntries(SECTIONS.map(([id])=>[id,github[id].filter(r=>r.isNew&&!settings.githubSeen[r.id]).length]));
     const finder=search('Search title, ref, repo, branch or author',value=>{views.connectionQuery=value;paint();remember();});finder.querySelector('input').value=views.connectionQuery;
     const sections=segment(SECTIONS.map(([id,label])=>[id,counts[id]?phrase(counts[id]===1?'{section} · 1 new':'{section} · {n} new',{section:L(label),n:counts[id]}):label]),value=>{views.connectionSection=value;views.connectionSelected='';paint();remember();},views.connectionSection);
-    const markAll=key(button('Mark all seen','',()=>{for(const r of github[views.connectionSection])settings.githubSeen[r.id]=true;setArea('connections',state.mode);}),'connections-mark-all');
     const list=el('div','connection-list'),detail=el('article','connection-detail');
-    const columns=el('div','connection-columns',null,list,detail);host.append(el('div','workspace-toolbar',null,sections,finder,markAll),columns);
+    const columns=el('div','connection-columns',null,list,detail);host.append(el('div','workspace-toolbar',null,sections,finder),columns);
     // The list repaints its rows, so its edge is added back each time.
     const edge=()=>flexible(columns,list,'conn',{def:420,min:280,max:680,label:'List',rail:()=>{const r=el('div','rail-marks');(github[views.connectionSection]??[]).slice(0,8).forEach(row=>{const b=button(null,'rail-dot',()=>{views.connectionSelected=row.id;paint();},row.title);b.setAttribute('data-tooltip',L(row.title));b.setAttribute('aria-pressed',String(row.id===views.connectionSelected));b.append(el('span','shape shape-'+(row.checks?checkTone(row.checks):'quiet')));r.append(b);});return r;}});
     function paint(){
