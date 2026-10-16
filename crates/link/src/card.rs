@@ -47,6 +47,11 @@ impl ToPhone {
     }
 }
 
+/// Longest target a card carries: a patch over hundreds of files would not fit in one message
+/// ([`crate::MAX_MESSAGE`]). The binding still covers the whole target; the card says it is cut,
+/// and core refuses the phone's *Always* past it.
+const MAX_TARGET: usize = vults_core::MAX_PHONE_TARGET;
+
 /// A card as the phone shows it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Card {
@@ -86,6 +91,16 @@ impl Card {
             .map(|s| s.project.clone())
             .unwrap_or_default();
         let left = PENDING_TTL.saturating_sub(now.saturating_duration_since(p.since));
+        let long = p.target.len() > MAX_TARGET;
+        let target = if long {
+            let end = (0..=MAX_TARGET)
+                .rev()
+                .find(|i| p.target.is_char_boundary(*i))
+                .unwrap_or(0);
+            format!("{}…", &p.target[..end])
+        } else {
+            p.target.clone()
+        };
         Self {
             request: p.request.0.clone(),
             binding: hex(&Binding::of(p).0),
@@ -93,10 +108,11 @@ impl Card {
             project,
             cwd: p.cwd.clone(),
             tool: p.tool.clone(),
-            target: p.target.clone(),
+            target,
             description: p.ask.description.clone(),
             full: p.ask.full.clone(),
-            cut: p.ask.cut,
+            // What the phone does not show whole, it may not make a rule of.
+            cut: p.ask.cut || long,
             questions: p
                 .questions
                 .iter()
@@ -121,6 +137,42 @@ impl Card {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[test]
+    fn a_long_target_is_cut_on_the_card_and_bound_whole() {
+        use vults_core::{
+            AgentEvent, AgentKind, AgentUpdate, Ask, Input, RequestId, SessionKey, Terminal, reduce,
+        };
+        let now = Instant::now();
+        let mut state = State::default();
+        let files: Vec<String> = (0..2_000).map(|i| format!("src/file{i}.rs")).collect();
+        let target = format!("Edit · {}", files.join(", "));
+        reduce(
+            &mut state,
+            Input::Agent(AgentUpdate {
+                session: SessionKey {
+                    agent: AgentKind::Codex,
+                    session_id: "s1".into(),
+                },
+                cwd: Some("/home/me/vults".into()),
+                terminal: Terminal::default(),
+                agent_id: None,
+                event: AgentEvent::PermissionRequested {
+                    request: RequestId("r1".into()),
+                    tool: "apply_patch".into(),
+                    target: target.clone(),
+                    ask: Ask::default(),
+                },
+                received: None,
+            }),
+            now,
+        );
+        let p = &state.pending[0];
+        let card = Card::of(&state, p, now);
+        assert!(card.cut && card.target.ends_with('…') && card.target.len() < target.len());
+        assert_eq!(card.binding, hex(&Binding::of(p).0));
+        assert!(ToPhone::Card(Box::new(card)).to_bytes().len() < crate::MAX_MESSAGE);
+    }
 
     #[test]
     fn a_message_goes_both_ways() {

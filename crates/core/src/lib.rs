@@ -26,18 +26,32 @@ pub mod silence;
 pub mod turns;
 mod view;
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
-pub use view::{AlertView, ApprovalView, DiffSummary, EndedView, SessionRef, SessionView, ViewModel};
+pub use view::{
+    AlertView, ApprovalView, ChangeView, DiffSummary, EndedView, SessionRef, SessionView, TouchedView,
+    ViewModel,
+};
 pub use vults_protocol::{AgentKind, Answer, Decision, Terminal};
 
 /// Longest reply the user may type to a question.
 const MAX_ANSWER_LEN: usize = 2_000;
 /// Steps kept per session for the overview.
 const MAX_STEPS: usize = 8;
+/// Finished edits whose diff a session keeps: more than its steps, so an edit stays readable after
+/// reads and commands push it off the ticker.
+const MAX_DIFFS: usize = 32;
+/// Files a session's ledger names; the one touched longest ago goes first.
+const MAX_TOUCHED: usize = 200;
+/// Files a session keeps as seen changed in its folder, never in an edit: a generator's output
+/// must not push its agent's own edits out of the ledger.
+const MAX_OUTSIDE: usize = 50;
+/// Longest target a paired phone shows whole: past it the card is cut, and the phone may not make
+/// a rule of what it did not show (`vults-link`'s card).
+pub const MAX_PHONE_TARGET: usize = 16 * 1024;
 /// Ended cards kept for the view, newest first.
 const MAX_ENDED: usize = 8;
 /// Connector alerts kept on the island, newest first.
@@ -246,6 +260,27 @@ pub struct Hunk {
     pub lines: Vec<String>,
 }
 
+/// A finished edit the session keeps: its step, as it read, and what it changed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Change {
+    pub step: u32,
+    pub of: Step,
+    pub diff: Diff,
+}
+
+/// One file a session changed, summed over its edits.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Touched {
+    pub path: String,
+    pub added: u32,
+    pub removed: u32,
+    pub edits: u32,
+    /// The step of its latest edit, whose diff may still be kept.
+    pub step: u32,
+    /// Seen changed in its folder, never in an edit the agent told of (a command wrote it).
+    pub outside: bool,
+}
+
 impl Diff {
     pub fn added(&self) -> u32 {
         self.files.iter().map(|f| f.added).sum()
@@ -287,6 +322,12 @@ pub enum AgentEvent {
         target: Option<String>,
         /// What an edit changed, when the agent sent its patch.
         diff: Option<Diff>,
+    },
+    /// An edit the agent tells of only once it is done (Cursor's `afterFileEdit`): its step and
+    /// what it changed, together.
+    Edited {
+        step: Step,
+        diff: Diff,
     },
     /// `target` is what Allow actually authorizes: `Bash · rm -rf build`, not just `Bash`.
     PermissionRequested {
@@ -508,6 +549,12 @@ pub enum Input {
         cwd: String,
         repo: Option<Repo>,
     },
+    /// Files that changed in a session's folder during its last turn, by their absolute paths,
+    /// as the app saw them (`Effect::Folder`): its agent's commands wrote some of them.
+    FolderChanged {
+        session: SessionKey,
+        files: Vec<String>,
+    },
     /// A connector's card after a good poll; `None` once it is switched off.
     Board {
         connector: String,
@@ -610,6 +657,13 @@ pub enum Effect {
     SaveProjects(BTreeMap<String, ProjectPrefs>),
     /// A turn ended: the app keeps it in the local history (counts only, docs/guide/activity.md).
     Turn(turns::Turn),
+    /// A turn started (`end` false) or ended in a session's folder: the app looks at what is
+    /// changed there, and at the end says what changed since (`Input::FolderChanged`).
+    Folder {
+        session: SessionKey,
+        cwd: String,
+        end: bool,
+    },
     /// Last week's recap card was read: the app saves its Monday so it never comes back.
     RecapSeen(String),
     /// A card was answered (or left): the app adds it to the audit log. Beside every answer.
@@ -648,8 +702,14 @@ pub struct Session {
     /// The folder its session started in: what the user's policies hold in and reach (`cwd` follows
     /// the agent's `cd`). None for a session Vults first saw later: policies allow it nothing.
     pub root: Option<String>,
-    /// The diffs of kept steps, by step number (counted like `step_count`).
-    pub diffs: VecDeque<(u32, Diff)>,
+    /// Edit steps whose diff has not come yet, by number: a call may finish after its step left
+    /// the ticker.
+    pub open_edits: VecDeque<(u32, Step)>,
+    /// The latest finished edits with their diff, oldest first, by step number (counted like
+    /// `step_count`).
+    pub diffs: VecDeque<Change>,
+    /// Every file the session changed, the latest last: its counts outlive the diffs.
+    pub touched: Vec<Touched>,
     /// Whether it has gone quiet while working (`silence`).
     pub watch: silence::Watch,
     /// The turn being counted, from its prompt to its end (`turns`).
@@ -837,6 +897,48 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::Cost { session, usd } => {
             if let Some(s) = state.sessions.get_mut(&session) {
                 s.cost_usd = Some(usd);
+            }
+            Vec::new()
+        }
+        Input::FolderChanged { session, files } => {
+            // More than a turn's commands write by hand: a build or a generator, not worth a list.
+            if files.len() > MAX_OUTSIDE {
+                return Vec::new();
+            }
+            // Another session's reported edit is that session's, not a command of this one.
+            let theirs: HashSet<&str> = state
+                .sessions
+                .iter()
+                .filter(|(k, _)| **k != session)
+                .flat_map(|(_, s)| s.touched.iter().filter(|t| !t.outside))
+                .map(|t| t.path.as_str())
+                .collect();
+            let files: Vec<String> = files
+                .into_iter()
+                .filter(|p| is_absolute(p) && !theirs.contains(p.as_str()))
+                .collect();
+            if let Some(s) = state.sessions.get_mut(&session) {
+                for path in files {
+                    if s.touched.iter().any(|t| t.path == path) {
+                        continue;
+                    }
+                    // Only an older outside file makes room: the agent's own edits stay.
+                    let outside = s.touched.iter().filter(|t| t.outside).count();
+                    if outside == MAX_OUTSIDE || s.touched.len() == MAX_TOUCHED {
+                        let Some(i) = s.touched.iter().position(|t| t.outside) else {
+                            break;
+                        };
+                        s.touched.remove(i);
+                    }
+                    s.touched.push(Touched {
+                        path,
+                        added: 0,
+                        removed: 0,
+                        edits: 0,
+                        step: 0,
+                        outside: true,
+                    });
+                }
             }
             Vec::new()
         }
@@ -1128,11 +1230,11 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 .collect();
             for key in gone {
                 if let Some(mut s) = state.sessions.remove(&key) {
-                    effects.extend(turns::end(&mut s, now, false).map(Effect::Turn));
+                    effects.extend(end_turn(&mut s, now, false));
                 }
             }
             for s in state.sessions.values_mut().filter(|s| turns::silent(s, now)) {
-                effects.extend(turns::end(s, now, false).map(Effect::Turn));
+                effects.extend(end_turn(s, now, false));
             }
             for s in state.sessions.values_mut() {
                 s.watch.level = silence::level(s, now);
@@ -1191,6 +1293,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                         && match &event {
                             AgentEvent::ToolFinished { target: Some(t), .. } => &p.target == t,
                             AgentEvent::ToolStarted(_)
+                            | AgentEvent::Edited { .. }
                             | AgentEvent::SubagentStarted
                             | AgentEvent::SubagentStopped => false,
                             _ => true,
@@ -1223,7 +1326,9 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         ruled: VecDeque::new(),
         policed: VecDeque::new(),
         root: None,
+        open_edits: VecDeque::new(),
         diffs: VecDeque::new(),
+        touched: Vec::new(),
         watch: silence::Watch::default(),
         turn: None,
         cost_usd: None,
@@ -1248,7 +1353,12 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
     }
     session.updated = now;
     silence::heard(session, &event);
+    let idle = session.turn.is_none();
     turns::heard(session, &event, now);
+    // Last among the effects: an ack must leave first.
+    let look = (idle && session.turn.is_some())
+        .then(|| folder(session, false))
+        .flatten();
     // A note belongs to the state it explains; anything that changes the state drops it.
     if !matches!(event, AgentEvent::SubagentStarted | AgentEvent::SubagentStopped) {
         session.note = None;
@@ -1263,15 +1373,15 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         AgentEvent::ToolStarted(step) => {
             session.status = Status::Working;
             session.activity = Some(step.activity);
-            if session.steps.len() == MAX_STEPS {
-                session.steps.pop_front();
-                session.step_at.pop_front();
+            push_step(session, step, wall);
+        }
+        AgentEvent::Edited { step, diff } => {
+            if !state.pending.iter().any(|p| p.session == key) {
+                session.status = Status::Working;
             }
-            session.steps.push_back(step);
-            session.step_at.push_back(wall);
-            session.step_count += 1;
-            let first = session.step_count + 1 - session.steps.len() as u32;
-            session.diffs.retain(|(n, _)| *n >= first);
+            session.activity = Some(Activity::Edit);
+            push_step(session, step, wall);
+            attach(session, diff);
         }
         // A parallel call may still wait for its answer: its card stays only while the session
         // says it needs approval.
@@ -1395,6 +1505,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
             session.note = questions.first().and_then(|q| note(q.question.clone()));
             if state.presence == Presence::Paused {
                 effects.push(Effect::ReleasePermission(request));
+                effects.extend(look);
                 return effects;
             }
             effects.push(Effect::AckPermission(request.clone()));
@@ -1421,20 +1532,20 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         }
         AgentEvent::RateLimited => session.status = Status::RateLimited,
         AgentEvent::Stopped { message } => {
-            effects.extend(turns::end(session, now, false).map(Effect::Turn));
+            effects.extend(end_turn(session, now, false));
             session.status = Status::Finished;
             session.activity = None;
             session.subagents = 0;
             session.note = message.and_then(note);
         }
         AgentEvent::StopFailed { error } => {
-            effects.extend(turns::end(session, now, true).map(Effect::Turn));
+            effects.extend(end_turn(session, now, true));
             session.status = Status::Failed;
             session.activity = None;
             session.note = error.and_then(note);
         }
         AgentEvent::SessionEnded => {
-            effects.extend(turns::end(session, now, false).map(Effect::Turn));
+            effects.extend(end_turn(session, now, false));
             if let Some(s) = state.sessions.remove(&key) {
                 handoff::ended(
                     &mut state.closed,
@@ -1460,25 +1571,108 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
             Status::Question
         };
     }
+    effects.extend(look);
     effects
 }
 
+/// Ends the session's turn, if one runs: its line for the history, and a last look at its folder.
+fn end_turn(session: &mut Session, now: Instant, failed: bool) -> Vec<Effect> {
+    let Some(turn) = turns::end(session, now, failed) else {
+        return Vec::new();
+    };
+    let mut effects = vec![Effect::Turn(turn)];
+    effects.extend(folder(session, true));
+    effects
+}
+
+/// A look at the session's folder, when the app found a repository there: outside one there is
+/// nothing to ask git.
+fn folder(session: &Session, end: bool) -> Option<Effect> {
+    session.repo.as_ref()?;
+    let cwd = session.cwd.clone().filter(|c| is_absolute(c))?;
+    Some(Effect::Folder {
+        session: session.key.clone(),
+        cwd,
+        end,
+    })
+}
+
+/// A step under way; an edit's waits for its diff in `open_edits`.
+fn push_step(session: &mut Session, step: Step, wall: Option<i64>) {
+    if session.steps.len() == MAX_STEPS {
+        session.steps.pop_front();
+        session.step_at.pop_front();
+    }
+    session.step_count += 1;
+    if step.activity == Activity::Edit {
+        if session.open_edits.len() == MAX_DIFFS {
+            session.open_edits.pop_front();
+        }
+        session.open_edits.push_back((session.step_count, step.clone()));
+    }
+    session.steps.push_back(step);
+    session.step_at.push_back(wall);
+}
+
 /// The diff goes to the latest edit of its file that has none yet: calls may finish out of order.
+/// Its files count in the ledger even when no step of theirs is open (the agent sent none).
 fn attach(session: &mut Session, diff: Diff) {
     let Some(file) = diff.files.first().map(|f| file_name(&f.path)) else {
         return;
     };
-    let first = session.step_count + 1 - session.steps.len() as u32;
-    let step = session.steps.iter().enumerate().rev().find_map(|(i, st)| {
-        let n = first + i as u32;
-        let named = st
-            .detail
+    let open = session.open_edits.iter().rposition(|(_, st)| {
+        st.detail
             .as_deref()
-            .is_some_and(|d| d == file || d.starts_with(&format!("{file} +")));
-        (st.activity == Activity::Edit && named && session.diffs.iter().all(|(m, _)| *m != n)).then_some(n)
+            .is_some_and(|d| d == file || d.starts_with(&format!("{file} +")))
     });
-    if let Some(n) = step {
-        session.diffs.push_back((n, diff));
+    let step = open.and_then(|i| session.open_edits.remove(i));
+    let at = step.as_ref().map_or(0, |(n, _)| *n);
+    for f in &diff.files {
+        let path = full_path(session.cwd.as_deref(), &f.path);
+        touch(&mut session.touched, path, f, at);
+    }
+    if let Some((step, of)) = step {
+        if session.diffs.len() == MAX_DIFFS {
+            session.diffs.pop_front();
+        }
+        session.diffs.push_back(Change { step, of, diff });
+    }
+}
+
+/// Adds an edit of `f` (at `path`) to the ledger and moves it last; `step` 0 when no step goes
+/// with it.
+fn touch(touched: &mut Vec<Touched>, path: String, f: &FileDiff, step: u32) {
+    let mut t = match touched.iter().position(|t| t.path == path) {
+        Some(i) => touched.remove(i),
+        None => Touched {
+            path,
+            added: 0,
+            removed: 0,
+            edits: 0,
+            step: 0,
+            outside: false,
+        },
+    };
+    t.outside = false;
+    t.added = t.added.saturating_add(f.added);
+    t.removed = t.removed.saturating_add(f.removed);
+    t.edits += 1;
+    if step != 0 {
+        t.step = step;
+    }
+    if touched.len() == MAX_TOUCHED {
+        touched.remove(0);
+    }
+    touched.push(t);
+}
+
+/// One path per file, whether the agent named it from its folder or whole.
+pub(crate) fn full_path(cwd: Option<&str>, path: &str) -> String {
+    match cwd {
+        Some(cwd) if !is_absolute(path) && is_absolute(cwd) => {
+            format!("{}/{}", cwd.trim_end_matches(['/', '\\']), path)
+        }
+        _ => path.to_string(),
     }
 }
 
@@ -1570,7 +1764,12 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
             let Some(p) = redeem_here(
                 state,
                 by,
-                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                |p| {
+                    p.request == request
+                        && p.questions.is_empty()
+                        && !p.ask.cut
+                        && !(matches!(by, By::Paired { .. }) && p.target.len() > MAX_PHONE_TARGET)
+                },
                 now,
             ) else {
                 return Vec::new();
@@ -1627,7 +1826,12 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
             let Some(p) = redeem_here(
                 state,
                 by,
-                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                |p| {
+                    p.request == request
+                        && p.questions.is_empty()
+                        && !p.ask.cut
+                        && !(matches!(by, By::Paired { .. }) && p.target.len() > MAX_PHONE_TARGET)
+                },
                 now,
             ) else {
                 return Vec::new();

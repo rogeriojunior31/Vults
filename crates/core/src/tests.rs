@@ -1913,17 +1913,171 @@ fn a_finished_edit_keeps_its_diff_on_its_step() {
 }
 
 #[test]
-fn a_diff_goes_with_its_step() {
+fn an_edit_outlives_the_ticker() {
     let mut s = State::default();
     let now = Instant::now();
+    let run = || {
+        AgentEvent::ToolStarted(Step {
+            activity: Activity::Run,
+            tool: "Bash".into(),
+            detail: Some("cargo test".into()),
+        })
+    };
     visible(&mut s, agent("a", edit_step("main.rs")), now);
-    visible(&mut s, agent("a", edited("/w/main.rs", false)), now);
+    visible(
+        &mut s,
+        agent("a", edited("/home/me/vults/src/main.rs", false)),
+        now,
+    );
+    // A slow call: its step leaves the ticker before it finishes.
+    visible(&mut s, agent("a", edit_step("lib.rs")), now);
     for _ in 0..MAX_STEPS {
-        visible(&mut s, agent("a", edit_step("x.rs")), now);
+        visible(&mut s, agent("a", run()), now);
     }
+    visible(
+        &mut s,
+        agent("a", edited("/home/me/vults/src/lib.rs", false)),
+        now,
+    );
+    visible(
+        &mut s,
+        agent("a", edited("/home/me/vults/src/main.rs", false)),
+        now,
+    );
+    assert_eq!(
+        s.diff(&key("a"), 1).map(|d| d.files[0].path.as_str()),
+        Some("/home/me/vults/src/main.rs")
+    );
+    assert!(s.diff(&key("a"), 2).is_some());
+    let v = &s.view().sessions[0];
+    assert!(v.diffs.iter().all(Option::is_none));
+    assert_eq!(
+        v.changes
+            .iter()
+            .map(|c| (c.step, c.text.as_str()))
+            .collect::<Vec<_>>(),
+        [(1, "Editing main.rs"), (2, "Editing lib.rs")]
+    );
+    // The ledger counts every edit, the one with no open step too, the latest file last.
+    let files: Vec<_> = v
+        .touched
+        .iter()
+        .map(|t| (t.path.as_str(), t.added, t.edits, t.step))
+        .collect();
+    assert_eq!(
+        files,
+        [("src/lib.rs", 2, 1, Some(2)), ("src/main.rs", 4, 2, Some(1))]
+    );
+}
+
+#[test]
+fn a_session_keeps_its_latest_diffs() {
+    let mut s = State::default();
+    let now = Instant::now();
+    for i in 0..MAX_DIFFS + 2 {
+        let name = format!("f{i}.rs");
+        visible(&mut s, agent("a", edit_step(&name)), now);
+        visible(&mut s, agent("a", edited(&format!("/w/{name}"), false)), now);
+    }
+    let session = &s.sessions[&key("a")];
+    assert_eq!(session.diffs.len(), MAX_DIFFS);
+    assert_eq!(session.touched.len(), MAX_DIFFS + 2);
     assert!(s.diff(&key("a"), 1).is_none());
-    assert!(s.sessions[&key("a")].diffs.is_empty());
-    assert!(s.view().sessions[0].diffs.iter().all(Option::is_none));
+    // The ledger still names the first file; its diff is gone.
+    let first = &s.view().sessions[0].touched[0];
+    assert_eq!(
+        (first.path.as_str(), first.step, first.file),
+        ("/w/f0.rs", None, None)
+    );
+}
+
+#[test]
+fn a_turn_in_a_repository_looks_at_its_folder_and_takes_what_commands_wrote() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let look = |end: bool| Effect::Folder {
+        session: key("a"),
+        cwd: "/home/me/vults".into(),
+        end,
+    };
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    // Outside a repository there is nothing to look at.
+    assert!(!reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now).contains(&look(false)));
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    visible(
+        &mut s,
+        Input::Repo {
+            session: key("a"),
+            cwd: "/home/me/vults".into(),
+            repo: Some(Repo {
+                key: "github:me/vults".into(),
+                name: "me/vults".into(),
+                branch: None,
+            }),
+        },
+        now,
+    );
+    assert_eq!(
+        reduce(&mut s, agent("a", AgentEvent::PromptSubmitted), now),
+        [look(false)]
+    );
+    // Only a turn's first event looks.
+    assert!(!reduce(&mut s, agent("a", edit_step("main.rs")), now).contains(&look(false)));
+    // An agent naming the file from its folder counts the same file as the folder's whole path.
+    visible(&mut s, agent("a", edited("src/main.rs", false)), now);
+    assert!(reduce(&mut s, agent("a", AgentEvent::Stopped { message: None }), now).contains(&look(true)));
+    let changed = |files: &[&str]| Input::FolderChanged {
+        session: key("a"),
+        files: files.iter().map(|f| f.to_string()).collect(),
+    };
+    visible(
+        &mut s,
+        changed(&[
+            "/home/me/vults/src/main.rs",
+            "/home/me/vults/gen.rs",
+            "relative.rs",
+        ]),
+        now,
+    );
+    let v = &s.view().sessions[0];
+    let files: Vec<_> = v
+        .touched
+        .iter()
+        .map(|t| (t.path.as_str(), t.edits, t.outside))
+        .collect();
+    assert_eq!(files, [("src/main.rs", 1, false), ("gen.rs", 0, true)]);
+    // Another session's own edit is not a command of this one's, and a build's flood is no list.
+    visible(&mut s, agent("b", edited("/home/me/vults/theirs.rs", false)), now);
+    visible(&mut s, changed(&["/home/me/vults/theirs.rs"]), now);
+    let flood: Vec<String> = (0..=MAX_OUTSIDE)
+        .map(|i| format!("/home/me/vults/out/{i}.o"))
+        .collect();
+    let flood: Vec<&str> = flood.iter().map(String::as_str).collect();
+    visible(&mut s, changed(&flood), now);
+    assert_eq!(s.sessions[&key("a")].touched.len(), 2);
+}
+
+#[test]
+fn an_edit_told_of_once_done_is_a_step_with_its_diff() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let Some(AgentEvent::ToolFinished { diff: Some(diff), .. }) = (match agent("a", edited("/w/a.md", false))
+    {
+        Input::Agent(u) => Some(u.event),
+        _ => None,
+    }) else {
+        unreachable!()
+    };
+    let step = Step {
+        activity: Activity::Edit,
+        tool: "Edit".into(),
+        detail: Some("a.md".into()),
+    };
+    visible(&mut s, agent("a", AgentEvent::Edited { step, diff }), now);
+    let v = &s.view().sessions[0];
+    assert_eq!(v.steps, ["Editing a.md"]);
+    assert_eq!(v.diffs[0].as_ref().map(|d| d.added), Some(2));
+    assert_eq!(v.touched[0].step, Some(1));
 }
 
 #[test]
@@ -4724,4 +4878,37 @@ fn a_session_may_be_continued_only_once_stopped_in_its_folder_for_ten_minutes() 
     visible(&mut s, Input::Agent(moved), now);
     let c = s.continuable("/home/me/vults/sub", now);
     assert_eq!(c.first().map(|c| c.cwd.as_str()), Some("/home/me/vults"));
+}
+
+#[test]
+fn a_phone_never_makes_a_rule_of_a_target_it_saw_cut() {
+    let ask = |target: String| {
+        let mut s = State::default();
+        let now = Instant::now();
+        visible(
+            &mut s,
+            agent(
+                "a",
+                AgentEvent::PermissionRequested {
+                    request: rid("r1"),
+                    tool: "Bash".into(),
+                    target,
+                    ask: Ask::default(),
+                },
+            ),
+            now,
+        );
+        let binding = ledger::Binding::of(&s.pending[0]);
+        let paired = Input::Paired {
+            device: "phone".into(),
+            counter: 1,
+            binding,
+            intent: Intent::DecideAlways { request: rid("r1") },
+        };
+        visible(&mut s, paired, now)
+            .iter()
+            .any(|e| matches!(e, Effect::RespondPermission { .. }))
+    };
+    assert!(ask("Bash · cargo test".into()));
+    assert!(!ask(format!("Bash · {}", "x".repeat(MAX_PHONE_TARGET))));
 }

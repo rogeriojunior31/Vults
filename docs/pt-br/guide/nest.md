@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: e68a556df54a -->
+<!-- source: 38df6c06114a -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
 tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -109,9 +109,11 @@ que ela pede (o comando, com **Copy**, e *1 of 2* quando outras esperam). Uma qu
 topo os passos até agora, os subagentes e o custo, o passo que acabou e o que está em andamento (o
 **+N −M** de uma edição terminada a abre em **Changes**) e, quando ela fica quieta, **Snooze**,
 **Keep going** e **Dismiss**, como na ilha. Uma que terminou ou falhou mostra a última resposta ou o
-erro. Embaixo do card, o que as edições guardadas mudaram (dos últimos passos dela). À direita, as
-**Changes** (o diff de cada edição terminada, escolhida na lista; **Focus diff** dá ao diff a largura
-toda), a **Activity** (os últimos passos, cada um na hora em que começou), o **Context** (worktree, repositório, branch, pasta,
+erro. Embaixo do card, quantos arquivos a sessão alterou e as linhas adicionadas e removidas. À
+direita, as **Changes** (o diff de cada uma das suas últimas 32 edições, escolhida na lista; **Focus
+diff** dá ao diff a largura toda; embaixo, todos os arquivos que a sessão alterou, e um clique num
+cujo diff ainda está guardado o mostra; num repositório, um arquivo que um comando escreveu durante
+um turno aparece como *by a command*), a **Activity** (os últimos passos, cada um na hora em que começou), o **Context** (worktree, repositório, branch, pasta,
 agente, editor, estado e custo) e, com o Zeca ligado, **Zeca**: **Ask Zeca** abre o Chat com a
 pergunta pronta. No Full, o uso dos seus planos fica embaixo, âmbar a partir de 70% e vermelho a
 partir de 90%.

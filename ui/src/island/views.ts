@@ -700,6 +700,8 @@ export interface MenuActions {
 
 /** The session's latest finished edit, if one is kept. */
 export function lastDiff(s: SessionView): { step: number; text: string; files: number } | null {
+  const kept = s.changes?.at(-1);
+  if (kept) return { step: kept.step, text: kept.text, files: kept.files };
   const steps = tickerSteps(s);
   for (let i = steps.length - 1; i >= 0; i--) {
     const d = steps[i].diff;

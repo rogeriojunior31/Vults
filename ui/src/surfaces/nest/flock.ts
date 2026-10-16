@@ -4,7 +4,7 @@
 // at the right; in Full, the plans' usage under it. The card of the session in front answers what
 // it waits on, here, as the island would (ADR 0021).
 import type { Answer, Diff, FlockPlace, Hush, ProjectPref, UsageWindow } from "../../bridge";
-import type { AgentKind, SessionView, ViewModel } from "../../view.gen";
+import type { AgentKind, SessionView, TouchedView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { assignSpecies } from "../../island/flock";
@@ -440,20 +440,60 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
   };
 
-  /** Under a card that does not wait: what its kept edits changed (the last steps the app keeps). */
+  /** Under a card that does not wait: every file the session changed, summed. */
   const changedOf = (s: SessionView): HTMLElement | null => {
-    const edits = tickerSteps(s).flatMap((step) => (step.diff ? [step.diff] : []));
-    if (!edits.length) return null;
-    const added = edits.reduce((n, d) => n + d.added, 0), removed = edits.reduce((n, d) => n + d.removed, 0);
-    const last = edits[edits.length - 1];
+    const files = s.touched ?? [];
+    if (!files.length) return null;
+    const added = files.reduce((n, f) => n + f.added, 0), removed = files.reduce((n, f) => n + f.removed, 0);
+    const last = s.changes?.at(-1);
     return fid(
       el(
         "button",
-        { class: "compact-detail", onclick: () => showChange(s, last.step) },
+        {
+          class: "compact-detail",
+          onclick: () => {
+            if (last) return showChange(s, last.step);
+            detail = "diff";
+            remember();
+            draw();
+          },
+        },
         el("span", {}, el("span", { class: "added", text: `+${added}` }), document.createTextNode(" "), el("span", { class: "removed", text: `−${removed}` })),
-        el("span", { text: edits.length === 1 ? t("1 edit") : t("{n} edits", { n: edits.length }) }),
+        el("span", { text: files.length === 1 ? t("1 file") : t("{n} files", { n: files.length }) }),
       ),
       "act:changes",
+    );
+  };
+
+  /** Every file the session changed, the latest first; one whose diff is still kept opens it. */
+  const touchedList = (s: SessionView, files: TouchedView[]): HTMLElement => {
+    const rows = [...files].reverse().map((f) => {
+      // A file only the folder's look saw has no lines to count: a command wrote it.
+      const counts = f.outside
+        ? el("span", { class: "touched-counts outside", text: t("by a command") })
+        : el(
+            "span",
+            { class: "touched-counts" },
+            el("span", { class: "added", text: `+${f.added}` }),
+            document.createTextNode(" "),
+            el("span", { class: "removed", text: `−${f.removed}` }),
+          );
+      const path = el("span", { class: "touched-path", text: f.path });
+      const step = f.step;
+      const row = step == null
+        ? el("div", { class: "touched-row" }, path, counts)
+        : fid(el("button", { class: "touched-row", onclick: () => showChange(s, step) }, path, counts), `act:touched:${f.path}`);
+      row.title = f.outside
+        ? t("Changed in its folder during a turn, not in an edit the agent reported")
+        : f.edits === 1 ? t("1 edit") : t("{n} edits", { n: f.edits });
+      if (step != null && shownDiff?.owner === key(s) && shownDiff.step === step) row.setAttribute("aria-current", "true");
+      return row;
+    });
+    return el(
+      "section",
+      { class: "touched" },
+      el("h3", { class: "touched-head", text: t("Files changed in this session ({n})", { n: files.length }) }),
+      ...rows,
     );
   };
 
@@ -584,15 +624,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
     void on.diff(s, step).then(done, () => done(null));
   };
 
-  /** Changes: the session's finished edits, one at a time, read from its kept diffs. */
+  /** Changes: the session's kept edits, one at a time, over every file it changed. */
   const changes = (s: SessionView): HTMLElement[] => {
-    const edits = tickerSteps(s).flatMap((step) => (step.diff ? [{ text: step.text, diff: step.diff }] : []));
+    const edits = (s.changes ?? []).map((c) => ({ text: c.text, diff: c }));
+    const files = s.touched ?? [];
     hasEdits = edits.length > 0;
     if (!edits.length) {
       shownDiff = null;
       restoredChange = null;
       focusDiff = false;
-      return [el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") })];
+      return [
+        el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }),
+        files.length ? touchedList(s, files) : null,
+      ].filter((e): e is HTMLElement => e !== null);
     }
     if (restoredChange) {
       const change = restoredChange;
@@ -649,6 +693,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
           : el("div", { class: "diff-block" }, ...diffRows(d)),
     ];
     if (d?.cut) out.push(el("p", { class: "detail-footnote", text: t("Only the start of this change: the rest was too long to keep.") }));
+    if (files.length) out.push(touchedList(s, files));
     return out;
   };
 
@@ -754,7 +799,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
         ["context", t("Context")],
       ];
       if (zeca) tabs.push(["zeca", t("Zeca")]);
-      const sums = tickerSteps(front).reduce((n, step) => (step.diff ? { added: n.added + step.diff.added, removed: n.removed + step.diff.removed } : n), { added: 0, removed: 0 });
+      // The tab sums every file the session changed, as its card does, not just the ticker's edits.
+      const sums = (front.touched ?? []).reduce((n, f) => ({ added: n.added + f.added, removed: n.removed + f.removed }), { added: 0, removed: 0 });
       detailTabs.replaceChildren(
         ...tabs.map(([id, word]) => {
           const b = fid(

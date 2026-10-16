@@ -1,7 +1,7 @@
 //! The one loop that owns the domain state. Hook connections, clicks and timers all become
 //! messages to it; it runs `core::reduce`, executes the effects and pushes the view to the UI.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -78,6 +78,13 @@ enum Msg {
         cwd: String,
         repo: Option<core::Repo>,
     },
+    /// A look at a session's folder, taken off the loop (`folder`): at its turn's start, or end.
+    Folder {
+        session: core::SessionKey,
+        turn: u64,
+        end: bool,
+        look: Option<crate::folder::Look>,
+    },
     /// The island asks for a step's whole diff; only the loop holds it.
     Diff {
         session: core::SessionKey,
@@ -94,6 +101,67 @@ const REPO_FRESH: Duration = Duration::from_secs(60);
 /// When a session's repository was last asked for, for which folder, and whether that reading is
 /// still out.
 type Readings = HashMap<core::SessionKey, (String, Instant, bool)>;
+
+/// A session's turn being looked at: the two looks, as they come back.
+#[derive(Default)]
+struct FolderTurn {
+    /// Which turn: a look that comes back for an older one is dropped.
+    turn: u64,
+    before: Option<crate::folder::Look>,
+    after: Option<crate::folder::Look>,
+}
+
+/// The turns being looked at, and the sessions whose look is still out.
+#[derive(Default)]
+struct Folders {
+    turns: HashMap<core::SessionKey, FolderTurn>,
+    out: HashSet<core::SessionKey>,
+    next: u64,
+}
+
+/// Takes a look at `cwd` off the loop, for the session's turn starting or ending. One look per
+/// session at a time: a folder that hangs holds one blocking thread, not one per turn.
+fn look_at_folder(
+    folders: &mut Folders,
+    session: core::SessionKey,
+    cwd: String,
+    end: bool,
+    tx: &mpsc::Sender<Msg>,
+) {
+    if folders.out.contains(&session) {
+        return;
+    }
+    let turn = if end {
+        // An end with no start looked at: nothing to compare.
+        match folders.turns.get(&session) {
+            Some(t) if t.before.is_some() => t.turn,
+            _ => return,
+        }
+    } else {
+        // A new turn replaces one whose end was never looked at (it had no repository then).
+        folders.next += 1;
+        let turn = folders.next;
+        folders.turns.insert(
+            session.clone(),
+            FolderTurn {
+                turn,
+                ..FolderTurn::default()
+            },
+        );
+        turn
+    };
+    folders.out.insert(session.clone());
+    let tx = tx.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let look = crate::folder::look(std::path::Path::new(&cwd));
+        let _ = tx.blocking_send(Msg::Folder {
+            session,
+            turn,
+            end,
+            look,
+        });
+    });
+}
 
 /// Reads the repository of a session just heard from, off the loop, when its folder is new to us
 /// or the last reading is older than [`REPO_FRESH`]. Never a second one while one is out: a folder
@@ -244,6 +312,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     recap_due(&app, &mut state, &mut recap_looked);
     // When each session's repository was last read, and for which folder.
     let mut repos = Readings::new();
+    // The turns whose folder is being looked at.
+    let mut folders = Folders::default();
 
     while let Some(msg) = rx.recv().await {
         let now = Instant::now();
@@ -360,6 +430,33 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 let _ = reply.send(state.diff(&session, step).cloned());
                 continue;
             }
+            Msg::Folder {
+                session,
+                turn,
+                end,
+                look,
+            } => {
+                folders.out.remove(&session);
+                // A look for an older turn is dropped.
+                let Some(turn) = folders.turns.get_mut(&session).filter(|t| t.turn == turn) else {
+                    continue;
+                };
+                let Some(look) = look else {
+                    folders.turns.remove(&session);
+                    continue;
+                };
+                if end {
+                    turn.after = Some(look);
+                } else {
+                    turn.before = Some(look);
+                }
+                let (Some(before), Some(after)) = (&turn.before, &turn.after) else {
+                    continue;
+                };
+                let files = crate::folder::changed(before, after);
+                folders.turns.remove(&session);
+                (!files.is_empty()).then_some(Input::FolderChanged { session, files })
+            }
             Msg::Repo { session, cwd, repo } => {
                 if let Some(r) = repos.get_mut(&session) {
                     r.2 = false;
@@ -378,6 +475,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         };
         if matches!(input, Input::Tick) {
             repos.retain(|key, _| state.sessions.contains_key(key));
+            folders.turns.retain(|key, _| state.sessions.contains_key(key));
         }
         // Each step keeps the wall-clock time it started, which the core cannot read itself.
         if matches!(input, Input::Agent(_) | Input::RunEnded(_) | Input::Tick)
@@ -457,6 +555,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     // An open Settings lists them.
                     let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
+                Effect::Folder { session, cwd, end } => look_at_folder(&mut folders, session, cwd, end, &tx),
                 // The local history (docs/guide/activity.md): off the loop, a line and a day.
                 Effect::Turn(turn) => {
                     // Zeca's journal (M4) has its own switch, apart from the history's.

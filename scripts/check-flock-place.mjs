@@ -97,7 +97,9 @@ const decisions = [];
 const keptDiff = { files: [{ path: "app.rs", hunks: [{ old_start: 1, new_start: 1, lines: ["-old", "+new"] }] }], cut: false };
 const guarded = createFlock({ ...backend, loadPlace: async () => null, diff: async () => keptDiff, decide: (...args) => decisions.push(args) });
 const edits = { ...session, status: "working", attention: "info", card: false, steps: ["First edit", "Second edit"], step_count: 2,
-  diffs: [{ step: 1, files: 1, added: 1, removed: 0 }, { step: 2, files: 1, added: 2, removed: 0 }] };
+  diffs: [{ step: 1, files: 1, added: 1, removed: 0 }, { step: 2, files: 1, added: 2, removed: 0 }],
+  changes: [{ text: "First edit", step: 1, files: 1, added: 1, removed: 0 }, { text: "Second edit", step: 2, files: 1, added: 2, removed: 0 }],
+  touched: [{ path: "gen.rs", added: 0, removed: 0, edits: 0, step: null, file: null, outside: true }, { path: "app.rs", added: 3, removed: 0, edits: 2, step: 2, file: 0 }] };
 guarded.update({ ...view, approval: null, sessions: [edits] }); await tick();
 const expand = button(guarded, "Focus diff ↗");
 assert.equal(expand.disabled, false);
@@ -140,8 +142,10 @@ const again = await mountDiff();
 assert.equal(pickedStep(again), "1");
 assert.equal(expanded(again), true);
 assert.ok(again.element.textContent.includes("app.rs"));
+assert.ok(again.element.textContent.includes("Files changed in this session (2)"), "Changes lists every file the session changed");
+assert.ok(again.element.textContent.includes("by a command"), "A file only a command wrote says so");
 assert.ok(diffReads.some(([owner, step]) => owner === "one" && step === 1));
-const trimmed = { ...edits, steps: ["Second edit"], diffs: [edits.diffs[1]] };
+const trimmed = { ...edits, steps: ["Second edit"], diffs: [edits.diffs[1]], changes: [edits.changes[1]] };
 again.update({ ...normal, sessions: [trimmed] });
 assert.equal(pickedStep(again), "2");
 assert.equal(expanded(again), false, "An expired change must fall back to the latest kept step and card");

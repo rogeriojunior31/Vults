@@ -76,6 +76,7 @@ pub fn heard(session: &mut Session, event: &AgentEvent, now: Instant) {
         event,
         AgentEvent::PromptSubmitted
             | AgentEvent::ToolStarted(_)
+            | AgentEvent::Edited { .. }
             | AgentEvent::PermissionRequested { .. }
             | AgentEvent::QuestionAsked { .. }
             | AgentEvent::Question { .. }
@@ -94,11 +95,15 @@ pub fn heard(session: &mut Session, event: &AgentEvent, now: Instant) {
                 turn.commands += 1;
             }
         }
-        AgentEvent::ToolFinished {
+        AgentEvent::Edited { diff, .. }
+        | AgentEvent::ToolFinished {
             failed: false,
             diff: Some(diff),
             ..
         } => {
+            if matches!(event, AgentEvent::Edited { .. }) {
+                turn.steps += 1;
+            }
             for f in &diff.files {
                 turn.files.insert(f.path.clone());
                 turn.added = turn.added.saturating_add(f.added);

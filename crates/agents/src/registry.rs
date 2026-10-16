@@ -132,7 +132,7 @@ pub static ALL: [Entry; 10] = [
         caps: Some(Caps {
             permissions: Permissions::Terminal,
             questions: Questions::Terminal,
-            diffs: Diffs::None,
+            diffs: Diffs::Lines,
             stop: Stop::No,
             sandbox: Sandbox::No,
             starts: false,
@@ -218,7 +218,7 @@ pub static ALL: [Entry; 10] = [
             // Its hooks that could answer read silence as a decision: it asks in its own prompt.
             permissions: Permissions::Terminal,
             questions: Questions::Terminal,
-            diffs: Diffs::None,
+            diffs: Diffs::Lines,
             stop: Stop::No,
             sandbox: Sandbox::No,
             starts: false,

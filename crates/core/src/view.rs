@@ -136,6 +136,13 @@ pub struct SessionView {
     /// [`State::diff`] by its step number.
     #[cfg_attr(test, ts(as = "Option<Vec<Option<DiffSummary>>>", optional))]
     pub diffs: Vec<Option<DiffSummary>>,
+    /// The finished edits the session keeps, oldest first, past the ticker's steps: the Nest's
+    /// Changes.
+    #[cfg_attr(test, ts(as = "Option<Vec<ChangeView>>", optional))]
+    pub changes: Vec<ChangeView>,
+    /// Every file it changed so far, the latest last (at most 200).
+    #[cfg_attr(test, ts(as = "Option<Vec<TouchedView>>", optional))]
+    pub touched: Vec<TouchedView>,
     /// When each of `steps` started, in Unix seconds; none before the app said the time.
     #[cfg_attr(test, ts(as = "Option<Vec<Option<f64>>>", optional))]
     pub step_at: Vec<Option<i64>>,
@@ -174,6 +181,36 @@ pub struct DiffSummary {
     pub files: usize,
 }
 
+/// A kept edit, as the Changes list names it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct ChangeView {
+    pub text: String,
+    pub step: u32,
+    pub added: u32,
+    pub removed: u32,
+    pub files: usize,
+}
+
+/// A file the session changed: from its folder when inside it, else its whole path.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct TouchedView {
+    pub path: String,
+    pub added: u32,
+    pub removed: u32,
+    pub edits: u32,
+    /// The step whose kept diff shows its latest edit; none once that diff is gone.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub step: Option<u32>,
+    /// Its place in that diff's files, for opening it.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub file: Option<usize>,
+    /// Seen changed in its folder, never in an edit the agent told of: a command wrote it.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub outside: bool,
+}
+
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct ApprovalView {
@@ -210,7 +247,7 @@ impl State {
     /// The diff of a session's step, while the step is kept.
     pub fn diff(&self, key: &SessionKey, step: u32) -> Option<&Diff> {
         let s = self.sessions.get(key)?;
-        s.diffs.iter().find(|(n, _)| *n == step).map(|(_, d)| d)
+        s.diffs.iter().find(|c| c.step == step).map(|c| &c.diff)
     }
 
     /// The sessions every surface shows, in their order: pinned projects first, then the first to
@@ -284,6 +321,8 @@ impl State {
                 step: steps(self, s).pop(),
                 steps: steps(self, s),
                 diffs: diffs(s),
+                changes: changes(self, s),
+                touched: touched(s),
                 step_at: s.step_at.iter().copied().collect(),
                 step_count: s.step_count,
                 subagents: s.subagents,
@@ -452,14 +491,69 @@ fn diffs(s: &crate::Session) -> Vec<Option<DiffSummary>> {
     (0..s.steps.len() as u32)
         .map(|i| {
             let n = first + i;
-            s.diffs.iter().find(|(m, _)| *m == n).map(|(_, d)| DiffSummary {
-                step: n,
-                added: d.added(),
-                removed: d.removed(),
-                files: d.files.len(),
-            })
+            s.diffs.iter().find(|c| c.step == n).map(summary)
         })
         .collect()
+}
+
+fn summary(c: &crate::Change) -> DiffSummary {
+    DiffSummary {
+        step: c.step,
+        added: c.diff.added(),
+        removed: c.diff.removed(),
+        files: c.diff.files.len(),
+    }
+}
+
+fn changes(state: &State, s: &crate::Session) -> Vec<ChangeView> {
+    s.diffs
+        .iter()
+        .map(|c| {
+            let d = summary(c);
+            ChangeView {
+                text: i18n::step(state.lang, c.of.activity, &c.of.tool, c.of.detail.as_deref()),
+                step: d.step,
+                added: d.added,
+                removed: d.removed,
+                files: d.files,
+            }
+        })
+        .collect()
+}
+
+fn touched(s: &crate::Session) -> Vec<TouchedView> {
+    let base = s.root.as_deref().or(s.cwd.as_deref());
+    s.touched
+        .iter()
+        .map(|t| {
+            let file = s.diffs.iter().find(|c| c.step == t.step).and_then(|c| {
+                let cwd = s.cwd.as_deref();
+                c.diff
+                    .files
+                    .iter()
+                    .position(|f| crate::full_path(cwd, &f.path) == t.path)
+            });
+            TouchedView {
+                path: relative(base, &t.path).to_string(),
+                added: t.added,
+                removed: t.removed,
+                edits: t.edits,
+                step: file.map(|_| t.step),
+                file,
+                outside: t.outside,
+            }
+        })
+        .collect()
+}
+
+/// `src/main.rs` for `/w/src/main.rs` in `/w`; any other path as it is.
+fn relative<'a>(base: Option<&str>, path: &'a str) -> &'a str {
+    base.map(|b| b.trim_end_matches(['/', '\\']))
+        .filter(|b| !b.is_empty())
+        .and_then(|b| path.strip_prefix(b))
+        .and_then(|rest| rest.strip_prefix(['/', '\\']))
+        .filter(|rest| !rest.is_empty())
+        .unwrap_or(path)
 }
 
 /// `ui/src/view.gen.ts`: these types as TypeScript, so the island cannot drift from them.
@@ -530,6 +624,8 @@ pub(crate) mod ts {
             ViewModel::decl(&cfg),
             SessionView::decl(&cfg),
             DiffSummary::decl(&cfg),
+            ChangeView::decl(&cfg),
+            TouchedView::decl(&cfg),
             ApprovalView::decl(&cfg),
             EndedView::decl(&cfg),
             SessionRef::decl(&cfg),

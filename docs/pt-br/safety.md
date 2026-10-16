@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 3025cdde25bf -->
+<!-- source: c593bd1bcc35 -->
 
 O que o Vults promete:
 
@@ -19,6 +19,11 @@ O que o Vults promete:
   a escolha ou as palavras que você deu no card dela.
 - **Só a sua conta de usuário fala com ele.** O socket fica na sua pasta de runtime privada, com modo
   `0600`, e os dois lados verificam se o outro processo roda como você (no Windows, pelo SID).
+- **Olhar a pasta de uma sessão só a lê.** Para ver os arquivos que os comandos de uma sessão
+  escreveram, no início e no fim de cada turno o app lista o repositório da pasta dela com
+  `git ls-files` e ele mesmo compara o tamanho e a data de modificação de cada arquivo. O git não lê
+  o conteúdo de nenhum arquivo e não escreve nada; o fsmonitor e os hooks ficam desligados, então
+  nenhum filtro, hook ou monitor da configuração do repositório roda.
 - **Ele nunca edita a configuração de um agente pelas suas costas.** Toda mudança ganha um backup
   datado e um diff que você aprova; os hooks de outras ferramentas são mantidos, uma status line do
   Claude Code que seja sua continua rodando ([como](reference/settings.md#agent-configs-vults-edits)),
@@ -60,7 +65,8 @@ O que ele guarda fica neste computador, nunca é enviado para lugar nenhum e est
 [Clear history](guide/activity.md#the-history) apaga quase tudo:
 
 - **As edições que ele mostra ficam na memória**: as linhas alteradas de uma edição concluída (no
-  máximo 400), dos últimos passos da sessão, nunca gravadas em um arquivo ou log.
+  máximo 400), das últimas 32 edições da sessão, e os caminhos dos arquivos que ela alterou com
+  suas contagens, nunca gravados em um arquivo ou log.
 - **Os conectores guardam só a última resposta**, para que um reinício não repita notícias antigas
   ([Conectores](guide/connectors.md#the-github-card)).
 - **O histórico de atividade é só contagem**: nunca um prompt, uma resposta, um comando, um nome de

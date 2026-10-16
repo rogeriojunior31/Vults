@@ -91,7 +91,9 @@ impl Agent for Antigravity {
             "PostToolUse" => AgentEvent::ToolFinished {
                 failed: !text("error").is_empty(),
                 target: Some(target(tool, &input)),
-                diff: None,
+                diff: p
+                    .pointer("/toolCall/args")
+                    .and_then(|args| crate::diff::antigravity(tool, args)),
             },
             "Stop" => match crate::filled(text("error")) {
                 Some(error) => AgentEvent::StopFailed { error: Some(error) },

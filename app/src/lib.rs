@@ -7,6 +7,7 @@ mod connectors;
 mod context;
 mod doctor;
 mod flock_tools;
+mod folder;
 mod gate;
 mod handoff;
 mod history;
