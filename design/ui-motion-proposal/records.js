@@ -16,14 +16,30 @@
     const heading=el('h3',null,views.week===0?'This week':phrase('{n} weeks ago',{n:-views.week}));
     const next=button('Next week ›','',()=>{if(views.week<0){views.week++;setArea('activity',state.mode);}});next.disabled=views.week===0;
     host.append(el('div','week-nav',null,button('‹ Previous week','',()=>{views.week--;setArea('activity',state.mode);}),heading,next,key(button('Save as image','quiet-control',()=>{const hide=el('input');hide.type='checkbox';openEditor('Save as image',el('div',null,null,el('p','pane-note','A 1080\u00d71350 card with this week\'s figures.'),el('label','check-row',null,hide,el('span',null,'Hide project names'))),()=>{toast(hide.checked?'Saved without project names':'Saved to Pictures');return true;},'Save image');}),'save-image')));
-    host.append(el('div','week-summary stat-tiles',null,...[[String(values.reduce((a,b)=>a+b,0)),'Agent turns'],['4','Projects'],['3 h 12 min','Agent time'],['2','Needed you']].map(([value,label])=>el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(L(value))),el('span',null,label)))));
+    /* The week as a dashboard: figures against last week, turns stacked by agent in the agents' own colors, the
+       records as cards and the year as a calendar. Color here is the agents' identity, never a status. */
+    const total=values.reduce((a,b)=>a+b,0),thisWeek=views.week===0;
+    const spark=el('span','stat-spark');values.forEach(v=>{const b=el('i');b.style.height=Math.max(2,v/Math.max(...values,1)*18)+'px';spark.append(b);});
+    const delta=text=>thisWeek?el('small','stat-delta counter',null,document.createTextNode(L(text))):null;
+    host.append(el('div','week-summary stat-tiles',null,
+      el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(String(total))),el('span',null,'Agent turns'),delta('↑ 3 vs last week'),spark),
+      ...[['4','Projects','= last week'],['3 h 12 min','Agent time','↑ 40 min vs last week'],['2','Needed you','↓ 1 vs last week']].map(([value,label,d])=>el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(L(value))),el('span',null,label),delta(d)))));
+    const SPLIT=[['claude',.45],['codex',.3],['opencode',.15],['qwen',.1]];
     const chart=el('div','week-chart');chart.setAttribute('role','group');chart.setAttribute('aria-label',L('Agent turns by day'));
     const max=Math.max(...values,1);
-    DAYS.forEach((day,i)=>{const b=button(null,'week-day'+(views.day===i?' selected':''),()=>{views.day=i;setArea('activity',state.mode);});b.setAttribute('aria-pressed',String(views.day===i));b.setAttribute('aria-label',phrase('{day}: {n} turns',{day:L(day),n:values[i]}));const bar=el('span','day-bar');bar.style.height=(values[i]/max*96)+'px';b.append(el('span','counter',null,document.createTextNode(String(values[i]))),bar,el('span',null,day));chart.append(b);});
-    host.append(chart,el('div','week-records',null,...[['Busiest day',DAYS[values.indexOf(Math.max(...values))]],['Longest turn','24 min · frontend'],['Most turns','Vults · 9']].map(([label,value])=>el('div',null,null,el('small',null,label),el('strong',null,null,document.createTextNode(L(value)))))));
+    DAYS.forEach((day,i)=>{
+      const b=button(null,'week-day'+(views.day===i?' selected':'')+(thisWeek&&i===3?' today':''),()=>{views.day=i;setArea('activity',state.mode);});b.setAttribute('aria-pressed',String(views.day===i));b.setAttribute('aria-label',phrase('{day}: {n} turns',{day:L(day),n:values[i]}));
+      const bar=el('span','day-bar');bar.style.height=(values[i]/max*104)+'px';
+      let left=values[i];for(const [agent,share] of SPLIT){const n=agent==='qwen'?left:Math.min(left,Math.round(values[i]*share));left-=n;if(n>0){const seg=el('span','day-seg '+agent);seg.style.flexGrow=String(n);bar.append(seg);}}
+      b.append(el('span','counter',null,document.createTextNode(String(values[i]))),bar,el('span','day-name',null,document.createTextNode(L(day))));chart.append(b);
+    });
+    const legend=el('div','chart-legend',null,...[['claude','Claude Code'],['codex','Codex'],['opencode','OpenCode'],['qwen','Qwen Code']].map(([agent,name])=>el('span',null,null,el('span','agent-dot '+agent),el('span',null,raw(name)))));
+    host.append(el('div','week-panel',null,chart,legend),el('div','week-records',null,...[['bars','Busiest day',DAYS[values.indexOf(Math.max(...values))]],['play','Longest turn','24 min · frontend'],['flock','Most turns','Vults · 9']].map(([glyph,label,value])=>el('div','record-card',null,A.icon(glyph,15),el('div',null,null,el('small',null,label),el('strong',null,null,document.createTextNode(L(value))))))));
     host.append(details('How activity is counted',['A turn is one answer from an agent, from your prompt to its stop.','Agent time adds up the turns, not the time sessions stay open.','Nothing leaves this computer.']));
     const grid=el('div','year-grid');grid.setAttribute('aria-label',L('The last 52 weeks'));for(let i=0;i<364;i++){const cell=el('span','year-cell level-'+((i*7+i%5)%9<4?0:(i*3)%4+1));grid.append(cell);}
-    host.append(el('h3','lab-panel-title','The last 52 weeks'),grid,el('p','pane-note',settings.github?'With GitHub on, a second tab shows your contribution calendar.':'Turn GitHub on to compare with your contribution calendar.'));
+    const months=el('div','year-months');for(let m=0;m<12;m++)months.append(el('span',null,null,document.createTextNode(new Date(2025,10+m,1).toLocaleString(language,{month:'short'}))));
+    const scale=el('div','year-scale',null,el('span',null,'Less'),...[0,1,2,3,4].map(n=>el('span','year-cell level-'+n)),el('span',null,'More'));
+    host.append(el('div','year-head',null,el('h3','lab-panel-title','The last 52 weeks'),scale),el('div','year-wrap',null,months,grid),el('p','pane-note',settings.github?'With GitHub on, a second tab shows your contribution calendar.':'Turn GitHub on to compare with your contribution calendar.'));
   }
   function renderProjects(host) {
     const list=el('div'), finder=search('Search projects',value=>{views.recordQuery=value;paint();remember();});finder.querySelector('input').value=views.recordQuery;host.append(el('div','workspace-toolbar',null,finder),list);

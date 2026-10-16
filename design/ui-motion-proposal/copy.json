@@ -5978,5 +5978,35 @@
     "Uma limpeza opcional por um modelo, ajustada por app. É um filtro, nunca um assistente.",
     "Una limpieza opcional con un modelo, ajustada por app. Es un filtro, nunca un asistente.",
     "可选的模型整理，按应用设置。它只是过滤器，绝不是助手。"
+  ],
+  "↑ 3 vs last week": [
+    "↑ 3 a mais que a semana passada",
+    "↑ 3 más que la semana pasada",
+    "比上周多 3"
+  ],
+  "= last week": [
+    "= semana passada",
+    "= semana pasada",
+    "与上周相同"
+  ],
+  "↑ 40 min vs last week": [
+    "↑ 40 min a mais que a semana passada",
+    "↑ 40 min más que la semana pasada",
+    "比上周多 40 分钟"
+  ],
+  "↓ 1 vs last week": [
+    "↓ 1 a menos que a semana passada",
+    "↓ 1 menos que la semana pasada",
+    "比上周少 1"
+  ],
+  "Less": [
+    "Menos",
+    "Menos",
+    "少"
+  ],
+  "More": [
+    "Mais",
+    "Más",
+    "多"
   ]
 }
