@@ -1,4 +1,6 @@
-  const settings = { zeca:true, sounds:false, volume:50, notifications:true, presence:'Island', fold:15, hover:false, autostart:false, media:false, usage:true, history:true, memory:true, summary:false, suggestions:true, sleep:false, embeddings:false, voice:true, voiceModel:'Small', voiceLanguage:'Automatic', access:'Asks first', native:true, web:false, webEngine:'Brave', github:true, visitors:true, animations:prefs.motion, species:'atratus', outfit:'auto', pool:'Brazil', language:'pt-BR', dailyBudget:10, phone:false, transport:'Relay', provider:'CLI', chatFolder:'Vults', recordsCleared:false, dnd:'Off', screen:'Follow the pointer', widget:'Off',
+  const settings = { theme:'jaragua', zeca:true, sounds:false, volume:50, notifications:true, presence:'Island', fold:15, hover:false, autostart:false, media:false, usage:true, history:true, memory:true, summary:false, suggestions:true, sleep:false, embeddings:false, voice:true, voiceModel:'Small', voiceLanguage:'Automatic', access:'Asks first', native:true, web:false, webEngine:'Brave', github:true, visitors:true, animations:prefs.motion, species:'atratus', outfit:'auto', pool:'Brazil', language:'pt-BR', dailyBudget:10, phone:false, transport:'Relay', provider:'CLI', chatFolder:'Vults', recordsCleared:false, dnd:'Off', screen:'Follow the pointer', widget:'Off',
+    dictMode:'Hold + double tap', dictSpace:true, dictSession:true, dictAutoSend:false, dictSpokenCode:true, dictAgentsAsk:false, dictMic:'System default', dictSound:true, dictRepeats:true, dictPlanB:true, dictTerminals:true, dictClipboard:true, dictCleanup:false, dictCleanupModel:'Chat & voice · claude-haiku-4-5', dictStyle:'Natural', dictWriteIn:'The spoken language', dictSessionsEnglish:false, dictSummary:false, dictKeep:'30', dictHint:true, dictProject:true, dictSayCancel:true, dictDuck:'Lower to 25%', dictCaption:true, dictCommands:true, dictCommandElse:'Say so on the island',
+    zecaVoice:false, zecaVoiceModel:'OpenAI · gpt-realtime', zecaBudget:'$1', zecaTurn:'Balanced', zecaBarge:true, zecaFollowUp:false,
     rules:[{agent:'Codex',tool:'Bash',target:'npm run build',cwd:'~/Projects/Vults'},{agent:'Claude Code',tool:'Read',target:'docs/**',cwd:'~/Projects/docs'}],
     policies:[{id:'global',scope:'Every folder',text:'deny command "git push --force*"\nask class network\nallow tool Read'},{id:'vults',scope:'~/Projects/Vults',text:'allow command "npm run build"\nallow command "cargo test*"\nask class write outside "src/**"'}],
     keys:{anthropic:true,openrouter:true,openai:false}, githubSeen:{} };
@@ -175,6 +177,7 @@
     if (data.taskDraft && typeof data.taskDraft.title==='string') taskDraft={...taskDraft,...data.taskDraft};
     if (CATEGORIES.some(([id])=>id===data.category)) state.category=data.category;
     if (['week','projects','history','cost','traces','audit'].includes(data.activity)) state.activity=data.activity;
+    applyTheme(settings.theme);
     language=LANGUAGES.includes(settings.language)?settings.language:'pt-BR';A.setLang(language);$('.language-select').value=language;
     prefs.motion=settings.animations&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
     A.setZeca(settings.zeca);A.setZecaSpecies(settings.species);A.setZecaLook(['none','auto'].includes(settings.outfit)?null:settings.outfit);
@@ -215,13 +218,13 @@
     if(room)suggestions.append(el('p','suggest-title','Ask about your agents, your projects or anything on your desktop.'));
     companionSuggestions().slice(0,room?4:2).forEach(c=>suggestions.append(key(button(c.label,'',()=>{if(c.go){c.go();return;}input.value=L(c.send);input.dispatchEvent(new Event('input'));input.focus();}),c.id)));
   }
-  const EMPTY_HINTS={flock:'Start an agent in a terminal with the Vults hooks installed; its bird lands here.',summary:'Cards, failures, checks and reviews that ask for an action show up here.',tasks:'Create a task; Vults runs it in its own clone and reports back here.',connections:'Turn on GitHub in Settings to see your pull requests and checks.',activity:'Turns appear here as your agents work. History is kept on this computer.',chat:'Ask Zeca about your agents, your projects or your desktop.'};
+  const EMPTY_HINTS={flock:'Start an agent in a terminal with the Vults hooks installed; its bird lands here.',summary:'Cards, failures, checks and reviews that ask for an action show up here.',tasks:'Create a task; Vults runs it in its own clone and reports back here.',connections:'Turn on GitHub in Settings to see your pull requests and checks.',activity:'Turns appear here as your agents work. History is kept on this computer.',dictation:'Hold Ctrl+Alt+V in any app and speak. What you dictate shows here, only on this computer.',chat:'Ask Zeca about your agents, your projects or your desktop.'};
   function stageState(host,emptyTitle,emptyAction) {
     if(!['empty','loading','error'].includes(state.scenario))return false;
     const panel=el('section','empty-state');panel.setAttribute('role',state.scenario==='error'?'alert':'status');
     if(state.scenario==='loading')panel.append(el('h3',null,'Loading'),el('div','loading-line'),el('div','loading-line'));
     else if(state.scenario==='error')panel.append(A.icon('retry',20),el('h3','state-error','Could not update this view.'),el('p',null,'Your draft and selections stay here.'),details('Technical details',['vults-store: database is locked (retrying in 2 s)']),button('Try again','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
-    else panel.append(A.icon(({flock:'flock',tasks:'tasks',connections:'plug',activity:'bars',chat:'chat'})[state.area]??'list',22),el('h3',null,emptyTitle),el('p',null,EMPTY_HINTS[state.area]??'Nothing here yet.'),emptyAction??button('Show sample data','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
+    else panel.append(A.icon(({flock:'flock',tasks:'tasks',connections:'plug',activity:'bars',chat:'chat',dictation:'mic'})[state.area]??'list',22),el('h3',null,emptyTitle),el('p',null,EMPTY_HINTS[state.area]??'Nothing here yet.'),emptyAction??button('Show sample data','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
     host.append(panel);return true;
   }
   function openEditor(title,content,onSave,saveLabel='Save') {
@@ -294,14 +297,16 @@
       ...sessions.map(s=>({group:'Sessions',label:s.project+' · '+labelFor(s.agent),hint:L(sessionBrief(s)),run:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;setArea('flock','room');}})),
       ...flockFacts().needs.map(s=>({group:'Cards',label:phrase('Review the card from {project}',{project:s.project}),hint:'Opens it; answering stays a click',run:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='session';setArea('flock','room');}})),
       ...COMMANDS.map(([name,about,insert])=>({group:'Commands',label:raw(name),hint:about,run:()=>prepareChat(insert)})),
-      ...[['flock','Flock'],['chat','Chat'],['tasks','Tasks'],['connections','Connections'],['activity','Activity'],['memory','Memory'],['settings','Settings']].map(([area,label])=>({group:'Go to',label,hint:'Lab',run:()=>area==='settings'?openSettings():area==='memory'?openMemory():setArea(area,'room')})),
+      ...[['flock','Flock'],['chat','Chat'],['tasks','Tasks'],['connections','Connections'],['activity','Activity'],['dictation','Dictation'],['memory','Memory'],['settings','Settings']].map(([area,label])=>({group:'Go to',label,hint:'Lab',run:()=>area==='settings'?openSettings():area==='memory'?openMemory():setArea(area,'room')})),
     ];
     const paint=query=> {list.replaceChildren();let group;rows.filter(row=>(L(row.label)+' '+L(row.hint)).toLowerCase().includes(query.toLowerCase())).slice(0,14).forEach(row=>{if(row.group!==group){group=row.group;list.append(el('small','menu-group',group));}const b=button(null,'menu-item',()=> {close();row.run();});b.append(el('span',null,row.label),el('small',null,row.hint));list.append(b);});};
     const query=field('Search sessions, cards, commands and places','','search',paint);content.append(query.element,list);paint('');close=openEditor('Search',content);
   }
   function openSettings(category){if(category)state.category=category;setArea('settings',state.mode==='full'?'full':'room');}
-  function openMemory(){state.memoryPanel=true;views.memoryTab=memory.pending.length?'Waiting for you':'What Zeca remembers';setArea('chat',state.mode==='full'?'full':'room');}
-  function toggleMemoryPanel(force){state.memoryPanel=force??!state.memoryPanel;paintMemoryPanel();remember();}
+  function openMemory(){state.memoryPanel=true;views.memoryTab=memory.pending.length?'Waiting for you':'What Zeca remembers';setArea('chat',state.mode==='full'?'full':'room');roomForMemory();}
+  // Opening Memory in a narrow Lab folds the conversation list once, so the chat keeps its width.
+  function roomForMemory(){if(windowEl.getBoundingClientRect().width>=1100)return;if(typeof views.panels!=='object'||!views.panels)views.panels={};const recent=views.panels.recent??={w:230,folded:false};if(!recent.folded){recent.folded=true;paintRecent();}}
+  function toggleMemoryPanel(force){state.memoryPanel=force??!state.memoryPanel;if(state.memoryPanel)roomForMemory();paintMemoryPanel();remember();}
   /* Every side panel in the Lab is flexible, the same way: a header with its name and a fold button that is
      always visible, a divider you drag (arrow keys work on it, double-click resets), and a narrow rail when
      folded, with the panel's own marks (`rail`) so it still says something. Widths are kept per panel. */
@@ -357,6 +362,31 @@
   function focusDetail(host,selected){
     host.querySelector(windowEl.classList.contains('single-pane')?'[data-key="back-to-list"]':'[data-key="'+selected+'"]')?.focus({preventScroll:true});
   }
+  /* Themes are generated from sp-night.json: each flavour's tokens fill the roles Vults reads. Black is
+     today's app theme (themes.css), kept as the fallback. */
+  const THEMES=[...Object.entries(SP_NIGHT.flavors).map(([value,f])=>({value,label:raw(f.label)})),{value:'black',label:'Black'}];
+  const mixHex=(a,b,t)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,'0')).join('');
+  function flavorVars(c){
+    const r=k=>c[SP_NIGHT.roles[k]];
+    return {'--bg':r('bg'),'--bg-deep':r('bg_deep'),'--chrome':r('bg_deep'),'--float':mixHex(r('bg_deep'),r('bg'),.5),'--input':mixHex(r('bg_deep'),r('bg'),.4),
+      '--panel':r('panel'),'--raised':r('raised'),'--border':mixHex(r('panel'),r('raised'),.5),'--chrome-line':mixHex(r('panel'),r('raised'),.5),
+      '--control-border':r('border_strong'),'--border-hover':mixHex(r('border_strong'),r('fg_muted'),.2),'--wire':r('border_strong'),
+      '--line':r('fg')+'12','--hairline':r('fg')+'0a','--fg-bright':r('fg_bright'),'--fg':r('fg'),'--fg-dim':r('fg_dim'),'--fg-muted':r('fg_muted'),
+      '--soft':r('fg_dim'),'--chrome-icon':mixHex(r('fg_dim'),r('fg'),.4),'--accent':r('fg_bright'),'--on-accent':r('bg_deep'),'--mark':r('fg'),
+      '--ok':r('ok'),'--warn':r('warn'),'--error':r('error'),'--error-text':r('error_text'),'--info':r('info'),'--tab-accent':r('accent'),
+      '--focus-border':mixHex(r('accent'),r('border_strong'),.55),'--focus-shadow':'0 0 0 2px '+r('bg')+',0 0 0 4px '+r('accent')+'47'};
+  }
+  let themeVars=[];
+  function applyTheme(value){
+    settings.theme=THEMES.some(t=>t.value===value)?value:'jaragua';
+    for(const name of themeVars)root.style.removeProperty(name);themeVars=[];
+    const flavor=SP_NIGHT.flavors[settings.theme];
+    if(flavor)for(const [name,v] of Object.entries(flavorVars(flavor.colors))){root.style.setProperty(name,v);themeVars.push(name);}
+    root.setAttribute('data-flavor',settings.theme);for(const pick of $$('.theme-select,.settings-theme'))pick.value=settings.theme;
+    // The scenes cache their wire and agent colors: redraw them in the new flavour.
+    for(const scene of activeScenes){scene.colors=null;scene.refresh?.();}
+    document.body?.style&&(document.body.style.background=flavor?flavor.colors[SP_NIGHT.roles.bg]:'#000');
+  }
   /* MODULES */
   const SCREEN_REVIEW=[
     {id:'island',label:'Island',open:()=>setMode('mini'),scope:'See only: badges by shape, the pulse, usage hairlines. A click opens Compact.'},
@@ -387,9 +417,9 @@
   }
   function translateStatic(){for(const node of $$('[data-word]'))node.textContent=L(node.dataset.word);for(const node of $$('[data-label]'))node.setAttribute('aria-label',L(node.dataset.label));input.placeholder=L(['room','full'].includes(state.mode)?'Ask Zeca…':'Ask Zeca… / for commands, @ for a session');input.setAttribute('aria-label',L('Message'));for(const node of $$('[data-size]'))node.textContent=MODE_NAME[node.dataset.size]==='Island'?L('Island'):MODE_NAME[node.dataset.size];}
   function setLanguage(value){language=LANGUAGES.includes(value)?value:'pt-BR';settings.language=language;A.setLang(language);$('.language-select').value=language;translateStatic();paintConversation();setArea(state.area,state.mode);remember();}
-  // Compact: Flock · Chat · Now. Lab: Flock · Chat · Tasks · Connections · Activity. Settings is the gear in both.
+  // Compact: Flock · Chat · Now. Lab: Flock · Chat · Tasks · Connections · Activity · Dictation. Settings is the gear in both.
   const COMPACT_NAV=[['flock','Flock','flock'],['chat','Chat','chat'],['bars','Now','summary']];
-  const LAB_NAV=[['flock','Flock','flock'],['chat','Chat','chat'],['tasks','Tasks','tasks'],['plug','Connections','connections'],['bars','Activity','activity']];
+  const LAB_NAV=[['flock','Flock','flock'],['chat','Chat','chat'],['tasks','Tasks','tasks'],['plug','Connections','connections'],['bars','Activity','activity'],['mic','Dictation','dictation']];
   function navCount(target){
     if(target==='flock')return flockFacts().needs.length+flockFacts().failed.length;
     if(target==='summary')return nowRows().filter(r=>r.urgent).length;
@@ -455,7 +485,7 @@
     $$('[data-area]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.area===area&&(!b.dataset.mode||b.dataset.mode===mode||(b.dataset.mode==='room'&&mode==='full')))));
     $$('[data-size]').forEach(b=>{const on=b.dataset.size===mode||(b.dataset.size==='room'&&mode==='full');b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
     layoutSurface(!restoring&&previousMode!==mode);
-    const workspace=$('.workspace-view');workspace.replaceChildren();workspace.classList.remove('compact-flock','compact-summary','lab-flock','lab-split','with-sky','task-board','list-detail','detail-open');paintNav();paintChrome();
+    const workspace=$('.workspace-view');workspace.replaceChildren();workspace.classList.remove('compact-flock','compact-summary','lab-flock','lab-split','with-sky','task-board','list-detail','detail-open','dx-view');paintNav();paintChrome();
     paintNeedsStrip();
     if(mini)renderIsland($('.mini-strip'));
     else if(chat){
@@ -464,7 +494,7 @@
     }
     else if(mode==='quick'&&area==='flock')renderCompactFlock(workspace);
     else if(mode==='quick'&&area==='summary')renderNow(workspace);
-    else ({flock:renderFlock,tasks:renderTasks,activity:renderActivity,connections:renderConnections,settings:renderSettings,review:renderReview})[area]?.(workspace);
+    else ({flock:renderFlock,tasks:renderTasks,activity:renderActivity,connections:renderConnections,dictation:renderDictation,settings:renderSettings,review:renderReview})[area]?.(workspace);
     $('.access-trigger').textContent=L(settings.access);$('.folder-trigger').textContent=L(settings.chatFolder??'Vults');
     if(!chat)input.hidden=state.voice?true:false;
     paintBird();paintSuggestions();translateStatic();if(previous!==area&&!restoring)enter(chat?chatEl:workspace,'gentle',4,1);remember();
@@ -507,7 +537,7 @@
     if(event.defaultPrevented||event.isComposing||event.keyCode===229)return;
     if(!$('.editor-overlay').hidden||!$('.dialog-overlay').hidden)return;
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openPalette();return;}
-    if(event.altKey&&['1','2','3','4','5'].includes(event.key)){event.preventDefault();setArea(LAB_NAV[Number(event.key)-1][2],state.mode==='full'?'full':'room');return;}
+    if(event.altKey&&['1','2','3','4','5','6'].includes(event.key)){event.preventDefault();setArea(LAB_NAV[Number(event.key)-1][2],state.mode==='full'?'full':'room');return;}
     // Ctrl+Alt+Y / N answer the card on screen, as the app's global shortcuts do; never one that is not shown.
     if(event.ctrlKey&&event.altKey&&['y','n'].includes(event.key?.toLowerCase())){const card=$('.request-card');const b=card?.querySelector('[data-key="'+(event.key.toLowerCase()==='y'?'allow':'deny')+'"]');if(b){event.preventDefault();b.click();}return;}
     if(event.ctrlKey&&event.altKey&&['1','2','3'].includes(event.key)){event.preventDefault();setMode(['mini','quick','room'][Number(event.key)-1]);}

@@ -32,15 +32,19 @@ const theme = (await readFile(new URL('../../ui/src/themes.css', here), 'utf8'))
 const template = await readFile(new URL('template.html', here), 'utf8');
 const logic = await readFile(new URL('preview.js', here), 'utf8');
 // Modules share the workspace's scope; their order is the order they are read in.
-const MODULES = ['cards.js','island.js','compact.js','lab.js','connections.js','records.js','settings.js','memory.js'];
+const MODULES = ['cards.js','island.js','compact.js','lab.js','connections.js','records.js','settings.js','memory.js','dictation.js'];
 const modules = (await Promise.all(MODULES.map(name => readFile(new URL(name, here), 'utf8')))).join('\n');
 const workspace = (await readFile(new URL('workspace.js', here), 'utf8')).replace('/* MODULES */', () => modules);
 const extraCopy = await readFile(new URL('copy.json', here), 'utf8');
+const spNight = await readFile(new URL('sp-night.json', here), 'utf8');
 const fragment = template.replace('/* PRODUCTION_THEME */', () => theme)
   .replace('/* PRODUCTION_ASSETS */', () => assets.replaceAll('</script', '<\\/script'))
   .replace('/* PROPOSAL_LOGIC */', () => logic.replace('/* WORKSPACE_LOGIC */', () => workspace)
-    .replace('/* EXTRA_COPY */', () => extraCopy.replace(/[^\x00-\x7f]/g, char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'))));
+    .replace('/* SP_NIGHT */', () => spNight)
+    // The page declares UTF-8 (below), so the translations go in unescaped and without the file's indentation.
+    .replace('/* EXTRA_COPY */', () => JSON.stringify(JSON.parse(extraCopy)).replaceAll('</', '<\\/')));
 if (Buffer.byteLength(fragment) > 1_000_000) throw new Error('Prototype exceeds inline size limit.');
 for (const match of fragment.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Script(match[1]);
-await writeFile(new URL('vults-ui-proposal.html', here), fragment);
+// Opened straight from disk the page has no head: declare the encoding, and a doctype so tables inherit their text color.
+await writeFile(new URL('vults-ui-proposal.html', here), '<!doctype html>\n<meta charset="utf-8">\n' + fragment);
 console.log(`Prototype built: ${Buffer.byteLength(fragment)} bytes; production sprites, icons and theme embedded.`);

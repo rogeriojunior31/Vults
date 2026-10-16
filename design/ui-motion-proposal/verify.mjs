@@ -45,7 +45,7 @@ const nodes=n=>[n,...n.children.flatMap(nodes)];
 let document;
 const animations=[],documentListeners=new Map();
 class Element {
-  children=[];attributes={};listeners={};style={setProperty(name,value){this[name]=value;}};value='';scrollHeight=40;scrollTop=0;clientHeight=200;checked=false;
+  children=[];attributes={};listeners={};style={setProperty(name,value){this[name]=value;},removeProperty(name){delete this[name];}};value='';scrollHeight=40;scrollTop=0;clientHeight=200;checked=false;
   constructor(tag){this.tagName=tag.toUpperCase();}
   get className(){return this.attributes.class??'';}set className(value){this.attributes.class=value;}
   get id(){return this.attributes.id;}set id(value){this.attributes.id=value;}
@@ -62,7 +62,7 @@ class Element {
   remove(){if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(n=>n!==this);this.parentElement=null;}
   contains(node){return nodes(this).includes(node);}
   get isConnected(){return nodes(dom).includes(this)||nodes(document.body).includes(this);}
-  get firstElementChild(){return this.children[0];}get firstChild(){return this.children[0];}get lastElementChild(){return this.children.at(-1);}
+  get firstElementChild(){return this.children[0];}get firstChild(){return this.children[0];}get nextElementSibling(){const p=this.parentElement;return p?p.children[p.children.indexOf(this)+1]??null:null;}get lastElementChild(){return this.children.at(-1);}
   matches(selector){
     const attr=selector.match(/\[([^=\]]+)(?:="([^"]*)")?\]/);if(attr&&(attr[2]===undefined?!(attr[1]in this.attributes):this.attributes[attr[1]]!==attr[2]))return false;
     selector=selector.replace(/\[[^\]]*\]/g,'');if(!selector)return true;
@@ -126,6 +126,9 @@ for(const f of manifest){
   if(at.category)P.state.category=at.category;
   if(at.face)P.views.connectionFace=at.face;
   if(at.memoryTab)P.views.memoryTab=at.memoryTab;
+  P.dictation.tab=at.dxTab??'history';
+  if(at.meetingTab)P.dictation.meetingTab=at.meetingTab;
+  P.dictation.island=at.dictation??'idle';
   P.setArea(at.area,at.mode);
   if(at.scenario)P.setScenario(at.scenario);
   if(at.example)P.showExample(at.example);
@@ -141,7 +144,7 @@ reset();
 for(const lang of ['pt-BR','es','zh']){
   P.setLanguage(lang);
   for(const f of manifest.filter(f=>f.at)){P.setScenario(f.at.scenario??'ready');P.setArea(f.at.area,f.at.mode);if(f.at.example)P.showExample(f.at.example);}
-  for(const area of ['flock','chat','tasks','connections','activity','settings','review'])P.setArea(area,'room');
+  for(const area of ['flock','chat','tasks','connections','activity','dictation','settings','review'])P.setArea(area,'room');
 }
 P.setLanguage('pt-BR');
 const untranslated=P.missing();
@@ -162,7 +165,7 @@ for(const area of ['flock','chat','tasks','connections','activity','settings']){
 
 /* Navigation: Compact has three tabs, the Lab five; Settings is the gear in both. */
 P.setArea('chat','quick');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-summary']);
-P.setArea('flock','room');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-tasks','nav-connections','nav-activity']);
+P.setArea('flock','room');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-tasks','nav-connections','nav-activity','nav-dictation']);
 find('[data-key="head-settings"]').click();assert.equal(P.state.area,'settings');
 P.setArea('chat','quick');find('[data-key="head-settings"]').click();assert.equal(find('.action-menu').hidden,false,'The Compact gear opens quick settings in place.');assert.equal(P.state.mode,'quick');
 change(all('.action-menu select')[1],'1 h');assert.ok(find('[data-key="dnd"]'),'Do not disturb shows its moon.');find('[data-key="dnd"]').click();assert.equal(find('[data-key="dnd"]'),null);
@@ -269,6 +272,8 @@ P.setArea('chat','room');assert.ok(find('.conversation-row .row-tools'));
 find('[data-label="Rename"]').click();type(find('.editor-content input'),'Renamed');submitEditor();assert.ok(text('.room-recent').includes('Renamed'));
 
 P.setArea('tasks','room');P.setArea('connections','room');assert.equal(find('.workspace-view').classList.contains('task-board'),false,'Leaving Tasks leaves no grid behind.');
+for(const flavor of ['noite','garoa','jaragua']){change(find('.theme-select'),flavor);assert.equal(root.getAttribute('data-flavor'),flavor);assert.ok(/^#/.test(root.style['--bg'])&&root.style['--tab-accent'],'The '+flavor+' flavour sets the roles from sp-night.json.');}
+change(find('.theme-select'),'black');assert.equal(root.style['--bg'],undefined,'Black falls back to the app theme.');change(find('.theme-select'),'jaragua');
 /* Every Lab side panel is flexible. */
 for(const [area,id] of [['flock','flock-list'],['chat','recent'],['connections','conn'],['settings','settings']]){
   P.views.connectionFace='you';P.setArea(area,'room');const fold=find('[data-key="fold-'+id+'"]');assert.ok(fold,'The '+id+' panel can fold.');
@@ -293,6 +298,47 @@ find('[data-key="proposal-1"] [data-key="remember"]').click();assert.equal(all('
 /* Settings: every category, policies through a diff. */
 P.setArea('settings','room');assert.equal(all('.settings-categories button').filter(b=>b.dataset.key&&!b.dataset.key.startsWith('fold-')&&!b.classList.contains('rail-dot')).length,10);
 for(const name of ['general','chat','flock','agents','approvals','projects','activity','connectors','phone','about']){find('.settings-categories [data-key="'+name+'"]').click();assert.ok(find('.settings-content').children.length>1,'Settings '+name+' has content.');}
+/* Dictation: a Lab tab with its own side list and settings, and the island over the flock. */
+P.dictation.tab='history';P.setArea('dictation','room');assert.ok(find('[data-key="nav-dictation"][aria-pressed="true"]'));assert.equal(all('.dx-pages button').length,10,'Ten pages in three groups.');assert.equal(find('.dx-phase').textContent,'V1');
+assert.ok(all('.dx-entry').length>=6);assert.ok(!text('.dx-list').includes('Fix the failing parser test'),'Without the clean-up nothing is rewritten by a model.');
+assert.ok(text('.dx-list').includes('Como falado'),'Without the clean-up every line is as spoken.');
+assert.ok(all('.dx-hit').some(n=>n.textContent==='Claude Code'),'A replacement is marked.');
+type(find('.dx-list').parentElement.querySelector('.search-field input'),'tauri');assert.equal(all('.dx-entry').length,1);P.dictation.query='';
+P.dictation.tab='dictionary';P.setArea('dictation','room');const words=all('.dx-chip').length;
+const wordInput=find('[data-key="add-word"]').parentElement.querySelector('input');wordInput.value='Kubernetes';find('[data-key="add-word"]').click();assert.equal(all('.dx-chip').length,words+1);
+assert.ok(text('[data-key="dictation-try-sentence"]').includes('PR'),'Try a sentence runs the text pass.');
+P.dictation.tab='history';P.setArea('dictation','room');const dictated=all('.dx-entry').length;
+find('[data-key="dictation-try"]').click();assert.equal(P.state.mode,'mini');assert.ok(find('.mini-strip.dictating .island-dictation.listening'),'The island listens over the flock.');
+for(let i=0;i<40&&P.state.mode==='mini';i++)runTimers();
+assert.equal(P.state.area,'dictation');assert.equal(all('.dx-entry').length,dictated+1);assert.ok(find('.dx-entry.dx-new'));
+P.setMode('mini');assert.ok(!find('.island-dictation'),'After a dictation the island is the flock again.');
+find('[data-dictation="held"]').click();assert.ok(find('.island-dictation.held .shape-needs'),'A session waiting on a card holds the text.');find('[data-dictation="idle"]').click();
+find('[data-dictation="listening"]').click();assert.ok(!find('.island-caption'),'With no words yet the caption adds nothing, so it stays away.');
+find('[data-dictation="answered"]').click();assert.ok(text('.island-caption').includes('quem est'),'The caption shows what was heard over the answer.');find('[data-dictation="idle"]').click();assert.ok(!find('.island-caption'),'The caption goes with the dictation.');
+P.settings.dictCaption=false;find('[data-dictation="answered"]').click();assert.ok(!find('.island-caption'),'The caption can be turned off.');find('[data-dictation="idle"]').click();P.settings.dictCaption=true;
+find('[data-dictation="cancelled"]').click();assert.ok(find('.island-dictation.cancelled'),'A spoken cancel pastes nothing.');find('[data-dictation="idle"]').click();
+/* Voice commands (V8): their own key, no model; "and X too" and "undo" reuse the last one; a card is never answered by voice. */
+P.dictation.tab='commands';P.setArea('dictation','room');const commandsBefore=all('.dx-entry').length,commandStates=[];
+for(let n=0;n<6;n++){
+  find('[data-key="dictation-try-command"]').click();assert.ok(find('.island-dictation.command'),'A command listens on the island.');
+  for(let i=0;i<40&&P.dictation.island==='command';i++)runTimers();
+  commandStates.push(P.dictation.island);
+  if(P.dictation.island==='refused'){assert.ok(text('.island-caption').includes('clique'),'Approving by voice is refused, and the caption says how.');assert.ok(!find('.island-dictation .shape-needs'),'A refused command does not look like a card.');}
+  for(let i=0;i<40&&P.state.mode==='mini';i++)runTimers();
+}
+assert.deepEqual(commandStates,['commanded','answered','refused','commanded','commanded','commanded']);
+assert.equal(all('.dx-entry').length,commandsBefore+6);assert.ok(text('.dx-entry.dx-new').includes('docs com som de novo'),'Undo reverses the command it remembers.');
+P.dictation.tab='settings';P.setArea('dictation','room');
+assert.equal(P.settings.dictCommands,true);assert.equal(P.settings.dictSayCancel,true);assert.ok(find('[data-key="dict-duck"]')&&find('[data-key="dict-caption"]'));
+P.dictation.tab='commands';P.setArea('dictation','room');assert.ok(find('[data-key="dict-commands-list"]'));find('[data-key="dict-commands"] .toggle').click();assert.ok(!find('[data-key="dict-commands-list"]'),'Commands off asks nothing more.');P.settings.dictCommands=true;
+P.dictation.tab='settings';P.setArea('dictation','room');assert.ok(find('[data-key="dict-key"]'));
+assert.equal(P.settings.dictCleanup,false);assert.equal(P.settings.dictAutoSend,false);assert.equal(P.settings.dictAgentsAsk,false);assert.ok(!find('[data-key="dict-cleanup-model"]'),'The clean-up is off and asks nothing.');
+P.dictation.tab='styles';P.setArea('dictation','room');assert.equal(all('.dx-style').length,4);find('[data-key="dict-cleanup"] .toggle').click();assert.ok(find('[data-key="dict-cleanup-model"]'),'Turning it on shows its model.');
+P.dictation.tab='history';P.setArea('dictation','room');assert.ok(text('.dx-list').includes('Fix the failing parser test'),'With the clean-up a session gets the English prompt.');P.settings.dictCleanup=false;
+P.settings.dictKeep='0';P.setArea('dictation','room');assert.ok(find('.empty-state'),'Do not keep hides the history.');P.settings.dictKeep='30';
+P.dictation.tab='meetings';P.setArea('dictation','room');find('[data-key="meeting-record"]').click();assert.ok(find('.dx-recording'));find('[data-key="meeting-stop"]').click();assert.ok(!find('.dx-recording'));P.dictation.tab='history';
+P.dictation.tab='talk';P.setArea('dictation','room');assert.equal(P.settings.zecaVoice,false);find('[data-key="zeca-voice"] .toggle').click();assert.ok(text('.dx-page').includes('gpt-realtime'));P.settings.zecaVoice=false;P.dictation.tab='history';
+P.setArea('settings','room');
 find('.settings-categories [data-key="approvals"]').click();all('.settings-content button').find(b=>b.textContent==='Editar').click();type(find('.editor-content textarea'),'allow command "npm run build"\nallow command "npm test"');submitEditor();runTimers();
 assert.ok(find('.editor-content .diff-add'),'A policy change is reviewed as a diff.');submitEditor();assert.ok(P.settings.policies[0].text.includes('npm test'));
 

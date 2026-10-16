@@ -2744,10 +2744,10 @@
     "Ctrl+Alt+Espacio · Modo teclado",
     "Ctrl+Alt+空格 · 键盘模式"
   ],
-  "Alt+1–5 · Lab tabs": [
-    "Alt+1–5 · Abas do Lab",
-    "Alt+1–5 · Pestañas de Lab",
-    "Alt+1–5 · Lab 标签页"
+  "Alt+1–6 · Lab tabs": [
+    "Alt+1–6 · Abas do Lab",
+    "Alt+1–6 · Pestañas de Lab",
+    "Alt+1–6 · Lab 标签页"
   ],
   "Esc · Close, or leave full screen": [
     "Esc · Fechar, ou sair da tela cheia",
@@ -4358,5 +4358,1625 @@
     "Buscar…",
     "Buscar…",
     "搜索…"
+  ],
+  "Details · {project}": [
+    "Detalhes · {project}",
+    "Detalles · {project}",
+    "详情 · {project}"
+  ],
+  "Theme": [
+    "Tema",
+    "Tema",
+    "主题"
+  ],
+  "Black": [
+    "Preto",
+    "Negro",
+    "黑色"
+  ],
+  "Colors from the sp-night palette.": [
+    "Cores da paleta sp-night.",
+    "Colores de la paleta sp-night.",
+    "来自 sp-night 调色板的颜色。"
+  ],
+  "A conversation keeps its engine and model; New starts another.": [
+    "Uma conversa mantém o motor e o modelo; Nova começa outra.",
+    "Una conversación mantiene su motor y modelo; Nueva empieza otra.",
+    "一段对话会保留其引擎和模型；“新建”会开始另一段。"
+  ],
+  "Dictation": [
+    "Ditado",
+    "Dictado",
+    "听写"
+  ],
+  "Island while dictating": [
+    "Ilha durante o ditado",
+    "Isla durante el dictado",
+    "听写时的岛"
+  ],
+  "Listening": [
+    "Ouvindo",
+    "Escuchando",
+    "正在听"
+  ],
+  "Hands-free": [
+    "Mãos-livres",
+    "Manos libres",
+    "免手持"
+  ],
+  "Transcribing": [
+    "Transcrevendo",
+    "Transcribiendo",
+    "正在转写"
+  ],
+  "Pasted": [
+    "Colado",
+    "Pegado",
+    "已粘贴"
+  ],
+  "In a session": [
+    "Numa sessão",
+    "En una sesión",
+    "在会话中"
+  ],
+  "Held for a card": [
+    "Retido por um card",
+    "Retenido por una tarjeta",
+    "因卡片暂停"
+  ],
+  "Plan B": [
+    "Plano B",
+    "Plan B",
+    "备用方案"
+  ],
+  "No sound": [
+    "Sem som",
+    "Sin sonido",
+    "没有声音"
+  ],
+  "Zeca speaks": [
+    "Zeca fala",
+    "Zeca habla",
+    "Zeca 说话"
+  ],
+  "Interrupted": [
+    "Interrompido",
+    "Interrumpido",
+    "已打断"
+  ],
+  "Dictation settings": [
+    "Ajustes do ditado",
+    "Ajustes del dictado",
+    "听写设置"
+  ],
+  "Hold the same key in any app.": [
+    "Segure a mesma tecla em qualquer app.",
+    "Mantén la misma tecla en cualquier app.",
+    "在任意应用中按住同一个键。"
+  ],
+  "Talk with Zeca": [
+    "Conversar com o Zeca",
+    "Hablar con Zeca",
+    "与 Zeca 对话"
+  ],
+  "Off by default. On, your voice goes to the realtime model you choose, with your key in the keyring, a daily budget and a trace. Dictation stays on this computer.": [
+    "Desligado por padrão. Ligado, sua voz vai ao modelo realtime que você escolher, com sua chave no keyring, um orçamento diário e um registro. O ditado continua neste computador.",
+    "Apagado por defecto. Encendido, tu voz va al modelo en tiempo real que elijas, con tu clave en el llavero, un presupuesto diario y un registro. El dictado sigue en este equipo.",
+    "默认关闭。开启后，你的语音会发送到你选择的实时模型，密钥保存在系统钥匙串中，并有每日预算和记录。听写仍在本机完成。"
+  ],
+  "Always": [
+    "Sempre",
+    "Siempre",
+    "始终"
+  ],
+  "Never answers a card": [
+    "Nunca responde um card",
+    "Nunca responde una tarjeta",
+    "从不回应卡片"
+  ],
+  "Permissions and agents' questions are answered with a click or a shortcut, never by voice.": [
+    "Permissões e perguntas dos agentes se respondem com um clique ou um atalho, nunca por voz.",
+    "Los permisos y las preguntas de los agentes se responden con un clic o un atajo, nunca por voz.",
+    "权限和代理的提问只能通过点击或快捷键回应，绝不通过语音。"
+  ],
+  "Zeca's voice": [
+    "Voz do Zeca",
+    "Voz de Zeca",
+    "Zeca 的声音"
+  ],
+  "Try it": [
+    "Testar",
+    "Probar",
+    "试一试"
+  ],
+  "Hold Ctrl+Alt+V in any app, speak and let go. The text goes where the cursor is.": [
+    "Segure Ctrl+Alt+V em qualquer app, fale e solte. O texto vai para onde está o cursor.",
+    "Mantén Ctrl+Alt+V en cualquier app, habla y suelta. El texto va donde está el cursor.",
+    "在任意应用中按住 Ctrl+Alt+V，说话后松开。文字会出现在光标处。"
+  ],
+  "Your words": [
+    "Suas palavras",
+    "Tus palabras",
+    "你的词汇"
+  ],
+  "Meetings": [
+    "Reuniões",
+    "Reuniones",
+    "会议"
+  ],
+  "Statistics": [
+    "Estatísticas",
+    "Estadísticas",
+    "统计"
+  ],
+  "uh, fix the failing parser test, like, only that one, and run cargo test again": [
+    "é, corrige o teste do parser que tá falhando, tipo, só ele, e roda o cargo test de novo",
+    "eh, arregla el test del parser que falla, o sea, solo ese, y corre cargo test otra vez",
+    "呃，修一下失败的 parser 测试，就是只修那个，然后再跑一次 cargo test"
+  ],
+  "my email": [
+    "meu email",
+    "mi correo",
+    "我的邮箱"
+  ],
+  "Snippet: “{trigger}”": [
+    "Atalho: “{trigger}”",
+    "Atajo: “{trigger}”",
+    "片段：“{trigger}”"
+  ],
+  "signature": [
+    "assinatura",
+    "firma",
+    "签名"
+  ],
+  "Cheers,\nAna": [
+    "Abraço,\nAna",
+    "Saludos,\nAna",
+    "此致\nAna"
+  ],
+  "Replacement: “{from}”": [
+    "Substituição: “{from}”",
+    "Sustitución: “{from}”",
+    "替换：“{from}”"
+  ],
+  "open a pull request on cloud code and ask zeca to review it": [
+    "abre um pull request no cloud code e pede pro zeca revisar",
+    "abre un pull request en cloud code y pide a zeca que lo revise",
+    "在 cloud code 上开一个 pull request 并让 zeca 审查"
+  ],
+  "hi team, the tauri build passed, here is the link. signature": [
+    "oi time, a build do tauri passou, segue o link. assinatura",
+    "hola equipo, el build de tauri pasó, aquí está el enlace. firma",
+    "大家好， tauri 的构建通过了，链接在这里。 签名"
+  ],
+  "words today": [
+    "palavras hoje",
+    "palabras hoy",
+    "今日字数"
+  ],
+  "{n} min": [
+    "{n} min",
+    "{n} min",
+    "{n} 分钟"
+  ],
+  "saved today": [
+    "economizados hoje",
+    "ahorrados hoy",
+    "今日节省"
+  ],
+  "words per minute": [
+    "palavras por minuto",
+    "palabras por minuto",
+    "每分钟字数"
+  ],
+  "Search what you dictated": [
+    "Buscar no que você ditou",
+    "Buscar en lo que dictaste",
+    "搜索你听写的内容"
+  ],
+  "Kept 7 days": [
+    "Guardado por 7 dias",
+    "Guardado 7 días",
+    "保留 7 天"
+  ],
+  "Kept 30 days": [
+    "Guardado por 30 dias",
+    "Guardado 30 días",
+    "保留 30 天"
+  ],
+  "Kept 1 year": [
+    "Guardado por 1 ano",
+    "Guardado 1 año",
+    "保留 1 年"
+  ],
+  "Kept always": [
+    "Guardado para sempre",
+    "Guardado siempre",
+    "永久保留"
+  ],
+  "Heard: “{text}”": [
+    "Ouvido: “{text}”",
+    "Oído: “{text}”",
+    "听到的：“{text}”"
+  ],
+  "heard: “{text}”": [
+    "ouvido: “{text}”",
+    "oído: “{text}”",
+    "听到的：“{text}”"
+  ],
+  "In session {session} · {app}": [
+    "Na sessão {session} · {app}",
+    "En la sesión {session} · {app}",
+    "在会话 {session} · {app}"
+  ],
+  "As spoken": [
+    "Como falado",
+    "Tal como se dijo",
+    "按原话"
+  ],
+  "Natural": [
+    "Natural",
+    "Natural",
+    "自然"
+  ],
+  "Polished": [
+    "Polido",
+    "Pulido",
+    "润色"
+  ],
+  "Prompt": [
+    "Prompt",
+    "Prompt",
+    "提示词"
+  ],
+  "No model: only your words and snippets.": [
+    "Sem modelo: só suas palavras e atalhos.",
+    "Sin modelo: solo tus palabras y atajos.",
+    "不用模型：只应用你的词汇和片段。"
+  ],
+  "Drops “uh”, “like” and repeats; keeps your voice.": [
+    "Tira “é”, “tipo” e repetições; mantém seu jeito.",
+    "Quita “eh”, “o sea” y repeticiones; mantiene tu estilo.",
+    "去掉“呃”“就是”和重复；保留你的语气。"
+  ],
+  "Full sentences and written punctuation.": [
+    "Frases completas e pontuação de texto escrito.",
+    "Frases completas y puntuación escrita.",
+    "完整句子和书面标点。"
+  ],
+  "A clear instruction for the agent. It never answers or runs what you said.": [
+    "Uma instrução clara para o agente. Nunca responde nem executa o que você disse.",
+    "Una instrucción clara para el agente. Nunca responde ni ejecuta lo que dijiste.",
+    "给代理的清晰指令。它从不回答或执行你说的内容。"
+  ],
+  "Paste again (Ctrl+Alt+B)": [
+    "Colar de novo (Ctrl+Alt+B)",
+    "Pegar otra vez (Ctrl+Alt+B)",
+    "再次粘贴 (Ctrl+Alt+B)"
+  ],
+  "Show what was heard": [
+    "Ver o que foi ouvido",
+    "Ver lo que se oyó",
+    "显示听到的内容"
+  ],
+  "Pasted in {app}": [
+    "Colado no {app}",
+    "Pegado en {app}",
+    "已粘贴到 {app}"
+  ],
+  "{n} fixes": [
+    "{n} correções",
+    "{n} correcciones",
+    "{n} 处修正"
+  ],
+  "1 fix": [
+    "1 correção",
+    "1 corrección",
+    "1 处修正"
+  ],
+  "in {language}": [
+    "em {language}",
+    "en {language}",
+    "译为 {language}"
+  ],
+  "codex finished the task, I will look at it tomorrow morning": [
+    "o codex terminou a tarefa, vou olhar amanhã cedo",
+    "codex terminó la tarea, la miro mañana temprano",
+    " codex 完成了任务，我明天早上再看"
+  ],
+  "Pasted again in the focused app": [
+    "Colado de novo no app em foco",
+    "Pegado otra vez en la app enfocada",
+    "已再次粘贴到当前应用"
+  ],
+  "Deleted": [
+    "Apagado",
+    "Eliminado",
+    "已删除"
+  ],
+  "Remove {word}": [
+    "Tirar {word}",
+    "Quitar {word}",
+    "移除 {word}"
+  ],
+  "Words · {n}": [
+    "Palavras · {n}",
+    "Palabras · {n}",
+    "词汇 · {n}"
+  ],
+  "Names and terms Vults always spells right.": [
+    "Nomes e termos que o Vults sempre escreve certo.",
+    "Nombres y términos que Vults siempre escribe bien.",
+    "Vults 总会正确拼写的名称和术语。"
+  ],
+  "New word, e.g. Kubernetes": [
+    "Nova palavra, ex.: Kubernetes",
+    "Palabra nueva, p. ej. Kubernetes",
+    "新词，例如 Kubernetes"
+  ],
+  "That word is already there.": [
+    "Essa palavra já está lá.",
+    "Esa palabra ya está.",
+    "这个词已经存在。"
+  ],
+  "When I say": [
+    "Quando eu disser",
+    "Cuando diga",
+    "当我说"
+  ],
+  "Write": [
+    "Escrever",
+    "Escribir",
+    "写成"
+  ],
+  "Replacements · {n}": [
+    "Substituições · {n}",
+    "Sustituciones · {n}",
+    "替换 · {n}"
+  ],
+  "Paste": [
+    "Colar",
+    "Pegar",
+    "粘贴"
+  ],
+  "Fill in both sides.": [
+    "Preencha os dois lados.",
+    "Rellena los dos lados.",
+    "请填写两边。"
+  ],
+  "Snippets · {n}": [
+    "Atalhos de texto · {n}",
+    "Atajos de texto · {n}",
+    "文本片段 · {n}"
+  ],
+  "Say the short phrase and Vults pastes the whole text, unchanged.": [
+    "Diga a frase curta e o Vults cola o texto inteiro, sem mudar nada.",
+    "Di la frase corta y Vults pega el texto completo, sin cambios.",
+    "说出短语，Vults 会原样粘贴完整文本。"
+  ],
+  "Help the model with these words": [
+    "Ajudar o modelo com estas palavras",
+    "Ayudar al modelo con estas palabras",
+    "用这些词帮助模型"
+  ],
+  "Your first words go to whisper as vocabulary. Only with Small, where it was measured to help.": [
+    "Suas primeiras palavras vão ao whisper como vocabulário. Só no Small, onde se mediu que ajuda.",
+    "Tus primeras palabras van a whisper como vocabulario. Solo con Small, donde se midió que ayuda.",
+    "你的前几个词会作为词汇提示交给 whisper。仅用于 Small，经测量对它有帮助。"
+  ],
+  "Project vocabulary": [
+    "Vocabulário do projeto",
+    "Vocabulario del proyecto",
+    "项目词汇"
+  ],
+  "Dictating into a session adds its project's file, crate and branch names.": [
+    "Ao ditar para uma sessão, entram os nomes de arquivos, crates e a branch do projeto dela.",
+    "Al dictar a una sesión se suman los nombres de archivos, crates y la rama de su proyecto.",
+    "向会话听写时，会加入该项目的文件、crate 和分支名称。"
+  ],
+  "Whole words, any case; a space and a hyphen count the same. Nothing is learned on its own.": [
+    "Palavra inteira, sem diferenciar maiúsculas; espaço e hífen contam igual. Nada é aprendido sozinho.",
+    "Palabras completas, sin distinguir mayúsculas; un espacio y un guion cuentan igual. Nada se aprende solo.",
+    "按整词匹配，不区分大小写；空格和连字符视为相同。不会自动学习任何内容。"
+  ],
+  "How it is applied": [
+    "Como é aplicado",
+    "Cómo se aplica",
+    "应用方式"
+  ],
+  "open a pull request on cloud code and send it to my email": [
+    "abre um pull request no cloud code e manda pro meu email",
+    "abre un pull request en cloud code y mándalo a mi correo",
+    "在 cloud code 上开一个 pull request 并发到 我的邮箱"
+  ],
+  "Try a sentence": [
+    "Teste uma frase",
+    "Prueba una frase",
+    "试一句话"
+  ],
+  "Becomes, before any clean-up:": [
+    "Vira, antes de qualquer limpeza:",
+    "Queda así, antes de cualquier limpieza:",
+    "在任何整理之前，变成："
+  ],
+  "Records your microphone and the computer's sound. No bot joins the call; the audio is deleted after the transcript.": [
+    "Grava seu microfone e o som do computador. Nenhum bot entra na chamada; o áudio é apagado depois da transcrição.",
+    "Graba tu micrófono y el sonido del equipo. Ningún bot entra en la llamada; el audio se borra tras la transcripción.",
+    "录制你的麦克风和电脑声音。不会有机器人加入通话；转写完成后音频即被删除。"
+  ],
+  "Record a call": [
+    "Gravar uma chamada",
+    "Grabar una llamada",
+    "录制通话"
+  ],
+  "Stop and transcribe": [
+    "Parar e transcrever",
+    "Parar y transcribir",
+    "停止并转写"
+  ],
+  "Transcribing…": [
+    "Transcrevendo…",
+    "Transcribiendo…",
+    "正在转写…"
+  ],
+  "Recording. Tell the people on the call that you are recording.": [
+    "Gravando. Avise quem está na chamada que você está gravando.",
+    "Grabando. Avisa a quienes están en la llamada que estás grabando.",
+    "录制中。请告知通话中的人你正在录音。"
+  ],
+  "Vults sync": [
+    "Sync do Vults",
+    "Sync de Vults",
+    "Vults 同步会"
+  ],
+  "Today · 10:00 · 32 min": [
+    "Hoje · 10:00 · 32 min",
+    "Hoy · 10:00 · 32 min",
+    "今天 · 10:00 · 32 分钟"
+  ],
+  "User interview": [
+    "Entrevista de usuário",
+    "Entrevista de usuario",
+    "用户访谈"
+  ],
+  "Yesterday · 15:30 · 48 min": [
+    "Ontem · 15:30 · 48 min",
+    "Ayer · 15:30 · 48 min",
+    "昨天 · 15:30 · 48 分钟"
+  ],
+  "Export": [
+    "Exportar",
+    "Exportar",
+    "导出"
+  ],
+  "Export…": [
+    "Exportar…",
+    "Exportar…",
+    "导出…"
+  ],
+  "Exported": [
+    "Exportado",
+    "Exportado",
+    "已导出"
+  ],
+  "You": [
+    "Você",
+    "Tú",
+    "你"
+  ],
+  "Person 2": [
+    "Pessoa 2",
+    "Persona 2",
+    "第 2 人"
+  ],
+  "Person 3": [
+    "Pessoa 3",
+    "Persona 3",
+    "第 3 人"
+  ],
+  "Copy as Markdown": [
+    "Copiar em Markdown",
+    "Copiar como Markdown",
+    "复制为 Markdown"
+  ],
+  "Meeting": [
+    "Reunião",
+    "Reunión",
+    "会议"
+  ],
+  "Transcript": [
+    "Transcrição",
+    "Transcripción",
+    "转写"
+  ],
+  "Summary": [
+    "Resumo",
+    "Resumen",
+    "摘要"
+  ],
+  "To-dos": [
+    "A fazer",
+    "Pendientes",
+    "待办"
+  ],
+  "Rename speaker": [
+    "Renomear quem fala",
+    "Renombrar a quien habla",
+    "重命名发言人"
+  ],
+  "Renamed in the whole meeting": [
+    "Renomeado em toda a reunião",
+    "Renombrado en toda la reunión",
+    "已在整场会议中重命名"
+  ],
+  "The idea is to close dictation this week.": [
+    "A ideia é fechar o ditado essa semana.",
+    "La idea es cerrar el dictado esta semana.",
+    "我们打算这周完成听写。"
+  ],
+  "Is whisper Small good enough in Portuguese?": [
+    "O whisper Small já está bom em português?",
+    "¿whisper Small ya va bien en portugués?",
+    "whisper Small 的葡萄牙语够用吗？"
+  ],
+  "Yes. Turbo is better, but only with a GPU.": [
+    "Está. O Turbo é melhor, mas só com GPU.",
+    "Sí. Turbo es mejor, pero solo con GPU.",
+    "够用。Turbo 更好，但需要 GPU。"
+  ],
+  "And on Wayland, how is the text pasted?": [
+    "E no Wayland, como cola o texto?",
+    "¿Y en Wayland, cómo se pega el texto?",
+    "那在 Wayland 上文字怎么粘贴？"
+  ],
+  "Through the RemoteDesktop portal; KDE asks once.": [
+    "Pelo portal RemoteDesktop; o KDE pergunta uma vez.",
+    "Por el portal RemoteDesktop; KDE pregunta una vez.",
+    "通过 RemoteDesktop 门户；KDE 只问一次。"
+  ],
+  "Dictation closes this week with whisper Small as the default. On Wayland, pasting goes through the RemoteDesktop portal.": [
+    "O ditado fecha esta semana com o whisper Small como padrão. No Wayland, a colagem usa o portal RemoteDesktop.",
+    "El dictado se cierra esta semana con whisper Small por defecto. En Wayland, el pegado pasa por el portal RemoteDesktop.",
+    "听写本周完成，默认使用 whisper Small。在 Wayland 上通过 RemoteDesktop 门户粘贴。"
+  ],
+  "I dictate more in the terminal than in the editor.": [
+    "Eu dito mais no terminal do que no editor.",
+    "Dicto más en la terminal que en el editor.",
+    "我在终端里听写比在编辑器里多。"
+  ],
+  "And does Ctrl+Shift+V work there on its own?": [
+    "E o Ctrl+Shift+V ali funciona sozinho?",
+    "¿Y ahí Ctrl+Shift+V funciona solo?",
+    "那里 Ctrl+Shift+V 能直接用吗？"
+  ],
+  "They dictate mostly in the terminal; pasting with Ctrl+Shift+V is essential.": [
+    "A pessoa dita principalmente no terminal; colar com Ctrl+Shift+V é essencial.",
+    "Dicta sobre todo en la terminal; pegar con Ctrl+Shift+V es esencial.",
+    "对方主要在终端里听写；用 Ctrl+Shift+V 粘贴是关键。"
+  ],
+  "Detect terminals from the focused app": [
+    "Detectar terminais pelo app em foco",
+    "Detectar terminales por la app enfocada",
+    "根据当前应用识别终端"
+  ],
+  "Summaries are off": [
+    "Resumos desligados",
+    "Resúmenes apagados",
+    "摘要已关闭"
+  ],
+  "They use the chat's model through the network gate, with a budget and a trace.": [
+    "Eles usam o modelo do chat pelo portão de rede, com orçamento e registro.",
+    "Usan el modelo del chat a través de la puerta de red, con presupuesto y registro.",
+    "摘要通过网络闸门使用聊天模型，有预算和记录。"
+  ],
+  "Compare Small and Turbo on 20 sentences": [
+    "Comparar Small e Turbo em 20 frases",
+    "Comparar Small y Turbo en 20 frases",
+    "用 20 句话比较 Small 和 Turbo"
+  ],
+  "Test the portal on KWin 6": [
+    "Testar o portal no KWin 6",
+    "Probar el portal en KWin 6",
+    "在 KWin 6 上测试门户"
+  ],
+  "Make a task": [
+    "Criar tarefa",
+    "Crear tarea",
+    "创建任务"
+  ],
+  "Task created": [
+    "Tarefa criada",
+    "Tarea creada",
+    "已创建任务"
+  ],
+  "words dictated": [
+    "palavras ditadas",
+    "palabras dictadas",
+    "听写字数"
+  ],
+  "{h} h {m} min": [
+    "{h} h {m} min",
+    "{h} h {m} min",
+    "{h} 小时 {m} 分钟"
+  ],
+  "saved": [
+    "economizados",
+    "ahorrados",
+    "节省时间"
+  ],
+  "Words per day, last 2 weeks": [
+    "Palavras por dia, últimas 2 semanas",
+    "Palabras por día, últimas 2 semanas",
+    "近两周每日字数"
+  ],
+  "{n} words": [
+    "{n} palavras",
+    "{n} palabras",
+    "{n} 个词"
+  ],
+  "today": [
+    "hoje",
+    "hoy",
+    "今天"
+  ],
+  "Where you dictate": [
+    "Onde você dita",
+    "Dónde dictas",
+    "你在哪里听写"
+  ],
+  "Only this computer. Erasing the history keeps the figures; a day with no dictation counts as unknown, not zero.": [
+    "Só deste computador. Apagar o histórico mantém os números; um dia sem ditado conta como desconhecido, não zero.",
+    "Solo este equipo. Borrar el historial mantiene las cifras; un día sin dictado cuenta como desconocido, no cero.",
+    "仅限本机。删除历史会保留统计；没有听写的日子记为未知，而不是零。"
+  ],
+  "Change in KDE…": [
+    "Trocar no KDE…",
+    "Cambiar en KDE…",
+    "在 KDE 中更改…"
+  ],
+  "Opens System Settings › Shortcuts › Vults": [
+    "Abre Configurações do sistema › Atalhos › Vults",
+    "Abre Preferencias del sistema › Atajos › Vults",
+    "打开系统设置 › 快捷键 › Vults"
+  ],
+  "Key": [
+    "Tecla",
+    "Tecla",
+    "按键"
+  ],
+  "Dictation key": [
+    "Tecla de ditado",
+    "Tecla de dictado",
+    "听写键"
+  ],
+  "Through the desktop's shortcuts portal: KDE asks once and lets you change it. This is the key it saved.": [
+    "Pelo portal de atalhos do desktop: o KDE pergunta uma vez e deixa trocar. Esta é a tecla que ele guardou.",
+    "Por el portal de atajos del escritorio: KDE pregunta una vez y te deja cambiarla. Esta es la tecla que guardó.",
+    "通过桌面的快捷键门户：KDE 只询问一次，之后可以修改。这是它保存的按键。"
+  ],
+  "Mode": [
+    "Modo",
+    "Modo",
+    "模式"
+  ],
+  "Hold + double tap": [
+    "Segurar + dois toques",
+    "Mantener + doble toque",
+    "按住 + 双击"
+  ],
+  "Hold only": [
+    "Só segurar",
+    "Solo mantener",
+    "仅按住"
+  ],
+  "Hold to talk. Two quick taps lock hands-free; one more tap finishes.": [
+    "Segure para falar. Dois toques rápidos travam o mãos-livres; mais um toque termina.",
+    "Mantén para hablar. Dos toques rápidos fijan manos libres; otro toque termina.",
+    "按住说话。快速双击锁定免手持；再按一次结束。"
+  ],
+  "Space locks": [
+    "Espaço trava",
+    "Espacio fija",
+    "空格锁定"
+  ],
+  "Started holding and it got long? Tap Space without letting go: hands-free. X11 only for now.": [
+    "Começou segurando e ficou longo? Toque Espaço sem soltar: vira mãos-livres. Por enquanto só no X11.",
+    "¿Empezaste manteniendo y se alargó? Toca Espacio sin soltar: manos libres. Por ahora solo en X11.",
+    "按住后说得太长？不松手按一下空格：切换为免手持。目前仅限 X11。"
+  ],
+  "Cancel": [
+    "Cancelar",
+    "Cancelar",
+    "取消"
+  ],
+  "Esc on X11. On Wayland, Ctrl+Alt+X: binding Esc would take it from every app.": [
+    "Esc no X11. No Wayland, Ctrl+Alt+X: prender o Esc o tiraria de todos os apps.",
+    "Esc en X11. En Wayland, Ctrl+Alt+X: asignar Esc se lo quitaría a todas las apps.",
+    "X11 上用 Esc。Wayland 上用 Ctrl+Alt+X：绑定 Esc 会让所有应用失去它。"
+  ],
+  "Paste again": [
+    "Colar de novo",
+    "Pegar otra vez",
+    "再次粘贴"
+  ],
+  "Pastes the last dictation again, where the cursor is.": [
+    "Cola de novo o último ditado, onde está o cursor.",
+    "Pega otra vez el último dictado, donde está el cursor.",
+    "在光标处再次粘贴上一次听写。"
+  ],
+  "Agents": [
+    "Agentes",
+    "Agentes",
+    "代理"
+  ],
+  "Dictate into the session": [
+    "Ditar direto na sessão",
+    "Dictar en la sesión",
+    "直接听写到会话"
+  ],
+  "When the focus is on a flock session's terminal, the text goes through Vults, the same on X11 and Wayland. Never into a session waiting on a card: then it stays in the clipboard and the island points to the card.": [
+    "Se o foco está no terminal de uma sessão do bando, o texto vai pelo Vults, igual no X11 e no Wayland. Nunca para uma sessão esperando um card: aí ele fica na área de transferência e a ilha aponta o card.",
+    "Si el foco está en la terminal de una sesión de la bandada, el texto va por Vults, igual en X11 y Wayland. Nunca a una sesión que espera una tarjeta: entonces queda en el portapapeles y la isla señala la tarjeta.",
+    "当焦点在鸟群会话的终端时，文字通过 Vults 发送，X11 和 Wayland 上一致。绝不发送到等待卡片的会话：此时文字留在剪贴板，岛会指向那张卡片。"
+  ],
+  "Send by itself": [
+    "Enviar sozinho",
+    "Enviar solo",
+    "自动发送"
+  ],
+  "Presses Enter after the text. Never while the session waits on a card.": [
+    "Aperta Enter depois do texto. Nunca enquanto a sessão espera um card.",
+    "Pulsa Enter después del texto. Nunca mientras la sesión espera una tarjeta.",
+    "在文字后按回车。会话等待卡片时绝不发送。"
+  ],
+  "Spoken code": [
+    "Código falado",
+    "Código hablado",
+    "口述代码"
+  ],
+  "“dot”, “slash”, “dash” become . / - in terminals and sessions; no forced full stop.": [
+    "“ponto”, “barra”, “traço” viram . / - em terminais e sessões; sem ponto final forçado.",
+    "“punto”, “barra”, “guion” se vuelven . / - en terminales y sesiones; sin punto final forzado.",
+    "在终端和会话中，“点”“斜杠”“横杠”会变成 . / -；不会强加句号。"
+  ],
+  "Agents may ask for a spoken answer": [
+    "Agentes podem pedir uma resposta falada",
+    "Los agentes pueden pedir una respuesta hablada",
+    "代理可以请求语音回答"
+  ],
+  "Through Vults' MCP: the island shows the question, the mic opens only on the key, and you send the text with a click. Never a permission.": [
+    "Pelo MCP do Vults: a ilha mostra a pergunta, o microfone só abre na tecla e você envia o texto com um clique. Nunca uma permissão.",
+    "Por el MCP de Vults: la isla muestra la pregunta, el micrófono solo se abre con la tecla y envías el texto con un clic. Nunca un permiso.",
+    "通过 Vults 的 MCP：岛会显示问题，麦克风只在按键时打开，文字由你点击发送。绝不用于权限。"
+  ],
+  "Voice": [
+    "Voz",
+    "Voz",
+    "语音"
+  ],
+  "Microphone": [
+    "Microfone",
+    "Micrófono",
+    "麦克风"
+  ],
+  "System default": [
+    "Padrão do sistema",
+    "Predeterminado del sistema",
+    "系统默认"
+  ],
+  "Blue Yeti": [
+    "Blue Yeti",
+    "Blue Yeti",
+    "Blue Yeti"
+  ],
+  "Webcam C920": [
+    "Webcam C920",
+    "Webcam C920",
+    "网络摄像头 C920"
+  ],
+  "Shared with the chat. Small is good in Portuguese; Turbo is the most accurate, best with a GPU.": [
+    "Compartilhado com o chat. O Small é bom em português; o Turbo é o mais preciso, melhor com GPU.",
+    "Compartido con el chat. Small va bien en portugués; Turbo es el más preciso, mejor con GPU.",
+    "与聊天共用。Small 的葡萄牙语不错；Turbo 最准确，有 GPU 更好。"
+  ],
+  "Sound when it starts": [
+    "Som ao começar",
+    "Sonido al empezar",
+    "开始时提示音"
+  ],
+  "A short tone when the island starts listening.": [
+    "Um toque curto quando a ilha começa a ouvir.",
+    "Un tono corto cuando la isla empieza a escuchar.",
+    "岛开始聆听时播放短提示音。"
+  ],
+  "Cut repeats": [
+    "Cortar repetições",
+    "Cortar repeticiones",
+    "去除重复"
+  ],
+  "Whisper sometimes loops a phrase or invents “Thank you.” in silence; Vults cuts it before pasting.": [
+    "O whisper às vezes repete uma frase em loop ou inventa “Obrigado.” no silêncio; o Vults corta antes de colar.",
+    "whisper a veces repite una frase en bucle o inventa “Gracias.” en el silencio; Vults lo corta antes de pegar.",
+    "whisper 有时会循环重复一句话，或在静音时编出“谢谢。”；Vults 会在粘贴前去掉。"
+  ],
+  "Speech heard but no text: try again with Base and say so on the island.": [
+    "Houve fala mas nenhum texto: tenta de novo com o Base e avisa na ilha.",
+    "Se oyó habla pero no hay texto: intenta otra vez con Base y lo avisa en la isla.",
+    "听到了说话却没有文字：用 Base 再试一次，并在岛上提示。"
+  ],
+  "Terminals use Ctrl+Shift+V": [
+    "Terminais usam Ctrl+Shift+V",
+    "Las terminales usan Ctrl+Shift+V",
+    "终端使用 Ctrl+Shift+V"
+  ],
+  "Konsole, kitty, Alacritty, WezTerm and the VS Code terminal.": [
+    "Konsole, kitty, Alacritty, WezTerm e o terminal do VS Code.",
+    "Konsole, kitty, Alacritty, WezTerm y la terminal de VS Code.",
+    "Konsole、kitty、Alacritty、WezTerm 和 VS Code 终端。"
+  ],
+  "Give the clipboard back": [
+    "Devolver a área de transferência",
+    "Devolver el portapapeles",
+    "恢复剪贴板"
+  ],
+  "What you had copied comes back 0.7 s later, only if nothing else changed it. Dictation stays out of Klipper.": [
+    "O que você tinha copiado volta 0,7 s depois, só se nada mais o mudou. O ditado fica fora do Klipper.",
+    "Lo que habías copiado vuelve 0,7 s después, solo si nada más lo cambió. El dictado queda fuera de Klipper.",
+    "0.7 秒后恢复你之前复制的内容，前提是期间没有其他改动。听写内容不会进入 Klipper。"
+  ],
+  "No text field": [
+    "Sem campo de texto",
+    "Sin campo de texto",
+    "没有文本框"
+  ],
+  "The text stays in the clipboard and the island says “Ctrl+V to paste”.": [
+    "O texto fica na área de transferência e a ilha avisa: “Ctrl+V para colar”.",
+    "El texto queda en el portapapeles y la isla dice “Ctrl+V para pegar”.",
+    "文字留在剪贴板，岛会提示“按 Ctrl+V 粘贴”。"
+  ],
+  "Clean-up": [
+    "Limpeza",
+    "Limpieza",
+    "整理"
+  ],
+  "Clean up with a model": [
+    "Limpar com um modelo",
+    "Limpiar con un modelo",
+    "用模型整理"
+  ],
+  "A request on your behalf, through the network gate with its own budget and trace. Off, only your words and snippets apply.": [
+    "Um pedido em seu nome, pelo portão de rede, com orçamento e registro próprios. Desligado, só valem suas palavras e atalhos.",
+    "Una solicitud en tu nombre, por la puerta de red con su propio presupuesto y registro. Apagado, solo se aplican tus palabras y atajos.",
+    "代表你发出的请求，经过网络闸门，有独立预算和记录。关闭时只应用你的词汇和片段。"
+  ],
+  "Clean-up model": [
+    "Modelo da limpeza",
+    "Modelo de limpieza",
+    "整理模型"
+  ],
+  "Local stays on this computer. A filter, never an assistant: a question is pasted as a question.": [
+    "Local fica neste computador. Um filtro, nunca um assistente: uma pergunta é colada como pergunta.",
+    "Local se queda en este equipo. Un filtro, nunca un asistente: una pregunta se pega como pregunta.",
+    "本地模型留在本机。它只是过滤器，不是助手：问题会按问题原样粘贴。"
+  ],
+  "Chat & voice · claude-haiku-4-5": [
+    "Chat e voz · claude-haiku-4-5",
+    "Chat y voz · claude-haiku-4-5",
+    "聊天与语音 · claude-haiku-4-5"
+  ],
+  "Local · Ollama · qwen3:1.7b": [
+    "Local · Ollama · qwen3:1.7b",
+    "Local · Ollama · qwen3:1.7b",
+    "本地 · Ollama · qwen3:1.7b"
+  ],
+  "Default style": [
+    "Estilo padrão",
+    "Estilo predeterminado",
+    "默认风格"
+  ],
+  "Write in": [
+    "Escrever em",
+    "Escribir en",
+    "输出语言"
+  ],
+  "Speak one language, paste another. Code, commands and your words stay as they are.": [
+    "Fale num idioma e cole em outro. Código, comandos e suas palavras ficam como estão.",
+    "Habla un idioma y pega en otro. El código, los comandos y tus palabras quedan igual.",
+    "用一种语言说，用另一种语言粘贴。代码、命令和你的词汇保持不变。"
+  ],
+  "The spoken language": [
+    "O idioma falado",
+    "El idioma hablado",
+    "说话的语言"
+  ],
+  "Agent sessions in English": [
+    "Sessões dos agentes em inglês",
+    "Sesiones de agentes en inglés",
+    "代理会话使用英文"
+  ],
+  "Only what goes to the flock's sessions.": [
+    "Só o que vai para as sessões do bando.",
+    "Solo lo que va a las sesiones de la bandada.",
+    "仅限发送到鸟群会话的内容。"
+  ],
+  "Style per app": [
+    "Estilo por app",
+    "Estilo por app",
+    "按应用设置风格"
+  ],
+  "Style for {app}": [
+    "Estilo para {app}",
+    "Estilo para {app}",
+    "{app} 的风格"
+  ],
+  "Summary and to-dos": [
+    "Resumo e tarefas",
+    "Resumen y pendientes",
+    "摘要与待办"
+  ],
+  "After each meeting, through the chat's model and the network gate. The transcript itself stays on this computer.": [
+    "Depois de cada reunião, pelo modelo do chat e o portão de rede. A transcrição em si fica neste computador.",
+    "Después de cada reunión, con el modelo del chat y la puerta de red. La transcripción queda en este equipo.",
+    "每次会议后，通过聊天模型和网络闸门生成。转写本身留在本机。"
+  ],
+  "Privacy": [
+    "Privacidade",
+    "Privacidad",
+    "隐私"
+  ],
+  "Keep the history": [
+    "Guardar o histórico",
+    "Guardar el historial",
+    "保留历史"
+  ],
+  "Audio is never saved; only the text, on this computer.": [
+    "O áudio nunca é salvo; só o texto, neste computador.",
+    "El audio nunca se guarda; solo el texto, en este equipo.",
+    "音频从不保存；只在本机保存文字。"
+  ],
+  "Do not keep": [
+    "Não guardar",
+    "No guardar",
+    "不保留"
+  ],
+  "7 days": [
+    "7 dias",
+    "7 días",
+    "7 天"
+  ],
+  "30 days": [
+    "30 dias",
+    "30 días",
+    "30 天"
+  ],
+  "1 year": [
+    "1 ano",
+    "1 año",
+    "1 年"
+  ],
+  "Erase the history": [
+    "Apagar o histórico",
+    "Borrar el historial",
+    "删除历史"
+  ],
+  "Statistics stay.": [
+    "As estatísticas ficam.",
+    "Las estadísticas se quedan.",
+    "统计会保留。"
+  ],
+  "Erase…": [
+    "Apagar…",
+    "Borrar…",
+    "删除…"
+  ],
+  "Erase": [
+    "Apagar",
+    "Borrar",
+    "删除"
+  ],
+  "Every dictation on this computer is erased. Statistics stay.": [
+    "Todo ditado neste computador é apagado. As estatísticas ficam.",
+    "Se borra todo dictado de este equipo. Las estadísticas se quedan.",
+    "本机上的所有听写都会被删除。统计会保留。"
+  ],
+  "History erased": [
+    "Histórico apagado",
+    "Historial borrado",
+    "历史已删除"
+  ],
+  "History is off": [
+    "Histórico desligado",
+    "Historial apagado",
+    "历史已关闭"
+  ],
+  "Only the last text stays in memory, for Paste again. Statistics still count.": [
+    "Só o último texto fica na memória, para Colar de novo. As estatísticas continuam contando.",
+    "Solo el último texto queda en memoria, para Pegar otra vez. Las estadísticas siguen contando.",
+    "只有最后一段文字留在内存中，供再次粘贴使用。统计仍会计数。"
+  ],
+  "Diagnostics": [
+    "Diagnóstico",
+    "Diagnóstico",
+    "诊断"
+  ],
+  "Test the microphone": [
+    "Testar o microfone",
+    "Probar el micrófono",
+    "测试麦克风"
+  ],
+  "Good: clear speech, low noise (−52 dB).": [
+    "Bom: fala clara, ruído baixo (−52 dB).",
+    "Bien: habla clara, poco ruido (−52 dB).",
+    "良好：语音清晰，噪声低 (−52 dB)。"
+  ],
+  "Release to pasted: 0.9 s typical, 1.8 s slow": [
+    "Do soltar ao colado: 0,9 s em geral, 1,8 s nos lentos",
+    "De soltar a pegado: 0,9 s lo normal, 1,8 s los lentos",
+    "从松开到粘贴：通常 0.9 秒，慢时 1.8 秒"
+  ],
+  "Transcription: whisper Small on Vulkan, 0.55 s": [
+    "Transcrição: whisper Small no Vulkan, 0,55 s",
+    "Transcripción: whisper Small en Vulkan, 0,55 s",
+    "转写：Vulkan 上的 whisper Small，0.55 秒"
+  ],
+  "Paste: RemoteDesktop portal, 45 ms": [
+    "Colar: portal RemoteDesktop, 45 ms",
+    "Pegar: portal RemoteDesktop, 45 ms",
+    "粘贴：RemoteDesktop 门户，45 毫秒"
+  ],
+  "This week: 4 repeats cut, Plan B used once": [
+    "Esta semana: 4 repetições cortadas, Plano B usado uma vez",
+    "Esta semana: 4 repeticiones cortadas, Plan B usado una vez",
+    "本周：去除 4 次重复，备用方案使用 1 次"
+  ],
+  "Wayland · KWin 6 · shortcuts and paste portals ready": [
+    "Wayland · KWin 6 · portais de atalhos e de colar prontos",
+    "Wayland · KWin 6 · portales de atajos y pegado listos",
+    "Wayland · KWin 6 · 快捷键和粘贴门户就绪"
+  ],
+  "cancels": [
+    "cancela",
+    "cancela",
+    "取消"
+  ],
+  "finishes": [
+    "termina",
+    "termina",
+    "结束"
+  ],
+  "Hands-free: speak freely": [
+    "Mãos-livres: fale à vontade",
+    "Manos libres: habla tranquilo",
+    "免手持：请随意说"
+  ],
+  "Listening…": [
+    "Ouvindo…",
+    "Escuchando…",
+    "正在听…"
+  ],
+  "Transcribing on this computer…": [
+    "Transcrevendo neste computador…",
+    "Transcribiendo en este equipo…",
+    "正在本机转写…"
+  ],
+  "Pasted in {app} · {n} words · {fixes} fixes": [
+    "Colado no {app} · {n} palavras · {fixes} correções",
+    "Pegado en {app} · {n} palabras · {fixes} correcciones",
+    "已粘贴到 {app} · {n} 个词 · {fixes} 处修正"
+  ],
+  "In session {session} · {app}: review it and press Enter": [
+    "Na sessão {session} · {app}: revise e aperte Enter",
+    "En la sesión {session} · {app}: revísalo y pulsa Enter",
+    "已发送到会话 {session} · {app}：检查后按回车"
+  ],
+  "{session} is waiting on a card: the text is in the clipboard": [
+    "{session} está esperando um card: o texto está na área de transferência",
+    "{session} espera una tarjeta: el texto está en el portapapeles",
+    "{session} 正在等待卡片：文字已在剪贴板"
+  ],
+  "to paste": [
+    "para colar",
+    "para pegar",
+    "粘贴"
+  ],
+  "No text field: it is in the clipboard": [
+    "Nenhum campo de texto: está na área de transferência",
+    "Ningún campo de texto: está en el portapapeles",
+    "没有文本框：已放入剪贴板"
+  ],
+  "Small returned nothing; trying Base…": [
+    "O Small não devolveu nada; tentando com o Base…",
+    "Small no devolvió nada; probando con Base…",
+    "Small 没有返回内容；正在用 Base 重试…"
+  ],
+  "Heard nothing. Check the microphone in Settings › Dictation.": [
+    "Não ouvi nada. Confira o microfone em Configurações › Ditado.",
+    "No oí nada. Revisa el micrófono en Ajustes › Dictado.",
+    "什么也没听到。请在设置 › 听写中检查麦克风。"
+  ],
+  "speak to interrupt": [
+    "fale para interromper",
+    "habla para interrumpir",
+    "说话即可打断"
+  ],
+  "api finished: 3 tests passed, the diff waits for your review.": [
+    "O api terminou: 3 testes passaram, o diff espera sua revisão.",
+    "api terminó: pasaron 3 tests, el diff espera tu revisión.",
+    "api 已完成：3 个测试通过，diff 等你审查。"
+  ],
+  "listening": [
+    "ouvindo",
+    "escuchando",
+    "正在听"
+  ],
+  "Stopped. Go ahead.": [
+    "Parei. Pode falar.",
+    "Me detuve. Adelante.",
+    "已停下。请说。"
+  ],
+  "Nothing dictated yet.": [
+    "Nada ditado ainda.",
+    "Nada dictado aún.",
+    "还没有听写内容。"
+  ],
+  "Hold Ctrl+Alt+V in any app and speak. What you dictate shows here, only on this computer.": [
+    "Segure Ctrl+Alt+V em qualquer app e fale. O que você ditar aparece aqui, só neste computador.",
+    "Mantén Ctrl+Alt+V en cualquier app y habla. Lo que dictes aparece aquí, solo en este equipo.",
+    "在任意应用中按住 Ctrl+Alt+V 并说话。听写内容只在本机显示于此。"
+  ],
+  "ask zeca to review the pull request on cloud code": [
+    "pede pro zeca revisar o pull request no cloud code",
+    "pide a zeca que revise el pull request en cloud code",
+    "让 zeca 审查 cloud code 上的 pull request"
+  ],
+  "now": [
+    "agora",
+    "ahora",
+    "刚刚"
+  ],
+  "Realtime model": [
+    "Modelo realtime",
+    "Modelo en tiempo real",
+    "实时模型"
+  ],
+  "OpenAI · gpt-realtime": [
+    "OpenAI · gpt-realtime",
+    "OpenAI · gpt-realtime",
+    "OpenAI · gpt-realtime"
+  ],
+  "Google · Gemini Live": [
+    "Google · Gemini Live",
+    "Google · Gemini Live",
+    "Google · Gemini Live"
+  ],
+  "Budget per day": [
+    "Orçamento por dia",
+    "Presupuesto diario",
+    "每日预算"
+  ],
+  "Past it, Zeca answers in text and says so.": [
+    "Passou dele, o Zeca responde por texto e avisa.",
+    "Al pasarlo, Zeca responde por texto y lo avisa.",
+    "超出后，Zeca 改用文字回答并告知你。"
+  ],
+  "When you are done": [
+    "Quando você terminou",
+    "Cuando terminaste",
+    "何时算说完"
+  ],
+  "Fast answers after 1 s of silence; Patient waits out sentences that sound unfinished.": [
+    "Rápido responde após 1 s de silêncio; Paciente espera frases que parecem incompletas.",
+    "Rápido responde tras 1 s de silencio; Paciente espera las frases que suenan incompletas.",
+    "“快速”在 1 秒静音后回答；“耐心”会等待听起来未说完的句子。"
+  ],
+  "Fast": [
+    "Rápido",
+    "Rápido",
+    "快速"
+  ],
+  "Balanced": [
+    "Equilibrado",
+    "Equilibrado",
+    "均衡"
+  ],
+  "Patient": [
+    "Paciente",
+    "Paciente",
+    "耐心"
+  ],
+  "Interrupt by speaking": [
+    "Interromper falando",
+    "Interrumpir hablando",
+    "说话打断"
+  ],
+  "Speak over him and he stops. Needs headphones or PipeWire's echo cancellation.": [
+    "Fale por cima e ele para. Precisa de fone ou do cancelamento de eco do PipeWire.",
+    "Habla encima y se detiene. Necesita auriculares o la cancelación de eco de PipeWire.",
+    "你一开口他就停下。需要耳机或 PipeWire 的回声消除。"
+  ],
+  "Answer without the key": [
+    "Responder sem a tecla",
+    "Responder sin la tecla",
+    "无需按键回答"
+  ],
+  "After Zeca asks you something, the mic opens for 8 s, shown on the island.": [
+    "Depois que o Zeca pergunta algo, o microfone abre por 8 s, mostrado na ilha.",
+    "Cuando Zeca te pregunta algo, el micrófono se abre 8 s, visible en la isla.",
+    "Zeca 向你提问后，麦克风会打开 8 秒，并在岛上显示。"
+  ],
+  "Added": [
+    "Adicionado",
+    "Añadido",
+    "已添加"
+  ],
+  "Cancelled": [
+    "Cancelado",
+    "Cancelado",
+    "已取消"
+  ],
+  "Island for voice commands": [
+    "Ilha nos comandos de voz",
+    "Isla en los comandos de voz",
+    "语音命令时的岛"
+  ],
+  "Command done": [
+    "Comando feito",
+    "Comando hecho",
+    "命令已执行"
+  ],
+  "Which one?": [
+    "Qual deles?",
+    "¿Cuál?",
+    "哪一个？"
+  ],
+  "Not by voice": [
+    "Não por voz",
+    "No por voz",
+    "不能用语音"
+  ],
+  "Not a command": [
+    "Não é comando",
+    "No es un comando",
+    "不是命令"
+  ],
+  "Try a command": [
+    "Testar um comando",
+    "Probar un comando",
+    "试一个命令"
+  ],
+  "Voice command": [
+    "Comando de voz",
+    "Comando de voz",
+    "语音命令"
+  ],
+  "They also fix the names in voice commands.": [
+    "Também corrigem os nomes nos comandos de voz.",
+    "También corrigen los nombres en los comandos de voz.",
+    "它们也会纠正语音命令中的名称。"
+  ],
+  "Dictating into a session, or into a terminal or editor whose window title names a project, adds its file, crate and branch names.": [
+    "Ao ditar numa sessão, ou num terminal ou editor cujo título da janela cita um projeto, entram os nomes de arquivos, crates e branches dele.",
+    "Al dictar en una sesión, o en un terminal o editor cuyo título de ventana nombra un proyecto, se añaden sus nombres de archivos, crates y ramas.",
+    "向会话口述时，或窗口标题含项目名的终端或编辑器中口述时，会加入该项目的文件、crate 和分支名称。"
+  ],
+  "Cancel by voice": [
+    "Cancelar falando",
+    "Cancelar por voz",
+    "用语音取消"
+  ],
+  "End with “cancel” or “never mind” and nothing is pasted. The same on X11 and Wayland.": [
+    "Termine com “cancela” ou “deixa pra lá” e nada é colado. Igual no X11 e no Wayland.",
+    "Termina con “cancela” o “déjalo” y no se pega nada. Igual en X11 y Wayland.",
+    "以“取消”或“算了”结尾，就什么都不会粘贴。X11 和 Wayland 上都一样。"
+  ],
+  "Voice commands": [
+    "Comandos de voz",
+    "Comandos de voz",
+    "语音命令"
+  ],
+  "Hold the command key, say what to do in Vults and let go. Understood on this computer with no model; it never types into an app.": [
+    "Segure a tecla de comando, diga o que fazer no Vults e solte. Entendido neste computador, sem modelo; nunca digita em um app.",
+    "Mantén la tecla de comando, di qué hacer en Vults y suelta. Se entiende en este ordenador, sin modelo; nunca escribe en una app.",
+    "按住命令键，说出要在 Vults 中做什么，然后松开。在本机理解，不用模型；绝不会向应用输入文字。"
+  ],
+  "Command key": [
+    "Tecla de comando",
+    "Tecla de comando",
+    "命令键"
+  ],
+  "A second key in the shortcuts portal, so a command never ends up pasted as text.": [
+    "Uma segunda tecla no portal de atalhos, para um comando nunca acabar colado como texto.",
+    "Una segunda tecla en el portal de atajos, para que un comando nunca acabe pegado como texto.",
+    "快捷键门户中的第二个键，这样命令永远不会被当作文字粘贴。"
+  ],
+  "Names it understands": [
+    "Nomes que entende",
+    "Nombres que entiende",
+    "能听懂的名称"
+  ],
+  "Your sessions' projects and agents, and the replacements in Your words. One or two letters off still counts; when two names fit, it asks which.": [
+    "Os projetos e agentes das suas sessões e as substituições de Suas palavras. Uma ou duas letras de diferença ainda contam; quando dois nomes servem, ele pergunta qual.",
+    "Los proyectos y agentes de tus sesiones y los reemplazos de Tus palabras. Una o dos letras de diferencia aún cuentan; si encajan dos nombres, pregunta cuál.",
+    "你的会话中的项目和代理，以及“你的词语”中的替换。差一两个字母也算；两个名称都符合时，它会问是哪一个。"
+  ],
+  "When it is not a command": [
+    "Quando não é um comando",
+    "Cuando no es un comando",
+    "不是命令时"
+  ],
+  "Say so on the island": [
+    "Dizer isso na ilha",
+    "Decirlo en la isla",
+    "在岛上说明"
+  ],
+  "Send it to Zeca as a message": [
+    "Mandar ao Zeca como mensagem",
+    "Enviarlo a Zeca como mensaje",
+    "作为消息发给 Zeca"
+  ],
+  "Sent to Zeca, it is answered through the chat's model, as if you had typed it.": [
+    "Mandado ao Zeca, é respondido pelo modelo do chat, como se você tivesse digitado.",
+    "Enviado a Zeca, se responde con el modelo del chat, como si lo hubieras escrito.",
+    "发给 Zeca 后，由聊天的模型回答，就像你打字一样。"
+  ],
+  "Move around": [
+    "Navegar",
+    "Moverse",
+    "切换"
+  ],
+  "“next session”, “previous”, “open api”, “go to the api terminal”, “open the web folder”": [
+    "“próxima sessão”, “anterior”, “abre o api”, “vai para o terminal do api”, “abre a pasta do web”",
+    "“siguiente sesión”, “anterior”, “abre api”, “ve al terminal de api”, “abre la carpeta de web”",
+    "“下一个会话”、“上一个”、“打开 api”、“去 api 的终端”、“打开 web 的文件夹”"
+  ],
+  "Ask": [
+    "Perguntar",
+    "Preguntar",
+    "询问"
+  ],
+  "“who is waiting?”, “what is api doing?”, “how much of my plan is left?”, “how are my pull requests?” Answered under the island from what Vults already knows.": [
+    "“quem está esperando?”, “o que o api está fazendo?”, “quanto falta do meu plano?”, “como estão meus pull requests?” Respondido embaixo da ilha com o que o Vults já sabe.",
+    "“¿quién está esperando?”, “¿qué hace api?”, “¿cuánto queda de mi plan?”, “¿cómo van mis pull requests?” Se responde bajo la isla con lo que Vults ya sabe.",
+    "“谁在等待？”、“api 在做什么？”、“我的套餐还剩多少？”、“我的拉取请求怎么样了？”在岛下方用 Vults 已知的信息回答。"
+  ],
+  "Quiet a project": [
+    "Silenciar um projeto",
+    "Silenciar un proyecto",
+    "让项目安静"
+  ],
+  "“mute web”, “pin api”, “hide docs”": [
+    "“silencia o web”, “fixa o api”, “esconde o docs”",
+    "“silencia web”, “fija api”, “oculta docs”",
+    "“静音 web”、“置顶 api”、“隐藏 docs”"
+  ],
+  "Again and undo": [
+    "De novo e desfazer",
+    "Otra vez y deshacer",
+    "再来与撤销"
+  ],
+  "“and docs too”, “same for web”, “undo”. Vults remembers the last command for 90 s.": [
+    "“e o docs também”, “o mesmo pro web”, “desfaz”. O Vults lembra o último comando por 90 s.",
+    "“y docs también”, “lo mismo para web”, “deshaz”. Vults recuerda el último comando 90 s.",
+    "“docs 也一样”、“web 同样”、“撤销”。Vults 会记住上一条命令 90 秒。"
+  ],
+  "“approve”, “allow”, “yes” to a card: cards are answered with a click or a shortcut.": [
+    "“aprova”, “permite”, “sim” para um card: cards se respondem com um clique ou um atalho.",
+    "“aprueba”, “permite”, “sí” a una tarjeta: las tarjetas se responden con un clic o un atajo.",
+    "对卡片说“批准”“允许”“是”：卡片只能用点击或快捷键回答。"
+  ],
+  "What you can say": [
+    "O que dá para dizer",
+    "Lo que puedes decir",
+    "可以说什么"
+  ],
+  "Music while you speak": [
+    "Música enquanto você fala",
+    "Música mientras hablas",
+    "说话时的音乐"
+  ],
+  "Lower to 25%": [
+    "Baixar para 25%",
+    "Bajar al 25%",
+    "降到 25%"
+  ],
+  "Pause it": [
+    "Pausar",
+    "Pausarla",
+    "暂停"
+  ],
+  "Leave it": [
+    "Deixar como está",
+    "Dejarla",
+    "不变"
+  ],
+  "Players that speak MPRIS (Spotify, Firefox, VLC) come back as they were. Not while a meeting records.": [
+    "Players com MPRIS (Spotify, Firefox, VLC) voltam como estavam. Não durante a gravação de uma reunião.",
+    "Los reproductores con MPRIS (Spotify, Firefox, VLC) vuelven como estaban. No mientras se graba una reunión.",
+    "支持 MPRIS 的播放器（Spotify、Firefox、VLC）会恢复原状。录制会议时不生效。"
+  ],
+  "Caption under the island": [
+    "Legenda embaixo da ilha",
+    "Subtítulo bajo la isla",
+    "岛下方的字幕"
+  ],
+  "The whole line in two rows while you speak and 2 s after; no buttons, and clicks go through it.": [
+    "A linha inteira em duas linhas enquanto você fala e 2 s depois; sem botões, e os cliques passam por ela.",
+    "La línea entera en dos filas mientras hablas y 2 s después; sin botones, y los clics la atraviesan.",
+    "说话时及之后 2 秒以两行显示完整内容；没有按钮，点击会穿过它。"
+  ],
+  "or “cancel”": [
+    "ou “cancela”",
+    "o “cancela”",
+    "或说“取消”"
+  ],
+  "Say what to do in Vults…": [
+    "Diga o que fazer no Vults…",
+    "Di qué hacer en Vults…",
+    "说出要在 Vults 中做什么…"
+  ],
+  "Let go to run it": [
+    "Solte para executar",
+    "Suelta para ejecutarlo",
+    "松开即执行"
+  ],
+  "say which": [
+    "diga qual",
+    "di cuál",
+    "说出是哪个"
+  ],
+  "Cancelled: nothing was pasted.": [
+    "Cancelado: nada foi colado.",
+    "Cancelado: no se pegó nada.",
+    "已取消：没有粘贴任何内容。"
+  ],
+  "“{text}”": [
+    "“{text}”",
+    "“{text}”",
+    "“{text}”"
+  ],
+  "{n} s": [
+    "{n} s",
+    "{n} s",
+    "{n} 秒"
+  ],
+  "open the api session": [
+    "abre a sessão do api",
+    "abre la sesión de api",
+    "打开 api 会话"
+  ],
+  "Opened api · Codex": [
+    "Sessão api aberta · Codex",
+    "Sesión api abierta · Codex",
+    "已打开 api · Codex"
+  ],
+  "who is waiting on a card": [
+    "quem está esperando num card",
+    "quién está esperando en una tarjeta",
+    "谁在等卡片"
+  ],
+  "Two sessions wait on a card: api and web.": [
+    "Duas sessões esperam num card: api e web.",
+    "Dos sesiones esperan en una tarjeta: api y web.",
+    "两个会话在等卡片：api 和 web。"
+  ],
+  "approve it": [
+    "aprova",
+    "apruébalo",
+    "批准它"
+  ],
+  "Cards are answered with a click or a shortcut, not by voice.": [
+    "Cards se respondem com um clique ou um atalho, não por voz.",
+    "Las tarjetas se responden con un clic o un atajo, no por voz.",
+    "卡片要用点击或快捷键回答，不能用语音。"
+  ],
+  "mute web": [
+    "silencia o web",
+    "silencia web",
+    "静音 web"
+  ],
+  "Muted web": [
+    "web silenciado",
+    "web silenciado",
+    "已静音 web"
+  ],
+  "and docs too": [
+    "e o docs também",
+    "y docs también",
+    "docs 也一样"
+  ],
+  "Muted docs, like web": [
+    "docs silenciado, como o web",
+    "docs silenciado, como web",
+    "已静音 docs，同 web"
+  ],
+  "undo": [
+    "desfaz",
+    "deshaz",
+    "撤销"
+  ],
+  "Unmuted docs": [
+    "docs com som de novo",
+    "docs con sonido otra vez",
+    "已取消静音 docs"
+  ],
+  "open the folder of apy": [
+    "abre a pasta do apy",
+    "abre la carpeta de apy",
+    "打开 apy 的文件夹"
+  ],
+  "Which one: api or api-gateway?": [
+    "Qual: api ou api-gateway?",
+    "¿Cuál: api o api-gateway?",
+    "哪一个：api 还是 api-gateway？"
+  ],
+  "the gateway one": [
+    "a do gateway",
+    "la del gateway",
+    "gateway 那个"
+  ],
+  "Opened the api-gateway folder": [
+    "Pasta do api-gateway aberta",
+    "Carpeta de api-gateway abierta",
+    "已打开 api-gateway 的文件夹"
+  ],
+  "write a poem about birds": [
+    "escreve um poema sobre pássaros",
+    "escribe un poema sobre pájaros",
+    "写一首关于鸟的诗"
+  ],
+  "Not a command. Try “next session” or “who is waiting?”.": [
+    "Não é um comando. Tente “próxima sessão” ou “quem está esperando?”.",
+    "No es un comando. Prueba “siguiente sesión” o “¿quién está esperando?”.",
+    "不是命令。试试“下一个会话”或“谁在等待？”。"
+  ],
+  "Dictionary": [
+    "Dicionário",
+    "Diccionario",
+    "词典"
+  ],
+  "Snippets": [
+    "Atalhos de texto",
+    "Atajos de texto",
+    "文本片段"
+  ],
+  "Styles": [
+    "Estilos",
+    "Estilos",
+    "风格"
+  ],
+  "Off: every line is pasted as spoken.": [
+    "Desligada: cada linha é colada como foi falada.",
+    "Apagada: cada línea se pega tal como se dijo.",
+    "关闭时：每一句都按原话粘贴。"
+  ],
+  "Last 50 dictations": [
+    "Últimos 50 ditados",
+    "Últimos 50 dictados",
+    "最近 50 次听写"
+  ],
+  "This computer": [
+    "Este computador",
+    "Este equipo",
+    "本机"
+  ],
+  "Heard nothing. Check the microphone in Dictation › Settings.": [
+    "Não ouvi nada. Confira o microfone em Ditado › Ajustes.",
+    "No oí nada. Revisa el micrófono en Dictado › Ajustes.",
+    "什么也没听到。请在听写 › 设置中检查麦克风。"
+  ],
+  "Recent commands": [
+    "Comandos recentes",
+    "Comandos recientes",
+    "最近的命令"
+  ],
+  "Start a conversation": [
+    "Começar a conversa",
+    "Empezar la conversación",
+    "开始对话"
+  ],
+  "An optional clean-up by a model, set per app. It is a filter, never an assistant.": [
+    "Uma limpeza opcional por um modelo, ajustada por app. É um filtro, nunca um assistente.",
+    "Una limpieza opcional con un modelo, ajustada por app. Es un filtro, nunca un asistente.",
+    "可选的模型整理，按应用设置。它只是过滤器，绝不是助手。"
   ]
 }

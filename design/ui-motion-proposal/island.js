@@ -66,7 +66,7 @@
     host.append(badges,plans);
     if(settings.github&&unseenCount())host.append(el('span','island-news'));
     if(settings.media)host.append(el('span','island-media',null,A.icon('note',10)));
-    attachSky('mini',host,scene,visible);paintBadges();
+    attachSky('mini',host,scene,visible);paintBadges();paintDictationIsland(host);
     host.classList.toggle('edge-needs',f.needs.length>0&&settings.dnd==='Off');host.classList.toggle('edge-failed',!f.needs.length&&f.failed.length>0);
   }
   $('.mini-strip').addEventListener('click',()=>{

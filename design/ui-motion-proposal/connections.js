@@ -36,7 +36,7 @@
       if(row.checks)detail.append(chip(checkTone(row.checks),row.merged?'Merged':row.checks==='passed'?'Checks passed':row.checks==='failed'?'Checks failed':'Checks running'));
       detail.append(el('h3',null,row.title),el('span','task-meta',null,document.createTextNode([row.repo,row.id.startsWith('#')?row.id:row.ref,row.branch,row.author&&'@'+row.author,row.size].filter(Boolean).join(' · '))));
       if(row.notes)detail.append(el('p',null,row.notes));
-      const actions=el('div','detail-actions',null,button('Open in GitHub ↗','quiet-control',()=>toast(phrase('Opened {ref} in your browser',{ref:row.ref??row.id}))),key(button('Ask Zeca','primary',()=>prepareChat(phrase(section==='actions'?'Why is {repo} main red?':'Review {title}',{repo:row.repo,title:L(row.title)}))),'ask-zeca'));
+      const actions=el('div','detail-actions',null,button('Open in GitHub ↗','quiet-control',()=>toast(phrase('Opened {ref} in your browser',{ref:row.ref??row.id}))),key(button('Ask Zeca','quiet-control',()=>prepareChat(phrase(section==='actions'?'Why is {repo} main red?':'Review {title}',{repo:row.repo,title:L(row.title)}))),'ask-zeca'));
       if(section==='pulls'){
         const merge=key(button('Squash and merge','quiet-control',()=>confirm('Squash and merge',phrase('Merges {ref} at its green commit. The action is traced.',{ref:row.id}),()=>{row.merged=true;paintDetail(row);remember();toast('Merged');},'default','Squash and merge')),'merge');
         merge.disabled=row.checks!=='passed'||row.merged;merge.setAttribute('data-tooltip',L(row.checks!=='passed'?'Merging waits for green checks.':'Merges the exact green commit.'));actions.append(merge);

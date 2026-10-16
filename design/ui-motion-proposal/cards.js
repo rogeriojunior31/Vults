@@ -43,6 +43,7 @@
     if(s.outside)card.append(el('p','request-reason danger-text',null,A.icon('openOut',12),el('span',null,'This follows content from outside (a web page). Check the command before allowing it.')));
     const where=el('div','request-where',null,el('span','request-cwd mono',null,A.icon('folder',11),document.createTextNode(s.cwd)));
     card.append(el('pre','request-command',null,document.createTextNode(s.step)),where);
+    if(density==='lab')where.querySelector('.request-cwd')?.remove();
     if(expired){card.append(el('p','pane-note','This request went back to the terminal. Answer it there.'));return card;}
     if(!chat)where.append(el('span','request-clock',null,el('span','clock-bar'),el('small','counter',phrase('Goes back to the terminal in {time}',{time:'1:12'}))));
     const decide=answer=>{
@@ -63,7 +64,7 @@
     actions.append(allow);card.append(actions);
     if(density==='lab'){
       const recent=auditRows.filter(r=>r.project===s.project).slice(0,2).map(r=>el('div',null,null,el('span','counter',null,document.createTextNode(r.time)),el('span',null,phrase('{answer} by {by}',{answer:L(r.answer),by:L(r.by)})),el('code',null,null,document.createTextNode(r.command))));
-      card.append(details(phrase('Recent answers in {project}',{project:s.project}),recent.length?recent:['Nothing answered here yet.'],'run-details request-history'));
+      card.append(details(phrase('Details · {project}',{project:s.project}),[el('div',null,null,A.icon('folder',11),el('code',null,null,document.createTextNode(s.cwd))),...(recent.length?recent:[el('div',null,'Nothing answered here yet.')])],'run-details request-history'));
     }
     return card;
   }

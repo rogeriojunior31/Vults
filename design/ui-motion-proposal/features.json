@@ -1356,6 +1356,570 @@
    "feature": "Android companion that answers cards",
    "status": "planned",
    "native": "L3–L5 / UX12: its own prototype"
+  },
+  {
+   "id": "dictation-area",
+   "area": "Lab",
+   "feature": "Dictation, a sixth Lab tab with its own side list: Voice, Your words, System",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation"
+   },
+   "expect": "[data-key=\"nav-dictation\"][aria-pressed=\"true\"]"
+  },
+  {
+   "id": "dictation-history",
+   "area": "Dictation",
+   "feature": "What you dictated by day: written text, what was heard, where it went, the fixes; search, paste again, copy, delete",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation"
+   },
+   "expect": ".dx-entry"
+  },
+  {
+   "id": "dictation-try",
+   "area": "Dictation",
+   "feature": "Try it: the island listens, transcribes and pastes, and the line shows up in History",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation"
+   },
+   "expect": "[data-key=\"dictation-try\"]"
+  },
+  {
+   "id": "dictation-words",
+   "area": "Dictation",
+   "feature": "Dictionary: words, replacements, whisper vocabulary and Try a sentence",
+   "status": "planned",
+   "phase": "V2",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "dictionary"
+   },
+   "expect": "[data-key=\"dictation-try-sentence\"]"
+  },
+  {
+   "id": "dictation-snippets",
+   "area": "Dictation",
+   "feature": "Snippets: a short phrase pastes a whole text, unchanged",
+   "status": "planned",
+   "phase": "V2",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "snippets"
+   },
+   "expect": "[data-key=\"add-snippet\"]"
+  },
+  {
+   "id": "dictation-styles",
+   "area": "Dictation",
+   "feature": "Styles: As spoken, Natural, Polished and Prompt, used only with the clean-up on",
+   "status": "planned",
+   "phase": "V3",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "styles"
+   },
+   "expect": ".dx-style"
+  },
+  {
+   "id": "dictation-meetings",
+   "area": "Dictation",
+   "feature": "Meetings: mic and system audio, transcript by person, renamed speakers, export",
+   "status": "planned",
+   "phase": "V5",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "meetings"
+   },
+   "expect": ".dx-line"
+  },
+  {
+   "id": "dictation-meeting-summary",
+   "area": "Dictation",
+   "feature": "Meeting summary through the network gate, off until you turn it on",
+   "status": "planned",
+   "phase": "V5",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "meetings",
+    "meetingTab": "summary"
+   },
+   "expect": ".dx-meeting .empty-state"
+  },
+  {
+   "id": "dictation-meeting-todos",
+   "area": "Dictation",
+   "feature": "Meeting to-dos that become tasks with a click",
+   "status": "planned",
+   "phase": "V5",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "meetings",
+    "meetingTab": "todos"
+   },
+   "expect": ".dx-todo"
+  },
+  {
+   "id": "dictation-stats",
+   "area": "Dictation",
+   "feature": "Statistics: words, time saved, words per minute, words per day and where you dictate",
+   "status": "planned",
+   "phase": "V4",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "stats"
+   },
+   "expect": ".dx-chart"
+  },
+  {
+   "id": "dictation-settings",
+   "area": "Settings",
+   "feature": "Settings › Dictation: key, mode, Space lock, cancel, paste again",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "settings"
+   },
+   "expect": "[data-key=\"dict-key\"]"
+  },
+  {
+   "id": "dictation-session-guard",
+   "area": "Settings",
+   "feature": "Dictating into a session never reaches one waiting on a card; Send by itself is off",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "settings"
+   },
+   "expect": "[data-key=\"dict-session\"]"
+  },
+  {
+   "id": "dictation-cleanup",
+   "area": "Settings",
+   "feature": "Clean-up by a model: off by default, a request on your behalf through the gate; styles, Write in, per app",
+   "status": "planned",
+   "phase": "V3",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "styles"
+   },
+   "expect": "[data-key=\"dict-cleanup\"]"
+  },
+  {
+   "id": "dictation-agents-ask",
+   "area": "Settings",
+   "feature": "Agents may ask for a spoken answer (MCP vults_dictate), sent with a click, never a permission",
+   "status": "planned",
+   "phase": "V7",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "settings"
+   },
+   "expect": "[data-key=\"dict-agents-ask\"]"
+  },
+  {
+   "id": "dictation-diagnostics",
+   "area": "Settings",
+   "feature": "Diagnostics: mic test, stage timings, repeats cut, Plan B, portals",
+   "status": "planned",
+   "phase": "V4",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "diagnostics"
+   },
+   "expect": "[data-key=\"dict-diagnostics\"]"
+  },
+  {
+   "id": "zeca-voice",
+   "area": "Settings",
+   "feature": "Talk with Zeca: an opt-in realtime model with its key, budget and trace; never answers a card",
+   "status": "planned",
+   "phase": "V6",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "talk"
+   },
+   "expect": "[data-key=\"zeca-voice\"]"
+  },
+  {
+   "id": "island-dictation-listening",
+   "area": "Island",
+   "feature": "Dictation over the flock: Listening, with level bands and the words so far",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "listening"
+   },
+   "expect": ".island-dictation.listening"
+  },
+  {
+   "id": "island-dictation-locked",
+   "area": "Island",
+   "feature": "Dictation over the flock: Hands-free after a double tap",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "locked"
+   },
+   "expect": ".island-dictation.locked"
+  },
+  {
+   "id": "island-dictation-working",
+   "area": "Island",
+   "feature": "Dictation over the flock: Transcribing on this computer",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "working"
+   },
+   "expect": ".island-dictation.working"
+  },
+  {
+   "id": "island-dictation-done",
+   "area": "Island",
+   "feature": "Dictation over the flock: Pasted, with words and fixes",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "done"
+   },
+   "expect": ".island-dictation.done"
+  },
+  {
+   "id": "island-dictation-session",
+   "area": "Island",
+   "feature": "Dictation over the flock: Delivered into a flock session",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "session"
+   },
+   "expect": ".island-dictation.session"
+  },
+  {
+   "id": "island-dictation-held",
+   "area": "Island",
+   "feature": "Dictation over the flock: Held: the session waits on a card, the text stays in the clipboard",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "held"
+   },
+   "expect": ".island-dictation.held"
+  },
+  {
+   "id": "island-dictation-clipboard",
+   "area": "Island",
+   "feature": "Dictation over the flock: Copied: no text field in focus",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "clipboard"
+   },
+   "expect": ".island-dictation.clipboard"
+  },
+  {
+   "id": "island-dictation-retry",
+   "area": "Island",
+   "feature": "Dictation over the flock: Plan B: retry with Base",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "retry"
+   },
+   "expect": ".island-dictation.retry"
+  },
+  {
+   "id": "island-dictation-failed",
+   "area": "Island",
+   "feature": "Dictation over the flock: No sound",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "failed"
+   },
+   "expect": ".island-dictation.failed"
+  },
+  {
+   "id": "island-dictation-speaking",
+   "area": "Island",
+   "feature": "Dictation over the flock: Zeca speaks",
+   "status": "planned",
+   "phase": "V6",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "speaking"
+   },
+   "expect": ".island-dictation.speaking"
+  },
+  {
+   "id": "island-dictation-interrupted",
+   "area": "Island",
+   "feature": "Dictation over the flock: Zeca was interrupted",
+   "status": "planned",
+   "phase": "V6",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "interrupted"
+   },
+   "expect": ".island-dictation.interrupted"
+  },
+  {
+   "id": "dictation-keys",
+   "area": "Desktop",
+   "feature": "Hold to talk, double tap to lock, Space lock, Esc cancel",
+   "status": "planned",
+   "phase": "V1",
+   "native": "Global shortcuts portal and XInput2 raw keys (V1.4, V1.5, V1.8); shown in Settings › Dictation"
+  },
+  {
+   "id": "dictation-paste",
+   "area": "Desktop",
+   "feature": "Paste with XTest on X11 and the RemoteDesktop portal on Wayland, with a clipboard lease",
+   "status": "planned",
+   "phase": "V1",
+   "native": "platform::insert (V1.9, V1.10)"
+  },
+  {
+   "id": "dictation-focus",
+   "area": "Desktop",
+   "feature": "The focused app read at key-down, terminals use Ctrl+Shift+V",
+   "status": "planned",
+   "phase": "V1",
+   "native": "EWMH or a KWin script (V1.7)"
+  },
+  {
+   "id": "dictation-commands",
+   "area": "Settings",
+   "feature": "Voice commands: their own key, understood on this computer with no model; move around, ask, quiet a project, again and undo; never a card",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "commands"
+   },
+   "expect": "[data-key=\"dict-commands\"]"
+  },
+  {
+   "id": "dictation-commands-list",
+   "area": "Settings",
+   "feature": "What you can say, and what is never done by voice",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "commands"
+   },
+   "expect": "[data-key=\"dict-commands-list\"]"
+  },
+  {
+   "id": "dictation-try-command",
+   "area": "Dictation",
+   "feature": "Try a command: the island hears it, runs it with no model, and History keeps it",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "commands"
+   },
+   "expect": "[data-key=\"dictation-try-command\"]"
+  },
+  {
+   "id": "dictation-say-cancel",
+   "area": "Settings",
+   "feature": "Cancel by voice: “cancel” or “never mind” at the end pastes nothing, on X11 and Wayland",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "settings"
+   },
+   "expect": "[data-key=\"dict-say-cancel\"]"
+  },
+  {
+   "id": "dictation-duck",
+   "area": "Settings",
+   "feature": "Music while you speak: lowered or paused through MPRIS and given back; not while a meeting records",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "settings"
+   },
+   "expect": "[data-key=\"dict-duck\"]"
+  },
+  {
+   "id": "dictation-caption",
+   "area": "Settings",
+   "feature": "Caption under the island: the whole line, two rows, no buttons",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "settings"
+   },
+   "expect": "[data-key=\"dict-caption\"]"
+  },
+  {
+   "id": "island-dictation-caption",
+   "area": "Island",
+   "feature": "The caption under the island while a dictation or command is live",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "answered"
+   },
+   "expect": ".island-caption"
+  },
+  {
+   "id": "island-dictation-cancelled",
+   "area": "Island",
+   "feature": "Dictation over the flock: Cancelled, nothing pasted",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "cancelled"
+   },
+   "expect": ".island-dictation.cancelled"
+  },
+  {
+   "id": "island-command-command",
+   "area": "Island",
+   "feature": "Voice command over the flock: Command: the words so far",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "command"
+   },
+   "expect": ".island-dictation.command"
+  },
+  {
+   "id": "island-command-commanded",
+   "area": "Island",
+   "feature": "Voice command over the flock: Command done",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "commanded"
+   },
+   "expect": ".island-dictation.commanded"
+  },
+  {
+   "id": "island-command-answered",
+   "area": "Island",
+   "feature": "Voice command over the flock: An answer from what Vults knows",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "answered"
+   },
+   "expect": ".island-dictation.answered"
+  },
+  {
+   "id": "island-command-asked",
+   "area": "Island",
+   "feature": "Voice command over the flock: Which one? when two names fit",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "asked"
+   },
+   "expect": ".island-dictation.asked"
+  },
+  {
+   "id": "island-command-refused",
+   "area": "Island",
+   "feature": "Voice command over the flock: Not by voice: cards are answered with a click",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "refused"
+   },
+   "expect": ".island-dictation.refused"
+  },
+  {
+   "id": "island-command-unknown",
+   "area": "Island",
+   "feature": "Voice command over the flock: Not a command",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "unknown"
+   },
+   "expect": ".island-dictation.unknown"
+  },
+  {
+   "id": "dictation-command-parser",
+   "area": "Desktop",
+   "feature": "The local command parser and name resolver: no model, every command an existing non-answer Intent",
+   "status": "planned",
+   "phase": "V8",
+   "native": "vults-dictation::command (V8.1–V8.3); tested by the rule-2 test over every Intent"
   }
  ]
 }

@@ -3,6 +3,7 @@
   if (!root) return;
   const A = VultsProposalAssets;
   const copy = /* EXTRA_COPY */;
+  const SP_NIGHT = /* SP_NIGHT */;
   const LANGUAGES = ['en','pt-BR','es','zh'];
   let language = 'pt-BR';
   A.setLang(language);
@@ -52,7 +53,7 @@
   const input = $('textarea'), popover = $('.model-popover'), history = $('.history-popover'), commands = $('.command-popover'), actionMenu = $('.action-menu');
   const state = { area:'chat', mode:'quick', scenario:'ready', activity:'week', category:'general', conversation:'current', example:'empty', engine:'claude', model:'Default model', effort:'Default effort', files:[], messages:[], queued:[], busy:false, voice:false, notice:false, memoryPanel:false, lastSent:'' };
   let restoring = true;
-  const AREAS=['summary','flock','chat','tasks','activity','connections','settings','memory','review'];
+  const AREAS=['summary','flock','chat','tasks','activity','connections','dictation','settings','memory','review'];
   const original = window.openai?.widgetState;
   if (original?.modelContent?.area && AREAS.includes(original.modelContent.area)) state.area=original.modelContent.area;
   function remember() {
@@ -105,7 +106,8 @@
   const attach = iconButton('clip','Attach a file',() => addFile('design-notes.md'));
   const mic = iconButton('mic','Voice (Ctrl+Alt+V)',() => toggleVoice());
   const send = button(null,'send-action',() => submit(), 'Send (Enter)'); send.append(A.icon('chevron',15));
-  $('.composer-left').append(attach,modelTrigger); $('.composer-right').append(mic,send);
+  // Model, folder and access live in one toolbar inside the composer.
+  $('.composer-left').append(attach,modelTrigger,$('.context-folder'),$('.context-access')); $('.composer-right').append(mic,send);
   const historyTrigger = iconButton('list','Conversations',() => toggleHistory());
   history.id='vults-proposal-history';historyTrigger.setAttribute('aria-expanded','false');historyTrigger.setAttribute('aria-controls',history.id);
   const memoryTrigger = iconButton('sideRight','Memory',() => toggleMemoryPanel());memoryTrigger.classList.add('memory-trigger');
@@ -143,6 +145,15 @@
     const rows = m.tools ?? [toolRow('flock_list','',phrase('{n} sessions',{n:sessions.length})),toolRow('recall','"recent changes"','1 note from Vults')];
     return details(phrase(rows.length===1?'Used 1 tool · {s} s':'Used {n} tools · {s} s',{n:rows.length,s:m.seconds??'0.4'}),rows,'run-details tool-details');
   }
+  /* In the Lab chat Zeca has his own place: large above the suggestions when nothing is said yet,
+     then perched on the composer's edge, his wire on its border, reacting as the conversation goes. */
+  function placeZeca() {
+    const p=$('.portrait'),room=['room','full'].includes(state.mode),populated=state.messages.length>0||state.busy;
+    p.classList.toggle('zeca-hero',room&&!populated);p.classList.toggle('zeca-perch',room&&populated);
+    if (room&&populated) { if (p.parentElement!==composer) composer.prepend(p); }
+    else if (room) { if (p.nextElementSibling!==$('.room-suggestions')) $('.room-suggestions').before(p); }
+    else if (p.parentElement!==$('.chat-intro')) $('.chat-intro').prepend(p);
+  }
   function paintConversation() {
     const readingTop=log.scrollTop;
     chatEl.classList.toggle('populated',state.messages.length>0||state.busy);
@@ -171,7 +182,7 @@
     }
     const queue=$('.queue-strip');queue.replaceChildren(...state.queued.map(text=>el('span','queued',null,A.icon('list',11),el('span',null,phrase('Queued: {text}',{text})))));
     paintSend(); log.scrollTop=readingTop;
-    paintBird(); paintModelTrigger(); paintSuggestions();
+    placeZeca(); paintBird(); paintModelTrigger(); paintSuggestions();
   }
   function paintSend() {
     const empty=!input.value.trim()&&!state.files.length;
@@ -485,6 +496,7 @@
   $$('[data-size]').forEach(b => b.addEventListener('click',() => setMode(b.dataset.size)));
   $('.scenario-select').addEventListener('change',() => setScenario($('.scenario-select').value));
   $('.language-select').addEventListener('change',() => setLanguage($('.language-select').value));
+  $('.theme-select').addEventListener('change',() => { applyTheme($('.theme-select').value); remember(); });
   $('.viewport-select').addEventListener('change',() => {const stage=$('.review-stage');stage.classList.toggle('narrow',$('.viewport-select').value==='narrow');stage.classList.toggle('short',$('.viewport-select').value==='short');layoutSurface(true);resizeCompactFlock();paintBird();});
   $('.prototype-tools').addEventListener('toggle',()=>{layoutSurface();resizeCompactFlock();paintBird();});
   $$('[data-example]').forEach(b => b.addEventListener('click',() => { if (state.area!=='chat') setArea('chat',state.mode==='mini'?'quick':state.mode); showExample(b.dataset.example); }));
@@ -494,8 +506,9 @@
       restoring=true;restorePrototype(event.detail.globals.widgetState);setArea(state.area,state.mode);restoring=false;
     }
   });
+  applyTheme(settings.theme);
   restorePrototype(original);paintFiles();paintConversation();setArea(state.area,state.mode);
   restoring=false;
   // verify.mjs drives the same entry points a reviewer clicks.
-  window.__vultsPrototype={setArea,setMode,setScenario,showExample,setLanguage,missing:() => [...missing],state,sessions,tasks,views,settings};
+  window.__vultsPrototype={setArea,setMode,setScenario,showExample,setLanguage,missing:() => [...missing],state,sessions,tasks,views,settings,dictation:dx};
 })();

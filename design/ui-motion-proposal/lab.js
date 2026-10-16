@@ -220,7 +220,7 @@
     host.classList.add('task-board');
     function select(row){views.taskSelected=row.id;views.detailOpen.tasks=true;setArea('tasks',state.mode);focusDetail(host,row.id);}
     const side=el('aside','task-side'),main=el('section','task-main');host.append(side,main);
-    const add=key(button(null,'primary task-new',()=>editTask(),'New task'),'new-task');add.append(A.icon('plus',14),el('span',null,'New task'));
+    const add=key(button(null,'quiet-control task-new',()=>editTask(),'New task'),'new-task');add.append(A.icon('plus',14),el('span',null,'New task'));
     const headRow=el('div','task-side-head',null,el('strong',null,'Tasks'),el('span','counter',null,document.createTextNode(String(tasks.filter(t=>!['Done','Dropped'].includes(t.status)).length))));
     side.append(headRow,add);
     flexible(host,side,'tasks',{def:300,min:220,max:460,label:'Tasks',head:fold=>{headRow.append(fold);return headRow;},rail:()=>{const r=el('div','rail-marks');r.append(key(iconButton('plus','New task',()=>editTask()),'rail-new-task'));tasks.filter(t=>!['Done','Dropped'].includes(t.status)).slice(0,8).forEach(row=>{const line=taskLine(row);const b=key(button(null,'rail-dot',()=>select(row),row.title),'rail-'+row.id);b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.append(el('span','shape shape-'+line.shape));r.append(b);});return r;}});

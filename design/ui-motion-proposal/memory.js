@@ -16,7 +16,7 @@
         const change=el('div','memory-change');
         if(proposal.current)change.append(el('small',null,'Current'),el('p','diff-remove',proposal.current));
         change.append(el('small',null,proposal.current?'Proposed':'New memory'),el('p',proposal.current?'diff-add':null,proposal.text));
-        body.append(key(el('article','content-row',null,el('h3',null,proposal.place),change,el('div','inline-actions',null,key(button('Turn down','quiet-control',()=>act(false)),'turn-down'),key(button(proposal.current?'Accept change':'Remember','primary',()=>act(true)),'remember'))),proposal.id));
+        body.append(key(el('article','content-row',null,el('h3',null,proposal.place),change,el('div','inline-actions',null,key(button('Turn down','',()=>act(false)),'turn-down'),key(button(proposal.current?'Accept change':'Remember','quiet-control',()=>act(true)),'remember'))),proposal.id));
       });
     }else if(views.memoryTab==='What Zeca remembers'){
       const files=el('div','memory-files');for(const [name,used] of memory.files){const bar=el('span','plan-bar',null,el('span',used>=90?'critical':used>=70?'warning':''));bar.firstChild.style.width=used+'%';files.append(el('div','plan-row',null,el('code',null,null,document.createTextNode(name)),bar,el('small','counter',null,document.createTextNode(used+'%'))));}
