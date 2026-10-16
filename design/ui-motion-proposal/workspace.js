@@ -16,20 +16,6 @@
   ].map(s => ({...s,cwd:'~/Projects/'+s.project,attention:s.status==='approval'?'needs-you':'quiet',card:s.status==='approval',waiting:s.status==='approval',raise:true,note:null,editor:s.agent==='claude'?'kitty':'tmux',bird_chosen:false,roost:s.project,started:'Watched in a terminal',pending:s.status==='approval'?2:0,restSince:s.rest?Date.now()-s.rest*1000:null}));
   A.assignSpecies(sessions);
   // A task's run is an agent Vults started on its own, in a clone; it joins the wire only when you ask.
-  const run = o => ({cwd:'~/.local/share/vults/tasks/'+o.task,started:'Started from Vults',editor:'Vults',raise:true,roost:o.project,attention:'quiet',subagents:0,pending:o.status==='approval'?1:0,card:o.status==='approval',waiting:o.status==='approval',note:null,bird_chosen:false,branch:'vults/'+o.task,...o});
-  const tasks = [
-    {id:'task-1',title:'Keep the chat scroll while a reply streams',repo:'frontend',engine:'Claude Code',status:'Doing',onWire:false,criteria:['The reading position stays when a reply arrives','New text shows a ↓ button instead of jumping','Scroll tests pass'],checks:['passed',null,null],checked:[true,false,false],issue:'#212',router:'Delegated to Claude Code: frontend prefers it (rule).',cost:'$0.64 · 52k tokens',rounds:[],
-      run:run({id:'run-task-1',task:'task-1',agent:'claude',project:'frontend',status:'working',activity:'edit',step:'ui/src/chat.ts',step_count:7,cost:0.64,steps:['Read the task goal','Read ui/src/chat.ts','Search "scrollTop"','Edit ui/src/chat.ts'],output:'Editing ui/src/chat.ts: the follow check now waits 150 ms after a manual scroll.'})},
-    {id:'task-2',title:'Show the Now inbox in Compact',repo:'Vults',engine:'Codex',status:'Doing',onWire:false,criteria:['Now lists only rows that ask for an action','Each row opens the right Lab view','npm run test:ui passes'],checks:['passed','passed',null],checked:[true,true,false],issue:'#360',router:'Delegated to Codex: Claude is at 85% of its plan.',cost:'$0.42 · 31k tokens',rounds:[],
-      run:run({id:'run-task-2',task:'task-2',agent:'codex',project:'Vults',status:'approval',activity:'run',why:'Run the UI tests so the third criterion can pass.',step:'npm run test:ui',step_count:9,cost:0.42,steps:['Read the task goal','Edit ui/src/island/now.ts','Edit ui/src/island/render.ts','Run npm run test:ui'],output:'Waiting for your permission to run npm run test:ui.'})},
-    {id:'task-3',title:'Document the flock badges',repo:'docs',engine:'Codex',status:'Doing',review:'waiting',onWire:false,criteria:['Each badge shape is explained','The pt-BR page is updated'],checks:['passed','passed'],checked:[true,true],issue:'',router:'Delegated to Codex: docs prefers it (rule).',cost:'$0.18 · 12k tokens',rounds:[{by:'Claude Code',verdict:'Changes requested',note:'Name the square badge "failed", not "error".'},{by:'Codex',verdict:'Fixed',note:'Renamed it and updated the translation.'}],
-      run:run({id:'run-task-3',task:'task-3',agent:'codex',project:'docs',status:'finished',activity:null,step:'docs/guide/flock.md',step_count:6,cost:0.18,steps:['Read the task goal','Edit docs/guide/flock.md','Edit docs/pt-br/guide/flock.md'],output:'Updated docs/guide/flock.md and its translation. Ready for your review.'})},
-    {id:'task-4',title:'Fix the flaky retry test',repo:'api',engine:'OpenCode',status:'Blocked',onWire:false,criteria:['retry::backs_off passes 20 times in a row'],checks:['failed'],checked:[false],issue:'#88',router:'Started with OpenCode: you chose it.',cost:'Not reported',rounds:[],
-      run:run({id:'run-task-4',task:'task-4',agent:'opencode',project:'api',status:'failed',activity:'run',step:'cargo test -p api',step_count:4,cost:null,steps:['Read the task goal','Edit crates/api/src/retry.rs','Run cargo test -p api'],output:'assertion failed: elapsed >= 200ms (was 140ms)'})},
-    {id:'task-5',title:'Add a year grid to Activity',repo:'Vults',engine:'',status:'To do',onWire:false,criteria:['One cell per day for the last 52 weeks','Hide project names when saving the image'],checks:[null,null],checked:[false,false],issue:'',router:'',cost:'',rounds:[],run:null},
-    {id:'task-6',title:'Try a second wire in Mini',repo:'Vults',engine:'Claude Code',status:'Dropped',onWire:false,criteria:['Two wires fit in 38 px'],checks:[null],checked:[false],issue:'',router:'',cost:'$0.05 · 4k tokens',rounds:[],run:null,output:'Dropped: the pill is too short for two wires.'},
-  ];
-  for (const t of tasks) if (t.run) A.assignSpecies([t.run]);
   const github = {
     synced:2, requests:41, budget:3000, refreshedAt:0,
     inbox:[
@@ -66,7 +52,7 @@
     facts:[{id:'fact-1',place:'Vults',text:'Merge with a merge commit, never squash.'},{id:'fact-2',place:'About you',text:'Reviews every PR before merging.'}],
     files:[['about-you.md',34],['vults.md',61],['frontend.md',22]],
     history:[], debrief:'Overnight, Zeca merged two notes about the Vults build and proposes one change.' };
-  const decisions = { chat:'approved', connections:'approved', island:'pending', flock:'pending', now:'pending', tasks:'pending', activity:'pending', settings:'pending', motion:'pending' };
+  const decisions = { chat:'approved', connections:'approved', island:'pending', flock:'pending', now:'pending', activity:'pending', settings:'pending', motion:'pending' };
   const notes = {};
   const conversations = [{id:'current',title:'Current conversation',messages:[],draft:''},{id:'recent',title:'What changed recently?',messages:[{who:'you',text:'What changed recently?'},SAMPLE_REPLY()],draft:''},{id:'older',title:'Why did the api tests fail?',messages:[],draft:''}];
   const auditRows=[
@@ -143,14 +129,12 @@
   const statusFor = s => ({approval:'Needs you',question:'Needs you',working:'Working',thinking:'Thinking…',finished:'Finished',failed:'Failed',idle:'Idle'})[s]??s;
   // One status vocabulary across the app; the shapes match the island's badges.
   const toneFor = s => s.quiet?'quiet':['approval','question'].includes(s.status)?'needs':s.status==='failed'?'failed':s.status==='finished'?'done':['working','thinking'].includes(s.status)?'working':'quiet';
-  const TASK_TONE={'To do':'quiet','Doing':'working','Blocked':'failed','Done':'done','Dropped':'quiet'};
   function chip(tone,label,shape=tone){const c=el('span','status tone-'+tone,null,el('span','shape shape-'+shape),el('span',null,label));return c;}
   const sessionChip = s => chip(toneFor(s),s.quiet?phrase('Quiet {n} min',{n:s.quiet}):statusFor(s.status),s.status==='question'?'question':toneFor(s));
-  const taskChip = row => row.review==='waiting'?chip('needs','Needs your review'):chip(TASK_TONE[row.status]??'quiet',row.status);
   // A filled sentence is already translated; mark it so a second L() does not count it as missing.
   const phrase = (text,vars) => {let out=L(text);for(const [name,value] of Object.entries(vars))out=out.replaceAll('{'+name+'}',String(value));return raw(out);};
   function snapshot() {
-    const data={settings,views,decisions,notes,mode:state.mode,category:state.category,activity:state.activity,conversation:state.conversation,draft:input.value.slice(0,2000),files:state.files,messages:state.messages.filter(m=>m.who!=='card').slice(-6).map(m => ({who:m.who,text:String(m.text).slice(0,500)})),tasks:tasks.slice(0,12).map(({id,title,repo,engine,status,checked,criteria,issue,review})=>({id,title,repo,engine,status,checked,criteria,issue,review})),memory:{pending:memory.pending,facts:memory.facts,history:memory.history},taskDraft};
+    const data={settings,views,decisions,notes,mode:state.mode,category:state.category,activity:state.activity,conversation:state.conversation,draft:input.value.slice(0,2000),files:state.files,messages:state.messages.filter(m=>m.who!=='card').slice(-6).map(m => ({who:m.who,text:String(m.text).slice(0,500)})),memory:{pending:memory.pending,facts:memory.facts,history:memory.history},taskDraft};
     return JSON.stringify(data).length<14000?data:{settings,views,decisions,notes,mode:state.mode,draft:data.draft,category:state.category,activity:state.activity};
   }
   function restorePrototype(saved) {
@@ -172,7 +156,6 @@
     if (Array.isArray(data.messages)) state.messages=data.messages.filter(m => ['you','zeca'].includes(m.who)&&typeof m.text==='string').slice(-8);
     if (data.decisions) for (const area of Object.keys(decisions)) if (['approved','pending','refine'].includes(data.decisions[area])) decisions[area]=data.decisions[area];
     if (data.notes) for(const [area,note] of Object.entries(data.notes)) if(typeof note==='string' && area in decisions) notes[area]=note.slice(0,800);
-    if (Array.isArray(data.tasks)) for (const saved of data.tasks) { const row=tasks.find(t=>t.id===saved.id); if (row&&Object.keys(TASK_TONE).includes(saved.status)) Object.assign(row,{status:saved.status,checked:Array.isArray(saved.checked)?saved.checked:row.checked,issue:typeof saved.issue==='string'?saved.issue:row.issue,review:saved.review}); }
     if (data.memory && ['pending','facts','history'].every(name=>Array.isArray(data.memory[name]))) Object.assign(memory,data.memory);
     if (data.taskDraft && typeof data.taskDraft.title==='string') taskDraft={...taskDraft,...data.taskDraft};
     if (CATEGORIES.some(([id])=>id===data.category)) state.category=data.category;
@@ -218,13 +201,13 @@
     if(room)suggestions.append(el('p','suggest-title','Ask about your agents, your projects or anything on your desktop.'));
     companionSuggestions().slice(0,room?4:2).forEach(c=>suggestions.append(key(button(c.label,'',()=>{if(c.go){c.go();return;}input.value=L(c.send);input.dispatchEvent(new Event('input'));input.focus();}),c.id)));
   }
-  const EMPTY_HINTS={flock:'Start an agent in a terminal with the Vults hooks installed; its bird lands here.',summary:'Cards, failures, checks and reviews that ask for an action show up here.',tasks:'Create a task; Vults runs it in its own clone and reports back here.',connections:'Turn on GitHub in Settings to see your pull requests and checks.',activity:'Turns appear here as your agents work. History is kept on this computer.',dictation:'Hold Ctrl+Alt+V in any app and speak. What you dictate shows here, only on this computer.',chat:'Ask Zeca about your agents, your projects or your desktop.'};
+  const EMPTY_HINTS={flock:'Start an agent in a terminal with the Vults hooks installed; its bird lands here.',summary:'Cards, failures, checks and reviews that ask for an action show up here.',connections:'Turn on GitHub in Settings to see your pull requests and checks.',activity:'Turns appear here as your agents work. History is kept on this computer.',dictation:'Hold Ctrl+Alt+V in any app and speak. What you dictate shows here, only on this computer.',chat:'Ask Zeca about your agents, your projects or your desktop.'};
   function stageState(host,emptyTitle,emptyAction) {
     if(!['empty','loading','error'].includes(state.scenario))return false;
     const panel=el('section','empty-state');panel.setAttribute('role',state.scenario==='error'?'alert':'status');
     if(state.scenario==='loading')panel.append(el('h3',null,'Loading'),el('div','loading-line'),el('div','loading-line'));
     else if(state.scenario==='error')panel.append(A.icon('retry',20),el('h3','state-error','Could not update this view.'),el('p',null,'Your draft and selections stay here.'),details('Technical details',['vults-store: database is locked (retrying in 2 s)']),button('Try again','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
-    else panel.append(A.icon(({flock:'flock',tasks:'tasks',connections:'plug',activity:'bars',chat:'chat',dictation:'mic'})[state.area]??'list',22),el('h3',null,emptyTitle),el('p',null,EMPTY_HINTS[state.area]??'Nothing here yet.'),emptyAction??button('Show sample data','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
+    else panel.append(A.icon(({flock:'flock',connections:'plug',activity:'bars',chat:'chat',dictation:'mic'})[state.area]??'list',22),el('h3',null,emptyTitle),el('p',null,EMPTY_HINTS[state.area]??'Nothing here yet.'),emptyAction??button('Show sample data','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
     host.append(panel);return true;
   }
   function openEditor(title,content,onSave,saveLabel='Save') {
@@ -297,7 +280,7 @@
       ...sessions.map(s=>({group:'Sessions',label:s.project+' · '+labelFor(s.agent),hint:L(sessionBrief(s)),run:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;setArea('flock','room');}})),
       ...flockFacts().needs.map(s=>({group:'Cards',label:phrase('Review the card from {project}',{project:s.project}),hint:'Opens it; answering stays a click',run:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='session';setArea('flock','room');}})),
       ...COMMANDS.map(([name,about,insert])=>({group:'Commands',label:raw(name),hint:about,run:()=>prepareChat(insert)})),
-      ...[['flock','Flock'],['chat','Chat'],['tasks','Tasks'],['connections','Connections'],['activity','Activity'],['dictation','Dictation'],['memory','Memory'],['settings','Settings']].map(([area,label])=>({group:'Go to',label,hint:'Lab',run:()=>area==='settings'?openSettings():area==='memory'?openMemory():setArea(area,'room')})),
+      ...[['flock','Flock'],['chat','Chat'],['connections','Connections'],['activity','Activity'],['dictation','Dictation'],['memory','Memory'],['settings','Settings']].map(([area,label])=>({group:'Go to',label,hint:'Lab',run:()=>area==='settings'?openSettings():area==='memory'?openMemory():setArea(area,'room')})),
     ];
     const paint=query=> {list.replaceChildren();let group;rows.filter(row=>(L(row.label)+' '+L(row.hint)).toLowerCase().includes(query.toLowerCase())).slice(0,14).forEach(row=>{if(row.group!==group){group=row.group;list.append(el('small','menu-group',group));}const b=button(null,'menu-item',()=> {close();row.run();});b.append(el('span',null,row.label),el('small',null,row.hint));list.append(b);});};
     const query=field('Search sessions, cards, commands and places','','search',paint);content.append(query.element,list);paint('');close=openEditor('Search',content);
@@ -393,7 +376,6 @@
     {id:'chat',label:'Compact · Chat',open:()=>setArea('chat','quick'),scope:'Approved direction. Now with engines, commands, tools and Zeca\'s own cards.'},
     {id:'flock',label:'Compact · Flock and the card',open:()=>setArea('flock','quick'),scope:'One card in three densities: Always, 1 of N, countdown and question choices.'},
     {id:'now',label:'Compact · Now',open:()=>setArea('summary','quick'),scope:'One inbox for everything that asks for an action. Quick settings in the gear.'},
-    {id:'tasks',label:'Lab · Flock and Tasks',open:()=>setArea('tasks','room'),scope:'The same list and detail for a session and a task run.'},
     {id:'connections',label:'Lab · Connections',open:()=>setArea('connections','room'),scope:'Approved direction. Now with a face for you and a face for Zeca.'},
     {id:'activity',label:'Lab · Activity',open:()=>setArea('activity','room'),scope:'Week, projects, history, cost, traces and audit with the app\'s real figures.'},
     {id:'settings',label:'Lab · Settings',open:()=>openSettings('general'),scope:'Every setting the app has, behind the gear.'},
@@ -410,20 +392,19 @@
     });
   }
   function decisionLabel(value){return value==='approved'?'Direction approved':value==='refine'?'Needs refinement':'Waiting for review';}
-  function clearExampleHistory(){clearTimeout(replyTimer);state.busy=false;state.voice=false;state.messages=[];state.files=[];input.value='';input.hidden=false;$('.voice-preview').hidden=true;mic.setAttribute('aria-pressed','false');state.conversation='current';conversations.splice(0,conversations.length,{id:'current',title:'Current conversation',messages:[],draft:''});auditRows.splice(0);settings.recordsCleared=true;paintFiles();paintConversation();paintRecent();remember();toast('History cleared. Memory, policies, phones, tasks and costs stay.');}
+  function clearExampleHistory(){clearTimeout(replyTimer);state.busy=false;state.voice=false;state.messages=[];state.files=[];input.value='';input.hidden=false;$('.voice-preview').hidden=true;mic.setAttribute('aria-pressed','false');state.conversation='current';conversations.splice(0,conversations.length,{id:'current',title:'Current conversation',messages:[],draft:''});auditRows.splice(0);settings.recordsCleared=true;paintFiles();paintConversation();paintRecent();remember();toast('History cleared. Memory, policies, phones and costs stay.');}
   function download(name,text,type='application/json'){
     if(typeof Blob==='undefined'||!URL.createObjectURL){toast('Export is not available in this viewer.');return;}
     const url=URL.createObjectURL(new Blob([text],{type})),a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Exported');
   }
   function translateStatic(){for(const node of $$('[data-word]'))node.textContent=L(node.dataset.word);for(const node of $$('[data-label]'))node.setAttribute('aria-label',L(node.dataset.label));input.placeholder=L(['room','full'].includes(state.mode)?'Ask Zeca…':'Ask Zeca… / for commands, @ for a session');input.setAttribute('aria-label',L('Message'));for(const node of $$('[data-size]'))node.textContent=MODE_NAME[node.dataset.size]==='Island'?L('Island'):MODE_NAME[node.dataset.size];}
   function setLanguage(value){language=LANGUAGES.includes(value)?value:'pt-BR';settings.language=language;A.setLang(language);$('.language-select').value=language;translateStatic();paintConversation();setArea(state.area,state.mode);remember();}
-  // Compact: Flock · Chat · Now. Lab: Flock · Chat · Tasks · Connections · Activity · Dictation. Settings is the gear in both.
+  // Compact: Flock · Chat · Now. Lab: Flock · Chat · Connections · Activity · Dictation. Settings is the gear in both.
   const COMPACT_NAV=[['flock','Flock','flock'],['chat','Chat','chat'],['bars','Now','summary']];
-  const LAB_NAV=[['flock','Flock','flock'],['chat','Chat','chat'],['tasks','Tasks','tasks'],['plug','Connections','connections'],['bars','Activity','activity'],['mic','Dictation','dictation']];
+  const LAB_NAV=[['flock','Flock','flock'],['chat','Chat','chat'],['plug','Connections','connections'],['bars','Activity','activity'],['mic','Dictation','dictation']];
   function navCount(target){
     if(target==='flock')return flockFacts().needs.length+flockFacts().failed.length;
     if(target==='summary')return nowRows().filter(r=>r.urgent).length;
-    if(target==='tasks')return tasks.filter(t=>t.review==='waiting'||t.status==='Blocked').length;
     if(target==='connections')return settings.github?unseenCount():0;
     return 0;
   }
@@ -460,7 +441,7 @@
     captureLabPosition();captureLabPosition=()=>{};
     if(area==='memory'){state.memoryPanel=true;area='chat';if(['mini','quick'].includes(mode))mode='room';}
     if(!['mini','quick','room','full'].includes(mode))mode='room';
-    if(['settings','tasks','review'].includes(area)&&['mini','quick'].includes(mode))mode='room';
+    if(['settings','review'].includes(area)&&['mini','quick'].includes(mode))mode='room';
     // Old Compact routes (activity, connections) land on Now, which links to them.
     if(mode==='quick'&&!['flock','chat','summary'].includes(area))area='summary';
     if(area==='summary'&&['room','full'].includes(mode))area='flock';
@@ -469,7 +450,7 @@
     if(['room','full'].includes(mode)&&previousMode==='quick'&&area==='flock')views.detailOpen.flock=true;
     if(previousMode==='quick')views.quickArea=previous;else if(['room','full'].includes(previousMode)&&previous!=='review')views.roomArea=previous;
     state.area=area;state.mode=mode;closeModels(false,false);closeMenu(history,historyTrigger,false,false);closeCommands();closeActionMenu(false);stopScenes();
-    $$('[data-flock-example]').forEach(option=>option.hidden=!['flock','summary','tasks'].includes(area)&&mode!=='mini');
+    $$('[data-flock-example]').forEach(option=>option.hidden=!['flock','summary'].includes(area)&&mode!=='mini');
     const mini=mode==='mini',room=['room','full'].includes(mode),chat=area==='chat';
     // The Lab has one bar: its tabs sit in the header between the name and the actions.
     const nav=$('.product-nav'),head=$('.product-head');
@@ -485,7 +466,7 @@
     $$('[data-area]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.area===area&&(!b.dataset.mode||b.dataset.mode===mode||(b.dataset.mode==='room'&&mode==='full')))));
     $$('[data-size]').forEach(b=>{const on=b.dataset.size===mode||(b.dataset.size==='room'&&mode==='full');b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
     layoutSurface(!restoring&&previousMode!==mode);
-    const workspace=$('.workspace-view');workspace.replaceChildren();workspace.classList.remove('compact-flock','compact-summary','lab-flock','lab-split','with-sky','task-board','list-detail','detail-open','dx-view');paintNav();paintChrome();
+    const workspace=$('.workspace-view');workspace.replaceChildren();workspace.classList.remove('compact-flock','compact-summary','lab-flock','lab-split','with-sky','list-detail','detail-open','dx-view');paintNav();paintChrome();
     paintNeedsStrip();
     if(mini)renderIsland($('.mini-strip'));
     else if(chat){
@@ -494,7 +475,7 @@
     }
     else if(mode==='quick'&&area==='flock')renderCompactFlock(workspace);
     else if(mode==='quick'&&area==='summary')renderNow(workspace);
-    else ({flock:renderFlock,tasks:renderTasks,activity:renderActivity,connections:renderConnections,dictation:renderDictation,settings:renderSettings,review:renderReview})[area]?.(workspace);
+    else ({flock:renderFlock,activity:renderActivity,connections:renderConnections,dictation:renderDictation,settings:renderSettings,review:renderReview})[area]?.(workspace);
     $('.access-trigger').textContent=L(settings.access);$('.folder-trigger').textContent=L(settings.chatFolder??'Vults');
     if(!chat)input.hidden=state.voice?true:false;
     paintBird();paintSuggestions();translateStatic();if(previous!==area&&!restoring)enter(chat?chatEl:workspace,'gentle',4,1);remember();
@@ -504,8 +485,7 @@
     const strip=$('.needs-strip');strip.replaceChildren();
     const room=['room','full'].includes(state.mode);
     const rows=[...flockFacts().needs.map(s=>({s,shape:s.status==='question'?'question':'needs',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='session';setArea('flock',state.mode);}})),
-      ...flockFacts().failed.map(s=>({s,shape:'failed',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='activity';setArea('flock',state.mode);}})),
-      ...tasks.filter(t=>['approval','question'].includes(t.run?.status)).map(t=>({s:t.run,shape:'needs',label:phrase('Task: {task}',{task:L(t.title)}),open:()=>openTask(t.id)}))].filter(r=>!isSkipped(r.s));
+      ...flockFacts().failed.map(s=>({s,shape:'failed',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.detailOpen.flock=true;views.flockDetail='activity';setArea('flock',state.mode);}}))].filter(r=>!isSkipped(r.s));
     strip.hidden=!room||state.area==='flock'||state.area==='review'||!rows.length;
     if(strip.hidden)return;
     strip.append(el('span','needs-title',null,chip('needs','Needs you')));
@@ -529,7 +509,7 @@
   }
   function setScenario(value){
     state.scenario=value;
-    if(['flock','summary','tasks'].includes(state.area)||state.mode==='mini'){views.flockDetail='session';views.sessionSelected='session-1';applyScenario(value);}
+    if(['flock','summary'].includes(state.area)||state.mode==='mini'){views.flockDetail='session';views.sessionSelected='session-1';applyScenario(value);}
     if(state.area==='chat'){if(value==='empty')showExample('empty');else if(value==='loading')showExample('thinking');}
     setArea(state.area,state.mode);
   }

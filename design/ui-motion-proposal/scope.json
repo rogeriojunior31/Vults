@@ -7,7 +7,7 @@
   "levels": {
     "island": "See: the flock, badges by shape, the pulse, plan usage. A click opens Compact.",
     "compact": "Act: Flock (one session and its card), Chat, Now (one inbox). The gear holds quick settings.",
-    "lab": "Lead: Flock, Chat (with Memory), Tasks, Connections, Activity, Dictation. The gear opens Settings. Full screen is the Lab maximized."
+    "lab": "Lead: Flock, Chat (with Memory), Connections, Activity, Dictation. Tasks were removed on 2026-10-16. The gear opens Settings. Full screen is the Lab maximized."
   },
   "approved": {
     "date": "2026-10-15",

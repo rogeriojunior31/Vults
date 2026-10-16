@@ -7,7 +7,7 @@
   const resting=s=>['finished','idle'].includes(s.status)&&!s.quiet;
   // The prototype always shows daytime: the thermal only rises by day.
   A.setDayPart('day');
-  function markRest(now=Date.now()){for(const s of [...sessions,...tasks.map(t=>t.run).filter(Boolean)]){if(resting(s))s.restSince??=now;else s.restSince=null;}}
+  function markRest(now=Date.now()){for(const s of sessions){if(resting(s))s.restSince??=now;else s.restSince=null;}}
   const soaring=s=>prefs.motion&&resting(s)&&s.restSince!==null&&Date.now()-s.restSince>=REST_MS;
   const skies=new Map();
   function skyFor(kind){

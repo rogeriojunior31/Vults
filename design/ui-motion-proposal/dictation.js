@@ -195,7 +195,7 @@
       detail.append(el('div','dx-line',null,name,el('span',null,line)));
     }
     if(dx.meetingTab==='summary')detail.append(settings.dictSummary?el('p',null,m.summary):el('section','empty-state',null,el('h3',null,'Summaries are off'),el('p',null,"They use the chat's model through the network gate, with a budget and a trace."),button('Dictation settings','quiet-control',()=>dxOpen('settings'))));
-    if(dx.meetingTab==='todos')for(const [text,owner,due] of m.todos)detail.append(el('div','dx-todo',null,el('span','shape shape-quiet'),el('span',null,text),el('small','task-meta',null,document.createTextNode(L(owner)+' · '+L(due))),button('Make a task','',()=>toast('Task created'))));
+    if(dx.meetingTab==='todos')for(const [text,owner,due] of m.todos)detail.append(el('div','dx-todo',null,el('span','shape shape-quiet'),el('span',null,text),el('small','task-meta',null,document.createTextNode(L(owner)+' · '+L(due)))));
     host.append(el('div','dx-meetings',null,list,detail));
   }
   function dxStatsPage(host){

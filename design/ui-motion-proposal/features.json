@@ -254,7 +254,7 @@
    "status": "new",
    "at": {
     "mode": "room",
-    "area": "tasks"
+    "area": "connections"
    },
    "expect": "[data-key=\"skip-all\"]"
   },
@@ -471,7 +471,7 @@
    "status": "shipped",
    "at": {
     "mode": "room",
-    "area": "tasks"
+    "area": "connections"
    },
    "expect": ".needs-chip"
   },
@@ -482,7 +482,7 @@
    "status": "shipped",
    "at": {
     "mode": "room",
-    "area": "tasks"
+    "area": "connections"
    },
    "expect": ".nav-count"
   },
@@ -568,194 +568,8 @@
    "expect": ".lab-context"
   },
   {
-   "id": "tasks-list",
-   "area": "Tasks",
-   "feature": "Tasks grouped by Needs you, Running, Queued and Finished, with search",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks"
-   },
-   "expect": ".task-item"
-  },
-  {
-   "id": "tasks-sidebar",
-   "area": "Tasks",
-   "feature": "A task list that folds to a rail and resizes; each row says where its task is",
-   "status": "new",
-   "at": {
-    "mode": "room",
-    "area": "tasks"
-   },
-   "expect": ".task-side .flex-handle"
-  },
-  {
-   "id": "tasks-timeline",
-   "area": "Tasks",
-   "feature": "Each task as a run: Plan, Run, Check, Review, PR",
-   "status": "new",
-   "at": {
-    "mode": "room",
-    "area": "tasks"
-   },
-   "expect": ".task-timeline"
-  },
-  {
-   "id": "tasks-wire",
-   "area": "Tasks",
-   "feature": "Show a task's run on the wire, per task",
-   "status": "new",
-   "at": {
-    "mode": "room",
-    "area": "tasks"
-   },
-   "expect": "[data-key=\"task-more\"]"
-  },
-  {
-   "id": "tasks-budget",
-   "area": "Tasks",
-   "feature": "Today's spend against the budget",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks"
-   },
-   "expect": ".task-budget"
-  },
-  {
-   "id": "tasks-new",
-   "area": "Tasks",
-   "feature": "New task with goal, project and Done when…",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks"
-   },
-   "expect": "[data-key=\"new-task\"]"
-  },
-  {
-   "id": "tasks-start",
-   "area": "Tasks",
-   "feature": "Start with Claude Code, Codex or an ACP agent",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-5"
-   },
-   "expect": "[data-key=\"task-start\"]"
-  },
-  {
-   "id": "tasks-stop",
-   "area": "Tasks",
-   "feature": "Stop and hand off",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-1"
-   },
-   "expect": "[data-key=\"task-handoff\"]"
-  },
-  {
-   "id": "tasks-go-on",
-   "area": "Tasks",
-   "feature": "Go on and Start fresh with handoff notes",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-4"
-   },
-   "expect": "[data-key=\"task-fresh\"]"
-  },
-  {
-   "id": "tasks-review",
-   "area": "Tasks",
-   "feature": "Cross review by the other agent, up to 3 rounds",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-3"
-   },
-   "expect": "[data-key=\"task-review\"]"
-  },
-  {
-   "id": "tasks-router",
-   "area": "Tasks",
-   "feature": "Router reason line",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-2"
-   },
-   "expect": ".router-line"
-  },
-  {
-   "id": "tasks-criteria",
-   "area": "Tasks",
-   "feature": "Criteria; a line that names a command runs as a check",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-2"
-   },
-   "expect": ".check-line"
-  },
-  {
-   "id": "tasks-output",
-   "area": "Tasks",
-   "feature": "Live output of the run",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-2"
-   },
-   "expect": ".terminal"
-  },
-  {
-   "id": "tasks-run-card",
-   "area": "Tasks",
-   "feature": "A task run waiting for you shows its card in the run",
-   "status": "new",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "task": "task-2"
-   },
-   "expect": ".live-output .request-card"
-  },
-  {
-   "id": "tasks-more",
-   "area": "Tasks",
-   "feature": "Status, owner, issue link, open an issue, delete, remove its folder",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks"
-   },
-   "expect": "[data-key=\"task-more\"]"
-  },
-  {
-   "id": "tasks-sandbox",
-   "area": "Tasks",
-   "feature": "Each task runs in its own clone on vults/task-N",
-   "status": "shipped",
-   "at": {
-    "mode": "room",
-    "area": "tasks",
-    "detail": "context",
-    "task": "task-2"
-   },
-   "expect": ".lab-context"
-  },
-  {
    "id": "agents-studio",
-   "area": "Tasks",
+   "area": "Lab",
    "feature": "Agents workspace, profiles, orchestrator and loops",
    "status": "planned",
    "native": "UX8–UX10: designed after the base is approved"
@@ -798,7 +612,7 @@
   {
    "id": "chat-commands",
    "area": "Chat",
-   "feature": "/task /delegate /continue /remember /forget",
+   "feature": "/continue /remember /forget",
    "status": "shipped",
    "at": {
     "mode": "quick",
@@ -973,7 +787,7 @@
   {
    "id": "zeca-followups",
    "area": "Zeca",
-   "feature": "Follow-ups under each reply: open, ask, make it a task",
+   "feature": "Follow-ups under each reply: open, ask",
    "status": "new",
    "at": {
     "mode": "quick",
@@ -1462,7 +1276,7 @@
   {
    "id": "dictation-meeting-todos",
    "area": "Dictation",
-   "feature": "Meeting to-dos that become tasks with a click",
+   "feature": "Meeting to-dos with who and when",
    "status": "planned",
    "phase": "V5",
    "at": {

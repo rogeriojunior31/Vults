@@ -120,8 +120,7 @@ for(const f of manifest){
   const at=f.at;P.setScenario(at.scenario??'ready');
   if(at.setting)P.settings[at.setting[0]]=at.setting[1];
   if(at.session)P.views.sessionSelected=at.session;
-  if(at.task)P.views.taskSelected=at.task;
-  if(at.detail){P.views.flockDetail=at.detail;P.views.taskDetail=at.detail;}
+  if(at.detail)P.views.flockDetail=at.detail;
   if(at.activity)P.state.activity=at.activity;
   if(at.category)P.state.category=at.category;
   if(at.face)P.views.connectionFace=at.face;
@@ -136,7 +135,7 @@ for(const f of manifest){
   assert.ok(find(f.expect),'Feature '+f.id+' ('+f.feature+') is visible at '+JSON.stringify(at)+' as '+f.expect);
   if(at.setting)P.settings[at.setting[0]]=at.setting[0]==='dnd'?'Off':false;
   if(at.type)type(find('.chat-view textarea'),'');
-  P.views.flockDetail='session';P.views.taskDetail='overview';P.views.connectionFace='you';P.views.memoryTab='Waiting for you';
+  P.views.flockDetail='session';P.views.connectionFace='you';P.views.memoryTab='Waiting for you';
 }
 reset();
 
@@ -144,7 +143,7 @@ reset();
 for(const lang of ['pt-BR','es','zh']){
   P.setLanguage(lang);
   for(const f of manifest.filter(f=>f.at)){P.setScenario(f.at.scenario??'ready');P.setArea(f.at.area,f.at.mode);if(f.at.example)P.showExample(f.at.example);}
-  for(const area of ['flock','chat','tasks','connections','activity','dictation','settings','review'])P.setArea(area,'room');
+  for(const area of ['flock','chat','connections','activity','dictation','settings','review'])P.setArea(area,'room');
 }
 P.setLanguage('pt-BR');
 const untranslated=P.missing();
@@ -161,11 +160,11 @@ assert.deepEqual(all('.product-size button').map(b=>b.textContent),['Ilha','Comp
 assert.equal(text('.surface-name'),'Compact');
 P.setArea('flock','room');assert.equal(text('.surface-name'),'Lab');assert.equal(find('.product-window').getAttribute('aria-label'),'Vults Lab');
 P.setMode('full');assert.equal(text('.surface-name'),'Lab','Full screen is the Lab maximized.');assert.equal(find('[data-size="room"]').getAttribute('aria-pressed'),'true');P.setMode('room');
-for(const area of ['flock','chat','tasks','connections','activity','settings']){P.setArea(area,'room');assert.equal(/\b(Room|Sala|Nest|R\u00e1pido|Quick)\b/.test(find('.product-window').textContent),false,'No retired surface name in Lab '+area);}
+for(const area of ['flock','chat','connections','activity','settings']){P.setArea(area,'room');assert.equal(/\b(Room|Sala|Nest|R\u00e1pido|Quick)\b/.test(find('.product-window').textContent),false,'No retired surface name in Lab '+area);}
 
 /* Navigation: Compact has three tabs, the Lab five; Settings is the gear in both. */
 P.setArea('chat','quick');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-summary']);
-P.setArea('flock','room');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-tasks','nav-connections','nav-activity','nav-dictation']);
+P.setArea('flock','room');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-connections','nav-activity','nav-dictation']);
 find('[data-key="head-settings"]').click();assert.equal(P.state.area,'settings');
 P.setArea('chat','quick');find('[data-key="head-settings"]').click();assert.equal(find('.action-menu').hidden,false,'The Compact gear opens quick settings in place.');assert.equal(P.state.mode,'quick');
 change(all('.action-menu select')[1],'1 h');assert.ok(find('[data-key="dnd"]'),'Do not disturb shows its moon.');find('[data-key="dnd"]').click();assert.equal(find('[data-key="dnd"]'),null);
@@ -201,14 +200,14 @@ P.setScenario('many');assert.ok(all('.compact-bird-pick').length<=6);assert.ok(t
 P.setScenario('ready');
 
 /* Now: one inbox. */
-P.setArea('summary','quick');const before=all('.now-row').length;assert.ok(before>=7,'Now gathers cards, failures, quiet birds, checks, inbox, tasks and memory.');
+P.setArea('summary','quick');const before=all('.now-row').length;assert.ok(before>=5,'Now gathers cards, failures, quiet birds, checks, inbox and memory.');
 assert.ok(find('[data-key="now-needs-session-1"]'));assert.ok(find('[data-key="now-failed-session-4"]'));assert.ok(find('[data-key="now-quiet-session-6"]'));
 find('[data-key="seen-inbox-1"]').click();assert.equal(all('.now-row').length,before-1,'✓ Seen removes one row.');
 find('[data-key="mark-all-seen"]').click();assert.equal(find('[data-key="mark-all-seen"]').disabled,true);
 find('[data-key="keep-going"]').click();assert.equal(find('[data-key="now-quiet-session-6"]'),null);
 all('.now-open').find(b=>b.textContent.includes('api')).click();assert.equal(P.state.mode,'room');assert.equal(P.views.flockDetail,'activity','A failure opens its output in the Lab.');
 
-/* Lab: one list and detail for sessions and tasks. */
+/* Lab: one list and detail for sessions. */
 P.setArea('flock','room');assert.ok(all('.lab-bird-target').length>=5,'Every visible Lab bird is a real control.');
 find('[data-key="bird-session-2"]').click();assert.equal(P.views.sessionSelected,'session-2');
 find('[data-key="tab-diff"]').click();assert.equal(all('.lab-diff-file').length,16);assert.ok(all('.lab-code-row').length>800);
@@ -217,35 +216,15 @@ find('[data-key="tab-diff"]').click();assert.equal(find('.lab-diff-scroll').scro
 change(all('.lab-diff-toolbar select')[0],'4');assert.equal(all('.lab-diff-file').length,2);change(all('.lab-diff-toolbar select')[0],'8');
 find('[data-key="session-6"]').click();assert.equal(find('.lab-diff-scroll'),null,'A session without changes never inherits a patch.');
 keydown(find('.detail-tabs'),'ArrowRight');assert.equal(P.views.flockDetail,'activity');
-find('[data-key="session-1"]').click();find('[data-key="tab-session"]').click();assert.equal(find('[data-key="task-link"]'),null,'A session you opened yourself has no task.');
 assert.ok(find('.lab-sky .proto-sky'),'The Lab flock has a sky above the wire.');
-find('[data-key="session-1"]').click();find('[data-key="skip"]').click();assert.ok(find('[data-key="unskip"]'),'A skipped card leaves the detail.');find('[data-key="unskip"]').click();assert.ok(find('.request-card'));
+find('[data-key="session-1"]').click();find('[data-key="tab-session"]').click();find('[data-key="skip"]').click();assert.ok(find('[data-key="unskip"]'),'A skipped card leaves the detail.');find('[data-key="unskip"]').click();assert.ok(find('.request-card'));
 
 /* Skipping never answers; the needs strip folds away when everything is skipped. */
-P.setArea('tasks','room');assert.ok(all('.needs-chip').length>=2);
+P.setArea('connections','room');assert.ok(all('.needs-chip').length>=2);
 const firstSkip=all('.needs-chip .icon-action')[0];firstSkip.click();const left=all('.needs-chip').length;
 find('[data-key="skip-all"]').click();assert.equal(find('.needs-strip').hidden,true,'With everything skipped the strip disappears.');
 assert.equal(P.sessions[0].status,'approval','Skipping does not answer the card.');P.views.skipped.splice(0);
 
-/* Tasks: agents Vults runs on its own, read as a timeline. */
-P.setArea('tasks','room');assert.ok(find('.task-side'));assert.equal(all('.task-timeline .stage').length,5);
-assert.ok(find('.live-output .request-card'),'A task run waiting for you shows its card in the run.');
-assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false,'A task run is not on the wire by default.');
-find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.ok(P.sessions.some(s=>s.id==='run-task-2'),'Show it on the wire puts its bird there.');
-P.setArea('flock','room');find('[data-key="run-task-2"]').click();assert.ok(find('[data-key="task-link"]'),'A run on the wire links back to its task.');
-P.setArea('tasks','room');find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false);
-find('[data-key="fold-tasks"]').click();assert.ok(find('.task-side.folded')&&find('[data-key="rail-task-2"]'),'The task list folds to a rail that still shows its tasks.');find('[data-key="fold-tasks"]').click();
-const handle=find('.task-side .flex-handle');keydown(handle,'ArrowRight');assert.equal(P.views.panels.tasks.w,320,'The list resizes from the keyboard.');
-assert.ok(all('.task-line').length>=5,'Each task says where it is in the list.');
-find('[data-key="task-5"]').click();find('[data-key="task-start"]').click();find('[data-key="codex"]').click();
-const started=P.tasks.find(t=>t.id==='task-5');assert.equal(started.status,'Doing');assert.ok(started.run,'Starting a task gives it a run.');
-find('[data-key="task-stop"]').click();assert.equal(started.status,'Blocked');find('[data-key="task-go-on"]').click();assert.equal(started.status,'Doing');
-find('[data-key="task-2"]').click();find('[data-key="run-check-2"]').click();runTimers();assert.equal(P.tasks.find(t=>t.id==='task-2').checks[2],'passed','A criterion that names a command runs as a check.');
-find('[data-key="task-3"]').click();find('[data-key="task-review"]').click();assert.equal(P.tasks.find(t=>t.id==='task-3').rounds.length,3);
-const prs=all('.connection-row').length;find('[data-key="task-accept"]').click();assert.equal(P.tasks.find(t=>t.id==='task-3').status,'Done');
-find('[data-key="new-task"]').click();submitEditor();assert.equal(find('.editor-error').hidden,false,'A task needs a goal.');
-type(find('.editor-content input'),'Prototype task');type(find('.editor-content textarea'),'First\nSecond');submitEditor();assert.equal(P.tasks[0].title,'Prototype task');assert.equal(P.tasks[0].criteria.length,2);
-find('[data-key="task-more"]').click();assert.ok(find('[data-key="delete-task"]')&&find('[data-key="remove-folder"]'));find('[data-key="task-more"]').click();
 
 /* Connections: a face for you and a face for Zeca. */
 P.setArea('connections','room');assert.ok(all('.connection-row').length>=3);
@@ -258,9 +237,8 @@ find('[data-key="tab-zeca"]').click();assert.equal(all('.zeca-tool').length,3);c
 P.setArea('chat','quick');P.showExample('empty');assert.ok(find('.usage-ring'),'The model shows plan usage.');
 find('.model-trigger').click();assert.ok(all('.engine-option').length>=5);find('[data-key="engine-codex"]').click();assert.ok(find('.model-options').textContent.includes('GPT-6.1-Sol'));
 change(find('.effort-select'),'High');assert.ok(find('.model-trigger').textContent.includes('Alto'),'Effort shows on the trigger.');find('.model-close').click();
-const box=find('.chat-view textarea');type(box,'/');assert.equal(find('.command-popover').hidden,false);assert.equal(all('.command-option').length,5);
-keydown(box,'Enter');assert.equal(box.value,'/task ');type(box,'/task Add a dark mode');keydown(box,'Enter');runTimers();
-assert.ok(P.tasks.some(t=>t.title==='Add a dark mode'),'/task creates a task.');assert.ok(text('.transcript').includes('Add a dark mode'));
+const box=find('.chat-view textarea');type(box,'/');assert.equal(find('.command-popover').hidden,false);assert.equal(all('.command-option').length,3);
+keydown(box,'Enter');assert.equal(box.value,'/continue');type(box,'');
 type(box,'what is @fr');assert.ok(all('.command-option')[0].textContent.includes('@frontend'));keydown(box,'Tab');assert.ok(box.value.endsWith('@frontend '));
 keydown(box,'Enter');runTimers();assert.ok(text('.transcript').includes('frontend'));
 type(box,'/remember Ship the island first');keydown(box,'Enter');runTimers();assert.ok(context.__vultsPrototype.state.messages.at(-1).text.includes('Vults'));
@@ -271,7 +249,6 @@ P.showExample('conversation');assert.ok(find('.tool-details'));assert.ok(all('.m
 P.setArea('chat','room');assert.ok(find('.conversation-row .row-tools'));
 find('[data-label="Rename"]').click();type(find('.editor-content input'),'Renamed');submitEditor();assert.ok(text('.room-recent').includes('Renamed'));
 
-P.setArea('tasks','room');P.setArea('connections','room');assert.equal(find('.workspace-view').classList.contains('task-board'),false,'Leaving Tasks leaves no grid behind.');
 for(const flavor of ['noite','garoa','jaragua']){change(find('.theme-select'),flavor);assert.equal(root.getAttribute('data-flavor'),flavor);assert.ok(/^#/.test(root.style['--bg'])&&root.style['--tab-accent'],'The '+flavor+' flavour sets the roles from sp-night.json.');}
 change(find('.theme-select'),'black');assert.equal(root.style['--bg'],undefined,'Black falls back to the app theme.');change(find('.theme-select'),'jaragua');
 /* Every Lab side panel is flexible. */
@@ -288,7 +265,7 @@ P.showExample('conversation');assert.equal(find('.zeca-note'),null,'Zeca never s
 find('[data-key="chip-card"]').click();assert.equal(P.state.area,'flock','A follow-up can open the card; it never answers it.');
 P.setArea('chat','quick');type(find('.chat-view textarea'),'hi');assert.equal(sceneUpdates.get(find('.portrait canvas'))[2].clip,'listen','Zeca listens while you type.');
 type(find('.chat-view textarea'),'Why did api fail?');keydown(find('.chat-view textarea'),'Enter');assert.ok(['search','think'].includes(sceneUpdates.get(find('.portrait canvas'))[2].clip),'Zeca searches, then thinks.');runTimers();
-assert.ok(text('.transcript').includes('cargo test -p api'),'He answers from the flock.');assert.ok(find('[data-key="chip-f-task"]'));
+assert.ok(text('.transcript').includes('cargo test -p api'),'He answers from the flock.');assert.ok(find('[data-key="chip-f-open"]'));
 
 /* Memory. */
 P.setArea('memory','room');const pending=all('.room-memory .memory-change').length;assert.equal(pending,3);
@@ -367,9 +344,6 @@ find('[data-key="session-2"]').click();assert.equal(find('.lab-diff-scroll').scr
 change(find('.viewport-select'),'normal');assert.equal(find('.product-window.single-pane'),null);
 assert.equal(P.views.sessionSelected,'session-2');assert.equal(find('.lab-diff-scroll').scrollTop,240);
 change(find('.viewport-select'),'short');assert.ok(find('.product-window.single-pane'),'A short Lab also uses one pane.');
-P.setArea('tasks','room');find('[data-key="nav-tasks"]').click();find('.task-side').scrollTop=80;
-find('[data-key="task-1"]').click();assert.ok(find('.list-detail.detail-open'));
-find('[data-key="back-to-list"]').click();assert.equal(find('.task-side').scrollTop,80);assert.equal(P.views.taskSelected,'task-1');
 P.views.sessionQuery='';change(find('.viewport-select'),'normal');
 P.setMode('quick');P.setMode('room');
 assert.ok(animations.filter(a=>a.element===find('.surface-shell')).every(a=>a.options.duration<=200),'Surface changes finish within 200 ms.');

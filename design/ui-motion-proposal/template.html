@@ -15,7 +15,6 @@
     <span class="review-group">Lab</span>
     <button type="button" data-area="flock" data-mode="room" aria-pressed="false" data-word="Flock"></button>
     <button type="button" data-area="chat" data-mode="room" aria-pressed="false" data-word="Chat"></button>
-    <button type="button" data-area="tasks" data-mode="room" aria-pressed="false" data-word="Tasks"></button>
     <button type="button" data-area="connections" data-mode="room" aria-pressed="false" data-word="Connections"></button>
     <button type="button" data-area="activity" data-mode="room" aria-pressed="false" data-word="Activity"></button>
     <button type="button" data-area="dictation" data-mode="room" aria-pressed="false" data-word="Dictation"></button>
@@ -443,6 +442,8 @@
 #vults-ui-proposal .content-row header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 #vults-ui-proposal .content-row h3 { font-size:13px; font-weight:500; }
 #vults-ui-proposal .content-row p { color:var(--fg-dim); margin:6px 0; }
+#vults-ui-proposal .task-group { display:flex; flex-direction:column; gap:2px; }
+#vults-ui-proposal .task-group h3 { display:flex; align-items:center; gap:8px; padding:8px 8px 4px; font-size:12px; font-weight:600; color:var(--fg-dim); }
 #vults-ui-proposal .task-meta { color:var(--fg-dim); font-size:12px; margin-top:4px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 #vults-ui-proposal .empty-state { display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:24px 0; }
 #vults-ui-proposal .empty-state h3 { font-size:15px; font-weight:500; }
@@ -539,7 +540,6 @@
 #vults-ui-proposal .workspace-view.lab-split { display:grid; grid-template-columns:min(var(--flock-list-w,380px),48%) minmax(0,1fr); padding:0; overflow:hidden; }
 #vults-ui-proposal .lab-list { display:flex; flex-direction:column; min-height:0; overflow-y:auto; scrollbar-width:thin; padding:12px 14px; border-right:1px solid var(--border); background:var(--panel); }
 #vults-ui-proposal .lab-list .search-field { flex:1; margin-left:0; min-width:120px; }
-#vults-ui-proposal .task-side .search-field { margin-left:0; flex:none; }
 #vults-ui-proposal .lab-list .group-by { flex:none; }
 #vults-ui-proposal .lab-rows { display:flex; flex-direction:column; gap:2px; }
 #vults-ui-proposal .session-row { display:flex; align-items:center; width:100%; gap:10px; text-align:left; padding:8px 10px; }
@@ -567,15 +567,9 @@
 #vults-ui-proposal .workspace.single-pane .detail-list.folded { padding:12px!important; }
 #vults-ui-proposal .workspace.single-pane .detail-list.folded>:not(.flex-handle):not(.flex-rail) { display:flex!important; }
 #vults-ui-proposal .workspace.single-pane .detail-list.folded>.task-groups,
-#vults-ui-proposal .workspace.single-pane .detail-list.folded>.task-budget { display:block!important; }
 #vults-ui-proposal .workspace.single-pane .detail-list.folded>.flex-rail { display:none; }
-#vults-ui-proposal .workspace.single-pane .task-main { overflow-y:auto; }
-#vults-ui-proposal .workspace.single-pane .task-main>.list-back { position:sticky; top:0; z-index:5; background:var(--bg); }
-#vults-ui-proposal .workspace.single-pane .task-main .lab-panel { flex:none; overflow:visible; }
-#vults-ui-proposal .workspace.single-pane .task-timeline { margin:12px 0; }
 #vults-ui-proposal .detail-head { flex:none; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
 #vults-ui-proposal .detail-head h3 { font-size:15px; font-weight:600; letter-spacing:-.3px; }
-#vults-ui-proposal .task-link { display:flex; align-items:center; gap:8px; font-size:12px; background:var(--float); }
 #vults-ui-proposal .detail-tabs { flex:none; margin-bottom:0; }
 #vults-ui-proposal .lab-panel { flex:1; min-height:0; overflow:auto; padding:16px 0 20px; overscroll-behavior:contain; scrollbar-width:thin; display:flex; flex-direction:column; gap:10px; }
 #vults-ui-proposal .lab-panel>* { flex:none; }
@@ -617,31 +611,13 @@
 #vults-ui-proposal .lab-wire { position:absolute; left:16px; right:16px; bottom:18px; height:96px; overflow:visible; }
 #vults-ui-proposal .sky-note { position:absolute; left:20px; bottom:4px; margin:0; font-size:12px; color:var(--fg-dim); }
 
-/* Tasks: a flexible list of runs and one run read as a timeline */
-#vults-ui-proposal .workspace-view.task-board { display:grid; grid-template-columns:min(var(--tasks-w,300px),48%) minmax(0,1fr); padding:0; overflow:hidden; }
-#vults-ui-proposal .task-side { display:flex; flex-direction:column; gap:10px; min-height:0; overflow-y:auto; scrollbar-width:thin; padding:12px; background:var(--panel); border-right:1px solid var(--border); }
-#vults-ui-proposal .task-side-head .counter { font-size:12px; color:var(--fg-muted); }
-#vults-ui-proposal .task-group { display:flex; flex-direction:column; gap:2px; }
-#vults-ui-proposal .task-group h3 { display:flex; align-items:center; gap:8px; padding:8px 8px 4px; font-size:12px; font-weight:600; color:var(--fg-dim); }
+/* Group counts in the Lab lists */
 #vults-ui-proposal .group-count { margin-left:auto; min-width:18px; padding:0 5px; border-radius:9px; background:var(--raised); color:var(--fg-dim); font-size:12px; line-height:16px; text-align:center; }
-#vults-ui-proposal .task-item { display:flex; align-items:flex-start; gap:10px; width:100%; text-align:left; padding:9px 10px; border-radius:var(--radius-card); }
-#vults-ui-proposal .task-item:hover:not(:disabled) { background:var(--float); }
-#vults-ui-proposal .task-item[aria-pressed=true] { background:var(--raised); box-shadow:inset 0 0 0 1px var(--border-hover); }
-#vults-ui-proposal .task-avatar { flex:none; display:grid; place-items:center; width:24px; height:24px; margin-top:1px; border-radius:7px; background:var(--panel); box-shadow:inset 0 0 0 1px var(--border-hover); }
-#vults-ui-proposal .task-item-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
-#vults-ui-proposal .task-item-copy strong { font-size:13px; font-weight:500; line-height:1.35; color:var(--fg); }
-#vults-ui-proposal .task-item-copy small { font-size:12px; color:var(--fg-dim); }
-#vults-ui-proposal .task-line { display:flex; align-items:center; gap:6px; font-weight:500; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-#vults-ui-proposal .task-line .shape { width:6px; height:6px; }
-#vults-ui-proposal .task-line span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
-#vults-ui-proposal .task-steps { display:flex; gap:5px; margin-top:4px; }
-#vults-ui-proposal .task-steps span { width:6px; height:6px; border-radius:50%; background:var(--border-hover); }
-#vults-ui-proposal .task-steps .done { background:var(--fg-dim); } #vults-ui-proposal .task-steps .current { background:var(--mark); } #vults-ui-proposal .task-steps .needs { background:var(--warn); } #vults-ui-proposal .task-steps .failed { background:var(--error-text); }
 
 /* Flexible side panels: a header you can read, a divider you can see, a rail that still speaks */
 #vults-ui-proposal .flexible { position:relative; }
 #vults-ui-proposal .flex-head { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:30px; padding:0 0 6px 6px; }
-#vults-ui-proposal .flex-head strong,#vults-ui-proposal .recent-head h3,#vults-ui-proposal .task-side-head strong { font-size:12px; font-weight:600; color:var(--fg-dim); letter-spacing:.2px; }
+#vults-ui-proposal .flex-head strong,#vults-ui-proposal .recent-head h3 { font-size:12px; font-weight:600; color:var(--fg-dim); letter-spacing:.2px; }
 #vults-ui-proposal .flex-fold { width:26px; min-height:26px; margin-left:auto; color:var(--fg-muted); border-radius:6px; }
 #vults-ui-proposal .flex-fold:hover { color:var(--fg); }
 #vults-ui-proposal .flex-handle { position:absolute; top:0; bottom:0; z-index:4; width:12px; cursor:col-resize; touch-action:none; }
@@ -666,34 +642,7 @@
 #vults-ui-proposal .rail-letter { font-size:12px; font-weight:600; }
 #vults-ui-proposal .rail-dot[data-tooltip]:hover::after { top:50%; left:calc(100% + 6px); transform:translateY(-50%); }
 #vults-ui-proposal .flexible.folded>.flex-handle { cursor:default; }
-#vults-ui-proposal .task-side-head { display:flex; align-items:center; gap:8px; padding-left:4px; }
-#vults-ui-proposal .task-side-head strong { flex:1; }
-#vults-ui-proposal .task-new { display:flex; align-items:center; justify-content:center; gap:8px; }
 #vults-ui-proposal .group-label { flex:1; }
-#vults-ui-proposal .task-budget { margin:auto 0 0; padding:0 6px; font-size:12px; color:var(--fg-muted); }
-#vults-ui-proposal .task-main { display:flex; flex-direction:column; min-width:0; min-height:0; padding:20px 28px 0; }
-#vults-ui-proposal .task-head { flex:none; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:10px 16px; }
-#vults-ui-proposal .task-title { min-width:min(100%,320px); flex:1; }
-#vults-ui-proposal .task-title h2 { font-size:18px; font-weight:600; letter-spacing:-.3px; text-wrap:balance; }
-#vults-ui-proposal .task-head .page-actions { flex-wrap:nowrap; }
-#vults-ui-proposal .task-timeline { flex:none; display:flex; list-style:none; margin:18px 0 12px; padding:0; }
-#vults-ui-proposal .task-timeline li { flex:1; display:flex; }
-#vults-ui-proposal .stage { flex:1; position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:0; min-height:0; font-size:12px; color:var(--fg-dim); text-align:left; border-radius:6px; }
-#vults-ui-proposal .stage:hover:not(:disabled) { background:transparent; color:var(--fg); }
-#vults-ui-proposal .stage::before { content:""; position:absolute; top:5px; left:14px; right:0; height:2px; background:var(--border-hover); }
-#vults-ui-proposal .task-timeline li:last-child .stage::before { display:none; }
-#vults-ui-proposal .stage-dot { position:relative; z-index:1; width:12px; height:12px; border-radius:50%; background:var(--bg); box-shadow:inset 0 0 0 2px var(--border-hover); }
-#vults-ui-proposal .stage-done { color:var(--fg-dim); }
-#vults-ui-proposal .stage-done::before { background:var(--fg-dim); }
-#vults-ui-proposal .stage-done .stage-dot { background:var(--fg-dim); box-shadow:none; }
-#vults-ui-proposal .stage-current,#vults-ui-proposal .stage-needs,#vults-ui-proposal .stage-failed { color:var(--fg); font-weight:500; }
-#vults-ui-proposal .stage-current .stage-dot { background:var(--mark); box-shadow:0 0 0 3px color-mix(in srgb,var(--mark) 22%,transparent); }
-#vults-ui-proposal .stage-needs .stage-dot { background:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 22%,transparent); }
-#vults-ui-proposal .stage-failed .stage-dot { background:var(--error-text); border-radius:2px; }
-#vults-ui-proposal .task-main .router-line { flex:none; margin-bottom:10px; }
-#vults-ui-proposal .task-main .lab-panel { gap:18px; }
-#vults-ui-proposal .task-main .lab-panel-diff { margin:0 -28px; }
-#vults-ui-proposal .task-section { display:flex; flex-direction:column; gap:8px; }
 #vults-ui-proposal .terminal { padding:10px 12px; max-height:220px; overflow:auto; border-radius:var(--radius-code); background:var(--bg-deep); box-shadow:inset 0 0 0 1px var(--border); font:12px/1.65 var(--mono); }
 #vults-ui-proposal .term-line { display:flex; gap:12px; }
 #vults-ui-proposal .term-line>span { color:var(--fg-muted); white-space:pre; }
@@ -702,10 +651,7 @@
 #vults-ui-proposal .check-line { display:flex; align-items:center; flex-wrap:wrap; gap:10px; min-height:34px; border-bottom:1px solid var(--border); }
 #vults-ui-proposal .check-line label { flex:1; display:flex; align-items:center; gap:8px; min-width:200px; }
 #vults-ui-proposal .check-line button { font-size:12px; }
-#vults-ui-proposal .review-bubble { display:flex; gap:10px; padding:10px 12px; border-radius:12px; background:var(--float); }
-#vults-ui-proposal .review-bubble .agent-dot { margin-top:6px; }
 #vults-ui-proposal .review-by { display:flex; align-items:center; gap:8px; }
-#vults-ui-proposal .review-bubble p { margin-top:2px; color:var(--fg-dim); }
 
 /* Connections */
 #vults-ui-proposal .connector-chips { display:flex; gap:6px; margin-bottom:6px; }

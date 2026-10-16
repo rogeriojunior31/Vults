@@ -53,7 +53,7 @@
   const input = $('textarea'), popover = $('.model-popover'), history = $('.history-popover'), commands = $('.command-popover'), actionMenu = $('.action-menu');
   const state = { area:'chat', mode:'quick', scenario:'ready', activity:'week', category:'general', conversation:'current', example:'empty', engine:'claude', model:'Default model', effort:'Default effort', files:[], messages:[], queued:[], busy:false, voice:false, notice:false, memoryPanel:false, lastSent:'' };
   let restoring = true;
-  const AREAS=['summary','flock','chat','tasks','activity','connections','dictation','settings','memory','review'];
+  const AREAS=['summary','flock','chat','activity','connections','dictation','settings','memory','review'];
   const original = window.openai?.widgetState;
   if (original?.modelContent?.area && AREAS.includes(original.modelContent.area)) state.area=original.modelContent.area;
   function remember() {
@@ -268,8 +268,6 @@
 
   /* Slash commands and @ mentions. A command never answers a card. */
   const COMMANDS = [
-    ['/task','Create a task from this goal','/task '],
-    ['/delegate','Hand the goal to an agent (codex or claude)','/delegate codex '],
     ['/continue','Resume a stopped session (within 10 minutes)','/continue'],
     ['/remember','Save a fact to Zeca\'s memory','/remember '],
     ['/forget','Remove a fact from Zeca\'s memory','/forget '],
@@ -410,14 +408,12 @@
   }
   function commandReply(text) {
     const [name,...rest]=text.split(' '), arg=rest.join(' ').trim();
-    if (name==='/task'&&arg) { const row=newTask(arg,settings.chatFolder); return {who:'zeca',text:phrase('Task created: {goal}. It waits in Tasks until you start it.',{goal:arg}),tools:false,link:{label:'Open in Tasks',action:() => openTask(row.id)}}; }
-    if (name==='/delegate') { const [agent,...goal]=rest; const row=newTask(goal.join(' ')||L('Follow up on this conversation'),settings.chatFolder,agent==='claude'?'Claude Code':'Codex'); row.status='Doing'; row.router=phrase('Delegated to {agent}: you asked for it.',{agent:row.engine}); return {who:'zeca',text:phrase('Delegated to {agent}. You will see its bird on the wire.',{agent:row.engine}),tools:false,link:{label:'Open in Tasks',action:() => openTask(row.id)}}; }
     if (name==='/continue') return {who:'zeca',text:'No stopped Claude or Codex session in the last 10 minutes.',tools:false};
     if (name==='/remember'&&arg) { memory.facts.push({id:'fact-'+Date.now(),place:settings.chatFolder,text:raw(arg)}); return {who:'zeca',text:phrase('Remembered for {place}.',{place:settings.chatFolder}),tools:false,link:{label:'Open Memory',action:() => openMemory()}}; }
     if (name==='/forget'&&arg) { const before=memory.facts.length; memory.facts=memory.facts.filter(f=>!L(f.text).toLowerCase().includes(arg.toLowerCase())); return {who:'zeca',text:before>memory.facts.length?'Forgotten.':'Nothing in memory matches that.',tools:false}; }
     if (/@\w+/.test(text)) { const s=sessions.find(s=>text.includes('@'+s.project)); if (s) return {who:'zeca',text:phrase('{project} ({agent}): {brief}.',{project:s.project,agent:labelFor(s.agent),brief:L(sessionBrief(s))}),tools:[toolRow('session_detail','"'+s.project+'"',raw(L(sessionBrief(s))))],seconds:'0.2'}; }
     const failed=sessions.find(s=>s.status==='failed'&&text.includes(s.project));
-    if (failed) return {who:'zeca',text:phrase('{project} stopped at {command}: {output}',{project:failed.project,command:failed.step,output:failed.output.split('\n').pop()}),tools:[toolRow('session_detail','"'+failed.project+'"',phrase('failed at step {n}',{n:failed.step_count}))],seconds:'0.5',chips:[{id:'f-open',label:'Open its output',go:()=>{views.sessionSelected=failed.id;views.flockDetail='activity';setArea('flock','room');}},{id:'f-task',label:'Make it a task',send:'/task Fix '+failed.step+' in '+failed.project}]};
+    if (failed) return {who:'zeca',text:phrase('{project} stopped at {command}: {output}',{project:failed.project,command:failed.step,output:failed.output.split('\n').pop()}),tools:[toolRow('session_detail','"'+failed.project+'"',phrase('failed at step {n}',{n:failed.step_count}))],seconds:'0.5',chips:[{id:'f-open',label:'Open its output',go:()=>{views.sessionSelected=failed.id;views.flockDetail='activity';setArea('flock','room');}}]};
     return {who:'zeca',text:'This prototype answers with sample data. In the app, Zeca reads the flock, your memory and the connectors he may use.',seconds:'0.4',memory:'fact-1',chips:[{id:'more',label:'Tell me more',send:'Tell me more'}]};
   }
   let noticeAnimation;
@@ -510,5 +506,5 @@
   restorePrototype(original);paintFiles();paintConversation();setArea(state.area,state.mode);
   restoring=false;
   // verify.mjs drives the same entry points a reviewer clicks.
-  window.__vultsPrototype={setArea,setMode,setScenario,showExample,setLanguage,missing:() => [...missing],state,sessions,tasks,views,settings,dictation:dx};
+  window.__vultsPrototype={setArea,setMode,setScenario,showExample,setLanguage,missing:() => [...missing],state,sessions,views,settings,dictation:dx};
 })();
