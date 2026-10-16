@@ -112,6 +112,8 @@
   $('.chat-actions').append(historyTrigger, memoryTrigger, iconButton('plus','New conversation',() => newConversation()));
   $('.context-folder').append(A.icon('folder',12),button('Vults','folder-trigger',() => openFolder(),'Folder for this conversation'),A.icon('chevronDown',10));
   $('.context-access').append(A.icon('person',12),button('Asks first','access-trigger',() => openAccess(),"Who answers Zeca's cards"));
+  // The composer resizes from one place, also when a draft or a conversation is loaded.
+  function fitInput(){ input.style.height='auto'; input.style.height=Math.min(state.mode==='quick'?90:220,input.scrollHeight)+'px'; paintSend(); }
   input.placeholder=L('Ask Zeca… / for commands, @ for a session'); input.setAttribute('aria-label',L('Message'));
   input.addEventListener('input',() => { if (input.value.trim()&&(!state.typing||state.mood)) { state.typing=true; state.mood=null; clearTimeout(moodTimer); paintBird(); } clearTimeout(typingTimer); typingTimer=window.setTimeout(()=>{ state.typing=false; paintBird(); },1500); input.style.height='auto'; input.style.height=Math.min(state.mode==='quick'?90:220,input.scrollHeight)+'px'; paintSend(); paintCommands(); remember(); });
   input.addEventListener('keydown',event => {
@@ -296,6 +298,7 @@
     saveConversation();conversations.slice(0,8).forEach(c=>history.append(conversationRow(c,() => closeMenu(history,historyTrigger,false,false))));
     history.append(button('New conversation','quiet-control',()=>{closeMenu(history,historyTrigger,false,false);newConversation();}));
   }
+  root.addEventListener('scroll',event => { if (!actionMenu.hidden&&!actionMenu.contains(event.target)) closeActionMenu(false); },true);
   document.addEventListener('pointerdown',event => {
     if (!popover.hidden&&!popover.contains(event.target)&&!modelTrigger.contains(event.target)) closeModels(false);
     if (!history.hidden&&!history.contains(event.target)&&!historyTrigger.contains(event.target)) closeMenu(history,historyTrigger,false);

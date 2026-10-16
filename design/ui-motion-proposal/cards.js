@@ -61,7 +61,6 @@
     const actions=el('div','request-actions',null,deny,el('span','spacer'));
     if(canAlways(s,destructive))actions.append(key(button(chat?'Always in this chat':'Always allow','',()=>decide(chat?'Allowed in this chat':'Always allowed')),'always'));
     actions.append(allow);card.append(actions);
-    card.addEventListener('keydown',event=>{if(event.ctrlKey&&event.altKey&&['y','n'].includes(event.key?.toLowerCase())){event.preventDefault();(event.key.toLowerCase()==='y'?allow:deny).click();}});
     if(density==='lab'){
       const recent=auditRows.filter(r=>r.project===s.project).slice(0,2).map(r=>el('div',null,null,el('span','counter',null,document.createTextNode(r.time)),el('span',null,phrase('{answer} by {by}',{answer:L(r.answer),by:L(r.by)})),el('code',null,null,document.createTextNode(r.command))));
       card.append(details(phrase('Recent answers in {project}',{project:s.project}),recent.length?recent:['Nothing answered here yet.'],'run-details request-history'));
@@ -71,7 +70,7 @@
   function questionCard(s,density,onAnswer) {
     const card=el('section','request-card question density-'+density);card.setAttribute('aria-label',L('Question'));
     card.append(el('header','request-head',null,el('span','agent-dot '+s.agent),el('strong',null,phrase('{agent} asks',{agent:labelFor(s.agent)})),el('span','request-tool',s.multi?'Choose any':'Choose one')),el('p','question-text',QUESTION.text));
-    const picked=new Set(),list=el('div','question-options');list.setAttribute('role',s.multi?'group':'listbox');
+    const picked=new Set(),list=el('div','question-options');list.setAttribute('role','group');
     const answer=text=>{s.status='working';s.activity='run';s.card=s.waiting=false;recordAudit('Answered',text,'You',s.project,labelFor(s.agent));toast('Answer sent. The agent continues.');onAnswer('Answered');remember();};
     QUESTION.options.forEach((option,i)=>{
       const b=key(button(null,'question-option',()=>{if(!s.multi){answer(L(option));return;}picked.has(option)?picked.delete(option):picked.add(option);b.setAttribute('aria-pressed',String(picked.has(option)));send.disabled=!picked.size;}),'option-'+(i+1));

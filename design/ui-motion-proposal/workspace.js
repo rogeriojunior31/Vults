@@ -106,6 +106,8 @@
     const rect=windowEl.getBoundingClientRect(),anchor=trigger.getBoundingClientRect();
     panel.style.maxHeight='312px';
     const placement=A.placePopover(rect,anchor,panel.scrollHeight,$('.product-nav').getBoundingClientRect().bottom,state.mode!=='quick');
+    // A small menu stays small, even in a wide surface.
+    if(panel===actionMenu&&placement.width>320){placement.left+=Math.max(0,Math.min(placement.width-320,anchor.left-rect.left-placement.left-160));placement.width=320;}
     for(const name of ['left','top','width','maxHeight'])panel.style[name]=placement[name]+'px';panel.style.transformOrigin=placement.origin;
   }
   let menuOwner=null;
@@ -129,7 +131,7 @@
       if(row.control){actionMenu.append(el('div','menu-control',null,el('span',null,row.label),row.control));continue;}
       const b=key(button(null,'menu-item',()=>{closeActionMenu(false);row.action();}),row.key??String(row.label).toLowerCase().replace(/[^a-z0-9]+/g,'-'));b.disabled=!!row.disabled;b.append(A.icon(row.icon??'chevron',14),el('span',null,row.label),...(row.hint?[el('small',null,row.hint)]:[]));actionMenu.append(b);
     }
-    actionMenu.setAttribute('aria-label',L(title));openMenu(actionMenu,trigger);actionMenu.querySelector('.menu-item,select,button')?.focus({preventScroll:true});
+    actionMenu.setAttribute('aria-label',L(title));openMenu(actionMenu,trigger);actionMenu.querySelector('.menu-item,.menu-control select')?.focus({preventScroll:true});
   }
   function closeActionMenu(returnFocus=false){if(actionMenu.hidden&&!menuOwner)return;const owner=menuOwner;menuOwner=null;closeMenu(actionMenu,owner,returnFocus,false);}
   function settleMotion(){for(const animation of surface.getAnimations?.({subtree:true})??[])animation.cancel();surfaceAnimation?.cancel();contentAnimation?.cancel();noticeAnimation?.cancel();$('.notice-slot').hidden=!state.notice;for(const panel of [popover,history,commands,actionMenu]){menuAnimations.get(panel)?.cancel();panel.hidden=panel.getAttribute('data-open')!=='true';}}
@@ -163,7 +165,7 @@
     // Old Compact routes (activity, connections, settings) open the Now inbox.
     views.quickArea=['flock','chat','summary'].includes(views.quickArea)?views.quickArea:'summary';
     if (!['you','zeca'].includes(views.connectionFace)) views.connectionFace='you';
-    if (typeof data.draft==='string') input.value=data.draft;
+    if (typeof data.draft==='string') { input.value=data.draft; fitInput(); }
     if (Array.isArray(data.files)) state.files=data.files.filter(name=>typeof name==='string').slice(0,4);
     if (Array.isArray(data.messages)) state.messages=data.messages.filter(m => ['you','zeca'].includes(m.who)&&typeof m.text==='string').slice(-8);
     if (data.decisions) for (const area of Object.keys(decisions)) if (['approved','pending','refine'].includes(data.decisions[area])) decisions[area]=data.decisions[area];
@@ -253,7 +255,7 @@
   function openConversation(id) {
     if(state.busy){toast('Stop the current turn first.');return;}
     saveConversation();const next=conversations.find(c=>c.id===id);if(!next)return;
-    state.conversation=id;state.messages=next.messages.map(m=>({...m}));input.value=next.draft;state.engine=next.engine??'claude';state.model=next.model??'Default model';paintConversation();paintRecent();remember();
+    state.conversation=id;state.messages=next.messages.map(m=>({...m}));input.value=next.draft;fitInput();state.engine=next.engine??'claude';state.model=next.model??'Default model';paintConversation();paintRecent();remember();
   }
   function conversationRow(c,before=()=>{}) {
     const row=el('div','conversation-row');
@@ -272,7 +274,7 @@
   }
   function newConversation() {
     if(state.busy){toast('Stop the current turn first.');return;}
-    saveConversation();const id='conversation-'+(conversations.length+1);conversations.unshift({id,title:'New conversation',messages:[],draft:''});state.conversation=id;input.value='';showExample('empty');paintRecent();remember();
+    saveConversation();const id='conversation-'+(conversations.length+1);conversations.unshift({id,title:'New conversation',messages:[],draft:''});state.conversation=id;input.value='';fitInput();showExample('empty');paintRecent();remember();
   }
   function prepareChat(text,mode) {setArea('chat',mode??(state.mode==='quick'?'quick':'room'));if(input.value.trim())input.value+='\n'+L(text);else input.value=L(text);input.dispatchEvent(new Event('input'));input.focus();}
   function openFolder(){
@@ -320,7 +322,8 @@
       fold.replaceChildren(A.icon(p.folded===(side==='left')?'sideRight':'sideLeft',15));
       railNode.replaceChildren();if(p.folded){railNode.append(fold);if(rail)railNode.append(rail());}else header.append(fold);
     }
-    const resize=width=>{p.w=Math.max(min,Math.min(max,Math.round(width)));p.folded=false;apply();};
+    // The grid caps a list at 48% of the Lab; the drag stops at the same place.
+    const resize=width=>{const cap=Math.min(max,Math.round((container.clientWidth||Infinity)*.48));p.w=Math.max(min,Math.min(cap,Math.round(width)));p.folded=false;apply();};
     handle.addEventListener('pointerdown',event=>{
       const start=event.clientX,from=p.w;handle.setPointerCapture?.(event.pointerId);handle.classList.add('dragging');document.body?.classList?.add('vp-resizing');
       const move=e=>resize(from+(e.clientX-start)*(side==='left'?1:-1));
@@ -382,7 +385,7 @@
     if(typeof Blob==='undefined'||!URL.createObjectURL){toast('Export is not available in this viewer.');return;}
     const url=URL.createObjectURL(new Blob([text],{type})),a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Exported');
   }
-  function translateStatic(){for(const node of $$('[data-word]'))node.textContent=L(node.dataset.word);for(const node of $$('[data-label]'))node.setAttribute('aria-label',L(node.dataset.label));input.placeholder=L('Ask Zeca… / for commands, @ for a session');input.setAttribute('aria-label',L('Message'));for(const node of $$('[data-size]'))node.textContent=MODE_NAME[node.dataset.size]==='Island'?L('Island'):MODE_NAME[node.dataset.size];}
+  function translateStatic(){for(const node of $$('[data-word]'))node.textContent=L(node.dataset.word);for(const node of $$('[data-label]'))node.setAttribute('aria-label',L(node.dataset.label));input.placeholder=L(['room','full'].includes(state.mode)?'Ask Zeca…':'Ask Zeca… / for commands, @ for a session');input.setAttribute('aria-label',L('Message'));for(const node of $$('[data-size]'))node.textContent=MODE_NAME[node.dataset.size]==='Island'?L('Island'):MODE_NAME[node.dataset.size];}
   function setLanguage(value){language=LANGUAGES.includes(value)?value:'pt-BR';settings.language=language;A.setLang(language);$('.language-select').value=language;translateStatic();paintConversation();setArea(state.area,state.mode);remember();}
   // Compact: Flock · Chat · Now. Lab: Flock · Chat · Tasks · Connections · Activity. Settings is the gear in both.
   const COMPACT_NAV=[['flock','Flock','flock'],['chat','Chat','chat'],['bars','Now','summary']];
@@ -505,6 +508,8 @@
     if(!$('.editor-overlay').hidden||!$('.dialog-overlay').hidden)return;
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openPalette();return;}
     if(event.altKey&&['1','2','3','4','5'].includes(event.key)){event.preventDefault();setArea(LAB_NAV[Number(event.key)-1][2],state.mode==='full'?'full':'room');return;}
+    // Ctrl+Alt+Y / N answer the card on screen, as the app's global shortcuts do; never one that is not shown.
+    if(event.ctrlKey&&event.altKey&&['y','n'].includes(event.key?.toLowerCase())){const card=$('.request-card');const b=card?.querySelector('[data-key="'+(event.key.toLowerCase()==='y'?'allow':'deny')+'"]');if(b){event.preventDefault();b.click();}return;}
     if(event.ctrlKey&&event.altKey&&['1','2','3'].includes(event.key)){event.preventDefault();setMode(['mini','quick','room'][Number(event.key)-1]);}
   });
   const media=matchMedia('(prefers-reduced-motion: reduce)');media.addEventListener?.('change',()=>{prefs.motion=settings.animations&&!media.matches;root.classList.toggle('motion-off',!prefs.motion);if(!prefs.motion)settleMotion();paintBird();for(const scene of activeScenes)scene.setActive(prefs.motion&&flockVisible());});

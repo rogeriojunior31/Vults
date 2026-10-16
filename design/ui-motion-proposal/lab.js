@@ -82,7 +82,7 @@
     const note=el('p','sky-note');band.append(note);
     const count=()=>{const flying=wire.filter(soaring).length;note.textContent=phrase('{flying} resting in the sky · {wire} on the wire',{flying,wire:wire.length-flying});};
     attachSky('lab',band,flock,wire,count);
-    const searcher=search('Find a session…',q=>{views.sessionQuery=q;paintRows();remember();});searcher.querySelector('input').value=views.sessionQuery;
+    const searcher=search('Search…',q=>{views.sessionQuery=q;paintRows();remember();});searcher.querySelector('input').value=views.sessionQuery;
     const grouping=segment([['state','By state'],['project','By project']],value=>{views.sessionGroup=value;paintRows();remember();},views.sessionGroup);grouping.classList.add('group-by');
     const rows=el('div','lab-rows');list.append(el('div','workspace-toolbar',null,searcher,grouping),rows);
     flexible(host,list,'flock-list',{def:380,min:260,max:560,label:'Sessions',rail:()=>{const r=el('div','rail-marks');facts.ordered.filter(s=>!settings['hide-'+s.project]).slice(0,8).forEach(s=>{const b=key(button(null,'rail-dot',()=>select(s),s.project),'rail-'+s.id);b.setAttribute('data-tooltip',s.project+' · '+L(sessionBrief(s)));b.setAttribute('aria-pressed',String(s.id===views.sessionSelected));b.append(el('span','shape shape-'+(toneFor(s)==='quiet'?'quiet':s.status==='question'?'question':toneFor(s))));r.append(b);});return r;}});
@@ -90,7 +90,7 @@
     const GROUPS=[['pinned','Pinned','quiet'],['needs','Needs you','needs'],['working','Working','working'],['quiet','Gone quiet','quiet'],['sky','In the sky','done']];
     function row(s){
       const b=key(button(null,'session-row',()=>select(s)),s.id);b.setAttribute('aria-pressed',String(s.id===views.sessionSelected));bindBirdFocus(b,flock,s);
-      b.append(el('span','agent-dot '+s.agent),el('span','session-copy',null,el('strong',null,s.project),el('small',null,raw(labelFor(s.agent)+' · '+L(s.started)))),soaring(s)?chip('done','In the sky'):sessionChip(s));
+      b.append(el('span','agent-dot '+s.agent),el('span','session-copy',null,el('strong',null,s.project),el('small',null,s.task?raw(labelFor(s.agent)+' · '+L(s.started)):labelFor(s.agent))),soaring(s)?chip('done','In the sky'):sessionChip(s));
       if(settings['pin-'+s.project])b.append(A.icon('pin',11));return b;
     }
     function paintRows(){
