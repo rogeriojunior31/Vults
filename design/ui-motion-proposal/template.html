@@ -163,7 +163,11 @@
 #vults-ui-proposal .nav-current { position:absolute; inset:0; border-radius:inherit; background:var(--raised); z-index:-1; }
 #vults-ui-proposal .nav-count { min-width:16px; padding:0 4px; border-radius:8px; font-size:10px; line-height:16px; background:color-mix(in srgb,var(--warn) 22%,transparent); color:var(--warn); }
 #vults-ui-proposal .needs-strip { flex:none; display:flex; align-items:center; gap:6px; padding:6px 16px; overflow-x:auto; scrollbar-width:none; border-bottom:1px solid var(--chrome-line); background:var(--chrome); }
-#vults-ui-proposal .needs-chip { display:flex; align-items:center; gap:7px; flex:none; min-height:26px; padding:2px 10px; font-size:12px; background:var(--float); border-radius:13px; }
+#vults-ui-proposal .needs-chip { display:flex; align-items:center; flex:none; background:var(--float); border-radius:13px; padding-right:2px; }
+#vults-ui-proposal .needs-open { display:flex; align-items:center; gap:7px; min-height:26px!important; padding:2px 6px 2px 10px; font-size:12px; border-radius:13px; }
+#vults-ui-proposal .needs-chip .icon-action { width:22px; min-height:22px; border-radius:11px; }
+#vults-ui-proposal .needs-skip-all { flex:none; margin-left:auto; font-size:11px; color:var(--fg-muted); min-height:24px!important; }
+#vults-ui-proposal .request-skip { font-size:12px; color:var(--fg-muted); }
 #vults-ui-proposal .notice-slot { flex:none; display:grid; padding:0 12px; max-height:80px; overflow:hidden; }
 #vults-ui-proposal .notice-content { display:flex; align-items:center; gap:8px; padding:6px 4px; border-bottom:1px solid var(--border); font-size:12px; color:var(--warn); }
 #vults-ui-proposal .notice-open { flex:1; text-align:left; color:inherit; min-height:28px; padding:0 4px; }
@@ -179,9 +183,10 @@
 #vults-ui-proposal .mini-strip { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; width:100%; height:100%; min-height:0; padding:0; background:var(--bg); border-radius:inherit; overflow:hidden; }
 #vults-ui-proposal .mini-strip:hover { background:var(--bg); }
 #vults-ui-proposal .mini-strip canvas { image-rendering:pixelated; }
-#vults-ui-proposal .mini-strip.pulse-needs { box-shadow:inset 0 0 0 1px var(--warn); animation:vp-edge 1.6s ease-in-out infinite; }
-#vults-ui-proposal .mini-strip.edge-failed { box-shadow:inset 0 0 0 1px var(--error-text); }
-@keyframes vp-edge { 50% { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 30%,transparent); } }
+/* The island never blinks: a still edge says someone needs you. */
+#vults-ui-proposal .mini-strip.edge-needs { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 70%,transparent); }
+#vults-ui-proposal .mini-strip.edge-failed { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--error-text) 70%,transparent); }
+#vults-ui-proposal .proto-sky { position:absolute; left:0; top:0; width:720px; height:640px; pointer-events:none; image-rendering:pixelated; }
 #vults-ui-proposal .island-badges { position:absolute; inset:0; pointer-events:none; }
 #vults-ui-proposal .island-badge { position:absolute; top:4px; width:6px; height:6px; }
 #vults-ui-proposal .island-usage { position:absolute; left:14px; right:14px; bottom:2px; display:grid; gap:1px; pointer-events:none; }
@@ -271,10 +276,28 @@
 #vults-ui-proposal .room-suggestions button { background:var(--float); color:var(--fg-dim); font-size:12px; text-align:left; }
 #vults-ui-proposal .workspace .chat-shell { display:grid; grid-template-columns:220px minmax(0,1fr); }
 #vults-ui-proposal .workspace .chat-shell.with-memory { grid-template-columns:220px minmax(0,1fr) 300px; }
-#vults-ui-proposal .workspace .chat-view { padding:12px 20px; }
-#vults-ui-proposal .workspace .chat-intro { min-height:108px; }
-#vults-ui-proposal .workspace .chat-view.populated .chat-intro { min-height:72px; }
-#vults-ui-proposal .workspace .transcript { width:100%; max-width:720px; margin:0 auto; }
+/* The Lab has room, so its chat works smaller: a slim header, a centred empty state, a dense transcript. */
+#vults-ui-proposal .workspace .chat-view { padding:8px 24px 12px; }
+#vults-ui-proposal .workspace .chat-intro,#vults-ui-proposal .workspace .chat-view.populated .chat-intro { min-height:0; padding:2px 0 8px; gap:10px; border-bottom:1px solid var(--border); }
+#vults-ui-proposal .workspace .portrait,#vults-ui-proposal .workspace .chat-view.populated .portrait { width:40px; height:40px; border-radius:8px; }
+#vults-ui-proposal .workspace .chat-view .portrait canvas { transform:scale(.36); }
+#vults-ui-proposal .workspace .intro-copy { display:flex; align-items:baseline; gap:10px; }
+#vults-ui-proposal .workspace .intro-copy h2 { font-size:14px; letter-spacing:0; }
+#vults-ui-proposal .workspace .intro-caption { margin:0; font-size:11px; max-width:none; }
+#vults-ui-proposal .workspace .chat-actions { margin-top:0; align-self:center; }
+#vults-ui-proposal .workspace .chat-view:not(.populated) .room-suggestions { margin:auto; flex-direction:column; align-items:center; gap:8px; max-width:420px; }
+#vults-ui-proposal .suggest-title { color:var(--fg-dim); font-size:13px; text-align:center; margin-bottom:4px; }
+#vults-ui-proposal .workspace .room-suggestions button { width:100%; text-align:left; min-height:30px; }
+#vults-ui-proposal .workspace .transcript { width:100%; max-width:760px; margin:0 auto; gap:10px; font-size:13px; padding-top:10px; }
+#vults-ui-proposal .workspace .message { line-height:1.55; }
+#vults-ui-proposal .workspace .message.you { padding:6px 12px; border-radius:12px 12px 4px 12px; }
+#vults-ui-proposal .workspace .message-signature { margin-bottom:2px; font-size:11px; }
+#vults-ui-proposal .workspace .tool-details summary { min-height:22px; font-size:11px; }
+#vults-ui-proposal .workspace .message-tools button { min-height:22px; }
+#vults-ui-proposal .workspace .composer-surface,#vults-ui-proposal .workspace .chat-context,#vults-ui-proposal .workspace .queue-strip { width:100%; max-width:760px; margin-inline:auto; }
+#vults-ui-proposal .workspace .composer-surface { padding:8px 10px 6px; }
+#vults-ui-proposal .workspace .chat-view textarea { min-height:28px; }
+#vults-ui-proposal .workspace .conversation-open { min-height:28px; }
 #vults-ui-proposal .room-recent,#vults-ui-proposal .room-memory { padding:12px 10px; background:var(--chrome); min-width:0; min-height:0; overflow-y:auto; scrollbar-width:thin; }
 #vults-ui-proposal .room-recent { border-right:1px solid var(--border); }
 #vults-ui-proposal .room-memory { border-left:1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
@@ -429,7 +452,6 @@
 /* Lab: one list and one detail for sessions and tasks */
 #vults-ui-proposal .workspace-view.lab-split { display:grid; grid-template-columns:minmax(300px,380px) minmax(0,1fr); padding:0; overflow:hidden; }
 #vults-ui-proposal .lab-list { display:flex; flex-direction:column; min-height:0; overflow-y:auto; scrollbar-width:thin; padding:16px; border-right:1px solid var(--border); background:var(--chrome); }
-#vults-ui-proposal .lab-list .flock-stage { flex:none; height:100px; margin:-4px 0 8px; }
 #vults-ui-proposal .lab-list .search-field { flex-basis:100%; margin-left:0; }
 #vults-ui-proposal .list-count { margin:0 0 6px; }
 #vults-ui-proposal .lab-rows { display:flex; flex-direction:column; gap:2px; }
@@ -485,6 +507,68 @@
 #vults-ui-proposal .lab-context { display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px 24px; margin:0; }
 #vults-ui-proposal .lab-context dt { color:var(--fg-dim); }
 #vults-ui-proposal .lab-context dd { margin:0; overflow-wrap:anywhere; }
+
+/* Lab flock: the wire and its sky span the top */
+#vults-ui-proposal .workspace-view.lab-split.with-sky { grid-template-rows:156px minmax(0,1fr); }
+#vults-ui-proposal .lab-sky { grid-column:1 / -1; position:relative; overflow:hidden; border-bottom:1px solid var(--border); background:linear-gradient(var(--bg),var(--chrome)); }
+#vults-ui-proposal .lab-wire { position:absolute; left:16px; right:16px; bottom:22px; height:104px; overflow:visible; }
+#vults-ui-proposal .sky-note { position:absolute; left:20px; bottom:4px; margin:0; font-size:11px; color:var(--fg-muted); }
+
+/* Tasks: a flexible list of runs and one run read as a timeline */
+#vults-ui-proposal .workspace-view.task-board { display:grid; grid-template-columns:var(--task-sidebar,280px) 6px minmax(0,1fr); padding:0; overflow:hidden; }
+#vults-ui-proposal .task-side { display:flex; flex-direction:column; gap:10px; min-height:0; overflow-y:auto; scrollbar-width:thin; padding:14px 12px; background:var(--chrome); }
+#vults-ui-proposal .task-side-head { display:flex; align-items:center; justify-content:space-between; padding-left:4px; }
+#vults-ui-proposal .task-side-head strong { font-size:15px; font-weight:600; }
+#vults-ui-proposal .task-new { display:flex; align-items:center; justify-content:center; gap:8px; }
+#vults-ui-proposal .task-resize { cursor:col-resize; border-left:1px solid var(--border); }
+#vults-ui-proposal .task-resize:hover,#vults-ui-proposal .task-resize:focus-visible { background:var(--border-hover); outline:none; }
+#vults-ui-proposal .task-groups { display:flex; flex-direction:column; gap:8px; }
+#vults-ui-proposal .task-group { display:flex; flex-direction:column; gap:2px; }
+#vults-ui-proposal .task-group h3 { display:flex; align-items:center; gap:8px; padding:6px 6px 2px; font-size:11px; font-weight:500; color:var(--fg-muted); }
+#vults-ui-proposal .group-label { flex:1; }
+#vults-ui-proposal .task-item { display:flex; align-items:flex-start; gap:10px; width:100%; text-align:left; padding:8px; }
+#vults-ui-proposal .task-item[aria-pressed=true] { background:var(--raised); }
+#vults-ui-proposal .task-item .agent-dot { margin-top:6px; }
+#vults-ui-proposal .task-item-copy { min-width:0; flex:1; }
+#vults-ui-proposal .task-item-copy strong { display:block; font-size:13px; font-weight:500; line-height:1.35; }
+#vults-ui-proposal .task-item-copy small { display:block; margin-top:2px; font-size:11px; color:var(--fg-muted); }
+#vults-ui-proposal .task-budget { margin:auto 0 0; padding:0 6px; font-size:11px; color:var(--fg-muted); }
+#vults-ui-proposal .task-side.collapsed { padding-inline:8px; align-items:center; }
+#vults-ui-proposal .task-side.collapsed .task-side-head strong,#vults-ui-proposal .task-side.collapsed .task-new span,#vults-ui-proposal .task-side.collapsed .task-item-copy,#vults-ui-proposal .task-side.collapsed .group-label,#vults-ui-proposal .task-side.collapsed .task-group h3 .counter,#vults-ui-proposal .task-side.collapsed .task-budget { display:none; }
+#vults-ui-proposal .task-side.collapsed .task-item { justify-content:center; padding:10px 0; }
+#vults-ui-proposal .task-side.collapsed .task-item .agent-dot { margin:0; width:9px; height:9px; }
+#vults-ui-proposal .task-side.collapsed .task-new { width:36px; padding:0; }
+#vults-ui-proposal .task-main { display:flex; flex-direction:column; min-width:0; min-height:0; padding:20px 28px 0; }
+#vults-ui-proposal .task-head { flex:none; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+#vults-ui-proposal .task-title h2 { font-size:20px; font-weight:600; letter-spacing:-.4px; text-wrap:balance; }
+#vults-ui-proposal .task-timeline { flex:none; display:flex; list-style:none; margin:18px 0 12px; padding:0; }
+#vults-ui-proposal .stage { flex:1; position:relative; display:flex; flex-direction:column; gap:6px; font-size:11px; color:var(--fg-muted); }
+#vults-ui-proposal .stage::before { content:""; position:absolute; top:5px; left:14px; right:4px; height:2px; background:var(--border-hover); }
+#vults-ui-proposal .stage:last-child::before { display:none; }
+#vults-ui-proposal .stage-dot { position:relative; z-index:1; width:12px; height:12px; border-radius:50%; background:var(--bg); box-shadow:inset 0 0 0 2px var(--border-hover); }
+#vults-ui-proposal .stage-done { color:var(--fg-dim); }
+#vults-ui-proposal .stage-done::before { background:var(--ok); }
+#vults-ui-proposal .stage-done .stage-dot { background:var(--ok); box-shadow:none; }
+#vults-ui-proposal .stage-current,#vults-ui-proposal .stage-needs,#vults-ui-proposal .stage-failed { color:var(--fg); font-weight:500; }
+#vults-ui-proposal .stage-current .stage-dot { background:var(--info); box-shadow:0 0 0 3px color-mix(in srgb,var(--info) 22%,transparent); }
+#vults-ui-proposal .stage-needs .stage-dot { background:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 22%,transparent); }
+#vults-ui-proposal .stage-failed .stage-dot { background:var(--error-text); border-radius:2px; }
+#vults-ui-proposal .task-main .router-line { flex:none; margin-bottom:10px; }
+#vults-ui-proposal .task-main .lab-panel { gap:18px; }
+#vults-ui-proposal .task-main .lab-panel-diff { margin:0 -28px; }
+#vults-ui-proposal .task-section { display:flex; flex-direction:column; gap:8px; }
+#vults-ui-proposal .terminal { padding:10px 12px; max-height:220px; overflow:auto; border-radius:var(--radius-code); background:var(--bg-deep); box-shadow:inset 0 0 0 1px var(--border); font:12px/1.65 var(--mono); }
+#vults-ui-proposal .term-line { display:flex; gap:12px; }
+#vults-ui-proposal .term-line>span { color:var(--fg-muted); white-space:pre; }
+#vults-ui-proposal .term-line code { color:var(--fg-dim); font:inherit; }
+#vults-ui-proposal .term-line.say code { color:var(--fg); }
+#vults-ui-proposal .check-line { display:flex; align-items:center; flex-wrap:wrap; gap:10px; min-height:34px; border-bottom:1px solid var(--border); }
+#vults-ui-proposal .check-line label { flex:1; display:flex; align-items:center; gap:8px; min-width:200px; }
+#vults-ui-proposal .check-line button { font-size:12px; }
+#vults-ui-proposal .review-bubble { display:flex; gap:10px; padding:10px 12px; border-radius:12px; background:var(--float); }
+#vults-ui-proposal .review-bubble .agent-dot { margin-top:6px; }
+#vults-ui-proposal .review-by { display:flex; align-items:center; gap:8px; }
+#vults-ui-proposal .review-bubble p { margin-top:2px; color:var(--fg-dim); }
 
 /* Connections */
 #vults-ui-proposal .connector-chips { display:flex; gap:6px; margin-bottom:6px; }
@@ -609,7 +693,11 @@
 @container(max-width:760px) {
   #vults-ui-proposal .workspace-view.lab-split { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); overflow-y:auto; }
   #vults-ui-proposal .lab-list { max-height:260px; border-right:0; border-bottom:1px solid var(--border); }
-  #vults-ui-proposal .lab-list .flock-stage { display:none; }
+  #vults-ui-proposal .workspace-view.lab-split.with-sky { grid-template-rows:120px auto minmax(0,1fr); }
+  #vults-ui-proposal .workspace-view.task-board { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); overflow-y:auto; }
+  #vults-ui-proposal .task-side { max-height:240px; }
+  #vults-ui-proposal .task-resize { display:none; }
+  #vults-ui-proposal .task-main { padding:16px; }
   #vults-ui-proposal .lab-detail { min-height:420px; }
   #vults-ui-proposal .workspace .chat-shell,#vults-ui-proposal .workspace .chat-shell.with-memory { grid-template-columns:minmax(0,1fr); }
   #vults-ui-proposal .workspace .room-recent { display:none; }

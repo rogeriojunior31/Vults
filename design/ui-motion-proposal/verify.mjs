@@ -73,7 +73,7 @@ class Element {
   dispatchEvent(event){event.target??=this;for(const fn of this.listeners[event.type]??[])fn(event);this['on'+event.type]?.(event);}
   click(){if(this.disabled)return;this.dispatchEvent({type:'click'});if(this.type==='submit'){let form=this.parentElement;while(form&&form.tagName!=='FORM')form=form.parentElement;form?.dispatchEvent({type:'submit',preventDefault(){}});}}focus(){document.activeElement=this;}
   getBoundingClientRect(){return this.classList.contains('product-nav')?{bottom:86,left:0,width:492,height:42}:{top:220,bottom:350,left:0,width:492,height:130};}
-  getContext(){return {clearRect(){},fillRect(){},drawImage(){}};}
+  getContext(){return new Proxy({},{get:(t,k)=>k in t?t[k]:()=>{},set:(t,k,v)=>{t[k]=v;return true;}});}
   animate(frames,options){animations.push({element:this,frames,options});return {finished:Promise.resolve(),cancel(){}};}
 }
 function inflate(tree){const node=new Element(tree.tag);for(const[k,v]of Object.entries(tree.attrs))node.setAttribute(k,v??'');for(const child of tree.children){if(typeof child==='string')node.text=(node.text??'')+child;else node.append(inflate(child));}return node;}
@@ -81,7 +81,7 @@ const dom=inflate(tree),root=dom.querySelector('[id="vults-ui-proposal"]');
 document={body:new Element('body'),documentElement:new Element('html'),hidden:false,createElement:tag=>new Element(tag),createElementNS:(_ns,tag)=>new Element(tag),createTextNode:text=>{const n=new Element('#text');n.text=String(text);return n;},getElementById:id=>nodes(dom).find(n=>n.id===id),addEventListener:(type,fn)=>documentListeners.set(type,fn),activeElement:null};
 const timers=new Map();let timerId=0,saves=0,lastSaved;
 const windowListeners=new Map();
-const context={document,console,performance,Event:class{constructor(type){this.type=type;}},matchMedia:()=>({matches:false,addEventListener(){}}),devicePixelRatio:1,
+const context={document,console,performance,getComputedStyle:()=>({getPropertyValue:()=>'',borderTopLeftRadius:'0'}),Event:class{constructor(type){this.type=type;}},matchMedia:()=>({matches:false,addEventListener(){}}),devicePixelRatio:1,
   setTimeout:(fn,delay)=>{timers.set(++timerId,{fn,delay});return timerId;},clearTimeout:id=>timers.delete(id),addEventListener:(type,fn)=>{windowListeners.set(type,fn);},openai:{widgetState:process.env.PROTOTYPE_STATE?JSON.parse(process.env.PROTOTYPE_STATE):null,setWidgetState:data=>{saves++;lastSaved=JSON.parse(JSON.stringify(data));return Promise.resolve();}}};
 context.window=context;vm.createContext(context);
 const scripts=[...source.matchAll(/<script>([\s\S]*?)<\/script>/g)];
@@ -212,14 +212,31 @@ find('[data-key="tab-diff"]').click();assert.equal(find('.lab-diff-scroll').scro
 change(all('.lab-diff-toolbar select')[0],'4');assert.equal(all('.lab-diff-file').length,2);change(all('.lab-diff-toolbar select')[0],'8');
 find('[data-key="session-6"]').click();assert.equal(find('.lab-diff-scroll'),null,'A session without changes never inherits a patch.');
 keydown(find('.detail-tabs'),'ArrowRight');assert.equal(P.views.flockDetail,'activity');
-find('[data-key="session-1"]').click();find('[data-key="tab-session"]').click();assert.ok(find('[data-key="task-link"]'));find('[data-key="task-link"]').click();assert.equal(P.state.area,'tasks');assert.equal(P.views.taskSelected,'task-2');
-assert.ok(find('[data-key="run-card"]'),'A task run waiting for you links to its card.');find('[data-key="run-card"]').click();assert.equal(P.state.area,'flock');assert.ok(find('.request-card'));
+find('[data-key="session-1"]').click();find('[data-key="tab-session"]').click();assert.equal(find('[data-key="task-link"]'),null,'A session you opened yourself has no task.');
+assert.ok(find('.lab-sky .proto-sky'),'The Lab flock has a sky above the wire.');
+find('[data-key="session-1"]').click();find('[data-key="skip"]').click();assert.ok(find('[data-key="unskip"]'),'A skipped card leaves the detail.');find('[data-key="unskip"]').click();assert.ok(find('.request-card'));
 
-/* Tasks. */
-P.setArea('tasks','room');find('[data-key="task-5"]').click();find('[data-key="task-start"]').click();find('[data-key="codex"]').click();
-const started=P.tasks.find(t=>t.id==='task-5');assert.equal(started.status,'Doing');assert.ok(P.sessions.some(s=>s.id==='run-task-5'),'A started task puts its run on the wire.');
+/* Skipping never answers; the needs strip folds away when everything is skipped. */
+P.setArea('tasks','room');assert.ok(all('.needs-chip').length>=2);
+const firstSkip=all('.needs-chip .icon-action')[0];firstSkip.click();const left=all('.needs-chip').length;
+find('[data-key="skip-all"]').click();assert.equal(find('.needs-strip').hidden,true,'With everything skipped the strip disappears.');
+assert.equal(P.sessions[0].status,'approval','Skipping does not answer the card.');P.views.skipped.splice(0);
+
+/* Tasks: agents Vults runs on its own, read as a timeline. */
+P.setArea('tasks','room');assert.ok(find('.task-side'));assert.equal(all('.task-timeline .stage').length,5);
+assert.ok(find('.live-output .request-card'),'A task run waiting for you shows its card in the run.');
+assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false,'A task run is not on the wire by default.');
+find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.ok(P.sessions.some(s=>s.id==='run-task-2'),'Show it on the wire puts its bird there.');
+P.setArea('flock','room');find('[data-key="run-task-2"]').click();assert.ok(find('[data-key="task-link"]'),'A run on the wire links back to its task.');
+P.setArea('tasks','room');find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false);
+find('[data-key="task-fold"]').click();assert.ok(find('.task-side.collapsed'),'The task list folds to a rail.');find('[data-key="task-fold"]').click();
+const handle=find('.task-resize');keydown(handle,'ArrowRight');assert.equal(P.views.taskSidebar,300,'The list resizes from the keyboard.');
+find('[data-key="task-5"]').click();find('[data-key="task-start"]').click();find('[data-key="codex"]').click();
+const started=P.tasks.find(t=>t.id==='task-5');assert.equal(started.status,'Doing');assert.ok(started.run,'Starting a task gives it a run.');
 find('[data-key="task-stop"]').click();assert.equal(started.status,'Blocked');find('[data-key="task-go-on"]').click();assert.equal(started.status,'Doing');
-find('[data-key="task-3"]').click();find('[data-key="task-review"]').click();assert.equal(P.tasks.find(t=>t.id==='task-3').rounds.length,2);find('[data-key="task-accept"]').click();assert.equal(P.tasks.find(t=>t.id==='task-3').status,'Done');
+find('[data-key="task-2"]').click();find('[data-key="run-check-2"]').click();runTimers();assert.equal(P.tasks.find(t=>t.id==='task-2').checks[2],'passed','A criterion that names a command runs as a check.');
+find('[data-key="task-3"]').click();find('[data-key="task-review"]').click();assert.equal(P.tasks.find(t=>t.id==='task-3').rounds.length,3);
+const prs=all('.connection-row').length;find('[data-key="task-accept"]').click();assert.equal(P.tasks.find(t=>t.id==='task-3').status,'Done');
 find('[data-key="new-task"]').click();submitEditor();assert.equal(find('.editor-error').hidden,false,'A task needs a goal.');
 type(find('.editor-content input'),'Prototype task');type(find('.editor-content textarea'),'First\nSecond');submitEditor();assert.equal(P.tasks[0].title,'Prototype task');assert.equal(P.tasks[0].criteria.length,2);
 find('[data-key="task-more"]').click();assert.ok(find('[data-key="delete-task"]')&&find('[data-key="remove-folder"]'));find('[data-key="task-more"]').click();

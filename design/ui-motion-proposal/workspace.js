@@ -2,24 +2,32 @@
     rules:[{agent:'Codex',tool:'Bash',target:'npm run build',cwd:'~/Projects/Vults'},{agent:'Claude Code',tool:'Read',target:'docs/**',cwd:'~/Projects/docs'}],
     policies:[{id:'global',scope:'Every folder',text:'deny command "git push --force*"\nask class network\nallow tool Read'},{id:'vults',scope:'~/Projects/Vults',text:'allow command "npm run build"\nallow command "cargo test*"\nask class write outside "src/**"'}],
     keys:{anthropic:true,openrouter:true,openai:false}, githubSeen:{} };
-  const views = { taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'overview', showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
+  const views = { taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'run', taskSidebar:280, taskSidebarCollapsed:false, skipped:[], showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
+  // Sessions you opened in a terminal: the flock watches them.
   const sessions = [
-    {id:'session-1',agent:'codex',project:'Vults',status:'approval',activity:'run',step:'npm run build',step_count:12,subagents:0,branch:'feat/compact-now',cost:0.42,started:'Started from Vults',task:'task-2',steps:['Read docs/dev/plan-ui.md','Edit ui/src/island/now.ts','Edit ui/src/island/render.ts','Run npm run build']},
-    {id:'session-2',agent:'claude',project:'frontend',status:'working',activity:'edit',step:'ui/src/chat.ts',step_count:8,subagents:1,branch:'fix/chat-scroll',cost:1.10,started:'Started from Vults',task:'task-1',steps:['Read ui/src/chat.ts','Search "scrollTop"','Subagent: check the scroll tests','Edit ui/src/chat.ts']},
-    {id:'session-3',agent:'codex',project:'docs',status:'finished',activity:null,step:'docs/guide/flock.md',step_count:6,subagents:0,branch:'docs/flock-badges',cost:0.18,started:'Started from Vults',task:'task-3',steps:['Read docs/guide/flock.md','Edit docs/guide/flock.md','Edit docs/pt-br/guide/flock.md']},
-    {id:'session-4',agent:'opencode',project:'api',status:'failed',activity:'run',step:'cargo test -p api',step_count:4,subagents:0,branch:'fix/retry-flake',cost:null,started:'Started from Vults',task:'task-4',steps:['Read crates/api/src/retry.rs','Edit crates/api/src/retry.rs','Run cargo test -p api'],output:'test retry::backs_off ... FAILED\nassertion failed: elapsed >= 200ms (was 140ms)'},
-    {id:'session-5',agent:'claude',project:'design',status:'thinking',activity:'think',step:'Compare the Lab layouts',step_count:3,subagents:0,branch:'main',cost:0.31,started:'Watched in a terminal',steps:['Read design/ui-motion-proposal/scope.json','Think about the Lab layout']},
-    {id:'session-6',agent:'qwen',project:'infra',status:'idle',activity:null,step:'Waiting for input',step_count:2,subagents:0,branch:'chore/ci-cache',cost:null,started:'Watched in a terminal',quiet:16,steps:['Read .github/workflows/ci.yml','Waiting for input']},
-  ].map(s => ({...s,cwd:'~/Projects/'+s.project,attention:s.status==='approval'?'needs-you':'quiet',card:s.status==='approval',waiting:s.status==='approval',raise:true,note:null,editor:s.agent==='claude'?'kitty':'tmux',bird_chosen:false,roost:s.project,pending:s.status==='approval'?2:0}));
+    {id:'session-1',agent:'codex',project:'Vults',status:'approval',activity:'run',step:'npm run build',step_count:12,subagents:0,branch:'feat/compact-now',cost:0.42,steps:['Read docs/dev/plan-ui.md','Edit ui/src/island/now.ts','Edit ui/src/island/render.ts','Run npm run build']},
+    {id:'session-2',agent:'claude',project:'frontend',status:'working',activity:'edit',step:'ui/src/chat.ts',step_count:8,subagents:1,branch:'fix/chat-scroll',cost:1.10,steps:['Read ui/src/chat.ts','Search "scrollTop"','Subagent: check the scroll tests','Edit ui/src/chat.ts']},
+    {id:'session-3',agent:'codex',project:'docs',status:'finished',activity:null,step:'docs/guide/flock.md',step_count:6,subagents:0,branch:'docs/flock-badges',cost:0.18,rest:24,steps:['Read docs/guide/flock.md','Edit docs/guide/flock.md','Edit docs/pt-br/guide/flock.md']},
+    {id:'session-4',agent:'opencode',project:'api',status:'failed',activity:'run',step:'cargo test -p api',step_count:4,subagents:0,branch:'fix/retry-flake',cost:null,steps:['Read crates/api/src/retry.rs','Edit crates/api/src/retry.rs','Run cargo test -p api'],output:'test retry::backs_off ... FAILED\nassertion failed: elapsed >= 200ms (was 140ms)'},
+    {id:'session-5',agent:'claude',project:'design',status:'thinking',activity:'think',step:'Compare the Lab layouts',step_count:3,subagents:0,branch:'main',cost:0.31,steps:['Read design/ui-motion-proposal/scope.json','Think about the Lab layout']},
+    {id:'session-6',agent:'qwen',project:'infra',status:'working',activity:null,step:'Waiting for input',step_count:2,subagents:0,branch:'chore/ci-cache',cost:null,quiet:16,steps:['Read .github/workflows/ci.yml','Waiting for input']},
+  ].map(s => ({...s,cwd:'~/Projects/'+s.project,attention:s.status==='approval'?'needs-you':'quiet',card:s.status==='approval',waiting:s.status==='approval',raise:true,note:null,editor:s.agent==='claude'?'kitty':'tmux',bird_chosen:false,roost:s.project,started:'Watched in a terminal',pending:s.status==='approval'?2:0,restSince:s.rest?Date.now()-s.rest*1000:null}));
   A.assignSpecies(sessions);
+  // A task's run is an agent Vults started on its own, in a clone; it joins the wire only when you ask.
+  const run = o => ({cwd:'~/.local/share/vults/tasks/'+o.task,started:'Started from Vults',editor:'Vults',raise:true,roost:o.project,attention:'quiet',subagents:0,pending:o.status==='approval'?1:0,card:o.status==='approval',waiting:o.status==='approval',note:null,bird_chosen:false,branch:'vults/'+o.task,...o});
   const tasks = [
-    {id:'task-1',title:'Keep the chat scroll while a reply streams',repo:'frontend',engine:'Claude Code',status:'Doing',run:'session-2',criteria:['The reading position stays when a reply arrives','New text shows a ↓ button instead of jumping','Scroll tests pass'],checked:[true,false,false],issue:'#212',router:'Delegated to Claude Code: frontend prefers it (rule).',cost:'$1.10 · 84k tokens',rounds:[],output:'Editing ui/src/chat.ts: the follow check now waits 150 ms after a manual scroll.'},
-    {id:'task-2',title:'Show the Now inbox in Compact',repo:'Vults',engine:'Codex',status:'Doing',run:'session-1',criteria:['Now lists only rows that ask for an action','Each row opens the right Lab view','npm run build passes'],checked:[true,true,false],issue:'#360',router:'Delegated to Codex: Claude is at 85% of its plan.',cost:'$0.42 · 31k tokens',rounds:[],output:'Waiting for your permission to run npm run build.'},
-    {id:'task-3',title:'Document the flock badges',repo:'docs',engine:'Codex',status:'Doing',review:'waiting',run:'session-3',criteria:['Each badge shape is explained','The pt-BR page is updated'],checked:[true,true],issue:'',router:'Delegated to Codex: docs prefers it (rule).',cost:'$0.18 · 12k tokens',rounds:[{by:'Claude Code',verdict:'Changes requested',note:'Name the square badge "failed", not "error".'}],output:'Updated docs/guide/flock.md and its translation. Ready for your review.'},
-    {id:'task-4',title:'Fix the flaky retry test',repo:'api',engine:'OpenCode',status:'Blocked',run:'session-4',criteria:['retry::backs_off passes 20 times in a row'],checked:[false],issue:'#88',router:'Started with OpenCode: you chose it.',cost:'Not reported',rounds:[],output:'assertion failed: elapsed >= 200ms (was 140ms)'},
-    {id:'task-5',title:'Add a year grid to Activity',repo:'Vults',engine:'',status:'To do',run:null,criteria:['One cell per day for the last 52 weeks','Hide project names when saving the image'],checked:[false,false],issue:'',router:'',cost:'',rounds:[],output:''},
-    {id:'task-6',title:'Try a second wire in Mini',repo:'Vults',engine:'Claude Code',status:'Dropped',run:null,criteria:['Two wires fit in 38 px'],checked:[false],issue:'',router:'',cost:'$0.05 · 4k tokens',rounds:[],output:'Dropped: the pill is too short for two wires.'},
+    {id:'task-1',title:'Keep the chat scroll while a reply streams',repo:'frontend',engine:'Claude Code',status:'Doing',onWire:false,criteria:['The reading position stays when a reply arrives','New text shows a ↓ button instead of jumping','Scroll tests pass'],checks:['passed',null,null],checked:[true,false,false],issue:'#212',router:'Delegated to Claude Code: frontend prefers it (rule).',cost:'$0.64 · 52k tokens',rounds:[],
+      run:run({id:'run-task-1',task:'task-1',agent:'claude',project:'frontend',status:'working',activity:'edit',step:'ui/src/chat.ts',step_count:7,cost:0.64,steps:['Read the task goal','Read ui/src/chat.ts','Search "scrollTop"','Edit ui/src/chat.ts'],output:'Editing ui/src/chat.ts: the follow check now waits 150 ms after a manual scroll.'})},
+    {id:'task-2',title:'Show the Now inbox in Compact',repo:'Vults',engine:'Codex',status:'Doing',onWire:false,criteria:['Now lists only rows that ask for an action','Each row opens the right Lab view','npm run test:ui passes'],checks:['passed','passed',null],checked:[true,true,false],issue:'#360',router:'Delegated to Codex: Claude is at 85% of its plan.',cost:'$0.42 · 31k tokens',rounds:[],
+      run:run({id:'run-task-2',task:'task-2',agent:'codex',project:'Vults',status:'approval',activity:'run',step:'npm run test:ui',step_count:9,cost:0.42,steps:['Read the task goal','Edit ui/src/island/now.ts','Edit ui/src/island/render.ts','Run npm run test:ui'],output:'Waiting for your permission to run npm run test:ui.'})},
+    {id:'task-3',title:'Document the flock badges',repo:'docs',engine:'Codex',status:'Doing',review:'waiting',onWire:false,criteria:['Each badge shape is explained','The pt-BR page is updated'],checks:['passed','passed'],checked:[true,true],issue:'',router:'Delegated to Codex: docs prefers it (rule).',cost:'$0.18 · 12k tokens',rounds:[{by:'Claude Code',verdict:'Changes requested',note:'Name the square badge "failed", not "error".'},{by:'Codex',verdict:'Fixed',note:'Renamed it and updated the translation.'}],
+      run:run({id:'run-task-3',task:'task-3',agent:'codex',project:'docs',status:'finished',activity:null,step:'docs/guide/flock.md',step_count:6,cost:0.18,steps:['Read the task goal','Edit docs/guide/flock.md','Edit docs/pt-br/guide/flock.md'],output:'Updated docs/guide/flock.md and its translation. Ready for your review.'})},
+    {id:'task-4',title:'Fix the flaky retry test',repo:'api',engine:'OpenCode',status:'Blocked',onWire:false,criteria:['retry::backs_off passes 20 times in a row'],checks:['failed'],checked:[false],issue:'#88',router:'Started with OpenCode: you chose it.',cost:'Not reported',rounds:[],
+      run:run({id:'run-task-4',task:'task-4',agent:'opencode',project:'api',status:'failed',activity:'run',step:'cargo test -p api',step_count:4,cost:null,steps:['Read the task goal','Edit crates/api/src/retry.rs','Run cargo test -p api'],output:'assertion failed: elapsed >= 200ms (was 140ms)'})},
+    {id:'task-5',title:'Add a year grid to Activity',repo:'Vults',engine:'',status:'To do',onWire:false,criteria:['One cell per day for the last 52 weeks','Hide project names when saving the image'],checks:[null,null],checked:[false,false],issue:'',router:'',cost:'',rounds:[],run:null},
+    {id:'task-6',title:'Try a second wire in Mini',repo:'Vults',engine:'Claude Code',status:'Dropped',onWire:false,criteria:['Two wires fit in 38 px'],checks:[null],checked:[false],issue:'',router:'',cost:'$0.05 · 4k tokens',rounds:[],run:null,output:'Dropped: the pill is too short for two wires.'},
   ];
+  for (const t of tasks) if (t.run) A.assignSpecies([t.run]);
   const github = {
     synced:2, requests:41, budget:3000, refreshedAt:0,
     inbox:[
@@ -127,7 +135,7 @@
   const labelFor = agent => raw(({claude:'Claude Code',codex:'Codex',opencode:'OpenCode',qwen:'Qwen Code',zeca:'Zeca'})[agent]??agent);
   const statusFor = s => ({approval:'Needs you',question:'Needs you',working:'Working',thinking:'Thinking…',finished:'Finished',failed:'Failed',idle:'Idle'})[s]??s;
   // One status vocabulary across the app; the shapes match the island's badges.
-  const toneFor = s => ['approval','question'].includes(s.status)?'needs':s.status==='failed'?'failed':s.status==='finished'?'done':['working','thinking'].includes(s.status)?'working':'quiet';
+  const toneFor = s => s.quiet?'quiet':['approval','question'].includes(s.status)?'needs':s.status==='failed'?'failed':s.status==='finished'?'done':['working','thinking'].includes(s.status)?'working':'quiet';
   const TASK_TONE={'To do':'quiet','Doing':'working','Blocked':'failed','Done':'done','Dropped':'quiet'};
   function chip(tone,label,shape=tone){const c=el('span','status tone-'+tone,null,el('span','shape shape-'+shape),el('span',null,label));return c;}
   const sessionChip = s => chip(toneFor(s),s.quiet?phrase('Quiet {n} min',{n:s.quiet}):statusFor(s.status),s.status==='question'?'question':toneFor(s));
@@ -176,7 +184,7 @@
     const base=kind==='mini'?A.COMPACT_SCENE:A.HABITAT_SCENE;
     const layout={...base,flights:base.flights&&prefs.motion},cacheKey=kind+'-'+prefs.motion;
     let scene=flockScenes.get(cacheKey);
-    if(!scene){scene=new A.Scene(layout);flockScenes.set(cacheKey,scene);}
+    if(!scene){scene=new A.Scene(layout,['mini','lab'].includes(kind)?skyOwns(kind):undefined);flockScenes.set(cacheKey,scene);}
     activeScenes.push(scene);host.append(scene.canvas);scene.canvas.setAttribute('role','img');scene.canvas.setAttribute('aria-label',L('Live session birds'));
     const update=() => {
       const width=Math.floor(host.getBoundingClientRect().width||layout.width);
@@ -195,6 +203,7 @@
   function paintSuggestions() {
     const suggestions=$('.room-suggestions');suggestions.replaceChildren();
     suggestions.hidden=state.mode==='quick'||state.mode==='mini'||state.messages.length>0||state.busy;
+    if(!suggestions.hidden)suggestions.append(el('p','suggest-title','Ask about your agents, your projects or anything on your desktop.'));
     if(!suggestions.hidden) ['What changed recently?','Why did the api tests fail?','What is waiting for me?'].forEach(word=>suggestions.append(button(word,'',()=> {input.value=L(word);input.dispatchEvent(new Event('input'));input.focus();})));
   }
   function stageState(host,emptyTitle,emptyAction) {
@@ -392,12 +401,18 @@
   // In the Lab, whatever needs you shows above every tab except Flock, where it is the list itself.
   function paintNeedsStrip(){
     const strip=$('.needs-strip');strip.replaceChildren();
-    const room=['room','full'].includes(state.mode),rows=[...flockFacts().needs,...flockFacts().failed];
+    const room=['room','full'].includes(state.mode);
+    const rows=[...flockFacts().needs.map(s=>({s,shape:s.status==='question'?'question':'needs',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.flockDetail='session';setArea('flock',state.mode);}})),
+      ...flockFacts().failed.map(s=>({s,shape:'failed',label:phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))}),open:()=>{views.sessionSelected=s.id;views.flockDetail='activity';setArea('flock',state.mode);}})),
+      ...tasks.filter(t=>['approval','question'].includes(t.run?.status)).map(t=>({s:t.run,shape:'needs',label:phrase('Task: {task}',{task:L(t.title)}),open:()=>openTask(t.id)}))].filter(r=>!isSkipped(r.s));
     strip.hidden=!room||state.area==='flock'||state.area==='review'||!rows.length;
     if(strip.hidden)return;
     strip.append(el('span','needs-title',null,chip('needs','Needs you')));
-    rows.forEach(s=>strip.append(key(button(null,'needs-chip',()=>{views.sessionSelected=s.id;views.flockDetail='session';setArea('flock',state.mode);}),'needs-'+s.id)));
-    strip.querySelectorAll('.needs-chip').forEach((b,i)=>{const s=rows[i];b.append(el('span','shape shape-'+(s.status==='failed'?'failed':s.status==='question'?'question':'needs')),el('span',null,phrase('{project}: {brief}',{project:s.project,brief:L(sessionBrief(s))})));});
+    rows.forEach(r=>{
+      const open=key(button(null,'needs-open',r.open),'needs-'+r.s.id);open.append(el('span','shape shape-'+r.shape),el('span',null,r.label));
+      strip.append(el('span','needs-chip',null,open,key(iconButton('close','Skip',()=>{skip(r.s);paintNeedsStrip();}),'skip-'+r.s.id)));
+    });
+    strip.append(key(button('Skip all','needs-skip-all',()=>{rows.forEach(r=>skip(r.s));paintNeedsStrip();}),'skip-all'));
   }
   function setScenarioQuiet(value){state.scenario=value;applyScenario(value);}
   function applyScenario(value){

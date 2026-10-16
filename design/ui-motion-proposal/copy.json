@@ -3768,5 +3768,240 @@
     "Quietos",
     "En silencio",
     "已安静"
+  ],
+  "Task {task} wants to run {command}": [
+    "A tarefa {task} quer rodar {command}",
+    "La tarea {task} quiere ejecutar {command}",
+    "任务 {task} 想运行 {command}"
+  ],
+  "{agent} · in its own clone": [
+    "{agent} · no clone dela",
+    "{agent} · en su propio clon",
+    "{agent} · 在自己的克隆中"
+  ],
+  "Skip for now": [
+    "Pular por agora",
+    "Omitir por ahora",
+    "暂时跳过"
+  ],
+  "{flying} resting in the sky · {wire} on the wire": [
+    "{flying} descansando no céu · {wire} no fio",
+    "{flying} descansando en el cielo · {wire} en el cable",
+    "{flying} 只在空中休息 · {wire} 只在线上"
+  ],
+  "Ask about your agents, your projects or anything on your desktop.": [
+    "Pergunte sobre seus agentes, seus projetos ou qualquer coisa na sua área de trabalho.",
+    "Pregunta sobre tus agentes, tus proyectos o cualquier cosa de tu escritorio.",
+    "可以问你的代理、项目或桌面上的任何事情。"
+  ],
+  "Skip": [
+    "Pular",
+    "Omitir",
+    "跳过"
+  ],
+  "Skip all": [
+    "Pular todos",
+    "Omitir todos",
+    "全部跳过"
+  ],
+  "Resize the task list": [
+    "Redimensionar a lista de tarefas",
+    "Cambiar el tamaño de la lista de tareas",
+    "调整任务列表宽度"
+  ],
+  "Fold the task list": [
+    "Recolher a lista de tarefas",
+    "Plegar la lista de tareas",
+    "收起任务列表"
+  ],
+  "Show the task list": [
+    "Mostrar a lista de tarefas",
+    "Mostrar la lista de tareas",
+    "展开任务列表"
+  ],
+  "Queued": [
+    "Na fila",
+    "En cola",
+    "排队中"
+  ],
+  "Try a second wire in Mini": [
+    "Testar um segundo fio no Mini",
+    "Probar un segundo cable en Mini",
+    "在 Mini 中尝试第二根线"
+  ],
+  "Progress": [
+    "Progresso",
+    "Progreso",
+    "进度"
+  ],
+  "Plan": [
+    "Planejar",
+    "Planificar",
+    "规划"
+  ],
+  "Run": [
+    "Rodar",
+    "Ejecutar",
+    "运行"
+  ],
+  "Check": [
+    "Checar",
+    "Comprobar",
+    "检查"
+  ],
+  "PR": [
+    "PR",
+    "PR",
+    "PR"
+  ],
+  "Live output": [
+    "Saída ao vivo",
+    "Salida en vivo",
+    "实时输出"
+  ],
+  "Output": [
+    "Saída",
+    "Salida",
+    "输出"
+  ],
+  "Waiting for your permission to run npm run test:ui.": [
+    "Esperando sua permissão para rodar npm run test:ui.",
+    "Esperando tu permiso para ejecutar npm run test:ui.",
+    "等待你允许运行 npm run test:ui。"
+  ],
+  "Passed": [
+    "Passou",
+    "Pasó",
+    "通过"
+  ],
+  "Failed": [
+    "Falhou",
+    "Falló",
+    "失败"
+  ],
+  "Running": [
+    "Rodando",
+    "En curso",
+    "运行中"
+  ],
+  "Run the check": [
+    "Rodar o check",
+    "Ejecutar la comprobación",
+    "运行检查"
+  ],
+  "Run again": [
+    "Rodar de novo",
+    "Ejecutar de nuevo",
+    "再次运行"
+  ],
+  "No run yet. Start the task to see its agent work here.": [
+    "Ainda sem execução. Inicie a tarefa para ver o agente trabalhando aqui.",
+    "Aún sin ejecución. Inicia la tarea para ver aquí a su agente trabajar.",
+    "尚未运行。启动任务后可在这里看到代理工作。"
+  ],
+  "$0.64 · 52k tokens": [
+    "$0.64 · 52k tokens",
+    "$0.64 · 52k tokens",
+    "$0.64 · 52k token"
+  ],
+  "$0.18 · 12k tokens": [
+    "$0.18 · 12k tokens",
+    "$0.18 · 12k tokens",
+    "$0.18 · 12k token"
+  ],
+  "Accept and open a PR": [
+    "Aceitar e abrir um PR",
+    "Aceptar y abrir un PR",
+    "接受并创建 PR"
+  ],
+  "Fixed": [
+    "Corrigido",
+    "Corregido",
+    "已修复"
+  ],
+  "Renamed it and updated the translation.": [
+    "Renomeei e atualizei a tradução.",
+    "Lo renombré y actualicé la traducción.",
+    "已重命名并更新译文。"
+  ],
+  "On the wire": [
+    "No fio",
+    "En el cable",
+    "在线上"
+  ],
+  "In the sky": [
+    "No céu",
+    "En el cielo",
+    "在空中"
+  ],
+  "npm run test:ui passes": [
+    "npm run test:ui passa",
+    "npm run test:ui pasa",
+    "npm run test:ui 通过"
+  ],
+  "A line that names a command (npm run build passes) becomes a check Vults can run.": [
+    "Uma linha que cita um comando (npm run build passa) vira um check que o Vults pode rodar.",
+    "Una línea que nombra un comando (npm run build pasa) se vuelve una comprobación que Vults puede ejecutar.",
+    "写明命令的条目（如 npm run build 通过）会成为 Vults 可运行的检查。"
+  ],
+  "Running the check: {check}": [
+    "Rodando o check: {check}",
+    "Ejecutando la comprobación: {check}",
+    "正在运行检查：{check}"
+  ],
+  "Started with {agent}.": [
+    "Iniciado com {agent}.",
+    "Iniciado con {agent}.",
+    "已用 {agent} 启动。"
+  ],
+  "Show it on the wire": [
+    "Mostrar no fio",
+    "Mostrar en el cable",
+    "显示在线上"
+  ],
+  "Take it off the wire": [
+    "Tirar do fio",
+    "Quitar del cable",
+    "从线上移除"
+  ],
+  "Its bird joins the wire.": [
+    "O pássaro dela entra no fio.",
+    "Su pájaro se une al cable.",
+    "它的鸟加入了线上。"
+  ],
+  "Its bird leaves the wire.": [
+    "O pássaro dela sai do fio.",
+    "Su pájaro deja el cable.",
+    "它的鸟离开了线上。"
+  ],
+  "Pull request opened. Its checks are running.": [
+    "Pull request aberto. Os checks estão rodando.",
+    "Pull request abierto. Sus comprobaciones están en curso.",
+    "已创建拉取请求，检查正在运行。"
+  ],
+  "Skipped. It still waits in Now and in its terminal.": [
+    "Pulado. Ele continua esperando no Agora e no terminal.",
+    "Omitido. Sigue esperando en Ahora y en su terminal.",
+    "已跳过。它仍在“现在”和终端中等待。"
+  ],
+  "Show the card": [
+    "Mostrar o card",
+    "Mostrar la tarjeta",
+    "显示卡片"
+  ],
+  "{n} in the sky": [
+    "{n} no céu",
+    "{n} en el cielo",
+    "{n} 只在空中"
+  ],
+  "Reopen and start…": [
+    "Reabrir e iniciar…",
+    "Reabrir e iniciar…",
+    "重新打开并开始…"
+  ],
+  "Unlink {issue}": [
+    "Desvincular {issue}",
+    "Desvincular {issue}",
+    "取消关联 {issue}"
   ]
 }

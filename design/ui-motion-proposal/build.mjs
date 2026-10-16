@@ -14,6 +14,8 @@ const result = await build({
       export { Scene, FOCUS_SCENE, COMPACT_SCENE, HABITAT_SCENE, NEST_HABITAT_SCENE } from ${JSON.stringify(root + 'src/island/scene.ts')};
       export { assignSpecies, setZeca, setZecaLook, setZecaSpecies } from ${JSON.stringify(root + 'src/island/flock.ts')};
       export { SPECIES } from ${JSON.stringify(root + 'src/character/flock/index.ts')};
+      export { Sky } from ${JSON.stringify(root + 'src/island/sky.ts')};
+      export { setDayPart } from ${JSON.stringify(root + 'src/island/daypart.ts')};
       export { LOOK_GROUPS } from ${JSON.stringify(root + 'src/character/looks.ts')};
       export { AGENTS } from ${JSON.stringify(root + 'src/agents.ts')};
       export { icon } from ${JSON.stringify(root + 'src/island/icons.ts')};

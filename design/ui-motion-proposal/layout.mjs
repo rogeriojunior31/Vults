@@ -1,5 +1,5 @@
 export const SURFACE_SIZES = Object.freeze({
-  mini: { width:340, height:38, radius:20 },
+  mini: { width:520, height:38, radius:20 },
   quick: { width:520, height:440, radius:22 },
   room: { width:1120, height:760, radius:16 },
   full: { width:1440, height:900, radius:12 },

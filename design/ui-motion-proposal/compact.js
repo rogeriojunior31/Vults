@@ -47,7 +47,8 @@
       const s=selected,more=key(iconButton('list','Quick actions',()=>sessionActions(more,s)),'compact-more');
       focus.replaceChildren(el('div','compact-focus-heading',null,el('strong',null,s.project),el('span',null,labelFor(s.agent)),sessionChip(s),more));
       const meta=[phrase('Step {n}',{n:s.step_count}),...(s.subagents?[phrase(s.subagents===1?'1 subagent':'{n} subagents',{n:s.subagents})]:[]),...(s.cost?[raw('≈ $'+s.cost.toFixed(2))]:[])];
-      if(['approval','question'].includes(s.status)){focus.append(requestCard(s,'compact',()=>resizeCompactFlock()));}
+      if(['approval','question'].includes(s.status)&&isSkipped(s)){focus.append(el('p',null,'Skipped. It still waits in Now and in its terminal.'),el('div','inline-actions',null,key(button('Show the card','quiet-control',()=>{unskip(s);resizeCompactFlock();}),'unskip')));}
+      else if(['approval','question'].includes(s.status)){focus.append(requestCard(s,'compact',()=>resizeCompactFlock()));}
       else{
         focus.append(el('p','compact-meta counter',null,document.createTextNode(meta.map(L).join(' · '))),el('p',null,sessionBrief(s)));
         if(s.quiet)focus.append(quietActions(s));
@@ -77,6 +78,7 @@
       github.actions.filter(a=>a.checks==='failed').forEach(a=>rows.push({id:'act-'+a.id,shape:'failed',title:phrase('{repo} main is red',{repo:a.repo}),body:phrase('{check} failed {age} ago',{check:a.checkList.find(c=>c[1]==='failed')[0],age:a.age}),open:()=>openConnection('actions',a.id)}));
       github.inbox.filter(i=>!settings.githubSeen[i.id]).forEach(i=>rows.push({id:'inbox-'+i.id,shape:'news',title:phrase('{kind}: {title}',{kind:L(i.kind),title:L(i.title)}),body:phrase('{repo} {ref} · {author}',{repo:i.repo,ref:i.ref,author:i.author}),seen:i.id,open:()=>openConnection('inbox',i.id)}));
     }
+    tasks.filter(t=>['approval','question'].includes(t.run?.status)).forEach(t=>rows.push({id:'run-'+t.id,shape:'needs',urgent:true,title:phrase('Task {task} wants to run {command}',{task:L(t.title),command:t.run.step}),body:phrase('{agent} · in its own clone',{agent:t.engine}),open:()=>openTask(t.id)}));
     tasks.filter(t=>t.review==='waiting').forEach(t=>rows.push({id:'task-'+t.id,shape:'needs',title:phrase('Task ready for your review: {task}',{task:L(t.title)}),body:phrase('{n} review round · {agent}',{n:t.rounds.length,agent:t.engine}),open:()=>openTask(t.id,'review')}));
     if(settings.memory&&memory.pending.length)rows.push({id:'memory',shape:'news',title:phrase(memory.pending.length===1?'A memory proposal is waiting':'{n} memory proposals are waiting',{n:memory.pending.length}),body:'You decide what Zeca keeps.',open:()=>openMemory()});
     if(settings.github){const ready=github.pulls.filter(p=>p.checks==='passed'&&!p.merged);if(ready.length)rows.push({id:'ready',shape:'done',quiet:true,title:phrase(ready.length===1?'1 pull request passed its checks':'{n} pull requests passed their checks',{n:ready.length}),body:'Review before merging',open:()=>openConnection('pulls',ready[0].id)});}

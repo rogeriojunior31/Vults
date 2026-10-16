@@ -1,115 +1,1303 @@
 {
-  "about": "Every user-facing feature the app ships or plans, with where it lives in this prototype. verify.mjs opens each place and checks the selector. A feature with no screen (native behavior) names why instead.",
-  "features": [
-    {"id":"island-flock","area":"Island","feature":"Zeca and up to 8 vults on the wire","status":"shipped","at":{"mode":"mini","area":"flock"},"expect":".mini-strip canvas"},
-    {"id":"island-badges","area":"Island","feature":"Badges by shape: permission, question, done, failed","status":"shipped","at":{"mode":"mini","area":"flock"},"expect":".island-badge"},
-    {"id":"island-pulse","area":"Island","feature":"Amber pulse when someone needs you, red edge on failure","status":"shipped","at":{"mode":"mini","area":"flock"},"expect":".mini-strip.pulse-needs"},
-    {"id":"island-usage","area":"Island","feature":"Plan usage hairlines (amber 70%, red 90%)","status":"shipped","at":{"mode":"mini","area":"flock"},"expect":".usage-line.warning"},
-    {"id":"island-news","area":"Island","feature":"Connector news dot","status":"shipped","at":{"mode":"mini","area":"flock"},"expect":".island-news"},
-    {"id":"island-click","area":"Island","feature":"A click opens Compact on whoever needs you","status":"shipped","at":{"mode":"mini","area":"flock"},"expect":".mini-strip[data-tooltip]"},
-    {"id":"island-fold","area":"Island","feature":"Auto-fold after the pointer leaves, wake from the top edge","status":"shipped","native":"Layer-shell input region and timers; set in Settings › General › Fold the island"},
-    {"id":"island-drop","area":"Island","feature":"Files dropped on the island go to the chat","status":"shipped","at":{"mode":"quick","area":"chat"},"expect":".composer-surface"},
-    {"id":"island-sky","area":"Island","feature":"Dayparts, seasons, molt, thermals and rare visitors","status":"shipped","native":"Drawn by the production renderer the prototype embeds; Settings › Flock & Zeca › Rare visitors"},
-    {"id":"card-permission","area":"Cards","feature":"Permission card with the full command and folder","status":"shipped","at":{"mode":"quick","area":"flock","scenario":"approval"},"expect":".request-card .request-command"},
-    {"id":"card-always","area":"Cards","feature":"Always allow: an exact rule","status":"shipped","at":{"mode":"quick","area":"flock","scenario":"approval"},"expect":"[data-key=\"always\"]"},
-    {"id":"card-count","area":"Cards","feature":"1 of N when an agent asks several times","status":"shipped","at":{"mode":"quick","area":"flock","scenario":"approval"},"expect":".request-count"},
-    {"id":"card-countdown","area":"Cards","feature":"Countdown before the card goes back to the terminal","status":"shipped","at":{"mode":"quick","area":"flock","scenario":"approval"},"expect":".request-clock"},
-    {"id":"card-keys","area":"Cards","feature":"Ctrl+Alt+Y / N shown on the buttons","status":"shipped","at":{"mode":"room","area":"flock","scenario":"approval"},"expect":".request-actions kbd"},
-    {"id":"card-destructive","area":"Cards","feature":"Destructive: Deny first, no Always, reason line","status":"shipped","at":{"mode":"quick","area":"flock","scenario":"destructive"},"expect":".request-card.destructive"},
-    {"id":"card-reason","area":"Cards","feature":"Reason line (policy asks first)","status":"shipped","at":{"mode":"room","area":"flock","scenario":"approval"},"expect":".request-reason"},
-    {"id":"card-history","area":"Cards","feature":"Recent answers for the project in the Lab card","status":"shipped","at":{"mode":"room","area":"flock","scenario":"approval"},"expect":".request-history"},
-    {"id":"card-question","area":"Cards","feature":"Question card with numbered choices, Other… and Reply in the terminal","status":"shipped","at":{"mode":"quick","area":"flock","scenario":"question"},"expect":"[data-key=\"release\"]"},
-    {"id":"card-multi","area":"Cards","feature":"Multi-select questions with Send","status":"shipped","at":{"mode":"quick","area":"flock","scenario":"question-multi"},"expect":"[data-key=\"send-answer\"]"},
-    {"id":"card-expired","area":"Cards","feature":"A card that went back to the terminal","status":"shipped","at":{"mode":"room","area":"flock","scenario":"expired"},"expect":".request-card"},
-    {"id":"card-chat","area":"Cards","feature":"Zeca's own card in the chat, with Always in this chat","status":"shipped","at":{"mode":"quick","area":"chat","example":"permission"},"expect":".request-card.density-chat"},
-    {"id":"card-taint","area":"Cards","feature":"Content from outside brings the card back, in red","status":"shipped","at":{"mode":"quick","area":"chat","example":"outside"},"expect":".request-reason.danger-text"},
-    {"id":"card-risk","area":"Cards","feature":"Risk line, out-of-scope warning, batch approve of reads","status":"planned","native":"K3 / UX11: not designed yet"},
-    {"id":"compact-signals","area":"Compact","feature":"Requests, failures, working and quiet counts","status":"shipped","at":{"mode":"quick","area":"flock"},"expect":".compact-signals"},
-    {"id":"compact-wire","area":"Compact","feature":"Up to 6 birds, chosen by attention","status":"shipped","at":{"mode":"quick","area":"flock"},"expect":".compact-bird-pick"},
-    {"id":"compact-focus","area":"Compact","feature":"One session in focus: step, subagents, cost","status":"shipped","at":{"mode":"quick","area":"flock","session":"session-2"},"expect":".compact-meta"},
-    {"id":"quick-actions","area":"Compact","feature":"Quick actions: terminal, folder, last change, keep in front, mute, hide, bird","status":"shipped","at":{"mode":"quick","area":"flock"},"expect":"[data-key=\"compact-more\"]"},
-    {"id":"quiet-bird","area":"Compact","feature":"Quiet bird: Snooze, Keep going, Dismiss","status":"shipped","at":{"mode":"quick","area":"summary"},"expect":"[data-key=\"keep-going\"]"},
-    {"id":"now-inbox","area":"Compact","feature":"Now: one inbox for everything that asks for an action","status":"new","at":{"mode":"quick","area":"summary"},"expect":".now-row"},
-    {"id":"away-digest","area":"Compact","feature":"While you were away","status":"shipped","at":{"mode":"quick","area":"summary"},"expect":"[data-key=\"away-digest\"]"},
-    {"id":"now-seen","area":"Compact","feature":"✓ Seen and Mark all seen","status":"shipped","at":{"mode":"quick","area":"summary"},"expect":"[data-key=\"mark-all-seen\"]"},
-    {"id":"latest-decision","area":"Compact","feature":"Latest decision and a link to Audit","status":"shipped","at":{"mode":"quick","area":"summary"},"expect":"[data-key=\"compact-open-audit\"]"},
-    {"id":"quick-settings","area":"Compact","feature":"Quick settings: presence, do not disturb, fold, Zeca, sounds, history","status":"shipped","at":{"mode":"quick","area":"summary"},"expect":"[data-key=\"head-settings\"]"},
-    {"id":"week-recap","area":"Compact","feature":"Weekly recap line on Monday","status":"shipped","at":{"mode":"room","area":"activity","activity":"week"},"expect":".week-summary"},
-    {"id":"now-playing","area":"Header","feature":"Now playing with controls (MPRIS)","status":"shipped","at":{"mode":"room","area":"flock","setting":["media",true]},"expect":".now-playing"},
-    {"id":"dnd","area":"Header","feature":"Do not disturb moon; a click ends it","status":"shipped","at":{"mode":"room","area":"flock","setting":["dnd","1 h"]},"expect":"[data-key=\"dnd\"]"},
-    {"id":"palette","area":"Header","feature":"Search (Ctrl+K): sessions, cards, commands, places; never answers a card","status":"shipped","at":{"mode":"room","area":"flock"},"expect":".product-head-actions"},
-    {"id":"sizes","area":"Header","feature":"Island · Compact · Lab, and full screen","status":"shipped","at":{"mode":"room","area":"flock"},"expect":"[data-key=\"head-full\"]"},
-    {"id":"needs-strip","area":"Lab","feature":"Needs-you chips above every tab but Flock","status":"shipped","at":{"mode":"room","area":"tasks"},"expect":".needs-chip"},
-    {"id":"nav-counts","area":"Lab","feature":"Counts on the tabs","status":"shipped","at":{"mode":"room","area":"tasks"},"expect":".nav-count"},
-    {"id":"lab-wire","area":"Lab","feature":"Wide flock with a selection target per bird","status":"shipped","at":{"mode":"room","area":"flock"},"expect":".lab-bird-target"},
-    {"id":"lab-sessions","area":"Lab","feature":"Session list: filters, search, in flight / on the wire","status":"shipped","at":{"mode":"room","area":"flock"},"expect":".list-count"},
-    {"id":"lab-detail","area":"Lab","feature":"Detail tabs: Session, Changes, Activity, Context, Zeca","status":"shipped","at":{"mode":"room","area":"flock"},"expect":".detail-tabs"},
-    {"id":"lab-diff","area":"Lab","feature":"Diff reader: steps, files, totals, open the file at its change","status":"shipped","at":{"mode":"room","area":"flock","detail":"diff","session":"session-2"},"expect":".lab-diff-file"},
-    {"id":"lab-failure","area":"Lab","feature":"What it said last, for a failed run","status":"shipped","at":{"mode":"room","area":"flock","session":"session-4"},"expect":".diff-preview"},
-    {"id":"lab-context","area":"Lab","feature":"Context: repository, branch, folder, agent, editor, cost","status":"shipped","at":{"mode":"room","area":"flock","detail":"context"},"expect":".lab-context"},
-    {"id":"task-link","area":"Lab","feature":"A session started by a task links to it","status":"new","at":{"mode":"room","area":"flock","detail":"session","session":"session-1"},"expect":"[data-key=\"task-link\"]"},
-    {"id":"tasks-list","area":"Tasks","feature":"Tasks grouped by project, Open / Needs you / Finished, search","status":"shipped","at":{"mode":"room","area":"tasks"},"expect":".task-row"},
-    {"id":"tasks-budget","area":"Tasks","feature":"Today's spend against the budget","status":"shipped","at":{"mode":"room","area":"tasks"},"expect":".lab-list .page-title p"},
-    {"id":"tasks-new","area":"Tasks","feature":"New task with goal, project and Done when…","status":"shipped","at":{"mode":"room","area":"tasks"},"expect":"[data-key=\"new-task\"]"},
-    {"id":"tasks-start","area":"Tasks","feature":"Start with Claude Code, Codex or an ACP agent","status":"shipped","at":{"mode":"room","area":"tasks","task":"task-5"},"expect":"[data-key=\"task-start\"]"},
-    {"id":"tasks-stop","area":"Tasks","feature":"Stop and hand off","status":"shipped","at":{"mode":"room","area":"tasks","task":"task-1"},"expect":"[data-key=\"task-handoff\"]"},
-    {"id":"tasks-go-on","area":"Tasks","feature":"Go on and Start fresh with handoff notes","status":"shipped","at":{"mode":"room","area":"tasks","task":"task-4"},"expect":"[data-key=\"task-fresh\"]"},
-    {"id":"tasks-review","area":"Tasks","feature":"Cross review by the other agent, up to 3 rounds","status":"shipped","at":{"mode":"room","area":"tasks","task":"task-3"},"expect":"[data-key=\"task-review\"]"},
-    {"id":"tasks-router","area":"Tasks","feature":"Router reason line","status":"shipped","at":{"mode":"room","area":"tasks","task":"task-2"},"expect":".router-line"},
-    {"id":"tasks-criteria","area":"Tasks","feature":"Criteria progress and the next one","status":"shipped","at":{"mode":"room","area":"tasks","task":"task-2"},"expect":".criteria-list"},
-    {"id":"tasks-output","area":"Tasks","feature":"What it said last","status":"shipped","at":{"mode":"room","area":"tasks","task":"task-2"},"expect":".lab-panel .diff-preview"},
-    {"id":"tasks-run-card","area":"Tasks","feature":"A task's run waiting for you links to its card","status":"new","at":{"mode":"room","area":"tasks","task":"task-2"},"expect":"[data-key=\"run-card\"]"},
-    {"id":"tasks-more","area":"Tasks","feature":"Status, owner, issue link, open an issue, delete, remove its folder","status":"shipped","at":{"mode":"room","area":"tasks"},"expect":"[data-key=\"task-more\"]"},
-    {"id":"tasks-sandbox","area":"Tasks","feature":"Each task runs in its own clone on vults/task-N","status":"shipped","at":{"mode":"room","area":"tasks","detail":"context","task":"task-2"},"expect":".lab-context"},
-    {"id":"agents-studio","area":"Tasks","feature":"Agents workspace, profiles, orchestrator and loops","status":"planned","native":"UX8–UX10: designed after the base is approved"},
-    {"id":"chat-engines","area":"Chat","feature":"Engines: your setup (CLI) and the Vults harness (API)","status":"shipped","at":{"mode":"quick","area":"chat","example":"models"},"expect":".engine-option"},
-    {"id":"chat-usage","area":"Chat","feature":"Plan usage ring on the model","status":"new","at":{"mode":"quick","area":"chat"},"expect":".usage-ring"},
-    {"id":"chat-effort","area":"Chat","feature":"Effort per conversation","status":"shipped","at":{"mode":"quick","area":"chat","example":"models"},"expect":".effort-select"},
-    {"id":"chat-commands","area":"Chat","feature":"/task /delegate /continue /remember /forget","status":"shipped","at":{"mode":"quick","area":"chat","type":"/"},"expect":".command-option"},
-    {"id":"chat-mentions","area":"Chat","feature":"@ a session or project","status":"new","at":{"mode":"quick","area":"chat","type":"@f"},"expect":".command-option"},
-    {"id":"chat-tools","area":"Chat","feature":"The tools Zeca used, collapsed under each reply","status":"shipped","at":{"mode":"quick","area":"chat","example":"conversation"},"expect":".tool-details"},
-    {"id":"chat-retry","area":"Chat","feature":"Copy and Try again","status":"shipped","at":{"mode":"quick","area":"chat","example":"conversation"},"expect":".message-tools"},
-    {"id":"chat-queue","area":"Chat","feature":"Messages queue while a reply streams; Stop","status":"shipped","at":{"mode":"quick","area":"chat","example":"thinking"},"expect":".send-action"},
-    {"id":"chat-files","area":"Chat","feature":"Attachments by paperclip or drop","status":"shipped","at":{"mode":"quick","area":"chat"},"expect":".composer-left .icon-action"},
-    {"id":"chat-voice","area":"Chat","feature":"Push to talk with a live partial transcript","status":"shipped","at":{"mode":"quick","area":"chat"},"expect":".voice-partial"},
-    {"id":"chat-folder","area":"Chat","feature":"Folder for the conversation","status":"shipped","at":{"mode":"quick","area":"chat"},"expect":".folder-trigger"},
-    {"id":"chat-access","area":"Chat","feature":"Access chip that can only lower access","status":"shipped","at":{"mode":"quick","area":"chat"},"expect":".access-trigger"},
-    {"id":"chat-history","area":"Chat","feature":"Conversations: search, rename, delete","status":"shipped","at":{"mode":"room","area":"chat"},"expect":".conversation-row .row-tools"},
-    {"id":"chat-suggestions","area":"Chat","feature":"Suggestions in an empty Lab chat (never sent)","status":"shipped","at":{"mode":"room","area":"chat","example":"empty"},"expect":".room-suggestions button"},
-    {"id":"chat-notice","area":"Chat","feature":"A session needs you, inside the chat","status":"shipped","at":{"mode":"quick","area":"chat","example":"notification"},"expect":".notice-open"},
-    {"id":"memory-panel","area":"Memory","feature":"Memory beside the Lab chat: proposals first","status":"shipped","at":{"mode":"room","area":"memory"},"expect":".room-memory .memory-change"},
-    {"id":"memory-diff","area":"Memory","feature":"Current versus proposed","status":"shipped","at":{"mode":"room","area":"memory"},"expect":".memory-change .diff-remove"},
-    {"id":"memory-files","area":"Memory","feature":"Memory files with usage bars","status":"shipped","at":{"mode":"room","area":"memory","memoryTab":"What Zeca remembers"},"expect":".memory-files"},
-    {"id":"memory-debrief","area":"Memory","feature":"Overnight debrief","status":"shipped","at":{"mode":"room","area":"memory","setting":["sleep",true]},"expect":".memory-debrief"},
-    {"id":"zeca-routines","area":"Zeca","feature":"Attention engine, routines, moods, skills, ACP in editors","status":"planned","native":"K1–K10 / UX11: designed after the base is approved"},
-    {"id":"conn-face-you","area":"Connections","feature":"Inbox, Pull requests, Actions, Releases with new counts","status":"shipped","at":{"mode":"room","area":"connections"},"expect":".connection-row"},
-    {"id":"conn-sync","area":"Connections","feature":"Sync age, request budget, Refresh at most once a minute","status":"shipped","at":{"mode":"room","area":"connections"},"expect":".sync-line"},
-    {"id":"conn-merge","area":"Connections","feature":"Squash and merge only on green checks, with confirmation","status":"shipped","at":{"mode":"room","area":"connections"},"expect":"[data-key=\"merge\"]"},
-    {"id":"conn-technical","area":"Connections","feature":"Technical details: the gh command, copy only","status":"shipped","at":{"mode":"room","area":"connections"},"expect":".connection-detail details"},
-    {"id":"conn-face-zeca","area":"Connections","feature":"What Zeca may read or do, each with a switch and traces","status":"new","at":{"mode":"room","area":"connections","face":"zeca"},"expect":".zeca-tool"},
-    {"id":"conn-add","area":"Connections","feature":"Add a connection","status":"shipped","at":{"mode":"room","area":"connections"},"expect":"[data-key=\"add-connection\"]"},
-    {"id":"activity-week","area":"Activity","feature":"Week: figures, days, records, save as image, year grid","status":"shipped","at":{"mode":"room","area":"activity","activity":"week"},"expect":".year-grid"},
-    {"id":"activity-projects","area":"Activity","feature":"By project: time, branches, memory, cost, share with Claude","status":"shipped","at":{"mode":"room","area":"activity","activity":"projects"},"expect":".roost"},
-    {"id":"activity-history","area":"Activity","feature":"History of finished turns","status":"shipped","at":{"mode":"room","area":"activity","activity":"history"},"expect":".record-table"},
-    {"id":"activity-cost","area":"Activity","feature":"Daily budget, plan windows, cost by project","status":"shipped","at":{"mode":"room","area":"activity","activity":"cost"},"expect":".plan-row"},
-    {"id":"activity-traces","area":"Activity","feature":"Traces: model, tokens, cost and tool waits","status":"shipped","at":{"mode":"room","area":"activity","activity":"traces"},"expect":".run-details"},
-    {"id":"activity-audit","area":"Activity","feature":"Audit: who answered (you, phone, rule, policy)","status":"shipped","at":{"mode":"room","area":"activity","activity":"audit"},"expect":".record-table"},
-    {"id":"settings-general","area":"Settings","feature":"Presence, fold, hover, screen, corner widget, notifications, sounds, volume, DND, language, now playing, plan usage, autostart, shortcuts","status":"shipped","at":{"mode":"room","area":"settings","category":"general"},"expect":".setting-row"},
-    {"id":"settings-chat","area":"Settings","feature":"Engines, provider and key, access, memory switches, voice model, web for Zeca","status":"shipped","at":{"mode":"room","area":"settings","category":"chat"},"expect":".setting-row"},
-    {"id":"settings-flock","area":"Settings","feature":"Zeca, species, look (every outfit), pool, visitors, animations","status":"shipped","at":{"mode":"room","area":"settings","category":"flock"},"expect":".settings-bird"},
-    {"id":"settings-agents","area":"Settings","feature":"Install, update and remove hooks with a diff; what each agent can do","status":"shipped","at":{"mode":"room","area":"settings","category":"agents"},"expect":".capability-table"},
-    {"id":"settings-approvals","area":"Settings","feature":"Always rules and policies with a reviewed diff","status":"shipped","at":{"mode":"room","area":"settings","category":"approvals"},"expect":".rule-row"},
-    {"id":"settings-projects","area":"Settings","feature":"Pinned, muted, hidden, bird, forget","status":"shipped","at":{"mode":"room","area":"settings","category":"projects"},"expect":".settings-group"},
-    {"id":"settings-activity","area":"Settings","feature":"Keep a history, clear history","status":"shipped","at":{"mode":"room","area":"settings","category":"activity"},"expect":".setting-row"},
-    {"id":"settings-connectors","area":"Settings","feature":"GitHub switch, status and budget","status":"shipped","at":{"mode":"room","area":"settings","category":"connectors"},"expect":".setting-row"},
-    {"id":"settings-phone","area":"Settings","feature":"Phone: transport, relay, pairing by QR, revoke","status":"shipped","at":{"mode":"room","area":"settings","category":"phone"},"expect":".setting-row"},
-    {"id":"settings-about","area":"Settings","feature":"Version and local paths","status":"shipped","at":{"mode":"room","area":"settings","category":"about"},"expect":".content-row"},
-    {"id":"tray","area":"Desktop","feature":"Tray icon with the flock's state and presets","status":"shipped","native":"System tray, outside the window"},
-    {"id":"shortcuts","area":"Desktop","feature":"Global shortcuts and keyboard mode","status":"shipped","native":"Desktop portal; listed in Settings › General › Keyboard shortcuts"},
-    {"id":"jump","area":"Desktop","feature":"Jump to the agent's terminal pane or editor","status":"shipped","native":"herdr, tmux, kitty, wezterm, KDE; the prototype shows Open terminal"},
-    {"id":"notifications","area":"Desktop","feature":"Desktop notifications in Panel","status":"shipped","native":"The desktop's notification server; Settings › General › Notifications"},
-    {"id":"lock","area":"Desktop","feature":"The island rests and connectors pause on screen lock","status":"shipped","native":"Session lock signal"},
-    {"id":"widget","area":"Desktop","feature":"Corner widget","status":"shipped","native":"A separate small window; Settings › General › Corner widget"},
-    {"id":"android","area":"Phone","feature":"Android companion that answers cards","status":"planned","native":"L3–L5 / UX12: its own prototype"}
-  ]
+ "about": "Every user-facing feature the app ships or plans, with where it lives in this prototype. verify.mjs opens each place and checks the selector. A feature with no screen (native behavior) names why instead.",
+ "features": [
+  {
+   "id": "island-flock",
+   "area": "Island",
+   "feature": "Zeca and up to 8 vults on the wire",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip canvas"
+  },
+  {
+   "id": "island-badges",
+   "area": "Island",
+   "feature": "Badges by shape: permission, question, done, failed",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".island-badge"
+  },
+  {
+   "id": "island-pulse",
+   "area": "Island",
+   "feature": "A still amber edge when someone needs you; red on failure; nothing blinks",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip.edge-needs"
+  },
+  {
+   "id": "island-sky",
+   "area": "Island",
+   "feature": "A bird with nothing to do stays green 30 s, then circles in the island's sky",
+   "status": "new",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip .proto-sky"
+  },
+  {
+   "id": "island-usage",
+   "area": "Island",
+   "feature": "Plan usage hairlines (amber 70%, red 90%)",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".usage-line.warning"
+  },
+  {
+   "id": "island-news",
+   "area": "Island",
+   "feature": "Connector news dot",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".island-news"
+  },
+  {
+   "id": "island-click",
+   "area": "Island",
+   "feature": "A click opens Compact on whoever needs you",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip[data-tooltip]"
+  },
+  {
+   "id": "island-fold",
+   "area": "Island",
+   "feature": "Auto-fold after the pointer leaves, wake from the top edge",
+   "status": "shipped",
+   "native": "Layer-shell input region and timers; set in Settings › General › Fold the island"
+  },
+  {
+   "id": "island-drop",
+   "area": "Island",
+   "feature": "Files dropped on the island go to the chat",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".composer-surface"
+  },
+  {
+   "id": "island-weather",
+   "area": "Island",
+   "feature": "Dayparts, seasons, molt, thermals and rare visitors",
+   "status": "shipped",
+   "native": "Drawn by the production renderer the prototype embeds; Settings › Flock & Zeca › Rare visitors"
+  },
+  {
+   "id": "card-permission",
+   "area": "Cards",
+   "feature": "Permission card with the full command and folder",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-card .request-command"
+  },
+  {
+   "id": "card-always",
+   "area": "Cards",
+   "feature": "Always allow: an exact rule",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": "[data-key=\"always\"]"
+  },
+  {
+   "id": "card-count",
+   "area": "Cards",
+   "feature": "1 of N when an agent asks several times",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-count"
+  },
+  {
+   "id": "card-countdown",
+   "area": "Cards",
+   "feature": "Countdown before the card goes back to the terminal",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-clock"
+  },
+  {
+   "id": "card-keys",
+   "area": "Cards",
+   "feature": "Ctrl+Alt+Y / N shown on the buttons",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-actions kbd"
+  },
+  {
+   "id": "card-destructive",
+   "area": "Cards",
+   "feature": "Destructive: Deny first, no Always, reason line",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "destructive"
+   },
+   "expect": ".request-card.destructive"
+  },
+  {
+   "id": "card-reason",
+   "area": "Cards",
+   "feature": "Reason line (policy asks first)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-reason"
+  },
+  {
+   "id": "card-history",
+   "area": "Cards",
+   "feature": "Recent answers for the project in the Lab card",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-history"
+  },
+  {
+   "id": "card-question",
+   "area": "Cards",
+   "feature": "Question card with numbered choices, Other… and Reply in the terminal",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "question"
+   },
+   "expect": "[data-key=\"release\"]"
+  },
+  {
+   "id": "card-multi",
+   "area": "Cards",
+   "feature": "Multi-select questions with Send",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "question-multi"
+   },
+   "expect": "[data-key=\"send-answer\"]"
+  },
+  {
+   "id": "card-expired",
+   "area": "Cards",
+   "feature": "A card that went back to the terminal",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "expired"
+   },
+   "expect": ".request-card"
+  },
+  {
+   "id": "card-skip",
+   "area": "Cards",
+   "feature": "Skip a card for now without answering it",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": "[data-key=\"skip\"]"
+  },
+  {
+   "id": "needs-skip",
+   "area": "Lab",
+   "feature": "Skip what needs you; the strip folds away when nothing is left",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": "[data-key=\"skip-all\"]"
+  },
+  {
+   "id": "card-chat",
+   "area": "Cards",
+   "feature": "Zeca's own card in the chat, with Always in this chat",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "permission"
+   },
+   "expect": ".request-card.density-chat"
+  },
+  {
+   "id": "card-taint",
+   "area": "Cards",
+   "feature": "Content from outside brings the card back, in red",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "outside"
+   },
+   "expect": ".request-reason.danger-text"
+  },
+  {
+   "id": "card-risk",
+   "area": "Cards",
+   "feature": "Risk line, out-of-scope warning, batch approve of reads",
+   "status": "planned",
+   "native": "K3 / UX11: not designed yet"
+  },
+  {
+   "id": "compact-signals",
+   "area": "Compact",
+   "feature": "Requests, failures, working and quiet counts",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock"
+   },
+   "expect": ".compact-signals"
+  },
+  {
+   "id": "compact-wire",
+   "area": "Compact",
+   "feature": "Up to 6 birds, chosen by attention",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock"
+   },
+   "expect": ".compact-bird-pick"
+  },
+  {
+   "id": "compact-focus",
+   "area": "Compact",
+   "feature": "One session in focus: step, subagents, cost",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "session": "session-2"
+   },
+   "expect": ".compact-meta"
+  },
+  {
+   "id": "quick-actions",
+   "area": "Compact",
+   "feature": "Quick actions: terminal, folder, last change, keep in front, mute, hide, bird",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock"
+   },
+   "expect": "[data-key=\"compact-more\"]"
+  },
+  {
+   "id": "quiet-bird",
+   "area": "Compact",
+   "feature": "Quiet bird: Snooze, Keep going, Dismiss",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"keep-going\"]"
+  },
+  {
+   "id": "now-inbox",
+   "area": "Compact",
+   "feature": "Now: one inbox for everything that asks for an action",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": ".now-row"
+  },
+  {
+   "id": "away-digest",
+   "area": "Compact",
+   "feature": "While you were away",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"away-digest\"]"
+  },
+  {
+   "id": "now-seen",
+   "area": "Compact",
+   "feature": "✓ Seen and Mark all seen",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"mark-all-seen\"]"
+  },
+  {
+   "id": "latest-decision",
+   "area": "Compact",
+   "feature": "Latest decision and a link to Audit",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"compact-open-audit\"]"
+  },
+  {
+   "id": "quick-settings",
+   "area": "Compact",
+   "feature": "Quick settings: presence, do not disturb, fold, Zeca, sounds, history",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"head-settings\"]"
+  },
+  {
+   "id": "week-recap",
+   "area": "Compact",
+   "feature": "Weekly recap line on Monday",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "week"
+   },
+   "expect": ".week-summary"
+  },
+  {
+   "id": "now-playing",
+   "area": "Header",
+   "feature": "Now playing with controls (MPRIS)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "setting": [
+     "media",
+     true
+    ]
+   },
+   "expect": ".now-playing"
+  },
+  {
+   "id": "dnd",
+   "area": "Header",
+   "feature": "Do not disturb moon; a click ends it",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "setting": [
+     "dnd",
+     "1 h"
+    ]
+   },
+   "expect": "[data-key=\"dnd\"]"
+  },
+  {
+   "id": "palette",
+   "area": "Header",
+   "feature": "Search (Ctrl+K): sessions, cards, commands, places; never answers a card",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".product-head-actions"
+  },
+  {
+   "id": "sizes",
+   "area": "Header",
+   "feature": "Island · Compact · Lab, and full screen",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": "[data-key=\"head-full\"]"
+  },
+  {
+   "id": "needs-strip",
+   "area": "Lab",
+   "feature": "Needs-you chips above every tab but Flock",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": ".needs-chip"
+  },
+  {
+   "id": "nav-counts",
+   "area": "Lab",
+   "feature": "Counts on the tabs",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": ".nav-count"
+  },
+  {
+   "id": "lab-wire",
+   "area": "Lab",
+   "feature": "The wire and its sky across the top; resting birds circle there",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".lab-sky .proto-sky"
+  },
+  {
+   "id": "lab-sessions",
+   "area": "Lab",
+   "feature": "Session list: filters, search; in the sky or on the wire",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".sky-note"
+  },
+  {
+   "id": "lab-detail",
+   "area": "Lab",
+   "feature": "Detail tabs: Session, Changes, Activity, Context, Zeca",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".detail-tabs"
+  },
+  {
+   "id": "lab-diff",
+   "area": "Lab",
+   "feature": "Diff reader: steps, files, totals, open the file at its change",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "detail": "diff",
+    "session": "session-2"
+   },
+   "expect": ".lab-diff-file"
+  },
+  {
+   "id": "lab-failure",
+   "area": "Lab",
+   "feature": "What it said last, for a failed run",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "session": "session-4"
+   },
+   "expect": ".diff-preview"
+  },
+  {
+   "id": "lab-context",
+   "area": "Lab",
+   "feature": "Context: repository, branch, folder, agent, editor, cost",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "detail": "context"
+   },
+   "expect": ".lab-context"
+  },
+  {
+   "id": "tasks-list",
+   "area": "Tasks",
+   "feature": "Tasks grouped by Needs you, Running, Queued and Finished, with search",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": ".task-item"
+  },
+  {
+   "id": "tasks-sidebar",
+   "area": "Tasks",
+   "feature": "A task list that folds to a rail and resizes",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": ".task-resize"
+  },
+  {
+   "id": "tasks-timeline",
+   "area": "Tasks",
+   "feature": "Each task as a run: Plan, Run, Check, Review, PR",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": ".task-timeline"
+  },
+  {
+   "id": "tasks-wire",
+   "area": "Tasks",
+   "feature": "Show a task's run on the wire, per task",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": "[data-key=\"task-more\"]"
+  },
+  {
+   "id": "tasks-budget",
+   "area": "Tasks",
+   "feature": "Today's spend against the budget",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": ".task-budget"
+  },
+  {
+   "id": "tasks-new",
+   "area": "Tasks",
+   "feature": "New task with goal, project and Done when…",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": "[data-key=\"new-task\"]"
+  },
+  {
+   "id": "tasks-start",
+   "area": "Tasks",
+   "feature": "Start with Claude Code, Codex or an ACP agent",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-5"
+   },
+   "expect": "[data-key=\"task-start\"]"
+  },
+  {
+   "id": "tasks-stop",
+   "area": "Tasks",
+   "feature": "Stop and hand off",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-1"
+   },
+   "expect": "[data-key=\"task-handoff\"]"
+  },
+  {
+   "id": "tasks-go-on",
+   "area": "Tasks",
+   "feature": "Go on and Start fresh with handoff notes",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-4"
+   },
+   "expect": "[data-key=\"task-fresh\"]"
+  },
+  {
+   "id": "tasks-review",
+   "area": "Tasks",
+   "feature": "Cross review by the other agent, up to 3 rounds",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-3"
+   },
+   "expect": "[data-key=\"task-review\"]"
+  },
+  {
+   "id": "tasks-router",
+   "area": "Tasks",
+   "feature": "Router reason line",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-2"
+   },
+   "expect": ".router-line"
+  },
+  {
+   "id": "tasks-criteria",
+   "area": "Tasks",
+   "feature": "Criteria; a line that names a command runs as a check",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-2"
+   },
+   "expect": ".check-line"
+  },
+  {
+   "id": "tasks-output",
+   "area": "Tasks",
+   "feature": "Live output of the run",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-2"
+   },
+   "expect": ".terminal"
+  },
+  {
+   "id": "tasks-run-card",
+   "area": "Tasks",
+   "feature": "A task run waiting for you shows its card in the run",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "task": "task-2"
+   },
+   "expect": ".live-output .request-card"
+  },
+  {
+   "id": "tasks-more",
+   "area": "Tasks",
+   "feature": "Status, owner, issue link, open an issue, delete, remove its folder",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks"
+   },
+   "expect": "[data-key=\"task-more\"]"
+  },
+  {
+   "id": "tasks-sandbox",
+   "area": "Tasks",
+   "feature": "Each task runs in its own clone on vults/task-N",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "tasks",
+    "detail": "context",
+    "task": "task-2"
+   },
+   "expect": ".lab-context"
+  },
+  {
+   "id": "agents-studio",
+   "area": "Tasks",
+   "feature": "Agents workspace, profiles, orchestrator and loops",
+   "status": "planned",
+   "native": "UX8–UX10: designed after the base is approved"
+  },
+  {
+   "id": "chat-engines",
+   "area": "Chat",
+   "feature": "Engines: your setup (CLI) and the Vults harness (API)",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "models"
+   },
+   "expect": ".engine-option"
+  },
+  {
+   "id": "chat-usage",
+   "area": "Chat",
+   "feature": "Plan usage ring on the model",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".usage-ring"
+  },
+  {
+   "id": "chat-effort",
+   "area": "Chat",
+   "feature": "Effort per conversation",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "models"
+   },
+   "expect": ".effort-select"
+  },
+  {
+   "id": "chat-commands",
+   "area": "Chat",
+   "feature": "/task /delegate /continue /remember /forget",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "type": "/"
+   },
+   "expect": ".command-option"
+  },
+  {
+   "id": "chat-mentions",
+   "area": "Chat",
+   "feature": "@ a session or project",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "type": "@f"
+   },
+   "expect": ".command-option"
+  },
+  {
+   "id": "chat-tools",
+   "area": "Chat",
+   "feature": "The tools Zeca used, collapsed under each reply",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "conversation"
+   },
+   "expect": ".tool-details"
+  },
+  {
+   "id": "chat-retry",
+   "area": "Chat",
+   "feature": "Copy and Try again",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "conversation"
+   },
+   "expect": ".message-tools"
+  },
+  {
+   "id": "chat-queue",
+   "area": "Chat",
+   "feature": "Messages queue while a reply streams; Stop",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "thinking"
+   },
+   "expect": ".send-action"
+  },
+  {
+   "id": "chat-files",
+   "area": "Chat",
+   "feature": "Attachments by paperclip or drop",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".composer-left .icon-action"
+  },
+  {
+   "id": "chat-voice",
+   "area": "Chat",
+   "feature": "Push to talk with a live partial transcript",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".voice-partial"
+  },
+  {
+   "id": "chat-folder",
+   "area": "Chat",
+   "feature": "Folder for the conversation",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".folder-trigger"
+  },
+  {
+   "id": "chat-access",
+   "area": "Chat",
+   "feature": "Access chip that can only lower access",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".access-trigger"
+  },
+  {
+   "id": "chat-history",
+   "area": "Chat",
+   "feature": "Conversations: search, rename, delete",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "chat"
+   },
+   "expect": ".conversation-row .row-tools"
+  },
+  {
+   "id": "chat-suggestions",
+   "area": "Chat",
+   "feature": "Suggestions in an empty Lab chat (never sent)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": ".room-suggestions button"
+  },
+  {
+   "id": "chat-lab-dense",
+   "area": "Chat",
+   "feature": "The Lab chat works smaller: slim header, centred empty state, dense transcript",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": ".suggest-title"
+  },
+  {
+   "id": "chat-notice",
+   "area": "Chat",
+   "feature": "A session needs you, inside the chat",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "notification"
+   },
+   "expect": ".notice-open"
+  },
+  {
+   "id": "memory-panel",
+   "area": "Memory",
+   "feature": "Memory beside the Lab chat: proposals first",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory"
+   },
+   "expect": ".room-memory .memory-change"
+  },
+  {
+   "id": "memory-diff",
+   "area": "Memory",
+   "feature": "Current versus proposed",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory"
+   },
+   "expect": ".memory-change .diff-remove"
+  },
+  {
+   "id": "memory-files",
+   "area": "Memory",
+   "feature": "Memory files with usage bars",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory",
+    "memoryTab": "What Zeca remembers"
+   },
+   "expect": ".memory-files"
+  },
+  {
+   "id": "memory-debrief",
+   "area": "Memory",
+   "feature": "Overnight debrief",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory",
+    "setting": [
+     "sleep",
+     true
+    ]
+   },
+   "expect": ".memory-debrief"
+  },
+  {
+   "id": "zeca-routines",
+   "area": "Zeca",
+   "feature": "Attention engine, routines, moods, skills, ACP in editors",
+   "status": "planned",
+   "native": "K1–K10 / UX11: designed after the base is approved"
+  },
+  {
+   "id": "conn-face-you",
+   "area": "Connections",
+   "feature": "Inbox, Pull requests, Actions, Releases with new counts",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".connection-row"
+  },
+  {
+   "id": "conn-sync",
+   "area": "Connections",
+   "feature": "Sync age, request budget, Refresh at most once a minute",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".sync-line"
+  },
+  {
+   "id": "conn-merge",
+   "area": "Connections",
+   "feature": "Squash and merge only on green checks, with confirmation",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": "[data-key=\"merge\"]"
+  },
+  {
+   "id": "conn-technical",
+   "area": "Connections",
+   "feature": "Technical details: the gh command, copy only",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".connection-detail details"
+  },
+  {
+   "id": "conn-face-zeca",
+   "area": "Connections",
+   "feature": "What Zeca may read or do, each with a switch and traces",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "connections",
+    "face": "zeca"
+   },
+   "expect": ".zeca-tool"
+  },
+  {
+   "id": "conn-add",
+   "area": "Connections",
+   "feature": "Add a connection",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": "[data-key=\"add-connection\"]"
+  },
+  {
+   "id": "activity-week",
+   "area": "Activity",
+   "feature": "Week: figures, days, records, save as image, year grid",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "week"
+   },
+   "expect": ".year-grid"
+  },
+  {
+   "id": "activity-projects",
+   "area": "Activity",
+   "feature": "By project: time, branches, memory, cost, share with Claude",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "projects"
+   },
+   "expect": ".roost"
+  },
+  {
+   "id": "activity-history",
+   "area": "Activity",
+   "feature": "History of finished turns",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "history"
+   },
+   "expect": ".record-table"
+  },
+  {
+   "id": "activity-cost",
+   "area": "Activity",
+   "feature": "Daily budget, plan windows, cost by project",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "cost"
+   },
+   "expect": ".plan-row"
+  },
+  {
+   "id": "activity-traces",
+   "area": "Activity",
+   "feature": "Traces: model, tokens, cost and tool waits",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "traces"
+   },
+   "expect": ".run-details"
+  },
+  {
+   "id": "activity-audit",
+   "area": "Activity",
+   "feature": "Audit: who answered (you, phone, rule, policy)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "audit"
+   },
+   "expect": ".record-table"
+  },
+  {
+   "id": "settings-general",
+   "area": "Settings",
+   "feature": "Presence, fold, hover, screen, corner widget, notifications, sounds, volume, DND, language, now playing, plan usage, autostart, shortcuts",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "general"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-chat",
+   "area": "Settings",
+   "feature": "Engines, provider and key, access, memory switches, voice model, web for Zeca",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "chat"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-flock",
+   "area": "Settings",
+   "feature": "Zeca, species, look (every outfit), pool, visitors, animations",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "flock"
+   },
+   "expect": ".settings-bird"
+  },
+  {
+   "id": "settings-agents",
+   "area": "Settings",
+   "feature": "Install, update and remove hooks with a diff; what each agent can do",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "agents"
+   },
+   "expect": ".capability-table"
+  },
+  {
+   "id": "settings-approvals",
+   "area": "Settings",
+   "feature": "Always rules and policies with a reviewed diff",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "approvals"
+   },
+   "expect": ".rule-row"
+  },
+  {
+   "id": "settings-projects",
+   "area": "Settings",
+   "feature": "Pinned, muted, hidden, bird, forget",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "projects"
+   },
+   "expect": ".settings-group"
+  },
+  {
+   "id": "settings-activity",
+   "area": "Settings",
+   "feature": "Keep a history, clear history",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "activity"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-connectors",
+   "area": "Settings",
+   "feature": "GitHub switch, status and budget",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "connectors"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-phone",
+   "area": "Settings",
+   "feature": "Phone: transport, relay, pairing by QR, revoke",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "phone"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-about",
+   "area": "Settings",
+   "feature": "Version and local paths",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "about"
+   },
+   "expect": ".content-row"
+  },
+  {
+   "id": "tray",
+   "area": "Desktop",
+   "feature": "Tray icon with the flock's state and presets",
+   "status": "shipped",
+   "native": "System tray, outside the window"
+  },
+  {
+   "id": "shortcuts",
+   "area": "Desktop",
+   "feature": "Global shortcuts and keyboard mode",
+   "status": "shipped",
+   "native": "Desktop portal; listed in Settings › General › Keyboard shortcuts"
+  },
+  {
+   "id": "jump",
+   "area": "Desktop",
+   "feature": "Jump to the agent's terminal pane or editor",
+   "status": "shipped",
+   "native": "herdr, tmux, kitty, wezterm, KDE; the prototype shows Open terminal"
+  },
+  {
+   "id": "notifications",
+   "area": "Desktop",
+   "feature": "Desktop notifications in Panel",
+   "status": "shipped",
+   "native": "The desktop's notification server; Settings › General › Notifications"
+  },
+  {
+   "id": "lock",
+   "area": "Desktop",
+   "feature": "The island rests and connectors pause on screen lock",
+   "status": "shipped",
+   "native": "Session lock signal"
+  },
+  {
+   "id": "widget",
+   "area": "Desktop",
+   "feature": "Corner widget",
+   "status": "shipped",
+   "native": "A separate small window; Settings › General › Corner widget"
+  },
+  {
+   "id": "android",
+   "area": "Phone",
+   "feature": "Android companion that answers cards",
+   "status": "planned",
+   "native": "L3–L5 / UX12: its own prototype"
+  }
+ ]
 }

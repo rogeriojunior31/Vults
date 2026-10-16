@@ -21,6 +21,11 @@
     if(s.status==='working')return s.activity==='edit'?'Editing a project file':s.activity==='run'?'Running project checks':'Working on the current step';
     return 'Ready for the next turn';
   }
+  // Skipping never answers: the card keeps waiting in Now and in the terminal until its countdown ends.
+  const skipKey=s=>s.id+':'+s.step;
+  const isSkipped=s=>views.skipped.includes(skipKey(s));
+  function skip(s){if(!isSkipped(s))views.skipped.push(skipKey(s));views.skipped=views.skipped.slice(-30);toast('Skipped. It still waits in Now and in its terminal.');remember();}
+  function unskip(s){views.skipped=views.skipped.filter(k=>k!==skipKey(s));remember();}
   // Always is an exact rule (agent, tool, target, folder); never for destructive, multi-line or long targets.
   const canAlways = (s,destructive) => !destructive && !s.step.includes('\n') && s.step.length<=300;
   function requestCard(s,density='compact',onAnswer=()=>{}) {
@@ -51,7 +56,7 @@
     };
     const deny=key(button(null,destructive?'primary':'quiet-control',()=>decide('Denied')),'deny');deny.append(el('span',null,'Deny'),...(density==='lab'?[kbd('Ctrl+Alt+N')]:[]));if(!chat)deny.setAttribute('data-tooltip','Ctrl+Alt+N');
     const allow=key(button(null,destructive?'quiet-control':'primary',()=>decide('Allowed')),'allow');allow.append(el('span',null,chat?'Allow':'Allow once'),...(density==='lab'?[kbd('Ctrl+Alt+Y')]:[]));if(!chat)allow.setAttribute('data-tooltip','Ctrl+Alt+Y');
-    const actions=el('div','request-actions',null,deny,el('span','spacer'));
+    const actions=el('div','request-actions',null,deny,...(chat?[]:[key(button('Skip for now','request-skip',()=>{skip(s);onAnswer('Skipped');}),'skip')]),el('span','spacer'));
     if(canAlways(s,destructive))actions.append(key(button(chat?'Always in this chat':'Always allow','',()=>decide(chat?'Allowed in this chat':'Always allowed')),'always'));
     actions.append(allow);card.append(actions);
     card.addEventListener('keydown',event=>{if(event.ctrlKey&&event.altKey&&['y','n'].includes(event.key?.toLowerCase())){event.preventDefault();(event.key.toLowerCase()==='y'?allow:deny).click();}});
