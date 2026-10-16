@@ -757,9 +757,14 @@
 #vults-ui-proposal .settings-categories button:hover:not(:disabled):not([aria-pressed=true]) { background:none; color:var(--fg); }
 #vults-ui-proposal .settings-categories button[aria-pressed=true] { color:var(--fg); background:var(--raised); box-shadow:inset 2px 0 var(--tab-accent,var(--mark)); }
 #vults-ui-proposal .settings-content { min-width:0; }
-#vults-ui-proposal .settings-title { font-size:15px; font-weight:600; margin-bottom:8px; }
-#vults-ui-proposal .settings-group { margin-top:18px; }
-#vults-ui-proposal .settings-group>h3 { color:var(--fg-muted); font-size:12px; font-weight:500; margin-bottom:2px; }
+#vults-ui-proposal .settings-title { font-size:18px; font-weight:600; letter-spacing:-.2px; margin-bottom:4px; }
+/* Each settings group is a card, so a long category reads as a few blocks instead of one list. */
+#vults-ui-proposal .settings-group { margin-top:14px; padding:2px 16px; border-radius:12px; background:var(--panel); }
+#vults-ui-proposal .settings-group>h3 { display:flex; align-items:center; color:var(--fg-dim); font-size:12px; font-weight:600; margin:0; padding:12px 0 4px; }
+#vults-ui-proposal .settings-group .setting-row:last-child,#vults-ui-proposal .settings-group>:last-child .setting-row:last-child { border-bottom:0; }
+#vults-ui-proposal .settings-categories button { display:flex; align-items:center; gap:10px; }
+#vults-ui-proposal .settings-categories button svg { flex:none; opacity:.75; }
+#vults-ui-proposal .settings-categories button[aria-pressed=true] svg { opacity:1; }
 #vults-ui-proposal .setting-row { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:12px 0; border-bottom:1px solid var(--border); }
 #vults-ui-proposal .setting-copy { min-width:0; }
 #vults-ui-proposal .setting-copy strong { font-size:13px; font-weight:500; }

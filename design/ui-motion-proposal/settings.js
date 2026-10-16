@@ -17,6 +17,7 @@
   }
   function optionRow(name,title,about,choices){return setting(title,about,choose(title,choices,settings[name],value=>changedSetting(name,typeof settings[name]==='number'?Number(value):value)));}
   function switchRow(name,title,about,onChange){return setting(title,about,makeSwitch(name,title,onChange));}
+  const CATEGORY_ICONS={general:'gear',chat:'chat',flock:'flock',agents:'terminal',approvals:'check',projects:'folder',activity:'bars',connectors:'plug',phone:'phone',about:'list'};
   function settingsGroup(title,...rows){return el('section','settings-group',null,el('h3',null,title),...rows.filter(Boolean));}
   function more(title,rows){return details(title,rows,'run-details setting-more');}
   function reviewDiff(title,lines,onApply,applyLabel='Write the file'){
@@ -27,7 +28,7 @@
     host.append(pageHeading('Settings',null));
     if(stageState(host,'No settings loaded.'))return;
     const categories=el('nav','settings-categories'),content=el('div','settings-content');categories.setAttribute('aria-label',L('Settings'));let last;
-    CATEGORIES.forEach(([id,label,group])=>{if(last!==group){categories.append(el('small',null,group));last=group;}const b=key(button(label,'',()=>{state.category=id;paint();remember();}),id);categories.append(b);});
+    CATEGORIES.forEach(([id,label,group])=>{if(last!==group){categories.append(el('small',null,group));last=group;}const b=key(button(null,'',()=>{state.category=id;paint();remember();},label),id);b.append(A.icon(CATEGORY_ICONS[id]??'gear',14),el('span',null,label));categories.append(b);});
     const grid=el('div','settings-grid',null,categories,content);host.append(grid);flexible(grid,categories,'settings',{def:190,min:150,max:300,label:'Sections',rail:()=>{const r=el('div','rail-marks');CATEGORIES.forEach(([id,label])=>{const b=button(null,'rail-dot',()=>{state.category=id;paint();remember();},label);b.setAttribute('data-tooltip',L(label));b.setAttribute('aria-pressed',String(state.category===id));b.append(el('span','rail-letter',null,document.createTextNode(L(label)[0])));r.append(b);});return r;}});paint();
     function paint(){
       stopScenes();content.replaceChildren();for(const b of categories.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.key===state.category));
