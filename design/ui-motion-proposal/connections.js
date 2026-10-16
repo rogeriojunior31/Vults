@@ -19,7 +19,7 @@
     const list=el('div','connection-list'),detail=el('article','connection-detail');
     const columns=el('div','connection-columns',null,list,detail);host.append(el('div','workspace-toolbar',null,sections,finder,markAll),columns);
     // The list repaints its rows, so its edge is added back each time.
-    const edge=()=>flexible(columns,list,'conn',{def:420,min:280,max:680,label:'List'});
+    const edge=()=>flexible(columns,list,'conn',{def:420,min:280,max:680,label:'List',rail:()=>{const r=el('div','rail-marks');(github[views.connectionSection]??[]).slice(0,8).forEach(row=>{const b=button(null,'rail-dot',()=>{views.connectionSelected=row.id;paint();},row.title);b.setAttribute('data-tooltip',L(row.title));b.setAttribute('aria-pressed',String(row.id===views.connectionSelected));b.append(el('span','shape shape-'+(row.checks?checkTone(row.checks):'quiet')));r.append(b);});return r;}});
     function paint(){
       list.replaceChildren();const rows=github[views.connectionSection]??[];
       const found=rows.filter(row=>[L(row.title),row.repo,row.id,row.ref,row.branch,row.author].join(' ').toLowerCase().includes(views.connectionQuery.toLowerCase()));

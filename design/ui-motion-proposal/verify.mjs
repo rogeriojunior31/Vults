@@ -229,7 +229,7 @@ assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false,'A task run is not on
 find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.ok(P.sessions.some(s=>s.id==='run-task-2'),'Show it on the wire puts its bird there.');
 P.setArea('flock','room');find('[data-key="run-task-2"]').click();assert.ok(find('[data-key="task-link"]'),'A run on the wire links back to its task.');
 P.setArea('tasks','room');find('[data-key="task-more"]').click();find('[data-key="task-wire"]').click();assert.equal(P.sessions.some(s=>s.id==='run-task-2'),false);
-find('[data-key="fold-tasks"]').click();assert.ok(find('.task-side.folded'),'The task list folds to a rail.');find('[data-key="fold-tasks"]').click();
+find('[data-key="fold-tasks"]').click();assert.ok(find('.task-side.folded')&&find('[data-key="rail-task-2"]'),'The task list folds to a rail that still shows its tasks.');find('[data-key="fold-tasks"]').click();
 const handle=find('.task-side .flex-handle');keydown(handle,'ArrowRight');assert.equal(P.views.panels.tasks.w,320,'The list resizes from the keyboard.');
 assert.ok(all('.task-line').length>=5,'Each task says where it is in the list.');
 find('[data-key="task-5"]').click();find('[data-key="task-start"]').click();find('[data-key="codex"]').click();
@@ -269,8 +269,8 @@ find('[data-label="Rename"]').click();type(find('.editor-content input'),'Rename
 /* Every Lab side panel is flexible. */
 for(const [area,id] of [['flock','flock-list'],['chat','recent'],['connections','conn'],['settings','settings']]){
   P.views.connectionFace='you';P.setArea(area,'room');const fold=find('[data-key="fold-'+id+'"]');assert.ok(fold,'The '+id+' panel can fold.');
-  fold.click();assert.ok(find('.flexible.folded'),'Folding '+id+' leaves a rail.');find('[data-key="rail-'+id+'"]').click();assert.equal(find('.flexible.folded'),null);
-  const edge=fold.parentElement;keydown(edge,'ArrowRight');assert.ok(P.views.panels[id].w>0,'The '+id+' panel resizes.');
+  fold.click();assert.ok(find('.flexible.folded'),'Folding '+id+' leaves a rail.');find('[data-key="fold-'+id+'"]').click();assert.equal(find('.flexible.folded'),null);
+  const edge=find('.flexible .flex-handle');keydown(edge,'ArrowRight');assert.ok(P.views.panels[id].w>0,'The '+id+' panel resizes.');
 }
 
 /* Zeca as a companion: he greets with the flock, suggests from it, notices, and reacts. */
@@ -288,7 +288,7 @@ assert.ok(find('.memory-change .diff-remove'),'A change shows current versus pro
 find('[data-key="proposal-1"] [data-key="remember"]').click();assert.equal(all('.room-memory .memory-change').length,2);
 
 /* Settings: every category, policies through a diff. */
-P.setArea('settings','room');assert.equal(all('.settings-categories button').filter(b=>!b.classList.contains('flex-toggle')&&!b.classList.contains('flex-rail')).length,10);
+P.setArea('settings','room');assert.equal(all('.settings-categories button').filter(b=>b.dataset.key&&!b.dataset.key.startsWith('fold-')&&!b.classList.contains('rail-dot')).length,10);
 for(const name of ['general','chat','flock','agents','approvals','projects','activity','connectors','phone','about']){find('.settings-categories [data-key="'+name+'"]').click();assert.ok(find('.settings-content').children.length>1,'Settings '+name+' has content.');}
 find('.settings-categories [data-key="approvals"]').click();all('.settings-content button').find(b=>b.textContent==='Editar').click();type(find('.editor-content textarea'),'allow command "npm run build"\nallow command "npm test"');submitEditor();runTimers();
 assert.ok(find('.editor-content .diff-add'),'A policy change is reviewed as a diff.');submitEditor();assert.ok(P.settings.policies[0].text.includes('npm test'));

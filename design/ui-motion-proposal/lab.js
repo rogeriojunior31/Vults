@@ -85,7 +85,7 @@
     const searcher=search('Find a session…',q=>{views.sessionQuery=q;paintRows();remember();});searcher.querySelector('input').value=views.sessionQuery;
     const filter=segment([['All sessions','All'],['Needs you','Needs you'],['Working','Working'],['Quiet','Gone quiet']],value=>{views.sessionFilter=value;paintRows();remember();},views.sessionFilter);
     const rows=el('div','lab-rows');list.append(el('div','workspace-toolbar',null,filter,searcher),rows);
-    flexible(host,list,'flock-list',{def:380,min:260,max:560,label:'Sessions'});
+    flexible(host,list,'flock-list',{def:380,min:260,max:560,label:'Sessions',rail:()=>{const r=el('div','rail-marks');facts.ordered.filter(s=>!settings['hide-'+s.project]).slice(0,8).forEach(s=>{const b=key(button(null,'rail-dot',()=>select(s),s.project),'rail-'+s.id);b.setAttribute('data-tooltip',s.project+' · '+L(sessionBrief(s)));b.setAttribute('aria-pressed',String(s.id===views.sessionSelected));b.append(el('span','shape shape-'+(toneFor(s)==='quiet'?'quiet':s.status==='question'?'question':toneFor(s))));r.append(b);});return r;}});
     function matches(s){return (s.project+' '+labelFor(s.agent)).toLowerCase().includes(views.sessionQuery.toLowerCase())&&(views.sessionFilter==='All sessions'||views.sessionFilter==='Needs you'&&(facts.needs.includes(s)||s.status==='failed')||views.sessionFilter==='Working'&&facts.working.includes(s)||views.sessionFilter==='Quiet'&&(s.quiet||s.status==='idle'));}
     function paintRows(){
       rows.replaceChildren();const found=facts.ordered.filter(s=>!settings['hide-'+s.project]&&matches(s));
@@ -209,8 +209,9 @@
     host.classList.add('task-board');
     const side=el('aside','task-side'),main=el('section','task-main');host.append(side,main);
     const add=key(button(null,'primary task-new',()=>editTask(),'New task'),'new-task');add.append(A.icon('plus',14),el('span',null,'New task'));
-    side.append(el('div','task-side-head',null,el('strong',null,'Tasks'),el('span','counter',null,document.createTextNode(String(tasks.filter(t=>!['Done','Dropped'].includes(t.status)).length)))),add);
-    const panel=flexible(host,side,'tasks',{def:300,min:220,max:460,rail:60,label:'Tasks',keep:true});
+    const headRow=el('div','task-side-head',null,el('strong',null,'Tasks'),el('span','counter',null,document.createTextNode(String(tasks.filter(t=>!['Done','Dropped'].includes(t.status)).length))));
+    side.append(headRow,add);
+    const panel=flexible(host,side,'tasks',{def:300,min:220,max:460,label:'Tasks',head:fold=>{headRow.append(fold);return headRow;},rail:()=>{const r=el('div','rail-marks');r.append(key(iconButton('plus','New task',()=>editTask()),'rail-new-task'));tasks.filter(t=>!['Done','Dropped'].includes(t.status)).slice(0,8).forEach(row=>{const line=taskLine(row);const b=key(button(null,'rail-dot',()=>{views.taskSelected=row.id;remember();setArea('tasks',state.mode);},row.title),'rail-'+row.id);b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.append(el('span','shape shape-'+line.shape));r.append(b);});return r;}});
     if(stageState(main,'No tasks yet.',button('New task','quiet-control',()=>editTask())))return;
     if(!panel.folded){const finder=search('Search tasks',value=>{views.taskQuery=value;paintList();remember();});finder.querySelector('input').value=views.taskQuery;side.append(finder);}
     const list=el('nav','task-groups');list.setAttribute('aria-label',L('Tasks'));side.append(list,el('p','task-budget counter',phrase('Today: ${spent} of ${budget}',{spent:'2.40',budget:Number(settings.dailyBudget).toFixed(2)})));
@@ -223,7 +224,7 @@
           const line=taskLine(row),stage=taskStage(row);
           const b=key(button(null,'task-item',()=>{views.taskSelected=row.id;remember();setArea('tasks',state.mode);},row.title),row.id);b.setAttribute('aria-pressed',String(row.id===views.taskSelected));b.setAttribute('data-tooltip',L(row.title)+' · '+line.text);
           const steps=el('span','task-steps');steps.setAttribute('aria-hidden','true');STAGES.forEach((_,i)=>steps.append(el('span',i<stage.at||stage.at===5?'done':i===stage.at?(stage.failed?'failed':stage.needs?'needs':'current'):'')));
-          b.append(el('span','task-avatar tone-'+line.tone,null,el('span','agent-dot '+(AGENT_KIND[row.engine]??'other'))),el('span','task-item-copy',null,el('strong',null,row.title),el('small','task-line tone-'+line.tone,null,el('span','shape shape-'+line.shape),el('span',null,null,document.createTextNode(line.text))),el('small',null,null,document.createTextNode([row.repo,row.engine||L('No owner yet')].join(' · '))),steps));
+          b.append(el('span','task-avatar',null,el('span','agent-dot '+(AGENT_KIND[row.engine]??'other'))),el('span','task-item-copy',null,el('strong',null,row.title),el('small','task-line tone-'+line.tone,null,el('span','shape shape-'+line.shape),el('span',null,null,document.createTextNode(line.text))),el('small',null,null,document.createTextNode([row.repo,row.engine||L('No owner yet')].join(' · '))),steps));
           section.append(b);
         });
         list.append(section);

@@ -4218,5 +4218,15 @@
     "falhou no passo {n}",
     "falló en el paso {n}",
     "在第 {n} 步失败"
+  ],
+  "Drag to resize · double-click to reset": [
+    "Arraste para redimensionar · duplo clique restaura",
+    "Arrastra para cambiar el tamaño · doble clic restablece",
+    "拖动调整宽度 · 双击恢复"
+  ],
+  "Sections": [
+    "Seções",
+    "Secciones",
+    "分区"
   ]
 }

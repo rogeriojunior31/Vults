@@ -263,7 +263,7 @@
     const list=el('div','recent-list');host.append(list);
     function paintList(){list.replaceChildren();const found=conversations.filter(c=>L(c.title).toLowerCase().includes(views.recentQuery.toLowerCase()));if(found.length)list.append(el('small','menu-group','Today'));found.forEach(c=>list.append(conversationRow(c)));if(!found.length)list.append(el('p','pane-note','Nothing here matches your search.'));}
     paintList();
-    if(['room','full'].includes(state.mode))flexible($('.chat-shell'),host,'recent',{def:220,min:160,max:380,label:'Conversations'});
+    if(['room','full'].includes(state.mode))flexible($('.chat-shell'),host,'recent',{def:230,min:170,max:380,label:'Conversations',head:fold=>{const h=host.querySelector('.recent-head');h.append(fold);return h;},rail:()=>{const r=el('div','rail-marks');conversations.slice(0,6).forEach(c=>{const b=button(null,'rail-dot',()=>openConversation(c.id),c.title);b.setAttribute('data-tooltip',L(c.title));b.append(A.icon('chat',13));r.append(b);});return r;}});
   }
   function newConversation() {
     if(state.busy){toast('Stop the current turn first.');return;}
@@ -295,34 +295,36 @@
   function openSettings(category){if(category)state.category=category;setArea('settings',state.mode==='full'?'full':'room');}
   function openMemory(){state.memoryPanel=true;views.memoryTab=memory.pending.length?'Waiting for you':'What Zeca remembers';setArea('chat',state.mode==='full'?'full':'room');}
   function toggleMemoryPanel(force){state.memoryPanel=force??!state.memoryPanel;paintMemoryPanel();remember();}
-  /* Every side panel in the Lab is flexible: drag its edge (or use the arrow keys on it), double-click to
-     reset, or fold it to a rail. Widths are kept per panel. */
-  function flexible(container,panel,id,{side='left',min=180,max=480,def=280,rail:railSize=44,label='Panel',keep=false}={}){
+  /* Every side panel in the Lab is flexible, the same way: a header with its name and a fold button that is
+     always visible, a divider you drag (arrow keys work on it, double-click resets), and a narrow rail when
+     folded, with the panel's own marks (`rail`) so it still says something. Widths are kept per panel. */
+  function flexible(container,panel,id,{side='left',min=180,max=480,def=280,label='Panel',head=null,rail=null}={}){
     if(typeof views.panels!=='object'||!views.panels)views.panels={};
     const p=views.panels[id]??={w:def,folded:false};
-    for(const old of [...panel.children])if(old.classList.contains('flex-handle')||old.classList.contains('flex-rail'))old.remove();
-    panel.classList.add('flexible','flex-'+side);panel.classList.toggle('flex-keep',keep);
-    const handle=el('div','flex-handle');handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-label',phrase('Resize {panel}',{panel:L(label)}));handle.setAttribute('aria-valuemin',String(min));handle.setAttribute('aria-valuemax',String(max));handle.tabIndex=0;
-    const toggle=key(button(null,'flex-toggle',()=>{p.folded=!p.folded;apply();remember();}),'fold-'+id);
-    const rail=key(button(null,'flex-rail',()=>{p.folded=false;apply();remember();}),'rail-'+id);rail.append(A.icon(side==='left'?'sideRight':'sideLeft',14),el('span',null,label));
-    handle.append(toggle);panel.append(handle,...(keep?[]:[rail]));
+    for(const old of [...panel.children])if(old.classList.contains('flex-handle')||old.classList.contains('flex-head')||old.classList.contains('flex-rail'))old.remove();
+    panel.classList.add('flexible','flex-'+side);
+    const fold=key(button(null,'icon-action flex-fold',()=>{p.folded=!p.folded;apply();remember();}),'fold-'+id);
+    const header=head?.(fold)??el('div','flex-head',null,el('strong',null,label),fold);
+    if(!head)panel.prepend(header);
+    const railNode=el('div','flex-rail');
+    const handle=el('div','flex-handle');handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-label',phrase('Resize {panel}',{panel:L(label)}));handle.setAttribute('aria-valuemin',String(min));handle.setAttribute('aria-valuemax',String(max));handle.tabIndex=0;handle.setAttribute('data-tooltip',L('Drag to resize · double-click to reset'));
+    panel.append(railNode,handle);
     function apply(){
-      container.style.setProperty('--'+id+'-w',(p.folded?railSize:p.w)+'px');panel.classList.toggle('folded',p.folded);handle.setAttribute('aria-valuenow',String(p.w));
-      const name=p.folded?phrase('Show {panel}',{panel:L(label)}):phrase('Fold {panel}',{panel:L(label)});toggle.setAttribute('aria-label',name);toggle.setAttribute('data-tooltip',name);
-      // The arrow points where the panel will go.
-      toggle.replaceChildren(A.icon('chevron',12));toggle.classList.toggle('flip',p.folded!==(side==='left'));
+      container.style.setProperty('--'+id+'-w',(p.folded?48:p.w)+'px');panel.classList.toggle('folded',p.folded);handle.setAttribute('aria-valuenow',String(p.w));
+      const name=p.folded?phrase('Show {panel}',{panel:L(label)}):phrase('Fold {panel}',{panel:L(label)});fold.setAttribute('aria-label',name);fold.setAttribute('data-tooltip',name);
+      fold.replaceChildren(A.icon(p.folded===(side==='left')?'sideRight':'sideLeft',15));
+      railNode.replaceChildren();if(p.folded){railNode.append(fold);if(rail)railNode.append(rail());}else header.append(fold);
     }
     const resize=width=>{p.w=Math.max(min,Math.min(max,Math.round(width)));p.folded=false;apply();};
     handle.addEventListener('pointerdown',event=>{
-      if(event.target!==handle)return;
-      const start=event.clientX,from=p.w;handle.setPointerCapture?.(event.pointerId);handle.classList.add('dragging');
+      const start=event.clientX,from=p.w;handle.setPointerCapture?.(event.pointerId);handle.classList.add('dragging');document.body?.classList?.add('vp-resizing');
       const move=e=>resize(from+(e.clientX-start)*(side==='left'?1:-1));
-      const up=()=>{handle.classList.remove('dragging');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);remember();};
-      handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);
+      const up=()=>{handle.classList.remove('dragging');document.body?.classList?.remove('vp-resizing');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);remember();};
+      handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
     });
     handle.addEventListener('keydown',event=>{
       if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault?.();resize(p.w+((event.key==='ArrowRight')===(side==='left')?20:-20));remember();}
-      if(event.key==='Enter'&&event.target===handle){p.folded=!p.folded;apply();remember();}
+      if(event.key==='Enter'){p.folded=!p.folded;apply();remember();}
     });
     handle.addEventListener('dblclick',()=>{p.w=def;p.folded=false;apply();remember();});
     apply();
