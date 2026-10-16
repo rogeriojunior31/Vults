@@ -1,0 +1,1739 @@
+{
+ "about": "Every user-facing feature the app ships or plans, with where it lives in this prototype. verify.mjs opens each place and checks the selector. A feature with no screen (native behavior) names why instead.",
+ "features": [
+  {
+   "id": "island-flock",
+   "area": "Island",
+   "feature": "Zeca and up to 8 vults on the wire",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip canvas"
+  },
+  {
+   "id": "island-badges",
+   "area": "Island",
+   "feature": "Badges by shape: permission, question, done, failed",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".island-badge"
+  },
+  {
+   "id": "island-pulse",
+   "area": "Island",
+   "feature": "A still amber edge when someone needs you; red on failure; nothing blinks",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip.edge-needs"
+  },
+  {
+   "id": "island-sky",
+   "area": "Island",
+   "feature": "A bird with nothing to do stays green 30 s, then circles in the island's sky",
+   "status": "new",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip .proto-sky"
+  },
+  {
+   "id": "island-usage",
+   "area": "Island",
+   "feature": "Plan usage hairlines (amber 70%, red 90%)",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".usage-line.warning"
+  },
+  {
+   "id": "island-news",
+   "area": "Island",
+   "feature": "Connector news dot",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".island-news"
+  },
+  {
+   "id": "island-click",
+   "area": "Island",
+   "feature": "A click opens Compact on whoever needs you",
+   "status": "shipped",
+   "at": {
+    "mode": "mini",
+    "area": "flock"
+   },
+   "expect": ".mini-strip[data-tooltip]"
+  },
+  {
+   "id": "island-fold",
+   "area": "Island",
+   "feature": "Auto-fold after the pointer leaves, wake from the top edge",
+   "status": "shipped",
+   "native": "Layer-shell input region and timers; set in Settings › General › Fold the island"
+  },
+  {
+   "id": "island-drop",
+   "area": "Island",
+   "feature": "Files dropped on the island go to the chat",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".composer-surface"
+  },
+  {
+   "id": "island-weather",
+   "area": "Island",
+   "feature": "Dayparts, seasons, molt, thermals and rare visitors",
+   "status": "shipped",
+   "native": "Drawn by the production renderer the prototype embeds; Settings › Flock & Zeca › Rare visitors"
+  },
+  {
+   "id": "card-permission",
+   "area": "Cards",
+   "feature": "Permission card with the full command and folder",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-card .request-command"
+  },
+  {
+   "id": "card-always",
+   "area": "Cards",
+   "feature": "Always allow: an exact rule",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": "[data-key=\"always\"]"
+  },
+  {
+   "id": "card-count",
+   "area": "Cards",
+   "feature": "1 of N when an agent asks several times",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-count"
+  },
+  {
+   "id": "card-countdown",
+   "area": "Cards",
+   "feature": "Countdown before the card goes back to the terminal",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-clock"
+  },
+  {
+   "id": "card-keys",
+   "area": "Cards",
+   "feature": "Ctrl+Alt+Y / N shown on the buttons",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-actions kbd"
+  },
+  {
+   "id": "card-destructive",
+   "area": "Cards",
+   "feature": "Destructive: Deny first, no Always, reason line",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "destructive"
+   },
+   "expect": ".request-card.destructive"
+  },
+  {
+   "id": "card-reason",
+   "area": "Cards",
+   "feature": "Reason line (policy asks first)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-reason"
+  },
+  {
+   "id": "card-history",
+   "area": "Cards",
+   "feature": "Recent answers for the project in the Lab card",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": ".request-history"
+  },
+  {
+   "id": "card-question",
+   "area": "Cards",
+   "feature": "Question card with numbered choices, Other… and Reply in the terminal",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "question"
+   },
+   "expect": "[data-key=\"release\"]"
+  },
+  {
+   "id": "card-multi",
+   "area": "Cards",
+   "feature": "Multi-select questions with Send",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "question-multi"
+   },
+   "expect": "[data-key=\"send-answer\"]"
+  },
+  {
+   "id": "card-expired",
+   "area": "Cards",
+   "feature": "A card that went back to the terminal",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "scenario": "expired"
+   },
+   "expect": ".request-card"
+  },
+  {
+   "id": "card-skip",
+   "area": "Cards",
+   "feature": "Skip a card for now without answering it",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "scenario": "approval"
+   },
+   "expect": "[data-key=\"skip\"]"
+  },
+  {
+   "id": "needs-skip",
+   "area": "Lab",
+   "feature": "Skip what needs you; the strip folds away when nothing is left",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": "[data-key=\"skip-all\"]"
+  },
+  {
+   "id": "card-chat",
+   "area": "Cards",
+   "feature": "Zeca's own card in the chat, with Always in this chat",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "permission"
+   },
+   "expect": ".request-card.density-chat"
+  },
+  {
+   "id": "card-taint",
+   "area": "Cards",
+   "feature": "Content from outside brings the card back, in red",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "outside"
+   },
+   "expect": ".request-reason.danger-text"
+  },
+  {
+   "id": "card-risk",
+   "area": "Cards",
+   "feature": "Risk line, out-of-scope warning, batch approve of reads",
+   "status": "planned",
+   "native": "K3 / UX11: not designed yet"
+  },
+  {
+   "id": "compact-signals",
+   "area": "Compact",
+   "feature": "Requests, failures, working and quiet counts",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock"
+   },
+   "expect": ".compact-signals"
+  },
+  {
+   "id": "compact-wire",
+   "area": "Compact",
+   "feature": "Up to 6 birds, chosen by attention",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock"
+   },
+   "expect": ".compact-bird-pick"
+  },
+  {
+   "id": "compact-focus",
+   "area": "Compact",
+   "feature": "One session in focus: step, subagents, cost",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock",
+    "session": "session-2"
+   },
+   "expect": ".compact-meta"
+  },
+  {
+   "id": "quick-actions",
+   "area": "Compact",
+   "feature": "Quick actions: terminal, folder, last change, keep in front, mute, hide, bird",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "flock"
+   },
+   "expect": "[data-key=\"compact-more\"]"
+  },
+  {
+   "id": "quiet-bird",
+   "area": "Compact",
+   "feature": "Quiet bird: Snooze, Keep going, Dismiss",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"keep-going\"]"
+  },
+  {
+   "id": "now-inbox",
+   "area": "Compact",
+   "feature": "Now: one inbox for everything that asks for an action",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": ".now-row"
+  },
+  {
+   "id": "away-digest",
+   "area": "Compact",
+   "feature": "While you were away",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"away-digest\"]"
+  },
+  {
+   "id": "now-seen",
+   "area": "Compact",
+   "feature": "✓ Seen and Mark all seen",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"mark-all-seen\"]"
+  },
+  {
+   "id": "latest-decision",
+   "area": "Compact",
+   "feature": "Latest decision and a link to Audit",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"compact-open-audit\"]"
+  },
+  {
+   "id": "quick-settings",
+   "area": "Compact",
+   "feature": "Quick settings: presence, do not disturb, fold, Zeca, sounds, history",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "summary"
+   },
+   "expect": "[data-key=\"head-settings\"]"
+  },
+  {
+   "id": "week-recap",
+   "area": "Compact",
+   "feature": "Weekly recap line on Monday",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "week"
+   },
+   "expect": ".week-summary"
+  },
+  {
+   "id": "now-playing",
+   "area": "Header",
+   "feature": "Now playing with controls (MPRIS)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "setting": [
+     "media",
+     true
+    ]
+   },
+   "expect": ".now-playing"
+  },
+  {
+   "id": "dnd",
+   "area": "Header",
+   "feature": "Do not disturb moon; a click ends it",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "setting": [
+     "dnd",
+     "1 h"
+    ]
+   },
+   "expect": "[data-key=\"dnd\"]"
+  },
+  {
+   "id": "palette",
+   "area": "Header",
+   "feature": "Search (Ctrl+K): sessions, cards, commands, places; never answers a card",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".product-head-actions"
+  },
+  {
+   "id": "sizes",
+   "area": "Header",
+   "feature": "Island · Compact · Lab, and full screen",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": "[data-key=\"head-full\"]"
+  },
+  {
+   "id": "needs-strip",
+   "area": "Lab",
+   "feature": "Needs-you chips above every tab but Flock",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".needs-chip"
+  },
+  {
+   "id": "nav-counts",
+   "area": "Lab",
+   "feature": "Counts on the tabs",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".nav-count"
+  },
+  {
+   "id": "lab-wire",
+   "area": "Lab",
+   "feature": "The wire and its sky across the top; resting birds circle there",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".lab-sky .proto-sky"
+  },
+  {
+   "id": "lab-sessions",
+   "area": "Lab",
+   "feature": "Session list: filters, search; in the sky or on the wire",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".sky-note"
+  },
+  {
+   "id": "lab-detail",
+   "area": "Lab",
+   "feature": "Detail tabs: Session, Changes, Activity, Context, Zeca",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".detail-tabs"
+  },
+  {
+   "id": "lab-flexible",
+   "area": "Lab",
+   "feature": "Every side panel resizes, resets on double-click and folds to a rail",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "flock"
+   },
+   "expect": ".flexible .flex-handle"
+  },
+  {
+   "id": "lab-diff",
+   "area": "Lab",
+   "feature": "Diff reader: steps, files, totals, open the file at its change",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "detail": "diff",
+    "session": "session-2"
+   },
+   "expect": ".lab-diff-file"
+  },
+  {
+   "id": "lab-failure",
+   "area": "Lab",
+   "feature": "What it said last, for a failed run",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "session": "session-4"
+   },
+   "expect": ".diff-preview"
+  },
+  {
+   "id": "lab-context",
+   "area": "Lab",
+   "feature": "Context: repository, branch, folder, agent, editor, cost",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "flock",
+    "detail": "context"
+   },
+   "expect": ".lab-context"
+  },
+  {
+   "id": "agents-studio",
+   "area": "Lab",
+   "feature": "Agents workspace, profiles, orchestrator and loops",
+   "status": "planned",
+   "native": "UX8–UX10: designed after the base is approved"
+  },
+  {
+   "id": "chat-engines",
+   "area": "Chat",
+   "feature": "Engines: your setup (CLI) and the Vults harness (API)",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "models"
+   },
+   "expect": ".engine-option"
+  },
+  {
+   "id": "chat-usage",
+   "area": "Chat",
+   "feature": "Plan usage ring on the model",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".usage-ring"
+  },
+  {
+   "id": "chat-effort",
+   "area": "Chat",
+   "feature": "Effort per conversation",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "models"
+   },
+   "expect": ".effort-select"
+  },
+  {
+   "id": "chat-commands",
+   "area": "Chat",
+   "feature": "/continue /remember /forget",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "type": "/"
+   },
+   "expect": ".command-option"
+  },
+  {
+   "id": "chat-mentions",
+   "area": "Chat",
+   "feature": "@ a session or project",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "type": "@f"
+   },
+   "expect": ".command-option"
+  },
+  {
+   "id": "chat-tools",
+   "area": "Chat",
+   "feature": "The tools Zeca used, collapsed under each reply",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "conversation"
+   },
+   "expect": ".tool-details"
+  },
+  {
+   "id": "chat-retry",
+   "area": "Chat",
+   "feature": "Copy and Try again",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "conversation"
+   },
+   "expect": ".message-tools"
+  },
+  {
+   "id": "chat-queue",
+   "area": "Chat",
+   "feature": "Messages queue while a reply streams; Stop",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "thinking"
+   },
+   "expect": ".send-action"
+  },
+  {
+   "id": "chat-files",
+   "area": "Chat",
+   "feature": "Attachments by paperclip or drop",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".composer-left .icon-action"
+  },
+  {
+   "id": "chat-voice",
+   "area": "Chat",
+   "feature": "Push to talk with a live partial transcript",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".voice-partial"
+  },
+  {
+   "id": "chat-folder",
+   "area": "Chat",
+   "feature": "Folder for the conversation",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".folder-trigger"
+  },
+  {
+   "id": "chat-access",
+   "area": "Chat",
+   "feature": "Access chip that can only lower access",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".access-trigger"
+  },
+  {
+   "id": "chat-history",
+   "area": "Chat",
+   "feature": "Conversations: search, rename, delete",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "chat"
+   },
+   "expect": ".conversation-row .row-tools"
+  },
+  {
+   "id": "chat-suggestions",
+   "area": "Chat",
+   "feature": "Suggestions in an empty Lab chat (never sent)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": ".room-suggestions button"
+  },
+  {
+   "id": "chat-lab-dense",
+   "area": "Chat",
+   "feature": "The Lab chat works smaller: slim header, centred empty state, dense transcript",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": ".suggest-title"
+  },
+  {
+   "id": "chat-notice",
+   "area": "Chat",
+   "feature": "A session needs you, inside the chat",
+   "status": "shipped",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "notification"
+   },
+   "expect": ".notice-open"
+  },
+  {
+   "id": "zeca-greeting",
+   "area": "Zeca",
+   "feature": "Zeca greets by the time of day and says what the flock needs",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": ".intro-caption"
+  },
+  {
+   "id": "zeca-suggestions",
+   "area": "Zeca",
+   "feature": "Suggestions follow the flock (a card waiting, a failure, the day)",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "chat",
+    "example": "empty"
+   },
+   "expect": "[data-key=\"s-card\"]"
+  },
+  {
+   "id": "zeca-followups",
+   "area": "Zeca",
+   "feature": "Follow-ups under each reply: open, ask",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat",
+    "example": "conversation"
+   },
+   "expect": ".reply-chips"
+  },
+  {
+   "id": "zeca-moods",
+   "area": "Zeca",
+   "feature": "Zeca listens while you type, searches, thinks, speaks, waits with you on a card",
+   "status": "new",
+   "at": {
+    "mode": "quick",
+    "area": "chat"
+   },
+   "expect": ".portrait canvas"
+  },
+  {
+   "id": "memory-panel",
+   "area": "Memory",
+   "feature": "Memory beside the Lab chat: proposals first",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory"
+   },
+   "expect": ".room-memory .memory-change"
+  },
+  {
+   "id": "memory-diff",
+   "area": "Memory",
+   "feature": "Current versus proposed",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory"
+   },
+   "expect": ".memory-change .diff-remove"
+  },
+  {
+   "id": "memory-files",
+   "area": "Memory",
+   "feature": "Memory files with usage bars",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory",
+    "memoryTab": "What Zeca remembers"
+   },
+   "expect": ".memory-files"
+  },
+  {
+   "id": "memory-debrief",
+   "area": "Memory",
+   "feature": "Overnight debrief",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "memory",
+    "setting": [
+     "sleep",
+     true
+    ]
+   },
+   "expect": ".memory-debrief"
+  },
+  {
+   "id": "zeca-routines",
+   "area": "Zeca",
+   "feature": "Attention engine, routines, moods, skills, ACP in editors",
+   "status": "planned",
+   "native": "K1–K10 / UX11: designed after the base is approved"
+  },
+  {
+   "id": "conn-face-you",
+   "area": "Connections",
+   "feature": "Inbox, Pull requests, Actions, Releases with new counts",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".connection-row"
+  },
+  {
+   "id": "conn-sync",
+   "area": "Connections",
+   "feature": "Sync age, request budget, Refresh at most once a minute",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".sync-line"
+  },
+  {
+   "id": "conn-merge",
+   "area": "Connections",
+   "feature": "Squash and merge only on green checks, with confirmation",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": "[data-key=\"merge\"]"
+  },
+  {
+   "id": "conn-technical",
+   "area": "Connections",
+   "feature": "Technical details: the gh command, copy only",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": ".connection-detail details"
+  },
+  {
+   "id": "conn-face-zeca",
+   "area": "Connections",
+   "feature": "What Zeca may read or do, each with a switch and traces",
+   "status": "new",
+   "at": {
+    "mode": "room",
+    "area": "connections",
+    "face": "zeca"
+   },
+   "expect": ".zeca-tool"
+  },
+  {
+   "id": "conn-add",
+   "area": "Connections",
+   "feature": "Add a connection",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "connections"
+   },
+   "expect": "[data-key=\"add-connection\"]"
+  },
+  {
+   "id": "activity-week",
+   "area": "Activity",
+   "feature": "Week: figures, days, records, save as image, year grid",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "week"
+   },
+   "expect": ".year-grid"
+  },
+  {
+   "id": "activity-projects",
+   "area": "Activity",
+   "feature": "By project: time, branches, memory, cost, share with Claude",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "projects"
+   },
+   "expect": ".roost"
+  },
+  {
+   "id": "activity-history",
+   "area": "Activity",
+   "feature": "History of finished turns",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "history"
+   },
+   "expect": ".record-table"
+  },
+  {
+   "id": "activity-cost",
+   "area": "Activity",
+   "feature": "Daily budget, plan windows, cost by project",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "cost"
+   },
+   "expect": ".plan-row"
+  },
+  {
+   "id": "activity-traces",
+   "area": "Activity",
+   "feature": "Traces: model, tokens, cost and tool waits",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "traces"
+   },
+   "expect": ".run-details"
+  },
+  {
+   "id": "activity-audit",
+   "area": "Activity",
+   "feature": "Audit: who answered (you, phone, rule, policy)",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "audit"
+   },
+   "expect": ".record-table"
+  },
+  {
+   "id": "settings-general",
+   "area": "Settings",
+   "feature": "Presence, fold, hover, screen, corner widget, notifications, sounds, volume, DND, language, now playing, plan usage, autostart, shortcuts",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "general"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-chat",
+   "area": "Settings",
+   "feature": "Engines, provider and key, access, memory switches, voice model, web for Zeca",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "chat"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-flock",
+   "area": "Settings",
+   "feature": "Zeca, species, look (every outfit), pool, visitors, animations",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "flock"
+   },
+   "expect": ".settings-bird"
+  },
+  {
+   "id": "settings-agents",
+   "area": "Settings",
+   "feature": "Install, update and remove hooks with a diff; what each agent can do",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "agents"
+   },
+   "expect": ".capability-table"
+  },
+  {
+   "id": "settings-approvals",
+   "area": "Settings",
+   "feature": "Always rules and policies with a reviewed diff",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "approvals"
+   },
+   "expect": ".rule-row"
+  },
+  {
+   "id": "settings-projects",
+   "area": "Settings",
+   "feature": "Pinned, muted, hidden, bird, forget",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "projects"
+   },
+   "expect": ".settings-group"
+  },
+  {
+   "id": "settings-activity",
+   "area": "Settings",
+   "feature": "Keep a history, clear history",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "activity"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-connectors",
+   "area": "Settings",
+   "feature": "GitHub switch, status and budget",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "connectors"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-phone",
+   "area": "Settings",
+   "feature": "Phone: transport, relay, pairing by QR, revoke",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "phone"
+   },
+   "expect": ".setting-row"
+  },
+  {
+   "id": "settings-about",
+   "area": "Settings",
+   "feature": "Version and local paths",
+   "status": "shipped",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "about"
+   },
+   "expect": ".content-row"
+  },
+  {
+   "id": "tray",
+   "area": "Desktop",
+   "feature": "Tray icon with the flock's state and presets",
+   "status": "shipped",
+   "native": "System tray, outside the window"
+  },
+  {
+   "id": "shortcuts",
+   "area": "Desktop",
+   "feature": "Global shortcuts and keyboard mode",
+   "status": "shipped",
+   "native": "Desktop portal; listed in Settings › General › Keyboard shortcuts"
+  },
+  {
+   "id": "jump",
+   "area": "Desktop",
+   "feature": "Jump to the agent's terminal pane or editor",
+   "status": "shipped",
+   "native": "herdr, tmux, kitty, wezterm, KDE; the prototype shows Open terminal"
+  },
+  {
+   "id": "notifications",
+   "area": "Desktop",
+   "feature": "Desktop notifications in Panel",
+   "status": "shipped",
+   "native": "The desktop's notification server; Settings › General › Notifications"
+  },
+  {
+   "id": "lock",
+   "area": "Desktop",
+   "feature": "The island rests and connectors pause on screen lock",
+   "status": "shipped",
+   "native": "Session lock signal"
+  },
+  {
+   "id": "widget",
+   "area": "Desktop",
+   "feature": "Corner widget",
+   "status": "shipped",
+   "native": "A separate small window; Settings › General › Corner widget"
+  },
+  {
+   "id": "android",
+   "area": "Phone",
+   "feature": "Android companion that answers cards",
+   "status": "planned",
+   "native": "L3–L5 / UX12: its own prototype"
+  },
+  {
+   "id": "dictation-area",
+   "area": "Lab",
+   "feature": "Dictation, a sixth Lab tab with its own side list: Voice, Your words, System",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation"
+   },
+   "expect": "[data-key=\"nav-dictation\"][aria-pressed=\"true\"]"
+  },
+  {
+   "id": "dictation-history",
+   "area": "Dictation",
+   "feature": "What you dictated by day: written text, what was heard, where it went, the fixes; search, paste again, copy, delete",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation"
+   },
+   "expect": ".dx-entry"
+  },
+  {
+   "id": "dictation-try",
+   "area": "Dictation",
+   "feature": "Try it: the island listens, transcribes and pastes, and the line shows up in History",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "dictation"
+   },
+   "expect": "[data-key=\"dictation-try\"]"
+  },
+  {
+   "id": "dictation-words",
+   "area": "Dictation",
+   "feature": "Dictionary: words, replacements, whisper vocabulary and Try a sentence",
+   "status": "planned",
+   "phase": "V2",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "dictionary"
+   },
+   "expect": "[data-key=\"dictation-try-sentence\"]"
+  },
+  {
+   "id": "dictation-snippets",
+   "area": "Dictation",
+   "feature": "Snippets: a short phrase pastes a whole text, unchanged",
+   "status": "planned",
+   "phase": "V2",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "snippets"
+   },
+   "expect": "[data-key=\"add-snippet\"]"
+  },
+  {
+   "id": "dictation-styles",
+   "area": "Dictation",
+   "feature": "Styles: As spoken, Natural, Polished and Prompt, used only with the clean-up on",
+   "status": "planned",
+   "phase": "V3",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "styles"
+   },
+   "expect": ".dx-style"
+  },
+  {
+   "id": "dictation-meetings",
+   "area": "Dictation",
+   "feature": "Meetings: mic and system audio, transcript by person, renamed speakers, export",
+   "status": "planned",
+   "phase": "V5",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "meetings"
+   },
+   "expect": ".dx-line"
+  },
+  {
+   "id": "dictation-meeting-summary",
+   "area": "Dictation",
+   "feature": "Meeting summary through the network gate, off until you turn it on",
+   "status": "planned",
+   "phase": "V5",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "meetings",
+    "meetingTab": "summary"
+   },
+   "expect": ".dx-meeting .empty-state"
+  },
+  {
+   "id": "dictation-meeting-todos",
+   "area": "Dictation",
+   "feature": "Meeting to-dos with who and when",
+   "status": "planned",
+   "phase": "V5",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "meetings",
+    "meetingTab": "todos"
+   },
+   "expect": ".dx-todo"
+  },
+  {
+   "id": "dictation-stats",
+   "area": "Activity",
+   "feature": "Activity › Dictation: words, time saved, words per minute, words per day and where you dictate",
+   "status": "planned",
+   "phase": "V4",
+   "at": {
+    "mode": "room",
+    "area": "activity",
+    "activity": "dictation"
+   },
+   "expect": ".dx-chart"
+  },
+  {
+   "id": "dictation-settings",
+   "area": "Settings",
+   "feature": "Settings › Dictation: key, mode, Space lock, cancel, paste again",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "dictation"
+   },
+   "expect": "[data-key=\"dict-key\"]"
+  },
+  {
+   "id": "dictation-session-guard",
+   "area": "Settings",
+   "feature": "Dictating into a session never reaches one waiting on a card; Send by itself is off",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "dictation"
+   },
+   "expect": "[data-key=\"dict-session\"]"
+  },
+  {
+   "id": "dictation-cleanup",
+   "area": "Settings",
+   "feature": "Clean-up by a model: off by default, a request on your behalf through the gate; styles, Write in, per app",
+   "status": "planned",
+   "phase": "V3",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "styles"
+   },
+   "expect": "[data-key=\"dict-cleanup\"]"
+  },
+  {
+   "id": "dictation-agents-ask",
+   "area": "Settings",
+   "feature": "Agents may ask for a spoken answer (MCP vults_dictate), sent with a click, never a permission",
+   "status": "planned",
+   "phase": "V7",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "dictation"
+   },
+   "expect": "[data-key=\"dict-agents-ask\"]"
+  },
+  {
+   "id": "dictation-diagnostics",
+   "area": "Settings",
+   "feature": "Settings › Dictation › Diagnostics: mic test, stage timings, repeats cut, Plan B, portals",
+   "status": "planned",
+   "phase": "V4",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "dictation"
+   },
+   "expect": "[data-key=\"dict-diagnostics\"]"
+  },
+  {
+   "id": "zeca-voice",
+   "area": "Settings",
+   "feature": "Talk with Zeca: an opt-in realtime model with its key, budget and trace; never answers a card",
+   "status": "planned",
+   "phase": "V6",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "talk"
+   },
+   "expect": "[data-key=\"zeca-voice\"]"
+  },
+  {
+   "id": "island-dictation-listening",
+   "area": "Island",
+   "feature": "Dictation over the flock: Listening, with level bands and the words so far",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "listening"
+   },
+   "expect": ".island-dictation.listening"
+  },
+  {
+   "id": "island-dictation-locked",
+   "area": "Island",
+   "feature": "Dictation over the flock: Hands-free after a double tap",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "locked"
+   },
+   "expect": ".island-dictation.locked"
+  },
+  {
+   "id": "island-dictation-working",
+   "area": "Island",
+   "feature": "Dictation over the flock: Transcribing on this computer",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "working"
+   },
+   "expect": ".island-dictation.working"
+  },
+  {
+   "id": "island-dictation-done",
+   "area": "Island",
+   "feature": "Dictation over the flock: Pasted, with words and fixes",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "done"
+   },
+   "expect": ".island-dictation.done"
+  },
+  {
+   "id": "island-dictation-session",
+   "area": "Island",
+   "feature": "Dictation over the flock: Delivered into a flock session",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "session"
+   },
+   "expect": ".island-dictation.session"
+  },
+  {
+   "id": "island-dictation-held",
+   "area": "Island",
+   "feature": "Dictation over the flock: Held: the session waits on a card, the text stays in the clipboard",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "held"
+   },
+   "expect": ".island-dictation.held"
+  },
+  {
+   "id": "island-dictation-clipboard",
+   "area": "Island",
+   "feature": "Dictation over the flock: Copied: no text field in focus",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "clipboard"
+   },
+   "expect": ".island-dictation.clipboard"
+  },
+  {
+   "id": "island-dictation-retry",
+   "area": "Island",
+   "feature": "Dictation over the flock: Plan B: retry with Base",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "retry"
+   },
+   "expect": ".island-dictation.retry"
+  },
+  {
+   "id": "island-dictation-failed",
+   "area": "Island",
+   "feature": "Dictation over the flock: No sound",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "failed"
+   },
+   "expect": ".island-dictation.failed"
+  },
+  {
+   "id": "island-dictation-speaking",
+   "area": "Island",
+   "feature": "Dictation over the flock: Zeca speaks",
+   "status": "planned",
+   "phase": "V6",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "speaking"
+   },
+   "expect": ".island-dictation.speaking"
+  },
+  {
+   "id": "island-dictation-interrupted",
+   "area": "Island",
+   "feature": "Dictation over the flock: Zeca was interrupted",
+   "status": "planned",
+   "phase": "V6",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "interrupted"
+   },
+   "expect": ".island-dictation.interrupted"
+  },
+  {
+   "id": "dictation-keys",
+   "area": "Desktop",
+   "feature": "Hold to talk, double tap to lock, Space lock, Esc cancel",
+   "status": "planned",
+   "phase": "V1",
+   "native": "Global shortcuts portal and XInput2 raw keys (V1.4, V1.5, V1.8); shown in Settings › Dictation"
+  },
+  {
+   "id": "dictation-paste",
+   "area": "Desktop",
+   "feature": "Paste with XTest on X11 and the RemoteDesktop portal on Wayland, with a clipboard lease",
+   "status": "planned",
+   "phase": "V1",
+   "native": "platform::insert (V1.9, V1.10)"
+  },
+  {
+   "id": "dictation-focus",
+   "area": "Desktop",
+   "feature": "The focused app read at key-down, terminals use Ctrl+Shift+V",
+   "status": "planned",
+   "phase": "V1",
+   "native": "EWMH or a KWin script (V1.7)"
+  },
+  {
+   "id": "dictation-commands",
+   "area": "Settings",
+   "feature": "Voice commands: their own key, understood on this computer with no model; move around, ask, quiet a project, again and undo; never a card",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "commands"
+   },
+   "expect": "[data-key=\"dict-commands\"]"
+  },
+  {
+   "id": "dictation-commands-list",
+   "area": "Settings",
+   "feature": "What you can say, and what is never done by voice",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "commands"
+   },
+   "expect": "[data-key=\"dict-commands-list\"]"
+  },
+  {
+   "id": "dictation-try-command",
+   "area": "Dictation",
+   "feature": "Try a command: the island hears it, runs it with no model, and History keeps it",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "room",
+    "area": "dictation",
+    "dxTab": "commands"
+   },
+   "expect": "[data-key=\"dictation-try-command\"]"
+  },
+  {
+   "id": "dictation-say-cancel",
+   "area": "Settings",
+   "feature": "Cancel by voice: “cancel” or “never mind” at the end pastes nothing, on X11 and Wayland",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "dictation"
+   },
+   "expect": "[data-key=\"dict-say-cancel\"]"
+  },
+  {
+   "id": "dictation-duck",
+   "area": "Settings",
+   "feature": "Music while you speak: lowered or paused through MPRIS and given back; not while a meeting records",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "dictation"
+   },
+   "expect": "[data-key=\"dict-duck\"]"
+  },
+  {
+   "id": "dictation-caption",
+   "area": "Settings",
+   "feature": "Caption under the island: the whole line, two rows, no buttons",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "room",
+    "area": "settings",
+    "category": "dictation"
+   },
+   "expect": "[data-key=\"dict-caption\"]"
+  },
+  {
+   "id": "island-dictation-caption",
+   "area": "Island",
+   "feature": "The caption under the island while a dictation or command is live",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "answered"
+   },
+   "expect": ".island-caption"
+  },
+  {
+   "id": "island-dictation-cancelled",
+   "area": "Island",
+   "feature": "Dictation over the flock: Cancelled, nothing pasted",
+   "status": "planned",
+   "phase": "V1",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "cancelled"
+   },
+   "expect": ".island-dictation.cancelled"
+  },
+  {
+   "id": "island-command-command",
+   "area": "Island",
+   "feature": "Voice command over the flock: Command: the words so far",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "command"
+   },
+   "expect": ".island-dictation.command"
+  },
+  {
+   "id": "island-command-commanded",
+   "area": "Island",
+   "feature": "Voice command over the flock: Command done",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "commanded"
+   },
+   "expect": ".island-dictation.commanded"
+  },
+  {
+   "id": "island-command-answered",
+   "area": "Island",
+   "feature": "Voice command over the flock: An answer from what Vults knows",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "answered"
+   },
+   "expect": ".island-dictation.answered"
+  },
+  {
+   "id": "island-command-asked",
+   "area": "Island",
+   "feature": "Voice command over the flock: Which one? when two names fit",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "asked"
+   },
+   "expect": ".island-dictation.asked"
+  },
+  {
+   "id": "island-command-refused",
+   "area": "Island",
+   "feature": "Voice command over the flock: Not by voice: cards are answered with a click",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "refused"
+   },
+   "expect": ".island-dictation.refused"
+  },
+  {
+   "id": "island-command-unknown",
+   "area": "Island",
+   "feature": "Voice command over the flock: Not a command",
+   "status": "planned",
+   "phase": "V8",
+   "at": {
+    "mode": "mini",
+    "area": "flock",
+    "dictation": "unknown"
+   },
+   "expect": ".island-dictation.unknown"
+  },
+  {
+   "id": "dictation-command-parser",
+   "area": "Desktop",
+   "feature": "The local command parser and name resolver: no model, every command an existing non-answer Intent",
+   "status": "planned",
+   "phase": "V8",
+   "native": "vults-dictation::command (V8.1–V8.3); tested by the rule-2 test over every Intent"
+  }
+ ]
+}

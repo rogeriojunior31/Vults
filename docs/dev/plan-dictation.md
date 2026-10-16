@@ -1,12 +1,14 @@
 # Plan: Dictation
 
-Draft of 2026-10-16, for review. One plan for the Dictation area: dictation into any app, your words
+Draft of 2026-10-16, for review; V0's prototype steps done the same day. One plan for the Dictation area: dictation into any app, your words
 (dictionary, replacements, snippets), styles, statistics and diagnostics, meetings, talking with Zeca
-(K8) and an MCP tool. It joins the single roadmap ([Plan Zeca](plan-zeca.md)) through the rows proposed in
+(K8), local voice commands (V8) and an MCP tool. It joins the single roadmap ([Plan Zeca](plan-zeca.md)) through the rows proposed in
 [Merge into plan-zeca.md](#merge-into-plan-zecamd) once the open decisions are settled.
 
-Nothing here is built yet. The UI was reviewed as a separate prototype (nine pages, eleven island states);
-putting it into the main prototype is step V0.7.
+Nothing in the app is built yet. The UI lives in the single prototype (`design/ui-motion-proposal/dictation.js`):
+a sixth Lab tab with its own side list of ten pages in three groups (Voice: Dictation, Voice commands, Talk
+with Zeca, Meetings, Statistics; Your words: Dictionary, Snippets, Styles; System: Settings, Diagnostics),
+eighteen island states and the caption under the island, waiting for the review in V0.9. The separate proposal it started as was folded in and removed.
 
 ## References
 
@@ -33,10 +35,13 @@ and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) (model clean-up is a
 |---|---|---|---|
 | R1 | X5 voice dictionary dropped (2026-10-12) | **Reopen, local only**: post-processing plus whisper vocabulary; cloud transcription stays dropped | Names of projects and tools come out right; cheap and fully local |
 | R2 | Dictation only into Vults' chat | **Dictation into any app** and straight into flock sessions (new ADR 0031) | Clear gain; the pipeline already exists |
-| R3 | Wake word: no | **Still no.** Hands-free is a double tap on the key | Keeps ADR 0028; no always-open mic |
+| R3 | Wake word: no | **Still no.** Hands-free is a double tap on the key. Zeca's 8 s follow-up mic is off by default | Keeps ADR 0028; no always-open mic |
 | R4 | X3 a voice per vult dropped | Stays dropped; reconsider after V6 | Speaking depends on the opt-in realtime model |
 | R5 | No meetings in the plan | **Meetings in V5**, opt-in per recording, mic and the PipeWire monitor | Useful, but the heaviest part (diarization) |
-| R6 | `DESIGN.md`: Settings is where configuration lives | Dictation settings inside the area, linked from Settings › Chat & voice, one owner of the values | The prototype puts them in the area |
+| R6 | `DESIGN.md`: Settings is where configuration lives | **Settled 2026-10-16 (revised the same day): Settings › Dictation owns every value**, with Diagnostics at its end; Activity › Dictation holds the figures. The area's side list keeps the work (Dictation, Voice commands, Talk with Zeca, Meetings, Dictionary, Snippets, Styles) and links to both. The voice model stays in Chat & voice, shared with the chat | The `DESIGN.md` rule holds unchanged; one owner per value, and figures sit with the other figures |
+| R7 | Each request on the user's behalf has its own switch | **Off by default**: model clean-up (and with it styles, "Write in" and agent sessions in English), meeting summaries, Zeca's voice. Off, the clean-up group shows only its switch | Rule 4 and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) |
+| R8 | The island sees: the flock, badges by shape, a click opens Compact | **The island stays the flock.** Dictation draws a grey line over it only while active; no idle hint, no buttons (no Undo); color only on badge shapes; a card's amber edge still shows. A caption under it carries what the line cannot (what was heard, a cut line), with no buttons, and goes with the dictation | The approved island (P2, P9) and D5 |
+| R9 | Moving around by voice (C11) waits for K8's realtime model | **Voice commands, local (V8)**: their own key; a parser and a name resolver with no model move around the flock, read what Vults knows and quiet projects, with a 90 s memory ("and docs too", "undo"); never type into an app, never answer a card. Not understood: say so, or (a choice) send it to Zeca as a chat message | Instant, free and offline; K8 then reuses it before the model. The same aliases as Your words |
 
 ## Architecture
 
@@ -69,7 +74,9 @@ and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) (model clean-up is a
   smart-turn v3 through `ort`, hold ≤ 1.2 s).
 - **`vults-dictation`** (new, pure): the key state machine (hold to talk; a tap under 0.30 s and a second
   within 0.40 s lock hands-free; Space during a hold locks; 600 ms mic tail; Esc and other keys cancel on
-  X11) and the text pipeline (snippets as marks `⟦n⟧`, replacements, spelling, spoken code, marks back).
+  X11) and the text pipeline (snippets as marks `⟦n⟧`, replacements, spelling, spoken code, marks back);
+  `command`: the voice-command parser and name resolver (V8), pure, returning existing non-answer `Intent`s
+  or a read of the flock tools.
 - **`platform`**: focus at key-down (EWMH on X11, a KWin script on Wayland), XInput2 raw keys on X11, the
   clipboard lease (give back after 0.7 s only if unchanged, hidden from Klipper), XTest and RemoteDesktop
   paste, delivery into flock sessions through their multiplexer, never into a session waiting on a
@@ -96,6 +103,8 @@ and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) (model clean-up is a
 8. The key shown as the desktop bound it.
 9. Diagnostics with per-stage timings.
 10. Talking with real interruption (echo cancellation and the turn machine).
+11. Voice commands for the flock with no model, on their own key, through the same names as Your words.
+12. A spoken cancel that works the same on Wayland, where Esc cannot be bound.
 
 ## Working agreement
 
@@ -118,7 +127,7 @@ and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) (model clean-up is a
   - ports cite only *behavior*, never "ported from X" with its name;
   - the other references (MIT ones) get a `NOTICE` line when code is translated from them; AGPL ones are
     ideas only;
-  - the prototype comments naming references are cleaned at V0.7.
+  - the prototype comments naming references were cleaned at V0.7 (2026-10-16).
 - Layers (`check-layers.sh`):
   - new Connect crates are `vults-audio` and `vults-dictation` (pure: FSM + text pipeline, no IO);
   - anything touching X11, portals, KWin or the clipboard lives in `platform` (Experience);
@@ -153,18 +162,21 @@ needs it.
 
 ## V0 Decisions and the prototype
 
-**Goal.** Record R1–R5 (and R6, surfaced here) as ADR edits. Put Dictation into the single UI prototype,
-translated and covered.
+**Goal.** Record R1–R5 as ADR edits (R6–R8 are settled in the prototype). Put Dictation into the single UI
+prototype, translated and covered.
 
-**User-visible outcome.** The main prototype has a *Dictation* Lab area with its nine pages and the island
-states, in four languages, each page carrying its phase badge. Nothing in the app changes yet.
+**User-visible outcome.** The main prototype has a *Dictation* Lab tab with its own side list of ten pages and
+the island states, in four languages, each page carrying its phase badge. Nothing in the app changes yet.
+
+**Status (2026-10-16).** V0.6–V0.8 are done in the prototype, uncommitted with the rest of the prototype work;
+V0.1–V0.5 and V0.9 wait for the user.
 
 **V0.1 ADR 0028 edit: voice, dictation, meetings** (S)
 - Build: edit `docs/adr/0028-spoken-replies-through-a-realtime-model.md` with dated *History* lines.
   - R1: a local dictionary and whisper `initial_prompt` are allowed; cloud transcription stays out.
   - R3: no wake word, mic opens only on a key or a click. Hands-free is a double tap. Decide whether
-    "reopen 8 s after Zeca asks" (prototype, Conversation page) counts as "opened by the user"; the
-    proposal is yes, and it is bounded and shown on the island.
+    "reopen 8 s after Zeca asks" (prototype: Dictation › Talk with Zeca, *Answer without the
+    key*) counts as "opened by the user"; the proposal is yes, off by default, bounded and shown on the island.
   - R5: Meetings is the one place where audio touches disk, as a temporary WAV deleted after
     transcription. It is opt-in per recording, with a consent line.
   - Licence rule extended to the new models: smart-turn v3, pyannote segmentation-3.0, CAM++.
@@ -188,10 +200,10 @@ states, in four languages, each page carrying its phase badge. Nothing in the ap
 - Build:
   - Dictation becomes a sixth Lab area (Flock, Chat, Tasks, Connections, Activity, Dictation).
   - The island gains dictation states, which never hide or delay a card (D5's test extended).
-  - **R6**: where dictation settings live. `DESIGN.md` says "Settings remains the configuration
-    destination", but the prototype puts *Settings* inside the area. Proposal: the area keeps its page
-    and Settings › Chat & voice links to it, with one owner of the values.
-- Needs: none. Done when: accepted; `DESIGN.md` gets a line if R6 changes the rule.
+  - The island stays the flock (R8): a grey line over it while dictating, no idle hint, no buttons.
+  - R6: the area owns its settings in its own side list; `DESIGN.md` gets a line saying a Lab area may own
+    its settings when Settings links to them.
+- Needs: none. Done when: accepted; `DESIGN.md` has the line.
 
 **V0.4 ADR 0019 consequences** (S)
 - Build: name the new gate features.
@@ -206,51 +218,60 @@ states, in four languages, each page carrying its phase badge. Nothing in the ap
 - Build: apply the *Merge into plan-zeca.md* section below to `plan-zeca.md`; this file keeps the step detail.
 - Needs: V0.1–V0.4. Done when: merged.
 
-**V0.6 Prototype strings to English** (S)
-- Build:
-  - the separate proposal (`design/ui-motion-proposal/dictation/`, not committed yet: it is hardcoded pt-BR
-    and would fail `check-english.sh`) has `dictation.js` and `page.html`; rewrite every
-    sentence in English through the prototype's `t()`;
-  - add `[pt-BR, es, zh]` triples to `copy.json` (pt-BR = today's text);
-  - remove reference-project names from comments ("Patter's design" → "turn-taking design").
-- Tests: `P.missing()` empty.
-- Done when: the separate proposal still builds (`dictation/build.mjs`) and reads the same in pt-BR.
+**V0.6 Prototype strings to English** (S) — done 2026-10-16
+- Every sentence is English through the prototype's `L()`/`phrase()`; 245 `[pt-BR, es, zh]` triples went
+  into `copy.json`. The sample dictations are translated too, so the text pass shows in each language.
+- No reference-project names in the module; sample data has no real names or addresses.
+- The separate proposal (`dictation/`, never committed) was folded into V0.7 and removed, as the single
+  prototype rule asks.
 
-**V0.7 Prototype: Dictation as a Lab area** (M)
-- Build:
-  - add `dictation.js` to `MODULES` in `build.mjs`, adapted to the workspace scope (`el`, `button`, `toast`
-    already exist there, so drop the copies);
-  - add the Lab nav key `nav-dictation` with icon `mic`, and the area `dictation` with sub-pages `history`,
-    `talk`, `notes`, `stats`, `dictionary`, `snippets`, `styles`, `settings`, `diagnostics`;
-  - move `dx-*` CSS into `template.html`;
-  - draw the island states in `island.js` at the Island/Mini size (production Mini is 340 × 38; long state
-    lines such as "In session api · Codex · in English" must truncate with the full text in a tooltip);
-  - delete `dictation/` once merged (or keep `build.mjs` as a pointer).
-- Rebase on the current uncommitted prototype work first (`git status` shows `build.mjs`, `copy.json`,
-  `verify.mjs`… modified).
-- Done when: `node design/ui-motion-proposal/build.mjs` builds under the 1 MB limit.
+**V0.7 Prototype: Dictation as a Lab area** (M) — done 2026-10-16
+- `dictation.js` is a module in `build.mjs`'s `MODULES`, in the workspace scope.
+- The Lab nav gains `nav-dictation` (icon `mic`, Alt+6). The area has its own side list, drawn like Settings'
+  (grouped, with icons and the sodium bar on the page shown), as the user's original proposal had it: Voice
+  (Dictation, Voice commands, Talk with Zeca, Meetings, Statistics), Your words (Dictionary, Snippets, Styles),
+  System (Settings, Diagnostics). Dictation has *Try it*, Voice commands *Try a command*. A first pass with
+  top tabs and a Settings › Dictation category was reverted the same day after the user's review.
+- Settings › Chat & voice keeps the voice model and links to Dictation › Settings.
+- The island states are drawn over the flock by `paintDictationIsland()` from `island.js`, and the
+  prototype controls get an *Island while dictating* row. *Try it* plays listening → transcribing → pasted
+  on the island and comes back to History with the new line.
+- `dx-*` CSS sits in `template.html`; in a Lab under 560 px the six Lab tabs are icons and their counts give
+  way, and under 760 px the side list becomes one scrolling row above the page.
+- Size: 986,883 of the 1,000,000-byte limit at first. `build.mjs` now inlines `copy.json` unescaped and
+  without indentation (the page declares UTF-8): 927,318 before the additions below, 948,702 after, 953,914 with the side list.
+- Added the same day, after the comparison with the reference app's voice assistant (R9):
+  - *Try a command* next to *Try it*: it plays the next of nine sample commands on the island (open a
+    session, who is waiting, approve it → refused, mute web, and docs too, undo, an ambiguous name and its
+    answer, not a command) and History keeps each as a *Voice command* line;
+  - Dictation › *Voice commands* (V8), a page with the recent commands under it: the switch, the command key (Ctrl+Alt+Z), the names it
+    understands, what happens when it is not a command, and *What you can say*;
+  - Key: *Cancel by voice*; Voice: *Music while you speak* and *Caption under the island*;
+  - Your words: replacements also fix command names; project vocabulary also reads the window title;
+  - the island gains *Cancelled* and six command states (a second row in the prototype controls) and the
+    caption under it.
 
-**V0.8 Prototype coverage** (M)
-- Build:
-  - `features.json`: one entry per page, per island state (11) and per key behavior (hold, double tap,
-    Space lock, Esc, paste again, terminal paste, session delivery, Copied fallback). Each entry has
-    `status: "planned"`, a `phase` (`V1`…`V7`), `at: {mode:'room', area:'dictation', page}` and an `expect`
-    selector.
-  - `scope.json`: add sources and an approved line `P12 Dictation` after review.
-  - `verify.mjs`:
-    - each page shows its phase badge (`.dx-phase` text equals the manifest's phase);
-    - "Simulate a dictation" walks idle→listening→working→done;
-    - the text pass marks snippet/replacement/word segments;
-    - adding a word, replacement and snippet works; choosing a style persists;
-    - retention "Do not keep" hides the history;
-    - every island state renders without overflow at Mini width;
-    - zero untranslated sentences.
-- Done when: `node design/ui-motion-proposal/verify.mjs` passes. (It already shells out to `python3` for
-  HTML parsing; do not add more Python, and consider replacing it later.)
+**V0.8 Prototype coverage** (M) — done 2026-10-16
+- `features.json`: the Dictation entries carry `status: "planned"` and a `phase`; every page of the side list,
+  the meeting summary and to-dos, the settings rows, Zeca's voice, each island state and the caption are placed,
+  and keys, paste, focus and the command parser are native with a reason (166 features in the manifest). `verify.mjs --coverage` opens each place in four languages (new `at` keys:
+  `dxTab`, `meetingTab`, `dictation`).
+- `scope.json`: `dictation.js` in the sources; `P12 Dictation` under `pending` until V0.9.
+- `verify.mjs` flows: the side list has ten pages; History and its phase badge; with the clean-up off nothing is rewritten and
+  every line is "As spoken"; a replacement is marked; search filters; adding a word; Try a sentence; *Try it*
+  walks the island and adds a line; after it the island is the flock again; the *Held for a card* state; the
+  defaults of the clean-up, Send by itself and agents' spoken answers are off; turning the clean-up on shows
+  its model and gives the session its English prompt; "Do not keep" hides the history; recording a meeting;
+  Zeca's voice is off and shows its model when on; zero untranslated sentences. After R9: the caption stays
+  away with nothing to add, shows what was heard over an answer, goes with the dictation and can be turned
+  off; *Cancelled*; six commands in a row give commanded, answered, refused (not drawn like a card),
+  commanded ×3, and *undo* reverses the remembered one; commands are on by default, and off they ask nothing
+  more.
+- Not covered: overflow at Mini width (the DOM simulation has no layout; checked by screenshots instead).
 
 **V0.9 Prototype review** (S)
-- Build: user review of the integrated prototype; the findings are fixed in place; `scope.json` records
-  `P12` approved with the date.
+- Build: user review of the integrated prototype; the findings are fixed in place; `scope.json` moves `P12`
+  from `pending` to `approved` with the date.
 - Done when: signed off. This gates every production UI step below.
 
 ---
@@ -428,10 +449,16 @@ flock session. Local only, no model clean-up.
 - Needs: V1.9, V0.2.
 
 **V1.12 Island dictation states** (M)
-- Build: in `ui/src/island/` (`fsm.ts`, `render.ts`, new `dictation.ts`):
-  - the states idle hint (bound key), listening/locked (bands + partial text from the existing preview),
-    working, done (Pasted / In session · app · words · fixes), clipboard ("Ctrl+V to paste"), retry
-    (plan B), failed (no sound → Dictation › Settings);
+- Build: in `ui/src/island/` (`fsm.ts`, `render.ts`, new `dictation.ts`), a grey line over the flock (R8),
+  only while a dictation is live:
+  - listening/locked (bands + partial text from the existing preview), working, done (Pasted · app · words ·
+    fixes), session (In session · app), held (the session waits on a card: Copied, pointing to the card),
+    clipboard ("Ctrl+V to paste"), retry (plan B), failed (no sound → Dictation › Settings);
+  - no idle hint and no buttons: the key is shown in Settings, and a click still opens Compact;
+  - the caption under the island (R8): what was heard, dim, over the result in two rows at most; shown only
+    when it adds something (heard text, a cut line, live words that no longer fit); no buttons, clicks pass
+    through; it leaves 2 s after the dictation ends; a switch in Dictation › Settings › Voice;
+  - *Cancelled* (V1.17);
   - an optional start sound through `sound.ts`;
   - cards always win: a card arriving mid-dictation shows (D5).
 - UI: prototype island states → production.
@@ -439,7 +466,7 @@ flock session. Local only, no model clean-up.
   each state at Mini and Quick widths and checks no overflow and a translated text.
 - Done when: the user reviews it in the running app on X11 and Wayland.
 - Needs: V1.6, V0.9.
-- Open question Q5: "Undo" on the Done state needs a synthetic Ctrl+Z; drop it unless wanted.
+- Q5 settled: no "Undo" on the island (it would need a synthetic Ctrl+Z, and the island has no buttons).
 
 **V1.13 History store** (S)
 - Build: a migration adds
@@ -456,8 +483,10 @@ flock session. Local only, no model clean-up.
 
 **V1.14 Lab › Dictation area and History page** (M)
 - Build:
-  - `ui/src/surfaces/nest/dictation/` with `area.ts` (sub-navigation as in the prototype) and `history.ts`;
-  - grouped by day, search, heard vs written, copy, paste again (`talk-again`), delete;
+  - `ui/src/surfaces/nest/dictation/` with `area.ts` (the side list in three groups, as in the prototype)
+    and `history.ts`;
+  - figures for today (words, time saved, words per minute), grouped by day, search, heard vs written, copy,
+    paste again (`talk-again`), delete;
   - "Not kept" empty state;
   - the `nav-dictation` tab in the Nest head; Tauri commands `dictation_history`, `dictation_delete`,
     `dictation_clear`, `dictation_paste_again`.
@@ -466,15 +495,17 @@ flock session. Local only, no model clean-up.
   read error); i18n check.
 - Needs: V1.13, V0.3, V0.9.
 
-**V1.15 Dictation settings page** (M)
-- Build: settings keys and the page:
+**V1.15 Settings › Dictation** (M)
+- Build: settings keys and a Settings category (R6), linked from the area's side list:
   - key: bound key shown, "Change in KDE…" opens System Settings › Shortcuts;
   - mode (hold + double tap / hold only), Space lock, Esc cancel, paste again key;
   - agents: deliver into session, send automatically, spoken code (V1.16);
   - voice: mic, model (shared with chat), language, start sound, cut repeats, plan B;
   - paste: terminals with Ctrl+Shift+V, give back the clipboard;
+  - meetings: summary and to-dos (V5.6);
   - privacy: retention, erase.
-- R6 decides the owner of these values; Settings › Chat & voice links here.
+- The voice model and its language stay in Settings › Chat & voice, shared with the chat; Chat & voice links
+  here.
 - Tests: an H4 fixture for the new keys; renderer check.
 - Needs: V1.14.
 
@@ -487,10 +518,27 @@ flock session. Local only, no model clean-up.
 - Tests: pt/en/es tables; prose apps unchanged.
 - Needs: V1.7.
 
-**V1.17 V1 docs and smoke** (S)
+**V1.17 Cancel by voice** (S)
+- Build: when the final transcript is only, or ends with, a cancel phrase ("cancela", "deixa pra lá", <!-- check-english:allow -->
+  "cancel", "never mind", "déjalo"; normalised, whole phrase) nothing is pasted, the island says <!-- check-english:allow -->
+  *Cancelled* and History keeps nothing. A switch in Dictation › Settings › Key, on by default.
+- It works the same on X11 and Wayland, so it covers what Q1 cannot: Esc is not bindable on Wayland.
+- Port: the cancel phrases from [VA] 3.3 (rewritten, pt/en/es tables).
+- Tests: phrase table; "cancel the meeting at noon" is pasted (only a trailing or whole phrase cancels).
+- Needs: V1.6.
+
+**V1.18 Music while you speak** (S)
+- Build: on listening, lower MPRIS players to 25 % (or pause them) and give each back its own volume or
+  playback state at the end; not while a meeting records; a player whose volume the user changed meanwhile
+  is left alone. A choice in Dictation › Settings › Voice (Lower to 25 %, Pause it, Leave it).
+- Port: idea from [VA] 3.4; MPRIS through `zbus` (already a dependency of `platform`), in `platform`.
+- Tests: a fake MPRIS player on a private D-Bus; restore after cancel and after a crash of the player.
+- Needs: V1.6.
+
+**V1.19 V1 docs and smoke** (S)
 - Build: `docs/guide/dictation.md` (+ pt-BR), a settings reference, the architecture diagram, CHANGELOG.
 - Smoke matrix: {X11, Wayland} × {Firefox, Kate, Konsole, tmux session, Vults chat} × {hold, double tap,
-  cancel}, with Zeca on and off.
+  cancel, spoken cancel, music playing}, with Zeca on and off.
 - Done when: the user signs off V1.
 
 ---
@@ -535,7 +583,8 @@ flock session. Local only, no model clean-up.
 - Tests: an `#[ignore]`d, env-driven WER test (models not in CI); a unit test of the prompt builder and cap.
 
 **V2.4 Project vocabulary** (M)
-- Build: for the focused session's roost:
+- Build: for the focused session's roost, or for a terminal or editor whose window title names a known
+  project (the title read at key-down with the focus, V1.7):
   - package, crate and module names (`Cargo.toml`, `package.json`), top-level file names and the branch;
   - cached per roost and refreshed on a session start;
   - merged into V2.3's prompt under the cap.
@@ -543,11 +592,10 @@ flock session. Local only, no model clean-up.
 - Needs: V2.3, V1.7.
 
 **V2.5 Dictionary and Snippets pages** (M)
-- Build: the prototype's Dictionary page:
-  - word chips, replacements table, "Help the model with these words" and "Project vocabulary" toggles,
-    "How it is applied";
-  - **Try a sentence** through a `dictation_try` command (real pipeline);
-  - a Snippets page.
+- Build: the prototype's two pages under *Your words*:
+  - Dictionary: word chips, replacements table, "Help the model with these words" and "Project vocabulary"
+    toggles, "How it is applied" and **Try a sentence** through a `dictation_try` command (real pipeline);
+  - Snippets: the table and the form for a new one.
 - Tests: renderer checks; i18n.
 - Needs: V2.2, V0.9.
 
@@ -604,9 +652,11 @@ flock session. Local only, no model clean-up.
 - Tests: resolution table.
 - Needs: V1.7, V3.2.
 
-**V3.4 Styles page** (M)
-- Build: the prototype's Styles page (clean-up switch, provider picker, three rules, style cards with
-  samples, language, per app); History shows "translated" and style.
+**V3.4 Clean-up settings** (M)
+- Build: the prototype's *Styles* page: the clean-up switch, off by default (R7), and the four style cards
+  (As spoken, Natural, Polished, Prompt; while off they say every line is pasted as spoken). On, it also shows
+  the provider, "Write in", agent sessions in English and a collapsed per-app list.
+  History shows the style and "in English" when a line was translated.
 - Tests: renderer checks.
 
 **V3.5 Docs and sign-off** (S).
@@ -621,15 +671,16 @@ flock session. Local only, no model clean-up.
 - Port: definitions from [PT] 262-278.
 - Tests: a percentile helper; post-cancel rows excluded.
 
-**V4.2 Statistics page** (M)
-- Build: week/month/all; words, time saved (`max(0, words/45 − secs/60)`), wpm (0 under 1 s), streak,
-  daily bars, top apps.
+**V4.2 Activity › Dictation** (M)
+- Build: a Dictation tab in Activity (R6), linked from the area's side list, and dictated words as a figure
+  in Activity's week; week/month/all; words, time saved (`max(0, words/45 − secs/60)`), wpm (0 under 1 s), daily bars,
+  top apps. No streaks or records.
 - Port: [TLP] 400-403, [DD] 294-303.
 - Reuse Activity's chart pieces and the `DESIGN.md` rule "missing measurements are unknown, not zero".
 - Tests: math table tests (Rust); renderer check.
 
-**V4.3 Diagnostics page** (M)
-- Build:
+**V4.3 Diagnostics** (M)
+- Build: a *Diagnostics* section at the end of Settings › Dictation:
   - a mic test (bands, noise floor in dB, verdict);
   - the stage table (V4.1);
   - counters: loops cut, plan B used, "Copied" outcomes;
@@ -661,7 +712,8 @@ deleted.
 
 **V5.2 Recording controls** (M)
 - Build:
-  - start/stop from Meetings and from the island (red dot, timer, the "tell people you are recording" line);
+  - start/stop from the Meetings page, with a grey recording line, a timer and the "tell people you are
+    recording" line;
   - an optional live transcript;
   - dictation stays available, with its own stream.
 - Tests: state machine (recording × dictation).
@@ -687,7 +739,8 @@ deleted.
 
 **V5.6 Summary and to-dos** (M)
 - Build: the JSON `{title, summary, key_points, todos[{text, owner, due}]}` from the chat's model through
-  gate feature `meeting-summary`, 120 s timeout.
+  gate feature `meeting-summary`, 120 s timeout. Off by default (R7): Dictation › Settings › Meetings; while
+  off, the Summary tab says why and links there.
 - Port: [TLP] 353 (`notes/builder.rs:239-243`).
 - A to-do can become a Task with a click (W3).
 - Tests: cassette eval.
@@ -698,7 +751,7 @@ deleted.
 - Tests: exporter golden files.
 
 **V5.8 Meetings page** (M)
-- Build: the prototype's page (list, transcript/summary tabs, speakers, to-dos, export), docs and sign-off.
+- Build: the prototype's page (list, Transcript/Summary/To-dos, renamed speakers, export), docs and sign-off.
 
 ---
 
@@ -762,16 +815,18 @@ deleted.
 **V6.6 Zeca's voice tools and delegation** (M)
 - Build:
   - the voice turn uses the existing `flock_tools.rs` (`flock_list`…) — K8's "Done when";
-  - "moving-around commands" (C11: next or previous session, open the Nest) map to existing intents that are
-    not answers;
+  - moving-around commands (C11) are V8's: the voice turn tries V8's parser first and calls the model only
+    when it is not a command;
+  - "acted, not repeated": when the model fails after a tool already ran, the turn ends with "Done" and the
+    local parser does not run the action again; Zeca says it is done only after the action ran;
   - a consult pattern for Claude Code/Codex questions, with a reassurance line after 1.5 s.
 - Tests: the rule-2 test over every `Intent` (H1) covers the voice path: no `Decide`/`DecideAlways`
   reachable.
 
-**V6.7 Conversation page and island speaking states** (M)
-- Build: the prototype's Conversation page (opt-in switch saying where audio goes, model, budget, turn
-  settings, interrupt, echo, "remember what you heard") and island `speaking`/`interrupted`; docs; sign-off;
-  K8 moves to Done.
+**V6.7 Talk with Zeca page and island speaking states** (M)
+- Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio
+  goes; on, the model, budget, end of turn, interrupting and *Answer without the key*, off by default; "never
+  answers a card" always shown) and the island `speaking`/`interrupted` lines; docs; sign-off; K8 moves to Done.
 
 ---
 
@@ -793,7 +848,59 @@ deleted.
 
 **V7.3 Offer it to agents** (M)
 - Build: add the tool to agents' MCP configs only through `agent-config` (rule 3: backup, diff, click); the
-  Settings switch "Agents may ask for a spoken answer" (off).
+  switch "Agents may ask for a spoken answer" in Dictation › Settings › Agents (off).
+
+---
+
+## V8 Voice commands (R9)
+
+**Goal.** Move around the flock and read it by voice, instantly and with no model, on a key of its own.
+
+**User-visible outcome.** Hold Ctrl+Alt+Z, say "open api", "who is waiting?", "mute web… and docs too…
+undo", let go: the island and its caption show what was done or the answer. "Approve" is refused with how to
+answer a card.
+
+**V8.1 Normaliser and phrase tables** (S)
+- Build: in `vults-dictation::command`: lowercase, accents and punctuation folded, politeness and leading
+  fillers stripped ("você pode", "por favor", "can you", "please", "uh", "então"), infinitives to imperatives <!-- check-english:allow -->
+  (pt/en/es tables), split on "e depois/and then" only when every part parses.
+- Port: [VA] 5.2 steps 1–6 and the multi-action rule (rewritten; French tables replaced by pt/en/es).
+- Tests: table tests per language.
+
+**V8.2 Name resolver** (S)
+- Build: aliases (Your words replacements whose target is a project or agent name), exact name, a single
+  whole word, then Levenshtein (1 for names up to 4 letters, 2 above); a runner-up within the same distance
+  makes it ambiguous and the island asks *Which one?*; the answer within 90 s resolves it.
+- Port: [VA] 5.3.
+- Tests: "apy" → ambiguous between api and api-gateway; "cloud code" → Claude Code through the alias.
+- Needs: V2.1.
+
+**V8.3 Intents and reads** (M)
+- Build: the command table maps only to existing `Intent`s that are not answers: `Focus`, `FocusNext`,
+  `FocusPrevious`, `Jump`, `OpenFolder`, `SetProjectPref` (mute, pin, hide and their undo); reads go through
+  `flock_tools` (`pending_asks`, `session_detail`, `usage`, `github_snapshot`) and are answered as text
+  from templates, with no model. "Approve", "allow", "yes" and the like are matched on purpose and refused
+  with the card rule.
+- A 90 s context: the last command with its target, for "and X too", "same for X" and "undo" (the inverse:
+  mute↔unmute, pin↔unpin, focus↔previous front).
+- Tests: the rule-2 test over every `Intent` (H1) gains the command path: no `Decide`, `DecideAlways`,
+  `Answer` or `Release` is reachable from any phrase; property test over random transcripts.
+- Needs: V8.1, V8.2.
+
+**V8.4 The command key and the island** (M)
+- Build: a second portal shortcut `talk-command` (default Ctrl+Alt+Z, shown as the desktop bound it), the
+  same capture and whisper path as dictation with no text pass and no paste; island states *Command*,
+  *Command done*, *Answer*, *Which one?*, *Not by voice*, *Not a command*, with the caption carrying what was
+  heard; History keeps the command line (no paste again).
+- When it is not a command: say so (default), or send it to Zeca as a chat message (a request on the user's
+  behalf, through the gate like any typed message).
+- Tests: `check-dictation-island.mjs` covers the six states; the key never pastes text.
+- Needs: V8.3, V1.12, V1.5.
+
+**V8.5 Settings and docs** (S)
+- Build: the prototype's *Voice commands* group (switch on by default, key, names, the not-a-command choice,
+  *What you can say*); `docs/guide/dictation.md` gains a commands section (+ pt-BR); sign-off.
+- Needs: V8.4.
 
 ---
 
@@ -806,7 +913,7 @@ detail stays in this file as `V<phase>.<n>`, and code comments cite `plan-zeca V
 
 | # | Step | Needs | Done when |
 |---|---|---|---|
-| V0 | Decisions: ADR 0028 edit (R1, R3, R5, model licences), ADR 0031 dictation into other apps (R2), ADR 0021 edit (Dictation area, island states, R6), ADR 0019 features; Dictation in the prototype, four languages, covered by `verify.mjs` | G9 | The user accepts the ADRs and the prototype (P12) |
+| V0 | Decisions: ADR 0028 edit (R1, R3, R5, model licences), ADR 0031 dictation into other apps (R2), ADR 0021 edit (Dictation area, island states, R8), ADR 0019 features; Dictation in the prototype, four languages, covered by `verify.mjs` | G9 | The user accepts the ADRs and the prototype (P12) |
 | V1 | Dictation in any app: `vults-audio`, key state machine, the talk key with Zeca off, focus at key-down, clipboard lease, XTest and RemoteDesktop paste, delivery into flock sessions (never into one waiting on a permission), island states, History and Settings | V0 | The R3-style smoke passes on X11 and Wayland with Zeca on and off |
 | V2 | Your words (was X5, local only): dictionary, replacements, snippets, whisper vocabulary, project vocabulary, Try a sentence | V1 | Measured WER down on the fixture set with the dictionary on |
 | V3 | Styles: clean-up as a filter (evals), Prompt, translation, per app; Chat & voice provider or a local one, through the gate | V1, Z6 | Injection and question evals pass; the timeout pastes raw text |
@@ -814,13 +921,14 @@ detail stays in this file as `V<phase>.<n>`, and code comments cite `plan-zeca V
 | V5 | Meetings: mic + system audio, temporary WAV deleted, diarization via `ort`, summary through the gate, MD/SRT/VTT | V1, V0 (R5) | A 30-minute call gives speakers, a summary and no audio left on disk |
 | V6 | = K8, delivered with the turn machine, end of turn, realtime client, playback and heard prefix, AEC | K8's needs, V1 | K8's own criterion |
 | V7 | `vults_dictate`: a question card filled by voice, sent with a click | M7, V1 | An agent's question answered by voice, audited |
+| V8 | Voice commands (R9, takes C11): own key, local parser and name resolver, existing non-answer intents and flock reads, 90 s memory and undo | V1, V2 | "open api", "who is waiting?" and "mute web… and docs too… undo" work with no model; H1 covers the command path |
 
 Edits to existing rows and lists:
 - **K8**:
   - becomes "Voice on the same brain (V6): an opt-in realtime model (replaces C9), turn-taking and barge-in,
-    open mic only as a bounded follow-up after Zeca asks (P9), moving-around commands (C11); never answers a
-    card";
-  - Needs: Z6, G9, V1;
+    open mic only as a bounded follow-up after Zeca asks (P9), V8's commands tried before the model; never
+    answers a card";
+  - Needs: Z6, G9, V1, V8;
   - Done when unchanged ("A spoken question uses `flock_list`").
 - **UX11** ("moods/voice"): its voice part is V6/V7's UI.
 - **Dropped (2026-10-12)**: rewrite as "X5 voice dictionary: reopened as V2 (local only, 2026-10-xx); cloud
@@ -832,7 +940,7 @@ Edits to existing rows and lists:
   delivered into a session waiting on a permission (ADR 0031)".
 - **Guarantees**:
   - "Dictation never answers a permission | core test: a waiting session yields Copied (V1.11); H1 covers
-    voice intents (V6.6)";
+    voice intents (V6.6) and voice commands (V8.3)";
   - "Meetings leave no audio | a leftover-WAV cleanup test (V5.1)".
 
 ---
@@ -864,9 +972,12 @@ Edits to existing rows and lists:
    - No `sherpa-onnx` crate (espeak-ng).
 9. **Brand.** Ported code must not carry the source's name; reviews grep for it (`check-brand.sh` catches
    only the two names).
-10. **Surfaces.** Island text at Mini width; a sixth Lab tab vs ADR 0021's fixed set; Settings ownership
-    (R6).
-11. **Prototype drift.** The main prototype has uncommitted work. V0.7 must rebase, not overwrite.
+10. **Surfaces.** Island text at Mini width (it truncates, with the full line in the tooltip); a sixth Lab tab
+    vs ADR 0021's fixed set (in a Lab under 560 px the tabs are icons and their counts give way); the area's side list becomes one
+    scrolling row under 760 px.
+11. **Prototype size.** 948,702 of 1,000,000 bytes after R9's additions (the copy is now inlined unescaped).
+12. **Commands misheard.** A wrong name could focus or mute the wrong project. Mitigation: ambiguity asks,
+    every command is reversible ("undo", 90 s), and none of them answers a card or sends text anywhere.
 
 ## Open questions
 
@@ -875,8 +986,9 @@ Edits to existing rows and lists:
 - Q2: does the RemoteDesktop restore token belong in the keyring (rule 4) or in the data folder (0600)?
 - Q3: does a loopback provider (Ollama) skip the gate's budget, as embeddings do today?
 - Q4: should dictation keep Ctrl+Alt+V shared with the chat (one key, context decides), or get its own id?
-  Proposal: one key.
-- Q5: keep "Undo" after a paste (needs a synthetic Ctrl+Z) or drop it from the prototype?
+  Proposal: one key for dictation and chat; voice commands get their own id (R9), so a command is never
+  pasted and dictation never runs one.
+- Q5: settled 2026-10-16, no Undo on the island (R8).
 - Q6: may Vults offer to load PipeWire `module-echo-cancel` itself (a system audio change, with a click), or
   only guide the user?
 - Q7: order of whisper work when a meeting, a dictation and a chat preview collide.
@@ -884,11 +996,15 @@ Edits to existing rows and lists:
 - Q9: auto-learn words from corrections in History (the reference has none)? Proposal: a "Add to
   dictionary" button on a highlighted word, no silent learning.
 - Q10: Parakeet v3 through `ort` (CC-BY-4.0 weights) as a second engine: worth an evaluation step after V2?
-- Q11: where dictation settings live (R6): in the area, in Settings, or one page linked from both.
+- Q11: settled 2026-10-16, the area's own Settings page, linked from Settings › Chat & voice (R6).
+- Q12: default command key. Ctrl+Alt+Z is free in Plasma's defaults; is it free in the user's setup, or
+  should the portal ask with no default?
+- Q13: may "Send it to Zeca as a message" be offered when Zeca's chat runs through a CLI provider, or only
+  with the API chat?
 
 ### Critical Files for Implementation
 - /home/rogeradas/Projects/Vults/crates/voice/src/record.rs (and lib.rs, vad.rs)
 - /home/rogeradas/Projects/Vults/crates/platform/src/shortcuts.rs (and jump.rs, jump/kwin.rs, jump/x11.rs)
 - /home/rogeradas/Projects/Vults/app/src/lib.rs (listen_shortcuts, 707-760) and app/src/voice.rs, app/src/gate.rs
 - /home/rogeradas/Projects/Vults/crates/store/src/lib.rs (MIGRATIONS)
-- /home/rogeradas/Projects/Vults/design/ui-motion-proposal/dictation/dictation.js with build.mjs, verify.mjs, features.json, copy.json
+- /home/rogeradas/Projects/Vults/design/ui-motion-proposal/dictation.js with island.js, settings.js, verify.mjs, features.json, copy.json
