@@ -735,9 +735,8 @@
 #vults-ui-proposal .week-nav { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 #vults-ui-proposal .week-nav h3 { font-size:15px; font-weight:600; margin:0 8px; }
 #vults-ui-proposal .week-nav [data-key=save-image] { margin-left:auto; }
-#vults-ui-proposal .week-summary,#vults-ui-proposal .week-records { display:flex; flex-wrap:wrap; gap:28px; padding:14px 0; margin:10px 0; border-bottom:1px solid var(--border); }
-#vults-ui-proposal .week-summary strong { display:block; font-size:18px; font-weight:500; }
-#vults-ui-proposal .week-summary span,#vults-ui-proposal .week-records small { display:block; font-size:12px; color:var(--fg-muted); }
+#vults-ui-proposal .week-records { display:flex; flex-wrap:wrap; gap:28px; padding:14px 0; margin:10px 0; border-bottom:1px solid var(--border); }
+#vults-ui-proposal .week-records small { display:block; font-size:12px; color:var(--fg-muted); }
 #vults-ui-proposal .week-chart { display:flex; align-items:flex-end; gap:12px; height:138px; margin:16px 0; }
 #vults-ui-proposal .week-day { flex:1; min-width:0; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:stretch; gap:6px; color:var(--fg-muted); font-size:12px; text-align:center; }
 #vults-ui-proposal .week-day .day-bar { display:block; background:var(--fg-muted); border-radius:3px 3px 0 0; min-height:3px; }
@@ -900,10 +899,11 @@
 #vults-ui-proposal .dx-time { color:var(--fg-muted); flex:none; }
 #vults-ui-proposal .dx-working { flex:none; width:48px; height:3px; border-radius:2px; background:linear-gradient(90deg,var(--raised),var(--fg-muted),var(--raised)); background-size:200% 100%; animation:vp-shimmer 1.2s linear infinite; }
 #vults-ui-proposal .dx-phase { display:inline-block; margin-left:8px; padding:1px 7px; border:1px solid var(--border); border-radius:10px; color:var(--fg-muted); font-size:11px; font-weight:500; letter-spacing:0; vertical-align:middle; text-transform:none; }
-#vults-ui-proposal .dx-tiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:16px; }
-#vults-ui-proposal .dx-tile { background:var(--panel); border-radius:10px; padding:12px 14px; }
-#vults-ui-proposal .dx-tile strong { display:block; font-size:20px; font-weight:600; letter-spacing:-.4px; }
-#vults-ui-proposal .dx-tile small { color:var(--fg-muted); font-size:12px; }
+/* One figure tile for the pages that lead with numbers (Activity, Dictation). */
+#vults-ui-proposal .stat-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin:10px 0 16px; }
+#vults-ui-proposal .stat-tile { background:var(--panel); border-radius:10px; padding:12px 14px; min-width:0; }
+#vults-ui-proposal .stat-tile strong { display:block; font-size:20px; font-weight:600; letter-spacing:-.4px; }
+#vults-ui-proposal .stat-tile small,#vults-ui-proposal .stat-tile span { display:block; color:var(--fg-muted); font-size:12px; }
 #vults-ui-proposal .workspace-view.dx-view { padding:0; overflow:hidden; display:flex; flex-direction:column; }
 #vults-ui-proposal .dx-view .dx-grid { flex:1; min-height:0; gap:0; grid-template-columns:200px minmax(0,1fr); }
 #vults-ui-proposal .dx-view .dx-pages { padding:16px 8px 16px 12px; overflow-y:auto; }
@@ -962,7 +962,7 @@
 #vults-ui-proposal .dx-apps small { color:var(--fg-muted); text-align:right; }
 #vults-ui-proposal .dx-keys { display:inline-flex; gap:4px; }
 #vults-ui-proposal .dx-keys kbd { font-size:11px; padding:4px 6px; }
-@media(max-width:760px) { #vults-ui-proposal .dx-meetings { grid-template-columns:1fr; } #vults-ui-proposal .dx-tiles { grid-template-columns:1fr 1fr; } }
+@media(max-width:760px) { #vults-ui-proposal .dx-meetings { grid-template-columns:1fr; } #vults-ui-proposal .stat-tiles { grid-template-columns:1fr 1fr; } }
 @media(max-width:620px) {
   #vults-ui-proposal .review-stage { padding:12px 0; } #vults-ui-proposal .island-caption { top:56px; }
   #vults-ui-proposal .workspace-view { padding:16px 14px; }

@@ -92,7 +92,7 @@
     return p;
   }
   const dxPhase=(node,phase)=>{node.querySelector('h2')?.append(el('span','dx-phase',null,document.createTextNode(phase)));return node;};
-  const dxTile=(value,label)=>el('div','dx-tile',null,el('strong','counter',null,document.createTextNode(value)),el('small',null,label));
+  const dxTile=(value,label)=>el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(value)),el('small',null,label));
 
   const dxOpen=page=>{dx.tab=page;setArea('dictation',state.mode==='full'?'full':'room');};
   // Each page: its title, a line about it and its actions, then its body.
@@ -132,7 +132,7 @@
   function dxHistoryPage(host){
     if(settings.dictKeep==='0'){host.append(el('section','empty-state',null,el('h3',null,'History is off'),el('p',null,'Only the last text stays in memory, for Paste again. Statistics still count.'),button('Dictation settings','quiet-control',()=>dxOpen('settings'))));return;}
     const today=dxHistory.filter(h=>h.day==='Today'&&!h.command).reduce((n,h)=>n+dxWordCount(dxPlain(dxFinal(h))),0)+1188;
-    host.append(el('div','dx-tiles',null,dxTile(today.toLocaleString(language),'words today'),dxTile(phrase('{n} min',{n:14}),'saved today'),dxTile('152','words per minute')));
+    host.append(el('div','stat-tiles',null,dxTile(today.toLocaleString(language),'words today'),dxTile(phrase('{n} min',{n:14}),'saved today'),dxTile('152','words per minute')));
     const finder=search('Search what you dictated',value=>{dx.query=value;fill();});finder.querySelector('input').value=dx.query;
     const kept=el('span','status',null,el('span','shape shape-quiet'),el('span',null,{'7':'Kept 7 days','30':'Kept 30 days','365':'Kept 1 year',all:'Kept always'}[settings.dictKeep]));
     const list=el('div','dx-list');host.append(el('div','workspace-toolbar dx-toolbar',null,finder,kept),list);fill();
@@ -199,7 +199,7 @@
     host.append(el('div','dx-meetings',null,list,detail));
   }
   function dxStatsPage(host){
-    host.append(el('div','dx-tiles',null,dxTile((48920).toLocaleString(language),'words dictated'),dxTile(phrase('{h} h {m} min',{h:5,m:26}),'saved'),dxTile('152','words per minute')));
+    host.append(el('div','stat-tiles',null,dxTile((48920).toLocaleString(language),'words dictated'),dxTile(phrase('{h} h {m} min',{h:5,m:26}),'saved'),dxTile('152','words per minute')));
     const max=Math.max(...DX_DAYS),chart=el('div','dx-chart');chart.setAttribute('role','img');chart.setAttribute('aria-label',L('Words per day, last 2 weeks'));
     DX_DAYS.forEach((n,i)=>{const bar=el('span',i===DX_DAYS.length-1?'today':null);bar.style.height=(n/max*100)+'%';bar.setAttribute('data-tooltip',phrase('{n} words',{n:n.toLocaleString(language)}));chart.append(el('div',null,null,bar,el('small',null,i===DX_DAYS.length-1?'today':null,...(i===DX_DAYS.length-1?[]:[document.createTextNode(String(3+i))]))));});
     const apps=el('div','dx-apps');for(const [app,pct] of DX_APPS){const bar=el('i');bar.style.width=pct*2.4+'%';apps.append(el('div',null,null,el('span',null,null,document.createTextNode(app)),el('span',null,null,bar),el('small','counter',null,document.createTextNode(pct+'%'))));}
