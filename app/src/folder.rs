@@ -2,20 +2,24 @@
 //! commands write files too (`sed -i`, `mv`, a generator). Two looks at the folder's repository, at
 //! the turn's start and at its end, compared by each file's size and modification time.
 //!
-//! Git only lists the candidates, through commands that read no file's content (`diff-files`
-//! compares the index's stat data, `ls-files` the ignore rules): a filter, fsmonitor or hook the
-//! agent planted in the repository's config never runs, and the index is never written.
+//! Git only lists the files, from its index and its ignore rules (`ls-files`): it compares no
+//! content, so a filter, fsmonitor or hook the agent planted in the repository's config never runs
+//! (`diff-files` would run a clean filter on a racy entry), and the index is never written.
 
 use std::collections::HashMap;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::SystemTime;
+use std::time::{Duration, Instant, SystemTime};
 
-/// Files a look lists, at most: past it the folder is too busy to tell (a build tree no ignore
-/// rule covers), and the turn gets nothing from it.
-const MAX_FILES: usize = 5_000;
+/// Files a look lists, at most: past it the repository is too big to stat twice a turn, and the
+/// turn gets nothing from it.
+const MAX_FILES: usize = 100_000;
 
-/// The repository's changed and untracked files at one moment, by their path in it.
+/// How long git may take: a folder on a hung share gives the look up instead of a thread.
+const GIT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The repository's files at one moment, by their path in it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Look {
     top: PathBuf,
@@ -25,28 +29,39 @@ pub struct Look {
 
 /// A look at the repository `cwd` is in; none outside one, or when git can't tell.
 pub fn look(cwd: &Path) -> Option<Look> {
-    let top = PathBuf::from(git(cwd, &["rev-parse", "--show-toplevel"])?.trim_end());
-    let mut names = Vec::new();
-    for args in [
-        &["diff-files", "--name-only", "-z"][..],
-        &["ls-files", "--others", "--exclude-standard", "-z"][..],
-    ] {
-        let out = git(&top, args)?;
-        names.extend(out.split('\0').filter(|n| !n.is_empty()).map(str::to_string));
-        if names.len() > MAX_FILES {
-            return None;
-        }
+    let top = top(cwd)?;
+    let out = git(
+        &top,
+        &["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+    )?;
+    let names: Vec<&str> = out.split('\0').filter(|n| !n.is_empty()).collect();
+    if names.len() > MAX_FILES {
+        return None;
     }
     let files = names
         .into_iter()
         .map(|name| {
-            let meta = std::fs::symlink_metadata(top.join(&name))
+            let meta = std::fs::symlink_metadata(top.join(name))
                 .ok()
                 .and_then(|m| Some((m.len(), m.modified().ok()?)));
-            (name, meta)
+            (name.to_string(), meta)
         })
         .collect();
     Some(Look { top, files })
+}
+
+/// The repository's top, spelled from `cwd`: git resolves symlinks (`/home` on some systems), and
+/// the agent names its files under the folder it was given.
+fn top(cwd: &Path) -> Option<PathBuf> {
+    let prefix = git(cwd, &["rev-parse", "--show-prefix"])?;
+    let up = Path::new(prefix.trim_end()).components().count();
+    let mut top = cwd.to_path_buf();
+    for _ in 0..up {
+        if !top.pop() {
+            return None;
+        }
+    }
+    Some(top)
 }
 
 /// The absolute paths of the files that showed up or moved between the two looks, sorted; none
@@ -67,9 +82,9 @@ pub fn changed(before: &Look, after: &Look) -> Vec<String> {
 }
 
 /// Git in `dir`, reading only: no prompt, no lock, nothing of the repository's config that runs a
-/// program. Its output, or none when it fails.
+/// program, and at most [`GIT_TIMEOUT`]. Its output, or none when it fails.
 fn git(dir: &Path, args: &[&str]) -> Option<String> {
-    let out = Command::new("git")
+    let mut child = Command::new("git")
         .arg("-C")
         .arg(dir)
         .args(["-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null"])
@@ -77,12 +92,32 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_OPTIONAL_LOCKS", "0")
         .stdin(Stdio::null())
+        .stdout(Stdio::piped())
         .stderr(Stdio::null())
-        .output()
+        .spawn()
         .ok()?;
-    out.status
+    // Read on another thread: a full pipe would stop git before it exits.
+    let mut stdout = child.stdout.take()?;
+    let reader = std::thread::spawn(move || {
+        let mut out = Vec::new();
+        stdout.read_to_end(&mut out).map(|_| out)
+    });
+    let deadline = Instant::now() + GIT_TIMEOUT;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(10)),
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+        }
+    };
+    let out = reader.join().ok()?.ok()?;
+    status
         .success()
-        .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+        .then(|| String::from_utf8_lossy(&out).into_owned())
 }
 
 #[cfg(test)]
@@ -130,7 +165,7 @@ mod tests {
         std::fs::create_dir_all(dir.join("target")).unwrap();
         std::fs::write(dir.join("target/out.o"), "x\n").unwrap();
         let after = look(&dir).unwrap();
-        let top = before.top.to_string_lossy().into_owned();
+        let top = after.top.to_string_lossy().into_owned();
         assert_eq!(
             changed(&before, &after),
             [format!("{top}/kept.rs"), format!("{top}/new.rs")]
@@ -153,6 +188,48 @@ mod tests {
         std::fs::write(dir.join("kept.rs"), "b\n").unwrap();
         assert!(look(&dir).is_some());
         assert!(!mark.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_planted_clean_filter_never_runs() {
+        let dir = repo("filter");
+        let mark = dir.join("ran");
+        std::fs::write(dir.join(".gitattributes"), "* filter=x\n").unwrap();
+        let clean = format!("sh -c 'touch {}; cat'", mark.display());
+        let ok = Command::new("git")
+            .arg("-C")
+            .arg(&dir)
+            .args(["config", "filter.x.clean", &clean])
+            .status()
+            .unwrap();
+        assert!(ok.success());
+        // A racy entry: the file is no older than the index, so a stat compare reads it.
+        let now = std::time::SystemTime::now();
+        for f in [dir.join("kept.rs"), dir.join(".git/index")] {
+            std::fs::File::options()
+                .append(true)
+                .open(&f)
+                .unwrap()
+                .set_modified(now)
+                .unwrap();
+        }
+        assert!(look(&dir).is_some());
+        assert!(!mark.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_folder_reached_through_a_symlink_keeps_its_spelling() {
+        let dir = repo("link");
+        let link = dir.with_file_name(format!("{}-to", dir.file_name().unwrap().to_string_lossy()));
+        let _ = std::fs::remove_file(&link);
+        std::os::unix::fs::symlink(&dir, &link).unwrap();
+        let before = look(&link).unwrap();
+        std::fs::write(dir.join("kept.rs"), "changed\n").unwrap();
+        let after = look(&link).unwrap();
+        assert_eq!(changed(&before, &after), [format!("{}/kept.rs", link.display())]);
+        let _ = std::fs::remove_file(&link);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

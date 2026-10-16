@@ -232,7 +232,9 @@ fn patch_file(tool: &str, input: &Value) -> Option<String> {
         return None;
     }
     let files = patched(input);
-    let first = file_name(files.first()?);
+    // A moved file goes by its new name: its diff does too.
+    let first = files.first()?;
+    let first = file_name(first.rsplit(" → ").next().unwrap_or(first));
     Some(if files.len() > 1 {
         format!("{first} +{}", files.len() - 1)
     } else {
@@ -378,6 +380,12 @@ mod tests {
         assert_eq!(ask(moved), ("Edit · src/a.rs → src/b.rs".to_string(), false));
         let d = crate::diff::codex(moved).unwrap();
         assert_eq!(d.files[0].path, "src/b.rs");
+        // The step goes by the new name, as its diff does, even at the top of the folder.
+        let top = "*** Begin Patch\n*** Update File: a.rs\n*** Move to: b.rs\n@@\n-x\n+y\n*** End Patch";
+        assert_eq!(
+            patch_file("apply_patch", &json!({ "command": top })).as_deref(),
+            Some("b.rs")
+        );
         // The hook cut it before its end: a file may be missing, so no Always.
         assert!(ask("*** Begin Patch\n*** Update File: src/a.rs\n@@\n-x\n+y").1);
     }

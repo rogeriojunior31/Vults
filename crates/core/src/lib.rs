@@ -26,7 +26,7 @@ pub mod silence;
 pub mod turns;
 mod view;
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
 pub use safe_url::SafeUrl;
@@ -46,6 +46,12 @@ const MAX_STEPS: usize = 8;
 const MAX_DIFFS: usize = 32;
 /// Files a session's ledger names; the one touched longest ago goes first.
 const MAX_TOUCHED: usize = 200;
+/// Files a session keeps as seen changed in its folder, never in an edit: a generator's output
+/// must not push its agent's own edits out of the ledger.
+const MAX_OUTSIDE: usize = 50;
+/// Longest target a paired phone shows whole: past it the card is cut, and the phone may not make
+/// a rule of what it did not show (`vults-link`'s card).
+pub const MAX_PHONE_TARGET: usize = 16 * 1024;
 /// Ended cards kept for the view, newest first.
 const MAX_ENDED: usize = 8;
 /// Connector alerts kept on the island, newest first.
@@ -895,21 +901,43 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             Vec::new()
         }
         Input::FolderChanged { session, files } => {
+            // More than a turn's commands write by hand: a build or a generator, not worth a list.
+            if files.len() > MAX_OUTSIDE {
+                return Vec::new();
+            }
+            // Another session's reported edit is that session's, not a command of this one.
+            let theirs: HashSet<&str> = state
+                .sessions
+                .iter()
+                .filter(|(k, _)| **k != session)
+                .flat_map(|(_, s)| s.touched.iter().filter(|t| !t.outside))
+                .map(|t| t.path.as_str())
+                .collect();
+            let files: Vec<String> = files
+                .into_iter()
+                .filter(|p| is_absolute(p) && !theirs.contains(p.as_str()))
+                .collect();
             if let Some(s) = state.sessions.get_mut(&session) {
-                for path in files.into_iter().filter(|p| is_absolute(p)) {
-                    if !s.touched.iter().any(|t| t.path == path) {
-                        if s.touched.len() == MAX_TOUCHED {
-                            s.touched.remove(0);
-                        }
-                        s.touched.push(Touched {
-                            path,
-                            added: 0,
-                            removed: 0,
-                            edits: 0,
-                            step: 0,
-                            outside: true,
-                        });
+                for path in files {
+                    if s.touched.iter().any(|t| t.path == path) {
+                        continue;
                     }
+                    // Only an older outside file makes room: the agent's own edits stay.
+                    let outside = s.touched.iter().filter(|t| t.outside).count();
+                    if outside == MAX_OUTSIDE || s.touched.len() == MAX_TOUCHED {
+                        let Some(i) = s.touched.iter().position(|t| t.outside) else {
+                            break;
+                        };
+                        s.touched.remove(i);
+                    }
+                    s.touched.push(Touched {
+                        path,
+                        added: 0,
+                        removed: 0,
+                        edits: 0,
+                        step: 0,
+                        outside: true,
+                    });
                 }
             }
             Vec::new()
@@ -1736,7 +1764,12 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
             let Some(p) = redeem_here(
                 state,
                 by,
-                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                |p| {
+                    p.request == request
+                        && p.questions.is_empty()
+                        && !p.ask.cut
+                        && !(matches!(by, By::Paired { .. }) && p.target.len() > MAX_PHONE_TARGET)
+                },
                 now,
             ) else {
                 return Vec::new();
@@ -1793,7 +1826,12 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
             let Some(p) = redeem_here(
                 state,
                 by,
-                |p| p.request == request && p.questions.is_empty() && !p.ask.cut,
+                |p| {
+                    p.request == request
+                        && p.questions.is_empty()
+                        && !p.ask.cut
+                        && !(matches!(by, By::Paired { .. }) && p.target.len() > MAX_PHONE_TARGET)
+                },
                 now,
             ) else {
                 return Vec::new();

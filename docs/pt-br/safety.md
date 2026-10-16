@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 17dc31372f50 -->
+<!-- source: c593bd1bcc35 -->
 
 O que o Vults promete:
 
@@ -20,9 +20,10 @@ O que o Vults promete:
 - **Só a sua conta de usuário fala com ele.** O socket fica na sua pasta de runtime privada, com modo
   `0600`, e os dois lados verificam se o outro processo roda como você (no Windows, pelo SID).
 - **Olhar a pasta de uma sessão só a lê.** Para ver os arquivos que os comandos de uma sessão
-  escreveram, no início e no fim de cada turno o app lista o que mudou no repositório da pasta dela
-  com `git diff-files` e `git ls-files`, que não leem o conteúdo de nenhum arquivo e não escrevem
-  nada; o fsmonitor e os hooks ficam desligados, então nada da configuração do repositório roda.
+  escreveram, no início e no fim de cada turno o app lista o repositório da pasta dela com
+  `git ls-files` e ele mesmo compara o tamanho e a data de modificação de cada arquivo. O git não lê
+  o conteúdo de nenhum arquivo e não escreve nada; o fsmonitor e os hooks ficam desligados, então
+  nenhum filtro, hook ou monitor da configuração do repositório roda.
 - **Ele nunca edita a configuração de um agente pelas suas costas.** Toda mudança ganha um backup
   datado e um diff que você aprova; os hooks de outras ferramentas são mantidos, uma status line do
   Claude Code que seja sua continua rodando ([como](reference/settings.md#agent-configs-vults-edits)),

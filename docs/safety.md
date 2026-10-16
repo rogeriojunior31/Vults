@@ -19,9 +19,10 @@ What Vults promises:
 - **Only your user account can talk to it.** The socket lives in your private runtime folder with mode
   `0600`, and both ends check the other process runs as you (on Windows, by SID).
 - **Looking at a session's folder only reads it.** To see the files a session's commands wrote,
-  at each turn's start and end the app lists what is changed in its folder's repository with
-  `git diff-files` and `git ls-files`, which read no file's content and write nothing; fsmonitor
-  and hooks are turned off, so nothing in the repository's config runs.
+  at each turn's start and end the app lists its folder's repository with `git ls-files` and
+  compares each file's size and modification time itself. Git reads no file's content and writes
+  nothing; fsmonitor and hooks are turned off, so no filter, hook or monitor in the repository's
+  config runs.
 - **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff
   you approve; hooks from other tools are kept, a Claude Code status line of your own keeps running
   ([how](reference/settings.md#agent-configs-vults-edits)), and Codex's `trusted_hash` is never

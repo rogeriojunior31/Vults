@@ -2046,6 +2046,15 @@ fn a_turn_in_a_repository_looks_at_its_folder_and_takes_what_commands_wrote() {
         .map(|t| (t.path.as_str(), t.edits, t.outside))
         .collect();
     assert_eq!(files, [("src/main.rs", 1, false), ("gen.rs", 0, true)]);
+    // Another session's own edit is not a command of this one's, and a build's flood is no list.
+    visible(&mut s, agent("b", edited("/home/me/vults/theirs.rs", false)), now);
+    visible(&mut s, changed(&["/home/me/vults/theirs.rs"]), now);
+    let flood: Vec<String> = (0..=MAX_OUTSIDE)
+        .map(|i| format!("/home/me/vults/out/{i}.o"))
+        .collect();
+    let flood: Vec<&str> = flood.iter().map(String::as_str).collect();
+    visible(&mut s, changed(&flood), now);
+    assert_eq!(s.sessions[&key("a")].touched.len(), 2);
 }
 
 #[test]
@@ -4869,4 +4878,37 @@ fn a_session_may_be_continued_only_once_stopped_in_its_folder_for_ten_minutes() 
     visible(&mut s, Input::Agent(moved), now);
     let c = s.continuable("/home/me/vults/sub", now);
     assert_eq!(c.first().map(|c| c.cwd.as_str()), Some("/home/me/vults"));
+}
+
+#[test]
+fn a_phone_never_makes_a_rule_of_a_target_it_saw_cut() {
+    let ask = |target: String| {
+        let mut s = State::default();
+        let now = Instant::now();
+        visible(
+            &mut s,
+            agent(
+                "a",
+                AgentEvent::PermissionRequested {
+                    request: rid("r1"),
+                    tool: "Bash".into(),
+                    target,
+                    ask: Ask::default(),
+                },
+            ),
+            now,
+        );
+        let binding = ledger::Binding::of(&s.pending[0]);
+        let paired = Input::Paired {
+            device: "phone".into(),
+            counter: 1,
+            binding,
+            intent: Intent::DecideAlways { request: rid("r1") },
+        };
+        visible(&mut s, paired, now)
+            .iter()
+            .any(|e| matches!(e, Effect::RespondPermission { .. }))
+    };
+    assert!(ask("Bash · cargo test".into()));
+    assert!(!ask(format!("Bash · {}", "x".repeat(MAX_PHONE_TARGET))));
 }

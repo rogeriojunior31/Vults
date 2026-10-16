@@ -48,8 +48,9 @@ impl ToPhone {
 }
 
 /// Longest target a card carries: a patch over hundreds of files would not fit in one message
-/// ([`crate::MAX_MESSAGE`]). The binding still covers the whole target; the card says it is cut.
-const MAX_TARGET: usize = 16 * 1024;
+/// ([`crate::MAX_MESSAGE`]). The binding still covers the whole target; the card says it is cut,
+/// and core refuses the phone's *Always* past it.
+const MAX_TARGET: usize = vults_core::MAX_PHONE_TARGET;
 
 /// A card as the phone shows it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
