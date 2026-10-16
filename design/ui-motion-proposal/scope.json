@@ -1,0 +1,227 @@
+{
+  "kind": "interactive-design-baseline",
+  "branch": "design/full-ui-prototype",
+  "productionImplementation": false,
+  "nativeValidation": "pending",
+  "runtime": "local simulated data; no backend calls",
+  "reference": {
+    "project": "open-claude-ui",
+    "components": [
+      "ChatComposer.tsx",
+      "ChatMessageBubbles.tsx",
+      "ModelSwitcherWithTokenGauge.tsx",
+      "ThinkingAccordion.tsx",
+      "CdsButton.tsx",
+      "ConfirmationDialog.tsx",
+      "SegmentedControl.tsx",
+      "StatusIndicators.tsx",
+      "ContainerResponsiveBar.tsx"
+    ],
+    "motion": "User-supplied canonical spring values, adapted to the native Web Animations API. Vults theme and sprite renderer remain authoritative.",
+    "application": [
+      "Readable controls and progressive disclosure",
+      "Subtle surface hierarchy",
+      "Stateful transitions with canonical user-supplied motion values",
+      "Production Vults birds, theme and renderer define identity"
+    ]
+  },
+  "approvedDirection": [
+    "Chat Compact",
+    "Connections list and detail"
+  ],
+  "screens": {
+    "mini": [
+      "production flock sprites",
+      "open Compact"
+    ],
+    "compact": [
+      "Flock: prioritized birds, one focused session and request review on demand",
+      "Chat",
+      "Overview: actionable connection checks, task reviews and memory proposals",
+      "open Settings in Room"
+    ],
+    "roomAndFull": [
+      "Flock",
+      "Chat and recent conversations",
+      "Tasks",
+      "Activity",
+      "Connections",
+      "Memory",
+      "Settings"
+    ],
+    "activity": [
+      "Week",
+      "By project",
+      "History",
+      "Cost",
+      "Traces",
+      "Audit"
+    ],
+    "settings": [
+      "General",
+      "Chat & voice",
+      "Flock & Zeca",
+      "Agents",
+      "Approvals",
+      "Projects",
+      "Activity",
+      "Connectors",
+      "Phone",
+      "About"
+    ]
+  },
+  "reviewWorkflow": [
+    "Open a screen",
+    "Keep its direction or mark it for refinement",
+    "Write a note",
+    "Export review JSON",
+    "Update implementation slices after approval"
+  ],
+  "releaseGroups": [
+    {
+      "id": "A",
+      "scope": "approved foundations: Compact, Connections and reviewed Tasks",
+      "roadmap": "existing UX4-UX6"
+    },
+    {
+      "id": "B",
+      "scope": "reviewed Flock, Activity, Memory and Settings",
+      "roadmap": "existing UX4-UX6"
+    },
+    {
+      "id": "C",
+      "scope": "native continuity, geometry and desktop acceptance",
+      "roadmap": "remaining UX6 and UX7"
+    },
+    {
+      "id": "later",
+      "scope": "Agents workspace, Studio and Investigations",
+      "roadmap": "UX8-UX10; not implemented by this prototype"
+    }
+  ],
+  "verification": {
+    "command": "node design/ui-motion-proposal/verify.mjs",
+    "evidence": "DOM interaction and state checks only; no measured browser layout or native compositor claim",
+    "desktopChecks": [
+      "480x360 Room",
+      "normal Room and Full",
+      "Compact content growth",
+      "native input region and zoom",
+      "long content",
+      "keyboard and focus",
+      "reduced motion",
+      "real provider and connector errors"
+    ],
+    "compactChecks": [
+      "three Compact tabs and unchanged Room navigation",
+      "derived request, failure and working counts",
+      "bounded bird count with 15 simulated sessions",
+      "full command and folder before a simulated decision",
+      "destructive Deny emphasis",
+      "draft and focused session preserved into Chat and Room",
+      "priority summaries open the correct full detail",
+      "old Compact routes migrate to Overview",
+      "fixed dimensions across tabs and popup opening",
+      "responsive flock redraw"
+    ],
+    "identityChecks": [
+      "same canvas and director across tab navigation",
+      "same per-session Bird instance across state updates",
+      "stable species and relative places on the wire",
+      "correct target for pointer and keyboard look-at responses",
+      "matching human summary and renderer input for seven work states",
+      "reduced-motion scenes disable arrivals and focus reactions",
+      "DOM interactions and CSS parsing passed; visual review remains pending"
+    ],
+    "labChecks": [
+      "bird selection updates selected session and restores keyboard focus",
+      "reader displays all 16 files and more than 800 lines",
+      "no session card or bird stage competes with Changes",
+      "step and file filters select the correct data",
+      "sessions without changes do not inherit another patch",
+      "tab navigation, scope and horizontal/vertical reading positions survive switches",
+      "pending approval remains accessible without changing the reader position",
+      "no outer window resize when switching bottom tabs",
+      "CSS parse and prototype interaction checks pass; no browser layout measurement"
+    ]
+  },
+  "layout": {
+    "preferredCssPixels": {
+      "island": [
+        340,
+        38
+      ],
+      "compact": [
+        520,
+        440
+      ],
+      "room": [
+        1120,
+        760
+      ]
+    },
+    "compact": "smaller fixed outer size across Flock, Chat and Overview; detailed content opens in Room or a bounded request dialog",
+    "roomTabOrder": [
+      "Flock",
+      "Chat",
+      "Tasks",
+      "Activity",
+      "Connections"
+    ],
+    "transitions": "one persistent shell, canonical gentle spring, no text or sprite scaling",
+    "popovers": "absolute layer inside the window, above or below the trigger within the available bounds",
+    "notifications": "animate internal height only while present",
+    "responsive": "preferred sizes clamp to the available preview width and height; native validation remains pending",
+    "compactSizing": "Provisional 520x440 for review; no native visual validation yet."
+  },
+  "productIntent": {
+    "primary": "Monitor and interact with AI agent sessions; show work, questions and approvals.",
+    "companion": "Zeca shares context across sessions, conversation, tools and memory.",
+    "connections": "One capability can serve direct user actions and Zeca tool use.",
+    "tasks": "Persistent goals and execution; a future agent studio grows from working foundations.",
+    "surfaceRoles": {
+      "island": "Presence and attention through the flock.",
+      "compact": "Resolve a quick situation and return to your work.",
+      "room": "Proposed Lab: focused investigation, conversation and management."
+    },
+    "identity": "Vultures are the visual language of agent state, with stable species, existing clips and direct interaction."
+  },
+  "identityInteractions": [
+    "Click the Compact bird itself or its name to focus its session",
+    "Pointer and keyboard focus use the same production look-at behavior",
+    "Cache per-surface directors so returning to a tab does not replay arrival",
+    "Example state selector exposes reading, editing, running, thinking, completion, failure and resting",
+    "Static scenes disable flights when motion is reduced",
+    "Species remain attached to their session across layouts"
+  ],
+  "labFlockRevision": {
+    "status": "proposed; user visual review pending",
+    "interaction": "Every visible bird has a keyboard-accessible hit target bound to its session.",
+    "detailNavigation": [
+      "Session",
+      "Changes",
+      "Activity",
+      "Context",
+      "Zeca"
+    ],
+    "composition": "Bottom tabs switch one main content region; Changes has no competing bird stage, session list or session card.",
+    "diffFixture": {
+      "kind": "Simulated complete multi-file patch; not captured production data",
+      "files": 16,
+      "lines": 945,
+      "steps": [
+        4,
+        6,
+        8
+      ],
+      "features": [
+        "old and new line numbers",
+        "file and step selection",
+        "horizontal and vertical scrolling",
+        "per-session/tab/step/file reading position",
+        "waiting request remains accessible in the header"
+      ]
+    },
+    "productionChanges": false
+  }
+}

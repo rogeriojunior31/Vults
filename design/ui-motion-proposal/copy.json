@@ -1,0 +1,1592 @@
+{
+  "Flock in Room": [
+    "Flock na Sala",
+    "Flock en Sala",
+    "\u623f\u95f4\u4e2d\u7684\u9e1f\u7fa4"
+  ],
+  "Chat in Room": [
+    "Chat na Sala",
+    "Chat en Sala",
+    "\u623f\u95f4\u4e2d\u7684\u804a\u5929"
+  ],
+  "Activity in Room": [
+    "Atividade na Sala",
+    "Actividad en Sala",
+    "\u623f\u95f4\u4e2d\u7684\u6d3b\u52a8"
+  ],
+  "Review & releases": [
+    "Revis\u00e3o e releases",
+    "Revisi\u00f3n y versiones",
+    "\u8bc4\u5ba1\u4e0e\u53d1\u5e03"
+  ],
+  "Design review": [
+    "Revis\u00e3o do prot\u00f3tipo",
+    "Revisi\u00f3n del prototipo",
+    "\u539f\u578b\u8bc4\u5ba1"
+  ],
+  "Example state": [
+    "Estado de exemplo",
+    "Estado de ejemplo",
+    "\u793a\u4f8b\u72b6\u6001"
+  ],
+  "Preview size": [
+    "Tamanho da pr\u00e9via",
+    "Tama\u00f1o de la vista previa",
+    "\u9884\u89c8\u5c3a\u5bf8"
+  ],
+  "Narrow": [
+    "Estreito",
+    "Estrecho",
+    "\u7a84\u7a97\u53e3"
+  ],
+  "Short": [
+    "Baixo",
+    "Bajo",
+    "\u4f4e\u7a97\u53e3"
+  ],
+  "Ready": [
+    "Pronto",
+    "Listo",
+    "\u5c31\u7eea"
+  ],
+  "Your sessions and the next useful action.": [
+    "Suas sess\u00f5es e a pr\u00f3xima a\u00e7\u00e3o \u00fatil.",
+    "Tus sesiones y la pr\u00f3xima acci\u00f3n \u00fatil.",
+    "\u4f1a\u8bdd\u4e0e\u4e0b\u4e00\u6b65\u64cd\u4f5c\u3002"
+  ],
+  "Live session birds": [
+    "Urubus das sess\u00f5es",
+    "Aves de las sesiones",
+    "\u4f1a\u8bdd\u9e1f\u7fa4"
+  ],
+  "All sessions": [
+    "Todas as sess\u00f5es",
+    "Todas las sesiones",
+    "\u6240\u6709\u4f1a\u8bdd"
+  ],
+  "Run the project build": [
+    "Compilar o projeto",
+    "Compilar el proyecto",
+    "\u6784\u5efa\u9879\u76ee"
+  ],
+  "Simulated decision only": [
+    "Decis\u00e3o simulada nesta pr\u00e9via",
+    "Decisi\u00f3n simulada en esta vista previa",
+    "\u4ec5\u6a21\u62df\u51b3\u5b9a"
+  ],
+  "Simulated execution only": [
+    "Execu\u00e7\u00e3o simulada nesta pr\u00e9via",
+    "Ejecuci\u00f3n simulada en esta vista previa",
+    "\u4ec5\u6a21\u62df\u6267\u884c"
+  ],
+  "The example run failed. Review its output before continuing.": [
+    "A execu\u00e7\u00e3o de exemplo falhou. Revise a sa\u00edda antes de continuar.",
+    "La ejecuci\u00f3n de ejemplo fall\u00f3. Revisa la salida antes de continuar.",
+    "\u793a\u4f8b\u8fd0\u884c\u5931\u8d25\u3002\u7ee7\u7eed\u524d\u8bf7\u68c0\u67e5\u8f93\u51fa\u3002"
+  ],
+  "Terminal actions are simulated.": [
+    "As a\u00e7\u00f5es do terminal s\u00e3o simuladas.",
+    "Las acciones de terminal son simuladas.",
+    "\u7ec8\u7aef\u64cd\u4f5c\u4e3a\u6a21\u62df\u64cd\u4f5c\u3002"
+  ],
+  "Could not update this view.": [
+    "N\u00e3o foi poss\u00edvel atualizar esta tela.",
+    "No se pudo actualizar esta vista.",
+    "\u65e0\u6cd5\u66f4\u65b0\u6b64\u89c6\u56fe\u3002"
+  ],
+  "Your draft and selections stay here.": [
+    "Seu rascunho e suas sele\u00e7\u00f5es continuam aqui.",
+    "Tu borrador y tus selecciones se conservan.",
+    "\u8349\u7a3f\u548c\u9009\u62e9\u4f1a\u4fdd\u7559\u3002"
+  ],
+  "This is an example empty state.": [
+    "Este \u00e9 um exemplo de tela sem dados.",
+    "Este es un ejemplo de vista vac\u00eda.",
+    "\u8fd9\u662f\u7a7a\u72b6\u6001\u793a\u4f8b\u3002"
+  ],
+  "Show sample data": [
+    "Mostrar dados de exemplo",
+    "Mostrar datos de ejemplo",
+    "\u663e\u793a\u793a\u4f8b\u6570\u636e"
+  ],
+  "Saved in this prototype": [
+    "Salvo nesta pr\u00e9via",
+    "Guardado en esta vista previa",
+    "\u5df2\u4fdd\u5b58\u5728\u539f\u578b\u4e2d"
+  ],
+  "Copied in this prototype": [
+    "C\u00f3pia simulada nesta pr\u00e9via",
+    "Copia simulada en esta vista previa",
+    "\u539f\u578b\u4e2d\u7684\u590d\u5236\u793a\u4f8b"
+  ],
+  "Current conversation": [
+    "Conversa atual",
+    "Conversaci\u00f3n actual",
+    "\u5f53\u524d\u5bf9\u8bdd"
+  ],
+  "Stop the current turn first.": [
+    "Pare o turno atual primeiro.",
+    "Det\u00e9n el turno actual primero.",
+    "\u8bf7\u5148\u505c\u6b62\u5f53\u524d\u8f6e\u6b21\u3002"
+  ],
+  "Criteria, one per line": [
+    "Crit\u00e9rios, um por linha",
+    "Criterios, uno por l\u00ednea",
+    "\u6761\u4ef6\uff0c\u6bcf\u884c\u4e00\u4e2a"
+  ],
+  "Creating a task does not start an agent.": [
+    "Criar uma tarefa n\u00e3o inicia um agente.",
+    "Crear una tarea no inicia un agente.",
+    "\u521b\u5efa\u4efb\u52a1\u4e0d\u4f1a\u542f\u52a8\u4ee3\u7406\u3002"
+  ],
+  "Enter a goal first.": [
+    "Preencha o objetivo primeiro.",
+    "Escribe un objetivo primero.",
+    "\u8bf7\u5148\u586b\u5199\u76ee\u6807\u3002"
+  ],
+  "Choose a project first.": [
+    "Escolha um projeto primeiro.",
+    "Elige un proyecto primero.",
+    "\u8bf7\u5148\u9009\u62e9\u9879\u76ee\u3002"
+  ],
+  "Enter a command first.": [
+    "Preencha o comando primeiro.",
+    "Escribe un comando primero.",
+    "\u8bf7\u5148\u586b\u5199\u547d\u4ee4\u3002"
+  ],
+  "No criteria yet. Add them in Edit task.": [
+    "Ainda sem crit\u00e9rios. Adicione em Editar tarefa.",
+    "Sin criterios todav\u00eda. A\u00f1\u00e1delos en Editar tarea.",
+    "\u5c1a\u65e0\u6761\u4ef6\uff0c\u8bf7\u5728\u7f16\u8f91\u4efb\u52a1\u4e2d\u6dfb\u52a0\u3002"
+  ],
+  "Linked issue": [
+    "Issue vinculada",
+    "Issue vinculada",
+    "\u5df2\u5173\u8054\u8bae\u9898"
+  ],
+  "GitHub issue URL": [
+    "URL da issue no GitHub",
+    "URL de la issue en GitHub",
+    "GitHub \u8bae\u9898\u94fe\u63a5"
+  ],
+  "Enter a GitHub issue URL.": [
+    "Preencha uma URL de issue do GitHub.",
+    "Escribe una URL de issue de GitHub.",
+    "\u8bf7\u586b\u5199 GitHub \u8bae\u9898\u94fe\u63a5\u3002"
+  ],
+  "Only this example task is removed.": [
+    "Somente esta tarefa de exemplo ser\u00e1 removida.",
+    "Solo se eliminar\u00e1 esta tarea de ejemplo.",
+    "\u4ec5\u79fb\u9664\u6b64\u793a\u4f8b\u4efb\u52a1\u3002"
+  ],
+  "Only the example workspace is removed. The task stays.": [
+    "Somente o workspace de exemplo ser\u00e1 removido. A tarefa continua.",
+    "Solo se eliminar\u00e1 el espacio de ejemplo. La tarea permanece.",
+    "\u4ec5\u79fb\u9664\u793a\u4f8b\u5de5\u4f5c\u533a\uff0c\u4efb\u52a1\u4f1a\u4fdd\u7559\u3002"
+  ],
+  "Sample data refreshed": [
+    "Dados de exemplo atualizados",
+    "Datos de ejemplo actualizados",
+    "\u793a\u4f8b\u6570\u636e\u5df2\u5237\u65b0"
+  ],
+  "No connection news yet.": [
+    "Ainda sem novidades das conex\u00f5es.",
+    "A\u00fan no hay novedades de conexiones.",
+    "\u5c1a\u65e0\u8fde\u63a5\u52a8\u6001\u3002"
+  ],
+  "Release notes and links appear here.": [
+    "Notas de vers\u00e3o e links aparecem aqui.",
+    "Las notas de versi\u00f3n y enlaces aparecen aqu\u00ed.",
+    "\u6b64\u5904\u663e\u793a\u53d1\u884c\u8bf4\u660e\u548c\u94fe\u63a5\u3002"
+  ],
+  "Release preview": [
+    "Pr\u00e9via de release",
+    "Vista previa de versi\u00f3n",
+    "\u53d1\u5e03\u9884\u89c8"
+  ],
+  "No release was published by this prototype.": [
+    "Nenhuma release foi publicada por este prot\u00f3tipo.",
+    "Este prototipo no public\u00f3 ninguna versi\u00f3n.",
+    "\u6b64\u539f\u578b\u672a\u53d1\u5e03\u4efb\u4f55\u7248\u672c\u3002"
+  ],
+  "Merged in prototype": [
+    "Merge simulado",
+    "Fusi\u00f3n simulada",
+    "\u5df2\u6a21\u62df\u5408\u5e76"
+  ],
+  "This only merges the example item. No GitHub action is sent.": [
+    "Isso s\u00f3 altera o item de exemplo. Nenhuma a\u00e7\u00e3o \u00e9 enviada ao GitHub.",
+    "Solo cambia el elemento de ejemplo. No se env\u00eda ninguna acci\u00f3n a GitHub.",
+    "\u4ec5\u5408\u5e76\u793a\u4f8b\u6761\u76ee\uff0c\u4e0d\u5411 GitHub \u53d1\u9001\u64cd\u4f5c\u3002"
+  ],
+  "GitHub is off": [
+    "GitHub desligado",
+    "GitHub desactivado",
+    "GitHub \u5df2\u5173\u95ed"
+  ],
+  "Open connector settings": [
+    "Abrir configura\u00e7\u00f5es de conectores",
+    "Abrir ajustes de conectores",
+    "\u6253\u5f00\u8fde\u63a5\u5668\u8bbe\u7f6e"
+  ],
+  "Your work, with useful context.": [
+    "Seu trabalho, com contexto \u00fatil.",
+    "Tu trabajo, con contexto \u00fatil.",
+    "\u5de5\u4f5c\u4e0e\u76f8\u5173\u4e0a\u4e0b\u6587\u3002"
+  ],
+  "No activity yet.": [
+    "Ainda sem atividade.",
+    "A\u00fan no hay actividad.",
+    "\u5c1a\u65e0\u6d3b\u52a8\u3002"
+  ],
+  "Open activity settings": [
+    "Abrir configura\u00e7\u00f5es de atividade",
+    "Abrir ajustes de actividad",
+    "\u6253\u5f00\u6d3b\u52a8\u8bbe\u7f6e"
+  ],
+  "Agent turns": [
+    "Turnos dos agentes",
+    "Turnos de agentes",
+    "\u4ee3\u7406\u8f6e\u6b21"
+  ],
+  "Agent turns by day": [
+    "Turnos dos agentes por dia",
+    "Turnos de agentes por d\u00eda",
+    "\u6bcf\u65e5\u4ee3\u7406\u8f6e\u6b21"
+  ],
+  "{day}: {n} turns": [
+    "{day}: {n} turnos",
+    "{day}: {n} turnos",
+    "{day}\uff1a{n} \u8f6e"
+  ],
+  "Week {n}": [
+    "Semana {n}",
+    "Semana {n}",
+    "\u7b2c {n} \u5468"
+  ],
+  "All numbers in this prototype are sample data.": [
+    "Todos os n\u00fameros desta pr\u00e9via s\u00e3o exemplos.",
+    "Todos los n\u00fameros de esta vista previa son ejemplos.",
+    "\u6b64\u539f\u578b\u4e2d\u7684\u6240\u6709\u6570\u503c\u5747\u4e3a\u793a\u4f8b\u3002"
+  ],
+  "Export example recap": [
+    "Exportar resumo de exemplo",
+    "Exportar resumen de ejemplo",
+    "\u5bfc\u51fa\u793a\u4f8b\u6458\u8981"
+  ],
+  "Recorded API estimates are separate from subscription usage.": [
+    "Estimativas de API s\u00e3o separadas do uso da assinatura.",
+    "Las estimaciones de API se separan del uso de la suscripci\u00f3n.",
+    "API \u4f30\u7b97\u4e0e\u8ba2\u9605\u7528\u91cf\u5206\u522b\u663e\u793a\u3002"
+  ],
+  "Edit budget": [
+    "Editar or\u00e7amento",
+    "Editar presupuesto",
+    "\u7f16\u8f91\u9884\u7b97"
+  ],
+  "Recorded estimate": [
+    "Estimativa registrada",
+    "Estimaci\u00f3n registrada",
+    "\u5df2\u8bb0\u5f55\u4f30\u7b97"
+  ],
+  "Not reported": [
+    "N\u00e3o informado",
+    "No informado",
+    "\u672a\u62a5\u544a"
+  ],
+  "Enter a positive amount.": [
+    "Preencha um valor positivo.",
+    "Escribe un importe positivo.",
+    "\u8bf7\u8f93\u5165\u6b63\u6570\u91d1\u989d\u3002"
+  ],
+  "Only this example memory is removed.": [
+    "Somente esta mem\u00f3ria de exemplo ser\u00e1 removida.",
+    "Solo se eliminar\u00e1 este recuerdo de ejemplo.",
+    "\u4ec5\u79fb\u9664\u6b64\u793a\u4f8b\u8bb0\u5fc6\u3002"
+  ],
+  "Remove memory": [
+    "Remover mem\u00f3ria",
+    "Eliminar recuerdo",
+    "\u79fb\u9664\u8bb0\u5fc6"
+  ],
+  "Open memory settings": [
+    "Abrir configura\u00e7\u00f5es de mem\u00f3ria",
+    "Abrir ajustes de memoria",
+    "\u6253\u5f00\u8bb0\u5fc6\u8bbe\u7f6e"
+  ],
+  "Remembered": [
+    "Memorizado",
+    "Recordado",
+    "\u5df2\u8bb0\u4f4f"
+  ],
+  "Turned down": [
+    "Recusado",
+    "Rechazado",
+    "\u5df2\u62d2\u7edd"
+  ],
+  "No settings loaded.": [
+    "Nenhuma configura\u00e7\u00e3o carregada.",
+    "No hay ajustes cargados.",
+    "\u672a\u52a0\u8f7d\u8bbe\u7f6e\u3002"
+  ],
+  "Language & sound": [
+    "Idioma e som",
+    "Idioma y sonido",
+    "\u8bed\u8a00\u4e0e\u58f0\u97f3"
+  ],
+  "The language used across Vults.": [
+    "Idioma usado em todo o Vults.",
+    "Idioma utilizado en todo Vults.",
+    "Vults \u4f7f\u7528\u7684\u8bed\u8a00\u3002"
+  ],
+  "Short cues for attention and completed work.": [
+    "Sons curtos para aten\u00e7\u00e3o e trabalho conclu\u00eddo.",
+    "Sonidos breves para atenci\u00f3n y trabajo terminado.",
+    "\u63d0\u9192\u548c\u5de5\u4f5c\u5b8c\u6210\u65f6\u7684\u77ed\u63d0\u793a\u97f3\u3002"
+  ],
+  "Preview controls do not play audio.": [
+    "Os controles desta pr\u00e9via n\u00e3o reproduzem \u00e1udio.",
+    "Los controles de esta vista previa no reproducen audio.",
+    "\u9884\u89c8\u63a7\u4ef6\u4e0d\u4f1a\u64ad\u653e\u97f3\u9891\u3002"
+  ],
+  "Show local media controls when enabled.": [
+    "Mostrar controles de m\u00eddia local quando ativado.",
+    "Mostrar controles de medios locales al activarlo.",
+    "\u542f\u7528\u65f6\u663e\u793a\u672c\u5730\u5a92\u4f53\u63a7\u4ef6\u3002"
+  ],
+  "Island behavior": [
+    "Comportamento da ilha",
+    "Comportamiento de la isla",
+    "\u6d6e\u5c9b\u884c\u4e3a"
+  ],
+  "Seconds after the pointer leaves.": [
+    "Segundos ap\u00f3s o ponteiro sair.",
+    "Segundos tras salir el puntero.",
+    "\u6307\u9488\u79bb\u5f00\u540e\u7684\u79d2\u6570\u3002"
+  ],
+  "Open the island when the pointer rests on it.": [
+    "Abrir a ilha ao manter o ponteiro sobre ela.",
+    "Abrir la isla al dejar el puntero encima.",
+    "\u6307\u9488\u505c\u7559\u65f6\u6253\u5f00\u6d6e\u5c9b\u3002"
+  ],
+  "Open Vults when you log in.": [
+    "Abrir o Vults ao iniciar a sess\u00e3o.",
+    "Abrir Vults al iniciar sesi\u00f3n.",
+    "\u767b\u5f55\u65f6\u6253\u5f00 Vults\u3002"
+  ],
+  "Attention": [
+    "Aten\u00e7\u00e3o",
+    "Atenci\u00f3n",
+    "\u63d0\u9192"
+  ],
+  "Desktop notifications in Panel mode.": [
+    "Notifica\u00e7\u00f5es do desktop no modo Painel.",
+    "Notificaciones de escritorio en modo Panel.",
+    "\u9762\u677f\u6a21\u5f0f\u4e0b\u7684\u684c\u9762\u901a\u77e5\u3002"
+  ],
+  "Read plan usage only when enabled.": [
+    "Consultar o uso do plano s\u00f3 quando ativado.",
+    "Consultar el uso del plan solo al activarlo.",
+    "\u4ec5\u5728\u542f\u7528\u65f6\u8bfb\u53d6\u8ba1\u5212\u7528\u91cf\u3002"
+  ],
+  "Your CLI setup": [
+    "Suas configura\u00e7\u00f5es de CLI",
+    "Tu configuraci\u00f3n de CLI",
+    "CLI \u8bbe\u7f6e"
+  ],
+  "Changes apply to the next conversation.": [
+    "Mudan\u00e7as valem para a pr\u00f3xima conversa.",
+    "Los cambios se aplican a la pr\u00f3xima conversaci\u00f3n.",
+    "\u66f4\u6539\u5e94\u7528\u4e8e\u4e0b\u4e00\u6b21\u5bf9\u8bdd\u3002"
+  ],
+  "Every answer is audited. Destructive commands always ask.": [
+    "Toda resposta \u00e9 auditada. Comandos destrutivos sempre pedem permiss\u00e3o.",
+    "Todas las respuestas se auditan. Los comandos destructivos siempre piden permiso.",
+    "\u6240\u6709\u51b3\u5b9a\u5747\u6709\u5ba1\u8ba1\u8bb0\u5f55\u3002\u7834\u574f\u6027\u547d\u4ee4\u59cb\u7ec8\u8be2\u95ee\u3002"
+  ],
+  "This preview changes only the example access mode. Destructive commands still ask.": [
+    "Esta pr\u00e9via muda apenas o acesso de exemplo. Comandos destrutivos continuam pedindo permiss\u00e3o.",
+    "Esta vista previa solo cambia el acceso de ejemplo. Los comandos destructivos siguen pidiendo permiso.",
+    "\u6b64\u9884\u89c8\u4ec5\u66f4\u6539\u793a\u4f8b\u8bbf\u95ee\u6a21\u5f0f\u3002\u7834\u574f\u6027\u547d\u4ee4\u4ecd\u4f1a\u8be2\u95ee\u3002"
+  ],
+  "Keep a local journal. Recalled facts join the conversation.": [
+    "Manter um di\u00e1rio local. Mem\u00f3rias recuperadas entram na conversa.",
+    "Mantener un diario local. Los recuerdos recuperados se a\u00f1aden a la conversaci\u00f3n.",
+    "\u4fdd\u7559\u672c\u5730\u65e5\u5fd7\uff0c\u68c0\u7d22\u7684\u8bb0\u5fc6\u4f1a\u52a0\u5165\u5bf9\u8bdd\u3002"
+  ],
+  "Uses your subscription for a daily summary; up to 8 requests a day.": [
+    "Usa sua assinatura para resumir o dia; at\u00e9 8 pedidos por dia.",
+    "Usa tu suscripci\u00f3n para el resumen diario; hasta 8 solicitudes al d\u00eda.",
+    "\u4f7f\u7528\u8ba2\u9605\u751f\u6210\u6bcf\u65e5\u6458\u8981\uff0c\u6bcf\u5929\u6700\u591a 8 \u6b21\u8bf7\u6c42\u3002"
+  ],
+  "Proposals wait for your review; up to 20 requests a day.": [
+    "Propostas aguardam sua revis\u00e3o; at\u00e9 20 pedidos por dia.",
+    "Las propuestas esperan tu revisi\u00f3n; hasta 20 solicitudes al d\u00eda.",
+    "\u63d0\u8bae\u7b49\u5f85\u5ba1\u6838\uff0c\u6bcf\u5929\u6700\u591a 20 \u6b21\u8bf7\u6c42\u3002"
+  ],
+  "Proposed merges wait for you; up to 4 requests a day.": [
+    "Propostas de uni\u00e3o aguardam voc\u00ea; at\u00e9 4 pedidos por dia.",
+    "Las propuestas de combinaci\u00f3n esperan tu revisi\u00f3n; hasta 4 solicitudes al d\u00eda.",
+    "\u5408\u5e76\u63d0\u8bae\u7b49\u5f85\u786e\u8ba4\uff0c\u6bcf\u5929\u6700\u591a 4 \u6b21\u8bf7\u6c42\u3002"
+  ],
+  "Uses your local embedding model.": [
+    "Usa seu modelo local de embeddings.",
+    "Usa tu modelo local de embeddings.",
+    "\u4f7f\u7528\u672c\u5730\u5d4c\u5165\u6a21\u578b\u3002"
+  ],
+  "Review memories": [
+    "Revisar mem\u00f3rias",
+    "Revisar recuerdos",
+    "\u5ba1\u6838\u8bb0\u5fc6"
+  ],
+  "Inspect proposals and saved facts.": [
+    "Revisar propostas e fatos salvos.",
+    "Revisar propuestas y hechos guardados.",
+    "\u68c0\u67e5\u63d0\u8bae\u548c\u5df2\u4fdd\u5b58\u8bb0\u5fc6\u3002"
+  ],
+  "Open Memory": [
+    "Abrir Mem\u00f3ria",
+    "Abrir Memoria",
+    "\u6253\u5f00\u8bb0\u5fc6"
+  ],
+  "Transcription is local. This prototype simulates microphone activity.": [
+    "A transcri\u00e7\u00e3o \u00e9 local. Esta pr\u00e9via simula a atividade do microfone.",
+    "La transcripci\u00f3n es local. Esta vista previa simula el micr\u00f3fono.",
+    "\u8f6c\u5f55\u5728\u672c\u5730\u5b8c\u6210\u3002\u6b64\u539f\u578b\u6a21\u62df\u9ea6\u514b\u98ce\u6d3b\u52a8\u3002"
+  ],
+  "Example local model, already available.": [
+    "Modelo local de exemplo, j\u00e1 dispon\u00edvel.",
+    "Modelo local de ejemplo, ya disponible.",
+    "\u793a\u4f8b\u672c\u5730\u6a21\u578b\uff0c\u5df2\u53ef\u7528\u3002"
+  ],
+  "Show voice example": [
+    "Mostrar exemplo de voz",
+    "Mostrar ejemplo de voz",
+    "\u663e\u793a\u8bed\u97f3\u793a\u4f8b"
+  ],
+  "API & web": [
+    "API e web",
+    "API y web",
+    "API \u4e0e\u7f51\u9875"
+  ],
+  "External content never grants permission. No requests leave this prototype.": [
+    "Conte\u00fado externo nunca concede permiss\u00f5es. Esta pr\u00e9via n\u00e3o envia pedidos.",
+    "El contenido externo no concede permisos. Esta vista previa no env\u00eda solicitudes.",
+    "\u5916\u90e8\u5185\u5bb9\u4e0d\u6388\u4e88\u6743\u9650\u3002\u6b64\u539f\u578b\u4e0d\u53d1\u9001\u8bf7\u6c42\u3002"
+  ],
+  "CLI subscription or your API provider.": [
+    "Assinatura da CLI ou seu provedor de API.",
+    "Suscripci\u00f3n de CLI o tu proveedor de API.",
+    "CLI \u8ba2\u9605\u6216 API \u63d0\u4f9b\u5546\u3002"
+  ],
+  "The real app stores keys in the OS keyring.": [
+    "O app real guarda chaves no chaveiro do sistema.",
+    "La aplicaci\u00f3n real guarda claves en el llavero del sistema.",
+    "\u5b9e\u9645\u5e94\u7528\u5c06\u5bc6\u94a5\u4fdd\u5b58\u5728\u7cfb\u7edf\u5bc6\u94a5\u73af\u4e2d\u3002"
+  ],
+  "View key setup": [
+    "Ver configura\u00e7\u00e3o de chave",
+    "Ver configuraci\u00f3n de clave",
+    "\u67e5\u770b\u5bc6\u94a5\u8bbe\u7f6e"
+  ],
+  "Key entry belongs to the real app. This prototype uses no credentials.": [
+    "Chaves s\u00e3o inseridas no app real. Esta pr\u00e9via n\u00e3o usa credenciais.",
+    "Las claves se introducen en la aplicaci\u00f3n real. Esta vista previa no usa credenciales.",
+    "\u8bf7\u5728\u5b9e\u9645\u5e94\u7528\u4e2d\u8f93\u5165\u5bc6\u94a5\u3002\u6b64\u539f\u578b\u4e0d\u4f7f\u7528\u51ed\u636e\u3002"
+  ],
+  "Companions": [
+    "Companheiros",
+    "Compa\u00f1eros",
+    "\u4f19\u4f34"
+  ],
+  "Off, the flock and decisions remain available.": [
+    "Desligado, o flock e as decis\u00f5es continuam dispon\u00edveis.",
+    "Desactivado, el flock y las decisiones siguen disponibles.",
+    "\u5173\u95ed\u540e\u9e1f\u7fa4\u548c\u51b3\u5b9a\u4ecd\u53ef\u7528\u3002"
+  ],
+  "Use the existing species and proportions.": [
+    "Usar as esp\u00e9cies e propor\u00e7\u00f5es existentes.",
+    "Usar las especies y proporciones existentes.",
+    "\u4f7f\u7528\u73b0\u6709\u7269\u79cd\u4e0e\u6bd4\u4f8b\u3002"
+  ],
+  "Occasional visitors cross the sky.": [
+    "Visitantes ocasionais atravessam o c\u00e9u.",
+    "Visitantes ocasionales cruzan el cielo.",
+    "\u8bbf\u5ba2\u5076\u5c14\u98de\u8fc7\u5929\u7a7a\u3002"
+  ],
+  "The production sprite renderer previews your selection.": [
+    "O renderizador real mostra sua sele\u00e7\u00e3o.",
+    "El renderizador real muestra tu selecci\u00f3n.",
+    "\u5b9e\u9645\u6e32\u67d3\u5668\u9884\u89c8\u6240\u9009\u5185\u5bb9\u3002"
+  ],
+  "Use the existing accessories.": [
+    "Usar os acess\u00f3rios existentes.",
+    "Usar los accesorios existentes.",
+    "\u4f7f\u7528\u73b0\u6709\u9970\u54c1\u3002"
+  ],
+  "Motion": [
+    "Movimento",
+    "Movimiento",
+    "\u52a8\u6548"
+  ],
+  "Reduced motion from your system always takes priority.": [
+    "A redu\u00e7\u00e3o de movimento do sistema sempre tem prioridade.",
+    "La reducci\u00f3n de movimiento del sistema siempre tiene prioridad.",
+    "\u7cfb\u7edf\u7684\u51cf\u5c11\u52a8\u6001\u6548\u679c\u8bbe\u7f6e\u59cb\u7ec8\u4f18\u5148\u3002"
+  ],
+  "Each setup shows a diff before applying. Capability labels are sample states.": [
+    "Cada instala\u00e7\u00e3o mostra o diff antes de aplicar. As capacidades s\u00e3o exemplos.",
+    "Cada instalaci\u00f3n muestra el diff antes de aplicar. Las capacidades son ejemplos.",
+    "\u5e94\u7528\u524d\u663e\u793a\u5dee\u5f02\u3002\u80fd\u529b\u6807\u7b7e\u4e3a\u793a\u4f8b\u72b6\u6001\u3002"
+  ],
+  "Connected in prototype": [
+    "Conectado na pr\u00e9via",
+    "Conectado en la vista previa",
+    "\u5df2\u5728\u539f\u578b\u4e2d\u8fde\u63a5"
+  ],
+  "Review setup": [
+    "Revisar instala\u00e7\u00e3o",
+    "Revisar instalaci\u00f3n",
+    "\u5ba1\u6838\u914d\u7f6e"
+  ],
+  "Setup simulated": [
+    "Instala\u00e7\u00e3o simulada",
+    "Instalaci\u00f3n simulada",
+    "\u5df2\u6a21\u62df\u914d\u7f6e"
+  ],
+  "Apply example": [
+    "Aplicar exemplo",
+    "Aplicar ejemplo",
+    "\u5e94\u7528\u793a\u4f8b"
+  ],
+  "Review this example change. No configuration file is written.": [
+    "Revise a mudan\u00e7a de exemplo. Nenhum arquivo de configura\u00e7\u00e3o ser\u00e1 escrito.",
+    "Revisa el cambio de ejemplo. No se escribe ning\u00fan archivo de configuraci\u00f3n.",
+    "\u5ba1\u6838\u793a\u4f8b\u66f4\u6539\uff0c\u4e0d\u4f1a\u5199\u5165\u914d\u7f6e\u6587\u4ef6\u3002"
+  ],
+  "The real installer makes a dated backup before applying a reviewed diff.": [
+    "O instalador real faz backup com data antes de aplicar o diff revisado.",
+    "El instalador real crea una copia con fecha antes de aplicar el diff revisado.",
+    "\u5b9e\u9645\u5b89\u88c5\u7a0b\u5e8f\u4f1a\u5728\u5e94\u7528\u5df2\u5ba1\u6838\u5dee\u5f02\u524d\u521b\u5efa\u5e26\u65e5\u671f\u7684\u5907\u4efd\u3002"
+  ],
+  "A rule applies only to the exact command and project you review.": [
+    "Uma regra vale s\u00f3 para o comando e projeto exatos que voc\u00ea revisar.",
+    "Una regla solo se aplica al comando y proyecto exactos que revises.",
+    "\u89c4\u5219\u4ec5\u5e94\u7528\u4e8e\u5ba1\u6838\u8fc7\u7684\u786e\u5207\u547d\u4ee4\u548c\u9879\u76ee\u3002"
+  ],
+  "Future matching requests ask again in the example.": [
+    "Pr\u00f3ximos pedidos correspondentes voltam a perguntar no exemplo.",
+    "Las pr\u00f3ximas solicitudes coincidentes vuelven a preguntar en el ejemplo.",
+    "\u540e\u7eed\u5339\u914d\u8bf7\u6c42\u5c06\u5728\u793a\u4f8b\u4e2d\u91cd\u65b0\u8be2\u95ee\u3002"
+  ],
+  "Add example rule": [
+    "Adicionar regra de exemplo",
+    "A\u00f1adir regla de ejemplo",
+    "\u6dfb\u52a0\u793a\u4f8b\u89c4\u5219"
+  ],
+  "Deny overrides allow.": [
+    "Negar prevalece sobre permitir.",
+    "Denegar prevalece sobre permitir.",
+    "\u62d2\u7edd\u4f18\u5148\u4e8e\u5141\u8bb8\u3002"
+  ],
+  "Destructive actions always ask.": [
+    "A\u00e7\u00f5es destrutivas sempre pedem permiss\u00e3o.",
+    "Las acciones destructivas siempre piden permiso.",
+    "\u7834\u574f\u6027\u64cd\u4f5c\u59cb\u7ec8\u8be2\u95ee\u3002"
+  ],
+  "Every answer is audited.": [
+    "Toda resposta \u00e9 auditada.",
+    "Todas las respuestas se auditan.",
+    "\u6240\u6709\u51b3\u5b9a\u5747\u6709\u5ba1\u8ba1\u8bb0\u5f55\u3002"
+  ],
+  "Keep this project near the start of the flock.": [
+    "Manter este projeto no come\u00e7o do flock.",
+    "Mantener este proyecto al principio del flock.",
+    "\u5c06\u6b64\u9879\u76ee\u653e\u5728\u9e1f\u7fa4\u524d\u90e8\u3002"
+  ],
+  "Keep decisions visible without attention sounds.": [
+    "Manter decis\u00f5es vis\u00edveis sem sons de aten\u00e7\u00e3o.",
+    "Mantener visibles las decisiones sin sonidos de atenci\u00f3n.",
+    "\u4fdd\u7559\u53ef\u89c1\u51b3\u5b9a\u4f46\u4e0d\u64ad\u653e\u63d0\u793a\u97f3\u3002"
+  ],
+  "Local records": [
+    "Registros locais",
+    "Registros locales",
+    "\u672c\u5730\u8bb0\u5f55"
+  ],
+  "Choose what stays on this computer.": [
+    "Escolha o que fica neste computador.",
+    "Elige qu\u00e9 se conserva en este equipo.",
+    "\u9009\u62e9\u5728\u6b64\u8ba1\u7b97\u673a\u4e0a\u4fdd\u7559\u7684\u5185\u5bb9\u3002"
+  ],
+  "Recaps and records": [
+    "Resumos e registros",
+    "Res\u00famenes y registros",
+    "\u6458\u8981\u4e0e\u8bb0\u5f55"
+  ],
+  "View your activity without duplicating it here.": [
+    "Veja sua atividade sem duplicar essa tela aqui.",
+    "Consulta tu actividad sin duplicarla aqu\u00ed.",
+    "\u67e5\u770b\u6d3b\u52a8\uff0c\u907f\u514d\u5728\u6b64\u91cd\u590d\u663e\u793a\u3002"
+  ],
+  "Maintenance": [
+    "Manuten\u00e7\u00e3o",
+    "Mantenimiento",
+    "\u7ef4\u62a4"
+  ],
+  "This removes only example records in this prototype.": [
+    "Isso remove apenas registros de exemplo nesta pr\u00e9via.",
+    "Esto solo elimina registros de ejemplo en esta vista previa.",
+    "\u4ec5\u79fb\u9664\u6b64\u539f\u578b\u4e2d\u7684\u793a\u4f8b\u8bb0\u5f55\u3002"
+  ],
+  "Only the example conversation, journal and audit records are cleared.": [
+    "Somente a conversa, o di\u00e1rio e a auditoria de exemplo ser\u00e3o limpos.",
+    "Solo se borran la conversaci\u00f3n, el diario y la auditor\u00eda de ejemplo.",
+    "\u4ec5\u6e05\u9664\u793a\u4f8b\u5bf9\u8bdd\u3001\u65e5\u5fd7\u548c\u5ba1\u8ba1\u8bb0\u5f55\u3002"
+  ],
+  "Example history cleared": [
+    "Hist\u00f3rico de exemplo limpo",
+    "Historial de ejemplo borrado",
+    "\u793a\u4f8b\u5386\u53f2\u5df2\u6e05\u9664"
+  ],
+  "The toggle affects only sample data. No service is contacted.": [
+    "O controle s\u00f3 afeta dados de exemplo. Nenhum servi\u00e7o \u00e9 contatado.",
+    "El control solo afecta a datos de ejemplo. No se contacta ning\u00fan servicio.",
+    "\u5f00\u5173\u4ec5\u5f71\u54cd\u793a\u4f8b\u6570\u636e\uff0c\u4e0d\u8054\u7cfb\u4efb\u4f55\u670d\u52a1\u3002"
+  ],
+  "Enabled in this prototype": [
+    "Ativo nesta pr\u00e9via",
+    "Activo en esta vista previa",
+    "\u5df2\u5728\u6b64\u539f\u578b\u4e2d\u542f\u7528"
+  ],
+  "Polling budget": [
+    "Limite de consultas",
+    "L\u00edmite de consultas",
+    "\u8f6e\u8be2\u9884\u7b97"
+  ],
+  "The real app records requests through its network gate.": [
+    "O app real registra pedidos pelo controle de rede.",
+    "La aplicaci\u00f3n real registra solicitudes mediante su control de red.",
+    "\u5b9e\u9645\u5e94\u7528\u901a\u8fc7\u7f51\u7edc\u7f51\u5173\u8bb0\u5f55\u8bf7\u6c42\u3002"
+  ],
+  "Pairing requires the Android companion and a configured relay in the real app.": [
+    "O pareamento real exige o app Android e um relay configurado.",
+    "El emparejamiento real requiere la aplicaci\u00f3n Android y un relay configurado.",
+    "\u5b9e\u9645\u914d\u5bf9\u9700\u8981 Android \u914d\u5957\u5e94\u7528\u548c\u5df2\u914d\u7f6e\u7684\u4e2d\u7ee7\u3002"
+  ],
+  "Example phone": [
+    "Celular de exemplo",
+    "Tel\u00e9fono de ejemplo",
+    "\u793a\u4f8b\u624b\u673a"
+  ],
+  "Paired in prototype": [
+    "Pareado na pr\u00e9via",
+    "Emparejado en la vista previa",
+    "\u5df2\u5728\u539f\u578b\u4e2d\u914d\u5bf9"
+  ],
+  "Show pairing example": [
+    "Mostrar exemplo de pareamento",
+    "Mostrar ejemplo de emparejamiento",
+    "\u663e\u793a\u914d\u5bf9\u793a\u4f8b"
+  ],
+  "Pairing example": [
+    "Exemplo de pareamento",
+    "Ejemplo de emparejamiento",
+    "\u914d\u5bf9\u793a\u4f8b"
+  ],
+  "Only the example phone is removed.": [
+    "Somente o celular de exemplo ser\u00e1 removido.",
+    "Solo se elimina el tel\u00e9fono de ejemplo.",
+    "\u4ec5\u79fb\u9664\u793a\u4f8b\u624b\u673a\u3002"
+  ],
+  "This code is illustrative and cannot pair a device.": [
+    "Este c\u00f3digo \u00e9 ilustrativo e n\u00e3o pareia dispositivos.",
+    "Este c\u00f3digo es ilustrativo y no empareja dispositivos.",
+    "\u6b64\u4ee3\u7801\u4ec5\u4f9b\u793a\u610f\uff0c\u65e0\u6cd5\u914d\u5bf9\u8bbe\u5907\u3002"
+  ],
+  "Pair example phone": [
+    "Parear celular de exemplo",
+    "Emparejar tel\u00e9fono de ejemplo",
+    "\u914d\u5bf9\u793a\u4f8b\u624b\u673a"
+  ],
+  "Interactive design prototype \u00b7 sample data": [
+    "Prot\u00f3tipo interativo de design \u00b7 dados de exemplo",
+    "Prototipo interactivo de dise\u00f1o \u00b7 datos de ejemplo",
+    "\u4ea4\u4e92\u8bbe\u8ba1\u539f\u578b \u00b7 \u793a\u4f8b\u6570\u636e"
+  ],
+  "Visual approval is separate from production implementation.": [
+    "Aprova\u00e7\u00e3o visual \u00e9 separada da implementa\u00e7\u00e3o no app.",
+    "La aprobaci\u00f3n visual es independiente de la implementaci\u00f3n.",
+    "\u89c6\u89c9\u6279\u51c6\u4e0e\u751f\u4ea7\u5b9e\u73b0\u5206\u522b\u8fdb\u884c\u3002"
+  ],
+  "Export review": [
+    "Exportar revis\u00e3o",
+    "Exportar revisi\u00f3n",
+    "\u5bfc\u51fa\u8bc4\u5ba1"
+  ],
+  "Screens": [
+    "Telas",
+    "Pantallas",
+    "\u754c\u9762"
+  ],
+  "Release sequence": [
+    "Sequ\u00eancia de releases",
+    "Secuencia de versiones",
+    "\u53d1\u5e03\u987a\u5e8f"
+  ],
+  "Direction approved": [
+    "Dire\u00e7\u00e3o aprovada",
+    "Direcci\u00f3n aprobada",
+    "\u65b9\u5411\u5df2\u6279\u51c6"
+  ],
+  "Needs refinement": [
+    "Precisa de ajustes",
+    "Necesita ajustes",
+    "\u9700\u8981\u8c03\u6574"
+  ],
+  "Waiting for review": [
+    "Aguardando revis\u00e3o",
+    "Pendiente de revisi\u00f3n",
+    "\u7b49\u5f85\u5ba1\u6838"
+  ],
+  "Open screen": [
+    "Abrir tela",
+    "Abrir pantalla",
+    "\u6253\u5f00\u754c\u9762"
+  ],
+  "Keep this direction": [
+    "Manter esta dire\u00e7\u00e3o",
+    "Mantener esta direcci\u00f3n",
+    "\u4fdd\u7559\u6b64\u65b9\u5411"
+  ],
+  "What should change?": [
+    "O que deve mudar?",
+    "\u00bfQu\u00e9 deber\u00eda cambiar?",
+    "\u9700\u8981\u66f4\u6539\u4ec0\u4e48\uff1f"
+  ],
+  "Notes for {screen}": [
+    "Observa\u00e7\u00f5es para {screen}",
+    "Notas para {screen}",
+    "{screen} \u7684\u5907\u6ce8"
+  ],
+  "Reference components": [
+    "Componentes de refer\u00eancia",
+    "Componentes de referencia",
+    "\u53c2\u8003\u7ec4\u4ef6"
+  ],
+  "Review exported": [
+    "Revis\u00e3o exportada",
+    "Revisi\u00f3n exportada",
+    "\u8bc4\u5ba1\u5df2\u5bfc\u51fa"
+  ],
+  "Export is not available in this viewer.": [
+    "A exporta\u00e7\u00e3o n\u00e3o est\u00e1 dispon\u00edvel neste visualizador.",
+    "La exportaci\u00f3n no est\u00e1 disponible en este visor.",
+    "\u5f53\u524d\u67e5\u770b\u5668\u4e0d\u652f\u6301\u5bfc\u51fa\u3002"
+  ],
+  "Release names are working groups, not published versions or dates. Existing roadmap dependencies remain in force.": [
+    "Os nomes das releases s\u00e3o grupos de trabalho, sem vers\u00f5es ou datas publicadas. As depend\u00eancias do plano atual continuam valendo.",
+    "Los nombres de versi\u00f3n son grupos de trabajo, sin versiones ni fechas publicadas. Se mantienen las dependencias del plan actual.",
+    "\u53d1\u5e03\u540d\u79f0\u4e3a\u5de5\u4f5c\u5206\u7ec4\uff0c\u5e76\u975e\u5df2\u53d1\u5e03\u7248\u672c\u6216\u65e5\u671f\u3002\u73b0\u6709\u8def\u7ebf\u56fe\u4f9d\u8d56\u4ecd\u6709\u6548\u3002"
+  ],
+  "Chat Compact and Connections keep the visual direction you approved. Other screens still need your review.": [
+    "Chat Compact e Conex\u00f5es mant\u00eam a dire\u00e7\u00e3o visual que voc\u00ea aprovou. As outras telas ainda precisam de sua revis\u00e3o.",
+    "Chat Compact y Conexiones mantienen la direcci\u00f3n visual aprobada. Las dem\u00e1s pantallas a\u00fan necesitan tu revisi\u00f3n.",
+    "Compact \u804a\u5929\u548c\u8fde\u63a5\u4fdd\u7559\u5df2\u6279\u51c6\u7684\u89c6\u89c9\u65b9\u5411\u3002\u5176\u4ed6\u754c\u9762\u4ecd\u9700\u5ba1\u6838\u3002"
+  ],
+  "Allow once": [
+    "Permitir uma vez",
+    "Permitir una vez",
+    "\u5141\u8bb8\u4e00\u6b21"
+  ],
+  "Animations": [
+    "Anima\u00e7\u00f5es",
+    "Animaciones",
+    "\u52a8\u753b"
+  ],
+  "Checks passed": [
+    "Checks aprovados",
+    "Comprobaciones aprobadas",
+    "\u68c0\u67e5\u901a\u8fc7"
+  ],
+  "Choose how Vults stays visible.": [
+    "Escolha como o Vults fica vis\u00edvel.",
+    "Elige c\u00f3mo se muestra Vults.",
+    "\u9009\u62e9 Vults \u7684\u663e\u793a\u65b9\u5f0f\u3002"
+  ],
+  "Connection status": [
+    "Estado da conex\u00e3o",
+    "Estado de la conexi\u00f3n",
+    "\u8fde\u63a5\u72b6\u6001"
+  ],
+  "Continue": [
+    "Continuar",
+    "Continuar",
+    "\u7ee7\u7eed"
+  ],
+  "Create task": [
+    "Criar tarefa",
+    "Crear tarea",
+    "\u521b\u5efa\u4efb\u52a1"
+  ],
+  "Criteria": [
+    "Crit\u00e9rios",
+    "Criterios",
+    "\u6761\u4ef6"
+  ],
+  "Daily budget": [
+    "Or\u00e7amento di\u00e1rio",
+    "Presupuesto diario",
+    "\u6bcf\u65e5\u9884\u7b97"
+  ],
+  "Delete task": [
+    "Excluir tarefa",
+    "Eliminar tarea",
+    "\u5220\u9664\u4efb\u52a1"
+  ],
+  "Edit task": [
+    "Editar tarefa",
+    "Editar tarea",
+    "\u7f16\u8f91\u4efb\u52a1"
+  ],
+  "Exact command": [
+    "Comando exato",
+    "Comando exacto",
+    "\u786e\u5207\u547d\u4ee4"
+  ],
+  "Full screen": [
+    "Tela inteira",
+    "Pantalla completa",
+    "\u5168\u5c4f"
+  ],
+  "Goal": [
+    "Objetivo",
+    "Objetivo",
+    "\u76ee\u6807"
+  ],
+  "Idle": [
+    "Em espera",
+    "En espera",
+    "\u7a7a\u95f2"
+  ],
+  "Link issue": [
+    "Vincular issue",
+    "Vincular issue",
+    "\u5173\u8054\u8bae\u9898"
+  ],
+  "Local model": [
+    "Modelo local",
+    "Modelo local",
+    "\u672c\u5730\u6a21\u578b"
+  ],
+  "Local paths": [
+    "Caminhos locais",
+    "Rutas locales",
+    "\u672c\u5730\u8def\u5f84"
+  ],
+  "Local trace example": [
+    "Exemplo de trace local",
+    "Ejemplo de traza local",
+    "\u672c\u5730\u8ddf\u8e2a\u793a\u4f8b"
+  ],
+  "Motion & continuity": [
+    "Movimento e continuidade",
+    "Movimiento y continuidad",
+    "\u52a8\u6548\u4e0e\u8fde\u7eed\u6027"
+  ],
+  "Needs attention": [
+    "Precisa de aten\u00e7\u00e3o",
+    "Requiere atenci\u00f3n",
+    "\u9700\u8981\u5173\u6ce8"
+  ],
+  "Next week": [
+    "Pr\u00f3xima semana",
+    "Pr\u00f3xima semana",
+    "\u4e0b\u4e00\u5468"
+  ],
+  "No sessions right now.": [
+    "Nenhuma sess\u00e3o agora.",
+    "No hay sesiones ahora.",
+    "\u5f53\u524d\u6ca1\u6709\u4f1a\u8bdd\u3002"
+  ],
+  "No tasks yet.": [
+    "Nenhuma tarefa ainda.",
+    "A\u00fan no hay tareas.",
+    "\u5c1a\u65e0\u4efb\u52a1\u3002"
+  ],
+  "Not configured": [
+    "N\u00e3o configurado",
+    "Sin configurar",
+    "\u672a\u914d\u7f6e"
+  ],
+  "Not paired": [
+    "N\u00e3o pareado",
+    "Sin emparejar",
+    "\u672a\u914d\u5bf9"
+  ],
+  "Open project": [
+    "Abrir projeto",
+    "Abrir proyecto",
+    "\u6253\u5f00\u9879\u76ee"
+  ],
+  "Open session": [
+    "Abrir sess\u00e3o",
+    "Abrir sesi\u00f3n",
+    "\u6253\u5f00\u4f1a\u8bdd"
+  ],
+  "Paired devices": [
+    "Dispositivos pareados",
+    "Dispositivos emparejados",
+    "\u5df2\u914d\u5bf9\u8bbe\u5907"
+  ],
+  "Read project context": [
+    "Ler contexto do projeto",
+    "Leer contexto del proyecto",
+    "\u8bfb\u53d6\u9879\u76ee\u4e0a\u4e0b\u6587"
+  ],
+  "Recent changes": [
+    "Altera\u00e7\u00f5es recentes",
+    "Cambios recientes",
+    "\u6700\u8fd1\u66f4\u6539"
+  ],
+  "Refresh": [
+    "Atualizar",
+    "Actualizar",
+    "\u5237\u65b0"
+  ],
+  "Remove phone": [
+    "Remover celular",
+    "Eliminar tel\u00e9fono",
+    "\u79fb\u9664\u624b\u673a"
+  ],
+  "Remove workspace": [
+    "Remover workspace",
+    "Eliminar espacio de trabajo",
+    "\u79fb\u9664\u5de5\u4f5c\u533a"
+  ],
+  "Review the layout": [
+    "Revisar o layout",
+    "Revisar el dise\u00f1o",
+    "\u5ba1\u6838\u5e03\u5c40"
+  ],
+  "Review the task: {task}": [
+    "Revise a tarefa: {task}",
+    "Revisa la tarea: {task}",
+    "\u5ba1\u6838\u4efb\u52a1\uff1a{task}"
+  ],
+  "Revoke rule": [
+    "Revogar regra",
+    "Revocar regla",
+    "\u64a4\u9500\u89c4\u5219"
+  ],
+  "Search": [
+    "Buscar",
+    "Buscar",
+    "\u641c\u7d22"
+  ],
+  "Species": [
+    "Esp\u00e9cie",
+    "Especie",
+    "\u7269\u79cd"
+  ],
+  "Time": [
+    "Hora",
+    "Hora",
+    "\u65f6\u95f4"
+  ],
+  "UI check failed": [
+    "Check da UI falhou",
+    "Fall\u00f3 la comprobaci\u00f3n de UI",
+    "\u754c\u9762\u68c0\u67e5\u5931\u8d25"
+  ],
+  "Voice model": [
+    "Modelo de voz",
+    "Modelo de voz",
+    "\u8bed\u97f3\u6a21\u578b"
+  ],
+  "Zeca is off": [
+    "Zeca desligado",
+    "Zeca desactivado",
+    "Zeca \u5df2\u5173\u95ed"
+  ],
+  "Zeca is on": [
+    "Zeca ligado",
+    "Zeca activado",
+    "Zeca \u5df2\u5f00\u542f"
+  ],
+  "Open chat access settings in Room": [
+    "Abrir permiss\u00f5es do chat na Sala",
+    "Abrir permisos del chat en Sala",
+    "\u5728\u623f\u95f4\u4e2d\u6253\u5f00\u804a\u5929\u6743\u9650\u8bbe\u7f6e"
+  ],
+  "Quick summary": [
+    "Resumo r\u00e1pido",
+    "Resumen r\u00e1pido",
+    "\u5feb\u901f\u6458\u8981"
+  ],
+  "Open in Room": [
+    "Abrir na Sala",
+    "Abrir en Sala",
+    "\u5728\u623f\u95f4\u4e2d\u6253\u5f00"
+  ],
+  "Mon": [
+    "Seg",
+    "Lun",
+    "\u5468\u4e00"
+  ],
+  "Tue": [
+    "Ter",
+    "Mar",
+    "\u5468\u4e8c"
+  ],
+  "Wed": [
+    "Qua",
+    "Mi\u00e9",
+    "\u5468\u4e09"
+  ],
+  "Thu": [
+    "Qui",
+    "Jue",
+    "\u5468\u56db"
+  ],
+  "Fri": [
+    "Sex",
+    "Vie",
+    "\u5468\u4e94"
+  ],
+  "Sat": [
+    "S\u00e1b",
+    "S\u00e1b",
+    "\u5468\u516d"
+  ],
+  "Sun": [
+    "Dom",
+    "Dom",
+    "\u5468\u65e5"
+  ],
+  "Ctrl+K \u00b7 Search": [
+    "Ctrl+K \u00b7 Buscar",
+    "Ctrl+K \u00b7 Buscar",
+    "Ctrl+K \u00b7 \u641c\u7d22"
+  ],
+  "Alt+1\u20135 \u00b7 Workspace tabs": [
+    "Alt+1\u20135 \u00b7 Abas da Sala",
+    "Alt+1\u20135 \u00b7 Pesta\u00f1as de Sala",
+    "Alt+1\u20135 \u00b7 \u5de5\u4f5c\u533a\u9009\u9879\u5361"
+  ],
+  "Escape \u00b7 Close the current overlay": [
+    "Escape \u00b7 Fechar o painel atual",
+    "Escape \u00b7 Cerrar el panel actual",
+    "Escape \u00b7 \u5173\u95ed\u5f53\u524d\u5f39\u5c42"
+  ],
+  "Keep the approved list and detail composition. Validate search, failed checks and explicit merge confirmation.": [
+    "Preservar a lista e o detalhe aprovados. Validar busca, checks com falha e confirma\u00e7\u00e3o de merge.",
+    "Conservar la lista y el detalle aprobados. Validar b\u00fasqueda, fallos y confirmaci\u00f3n de fusi\u00f3n.",
+    "\u4fdd\u7559\u5df2\u6279\u51c6\u7684\u5217\u8868\u548c\u8be6\u60c5\u5e03\u5c40\u3002\u9a8c\u8bc1\u641c\u7d22\u3001\u68c0\u67e5\u5931\u8d25\u548c\u5408\u5e76\u786e\u8ba4\u3002"
+  ],
+  "Goal and next action first. Review creation, criteria, execution controls and separate removal actions.": [
+    "Objetivo e pr\u00f3xima a\u00e7\u00e3o primeiro. Revisar cria\u00e7\u00e3o, crit\u00e9rios, execu\u00e7\u00e3o e remo\u00e7\u00f5es separadas.",
+    "Objetivo y siguiente acci\u00f3n primero. Revisar creaci\u00f3n, criterios, ejecuci\u00f3n y eliminaciones separadas.",
+    "\u4f18\u5148\u663e\u793a\u76ee\u6807\u548c\u4e0b\u4e00\u6b65\u3002\u5ba1\u6838\u521b\u5efa\u3001\u6761\u4ef6\u3001\u6267\u884c\u548c\u72ec\u7acb\u79fb\u9664\u64cd\u4f5c\u3002"
+  ],
+  "Preserve the birds and habitat. Review session selection, activity, changes and permission cards.": [
+    "Preservar os urubus e o habitat. Revisar sele\u00e7\u00e3o de sess\u00e3o, atividade, altera\u00e7\u00f5es e permiss\u00f5es.",
+    "Conservar aves y h\u00e1bitat. Revisar selecci\u00f3n, actividad, cambios y permisos.",
+    "\u4fdd\u7559\u9e1f\u7fa4\u548c\u6816\u606f\u5730\u3002\u5ba1\u6838\u4f1a\u8bdd\u9009\u62e9\u3001\u6d3b\u52a8\u3001\u66f4\u6539\u548c\u6743\u9650\u5361\u7247\u3002"
+  ],
+  "Review Week, Projects, History, Cost, Traces and Audit with useful empty and error states.": [
+    "Revisar Semana, Projetos, Hist\u00f3rico, Custos, Traces e Auditoria, incluindo telas vazias e erros.",
+    "Revisar Semana, Proyectos, Historial, Costes, Trazas y Auditor\u00eda, incluyendo estados vac\u00edos y errores.",
+    "\u5ba1\u6838\u5468\u89c6\u56fe\u3001\u9879\u76ee\u3001\u5386\u53f2\u3001\u6210\u672c\u3001\u8ddf\u8e2a\u548c\u5ba1\u8ba1\uff0c\u5305\u62ec\u7a7a\u72b6\u6001\u4e0e\u9519\u8bef\u3002"
+  ],
+  "Review proposals before saved facts. Keep accept, reject, remove and undo explicit.": [
+    "Revisar propostas antes das mem\u00f3rias salvas. Manter aceitar, recusar, remover e desfazer expl\u00edcitos.",
+    "Revisar propuestas antes de recuerdos guardados. Mantener expl\u00edcitos aceptar, rechazar, eliminar y deshacer.",
+    "\u5148\u5ba1\u6838\u63d0\u8bae\uff0c\u518d\u67e5\u770b\u5df2\u4fdd\u5b58\u8bb0\u5fc6\u3002\u660e\u786e\u63a5\u53d7\u3001\u62d2\u7edd\u3001\u79fb\u9664\u548c\u64a4\u9500\u64cd\u4f5c\u3002"
+  ],
+  "Keep full settings in Room. Align the ten existing categories and remove repeated navigation.": [
+    "Manter configura\u00e7\u00f5es completas na Sala. Alinhar as dez categorias e remover navega\u00e7\u00e3o repetida.",
+    "Mantener ajustes completos en Sala. Alinear las diez categor\u00edas y eliminar navegaci\u00f3n repetida.",
+    "\u5b8c\u6574\u8bbe\u7f6e\u4fdd\u7559\u5728\u623f\u95f4\u4e2d\u3002\u7edf\u4e00\u5341\u4e2a\u7c7b\u522b\u5e76\u79fb\u9664\u91cd\u590d\u5bfc\u822a\u3002"
+  ],
+  "Review reduced motion, keyboard use, scroll position and draft continuity across layouts.": [
+    "Revisar movimento reduzido, teclado, posi\u00e7\u00e3o de leitura e rascunhos entre layouts.",
+    "Revisar movimiento reducido, teclado, posici\u00f3n de lectura y borradores entre dise\u00f1os.",
+    "\u5ba1\u6838\u51cf\u5c11\u52a8\u6001\u6548\u679c\u3001\u952e\u76d8\u3001\u6eda\u52a8\u4f4d\u7f6e\u53ca\u8de8\u5e03\u5c40\u8349\u7a3f\u8fde\u7eed\u6027\u3002"
+  ],
+  "Release A \u00b7 approved foundations": [
+    "Release A \u00b7 base aprovada",
+    "Versi\u00f3n A \u00b7 base aprobada",
+    "\u53d1\u5e03 A \u00b7 \u5df2\u6279\u51c6\u57fa\u7840"
+  ],
+  "Release B \u00b7 complete workspaces": [
+    "Release B \u00b7 \u00e1reas completas",
+    "Versi\u00f3n B \u00b7 \u00e1reas completas",
+    "\u53d1\u5e03 B \u00b7 \u5b8c\u6574\u5de5\u4f5c\u533a"
+  ],
+  "Release C \u00b7 native continuity": [
+    "Release C \u00b7 continuidade nativa",
+    "Versi\u00f3n C \u00b7 continuidad nativa",
+    "\u53d1\u5e03 C \u00b7 \u539f\u751f\u8fde\u7eed\u6027"
+  ],
+  "Later releases \u00b7 separate features": [
+    "Releases futuras \u00b7 novas fun\u00e7\u00f5es",
+    "Versiones futuras \u00b7 nuevas funciones",
+    "\u540e\u7eed\u53d1\u5e03 \u00b7 \u72ec\u7acb\u529f\u80fd"
+  ],
+  "Existing UI work \u00b7 UX4\u2013UX6": [
+    "UI existente \u00b7 UX4\u2013UX6",
+    "UI existente \u00b7 UX4\u2013UX6",
+    "\u73b0\u6709\u754c\u9762\u5de5\u4f5c \u00b7 UX4\u2013UX6"
+  ],
+  "Native feature work \u00b7 remaining UX6 and UX7": [
+    "Trabalho nativo \u00b7 pend\u00eancias de UX6 e UX7",
+    "Trabajo nativo \u00b7 pendientes de UX6 y UX7",
+    "\u539f\u751f\u5de5\u4f5c \u00b7 \u5269\u4f59 UX6 \u4e0e UX7"
+  ],
+  "Future work \u00b7 UX8\u2013UX10": [
+    "Trabalho futuro \u00b7 UX8\u2013UX10",
+    "Trabajo futuro \u00b7 UX8\u2013UX10",
+    "\u540e\u7eed\u5de5\u4f5c \u00b7 UX8\u2013UX10"
+  ],
+  "Chat Compact \u00b7 Connections \u00b7 Tasks": [
+    "Chat Compact \u00b7 Conex\u00f5es \u00b7 Tasks",
+    "Chat Compact \u00b7 Conexiones \u00b7 Tareas",
+    "Compact \u804a\u5929 \u00b7 \u8fde\u63a5 \u00b7 \u4efb\u52a1"
+  ],
+  "Flock \u00b7 Activity \u00b7 Memory \u00b7 Settings": [
+    "Flock \u00b7 Atividade \u00b7 Mem\u00f3ria \u00b7 Configura\u00e7\u00f5es",
+    "Flock \u00b7 Actividad \u00b7 Memoria \u00b7 Ajustes",
+    "\u9e1f\u7fa4 \u00b7 \u6d3b\u52a8 \u00b7 \u8bb0\u5fc6 \u00b7 \u8bbe\u7f6e"
+  ],
+  "Mini \u00b7 Compact \u00b7 Room \u00b7 Full": [
+    "Mini \u00b7 Compact \u00b7 Sala \u00b7 Tela inteira",
+    "Mini \u00b7 Compact \u00b7 Sala \u00b7 Pantalla completa",
+    "Mini \u00b7 Compact \u00b7 \u623f\u95f4 \u00b7 \u5168\u5c4f"
+  ],
+  "Agents workspace \u00b7 Studio \u00b7 Investigations": [
+    "\u00c1rea de agentes \u00b7 Studio \u00b7 Investiga\u00e7\u00f5es",
+    "\u00c1rea de agentes \u00b7 Studio \u00b7 Investigaciones",
+    "\u4ee3\u7406\u5de5\u4f5c\u533a \u00b7 Studio \u00b7 \u8c03\u67e5"
+  ],
+  "Apply the approved visual direction to existing components, then validate the real chat, model menu, criteria and connection actions.": [
+    "Aplicar a dire\u00e7\u00e3o aprovada aos componentes atuais e validar chat real, modelos, crit\u00e9rios e a\u00e7\u00f5es de conex\u00f5es.",
+    "Aplicar la direcci\u00f3n aprobada a los componentes actuales y validar chat real, modelos, criterios y acciones de conexiones.",
+    "\u5c06\u5df2\u6279\u51c6\u65b9\u5411\u5e94\u7528\u5230\u73b0\u6709\u7ec4\u4ef6\uff0c\u9a8c\u8bc1\u5b9e\u9645\u804a\u5929\u3001\u6a21\u578b\u3001\u6761\u4ef6\u548c\u8fde\u63a5\u64cd\u4f5c\u3002"
+  ],
+  "Apply the reviewed hierarchy to the remaining existing views. Preserve the current assets, permissions, retention and network controls.": [
+    "Aplicar a hierarquia revisada \u00e0s demais telas atuais. Preservar assets, permiss\u00f5es, reten\u00e7\u00e3o e controles de rede.",
+    "Aplicar la jerarqu\u00eda revisada a las dem\u00e1s vistas. Conservar recursos, permisos, retenci\u00f3n y controles de red.",
+    "\u5c06\u5df2\u5ba1\u6838\u5c42\u6b21\u5e94\u7528\u5230\u5176\u4f59\u73b0\u6709\u754c\u9762\u3002\u4fdd\u7559\u7d20\u6750\u3001\u6743\u9650\u3001\u4fdd\u7559\u7b56\u7565\u548c\u7f51\u7edc\u63a7\u5236\u3002"
+  ],
+  "Validate native geometry, input regions, zoom and saved transitions. A browser prototype cannot prove these behaviors.": [
+    "Validar geometria nativa, regi\u00f5es de clique, zoom e transi\u00e7\u00f5es salvas. O prot\u00f3tipo no navegador n\u00e3o comprova esses comportamentos.",
+    "Validar geometr\u00eda nativa, regiones de entrada, zoom y transiciones guardadas. El prototipo web no demuestra estos comportamientos.",
+    "\u9a8c\u8bc1\u539f\u751f\u51e0\u4f55\u3001\u8f93\u5165\u533a\u57df\u3001\u7f29\u653e\u548c\u5df2\u4fdd\u5b58\u8fc7\u6e21\u3002\u6d4f\u89c8\u5668\u539f\u578b\u65e0\u6cd5\u8bc1\u660e\u8fd9\u4e9b\u884c\u4e3a\u3002"
+  ],
+  "Keep new workspaces under their own capability contracts. This visual review does not claim those future features are implemented.": [
+    "Novas \u00e1reas seguem seus contratos de capacidade. Esta revis\u00e3o visual n\u00e3o considera essas fun\u00e7\u00f5es futuras implementadas.",
+    "Las nuevas \u00e1reas siguen sus contratos de capacidad. Esta revisi\u00f3n visual no considera implementadas esas funciones futuras.",
+    "\u65b0\u5de5\u4f5c\u533a\u9075\u5faa\u5404\u81ea\u7684\u80fd\u529b\u5951\u7ea6\u3002\u6b64\u89c6\u89c9\u8bc4\u5ba1\u4e0d\u4ee3\u8868\u672a\u6765\u529f\u80fd\u5df2\u5b9e\u73b0\u3002"
+  ],
+  "User review of Tasks; production renderer checks; native Compact and Room validation.": [
+    "Revis\u00e3o de Tasks pelo usu\u00e1rio; testes do renderizador real; valida\u00e7\u00e3o nativa do Compact e Room.",
+    "Revisi\u00f3n de Tareas; pruebas del renderizador real; validaci\u00f3n nativa de Compact y Room.",
+    "\u7528\u6237\u5ba1\u6838\u4efb\u52a1\uff1b\u751f\u4ea7\u6e32\u67d3\u5668\u68c0\u67e5\uff1bCompact \u4e0e Room \u539f\u751f\u9a8c\u8bc1\u3002"
+  ],
+  "Screen-by-screen approval; empty/error states; keyboard and short-window acceptance.": [
+    "Aprova\u00e7\u00e3o por tela; estados vazios e erros; aceita\u00e7\u00e3o com teclado e janelas baixas.",
+    "Aprobaci\u00f3n por pantalla; estados vac\u00edos y errores; aceptaci\u00f3n con teclado y ventanas bajas.",
+    "\u9010\u5c4f\u6279\u51c6\uff1b\u7a7a\u72b6\u6001\u4e0e\u9519\u8bef\uff1b\u952e\u76d8\u548c\u4f4e\u7a97\u53e3\u9a8c\u6536\u3002"
+  ],
+  "Real Linux desktop matrix, multiple monitor scales, unchanged drafts and selections.": [
+    "Matriz no desktop Linux real, escalas de monitor e preserva\u00e7\u00e3o de rascunhos e sele\u00e7\u00f5es.",
+    "Matriz en escritorio Linux real, escalas de monitor y conservaci\u00f3n de borradores y selecciones.",
+    "\u5b9e\u9645 Linux \u684c\u9762\u77e9\u9635\u3001\u591a\u663e\u793a\u5668\u7f29\u653e\u3001\u8349\u7a3f\u548c\u9009\u62e9\u4fdd\u6301\u4e0d\u53d8\u3002"
+  ],
+  "Feature specification, capability review and a separate approved prototype.": [
+    "Especifica\u00e7\u00e3o da fun\u00e7\u00e3o, revis\u00e3o de capacidades e prot\u00f3tipo pr\u00f3prio aprovado.",
+    "Especificaci\u00f3n de funci\u00f3n, revisi\u00f3n de capacidades y prototipo independiente aprobado.",
+    "\u529f\u80fd\u89c4\u8303\u3001\u80fd\u529b\u5ba1\u6838\u548c\u72ec\u7acb\u6279\u51c6\u7684\u539f\u578b\u3002"
+  ],
+  "Destructive request": [
+    "Pedido destrutivo",
+    "Solicitud destructiva",
+    "\u7834\u574f\u6027\u8bf7\u6c42"
+  ],
+  "Expired request": [
+    "Pedido expirado",
+    "Solicitud caducada",
+    "\u5df2\u8fc7\u671f\u8bf7\u6c42"
+  ],
+  "Many sessions": [
+    "Muitas sess\u00f5es",
+    "Muchas sesiones",
+    "\u591a\u4e2a\u4f1a\u8bdd"
+  ],
+  "{n} sessions; select one below. Only the visible birds use the wire.": [
+    "{n} sess\u00f5es; selecione abaixo. Apenas os urubus vis\u00edveis ficam no fio.",
+    "{n} sesiones; selecciona abajo. Solo las aves visibles est\u00e1n en el cable.",
+    "{n} \u4e2a\u4f1a\u8bdd\uff1b\u5728\u4e0b\u65b9\u9009\u62e9\u3002\u4ec5\u663e\u793a\u53ef\u89c1\u7684\u9e1f\u3002"
+  ],
+  "Choose how to continue.": [
+    "Escolha como continuar.",
+    "Elige c\u00f3mo continuar.",
+    "\u9009\u62e9\u5982\u4f55\u7ee7\u7eed\u3002"
+  ],
+  "Choose an answer": [
+    "Escolha uma resposta",
+    "Elige una respuesta",
+    "\u9009\u62e9\u4e00\u4e2a\u7b54\u6848"
+  ],
+  "Your answer": [
+    "Sua resposta",
+    "Tu respuesta",
+    "\u4f60\u7684\u56de\u7b54"
+  ],
+  "Review first": [
+    "Revisar primeiro",
+    "Revisar primero",
+    "\u5148\u5ba1\u6838"
+  ],
+  "Continue with checks": [
+    "Continuar com os checks",
+    "Continuar con comprobaciones",
+    "\u7ee7\u7eed\u5e76\u6267\u884c\u68c0\u67e5"
+  ],
+  "Send answer": [
+    "Enviar resposta",
+    "Enviar respuesta",
+    "\u53d1\u9001\u56de\u7b54"
+  ],
+  "Request expired": [
+    "Pedido expirado",
+    "Solicitud caducada",
+    "\u8bf7\u6c42\u5df2\u8fc7\u671f"
+  ],
+  "This request can no longer be answered.": [
+    "Este pedido n\u00e3o pode mais ser respondido.",
+    "Ya no se puede responder a esta solicitud.",
+    "\u6b64\u8bf7\u6c42\u5df2\u65e0\u6cd5\u56de\u7b54\u3002"
+  ],
+  "Keep the approved Compact composition in one stable window across tabs. Validate bounded menus and internal scrolling.": [
+    "Preservar o Compact aprovado em uma janela est\u00e1vel entre abas. Validar menus contidos e rolagem interna.",
+    "Conservar el Compact aprobado en una ventana estable entre pesta\u00f1as. Validar men\u00fas contenidos y desplazamiento interno.",
+    "\u4fdd\u7559\u5df2\u6279\u51c6\u7684 Compact \u5e03\u5c40\uff0c\u9009\u9879\u5361\u4e4b\u95f4\u4f7f\u7528\u7a33\u5b9a\u7a97\u53e3\u3002\u9a8c\u8bc1\u83dc\u5355\u8fb9\u754c\u4e0e\u5185\u90e8\u6eda\u52a8\u3002"
+  ],
+  "Flock in Compact": [
+    "Flock no Compact",
+    "Flock en Compact",
+    "Compact \u4e2d\u7684\u9e1f\u7fa4"
+  ],
+  "Overview in Compact": [
+    "Resumo no Compact",
+    "Resumen en Compact",
+    "Compact \u6982\u89c8"
+  ],
+  "Overview": [
+    "Resumo",
+    "Resumen",
+    "\u6982\u89c8"
+  ],
+  "Open Activity": [
+    "Abrir Atividade",
+    "Abrir Actividad",
+    "\u6253\u5f00\u6d3b\u52a8"
+  ],
+  "Session overview": [
+    "Resumo das sess\u00f5es",
+    "Resumen de sesiones",
+    "\u4f1a\u8bdd\u6982\u89c8"
+  ],
+  "1 request": [
+    "1 pedido",
+    "1 solicitud",
+    "1 \u4e2a\u8bf7\u6c42"
+  ],
+  "{n} requests": [
+    "{n} pedidos",
+    "{n} solicitudes",
+    "{n} \u4e2a\u8bf7\u6c42"
+  ],
+  "1 failure": [
+    "1 falha",
+    "1 fallo",
+    "1 \u4e2a\u5931\u8d25"
+  ],
+  "{n} failures": [
+    "{n} falhas",
+    "{n} fallos",
+    "{n} \u4e2a\u5931\u8d25"
+  ],
+  "1 working": [
+    "1 em andamento",
+    "1 en curso",
+    "1 \u4e2a\u8fdb\u884c\u4e2d"
+  ],
+  "{n} working": [
+    "{n} em andamento",
+    "{n} en curso",
+    "{n} \u4e2a\u8fdb\u884c\u4e2d"
+  ],
+  "Select {project}": [
+    "Selecionar {project}",
+    "Seleccionar {project}",
+    "\u9009\u62e9 {project}"
+  ],
+  "See all {n} sessions": [
+    "Ver as {n} sess\u00f5es",
+    "Ver las {n} sesiones",
+    "\u67e5\u770b\u5168\u90e8 {n} \u4e2a\u4f1a\u8bdd"
+  ],
+  "Review request": [
+    "Revisar pedido",
+    "Revisar solicitud",
+    "\u5ba1\u6838\u8bf7\u6c42"
+  ],
+  "Review failure": [
+    "Revisar falha",
+    "Revisar fallo",
+    "\u68c0\u67e5\u5931\u8d25"
+  ],
+  "View result": [
+    "Ver resultado",
+    "Ver resultado",
+    "\u67e5\u770b\u7ed3\u679c"
+  ],
+  "Follow in Room": [
+    "Acompanhar na Sala",
+    "Seguir en Sala",
+    "\u5728\u623f\u95f4\u4e2d\u8ddf\u8fdb"
+  ],
+  "Also needs attention: {project}": [
+    "Tamb\u00e9m precisa de voc\u00ea: {project}",
+    "Tambi\u00e9n necesita atenci\u00f3n: {project}",
+    "\u4e5f\u9700\u8981\u5173\u6ce8\uff1a{project}"
+  ],
+  "Waiting for your permission": [
+    "Esperando sua permiss\u00e3o",
+    "Esperando tu permiso",
+    "\u7b49\u5f85\u4f60\u7684\u8bb8\u53ef"
+  ],
+  "Waiting for your answer": [
+    "Esperando sua resposta",
+    "Esperando tu respuesta",
+    "\u7b49\u5f85\u4f60\u7684\u56de\u7b54"
+  ],
+  "A check failed. The output needs review.": [
+    "Um check falhou. A sa\u00edda precisa de revis\u00e3o.",
+    "Una comprobaci\u00f3n fall\u00f3. Revisa la salida.",
+    "\u68c0\u67e5\u5931\u8d25\uff0c\u8bf7\u67e5\u770b\u8f93\u51fa\u3002"
+  ],
+  "The agent finished its turn": [
+    "O agente terminou o turno",
+    "El agente termin\u00f3 su turno",
+    "\u4ee3\u7406\u5df2\u5b8c\u6210\u672c\u8f6e\u4efb\u52a1"
+  ],
+  "Thinking about the next step": [
+    "Pensando no pr\u00f3ximo passo",
+    "Pensando en el siguiente paso",
+    "\u6b63\u5728\u601d\u8003\u4e0b\u4e00\u6b65"
+  ],
+  "Editing a project file": [
+    "Editando um arquivo do projeto",
+    "Editando un archivo del proyecto",
+    "\u6b63\u5728\u7f16\u8f91\u9879\u76ee\u6587\u4ef6"
+  ],
+  "Running project checks": [
+    "Rodando os checks do projeto",
+    "Ejecutando comprobaciones del proyecto",
+    "\u6b63\u5728\u8fd0\u884c\u9879\u76ee\u68c0\u67e5"
+  ],
+  "Working on the current step": [
+    "Trabalhando na etapa atual",
+    "Trabajando en el paso actual",
+    "\u6b63\u5728\u5904\u7406\u5f53\u524d\u6b65\u9aa4"
+  ],
+  "Ready for the next turn": [
+    "Pronto para o pr\u00f3ximo turno",
+    "Listo para el siguiente turno",
+    "\u51c6\u5907\u597d\u5f00\u59cb\u4e0b\u4e00\u8f6e"
+  ],
+  "A check needs your attention": [
+    "Um check precisa de aten\u00e7\u00e3o",
+    "Una comprobaci\u00f3n necesita atenci\u00f3n",
+    "\u6709\u68c0\u67e5\u9700\u8981\u5173\u6ce8"
+  ],
+  "{n} pull requests need attention": [
+    "{n} PRs precisam de aten\u00e7\u00e3o",
+    "{n} PR necesitan atenci\u00f3n",
+    "{n} \u4e2a PR \u9700\u8981\u5173\u6ce8"
+  ],
+  "A task is ready for review": [
+    "Uma tarefa est\u00e1 pronta para revisar",
+    "Una tarea est\u00e1 lista para revisar",
+    "\u6709\u4efb\u52a1\u53ef\u4f9b\u5ba1\u6838"
+  ],
+  "{n} tasks are ready for review": [
+    "{n} tarefas est\u00e3o prontas para revisar",
+    "{n} tareas est\u00e1n listas para revisar",
+    "{n} \u4e2a\u4efb\u52a1\u53ef\u4f9b\u5ba1\u6838"
+  ],
+  "A memory proposal is waiting": [
+    "Uma proposta de mem\u00f3ria espera sua revis\u00e3o",
+    "Una propuesta de memoria espera revisi\u00f3n",
+    "\u6709\u8bb0\u5fc6\u5efa\u8bae\u7b49\u5f85\u5ba1\u6838"
+  ],
+  "{n} memory proposals are waiting": [
+    "{n} propostas de mem\u00f3ria para revisar",
+    "{n} propuestas de memoria para revisar",
+    "{n} \u6761\u8bb0\u5fc6\u5efa\u8bae\u7b49\u5f85\u5ba1\u6838"
+  ],
+  "Review before Zeca remembers": [
+    "Voc\u00ea decide o que o Zeca guarda",
+    "T\u00fa decides lo que Zeca recuerda",
+    "\u7531\u4f60\u51b3\u5b9a Zeca \u8bb0\u4f4f\u4ec0\u4e48"
+  ],
+  "Nothing needs your attention": [
+    "Nenhuma pend\u00eancia por aqui",
+    "No hay nada pendiente",
+    "\u76ee\u524d\u6ca1\u6709\u5f85\u5904\u7406\u4e8b\u9879"
+  ],
+  "Open Room when you want the full picture.": [
+    "Abra a Sala para ver todos os detalhes.",
+    "Abre Sala para ver todos los detalles.",
+    "\u6253\u5f00\u623f\u95f4\u67e5\u770b\u5b8c\u6574\u8be6\u60c5\u3002"
+  ],
+  "1 pull request passed its checks": [
+    "1 PR com checks aprovados",
+    "1 PR con comprobaciones aprobadas",
+    "1 \u4e2a PR \u68c0\u67e5\u901a\u8fc7"
+  ],
+  "{n} pull requests passed their checks": [
+    "{n} PRs com checks aprovados",
+    "{n} PR con comprobaciones aprobadas",
+    "{n} \u4e2a PR \u68c0\u67e5\u901a\u8fc7"
+  ],
+  "Review before merging": [
+    "Revise antes do merge",
+    "Revisa antes de fusionar",
+    "\u5408\u5e76\u524d\u8bf7\u5ba1\u6838"
+  ],
+  "Latest decision": [
+    "\u00daltima decis\u00e3o",
+    "\u00daltima decisi\u00f3n",
+    "\u6700\u8fd1\u7684\u51b3\u5b9a"
+  ],
+  "No updates right now.": [
+    "Nenhuma novidade agora.",
+    "No hay novedades ahora.",
+    "\u6682\u65e0\u66f4\u65b0\u3002"
+  ],
+  "Select {project}: {status}": [
+    "Selecionar {project}: {status}",
+    "Seleccionar {project}: {status}",
+    "\u9009\u62e9 {project}\uff1a{status}"
+  ],
+  "Reading project context": [
+    "Lendo o contexto do projeto",
+    "Leyendo el contexto del proyecto",
+    "\u6b63\u5728\u9605\u8bfb\u9879\u76ee\u4e0a\u4e0b\u6587"
+  ],
+  "Searching for information": [
+    "Buscando informa\u00e7\u00f5es",
+    "Buscando informaci\u00f3n",
+    "\u6b63\u5728\u641c\u7d22\u4fe1\u606f"
+  ],
+  "Reading files": [
+    "Lendo arquivos",
+    "Leyendo archivos",
+    "\u9605\u8bfb\u6587\u4ef6"
+  ],
+  "Editing a file": [
+    "Editando um arquivo",
+    "Editando un archivo",
+    "\u7f16\u8f91\u6587\u4ef6"
+  ],
+  "Running checks": [
+    "Rodando checks",
+    "Ejecutando comprobaciones",
+    "\u8fd0\u884c\u68c0\u67e5"
+  ],
+  "Thinking": [
+    "Pensando",
+    "Pensando",
+    "\u601d\u8003\u4e2d"
+  ],
+  "Turn finished": [
+    "Turno conclu\u00eddo",
+    "Turno terminado",
+    "\u672c\u8f6e\u5b8c\u6210"
+  ],
+  "Check failed": [
+    "Check falhou",
+    "La comprobaci\u00f3n fall\u00f3",
+    "\u68c0\u67e5\u5931\u8d25"
+  ],
+  "Resting": [
+    "Descansando",
+    "Descansando",
+    "\u4f11\u606f\u4e2d"
+  ],
+  "Diff in Lab": [
+    "Diff no Lab",
+    "Diff en Lab",
+    "Lab \u4e2d\u7684\u5dee\u5f02"
+  ],
+  "Selected session": [
+    "Sess\u00e3o selecionada",
+    "Sesi\u00f3n seleccionada",
+    "\u9009\u4e2d\u7684\u4f1a\u8bdd"
+  ],
+  "Session details": [
+    "Detalhes da sess\u00e3o",
+    "Detalles de la sesi\u00f3n",
+    "\u4f1a\u8bdd\u8be6\u60c5"
+  ],
+  "Session": [
+    "Sess\u00e3o",
+    "Sesi\u00f3n",
+    "\u4f1a\u8bdd"
+  ],
+  "The change shown": [
+    "Altera\u00e7\u00e3o exibida",
+    "Cambio mostrado",
+    "\u663e\u793a\u7684\u66f4\u6539"
+  ],
+  "Changed file": [
+    "Arquivo alterado",
+    "Archivo modificado",
+    "\u66f4\u6539\u7684\u6587\u4ef6"
+  ],
+  "Step {step} \u00b7 {n} files": [
+    "Etapa {step} \u00b7 {n} arquivos",
+    "Paso {step} \u00b7 {n} archivos",
+    "\u6b65\u9aa4 {step} \u00b7 {n} \u4e2a\u6587\u4ef6"
+  ],
+  "All {n} files": [
+    "Todos os {n} arquivos",
+    "Todos los {n} archivos",
+    "\u5168\u90e8 {n} \u4e2a\u6587\u4ef6"
+  ],
+  "Code changes": [
+    "Altera\u00e7\u00f5es no c\u00f3digo",
+    "Cambios de c\u00f3digo",
+    "\u4ee3\u7801\u66f4\u6539"
+  ],
+  "Sample patch. No project files were changed.": [
+    "Patch de exemplo. Nenhum arquivo do projeto foi alterado.",
+    "Patch de ejemplo. No se modific\u00f3 ning\u00fan archivo del proyecto.",
+    "\u793a\u4f8b\u8865\u4e01\u3002\u672a\u66f4\u6539\u4efb\u4f55\u9879\u76ee\u6587\u4ef6\u3002"
+  ],
+  "No changes kept for this session yet.": [
+    "Nenhuma altera\u00e7\u00e3o guardada para esta sess\u00e3o ainda.",
+    "Esta sesi\u00f3n a\u00fan no tiene cambios guardados.",
+    "\u6b64\u4f1a\u8bdd\u5c1a\u65e0\u4fdd\u7559\u7684\u66f4\u6539\u3002"
+  ],
+  "Ask about the selected session. Your conversation and draft stay together.": [
+    "Pergunte sobre a sess\u00e3o selecionada. Sua conversa e seu rascunho continuam juntos.",
+    "Pregunta sobre la sesi\u00f3n seleccionada. Se conservan tu conversaci\u00f3n y tu borrador.",
+    "\u8be2\u95ee\u9009\u4e2d\u7684\u4f1a\u8bdd\u3002\u5bf9\u8bdd\u548c\u8349\u7a3f\u5c06\u4e00\u5e76\u4fdd\u7559\u3002"
+  ]
+}
