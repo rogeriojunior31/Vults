@@ -250,8 +250,6 @@
 #vults-ui-proposal .run-body>div>svg { color:var(--ok); }
 #vults-ui-proposal .tool-row code { color:var(--fg); }
 #vults-ui-proposal .tool-row span { color:var(--fg-muted); }
-#vults-ui-proposal .zeca-note { padding:10px 12px; border-radius:var(--radius-card); background:var(--float); box-shadow:inset 0 0 0 1px var(--border-hover); }
-#vults-ui-proposal .zeca-note p { line-height:1.5; }
 #vults-ui-proposal .reply-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
 #vults-ui-proposal .reply-chip { min-height:26px!important; padding:3px 10px; font-size:12px; border-radius:13px; background:var(--float); color:var(--fg-dim); box-shadow:inset 0 0 0 1px var(--border-hover); }
 #vults-ui-proposal .reply-chip:hover:not(:disabled) { color:var(--fg); }
@@ -408,10 +406,11 @@
 #vults-ui-proposal .flock-stage canvas { display:block; image-rendering:pixelated; }
 
 /* The card: Compact and Lab densities share one shape */
-#vults-ui-proposal .request-card { display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:var(--radius-card); background:var(--panel); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent); }
+#vults-ui-proposal .request-card { display:flex; flex-direction:column; gap:8px; padding:10px 12px; border-radius:var(--radius-card); background:var(--panel); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent); }
 #vults-ui-proposal .request-card.destructive { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--error-text) 55%,transparent); }
 #vults-ui-proposal .request-card.density-chat { background:var(--float); }
 #vults-ui-proposal .request-head { display:flex; align-items:center; gap:8px; font-size:12px; }
+#vults-ui-proposal .request-why { margin:0; font-size:13px; color:var(--fg); line-height:1.45; }
 #vults-ui-proposal .request-head .icon-action { width:24px; min-height:24px; margin-left:4px; color:var(--fg-muted); }
 #vults-ui-proposal .request-head .request-count+.icon-action { margin-left:0; }
 #vults-ui-proposal .request-head strong { font-weight:600; }
@@ -446,6 +445,8 @@
 #vults-ui-proposal .compact-bird-pick:hover span { background:var(--float); }
 #vults-ui-proposal .compact-bird-pick[aria-pressed=true] span { color:var(--fg); background:var(--raised); }
 #vults-ui-proposal .compact-focus { display:flex; flex-direction:column; gap:6px; padding:8px 10px; background:var(--float); border-radius:var(--radius-card); }
+#vults-ui-proposal .compact-focus.with-card { background:transparent; padding:0; gap:4px; }
+#vults-ui-proposal .compact-focus.with-card .compact-focus-heading { padding:0 4px; }
 #vults-ui-proposal .compact-focus .request-card { background:var(--panel); }
 #vults-ui-proposal .compact-focus-heading { display:flex; gap:10px; align-items:center; }
 #vults-ui-proposal .compact-focus-heading strong { font-size:14px; font-weight:500; }

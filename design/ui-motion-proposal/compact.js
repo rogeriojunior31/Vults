@@ -45,6 +45,7 @@
       for(const b of picks.children)b.setAttribute('aria-pressed',String(b.dataset.key===selected.id));
       focus.setAttribute('aria-live','polite');
       const s=selected,more=key(iconButton('list','Quick actions',()=>sessionActions(more,s)),'compact-more');
+      const pendingNow=['approval','question'].includes(s.status)&&!isSkipped(s);focus.classList.toggle('with-card',pendingNow);
       focus.replaceChildren(el('div','compact-focus-heading',null,el('strong',null,s.project),el('span',null,labelFor(s.agent)),sessionChip(s),more));
       const meta=[phrase('Step {n}',{n:s.step_count}),...(s.subagents?[phrase(s.subagents===1?'1 subagent':'{n} subagents',{n:s.subagents})]:[]),...(s.cost?[raw('≈ $'+s.cost.toFixed(2))]:[])];
       if(['approval','question'].includes(s.status)&&isSkipped(s)){focus.append(el('p',null,'Skipped. It still waits in Now and in its terminal.'),el('div','inline-actions',null,key(button('Show the card','quiet-control',()=>{unskip(s);resizeCompactFlock();}),'unskip')));}

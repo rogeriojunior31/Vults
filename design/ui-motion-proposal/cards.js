@@ -37,6 +37,7 @@
     if(s.pending>1&&!chat)head.append(el('span','request-count counter',phrase('1 of {n}',{n:s.pending})));
     if(!chat&&!expired)head.append(key(iconButton('close','Skip for now',()=>{skip(s);onAnswer('Skipped');}),'skip'));
     card.append(head);
+    if(s.why)card.append(el('p','request-why',null,el('span',null,s.why)));
     if(destructive)card.append(el('p','request-reason danger-text',null,A.icon('retry',12),el('span',null,'Destructive: no policy ever allows it')));
     else if(density==='lab')card.append(el('p','request-reason',null,A.icon('person',12),el('span',null,'Your policy asks first for builds outside src/')));
     if(s.outside)card.append(el('p','request-reason danger-text',null,A.icon('openOut',12),el('span',null,'This follows content from outside (a web page). Check the command before allowing it.')));

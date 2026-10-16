@@ -971,18 +971,6 @@
    "expect": "[data-key=\"s-card\"]"
   },
   {
-   "id": "zeca-notes",
-   "area": "Zeca",
-   "feature": "Zeca notices what needs you and says it in the conversation",
-   "status": "new",
-   "at": {
-    "mode": "quick",
-    "area": "chat",
-    "example": "conversation"
-   },
-   "expect": ".zeca-note"
-  },
-  {
    "id": "zeca-followups",
    "area": "Zeca",
    "feature": "Follow-ups under each reply: open, ask, make it a task",

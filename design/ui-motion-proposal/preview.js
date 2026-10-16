@@ -157,11 +157,10 @@
     caption.textContent=state.messages.length||state.busy?phrase('{engine} · {folder}',{engine:engineInfo().name,folder:settings.chatFolder}):flockLine();
     log.replaceChildren();
     // Follow-ups stay on the latest reply, even when a note from Zeca came after it.
-    const lastReply=state.messages.map((m,i)=>m.who==='zeca'&&!m.note?i:-1).reduce((a,b)=>Math.max(a,b),-1);
+    const lastReply=state.messages.map((m,i)=>m.who==='zeca'?i:-1).reduce((a,b)=>Math.max(a,b),-1);
     state.messages.forEach((m,index) => {
       if (m.who==='you') { log.append(el('div','message you',m.text)); return; }
       if (m.who==='card') { log.append(chatCard(m)); return; }
-      if (m.note) { log.append(noteBubble(m,index)); return; }
       if (m.tools!==false) log.append(replyTools(m));
       const reply=el('div','message reply',null,el('div','message-signature',null,el('span','agent-dot '+engineInfo().agent),el('span',null,'Zeca'),el('small',null,raw(m.model??modelLabel()))),el('p',null,m.text));
       if (m.list) { const list=el('ul'); m.list.forEach(text => list.append(el('li',null,text))); reply.append(list); }
@@ -319,7 +318,7 @@
     state.voice=false; input.hidden=false; $('.voice-preview').hidden=true; mic.setAttribute('aria-pressed','false');
     state.example=example; state.busy=example==='thinking'; state.notice=example==='notification'; state.queued=[];
     state.messages=['conversation','thinking','notification'].includes(example)?[{who:'you',text:sampleQuestion()}]:[];
-    if (example==='conversation'||example==='notification') { state.messages.push(SAMPLE_REPLY()); noticed.clear(); companionNotes(); }
+    if (example==='conversation'||example==='notification') state.messages.push(SAMPLE_REPLY());
     if (example==='permission'||example==='outside') {
       const outside=example==='outside';
       state.messages=[{who:'you',text:outside?'Install the linter the docs page recommends':'Show me the last commits in Vults'},
@@ -341,20 +340,6 @@
     });
     if (m.answer) return el('div','card-outcome',null,A.icon(m.answer==='Denied'?'close':'check',13),el('span',null,phrase('{answer}: {command}',{answer:L(m.answer),command:m.command})));
     return card;
-  }
-  // Zeca speaks first when something in the flock is worth your time; each event once.
-  function noteBubble(m,index) {
-    const bubble=el('div','zeca-note',null,el('div','message-signature',null,el('span','agent-dot zeca'),el('span',null,'Zeca'),el('small',null,'noticed')),el('p',null,m.text));
-    if (m.chips) bubble.append(el('div','reply-chips',null,...m.chips.map(c=>key(button(c.label,'reply-chip',()=>followUp(c)),'chip-'+c.id))));
-    return bubble;
-  }
-  const noticed=new Set();
-  function companionNotes() {
-    if (!settings.zeca||!state.messages.length) return;
-    const f=flockFacts(),notes=[];
-    for (const s of f.needs) notes.push({key:'needs:'+s.id+':'+s.step,text:phrase('{project} is waiting for you: {agent} wants to run {command}.',{project:s.project,agent:labelFor(s.agent),command:s.step}),chips:[{id:'card-'+s.id,label:'Show me the card',go:()=>{views.sessionSelected=s.id;setArea('flock',state.mode==='quick'?'quick':'room');}},{id:'why-'+s.id,label:'What is it for?',send:phrase('Why does {project} want to run {command}?',{project:s.project,command:s.step})}]});
-    for (const s of f.failed) notes.push({key:'failed:'+s.id,text:phrase('{project}\'s checks failed. I can read the output with you.',{project:s.project}),chips:[{id:'fail-'+s.id,label:'Read it with me',send:phrase('Why did {project} fail?',{project:s.project})}]});
-    for (const n of notes) if (!noticed.has(n.key)) { noticed.add(n.key); state.messages.push({who:'zeca',note:true,text:n.text,chips:n.chips}); }
   }
   function followUp(c) {
     if (c.go) { c.go(); return; }

@@ -278,7 +278,7 @@ for(const [area,id] of [['flock','flock-list'],['chat','recent'],['connections',
 /* Zeca as a companion: he greets with the flock, suggests from it, notices, and reacts. */
 P.setArea('chat','quick');P.showExample('empty');assert.ok(/Boa|Bom/.test(text('.intro-copy h2')),'Zeca greets by the time of day.');assert.ok(text('.intro-caption').includes('Vults'),'The greeting says what the flock needs.');
 assert.ok(find('[data-key="s-card"]'),'Suggestions follow the flock.');find('[data-key="s-card"]').click();assert.ok(find('.chat-view textarea').value.includes('Vults'),'A suggestion fills the draft; it never sends.');type(find('.chat-view textarea'),'');
-P.showExample('conversation');assert.ok(find('.zeca-note'),'Zeca notes what needs you inside the conversation.');assert.ok(find('.reply-chips'));
+P.showExample('conversation');assert.equal(find('.zeca-note'),null,'Zeca never speaks first in the transcript.');assert.ok(find('.reply-chips'));
 find('[data-key="chip-card"]').click();assert.equal(P.state.area,'flock','A follow-up can open the card; it never answers it.');
 P.setArea('chat','quick');type(find('.chat-view textarea'),'hi');assert.equal(sceneUpdates.get(find('.portrait canvas'))[2].clip,'listen','Zeca listens while you type.');
 type(find('.chat-view textarea'),'Why did api fail?');keydown(find('.chat-view textarea'),'Enter');assert.ok(['search','think'].includes(sceneUpdates.get(find('.portrait canvas'))[2].clip),'Zeca searches, then thinks.');runTimers();

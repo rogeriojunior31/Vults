@@ -4323,5 +4323,15 @@
     "Nada aqui ainda.",
     "Nada aquí todavía.",
     "这里还没有内容。"
+  ],
+  "Build the project to check the Now inbox before the review.": [
+    "Compilar o projeto para conferir a caixa Agora antes da revisão.",
+    "Compilar el proyecto para revisar la bandeja Ahora antes de la revisión.",
+    "在审查前构建项目以检查“现在”收件箱。"
+  ],
+  "Run the UI tests so the third criterion can pass.": [
+    "Rodar os testes de UI para o terceiro critério passar.",
+    "Ejecutar las pruebas de UI para que pase el tercer criterio.",
+    "运行 UI 测试以通过第三个条件。"
   ]
 }
