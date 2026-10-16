@@ -6008,5 +6008,10 @@
     "Remove turnos, conversas, diário e traces. Memória, políticas, celulares e custos ficam.",
     "Elimina turnos, conversaciones, diario y trazas. Memoria, políticas, teléfonos y costos se quedan.",
     "删除回合、对话、日志和追踪记录。记忆、策略、手机和成本会保留。"
+  ],
+  "{n} of {total} passed": [
+    "{n} de {total} passaram",
+    "{n} de {total} aprobados",
+    "{total} 项中 {n} 项通过"
   ]
 }

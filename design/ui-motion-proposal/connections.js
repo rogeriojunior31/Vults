@@ -27,15 +27,18 @@
       found.forEach(row=>{
         const b=key(button(null,'connection-row',()=>{views.connectionSelected=row.id;paint();enter(detail,'gentle',4,1);remember();}),row.id);b.setAttribute('aria-pressed',String(row.id===views.connectionSelected));
         const fresh=row.isNew&&!settings.githubSeen[row.id];
-        b.append(el('span','shape shape-'+(row.checks?checkTone(row.checks):fresh?'news':'quiet')),el('div','connection-copy',null,el('strong',null,row.title),el('small',null,null,document.createTextNode([row.repo,row.ref??(views.connectionSection==='pulls'?row.id:''),row.kind?L(row.kind):'',row.age?phrase('{age} ago',{age:row.age}):''].filter(Boolean).join(' · ')))),...(fresh?[el('span','new-dot','New')]:[]));list.append(b);
+        const side=el('span','conn-side',null,row.checkList?checkBar(row.checkList):el('span','shape shape-'+(row.checks?checkTone(row.checks):fresh?'news':'quiet')),row.age?el('small','counter',null,document.createTextNode(phrase('{age} ago',{age:row.age}))):null);
+        b.append(repoMark(row.repo),el('div','connection-copy',null,el('strong',null,null,...(fresh?[el('span','new-dot')]:[]),document.createTextNode(L(row.title))),el('small',null,null,document.createTextNode([row.repo,row.ref??(views.connectionSection==='pulls'?row.id:''),row.kind?L(row.kind):''].filter(Boolean).join(' · ')))),side);
+        if(fresh)b.setAttribute('aria-label',L(row.title)+' · '+L('New'));list.append(b);
       });
       if(!found.length){list.append(el('p','pane-note','Nothing here matches your search.'),button('Clear filters','quiet-control',()=>{views.connectionQuery='';finder.querySelector('input').value='';paint();}));detail.replaceChildren();return;}
       const selected=found.find(row=>row.id===views.connectionSelected)??found[0];views.connectionSelected=selected.id;paintDetail(selected);edge();
     }
     function paintDetail(row){
       detail.replaceChildren();const section=views.connectionSection;
-      if(row.checks)detail.append(chip(checkTone(row.checks),row.merged?'Merged':row.checks==='passed'?'Checks passed':row.checks==='failed'?'Checks failed':'Checks running'));
-      detail.append(el('h3',null,row.title),el('span','task-meta',null,document.createTextNode([row.repo,row.id.startsWith('#')?row.id:row.ref,row.branch,row.author&&'@'+row.author,row.size].filter(Boolean).join(' · '))));
+      const where=el('div','conn-where',null,repoMark(row.repo),el('span',null,null,document.createTextNode([row.repo,row.id.startsWith('#')?row.id:row.ref].filter(Boolean).join(' · '))),row.checks?chip(checkTone(row.checks),row.merged?'Merged':row.checks==='passed'?'Checks passed':row.checks==='failed'?'Checks failed':'Checks running'):null);
+      const facts=el('div','conn-facts',null,row.branch?el('span','conn-fact',null,A.icon('branch',12),el('code',null,null,document.createTextNode(row.branch))):null,row.author?el('span','conn-fact',null,A.icon('person',12),el('span',null,null,document.createTextNode('@'+row.author))):null,row.size?diffBar(row.size):null);
+      detail.append(where,el('h3',null,row.title),facts);
       if(row.notes)detail.append(el('p',null,row.notes));
       const actions=el('div','detail-actions',null,button('Open in GitHub ↗','quiet-control',()=>toast(phrase('Opened {ref} in your browser',{ref:row.ref??row.id}))),key(button('Ask Zeca','quiet-control',()=>prepareChat(phrase(section==='actions'?'Why is {repo} main red?':'Review {title}',{repo:row.repo,title:L(row.title)}))),'ask-zeca'));
       if(section==='pulls'){
@@ -44,10 +47,19 @@
       }
       if(row.isNew&&!settings.githubSeen[row.id])actions.append(key(button('✓ Seen','',()=>{settings.githubSeen[row.id]=true;paint();remember();}),'seen'));
       detail.append(actions);
-      if(row.checkList){const checks=details(phrase('Checks · {n}',{n:row.checkList.length}),[...row.checkList].sort((a,b)=>(a[1]==='failed'?-1:0)-(b[1]==='failed'?-1:0)).map(([name,value])=>el('div',null,null,el('span','shape shape-'+checkTone(value)),el('span',null,raw(name)),el('small',null,value))));checks.open=row.checks==='failed';detail.append(checks);}
+      if(row.checkList){const passed=row.checkList.filter(c=>c[1]==='passed').length;detail.append(el('section','conn-checks',null,el('header',null,null,el('strong',null,null,document.createTextNode(phrase('Checks · {n}',{n:row.checkList.length}))),el('small','counter',null,document.createTextNode(phrase('{n} of {total} passed',{n:passed,total:row.checkList.length})))),...[...row.checkList].sort((a,b)=>(a[1]==='failed'?-1:0)-(b[1]==='failed'?-1:0)).map(([name,value])=>el('div','conn-check '+checkTone(value),null,el('span','shape shape-'+checkTone(value)),el('span',null,raw(name)),el('small',null,value)))));}
       detail.append(details('Technical details',[el('code','mono',null,document.createTextNode('gh pr view '+(row.id.startsWith('#')?row.id.slice(1):row.ref?.slice(1)??'')+' --repo you/'+row.repo+' --json statusCheckRollup')),el('p','pane-note','Copy-only. Vults never runs a command you type here.')]));
     }
     paint();
+  }
+  // A repo's mark: its first letter on a tile, so rows from the same repo read as one at a glance.
+  const repoMark=repo=>{const m=el('span','repo-mark',null,document.createTextNode(String(repo||'?').slice(0,1).toUpperCase()));m.setAttribute('aria-hidden','true');return m;};
+  // Each check is one segment, in its status color; the only color in the row.
+  const checkBar=list=>{const bar=el('span','check-bar');bar.setAttribute('data-tooltip',list.map(([n,v])=>n+': '+L(v)).join(' · '));for(const [,v] of list)bar.append(el('i',checkTone(v)));return bar;};
+  function diffBar(size){
+    const [add,del]=(String(size).match(/\d+/g)??['0','0']).map(Number),total=Math.max(add+del,1),bar=el('span','diff-bar');
+    for(let i=0;i<5;i++)bar.append(el('i',i<Math.round(add/total*5)?'add':'del'));
+    return el('span','conn-fact',null,el('span','diff-add',null,document.createTextNode('+'+add)),el('span','diff-del',null,document.createTextNode('−'+del)),bar);
   }
   function renderZecaFace(host){
     host.append(el('p','pane-note','What Zeca may read or do with GitHub. Each tool has its own switch and leaves a trace. Acting always asks you first.'));
