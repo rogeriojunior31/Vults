@@ -571,23 +571,20 @@ mod tests {
     }
 
     #[test]
-    fn codex_keeps_more_of_a_finished_patch() {
+    fn codex_keeps_more_of_a_patch() {
         let patch = format!(
-            "*** Begin Patch\n*** Add File: a\n{}*** End Patch",
+            "*** Begin Patch\n*** Add File: a\n{}*** Add File: b\n+y\n*** End Patch",
             "+x\n".repeat(2_000)
         );
         let raw = |event: &str| {
             serde_json::to_vec(&json!({ "hook_event_name": event, "tool_name": "apply_patch", "tool_input": { "command": patch } }))
                 .unwrap()
         };
-        let e = build_event(&args(AgentKind::Codex, None), &raw("PostToolUse"), None, |_| None).unwrap();
-        assert_eq!(e.payload["tool_input"]["command"], patch);
-        // Before it runs, the approval card needs only its files.
-        let e = build_event(&args(AgentKind::Codex, None), &raw("PreToolUse"), None, |_| None).unwrap();
-        assert!(
-            e.payload["tool_input"]["command"].as_str().unwrap().len()
-                <= protocol::MAX_FIELD_LEN + '…'.len_utf8()
-        );
+        // Before it runs too: a file named past the field cap must reach the approval card.
+        for event in ["PostToolUse", "PreToolUse", "PermissionRequest"] {
+            let e = build_event(&args(AgentKind::Codex, None), &raw(event), None, |_| None).unwrap();
+            assert_eq!(e.payload["tool_input"]["command"], patch, "{event}");
+        }
     }
 
     #[test]

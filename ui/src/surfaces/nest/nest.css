@@ -1676,6 +1676,55 @@ body.still .detail-content.detail-enter { animation: none; }
   font: 11px var(--mono);
   color: var(--fg-dim);
 }
+/* Every file the session changed, under the diff shown: paths whole, counts aligned. */
+.touched {
+  margin-top: 18px;
+}
+.touched-head {
+  margin: 0 0 8px;
+  font: 600 11px var(--font);
+  color: var(--fg-muted);
+}
+.touched-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: 11px var(--mono);
+  color: var(--fg-dim);
+  text-align: left;
+}
+button.touched-row {
+  color: var(--fg);
+  cursor: pointer;
+}
+button.touched-row:hover,
+.touched-row[aria-current="true"] {
+  background: var(--float);
+}
+.touched-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.touched-counts {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.touched-counts .added {
+  color: #71dc94;
+}
+.touched-counts .removed {
+  color: var(--error);
+}
+.touched-counts.outside {
+  font-style: italic;
+  color: var(--fg-dim);
+}
 .diff-block {
   overflow: hidden;
   border: 1px solid var(--border);

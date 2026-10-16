@@ -197,7 +197,9 @@ pub fn build_event(
             kept.insert("cut".into(), Value::Bool(true));
         }
     }
-    let patch = finished && payload.get("tool_name").and_then(Value::as_str) == Some("apply_patch");
+    // Every event keeps Codex's patch whole up to its cap, not just a finished one: the approval
+    // card names its files from it, and a file past the field cap would go unnamed.
+    let patch = payload.get("tool_name").and_then(Value::as_str) == Some("apply_patch");
     let mut patch = patch
         .then(|| payload.get_mut("tool_input")?.get_mut("command").map(Value::take))
         .flatten();

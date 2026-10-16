@@ -12,7 +12,7 @@ const CONTEXT: usize = 3;
 
 /// A Claude Code edit, from its `PostToolUse`.
 pub(crate) fn claude(tool: &str, input: &Value, response: Option<&Value>) -> Option<Diff> {
-    let path = input.get("file_path")?.as_str()?.to_string();
+    let path = path_of(input)?;
     let hunks = response
         .and_then(|r| r.get("structuredPatch"))
         .and_then(Value::as_array);
@@ -58,10 +58,17 @@ pub(crate) fn claude(tool: &str, input: &Value, response: Option<&Value>) -> Opt
     }
 }
 
+/// The file an edit names; a notebook's cell edit names its notebook.
+fn path_of(input: &Value) -> Option<String> {
+    let path = input.get("file_path").or_else(|| input.get("notebook_path"))?;
+    Some(path.as_str()?.to_string())
+}
+
 /// An edit rebuilt from its old and new text (`Edit`, `MultiEdit`, Gemini's `replace`), without
-/// line numbers. A `Write` over a file says nothing of what was there, so it has none.
+/// line numbers. A `Write` over a file says nothing of what was there, so it has none; nor does a
+/// notebook cell's edit, which sends only its new source.
 pub(crate) fn from_input(tool: &str, input: &Value) -> Option<Diff> {
-    let path = input.get("file_path")?.as_str()?.to_string();
+    let path = path_of(input)?;
     let side = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).unwrap_or_default().to_string();
     let edits: Vec<(String, String)> = match tool {
         "Edit" | "replace" => vec![(side(input, "old_string"), side(input, "new_string"))],
@@ -71,15 +78,56 @@ pub(crate) fn from_input(tool: &str, input: &Value) -> Option<Diff> {
             .iter()
             .map(|e| (side(e, "old_string"), side(e, "new_string")))
             .collect(),
+        "NotebookEdit" if input.get("edit_mode").and_then(Value::as_str) == Some("delete") => {
+            return Some(single(path, Vec::new(), false));
+        }
+        "NotebookEdit" => vec![(String::new(), side(input, "new_source"))],
         _ => return None,
     };
-    let cut = edits.iter().any(|(old, new)| was_cut(old) || was_cut(new));
-    let hunks = edits.iter().map(|(old, new)| hunk(old, new)).collect();
-    Some(single(path, hunks, cut))
+    Some(rebuilt(path, &edits))
 }
 
-/// Codex's `apply_patch`: `*** Update File:` / `*** Add File:` / `*** Delete File:` sections,
-/// each `@@` a hunk, without line numbers.
+/// Antigravity's edits, from its own argument names: `replace_file_content` (one chunk),
+/// `multi_replace_file_content` (its `ReplacementChunks`) and `write_to_file` (a whole file),
+/// without line numbers. The names are read off agy 1.3.6 itself: no recorded session edits yet.
+pub(crate) fn antigravity(tool: &str, args: &Value) -> Option<Diff> {
+    let path = args.get("TargetFile")?.as_str()?.to_string();
+    let side = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).unwrap_or_default().to_string();
+    let chunk = |v: &Value| (side(v, "TargetContent"), side(v, "ReplacementContent"));
+    let edits: Vec<(String, String)> = match tool {
+        "replace_file_content" => vec![chunk(args)],
+        "multi_replace_file_content" => {
+            // The model may send the list as JSON text.
+            let chunks = match args.get("ReplacementChunks")? {
+                Value::String(text) => serde_json::from_str(text).ok()?,
+                v => v.clone(),
+            };
+            chunks.as_array()?.iter().map(chunk).collect()
+        }
+        "write_to_file" => {
+            let content = args.get("CodeContent")?.as_str()?;
+            let lines = content.lines().map(|l| format!("+{l}")).collect();
+            let hunk = Hunk {
+                old_start: None,
+                new_start: Some(1),
+                lines,
+            };
+            return Some(single(path, vec![hunk], was_cut(content)));
+        }
+        _ => return None,
+    };
+    Some(rebuilt(path, &edits))
+}
+
+/// One file's edits, each rebuilt from its old and new text.
+fn rebuilt(path: String, edits: &[(String, String)]) -> Diff {
+    let cut = edits.iter().any(|(old, new)| was_cut(old) || was_cut(new));
+    let hunks = edits.iter().map(|(old, new)| hunk(old, new)).collect();
+    single(path, hunks, cut)
+}
+
+/// Codex's `apply_patch`: `*** Update File:` / `*** Add File:` / `*** Delete File:` sections (a
+/// `*** Move to:` renames the one before), each `@@` a hunk, without line numbers.
 pub(crate) fn codex(patch: &str) -> Option<Diff> {
     let mut files: Vec<FileDiff> = Vec::new();
     for line in patch.lines() {
@@ -98,6 +146,11 @@ pub(crate) fn codex(patch: &str) -> Option<Diff> {
         let Some(file) = files.last_mut() else {
             continue;
         };
+        // The file's changes land on its new path.
+        if let Some(to) = line.strip_prefix("*** Move to: ") {
+            file.path = to.trim().to_string();
+            continue;
+        }
         if line.starts_with("@@") || file.hunks.is_empty() {
             file.hunks.push(Hunk {
                 old_start: None,
@@ -230,6 +283,40 @@ mod tests {
         // Cut by the hook: no end marker.
         assert!(codex("*** Begin Patch\n*** Add File: a\n+x…").unwrap().cut);
         assert!(codex("not a patch").is_none());
+    }
+
+    #[test]
+    fn a_notebook_cell_edit_names_its_notebook() {
+        let input = json!({ "notebook_path": "/w/a.ipynb", "cell_id": "c1", "new_source": "x = 1\ny = 2" });
+        let d = claude("NotebookEdit", &input, None).unwrap();
+        assert_eq!(
+            (d.files[0].path.as_str(), d.added(), d.removed()),
+            ("/w/a.ipynb", 2, 0)
+        );
+        let gone = json!({ "notebook_path": "/w/a.ipynb", "cell_id": "c1", "edit_mode": "delete" });
+        assert_eq!(
+            claude("NotebookEdit", &gone, None).unwrap().files[0].path,
+            "/w/a.ipynb"
+        );
+    }
+
+    #[test]
+    fn antigravity_edits_read_its_own_arguments() {
+        let one = json!({ "TargetFile": "/w/a.rs", "TargetContent": "x", "ReplacementContent": "y\nz" });
+        let d = antigravity("replace_file_content", &one).unwrap();
+        assert_eq!(
+            (d.files[0].path.as_str(), d.added(), d.removed()),
+            ("/w/a.rs", 2, 1)
+        );
+        let chunks = json!([{ "TargetContent": "a", "ReplacementContent": "b" }, { "TargetContent": "c", "ReplacementContent": "" }]);
+        for chunks in [chunks.clone(), Value::String(chunks.to_string())] {
+            let many = json!({ "TargetFile": "/w/a.rs", "ReplacementChunks": chunks });
+            let d = antigravity("multi_replace_file_content", &many).unwrap();
+            assert_eq!((d.added(), d.removed()), (1, 2));
+        }
+        let new = json!({ "TargetFile": "/w/b.rs", "CodeContent": "one\ntwo", "Overwrite": false });
+        assert_eq!(antigravity("write_to_file", &new).unwrap().added(), 2);
+        assert!(antigravity("view_file", &json!({ "TargetFile": "/w/b.rs" })).is_none());
     }
 
     #[test]

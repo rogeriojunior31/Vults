@@ -7,7 +7,8 @@
 //! `conversation_id`, `workspace_roots`, `error_message`); here, its tool names.
 //! - The file holds a flat list of handlers per event, shared with other tools.
 //! - `preToolUse`, `beforeSubmitPrompt` and the `before…` hooks are left out: Cursor reads their
-//!   output as a decision, so the island sees finished steps, never steps starting.
+//!   output as a decision, so the island sees finished steps, never steps starting. An edit comes
+//!   whole from `afterFileEdit` (its file and each replacement), read by nothing.
 //! - A hook runs in `~/.cursor`, not the project: the folder is `workspace_roots`.
 //! - Every command ends in `|| exit 0`, so a missing hook binary is never read as a failure.
 
@@ -15,7 +16,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 use vults_agent_config::{HookEntry, flat};
-use vults_core::AgentUpdate;
+use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
 use vults_protocol::{AgentKind, Event};
 
 use crate::{Agent, Dirs, MARKER, hook_command};
@@ -35,6 +36,7 @@ const EVENTS: &[(&str, u64)] = &[
     ("sessionEnd", 5),
     ("postToolUse", 5),
     ("postToolUseFailure", 5),
+    ("afterFileEdit", 5),
     ("subagentStop", 5),
     ("stop", 5),
 ];
@@ -61,7 +63,14 @@ impl Agent for Cursor {
                 e.payload["tool_name"] = claude.into();
             }
         }
-        let mut update = crate::other::as_claude(&e, NAME)?;
+        let mut update = match e.event.as_str() {
+            "afterFileEdit" => edited(&e)?,
+            _ => crate::other::as_claude(&e, NAME)?,
+        };
+        // `afterFileEdit` brings each edit's diff: a finished tool's would count it twice.
+        if let AgentEvent::ToolFinished { diff, .. } = &mut update.event {
+            *diff = None;
+        }
         // Its hooks run in ~/.cursor: the project is the workspace's first folder.
         if let Some(root) = e
             .payload
@@ -127,10 +136,35 @@ impl Cursor {
     }
 }
 
+/// `afterFileEdit`: a finished edit, its file and each replacement's old and new text.
+fn edited(e: &Event) -> Option<AgentUpdate> {
+    let n = crate::other::normalized(e)?;
+    let path = n.payload.get("file_path")?.as_str()?;
+    let edits = n.payload.get("edits")?;
+    let diff = crate::diff::from_input("MultiEdit", &json!({ "file_path": path, "edits": edits }))?;
+    Some(AgentUpdate {
+        session: SessionKey {
+            agent: AgentKind::Other,
+            session_id: format!("{NAME}/{}", n.payload.get("session_id")?.as_str()?),
+        },
+        cwd: n.payload.get("cwd").and_then(Value::as_str).map(str::to_string),
+        terminal: e.terminal.clone(),
+        agent_id: None,
+        received: None,
+        event: AgentEvent::Edited {
+            step: Step {
+                activity: Activity::Edit,
+                tool: "Edit".into(),
+                detail: Some(crate::file_name(path)),
+            },
+            diff,
+        },
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vults_core::{Activity, AgentEvent};
     use vults_protocol::Terminal;
 
     fn event(name: &str, payload: Value) -> Event {
@@ -163,6 +197,33 @@ mod tests {
             .unwrap()
             .extend(extra.as_object().unwrap().clone());
         p
+    }
+
+    #[test]
+    fn a_finished_edit_carries_its_step_and_diff_once() {
+        let edit = base(json!({
+            "hook_event_name": "afterFileEdit", "file_path": "/home/me/notes/a.md",
+            "edits": [{ "old_string": "old", "new_string": "new\nmore" }],
+        }));
+        let u = crate::parse(&event("afterFileEdit", edit)).unwrap();
+        assert_eq!(u.session.session_id, "cursor/98187bc5");
+        assert_eq!(u.cwd.as_deref(), Some("/home/me/notes"));
+        match u.event {
+            AgentEvent::Edited { step, diff } => {
+                assert_eq!(step.detail.as_deref(), Some("a.md"));
+                assert_eq!((diff.added(), diff.removed()), (2, 1));
+            }
+            other => panic!("{other:?}"),
+        }
+        let write = base(
+            json!({ "tool_name": "Write", "tool_input": { "file_path": "/home/me/notes/a.md", "content": "x" } }),
+        );
+        let u = crate::parse(&event("postToolUse", write)).unwrap();
+        assert!(
+            matches!(u.event, AgentEvent::ToolFinished { diff: None, .. }),
+            "{:?}",
+            u.event
+        );
     }
 
     #[test]

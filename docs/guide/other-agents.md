@@ -39,11 +39,11 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 |---|---|---|---|---|---|---|
 | Claude Code | a card | a card | lines, numbered | at once, when Vults started it | bubblewrap, if on | yes |
 | Codex | a card | its terminal | lines | at once, when Vults started it | its sandbox mode | yes |
-| Antigravity | its terminal | its terminal | none | not from Vults yet | none | not yet |
+| Antigravity | its terminal | its terminal | lines | not from Vults yet | none | not yet |
 | OpenCode | a card | a card (OpenCode 1) | lines | at once, when Vults started it | none | a task, over ACP |
 | Qwen Code | a card | its terminal | lines | at once, when Vults started it | a container, if on | a task, over ACP |
 | Copilot CLI | a card | none | lines | at once, when Vults started it | none | a task, over ACP |
-| Cursor | its terminal | its terminal | none | not from Vults | none | no |
+| Cursor | its terminal | its terminal | lines | not from Vults | none | no |
 | Factory Droid | its terminal | its terminal | lines | not from Vults | none | no |
 | Kimi Code | its terminal; a card in a task | its terminal | lines | at once, when Vults started it | none | a task, over ACP |
 
@@ -68,7 +68,8 @@ the file the agy CLI, the Antigravity app and the IDE share (checked with agy 1.
 hooks there are never touched; if one of yours is already named `vults`, the installer writes
 nothing. Its sessions show as `antigravity`.
 
-The island shows Antigravity thinking, each step (`view_file`, `run_command`…) and when it stops.
+The island shows Antigravity thinking, each step (`view_file`, `run_command`…) and when it stops,
+and each edit's diff, rebuilt from the text it replaced (without line numbers).
 Antigravity does not send its reply, so a finished session has no summary line, and it has no
 session start or end: a session leaves the wire once quiet (10 minutes after it finished, 30
 otherwise). Its hook runs before every tool and does not say whether Antigravity would have asked,
@@ -83,8 +84,9 @@ Vults' own. Restart Cursor after. Its sessions show as `cursor`, in the project 
 The island shows each finished step, failures included, and when a turn stops. Its hooks that run
 before a step (`preToolUse`, `beforeSubmitPrompt`, `beforeShellExecution`…) are left out: Cursor
 reads what they print as a decision, so Cursor asks its permissions itself
-([Approving](approvals.md#agents-that-ask-in-their-own-prompt)). What a tool printed and the account's email never leave the
-hook.
+([Approving](approvals.md#agents-that-ask-in-their-own-prompt)). Each edit comes from
+`afterFileEdit`, which Cursor reads nothing from, with its diff (without line numbers). What a tool
+printed and the account's email never leave the hook.
 
 Cursor also runs Claude Code's hooks (its *third-party* hooks, on by default). The relay ignores
 Cursor's events there, so a session never shows twice, once as Claude Code.

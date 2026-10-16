@@ -14,6 +14,7 @@ crates/chat/src/summary.rs       the claude CLI, with no tools: a past day of Ze
 crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent
 crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, the model list the user opened, or the usage read, which app/src/usage.rs makes only through the network gate
 app/src/runs.rs                  a task's session on the user's Start: the claude CLI through the chat's driver, on their login; and git worktree add/remove and rev-parse, local only
+app/src/folder.rs                git diff-files, ls-files and rev-parse in a session's repository at each turn's start and end, reading only (no content, no fsmonitor, no hooks), and a test's git init: local only
 crates/connectors/src/github.rs  gh, for the GitHub connector (through the network gate), the calendar tab the user opens, and an issue from a task on the user's click
 crates/voice/src/models.rs       a voice model's download, on the user's click, checked against its SHA-256
 crates/relay/src/client.rs       the phone relay's client: each request asks the app's network gate first, follows no redirect

@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: bb2811823bce -->
+<!-- source: eefd06cd3354 -->
 
 Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -43,11 +43,11 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 |---|---|---|---|---|---|---|
 | Claude Code | um card | um card | linhas, numeradas | na hora, quando o Vults o iniciou | bubblewrap, se ligado | sim |
 | Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o modo de sandbox dele | sim |
-| Antigravity | o terminal dele | o terminal dele | nenhum | pelo Vults, ainda não | nenhum | ainda não |
+| Antigravity | o terminal dele | o terminal dele | linhas | pelo Vults, ainda não | nenhum | ainda não |
 | OpenCode | um card | um card (OpenCode 1) | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 | Qwen Code | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
 | Copilot CLI | um card | nenhuma | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
-| Cursor | o terminal dele | o terminal dele | nenhum | não pelo Vults | nenhum | não |
+| Cursor | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
 | Factory Droid | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
 | Kimi Code | o terminal dele; um card numa tarefa | o terminal dele | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
 
@@ -75,7 +75,8 @@ o arquivo que o CLI agy, o app Antigravity e a IDE compartilham (testado com o a
 outros hooks dali nunca são tocados; se um hook seu já se chamar `vults`, o instalador não escreve
 nada. As sessões dele aparecem como `antigravity`.
 
-A ilha mostra o Antigravity pensando, cada passo (`view_file`, `run_command`…) e quando ele para. O
+A ilha mostra o Antigravity pensando, cada passo (`view_file`, `run_command`…) e quando ele para,
+e o diff de cada edição, refeito a partir do texto que ela trocou (sem números de linha). O
 Antigravity não manda a resposta dele, então uma sessão terminada não tem linha de resumo, e não há
 início nem fim de sessão: uma sessão sai do fio depois de um tempo em silêncio (10 minutos depois de
 terminar, 30 nos outros casos). O hook dele roda antes de toda ferramenta e não diz se o Antigravity
@@ -92,8 +93,9 @@ projeto em que o Cursor trabalha.
 A ilha mostra cada passo terminado, falhas incluídas, e quando um turno para. Os hooks dele que
 rodam antes de um passo (`preToolUse`, `beforeSubmitPrompt`, `beforeShellExecution`…) ficam de fora:
 o Cursor lê o que eles imprimem como uma decisão, então o Cursor pergunta as permissões ele mesmo
-([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)). O que uma ferramenta imprimiu e o email da conta nunca saem do
-hook.
+([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)). Cada edição vem do
+`afterFileEdit`, de que o Cursor não lê nada, com o seu diff (sem números de linha). O que uma
+ferramenta imprimiu e o email da conta nunca saem do hook.
 
 O Cursor também roda os hooks do Claude Code (os hooks *third-party* dele, ligados por padrão). O
 relay ignora os eventos do Cursor ali, então uma sessão nunca aparece duas vezes, uma como Claude

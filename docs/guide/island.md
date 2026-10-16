@@ -213,7 +213,7 @@ list_prs*.
 A finished edit shows the lines it added and removed (*Editing main.rs* **+4 −2**). Click them to see
 the diff in place of the card, with line numbers when the agent sends them (Claude Code does;
 Codex's diffs have none). **×** or **Esc** goes back. Diffs are kept for the
-session's last eight steps, up to 400 lines each; a longer one says it stops short.
+session's last 32 edits, up to 400 lines each; a longer one says it stops short.
 
 ![A finished edit's diff in place of the card: ticker.ts +4 −2, with line numbers](../assets/island-live-diff.png)
 

@@ -295,9 +295,13 @@ pub fn ask(tool: &str, input: &Value) -> Ask {
         "apply_patch" => patch_lines(text("command").unwrap_or_default()),
         _ => (0, 0),
     };
-    // A patch's target names its files, which are never cut.
-    let cut = tool != "apply_patch"
-        && first_field(input, TARGET_FIELDS).is_some_and(|(_, v)| shorten(v, TARGET_MAX) != v);
+    // A patch's target names its files: it is cut only when the hook cut the patch before its end
+    // marker, and then a file may be missing from it.
+    let cut = if tool == "apply_patch" {
+        !text("command").is_some_and(|p| p.trim_end().ends_with("*** End Patch"))
+    } else {
+        first_field(input, TARGET_FIELDS).is_some_and(|(_, v)| shorten(v, TARGET_MAX) != v)
+    };
     Ask {
         description: text("description").and_then(filled),
         full,

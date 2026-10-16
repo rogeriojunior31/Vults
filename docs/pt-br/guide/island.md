@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 2c27419a5df4 -->
+<!-- source: 3a71a158ccba -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -237,7 +237,7 @@ github · list_prs*.
 Uma edição concluída mostra as linhas que acrescentou e removeu (*Editing main.rs* **+4 −2**). Clique
 nelas para ver o diff no lugar do card, com números de linha quando o agente os manda (o Claude Code
 manda; os diffs do Codex não têm). **×** ou **Esc** volta. Os diffs ficam guardados
-para os últimos oito passos da sessão, até 400 linhas cada; um mais longo avisa que para antes.
+para as últimas 32 edições da sessão, até 400 linhas cada; um mais longo avisa que para antes.
 
 ![O diff de uma edição concluída no lugar do card: ticker.ts +4 −2, com números de linha](../../assets/island-live-diff.png)
 

@@ -18,6 +18,10 @@ What Vults promises:
   its card.
 - **Only your user account can talk to it.** The socket lives in your private runtime folder with mode
   `0600`, and both ends check the other process runs as you (on Windows, by SID).
+- **Looking at a session's folder only reads it.** To see the files a session's commands wrote,
+  at each turn's start and end the app lists what is changed in its folder's repository with
+  `git diff-files` and `git ls-files`, which read no file's content and write nothing; fsmonitor
+  and hooks are turned off, so nothing in the repository's config runs.
 - **It never edits an agent's config behind your back.** Every change gets a dated backup and a diff
   you approve; hooks from other tools are kept, a Claude Code status line of your own keeps running
   ([how](reference/settings.md#agent-configs-vults-edits)), and Codex's `trusted_hash` is never
@@ -56,7 +60,8 @@ What it keeps stays on this computer, is never sent anywhere, and is listed in
 [Clear history](guide/activity.md#the-history) removes most of it:
 
 - **The edits it shows stay in memory**: a finished edit's changed lines (400 at most), for the
-  session's last steps, never written to a file or a log.
+  session's last 32 edits, and the paths of the files it changed with their counts, never written
+  to a file or a log.
 - **Connectors keep only their last answer**, so a restart does not replay old news
   ([Connectors](guide/connectors.md#the-github-card)).
 - **The activity history is counts**: never a prompt, a reply, a command, a file name or a path

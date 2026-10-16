@@ -208,18 +208,22 @@ fn activity(tool: &str) -> Activity {
     }
 }
 
-/// Files a patch touches, from its `*** Add|Update|Delete File: <path>` headers.
+/// Files a patch touches, from its `*** Add|Update|Delete File: <path>` headers; a moved one as
+/// `old → new`, since Allow lets it write the new path too.
 fn patched(input: &Value) -> Vec<String> {
     let patch = input.get("command").and_then(Value::as_str).unwrap_or_default();
-    patch
-        .lines()
-        .filter_map(|l| {
-            ["*** Add File: ", "*** Update File: ", "*** Delete File: "]
-                .iter()
-                .find_map(|h| l.strip_prefix(h))
-        })
-        .map(|path| path.trim().to_string())
-        .collect()
+    let mut files: Vec<String> = Vec::new();
+    for l in patch.lines() {
+        if let Some(path) = ["*** Add File: ", "*** Update File: ", "*** Delete File: "]
+            .iter()
+            .find_map(|h| l.strip_prefix(h))
+        {
+            files.push(path.trim().to_string());
+        } else if let (Some(to), Some(last)) = (l.strip_prefix("*** Move to: "), files.last_mut()) {
+            *last = format!("{last} → {}", to.trim());
+        }
+    }
+    files
 }
 
 /// `main.rs`, or `main.rs +2` when the patch touches more files.
@@ -355,6 +359,27 @@ mod tests {
             patch_file("apply_patch", &json!({ "command": patch })).as_deref(),
             Some("a.rs +1")
         );
+    }
+
+    #[test]
+    fn a_moved_file_shows_both_paths_and_a_cut_patch_is_cut() {
+        let moved =
+            "*** Begin Patch\n*** Update File: src/a.rs\n*** Move to: src/b.rs\n@@\n-x\n+y\n*** End Patch";
+        let ask = |patch: &str| match Codex
+            .parse(&event(
+                "PermissionRequest",
+                json!({ "session_id": "s", "tool_name": "apply_patch", "tool_input": { "command": patch } }),
+            ))
+            .map(|u| u.event)
+        {
+            Some(AgentEvent::PermissionRequested { target, ask, .. }) => (target, ask.cut),
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(ask(moved), ("Edit · src/a.rs → src/b.rs".to_string(), false));
+        let d = crate::diff::codex(moved).unwrap();
+        assert_eq!(d.files[0].path, "src/b.rs");
+        // The hook cut it before its end: a file may be missing, so no Always.
+        assert!(ask("*** Begin Patch\n*** Update File: src/a.rs\n@@\n-x\n+y").1);
     }
 
     #[test]

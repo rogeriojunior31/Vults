@@ -109,6 +109,15 @@ steps: Array<string>,
  */
 diffs?: Array<DiffSummary | null>,
 /**
+ * The finished edits the session keeps, oldest first, past the ticker's steps: the Nest's
+ * Changes.
+ */
+changes?: Array<ChangeView>,
+/**
+ * Every file it changed so far, the latest last (at most 200).
+ */
+touched?: Array<TouchedView>,
+/**
  * When each of `steps` started, in Unix seconds; none before the app said the time.
  */
 step_at?: Array<number | null>,
@@ -147,6 +156,22 @@ roost_key?: string | null, roost?: string | null,
 branch?: string | null, };
 
 export type DiffSummary = { step: number, added: number, removed: number, files: number, };
+
+export type ChangeView = { text: string, step: number, added: number, removed: number, files: number, };
+
+export type TouchedView = { path: string, added: number, removed: number, edits: number,
+/**
+ * The step whose kept diff shows its latest edit; none once that diff is gone.
+ */
+step?: number | null,
+/**
+ * Its place in that diff's files, for opening it.
+ */
+file?: number | null,
+/**
+ * Seen changed in its folder, never in an edit the agent told of: a command wrote it.
+ */
+outside?: boolean, };
 
 export type ApprovalView = { request: string, agent: AgentKind,
 /**

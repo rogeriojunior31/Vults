@@ -105,9 +105,11 @@ what it asks (the command, with **Copy**, and *1 of 2* when more wait). A workin
 steps so far, its subagents and its cost in the head, the step just done and the one under way
 (a finished edit's **+N −M** opens it in **Changes**), and, when it has gone quiet, **Snooze**,
 **Keep going** and **Dismiss**, as on the island. A finished or failed one shows its last reply or
-its error. Under the card, what its kept edits changed (from its last steps). At the right, its
-**Changes** (each finished edit's diff, chosen in the list; **Focus diff** gives the diff the whole
-width), **Activity** (its last steps, each at the time it started), **Context** (worktree, repository, branch, folder, agent,
+its error. Under the card, how many files the session changed and their lines added and removed. At
+the right, its **Changes** (each of its last 32 edits' diff, chosen in the list; **Focus diff**
+gives the diff the whole width; under it, every file the session changed, and a click on one whose
+diff is still kept shows it; in a repository, a file a command wrote during a turn shows *by a
+command*), **Activity** (its last steps, each at the time it started), **Context** (worktree, repository, branch, folder, agent,
 editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
 ready. In Full, your plans' usage sits under it, amber from 70% and red from 90%.
 
