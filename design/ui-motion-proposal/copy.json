@@ -4228,5 +4228,100 @@
     "Seções",
     "Secciones",
     "分区"
+  ],
+  "By state": [
+    "Por estado",
+    "Por estado",
+    "按状态"
+  ],
+  "By project": [
+    "Por projeto",
+    "Por proyecto",
+    "按项目"
+  ],
+  "Pinned": [
+    "Fixadas",
+    "Fijadas",
+    "已固定"
+  ],
+  "Pin project": [
+    "Fixar projeto",
+    "Fijar proyecto",
+    "固定项目"
+  ],
+  "Unpin project": [
+    "Desafixar projeto",
+    "Quitar fijación",
+    "取消固定"
+  ],
+  "Pinned at the top of the list.": [
+    "Fixado no topo da lista.",
+    "Fijado arriba de la lista.",
+    "已固定在列表顶部。"
+  ],
+  "Unpinned.": [
+    "Desafixado.",
+    "Fijación quitada.",
+    "已取消固定。"
+  ],
+  "Using 1 tool…": [
+    "Usando 1 ferramenta…",
+    "Usando 1 herramienta…",
+    "正在使用 1 个工具…"
+  ],
+  "Using {n} tools…": [
+    "Usando {n} ferramentas…",
+    "Usando {n} herramientas…",
+    "正在使用 {n} 个工具…"
+  ],
+  "Thinking…": [
+    "Pensando…",
+    "Pensando…",
+    "思考中…"
+  ],
+  "running…": [
+    "rodando…",
+    "en curso…",
+    "运行中…"
+  ],
+  "No pull request yet. Accept the review to open one.": [
+    "Ainda sem pull request. Aceite a revisão para abrir um.",
+    "Aún no hay pull request. Acepta la revisión para abrir uno.",
+    "还没有拉取请求。接受审查后即可创建。"
+  ],
+  "Start an agent in a terminal with the Vults hooks installed; its bird lands here.": [
+    "Inicie um agente num terminal com os hooks do Vults instalados; o pássaro dele pousa aqui.",
+    "Inicia un agente en un terminal con los hooks de Vults instalados; su pájaro aterriza aquí.",
+    "在安装了 Vults 钩子的终端里启动一个代理，它的鸟就会落在这里。"
+  ],
+  "Cards, failures, checks and reviews that ask for an action show up here.": [
+    "Cards, falhas, checks e revisões que pedem uma ação aparecem aqui.",
+    "Tarjetas, fallos, comprobaciones y revisiones que piden una acción aparecen aquí.",
+    "需要你操作的卡片、失败、检查和审查会出现在这里。"
+  ],
+  "Create a task; Vults runs it in its own clone and reports back here.": [
+    "Crie uma tarefa; o Vults roda num clone próprio e reporta aqui.",
+    "Crea una tarea; Vults la ejecuta en su propio clon e informa aquí.",
+    "创建一个任务；Vults 会在独立克隆中运行并在这里汇报。"
+  ],
+  "Turn on GitHub in Settings to see your pull requests and checks.": [
+    "Ligue o GitHub em Ajustes para ver seus pull requests e checks.",
+    "Activa GitHub en Ajustes para ver tus pull requests y comprobaciones.",
+    "在设置中开启 GitHub 即可查看你的拉取请求和检查。"
+  ],
+  "Turns appear here as your agents work. History is kept on this computer.": [
+    "Os turnos aparecem aqui conforme seus agentes trabalham. O histórico fica neste computador.",
+    "Los turnos aparecen aquí a medida que tus agentes trabajan. El historial queda en este equipo.",
+    "代理工作时回合会出现在这里。历史保存在这台电脑上。"
+  ],
+  "Ask Zeca about your agents, your projects or your desktop.": [
+    "Pergunte ao Zeca sobre seus agentes, seus projetos ou sua área de trabalho.",
+    "Pregunta a Zeca sobre tus agentes, tus proyectos o tu escritorio.",
+    "向 Zeca 询问你的代理、项目或桌面。"
+  ],
+  "Nothing here yet.": [
+    "Nada aqui ainda.",
+    "Nada aquí todavía.",
+    "这里还没有内容。"
   ]
 }

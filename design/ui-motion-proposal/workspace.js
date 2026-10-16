@@ -2,7 +2,7 @@
     rules:[{agent:'Codex',tool:'Bash',target:'npm run build',cwd:'~/Projects/Vults'},{agent:'Claude Code',tool:'Read',target:'docs/**',cwd:'~/Projects/docs'}],
     policies:[{id:'global',scope:'Every folder',text:'deny command "git push --force*"\nask class network\nallow tool Read'},{id:'vults',scope:'~/Projects/Vults',text:'allow command "npm run build"\nallow command "cargo test*"\nask class write outside "src/**"'}],
     keys:{anthropic:true,openrouter:true,openai:false}, githubSeen:{} };
-  const views = { taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'run', panels:{}, skipped:[], showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
+  const views = { taskQuery:'', taskFilter:'Open', taskSelected:'task-2', taskDetail:'run', panels:{}, skipped:[], showFinished:false, connectionQuery:'', connectionSection:'pulls', connectionFace:'you', connectionSelected:'#364', sessionQuery:'', sessionFilter:'All sessions', sessionGroup:'state', sessionSelected:'session-1', flockDetail:'session', flockStep:0, flockFile:'all', recordQuery:'', week:0, day:3, memoryTab:'Waiting for you', recentQuery:'', chatScroll:0, quickArea:'chat', roomArea:'flock' };
   // Sessions you opened in a terminal: the flock watches them.
   const sessions = [
     {id:'session-1',agent:'codex',project:'Vults',status:'approval',activity:'run',step:'npm run build',step_count:12,subagents:0,branch:'feat/compact-now',cost:0.42,steps:['Read docs/dev/plan-ui.md','Edit ui/src/island/now.ts','Edit ui/src/island/render.ts','Run npm run build']},
@@ -209,12 +209,13 @@
     if(room)suggestions.append(el('p','suggest-title','Ask about your agents, your projects or anything on your desktop.'));
     companionSuggestions().slice(0,room?4:2).forEach(c=>suggestions.append(key(button(c.label,'',()=>{if(c.go){c.go();return;}input.value=L(c.send);input.dispatchEvent(new Event('input'));input.focus();}),c.id)));
   }
+  const EMPTY_HINTS={flock:'Start an agent in a terminal with the Vults hooks installed; its bird lands here.',summary:'Cards, failures, checks and reviews that ask for an action show up here.',tasks:'Create a task; Vults runs it in its own clone and reports back here.',connections:'Turn on GitHub in Settings to see your pull requests and checks.',activity:'Turns appear here as your agents work. History is kept on this computer.',chat:'Ask Zeca about your agents, your projects or your desktop.'};
   function stageState(host,emptyTitle,emptyAction) {
     if(!['empty','loading','error'].includes(state.scenario))return false;
     const panel=el('section','empty-state');panel.setAttribute('role',state.scenario==='error'?'alert':'status');
     if(state.scenario==='loading')panel.append(el('h3',null,'Loading'),el('div','loading-line'),el('div','loading-line'));
     else if(state.scenario==='error')panel.append(A.icon('retry',20),el('h3','state-error','Could not update this view.'),el('p',null,'Your draft and selections stay here.'),details('Technical details',['vults-store: database is locked (retrying in 2 s)']),button('Try again','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
-    else panel.append(A.icon('list',22),el('h3',null,emptyTitle),emptyAction??button('Show sample data','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
+    else panel.append(A.icon(({flock:'flock',tasks:'tasks',connections:'plug',activity:'bars',chat:'chat'})[state.area]??'list',22),el('h3',null,emptyTitle),el('p',null,EMPTY_HINTS[state.area]??'Nothing here yet.'),emptyAction??button('Show sample data','quiet-control',()=> {state.scenario='ready';setArea(state.area,state.mode);}));
     host.append(panel);return true;
   }
   function openEditor(title,content,onSave,saveLabel='Save') {
@@ -413,6 +414,10 @@
     state.area=area;state.mode=mode;closeModels(false,false);closeMenu(history,historyTrigger,false,false);closeCommands();closeActionMenu(false);stopScenes();
     $$('[data-flock-example]').forEach(option=>option.hidden=!['flock','summary','tasks'].includes(area)&&mode!=='mini');
     const mini=mode==='mini',room=['room','full'].includes(mode),chat=area==='chat';
+    // The Lab has one bar: its tabs sit in the header between the name and the actions.
+    const nav=$('.product-nav'),head=$('.product-head');
+    if(room&&nav.parentElement!==head)$('.product-head-actions').before(nav);
+    else if(!room&&nav.parentElement===head)head.after(nav);
     windowEl.hidden=mini;$('.mini-strip').hidden=!mini;windowEl.classList.toggle('workspace',room);windowEl.classList.toggle('review-mode',area==='review');
     $('.chat-shell').hidden=!chat||mini;chatEl.hidden=!chat||mini;$('.workspace-view').hidden=chat||mini;$('.room-recent').hidden=!room;
     memoryTrigger.hidden=!room;
@@ -447,10 +452,12 @@
     strip.hidden=!room||state.area==='flock'||state.area==='review'||!rows.length;
     if(strip.hidden)return;
     strip.append(el('span','needs-title',null,chip('needs','Needs you')));
-    rows.forEach(r=>{
+    const shown=rows.slice(0,3),rest=rows.slice(3);
+    shown.forEach(r=>{
       const open=key(button(null,'needs-open',r.open),'needs-'+r.s.id);open.append(el('span','shape shape-'+r.shape),el('span',null,r.label));
       strip.append(el('span','needs-chip',null,open,key(iconButton('close','Skip',()=>{skip(r.s);paintNeedsStrip();}),'skip-'+r.s.id)));
     });
+    if(rest.length){const more=key(button(null,'needs-more',()=>openActionMenu(more,'Needs you',rest.map(r=>({label:r.label,icon:'person',action:r.open})))),'needs-more');more.append(document.createTextNode('+'+rest.length));strip.append(more);}
     strip.append(key(button('Skip all','needs-skip-all',()=>{rows.forEach(r=>skip(r.s));paintNeedsStrip();}),'skip-all'));
   }
   function setScenarioQuiet(value){state.scenario=value;applyScenario(value);}

@@ -35,6 +35,7 @@
     const who=chat?'Zeca wants to run':phrase('{agent} wants to run',{agent:labelFor(s.agent)});
     const head=el('header','request-head',null,el('span','agent-dot '+(chat?'zeca':s.agent)),el('strong',null,who),el('span','request-tool mono',null,document.createTextNode(s.tool??'Bash')));
     if(s.pending>1&&!chat)head.append(el('span','request-count counter',phrase('1 of {n}',{n:s.pending})));
+    if(!chat&&!expired)head.append(key(iconButton('close','Skip for now',()=>{skip(s);onAnswer('Skipped');}),'skip'));
     card.append(head);
     if(destructive)card.append(el('p','request-reason danger-text',null,A.icon('retry',12),el('span',null,'Destructive: no policy ever allows it')));
     else if(density==='lab')card.append(el('p','request-reason',null,A.icon('person',12),el('span',null,'Your policy asks first for builds outside src/')));
@@ -56,7 +57,7 @@
     };
     const deny=key(button(null,destructive?'primary':'quiet-control',()=>decide('Denied')),'deny');deny.append(el('span',null,'Deny'),...(density==='lab'?[kbd('Ctrl+Alt+N')]:[]));if(!chat)deny.setAttribute('data-tooltip','Ctrl+Alt+N');
     const allow=key(button(null,destructive?'quiet-control':'primary',()=>decide('Allowed')),'allow');allow.append(el('span',null,chat?'Allow':'Allow once'),...(density==='lab'?[kbd('Ctrl+Alt+Y')]:[]));if(!chat)allow.setAttribute('data-tooltip','Ctrl+Alt+Y');
-    const actions=el('div','request-actions',null,deny,...(chat?[]:[key(button('Skip for now','request-skip',()=>{skip(s);onAnswer('Skipped');}),'skip')]),el('span','spacer'));
+    const actions=el('div','request-actions',null,deny,el('span','spacer'));
     if(canAlways(s,destructive))actions.append(key(button(chat?'Always in this chat':'Always allow','',()=>decide(chat?'Allowed in this chat':'Always allowed')),'always'));
     actions.append(allow);card.append(actions);
     card.addEventListener('keydown',event=>{if(event.ctrlKey&&event.altKey&&['y','n'].includes(event.key?.toLowerCase())){event.preventDefault();(event.key.toLowerCase()==='y'?allow:deny).click();}});
@@ -91,6 +92,7 @@
       {label:'View last change',icon:'file',disabled:!labChangesFor(s),action:()=>{views.sessionSelected=s.id;views.flockDetail='diff';setArea('flock',state.mode==='full'?'full':'room');}},
       {label:s.raise?'Let the flock choose':'Keep in front',icon:'pin',action:()=>{s.raise=!s.raise;toast(s.raise?'The flock chooses who is in front.':'Kept in front.');}},
       {group:'This project'},
+      {label:settings['pin-'+s.project]?'Unpin project':'Pin project',icon:'pin',action:()=>{settings['pin-'+s.project]=!settings['pin-'+s.project];toast(settings['pin-'+s.project]?'Pinned at the top of the list.':'Unpinned.');setArea(state.area,state.mode);}},
       {label:settings['mute-'+s.project]?'Unmute project':'Mute project',icon:'mute',action:()=>{settings['mute-'+s.project]=!settings['mute-'+s.project];toast('Saved');}},
       {label:'Hide project',icon:'hide',action:()=>confirm('Hide project',phrase('{project} leaves the wire until you show it again in Settings › Projects.',{project:s.project}),()=>{settings['hide-'+s.project]=true;toast('Hidden. Settings › Projects brings it back.');})},
       {label:"This project's bird…",icon:'flock',action:()=>openSettings('projects')},

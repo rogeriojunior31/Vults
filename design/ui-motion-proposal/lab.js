@@ -83,15 +83,25 @@
     const count=()=>{const flying=wire.filter(soaring).length;note.textContent=phrase('{flying} resting in the sky · {wire} on the wire',{flying,wire:wire.length-flying});};
     attachSky('lab',band,flock,wire,count);
     const searcher=search('Find a session…',q=>{views.sessionQuery=q;paintRows();remember();});searcher.querySelector('input').value=views.sessionQuery;
-    const filter=segment([['All sessions','All'],['Needs you','Needs you'],['Working','Working'],['Quiet','Gone quiet']],value=>{views.sessionFilter=value;paintRows();remember();},views.sessionFilter);
-    const rows=el('div','lab-rows');list.append(el('div','workspace-toolbar',null,filter,searcher),rows);
+    const grouping=segment([['state','By state'],['project','By project']],value=>{views.sessionGroup=value;paintRows();remember();},views.sessionGroup);grouping.classList.add('group-by');
+    const rows=el('div','lab-rows');list.append(el('div','workspace-toolbar',null,searcher,grouping),rows);
     flexible(host,list,'flock-list',{def:380,min:260,max:560,label:'Sessions',rail:()=>{const r=el('div','rail-marks');facts.ordered.filter(s=>!settings['hide-'+s.project]).slice(0,8).forEach(s=>{const b=key(button(null,'rail-dot',()=>select(s),s.project),'rail-'+s.id);b.setAttribute('data-tooltip',s.project+' · '+L(sessionBrief(s)));b.setAttribute('aria-pressed',String(s.id===views.sessionSelected));b.append(el('span','shape shape-'+(toneFor(s)==='quiet'?'quiet':s.status==='question'?'question':toneFor(s))));r.append(b);});return r;}});
-    function matches(s){return (s.project+' '+labelFor(s.agent)).toLowerCase().includes(views.sessionQuery.toLowerCase())&&(views.sessionFilter==='All sessions'||views.sessionFilter==='Needs you'&&(facts.needs.includes(s)||s.status==='failed')||views.sessionFilter==='Working'&&facts.working.includes(s)||views.sessionFilter==='Quiet'&&(s.quiet||s.status==='idle'));}
+    const groupOf=s=>settings['pin-'+s.project]?'pinned':soaring(s)?'sky':facts.needs.includes(s)||s.status==='failed'?'needs':facts.working.includes(s)?'working':'quiet';
+    const GROUPS=[['pinned','Pinned','quiet'],['needs','Needs you','needs'],['working','Working','working'],['quiet','Gone quiet','quiet'],['sky','In the sky','done']];
+    function row(s){
+      const b=key(button(null,'session-row',()=>select(s)),s.id);b.setAttribute('aria-pressed',String(s.id===views.sessionSelected));bindBirdFocus(b,flock,s);
+      b.append(el('span','agent-dot '+s.agent),el('span','session-copy',null,el('strong',null,s.project),el('small',null,raw(labelFor(s.agent)+' · '+L(s.started)))),soaring(s)?chip('done','In the sky'):sessionChip(s));
+      if(settings['pin-'+s.project])b.append(A.icon('pin',11));return b;
+    }
     function paintRows(){
-      rows.replaceChildren();const found=facts.ordered.filter(s=>!settings['hide-'+s.project]&&matches(s));
-      found.forEach(s=>{const b=key(button(null,'session-row',()=>select(s)),s.id);b.setAttribute('aria-pressed',String(s.id===views.sessionSelected));bindBirdFocus(b,flock,s);
-        b.append(el('span','agent-dot '+s.agent),el('span','session-copy',null,el('strong',null,s.project),el('small',null,raw(labelFor(s.agent)+' · '+L(s.started)))),soaring(s)?chip('done','In the sky'):sessionChip(s));rows.append(b);});
-      if(!found.length)rows.append(el('p','pane-note','Nothing here matches your search.'),button('Clear filters','quiet-control',()=>{views.sessionQuery='';views.sessionFilter='All sessions';setArea('flock',state.mode);}));
+      rows.replaceChildren();const found=facts.ordered.filter(s=>!settings['hide-'+s.project]&&(s.project+' '+labelFor(s.agent)).toLowerCase().includes(views.sessionQuery.toLowerCase()));
+      const groups=views.sessionGroup==='project'?[...new Set(found.map(s=>s.project))].sort().map(p=>[p,p,null]):GROUPS;
+      for(const [id,label,tone] of groups){
+        const members=found.filter(s=>views.sessionGroup==='project'?s.project===id:groupOf(s)===id);if(!members.length)continue;
+        const section=el('section','task-group');section.append(el('h3',null,null,tone?el('span','shape shape-'+tone):A.icon('folder',12),el('span','group-label',null,document.createTextNode(views.sessionGroup==='project'?id:L(label))),el('span','group-count counter',null,document.createTextNode(String(members.length)))));
+        members.forEach(s=>section.append(row(s)));rows.append(section);
+      }
+      if(!found.length)rows.append(el('p','pane-note','Nothing here matches your search.'),button('Clear filters','quiet-control',()=>{views.sessionQuery='';setArea('flock',state.mode);}));
     }
     function select(s){captureLabPosition();views.sessionSelected=s.id;remember();setArea('flock',state.mode);host.querySelector('[data-key="'+s.id+'"]')?.focus({preventScroll:true});}
     paintRows();
@@ -236,7 +246,10 @@
     const r=row.run,stage=taskStage(row);
     main.append(el('header','task-head',null,el('div','task-title',null,el('h2',null,row.title),el('span','task-meta',null,el('span','agent-dot '+(AGENT_KIND[row.engine]??'other')),el('span',null,null,document.createTextNode([row.engine||L('No owner yet'),row.repo,...(row.issue?[row.issue]:[]),...(row.cost?[L(row.cost)]:[])].join(' · '))),...(row.onWire?[chip('working','On the wire')]:[]))),el('div','page-actions',null,...taskActions(row))));
     const rail=el('ol','task-timeline');rail.setAttribute('aria-label',L('Progress'));
-    STAGES.forEach(([id,label],i)=>{const state_=i<stage.at||stage.at===5?'done':i===stage.at?(stage.failed?'failed':stage.needs?'needs':'current'):'todo';rail.append(el('li','stage stage-'+state_,null,el('span','stage-dot'),el('span',null,label)));});
+    const checksDone=row.checks.filter(c=>c==='passed').length,pr=github.pulls.find(p=>p.branch==='vults/'+row.id||p.title===row.title);
+    const go={plan:()=>{views.taskDetail='run';setArea('tasks',state.mode);},run:()=>{views.taskDetail='run';setArea('tasks',state.mode);main.querySelector('.live-output')?.scrollIntoView?.();},check:()=>{views.taskDetail='run';setArea('tasks',state.mode);main.querySelector('.task-checks')?.scrollIntoView?.();},review:()=>{views.taskDetail='run';setArea('tasks',state.mode);main.querySelector('.task-review')?.scrollIntoView?.();},pr:()=>{if(pr)openConnection('pulls',pr.id);else toast('No pull request yet. Accept the review to open one.');}};
+    STAGES.forEach(([id,label],i)=>{const state_=i<stage.at||stage.at===5?'done':i===stage.at?(stage.failed?'failed':stage.needs?'needs':'current'):'todo';
+      const b=key(button(null,'stage stage-'+state_,go[id]),'stage-'+id);b.append(el('span','stage-dot'),el('span',null,null,document.createTextNode(L(label)+(id==='check'&&row.criteria.length?' '+checksDone+'/'+row.criteria.length:id==='review'&&row.rounds.length?' '+row.rounds.length:id==='pr'&&pr?' '+pr.id:''))));rail.append(el('li',null,null,b));});
     main.append(rail);
     if(row.router)main.append(el('p','router-line',null,A.icon('branch',12),el('span',null,row.router)));
     detailPanel(main,{id:row.id,tabs:TASK_TABS,current:TASK_TABS.some(([id])=>id===views.taskDetail)?views.taskDetail:'run',onTab:tab=>{views.taskDetail=tab;remember();setArea('tasks',state.mode);},render:(panel,setScroll)=>{
@@ -248,7 +261,7 @@
         else term.append(el('p','pane-note',row.output??'No run yet. Start the task to see its agent work here.'));
         live.append(term);if(r&&['approval','question'].includes(r.status))live.append(requestCard(r,'lab',()=>setArea('tasks',state.mode)));
         panel.append(live);
-        const checks=el('section','task-section',null,el('h3','lab-panel-title',phrase('Done when… {done} of {all}',{done:row.checked.filter(Boolean).length,all:row.criteria.length})));
+        const checks=el('section','task-section task-checks',null,el('h3','lab-panel-title',phrase('Done when… {done} of {all}',{done:row.checked.filter(Boolean).length,all:row.criteria.length})));
         row.criteria.forEach((text,i)=>{
           const c=el('input');c.type='checkbox';c.checked=!!row.checked[i];c.addEventListener('change',()=>{row.checked[i]=c.checked;remember();setArea('tasks',state.mode);});
           const result=row.checks[i],runnable=/\b(npm|cargo|pnpm|retry::)/.test(String(row.criteria[i]));
@@ -259,7 +272,7 @@
         });
         if(!row.criteria.length)checks.append(el('p','pane-note','No criteria yet. Add them in Edit task.'));
         panel.append(checks);
-        if(row.rounds.length){const review=el('section','task-section',null,el('h3','lab-panel-title','Review'));row.rounds.forEach(rd=>review.append(el('div','review-bubble',null,el('span','agent-dot '+(AGENT_KIND[rd.by]??'other')),el('div',null,null,el('div','review-by',null,el('strong',null,rd.by),chip(['Approved','Fixed'].includes(rd.verdict)?'done':'needs',rd.verdict)),el('p',null,rd.note)))));panel.append(review);}
+        if(row.rounds.length){const review=el('section','task-section task-review',null,el('h3','lab-panel-title','Review'));row.rounds.forEach(rd=>review.append(el('div','review-bubble',null,el('span','agent-dot '+(AGENT_KIND[rd.by]??'other')),el('div',null,null,el('div','review-by',null,el('strong',null,rd.by),chip(['Approved','Fixed'].includes(rd.verdict)?'done':'needs',rd.verdict)),el('p',null,rd.note)))));panel.append(review);}
       }
       else if(tab==='diff')paintDiff(panel,r,setScroll);
       else if(tab==='context')panel.append(contextList([['Project',row.repo],['Branch',r?.branch??'vults/'+row.id],['Clone',r?.cwd??'Created when it starts'],['Owner',row.engine||'No owner yet'],['On the wire',row.onWire?'Yes':'No'],['Issue',row.issue||'None'],['Cost',row.cost||'Not started']]));

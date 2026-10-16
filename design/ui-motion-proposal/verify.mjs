@@ -55,6 +55,8 @@ class Element {
   setAttribute(name,value){this.attributes[name]=String(value);}getAttribute(name){return this.attributes[name];}
   get textContent(){return (this.text??'')+this.children.map(n=>n.textContent).join('');}set textContent(value){this.replaceChildren();this.text=String(value);}
   append(...children){for(const node of children){node.remove();node.parentElement=this;this.children.push(node);}}
+  before(node){const p=this.parentElement;node.remove();node.parentElement=p;p.children.splice(p.children.indexOf(this),0,node);}
+  after(node){const p=this.parentElement;node.remove();node.parentElement=p;p.children.splice(p.children.indexOf(this)+1,0,node);}
   prepend(...children){for(const node of [...children].reverse()){node.remove();node.parentElement=this;this.children.unshift(node);}}
   replaceChildren(...children){for(const node of this.children)node.parentElement=null;this.children=[];this.text='';this.append(...children);}
   remove(){if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(n=>n!==this);this.parentElement=null;}

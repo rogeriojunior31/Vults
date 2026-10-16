@@ -172,7 +172,10 @@
       if (index===state.messages.length-1) tools.append(button('Try again','',() => retry()));
       reply.append(tools); log.append(reply);
     });
-    if (state.busy) log.append(el('div','message-signature thinking',null,el('span','live-dot'),el('span',null,phrase('Thinking… {n} s',{n:2}))));
+    if (state.busy) {
+      const live=el('details','run-details tool-details live',null,el('summary',null,null,el('span','live-dot'),el('span',null,state.liveTools?.length?phrase(state.liveTools.length===1?'Using 1 tool…':'Using {n} tools…',{n:state.liveTools.length}):'Thinking…')),el('div','run-body',null,...(state.liveTools??[]).map(t=>toolRow(t.name,t.args,t.result??'running…'))));
+      live.open=true;live.addEventListener('toggle',()=>{if(state.busy)live.open=true;});log.append(live);
+    }
     const queue=$('.queue-strip');queue.replaceChildren(...state.queued.map(text=>el('span','queued',null,A.icon('list',11),el('span',null,phrase('Queued: {text}',{text})))));
     paintSend(); log.scrollTop=readingTop;
     paintBird(); paintModelTrigger(); paintSuggestions();
@@ -397,11 +400,17 @@
     input.value=''; input.style.height='auto'; state.files=[]; paintFiles(); paintConversation();log.scrollTop=log.scrollHeight;
     const reply=commandReply(text);
     if (/\b(thanks|thank you|obrigad|gracias|valeu)/i.test(text)) { reply.text='Anytime. I am here.'; reply.tools=false; reply.thanks=true; }
-    state.toolPhase=reply.tools!==false; paintBird();
-    window.setTimeout(()=>{ state.toolPhase=false; if (state.busy) paintBird(); },700);
+    state.toolPhase=reply.tools!==false; state.liveTools=[]; paintBird();
+    // Each tool call lands as it happens: first without a result, then with it.
+    (Array.isArray(reply.tools)?reply.tools:[]).forEach((row,i)=>{
+      const name=row.querySelector?.('code')?.textContent??'', at=name.indexOf('('), call={name:name.slice(0,at),args:name.slice(at+1,-1),result:null};
+      window.setTimeout(()=>{ if (!state.busy) return; state.liveTools.push(call); paintConversation(); log.scrollTop=log.scrollHeight; },250+i*300);
+      window.setTimeout(()=>{ if (!state.busy) return; call.result=row.querySelector?.('span')?.textContent??''; paintConversation(); },550+i*300);
+    });
+    window.setTimeout(()=>{ state.toolPhase=false; if (state.busy) paintBird(); },700+300*(Array.isArray(reply.tools)?reply.tools.length:0));
     replyTimer=window.setTimeout(() => {
       const top=log.scrollTop, follow=log.scrollHeight-log.scrollTop-log.clientHeight<40 && Date.now()-lastManualScroll>=150;
-      state.busy=false; state.messages.push(reply); paintConversation();enter(log.lastElementChild,'gentle');log.scrollTop=follow?log.scrollHeight:top;
+      state.busy=false; state.liveTools=[]; state.messages.push(reply); paintConversation();enter(log.lastElementChild,'gentle');log.scrollTop=follow?log.scrollHeight:top;
       zecaDo(reply.thanks?'dance':'speak',reply.thanks?2200:1600);
       if (state.queued.length) { input.value=state.queued.shift(); submit(); }
       remember();
