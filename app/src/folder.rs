@@ -165,11 +165,8 @@ mod tests {
         std::fs::create_dir_all(dir.join("target")).unwrap();
         std::fs::write(dir.join("target/out.o"), "x\n").unwrap();
         let after = look(&dir).unwrap();
-        let top = after.top.to_string_lossy().into_owned();
-        assert_eq!(
-            changed(&before, &after),
-            [format!("{top}/kept.rs"), format!("{top}/new.rs")]
-        );
+        let at = |name: &str| after.top.join(name).to_string_lossy().into_owned();
+        assert_eq!(changed(&before, &after), [at("kept.rs"), at("new.rs")]);
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -219,6 +216,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_folder_reached_through_a_symlink_keeps_its_spelling() {
         let dir = repo("link");
