@@ -904,12 +904,26 @@
 #vults-ui-proposal .dx-toolbar .search-field { flex:1; }
 #vults-ui-proposal .dx-meeting select { border:1px solid var(--control-border); background:var(--float); color:var(--fg); border-radius:var(--radius-control); padding:5px 8px; min-height:32px; }
 #vults-ui-proposal .dx-list .menu-group { display:block; margin:14px 0 2px; }
-#vults-ui-proposal .dx-entry { display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:12px; align-items:start; padding:10px 0; border-bottom:1px solid var(--border); }
+#vults-ui-proposal .dx-entry { display:grid; grid-template-columns:32px minmax(0,1fr) auto; gap:14px; align-items:start; padding:12px 10px; margin:0 -10px; border-radius:10px; border-bottom:0; transition:background var(--motion-fast,120ms); }
+#vults-ui-proposal .dx-entry:hover,#vults-ui-proposal .dx-entry:focus-within { background:var(--panel); }
+#vults-ui-proposal .dx-mark { display:inline-grid; place-items:center; width:32px; height:32px; border-radius:9px; background:var(--raised); color:var(--fg-dim); font-size:13px; font-weight:600; }
+#vults-ui-proposal .dx-mark.command,#vults-ui-proposal .dx-mark.session { background:color-mix(in srgb,var(--fg) 10%,var(--raised)); color:var(--fg); }
+#vults-ui-proposal .dx-meta time { color:var(--fg-muted); }
+#vults-ui-proposal .dx-hero { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:10px; margin-bottom:18px; }
+#vults-ui-proposal .dx-hero-key { position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:center; gap:10px; min-height:124px; padding:18px 20px; border-radius:12px; background:var(--panel); }
+#vults-ui-proposal .dx-hero-key p { position:relative; z-index:1; max-width:30ch; margin:0; color:var(--fg-dim); font-size:13px; }
+#vults-ui-proposal .dx-keycaps { position:relative; z-index:1; display:flex; gap:6px; }
+#vults-ui-proposal .dx-keycaps kbd { min-width:40px; padding:7px 11px; border:1px solid var(--control-border); border-bottom-width:3px; border-radius:8px; background:var(--raised); color:var(--fg); font:600 14px var(--font); text-align:center; }
+#vults-ui-proposal .dx-wave { position:absolute; right:16px; top:18px; bottom:18px; width:46%; display:flex; align-items:center; gap:3px; opacity:.5; -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%); mask-image:linear-gradient(90deg,transparent,#000 30%); }
+#vults-ui-proposal .dx-wave i { flex:1; border-radius:2px; background:var(--fg-muted); }
+#vults-ui-proposal .dx-hero-stats { display:grid; gap:8px; }
+#vults-ui-proposal .dx-hero-stats .stat-tile { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:10px 14px; }
+#vults-ui-proposal .dx-hero-stats .stat-tile strong { font-size:17px; }
 #vults-ui-proposal .dx-entry.dx-new { animation:dx-in 600ms var(--ease-out,ease-out); }
 @keyframes dx-in { from { background:var(--raised); } }
 #vults-ui-proposal .dx-entry time { color:var(--fg-muted); font-size:12px; padding-top:1px; }
 #vults-ui-proposal .dx-text { color:var(--fg); white-space:pre-wrap; }
-#vults-ui-proposal .dx-hit { text-decoration:underline dotted var(--fg-muted); text-underline-offset:3px; }
+#vults-ui-proposal .dx-hit { padding:0 3px; margin:0 -1px; border-radius:4px; background:color-mix(in srgb,var(--fg) 9%,transparent); box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--fg) 30%,transparent); }
 #vults-ui-proposal .dx-heard { color:var(--fg-muted); font-size:12px; margin-top:4px; }
 #vults-ui-proposal .dx-meta { display:flex; flex-wrap:wrap; gap:4px 10px; color:var(--fg-muted); font-size:12px; margin-top:3px; }
 #vults-ui-proposal .dx-where { display:inline-flex; align-items:center; gap:5px; }
@@ -947,7 +961,7 @@
 #vults-ui-proposal .dx-apps small { color:var(--fg-muted); text-align:right; }
 #vults-ui-proposal .dx-keys { display:inline-flex; gap:4px; }
 #vults-ui-proposal .dx-keys kbd { font-size:11px; padding:4px 6px; }
-@media(max-width:760px) { #vults-ui-proposal .dx-meetings { grid-template-columns:1fr; } #vults-ui-proposal .stat-tiles { grid-template-columns:1fr 1fr; } }
+@media(max-width:760px) { #vults-ui-proposal .dx-hero { grid-template-columns:1fr; } #vults-ui-proposal .dx-meetings { grid-template-columns:1fr; } #vults-ui-proposal .stat-tiles { grid-template-columns:1fr 1fr; } }
 @media(max-width:620px) {
   #vults-ui-proposal .review-stage { padding:12px 0; } #vults-ui-proposal .island-caption { top:56px; }
   #vults-ui-proposal .workspace-view { padding:16px 14px; }

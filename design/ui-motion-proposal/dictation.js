@@ -123,16 +123,26 @@
     ({history:dxHistoryPage,commands:dxCommandsPage,talk:dxTalkPage,meetings:dxMeetingsPage,stats:dxStatsPage,dictionary:dxWordsPage,snippets:dxSnippetsPage,styles:dxStylesPage,settings:dxSettingsPage,diagnostics:dxDiagnosticsPage})[dx.tab](page);
   }
   // A voice command in a list: what it did, what was heard on demand.
+  // Where a line went, at a glance: a command, a flock session, or the app's first letter.
+  function dxMark(h){
+    const m=el('span','dx-mark'+(h.command?' command':h.session?' session':''));m.setAttribute('aria-hidden','true');
+    if(h.command)m.append(A.icon('flock',14));else if(h.session)m.append(A.icon('terminal',14));else m.append(document.createTextNode(String(L(h.app)).slice(0,1).toUpperCase()));
+    return m;
+  }
   function dxCommandLine(h,refill){
     const heard=el('p','dx-heard',null,document.createTextNode(phrase('Heard: “{text}”',{text:L(h.heard)})));heard.hidden=true;
-    const meta=el('div','dx-meta',null,el('span','dx-where',null,A.icon('flock',12),el('span',null,'Voice command')),el('span','counter',null,document.createTextNode(phrase('{n} s',{n:h.secs}))));
-    return key(el('article','dx-entry'+(h===dx.fresh?' dx-new':''),null,el('time','counter',null,document.createTextNode(L(h.time))),el('div',null,null,el('p','dx-text',null,document.createTextNode(L(h.result))),heard,meta),
+    const meta=el('div','dx-meta',null,el('time','counter',null,document.createTextNode(L(h.time))),el('span','dx-where',null,A.icon('flock',12),el('span',null,'Voice command')),el('span','counter',null,document.createTextNode(phrase('{n} s',{n:h.secs}))));
+    return key(el('article','dx-entry'+(h===dx.fresh?' dx-new':''),null,dxMark(h),el('div',null,null,el('p','dx-text',null,document.createTextNode(L(h.result))),heard,meta),
       el('div','dx-actions',null,iconButton('hide','Show what was heard',()=>{heard.hidden=!heard.hidden;}),iconButton('close','Delete',()=>{dxHistory.splice(dxHistory.indexOf(h),1);toast('Deleted');refill();}))),'dictation-'+dxHistory.indexOf(h));
   }
   function dxHistoryPage(host){
     if(settings.dictKeep==='0'){host.append(el('section','empty-state',null,el('h3',null,'History is off'),el('p',null,'Only the last text stays in memory, for Paste again. Statistics still count.'),button('Dictation settings','quiet-control',()=>dxOpen('settings'))));return;}
     const today=dxHistory.filter(h=>h.day==='Today'&&!h.command).reduce((n,h)=>n+dxWordCount(dxPlain(dxFinal(h))),0)+1188;
-    host.append(el('div','stat-tiles',null,dxTile(today.toLocaleString(language),'words today'),dxTile(phrase('{n} min',{n:14}),'saved today'),dxTile('152','words per minute')));
+    // The page's signature: the key itself, a voice line, and today's figures beside it.
+    const wave=el('span','dx-wave');for(let i=0;i<36;i++){const b=el('i');b.style.height=(18+Math.round(Math.abs(Math.sin(i*1.7)*Math.cos(i*.45))*70))+'%';wave.append(b);}
+    host.append(el('section','dx-hero',null,
+      el('div','dx-hero-key',null,el('div','dx-keycaps',null,...['Ctrl','Alt','V'].map(k=>el('kbd',null,null,document.createTextNode(k)))),el('p',null,'In any app: the editor, the terminal, the browser, or straight into a flock session.'),wave),
+      el('div','dx-hero-stats',null,dxTile(today.toLocaleString(language),'words today'),dxTile(phrase('{n} min',{n:14}),'saved today'),dxTile('152','words per minute'))));
     const finder=search('Search what you dictated',value=>{dx.query=value;fill();});finder.querySelector('input').value=dx.query;
     const kept=el('span','status',null,el('span','shape shape-quiet'),el('span',null,{'7':'Kept 7 days','30':'Kept 30 days','365':'Kept 1 year',all:'Kept always'}[settings.dictKeep]));
     const list=el('div','dx-list');host.append(el('div','workspace-toolbar dx-toolbar',null,finder,kept),list);fill();
@@ -147,13 +157,13 @@
         const segs=dxFinal(h),fixes=segs.filter(s=>s.why).length,style=dxStyleOf(h);
         const heard=el('p','dx-heard',null,document.createTextNode(phrase('Heard: “{text}”',{text:L(h.heard)})));heard.hidden=true;
         const where=h.session?el('span','dx-where',null,A.icon('flock',12),el('span',null,null,document.createTextNode(phrase('In session {session} · {app}',{session:h.session,app:h.app})))):el('span','dx-where',null,A.icon('openOut',12),el('span',null,null,document.createTextNode(phrase('Pasted in {app}',{app:h.app}))));
-        const meta=el('div','dx-meta',null,where,el('span',null,null,document.createTextNode(L(DX_STYLES[style][0])+(h.translated&&settings.dictCleanup?' · '+phrase('in {language}',{language:L(h.translated)}):''))),el('span','counter',null,document.createTextNode(phrase('{n} s',{n:h.secs}))),fixes?el('span',null,null,document.createTextNode(phrase(fixes===1?'1 fix':'{n} fixes',{n:fixes}))):null);
+        const meta=el('div','dx-meta',null,el('time','counter',null,document.createTextNode(L(h.time))),where,el('span',null,null,document.createTextNode(L(DX_STYLES[style][0])+(h.translated&&settings.dictCleanup?' · '+phrase('in {language}',{language:L(h.translated)}):''))),el('span','counter',null,document.createTextNode(phrase('{n} s',{n:h.secs}))),fixes?el('span',null,null,document.createTextNode(phrase(fixes===1?'1 fix':'{n} fixes',{n:fixes}))):null);
         const actions=el('div','dx-actions',null,
           iconButton('retry','Paste again (Ctrl+Alt+B)',()=>toast('Pasted again in the focused app')),
           iconButton('hide','Show what was heard',()=>{heard.hidden=!heard.hidden;}),
           iconButton('copy','Copy',()=>toast('Copied')),
           iconButton('close','Delete',()=>{dxHistory.splice(dxHistory.indexOf(h),1);toast('Deleted');fill();}));
-        list.append(key(el('article','dx-entry'+(h===dx.fresh?' dx-new':''),null,el('time','counter',null,document.createTextNode(L(h.time))),el('div',null,null,dxRender(segs),heard,meta),actions),'dictation-'+dxHistory.indexOf(h)));
+        list.append(key(el('article','dx-entry'+(h===dx.fresh?' dx-new':''),null,dxMark(h),el('div',null,null,dxRender(segs),heard,meta),actions),'dictation-'+dxHistory.indexOf(h)));
       }
       dx.fresh=null;
     }

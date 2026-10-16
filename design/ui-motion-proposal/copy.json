@@ -6013,5 +6013,10 @@
     "{n} de {total} passaram",
     "{n} de {total} aprobados",
     "{total} 项中 {n} 项通过"
+  ],
+  "In any app: the editor, the terminal, the browser, or straight into a flock session.": [
+    "Em qualquer app: editor, terminal, navegador ou direto numa sessão do bando.",
+    "En cualquier app: el editor, el terminal, el navegador o directo en una sesión de la bandada.",
+    "任何应用都可以：编辑器、终端、浏览器，或直接进入鸟群中的会话。"
   ]
 }
