@@ -6018,5 +6018,30 @@
     "Em qualquer app: editor, terminal, navegador ou direto numa sessão do bando.",
     "En cualquier app: el editor, el terminal, el navegador o directo en una sesión de la bandada.",
     "任何应用都可以：编辑器、终端、浏览器，或直接进入鸟群中的会话。"
+  ],
+  "Words dictated": [
+    "Palavras ditadas",
+    "Palabras dictadas",
+    "口述字数"
+  ],
+  "↑ 820 vs last week": [
+    "↑ 820 a mais que a semana passada",
+    "↑ 820 más que la semana pasada",
+    "比上周多 820"
+  ],
+  "Statistics in Activity": [
+    "Estatísticas na Atividade",
+    "Estadísticas en Actividad",
+    "活动中的统计"
+  ],
+  "Speak for three seconds; Vults measures the level and the noise.": [
+    "Fale por três segundos; o Vults mede o nível e o ruído.",
+    "Habla tres segundos; Vults mide el nivel y el ruido.",
+    "说三秒钟，Vults 会测量音量和噪音。"
+  ],
+  "Test": [
+    "Testar",
+    "Probar",
+    "测试"
   ]
 }

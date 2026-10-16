@@ -1,5 +1,5 @@
   /* Lab · Activity: six views of the local records. Every figure here is sample data. */
-  const ACTIVITY_TABS=[['week','Week'],['projects','By project'],['history','History'],['cost','Cost'],['traces','Traces'],['audit','Audit']];
+  const ACTIVITY_TABS=[['week','Week'],['projects','By project'],['dictation','Dictation'],['history','History'],['cost','Cost'],['traces','Traces'],['audit','Audit']];
   const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   function renderActivity(host) {
     host.append(pageHeading('Activity',null));
@@ -8,7 +8,7 @@
     if(settings.recordsCleared&&!['projects','cost'].includes(state.activity)&&!(state.activity==='audit'&&auditRows.length)){host.append(el('section','empty-state',null,el('h3',null,'No activity yet.'),el('p',null,'New turns appear here as your agents work.')));return;}
     if(!settings.history&&['week','history','traces'].includes(state.activity)){host.append(el('section','empty-state',null,el('h3',null,'History is off'),el('p',null,'Vults keeps no record of turns while it is off. Audit always stays.'),button('Open activity settings','quiet-control',()=>openSettings('activity'))));return;}
     const panel=el('div','activity-content');host.append(panel);
-    const view={week:renderWeek,projects:renderProjects,cost:renderCost,traces:renderTraces}[state.activity];
+    const view={week:renderWeek,projects:renderProjects,dictation:dxStatsPage,cost:renderCost,traces:renderTraces}[state.activity];
     if(view)view(panel);else renderRecords(panel,state.activity);
   }
   function renderWeek(host) {
@@ -23,7 +23,7 @@
     const delta=text=>thisWeek?el('small','stat-delta counter',null,document.createTextNode(L(text))):null;
     host.append(el('div','week-summary stat-tiles',null,
       el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(String(total))),el('span',null,'Agent turns'),delta('↑ 3 vs last week'),spark),
-      ...[['4','Projects','= last week'],['3 h 12 min','Agent time','↑ 40 min vs last week'],['2','Needed you','↓ 1 vs last week']].map(([value,label,d])=>el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(L(value))),el('span',null,label),delta(d)))));
+      ...[['4','Projects','= last week'],['3 h 12 min','Agent time','↑ 40 min vs last week'],['2','Needed you','↓ 1 vs last week'],[(6230).toLocaleString(language),'Words dictated','↑ 820 vs last week']].map(([value,label,d])=>el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(L(value))),el('span',null,label),delta(d)))));
     const SPLIT=[['claude',.45],['codex',.3],['opencode',.15],['qwen',.1]];
     const chart=el('div','week-chart');chart.setAttribute('role','group');chart.setAttribute('aria-label',L('Agent turns by day'));
     const max=Math.max(...values,1);

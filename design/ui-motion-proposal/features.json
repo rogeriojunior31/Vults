@@ -1289,14 +1289,14 @@
   },
   {
    "id": "dictation-stats",
-   "area": "Dictation",
-   "feature": "Statistics: words, time saved, words per minute, words per day and where you dictate",
+   "area": "Activity",
+   "feature": "Activity › Dictation: words, time saved, words per minute, words per day and where you dictate",
    "status": "planned",
    "phase": "V4",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "stats"
+    "area": "activity",
+    "activity": "dictation"
    },
    "expect": ".dx-chart"
   },
@@ -1308,8 +1308,8 @@
    "phase": "V1",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "settings"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-key\"]"
   },
@@ -1321,8 +1321,8 @@
    "phase": "V1",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "settings"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-session\"]"
   },
@@ -1347,21 +1347,21 @@
    "phase": "V7",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "settings"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-agents-ask\"]"
   },
   {
    "id": "dictation-diagnostics",
    "area": "Settings",
-   "feature": "Diagnostics: mic test, stage timings, repeats cut, Plan B, portals",
+   "feature": "Settings › Dictation › Diagnostics: mic test, stage timings, repeats cut, Plan B, portals",
    "status": "planned",
    "phase": "V4",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "diagnostics"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-diagnostics\"]"
   },
@@ -1592,8 +1592,8 @@
    "phase": "V1",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "settings"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-say-cancel\"]"
   },
@@ -1605,8 +1605,8 @@
    "phase": "V1",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "settings"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-duck\"]"
   },
@@ -1618,8 +1618,8 @@
    "phase": "V1",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "settings"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-caption\"]"
   },

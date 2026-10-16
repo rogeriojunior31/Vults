@@ -1,5 +1,5 @@
   /* Lab · Settings, behind the gear. The same groups and fields as the app's Settings window. */
-  const CATEGORIES=[['general','General','Experience'],['chat','Chat & voice','Experience'],['flock','Flock & Zeca','Experience'],['agents','Agents','Work'],['approvals','Approvals','Work'],['projects','Projects','Work'],['activity','Activity','System'],['connectors','Connectors','System'],['phone','Phone','System'],['about','About','System']];
+  const CATEGORIES=[['general','General','Experience'],['chat','Chat & voice','Experience'],['dictation','Dictation','Experience'],['flock','Flock & Zeca','Experience'],['agents','Agents','Work'],['approvals','Approvals','Work'],['projects','Projects','Work'],['activity','Activity','System'],['connectors','Connectors','System'],['phone','Phone','System'],['about','About','System']];
   const PROVIDERS=['Anthropic','OpenAI','Google','OpenRouter','Groq','DeepSeek','Mistral','xAI','Ollama','LM Studio'];
   const CAPABILITIES=['Permissions','Questions','Diffs','Stopping a turn','Sandbox','Started from Vults'];
   const AGENT_CAN={claude:['yes','yes','yes','yes','yes','yes'],codex:['yes','yes','yes','yes','yes','yes'],antigravity:['own','own','no','no','no','no'],opencode:['yes','yes','yes','yes','no','yes'],qwen:['yes','terminal','yes','yes','no','yes'],copilot:['yes','terminal','no','yes','no','yes'],cursor:['own','own','no','no','no','no'],droid:['own','own','no','no','no','no'],kimi:['own','own','no','yes','no','yes']};
@@ -17,7 +17,7 @@
   }
   function optionRow(name,title,about,choices){return setting(title,about,choose(title,choices,settings[name],value=>changedSetting(name,typeof settings[name]==='number'?Number(value):value)));}
   function switchRow(name,title,about,onChange){return setting(title,about,makeSwitch(name,title,onChange));}
-  const CATEGORY_ICONS={general:'gear',chat:'chat',flock:'flock',agents:'terminal',approvals:'check',projects:'folder',activity:'bars',connectors:'plug',phone:'phone',about:'list'};
+  const CATEGORY_ICONS={general:'gear',chat:'chat',dictation:'mic',flock:'flock',agents:'terminal',approvals:'check',projects:'folder',activity:'bars',connectors:'plug',phone:'phone',about:'list'};
   function settingsGroup(title,...rows){return el('section','settings-group',null,el('h3',null,title),...rows.filter(Boolean));}
   function more(title,rows){return details(title,rows,'run-details setting-more');}
   function reviewDiff(title,lines,onApply,applyLabel='Write the file'){
@@ -33,7 +33,7 @@
     function paint(){
       stopScenes();content.replaceChildren();for(const b of categories.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.key===state.category));
       const title=CATEGORIES.find(([id])=>id===state.category)?.[1]??'General';content.append(el('h3','settings-title',title));
-      ({general,chat,flock,agents,approvals,projects,activity,connectors,phone,about})[state.category]?.();
+      ({general,chat,dictation:()=>dictationSettings(content),flock,agents,approvals,projects,activity,connectors,phone,about})[state.category]?.();
       enter(content,'gentle',4,1);
     }
     function general(){
@@ -56,7 +56,7 @@
       content.append(
         settingsGroup('Engines',switchRow('native','Your Claude Code and Codex setup','The CLI reads your CLAUDE.md, skills, MCP servers and hooks. Applies to the next conversation.'),setting('API provider','For the Vults harness. Models load live from the provider.',provider),setting('API key',null,keyRow),setting("Who answers Zeca's cards",'Every answer is audited. Destructive commands always ask.',access)),
         settingsGroup('Memory',switchRow('memory',"Zeca's memory",'A local journal, kept 90 days with secrets removed.'),switchRow('summary','A summary of each day','Up to 8 requests a day on your subscription.'),switchRow('suggestions','Suggest what to remember','Proposals wait for you; up to 20 a day.'),switchRow('sleep','Let Zeca sleep on it','Merges notes overnight and leaves a debrief; up to 4 a day.'),switchRow('embeddings','Recall by meaning','Uses a local Ollama embedding model.'),setting('Review memories',null,button('Open Memory','quiet-control',()=>openMemory()))),
-        settingsGroup('Voice',switchRow('voice','Talk to the chat','whisper.cpp on this computer; nothing is sent.'),optionRow('voiceModel','Voice model','Downloaded once and checked.',['Base','Small','Large v3 Turbo']),optionRow('voiceLanguage','Language you speak',null,['Automatic','Portugu\u00eas','English','Espa\u00f1ol']),setting('Dictation','Hold the same key in any app.',button('Dictation settings','quiet-control',()=>dxOpen('settings')))),
+        settingsGroup('Voice',switchRow('voice','Talk to the chat','whisper.cpp on this computer; nothing is sent.'),optionRow('voiceModel','Voice model','Downloaded once and checked.',['Base','Small','Large v3 Turbo']),optionRow('voiceLanguage','Language you speak',null,['Automatic','Portugu\u00eas','English','Espa\u00f1ol']),setting('Dictation','Hold the same key in any app.',button('Dictation settings','quiet-control',()=>{state.category='dictation';paint();remember();}))),
         settingsGroup('Web for Zeca',switchRow('web','Web for Zeca','Search and read pages. Page content never answers a card.'),optionRow('webEngine','Search engine','Brave and Tavily need a key; SearXNG needs its URL.',['Brave','Tavily','SearXNG'])));
     }
     function flock(){

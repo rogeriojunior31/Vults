@@ -273,10 +273,10 @@ assert.ok(find('.memory-change .diff-remove'),'A change shows current versus pro
 find('[data-key="proposal-1"] [data-key="remember"]').click();assert.equal(all('.room-memory .memory-change').length,2);
 
 /* Settings: every category, policies through a diff. */
-P.setArea('settings','room');assert.equal(all('.settings-categories button').filter(b=>b.dataset.key&&!b.dataset.key.startsWith('fold-')&&!b.classList.contains('rail-dot')).length,10);
+P.setArea('settings','room');assert.equal(all('.settings-categories button').filter(b=>b.dataset.key&&!b.dataset.key.startsWith('fold-')&&!b.classList.contains('rail-dot')).length,11);
 for(const name of ['general','chat','flock','agents','approvals','projects','activity','connectors','phone','about']){find('.settings-categories [data-key="'+name+'"]').click();assert.ok(find('.settings-content').children.length>1,'Settings '+name+' has content.');}
 /* Dictation: a Lab tab with its own side list and settings, and the island over the flock. */
-P.dictation.tab='history';P.setArea('dictation','room');assert.ok(find('[data-key="nav-dictation"][aria-pressed="true"]'));assert.equal(all('.dx-pages button').length,10,'Ten pages in three groups.');assert.equal(find('.dx-phase').textContent,'V1');
+P.dictation.tab='history';P.setArea('dictation','room');assert.ok(find('[data-key="nav-dictation"][aria-pressed="true"]'));assert.equal(all('.dx-pages button').length,9,'Seven pages, then links to Settings and Activity.');assert.equal(find('.dx-phase').textContent,'V1');
 assert.ok(all('.dx-entry').length>=6);assert.ok(!text('.dx-list').includes('Fix the failing parser test'),'Without the clean-up nothing is rewritten by a model.');
 assert.ok(text('.dx-list').includes('Como falado'),'Without the clean-up every line is as spoken.');
 assert.ok(all('.dx-hit').some(n=>n.textContent==='Claude Code'),'A replacement is marked.');
@@ -305,10 +305,12 @@ for(let n=0;n<6;n++){
 }
 assert.deepEqual(commandStates,['commanded','answered','refused','commanded','commanded','commanded']);
 assert.equal(all('.dx-entry').length,commandsBefore+6);assert.ok(text('.dx-entry.dx-new').includes('docs com som de novo'),'Undo reverses the command it remembers.');
-P.dictation.tab='settings';P.setArea('dictation','room');
+P.setArea('settings','room');find('.settings-categories [data-key="dictation"]').click();
 assert.equal(P.settings.dictCommands,true);assert.equal(P.settings.dictSayCancel,true);assert.ok(find('[data-key="dict-duck"]')&&find('[data-key="dict-caption"]'));
 P.dictation.tab='commands';P.setArea('dictation','room');assert.ok(find('[data-key="dict-commands-list"]'));find('[data-key="dict-commands"] .toggle').click();assert.ok(!find('[data-key="dict-commands-list"]'),'Commands off asks nothing more.');P.settings.dictCommands=true;
-P.dictation.tab='settings';P.setArea('dictation','room');assert.ok(find('[data-key="dict-key"]'));
+P.setArea('settings','room');find('.settings-categories [data-key="dictation"]').click();assert.ok(find('[data-key="dict-key"]')&&find('[data-key="dict-diagnostics"]'),'Settings › Dictation holds the values and Diagnostics.');
+P.dictation.tab='history';P.setArea('dictation','room');find('[data-key="dx-page-settings"]').click();assert.equal(P.state.area,'settings');assert.equal(P.state.category,'dictation');
+P.setArea('dictation','room');find('[data-key="dx-page-stats"]').click();assert.equal(P.state.area,'activity');assert.ok(find('.dx-chart'),'Dictation figures live in Activity.');
 assert.equal(P.settings.dictCleanup,false);assert.equal(P.settings.dictAutoSend,false);assert.equal(P.settings.dictAgentsAsk,false);assert.ok(!find('[data-key="dict-cleanup-model"]'),'The clean-up is off and asks nothing.');
 P.dictation.tab='styles';P.setArea('dictation','room');assert.equal(all('.dx-style').length,4);find('[data-key="dict-cleanup"] .toggle').click();assert.ok(find('[data-key="dict-cleanup-model"]'),'Turning it on shows its model.');
 P.dictation.tab='history';P.setArea('dictation','room');assert.ok(text('.dx-list').includes('Fix the failing parser test'),'With the clean-up a session gets the English prompt.');P.settings.dictCleanup=false;
@@ -320,8 +322,8 @@ find('.settings-categories [data-key="approvals"]').click();all('.settings-conte
 assert.ok(find('.editor-content .diff-add'),'A policy change is reviewed as a diff.');submitEditor();assert.ok(P.settings.policies[0].text.includes('npm test'));
 
 /* Activity. */
-P.setArea('activity','room');assert.equal(all('.activity-tabs button').length,6);
-for(const id of ['week','projects','history','cost','traces','audit']){find('[data-key="tab-'+id+'"]').click();assert.ok(find('.activity-content').children.length>0,'Activity '+id+' has content.');}
+P.setArea('activity','room');assert.equal(all('.activity-tabs button').length,7);
+for(const id of ['week','projects','dictation','history','cost','traces','audit']){find('[data-key="tab-'+id+'"]').click();assert.ok(find('.activity-content').children.length>0,'Activity '+id+' has content.');}
 assert.ok(text('.activity-content').includes('npm run lint'),'Card answers appear in Audit: '+text('.activity-content').slice(0,400)+' state:'+P.state.activity);
 
 /* Island. */

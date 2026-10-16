@@ -4,8 +4,8 @@
      island shows dictation over the flock, in grey, and a card always wins.
      Voice commands (V8) use their own key: understood on this computer with no model, they move around the flock and
      read what Vults already knows; they never type into an app and never answer a card. */
-  const DX_PAGES=[['history','Dictation','mic','Voice'],['commands','Voice commands','flock','Voice'],['talk','Talk with Zeca','chat','Voice'],['meetings','Meetings','person','Voice'],['stats','Statistics','bars','Voice'],
-    ['dictionary','Dictionary','file','Your words'],['snippets','Snippets','tag','Your words'],['styles','Styles','pencil','Your words'],['settings','Settings','gear','System'],['diagnostics','Diagnostics','list','System']];
+  const DX_PAGES=[['history','Dictation','mic','Voice'],['commands','Voice commands','flock','Voice'],['talk','Talk with Zeca','chat','Voice'],['meetings','Meetings','person','Voice'],
+    ['dictionary','Dictionary','file','Your words'],['snippets','Snippets','tag','Your words'],['styles','Styles','pencil','Your words']];
   const DX_PHASE={history:'V1',commands:'V8',talk:'V6',meetings:'V5',stats:'V4',dictionary:'V2',snippets:'V2',styles:'V3',settings:'V1',diagnostics:'V4'};
   const dx={tab:'history',query:'',island:'idle',partial:'',caption:null,command:0,meeting:'m1',meetingTab:'transcript',recording:false,fresh:null,timers:[]};
   const dxWords=['Vults','Zeca','Codex','KWin','Wayland','Tauri','whisper.cpp'].map(raw);
@@ -94,19 +94,17 @@
   const dxPhase=(node,phase)=>{node.querySelector('h2')?.append(el('span','dx-phase',null,document.createTextNode(phase)));return node;};
   const dxTile=(value,label)=>el('div','stat-tile',null,el('strong','counter',null,document.createTextNode(value)),el('small',null,label));
 
-  const dxOpen=page=>{dx.tab=page;setArea('dictation',state.mode==='full'?'full':'room');};
+  // Settings › Dictation owns every value (R6) and Activity › Dictation the figures; the area keeps the work itself.
+  const dxOpen=page=>{if(page==='settings'){openSettings('dictation');return;}dx.tab=page;setArea('dictation',state.mode==='full'?'full':'room');};
   // Each page: its title, a line about it and its actions, then its body.
   const DX_HEAD={
     history:()=>['Dictation','Hold Ctrl+Alt+V in any app, speak and let go. The text goes where the cursor is.',key(button('Try it','quiet-control',()=>dxSimulate()),'dictation-try')],
     commands:()=>['Voice commands','Hold the command key, say what to do in Vults and let go. Understood on this computer with no model; it never types into an app.',...(settings.dictCommands?[key(button('Try a command','quiet-control',()=>dxCommand()),'dictation-try-command')]:[])],
     talk:()=>['Talk with Zeca','Off by default. On, your voice goes to the realtime model you choose, with your key in the keyring, a daily budget and a trace. Dictation stays on this computer.',...(settings.zecaVoice?[key(button('Start a conversation','quiet-control',()=>dxIsland('speaking')),'zeca-talk')]:[])],
     meetings:()=>['Meetings','Records your microphone and the computer\'s sound. No bot joins the call; the audio is deleted after the transcript.',dx.recording?key(button('Stop and transcribe','quiet-control',()=>{dx.recording=false;toast('Transcribing…');dxOpen('meetings');}),'meeting-stop'):key(button('Record a call','quiet-control',()=>{dx.recording=true;dxOpen('meetings');}),'meeting-record')],
-    stats:()=>['Statistics','Only this computer. Erasing the history keeps the figures; a day with no dictation counts as unknown, not zero.'],
     dictionary:()=>['Dictionary','Names and terms Vults always spells right.'],
     snippets:()=>['Snippets','Say the short phrase and Vults pastes the whole text, unchanged.'],
     styles:()=>['Styles','An optional clean-up by a model, set per app. It is a filter, never an assistant.'],
-    settings:()=>['Settings',null],
-    diagnostics:()=>['Diagnostics',null,button('Test the microphone','quiet-control',()=>toast('Good: clear speech, low noise (−52 dB).'))],
   };
   function renderDictation(host){
     host.classList.add('dx-view');
@@ -117,10 +115,13 @@
       if(id==='meetings'&&dx.recording)b.append(el('span','shape shape-working nav-count'));
       b.setAttribute('aria-pressed',String(dx.tab===id));nav.append(b);
     }
+    nav.append(el('small',null,'System'),key(button(null,'',()=>openSettings('dictation'),'Dictation settings'),'dx-page-settings'),key(button(null,'',()=>{state.activity='dictation';setArea('activity',state.mode==='full'?'full':'room');},'Statistics in Activity'),'dx-page-stats'));
+    nav.querySelector('[data-key="dx-page-settings"]').append(A.icon('gear',14),el('span',null,'Settings'),A.icon('openOut',11));
+    nav.querySelector('[data-key="dx-page-stats"]').append(A.icon('bars',14),el('span',null,'Statistics'),A.icon('openOut',11));
     host.append(el('div','settings-grid dx-grid',null,nav,page));
     if(stageState(page,'Nothing dictated yet.'))return;
     const [title,about,...actions]=DX_HEAD[dx.tab]();page.append(dxPhase(pageHeading(title,about,...actions),DX_PHASE[dx.tab]));
-    ({history:dxHistoryPage,commands:dxCommandsPage,talk:dxTalkPage,meetings:dxMeetingsPage,stats:dxStatsPage,dictionary:dxWordsPage,snippets:dxSnippetsPage,styles:dxStylesPage,settings:dxSettingsPage,diagnostics:dxDiagnosticsPage})[dx.tab](page);
+    (({history:dxHistoryPage,commands:dxCommandsPage,talk:dxTalkPage,meetings:dxMeetingsPage,dictionary:dxWordsPage,snippets:dxSnippetsPage,styles:dxStylesPage})[dx.tab]??dxHistoryPage)(page);
   }
   // A voice command in a list: what it did, what was heard on demand.
   // Where a line went, at a glance: a command, a flock session, or the app's first letter.
@@ -208,12 +209,14 @@
     if(dx.meetingTab==='todos')for(const [text,owner,due] of m.todos)detail.append(el('div','dx-todo',null,el('span','shape shape-quiet'),el('span',null,text),el('small','task-meta',null,document.createTextNode(L(owner)+' · '+L(due)))));
     host.append(el('div','dx-meetings',null,list,detail));
   }
+  // Activity › Dictation: the figures of dictation, next to the agents' week.
   function dxStatsPage(host){
+    host.append(el('p','pane-note','Only this computer. Erasing the history keeps the figures; a day with no dictation counts as unknown, not zero.'));
     host.append(el('div','stat-tiles',null,dxTile((48920).toLocaleString(language),'words dictated'),dxTile(phrase('{h} h {m} min',{h:5,m:26}),'saved'),dxTile('152','words per minute')));
     const max=Math.max(...DX_DAYS),chart=el('div','dx-chart');chart.setAttribute('role','img');chart.setAttribute('aria-label',L('Words per day, last 2 weeks'));
     DX_DAYS.forEach((n,i)=>{const bar=el('span',i===DX_DAYS.length-1?'today':null);bar.style.height=(n/max*100)+'%';bar.setAttribute('data-tooltip',phrase('{n} words',{n:n.toLocaleString(language)}));chart.append(el('div',null,null,bar,el('small',null,i===DX_DAYS.length-1?'today':null,...(i===DX_DAYS.length-1?[]:[document.createTextNode(String(3+i))]))));});
     const apps=el('div','dx-apps');for(const [app,pct] of DX_APPS){const bar=el('i');bar.style.width=pct*2.4+'%';apps.append(el('div',null,null,el('span',null,null,document.createTextNode(app)),el('span',null,null,bar),el('small','counter',null,document.createTextNode(pct+'%'))));}
-    host.append(el('h3','lab-panel-title','Words per day, last 2 weeks'),chart,el('h3','lab-panel-title','Where you dictate'),apps);
+    host.append(el('div','week-panel dx-stats-panel',null,el('h3','lab-panel-title','Words per day, last 2 weeks'),chart),el('div','week-panel dx-stats-panel',null,el('h3','lab-panel-title','Where you dictate'),apps));
   }
 
   /* The area owns its settings (R6), page by page; the voice model stays in Settings › Chat & voice, shared with the chat. */
@@ -267,6 +270,12 @@
     const cards=el('div','dx-styles');
     for(const [id,[name,about]] of Object.entries(DX_STYLES)){const b=key(button(null,'dx-style',()=>{changedSetting('dictStyle',name);dxOpen('styles');}),'dx-style-'+id);b.append(el('strong',null,name),el('small',null,about));b.setAttribute('aria-pressed',String(settings.dictStyle===name));cards.append(b);}
     host.append(settingsGroup('Default style',...(settings.dictCleanup?[]:[el('p','pane-note','Off: every line is pasted as spoken.')]),cards));
+  }
+  // Settings › Dictation: the values, then Diagnostics at the end.
+  function dictationSettings(content){
+    dxSettingsPage(content);
+    content.append(el('h3','settings-title dx-settings-sub','Diagnostics'),settingsGroup('Microphone',setting('Test the microphone','Speak for three seconds; Vults measures the level and the noise.',button('Test','quiet-control',()=>toast('Good: clear speech, low noise (−52 dB).')))));
+    dxDiagnosticsPage(content);
   }
   function dxDiagnosticsPage(host){
     host.append(key(settingsGroup('Last 50 dictations',...['Release to pasted: 0.9 s typical, 1.8 s slow','Transcription: whisper Small on Vulkan, 0.55 s','Paste: RemoteDesktop portal, 45 ms','This week: 4 repeats cut, Plan B used once'].map(t=>setting(t,null,null))),'dict-diagnostics'),
