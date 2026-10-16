@@ -4,12 +4,13 @@
   function openConnection(section,id){views.connectionFace='you';views.connectionSection=section;views.connectionSelected=id;views.connectionQuery='';setArea('connections','room');}
   const checkTone=value=>value==='passed'?'done':value==='failed'?'failed':'working';
   function renderConnections(host) {
-    const refresh=key(button('Refresh','quiet-control',()=>{if(Date.now()-github.refreshedAt<60000){toast('Refreshed less than a minute ago.');return;}github.refreshedAt=Date.now();github.synced=0;github.requests++;setArea('connections',state.mode);toast('Synced with GitHub');}),'refresh');
+    const refresh=key(iconButton('retry','Refresh',()=>{if(Date.now()-github.refreshedAt<60000){toast('Refreshed less than a minute ago.');return;}github.refreshedAt=Date.now();github.synced=0;github.requests++;setArea('connections',state.mode);toast('Synced with GitHub');}),'refresh');
     const markAll=key(button('Mark all seen','',()=>{for(const r of github[views.connectionSection]??[])settings.githubSeen[r.id]=true;setArea('connections',state.mode);}),'connections-mark-all');
-    host.append(pageHeading('Connections',null,markAll,refresh,key(button('Add a connection','',()=>openCatalog()),'add-connection')));
+    // One filled action, Add; Mark all seen stays text, and Refresh sits on the line that says when it last synced.
+    host.append(pageHeading('Connections',null,markAll,key(button('Add a connection','quiet-control',()=>openCatalog()),'add-connection')));
     const picker=el('div','connector-chips');CONNECTORS.forEach(c=>{const b=key(button(null,'connector-chip',()=>{}),'connector-'+c.id);b.setAttribute('aria-pressed','true');b.append(A.icon('pull',13),el('span',null,raw(c.name)),el('span','shape shape-'+(settings.github?'done':'quiet')));picker.append(b);});host.append(picker);
     if(!settings.github){host.append(el('section','empty-state',null,el('h3',null,'GitHub is off'),el('p',null,'Turn it on to see your pull requests and checks. Vults then calls gh every 5 minutes, within its daily budget.'),button('Open connector settings','quiet-control',()=>openSettings('connectors'))));return;}
-    host.append(el('p','sync-line pane-note',phrase('Synced {age} · {used} of {budget} requests today',{age:github.synced?phrase('{n} min ago',{n:github.synced}):L('just now'),used:github.requests,budget:'3,000'})));
+    host.append(el('div','sync-line',null,el('p','pane-note',phrase('Synced {age} · {used} of {budget} requests today',{age:github.synced?phrase('{n} min ago',{n:github.synced}):L('just now'),used:github.requests,budget:'3,000'})),refresh));
     host.append(tabs([['you','For you'],['zeca','For Zeca']],views.connectionFace,face=>{views.connectionFace=face;remember();setArea('connections',state.mode);},'GitHub','face-tabs'));
     if(stageState(host,'No connection news yet.'))return;
     if(views.connectionFace==='zeca'){renderZecaFace(host);return;}

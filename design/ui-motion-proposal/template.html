@@ -711,7 +711,9 @@
 #vults-ui-proposal .connector-chips { display:flex; gap:6px; margin-bottom:6px; }
 #vults-ui-proposal .connector-chip { display:flex; align-items:center; gap:8px; background:var(--float); font-size:12px; }
 #vults-ui-proposal .connector-chip[aria-pressed=true] { background:var(--raised); }
-#vults-ui-proposal .sync-line { margin:0 0 10px; }
+#vults-ui-proposal .sync-line { display:flex; align-items:center; gap:4px; margin:0 0 10px; }
+#vults-ui-proposal .sync-line .pane-note { margin:0; }
+#vults-ui-proposal .sync-line .icon-action { width:26px; min-height:26px; }
 #vults-ui-proposal .connection-columns { display:grid; grid-template-columns:min(var(--conn-w,420px),48%) minmax(0,1fr); gap:20px; }
 #vults-ui-proposal .connection-row { display:flex; align-items:center; gap:10px; width:100%; padding:10px; text-align:left; margin-bottom:2px; }
 #vults-ui-proposal .connection-row[aria-pressed=true] { background:var(--raised); }
