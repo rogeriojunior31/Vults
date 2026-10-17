@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 44288c838224 -->
+<!-- source: 9bd6acd84fed -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -45,7 +45,7 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | `question` | pergunta | A inclinada curiosa de cabeça, mantida |
 | `done` | concluído | Um pulo que pousa com um leve achatamento, um alongamento de asa e perna, se acomoda, depois a assinatura da espécie (veja abaixo) |
 | `fail` | falha | Penas eriçadas, um chiado, uma sacudida; depois abatido, cabeça pendurada e uma asa caída |
-| `listen` | o mic do chat está aberto | A cabeça inclinada na sua direção, pequenos acenos enquanto você fala |
+| `listen` | digitação ao vivo no chat ou seu mic aberto | A cabeça inclinada na sua direção, pequenos acenos enquanto você fala |
 | `dance` | música tocando (Now playing ligado), o Zeca sozinho | Um balanço a cada batida, gingando, um pé batendo |
 | `sleep` | dormindo | Todo afofado, a cabeça virada para trás sobre as costas, só o alto dela aparecendo por cima dos ombros |
 | `swallow` | um arquivo solto em cima dele | Desce até o fio, pega, joga a cabeça para trás e engole |
@@ -53,7 +53,7 @@ urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes
 | `preen` | o ponteiro parado sobre o Zeca | Uma sessão de limpeza das penas, cabeça na asa |
 | `startle` | um clique no Zeca | Um pulo com as asas jogadas para cima, cabeça erguida |
 | `hello` | o app abrindo | Um pouso com achatamento, um quique para cima bem esticado e um pouso mais suave; depois ele vira a cabeça para você e acena com uma asa |
-| `speak` | Sem uso: o Zeca responde só em texto, e nada no app o toca. Ele fica no sprite e no lab, onde os testes visuais o desenham | De frente para o chat, o bico abrindo e fechando num ritmo irregular, uma piscada entre as frases |
+| `speak` | texto novo chegando ao Chat e, brevemente, o turno concluído | De frente para o chat, o bico abrindo e fechando num ritmo irregular, uma piscada entre as frases |
 | `fly` | web | Uma saída completa: decola, bate-bate-bate-plana para longe, plana de volta, freia, pousa, vira; cada batida para baixo levanta o corpo uma linha |
 
 O clipe `idle` inclui uma sessão de limpeza das penas (cabeça na asa, mordiscadas rápidas), e o `done` estica
@@ -72,7 +72,7 @@ A ilha os toca assim:
 - **doze**: uma ave descansando num poleiro onde ela não plana cochila com ele depois de 90
   segundos, ±12% conforme a sessão, e então dorme: o Zeca no fio vazio da ilha e no chat, o bando
   do Nest e o widget do canto (o bando ocioso da própria ilha plana em vez disso). Com movimento
-  reduzido ela dorme direto.
+  reduzido a cena mantém uma pose estática.
 - **wake**: o trabalho acorda uma ave dormindo, que se alonga antes do clipe de trabalho (ou antes
   de decolar, no trabalho na web). Uma permissão, uma pergunta ou uma falha entra direto, sem
   alongamento.
@@ -80,6 +80,19 @@ A ilha os toca assim:
   vez de planar, e voltam a subir quando ela para. O Zeca sozinho continua dançando.
 - **fed**: quando o Zeca engole um arquivo no chat, o engolir segue para o papo cheio, que esvazia
   enquanto ele descansa; pensar, ouvir ou outro arquivo interrompe.
+
+No Quick e no Nest, eventos reais da conversa controlam o mesmo retrato. Digitar mantém
+`listen` por 1,5 segundo após a última entrada; restaurar ou preencher um rascunho não a
+dispara. Inícios e fins informados pelas ferramentas controlam `search`, inclusive chamadas
+CLI simultâneas e leituras de API. Sem ferramenta ativa, texto novo mantém `speak` por
+1,6 segundo; um fluxo quieto volta a `think`, e a conclusão bem-sucedida dá uma última
+reação curta. Respostas salvas não a repetem. Gravar usa `listen`, transcrever usa `think`
+e toda permissão pendente tem prioridade sobre arquivos, voz e texto posterior. Fechar,
+esconder, desativar o Zeca ou substituir a conversa limpa as reações breves. Os estados ativos do
+Chat interrompem um olá ou reação decorativa imediatamente. Essas poses nunca criam fala,
+executam uma ferramenta ou respondem a uma permissão. O movimento
+reduzido e o modo estático manual desenham a pose atual uma vez, com sua marca sobre a
+cabeça, sem um timer de quadros recorrente; cenas escondidas continuam paradas.
 
 <a id="zeca-notices-you"></a>
 
@@ -129,10 +142,10 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
   (um abutre do Velho Mundo ou um condor) chega planando pela direita, sobe uma vez na térmica da ilha
   e segue o caminho, sem nunca pousar; ele passa por trás dos cards e das linhas, nunca por cima do texto deles.
   Desligue em Settings → Flock & Zeca; nenhum com movimento reduzido ou enquanto a ilha está escondida.
-- Depois de dois segundos ociosa, a ave de uma sessão decola para o céu compartilhado abaixo da ilha. Uma
-  sessão concluída (o agente esperando o próximo prompt) toca primeiro o clipe de concluído, depois decola
-  quando esse clipe e a assinatura da espécie acabam (seis a oito segundos depois que o estado de concluído
-  aparece); o selo "done" dela fica até você dispensá-lo.
+- Uma sessão ociosa ou concluída com sucesso mantém um círculo verde por 30 segundos, depois perde a
+  marca e decola para o céu compartilhado abaixo da ilha. O core controla o prazo monotônico de repouso;
+  metadados, navegação e a volta do Nest nunca o reiniciam. O clipe de concluído e a assinatura da
+  espécie tocam no poleiro durante esse intervalo; a resposta concluída continua disponível.
   Cada sessão mantém a sua ave nas transições entre compacto e aberto, na própria fase e velocidade de volta.
   O bando circula sem parar enquanto está ocioso, de dia. Trabalho traz para baixo só a ave daquela
   sessão; abrir a ilha deixa as outras aves voando. Sem sessões, não há bando decorativo.
@@ -154,9 +167,10 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 - O céu é um canvas transparente e sem ponteiro dentro da superfície de desktop existente de 720 por 640;
   ele não aumenta a região de entrada nem remapeia a janela layer-shell do Linux.
 - Com movimento reduzido (inclusive mudanças durante o voo), as aves voltam às suas cenas estáticas.
-  Uma ave ociosa no poleiro cochila depois de 90 segundos, e uma ave ociosa decola depois de 2, cada
-  uma ±12% conforme a sessão, para o bando nunca se mexer no mesmo passo. Cenas escondidas param os
-  timers de desenho.
+  Uma ave ociosa no poleiro cochila depois de 90 segundos, ±12% conforme a sessão. O limite de repouso
+  de 30 segundos continua exato; as fases e velocidades de volta variam por sessão. Chamar uma ave
+  voando para baixo a mantém pousada por mais 30 segundos sem mudar o prazo do core. Cenas escondidas
+  param os timers de desenho.
 - O agente aparece como uma pequena faixa na base do pescoço (laranja Claude, verde-azulado Codex, rosa OpenCode, índigo Qwen, azul Copilot, violeta para qualquer outra ferramenta, o Antigravity incluído), nunca como a
   cor da ave.
 - Um clipe toca pelo menos 600 ms antes que um mais calmo o substitua; aprovação, pergunta e falha entram

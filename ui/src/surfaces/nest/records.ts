@@ -12,7 +12,7 @@ import { NAME_BY_ID } from "../../agents";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
-import { money, usageLabel, usageLevel } from "../../cost";
+import { money, usageLabel, usageLevel, usageWindowName } from "../../cost";
 import { viewState } from "./view-state";
 
 export interface RecordsBackend {
@@ -84,17 +84,6 @@ const when = (ms: number) =>
 
 const tokens = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n.toLocaleString("en-US");
-
-/** A plan window's length, in words. */
-function windowName(minutes: number): string {
-  if (minutes === 300) return t("5 hours");
-  if (minutes === 10080) return t("A week");
-  if (minutes === 1440) return t("1 day");
-  if (minutes === 60) return t("1 hour");
-  if (minutes % 1440 === 0) return t("{n} days", { n: minutes / 1440 });
-  if (minutes % 60 === 0) return t("{n} hours", { n: minutes / 60 });
-  return t("{n} minutes", { n: minutes });
-}
 
 function line(parts: (HTMLElement | null)[], cls = ""): HTMLElement {
   return el(
@@ -209,7 +198,7 @@ function usageBody(u: UsageView): HTMLElement[] {
     ? u.windows.map((w) =>
         line([
           span(agentName(w.agent), "record-who"),
-          span(windowName(w.minutes), "record-what"),
+          span(usageWindowName(w.minutes), "record-what"),
           bar(w.used_percent, usageLevel(w.used_percent)),
           span(`${w.used_percent}%`, "record-meta"),
           span(usageLabel(w.used_percent), `usage-status ${usageLevel(w.used_percent)}`),

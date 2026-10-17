@@ -245,6 +245,7 @@ export class Scene {
     this.canvas.className = "scene";
     this.ctx = this.canvas.getContext("2d")!;
     this.size(this.layout.height);
+    window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", () => this.refresh());
     document.addEventListener("themechange", () => {
       this.colors = null;
       if (this.active) this.draw();
@@ -420,6 +421,11 @@ export class Scene {
       f.bird.want("idle", now);
       if (f.bird.react("fed", now, true)) return;
     }
+    // An active conversation must not wait behind a greeting or a cosmetic reaction.
+    if (f.key === "zeca" && !f.alone && clip !== "idle") {
+      f.bird.perchNow(clip, now);
+      return;
+    }
     // Work wakes a sleeping bird: it opens an eye and stretches first, then works (a web sortie
     // takes off after it). A card that needs the user cuts in at once.
     if (asleep && clip !== "idle" && clip !== "sleep" && !URGENT_CLIPS.has(clip) && !calm()) f.bird.react("wake", now);
@@ -521,8 +527,10 @@ export class Scene {
   }
 
   private draw(): void {
+    this.schedule(null);
     const now = Clock.now();
     const ctx = this.ctx;
+    const paused = calm();
     if (!this.colors) {
       const css = getComputedStyle(this.canvas);
       const v = (name: string, fallback: string) =>
@@ -558,6 +566,10 @@ export class Scene {
 
     let next = 1000;
     const rest = (f: Flock) => {
+      if (paused) {
+        f.bird.perchNow(f.clip, now);
+        return;
+      }
       if (f.idleSince === null || f.roosting) return;
       // Each bird nods off on its own time (±12% by its key), so a resting wire never sleeps in step.
       // Zeca in the chat is talking to you: he naps on the usual time, even at night.
@@ -585,7 +597,7 @@ export class Scene {
       rest(v);
       const s = v.bird.shot(now);
       this.cache(v.set).drawShot(ctx, s, vults.scale * this.dpr, accent(v.agent));
-      next = Math.min(next, this.emote(v, s, vults.scale, now, -Infinity));
+      next = Math.min(next, this.emote(v, s, vults.scale, paused ? 0 : now, -Infinity));
       next = Math.min(next, v.bird.nextChange(now));
     }
     if (this.zeca && zeca && !inSky(this.zeca)) {
@@ -604,12 +616,12 @@ export class Scene {
       const z = this.zeca.bird.shot(now);
       this.cache(this.zeca.set).drawShot(ctx, z, zeca.scale * this.dpr, accent(this.zeca.agent));
       // A hat lifts the top of his head: with no room over it, the mark goes beside it.
-      next = Math.min(next, this.emote(this.zeca, z, zeca.scale, now, 0));
+      next = Math.min(next, this.emote(this.zeca, z, zeca.scale, paused ? 0 : now, 0));
       next = Math.min(next, this.zeca.bird.nextChange(now));
     }
     ctx.globalAlpha = 1;
     // Nothing on the wire: one clear frame, then rest.
-    if (this.zeca || this.vults.size) this.schedule(next);
+    if (!paused && (this.zeca || this.vults.size)) this.schedule(next);
   }
 }
 

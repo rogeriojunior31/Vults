@@ -1,14 +1,14 @@
 // One persistent bird per resting session (idle, or finished and waiting for the next prompt),
 // shared by the compact and open island.
 import { Bird, type Perch, type Thermal } from "../character/director";
-import { FrameCache, clipLength, frameWidth, type SpriteSet } from "../character/sprites";
+import { FrameCache, frameWidth, type SpriteSet } from "../character/sprites";
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { clipFor, musicOn } from "./behavior";
 import { dayPart } from "./daypart";
 import { perchOf } from "../character/zeca";
 import { SPECIES, perchedSignature, speciesSet } from "../character/flock";
-import { hash as hashOf, jitter, speciesOf, zecaSpecies } from "./flock";
+import { hash as hashOf, speciesOf, zecaSpecies } from "./flock";
 
 export type SkyPerch = { x: number; y: number; scale: number };
 /** The island's rectangle in the sky's coordinates, with its corner radius: the flock stays inside. */
@@ -36,17 +36,12 @@ function flourish(set: SpriteSet, hash: number, b: SkyBox): Thermal["flourish"] 
 /** Room kept between a circling bird and the island's edge. */
 const MARGIN = 14;
 const key = (s: SessionView) => `${s.agent}:${s.id}`;
-const IDLE_MS = 2000;
-/** A finished session celebrates on its perch first (the done clip, with its species' signature),
- *  then takes off too: an agent waiting for the next prompt is resting, whether or not its "done"
- *  was dismissed. */
-const DONE_MS = 6000;
-/** About how long a new bird takes to fly in and land. */
-const ARRIVAL_MS = 4500;
+const REST_MS = 30_000;
 /** Resting birds go up, only by day (no sun, no thermal); with a song playing the idle ones court
  *  on the wire instead. */
 const resting = (s: SessionView) =>
-  dayPart() === "day" && ((s.status === "idle" && !musicOn()) || s.status === "finished");
+  s.rested !== false && s.rested !== null && dayPart() === "day"
+    && ((s.status === "idle" && !musicOn()) || s.status === "finished");
 
 /**
  * Each species at its height in the sky, as in nature: the Cathartes low, sniffing for food, the
@@ -58,8 +53,8 @@ export function floorOf(species: string): -1 | 0 | 1 {
   if (species === "atratus") return 0;
   return 1;
 }
-const restAfter = (s: SessionView, set: SpriteSet) =>
-  s.status === "finished" ? Math.max(DONE_MS, clipLength(set.clips.done) + 1000) : IDLE_MS * jitter(key(s));
+// Older illustrative states have no core rest clock; production always supplies it.
+const restAfter = (s: SessionView) => s.rested === true ? 0 : REST_MS;
 /**
  * Each running subagent shows as a scout: a small Cathartes (the vultures that find food by smell)
  * taking off from its session's perch and circling low near it, gone when the subagent ends.
@@ -135,7 +130,7 @@ export class Sky {
     const now = Clock.now();
     f.bird.want("idle", now);
     f.landingAt = now;
-    if (f.idleAt !== null) f.idleAt = now;
+    if (f.idleAt !== null) f.idleAt = now + REST_MS;
     this.draw();
   }
 
@@ -205,7 +200,6 @@ export class Sky {
         // The scene starts the new bird's clip over: its rest starts over too.
         if (f.idleAt !== null) f.idleAt = now;
       }
-      const arriving = !f || f.leaving;
       if (!f || f.leaving) {
         const anchor = this.anchors.get(id) ?? { x: WIDTH / 2, y: 22, scale: 1 };
         const hash = hashOf(id);
@@ -222,8 +216,7 @@ export class Sky {
       f.session = session;
       if (resting(session)) {
         if (f.idleAt === null || statusChanged) {
-          // A session that shows up finished flies in first: its done clip starts once it lands.
-          f.idleAt = arriving && session.status === "finished" ? now + ARRIVAL_MS : now;
+          f.idleAt = now;
           // A finished bird keeps its done clip until it takes off; the scene plays it.
           if (session.status === "idle" && !f.bird.isSoaring()) f.bird.want("idle", now);
         }
@@ -350,7 +343,7 @@ export class Sky {
       }
       if (!this.active) continue;
       if (f.leaving && f.bird.gone(now)) { this.birds.delete(id); changed = true; continue; }
-      if (!f.leaving && f.idleAt !== null && ((!f.airborne && now - f.idleAt >= restAfter(f.session, f.set)) || f.bird.isSoaring())) {
+      if (!f.leaving && f.idleAt !== null && ((!f.airborne && now - f.idleAt >= restAfter(f.session)) || f.bird.isSoaring())) {
         const hash = f.hash;
         // Its species may have changed while it was up (it became king): take off as the new one.
         const set = speciesOf(id);

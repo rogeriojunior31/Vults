@@ -64,6 +64,7 @@ pub(crate) enum Msg {
         changes: Value,
     },
     Delta(String),
+    Reasoning(String),
     /// A tool item began or ended (a command, a file change, an MCP call).
     ToolStart {
         id: String,
@@ -146,6 +147,10 @@ pub(crate) fn classify(raw: &str) -> Msg {
                 },
             }
         }
+        (None, Some("item/reasoning/summaryPartAdded")) => Msg::Reasoning("\n\n".into()),
+        (None, Some("item/reasoning/summaryTextDelta")) => v["params"]["delta"]
+            .as_str()
+            .map_or(Msg::Other, |d| Msg::Reasoning(d.to_string())),
         (None, Some("item/agentMessage/delta")) => v["params"]["delta"]
             .as_str()
             .map_or(Msg::Other, |d| Msg::Delta(d.to_string())),
@@ -415,6 +420,7 @@ impl AppServer {
                 Msg::Response { id: got, result } if got == id => {
                     turn_id = result["turn"]["id"].as_str().map(str::to_string);
                 }
+                Msg::Reasoning(text) => sink.event(Event::Reasoning(text)).await,
                 Msg::Delta(text) => {
                     sink.event(Event::Text(text)).await;
                 }
@@ -634,6 +640,20 @@ fn config_overrides(spec: &Spec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn public_reasoning_summary_is_separate_and_raw_reasoning_is_ignored() {
+        assert_eq!(
+            classify(
+                r#"{"method":"item/reasoning/summaryTextDelta","params":{"delta":"Inspect the files."}}"#
+            ),
+            Msg::Reasoning("Inspect the files.".into())
+        );
+        assert_eq!(
+            classify(r#"{"method":"item/reasoning/textDelta","params":{"delta":"raw"}}"#),
+            Msg::Other
+        );
+    }
 
     #[test]
     fn an_approval_that_allows_more_than_it_names_is_refused() {

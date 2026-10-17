@@ -17,6 +17,8 @@ const island = createIsland(document.getElementById("island")!, {
   decideAlways: (request) => void Bridge.decideAlways(request),
   answer: (request, answers) => void Bridge.questionAnswer(request, answers),
   release: (request) => void Bridge.questionRelease(request),
+  skip: (request) => void Bridge.cardSkip(request),
+  reviewRequest: (request) => Bridge.cardReview(request),
   layout: (x, y, w, h) => Dock.layout(x, y, w, h, resting()),
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),
@@ -64,7 +66,7 @@ const island = createIsland(document.getElementById("island")!, {
     draft: Bridge.chatDraft,
     current: Bridge.chatCurrent,
     saveDraft: Bridge.chatDraftSet,
-    send: (text, files, folder) => Bridge.chatSend(text, files, folder),
+    send: (text, files, folder, mentions) => Bridge.chatSend(text, files, folder, mentions),
     decide: (id, answer) => void Bridge.chatDecide(id, answer),
     stop: () => void Bridge.chatStop(),
     reset: (provider) => Bridge.chatReset(provider),
@@ -74,6 +76,7 @@ const island = createIsland(document.getElementById("island")!, {
     rename: (id, title) => Bridge.chatRename(id, title),
     remove: (id) => Bridge.chatDelete(id),
     openNest: () => void changeView(() => Bridge.openNest("chat")),
+    openFlock: () => void changeView(() => Bridge.openNest("flock")),
     pickFiles: (title) => Bridge.chatPickFiles(title),
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
     handoff: (text, folder) => Bridge.continueCommand(text, folder),
@@ -147,6 +150,7 @@ let nestShown = false;
 Bridge.onFiles((d) => (d.to === "island" || !nestShown) && island.chat.attach(d.copied, d.refused));
 Bridge.onDrag((over) => island.chat.setDragOver(over));
 Bridge.onOpenChat(() => island.chat.toggle(true));
+Bridge.onOpenNow(() => island.openNow());
 Bridge.onJumpFailed(() => island.jumpFailed());
 Bridge.onRowMerged((m) => island.merged(m.connector, m.item, m.error));
 void Bridge.editorFound().then(island.setEditor, () => {});
@@ -162,7 +166,6 @@ Bridge.onVoiceSilence(() => island.chat.voiceSilence());
 Bridge.onVoicePartial((text) => island.chat.voicePartial(text));
 void Bridge.voiceStatus().then((v) => island.chat.setVoiceReady(v.ready));
 Bridge.onUsage(island.setUsage);
-void Bridge.usage().then(island.setUsage);
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void settings.then((s) => {

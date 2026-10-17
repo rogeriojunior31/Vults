@@ -358,11 +358,11 @@ console.log("check-chat-models: Room-only editable suggestions, both file picker
 for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {}, { window: surface });
   await tick();
-  const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting" && !node.hidden);
+  const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting" && !node.parentElement.hidden);
   const engine = nodes(chat.element).find(node => node.className === "model-box engine-box");
   assert.equal(engine.parentElement.className, surface === "island" ? "chat-foot" : "chat-head", "Only Quick moves its executor beside the draft; Room keeps its existing header");
   assert.equal(greetings().length, 1, "The recipient is introduced once");
-  assert.equal(greetings()[0].parentElement.className, surface === "island" ? "chat-head" : "hint", "Quick introduces the empty conversation beside its companion; Room keeps its empty state");
+  assert.equal(greetings()[0].parentElement.parentElement.className, surface === "island" ? "chat-head" : "hint", "Quick introduces the empty conversation beside its companion; Room keeps its empty state");
   assert.equal(chat.element.classList.contains("has-messages"), false, "An empty chat has no message-state marker");
   chat.load({ ...conversation, busy: true, lines: [] });
   assert.equal(chat.element.classList.contains("has-messages"), true, "Thinking already reserves the conversation space");
@@ -434,7 +434,8 @@ for (const surface of ["island", "nest"]) {
 console.log("check-chat-models: both companions retain streaming thought, decision priority, voice, transcription and attachment expressions");
 
 // Load Room's real entry point: a working ChatPanel alone cannot catch missing native wiring.
-const voiceEvents = {}, voiceCalls = [], voiceDrafts = [];
+const voiceEvents = {}, voiceCalls = [], voiceDrafts = [], voiceViewActions = [];
+let voiceSaveFails = false;
 const voiceRoot = new Element("main");
 document.getElementById = () => voiceRoot;
 document.documentElement = new Element("html");
@@ -442,7 +443,7 @@ globalThis.location = { hash: "#chat" };
 globalThis.voiceTestCreateNest = (_root, backend) => {
   const chat = new ChatPanel(backend.chat, () => {}, { window: "nest" });
   const noop = () => {};
-  return globalThis.voiceTestNest = { chat, current: () => "chat", open: noop, setFull: noop,
+  return globalThis.voiceTestNest = { chat, current: () => "chat", open: tab => voiceViewActions.push(tab), flushState: () => chat.flushDraft(), setFull: noop,
     setZeca: on => chat.setEnabled(on), setSound: noop, setSpecies: noop, setKeys: noop, setMedia: noop,
     memoryChanged: noop, usageChanged: noop, spendChanged: noop, relabel: noop, view: noop, shortcut: noop };
 };
@@ -455,7 +456,7 @@ globalThis.voiceTestBridge = new Proxy({}, { get: (_target, name) => {
       case "voiceStop": voiceCalls.push(["stop"]); return "Spoken words";
       case "voiceCancel": voiceCalls.push(["cancel"]); return;
       case "chatSend": assert.fail("Dictation never sends a message");
-      case "chatDraftSet": voiceDrafts.push(args[0]); return;
+      case "chatDraftSet": voiceDrafts.push(args[0]); if (voiceSaveFails) throw new Error("Draft save unavailable."); return;
       case "chatDraft": return { text: "Existing draft", files: [], folder: "/work", provider: "claude" };
       case "chatCurrent": return null;
       case "chatModels": case "taskAgents": return [];
@@ -528,7 +529,7 @@ for (const surface of ["island", "nest"]) {
   failClipboard = false; copy.listeners.click(); await tick(); assert.ok(copy.textContent.includes("Copied"));
   assert.equal(nodes(chat.element).find(n => n.tag === "textarea").value, "Keep my next question");
   chat.receive({ kind: "permission", id: "layout-scope", tool: "Bash", target: "rm /work/old", description: "Remove old output", full: "rm /work/old", added: 0, removed: 0, always: false, outside: "Web" });
-  const permission = nodes(chat.element).find(n => n.className === "ask");
+  const permission = nodes(chat.element).find(n => n.classList.contains("ask"));
   assert.ok(permission.textContent.includes("Permission required"));
   assert.ok(permission.textContent.includes("Folder")); assert.ok(permission.textContent.includes("rm /work/old"));
   assert.ok(permission.textContent.includes("content from outside"));
@@ -596,3 +597,321 @@ for (const surface of ["island", "nest"]) {
   assert.equal(menuActions, 0, "Browsing, focusing and dismissing selectors never sends, grants access or opens Settings");
 }
 console.log("check-chat-models: both selectors retain focus/rename caret across reads, one open panel, keyboard/IME/Escape/outside dismissal and no implicit actions");
+
+// The plan badge updates only the model control, never the draft, transcript or open choices.
+const actualDateNow = Date.now, originalPlanTimeout = window.setTimeout, originalPlanClear = window.clearTimeout;
+let planNow = 2_000_000, timerId = 0;
+const planTimers = new Map();
+const windowOf = (agent, used_percent, resets_at = null, minutes = 300) => ({ agent, used_percent, resets_at, minutes });
+try {
+  Date.now = () => planNow;
+  for (const surface of ['island', 'nest']) {
+    let modelReads = 0, effects = 0;
+    const chat = new ChatPanel({ models: async () => { modelReads++; return []; }, pick: async () => ({}), keyboard() {},
+      send: async () => { effects++; }, decide: () => { effects++; }, reset: async () => { effects++; return 'claude'; }, setPick: async () => { effects++; },
+    }, () => {}, { window: surface });
+    await tick();
+    chat.load({ ...conversation, busy: false, provider: 'claude', lines: [{ who: 'zeca', text: 'Read this reply first.' }] });
+    chat.draft('Keep this draft'); chat.attach(['/inbox/next.txt']);
+    const trigger = nodes(chat.element).find(n => n.classList.contains('model'));
+    const badge = nodes(trigger).find(n => n.classList.contains('model-usage'));
+    const input = nodes(chat.element).find(n => n.tag === 'textarea');
+    const transcript = nodes(chat.element).find(n => n.className === 'log');
+    const contents = [...transcript.children]; transcript.scrollTop = 96;
+    trigger.click(); const menu = chat.element.querySelector('.model-menu');
+    const choices = [...menu.querySelectorAll('button')]; choices[0].focus();
+    const focused = document.activeElement, reads = modelReads;
+    chat.setUsage([windowOf('claude', 99, 1999), windowOf('claude', 69, 2010), windowOf('claude', 88, 2020, 10080), windowOf('codex', 97, 2030)]);
+    assert.equal(badge.hidden, false); assert.equal(badge.textContent, '88%');
+    assert.equal(badge.classList.contains('warning'), true);
+    assert.ok(trigger.attributes['aria-label'].includes('88% used · Warning'));
+    assert.ok(trigger.title.includes('5 hours: 69% used') && trigger.title.includes('A week: 88% used'));
+    assert.equal(document.activeElement, focused); assert.deepEqual(menu.querySelectorAll('button'), choices);
+    assert.deepEqual(transcript.children, contents); assert.equal(transcript.scrollTop, 96);
+    assert.equal(input.value, 'Keep this draft'); assert.ok(chat.element.textContent.includes('next.txt'));
+    for (const [percent, level] of [[0, 'normal'], [69, 'normal'], [70, 'warning'], [89, 'warning'], [90, 'critical'], [100, 'critical']]) {
+      chat.setUsage([windowOf('claude', percent)]);
+      assert.equal(badge.textContent, `${percent}%`); assert.equal(badge.classList.contains(level), true);
+      assert.equal(badge.querySelector('.usage-ring').style['--used'], `${percent}%`);
+    }
+    chat.setUsage([windowOf('claude', 100, 2000), windowOf('codex', 97)]);
+    assert.equal(badge.hidden, true, 'Expired or another provider’s windows are not current usage');
+    chat.load({ ...conversation, provider: 'codex', busy: false, lines: [] });
+    assert.equal(badge.hidden, false); assert.equal(badge.textContent, '97%');
+    chat.load({ ...conversation, provider: 'api', busy: false, lines: [] });
+    chat.setUsage([windowOf('claude', 93), windowOf('codex', 97)]);
+    assert.equal(badge.hidden, true, 'The API’s Claude bird never borrows Claude Code’s subscription');
+    chat.load({ ...conversation, provider: 'claude', busy: false, lines: [] });
+    chat.setUsage([]); assert.equal(badge.hidden, true);
+    chat.setUsage([windowOf('claude', NaN), windowOf('claude', -1), windowOf('claude', 101)]); assert.equal(badge.hidden, true);
+    window.setTimeout = (fn, ms) => { const id = ++timerId; planTimers.set(id, { fn, ms }); return id; };
+    window.clearTimeout = id => planTimers.delete(id);
+    chat.toggle(true); chat.setUsage([windowOf('claude', 91, 2001), windowOf('claude', 40, 2002)]);
+    const next = [...planTimers.values()].find(t => t.ms === 1000); assert.ok(next, 'One deadline wakes the badge at reset');
+    planNow = 2_001_000; next.fn(); assert.equal(badge.textContent, '40%');
+    const last = [...planTimers.values()].find(t => t.ms === 1000); assert.ok(last);
+    planNow = 2_002_000; last.fn(); assert.equal(badge.hidden, true, 'A window can expire without any new hook');
+    planNow = 2_000_000; chat.setUsage([windowOf('claude', 80, 2010)]); assert.ok(chat.usageTimer);
+    chat.toggle(false); assert.equal(chat.usageTimer, undefined, 'A closed Chat has no reset timer');
+    chat.toggle(true); chat.setEnabled(false); assert.equal(chat.usageTimer, undefined);
+    assert.equal(modelReads, reads, 'Plan updates and expiry never ask for models'); assert.equal(effects, 0);
+    window.setTimeout = originalPlanTimeout; window.clearTimeout = originalPlanClear; planTimers.clear();
+  }
+} finally {
+  Date.now = actualDateNow; window.setTimeout = originalPlanTimeout; window.clearTimeout = originalPlanClear;
+}
+console.log('check-chat-models: provider-scoped plan ring, every threshold, zero/unknown/invalid/API/reset cases, deadline lifecycle, stable menu/draft/files/reading and no actions');
+
+// The real Nest entry forwards live windows to its ChatPanel too.
+voiceEvents.onUsage([{ agent: 'claude', minutes: 300, used_percent: 76, resets_at: null }]);
+assert.equal(nodes(roomChat.element).find(n => n.classList.contains('model-usage')).textContent, '76%');
+
+// The actual Bridge subscribes before reading; a delayed snapshot never overwrites an event.
+const usageIpc = { callback: null, subscribed: null, read: null, calls: [] };
+globalThis.planUsageIpc = usageIpc;
+const bridgeBundles = await build({ configFile: false, root, logLevel: 'silent',
+  plugins: [{ name: 'usage-ipc', enforce: 'pre', resolveId(id) { if (id.startsWith('@tauri-apps/api/')) return '\0usage-'+id.split('/').at(-1); },
+    load(id) {
+      if (id === '\0usage-core') return 'export const invoke = (...args) => {planUsageIpc.calls.push(args);return new Promise(resolve=>planUsageIpc.read=resolve)};';
+      if (id === '\0usage-event') return 'export const emitTo=()=>{};export const listen=(event,cb)=>{planUsageIpc.callback=cb;return new Promise(resolve=>planUsageIpc.subscribed=resolve)};';
+      if (id === '\0usage-window') return 'export const getCurrentWindow=()=>({});';
+    } }], build: { write: false, minify: false, lib: { entry: `${root}src/bridge.ts`, formats: ['es'] } },
+});
+const bridgeChunk = bridgeBundles[0].output.find(p => p.type === 'chunk');
+const { Bridge: usageBridge } = await import(`data:text/javascript;base64,${Buffer.from(bridgeChunk.code).toString('base64')}`);
+const seenUsage = [];
+usageBridge.onUsage(windows => seenUsage.push(windows));
+assert.deepEqual(usageIpc.calls, [], 'No snapshot is read before the listener is ready');
+usageIpc.subscribed(() => {}); await tick(); assert.deepEqual(usageIpc.calls, [['usage']]);
+const liveUsage = [windowOf('codex', 90)]; usageIpc.callback({ payload: liveUsage });
+usageIpc.read([windowOf('claude', 20)]); await tick(); assert.deepEqual(seenUsage, [liveUsage]);
+usageIpc.calls.length = 0; const seededUsage = [];
+usageBridge.onUsage(windows => seededUsage.push(windows));usageIpc.subscribed(() => {});await tick();
+usageIpc.read([]); await tick(); assert.deepEqual(seededUsage, [[]], 'An empty cached snapshot is explicit absence, not zero usage');
+console.log('check-chat-models: actual Nest usage event binding and Bridge listener-before-cache, late read rejection and empty seed');
+
+// References use stable identities and selecting an option only changes the editable draft.
+for (const surface of ['island','nest']) {
+  const sent=[], drafts=[];
+  const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>drafts.push(d),send:async(...args)=>sent.push(args)},()=>{},{window:surface});
+  await tick(); chat.toggle(true);
+  const input=chat.element.querySelector('textarea'), menu=chat.element.querySelector('.mention-menu');
+  const sessions=[{agent:'claude',id:'shared',project:'same name',cwd:'/one/same name'},{agent:'codex',id:'shared',project:'same name',cwd:'/two/same name'},{agent:'codex',id:'next',project:'same name',cwd:'/one/same name'}];
+  chat.setSessions(sessions);
+  chat.element.isConnected=true;
+  const type=(value,caret=value.length)=>{input.value=value;input.setSelectionRange(caret,caret);input.listeners.input();};
+  const key=key=>input.listeners.keydown({key,preventDefault(){},stopPropagation(){}});
+  type('Email user@example.com');assert.equal(menu.classList.contains('on'),false);
+  type('@same name');assert.equal(menu.children.length,5,'Project searches include spaces');
+  input.listeners.keydown({key:'Enter',shiftKey:true,preventDefault(){assert.fail('Shift+Enter stays native even with suggestions')}});
+  assert.equal(menu.classList.contains('on'),false);assert.equal(sent.length,0);
+  type('Review @same then explain',12);assert.equal(menu.classList.contains('on'),true);
+  assert.equal(menu.children.length,5);assert.ok(menu.textContent.includes('/one/same name')&&menu.textContent.includes('/two/same name'));
+  assert.equal(input.attributes['aria-expanded'],'true');
+  key('ArrowDown'); const selected=input.attributes['aria-activedescendant'];
+  chat.setSessions([...sessions]);assert.equal(input.attributes['aria-activedescendant'],selected,'A live view keeps the active identity');
+  key('Enter');await tick();assert.equal(sent.length,0);assert.ok(input.value.endsWith(' then explain'));
+  const project=drafts.at(-1).mentions[0];assert.deepEqual(project.target,{kind:'project',cwd:'/two/same name'});
+  assert.ok(input.value.includes(project.token));assert.equal(menu.classList.contains('on'),false);
+  const copy=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>drafts.push(d)},()=>{},{window:surface});await tick();
+  copy.restoreDraft(drafts.at(-1));await copy.flushDraft();assert.deepEqual(drafts.at(-1).mentions,[project]);
+  type(input.value+' @claude');
+  const mouseChoice=menu.children[0];
+  mouseChoice.listeners.pointerdown({preventDefault(){}});
+  for(const listener of documentEvents.pointerdown)listener({target:mouseChoice});
+  assert.equal(menu.classList.contains('on'),true,'A real pointer sequence keeps the row until click');
+  mouseChoice.click();await tick();assert.equal(drafts.at(-1).mentions.length,2);assert.equal(sent.length,0);
+  type(input.value+' @');for(const listener of documentEvents.pointerdown)listener({target:document.body});assert.equal(menu.classList.contains('on'),false);
+  type(input.value+' @codex');key('ArrowDown');key('Tab');await tick();
+  assert.equal(sent.length,0);assert.deepEqual(drafts.at(-1).mentions[2].target,{kind:'session',agent:'codex',id:'next'});
+  const references=[...drafts.at(-1).mentions], text=input.value;
+  type(text+' @');key('Escape');assert.equal(menu.classList.contains('on'),false);assert.ok(input.value.endsWith(' @'));
+  type(text+' @');input.listeners.compositionstart();assert.equal(menu.classList.contains('on'),false);
+  input.listeners.keydown({key:'Enter',isComposing:true,preventDefault(){assert.fail('IME is native')}});assert.equal(sent.length,0);
+  type(text);key('Enter');await tick();await tick();assert.equal(sent.length,1);assert.deepEqual(sent[0][3],references);assert.equal(sent[0][2],null,'References do not change the execution folder');
+  chat.receive({kind:'done'});type('');await tick();assert.equal(drafts.at(-1).mentions,undefined);
+  type('@codex');assert.equal(menu.classList.contains('on'),true);chat.toggle(false);assert.equal(menu.classList.contains('on'),false);
+  chat.toggle(true);type('@');chat.setEnabled(false);assert.equal(menu.classList.contains('on'),false);
+}
+console.log('check-chat-models: both surfaces reference exact sessions/projects, caret insertion, keyboard/IME/dismissal, live identity, draft transfer and explicit send without folder changes');
+voiceEvents.onView({sessions:[{agent:'claude',id:'entry',project:'wired',cwd:'/wired'}]});
+roomInput.value='@wired';roomInput.setSelectionRange(6,6);roomInput.listeners.input();
+assert.ok(roomChat.element.querySelector('.mention-menu').textContent.includes('wired'),'The actual Nest entry supplies live sessions');
+
+for(const surface of ['island','nest']) {
+  const writes=[];
+  const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>writes.push(d),send:async()=>{throw "A referenced session or project is no longer in the flock. Remove its reference and choose again.";}},()=>{},{window:surface});
+  await tick();
+  const ref={token:'@"Session: missing"',target:{kind:'session',agent:'codex',id:'gone'}};
+  chat.restoreDraft({text:'Review '+ref.token,files:['/inbox/review.txt'],folder:null,provider:'claude',mentions:[ref]});
+  const input=chat.element.querySelector('textarea');input.listeners.keydown({key:'Enter',preventDefault(){}});await tick();await tick();
+  assert.equal(input.value,'Review '+ref.token);assert.deepEqual(writes.at(-1).mentions,[ref]);assert.deepEqual(writes.at(-1).files,['/inbox/review.txt']);
+  assert.equal(chat.started,false,'A failed reference never pins a new conversation');
+}
+console.log('check-chat-models: rejected references retain editable text, files, identities and the unstarted conversation in both surfaces');
+
+// Live core offers update their own controls, keeping the transcript and editable source intact.
+for (const surface of ['island','nest']) {
+  const drafts=[], actions=[];
+  const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>drafts.push(d),openFlock:()=>actions.push('flock'),send:async()=>actions.push('send')},()=>{},{window:surface});
+  await tick();
+  const input=chat.element.querySelector('textarea');
+  const sessions=[{agent:'codex',id:'same',project:'site',cwd:'/one/site'},{agent:'claude',id:'same',project:'site',cwd:'/two/site'},{agent:'codex',id:'next',project:'site',cwd:'/three/site'}];
+  const offers={greeting:'Good morning',caption:'site is waiting for your answer.',suggestions:[{id:'waiting',text:'What is site waiting for?',session:{agent:'codex',id:'next'}}],followups:['explain','next','flock']};
+  chat.setSessions(sessions);chat.setOffers(offers);
+  chat.restoreDraft({text:'Keep my notes',files:['/inbox/notes.txt'],folder:'/execution',provider:'claude'});
+  const suggestions=chat.element.querySelectorAll('.suggestion');
+  assert.equal(suggestions.length,surface==='nest'?1:0);
+  if(surface==='nest') {
+    suggestions[0].focus();chat.setOffers({...offers,greeting:'Good afternoon'});
+    assert.equal(document.activeElement,suggestions[0],'A greeting refresh retains the offered button and focus');
+    suggestions[0].click();await chat.flushDraft();
+    assert.ok(input.value.startsWith('Keep my notes\n\nWhat is site waiting for?'));
+    assert.deepEqual(drafts.at(-1).mentions[0].target,{kind:'session',agent:'codex',id:'next'});
+    assert.ok(input.value.includes('next'),'Duplicate session names keep the exact ID in their token');
+    assert.deepEqual(drafts.at(-1).files,['/inbox/notes.txt']);assert.equal(drafts.at(-1).folder,'/execution');
+    const before=input.value;chat.setSessions([]);suggestions[0].click();assert.equal(input.value,before,'An expired exact session is not inserted');chat.setSessions(sessions);
+    suggestions[0].focus();chat.setOffers({...offers,suggestions:[]});assert.equal(document.activeElement,input,'A removed offer returns focus to the editor');
+    suggestions[0].click();assert.equal(input.value,before,'Detached offers are inert');
+  }
+  chat.load({...conversation,lines:[{who:'you',text:'Question',files:[]},{who:'zeca',text:'Older reply'},{who:'you',text:'Next question',files:[]},{who:'zeca',text:'Latest reply'}]});
+  const log=chat.element.querySelector('.log'), replies=chat.element.querySelectorAll('.zeca'), reply=replies.at(-1);
+  const group=reply.querySelector('.reply-chips');assert.ok(group);assert.equal(replies[0].querySelector('.reply-chips'),null);
+  assert.equal(group.children.length,3);assert.equal(group.attributes['aria-label'],'Continue the conversation');
+  log.scrollTop=27;input.focus();input.setSelectionRange(2,2);const text=input.value;
+  chat.setOffers({...offers,greeting:'Good evening',followups:['next']});
+  assert.equal(chat.element.querySelectorAll('.zeca').at(-1),reply);assert.equal(log.scrollTop,27);assert.equal(document.activeElement,input);assert.equal(input.selectionStart,2);assert.equal(input.value,text);
+  group.children[0].click();await chat.flushDraft();assert.ok(input.value.endsWith('What should I check next?'));assert.deepEqual(actions,[]);
+  chat.setOffers(offers);group.children[0].click();await chat.flushDraft();assert.ok(input.value.endsWith('Explain your last reply more simply.'));
+  group.children[2].click();await tick();assert.deepEqual(actions,['flock']);
+  const stale=group.children[0];chat.load({...conversation,lines:[{who:'error',text:'Failed reply'}]});
+  assert.equal(chat.element.querySelector('.reply-chips'),null);const unchanged=input.value;stale.click();assert.equal(input.value,unchanged);
+  chat.load({...conversation,busy:true,partial:'Still writing',lines:[]});assert.equal(chat.element.querySelector('.reply-chips'),null);stale.click();assert.equal(input.value,unchanged);
+  chat.load({...conversation,lines:[{who:'stopped',text:''}]});assert.equal(chat.element.querySelector('.reply-chips'),null);
+  chat.load({...conversation,lines:[{who:'zeca',text:'Finished'}]});chat.setEnabled(false);stale.click();assert.equal(input.value,unchanged);
+  assert.deepEqual(actions,['flock'],'Suggestions never send, execute a tool or answer a card');
+}
+console.log('check-chat-models: core greetings/offers, exact draft references, stale/disabled guards, latest settled reply, stable reading/caret/focus and explicit Flock navigation in both surfaces');
+
+// The real Nest entry routes this new action through the same save/error guard as size changes.
+roomChat.setEnabled(true);
+roomChat.load({...conversation,lines:[{who:'zeca',text:'Ready to review'}]});
+voiceEvents.onView({sessions:[{agent:'claude',id:'entry',project:'wired',cwd:'/wired'}],chat:{greeting:'Good morning',caption:'Current flock',suggestions:[],followups:['flock']}});
+assert.equal(roomChat.element.querySelectorAll('.reply-chip').length,1,'The actual Nest entry supplies core offers');
+roomInput.value='Keep this draft';roomInput.listeners.input();await tick();
+const navigationCount=voiceViewActions.length;
+voiceSaveFails=true;roomChat.element.querySelector('.reply-chip').click();await tick();await tick();
+assert.equal(voiceViewActions.length,navigationCount,'A failed save keeps the same view');
+assert.equal(voiceRoot.querySelector('.nest-close-error').hidden,false);
+assert.ok(voiceRoot.textContent.includes('Could not change the view'));
+assert.equal(roomInput.value,'Keep this draft');
+voiceSaveFails=false;roomChat.element.querySelector('.reply-chip').click();await tick();await tick();
+assert.equal(voiceViewActions.at(-1),'flock');assert.equal(voiceRoot.querySelector('.nest-close-error').hidden,true);
+assert.equal(voiceDrafts.at(-1).text,'Keep this draft');
+console.log('check-chat-models: actual Nest core offers, saved Flock navigation, visible save failure, retained draft and explicit retry');
+
+// Drive real conversation events against a deterministic clock; reactions never perform actions.
+{
+  const realPerformance=globalThis.performance, timeout=window.setTimeout, clear=window.clearTimeout;
+  let now=10_000, next=0;const timers=new Map();
+  globalThis.performance={now:()=>now};
+  window.setTimeout=(run,ms)=>{const id=++next;timers.set(id,{run,ms});return id;};
+  window.clearTimeout=id=>timers.delete(id);
+  document.hidden=false;
+  for(const surface of ['island','nest']) {
+    const actions=[];let changes=0;
+    const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},send:async()=>actions.push('send'),decide:()=>actions.push('decide')},()=>changes++,{window:surface});await tick();chat.toggle(true);
+    const input=chat.element.querySelector('textarea');
+    input.value='Unsent question';input.listeners.input({isComposing:true});
+    assert.equal(chat.clip(now),'listen','Typing and IME composition are live listening cues');
+    const before=changes;input.value+='x';input.listeners.input();assert.equal(changes,before,'Continued typing extends the cue without repainting the surface');
+    now+=1500;const expiry=timers.get(chat.reactionTimer);assert.ok(expiry);expiry.run();assert.equal(chat.clip(now),'idle');assert.equal(changes,before+1);
+    input.listeners.input();input.value='';input.listeners.input();assert.equal(chat.clip(now),'idle');
+    chat.restoreDraft({text:'Saved draft',files:[],folder:null,provider:'claude'});assert.equal(chat.clip(now),'idle','Restoring text does not impersonate typing');
+    chat.receive({kind:'toolstate',active:true});chat.load({...conversation,busy:true,tools:false,lines:[]},false,true);assert.equal(chat.clip(now),'search','A live tool event outranks a delayed initial snapshot');
+    chat.load({...conversation,busy:true,lines:[],partial:'Earlier words',tools:true});assert.equal(chat.clip(now),'search','A recreated surface retains current tool activity');
+    const reply=chat.element.querySelector('.zeca'), log=chat.element.querySelector('.log');log.scrollTop=31;input.focus();input.setSelectionRange(2,2);
+    chat.receive({kind:'toolstate',active:false});assert.equal(chat.clip(now),'think');
+    assert.equal(chat.element.querySelector('.zeca'),reply);assert.equal(log.scrollTop,31);assert.equal(input.selectionStart,2);assert.equal(document.activeElement,input);
+    chat.receive({kind:'text',text:'New reply'});assert.equal(chat.clip(now),'speak');
+    now+=1600;assert.equal(chat.clip(now),'think','A quiet stream returns to thinking without assuming it finished');
+    chat.receive({kind:'toolstate',active:true});chat.receive({kind:'text',text:'Text beside a running call'});assert.equal(chat.clip(now),'search');
+    chat.receive({kind:'permission',id:'unanswered',tool:'Bash',target:'git status',description:null,full:null,added:0,removed:0,always:false,outside:null});
+    chat.receive({kind:'tool',tool:'read',outside:false});chat.showVoice('listening');chat.attach(['/inbox/note.txt']);
+    assert.equal(chat.clip(now),'question','Every pending card outranks later notes, voice and attachment reactions');
+    chat.showVoice('off');chat.receive({kind:'stopped'});now+=2000;assert.equal(chat.clip(now),'idle');
+    chat.load({...conversation,busy:true,lines:[]});chat.receive({kind:'text',text:'A completed reply'});chat.receive({kind:'done'});assert.equal(chat.clip(now),'speak');
+    now+=1600;timers.get(chat.reactionTimer).run();assert.equal(chat.clip(now),'idle','Completion is a brief visual reply, never an endless celebration');
+    chat.load({...conversation,lines:[{who:'zeca',text:'Saved reply'}]});assert.equal(chat.clip(now),'idle');
+    input.listeners.input();chat.toggle(false);assert.equal(chat.reactionTimer,undefined);chat.toggle(true);assert.equal(chat.clip(now),'idle');
+    input.listeners.input();document.hidden=true;for(const fn of documentEvents.visibilitychange)fn();assert.equal(chat.reactionTimer,undefined);document.hidden=false;assert.equal(chat.clip(now),'idle');
+    chat.load({...conversation,busy:true,lines:[]});chat.receive({kind:'text',text:'Partial'});chat.receive({kind:'error',message:'Controlled error'});assert.equal(chat.clip(now),'idle');
+    chat.load({...conversation,busy:true,lines:[]});chat.receive({kind:'text',text:'More'});chat.setEnabled(false);assert.equal(chat.clip(now),'idle');assert.equal(chat.reactionTimer,undefined);
+    assert.deepEqual(actions,[],'Pose changes cannot send a message, run a tool or answer a permission');
+  }
+  globalThis.performance=realPerformance;window.setTimeout=timeout;window.clearTimeout=clear;
+}
+console.log('check-chat-models: live typing/IME/tool/stream/completion poses, concurrent-tool priority, pending-card priority, static restoration, bounded expiry, hidden/off/close/error cleanup, no actions');
+
+// Activity is display-only; exactly the selected pending request owns each decision.
+for (const surface of ["island", "nest"]) {
+  const decisions = [], timers = [];
+  const oldTimeout = window.setTimeout;
+  window.setTimeout = fn => { timers.push(fn); return timers.length; };
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {},
+    decide: (id, answer) => decisions.push([id, answer]), openSettings() {},
+  }, () => {}, { window: surface });
+  await tick(); chat.toggle(true); chat.element.isConnected = true; chat.element.offsetParent = {};
+  chat.load({ ...conversation, busy: true, lines: [{ who: "you", text: "Inspect this project", files: [] }] });
+  const flush = () => { for (const fn of timers.splice(0)) fn(); };
+  chat.receive({ kind: "activity", event: { type: "reasoning", text: "Provider summary <script>inert</script>" } }); flush();
+  const activity = nodes(chat.element).find(n => n.classList.contains("chat-activity"));
+  assert.ok(activity); assert.ok(!activity.open, "Thinking is available without opening itself over the reply");
+  activity.open = true;
+  chat.receive({ kind: "activity", event: { type: "start", id: "read", tool: "Read", detail: "/work/file.rs" } }); flush();
+  const tool = nodes(activity).find(n => n.classList.contains("activity-tool")); tool.open = true;
+  chat.receive({ kind: "text", text: "The readable answer" });
+  chat.receive({ kind: "activity", event: { type: "reasoning", text: " More summary." } }); flush();
+  assert.equal(nodes(chat.element).find(n => n.classList.contains("chat-activity")), activity);
+  assert.equal(activity.open, true); assert.equal(tool.open, true);
+  assert.equal(nodes(activity).find(n => n.classList.contains("activity-tool")), tool, "Streaming preserves the inspected tool and its disclosure");
+  assert.ok(activity.textContent.includes("Provider summary <script>inert</script> More summary."));
+  assert.ok(activity.textContent.includes("Running"));
+  chat.receive({ kind: "activity", event: { type: "end", id: "read", ok: false } }); flush();
+  assert.ok(tool.textContent.includes("Failed"));
+  const request = (id, target) => ({ kind: "permission", id, tool: "Bash", target, full: target, description: null, added: 0, removed: 0, always: false, outside: null });
+  chat.receive(request("first", "git status"));
+  const first = nodes(chat.element).find(n => n.classList.contains("ask"));
+  const staleAllow = nodes(first).find(n => n.tag === "button" && n.textContent === "Allow");
+  chat.receive(request("second", "git diff"));
+  assert.equal(nodes(chat.element).filter(n => n.classList.contains("ask")).length, 1);
+  assert.ok(chat.element.textContent.includes("Review approval 1 of 2"));
+  nodes(chat.element).find(n => n.attributes["aria-label"] === "Next approval").click();
+  staleAllow.click();
+  assert.deepEqual(decisions, [], "A stale button cannot answer a request now hidden behind the selected one");
+  assert.ok(chat.element.textContent.includes("Review approval 2 of 2"));
+  assert.equal(chat.answerWaiting(true), true);
+  assert.deepEqual(decisions, [["second", "allow"]]);
+  const receipt = nodes(chat.element).find(n => n.classList.contains("approval-receipt"));
+  assert.ok(receipt && !receipt.open, "Answered commands become closed receipts, with details retained");
+  assert.equal(chat.answerWaiting(false), true);
+  assert.deepEqual(decisions, [["second", "allow"], ["first", "deny"]]);
+  chat.receive(request("cancelled", "must never run"));
+  chat.receive({ kind: "done" });
+  assert.equal(chat.answerWaiting(true), false, "Even an unexpected successful end expires its pending cards");
+  assert.ok(chat.element.textContent.includes("Cancelled"));
+  const saved = { reasoning: "Saved public summary", tools: [{ id: "saved", tool: "Read", detail: "file.rs", ok: null }], decisions: [{ tool: "Bash", target: "git status", answer: "allow", by: "human" }], truncated: false };
+  chat.load({ ...conversation, lines: [{ who: "activity", text: JSON.stringify(saved), files: [] }, { who: "zeca", text: "Saved answer", files: [] }] });
+  assert.ok(chat.element.textContent.includes("Saved public summary"));
+  assert.ok(chat.element.textContent.includes("No result reported"), "Missing completion is never presented as success");
+  assert.equal(nodes(chat.element).filter(n => n.classList.contains("ask")).length, 0);
+  assert.equal(decisions.length, 2, "Restored activity cannot replay any decision");
+  chat.load({ ...conversation, busy: true, activity: saved, waiting: [{ id: "restored", tool: "Bash", target: "cut…", full: "whole command with exact scope", description: "Describe scope", added: 4, removed: 2, always: false, outside: "Web" }], lines: [] });
+  assert.ok(chat.element.textContent.includes("whole command with exact scope"));
+  assert.ok(chat.element.textContent.includes("content from outside"));
+  chat.receive({ kind: "stopped" });
+  assert.equal(chat.answerWaiting(true), false);
+  assert.equal(decisions.length, 2);
+  window.setTimeout = oldTimeout;
+}
+console.log("check-chat-models: provider-only reasoning, stable tool disclosures/status, single selected approval, stale buttons/shortcuts, compact receipts, cancellation and display-only restored activity in both surfaces");

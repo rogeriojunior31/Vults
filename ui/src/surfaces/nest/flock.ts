@@ -1,8 +1,4 @@
-// The Nest's Flock tab (ADR 0021), as the Living Flock prototype draws it: the stage (the flock at
-// 3x across the pane, a roost card under each bird), *Session details* with *Needs you* and a
-// search, the card of the session in front at the left and its Changes, Activity, Context and Zeca
-// at the right; in Full, the plans' usage under it. The card of the session in front answers what
-// it waits on, here, as the island would (ADR 0021).
+// Flock keeps core's selected session and permission owner across its wire, list and details.
 import type { Answer, Diff, FlockPlace, Hush, ProjectPref, UsageWindow } from "../../bridge";
 import type { AgentKind, SessionView, TouchedView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
@@ -10,7 +6,7 @@ import { t } from "../../i18n";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { agentName, badgeOf, lastDiff, needsYou, questionBody, statusText } from "../../island/views";
+import { agentName, badgeOf, lastDiff, needsYou, questionBody, skipButton, statusText } from "../../island/views";
 import { usageLabel, usageLevel } from "../../cost";
 
 export interface FlockActions {
@@ -30,6 +26,7 @@ export interface FlockActions {
   answer: (request: string, answers: Answer[]) => void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
   release: (request: string) => void;
+  skip: (request: string) => void;
   /** A finished step's diff; null once the session no longer keeps it. */
   diff: (s: SessionView, step: number) => Promise<Diff | null>;
   /** The plans' usage windows, for Full's strip. */
@@ -76,6 +73,17 @@ function costChip(s: SessionView): HTMLElement | null {
   span.title = t("What this session's tokens would cost at API prices. A subscription is not charged this.");
   return span;
 }
+
+function runningTime(s: SessionView): string {
+  if (s.elapsed_ms == null) return t("Not reported");
+  const seconds = Math.floor(s.elapsed_ms / 1000);
+  return seconds < 60 ? t("{n} s", { n: seconds }) : t("{n} min", { n: Math.floor(seconds / 60) });
+}
+
+const inStatus = (s: SessionView, status: FlockPlace["status"]) =>
+  status === "failed" ? s.status === "failed" || s.attention === "failed"
+    : status === "working" ? (s.status === "working" || s.status === "thinking") && !s.silent
+    : status === "quiet" ? !!s.silent || ["idle", "finished", "ratelimited"].includes(s.status) : true;
 
 const calmNow = () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.classList.contains("still");
 
@@ -155,7 +163,6 @@ export function createFlock(on: FlockActions & FlockAsk): {
     { class: "flock-stage" },
     el("header", { class: "habitat-header" }, el("div", { class: "habitat-heading" }, el("span", { class: "legend-dot" }), heading), summary),
     sky,
-    roosts,
   );
   const title = el("h2");
   const search = el("input", { class: "nest-search" });
@@ -167,13 +174,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const clear = el("button", { class: "outline", onclick: () => {
     search.value = "";
     onlyNeeds = false;
+    status = null;
     remember();
     relabel();
     draw();
     search.focus();
   } });
   clear.hidden = true;
-  const toolbar = el("div", { class: "flock-toolbar" }, title, el("div", { class: "flock-tools" }, needs, el("div", { class: "app-search" }, search), clear));
+  const filters = el("div", { class: "flock-filters" });
+  const toolbar = el("div", { class: "flock-toolbar" }, title, el("div", { class: "app-search" }, search), filters, clear);
+  const list = el("section", { class: "flock-list" }, toolbar, roosts);
   const focusBlock = el("section", { class: "focus-block" });
   const detailTabs = el("nav", { class: "detail-tabs" });
   detailTabs.setAttribute("role", "tablist");
@@ -184,7 +194,12 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const body = el("div", { class: "app-body" }, focusBlock, details);
   const usage = el("div", { class: "usage-card" });
   usage.hidden = true;
-  const element = el("div", { class: "nest-flock-tab" }, habitat, toolbar, body, usage);
+  const back = el("button", { class: "outline flock-back", text: t("Back to sessions"), onclick: () => {
+    choosing = true; element.classList.add("choosing-session"); search.focus();
+  } });
+  const selected = el("section", { class: "flock-selected" }, back, body);
+  const workspace = el("div", { class: "flock-workspace" }, list, selected);
+  const element = el("div", { class: "nest-flock-tab" }, habitat, workspace, usage);
 
   // A right click on a bird or its card: the island's quick actions that work from here (ADR
   // 0011). None answers a card: the card itself does.
@@ -290,9 +305,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
   /** A card answered once: a second click or key on it sends nothing. */
   let sent: string | null = null;
   let onlyNeeds = false;
+  let status: FlockPlace["status"] = null;
+  let choosing = false;
   let zeca = true;
   let full = false;
-  let detail: Detail = "diff";
+  let detail: Detail = "session";
   let edited = false;
   let saved: Promise<void> = Promise.resolve();
   const remember = () => {
@@ -301,7 +318,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const change = shownDiff && front && shownDiff.owner === key(front)
       ? { owner: shownDiff.owner, step: shownDiff.step, focused: focusDiff }
       : restoredChange ?? null;
-    const place = { query: search.value, onlyNeeds, detail, change };
+    const place = { query: search.value, onlyNeeds, status, detail, change };
     saved = saved.catch(() => {}).then(() => on.savePlace?.(place));
     void saved.catch(() => {});
   };
@@ -323,7 +340,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
   const visible = (v: ViewModel): SessionView[] => {
     const q = search.value.trim().toLowerCase();
-    return v.sessions.filter((s) => (!onlyNeeds || needsYou(s)) && (!q || said(s).includes(q)));
+    return v.sessions.filter((s) => (!onlyNeeds || needsYou(s)) && inStatus(s, status) && (!q || said(s).includes(q)));
   };
 
   /** Over each vult a button (its name and state on hover and for a screen reader; a click puts it
@@ -347,6 +364,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         b.style.left = `${slot.x - 4}px`;
         b.style.width = `${slot.width + 8}px`;
         b.title = label;
+        b.append(el("span", { class: "bird-name", text: s.project || agentName(s) }));
         b.setAttribute("aria-label", label);
         b.setAttribute("aria-pressed", String(!!front && key(front) === slot.key));
         const kind = badgeOf(s);
@@ -373,7 +391,6 @@ export function createFlock(on: FlockActions & FlockAsk): {
     columns = cols;
     const col = w / cols;
     scene.resize(w, cols, (slot) => ({ x: Math.max(0, Math.round(col * slot + (col - BIRD_PX) / 2)), wire: NEST_HABITAT_WIRE }));
-    roosts.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
     drawSky();
   };
   new ResizeObserver(() => layout()).observe(sky);
@@ -385,7 +402,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     return m;
   };
   const roost = (s: SessionView, front: boolean) => {
-    const b = fid(el("button", { class: "roost-card", onclick: () => on.focus(s) }), `roost:${key(s)}`);
+    const b = fid(el("button", { class: "roost-card", onclick: () => {
+      choosing = false; element.classList.remove("choosing-session"); back.focus(); on.focus(s);
+    } }), `roost:${key(s)}`);
     menuOn(b, s);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
@@ -393,8 +412,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
     b.append(
       el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
       el("div", { class: `roost-sub ${tone(s)}`, text: statusText(s) }),
-      el("div", { class: "roost-agent", text: agentName(s) }),
+      el("div", { class: "roost-agent", text: t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
+      el("div", { class: "roost-context", text: s.context_percent == null ? t("Context not reported") : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) }),
     );
+    const meter = contextMeter(s);
+    if (meter) b.append(meter);
     return b;
   };
 
@@ -466,8 +488,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
 
   /** Every file the session changed, the latest first; one whose diff is still kept opens it. */
-  const touchedList = (s: SessionView, files: TouchedView[]): HTMLElement => {
-    const rows = [...files].reverse().map((f) => {
+  const touchedList = (s: SessionView, files: TouchedView[], limit = files.length): HTMLElement => {
+    const rows = [...files].reverse().slice(0, limit).map((f) => {
       // A file only the folder's look saw has no lines to count: a command wrote it.
       const counts = f.outside
         ? el("span", { class: "touched-counts outside", text: t("by a command") })
@@ -498,7 +520,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
 
   /** The question card's answers; the Nest has no keyboard to hold and nothing to measure. */
+  function skipCard(request: string): void {
+    onScreen = null;
+    sent = request;
+    asked = null;
+    on.skip(request);
+  }
+
   const questionActions = {
+    skip: skipCard,
+    review: (s: SessionView) => on.focus(s),
     keys: {},
     decide: () => {},
     decideAlways: () => {},
@@ -518,6 +549,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const questionNode = (s: SessionView, question: NonNullable<ViewModel["approval"]>): HTMLElement => {
     if (asked?.request !== question.request)
       asked = { request: question.request, node: el("div", { class: "nest-question" }, ...questionBody(s, question, questionActions)) };
+    const skip = asked.node.querySelector<HTMLElement>(".card-skip");
+    if (skip) skip.dataset.fid = "act:skip";
     return asked.node;
   };
 
@@ -551,8 +584,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const ask = v.approval && v.approval.agent === s.agent && v.approval.session === s.id ? v.approval : null;
     // A finished or failed turn says how it ended (its last reply, its error), as the island does.
     const ended = s.status === "finished" || s.status === "failed";
-    const ticker = ask ? null : tickerOf(s);
-    const words = ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
+    const ticker = ask || detail === "session" ? null : tickerOf(s);
+    const words = s.skipped || (detail === "session" && !ask && !ended) ? null : ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
     const question = ask && ask.questions.length ? ask : null;
     const permission = ask && !question ? ask : null;
     const command = permission ? [permission.tool, permission.full ?? permission.target].filter(Boolean).join(" · ") : null;
@@ -576,8 +609,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
         s.status === "working" && s.step_count > 0
           ? el("span", { class: "card-verb", text: s.step_count === 1 ? t("1 step") : t("{n} steps", { n: s.step_count }) })
           : null,
-        costChip(s),
-        ask && ask.queue > 1 ? el("div", { class: "card-side" }, el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) })) : null,
+        detail === "session" ? null : costChip(s),
+        ask ? el("div", { class: "card-side" },
+          ask.queue > 1 ? el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) }) : null,
+          question ? null : fid(skipButton(ask.request, skipCard), "act:skip")) : null,
       ),
       question ? null : words ? el("p", { class: "card-words", text: words }) : null,
       ticker,
@@ -605,8 +640,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
         zeca ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
       ),
       // No card for it: it asks in its terminal (its card expired or went there, or it has none).
-      waits(s) && !ask ? el("p", { class: "rule-scope", text: t("Needs you: it asks in its terminal.") }) : null,
-      waits(s) ? null : changedOf(s),
+      s.skipped && s.waiting ? el("div", { class: "skipped-card" },
+        el("p", { class: "rule-scope", text: t("Skipped for now. The request still waits for your answer.") }),
+        fid(el("button", { class: "outline", text: t("Show the card"), onclick: () => on.focus(s) }), "act:unskip"))
+        : waits(s) && !ask ? el("p", { class: "rule-scope", text: t("Needs you: it asks in its terminal.") }) : null,
+      waits(s) || detail === "session" ? null : changedOf(s),
     );
   };
 
@@ -731,9 +769,40 @@ export function createFlock(on: FlockActions & FlockAsk): {
       [t("Agent"), agentName(s)],
       [t("Editor"), s.editor],
       [t("Status"), statusText(s)],
-      [t("Cost so far"), s.cost_usd != null && s.cost_usd >= 0.01 ? `≈$${s.cost_usd.toFixed(2)}` : null],
+      [t("Cost so far"), s.cost_usd == null ? t("Not reported") : `≈$${s.cost_usd.toFixed(2)}`],
+      [t("Running time"), runningTime(s)],
+      [t("Context used"), s.context_percent == null ? t("Not reported") : `${Math.round(s.context_percent)}%`],
     ];
     return [el("dl", { class: "context-dl" }, ...rows.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : [])))];
+  };
+
+  function contextMeter(s: SessionView): HTMLElement | null {
+    if (s.context_percent == null) return null;
+    const meter = el("meter", { class: "session-context-meter" });
+    meter.setAttribute("min", "0"); meter.setAttribute("max", "100");
+    meter.setAttribute("value", String(s.context_percent));
+    meter.setAttribute("aria-label", t("Context used: {percent}%", { percent: Math.round(s.context_percent) }));
+    return meter;
+  }
+
+  const overview = (s: SessionView): HTMLElement[] => {
+    const go = (id: Detail) => { detail = id; remember(); draw(); };
+    const metric = (label: string, value: string, extra: HTMLElement | null = null) =>
+      el("div", { class: "session-metric" }, el("dt", { text: label }), el("dd", { text: value }), extra);
+    const metrics = el("dl", { class: "session-metrics" },
+      metric(t("Running time"), runningTime(s)),
+      metric(t("Cost so far"), s.cost_usd == null ? t("Not reported") : `≈$${s.cost_usd.toFixed(2)}`),
+      metric(t("Context used"), s.context_percent == null ? t("Not reported") : `${Math.round(s.context_percent)}%`, contextMeter(s)));
+    metrics.title = t("The CLI's last reported metrics. Cost is estimated at API prices; a subscription is not charged this.");
+    const allSteps = fid(el("button", { class: "outline", text: t("All steps"), onclick: () => go("activity") }), "act:all-steps");
+    const recent = el("section", { class: "session-recent" },
+      el("header", { class: "session-section-head" }, el("h3", { text: t("Recent steps") }), allSteps), ...activity(s).slice(0, 4));
+    const files = s.touched ?? [];
+    const changes = el("section", { class: "session-files" },
+      el("header", { class: "session-section-head" }, el("h3", { text: t("Changed files") }),
+        fid(el("button", { class: "outline", text: t("See the changes"), onclick: () => go("diff") }), "act:overview-changes")),
+      files.length ? touchedList(s, files, 4) : el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }));
+    return [metrics, recent, changes];
   };
 
   const zecaPane = (s: SessionView): HTMLElement[] => [
@@ -745,6 +814,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     if (!view) return;
     const v = view;
     // A view redraws the tab: the control that had the keyboard gets it back after.
+    const listScroll = roosts.scrollTop, detailScroll = detailBody.scrollTop;
+    let selectedScroll = selected.scrollTop;
     const had = (document.activeElement as HTMLElement | null)?.dataset?.fid ?? null;
     onScreen = null;
     layout();
@@ -754,19 +825,14 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const attention = v.sessions.filter(needsYou).length;
     needsCount.textContent = String(attention);
     needs.setAttribute("aria-label", attention === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: attention }));
-    clear.hidden = !search.value && !onlyNeeds;
+    clear.hidden = !search.value && !onlyNeeds && !status;
+    drawFilters(v.sessions);
+    element.classList.toggle("choosing-session", choosing || !front);
+    back.hidden = !front;
+
     roosts.replaceChildren(
       ...(shown.length
-        ? shown.map((s) => {
-            const card = roost(s, !!front && key(front) === key(s));
-            // Under its own bird, filtered or not; a session past the habitat's places comes after.
-            const at = v.sessions.indexOf(s);
-            if (at < columns) {
-              card.style.gridColumn = String(at + 1);
-              card.style.gridRow = "1";
-            }
-            return card;
-          })
+        ? shown.map((s) => roost(s, !!front && key(front) === key(s)))
         : [
             el(
               "div",
@@ -780,7 +846,6 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const out = calmNow() ? 0 : v.sessions.filter((s) => s.status === "working" && s.activity === "web").length;
     summary.textContent = v.sessions.length ? t("{out} in flight · {on} on the wire", { out, on: v.sessions.length - out }) : "";
     body.hidden = !front;
-    toolbar.hidden = !v.sessions.length;
     // Expanded changes cannot hide a permission or a question arriving for this session.
     if (!front || waits(front) || v.approval) {
       focusDiff = false;
@@ -788,12 +853,14 @@ export function createFlock(on: FlockActions & FlockAsk): {
     }
     if (front && key(front) !== shownFront) {
       shownFront = key(front);
+      selectedScroll = 0;
       focusDiff = false;
     }
     if (front) {
       focusBlock.replaceChildren(card(v, front));
-      if (detail === "zeca" && !zeca) detail = "diff";
+      if (detail === "zeca" && !zeca) detail = "session";
       const tabs: [Detail, string][] = [
+        ["session", t("Session")],
         ["diff", t("Changes")],
         ["activity", t("Activity")],
         ["context", t("Context")],
@@ -826,11 +893,13 @@ export function createFlock(on: FlockActions & FlockAsk): {
           return b;
         }),
       );
-      detailBody.replaceChildren(...(detail === "diff" ? changes(front) : detail === "activity" ? activity(front) : detail === "context" ? context(front) : zecaPane(front)));
+      detailBody.replaceChildren(...(detail === "session" ? overview(front) : detail === "diff" ? changes(front) : detail === "activity" ? activity(front) : detail === "context" ? context(front) : zecaPane(front)));
       detailBody.setAttribute("aria-labelledby", `nest-detail-${detail}`);
     }
     body.classList.toggle("details-focus", focusDiff && detail === "diff" && hasEdits);
-    if (had) element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)?.focus();
+    roosts.scrollTop = listScroll; detailBody.scrollTop = detailScroll; selected.scrollTop = selectedScroll;
+    if (had) (element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)
+      ?? (had === "act:skip" ? element.querySelector<HTMLElement>('[data-fid="act:unskip"]') : null))?.focus({ preventScroll: true });
   };
 
   /** Full's strip: each plan's windows, amber from 70% and red from 90%, as on the island. */
@@ -870,9 +939,24 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
   };
 
+  function drawFilters(sessions: SessionView[]): void {
+    const pick = (word: string, value: FlockPlace["status"], count: number) => {
+      const b = fid(el("button", { class: "session-filter", onclick: () => {
+        onlyNeeds = false; status = value; remember(); relabel(); draw();
+      } }, el("span", { text: word }), el("span", { class: "attention-count", text: String(count) })), `filter:${value ?? "all"}`);
+      b.setAttribute("aria-pressed", String(!onlyNeeds && status === value));
+      return b;
+    };
+    filters.replaceChildren(pick(t("All sessions"), null, sessions.length), needs,
+      pick(t("Working"), "working", sessions.filter(s => inStatus(s, "working")).length),
+      pick(t("Failed"), "failed", sessions.filter(s => inStatus(s, "failed")).length),
+      pick(t("Quiet sessions"), "quiet", sessions.filter(s => inStatus(s, "quiet")).length));
+  }
+
   const relabel = () => {
     heading.textContent = t("The flock, together");
-    title.textContent = t("Session details");
+    title.textContent = t("Sessions");
+    back.textContent = t("Back to sessions");
     search.placeholder = t("Find a session…");
     search.setAttribute("aria-label", t("Find a session…"));
     needs.replaceChildren(el("span", { text: t("Needs you") }), needsCount);
@@ -883,10 +967,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
   detailBody.addEventListener("animationend", () => detailBody.classList.remove("detail-enter"));
   detailBody.addEventListener("animationcancel", () => detailBody.classList.remove("detail-enter"));
   detailTabs.addEventListener("keydown", (e) => {
-    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
     const ids = [...detailTabs.querySelectorAll<HTMLElement>(".detail-tab")].map((b) => b.id.replace("nest-detail-", "") as Detail);
     const at = ids.indexOf(detail);
-    detail = ids[(at + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length];
+    detail = e.key === "Home" ? ids[0] : e.key === "End" ? ids[ids.length - 1] : ids[(at + (e.key === "ArrowRight" ? 1 : -1) + ids.length) % ids.length];
     if (!calmNow()) detailBody.classList.add("detail-enter");
     remember();
     e.preventDefault();
@@ -896,6 +980,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   search.addEventListener("input", () => { remember(); draw(); });
   needs.addEventListener("click", () => {
     onlyNeeds = !onlyNeeds;
+    status = null;
     remember();
     relabel();
     draw();
@@ -920,7 +1005,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     if (place && !edited) {
       search.value = place.query;
       onlyNeeds = place.onlyNeeds;
-      detail = place.detail === "zeca" && !zeca ? "diff" : place.detail;
+      status = place.status ?? null;
+      detail = place.detail === "zeca" && !zeca ? "session" : place.detail;
       shownDiff = null;
       restoredChange = place.change ?? null;
       focusDiff = false;
@@ -946,6 +1032,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
     update: (v) => {
       // What the menu offers was read from the view before: a new one closes it.
       closeMenu();
+      if (view?.approval?.request !== v.approval?.request) {
+        sent = null;
+        if (v.approval) { choosing = false; selected.scrollTop = 0; }
+      }
       view = v;
       relabel();
       draw();

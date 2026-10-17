@@ -65,6 +65,18 @@ pub fn claude_cost(payload: &Value) -> Option<f64> {
         .filter(|usd| usd.is_finite() && *usd >= 0.0)
 }
 
+/// The session's running time, including resumed runs, as the CLI reports it.
+pub fn claude_elapsed(payload: &Value) -> Option<u64> {
+    payload["cost"]["total_duration_ms"].as_u64()
+}
+
+/// The current context occupancy, not cumulative tokens or a subscription limit.
+pub fn claude_context(payload: &Value) -> Option<f64> {
+    payload["context_window"]["used_percentage"]
+        .as_f64()
+        .filter(|used| (0.0..=100.0).contains(used))
+}
+
 /// From Claude Code's statusLine input, relayed by the hook: `rate_limits.five_hour` and
 /// `.seven_day`, each one there only while its window is open. `now` is epoch seconds.
 pub fn claude(payload: &Value, now: i64) -> Vec<Window> {
@@ -106,6 +118,25 @@ mod tests {
         assert_eq!((w.used_percent, w.resets_at), (10, None));
         // A reset already past is only stale, not wrong.
         assert_eq!(line(10.0, NOW - 60)[0].resets_at, Some(NOW - 60));
+    }
+
+    #[test]
+    fn claude_session_metrics_keep_unknown_distinct_from_zero() {
+        let start: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/claude-statusline-start.json")).unwrap();
+        assert_eq!(claude_elapsed(&start), Some(705));
+        assert_eq!(claude_context(&start), None);
+        let report = |ms: Value, used: Value| json!({ "cost": { "total_duration_ms": ms }, "context_window": { "used_percentage": used } });
+        let zero = report(json!(0), json!(0));
+        assert_eq!(claude_elapsed(&zero), Some(0));
+        assert_eq!(claude_context(&zero), Some(0.0));
+        assert_eq!(claude_context(&report(json!(42), json!(37.5))), Some(37.5));
+        for bad in [json!(null), json!(-1), json!(101), json!("42")] {
+            assert_eq!(claude_context(&report(json!(42), bad)), None);
+        }
+        for bad in [json!(null), json!(-1), json!(1.5), json!("42")] {
+            assert_eq!(claude_elapsed(&report(bad, json!(42))), None);
+        }
     }
 
     #[test]

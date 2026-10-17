@@ -78,10 +78,13 @@ questions it read.
 An event from `other` never has `wants_reply`: nothing in the app answers another tool's permission.
 
 `StatusLine` is Claude Code's statusLine input, sent by `vults-hook --agent claude --statusline`.
-Its payload is only `rate_limits` (the plan's 5-hour and weekly windows), `cost.total_cost_usd`
-(what the session's tokens would cost at API prices, for its card) and `session_id`; the session's
-paths, its other cost figures and its model never leave the hook. Before the session's first reply
-there are no `rate_limits`, and with no cost either nothing is sent. The hook prints only what the user's own status line prints
+Its payload keeps `rate_limits` (the plan's windows), `session_id`, `cost.total_cost_usd`
+(the API-price estimate), `cost.total_duration_ms` (reported running time) and
+`context_window.used_percentage` (current context occupancy). Session paths, model data, token
+contents and other cost fields never leave the hook. Numeric metrics are validated; absent or
+null context stays unknown. With no valid metric or plan window nothing is sent. Existing hooks
+that send only cost or plan usage still work; optional payload fields do not change the envelope.
+The hook prints only what the user's own status line prints
 (saved on install, see [settings](settings.md)), or nothing when there is none, so Claude Code's
 status line looks as it did before.
 

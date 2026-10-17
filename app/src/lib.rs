@@ -19,6 +19,7 @@ mod log;
 mod mcp;
 mod media;
 mod memory;
+mod mentions;
 mod notify;
 mod open;
 mod panel;
@@ -178,6 +179,8 @@ pub fn run() {
             runtime::decide_always,
             runtime::question_answer,
             runtime::question_release,
+            runtime::card_skip,
+            runtime::card_review,
             runtime::rules_list,
             runtime::rule_remove,
             spend::spend_today,
@@ -456,6 +459,7 @@ mod label_tests {
         let place = FlockPlace {
             query: "Alpha".into(),
             only_needs: true,
+            status: None,
             detail: "context".into(),
             change: Some(FlockChange {
                 owner: "claude:one".into(),
@@ -483,6 +487,7 @@ mod tests {
         let mut place = super::FlockPlace {
             query: "\u{754c}".repeat(4096),
             only_needs: true,
+            status: None,
             detail: "context".into(),
             change: None,
         };
@@ -490,10 +495,17 @@ mod tests {
         place.query.push('x');
         assert!(place.validate().is_err());
         place.query.clear();
-        for detail in ["diff", "activity", "context", "zeca"] {
+        for detail in ["session", "diff", "activity", "context", "zeca"] {
             place.detail = detail.into();
             assert!(place.validate().is_ok());
         }
+        for status in ["working", "failed", "quiet"] {
+            place.status = Some(status.into());
+            assert!(place.validate().is_ok());
+        }
+        place.status = Some("unknown".into());
+        assert!(place.validate().is_err());
+        place.status = None;
         place.detail = "unknown".into();
         assert!(place.validate().is_err());
         place.detail = "diff".into();
@@ -607,7 +619,7 @@ mod tests {
         use tauri::Listener;
         let app = tauri::test::mock_app();
         let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-        for name in ["open-chat", "shortcut"] {
+        for name in ["open-chat", "open-now", "shortcut"] {
             let events = events.clone();
             app.listen_any(name, move |event| {
                 events.lock().unwrap().push((name, event.payload().to_string()))
@@ -618,6 +630,20 @@ mod tests {
         assert!(events.lock().unwrap().is_empty());
         for (size, asked, last, zeca, expected) in [
             ("quick", Some("chat"), Some("chat"), true, ("open-chat", "null")),
+            (
+                "quick",
+                Some("activity"),
+                Some("activity"),
+                true,
+                ("open-now", "null"),
+            ),
+            (
+                "quick",
+                Some("connections"),
+                Some("connections"),
+                false,
+                ("open-now", "null"),
+            ),
             (
                 "quick",
                 Some("chat"),
@@ -879,6 +905,8 @@ struct FlockChange {
 struct FlockPlace {
     query: String,
     only_needs: bool,
+    #[serde(default)]
+    status: Option<String>,
     detail: String,
     #[serde(default)]
     change: Option<FlockChange>,
@@ -887,7 +915,14 @@ struct FlockPlace {
 impl FlockPlace {
     fn validate(&self) -> Result<(), String> {
         if self.query.chars().count() > 4096
-            || !matches!(self.detail.as_str(), "diff" | "activity" | "context" | "zeca")
+            || !matches!(
+                self.detail.as_str(),
+                "session" | "diff" | "activity" | "context" | "zeca"
+            )
+            || self
+                .status
+                .as_deref()
+                .is_some_and(|s| !matches!(s, "working" | "failed" | "quiet"))
             || self
                 .change
                 .as_ref()
@@ -933,9 +968,14 @@ fn nest_close<R: tauri::Runtime>(window: tauri::Webview<R>) -> Result<(), String
 }
 
 fn valid_nest_tab(tab: &str) -> bool {
+    if tab.starts_with("connection:") {
+        let parts: Vec<_> = tab.split(':').collect();
+        return tab.len() <= 4096 && parts.len() == 3 && parts.iter().all(|p| !p.is_empty());
+    }
     matches!(
         tab,
         "flock"
+            | "memory"
             | "chat"
             | "activity"
             | "connections"
@@ -953,7 +993,11 @@ fn restored_tab<'a>(asked: Option<&'a str>, last: Option<&'a str>, zeca: bool) -
         .filter(|t| valid_nest_tab(t))
         .or_else(|| last.filter(|t| valid_nest_tab(t)))
         .unwrap_or("flock");
-    if tab == "chat" && !zeca { "flock" } else { tab }
+    if matches!(tab, "chat" | "memory") && !zeca {
+        "flock"
+    } else {
+        tab
+    }
 }
 
 #[tauri::command]
@@ -1297,6 +1341,8 @@ fn show_island_size<R: tauri::Runtime>(app: &AppHandle<R>, size: &str, tab: Opti
     use tauri::Emitter;
     if size == "quick" && tab == Some("chat") && zeca {
         let _ = app.emit_to(ISLAND, "open-chat", ());
+    } else if size == "quick" && matches!(tab, Some("now" | "activity" | "connections")) {
+        let _ = app.emit_to(ISLAND, "open-now", ());
     } else {
         let _ = app.emit_to(ISLAND, "shortcut", if size == "mini" { "fold" } else { "open" });
     }

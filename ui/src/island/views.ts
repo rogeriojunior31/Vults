@@ -43,7 +43,7 @@ export function statusText(s: SessionView): string {
 export const needsYou = (s: SessionView): boolean => s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true;
 export const statusClass = (s: SessionView): string => (s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status);
 
-/** Statuses that need a look, worn as a badge by a bird that is not in front. */
+/** Statuses that need a look, worn as a badge on the wire. */
 export const BADGE: Partial<Record<SessionView["status"], string>> = {
   approval: "approval",
   question: "question",
@@ -54,6 +54,7 @@ export const BADGE: Partial<Record<SessionView["status"], string>> = {
 /** A bird's badge: its state's, or a quiet bird's flag (grey, then amber when loud). */
 export function badgeOf(s: SessionView | undefined): string | undefined {
   if (!s) return undefined;
+  if ((s.status === "idle" || s.status === "finished") && s.rested !== undefined) return s.rested === false ? "finished" : undefined;
   return BADGE[s.status] ?? (s.silent ? `silent ${s.silent}` : undefined);
 }
 
@@ -77,12 +78,14 @@ export interface CardActions {
   answer(request: string, answers: Answer[]): void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
   release(request: string): void;
+  skip(request: string): void;
+  review(s: SessionView): void;
   /** The "Other" field wants the keyboard (the island never takes it otherwise). */
   keyboard(on: boolean): void;
   /** The card changed size on its own: measure the island again. */
   relayout(): void;
   jump(agent: SessionView["agent"], id: string): void;
-  /** OK on a finished or failed card: seen, the badge goes. */
+  /** OK on a finished or failed card: seen; recent successful rest keeps its deadline. */
   dismiss(s: SessionView): void;
   /** The answer to a quiet bird: snooze its flag, keep going, or dismiss it for the run. */
   hush(s: SessionView, hush: Hush): void;
@@ -295,12 +298,24 @@ function askZeca(actions: CardActions): HTMLElement[] {
   ];
 }
 
+export function skipButton(request: string, skip: (request: string) => void, label = t("Skip for now")): HTMLElement {
+  const b = el("button", { class: "card-skip", onclick: () => skip(request) }, icon("close", 14));
+  b.title = label;
+  b.setAttribute("aria-label", label);
+  return b;
+}
+
 function sessionBody(
   s: SessionView,
   approval: ApprovalView | null,
   ticker: Ticker,
   actions: CardActions,
 ): HTMLElement[] {
+  if (s.skipped && s.waiting) return [
+    who(s, t("Needs you")),
+    el("p", { class: "sub", text: t("Skipped for now. The request still waits for your answer.") }),
+    el("div", { class: "actions" }, button(t("Show the card"), "secondary", () => actions.review(s))),
+  ];
   const last = s.step ?? "";
   const dismiss = () => actions.dismiss(s);
   switch (s.status) {
@@ -324,7 +339,7 @@ function sessionBody(
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
       const parts: (HTMLElement | null)[] = [
-        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue),
+        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, skipButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
         // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
@@ -591,7 +606,13 @@ export function questionBody(s: SessionView, approval: ApprovalView, actions: Ca
   const card = el(
     "div",
     { class: "question-card" },
-    el("div", { class: "card-head" }, who(s, t("asks you"), q.header ? el("span", { class: "chip", text: q.header }) : null), count),
+    el("div", { class: "card-head" }, who(s, t("asks you"), q.header ? el("span", { class: "chip", text: q.header }) : null), count,
+      skipButton(approval.request, request => {
+        if (sent) return;
+        sent = true;
+        if (p.other !== null) actions.keyboard(false);
+        actions.skip(request);
+      })),
     el("div", { class: "ask-what", text: q.question }),
     choices,
     el(

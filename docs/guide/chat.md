@@ -10,7 +10,7 @@ Its menu opens upward across the footer width, with one scroll area for long lis
 and wrapping engine, model and effort options. A started conversation explains its pinned
 model inside the menu rather than covering the choices with a tooltip.
 Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
-An empty Quick Chat stays short: Zeca uses his original 3x portrait beside **Ask Zeca**,
+An empty Quick Chat stays short: Zeca uses his original 3x portrait beside a greeting,
 with the draft and controls directly below. The title disappears and his portrait uses 2x
 when messages arrive. The surface grows with the actual transcript until it reaches the
 available overlay height, then only the transcript scrolls. Starting an empty conversation
@@ -36,8 +36,28 @@ Only one selector opens at a time. **↑/↓** on its trigger opens it and focus
 chooses; **Esc** returns focus to the trigger. Clicking outside dismisses it. Model reads
 retain the focused choice, and refreshes preserve an unfinished conversation title.
 
-In an empty Room CLI conversation, the question cards fill the draft and focus the
-input. Edit it before pressing **Send** or **Enter**; clicking a suggestion does not send it.
+An empty Chat greets you by the desktop's local time: morning from 05:00, afternoon from
+12:00, evening from 18:00 through 04:59. Its caption reflects a waiting session first,
+then a failure, then active work or a quiet flock. In Room and Full, the question cards
+follow those same rules. A session question includes its exact **@** reference; it keeps
+your existing text, files and execution folder. Edit the draft before pressing **Send**
+or **Enter**; clicking a suggestion does not send it.
+
+Under the latest completed reply, **Explain more simply** and **What should I check next?**
+append a question to your editable draft. **Open Flock** appears when sessions exist and
+opens the existing Flock while saving that draft. These controls appear in Quick too;
+they disappear while a turn runs or when the latest result failed or was stopped.
+Greetings and offers use local rules, without a model request, spoken line, notification
+or permission answer. With Zeca off, they do not open Chat.
+
+Zeca briefly listens while you type, thinks while waiting for the model or a voice
+transcription, and searches while a reported tool runs. As new reply text arrives, he
+moves his bill, then settles after a short pause; a quiet stream returns to thinking until
+the turn ends. This is a visual reaction, without spoken audio. Opening saved replies or
+restoring a draft does not replay it. Every unanswered Chat permission keeps his question
+pose, even when files arrive or another tool reports progress. Reduced motion shows a
+static pose for the current state; hidden companions stop drawing.
+
 In Quick, the composer starts with one writing line and grows as you type, up to its height limit.
 The paperclip, optional microphone and Send sit beside the draft; the paperclip keeps its
 **Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies
@@ -63,6 +83,16 @@ lists the models your own `codex` offers, asked the first time you open the pick
 The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**
 leaves either to the CLI, as your own settings set it.
 
+In Quick and the Nest, a ring and percentage beside the model show the selected CLI's
+fullest active plan window. **0%** is a reported zero; missing or expired windows show no
+indicator. **Warning** starts at 70%, and **Near limit** at 90%. Hover over the control for
+each reported window and its reset time, when known. The control's accessible name includes
+the usage and status. Windows disappear at their reset time without waiting for another read.
+
+This reuses the existing Claude Code status-line readings and the optional Codex plan readings
+in Settings; opening Chat does not add provider requests. The API chat has no subscription
+indicator. Usage updates keep your draft, files, reading position and open model menu.
+
 If a CLI cannot list its models, the picker shows an explanation and keeps your
 draft and model choice. Close and reopen the picker to try again; typing or
 updating the chat does not keep repeating the failed request.
@@ -71,12 +101,44 @@ The choice is remembered per folder and per engine: a new conversation in that f
 it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
 midway; **New** starts another. The API chat's model is chosen in **Settings → Chat & voice**.
 
+## Referencing the flock
+
+Type **@** in the draft to find an open session or project. Search by its project, agent,
+folder or session ID. **↑/↓** move through suggestions; **Enter**, **Tab** or a click inserts
+the selected reference. The draft keeps focus, and selecting never sends a message. **Esc**
+dismisses the suggestions. A reference looks like `@"Session: Codex · site"` or
+`@"Project: site"`; duplicate names show their full folder or session ID. You can select up to
+eight references, including several sessions in one message.
+
+A session reference selects that exact agent and session ID. A project reference selects
+the flock sessions in that exact folder, including its different agents. When you send,
+the turn's flock context and flock tools read only those selections. This works with the
+CLI and API engines. References do not switch the conversation's working folder or answer
+cards, and earlier messages remain in the conversation. With no references, the usual
+flock context is unchanged.
+
+References follow the unsent draft between Quick and the Nest, together with attachments.
+Remove the whole quoted reference to stop including it. If you edit, paste or recall a
+reference without its selection, choose it from **@** suggestions again. If a referenced
+session or project has left the flock, Vults asks you to remove it and choose again before
+starting a turn, keeping the draft and attachments editable. A saved conversation keeps the
+reference's readable text; reselect it if you bring that text back into a new draft.
+
 ## The Nest
 
 The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own window. Its
 **Chat** tab is the same conversation, wide, with replies in full Markdown; its cards are answered
 there too. **Memory**, beside it, shows what Zeca
 remembers.
+
+An empty Nest Chat centres Zeca's original 3x portrait above **Ask Zeca** and a vertical list
+of suggestions. Once messages arrive, the same scene uses a smaller 2x perch above the
+composer. Its own space keeps messages clear of the bird throughout scrolling. The slim
+header, tighter message spacing and one-line initial draft leave more room for reading;
+the draft grows as you type. Transcript and composer share a column up to 760 px wide.
+Attachments stay in a bounded horizontal strip, with long filenames readable inside each card.
+Short windows bound the writing field and omit the keyboard hint; at 560 px high or less,
+they also fold the portrait away and use smaller composer controls.
 
 Zeca stays on his perch while the transcript scrolls. Hover over him to get his attention, or
 click **Greet Zeca** to wave while he is idle. Thinking, voice, questions and files use the same
@@ -170,6 +232,33 @@ Everything happens on this computer: whisper.cpp transcribes the audio in memory
 never saved or sent anywhere. The models and the detector are checked against their known SHA-256
 before they are used.
 
+## Reading a turn
+
+![One pending approval with its command and actions in the minimum Nest](../assets/nest-chat-approval.png)
+
+The reply stays separate from a collapsed **Activity** disclosure. Open it for the readable
+thinking supplied by the engine and the tools it reported. Each tool exposes its arguments or
+command and its reported completion or failure. Missing results remain **No result reported**;
+Vults does not invent thought text or treat elapsed turn time as measured thinking time. Codex
+shows its public reasoning summaries; engines that do not supply details say so.
+
+Only one pending approval is expanded at a time. **Review approval** returns to that exact
+request; Previous/Next selects another without answering it. New cards enter upward with a short
+transition, disabled with reduced motion. Answered cards collapse into receipts with their scope
+available in detail. A turn ending expires unanswered cards as **Cancelled**. Reading older text
+keeps your scroll position; the review control remains available above the transcript.
+
+Activity is stored locally with the conversation, with recognized secrets redacted, bounded detail
+size and an explicit notice when shortened. Reopening it shows history only: it never replays a command or permission answer.
+Live requests keep their full details when you switch between Quick and Nest.
+
+**Permissions** beside the pending queue opens **Settings → Chat & voice**. **Asks first** asks
+for each command or edit. To reduce repeats, choose your accepted policies there; uncovered calls
+and destructive actions still ask. **Always in this chat** covers only the same exact eligible
+call until the conversation ends. Zeca is instructed to prefer file-reading and search tools for
+simple inspection, and to avoid unnecessary tool calls in ordinary conversation. This guidance
+does not change the permission checks. Collapsing a card never grants access.
+
 ## What it may do
 
 ![Zeca asks in the chat before running a command](../assets/island-chat-permission.png)
@@ -191,7 +280,8 @@ before they are used.
 - **Always in this chat** allows that exact call again (the whole command and input, not the card's
   text) without a card, until the conversation ends: **New**, another engine, or Zeca turned off. A
   card that can't name the call whole has no such button. Each time the rule answers, the chat says
-  *Allowed for this conversation* and the audit log keeps it. Rules are never saved.
+  *Allowed for this conversation* and the audit log keeps it. Destructive commands always ask:
+  they never offer this button, and an existing conversation rule cannot answer them. Rules are never saved.
 
 ### Who answers Zeca's cards
 

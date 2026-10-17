@@ -11,9 +11,14 @@ use crate::{
 #[cfg_attr(test, derive(ts_rs::TS))]
 // `ts(optional)` touches only the TypeScript: the lab's older states leave those fields out.
 pub struct ViewModel {
+    #[cfg_attr(test, ts(as = "Option<crate::chat::ChatView>", optional))]
+    pub chat: crate::chat::ChatView,
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     pub alerts: Vec<AlertView>,
+    /// Actionable items, including deferred offers; surfaces only choose their presentation.
+    #[cfg_attr(test, ts(as = "Option<Vec<crate::attention::AttentionItem>>", optional))]
+    pub inbox: Vec<crate::attention::AttentionItem>,
     /// The most any session wants the user.
     #[cfg_attr(test, ts(as = "Option<Attention>", optional))]
     pub attention: Attention,
@@ -103,6 +108,9 @@ pub struct SessionView {
     /// The project folder, where the chat works when this session is in front.
     pub cwd: Option<String>,
     pub status: Status,
+    /// None while busy; false during the first 30 seconds of rest, then true until work returns.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub rested: Option<bool>,
     /// What the status asks of the user.
     pub attention: Attention,
     /// The card first in line is this session's, and its status still waits on it: the island
@@ -111,6 +119,12 @@ pub struct SessionView {
     /// A card of this session waits, first in line or behind another.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub waiting: bool,
+    /// The next card this session can show; deferred cards keep their request id.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub request: Option<String>,
+    /// All of this session's waiting cards were explicitly deferred.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub skipped: bool,
     /// *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
     /// its window. Elsewhere a quick action offers its folder instead (ADR 0011).
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
@@ -148,6 +162,12 @@ pub struct SessionView {
     /// What it has cost so far at API prices, when its agent says: a subscription is not charged it.
     #[cfg_attr(test, ts(optional = nullable))]
     pub cost_usd: Option<f64>,
+    /// Running time in the CLI's last report, including resumed runs; not app uptime.
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub elapsed_ms: Option<u64>,
+    /// Current context occupancy in the CLI's last report; unknown is never zero.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub context_percent: Option<f64>,
     /// The question, the last reply or the error that goes with the status.
     pub note: Option<String>,
     /// The editor whose terminal the session runs in ("Cursor", "VS Code").
@@ -240,6 +260,14 @@ pub struct ApprovalView {
 }
 
 impl State {
+    /// The next rest boundary: app wakes exactly then, even if no hook event arrives.
+    pub fn next_rest(&self) -> Option<std::time::Instant> {
+        self.sessions
+            .values()
+            .filter_map(|s| s.rest_since.map(|at| at + crate::REST_AFTER))
+            .filter(|at| self.now.is_none_or(|now| *at > now))
+            .min()
+    }
     /// The diff of a session's step, while the step is kept.
     pub fn diff(&self, key: &SessionKey, step: u32) -> Option<&Diff> {
         let s = self.sessions.get(key)?;
@@ -262,8 +290,12 @@ impl State {
 
     /// The session whose card is first in line, while its status still waits on it: the card is
     /// what the user must see. A question in the terminal is not the card: only one asked here is.
+    pub(crate) fn active_card(&self) -> Option<&crate::Pending> {
+        self.pending.iter().find(|p| !p.skipped)
+    }
+
     pub(crate) fn card_session(&self) -> Option<&SessionKey> {
-        let p = self.pending.front()?;
+        let p = self.active_card()?;
         let s = self.sessions.get(&p.session)?;
         crate::shows(s, p).then_some(&p.session)
     }
@@ -289,61 +321,80 @@ impl State {
         let card = self.card_session();
         let sessions: Vec<SessionView> = sessions
             .into_iter()
-            .map(|s| SessionView {
-                id: s.key.session_id.clone(),
-                agent: s.key.agent,
-                agent_name: (s.key.agent == AgentKind::Other)
-                    .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
-                    .flatten(),
-                project: s.project.clone(),
-                cwd: s.cwd.clone(),
-                status: s.status,
-                // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
-                attention: match (s.status, s.watch.level) {
-                    (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
-                    (status, _) => status.attention(),
-                },
-                card: card == Some(&s.key),
-                waiting: self
+            .map(|s| {
+                let pending: Vec<_> = self
                     .pending
                     .iter()
-                    .any(|p| p.session == s.key && crate::shows(s, p)),
-                raise: raises(&s.terminal),
-                muted: self.prefs(s).mute,
-                pinned: self.prefs(s).pin,
-                silent: s.watch.level.filter(|_| s.status == Status::Working),
-                activity: s.activity,
-                step: steps(self, s).pop(),
-                steps: steps(self, s),
-                diffs: diffs(s),
-                changes: changes(self, s),
-                touched: touched(s),
-                step_at: s.step_at.iter().copied().collect(),
-                step_count: s.step_count,
-                subagents: s.subagents,
-                cost_usd: s.cost_usd,
-                note: s.note.clone(),
-                editor: editor(&s.terminal),
-                species: species[&s.key],
-                bird_chosen: self
-                    .prefs(s)
-                    .species
-                    .as_deref()
-                    .and_then(crate::flock::chosen)
-                    .is_some(),
-                roost_key: s.repo.as_ref().map(|r| r.key.clone()),
-                roost: s.repo.as_ref().map(|r| r.name.clone()),
-                branch: s.repo.as_ref().and_then(|r| r.branch.clone()),
+                    .filter(|p| p.session == s.key && crate::shows(s, p))
+                    .collect();
+                SessionView {
+                    id: s.key.session_id.clone(),
+                    agent: s.key.agent,
+                    agent_name: (s.key.agent == AgentKind::Other)
+                        .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
+                        .flatten(),
+                    project: s.project.clone(),
+                    cwd: s.cwd.clone(),
+                    status: s.status,
+                    rested: s.rest_since.map(|at| {
+                        self.now
+                            .is_some_and(|now| now.saturating_duration_since(at) >= crate::REST_AFTER)
+                    }),
+                    // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
+                    attention: match (s.status, s.watch.level) {
+                        (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
+                        (status, _) => status.attention(),
+                    },
+                    card: card == Some(&s.key),
+                    waiting: !pending.is_empty(),
+                    request: pending
+                        .iter()
+                        .find(|p| !p.skipped)
+                        .or_else(|| pending.first())
+                        .map(|p| p.request.0.clone()),
+                    skipped: !pending.is_empty() && pending.iter().all(|p| p.skipped),
+                    raise: raises(&s.terminal),
+                    muted: self.prefs(s).mute,
+                    pinned: self.prefs(s).pin,
+                    silent: s.watch.level.filter(|_| s.status == Status::Working),
+                    activity: s.activity,
+                    step: steps(self, s).pop(),
+                    steps: steps(self, s),
+                    diffs: diffs(s),
+                    changes: changes(self, s),
+                    touched: touched(s),
+                    step_at: s.step_at.iter().copied().collect(),
+                    step_count: s.step_count,
+                    subagents: s.subagents,
+                    cost_usd: s.cost_usd,
+                    elapsed_ms: s.elapsed_ms,
+                    context_percent: s.context_percent,
+                    note: s.note.clone(),
+                    editor: editor(&s.terminal),
+                    species: species[&s.key],
+                    bird_chosen: self
+                        .prefs(s)
+                        .species
+                        .as_deref()
+                        .and_then(crate::flock::chosen)
+                        .is_some(),
+                    roost_key: s.repo.as_ref().map(|r| r.key.clone()),
+                    roost: s.repo.as_ref().map(|r| r.name.clone()),
+                    branch: s.repo.as_ref().and_then(|r| r.branch.clone()),
+                }
             })
             .collect();
+        let boards = crate::board::view(self);
         ViewModel {
+            chat: crate::chat::view(&sessions, self.local_hour, self.lang),
+            inbox: crate::attention::view(self, &boards),
             attention: sessions
                 .iter()
                 .map(|s| s.attention)
                 .max()
                 .unwrap_or(Attention::Quiet),
             sessions,
-            approval: self.pending.front().map(|p| ApprovalView {
+            approval: self.active_card().map(|p| ApprovalView {
                 request: p.request.0.clone(),
                 agent: p.session.agent,
                 session: p.session.session_id.clone(),
@@ -404,7 +455,7 @@ impl State {
                     link: a.url.is_some(),
                 })
                 .collect(),
-            boards: crate::board::view(self),
+            boards,
             look: self.outfit.worn(self.today),
             focus: self.focus.as_ref().map(SessionRef::from),
             front: self.front().map(SessionRef::from),
@@ -610,6 +661,11 @@ pub(crate) mod ts {
             AlertLevel::decl(&cfg),
             Outfit::decl(&cfg),
             ViewModel::decl(&cfg),
+            crate::chat::ChatView::decl(&cfg),
+            crate::chat::ChatSuggestion::decl(&cfg),
+            crate::chat::ChatFollowup::decl(&cfg),
+            crate::AttentionItem::decl(&cfg),
+            crate::AttentionSource::decl(&cfg),
             SessionView::decl(&cfg),
             DiffSummary::decl(&cfg),
             ChangeView::decl(&cfg),

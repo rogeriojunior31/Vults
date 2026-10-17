@@ -12,7 +12,8 @@ export type Size = "mini" | "quick" | "room" | "full";
 export interface FlockPlace {
   query: string;
   onlyNeeds: boolean;
-  detail: "diff" | "activity" | "context" | "zeca";
+  detail: "session" | "diff" | "activity" | "context" | "zeca";
+  status?: "working" | "failed" | "quiet" | null;
   change?: { owner: string; step: number; focused: boolean } | null;
 }
 /** A side or corner of the Nest's window, as the compositor takes a resize from it. */
@@ -28,6 +29,9 @@ export type {
   BoardView,
   CardView,
   Checks,
+  ChatView,
+  ChatSuggestion,
+  ChatFollowup,
   Choice,
   Diff,
   DiffSummary,
@@ -316,7 +320,9 @@ export type OpenedConversation = {
   /** A turn runs: what Zeca said so far, and the cards it waits on. */
   busy: boolean;
   partial: string;
-  waiting: { id: string; tool: string; target: string; outside: string | null }[];
+  tools?: boolean;
+  activity?: ChatActivity;
+  waiting: { id: string; tool: string; target: string; outside: string | null; description?: string | null; full?: string | null; added?: number; removed?: number; always?: boolean }[];
   provider: ChatProvider;
   /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
   label: string;
@@ -328,7 +334,8 @@ export type OpenedConversation = {
 };
 
 /** What one of the chat's windows did, for the other to show too; each skips its own (`from`). */
-export type ChatDraft = { text: string; files: string[]; folder: string | null; provider: ChatProvider | null };
+export type ChatMention = { token: string; target: { kind: "session"; agent: string; id: string } | { kind: "project"; cwd: string } };
+export type ChatDraft = { text: string; files: string[]; folder: string | null; provider: ChatProvider | null; mentions?: ChatMention[] };
 export type ConnectionsPlace = {
   chosen: string | null;
   picked: string | null;
@@ -338,7 +345,7 @@ export type ConnectionsPlace = {
 };
 export type ChatSync =
   | { kind: "draft"; from: string; draft: ChatDraft }
-  | { kind: "sent"; from: string; text: string; files: string[]; provider: ChatProvider; folder: string | null; model: string | null; effort: string | null }
+  | { kind: "sent"; from: string; text: string; files: string[]; provider: ChatProvider; folder: string | null; model: string | null; effort: string | null; mentions?: ChatMention[] }
   | { kind: "reset"; from: string; provider: ChatProvider }
   | { kind: "opened"; from: string; conversation: OpenedConversation }
   | { kind: "answered"; from: string; id: string; answer: ChatAnswer };
@@ -349,8 +356,21 @@ export type ChatAnswer = "allow" | "deny" | "always";
 /** Who answers the chat's cards (ADR 0004): a card, the user's policies, or full access. */
 export type ChatAccess = "ask" | "policies" | "full";
 
+export type ChatActivityEvent =
+  | { type: "reasoning"; text: string }
+  | { type: "start"; id: string; tool: string; detail: string }
+  | { type: "end"; id: string; ok: boolean }
+  | { type: "decision"; tool: string; target: string; answer: string; by: string };
+export type ChatActivity = {
+  reasoning: string;
+  tools: { id: string; tool: string; detail: string; ok: boolean | null }[];
+  decisions: { tool: string; target: string; answer: string; by: string }[];
+  truncated: boolean;
+};
+
 export type ChatDelta =
   | { kind: "text"; text: string }
+  | { kind: "activity"; event: ChatActivityEvent }
   | {
       kind: "permission";
       id: string;
@@ -369,6 +389,7 @@ export type ChatDelta =
   /** The user's own choice for the chat answered with no card (ADR 0004). */
   | { kind: "settled"; tool: string; target: string; allow: boolean; by: "policy" | "full-access" }
   | { kind: "tool"; tool: string; outside: boolean }
+  | { kind: "toolstate"; active: boolean }
   | { kind: "done" }
   | { kind: "stopped" }
   | { kind: "error"; message: string };
@@ -407,6 +428,8 @@ export const Bridge = {
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
   questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),
   questionRelease: (request: string) => invoke<void>("question_release", { request }),
+  cardSkip: (request: string) => invoke<void>("card_skip", { request }),
+  cardReview: (request: string) => invoke<void>("card_review", { request }),
   rulesList: () => invoke<Rule[]>("rules_list"),
   policiesList: () => invoke<PolicyRow[]>("policies_list"),
   /** `replaces`: the policy being edited, revoked too when the text moves it to another folder. */
@@ -562,7 +585,7 @@ export const Bridge = {
   apiModelSet: (provider: string, model: string) => invoke<void>("api_model_set", { provider, model }),
   /** The chat's paperclip: the system's file chooser; picked files arrive as `files`, like a drop. */
   chatPickFiles: (title: string) => void invoke<void>("chat_pick_files", { title }),
-  chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
+  chatSend: (text: string, files: string[], folder: string | null, mentions: ChatMention[] = []) => invoke<void>("chat_send", { text, files, folder, mentions }),
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
@@ -677,9 +700,12 @@ export const Bridge = {
   onMedia(cb: (now: NowPlaying | null) => void): void {
     void listen<NowPlaying | null>("media", (e) => cb(e.payload));
   },
-  /** A fresh usage read: every few minutes, while a CLI answers. */
+  /** Subscribe before reading the cache; a late startup read cannot replace a live update. */
   onUsage(cb: (windows: UsageWindow[]) => void): void {
-    void listen<UsageWindow[]>("usage", (e) => cb(e.payload));
+    let updated = false;
+    void listen<UsageWindow[]>("usage", (e) => { updated = true; cb(e.payload); }).then(() =>
+      invoke<UsageWindow[]>("usage").then((windows) => { if (!updated) cb(windows); }, () => {}),
+    ).catch(() => {});
   },
   onPointer(cb: (inside: boolean) => void): void {
     void listen<boolean>("pointer", (e) => cb(e.payload));
@@ -712,5 +738,8 @@ export const Bridge = {
   },
   onOpenChat(cb: () => void): void {
     void listen("open-chat", () => cb());
+  },
+  onOpenNow(cb: () => void): void {
+    void listen("open-now", cb);
   },
 };

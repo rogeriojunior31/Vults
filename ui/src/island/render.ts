@@ -43,7 +43,8 @@ import { settingsQuick, weekQuick, type QuickPage, type QuickSettings } from "./
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { createNow, nowItems } from "./now";
+import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, skipButton, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
 export interface Actions {
@@ -54,6 +55,8 @@ export interface Actions {
   answer(request: string, answers: Answer[]): void;
   /** A question card goes back to the agent's terminal. */
   release(request: string): void;
+  skip(request: string): void;
+  reviewRequest(request: string): Promise<void>;
   /** The part of the window that takes the pointer; everything else passes through. */
   layout(x: number, y: number, width: number, height: number): void;
   openAlert(key: string): void;
@@ -119,7 +122,7 @@ export interface Actions {
 }
 
 /** Quick's short views (ADR 0021): this week, the gear's settings, and Connections with none on. */
-type QuickKind = "activity" | "settings" | "connections";
+type QuickKind = "activity" | "settings" | "connections" | "now";
 
 /** News rows shown at once; the rest are counted. */
 const MAX_ALERTS = 3;
@@ -222,6 +225,7 @@ function alertRow(a: AlertView, actions: Actions): HTMLElement {
 
 export interface Island {
   render(v: ViewModel): void;
+  openNow(): void;
   /** The view on screen, to re-render after a setting changes. */
   last(): ViewModel;
   /** Holds the island open (the lab, screenshots). */
@@ -439,7 +443,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** The card on screen right now (a permission takes its place while it waits). */
   let boardShown: string | null = null;
   /** The connector last opened: the Connections tab opens on it again. */
-  let lastBoard: string | null = null;
   const boardHost = el("div", { class: "board-host" });
   /** Quick's short view the user opened from its tab (ADR 0021), in place of the overview. */
   let quickOpen: QuickKind | null = null;
@@ -456,6 +459,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let quickFailed = false;
   let quickAsked = 0;
   const quickHost = el("div", { class: "quick-host" });
+  const nowPane = createNow({
+    relayout: () => render(raw),
+    request: (request, s) => { void actions.reviewRequest(request).then(() => toSession(s)); },
+    session: s => { toSession(s); },
+    connection: (connector, item) => actions.setSize?.("room", `connection:${encodeURIComponent(connector)}:${encodeURIComponent(item)}`),
+    alert: key => actions.openAlert(key),
+    chat: () => { quickOpen = null; chat.toggle(true); },
+    memory: () => actions.setSize?.("room", "memory"),
+    room: tab => actions.setSize?.("room", tab),
+  });
   /** The palette (Ctrl+K) holds the body until a choice or Esc. */
   let paletteOpen = false;
   const closePalette = () => {
@@ -840,7 +853,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const nowSecs = Date.now() / 1000;
     const live = usage.filter((w) => w.resets_at === null || w.resets_at > nowSecs);
     const boards = (last.boards ?? []).map((b) => [b.connector, unseen(b).length]);
-    return JSON.stringify([view, boardShown, quickShown, boards, order.filter(needsYou).length, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
+    return JSON.stringify([view, boardShown, quickShown, boards, last.inbox, seenSig(), order.filter(needsYou).length, cardWaits, media, live, Sound.isEnabled(), fsm.pinned && !held, zecaShown(), !!raw.dnd]);
   }
 
   const connectorName = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
@@ -889,7 +902,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (chat.isOpen()) chat.toggle(false);
     quickOpen = null;
     boardOpen = connector;
-    lastBoard = connector;
     Sound.play("tap");
     actions.opened();
     boardStatus = null;
@@ -924,23 +936,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       const b = tab(kind, glyph, label, () => openQuick(kind));
       if (cardWaits) b.disabled = true;
       return b;
-    };
-    // One tab for every connector, as the prototype has it: their rows counted, the last one opened
-    // first; with none on, a view that says so and leads to the Nest's Connections.
-    const connectionsTab = () => {
-      const boards = last.boards ?? [];
-      // Rows marked seen leave the count, as they leave Quick.
-      const count = boards.reduce((n, b) => n + unseen(b).length, 0);
-      const go = () => {
-        const next = boards.find((b) => b.connector === lastBoard) ?? boards[0];
-        if (next) openBoard(next.connector);
-        else openQuick("connections");
-      };
-      if (!cardWaits) return tab("connections", "plug", t("Connections"), go, count);
-      // Clicked now, it would open only once the permission is answered: say so instead.
-      const waiting = tab("connections", "plug", t("Connections opens once the permission is answered"), () => {}, count);
-      waiting.disabled = true;
-      return waiting;
     };
     // As the badges count it: settled, and not a state you already said OK to.
     const needs = order.filter(needsYou).length;
@@ -977,8 +972,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           ]
         : []),
       // Quick's short views (ADR 0021); a waiting card keeps the island, as for a connector's card.
-      quickTab("activity", "list", t("Activity")),
-      connectionsTab(),
+      (() => {
+        const b = tab("now", "list", t("Now"), () => openQuick("now"), nowItems(last, zecaShown()).filter(i => i.level === "needs-you" || i.level === "failed").length);
+        b.disabled = cardWaits;
+        return b;
+      })(),
       gear,
     );
     const soundOn = Sound.isEnabled();
@@ -1000,7 +998,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Ctrl+K waits for a card or a connector's card to be read: so does the button.
     if (cardWaits || boardOpen) search.disabled = true;
     // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
-    const nestTab = view === "settings" ? "flock" : view;
+    const nestTab = view === "settings" || view === "now" ? "flock" : view;
     const sizes = sizeSwitch(
       "quick",
       // From the gear's view, Room is Settings itself in the Nest.
@@ -1074,7 +1072,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const song = media?.playing && (!front || status === "idle") ? media : null;
     const paused = presenceNow() === "paused";
     const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? t("Agents ask in their terminals") : zecaShown() ? t("Nothing running") : t("Start an agent and it lands here");
-    const vults = compactScene.slots().filter((s) => s.key !== "zeca");
+    const vults = compactScene.slots();
     const name = song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running");
     const failed = shown.filter((s) => s.status === "failed" || s.attention === "failed").length;
     compact.setAttribute(
@@ -1104,7 +1102,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const byKey = new Map(shown.map((s) => [key(s), s]));
     badges.replaceChildren(
       ...vults.flatMap((slot) => {
-        const kind = badgeOf(byKey.get(slot.key));
+        const kind = badgeOf(slot.key === "zeca" ? front ?? undefined : byKey.get(slot.key));
         if (!kind) return [];
         const b = el("span", { class: `badge ${kind}` });
         b.style.left = `${slot.x + slot.width - 4}px`;
@@ -1136,11 +1134,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A view sets what he wears today (island.ts); the picker's preview wins while it is open.
     if (looksOpen) wear(lookPreview);
     const v = drawn(view);
+    const skipFocused = root.contains(document.activeElement) && document.activeElement?.classList.contains("card-skip");
     // The click holds until core's focus names it: a view sent before core took the click must
     // not swing the front back for a moment.
     if (picked && v.focus && `${v.focus.agent}:${v.focus.id}` === picked) picked = null;
     if (v !== last) cues(v);
     const prev = last;
+    if (prev?.approval?.request !== v.approval?.request) actedLast = null;
     last = v;
     const now = Clock.now();
     const byKey = new Map(v.sessions.map((s) => [key(s), s]));
@@ -1234,6 +1234,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     fsm.setEngaged(chat.isOpen(), now);
     const mode: Mode = fsm.mode;
 
+    chat.setSessions(v.sessions);
+    chat.setOffers(v.chat ?? null);
     chat.setFolders(
       shown.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : [])),
       front?.cwd ?? null,
@@ -1246,7 +1248,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Connections with none answered yet: the first board to come takes the view's place.
     if (quickOpen === "connections" && (v.boards ?? []).length) {
       quickOpen = null;
-      boardOpen = lastBoard = v.boards![0].connector;
+      boardOpen = v.boards![0].connector;
       boardStatus = null;
       askStatus(boardOpen);
     }
@@ -1309,7 +1311,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         headerShown = shows;
         headerSlot.replaceChildren(header());
       }
-      paintNeeds(chatShown || board || quick ? shown : [], topNeeds);
+      paintNeeds(quick !== "now" && (chatShown || board || quick) ? shown : [], topNeeds);
       if (chatShown) {
         perch.className = "perch chatting";
         if (perch.parentElement !== chat.perchSlot) chat.perchSlot.append(perch);
@@ -1358,6 +1360,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           );
         }
         show(boardHost);
+      } else if (quick === "now") {
+        nowPane.update(v, zecaShown());
+        show(nowPane.element);
       } else if (paletteOpen) {
         show(paletteHost);
       } else if (quick) {
@@ -1457,6 +1462,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     root.classList.toggle("is-open", mode === "open");
     root.classList.toggle("is-hidden", mode === "hidden");
     reshape(mode);
+    if (skipFocused) (mode === "compact" ? compact : atRest ? habitat.querySelector<HTMLElement>(".habitat-bird")
+      : card?.querySelector<HTMLElement>(".card-skip, button"))?.focus({ preventScroll: true });
   }
 
   function placeSky(): void {
@@ -1514,6 +1521,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
    * the chat out of the page and back, on every render, would blur its input after each key.
    */
   function show(part: HTMLElement): void {
+    main.classList.toggle("with-now", part === nowPane.element);
     if (main.childElementCount !== 1 || main.firstElementChild !== part) main.replaceChildren(part);
   }
 
@@ -1588,14 +1596,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   function paintNeeds(sessions: SessionView[], strip = needStrip): void {
     // What a look would answer: a question or a card, a failure, a bird gone quiet for too long.
-    const wanting = sessions.filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud");
+    const wanting = sessions.filter((s) => !s.skipped && (needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud"));
     strip.hidden = !wanting.length;
     const tags = wanting.map((s) => {
       const failed = s.status === "failed" || s.attention === "failed";
       const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
       b.title = [s.project || agentName(s), statusText(s)].join(" · ");
-      return b;
+      return el("span", { class: "need-chip" }, b,
+        s.request ? skipButton(s.request, skipCard, t("Skip {project} for now", { project: s.project || agentName(s) })) : null);
     });
+    const requests = wanting.flatMap(s => s.request ? [s.request] : []);
+    if (requests.length > 1) tags.push(el("button", { class: "needs-skip-all", text: t("Skip all"), onclick: () => requests.forEach(skipCard) }));
     strip.replaceChildren(...(strip === topNeeds ? [el("div", { class: "need-tags" }, ...tags)] : tags));
   }
 
@@ -1758,6 +1769,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       presenceNow(),
       zecaShown(),
       s?.waiting,
+      s?.skipped,
       s?.raise,
       s?.silent,
       menu || activity ? [s?.steps, s?.diffs, focusKey(), editorFound] : null,
@@ -1813,19 +1825,29 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     expiryTimer = window.setTimeout(tickExpiry, on ? 1000 : Math.max(1000, left - EXPIRY_SHOWN_MS));
   }
 
-  /** The card last answered here: until the next view takes it away, a second click or key on it
-   *  would only sound again (core ignores it). */
-  let answeredLast: string | null = null;
+  /** Ignore stale controls until core replaces the card after an answer or Skip. */
+  let actedLast: string | null = null;
   /** A click or a shortcut answered the card on screen: it sounds now; what became of it comes
    *  from core with the next view. False when that card was already answered. */
   function answered(request: string, how: "allow" | "deny" | "answered" | "released"): boolean {
-    if (request === answeredLast) return false;
-    answeredLast = request;
+    if (request === actedLast) return false;
+    actedLast = request;
     if (how !== "released") Sound.play(how === "answered" ? "allow" : how);
     return true;
   }
 
+  function skipCard(request: string): void {
+    if (cardOnScreen?.request === request) {
+      actedLast = request;
+      cardOnScreen = null;
+      cardActions.keyboard(false);
+    }
+    actions.skip(request);
+  }
+
   const cardActions = {
+    skip: skipCard,
+    review: (s: SessionView) => toSession(s),
     get keys() {
       return keys;
     },
@@ -2198,6 +2220,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   const setUsage = (windows: UsageWindow[]) => {
     usage = windows;
+    chat.setUsage(windows);
     render(raw);
   };
   const setVisitors = (on: boolean) => sky.setVisitors(on);
@@ -2222,7 +2245,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   return {
-    render, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, settingsChanged: quickSettingsChanged, greet, chat, pointer, away, setMedia, setUsage,
+    render, openNow: () => { fsm.open(Clock.now()); openQuick("now"); }, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, settingsChanged: quickSettingsChanged, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,
   };

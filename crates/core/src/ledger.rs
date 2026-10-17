@@ -330,6 +330,7 @@ mod tests {
             cwd: None,
             since: Instant::now(),
             reminders: 0,
+            skipped: false,
         }
     }
 

@@ -64,6 +64,16 @@ pub(crate) async fn turn(
             let content = (!reply.text.is_empty()).then(|| reply.text.clone());
             messages.push(json!({ "role": "assistant", "content": content, "tool_calls": calls }));
             for c in &reply.calls {
+                let _ = out.send(Delta::ToolState { active: true }).await;
+                let _ = out
+                    .send(Delta::Activity {
+                        event: crate::activity::Event::Start {
+                            id: c.id.clone(),
+                            tool: c.name.clone(),
+                            detail: c.arguments.clone(),
+                        },
+                    })
+                    .await;
                 let _ = out.send(Delta::Tool { tool: c.name.clone() }).await;
                 let args = if c.arguments.trim().is_empty() {
                     "{}"
@@ -71,16 +81,25 @@ pub(crate) async fn turn(
                     &c.arguments
                 };
                 // Arguments that don't read as JSON: the tool is not run with ones it wasn't sent.
-                let text = match serde_json::from_str::<Value>(args) {
+                let (text, error) = match serde_json::from_str::<Value>(args) {
                     Ok(input) => {
                         let (text, error) = tools::run(tools, &c.name, &input).await;
                         if !error && tools::outside(tools, &c.name) {
                             crate::taint(outside, c.name.clone());
                         }
-                        text
+                        (text, error)
                     }
-                    Err(_) => "The arguments were not valid JSON.".to_string(),
+                    Err(_) => ("The arguments were not valid JSON.".to_string(), true),
                 };
+                let _ = out
+                    .send(Delta::Activity {
+                        event: crate::activity::Event::End {
+                            id: c.id.clone(),
+                            ok: !error,
+                        },
+                    })
+                    .await;
+                let _ = out.send(Delta::ToolState { active: false }).await;
                 messages.push(json!({ "role": "tool", "tool_call_id": c.id, "content": text }));
             }
             continue;
@@ -783,7 +802,7 @@ mod tests {
         ]);
         let (provider, seen) =
             crate::mock::scripted("openrouter", vec![call("c1", "one"), call("c2", "two"), answer]).await;
-        let (tx, _rx) = mpsc::channel(32);
+        let (tx, mut rx) = mpsc::channel(32);
         let mut history = Vec::new();
         turn(
             &provider,
@@ -800,6 +819,13 @@ mod tests {
         )
         .await
         .unwrap();
+        let mut phases = Vec::new();
+        while let Ok(delta) = rx.try_recv() {
+            if let Delta::ToolState { active } = delta {
+                phases.push(active);
+            }
+        }
+        assert_eq!(phases, [true, false, true, false]);
         let bodies = seen.lock().unwrap().clone();
         assert_eq!(bodies.len(), 3);
         assert_eq!(bodies[0]["tools"][0]["function"]["name"], "echo");

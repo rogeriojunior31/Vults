@@ -91,6 +91,11 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
+      export { setDayPart } from ${source("island/daypart.ts")};
+      export { setMusic, emoteFor } from ${source("island/behavior.ts")};
+      export { badgeOf } from ${source("island/views.ts")};
+      export { createNow } from ${source("island/now.ts")};
+      export { focusCard, questionBody } from ${source("island/views.ts")};
       export { applyTheme } from ${source("theme.ts")};
       export { sidePanel } from ${source("surfaces/nest/panels.ts")};
       export { createWeek } from ${source("surfaces/nest/week.ts")};
@@ -107,7 +112,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -129,7 +134,7 @@ for (const width of [480, 760, 900, 1180]) {
       boards: [{ connector: "github", rows: [row] }] };
     const originalView = structuredClone(view), actions = [], voiceCalls = [];
     let draft = { text: "Unsent", files: ["/inbox/note.txt"], folder: "/work/alpha", provider: "codex" };
-    let place = "audit", flockPlace = { query: "Alpha", onlyNeeds: true, detail: "context", change: null };
+    let place = "audit", flockPlace = { query: "Alpha", onlyNeeds: true, status: null, detail: "context", change: null };
     let connectionPlace = { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 };
     const queries = { history: "History query", audit: "Audit query", projects: "Project query" };
     const current = { provider: "codex", label: "Codex", folder: "/work/alpha", started: true, model: "gpt", effort: "high", lines: [], busy: true, partial: "", waiting: [] };
@@ -206,6 +211,7 @@ for (const width of [480, 760, 900, 1180]) {
     nest.open("chat"); nest.chat.draft("More context");
     const character = nest.chat.perchSlot.querySelector(".chat-character");
     const canvas = character.querySelector("canvas");
+    assert.equal(canvas.isConnected, true, "The chat's companion remains mounted outside the scrolling messages");
     const portrait = scenes.get(canvas);
     assert.ok(portrait, "Room uses the production animated scene in the chat's own perch");
     assert.equal(active.get(canvas), true);
@@ -214,6 +220,7 @@ for (const width of [480, 760, 900, 1180]) {
     character.fire("click");
     assert.equal(portrait.playing("zeca"), "think", "Greeting never replaces an active reply");
     nest.chat.load({ ...current, busy: false });
+    assert.equal(canvas.isConnected, true, "Replacing restored messages keeps the same companion attached");
     Clock.freeze(Clock.now() + 1000);
     document.body.classList.add("still");
     character.fire("click");
@@ -221,6 +228,8 @@ for (const width of [480, 760, 900, 1180]) {
     document.body.classList.remove("still");
     character.fire("click");
     assert.equal(portrait.playing("zeca"), "hello");
+    nest.chat.element.querySelector("textarea").fire("input");
+    assert.equal(portrait.playing("zeca"), "listen", "Typing cuts a cosmetic greeting at once");
     nest.chat.receive({ kind: "permission", id: "portrait-card", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
     character.fire("click");
     assert.equal(portrait.playing("zeca"), "question", "A waiting card outranks a cosmetic reaction");
@@ -317,7 +326,7 @@ for (const width of [480, 760, 900, 1180]) {
     assert.deepEqual(draft, expectedDraft); assert.equal(place, "audit");
     await mount(true); hiddenIsland();
     assert.equal(nest.current(), "audit");
-    assert.deepEqual(flockPlace, { query: "Alpha", onlyNeeds: true, detail: "context", change: null });
+    assert.deepEqual(flockPlace, { query: "Alpha", onlyNeeds: true, status: null, detail: "context", change: null });
     assert.deepEqual(queries, { history: "History query", audit: "Audit query", projects: "Project query" });
     // Minimize, deliver a pending card to the island, then restore without answering it.
     visibility(true); fsm.setNestHolds(false); fsm.setNestOpen(false); machine.openPinned();
@@ -627,3 +636,155 @@ assert.equal(themedScene.colors, null); assert.equal(themedSky.colors, null);
 assert.ok(!paintedThemes.includes(themedScene.canvas) && !paintedThemes.includes(themedSky.canvas), "Hidden canvases invalidate without starting animation");
 Scene.prototype.draw = scenePaint; Sky.prototype.draw = skyPaint;
 console.log("check-surface-continuity: shared theme events win over late startup reads");
+
+const cardEvents = [];
+const cardActions = { keys: {}, skip: id => cardEvents.push(["skip", id]), review: s => cardEvents.push(["review", s.id]),
+  decide: (...args) => cardEvents.push(["decide", ...args]), decideAlways: id => cardEvents.push(["always", id]),
+  answer: (...args) => cardEvents.push(["answer", ...args]), release: id => cardEvents.push(["release", id]),
+  keyboard: on => cardEvents.push(["keyboard", on]), relayout() {}, jump() {}, dismiss() {}, hush() {}, openChat() {} };
+const skipSession = { id: "skip-test", agent: "codex", project: "Alpha", cwd: "/work/alpha", status: "approval", attention: "needs-you", card: true,
+  activity: null, step: null, steps: [], step_count: 0, subagents: 0, waiting: true };
+const skipApproval = { agent: "codex", session: "skip-test", request: "skip-permission", tool: "Bash", target: "git status", questions: [], queue: 1 };
+const permissionCard = focusCard(skipSession, skipApproval, { sync() {} }, new Element("aside"), cardActions, false);
+const oldAllow = permissionCard.querySelectorAll("button").find(b => b.textContent === "Allow");
+permissionCard.querySelector(".card-skip").click(); oldAllow.click();
+assert.deepEqual(cardEvents, [["skip", "skip-permission"]], "Quick Skip cannot fall through to an old Allow control");
+const skippedCard = focusCard({ ...skipSession, skipped: true }, null, { sync() {} }, new Element("aside"), cardActions, false);
+skippedCard.querySelectorAll("button").find(b => b.textContent === "Show the card").click();
+assert.deepEqual(cardEvents.at(-1), ["review", "skip-test"]);
+const questionApproval = { ...skipApproval, request: "skip-question", questions: [{ question: "Choose a label", options: [{ label: "A", description: "" }], multi: false }] };
+const questionHost = new Element("main"); questionHost.append(...questionBody({ ...skipSession, status: "question" }, questionApproval, cardActions));
+questionHost.querySelectorAll("button").find(b => b.textContent === "Other…").click();
+const answerDraft = questionHost.querySelector(".other-input"); answerDraft.value = "unfinished answer"; answerDraft.oninput();
+questionHost.querySelector(".card-skip").click();
+assert.deepEqual(cardEvents.at(-1), ["skip", "skip-question"]);
+assert.ok(!cardEvents.some(([name]) => ["answer", "release", "decide", "always"].includes(name)));
+questionHost.replaceChildren(...questionBody({ ...skipSession, status: "question" }, questionApproval, cardActions));
+assert.equal(questionHost.querySelector(".other-input").value, "unfinished answer", "Skipping preserves the question draft");
+questionHost.querySelectorAll("button").find(b => b.textContent === "Send").click();
+assert.deepEqual(cardEvents.at(-1), ["answer", "skip-question", ["unfinished answer"]]);
+console.log("check-surface-continuity: Quick Skip blocks stale Allow, retains question drafts and resumes only through an explicit action");
+
+const nowEvents = [];
+const nowUI = createNow({ request: (...args) => nowEvents.push(['request', args[0]]), session: s => nowEvents.push(['session', s.id]),
+  relayout() {},
+  connection: (...args) => nowEvents.push(['connection', ...args]), alert: key => nowEvents.push(['alert', key]),
+  chat: () => nowEvents.push(['chat']), memory: () => nowEvents.push(['memory']), room: tab => nowEvents.push(['room', tab]) });
+const attentionSession = { ...skipSession, id: 'now-session', skipped: true };
+const reviewRow = { ...row, item: 'now-review', group: 'to-review', checks: null, review: null, merge: false };
+const failedRow = { ...row, item: 'now-failed', group: 'yours', checks: 'failing', review: null, merge: false };
+const nowView = { sessions: [attentionSession], approval: null, alerts: [], boards: [{ connector: 'github', rows: [reviewRow, failedRow] }], inbox: [
+  ...['offer-one', 'offer-two'].map(request => ({ level: 'needs-you', source: { kind: 'request', request, session: { agent: attentionSession.agent, id: attentionSession.id }, tool: 'Bash', target: request, description: null, question: false, skipped: true } })),
+  { level: 'failed', source: { kind: 'connection', connector: 'github', item: failedRow.item } },
+  { level: 'info', source: { kind: 'connection', connector: 'github', item: reviewRow.item } },
+  { level: 'needs-you', source: { kind: 'chat', count: 2 } }, { level: 'info', source: { kind: 'memory', count: 1 } },
+] };
+document.body.replaceChildren(nowUI.element);
+nowUI.update(nowView, true);
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 6);
+assert.deepEqual(nowEvents, [], 'Drawing the inbox has no effects');
+const nowAt = id => nowUI.element.querySelector(`[data-now="${id}"]`);
+nowAt('request:offer-two').click();
+assert.deepEqual(nowEvents, [['request', 'offer-two']], 'Each offer opens by its own id, including deferred offers of one session');
+const focusNow = nowAt('request:offer-one'); focusNow.focus();
+nowUI.element.querySelector('.now-feed').scrollTop = 91;
+nowUI.update({ ...nowView, sessions: [{ ...attentionSession, step: 'updated metadata' }] }, true);
+assert.equal(document.activeElement.dataset.now, 'request:offer-one');
+assert.equal(nowUI.element.querySelector('.now-feed').scrollTop, 91);
+nowAt('connection:github:now-failed').click(); nowAt('chat').click(); nowAt('memory').click();
+assert.deepEqual(nowEvents.slice(1), [['connection', 'github', 'now-failed'], ['chat'], ['memory']]);
+nowAt('seen-all').focus(); nowAt('seen-all').click();
+assert.equal(document.activeElement.dataset.now, 'request:offer-one', 'Seen hands keyboard focus to a remaining item');
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 5, 'Seen only removes quiet connection news; failures and cards stay');
+assert.ok(nowAt('connection:github:now-failed')); assert.ok(nowAt('request:offer-one'));
+assert.equal(nowEvents.length, 4, 'Marking seen sends no backend action');
+nowUI.update(nowView, false);
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 3, 'Zeca off removes only his Chat and Memory items');
+nowUI.update({ ...nowView, inbox: [{ level: 'info', source: { kind: 'memory', count: null } }] }, true);
+assert.ok(nowUI.element.textContent.includes('Could not read memory proposals.'));
+nowUI.update({ ...nowView, inbox: [] }, true);
+assert.ok(nowUI.element.textContent.includes('Nothing needs your attention'));
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 0, 'The renderer never reconstructs a competing inbox from sessions or boards');
+assert.equal(nowEvents.length, 4);
+connectionUI.update(connectionView);
+connectionUI.select('github', mergeRow.item);
+assert.equal(cSearch.value, '', 'A Now link reveals its item despite an old search');
+assert.equal(storage.get('vults.connections-query'), '', 'The revealed connection stays visible when reopened');
+assert.ok(connectionUI.element.querySelector('.conn-detail').textContent.includes(mergeRow.title), 'A Now link opens the exact selected detail');
+assert.ok(!connectionEffects.includes('merge'), 'Opening connection detail never merges');
+console.log('check-surface-continuity: Now uses the shared inbox, opens exact deferred offers, retains focus/scroll, separates Seen from decisions and routes connection detail');
+
+// The renderer consumes the core's rest stage, including on a late mount.
+const restSession = { ...skipSession, id: 'rest-clock', status: 'idle', attention: 'quiet', waiting: false, card: false, rested: false, species: 'atratus' };
+assert.equal(badgeOf(restSession), 'finished');
+assert.equal(badgeOf({ ...restSession, rested: true }), undefined);
+assert.equal(badgeOf({ ...restSession, status: 'approval', rested: null }), 'approval');
+assert.equal(badgeOf({ ...restSession, rested: null }), undefined, 'Dismissing a failure cannot invent a successful rest');
+assert.equal(emoteFor({ ...restSession, status: 'finished', rested: false }), 'done');
+assert.equal(emoteFor(restSession), 'done');
+assert.equal(emoteFor({ ...restSession, status: 'finished', rested: true }), null);
+const skyContext = new Proxy({}, { get: () => () => {} });
+function restSky() {
+  const sky = new Sky(() => {});
+  sky.ctx = skyContext; sky.colors = {};
+  sky.cache = () => ({ drawShot() {} });
+  sky.setVisitors(false);
+  sky.place(new Map([['codex:rest-clock', { x: 120, y: 30, scale: 1 }]]), { left: 0, top: 0, width: 340, height: 38, radius: 14 });
+  return sky;
+}
+setDayPart('day'); setMusic(false); Clock.freeze(0);
+const restingSky = restSky();
+restingSky.update([restSession], true);
+Clock.freeze(60_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'A local clock cannot advance a recent core state');
+const readyRest = { ...restSession, rested: true };
+restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+const reopenedSky = restSky(); reopenedSky.update([readyRest], true);
+assert.equal(reopenedSky.owns('codex:rest-clock'), true, 'Mounting a new renderer cannot restart the core rest');
+restingSky.call('codex:rest-clock');
+Clock.freeze(65_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false);
+Clock.freeze(89_999); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'Calling a bird down keeps a local visual rest');
+Clock.freeze(90_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+restingSky.update([{ ...readyRest, status: 'approval', attention: 'needs-you', rested: null }], true);
+Clock.freeze(92_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'A permission lands the bird without answering it');
+setDayPart('night'); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), false);
+setDayPart('day'); setMusic(true); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'Music keeps idle courtship on the wire');
+setMusic(false); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+restingSky.motion = { matches: true }; restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'Reduced motion keeps the bird perched');
+restingSky.motion = { matches: false }; document.body.classList.add('still'); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false);
+document.body.classList.remove('still'); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+let restFrames = 0; const restTimeout = window.setTimeout; window.setTimeout = () => { restFrames++; return 0; };
+restingSky.update([readyRest], false);
+assert.equal(restFrames, 0, 'A hidden sky schedules no animation');
+window.setTimeout = restTimeout; setDayPart('day'); setMusic(false); Clock.freeze(null);
+console.log('check-surface-continuity: core-owned rest, recent green mark, immediate late mount, call-down, urgent landing, music/night, reduced motion and hidden sky');
+
+// Reduced motion still draws each state, without a repeating frame timer or advancing emotes.
+{
+  const media=window.matchMedia, timeout=window.setTimeout;
+  let reduce=true, scheduled=0;const listeners=[];
+  window.matchMedia=query=>query.includes('prefers-reduced-motion')?{get matches(){return reduce;},addEventListener:(_event,fn)=>listeners.push(fn)}:media(query);
+  window.setTimeout=()=>{scheduled++;return 0;};
+  const scene=new Scene({width:114,height:108,wire:100,zeca:{x:21,wire:100,scale:3},vults:{max:0,scale:1,at:()=>({x:0,wire:100})},skyTop:0,flights:false,reflow:false,emotes:false});
+  scene.colors={wire:'#000',claude:'#000'};
+  const frames=[];scene.cache=()=>({drawShot:(_ctx,shot)=>frames.push(JSON.stringify(shot.frame))});
+  scene.update([],null,{clip:'speak',agent:'claude'});scheduled=0;scene.draw();assert.equal(scheduled,0);
+  Clock.freeze(Clock.now()+1000);scene.draw();assert.equal(frames[0],frames[1],'Repeated paused redraws keep the same pose');
+  scene.update([],null,{clip:'question',agent:'claude'});scheduled=0;scene.draw();assert.equal(scene.playing('zeca'),'question');assert.equal(scheduled,0,'A waiting card updates its static pose without a frame loop');
+  reduce=false;listeners.forEach(fn=>fn());assert.ok(scheduled>0,'Restoring motion refreshes the active scene');scheduled=0;scene.draw();assert.ok(scheduled>0);
+  document.body.classList.add('still');scheduled=0;scene.draw();assert.equal(scheduled,0,'Manual still mode also stops the frame loop');document.body.classList.remove('still');
+  scene.setActive(false);scheduled=0;listeners.forEach(fn=>fn());assert.equal(scheduled,0,'A media change never wakes a hidden scene');
+  window.matchMedia=media;window.setTimeout=timeout;Clock.freeze(null);
+}
+console.log('check-surface-continuity: static state poses under reduced motion/manual pause, no repeating timer, live preference resume and no hidden wake');

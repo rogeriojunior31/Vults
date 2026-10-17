@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: ed217dc067bf -->
+<!-- source: 5741823445ff -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -12,7 +12,7 @@ longas e opções de motor, modelo e esforço que quebram linha. Uma conversa in
 seu modelo fixado dentro do menu, sem uma dica flutuante cobrindo as opções.
 O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos após o zoom).
 O chat vazio no Quick fica baixo: o Zeca usa seu retrato original em 3x ao lado de
-**Perguntar ao Zeca**, com o rascunho e os controles logo abaixo. O título some e o retrato
+uma saudação, com o rascunho e os controles logo abaixo. O título some e o retrato
 passa para 2x quando chegam mensagens. A superfície cresce com o conteúdo real da conversa
 até atingir a altura disponível da ilha; então só a conversa rola. Começar uma conversa
 vazia libera a altura anterior. Abrir, carregar e fechar o menu de motor não muda essa altura:
@@ -35,8 +35,29 @@ Só um seletor fica aberto por vez. **↑/↓** no botão abre a lista e foca um
 **Esc** devolve o foco ao botão. Clicar fora fecha a lista. O carregamento dos modelos mantém
 na opção o foco, e as atualizações preservam um título de conversa ainda em edição.
 
-Numa conversa CLI vazia no Room, os cartões de perguntas preenchem o rascunho e focam o campo.
-Edite antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
+O Chat vazio saúda você pelo horário local do desktop: bom dia a partir das 05:00, boa
+tarde a partir das 12:00 e boa noite das 18:00 às 04:59. O texto de apoio prioriza uma sessão
+esperando resposta, depois uma falha, depois trabalho ativo ou um bando tranquilo. No Room
+e no Full, os cartões de perguntas seguem essas mesmas regras. Uma pergunta sobre sessão
+inclui sua referência **@** exata; mantém seu texto, arquivos e pasta de execução.
+Edite o rascunho antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
+
+Sob a última resposta concluída, **Explique de forma mais simples** e **O que devo verificar
+agora?** acrescentam uma pergunta ao rascunho editável. **Abrir Flock** aparece quando há
+sessões e abre o Flock existente, salvando esse rascunho. Esses controles também aparecem
+no Quick; somem durante um turno ou quando o último resultado falhou ou foi interrompido.
+As saudações e sugestões usam regras locais, sem chamada ao modelo, fala, notificação ou
+resposta a uma permissão. Com o Zeca desligado, elas não abrem o Chat.
+
+O Zeca escuta brevemente enquanto você digita, pensa enquanto espera pelo modelo ou pela
+transcrição de voz e busca enquanto uma ferramenta informada está em execução. Quando
+chega texto novo na resposta, ele move o bico e se acomoda após uma pausa curta; se o fluxo
+fica quieto, volta a pensar até o turno terminar. É uma reação visual, sem áudio de fala.
+Abrir respostas salvas ou restaurar um rascunho não a reproduz. Toda permissão pendente
+do Chat mantém a pose de pergunta, mesmo quando chegam arquivos ou outra ferramenta
+informa progresso. O movimento reduzido mostra uma pose estática para o estado atual;
+os companheiros escondidos param de desenhar.
+
 No Quick, o compositor começa com uma linha de escrita e cresce conforme você digita, até o limite de altura.
 O clipe, o microfone opcional e Enviar ficam ao lado do rascunho; o clipe mantém o nome acessível
 e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própria acima dele. Suas mensagens ficam em balões à direita;
@@ -67,6 +88,18 @@ um); o Codex lista os modelos que o seu próprio `codex` oferece, perguntados na
 abre o seletor com o Codex. O esforço vai de **Low** a **Max**, só com os que o modelo escolhido
 aceita. **Default** deixa cada um para a CLI, como as suas configurações definem.
 
+No Quick e no Nest, um anel e a porcentagem ao lado do modelo mostram a janela ativa mais
+cheia do plano da CLI selecionada. **0%** é um zero informado; janelas ausentes ou expiradas
+ficam sem indicador. **Atenção** começa em 70%, e **Perto do limite** em 90%. Passe o mouse no
+controle para ver cada janela informada e seu horário de renovação, quando conhecido. O nome
+acessível do controle inclui o uso e o estado. As janelas somem no horário de renovação sem
+esperar outra leitura.
+
+Isso reaproveita as leituras existentes da linha de status do Claude Code e as leituras
+opcionais do plano do Codex nas configurações; abrir o Chat não adiciona consultas ao provedor.
+O chat por API não tem indicador de assinatura. As atualizações de uso mantêm o rascunho,
+os arquivos, a posição de leitura e o menu de modelo aberto.
+
 Se uma CLI não conseguir listar os modelos, o seletor mostra uma explicação e
 mantém seu rascunho e sua escolha de modelo. Feche e reabra o seletor para tentar
 de novo; digitar ou atualizar o chat não repete continuamente a consulta que falhou.
@@ -74,6 +107,32 @@ de novo; digitar ou atualizar o chat não repete continuamente a consulta que fa
 A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
 pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
 **New** começa outra. O modelo do chat por API é escolhido em **Settings → Chat & voice**.
+
+<a id="referencing-the-flock"></a>
+
+## Mencionando o bando
+
+Digite **@** no rascunho para encontrar uma sessão ou projeto aberto. Busque pelo projeto,
+agente, pasta ou ID da sessão. **↑/↓** percorrem as sugestões; **Enter**, **Tab** ou um clique
+inserem a referência escolhida. O foco continua no rascunho, e escolher nunca envia uma
+mensagem. **Esc** fecha as sugestões. Uma referência aparece como `@"Sessão: Codex · site"`
+ou `@"Projeto: site"`; nomes repetidos mostram a pasta completa ou o ID da sessão. Você pode
+selecionar até oito referências, incluindo várias sessões numa mensagem.
+
+Uma referência de sessão seleciona aquele agente e ID exatos. Uma referência de projeto
+seleciona as sessões do bando naquela pasta exata, incluindo seus diferentes agentes.
+Ao enviar, o contexto do bando e as ferramentas que o consultam leem somente essas seleções
+naquele turno. Isso funciona nos motores CLI e API. As referências não mudam a pasta de
+trabalho da conversa nem respondem aos cards, e as mensagens anteriores continuam na
+conversa. Sem referências, o contexto habitual do bando continua igual.
+
+As referências acompanham o rascunho ainda não enviado entre Quick e Nest, junto com os
+anexos. Remova a referência inteira entre aspas para deixar de incluí-la. Se editar, colar
+ou recuperar uma referência sem sua seleção, escolha-a novamente nas sugestões de **@**.
+Se uma sessão ou projeto mencionado tiver saído do bando, o Vults pede para remover a
+referência e escolher novamente antes de iniciar um turno, mantendo o rascunho e os anexos
+editáveis. Uma conversa salva mantém o texto legível da referência; selecione-a novamente se
+trouxer esse texto para um novo rascunho.
 
 <a id="the-nest"></a>
 
@@ -86,6 +145,16 @@ enviar, começar ou abrir outra conversa, ou sair do Vults.
 A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
 ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
+
+O Chat vazio no Nest centraliza o retrato original do Zeca em 3x acima de **Perguntar ao Zeca**
+e de uma lista vertical de sugestões. Quando chegam mensagens, a mesma cena usa um poleiro
+menor em 2x acima do compositor. Seu espaço próprio mantém as mensagens livres da ave
+durante toda a rolagem. O cabeçalho baixo, o espaçamento menor entre mensagens e o rascunho
+inicial de uma linha deixam mais espaço para leitura; o campo cresce conforme você digita.
+Conversa e compositor compartilham uma coluna de até 760 px de largura. Os anexos ficam numa
+faixa horizontal com altura limitada, com nomes longos legíveis dentro de cada cartão.
+Janelas baixas limitam o campo de escrita e omitem a dica de teclado; com até 560 px de altura,
+também recolhem o retrato e usam controles menores no compositor.
 
 O Zeca fica no poleiro enquanto a conversa rola. Passe o mouse nele para chamar sua atenção, ou
 clique em **Cumprimentar o Zeca** para ele acenar enquanto está ocioso. Pensamento, voz, perguntas
@@ -191,6 +260,36 @@ Tudo acontece neste computador: o whisper.cpp transcreve o áudio na memória, e
 nem enviado para lugar nenhum. Os modelos e o detector são conferidos contra o SHA-256 conhecido
 deles antes de serem usados.
 
+<a id="reading-a-turn"></a>
+## Lendo um turno
+
+![Uma aprovação pendente com seu comando e ações no Ninho mínimo](../../assets/nest-chat-approval.png)
+
+A resposta fica separada de uma seção **Atividade** recolhida. Abra para ver o pensamento
+legível fornecido pelo motor e as ferramentas que ele informou. Cada ferramenta mostra seus
+argumentos ou comando e a conclusão ou falha informada. Resultados ausentes ficam como **Nenhum
+resultado informado**; o Vults não inventa pensamento nem trata a duração do turno como tempo
+medido de pensamento. O Codex mostra seus resumos públicos de raciocínio; motores que não fornecem
+detalhes informam isso.
+
+Somente uma aprovação pendente fica expandida por vez. **Revisar aprovação** volta àquela
+solicitação exata; Anterior/Próxima seleciona outra sem responder. Cartões novos entram subindo
+com uma transição curta, desativada com movimento reduzido. Cartões respondidos viram registros
+recolhidos com o escopo disponível nos detalhes. O fim do turno expira os cartões sem resposta como
+**Cancelado**. Ler mensagens anteriores preserva sua rolagem; o controle de revisão continua
+acessível acima da conversa.
+
+A atividade é salva localmente com a conversa, com segredos reconhecidos ocultados, tamanho de detalhes limitado e aviso explícito
+quando reduzida. Reabrir mostra apenas o histórico: nunca repete um comando ou resposta de permissão.
+Solicitações em andamento mantêm seus detalhes completos ao alternar entre Quick e Ninho.
+
+**Permissões** ao lado da fila abre **Configurações → Chat e voz**. **Pergunta antes** pede
+aprovação para cada comando ou edição. Para reduzir repetições, escolha suas políticas aceitas ali;
+chamadas não cobertas e ações destrutivas continuam perguntando. **Sempre neste chat** cobre apenas
+a mesma chamada exata elegível até a conversa acabar. O Zeca recebe a orientação de preferir ferramentas
+de leitura e busca para inspeções simples e evitar chamadas desnecessárias em conversas comuns. Essa
+orientação não muda as verificações de permissão. Recolher um cartão nunca concede acesso.
+
 <a id="what-it-may-do"></a>
 
 ## O que ele pode fazer
@@ -214,8 +313,9 @@ deles antes de serem usados.
 - **Always in this chat** permite aquela chamada exata de novo (o comando e a entrada inteiros,
   não o texto do card) sem card, até a conversa acabar: **New**, outro motor, ou o Zeca desligado.
   Um card que não consegue nomear a chamada inteira não tem esse botão. Toda vez que a regra
-  responde, o chat mostra *Allowed for this conversation* e o log de auditoria guarda. As regras nunca
-  são salvas.
+  responde, o chat mostra *Allowed for this conversation* e o log de auditoria guarda. Comandos
+  destrutivos sempre perguntam: nunca oferecem esse botão, e uma regra existente da conversa
+  não pode respondê-los. As regras nunca são salvas.
 
 <a id="who-answers-zecas-cards"></a>
 

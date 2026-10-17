@@ -12,8 +12,16 @@ card that shows exactly what **Allow** authorizes (Antigravity, Cursor, Factory 
 
 ![A permission card with the whole command, Deny, Allow and Always allow](../assets/island-approval.png)
 
-The card takes the whole width of the island until you answer. Then it says what happened for a
+The card takes the whole width of the island until you answer or explicitly skip it. After an answer it says what happened for a
 moment (**Allowed** in green, **Denied** in red) before the next thing shows.
+
+**Skip for now** hides a permission or question card without answering it. The next card
+comes forward; if all are skipped, Quick can fold again. The request keeps its original
+hook deadline and its bird still shows that it needs you. Select that session or choose
+**Show the card** to reopen it. The **Needs you** strip offers the same Skip action and
+**Skip all** for its visible request cards; it folds when no unskipped items remain.
+Skipping neither approves nor denies a call, creates no Always rule and does not release
+the request to its terminal. On timeout, the normal terminal fallback still applies.
 
 ## Answering
 

@@ -11,7 +11,7 @@ import { Clock } from "../../clock";
 import { FOCUS_SCENE, Scene } from "../../island/scene";
 import { setZecaLook, setZecaSpecies } from "../../island/flock";
 import { icon } from "../../island/icons";
-import { agentName, statusText } from "../../island/views";
+import { agentName, skipButton, statusText } from "../../island/views";
 import { renderFull } from "../../island/markdown";
 import type { SessionView, ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
@@ -172,6 +172,8 @@ export function createNest(
   portraitButton.addEventListener("pointerleave", () => portrait.lookAt(null));
   portrait.canvas.setAttribute("aria-hidden", "true");
   chat.perchSlot.append(portraitButton);
+  // Outside the scrolling log, the same scene introduces an empty chat and perches by its draft.
+  chat.element.querySelector(".log-box")?.prepend(chat.perchSlot);
   const flock = createFlock({
     ...backend.flock,
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
@@ -386,7 +388,7 @@ export function createNest(
   let last: ViewModel | null = null;
   let sub: Sub = "week";
   const currentPlace = () => tab === "activity" ? sub : tab;
-  const portraitSpace = window.matchMedia("(min-height: 481px)");
+  const portraitSpace = window.matchMedia("(min-height: 561px)");
   const portraitNarrow = window.matchMedia("(max-width: 600px)");
   function paintPortrait(): void {
     portrait.setActive(zecaOn && tab === "chat" && !document.hidden && !last?.locked
@@ -478,7 +480,7 @@ export function createNest(
   const paintNeeds = () => {
     // Drawn on every view: the tag that had the focus gets it back.
     const had = needStrip.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.key : null;
-    const wanting = tab === "flock" ? [] : (last?.sessions ?? []).filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed");
+    const wanting = tab === "flock" ? [] : (last?.sessions ?? []).filter((s) => !s.skipped && (needsYou(s) || s.status === "failed" || s.attention === "failed"));
     needStrip.hidden = !wanting.length;
     needStrip.setAttribute("aria-label", wanting.length === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: wanting.length }));
     needStrip.replaceChildren(
@@ -498,10 +500,18 @@ export function createNest(
         );
         b.dataset.key = `${s.agent}:${s.id}`;
         b.title = [s.project || agentName(s), statusText(s)].join(" · ");
-        return b;
+        const skip = s.request ? skipButton(s.request, backend.flock.skip, t("Skip {project} for now", { project: s.project || agentName(s) })) : null;
+        if (skip) skip.dataset.key = b.dataset.key;
+        return el("span", { class: "need-chip" }, b, skip);
       }),
+      ...(wanting.filter(s => s.request).length > 1 ? [(() => {
+        const all = el("button", { class: "needs-skip-all", text: t("Skip all"), onclick: () => wanting.forEach(s => s.request && backend.flock.skip(s.request)) });
+        all.dataset.key = "skip-all";
+        return all;
+      })()] : []),
     );
-    if (had) needStrip.querySelector<HTMLElement>(`[data-key="${CSS.escape(had)}"]`)?.focus();
+    if (had) (needStrip.querySelector<HTMLElement>(`[data-key="${CSS.escape(had)}"]`)
+      ?? needStrip.querySelector<HTMLElement>(".need-tag") ?? root.querySelector<HTMLElement>(".suite-tab.on"))?.focus();
   };
   root.append(
     ...head.elements,
@@ -554,6 +564,20 @@ export function createNest(
       parts[sub].refresh();
   };
   const open = (id: string) => {
+    if (id === "memory") {
+      if (zecaOn) { show("chat"); setMemory(true); }
+      return;
+    }
+    if (id.startsWith("connection:")) {
+      const parts = id.split(":");
+      if (parts.length === 3) {
+        try {
+          show("connections");
+          connections.select(decodeURIComponent(parts[1]!), decodeURIComponent(parts[2]!));
+        } catch { /* An invalid navigation link changes no connection. */ }
+      }
+      return;
+    }
     if ((TABS as string[]).includes(id)) return show(id as Tab);
     if ((SUBS as string[]).includes(id)) {
       sub = id as Sub;

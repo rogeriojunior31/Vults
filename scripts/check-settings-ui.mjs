@@ -62,7 +62,7 @@ globalThis.document = { body: new Element("body"), documentElement: new Element(
 };
 document.body.append(root);
 globalThis.window = { setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, addEventListener() {} };
-globalThis.matchMedia = () => ({ matches: true });
+globalThis.matchMedia = () => ({ matches: true, addEventListener() {} });
 globalThis.location = { hash: "#general" };
 globalThis.Option = class extends Element {
   constructor(label, value, _default, selected) { super("option"); this.textContent = label; this.value = value; this.selected = selected; }

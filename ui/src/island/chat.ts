@@ -2,8 +2,11 @@
 // right. Its DOM is built once and updated in place, so the input keeps its focus and text while
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
+import { applyActivity, emptyActivity, readActivity } from "./chat-activity";
+import type { ChatActivity, ChatActivityEvent } from "../bridge";
 import { Clock } from "../clock";
-import type { ChatDraft } from "../bridge";
+import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
+import { NAME_BY_KIND } from "../agents";
 import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
 import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
@@ -12,13 +15,14 @@ import { Sound } from "../sound";
 import { icon } from "./icons";
 import { renderFull } from "./markdown";
 import { copyTextButton } from "../clipboard";
-import { t, tk } from "../i18n";
+import { locale, t, tk } from "../i18n";
+import { usageLabel, usageLevel, usageWindowName } from "../cost";
 
 export interface ChatBackend {
   draft?: () => Promise<ChatDraft>;
   current?: () => Promise<OpenedConversation | null>;
   saveDraft?: (draft: ChatDraft) => Promise<void>;
-  send(text: string, files: string[], folder: string | null): Promise<void>;
+  send(text: string, files: string[], folder: string | null, mentions?: ChatMention[]): Promise<void>;
   decide(id: string, answer: ChatAnswer): void;
   /** Stops the turn running now. */
   stop(): void;
@@ -40,6 +44,8 @@ export interface ChatBackend {
   voice?: VoiceBackend;
   /** Opens the conversation in the Nest; absent in the Nest itself. */
   openNest?: () => void;
+  /** Opens the existing Flock without answering or starting anything. */
+  openFlock?: () => void;
   /** The paperclip: the system's file chooser, titled in the user's language; what it picks comes
    *  back as a drop does. */
   pickFiles?: (title: string) => void;
@@ -83,6 +89,13 @@ const MEMORY_SAID = new Set([
   tk("This conversation has no folder: pick one first."),
   tk("That session couldn't be resumed:"),
   tk("It is still starting: try again in a moment."),
+]);
+
+const REFERENCE_ERRORS = new Set([
+  tk("Chat references are invalid or too large."),
+  tk("A referenced session or project is no longer in the flock. Remove its reference and choose again."),
+  tk("Choose flock references from the @ suggestions again before sending."),
+  tk("Could not prepare the chat's flock references. Try again."),
 ]);
 
 /** What a `/remember` or `/forget` says back: an English sentence to translate, and the memory's
@@ -141,10 +154,14 @@ type Ask = {
   /** The conversation read content from outside (through this tool) before this card. */
   outside: string | null;
   answer?: ChatAnswer;
+  cancelled?: boolean;
 };
 
+type ActivityMessage = { who: "activity"; data: ChatActivity; ended: boolean };
+
 type Message =
-  | { who: "you"; text: string; files: string[] }
+  | ActivityMessage
+  | { who: "you"; text: string; files: string[]; mentions?: ChatMention[] }
   | { who: "zeca"; text: string; error?: boolean; retry?: boolean }
   | { who: "note"; text: string }
   | Ask;
@@ -239,7 +256,8 @@ export class ChatPanel {
   flushDraft(): Promise<void> {
     if (!this.restored && this.backend.draft) return this.restore().then(() => this.flushDraft());
     this.draftEdited = true;
-    const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider };
+    this.mentions = this.mentions.filter(m => this.input.value.includes(m.token));
+    const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider, ...(this.mentions.length ? { mentions: [...this.mentions] } : {}) };
     this.draftSaved = this.draftSaved.catch(() => {}).then(() => this.backend.saveDraft?.(draft));
     return this.draftSaved;
   }
@@ -254,6 +272,8 @@ export class ChatPanel {
     if (initial && this.draftEdited) return;
     this.draftEdited = true;
     this.input.value = draft.text;
+    this.mentions = (draft.mentions ?? []).filter(m => draft.text.includes(m.token));
+    this.closeMentions();
     this.files = [...draft.files];
     if (!this.started && (draft.text || draft.files.length || draft.folder)) {
       this.folder = draft.folder;
@@ -268,6 +288,12 @@ export class ChatPanel {
   /** The island moves its perch here; the Nest keeps its own scene in the same slot. */
   readonly perchSlot = el("div", { class: "chat-perch" });
   private readonly greeting = el("h2", { class: "chat-greeting" });
+  private readonly caption = el("p", { class: "chat-caption" });
+  private readonly intro = el("div", { class: "chat-intro" }, this.greeting, this.caption);
+  private readonly suggestions = el("div", { class: "suggestions" });
+  private readonly replySuggestions = el("div", { class: "reply-chips" });
+  private readonly apiNotice = el("p");
+  private offers: ChatView | null = null;
   private open = false;
   private provider: ChatProvider = "claude";
   /** The API chat: offered only while it can be used (a key saved, or a local model). */
@@ -276,6 +302,13 @@ export class ChatPanel {
   private engines: ChatEngines | null = null;
   private enginesAsked = 0;
   private messages: Message[] = [];
+  private selectedAsk: string | null = null;
+  private approvalQueueKey = "";
+  private askNodes = new WeakMap<Ask, HTMLElement>();
+  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, { node: HTMLDetailsElement; status: HTMLElement; detail: HTMLElement }> }>();
+  private activityTimer: number | undefined;
+  private replyBreak = false;
+  private readonly approvalQueue = el("div", { class: "approval-queue" });
   /** The rendered messages, one node per message. */
   private nodes: HTMLElement[] = [];
   private readonly appeared = new WeakSet<Message>();
@@ -294,6 +327,9 @@ export class ChatPanel {
   private folders: Folder[] = [];
   private started = false;
   private swallowUntil = 0;
+  private searching = false;
+  private reaction: { clip: "listen" | "speak"; until: number } | null = null;
+  private reactionTimer: number | undefined;
   /** The pending repaint of the reply being streamed. */
   private streaming: number | undefined;
   private dragOver = false;
@@ -316,6 +352,10 @@ export class ChatPanel {
   private readonly menu = el("div", { class: "menu" });
   /** The model and effort: picked per folder before the first message, fixed after it. */
   private readonly modelButton = el("button", { class: "place model" });
+  private readonly planUsage = el("span", { class: "model-usage" });
+  private usage: UsageWindow[] = [];
+  private usageTimer: number | undefined;
+  private selectionLabel = "";
   private readonly modelMenu = el("div", { class: "menu model-menu" });
   private modelOpen = false;
   /** Who answers the cards, as Settings says; the picker shows it and gives some back. */
@@ -347,6 +387,12 @@ export class ChatPanel {
   private readonly composerHint = el("p", { class: "composer-hint" });
   private readonly attachLabel = el("span");
   private readonly input = document.createElement("textarea");
+  private mentions: ChatMention[] = [];
+  private sessions: SessionView[] = [];
+  private readonly mentionMenu = el("div", { class: "menu mention-menu" });
+  private mentionRows: { label: string; detail: string; mention: ChatMention }[] = [];
+  private mentionIndex = 0;
+  private mentionStart = 0;
   private readonly send = el("button", {
     class: "send",
     onclick: () => this.sendOrStop(),
@@ -376,20 +422,54 @@ export class ChatPanel {
     private readonly opts: ChatPanelOptions = { window: "island" },
   ) {
     this.input.rows = 1;
+    this.mentionMenu.id = `${this.menuId}-mentions`;
+    this.mentionMenu.setAttribute("role", "listbox");
+    this.mentionMenu.setAttribute("aria-label", t("Sessions and projects"));
+    this.input.setAttribute("aria-autocomplete", "list");
+    this.input.setAttribute("aria-controls", this.mentionMenu.id);
+    this.closeMentions();
+    this.planUsage.setAttribute("aria-hidden", "true");
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) this.clearReaction();
+      this.paintUsage();
+    });
+    window.addEventListener?.("resize", () => this.sizeMentions());
     this.setup.setAttribute("role", "img");
     this.input.addEventListener("keydown", (e) => {
       if (e.isComposing || e.keyCode === 229) return;
+      if (e.shiftKey && (e.key === "Enter" || e.key === "Tab")) { this.closeMentions(); return; }
+      if (this.mentionMenu.classList.contains("on") && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
+        e.preventDefault(); e.stopPropagation();
+        if (e.key === "Escape") this.closeMentions();
+        else if (e.key === "Enter" || e.key === "Tab") this.pickMention();
+        else {
+          this.mentionIndex = (this.mentionIndex + (e.key === "ArrowDown" ? 1 : -1) + this.mentionRows.length) % this.mentionRows.length;
+          this.paintMentions();
+        }
+        return;
+      }
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         void this.submit();
       } else if (e.key === "ArrowUp" && !this.input.value && this.recall()) e.preventDefault();
     });
-    this.input.addEventListener("input", () => {
+    this.input.addEventListener("input", (event) => {
       this.grow();
       this.paintSend();
       this.keepDraft();
+      if (!this.busy) {
+        const before = this.clip(Clock.now());
+        if (this.input.value.trim()) this.react("listen");
+        else this.clearReaction();
+        if (before !== this.clip(Clock.now())) this.changed();
+      }
+      if (!(event as InputEvent | undefined)?.isComposing) this.findMentions();
     });
+    this.input.addEventListener("compositionstart", () => this.closeMentions());
+    this.input.addEventListener("compositionend", () => this.findMentions());
+    this.input.addEventListener("click", () => this.findMentions());
+    this.input.addEventListener("keyup", (e) => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) this.findMentions(); });
     this.place.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
       this.menuOpen = !this.menuOpen;
@@ -476,6 +556,8 @@ export class ChatPanel {
     document.addEventListener("pointerdown", event => {
       if (!this.element.isConnected) return;
       const target = event.target as Node | null;
+      if (this.mentionMenu.contains(target) || target === this.input) return;
+      this.closeMentions();
       if (this.menuPanels().some(({ menu, trigger }) => menu.contains(target) || trigger.contains(target))) return;
       this.closeMenus();
     });
@@ -502,7 +584,7 @@ export class ChatPanel {
       ? el(
           "div",
           { class: "chat-head" },
-          this.greeting,
+          this.intro,
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
           ...(this.backend.openNest ? [this.nestButton()] : []),
@@ -523,8 +605,10 @@ export class ChatPanel {
       "div",
       { class: "chat-main" },
       head,
+      this.approvalQueue,
       el("div", { class: "log-box" }, this.log, this.jump),
       el("div", { class: "composer" },
+        this.mentionMenu,
         this.chips,
         this.input,
         this.wave,
@@ -542,11 +626,12 @@ export class ChatPanel {
   /** Its words again: the language is known now, or changed. The panel is built before the app
    *  says which one, so the first call comes from there too. */
   relabel(): void {
-    this.greeting.textContent = t("Ask Zeca");
+    this.askNodes = new WeakMap();
     this.input.placeholder = t("Ask Zeca…");
     this.input.setAttribute("aria-label", t("Ask Zeca…"));
+    this.input.title = t("Type @ to reference a session or project. References limit this turn's flock reads.");
     this.log.setAttribute("aria-label", t("Chat"));
-    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.");
+    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.");
     this.attachLabel.textContent = t("Attach a file");
     this.chips.setAttribute("role", "group");
     this.chips.setAttribute("aria-label", t("Attachments"));
@@ -569,6 +654,48 @@ export class ChatPanel {
   /** Which bird talks: the API chat is Claude too. */
   agent(): AgentKind {
     return this.provider === "api" ? "claude" : this.provider;
+  }
+
+  /** The app's cached plan windows; this never asks a provider or changes the conversation. */
+  setUsage(windows: UsageWindow[]): void {
+    this.usage = windows;
+    this.paintUsage();
+  }
+
+  private paintUsage(): void {
+    window.clearTimeout(this.usageTimer);
+    this.usageTimer = undefined;
+    const now = Date.now() / 1000;
+    // API chat borrows Claude's bird, never its subscription.
+    const live = this.usage.filter(w => this.provider !== "api" && w.agent === this.provider
+      && Number.isFinite(w.used_percent) && w.used_percent >= 0 && w.used_percent <= 100
+      && (w.resets_at === null || w.resets_at > now));
+    const fullest = live.reduce<UsageWindow | null>((a, w) => !a || w.used_percent > a.used_percent ? w : a, null);
+    this.planUsage.hidden = !fullest;
+    const hint = this.compact ? "" : this.started
+      ? t("A conversation keeps its model; New starts another.")
+      : t("The model and effort for new conversations in this folder.");
+    this.modelButton.setAttribute("aria-label", this.selectionLabel);
+    this.modelButton.title = hint;
+    if (!fullest) return;
+    const percent = Math.round(fullest.used_percent);
+    const summary = t("{engine} plan: {percent}% used · {status}", { engine: this.engineName(this.provider), percent, status: usageLabel(percent) });
+    const ring = el("span", { class: "usage-ring" });
+    ring.style.setProperty("--used", `${percent}%`);
+    this.planUsage.className = `model-usage ${usageLevel(percent)}`;
+    this.planUsage.replaceChildren(ring, el("span", { text: `${percent}%` }));
+    this.modelButton.setAttribute("aria-label", t("{selection}. {usage}", { selection: this.selectionLabel, usage: summary }));
+    const windows = live.map(w => {
+      const vars = { window: usageWindowName(w.minutes), percent: w.used_percent };
+      return w.resets_at === null
+        ? t("{window}: {percent}% used", vars)
+        : t("{window}: {percent}% used. Resets {when}.", { ...vars, when: new Date(w.resets_at * 1000).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" }) });
+    });
+    this.modelButton.title = [hint, summary, ...windows].filter(Boolean).join("\n");
+    const next = Math.min(...live.flatMap(w => w.resets_at === null ? [] : [w.resets_at]));
+    if (Number.isFinite(next) && this.enabled && this.open && !document.hidden) {
+      this.usageTimer = window.setTimeout(() => this.paintUsage(), Math.min(2_147_483_647, Math.max(1, (next - now) * 1000)));
+    }
   }
 
   setVoiceReady(on: boolean): void {
@@ -636,16 +763,199 @@ export class ChatPanel {
     } else if (changed) this.paintHead();
   }
 
+  setSessions(sessions: SessionView[]): void {
+    this.sessions = sessions;
+    if (this.mentionMenu.classList.contains("on")) this.findMentions();
+  }
+
+  /** Core offers are presentation only: no model call, notification, sound or turn. */
+  setOffers(offers: ChatView | null): void {
+    if (JSON.stringify(offers) === JSON.stringify(this.offers)) return;
+    this.offers = offers;
+    this.paintOffers();
+  }
+
+  private sessionMention(s: SessionView): { label: string; mention: ChatMention } {
+    const agent = s.agent_name ?? (s.agent === "other" ? t("Agent") : NAME_BY_KIND[s.agent]);
+    const duplicates = this.sessions.filter(other => other.agent === s.agent && other.project === s.project).length > 1;
+    const label = t("Session: {session}", { session: `${agent} · ${s.project}` });
+    const tokenLabel = duplicates ? `${label} · ${s.id}` : label;
+    return { label, mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "session", agent: s.agent, id: s.id } } };
+  }
+
+  private chooseSuggestion(id: string): void {
+    if (!this.enabled) return;
+    const offered = this.offers?.suggestions.find(q => q.id === id);
+    if (!offered) {
+      if (!this.offers && SUGGESTIONS.includes(id)) this.draft(t(id));
+      return;
+    }
+    let text = offered.text;
+    if (offered.session) {
+      const session = this.sessions.find(s => s.agent === offered.session!.agent && s.id === offered.session!.id);
+      if (!session) return;
+      this.mentions = this.mentions.filter(m => this.input.value.includes(m.token));
+      let reference = this.mentions.find(m => m.target.kind === "session" && m.target.agent === session.agent && m.target.id === session.id);
+      if (!reference) {
+        if (this.mentions.length >= 8) return;
+        reference = this.sessionMention(session).mention;
+        this.mentions.push(reference);
+      }
+      if (!this.input.value.includes(reference.token)) text += `\n${reference.token}`;
+    }
+    this.draft(text);
+  }
+
+  private chooseFollowup(id: string): void {
+    const last = this.messages[this.messages.length - 1];
+    if (!this.enabled || this.busy || last?.who !== "zeca" || last.error || !last.text.trim() || !this.offers?.followups.includes(id as ChatView["followups"][number])) return;
+    if (id === "flock") {
+      this.backend.openFlock?.();
+    } else this.draft(id === "explain" ? t("Explain your last reply more simply.") : t("What should I check next?"));
+  }
+
+  private paintOffers(): void {
+    this.greeting.textContent = this.offers?.greeting ?? t("Ask Zeca");
+    const api = t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.");
+    this.caption.textContent = this.offers?.caption ?? t("Ask anything, or drop a file on the island.");
+    this.caption.hidden = !this.offers && (this.compact || this.provider === "api");
+    this.apiNotice.textContent = api;
+    this.apiNotice.hidden = this.provider !== "api";
+    this.intro.hidden = this.compact && (this.messages.length > 0 || this.busy);
+    const questions = this.compact ? [] : this.offers?.suggestions ?? (this.provider === "api" ? [] : SUGGESTIONS.map(q => ({ id: q, text: t(q), session: null })));
+    this.offerButtons(this.suggestions, questions.map(q => ({ id: q.id, text: q.text })), id => this.chooseSuggestion(id));
+    const labels = { explain: t("Explain more simply"), next: t("What should I check next?"), flock: t("Open Flock") };
+    const followups = (this.offers?.followups ?? []).filter(id => id !== "flock" || !!this.backend.openFlock);
+    this.offerButtons(this.replySuggestions, followups.map(id => ({ id, text: labels[id] })), id => this.chooseFollowup(id));
+    this.replySuggestions.setAttribute("role", "group");
+    this.replySuggestions.setAttribute("aria-label", t("Continue the conversation"));
+    this.suggestions.setAttribute("role", "group");
+    this.suggestions.setAttribute("aria-label", t("Suggested questions"));
+  }
+
+  private offerButtons(container: HTMLElement, rows: { id: string; text: string }[], choose: (id: string) => void): void {
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>("button")];
+    const active = buttons.find(b => b === document.activeElement)?.dataset.offer;
+    container.replaceChildren(...rows.map(row => {
+      const kept = buttons.find(b => b.dataset.offer === row.id);
+      const button = kept ?? el("button", { class: container === this.suggestions ? "suggestion" : "reply-chip", onclick: () => choose(row.id) });
+      button.dataset.offer = row.id;
+      button.textContent = row.text;
+      return button;
+    }));
+    if (active) {
+      const kept = [...container.querySelectorAll<HTMLButtonElement>("button")].find(b => b.dataset.offer === active);
+      (kept ?? this.input).focus({ preventScroll: true });
+    }
+  }
+
+  private closeMentions(): void {
+    this.mentionMenu.classList.remove("on");
+    this.input.setAttribute("aria-expanded", "false");
+    this.input.setAttribute("aria-activedescendant", "");
+    this.mentionRows = [];
+    this.mentionIndex = 0;
+  }
+
+  private findMentions(): void {
+    if (!this.enabled) { this.closeMentions(); return; }
+    const end = this.input.selectionStart ?? this.input.value.length;
+    const before = this.input.value.slice(0, end);
+    const typed = /(?:^|\s)@([^@"\n]*)$/u.exec(before)?.[1];
+    if (typed === undefined || this.mentions.length >= 8 || this.input.selectionEnd !== null && this.input.selectionEnd !== undefined && this.input.selectionEnd !== end) {
+      this.closeMentions(); return;
+    }
+    const query = typed.toLocaleLowerCase();
+    if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMenus();
+    const previous = this.mentionRows[this.mentionIndex]?.mention.token;
+    const rows: typeof this.mentionRows = [];
+    const projects = new Map(this.sessions.filter(s => s.cwd).map(s => [s.cwd!, s.project]));
+    for (const [cwd, project] of projects) {
+      const duplicates = [...projects.values()].filter(p => p === project).length > 1;
+      const label = t("Project: {project}", { project });
+      const tokenLabel = duplicates ? t("Project: {project}", { project: cwd }) : label;
+      rows.push({ label, detail: cwd, mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "project", cwd } } });
+    }
+    for (const s of this.sessions) {
+      rows.push({ ...this.sessionMention(s), detail: [s.cwd, s.id].filter(Boolean).join(" · ") });
+    }
+    this.mentionStart = end - (typed.length + 1);
+    this.mentionRows = rows.filter(r => `${r.label} ${r.detail}`.toLocaleLowerCase().includes(query)
+      && !this.mentions.some(m => m.token === r.mention.token)).slice(0, 8);
+    if (!this.mentionRows.length) { this.closeMentions(); return; }
+    this.mentionIndex = Math.max(0, this.mentionRows.findIndex(r => r.mention.token === previous));
+    this.paintMentions();
+  }
+
+  private paintMentions(): void {
+    this.mentionMenu.replaceChildren(...this.mentionRows.map((row, i) => {
+      const button = el("button", { class: `menu-item${i === this.mentionIndex ? " on" : ""}`, onclick: () => { this.mentionIndex = i; this.pickMention(); } },
+        el("strong", { text: row.label }), el("small", { text: row.detail }));
+      button.id = `${this.mentionMenu.id}-${i}`;
+      button.setAttribute("role", "option");
+      button.tabIndex = -1;
+      button.setAttribute("aria-selected", String(i === this.mentionIndex));
+      button.addEventListener("pointerdown", event => event.preventDefault());
+      return button;
+    }));
+    this.mentionMenu.classList.add("on");
+    this.sizeMentions();
+    this.input.setAttribute("aria-expanded", "true");
+    this.input.setAttribute("aria-activedescendant", `${this.mentionMenu.id}-${this.mentionIndex}`);
+    this.mentionMenu.children[this.mentionIndex]?.scrollIntoView?.({ block: "nearest" });
+  }
+
+  private sizeMentions(): void {
+    if (!this.mentionMenu.classList.contains("on")) return;
+    const box = this.element.getBoundingClientRect();
+    const composer = this.mentionMenu.parentElement?.getBoundingClientRect();
+    const zoom = box.height / this.element.offsetHeight || 1;
+    if (composer && Number.isFinite(composer.top - box.top)) {
+      this.mentionMenu.style.maxHeight = `${Math.max(40, Math.min(240, (composer.top - box.top) / zoom - 6))}px`;
+    }
+  }
+
+  private pickMention(): void {
+    const row = this.mentionRows[this.mentionIndex];
+    if (!row) return;
+    const end = this.input.selectionStart ?? this.input.value.length;
+    const inserted = `${row.mention.token} `;
+    this.input.value = this.input.value.slice(0, this.mentionStart) + inserted + this.input.value.slice(end);
+    this.mentions.push(row.mention);
+    const caret = this.mentionStart + inserted.length;
+    this.input.setSelectionRange(caret, caret);
+    this.closeMentions();
+    this.grow(); this.paintSend(); this.keepDraft(); this.input.focus();
+  }
+
   /** What Zeca does while the chat is open. */
   clip(now: number): string {
+    if (!this.enabled) return "idle";
+    if (this.messages.some(m => m.who === "ask" && !m.answer)) return "question";
     if (now < this.swallowUntil) return "swallow";
     if (this.dragOver) return "gape";
-    const last = this.messages[this.messages.length - 1];
-    if (last?.who === "ask" && !last.answer) return "question";
     if (this.voice === "listening") return "listen";
     if (this.voice === "transcribing") return "think";
-    if (this.busy) return "think";
-    return "idle";
+    if (this.busy && this.searching) return "search";
+    if (this.reaction && now < this.reaction.until) return this.reaction.clip;
+    return this.busy ? "think" : "idle";
+  }
+
+  private clearReaction(): void {
+    window.clearTimeout(this.reactionTimer);
+    this.reactionTimer = undefined;
+    this.reaction = null;
+  }
+
+  /** Only live events get a brief reaction; saved replies and hidden surfaces never replay it. */
+  private react(clip: "listen" | "speak"): void {
+    this.clearReaction();
+    if (!this.enabled || !this.open || document.hidden) return;
+    this.reaction = { clip, until: Clock.now() + (clip === "listen" ? 1500 : 1600) };
+    this.reactionTimer = window.setTimeout(() => {
+      this.clearReaction();
+      this.changed();
+    }, clip === "listen" ? 1500 : 1600);
   }
 
   // ── Voice ────────────────────────────────────────────────────────────────
@@ -811,14 +1121,19 @@ export class ChatPanel {
       this.cancelVoice();
       this.toggle(false);
     }
+    this.paintUsage();
   }
   private enabled = true;
 
   toggle(open = !this.open): void {
     if (open && !this.enabled) return;
-    if (!open) this.cancelVoice();
+    if (!open) {
+      this.cancelVoice();
+      this.clearReaction();
+    }
     if (open === this.open) return;
     this.open = open;
+    this.closeMentions();
     this.paintDrop();
     this.menuOpen = false;
     this.modelOpen = false;
@@ -915,10 +1230,30 @@ export class ChatPanel {
   receive(d: ChatDelta): void {
     this.conversationVersion++;
     if (d.kind === "done" || d.kind === "stopped" || d.kind === "error") this.liveEnded = true;
+    if (d.kind === "activity") {
+      const activity = this.turnActivity();
+      if (d.event.type === "start") this.replyBreak = true;
+      applyActivity(activity.data, d.event);
+      if (this.activityTimer === undefined) this.activityTimer = window.setTimeout(() => {
+        this.activityTimer = undefined;
+        const follow = this.following && this.atEnd();
+        this.paint(); this.after(follow); this.changed();
+      }, STREAM_MS);
+      return;
+    }
+    if (d.kind === "toolstate") {
+      this.clearReaction();
+      this.searching = d.active;
+      this.changed();
+      return;
+    }
     const last = this.messages[this.messages.length - 1];
     const follow = this.following && this.atEnd();
     if (d.kind === "text") {
-      if (last?.who === "zeca" && !last.error) {
+      if (d.text) {
+        this.react("speak");
+      }
+      if (last?.who === "zeca" && !last.error && !this.replyBreak) {
         // Streaming: only the message being written changes. Tokens come many a second, and each
         // repaint re-reads its markdown and renders the island: at most one every STREAM_MS.
         last.text += d.text;
@@ -936,8 +1271,10 @@ export class ChatPanel {
         }
         return;
       }
+      this.replyBreak = false;
       this.messages.push({ who: "zeca", text: d.text });
     } else if (d.kind === "permission") {
+      this.clearReaction();
       const { id, tool, target, description, full, added, removed, always, outside } = d;
       this.messages.push({
         who: "ask",
@@ -953,35 +1290,33 @@ export class ChatPanel {
       });
       Sound.play("approval");
     } else if (d.kind === "tool") {
+      this.replyBreak = true;
+      this.clearReaction();
       // The API chat's own tools only read: a line says which one it used, no card.
-      this.messages.push({ who: "note", text: t("Used {tool}", { tool: d.tool }) });
+      const activity = this.turnActivity();
+      if (!activity.data.tools.some(tool => tool.tool === d.tool)) applyActivity(activity.data, { type: "start", id: `api:${activity.data.tools.length}`, tool: d.tool, detail: "" });
     } else if (d.kind === "settled") {
+      this.clearReaction();
       // The user's choice answered with no card: the chat says what ran, and on whose word.
-      const text =
-        d.by === "full-access"
-          ? t("Ran with full access: {target}", { target: d.target })
-          : d.allow
-            ? t("Allowed by your policy: {target}", { target: d.target })
-            : t("Denied by your policy: {target}", { target: d.target });
-      this.messages.push({ who: "note", text });
+      this.addActivity({ type: "decision", tool: d.tool, target: d.target, answer: d.allow ? "allow" : "deny", by: d.by });
     } else if (d.kind === "allowed") {
-      // The user's own rule for this conversation answered: the chat says what ran.
-      this.messages.push({
-        who: "note",
-        text: t("Allowed for this conversation: {target}", { target: d.target }),
-      });
+      this.clearReaction();
+      this.addActivity({ type: "decision", tool: d.tool, target: d.target, answer: "allow", by: "conversation" });
     } else {
       // Only a turn's failure can be sent again; a mic that would not open has nothing to resend.
       const turn = this.busy;
+      this.clearReaction();
+      this.searching = false;
+      if (d.kind === "done" && turn && last?.who === "zeca" && !last.error && last.text.trim()) this.react("speak");
       this.busy = false;
       if (d.kind === "error")
-        this.messages.push({ who: "zeca", text: d.message, error: true, retry: turn });
+        this.messages.push({ who: "zeca", text: REFERENCE_ERRORS.has(d.message) ? t(d.message) : d.message, error: true, retry: turn });
       if (d.kind === "stopped")
         this.messages.push({ who: "note", text: t("Stopped.") });
+      for (const message of this.messages) if (message.who === "activity") message.ended = true;
       // Anything still waiting is a no now: it can't be answered any more.
       for (const m of this.messages)
-        if (m.who === "ask" && !m.answer && d.kind !== "done")
-          m.answer = "deny";
+        if (m.who === "ask" && !m.answer) { m.answer = "deny"; m.cancelled = true; this.askNodes.delete(m); }
     }
     this.paint();
     this.after(follow);
@@ -998,6 +1333,8 @@ export class ChatPanel {
     this.conversationVersion++;
     if (s.kind !== "answered") this.sourceVersion++;
     if (s.kind === "sent") {
+      this.clearReaction();
+      this.searching = false;
       this.draftEdited = true;
       this.liveEnded = false;
       // A conversation that began in the other window: shown where and how it runs.
@@ -1009,7 +1346,7 @@ export class ChatPanel {
         this.picksSeq++;
         this.picks = { [s.provider]: { model: s.model, effort: s.effort } };
       }
-      this.messages.push({ who: "you", text: s.text, files: s.files });
+      this.messages.push({ who: "you", text: s.text, files: s.files, mentions: s.mentions });
       this.busy = true;
       this.turnSince = Clock.now();
       this.started = true;
@@ -1023,6 +1360,7 @@ export class ChatPanel {
       const m = this.messages.find((m): m is Ask => m.who === "ask" && m.id === s.id);
       if (!m || m.answer) return;
       m.answer = s.answer;
+      this.askNodes.delete(m);
       this.paint();
       this.changed();
     }
@@ -1031,9 +1369,18 @@ export class ChatPanel {
   /** Answers the permission waiting in the chat, if one is; for the global shortcuts. */
   answerWaiting(allow: boolean): boolean {
     if (!this.open || !this.enabled || document.hidden || !this.element.isConnected || this.element.offsetParent === null) return false;
-    const waiting = [...this.messages]
-      .reverse()
-      .find((m): m is Ask => m.who === "ask" && !m.answer);
+    const waiting = this.pendingAsk();
+    const node = waiting && this.askNodes.get(waiting);
+    if (node) {
+      const card = node.getBoundingClientRect(), viewport = this.log.getBoundingClientRect();
+      if (Number.isFinite(card.top)) {
+        const operation = node.querySelector(".code")?.getBoundingClientRect();
+        const actions = node.querySelector(".actions")?.getBoundingClientRect();
+        if (card.bottom <= viewport.top || card.top >= viewport.bottom || !operation || !actions
+          || operation.bottom <= viewport.top || operation.top >= viewport.bottom
+          || actions.top < viewport.top || actions.bottom > viewport.bottom) return false;
+      }
+    }
     if (!waiting) return false;
     this.answer(waiting, allow ? "allow" : "deny");
     return true;
@@ -1054,6 +1401,7 @@ export class ChatPanel {
     const you = this.lastYou();
     if (!you?.text) return false;
     this.input.value = you.text;
+    this.mentions = [...(you.mentions ?? [])];
     this.grow();
     this.paintSend();
     this.keepDraft();
@@ -1075,6 +1423,7 @@ export class ChatPanel {
     const you = this.lastYou();
     if (this.busy || !you) return;
     this.input.value = you.text;
+    this.mentions = [...(you.mentions ?? [])];
     this.files = [...new Set([...this.files, ...you.files])];
     void this.submit();
   }
@@ -1110,11 +1459,17 @@ export class ChatPanel {
         return;
       }
     }
-    this.messages.push({ who: "you", text, files });
+    const mentions = this.mentions.filter(m => text.includes(m.token));
+    const wasStarted = this.started;
+    this.messages.push({ who: "you", text, files, mentions });
+    this.mentions = [];
+    this.closeMentions();
     this.files = [];
     this.input.value = "";
     this.input.style.height = "";
     this.keepDraft();
+    this.clearReaction();
+    this.searching = false;
     this.busy = true;
     this.turnSince = Clock.now();
     this.started = true;
@@ -1127,8 +1482,18 @@ export class ChatPanel {
     this.changed();
     try {
       await this.draftSaved;
-      await this.backend.send(text, files, this.folder);
+      await this.backend.send(text, files, this.folder, mentions);
     } catch (e) {
+      if (REFERENCE_ERRORS.has(String(e))) {
+        this.started = wasStarted;
+        // A rejected reference starts no turn; keep it editable without replacing newer typing.
+        if (!this.input.value && !this.files.length) {
+          this.input.value = text;
+          this.files = files;
+          this.mentions = mentions;
+          this.grow(); this.keepDraft();
+        }
+      }
       this.receive({ kind: "error", message: String(e) });
     }
   }
@@ -1146,6 +1511,10 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider): void {
+    this.clearReaction();
+    this.searching = false;
+    this.mentions = [];
+    this.closeMentions();
     this.conversationVersion++;
     this.sourceVersion++;
     this.liveEnded = false;
@@ -1167,11 +1536,13 @@ export class ChatPanel {
   }
 
   private answer(m: Ask, answer: ChatAnswer): void {
-    if (m.answer) return;
+    if (m.answer || this.pendingAsk() !== m || !this.messages.includes(m) || !this.enabled || !this.open || document.hidden || !this.element.isConnected || this.element.offsetParent === null) return;
     m.answer = answer;
+    this.askNodes.delete(m);
     Sound.play(answer === "deny" ? "deny" : "allow");
     this.backend.decide(m.id, answer);
     this.paint();
+    this.reviewApproval();
     this.changed();
   }
 
@@ -1201,6 +1572,7 @@ export class ChatPanel {
 
   /** Measure content before the island measures its native hit region; menus never size the log. */
   fitContents(): void {
+    this.sizeMentions();
     if (!this.compact || !this.element.isConnected) return;
     const top = this.log.scrollTop;
     const height = this.log.style.height;
@@ -1234,6 +1606,7 @@ export class ChatPanel {
   }
 
   private messageNode(m: Message): HTMLElement {
+    if (m.who === "activity") return this.activityNode(m);
     if (m.who === "zeca") {
       const last = m === this.messages[this.messages.length - 1];
       if (m.error) {
@@ -1247,6 +1620,7 @@ export class ChatPanel {
       // In the Nest's wide column a turn's reply is signed, so each one reads apart from the next.
       if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who === "you") b.append(this.signature());
       b.append((this.opts.render ?? renderFull)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
+      if (last && !this.busy && m.text.trim()) b.append(this.replySuggestions);
       return b;
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
@@ -1276,7 +1650,113 @@ export class ChatPanel {
     return this.askNode(m);
   }
 
+  private turnActivity(): ActivityMessage {
+    let start = this.messages.length - 1;
+    while (start >= 0 && this.messages[start].who !== "you") start--;
+    const existing = this.messages.slice(start + 1).find((m): m is ActivityMessage => m.who === "activity");
+    if (existing) return existing;
+    const activity: ActivityMessage = { who: "activity", data: emptyActivity(), ended: !this.busy };
+    this.messages.splice(start + 1, 0, activity);
+    return activity;
+  }
+
+  private addActivity(event: ChatActivityEvent): void {
+    applyActivity(this.turnActivity().data, event);
+  }
+
+  private activityNode(m: ActivityMessage): HTMLElement {
+    let kept = this.activityNodes.get(m);
+    if (!kept) {
+      const summary = el("summary");
+      const reasoning = el("pre", { class: "activity-reasoning" });
+      reasoning.tabIndex = 0;
+      reasoning.setAttribute("role", "region");
+      reasoning.setAttribute("aria-label", t("Thinking details"));
+      const tools = el("div", { class: "activity-tools" });
+      const decisions = el("div", { class: "activity-decisions" });
+      const warning = el("p", { class: "activity-warning" });
+      const node = el("details", { class: "chat-activity" }, summary,
+        el("div", { class: "activity-body" }, el("h4", { text: t("Thinking details") }), reasoning, tools, decisions, warning));
+      node.addEventListener("toggle", () => this.changed());
+      kept = { node, summary, reasoning, tools, decisions, warning, toolNodes: new Map() };
+      this.activityNodes.set(m, kept);
+    }
+    const { data } = m;
+    kept.summary.textContent = data.tools.length === 1 ? t("Activity · 1 tool") : data.tools.length ? t("Activity · {n} tools", { n: data.tools.length }) : t("Activity");
+    const reasoning = data.reasoning.trim() ? data.reasoning : t("This engine has not provided thinking details.");
+    if (kept.reasoning.textContent !== reasoning) kept.reasoning.textContent = reasoning;
+    const toolNodes = data.tools.map(tool => {
+      const status = tool.ok === true ? t("Completed") : tool.ok === false ? t("Failed") : m.ended ? t("No result reported") : t("Running");
+      let entry = kept!.toolNodes.get(tool.id);
+      if (!entry) {
+        const label = el("span", { class: "tool-status" });
+        const detail = el("pre", { text: tool.detail || t("No arguments reported.") });
+        detail.tabIndex = 0;
+        detail.setAttribute("role", "region");
+        detail.setAttribute("aria-label", tool.tool);
+        const node = el("details", { class: "activity-tool" }, el("summary", {}, el("span", { text: tool.tool }), label), detail);
+        node.addEventListener("toggle", () => this.changed());
+        entry = { node, status: label, detail };
+        kept!.toolNodes.set(tool.id, entry);
+      }
+      entry.status.textContent = status;
+      entry.status.classList.toggle("failed", tool.ok === false);
+      return entry.node;
+    });
+    if (kept.tools.children.length !== toolNodes.length) kept.tools.replaceChildren(...toolNodes);
+    kept.decisions.replaceChildren(...data.decisions.map(d => {
+      const text = d.by === "full-access" ? t("Ran with full access: {target}", { target: d.target })
+        : d.by === "policy" ? (d.answer === "deny" ? t("Denied by your policy: {target}", { target: d.target }) : t("Allowed by your policy: {target}", { target: d.target }))
+        : d.by === "conversation" || d.answer === "always" ? t("Allowed for this conversation: {target}", { target: d.target })
+        : d.answer === "deny" ? t("You denied: {target}", { target: d.target }) : t("You allowed: {target}", { target: d.target });
+      return el("p", { text });
+    }));
+    kept.warning.textContent = data.truncated ? t("Activity details were shortened to keep this conversation responsive.") : "";
+    return kept.node;
+  }
+
+  private pendingAsk(): Ask | undefined {
+    const pending = this.messages.filter((m): m is Ask => m.who === "ask" && !m.answer);
+    const selected = pending.find(m => m.id === this.selectedAsk) ?? pending[0];
+    this.selectedAsk = selected?.id ?? null;
+    return selected;
+  }
+
+  private reviewApproval(): void {
+    const request = this.pendingAsk();
+    const node = request && this.askNodes.get(request);
+    if (!node) return;
+    node.scrollIntoView?.({ block: "nearest" });
+    node.querySelector<HTMLElement>(".code")?.scrollIntoView?.({ block: "nearest" });
+    node.querySelector<HTMLButtonElement>(".actions button")?.focus({ preventScroll: true });
+  }
+
+  private paintApprovalQueue(): void {
+    const pending = this.messages.filter((m): m is Ask => m.who === "ask" && !m.answer);
+    const key = JSON.stringify([locale(), this.pendingAsk()?.id, pending.map(m => m.id)]);
+    if (key === this.approvalQueueKey) return;
+    this.approvalQueueKey = key;
+    this.approvalQueue.classList.toggle("on", pending.length > 0);
+    if (!pending.length) { this.approvalQueue.replaceChildren(); return; }
+    const current = this.pendingAsk()!;
+    const select = (step: number) => {
+      this.selectedAsk = pending[(pending.indexOf(current) + step + pending.length) % pending.length].id;
+      this.paint(); this.reviewApproval(); this.changed();
+    };
+    const review = el("button", { class: "approval-review", text: t("Review approval {index} of {total}", { index: pending.indexOf(current) + 1, total: pending.length }), onclick: () => this.reviewApproval() });
+    const previous = el("button", { text: "‹", onclick: () => select(-1) });
+    previous.setAttribute("aria-label", t("Previous approval"));
+    const next = el("button", { text: "›", onclick: () => select(1) });
+    next.setAttribute("aria-label", t("Next approval"));
+    const settings = this.backend.openSettings ? el("button", { class: "approval-settings", text: t("Permissions"), onclick: () => this.backend.openSettings?.() }) : null;
+    if (settings) settings.title = t("To reduce repeated requests, choose your policies in Settings. Destructive actions still ask.");
+    this.approvalQueue.replaceChildren(review, ...(pending.length > 1 ? [previous, next] : []), ...(settings ? [settings] : []));
+  }
+
   private askNode(m: Ask): HTMLElement {
+    if (!m.answer && this.pendingAsk() !== m) return el("span", { class: "chat-hidden" });
+    const kept = this.askNodes.get(m);
+    if (kept) return kept;
     const diff =
       m.added || m.removed
         ? el(
@@ -1311,7 +1791,7 @@ export class ChatPanel {
     operation.tabIndex = 0;
     operation.setAttribute("role", "region");
     operation.setAttribute("aria-label", t("Code"));
-    return el(
+    const card = el(
       "div",
       { class: `ask${m.answer ? ` ${m.answer === "always" ? "allow" : m.answer}` : ""}` },
       el(
@@ -1342,16 +1822,26 @@ export class ChatPanel {
             "div",
             { class: `settled-label ${m.answer === "always" ? "allow" : m.answer}` },
             icon(m.answer === "deny" ? "close" : "check", 12, 2.6),
-            el("span", { text: settled[m.answer] }),
+            el("span", { text: m.cancelled ? t("Cancelled") : settled[m.answer] }),
           )
         : el(
             "div",
             { class: "actions" },
             button(t("Deny"), !m.always || m.outside ? "primary" : "secondary", "deny", this.keys.deny),
             button(t("Allow"), !m.always || m.outside ? "secondary" : "primary", "allow", this.keys.allow),
-            m.always ? always : null,
+            m.always ? el("details", { class: "ask-more" }, el("summary", { class: "btn secondary", text: t("More choices") }), always) : null,
           ),
     );
+    if (m.answer) {
+      const receipt = el("details", { class: "approval-receipt" }, el("summary", { text: `${m.cancelled ? t("Cancelled") : settled[m.answer]} · ${m.tool}` }), card);
+      receipt.addEventListener("toggle", () => this.changed());
+      this.askNodes.set(m, receipt);
+      return receipt;
+    }
+    if (!this.appeared.has(m)) card.classList.add("approval-enter");
+    card.addEventListener("animationend", event => { if (event.target === card) card.classList.remove("approval-enter"); });
+    this.askNodes.set(m, card);
+    return card;
   }
 
   /** Re-renders one message in place. */
@@ -1399,10 +1889,16 @@ export class ChatPanel {
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    if (!preserveLive) {
+      this.clearReaction();
+      this.searching = c.busy && !!c.tools;
+    }
     this.conversationVersion++;
     this.sourceVersion++;
     if (clearDraft) {
       this.input.value = "";
+      this.mentions = [];
+      this.closeMentions();
       this.files = [];
     }
     this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
@@ -1420,6 +1916,7 @@ export class ChatPanel {
     const saved = c.lines.map((l): Message => {
       if (l.who === "you") return { who: "you", text: l.text, files: l.files };
       if (l.who === "error") return { who: "zeca", text: l.text, error: true };
+      if (l.who === "activity") return { who: "activity", data: readActivity(l.text), ended: true };
       if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
       return { who: "zeca", text: l.text };
     });
@@ -1442,9 +1939,10 @@ export class ChatPanel {
       this.busy = true;
       // Its start is not known here: counted from now.
       this.turnSince = Clock.now();
+      if (c.activity) this.messages.push({ who: "activity", data: readActivity(JSON.stringify(c.activity)), ended: false });
       if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
       for (const w of c.waiting)
-        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: w.outside });
+        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: w.description ?? null, full: w.full ?? null, added: w.added ?? 0, removed: w.removed ?? 0, always: w.always ?? false, outside: w.outside });
     }
     if (clearDraft) this.keepDraft();
     for (const message of this.messages) this.appeared.add(message);
@@ -1638,14 +2136,13 @@ export class ChatPanel {
           el("span", { class: "engine-name", text: this.engineName(this.provider) }),
           ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
         ),
+        this.planUsage,
         icon("chevronDown", 11, 2.2),
       );
-      this.modelButton.setAttribute("aria-label", api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label }));
+      this.selectionLabel = api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label });
       this.modelButton.setAttribute("aria-expanded", String(this.modelOpen));
     }
-    this.modelButton.title = this.compact ? "" : this.started
-      ? t("A conversation keeps its model; New starts another.")
-      : t("The model and effort for new conversations in this folder.");
+    this.paintUsage();
     this.modelMenu.classList.toggle("on", this.modelOpen);
     if (!this.modelOpen) return;
     // The engines first, as the prototype groups them: the user's own CLIs, then Vults' harness;
@@ -1792,6 +2289,11 @@ export class ChatPanel {
   }
 
   private closeMenus(returnFocus = false): boolean {
+    if (this.mentionMenu.classList.contains("on")) {
+      this.closeMentions();
+      if (returnFocus) this.input.focus();
+      return true;
+    }
     const open = this.menuPanels().find(({ menu }) => menu.classList.contains("on"));
     if (!open) return false;
     this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
@@ -1809,6 +2311,7 @@ export class ChatPanel {
   }
 
   private paintHead(): void {
+    if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMentions();
     const active = document.activeElement as HTMLInputElement | null;
     const panel = active ? this.menuPanels().find(({ menu }) => menu.contains(active)) : null;
     const choice = panel ? active?.dataset.choice : null;
@@ -1898,7 +2401,7 @@ export class ChatPanel {
     const words = el("span", { class: "typing-words" });
     const tick = () => {
       const ms = Clock.now() - this.turnSince;
-      words.textContent = ms < SHOW_ELAPSED_MS ? t("Thinking…") : t("Thinking… {seconds} s", { seconds: Math.floor(ms / 1000) });
+      words.textContent = ms < SHOW_ELAPSED_MS ? (this.searching ? t("Using tools…") : t("Working…")) : t("Working… {seconds} s", { seconds: Math.floor(ms / 1000) });
     };
     tick();
     this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})), words);
@@ -1909,46 +2412,26 @@ export class ChatPanel {
 
   private paint(): void {
     this.element.classList.toggle("has-messages", this.messages.length > 0 || this.busy);
-    this.greeting.hidden = this.compact && (this.messages.length > 0 || this.busy);
+    this.paintOffers();
     this.paintHead();
     this.paintVoice();
-    const last = this.messages[this.messages.length - 1];
     // While a turn runs and nothing waits on the user: before the first word, and between a
     // reply's words and its tools, when the CLI can go quiet for a while.
-    const waiting = this.busy && !(last?.who === "ask" && !last.answer);
+    const waiting = this.busy && !this.pendingAsk();
     this.paintThinking(waiting);
+    this.paintApprovalQueue();
+    const focused = document.activeElement && this.log.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
     this.nodes = this.messages.map((m) => this.node(m));
     this.log.replaceChildren(
       ...(this.messages.length
         ? this.nodes
         : [
-            ...(this.compact && this.provider !== "api" ? [] : [el("div", { class: "hint" },
-              this.compact ? null : this.greeting,
-              el("p", { text:
-                this.provider === "api"
-                  ? t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.")
-                  : t("Ask anything, or drop a file on the island."),
-              }),
-            )]),
-            el(
-              "div",
-              { class: "suggestions" },
-              ...(this.compact || this.provider === "api" ? [] : SUGGESTIONS).map((q) =>
-                el("button", {
-                  class: "suggestion",
-                  onclick: () => {
-                    this.input.value = t(q);
-                    this.keepDraft();
-                    this.paintSend();
-                    this.grow();
-                    this.input.focus();
-                  },
-                }, icon("chat", 16), el("span", { text: t(q) }), icon("chevron", 13)),
-              ),
-            ),
+            ...(this.compact ? (this.provider === "api" ? [el("div", { class: "hint" }, this.apiNotice)] : []) : [el("div", { class: "hint" }, this.intro, this.apiNotice)]),
+            this.suggestions,
           ]),
       ...(waiting && this.thinking ? [this.thinking] : []),
     );
+    if (focused?.isConnected) focused.focus({ preventScroll: true });
     for (const path of this.attachmentNodes.keys()) if (!this.files.includes(path)) this.attachmentNodes.delete(path);
     const attachments = this.files.map((file) => {
       const kept = this.attachmentNodes.get(file);

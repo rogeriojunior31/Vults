@@ -522,16 +522,20 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::SetProjectBird { .. } => Some(13),
         Intent::DismissRecap => Some(14),
         Intent::MergeRow { .. } => Some(15),
+        Intent::Skip { .. } => Some(16),
+        Intent::Review { .. } => Some(17),
     }
 }
 
-const QUIET_INTENTS: usize = 16;
+const QUIET_INTENTS: usize = 18;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
     let mut intents = Vec::new();
     for id in ["r1", "q1", "gone"] {
         intents.push(Intent::Release { request: rid(id) });
+        intents.push(Intent::Skip { request: rid(id) });
+        intents.push(Intent::Review { request: rid(id) });
     }
     for session in ["a", "b", "gone"] {
         intents.push(Intent::Jump {
@@ -816,9 +820,11 @@ fn steps_and_subagents() {
 fn a_sessions_cost_is_on_its_card() {
     let mut s = State::default();
     let now = Instant::now();
-    let cost = |id: &str, usd| Input::Cost {
+    let cost = |id: &str, usd| Input::SessionMetrics {
         session: key(id),
-        usd,
+        cost_usd: Some(usd),
+        elapsed_ms: None,
+        context_percent: None,
     };
     assert!(visible(&mut s, cost("a", 1.0), now).is_empty());
     assert!(s.sessions.is_empty());
@@ -828,6 +834,48 @@ fn a_sessions_cost_is_on_its_card() {
     visible(&mut s, cost("b", 9.0), now);
     assert_eq!(s.view().sessions[0].cost_usd, Some(0.42));
     assert_eq!(s.sessions.len(), 1);
+}
+
+#[test]
+fn session_metrics_are_reported_snapshots_not_activity_or_permissions() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let metrics = |elapsed_ms, context_percent| Input::SessionMetrics {
+        session: key("a"),
+        cost_usd: None,
+        elapsed_ms,
+        context_percent,
+    };
+    visible(&mut s, metrics(Some(600_000), Some(42.5)), now);
+    assert!(s.sessions.is_empty());
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(&mut s, agent("b", AgentEvent::SessionStarted), now);
+    let rest = s.sessions[&key("a")].rest_since;
+    assert!(visible(&mut s, metrics(Some(600_000), Some(42.5)), now).is_empty());
+    assert_eq!(s.sessions[&key("a")].rest_since, rest);
+    assert_eq!(session_view(&s, "a").elapsed_ms, Some(600_000));
+    assert_eq!(session_view(&s, "a").context_percent, Some(42.5));
+    assert_eq!(session_view(&s, "b").context_percent, None);
+    visible(&mut s, requested("a", "metrics-card"), now);
+    visible(
+        &mut s,
+        metrics(Some(600_001), Some(12.0)),
+        now + Duration::from_secs(1),
+    );
+    assert_eq!(session_view(&s, "a").context_percent, Some(12.0));
+    assert_eq!(s.pending[0].since, now);
+    assert!(s.ledger.is_open(&rid("metrics-card")));
+    assert_eq!(s.view().approval.unwrap().request, "metrics-card");
+    visible(&mut s, metrics(Some(0), Some(0.0)), now + Duration::from_secs(2));
+    assert_eq!(session_view(&s, "a").elapsed_ms, Some(0));
+    assert_eq!(session_view(&s, "a").context_percent, Some(0.0));
+    for context in [Some(-1.0), Some(101.0), Some(f64::NAN), None] {
+        visible(&mut s, metrics(None, context), now + Duration::from_secs(3));
+        assert_eq!(session_view(&s, "a").context_percent, None);
+        assert_eq!(session_view(&s, "a").elapsed_ms, None);
+    }
+    assert_eq!(session_view(&s, "a").status, Status::Approval);
+    assert!(s.ended.is_empty());
 }
 
 /// The app reads a session's repository for its folder; a reading for a folder it left is dropped,
@@ -2596,6 +2644,257 @@ fn focus_answers_nothing() {
     assert!(visible(&mut s, focus(Some("a")), now).is_empty());
     assert!(visible(&mut s, focus(None), now).is_empty());
     assert_eq!(s.pending.len(), 1);
+}
+
+#[test]
+fn rest_has_one_monotonic_deadline_across_metadata_navigation_and_wall_clock_changes() {
+    let mut s = State::default();
+    let t = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), t);
+    assert_eq!(s.sessions[&key("a")].rest_since, Some(t));
+    assert_eq!(session_view(&s, "a").rested, Some(false));
+    assert_eq!(s.next_rest(), Some(t + REST_AFTER));
+    visible(
+        &mut s,
+        Input::SessionMetrics {
+            session: key("a"),
+            cost_usd: Some(0.4),
+            elapsed_ms: Some(10_000),
+            context_percent: Some(42.0),
+        },
+        t + Duration::from_secs(10),
+    );
+    visible(&mut s, focus(Some("a")), t + Duration::from_secs(20));
+    visible(&mut s, Input::Clock(10_000_000), t + Duration::from_secs(25));
+    visible(&mut s, Input::Tick, t + REST_AFTER - Duration::from_millis(1));
+    assert_eq!(session_view(&s, "a").rested, Some(false));
+    assert_eq!(s.next_rest(), Some(t + REST_AFTER));
+    assert!(visible(&mut s, Input::Tick, t + REST_AFTER).is_empty());
+    assert_eq!(s.view().sessions[0].rested, Some(true));
+    assert_eq!(s.next_rest(), None);
+    visible(
+        &mut s,
+        agent("a", AgentEvent::PromptSubmitted),
+        t + Duration::from_secs(31),
+    );
+    assert_eq!(s.sessions[&key("a")].rest_since, None);
+    assert_eq!(session_view(&s, "a").rested, None);
+    visible(
+        &mut s,
+        agent("a", AgentEvent::Stopped { message: None }),
+        t + Duration::from_secs(35),
+    );
+    visible(
+        &mut s,
+        agent("a", AgentEvent::SubagentStopped),
+        t + Duration::from_secs(40),
+    );
+    assert_eq!(
+        s.sessions[&key("a")].rest_since,
+        Some(t + Duration::from_secs(35))
+    );
+    assert_eq!(session_view(&s, "a").rested, Some(false));
+    assert_eq!(s.next_rest(), Some(t + Duration::from_secs(65)));
+    visible(&mut s, Input::Tick, t + Duration::from_secs(65));
+    assert_eq!(session_view(&s, "a").rested, Some(true));
+    visible(
+        &mut s,
+        agent("a", AgentEvent::StopFailed { error: None }),
+        t + Duration::from_secs(66),
+    );
+    assert_eq!(session_view(&s, "a").rested, None);
+    assert_eq!(s.next_rest(), None);
+}
+
+#[test]
+fn the_next_rest_wakes_each_session_without_touching_a_waiting_offer() {
+    let mut s = State::default();
+    let t = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), t);
+    visible(
+        &mut s,
+        agent("b", AgentEvent::SessionStarted),
+        t + Duration::from_secs(10),
+    );
+    assert_eq!(s.next_rest(), Some(t + REST_AFTER));
+    visible(&mut s, requested("a", "r1"), t + Duration::from_secs(20));
+    let since = s.pending[0].since;
+    assert_eq!(s.next_rest(), Some(t + Duration::from_secs(40)));
+    assert!(visible(&mut s, Input::Tick, t + Duration::from_secs(40)).is_empty());
+    assert_eq!(session_view(&s, "a").rested, None);
+    assert_eq!(session_view(&s, "b").rested, Some(true));
+    assert_eq!(s.next_rest(), None);
+    assert_eq!(s.pending[0].since, since);
+    assert!(s.ledger.is_open(&rid("r1")));
+    assert_eq!(s.view().approval.unwrap().request, "r1");
+    assert!(s.ended.is_empty());
+    visible(
+        &mut s,
+        agent("b", AgentEvent::SessionEnded),
+        t + Duration::from_secs(41),
+    );
+    assert_eq!(s.next_rest(), None);
+}
+
+#[test]
+fn skipping_preserves_the_offer_and_deadline_until_explicitly_reopened() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, asked("b", "q1"), now + Duration::from_secs(1));
+    let binding = ledger::Binding::of(&s.pending[0]);
+    let skip = |id| Input::User(Intent::Skip { request: rid(id) });
+    assert!(reduce(&mut s, skip("r1"), now).is_empty());
+    assert_eq!(s.view().approval.unwrap().request, "q1");
+    assert!(reduce(&mut s, skip("q1"), now).is_empty());
+    assert!(reduce(&mut s, skip("gone"), now).is_empty());
+    assert!(reduce(&mut s, skip("r1"), now).is_empty());
+    assert!(s.view().approval.is_none());
+    s.presence = Presence::Panel;
+    assert!(
+        notify::Notifier::default()
+            .update(&s, notify::Prefs { on: true })
+            .is_empty(),
+        "Explicitly skipped cards do not reopen a desktop notification"
+    );
+    assert!(
+        s.view()
+            .sessions
+            .iter()
+            .all(|s| s.waiting && s.skipped && !s.card && s.request.is_some())
+    );
+    assert_eq!(s.pending.len(), 2);
+    assert_eq!(s.ledger.open().count(), 2);
+    assert!(s.ended.is_empty());
+    assert_eq!(ledger::Binding::of(&s.pending[0]), binding);
+    // A stale control cannot answer a card the user has deferred.
+    assert!(reduce(&mut s, decide("r1", Decision::Allow), now).is_empty());
+    assert!(reduce(&mut s, answer("q1", vec![one("yes")]), now).is_empty());
+    assert!(reduce(&mut s, focus(Some("a")), now).is_empty());
+    assert_eq!(s.view().approval.unwrap().request, "r1");
+    assert_eq!(s.pending[0].since, now);
+    assert_eq!(ledger::Binding::of(&s.pending[0]), binding);
+    assert!(reduce(&mut s, skip("r1"), now).is_empty());
+    let effects = visible(&mut s, Input::Tick, now + PENDING_TTL);
+    assert_eq!(released(&effects), vec![rid("r1")]);
+    assert_eq!(s.pending.len(), 1);
+    assert!(s.pending[0].skipped);
+    assert!(s.ledger.is_open(&rid("q1")));
+    visible(&mut s, focus(Some("b")), now + PENDING_TTL);
+    assert_eq!(s.view().approval.unwrap().request, "q1");
+}
+
+#[test]
+fn skipping_one_of_a_sessions_cards_keeps_its_other_card_reachable() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r2"), now);
+    assert!(reduce(&mut s, Input::User(Intent::Skip { request: rid("r1") }), now).is_empty());
+    let view = s.view();
+    assert_eq!(view.approval.unwrap().request, "r2");
+    assert!(!view.sessions[0].skipped);
+    assert_eq!(view.sessions[0].request.as_deref(), Some("r2"));
+    assert_eq!(s.ledger.open().count(), 2);
+}
+
+#[test]
+fn the_inbox_keeps_each_offer_and_reviews_the_exact_request_without_answering() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r2"), now);
+    visible(&mut s, asked("b", "q1"), now);
+    visible(&mut s, Input::User(Intent::Skip { request: rid("r2") }), now);
+    let inbox = s.view().inbox;
+    assert_eq!(inbox.len(), 3);
+    assert!(inbox.iter().any(
+        |i| matches!(&i.source, AttentionSource::Request { request, skipped: true, .. } if request == "r2")
+    ));
+    let binding = ledger::Binding::of(s.pending.iter().find(|p| p.request == rid("r2")).unwrap());
+    assert!(reduce(&mut s, Input::User(Intent::Review { request: rid("r2") }), now).is_empty());
+    assert_eq!(s.view().approval.unwrap().request, "r2");
+    assert_eq!(s.focus, Some(key("a")));
+    assert_eq!(s.pending[0].since, now);
+    assert_eq!(ledger::Binding::of(&s.pending[0]), binding);
+    assert_eq!(s.ledger.open().count(), 3);
+    assert!(s.ended.is_empty());
+    assert!(reduce(&mut s, Input::User(Intent::Review { request: rid("gone") }), now).is_empty());
+    visible(&mut s, Input::Tick, now + PENDING_TTL);
+    assert!(
+        s.view()
+            .inbox
+            .iter()
+            .all(|i| !matches!(i.source, AttentionSource::Request { .. }))
+    );
+}
+
+#[test]
+fn the_inbox_lists_actions_without_success_noise_or_duplicate_connector_alerts() {
+    let mut s = State::default();
+    let now = Instant::now();
+    working(&mut s, "quiet", now - Duration::from_secs(16 * 60));
+    visible(&mut s, Input::Tick, now);
+    visible(
+        &mut s,
+        agent(
+            "failed",
+            AgentEvent::StopFailed {
+                error: Some("Build failed".into()),
+            },
+        ),
+        now,
+    );
+    visible(&mut s, agent("done", AgentEvent::Stopped { message: None }), now);
+    let failed = row("pr:me/app#12", "https://github.com/me/app/pull/12");
+    let mut review = failed.clone();
+    review.item = "pr:me/app#13".into();
+    review.group = board::Group::ToReview;
+    review.checks = None;
+    let mut passing = failed.clone();
+    passing.item = "pr:me/app#14".into();
+    passing.checks = Some(board::Checks::Passing);
+    visible(&mut s, card(vec![failed, review, passing]), now);
+    visible(
+        &mut s,
+        alert("pr:me/app#12:ci-failed", "https://github.com/me/app/pull/12"),
+        now,
+    );
+    visible(&mut s, alert("service:unavailable", "https://github.com"), now);
+    let inbox = s.view().inbox;
+    assert_eq!(inbox.len(), 5);
+    assert!(inbox.iter().any(|i| i.level == Attention::Info
+        && matches!(&i.source, AttentionSource::Session { session } if session.id == "quiet")));
+    assert_eq!(
+        inbox
+            .iter()
+            .filter(|i| matches!(i.source, AttentionSource::Connection { .. }))
+            .count(),
+        2
+    );
+    assert_eq!(
+        inbox
+            .iter()
+            .filter(|i| matches!(i.source, AttentionSource::Alert { .. }))
+            .count(),
+        1
+    );
+    assert!(matches!(&inbox[0].source, AttentionSource::Session { session } if session.id == "failed"));
+    assert!(inbox.windows(2).all(|w| w[0].level >= w[1].level));
+    visible(
+        &mut s,
+        Input::Board {
+            connector: "github".into(),
+            rows: None,
+        },
+        now,
+    );
+    assert!(
+        s.view()
+            .inbox
+            .iter()
+            .all(|i| !matches!(i.source, AttentionSource::Connection { .. }))
+    );
 }
 
 #[test]
@@ -4892,4 +5191,95 @@ fn a_phone_never_makes_a_rule_of_a_target_it_saw_cut() {
     };
     assert!(ask("Bash · cargo test".into()));
     assert!(!ask(format!("Bash · {}", "x".repeat(MAX_PHONE_TARGET))));
+}
+
+#[test]
+fn chat_offers_follow_local_time_and_flock_without_effects_or_answers() {
+    use chat::ChatFollowup::{Explain, Flock, Next};
+    use i18n::Lang;
+    let now = Instant::now();
+    let mut s = State::default();
+    for (lang, morning, afternoon, evening) in [
+        (Lang::En, "Good morning", "Good afternoon", "Good evening"),
+        (Lang::PtBr, "Bom dia", "Boa tarde", "Boa noite"), // check-english:allow
+        (Lang::Es, "Buenos días", "Buenas tardes", "Buenas noches"), // check-english:allow
+        (Lang::Zh, "早上好", "下午好", "晚上好"),
+    ] {
+        reduce(&mut s, Input::SetLang(lang), now);
+        for (hour, expected) in [
+            (0, evening),
+            (4, evening),
+            (5, morning),
+            (11, morning),
+            (12, afternoon),
+            (17, afternoon),
+            (18, evening),
+            (23, evening),
+        ] {
+            assert!(reduce(&mut s, Input::LocalHour(hour), now).is_empty());
+            let view = s.view().chat;
+            assert_eq!(view.greeting, expected);
+            assert_eq!(view.followups, [Explain, Next]);
+            assert_eq!(
+                view.suggestions.iter().map(|q| q.id.as_str()).collect::<Vec<_>>(),
+                ["help", "recent"]
+            );
+            assert!(
+                view.suggestions
+                    .iter()
+                    .all(|q| q.session.is_none() && !q.text.is_empty())
+            );
+        }
+    }
+    reduce(&mut s, Input::SetLang(Lang::En), now);
+    assert!(reduce(&mut s, Input::LocalHour(24), now).is_empty());
+    assert_eq!(s.view().chat.greeting, "Ask Zeca");
+    visible(&mut s, agent("working", AgentEvent::PromptSubmitted), now);
+    assert!(s.view().chat.caption.starts_with("One agent"));
+    assert_eq!(
+        s.view().chat.suggestions[0].session.as_ref().unwrap().id,
+        "working"
+    );
+    visible(&mut s, agent("thinking", AgentEvent::PromptSubmitted), now);
+    assert!(s.view().chat.caption.starts_with("2 agents"));
+    visible(
+        &mut s,
+        agent("failed", AgentEvent::StopFailed { error: None }),
+        now,
+    );
+    assert_eq!(s.view().chat.suggestions[0].id, "failed");
+    visible(&mut s, requested("waiting", "unanswered"), now);
+    let approval = s.view().approval.unwrap();
+    for lang in [Lang::En, Lang::PtBr, Lang::Es, Lang::Zh] {
+        reduce(&mut s, Input::SetLang(lang), now);
+        assert!(reduce(&mut s, Input::LocalHour(12), now).is_empty());
+        let view = s.view();
+        assert_eq!(view.approval.unwrap().request, approval.request);
+        assert_eq!(view.chat.followups, [Explain, Next, Flock]);
+        assert_eq!(
+            view.chat
+                .suggestions
+                .iter()
+                .map(|q| q.id.as_str())
+                .collect::<Vec<_>>(),
+            ["waiting", "failed", "recent"]
+        );
+        assert_eq!(
+            view.chat.suggestions[0].session,
+            Some(SessionRef {
+                agent: AgentKind::Claude,
+                id: "waiting".into()
+            })
+        );
+        assert_eq!(view.chat.suggestions[1].session.as_ref().unwrap().id, "failed");
+        assert!(!view.chat.caption.is_empty());
+    }
+    // Empty or still undiscovered folders retain a meaningful agent name.
+    let mut sessions = s.view().sessions;
+    sessions.retain(|row| row.id == "waiting");
+    sessions[0].project.clear();
+    assert_eq!(
+        chat::view(&sessions, Some(12), Lang::En).caption,
+        "claude is waiting for your answer."
+    );
 }

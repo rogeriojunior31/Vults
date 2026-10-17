@@ -43,6 +43,8 @@ pub struct Draft {
     files: Vec<String>,
     folder: Option<String>,
     provider: Option<Provider>,
+    #[serde(default)]
+    mentions: Vec<crate::mentions::Mention>,
 }
 
 impl Draft {
@@ -54,7 +56,7 @@ impl Draft {
         {
             return Err("Chat draft is too large.".into());
         }
-        Ok(())
+        crate::mentions::validate(&self.mentions)
     }
 }
 
@@ -89,6 +91,9 @@ pub fn chat_draft_set(
 struct Live {
     /// A turn runs.
     busy: bool,
+    tools: bool,
+    activity: vults_chat::activity::Activity,
+    permissions: HashMap<String, vults_chat::Detail>,
     started: bool,
     /// The turn's message and what Zeca has said in it so far: not saved until the turn ends.
     sent: Option<(String, Vec<String>)>,
@@ -127,16 +132,24 @@ struct Scope {
 }
 
 impl Waiting {
+    fn pending_count(&self) -> usize {
+        self.0
+            .lock()
+            .map(|m| m.values().filter(|a| !a.answer.is_closed()).count())
+            .unwrap_or_default()
+    }
+
     fn shown(&self) -> Vec<WaitingView> {
         self.0
             .lock()
             .map(|m| {
                 m.iter()
+                    .filter(|(_, a)| !a.answer.is_closed())
                     .map(|(id, a)| WaitingView {
                         id: id.clone(),
                         tool: a.tool.clone(),
                         target: a.target.clone(),
-                        outside: None,
+                        detail: Default::default(),
                     })
                     .collect()
             })
@@ -298,6 +311,14 @@ impl ChatState {
     }
 }
 
+pub(crate) fn attention(app: &AppHandle) -> Option<vults_core::AttentionItem> {
+    let count = app.try_state::<ChatState>()?.waiting.pending_count();
+    (count > 0).then_some(vults_core::AttentionItem {
+        level: vults_core::Attention::NeedsYou,
+        source: vults_core::AttentionSource::Chat { count },
+    })
+}
+
 /// To both of the chat's windows: the island and the Nest (if it is open).
 fn emit_chat<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload: &S) {
     // Once, to every page: a page's `listen` takes events sent to any target, so one copy sent
@@ -323,6 +344,7 @@ enum Sync {
         folder: Option<String>,
         model: Option<String>,
         effort: Option<String>,
+        mentions: Vec<crate::mentions::Mention>,
     },
     Reset {
         from: String,
@@ -340,6 +362,9 @@ enum Sync {
 }
 
 fn sync(app: &AppHandle, s: Sync) {
+    if !matches!(s, Sync::Draft { .. }) {
+        crate::runtime::recheck(app);
+    }
     emit_chat(app, "chat-sync", &s);
 }
 
@@ -352,10 +377,21 @@ pub async fn chat_send(
     text: String,
     files: Vec<String>,
     folder: Option<String>,
+    mentions: Option<Vec<crate::mentions::Mention>>,
 ) -> Result<(), String> {
     if !crate::settings::zeca(&app) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }
+    use crate::flock_tools::Source as _;
+    let mentions = mentions.unwrap_or_default();
+    let targets = crate::mentions::resolve(&text, mentions.clone(), &app.view().unwrap_or_default())?;
+    let source: Arc<dyn crate::flock_tools::Source> = match &targets {
+        Some(targets) => Arc::new(crate::mentions::Source {
+            source: Arc::new(app.clone()),
+            targets: targets.clone(),
+        }),
+        None => Arc::new(app.clone()),
+    };
     // Only our own inbox copies may be attached, never an arbitrary path from the webview.
     let inbox = paths::inbox_dir();
     let files: Vec<PathBuf> = files
@@ -380,6 +416,7 @@ pub async fn chat_send(
                             s.0.push_str(text);
                             app.state::<ChatState>().live(|l| l.text.push_str(text));
                         }
+                        Delta::ToolState { active } => app.state::<ChatState>().live(|l| l.tools = *active),
                         Delta::Error { message } => s.1 = Some(message.clone()),
                         _ => {}
                     }
@@ -395,9 +432,45 @@ pub async fn chat_send(
                         _ => {}
                     }
                 }
-                if let Delta::Permission { detail, .. } = &delta {
+                app.state::<ChatState>().live(|l| match &delta {
+                    Delta::Activity { event } => l.activity.apply(event),
+                    Delta::Allowed { tool, target } => {
+                        l.activity.apply(&vults_chat::activity::Event::Decision {
+                            tool: tool.clone(),
+                            target: target.clone(),
+                            answer: "allow".into(),
+                            by: "conversation".into(),
+                        })
+                    }
+                    Delta::Settled {
+                        tool,
+                        target,
+                        allow,
+                        by,
+                    } => l.activity.apply(&vults_chat::activity::Event::Decision {
+                        tool: tool.clone(),
+                        target: target.clone(),
+                        answer: if *allow { "allow" } else { "deny" }.into(),
+                        by: match by {
+                            vults_chat::SettledBy::Policy => "policy",
+                            vults_chat::SettledBy::FullAccess => "full-access",
+                        }
+                        .into(),
+                    }),
+                    _ => {}
+                });
+                if let Delta::Permission { id, detail, .. } = &delta {
                     let outside = detail.outside.clone();
-                    app.state::<ChatState>().live(|l| l.outside = outside);
+                    app.state::<ChatState>().live(|l| {
+                        l.outside = outside;
+                        l.permissions.insert(id.clone(), detail.clone());
+                    });
+                }
+                if matches!(
+                    delta,
+                    Delta::Permission { .. } | Delta::Done | Delta::Error { .. } | Delta::Stopped
+                ) {
+                    crate::runtime::recheck(&app);
                 }
                 emit_chat(&app, "chat", &delta);
             }
@@ -431,7 +504,7 @@ pub async fn chat_send(
     // After the folder: the memory's tool proposes for the roost the conversation is in.
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
     if chat.provider() == Provider::ClaudeApi {
-        let mut tools = crate::flock_tools::all(Arc::new(app.clone()));
+        let mut tools = crate::flock_tools::all(source.clone());
         tools.extend(crate::recall::tools(&app));
         tools.extend(crate::memory::tools(&app, chat.folder()));
         // The web only while the user has it on: off, the model is never offered it (Z7).
@@ -441,6 +514,9 @@ pub async fn chat_send(
             ))));
         }
         chat.set_tools(tools);
+    }
+    if chat.provider() == Provider::Claude {
+        crate::mcp::keep_scope(targets.as_deref())?;
     }
     if !chat.started() {
         let pick = pick_for(&app, chat.folder(), chat.provider());
@@ -507,6 +583,7 @@ pub async fn chat_send(
             folder: Some(folder_key(Some(chat.folder()))).filter(|f| !f.is_empty()),
             model: model.map(str::to_string),
             effort: effort.map(|e| e.name().to_string()),
+            mentions: mentions.clone(),
         },
     );
     state.live(|l| {
@@ -542,9 +619,9 @@ pub async fn chat_send(
     if let Ok(mut t) = state.waiting.1.lock() {
         *t = Some(turn.clone());
     }
-    // Only a conversation that began with the frozen part knows what the blocks are (one saved
-    // before M2 does not, and its system prompt can't change now).
-    let context = chat.frozen().map(|_| crate::context::volatile(&app, &memories));
+    // Older conversations omit general context; an explicit reference still carries its scope.
+    let context = (chat.frozen().is_some() || targets.is_some())
+        .then(|| crate::context::volatile(source.as_ref(), &memories));
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
     crate::journal::chat(&app, "you", chat.folder(), &text, false);
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
@@ -568,7 +645,13 @@ pub async fn chat_send(
             crate::journal::chat(&app, "zeca", &folder, &reply, outside.is_some());
         }
         let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
+        let activity = state.live.lock().ok().and_then(|l| {
+            (!l.activity.is_empty())
+                .then(|| serde_json::to_string(&l.activity.for_history()).ok())
+                .flatten()
+        });
         for (who, text) in [
+            ("activity", activity),
             ("zeca", Some(reply).filter(|r| !r.is_empty())),
             ("error", error),
             ("stopped", stopped.then(String::new)),
@@ -768,6 +851,26 @@ pub fn chat_decide(
             ChatAnswer::Always => (vults_chat::Answer::AllowInConversation, Act::AllowInConversation),
         };
         let allow = reply.allows();
+        let full_target = state
+            .live
+            .lock()
+            .ok()
+            .and_then(|mut l| l.permissions.remove(&id))
+            .and_then(|d| d.full)
+            .unwrap_or_else(|| asked.target.clone());
+        state.live(|l| {
+            l.activity.apply(&vults_chat::activity::Event::Decision {
+                tool: asked.tool.clone(),
+                target: full_target,
+                answer: match answer {
+                    ChatAnswer::Deny => "deny",
+                    ChatAnswer::Allow => "allow",
+                    ChatAnswer::Always => "always",
+                }
+                .into(),
+                by: "human".into(),
+            })
+        });
         let _ = asked.answer.send(reply);
         sync(
             window.app_handle(),
@@ -866,16 +969,19 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         return Ok(None);
     };
     // Never the chat's lock: a turn holds it until it ends.
-    let (busy, started, sent, text, outside) = state
+    let (busy, tools, started, sent, text, outside, activity, permissions) = state
         .live
         .lock()
         .map(|l| {
             (
                 l.busy,
+                l.tools,
                 l.started,
                 l.sent.clone(),
                 l.text.clone(),
                 l.outside.clone(),
+                l.activity.clone(),
+                l.permissions.clone(),
             )
         })
         .unwrap_or_default();
@@ -898,10 +1004,15 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
             });
         }
         opened.busy = true;
+        opened.tools = tools;
         opened.partial = text;
+        opened.activity = activity;
         opened.waiting = state.waiting.shown();
         for w in &mut opened.waiting {
-            w.outside.clone_from(&outside);
+            if let Some(detail) = permissions.get(&w.id) {
+                w.detail = detail.clone();
+            }
+            w.detail.outside.clone_from(&outside);
         }
     }
     Ok(Some(opened))
@@ -929,7 +1040,8 @@ pub struct WaitingView {
     id: String,
     tool: String,
     target: String,
-    outside: Option<String>,
+    #[serde(flatten)]
+    detail: vults_chat::Detail,
 }
 
 /// One line of a saved conversation, as the chat shows it.
@@ -945,7 +1057,9 @@ pub struct LineView {
 pub struct Opened {
     /// A turn runs: what Zeca said so far, and the cards it waits on.
     busy: bool,
+    tools: bool,
     partial: String,
+    activity: vults_chat::activity::Activity,
     waiting: Vec<WaitingView>,
     provider: Provider,
     label: String,
@@ -1139,7 +1253,9 @@ fn opened(
 ) -> Option<Opened> {
     Some(Opened {
         busy: false,
+        tools: false,
         partial: String::new(),
+        activity: Default::default(),
         waiting: Vec::new(),
         provider: engine_provider(&c.engine)?,
         label: engine_label(&c.engine),
@@ -1558,12 +1674,34 @@ mod tests {
     use vults_chat::Settings;
 
     #[test]
+    fn timed_out_chat_offers_leave_the_inbox_and_reopened_chat() {
+        let waiting = Waiting::default();
+        let live = waiting.wait("live", "Bash", "git status");
+        let expired = waiting.wait("expired", "Bash", "git diff");
+        assert_eq!(waiting.pending_count(), 2);
+        drop(expired);
+        assert_eq!(waiting.pending_count(), 1);
+        assert_eq!(waiting.shown().len(), 1);
+        assert_eq!(waiting.shown()[0].id, "live");
+        drop(live);
+        assert_eq!(waiting.pending_count(), 0);
+        assert!(waiting.shown().is_empty());
+    }
+
+    #[test]
     fn draft_roundtrip_keeps_multiline_text_files_and_context() {
         let draft = Draft {
             text: "Review this change\nThen run its tests".into(),
             files: vec!["/inbox/change.patch".into()],
             folder: Some("/project".into()),
             provider: Some(Provider::Codex),
+            mentions: vec![crate::mentions::Mention {
+                token: "@\"site\"".into(),
+                target: crate::mentions::Target::Session {
+                    agent: "codex".into(),
+                    id: "exact-session".into(),
+                },
+            }],
         };
         draft.validate().unwrap();
         let restored: Draft = serde_json::from_str(&serde_json::to_string(&draft).unwrap()).unwrap();
@@ -1571,6 +1709,10 @@ mod tests {
         assert_eq!(restored.files, draft.files);
         assert_eq!(restored.folder, draft.folder);
         assert_eq!(restored.provider, draft.provider);
+        assert_eq!(restored.mentions, draft.mentions);
+        let old: Draft =
+            serde_json::from_str(r#"{"text":"old draft","files":[],"folder":null,"provider":null}"#).unwrap();
+        assert!(old.mentions.is_empty());
         assert!(
             Draft {
                 text: "x".repeat(1024 * 1024 + 1),

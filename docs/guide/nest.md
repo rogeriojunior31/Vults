@@ -32,7 +32,10 @@ Minimizing the Nest returns the island and its approval shortcuts. Opening the N
 again restores the window; minimizing does not change its saved Room size.
 
 Reopening from the tray keeps your last tab and Activity subsection until Vults exits.
-Opening a specific view takes priority. If Zeca is off, a saved Chat tab opens Flock.
+Opening a specific view takes priority. If Zeca is off, a saved Chat tab opens Flock. Quick's **Now**
+opens a connection directly in its selected detail, clearing an old filter that would hide it;
+a memory proposal opens Chat's Memory panel. Neither route performs an action. Returning
+from Activity or Connections to Quick opens Now.
 
 Closing with the desktop's close command (such as **Alt+F4**) also waits for the
 Chat draft, navigation and record searches to save. If saving or closing fails,
@@ -83,41 +86,48 @@ its unsaved text and selection during an unrelated update.
 
 ## Flock
 
-The flock across the window, three times its size, each bird over a card with its session's
-project, state and agent, and by the heading how many are out on a web sortie and how many sit on
-the wire. A click on a bird or a card (or **↑ ↓**) puts that session in front. A right click (or
-the menu key, or **Shift+F10**) opens its quick actions, as on the island: **Open terminal**, **Open folder**,
-**Activity**, **View the last diff**,
-**Keep in front** (or **Let the flock choose**), and mute, pin or hide its project. While a card
-waits, only that session's **Activity** and diff can show.
-Under them, **Session details**: **Needs you** keeps only the sessions waiting for you, and **Find a
-session…** reads projects, repositories, branches, agents and what each is doing now.
+The flock sits on one wire, three times its size, with a project name under each bird. Below it,
+a session list shows each project's state, agent, step number, reported running time and context
+use. Select a bird or row (or use **↑ ↓**) to put that session in front. Hover for the complete
+project, branch, agent and state. A right click, the menu key or **Shift+F10** opens the existing
+quick actions: terminal, folder, Activity, last diff, focus, mute, pin and hide. A waiting card
+keeps its own session in front.
 
-The selected bird and its card share a light selection mark. Project names have
-up to two lines; hovering over a card shows its full name, branch, agent and state.
-**Needs you** includes the total waiting count across the flock, even while searching.
-The detail card separates the project heading from its agent and state, and detail
-tabs use a brief entrance only when you switch them; live updates do not replay it.
-Reduced motion and manual pause skip that entrance.
+Above the list, **All sessions**, **Needs you**, **Working**, **Failed** and **Quiet sessions**
+filter the rows. Quiet includes resting sessions and birds flagged for silence. Counts cover the
+whole flock even while searching. **Find a session…** reads projects, repositories, branches,
+agents and current steps. Filtering leaves the selected session and its card in place. The list
+and details scroll independently. In a narrow Nest, **Back to sessions** opens the list; choosing
+a row returns to its details. In a short window the wire gives way to the selected content.
+A new request returns to its card, including while the narrow list is open.
 
-The search, **Needs you** filter and detail tab stay where you left them when you
-close and reopen the Nest or return to the island, until Vults exits. **Clear
-filters** in the search toolbar clears the search and Needs you, keeping the detail tab. If Zeca is off,
-his saved detail tab opens **Changes**. Filtering the session list leaves the
-current permission card visible; restoring these controls never answers it.
+The search, status filter, detail tab and chosen diff survive closing and reopening the Nest or
+returning to the island until Vults exits. **Clear filters** clears search and status, keeping
+the selected detail. With Zeca off, his saved detail opens **Session**. Restoring navigation
+only reads local state. Live updates preserve scroll and keyboard focus; tab changes respect
+reduced motion and manual pause. Left/Right and Home/End move between detail tabs.
 
-The session in front has its card at the left: its state, what it is doing, and for one that waits,
-what it asks (the command, with **Copy**, and *1 of 2* when more wait). A working one shows its
-steps so far, its subagents and its cost in the head, the step just done and the one under way
-(a finished edit's **+N −M** opens it in **Changes**), and, when it has gone quiet, **Snooze**,
-**Keep going** and **Dismiss**, as on the island. A finished or failed one shows its last reply or
-its error. Under the card, how many files the session changed and their lines added and removed. At
-the right, its **Changes** (each of its last 32 edits' diff, chosen in the list; **Focus diff**
-gives the diff the whole width; under it, every file the session changed, and a click on one whose
-diff is still kept shows it; in a repository, a file a command wrote during a turn shows *by a
-command*), **Activity** (its last steps, each at the time it started), **Context** (worktree, repository, branch, folder, agent,
-editor, state and cost) and, with Zeca on, **Zeca**: **Ask Zeca** opens the Chat with the question
-ready. In Full, your plans' usage sits under it, amber from 70% and red from 90%.
+The selected session's card shows its state and the command or question it asks, with its existing
+actions. A finished or failed turn shows its last reply or error. **Snooze**, **Keep going** and
+**Dismiss** remain on a session flagged for silence. Below the card:
+
+- **Session** opens by default: running time, cost, context use, four recent steps and up to four
+  changed files. **All steps** and **See the changes** open the full kept Activity and Changes.
+  Reported zero is displayed as zero; a missing metric says **Not reported** and has no meter.
+- **Changes** keeps the last 32 edit diffs, a change picker and **Focus diff**, plus every tracked
+  changed file. A file with a kept edit opens that diff. A file detected in the repository during
+  a turn without a reported edit says *by a command*, without invented line counts.
+- **Activity** shows the kept recent steps and their start times.
+- **Context** lists the project, repository, branch, folder, agent, editor, state and reported metrics.
+- With Zeca on, **Zeca** opens Chat with a question about that session ready to send.
+
+Running time and context are the CLI's last reported snapshot, currently from Claude Code's
+[status line](https://code.claude.com/docs/en/statusline). Running time includes resumed runs;
+it is not inferred from step count or Vults uptime. Context is current occupancy and may fall
+after compaction. Cost is an API-price estimate, not a subscription charge. Agents that do not
+report these values, including Codex hooks, show **Not reported**. Reading the summary makes no
+network request and changes no agent configuration. In Full, the plans' usage remains below,
+amber from 70% and red from 90%.
 
 If a permission or question arrives while **Focus diff** is expanded, the card
 comes back. Expansion stays unavailable while the request waits. Permission
@@ -131,7 +141,10 @@ If the diff body is unavailable, the card returns and expansion is unavailable.
 A session that waits for you is answered on its card, as on the island
 ([Approving from the island](approvals.md)): **Deny**, **Allow** and **Always allow** for a
 permission (**Ctrl+Alt+Y** and **Ctrl+Alt+N** too, while the Nest has the focus), the choices for a
-question. One with no card here (it asks in its terminal) says so.
+question. **Skip for now** defers that card without answering it or renewing its deadline;
+select its session or **Show the card** to reopen it. Skipped cards keep their birds and
+waiting count, while the **Needs you** strip hides their tags. One with no card here
+(it asks in its terminal) says so.
 **Open terminal** shows where Vults can bring its terminal forward
 ([The island](island.md#getting-to-a-session)).
 
@@ -141,10 +154,11 @@ The island's conversation with Zeca, wide, with replies in full Markdown (a link
 and is never followed); a message, **New** or another engine in either one shows in both. Cards
 are answered here too, with **Deny**, **Allow** and **Always in this chat**, as on the island.
 The title bar holds the conversation's title, the engine pill (as on the island: the engine in its
-color and its model; its menu holds the engines, the models and the effort), the folder, and two
-panel buttons. The composer has a paperclip: the files you pick go to this chat, as a drop on the
+color and its model; its menu holds the engines, the models and the effort), the folder, and
+the available panel controls. The composer has a paperclip: the files you pick go to this chat, as a drop on the
 island does. The left panel button opens **Recent**: a sidebar in a wide window or Full,
-or a separate view with **Back to Chat** in a narrow Room. Conversations are grouped by date,
+or a separate view with **Back to Chat** in a narrow Room. While Recent is visible, its own fold
+button (wide) or Back to Chat (narrow) replaces the title-bar button. Conversations are grouped by date,
 with their project, executor and time below the title; the current conversation is marked.
 **Search conversations** searches all loaded titles, folders and executors locally, including
 conversations past the initial 30. **Show more** reveals the rest. The search stays on this

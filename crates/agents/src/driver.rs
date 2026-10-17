@@ -201,6 +201,8 @@ pub enum Event {
     Session(String),
     /// More reply text.
     Text(String),
+    /// Readable reasoning supplied by the provider, separate from the reply.
+    Reasoning(String),
     /// What the turn cost; before the turn ends.
     Usage(Usage),
     /// A tool began; `id` pairs it with its [`Event::ToolEnd`]. `target` is what a card shows (cut),

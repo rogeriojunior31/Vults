@@ -19,7 +19,7 @@ const nest = createNest(
       draft: Bridge.chatDraft,
       current: Bridge.chatCurrent,
       saveDraft: Bridge.chatDraftSet,
-      send: (text, files, folder) => Bridge.chatSend(text, files, folder),
+      send: (text, files, folder, mentions) => Bridge.chatSend(text, files, folder, mentions),
       decide: (id, answer) => void Bridge.chatDecide(id, answer),
       stop: () => void Bridge.chatStop(),
       reset: (provider) => Bridge.chatReset(provider),
@@ -37,6 +37,7 @@ const nest = createNest(
       setAccess: (access) => Bridge.setChatAccess(access),
       openSettings: () => void Bridge.openSettings("chat"),
       engines: () => Bridge.chatEngines(),
+      openFlock: () => void changeSize(async () => nest.open("flock")),
       pickFiles: (title) => Bridge.chatPickFiles(title),
       voice: {
         start: (tap) => Bridge.voiceStart(tap),
@@ -92,6 +93,7 @@ const nest = createNest(
       decideAlways: (request) => void Bridge.decideAlways(request),
       answer: (request, answers) => void Bridge.questionAnswer(request, answers),
       release: (request) => void Bridge.questionRelease(request),
+      skip: (request) => void Bridge.cardSkip(request),
       diff: (s, step) => Bridge.stepDiff(s.agent, s.id, step),
       usage: () => Bridge.usage(),
       hush: (s, hush) => void Bridge.sessionHush(s.agent, s.id, hush),
@@ -154,7 +156,7 @@ Bridge.onNestTab((tab) => {
   nest.open(tab);
 });
 Bridge.onMemory(() => nest.memoryChanged());
-Bridge.onUsage(() => nest.usageChanged());
+Bridge.onUsage((windows) => { nest.chat.setUsage(windows); nest.usageChanged(); });
 Bridge.onSpend(() => nest.spendChanged());
 
 Bridge.onChat((d) => nest.chat.receive(d));
@@ -178,6 +180,8 @@ let lastView: Parameters<typeof nest.view>[0] | null = null;
 onDayPart(() => lastView && nest.view(lastView));
 Bridge.onView((v) => {
   lastView = v;
+  nest.chat.setSessions(v.sessions);
+  nest.chat.setOffers(v.chat ?? null);
   const folders = v.sessions.flatMap((s) =>
     s.cwd ? [{ cwd: s.cwd, project: s.project }] : [],
   );
@@ -194,7 +198,7 @@ void Bridge.appSettings().then((s) => {
   nest.chat.setAccess(s.chatAccess);
   // Asked for the Chat before Zeca was known to be on.
   // Not if the user went elsewhere meanwhile.
-  if (s.zeca && asked === "chat" && nest.current() === "flock") nest.open("chat");
+  if (s.zeca && ["chat", "memory"].includes(asked) && nest.current() === "flock") nest.open(asked);
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {

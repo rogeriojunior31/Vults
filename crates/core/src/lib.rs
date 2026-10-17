@@ -7,10 +7,12 @@
 
 #![forbid(unsafe_code)]
 
+pub mod attention;
 pub mod audit;
 pub mod away;
 pub mod board;
 pub mod calendar;
+pub mod chat;
 pub mod flock;
 pub mod handoff;
 pub mod i18n;
@@ -29,6 +31,7 @@ mod view;
 use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
+pub use attention::{AttentionItem, AttentionSource};
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
 pub use view::{
@@ -64,6 +67,8 @@ pub const PENDING_TTL: Duration =
 const SESSION_TTL: Duration = Duration::from_secs(30 * 60);
 /// A finished session lingers this long before leaving.
 const FINISHED_TTL: Duration = Duration::from_secs(10 * 60);
+/// A resting session keeps its recent green mark before it may take to the sky.
+pub const REST_AFTER: Duration = Duration::from_secs(30);
 
 /// What an agent is doing right now; each one has its own animation clip.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -459,6 +464,14 @@ pub enum Intent {
         request: RequestId,
         answers: Vec<Answer>,
     },
+    /// Defer this card without answering it or changing its deadline.
+    Skip {
+        request: RequestId,
+    },
+    /// Open this exact offer without answering it, including another card of the same session.
+    Review {
+        request: RequestId,
+    },
     /// "Reply in the terminal": the card goes and the agent's terminal asks.
     Release {
         request: RequestId,
@@ -536,11 +549,12 @@ pub enum Input {
     /// a session, a card or a bird.
     Chat(AgentUpdate),
     Connector(Alert),
-    /// What a session has cost so far, at API prices (Claude Code's statusLine). A session not
-    /// seen yet is not made for it.
-    Cost {
+    /// A CLI's session metrics snapshot. Missing context stays unknown, not zero; no new session.
+    SessionMetrics {
         session: SessionKey,
-        usd: f64,
+        cost_usd: Option<f64>,
+        elapsed_ms: Option<u64>,
+        context_percent: Option<f64>,
     },
     /// The repository a session's folder is in, read by the app from its `.git` (no network) for
     /// that `cwd`: dropped if the session has moved since. `None` when the folder is in none.
@@ -587,6 +601,8 @@ pub enum Input {
     /// The wall clock in Unix seconds, from the app before each agent event and on every tick:
     /// each step keeps the time it started (`now` is monotonic, and stops through a suspend).
     Clock(i64),
+    /// The desktop's local hour; the core never reads the system clock itself.
+    LocalHour(u8),
     /// The preset the user chose. *Paused* sends every waiting card to its terminal.
     SetPresence(Presence),
     /// Do not disturb until then, or `None` to end it (Settings, the island).
@@ -689,6 +705,8 @@ pub struct Session {
     pub step_count: u32,
     pub subagents: u32,
     pub updated: Instant,
+    /// Idle and successful completion share one rest; metadata and navigation never restart it.
+    pub rest_since: Option<Instant>,
     /// When the session first showed up: the oldest of a project is its king.
     pub started: Instant,
     pub terminal: Terminal,
@@ -714,8 +732,12 @@ pub struct Session {
     pub watch: silence::Watch,
     /// The turn being counted, from its prompt to its end (`turns`).
     pub turn: Option<turns::Draft>,
-    /// What it has cost so far at API prices, when its agent says (`Input::Cost`).
+    /// What it has cost so far at API prices, when its agent says (`Input::SessionMetrics`).
     pub cost_usd: Option<f64>,
+    /// The CLI's reported running time; never inferred from steps or app uptime.
+    pub elapsed_ms: Option<u64>,
+    /// The current context occupancy; absent until the CLI reports it.
+    pub context_percent: Option<f64>,
     /// The repository its folder is in (`Input::Repo`).
     pub repo: Option<Repo>,
 }
@@ -783,10 +805,14 @@ pub struct Pending {
     pub since: Instant,
     /// How many reminders it has earned by waiting (`notify::reminders`), as of the last tick.
     pub reminders: u32,
+    /// Hidden by an explicit Skip until the user reopens it. Its offer stays live.
+    pub skipped: bool,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct State {
+    /// The latest monotonic time supplied to reduce; views never read the system clock.
+    pub now: Option<Instant>,
     pub sessions: BTreeMap<SessionKey, Session>,
     /// Every permission or question waiting for a human, oldest first. The island shows the first; each one
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
@@ -818,6 +844,7 @@ pub struct State {
     pub today: Option<looks::Date>,
     /// The wall clock the app last said (`Input::Clock`), and when.
     pub clock: Option<(Instant, i64)>,
+    pub local_hour: Option<u8>,
     /// The session the user put in front; forgotten when it leaves.
     pub focus: Option<SessionKey>,
     pub presence: Presence,
@@ -855,7 +882,15 @@ impl State {
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
+    state.now = Some(now);
     let effects = apply(state, input, now);
+    for s in state.sessions.values_mut() {
+        if matches!(s.status, Status::Idle | Status::Finished) {
+            s.rest_since.get_or_insert(now);
+        } else {
+            s.rest_since = None;
+        }
+    }
     flock::keep(
         &mut state.breeds,
         state.flock,
@@ -894,9 +929,18 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             board::set(state, connector, rows);
             Vec::new()
         }
-        Input::Cost { session, usd } => {
+        Input::SessionMetrics {
+            session,
+            cost_usd,
+            elapsed_ms,
+            context_percent,
+        } => {
             if let Some(s) = state.sessions.get_mut(&session) {
-                s.cost_usd = Some(usd);
+                if let Some(usd) = cost_usd.filter(|n| n.is_finite() && *n >= 0.0) {
+                    s.cost_usd = Some(usd);
+                }
+                s.elapsed_ms = elapsed_ms;
+                s.context_percent = context_percent.filter(|n| (0.0..=100.0).contains(n));
             }
             Vec::new()
         }
@@ -1049,6 +1093,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             state.digest = None;
             Vec::new()
         }
+        Input::LocalHour(hour) => {
+            state.local_hour = (hour < 24).then_some(hour);
+            Vec::new()
+        }
         Input::SetLang(lang) => {
             state.lang = lang;
             Vec::new()
@@ -1135,6 +1183,29 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             }
             effects
         }
+        Input::User(Intent::Skip { request }) => {
+            if let Some(i) = state
+                .pending
+                .iter()
+                .position(|p| p.request == request && !p.skipped)
+                && let Some(mut p) = state.pending.remove(i)
+            {
+                p.skipped = true;
+                state.pending.push_back(p);
+            }
+            Vec::new()
+        }
+        Input::User(Intent::Review { request }) => {
+            if let Some(i) = state.pending.iter().position(|p| {
+                p.request == request && state.sessions.get(&p.session).is_some_and(|s| shows(s, p))
+            }) && let Some(mut p) = state.pending.remove(i)
+            {
+                p.skipped = false;
+                state.focus = Some(p.session.clone());
+                state.pending.push_front(p);
+            }
+            Vec::new()
+        }
         Input::User(Intent::Jump { session }) => state
             .sessions
             .get(&session)
@@ -1151,8 +1222,9 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                         .pending
                         .iter()
                         .position(|p| &p.session == k && state.sessions.get(k).is_some_and(|s| shows(s, p)))
-                    && let Some(p) = state.pending.remove(i)
+                    && let Some(mut p) = state.pending.remove(i)
                 {
+                    p.skipped = false;
                     state.pending.push_front(p);
                 }
                 state.focus = session;
@@ -1320,6 +1392,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         step_count: 0,
         subagents: 0,
         updated: now,
+        rest_since: None,
         started: now,
         terminal: Terminal::default(),
         note: None,
@@ -1332,6 +1405,8 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         watch: silence::Watch::default(),
         turn: None,
         cost_usd: None,
+        elapsed_ms: None,
+        context_percent: None,
         repo: None,
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).
@@ -1492,6 +1567,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                         cwd,
                         since,
                         reminders: 0,
+                        skipped: false,
                     },
                 );
             }
@@ -1523,6 +1599,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                     cwd,
                     since,
                     reminders: 0,
+                    skipped: false,
                 },
             );
         }
@@ -1930,7 +2007,10 @@ fn redeem_here(
     matches: impl Fn(&Pending) -> bool,
     now: Instant,
 ) -> Option<Pending> {
-    let p = state.pending.iter().find(|p| matches(p))?;
+    let p = state
+        .pending
+        .iter()
+        .find(|p| matches(p) && (!matches!(by, By::Island) || !p.skipped))?;
     let request = p.request.clone();
     let (binding, device) = match by {
         By::Island => (ledger::Binding::of(p), ledger::Device::Island),

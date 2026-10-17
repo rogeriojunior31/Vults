@@ -18,6 +18,37 @@ use vults_zeca::memory::{By, Memory};
 
 /// The event every window gets when the memory or its proposals change.
 const CHANGED: &str = "memory";
+static PENDING: std::sync::Mutex<Option<usize>> = std::sync::Mutex::new(Some(0));
+
+pub(crate) fn refresh_attention(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _held = held();
+        let count = if crate::settings::memory(&app) {
+            (|| {
+                let mut store = vults_store::Store::open(&crate::history::dir())?;
+                store.proposals_prune(crate::traces::now_ms())?;
+                store.proposals_pending().map(|p| p.len())
+            })()
+            .ok()
+        } else {
+            Some(0)
+        };
+        *PENDING.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = count;
+        crate::runtime::recheck(&app);
+    });
+}
+
+pub(crate) fn attention(app: &AppHandle) -> Option<vults_core::AttentionItem> {
+    if !crate::settings::memory(app) {
+        return None;
+    }
+    let count = *PENDING.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    (count != Some(0)).then_some(vults_core::AttentionItem {
+        level: vults_core::Attention::Info,
+        source: vults_core::AttentionSource::Memory { count },
+    })
+}
 
 /// One write at a time: two commits at once would race on HEAD, and a page read before another
 /// commit landed would be written over it.
@@ -103,6 +134,7 @@ fn file_for(place: &str, folder: Option<&Path>) -> Option<Target> {
 /// Tells every window the memory or its proposals changed (the MCP server, another process, can't:
 /// the chat calls this when a Claude turn ends).
 pub(crate) fn changed(app: &AppHandle) {
+    refresh_attention(app);
     let _ = app.emit(CHANGED, ());
 }
 

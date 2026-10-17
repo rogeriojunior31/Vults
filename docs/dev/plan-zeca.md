@@ -141,6 +141,217 @@ or a policy, and no preset leaves a card unseen (D5).
 | N2.8 | Zeca greets by the time of day, suggestions follow the flock, follow-ups under each reply | `zeca-greeting`, `zeca-suggestions`, `zeca-followups` | Rules in `core` for what is offered; none is an unasked line (K1) |
 | N2.9 | Zeca's moods while you type, search, think, speak and wait on a card | `zeca-moods` | The chat's turn states; K7's flock mood stays in N4 |
 
+N2.1 implementation keeps skipped cards in the core's pending queue and ledger with their
+original deadline. Skip only changes presentation/order; stale local controls cannot redeem
+a skipped offer. Selecting its session reopens the card. Both Flock and Quick expose Skip;
+the Needs you strip filters skipped tags and keeps an explicit return through the flock.
+Question drafts survive skipping. Core and renderer checks cover these invariants; native
+validation uses isolated requests without executing an agent command. User acceptance of
+N2.1 is pending. N2.2 adds Quick's Now inbox: one `ViewModel.inbox`, derived from
+core pending offers, session attention and connector snapshots, with Chat's waiting count
+and locally read memory proposals supplied by app. Each pending offer keeps its own ID,
+including several offers from one session; Review only reorders/reopens that exact offer.
+Quiet connection news can be marked seen, while failures and pending offers remain.
+The destinations reuse Flock, Chat, Memory and the selected Connections detail. Activity
+and Connections return to Now when the Nest goes back to Quick.
+
+N2.2 core/renderer checks cover ordering, skipped offers, exact-request review, silence,
+connector deduplication, Seen versus decisions, Zeca off and retained focus/scroll.
+The native Linux pass covers Black and Light, a full seven-item inbox, bounded feed/header/
+footer, the empty state, separate cards from one session, Memory/Connections destinations,
+a stale connection filter, Seen preserving a failure, and Zeca off. Controlled IPC offers,
+local proposals and a local `gh` fixture executed no agent command or remote action.
+User acceptance of N2.2 is pending.
+
+N2.3 gives idle and successfully finished sessions one monotonic 30-second rest deadline in
+core. Metadata, navigation and the wall clock cannot restart it. App wakes at the next rest
+boundary without waiting for a hook; Mini and Quick keep a green mark until then and reuse
+the existing sky. The front bird now wears its Mini badge too. Work, permissions and questions
+cancel rest and land that bird; night, music, reduced motion and hidden scenes keep their
+existing motion rules. Calling a circling bird down keeps a local 30-second perch break.
+
+Core/renderer checks cover the exact boundary, staggered sessions, waiting offers remaining
+open, late mounts, call-down, urgent landing and motion exceptions. The native Linux pass
+covers Black and Light, both green Mini birds, Quick, a Nest return during the grace period,
+and the unprompted transition from green at 29 seconds to flight at 31. New work lands only
+its own bird; a new completion starts another grace period; a controlled permission lands
+without a decision or command. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.3 is pending.
+
+N2.4 adds a Session overview to the existing Flock owner: reported running time, API-price cost,
+current context occupancy, four recent steps and four changed files, with links to Activity and
+Changes. Rows show agent, step, reported duration and context; named birds share the selected
+session. Status chips filter the list without replacing its selected card. Narrow Room switches
+between list and detail; short windows give the wire's space to content. List and detail retain
+independent scroll; a new request brings its card back to the top without a focus-induced jump.
+
+The existing Claude Code status-line relay now keeps validated numeric duration and context
+alongside cost and plan windows. Paths, model data and transcript contents stay out. Core stores
+per-session snapshots without creating sessions, changing activity, resetting rest or answering
+offers. Missing metrics, including Codex hooks' duration/context, say Not reported; genuine zeros
+stay zero and compaction may lower context. File counts reuse reported edits and the existing
+folder observation, distinguishing command-written files from counted diffs.
+
+Core, hook, parser and renderer checks cover those contracts, retained filters/detail/diffs,
+keyboard navigation and permission priority. Native Linux validation uses six sessions through
+the real hook and covers Black/Light, 480 x 360, 760 x 600 and 1180 x 820, known/zero/unknown
+metrics, named birds, filtered selection, independent scroll/focus, narrow navigation and a
+destructive request arriving over a scrolled overview. Quick/Nest return preserves search,
+status, detail and owner; the empty Flock remains usable with Zeca on. No test executes a tool
+or answers an agent permission. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.4 is pending.
+
+N2.5 adds the plan usage ring and percentage to the existing model control in Quick and
+Nest Chat. It selects the fullest active window of the selected CLI, distinguishes a reported
+zero from missing data, and uses the shared 70% warning / 90% critical statuses. The tooltip
+lists each active window and its reported reset time; the accessible name includes usage and
+status. API Chat never borrows Claude Code's subscription. A reset deadline removes expired
+windows without a new hook, and closing or hiding Chat stops its timer.
+
+Usage changes now reach every surface. The shared Bridge subscribes before reading the cache,
+so a delayed initial read cannot overwrite an event. The feature reuses the existing status-line
+relay, Codex opt-in, polling and network gate; opening Chat adds no provider requests. Updates
+touch only the model indicator, preserving the draft, files, transcript and open menu.
+
+Renderer checks cover provider scope, thresholds, zero/unknown/invalid data, expiration,
+timer lifecycle, retained controls and the actual Nest/Bridge event wiring. Native Linux
+validation uses the real status-line hook and a local Codex app-server fixture: initial cache,
+live updates in both surfaces, retained draft and focused choices, automatic expiration,
+provider changes, API absence and the existing Codex switch. Visual checks cover Quick and
+Nest in Black/Light, with Nest at 480 x 360, 760 x 600 and 1180 x 820. No test sends a chat
+message or answers an agent permission. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.5 is pending.
+
+N2.6 adds shared Chat suggestions for session and project references typed with `@`.
+Filtering uses live flock data, including full folders and session IDs for duplicate names.
+Arrow keys select; Enter, Tab and clicks insert a readable quoted reference without sending.
+Escape, outside clicks, IME composition and leaving Chat dismiss the menu. Its overlay is
+bounded to the available conversation area, independently of transcript sizing. Draft sync
+retains the exact reference targets between Quick and the disposable Nest.
+
+On send, the app validates at most eight selections, resolves agent plus session ID or the
+exact project folder, and limits the current turn's flock context and API tools to their union.
+Claude Code's existing read-only MCP flock tool applies the same selection on each call,
+through a private, atomic turn-scope file and identity keys beside its redacted snapshot.
+Missing targets and unbound quoted references fail before a provider turn starts; edited-away
+references restore ordinary flock context. References never change the working folder, answer
+cards or grant access, and prior conversation messages remain intact. Saved history retains
+readable reference text; a recalled reference without its selection must be selected again.
+
+Renderer checks cover both surfaces, keyboard/IME/caret and full pointer sequences, duplicate identities,
+live selection, draft transfer, explicit sending and unchanged folders. Rust checks cover
+validation, exact scopes, missing/edited references, API tool/context filtering, MCP selection
+and old/new draft serialization. Native Linux validation uses four sessions from the real
+hook, duplicate folders and session IDs, Quick/Nest draft return, Black/Light and Nest at
+480 x 360, 760 x 600 and 1180 x 820. A local Claude fixture captures the real prompt; the
+real MCP stdio server returns only the selected session. A missing target starts no provider
+process and retains its editable draft. No real provider request, agent tool
+execution or permission answer is used. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.6 is pending.
+
+N2.7 compacts the existing Nest Chat in Room and Full: a 42 px wide-layout title bar,
+13 px transcript with tighter message spacing, and a one-line initial composer sharing its
+760 px reading column. The empty state centres Zeca's original 3x scene and vertical
+suggestions; populated Chat keeps that same scene at 2x above the composer, outside the
+scrolling log. Reserved space prevents it from covering text at any scroll position.
+Attachments use a bounded horizontal strip; shorter windows cap the growing draft and fold
+the portrait at 560 px, with its animation stopped. Quick keeps its own layout and controls.
+
+The surface check verifies that replacing messages leaves the same companion mounted.
+Native Linux validation covers empty/long Markdown/API states, real quota and reference
+sources, keyboard selectors, retained multiline drafts/files, Recent/Memory and Quick/Nest
+transitions, and Zeca off. Black/Light checks include 480 x 360, 760 x 600 and 1180 x 820;
+24 attachments and ten draft lines also cover 481/560/561 px boundaries, with at least 40 px
+of transcript and reachable writing and action controls. A local CLI fixture supplies text
+and an unanswered permission; no real provider request or agent tool execution is used.
+
+That native pass exposed an existing Chat rule gap: destructive calls still offered Always.
+Conversation-rule eligibility now uses the existing core classifier on the whole command;
+such calls cannot create or redeem an Always rule, including an older in-memory entry.
+The regression covers multiple shell tools, wrappers, compound calls and a cut display target.
+Native cards keep Deny primary and omit Always in both themes at all three standard sizes.
+No permission is answered during validation. Build, workspace tests, evals and repository
+checks pass. User acceptance of N2.7 is pending.
+
+N2.8 adds a pure `ViewModel.chat` with time-of-day greetings and offers derived from the
+flock. The app supplies its local hour on the existing clock updates. Core rules prioritize
+a waiting session, then a failure, then active work or an empty flock; session questions
+carry the exact agent and session ID. All sentences have the four language variants.
+These are offers inside an explicitly opened Chat, not K1's proactive speech: no model
+request, sound, notification, permission answer or automatic opening is added.
+
+Room and Full show the offered questions in the empty conversation; clicks append to the
+editable draft using N2.6 references and retain files and the execution folder. Quick keeps
+only the compact greeting and caption. Both layouts offer simple continuations under the
+latest completed successful reply, including a saved reply, without guessing its meaning.
+Question chips fill the draft; Open Flock uses the existing save/error transition owner.
+Streaming, errors, stopped turns and Zeca off cannot activate continuations. Core refreshes
+update the offers without replacing messages, scrolling the transcript or moving the caret.
+
+Core checks cover greeting boundaries, languages, offer priority and unchanged waiting
+permissions. Renderer checks cover exact identities, obsolete offers, focus, retained drafts,
+reply eligibility and the real Nest entry's failed save and retry. Native Linux validation
+covers quiet/working/failed/waiting states, four languages, Black/Light in Quick and Nest,
+and Nest at 480 x 360, 760 x 600 and 1180 x 820. A local CLI fixture supplies one reply;
+no real provider request, agent command or permission answer is made. Build, workspace tests,
+evals and repository checks pass. User acceptance of N2.8 is pending.
+
+N2.9 connects Zeca's existing clips to live Chat events in Quick and the Nest. Typing and
+IME input give a brief listen cue; voice recording listens and transcription thinks.
+Reported tools search until they end; new reply text speaks visually, returning to thought
+during a quiet stream and resting shortly after a successful completion. Saved replies and
+restored drafts never replay these brief cues. Active conversation states cut a cosmetic greeting immediately. Every unanswered permission
+outranks later text, tool notes, attachments and voice. No pose sends a message or answers a card; K7's
+flock-wide mood, semantic reactions and generated speech remain outside this step.
+
+The Chat driver now forwards tool activity as presentation data, tracking simultaneous CLI
+calls by ID and bracketing API reads. The app's existing live snapshot retains this state
+when the disposable Nest is recreated. This leaves approvals and outside-content tracking
+with their existing owners. Reduced motion and manual still mode draw each current scene
+pose and head mark once, without a frame loop; active scenes refresh when the preference
+changes, while short, hidden, locked and disabled companions keep their lifecycle guards.
+Closing or hiding Chat clears its transient reaction timer.
+
+Checks cover concurrent/duplicate/unknown/stopped tool events, both API wires, live versus
+saved poses, pending-card priority, timer cleanup, late initial reads and retained reading,
+focus and caret. Native Linux validation uses a controlled local CLI's real tool/text/card
+events, without running its reported tools or answering its permission. It covers typing,
+search/thought/speech transitions, completion/expiry, saved and active recreation, Quick/Nest
+continuity, Black/Light, 480 x 360, 760 x 600 and 1180 x 820, reduced/manual motion and Zeca
+off. Voice poses use the existing display-only fixture; no microphone or speech service runs.
+Build, workspace tests (876), evals and repository checks pass. N2.1-N2.9 are implemented;
+Final N2 acceptance is recorded below.
+
+N2 acceptance follow-up (2026-10-17): Chat keeps provider reasoning and tool arguments/status in
+one closed Activity disclosure per turn. Only the selected pending approval expands; explicit
+Review and Previous/Next retain exact request ownership, and answered cards become closed receipts.
+Ended requests expire as Cancelled. Commands, folder and decision actions fit the 480 x 360 Nest;
+Always moves into More choices. New approvals enter upward, respecting reduced/manual motion.
+The portrait hover follows the sprite silhouette. CLI guidance now avoids unnecessary tools and
+prefers reading/search tools for simple inspection; permission authority and access remain unchanged.
+
+Bounded local activity survives saved/live Quick/Nest recreation; recognized secrets are redacted
+before persistence. Public Codex summaries and Claude thinking events remain separate from reply
+text. Missing reasoning/results are explicit. Checks exercise exact selection, stale controls,
+shortcuts, inert restoration, tool completion/failure, truncation and redaction. Native fixtures
+cover actual stream/card events, command/actions together at minimum size, Black/Light, manual
+reading, disclosure/restoration and cancellation without executing tools or clicking approvals.
+On 2026-10-17, the user accepted N2.1-N2.9 and these follow-ups for the N2 PR. Earlier
+per-slice pending notes record their delivery-time status. The broader desktop matrix and
+R3 release smoke remain separate; N3 follows the N2 merge.
+
+The N2 PR also repairs Windows test startup: all MSVC executables receive the Common Controls
+v6 manifest, including the library test harness. This follows the Tauri build workaround and
+retains the existing tests rather than excluding the Waiting regression from Windows.
+Reference fixtures also use drive-qualified project paths on Windows without loosening path validation.
+
+On 2026-10-17, Security CI picked up retirement advisories RUSTSEC-2026-0370/0371/0372:
+zvariant, zbus_names and zvariant_derive moved into zbus 6. The current Tauri/ashpd/ksni stack
+still pulls zbus 5. Like the existing GTK3 retirement exceptions, deny.toml lists only these
+informational IDs, with removal tied to the desktop stack's zbus 6 migration. Vulnerability,
+license and source checks retain their existing settings. Upstream record:
+https://github.com/z-galaxy/zbus/issues/2043.
+
 #### N3 Dictation
 
 The phases of [plan-dictation.md](plan-dictation.md), in this order: V0 (its open R and Q

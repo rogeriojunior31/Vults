@@ -204,6 +204,7 @@ pub fn start(app: AppHandle) {
     let (tx, rx) = mpsc::channel(64);
     app.manage(Inbox(tx.clone()));
     app.manage(LastView::default());
+    crate::memory::refresh_attention(&app);
 
     let (hooks_tx, mut hooks_rx) = mpsc::channel(64);
     tauri::async_runtime::spawn(async move {
@@ -247,10 +248,12 @@ pub fn start(app: AppHandle) {
     // Once a minute, so silent sessions and stale cards age out. One message a minute is
     // all it costs when nothing is going on.
     let ticker = tx.clone();
+    let memory_app = app.clone();
     tauri::async_runtime::spawn(async move {
         let mut every = tokio::time::interval(Duration::from_secs(60));
         loop {
             every.tick().await;
+            crate::memory::refresh_attention(&memory_app);
             if ticker.send(Msg::Tick).await.is_err() {
                 break;
             }
@@ -315,7 +318,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     // The turns whose folder is being looked at.
     let mut folders = Folders::default();
 
-    while let Some(msg) = rx.recv().await {
+    while let Some(msg) = match state.next_rest() {
+        Some(at) => tokio::select! {
+            msg = rx.recv() => msg,
+            _ = tokio::time::sleep_until(at.into()) => Some(Msg::Tick),
+        },
+        None => rx.recv().await,
+    } {
         let now = Instant::now();
         let input = match msg {
             Msg::Hook(Incoming::Event(event)) => {
@@ -331,9 +340,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if !windows.is_empty() {
                         crate::usage::set(&app, event.agent, windows);
                     }
-                    let Some(usd) = vults_agents::usage::claude_cost(&event.payload) else {
-                        continue;
-                    };
+                    let usd = vults_agents::usage::claude_cost(&event.payload);
                     let Some(id) = event.payload.get("session_id").and_then(|v| v.as_str()) else {
                         continue;
                     };
@@ -343,15 +350,21 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     };
                     // The day's spend (W9): what the session's total grew by. Only a session the
                     // flock knows, so a stray statusLine never adds to the user's spend.
-                    if state
-                        .sessions
-                        .get(&session)
-                        .is_some_and(|s| s.cost_usd != Some(usd))
+                    if let Some(usd) = usd
+                        && state
+                            .sessions
+                            .get(&session)
+                            .is_some_and(|s| s.cost_usd != Some(usd))
                     {
                         let cwd = state.sessions.get(&session).and_then(|s| s.cwd.clone());
                         crate::spend::watched(&app, event.agent, id.to_string(), cwd, plan, usd);
                     }
-                    Some(Input::Cost { session, usd })
+                    Some(Input::SessionMetrics {
+                        session,
+                        cost_usd: usd,
+                        elapsed_ms: vults_agents::usage::claude_elapsed(&event.payload),
+                        context_percent: vults_agents::usage::claude_context(&event.payload),
+                    })
                 } else {
                     parse(&event)
                 }
@@ -481,11 +494,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         if matches!(input, Input::Agent(_) | Input::RunEnded(_) | Input::Tick)
             && let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
         {
-            core::reduce(
-                &mut state,
-                Input::Clock(i64::try_from(d.as_secs()).unwrap_or(0)),
-                now,
-            );
+            let unix = i64::try_from(d.as_secs()).unwrap_or(0);
+            let hour = ((unix + i64::from(crate::history::local_offset(unix))).div_euclid(3600))
+                .rem_euclid(24) as u8;
+            core::reduce(&mut state, Input::LocalHour(hour), now);
+            core::reduce(&mut state, Input::Clock(unix), now);
         }
 
         let effects = core::reduce(&mut state, input, now);
@@ -617,7 +630,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
 
         crate::phone::sync(&app, &state, now);
-        let view = state.view();
+        let mut view = state.view();
+        if crate::settings::zeca(&app) {
+            view.inbox.extend(crate::chat::attention(&app));
+            view.inbox.extend(crate::memory::attention(&app));
+        }
+        view.inbox.sort_by_key(|i| std::cmp::Reverse(i.level));
         if last_view.as_ref() != Some(&view) {
             publish_view(&app, &view);
             crate::tray::show(&app, &view);
@@ -852,6 +870,44 @@ pub async fn question_answer(
         .send(Msg::User(Intent::Answer {
             request: RequestId(request),
             answers,
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// Reopen one exact offer without answering it.
+#[tauri::command]
+pub async fn card_review(
+    window: tauri::Webview,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::Review {
+            request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// Defer a card; the hook's reply handle and deadline are unchanged.
+#[tauri::command]
+pub async fn card_skip(
+    window: tauri::Webview,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::Skip {
+            request: RequestId(request),
         }))
         .await
         .map_err(|_| ())

@@ -63,13 +63,19 @@ Turn him back on in the same place; no restart either way.
 Zeca on the left with the session in front, up to eight vults spread along the wire, and under it a
 hairline per plan showing its usage, in the usage meters' colors (amber from 70%, red from 90%).
 For sessions, colors mean the
-same everywhere: amber for a permission, cyan for a question, green when done, red when it failed. A
+same everywhere: amber for a permission, cyan for a question, green for recent rest, red when it failed. A
 vult in one of those states wears a badge of that color, and of its own shape, so no state rests on
-color alone: a triangle for a permission, a diamond for a question, a circle when done, a square
+color alone: a triangle for a permission, a diamond for a question, a circle for recent rest, a square
 when it failed. While someone needs you the pill's edge pulses amber; when a session failed (and
 nobody needs you) it stays red; a cyan dot at its corner says a connector has news. Rest the pointer on a vult and it looks at you (one in the air comes down);
 **click** it to open the island on its session, **right-click** it for its quick actions. Connector
 news waits in the open island.
+
+An idle or successfully finished session keeps its green circle for 30 seconds. Then the mark goes
+and, by day, its bird circles in the island's sky. Opening Quick or returning from the Nest keeps
+that deadline. Work, a permission or a question brings the bird back down. At dawn, dusk and night,
+with reduced motion or paused animation, birds stay perched; idle birds also stay on the wire while
+music plays. The finished reply remains available after the green mark goes.
 
 **Click** anywhere else on the pill to open the island. It folds back 15 seconds after the pointer leaves (a thin line
 at the bottom counts down; coming back cancels it). The size switch at the top right
@@ -85,7 +91,8 @@ default, and not in *Panel*.
 
 Two things keep it open until you are done:
 
-- **A permission card.** It opens the island by itself and stays until you answer. Nothing else
+- **A permission card.** It opens the island by itself and stays until you answer or choose
+  **Skip for now**. A skipped request keeps its badge and deadline; select its session to reopen it. Nothing else
   opens it by itself: a session that finishes, fails or asks something plays its sound and gets its
   badge.
 - **The chat.** The island never folds while you type.
@@ -165,25 +172,28 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 ![The open island at rest: the flock, every session named, and a chip for each one that needs a look](../assets/island-busy-flock.png)
 
 Open, the island's header has its mark and name, a sound toggle, the search (the palette, as
-**Ctrl+K**), the size switch and the full-screen button. Under it, its five tabs as icons, as
-the prototype draws them:
+**Ctrl+K**), the size switch and the full-screen button. Under it, its tabs are:
 
 - **Flock**, with how many sessions need you;
-- **Chat**, Zeca's, in a compact form: the engine and your conversations at the top, the composer
-  with a paperclip (to hand Zeca files) and the microphone, the folder and model under it;
-- **Activity**: this week, counted on this computer, its four figures and a bar per project (the most first; by day when no project is named), and **‹ Previous week** / **This week**;
-- **Connections**, with how many rows its connectors show and you have not marked seen: a chip per
-  connector and a card per row, with **Ask Zeca why**, **Review with Zeca**, **Squash and merge** and **✓**
-  ([Connectors](connectors.md#the-github-card)); with none on, **+** leads to the Nest's Connections;
-- **Settings** (the gear): **Presence** and **Fold the island** right there; its page list also
-  draws **Activity** (the local history's switch) and **Flock & Zeca** (Zeca's switch and where the
-  flock draws from) in place; any other page of Settings in the Nest, and **All settings** (at **Agents** while an agent's hooks are missing or
-  out of date, at **General** otherwise).
+- **Chat**, Zeca's compact conversation, with its engine, folder, attachments and microphone;
+- **Now**, one inbox for pending cards (including skipped cards), failed or quiet sessions,
+  actionable connector rows, Chat requests and memory proposals. Each row opens its own card
+  or detail; opening never answers a request, sends a message, accepts a proposal or merges;
+- **Settings** (the gear): **Presence** and **Fold the island** here, with the other settings
+  available in the Nest.
 
-Over the Chat, Activity, Connections and Settings tabs, the chips of the sessions that need you stay under the
-tabs; one opens its session. Activity has **Open in the Nest** for the rest.
-The [Nest](nest.md), Vults' own window, has tabs of its own; the arrow at the top of the chat
-also opens it. The song and your plans' usage take a line under the tabs.
+Now keeps each request separate, even when one session has several. Its count highlights
+requests and failures. **Seen** and **Mark all seen** hide quiet connection news until it changes;
+failures and requests remain. The marks stay on this computer and change nothing on GitHub.
+An empty inbox says **Nothing needs your attention**. With Zeca off, the independent flock
+and connections remain; his Chat and Memory items disappear.
+
+A pending card stays in front until answered or explicitly skipped. Then Now can open and
+bring any deferred card back by its request. Cards keep their original deadline and question draft.
+**Activity** and **Connections** at the bottom of Now open the full views in the
+[Nest](nest.md). Returning from those views to Quick opens Now; Chat returns to Chat.
+The chips of sessions that need you stay under the tabs over Chat and Settings.
+The song and your plans' usage take a line under the tabs.
 Below, the island's whole width (about 500 px on screen, the size switch's **Quick**):
 
 - **at rest, the flock**: every session's vult on one wire, twice its size, its project's name under
@@ -217,7 +227,8 @@ session's last 32 edits, up to 400 lines each; a longer one says it stops short.
 
 ![A finished edit's diff in place of the card: ticker.ts +4 −2, with line numbers](../assets/island-live-diff.png)
 
-**OK** says you have seen it: the badge goes and the session shows as idle. With nobody on the wire,
+**OK** says you have seen it: the session shows as idle. For a successful completion, the original
+rest deadline still holds. With nobody on the wire,
 the card offers **Ask Zeca**.
 
 Zeca notices you: he looks toward the pointer, preens if you rest it on him, and startles at a click.

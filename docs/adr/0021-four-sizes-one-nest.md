@@ -18,6 +18,11 @@ meant to steer whatever reads them.
   level), which session is in focus, and how each card ended (here, in the terminal, expired, by a
   rule). Surfaces choose clips, icons, colors and sounds, from one small view model (a projection
   per surface only when a payload grows), and speak only in `Intent`s through the same commands.
+- **Quick's action inbox**: Flock, Chat and Now, with Settings in the gear. Now presents one
+  `ViewModel.inbox` from core/app, including deferred offers, session problems, actionable
+  connector rows, Chat requests and memory proposals. A row opens its existing interaction
+  owner; no inbox operation answers a permission or executes the destination's action.
+  Activity and Connections keep their full views in the Nest.
 - **Four sizes**: **Mini** is the pill (340 x 38, the flock and no text: news reaches it only as a
   body, a color or a motion). **Quick** is the island inside the fixed 720 x 640 logical-pixel
   layer surface: 440 CSS px wide normally, 492 CSS px in Chat, before the UI's 1.14 zoom
@@ -109,3 +114,6 @@ meant to steer whatever reads them.
   other Quick tabs retain their widths. User-selectable paired widths remain future work.
 - 2026-10-16, [0031](0031-tasks-leave-vults.md): remove Tasks from the Nest; preserve D7, spend and
   budget, and the D8 boundary for `/continue`.
+
+- 2026-10-17: N2.2 adds Quick's Now inbox, exact-request review and explicit links to the existing
+  Nest details; cards keep their original authority, ledger and deadline.

@@ -101,6 +101,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   /** Draws again with what it has: the language changed. */
   redraw: () => void;
   flush: () => Promise<void>;
+  select(connector: string, item: string): void;
 } {
   const element = el("div", { class: "nest-connections" });
   const search = fid(el("input", { class: "conn-search" }), "act:search");
@@ -121,6 +122,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   let picked: string | null = null;
   /** At narrow widths a selected row becomes its own view. */
   let detailOpen = false;
+  let focusDetail = false;
   let listTop = 0;
   let restored = !actions.loadPlace;
   let saved: Promise<void> = Promise.resolve();
@@ -296,6 +298,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       checkDisclosures.set(k, checkList);
     }
     const context = r.group === "releases" ? [] : [f.branch, f.author ? `@${f.author}` : null, diffLine(r)].filter((x): x is string => !!x);
+    const heading = fid(el("h3", { text: r.title }), "detail:title");
+    heading.tabIndex = -1;
     const panel = el(
       "section",
       { class: `conn-detail ${stateOf(r)}` },
@@ -315,7 +319,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           )
         : null,
       el("div", { class: "conn-detail-head" }, icon(iconOf(r), 14, 1.6), el("span", { text: ref }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
-      el("h3", { text: r.title }),
+      heading,
       context.length ? el("div", { class: "conn-context" }, ...context.map(text => el("span", { text }))) : null,
       f.diff ? (() => {
         const added = el("i", { class: "diff-added" });
@@ -604,6 +608,10 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       const at = (id: string) => element.querySelector<HTMLButtonElement>(`[data-fid="${CSS.escape(id)}"]:not(:disabled)`);
       (at(had) ?? (had.startsWith("act:") ? (at("act:merge") ?? at("act:zeca") ?? at("act:open")) : null))?.focus({ preventScroll: true });
     }
+    if (focusDetail && nextDetail) {
+      focusDetail = false;
+      nextDetail.querySelector<HTMLElement>('[data-fid="detail:title"]')?.focus({ preventScroll: true });
+    }
   };
   const rememberQuery = () => { try { localStorage.setItem(searchKey, search.value); } catch { /* Keep the current search usable. */ } };
   search.addEventListener("input", () => { asking = null; rememberQuery(); draw(true); });
@@ -620,7 +628,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   // CSS and the list/detail DOM must switch at the same breakpoint.
   matchMedia("(min-width: 900px)").addEventListener("change", () => draw());
   void actions.loadPlace?.().then((place) => {
-    if (place) ({ chosen, picked, repo, tab, detailOpen } = place);
+    if (!restored && place) ({ chosen, picked, repo, tab, detailOpen } = place);
   }, () => {}).then(() => {
     restored = true;
     draw();
@@ -663,6 +671,13 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   }, 60_000);
   return {
     element,
+    select: (connector, item) => {
+      restored = true;
+      chosen = connector; picked = item; repo = null; tab = "inbox";
+      search.value = ""; detailOpen = true; focusDetail = true; asking = null;
+      rememberQuery();
+      remember(); draw();
+    },
     update: (v) => {
       if (view && JSON.stringify(v.boards ?? []) === JSON.stringify(view.boards ?? [])) {
         view = v;

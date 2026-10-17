@@ -12,7 +12,11 @@ export type AlertLevel = "info" | "ok" | "warn" | "error";
 
 export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses" | "west-coast" | "fitted-cap" | "mountain-hat" | "headband" | "dreads" | "front-knot" | "durag" | "crown" | "bucket-hat" | "clock-chain" | "headphones" | "shutter-shades" | "chrome-chain" | "eye-patch";
 
-export type ViewModel = { sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
+export type ViewModel = { chat?: ChatView, sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
+/**
+ * Actionable items, including deferred offers; surfaces only choose their presentation.
+ */
+inbox?: Array<AttentionItem>,
 /**
  * The most any session wants the user.
  */
@@ -55,6 +59,16 @@ digest?: DigestView | null,
  */
 recap?: CardView | null, };
 
+export type ChatView = { greeting: string, caption: string, suggestions: Array<ChatSuggestion>, followups: Array<ChatFollowup>, };
+
+export type ChatSuggestion = { id: string, text: string, session: SessionRef | null, };
+
+export type ChatFollowup = "explain" | "next" | "flock";
+
+export type AttentionItem = { level: Attention, source: AttentionSource, };
+
+export type AttentionSource = { "kind": "request", request: string, session: SessionRef, tool: string, target: string, description: string | null, question: boolean, skipped: boolean, } | { "kind": "session", session: SessionRef, } | { "kind": "connection", connector: string, item: string, } | { "kind": "alert", key: string, } | { "kind": "chat", count: number, } | { "kind": "memory", count: number | null, };
+
 export type SessionView = { id: string, agent: AgentKind,
 /**
  * Another tool's name (`AgentKind::Other`), taken from its session id: `<name>/<id>`.
@@ -64,6 +78,10 @@ agent_name?: string | null, project: string,
  * The project folder, where the chat works when this session is in front.
  */
 cwd: string | null, status: Status,
+/**
+ * None while busy; false during the first 30 seconds of rest, then true until work returns.
+ */
+rested?: boolean | null,
 /**
  * What the status asks of the user.
  */
@@ -77,6 +95,14 @@ card: boolean,
  * A card of this session waits, first in line or behind another.
  */
 waiting?: boolean,
+/**
+ * The next card this session can show; deferred cards keep their request id.
+ */
+request?: string | null,
+/**
+ * All of this session's waiting cards were explicitly deferred.
+ */
+skipped?: boolean,
 /**
  * *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
  * its window. Elsewhere a quick action offers its folder instead (ADR 0011).
@@ -124,6 +150,14 @@ step_count: number, subagents: number,
  * What it has cost so far at API prices, when its agent says: a subscription is not charged it.
  */
 cost_usd?: number | null,
+/**
+ * Running time in the CLI's last report, including resumed runs; not app uptime.
+ */
+elapsed_ms?: number | null,
+/**
+ * Current context occupancy in the CLI's last report; unknown is never zero.
+ */
+context_percent?: number | null,
 /**
  * The question, the last reply or the error that goes with the status.
  */

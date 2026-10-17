@@ -87,9 +87,10 @@ body {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 10px;
-  min-height: 49px;
-  padding: 8px 20px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 4px 16px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--chrome-line);
 }
 .chat-title {
@@ -97,7 +98,7 @@ body {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 650;
   letter-spacing: -0.2px;
   text-overflow: ellipsis;
@@ -134,7 +135,7 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
 }
@@ -176,6 +177,7 @@ body {
 }
 @media (min-width: 900px) {
   .nest-chat.no-recent .nest-recent { display: none; }
+  .nest-chat:not(.no-recent) .recent-toggle { display: none; }
 }
 /* The gear: Settings. */
 /* Activity: its sub-tabs, then the part chosen. */
@@ -510,38 +512,41 @@ body {
 }
 /* The whole window is the chat: none of the island's card around it. */
 .nest-chat .chat {
-  display: grid;
+  display: flex;
   flex: 1;
   min-height: 0;
-  grid-template-columns: 112px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  column-gap: 16px;
   width: auto;
   height: auto;
-  padding: 10px 16px 14px;
+  padding: 8px 24px 12px;
   border: none;
   border-radius: 0;
   background: transparent;
 }
-/* A separate perch keeps the companion visible while only the transcript scrolls. */
+/* The scene stays beside the log; its smaller perch never covers a reply or the composer. */
 .nest-chat .chat-perch {
+  position: absolute;
+  left: max(12px, calc((100% - 760px) / 2 + 12px));
+  bottom: -12px;
+  z-index: 2;
   display: block;
-  align-self: start;
-  width: 112px;
-  height: 108px;
-  margin-top: 16px;
+  width: 76px;
+  height: 72px;
+  min-height: 0;
 }
-.nest-chat .chat:has(.log > .hint:first-child) .chat-perch { align-self: center; margin-top: 0; }
-.nest-chat .chat-character { position: relative; width: 112px; height: 108px; border-radius: var(--radius-card); }
-.nest-chat .chat-character .perch { left: 0; top: 0; transform: none; }
-.nest-chat .chat-character:hover { background: var(--float); }
+.nest-chat .chat-character { position: relative; width: 76px; height: 72px; border-radius: var(--radius-control); }
+.nest-chat .chat-character .perch { left: 0; top: 0; transform: scale(calc(2 / 3)); transform-origin: top left; }
+.nest-chat .chat-character:is(:hover, :focus-visible) .scene { filter: drop-shadow(0 0 2px var(--fg-dim)); }
 .nest-chat .chat-main {
   flex: 1;
   min-height: 0;
+  width: 100%;
+  gap: 6px;
 }
 .nest-chat .log-box {
   flex: 1;
   min-height: 0;
+  box-sizing: border-box;
+  padding-bottom: 72px;
 }
 /* The conversation reads in one column, as wide as the composer under it: a reply that runs the
    window's whole width is hard to follow. The log itself stays wide, so its scrollbar keeps to the
@@ -550,23 +555,24 @@ body {
   box-sizing: border-box;
   max-height: none;
   height: 100%;
-  gap: 20px;
-  padding: 20px max(4px, calc((100% - 720px) / 2)) 24px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 10px max(4px, calc((100% - 760px) / 2)) 12px;
+  font-size: 13px;
 }
 .nest-chat .msg.zeca {
-  line-height: 1.6;
+  line-height: 1.55;
 }
+.nest-chat .msg.you { padding: 6px 12px; border-radius: 12px 12px 4px 12px; }
 /* A new turn starts a little apart from the reply before it. */
 .nest-chat .msg.you:not(:first-child) {
-  margin-top: 12px;
+  margin-top: 6px;
 }
 /* A turn's reply signed: Zeca's figure, his name and the engine that wrote it. */
 .nest-chat .msg-who {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 2px;
   line-height: 1;
 }
 .nest-chat .msg-face {
@@ -575,7 +581,7 @@ body {
 }
 .nest-chat .msg-name {
   color: var(--fg-bright);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 .nest-chat .msg-engine {
@@ -617,49 +623,55 @@ body {
 }
 .nest-chat .composer-hint {
   width: 100%;
-  max-width: 720px;
-  margin: 6px auto 0;
+  max-width: 760px;
+  margin: 0 auto;
   color: var(--fg-muted);
-  font: 13px var(--font);
+  font: 12px var(--font);
   text-align: center;
 }
 /* One writing surface contains the draft, file cards and its own action row. */
 .nest-chat .composer {
   width: 100%;
-  max-width: 720px;
-  margin: 8px auto 0;
-  padding: 16px 16px 12px;
+  max-width: 760px;
+  margin: 4px auto 0;
+  padding: 8px 10px 6px;
+  gap: 6px;
   box-sizing: border-box;
 }
 .nest-chat .composer .wave {
-  height: 64px;
+  height: 32px;
 }
 .nest-chat .composer textarea {
-  /* A Nest has room for a thought before it becomes a message. */
-  min-height: 64px;
-  font-size: 14px;
+  min-height: 28px;
+  font-size: 13px;
 }
+.nest-chat .composer-tools :is(.send, .attach, .mic) { min-height: 32px; height: 32px; }
+.nest-chat .composer-tools :is(.send, .mic) { width: 32px; }
+.nest-chat .composer .chips { display: flex; max-height: 56px; gap: 6px; box-sizing: border-box; }
+.nest-chat .composer .chips:empty { display: none; }
+.nest-chat .composer .chip { flex: 0 0 188px; max-height: 56px; box-sizing: border-box; }
+.nest-chat .file-info { max-height: 44px; overflow-y: auto; }
 .nest-chat .suggestions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 .nest-chat .suggestion {
-  align-items: flex-start;
-  min-height: 64px;
-  padding: 12px;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
   line-height: 1.5;
 }
 .nest-chat .suggestion > svg:first-child {
   display: none;
 }
 .nest-chat .chat-greeting {
-  font-size: 20px;
+  font-size: 15px;
 }
-@media (max-width: 600px) {
-  .nest-chat .suggestions { grid-template-columns: 1fr; }
-  .nest-chat .suggestion { min-height: 36px; padding: 8px 12px; }
+@media (max-height: 640px) {
+  .nest-chat .composer textarea { max-height: 72px; }
+  .nest-chat .composer-hint { display: none; }
 }
 /* A short Nest keeps both the message box and its footer reachable. */
-@media (max-height: 480px) {
+@media (max-height: 560px) {
   .chat-titlebar {
     gap: 6px;
     min-height: 0;
@@ -669,7 +681,6 @@ body {
     gap: 4px;
   }
   .nest-chat .chat {
-    grid-template-columns: minmax(0, 1fr);
     padding: 0 12px;
   }
   .nest-chat .chat-perch { display: none; }
@@ -685,7 +696,7 @@ body {
     max-height: 48px;
     padding: 0;
   }
-  .nest-chat .composer-tools :is(.send, .attach, .mic) { height: 28px; }
+  .nest-chat .composer-tools :is(.send, .attach, .mic) { min-height: 28px; height: 28px; }
   .nest-chat .composer-tools :is(.send, .mic) { width: 28px; }
   .nest-chat .composer .chips { display: flex; max-height: 32px; gap: 6px; padding: 0; }
   .nest-chat .composer .chips:empty { display: none; }
@@ -693,29 +704,33 @@ body {
   .nest-chat .file-info { max-height: 28px; overflow-y: auto; }
   .nest-chat .file-icon { width: 20px; height: 28px; }
   .nest-chat .log { padding-top: 4px; padding-bottom: 4px; gap: 12px; }
-  .nest-chat .log-box { min-height: 40px; }
+  .nest-chat .log-box { min-height: 40px; padding-bottom: 0; }
   .nest-chat .composer .wave { height: 24px; }
   .nest-chat .composer-hint {
     display: none;
   }
 }
-/* Empty conversations introduce the actions above the composer, in the same reading column. */
-.nest-chat .chat-main:has(.log > .hint:first-child) {
-  justify-content: safe center;
-}
+/* Empty chat centres its existing scene and suggestions; the draft keeps its own bottom row. */
 .nest-chat .chat-main:has(.log > .hint:first-child) .log-box {
-  flex: 0 1 auto;
-  overflow-y: auto;
-  max-width: 720px;
-  width: 100%;
-  margin: 0 auto 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 0;
 }
 .nest-chat .chat-main:has(.log > .hint:first-child) .log {
+  flex: 0 1 auto;
+  min-height: 0;
   height: auto;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 4px 8px 12px;
+  gap: 8px;
 }
-@media (max-height: 480px) {
-  .nest-chat .chat-main:has(.log > .hint:first-child) .log-box { margin: 0 auto; }
-}
+.nest-chat .chat:not(.has-messages) .chat-perch { position: relative; left: auto; bottom: auto; flex: none; width: 112px; height: 108px; margin: 0 auto 4px; }
+.nest-chat .chat:not(.has-messages) .chat-character { width: 112px; height: 108px; }
+.nest-chat .chat:not(.has-messages) .chat-character .perch { transform: none; }
+.nest-chat .chat .hint { text-align: center; padding: 4px; }
 @media (max-height: 400px) {
   .nest-chat .composer textarea { max-height: 24px; }
 }
@@ -2252,6 +2267,7 @@ button.touched-row:hover,
 
 /* Narrow Room uses the same retained history, without squeezing the composer beside it. */
 @media (max-width: 899px) {
+  .nest-chat.recent-open .recent-toggle { display: none; }
   .nest-chat.recent-open .nest-recent {
     display: flex;
     flex: 1;
@@ -2303,3 +2319,73 @@ button.touched-row:hover,
 
 .cost-today { padding: 16px 20px; font-size: 14px; line-height: 1.6; }
 .cost-today > p { margin: 2px 0; }
+
+/* Session rows and their selected owner scroll independently of the wire. */
+.nest-flock-pane { overflow: hidden; }
+.nest-flock-tab { height: 100%; min-height: 0; }
+.flock-stage { padding-bottom: 22px; }
+.habitat-sky .bird-name {
+  position: absolute; left: 50%; top: calc(100% + 2px); transform: translateX(-50%);
+  max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--fg-dim); font-size: 12px; line-height: 18px;
+}
+.flock-workspace {
+  flex: 1; min-height: 0; display: grid;
+  grid-template-columns: minmax(230px, 28%) minmax(0, 1fr);
+}
+.flock-list { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--border); }
+.flock-toolbar { flex: none; align-items: stretch; padding: 12px; gap: 10px; }
+.flock-toolbar h2 { width: 100%; }
+.flock-toolbar .app-search { width: 100%; }
+.flock-toolbar .nest-search { width: 100%; }
+.flock-filters { display: flex; flex-wrap: wrap; gap: 4px; }
+.session-filter { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; padding: 4px 6px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; }
+.session-filter:hover, .session-filter[aria-pressed="true"] { background: var(--raised); color: var(--fg); }
+.flock-list .roost-cards { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; padding: 8px; }
+.flock-list .roost-cards.empty { display: block; }
+.flock-list .roost-card { flex: none; width: 100%; padding: 10px; text-align: left; }
+.flock-list .roost-label strong { font-size: 13px; }
+.flock-list .roost-agent { color: var(--fg-dim); margin-top: 6px; white-space: normal; font-size: 12px; line-height: 1.5; }
+.roost-context { color: var(--fg-muted); margin-top: 4px; font-size: 12px; }
+.session-context-meter { display: block; width: 100%; height: 5px; margin-top: 8px; accent-color: var(--fg-dim); }
+.session-context-meter::-webkit-meter-bar { background: var(--raised); border: 0; border-radius: 3px; }
+.session-context-meter::-webkit-meter-optimum-value { background: var(--fg-dim); border-radius: 3px; }
+.flock-selected { min-width: 0; min-height: 0; overflow-y: auto; }
+.flock-selected .app-body { display: flex; flex-direction: column; min-height: 0; }
+.flock-selected .app-body[hidden] { display: none; }
+.flock-selected .focus-block { border-right: 0; border-bottom: 1px solid var(--border); }
+.flock-back { display: none; }
+.session-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 4px 0 20px; }
+.session-metric { min-width: 0; }
+.session-metric dt { color: var(--fg-dim); font-size: 12px; }
+.session-metric dd { margin: 6px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.session-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 8px; }
+.session-section-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.session-files .touched { margin-top: 0; }
+.session-recent .activity-row { min-width: 0; }
+.session-recent .activity-row strong { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .flock-workspace { display: flex; flex-direction: column; }
+  .flock-list { display: none; flex: 1; border-right: 0; }
+  .flock-selected { flex: 1; }
+  .flock-back { display: inline-flex; margin: 8px 14px 0; }
+  .choosing-session .flock-list { display: flex; }
+  .choosing-session .flock-selected { display: none; }
+  .flock-toolbar .app-search { flex: 1; width: auto; }
+  .flock-toolbar h2 { width: auto; align-self: center; }
+  .flock-filters { width: 100%; }
+  .session-metrics { gap: 8px; }
+  .session-metric dd { font-size: 16px; }
+}
+
+@media (max-height: 480px) { .nest-flock-tab .flock-stage { display: none; } }
+
+@media (max-height: 480px) {
+  .nest-chat:has(.approval-queue.on) .chat-titlebar { flex-wrap: nowrap; padding: 4px 8px; gap: 4px; }
+  .nest-chat:has(.approval-queue.on) .chat-titlebar .chat-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .nest-chat:has(.approval-queue.on) .chat-titlebar .chat-head { flex: 1; order: 0; flex-wrap: nowrap; }
+  .nest-chat:has(.approval-queue.on) .chat-head .engine-model { display: none; }
+  .nest-chat:has(.approval-queue.on) .chat-head > .ghost:disabled { display: none; }
+  .nest-chat:has(.approval-queue.on) .nest-memory-toggle { width: 28px; padding: 0; }
+  .nest-chat:has(.approval-queue.on) .nest-memory-toggle span { display: none; }
+}

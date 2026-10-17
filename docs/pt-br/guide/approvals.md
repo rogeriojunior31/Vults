@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 74f3f6d388c8 -->
+<!-- source: c92e920f2e3c -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -13,8 +13,17 @@ Antigravity, o Cursor, o Factory Droid e o Kimi Code são as exceções, [abaixo
 
 ![Um card de permissão com o comando inteiro, Deny, Allow e Always allow](../../assets/island-approval.png)
 
-O card ocupa toda a largura da ilha até você responder. Depois ele diz o que aconteceu por um
+O card ocupa toda a largura da ilha até você responder ou adiá-lo explicitamente. Depois de uma resposta ele diz o que aconteceu por um
 instante (**Allowed** em verde, **Denied** em vermelho) antes de a próxima coisa aparecer.
+
+**Adiar por enquanto** oculta um card de permissão ou pergunta sem respondê-lo. O próximo
+card vem para a frente; se todos forem adiados, o Quick pode se recolher novamente. A
+solicitação mantém o prazo original do hook, e sua ave continua indicando que precisa de
+você. Selecione essa sessão ou escolha **Mostrar o card** para reabri-lo. A faixa
+**Needs you** oferece a mesma ação e **Adiar todos** para seus cards de solicitação visíveis;
+ela se recolhe quando não restam itens não adiados. Adiar não permite nem nega uma chamada,
+não cria uma regra Always e não devolve a solicitação ao terminal. Quando o prazo acaba,
+o retorno normal ao terminal continua valendo.
 
 <a id="answering"></a>
 
