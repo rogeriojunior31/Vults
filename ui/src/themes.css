@@ -81,3 +81,5 @@
   --agent-qwen: #5044c1; --agent-copilot: #2268a9; --agent-other: #7750b0; --zeca: #137333; --wire: #858b94;
   color-scheme: light;
 }
+
+input::placeholder, textarea::placeholder { color: var(--fg-muted); opacity: 1; }

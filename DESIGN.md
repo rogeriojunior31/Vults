@@ -11,6 +11,8 @@ this document defines how the UI presents them.
 - Black is the default. The optional neutral Light theme uses the same roles and
   hierarchy across windows. Color communicates status or agent identity; it does
   not create a separate navigation or page theme.
+- Scene backgrounds, diffs, selections and popovers use theme roles too. A theme
+  change refreshes canvas colors without restarting the birds or their motion.
 - Keep species, accessories, palettes and sprite proportions from the existing
   character renderer. Scale pixel art with integer drawing scales and
   `image-rendering: pixelated`; do not stretch a bird to fill a card.

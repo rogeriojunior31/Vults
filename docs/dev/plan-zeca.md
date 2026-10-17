@@ -112,8 +112,15 @@ The native Linux pass covered Activity, Connections and Settings at 480 x 360,
 return/focus, panel reset/folding and a retained Chat draft. Black layouts were compared
 with the prototype in the same WebKit runtime. Controlled local history and GitHub
 responses supplied populated states; they are not usage or live-account evidence.
-N1.5 remains open for the user's full UX6 desktop matrix, including pending cards,
+N1.5 remains open for the corrected Flock/Compact theme review and the full UX6 desktop
+matrix, including pending cards,
 multiple displays/scales and window ownership. R3's release smoke remains separate.
+
+The Flock/Compact theme follow-up replaces fixed dark surfaces, pale diff text and control
+colors with shared roles. Active canvases refresh their palettes on a theme change; hidden
+ones invalidate without starting animation. Native checks cover Flock at 480/760/1180 px,
+Quick and Mini in both schemes, populated sessions, an unanswered permission and live
+switching with motion paused. Representative text contrast is checked in the native renderer.
 
 #### N2 Flock and Chat
 

@@ -58,7 +58,7 @@ globalThis.document = { body: new Element("body"), documentElement: new Element(
   getElementById: () => root, createElement: tag => new Element(tag),
   createElementNS: (_ns, tag) => new Element(tag),
   createTextNode: text => { const n = new Element("text"); n.textContent = text; return n; },
-  addEventListener() {}, hidden: false,
+  addEventListener() {}, dispatchEvent() {}, hidden: false,
 };
 document.body.append(root);
 globalThis.window = { setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, addEventListener() {} };

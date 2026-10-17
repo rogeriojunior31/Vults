@@ -63,6 +63,7 @@ globalThis.document = { hidden: false, body: new Element("body"),
   createDocumentFragment: () => new Element("fragment"),
   querySelector: selector => document.body.querySelector(selector),
   addEventListener: (event, fn) => (documentEvents[event] ??= []).push(fn),
+  dispatchEvent: event => { for (const fn of documentEvents[event.type] ?? []) fn(event); },
 };
 globalThis.window = { innerWidth: 480, innerHeight: 640,
   setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
@@ -75,6 +76,7 @@ globalThis.window = { innerWidth: 480, innerHeight: 640,
   }, addEventListener: (_event, fn) => mediaChanges.push({ query, fn }) }),
 };
 globalThis.matchMedia = window.matchMedia;
+globalThis.devicePixelRatio = 1;
 globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
 globalThis.requestAnimationFrame = () => 0;
 globalThis.ResizeObserver = class { observe() {} };
@@ -96,6 +98,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { NEST_TABS, tabByKey } from ${source("surfaces/nest/head.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
+      export { Sky } from ${source("island/sky.ts")};
       export { Scene } from ${source("island/scene.ts")};
       export { Clock } from ${source("clock.ts")};
       export { savedClose, savedTransition } from ${source("surfaces/nest/close.ts")};
@@ -104,7 +107,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -604,8 +607,23 @@ handle.fire("keydown", { key: "Home", preventDefault() {} }); assert.equal(handl
 weekPage.querySelector(".week-settings").click(); assert.deepEqual(weekEffects, ["history-settings"]);
 console.log("check-surface-continuity: resized/folded panel state, retained draft, reset, pointer/keyboard bounds and Settings-owned retention");
 
+// Both canvas owners must refresh live colors even when animation is paused.
+const scenePaint = Scene.prototype.draw, skyPaint = Sky.prototype.draw;
+const paintedThemes = [];
+Scene.prototype.draw = function () { paintedThemes.push(this.canvas); };
+Sky.prototype.draw = function () { paintedThemes.push(this.canvas); };
+const themedScene = new Scene({ width: 100, height: 40, wire: 30, zeca: null, vults: { max: 0, scale: 1, at: () => ({ x: 0, wire: 30 }) } });
+const themedSky = new Sky(() => {});
+themedScene.colors = themedSky.colors = { wire: "old-theme" };
 document.documentElement = new Element("html");
 applyTheme("black", true); applyTheme("light"); applyTheme("black", true);
 assert.equal(document.documentElement.getAttribute("data-theme"), "light", "A stale startup read cannot undo a newer theme event");
 applyTheme("black"); assert.equal(document.documentElement.getAttribute("data-theme"), "black");
+assert.equal(themedScene.colors, null); assert.equal(themedSky.colors, null);
+assert.ok(paintedThemes.includes(themedScene.canvas) && paintedThemes.includes(themedSky.canvas));
+themedScene.setActive(false); themedSky.update([], false); paintedThemes.length = 0;
+themedScene.colors = themedSky.colors = { wire: "old-theme" }; applyTheme("light");
+assert.equal(themedScene.colors, null); assert.equal(themedSky.colors, null);
+assert.ok(!paintedThemes.includes(themedScene.canvas) && !paintedThemes.includes(themedSky.canvas), "Hidden canvases invalidate without starting animation");
+Scene.prototype.draw = scenePaint; Sky.prototype.draw = skyPaint;
 console.log("check-surface-continuity: shared theme events win over late startup reads");

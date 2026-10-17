@@ -104,7 +104,7 @@ button:focus-visible,
   flex: 1;
   overflow: hidden;
   border-radius: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 .pill-fuel b {
   position: absolute;
@@ -164,7 +164,7 @@ body.still .compact.needs::after {
   transition: background 0.15s;
 }
 #island:not(.is-open):hover .compact::before {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
 }
 .compact .scene {
   position: absolute;
@@ -251,7 +251,7 @@ body.still .compact.needs::after {
   background: var(--warn);
   box-shadow:
     0 0 0 2px var(--bg),
-    0 0 0 3.5px rgba(245, 165, 36, 0.45);
+    0 0 0 3.5px color-mix(in srgb, var(--warn) 45%, transparent);
 }
 .silence {
   display: flex;
@@ -281,7 +281,7 @@ body.still .compact.needs::after {
   width: 160px;
   height: 2px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.35);
+  background: color-mix(in srgb, var(--fg) 35%, transparent);
   transform: translateX(-50%) scaleX(0);
   opacity: 0;
 }
@@ -345,20 +345,20 @@ body.still .compact.needs::after {
   gap: 2px;
   margin: 0 2px;
   padding: 3px;
-  border: 1px solid #2b2e33;
+  border: 1px solid var(--control-border);
   border-radius: 7px;
-  background: #101114;
+  background: var(--input);
 }
 .header .size-switch .size {
   padding: 5px 7px;
   border-radius: 4px;
   font-size: 9px;
   line-height: 1;
-  color: #a6acb6;
+  color: var(--fg-dim);
 }
 .header .size-switch .size.on {
   background: var(--mark);
-  color: #16201a;
+  color: var(--on-accent);
 }
 /* Tabs are icons only, with their name on hover: the island stays quiet. */
 .tabs {
@@ -367,8 +367,8 @@ body.still .compact.needs::after {
   gap: 4px;
   margin: 2px 0 0;
   padding: 5px 4px;
-  border-top: 1px solid #1d1f24;
-  border-bottom: 1px solid #1d1f24;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .tab {
   display: flex;
@@ -387,16 +387,16 @@ body.still .compact.needs::after {
 .tab-count {
   padding: 1px 4px;
   border-radius: 3px;
-  background: #f5a52416;
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
   color: var(--warn);
   font: 9px var(--mono);
 }
 .tab:hover {
-  background: #17191d;
+  background: var(--float);
   color: var(--fg);
 }
 .tab.on {
-  background: #222429;
+  background: var(--raised);
   color: var(--fg-bright);
 }
 .tab:disabled {
@@ -477,7 +477,7 @@ body.still .compact.needs::after {
   transition: background 0.15s, color 0.15s;
 }
 .icon-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
   color: var(--fg-bright);
 }
 .icon-btn:disabled {
@@ -525,8 +525,8 @@ body.still .compact.needs::after {
 }
 .habitat .habitat-bird:hover,
 .habitat .habitat-bird:focus-visible {
-  border-color: #64796555;
-  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--border-hover);
+  background: color-mix(in srgb, var(--fg) 2%, transparent);
 }
 /* Under its bird, the session's name and "!" when it needs you, as the prototype's roosts. */
 .habitat-bird .label {
@@ -561,7 +561,7 @@ body.still .compact.needs::after {
   top: 46px;
   padding: 2px 7px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
   color: var(--fg-dim);
   font-size: 11px;
 }
@@ -626,7 +626,7 @@ body.still .compact.needs::after {
   overflow: hidden;
 }
 .perch {
-  --glow: rgba(255, 255, 255, 0.5);
+  --glow: color-mix(in srgb, var(--fg) 50%, transparent);
   --glow-on: 0.14;
   position: absolute;
   left: 6px;
@@ -645,7 +645,7 @@ body.still .compact.needs::after {
   width: 96px;
   height: 84px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.11), transparent);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--fg) 11%, transparent), transparent);
   transform: translate(-50%, -50%);
 }
 .perch .glow {
@@ -709,7 +709,7 @@ body.still .compact.needs::after {
   --glow-on: 0.5;
 }
 .perch.greeting {
-  --glow: #fde68a;
+  --glow: var(--warn);
   --glow-on: 0.35;
 }
 .title.big {
@@ -752,7 +752,7 @@ body.still .compact.needs::after {
 .helpers {
   padding: 0 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
   font-size: 11px;
   color: var(--fg-dim);
   white-space: nowrap;
@@ -786,14 +786,14 @@ body.still .compact.needs::after {
   flex: none;
   padding: 1px 8px;
   border-radius: 999px;
-  background: rgba(245, 165, 36, 0.14);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
   color: var(--warn);
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .queue.cyan {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--info) 14%, transparent);
   color: var(--info);
 }
 /* The question card: one question at a time, its choices as rows to click. */
@@ -806,7 +806,7 @@ body.still .compact.needs::after {
   flex: none;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--info) 14%, transparent);
   color: var(--info);
   font-size: 11px;
   font-weight: 600;
@@ -824,18 +824,18 @@ body.still .compact.needs::after {
   min-width: 0;
   padding: 6px 10px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
   border: 1px solid transparent;
   text-align: left;
   font-size: 12.5px;
   transition: background 0.12s ease-out;
 }
 .choice:hover {
-  background: rgba(255, 255, 255, 0.11);
+  background: color-mix(in srgb, var(--fg) 11%, transparent);
 }
 .choice.on {
-  border-color: rgba(34, 211, 238, 0.55);
-  background: rgba(34, 211, 238, 0.1);
+  border-color: color-mix(in srgb, var(--info) 55%, transparent);
+  background: color-mix(in srgb, var(--info) 10%, transparent);
 }
 .choice-label {
   flex: none;
@@ -883,7 +883,7 @@ body.still .compact.needs::after {
   outline: none;
 }
 .other-input:focus {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: color-mix(in srgb, var(--fg) 18%, transparent);
 }
 .btn[disabled] {
   opacity: 0.4;
@@ -987,16 +987,16 @@ body.still .compact.needs::after {
   z-index: 1;
 }
 .card.wash.amber {
-  --wash: rgba(245, 165, 36, 0.42);
+  --wash: color-mix(in srgb, var(--warn) 42%, transparent);
 }
 .card.wash.green {
-  --wash: rgba(52, 211, 153, 0.45);
+  --wash: color-mix(in srgb, var(--ok) 45%, transparent);
 }
 .card.wash.red {
-  --wash: rgba(244, 80, 94, 0.5);
+  --wash: color-mix(in srgb, var(--error-text) 50%, transparent);
 }
 .card.wash.cyan {
-  --wash: rgba(34, 211, 238, 0.38);
+  --wash: color-mix(in srgb, var(--info) 38%, transparent);
 }
 .card-head {
   display: flex;
@@ -1059,7 +1059,7 @@ body.still .compact.needs::after {
   padding: 8px 10px;
   max-height: 86px;
   overflow: auto;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--bg-deep);
   border: 1px solid var(--line);
   border-radius: 10px;
   font: 12px/1.45 var(--mono);
@@ -1100,11 +1100,11 @@ body.still .compact.needs::after {
   background: var(--fg-bright);
 }
 .btn.secondary {
-  background: rgba(255, 255, 255, 0.09);
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
   color: var(--fg);
 }
 .btn.secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--fg) 15%, transparent);
 }
 /* Allow on a destructive card: outlined, never the button the eye lands on. */
 .btn.secondary.danger {
@@ -1113,7 +1113,7 @@ body.still .compact.needs::after {
   box-shadow: inset 0 0 0 1px var(--error);
 }
 .btn.secondary.danger:hover {
-  background: rgba(244, 80, 94, 0.12);
+  background: color-mix(in srgb, var(--error-text) 12%, transparent);
 }
 .btn.ghost-btn {
   margin-left: auto;
@@ -1121,7 +1121,7 @@ body.still .compact.needs::after {
 }
 .btn.ghost-btn:hover {
   color: var(--fg-bright);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 
 /* ── Step ticker ── */
@@ -1210,11 +1210,11 @@ body.still .compact.needs::after {
   padding: 1px 6px;
   border: 0;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
   cursor: pointer;
 }
 .tick-diff:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
 }
 
 /* ── The diff card ── */
@@ -1222,7 +1222,7 @@ body.still .compact.needs::after {
   max-height: 168px;
   overflow: auto;
   padding: 4px 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--bg-deep);
   border: 1px solid var(--line);
   border-radius: 10px;
   font: 11px/1.55 var(--mono);
@@ -1237,10 +1237,10 @@ body.still .compact.needs::after {
   white-space: pre;
 }
 .diff-line.add {
-  background: rgba(34, 197, 94, 0.12);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
 }
 .diff-line.del {
-  background: rgba(244, 80, 94, 0.12);
+  background: color-mix(in srgb, var(--error-text) 12%, transparent);
 }
 .diff-line .ln {
   padding-right: 8px;
@@ -1295,7 +1295,7 @@ body.still .compact.needs::after {
   min-width: 0;
   padding: 7px 10px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
   color: var(--fg);
   font-size: 12.5px;
   text-align: left;
@@ -1311,7 +1311,7 @@ body.still .compact.needs::after {
   color: var(--fg-muted);
 }
 .menu-item:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
   color: var(--fg-bright);
 }
 .menu-item:disabled {
@@ -1454,7 +1454,7 @@ body.still .compact.needs::after {
   cursor: pointer;
 }
 .board-row.link:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 .board-row .dot.passing {
   background: var(--ok);
@@ -1523,7 +1523,7 @@ body.still .compact.needs::after {
   grid-template-columns: 112px minmax(0, 1fr);
   gap: 8px;
   padding: 10px 12px 12px 6px;
-  background: radial-gradient(320px 260px at 10% 120%, rgba(99, 102, 241, 0.3), transparent 70%), var(--panel);
+  background: radial-gradient(320px 260px at 10% 120%, color-mix(in srgb, var(--agent-qwen) 30%, transparent), transparent 70%), var(--panel);
   border: 1px solid var(--hairline);
   border-radius: 20px;
 }
@@ -1536,7 +1536,7 @@ body.still .compact.needs::after {
   top: 54px;
 }
 .perch.chatting {
-  --glow: #6366f1;
+  --glow: var(--agent-qwen);
   --glow-on: 0.45;
 }
 .chat-main {
@@ -1580,7 +1580,7 @@ body.still .compact.needs::after {
   text-overflow: ellipsis;
 }
 .place:not(.fixed):hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
   color: var(--fg);
 }
 .place.fixed {
@@ -1611,7 +1611,7 @@ body.still .compact.needs::after {
   border-radius: 7px;
 }
 .saved-row.on {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 .saved-open {
   display: flex;
@@ -1623,7 +1623,7 @@ body.still .compact.needs::after {
   text-align: left;
 }
 .saved-open:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 .saved-title,
 .saved-where {
@@ -1654,7 +1654,7 @@ body.still .compact.needs::after {
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
   color: var(--fg);
   font: inherit;
   font-size: 12px;
@@ -1710,7 +1710,7 @@ body.still .compact.needs::after {
   white-space: nowrap;
 }
 .engine-row .engine-state.off {
-  color: #f5a524;
+  color: var(--warn);
 }
 .menu-item.engine-settings {
   margin-top: 4px;
@@ -1778,7 +1778,7 @@ body.still .compact.needs::after {
   background: none;
 }
 .menu-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
   color: var(--fg-bright);
 }
 .menu-item.on {
@@ -1867,9 +1867,9 @@ body.still .compact.needs::after {
 }
 .msg.error {
   padding: 7px 10px;
-  border: 1px solid rgba(244, 80, 94, 0.25);
+  border: 1px solid color-mix(in srgb, var(--error-text) 25%, transparent);
   border-radius: 10px;
-  background: rgba(244, 80, 94, 0.08);
+  background: color-mix(in srgb, var(--error-text) 8%, transparent);
   color: var(--error-text);
 }
 /* What happened along the way (a tool used, a rule that answered, a file refused): a quiet pill. */
@@ -1896,25 +1896,25 @@ body.still .compact.needs::after {
   flex-direction: column;
   gap: 7px;
   padding: 10px 12px;
-  background: linear-gradient(180deg, rgba(245, 165, 36, 0.12), transparent 140%), var(--float);
-  border: 1px solid rgba(245, 165, 36, 0.22);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--warn) 12%, transparent), transparent 140%), var(--float);
+  border: 1px solid color-mix(in srgb, var(--warn) 22%, transparent);
   border-radius: 12px;
 }
 /* The conversation read from outside: the card says so above what it asks. */
 .ask-outside {
   padding: 5px 9px;
   border-radius: 8px;
-  background: rgba(244, 80, 94, 0.12);
+  background: color-mix(in srgb, var(--error-text) 12%, transparent);
   color: var(--error-text);
   font-size: 12px;
 }
 .ask.allow {
   background: var(--float);
-  border-color: rgba(34, 197, 94, 0.25);
+  border-color: color-mix(in srgb, var(--ok) 25%, transparent);
 }
 .ask.deny {
   background: var(--float);
-  border-color: rgba(244, 80, 94, 0.25);
+  border-color: color-mix(in srgb, var(--error-text) 25%, transparent);
 }
 .ask .who .label {
   color: var(--fg-dim);
@@ -1946,7 +1946,7 @@ body.still .compact.needs::after {
 }
 .chat .ask .actions > .btn:nth-child(3):hover {
   color: var(--fg-bright);
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 /* A reply's own tools (copy it, send a failed turn again): in view under the latest reply, over
    the corner of an older one on hover, so hovering never moves the log. */
@@ -1985,7 +1985,7 @@ body.still .compact.needs::after {
   font-size: 11.5px;
 }
 .msg-tool:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--fg-bright);
 }
 .msg.error .msg-tool {
@@ -2027,7 +2027,7 @@ body.still .compact.needs::after {
   outline: none;
 }
 .chat textarea:focus {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: color-mix(in srgb, var(--fg) 18%, transparent);
 }
 
 /* Dragging a file over the island: the chat becomes a place to drop it. */
@@ -2042,7 +2042,7 @@ body.still .compact.needs::after {
   justify-content: center;
   gap: 4px;
   border-radius: 14px;
-  background: radial-gradient(300px 160px at 50% 130%, rgba(34, 197, 94, 0.22), transparent 75%), var(--panel);
+  background: radial-gradient(300px 160px at 50% 130%, color-mix(in srgb, var(--ok) 22%, transparent), transparent 75%), var(--panel);
   pointer-events: none;
 }
 .drop-zone.on {
@@ -2059,7 +2059,7 @@ body.still .compact.needs::after {
   width: calc(100% - 2px);
   height: calc(100% - 2px);
   fill: none;
-  stroke: rgba(34, 197, 94, 0.65);
+  stroke: color-mix(in srgb, var(--ok) 65%, transparent);
   stroke-width: 1.5;
   stroke-dasharray: 6 5;
   animation: march 1.1s linear infinite;
@@ -2082,7 +2082,7 @@ body.still .compact.needs::after {
 .drop-kinds .kind {
   padding: 2px 9px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
   font-size: 11.5px;
   color: var(--fg-dim);
 }
@@ -2108,7 +2108,7 @@ body.still .compact.needs::after {
   bottom: 4px;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   overflow: hidden;
 }
 .carry-fill {
@@ -2116,8 +2116,8 @@ body.still .compact.needs::after {
   width: 0;
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.5), #4ade80);
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 50%, transparent), var(--ok));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 60%, transparent);
   animation: carry-fill 1.3s ease-in-out forwards;
 }
 .carry-bird {
@@ -2156,7 +2156,7 @@ button.ghost {
 }
 button.ghost:hover {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2182,10 +2182,10 @@ button.ghost:hover {
   font-size: 10.5px;
   font-weight: 500;
   opacity: 0.55;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid color-mix(in srgb, var(--fg) 40%, transparent);
 }
 .btn.primary .kbd {
-  border-color: rgba(0, 0, 0, 0.4);
+  border-color: color-mix(in srgb, var(--on-accent) 40%, transparent);
 }
 
 /* ── Chat polish ── */
@@ -2366,7 +2366,7 @@ button.ghost:hover {
 .msg.zeca code {
   padding: 0 4px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   font: 12px var(--mono);
 }
 .msg.zeca strong {
@@ -2530,7 +2530,7 @@ button.ghost:hover {
   padding: 0;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
   cursor: pointer;
   line-height: 0;
 }
@@ -2548,7 +2548,7 @@ button.ghost:hover {
   padding: 3px 9px;
   border: 1px solid transparent;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
   color: var(--fg);
   font: inherit;
   font-size: 11.5px;
@@ -2557,19 +2557,19 @@ button.ghost:hover {
 }
 .look-chip:hover,
 .look-chip:focus-visible {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
   outline: none;
 }
 .look-chip.on {
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: color-mix(in srgb, var(--fg) 35%, transparent);
 }
 .look:hover,
 .look:focus-visible {
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   outline: none;
 }
 .look.on {
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: color-mix(in srgb, var(--fg) 35%, transparent);
 }
 .bird canvas {
   width: 44px;
@@ -2645,7 +2645,7 @@ button.ghost:hover {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
-  border-top: 1px solid #1d1f24;
+  border-top: 1px solid var(--border);
 }
 .quick-setting-text {
   display: grid;
@@ -2677,9 +2677,9 @@ button.ghost:hover {
   gap: 8px;
   min-height: 32px;
   padding: 0 10px 0 12px;
-  border: 1px solid #3a3d44;
+  border: 1px solid var(--border-hover);
   border-radius: 7px;
-  background: #111214;
+  background: var(--input);
   font-size: 12.5px;
   color: var(--fg);
 }
@@ -2688,15 +2688,15 @@ button.ghost:hover {
   color: var(--fg-muted);
 }
 .quick-pick-btn:hover {
-  border-color: #6b7065;
+  border-color: var(--focus-border);
 }
 .quick-pick-list {
   display: none;
   flex-direction: column;
   padding: 3px;
-  border: 1px solid #2c2f35;
+  border: 1px solid var(--control-border);
   border-radius: 7px;
-  background: #0d0e10;
+  background: var(--float);
 }
 .quick-pick.open .quick-pick-list {
   display: flex;
@@ -2709,11 +2709,11 @@ button.ghost:hover {
   color: var(--fg);
 }
 .quick-pick-item:hover {
-  background: #1c1e22;
+  background: var(--raised);
 }
 .quick-pick-item.on {
   color: var(--fg-bright);
-  background: #c3d2b712;
+  background: color-mix(in srgb, var(--mark) 7%, transparent);
 }
 
 /* The palette (Ctrl+K, ADR 0021): a search over sessions, commands and the Nest's tabs. The Nest
@@ -2755,7 +2755,7 @@ button.ghost:hover {
 }
 .palette-item.on,
 .palette-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 .palette-label {
   color: var(--fg);
@@ -2783,9 +2783,9 @@ button.ghost:hover {
 .habitat .habitat-bird.chosen .label {
   bottom: 1px;
   padding: 3px 6px;
-  border: 1px solid #6b7065;
+  border: 1px solid var(--focus-border);
   border-radius: 5px;
-  background: #c3d2b70a;
+  background: color-mix(in srgb, var(--mark) 4%, transparent);
 }
 /* A chip for each session that needs you, under the flock. */
 .need-strip {
@@ -2793,7 +2793,7 @@ button.ghost:hover {
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px 4px 2px;
-  border-top: 1px solid #1d1f24;
+  border-top: 1px solid var(--border);
 }
 .need-strip[hidden] {
   display: none;
@@ -2803,9 +2803,9 @@ button.ghost:hover {
   align-items: center;
   gap: 7px;
   padding: 4px 11px 4px 4px;
-  border: 1px solid #705727;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
   border-radius: 999px;
-  background: #f5a5240b;
+  background: color-mix(in srgb, var(--warn) 4%, transparent);
   font-size: 12px;
   color: var(--fg);
 }
@@ -2816,12 +2816,12 @@ button.ghost:hover {
   height: 16px;
   border-radius: 50%;
   background: var(--warn);
-  color: #111;
+  color: var(--on-accent);
   font: 700 10px var(--font);
 }
 .need-tag.failed {
-  border-color: #7a2f36;
-  background: #ff8d970b;
+  border-color: color-mix(in srgb, var(--error-text) 45%, var(--border));
+  background: color-mix(in srgb, var(--error-text) 4%, transparent);
 }
 .need-tag.failed i {
   background: var(--error-text);
@@ -2842,7 +2842,7 @@ button.ghost:hover {
   gap: 6px;
   min-height: 30px;
   padding: 0 11px 0 8px;
-  border: 1px solid #3a3d44;
+  border: 1px solid var(--border-hover);
   border-radius: 7px;
   font-size: 12px;
   color: var(--fg);
@@ -2851,8 +2851,8 @@ button.ghost:hover {
   transform: scaleX(-1);
 }
 .session-back:hover {
-  border-color: #6b7065;
-  background: #1c1e22;
+  border-color: var(--focus-border);
+  background: var(--raised);
 }
 .session-dots {
   display: flex;
@@ -2883,7 +2883,7 @@ button.ghost:hover {
 .session-dot.qwen { --session-dot: var(--agent-qwen); }
 .session-dot.copilot { --session-dot: var(--agent-copilot); }
 .session-dot.on::before {
-  box-shadow: 0 0 0 2px #000, 0 0 0 3.5px var(--fg-dim);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--fg-dim);
 }
 .session-dot:focus-visible {
   outline: 1px solid var(--fg-dim);
@@ -2967,18 +2967,18 @@ button.ghost:hover {
 .overview .card.focus .who .agent.copilot { color: var(--agent-copilot); }
 .overview .card.focus .who .label {
   padding: 0 6px;
-  border: 1px solid #6b7065;
+  border: 1px solid var(--focus-border);
   border-radius: 4px;
   font-size: 11.5px;
   line-height: 17px;
   color: var(--fg);
 }
 .overview .card.focus.wash.amber .who .label {
-  border-color: #b9802a;
+  border-color: var(--warn);
   color: var(--warn);
 }
 .overview .card.focus.wash.red .who .label {
-  border-color: #a8434c;
+  border-color: var(--error-text);
   color: var(--error-text);
 }
 /* No pool of light under the session: the bird alone carries its state, as in the prototype. */
@@ -2989,7 +2989,7 @@ button.ghost:hover {
   --glow-on: 0.06;
 }
 .overview .card.focus.wash.cyan .who .label {
-  border-color: #2b8796;
+  border-color: var(--info);
   color: var(--info);
 }
 /* A lone way out (Open terminal) takes the whole width. */
@@ -3018,14 +3018,14 @@ button.ghost:hover {
   gap: 7px;
   min-height: 30px;
   padding: 0 10px;
-  border: 1px solid #2c2f35;
+  border: 1px solid var(--control-border);
   border-radius: 7px;
   font-size: 12.5px;
   color: var(--fg);
 }
 .qconn-chip.on {
-  border-color: #3a3d44;
-  background: #1c1e22;
+  border-color: var(--border-hover);
+  background: var(--raised);
   color: var(--fg-bright);
 }
 .qconn-chip.add {
@@ -3035,7 +3035,7 @@ button.ghost:hover {
   color: var(--fg-muted);
 }
 .qconn-chip:hover {
-  border-color: #6b7065;
+  border-color: var(--focus-border);
 }
 .qconn-count {
   font-size: 11.5px;
@@ -3059,14 +3059,14 @@ button.ghost:hover {
   min-height: 48px;
   padding: 6px 10px;
   box-sizing: border-box;
-  border: 1px solid #24262c;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #0d0e10;
+  background: var(--float);
   text-align: left;
 }
 .qconn-row:has(.qconn-open.link:hover) {
-  border-color: #3a3d44;
-  background: #141518;
+  border-color: var(--border-hover);
+  background: var(--panel);
 }
 /* The row's body opens it; its action and ✓ sit beside, never inside, a button. */
 .qconn-open {
@@ -3088,21 +3088,21 @@ button.ghost:hover {
 .qconn-act {
   flex: none;
   padding: 3px 8px;
-  border: 1px solid #2c2f35;
+  border: 1px solid var(--control-border);
   border-radius: 6px;
-  background: #141518;
+  background: var(--panel);
   font-size: 11.5px;
   color: var(--fg);
   white-space: nowrap;
   cursor: pointer;
 }
 .qconn-act:hover {
-  border-color: #6b7065;
+  border-color: var(--focus-border);
 }
 .qconn-act.primary {
   border-color: var(--fg-bright);
   background: var(--fg-bright);
-  color: #000;
+  color: var(--on-accent);
 }
 .qconn-act:disabled {
   opacity: 0.6;
@@ -3115,7 +3115,7 @@ button.ghost:hover {
   gap: 6px;
   flex-basis: 100%;
   padding-top: 6px;
-  border-top: 1px solid #1d1f24;
+  border-top: 1px solid var(--border);
   font-size: 12px;
   color: var(--fg);
 }
@@ -3130,7 +3130,7 @@ button.ghost:hover {
   flex: none;
   width: 26px;
   height: 26px;
-  border: 1px solid #2c2f35;
+  border: 1px solid var(--control-border);
   border-radius: 6px;
   background: none;
   font-size: 12px;
@@ -3139,7 +3139,7 @@ button.ghost:hover {
 }
 .qconn-done:hover,
 .qconn-done:focus-visible {
-  border-color: #2f6b4f;
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
   color: var(--ok);
 }
 .qconn-foot {
@@ -3147,7 +3147,7 @@ button.ghost:hover {
   justify-content: space-between;
   align-items: center;
   padding-top: 6px;
-  border-top: 1px solid #1d1f24;
+  border-top: 1px solid var(--border);
   font: 11px var(--mono);
   color: var(--fg-muted);
 }
@@ -3212,30 +3212,30 @@ button.ghost:hover {
 .qconn-tag {
   flex: none;
   padding: 3px 8px;
-  border: 1px solid #3a3d44;
+  border: 1px solid var(--border-hover);
   border-radius: 6px;
   font-size: 11.5px;
   color: var(--fg);
 }
 .qconn-tag.approved,
 .qconn-tag.passing {
-  border-color: #2f6b4f;
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
   color: var(--ok);
 }
 .qconn-tag.changes,
 .qconn-tag.running {
-  border-color: #705727;
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
   color: var(--warn);
 }
 .qconn-tag.failing {
-  border-color: #7a2f36;
+  border-color: color-mix(in srgb, var(--error-text) 45%, var(--border));
   color: var(--error-text);
 }
 /* Over the other tabs, who needs you, under the tabs. */
 .need-strip.top {
   padding: 8px 4px;
   border-top: 0;
-  border-bottom: 1px solid #1d1f24;
+  border-bottom: 1px solid var(--border);
 }
 /* The chat gets a wider reading column inside the existing native overlay. */
 #island .inner:has(.main > .chat) {
@@ -3555,9 +3555,9 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
   flex: none;
   width: 34px;
   height: 20px;
-  border: 1px solid #3a3d44;
+  border: 1px solid var(--border-hover);
   border-radius: 999px;
-  background: #141518;
+  background: var(--panel);
 }
 .quick-switch > span {
   position: absolute;
@@ -3570,8 +3570,8 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
   transition: transform 0.15s;
 }
 .quick-switch.on {
-  border-color: #2f6b4f;
-  background: #22c55e22;
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+  background: color-mix(in srgb, var(--ok) 13%, transparent);
 }
 .quick-switch.on > span {
   background: var(--ok);

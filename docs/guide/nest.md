@@ -12,7 +12,9 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 
 Activity, Connections and Settings share neutral controls, page headings, cards and view states.
 **Settings → General → Theme** chooses **Black** (the default) or **Light** across every window.
-Activity and Connections use underlined view tabs; status colors keep their meaning.
+Activity and Connections use underlined view tabs; status colors keep their meaning. The Flock stage,
+diffs and Compact controls follow the same theme, including live changes to the birds'
+agent colors and wire.
 
 At widths of 900 px or more, drag the separator of Settings, Connections, Recent or Memory
 to resize that side panel. Double-click resets its width; the fold button keeps a narrow rail.

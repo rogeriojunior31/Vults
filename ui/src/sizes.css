@@ -5,7 +5,7 @@
   margin-left: 4px;
   padding: 2px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--float);
 }
 .size-switch .size {
   min-width: 30px;
@@ -20,7 +20,7 @@
   color: var(--fg-dim);
 }
 .size-switch .size.on {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--raised);
   color: var(--fg-bright);
 }
 .size-switch .size:disabled {

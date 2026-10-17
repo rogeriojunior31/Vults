@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: b0bbeb8f3824 -->
+<!-- source: 7e33bb53426e -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -13,7 +13,9 @@ foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 
 Atividade, Conexões e Configurações usam controles neutros, títulos, cards e estados de leitura
 compartilhados. **Settings → General → Theme** escolhe **Black** (o padrão) ou **Light** em todas
-as janelas. Atividade e Conexões usam abas sublinhadas; as cores de status mantêm seus significados.
+as janelas. Atividade e Conexões usam abas sublinhadas; as cores de status mantêm seus significados. O palco do Flock,
+os diffs e os controles do Compact seguem o mesmo tema, incluindo a atualização ao vivo
+das cores dos agentes nas aves e do fio.
 
 Em larguras de pelo menos 900 px, arraste o separador de Settings, Connections, Recent ou Memory
 para redimensionar esse painel lateral. Um clique duplo restaura a largura; o botão de recolher

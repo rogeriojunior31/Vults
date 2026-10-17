@@ -115,6 +115,10 @@ export class Sky {
     this.canvas.width = WIDTH * this.dpr;
     this.canvas.height = HEIGHT * this.dpr;
     this.ctx = this.canvas.getContext("2d")!;
+    document.addEventListener("themechange", () => {
+      this.colors = null;
+      if (this.active) this.draw();
+    });
     this.motion.addEventListener("change", () => {
       this.updateScouts(Clock.now());
       this.draw();
