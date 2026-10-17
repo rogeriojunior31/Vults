@@ -562,6 +562,20 @@ export function createNest(
       parts[sub].refresh();
   };
   const open = (id: string) => {
+    if (id === "memory") {
+      if (zecaOn) { show("chat"); setMemory(true); }
+      return;
+    }
+    if (id.startsWith("connection:")) {
+      const parts = id.split(":");
+      if (parts.length === 3) {
+        try {
+          show("connections");
+          connections.select(decodeURIComponent(parts[1]!), decodeURIComponent(parts[2]!));
+        } catch { /* An invalid navigation link changes no connection. */ }
+      }
+      return;
+    }
     if ((TABS as string[]).includes(id)) return show(id as Tab);
     if ((SUBS as string[]).includes(id)) {
       sub = id as Sub;

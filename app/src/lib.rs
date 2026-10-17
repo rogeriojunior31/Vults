@@ -179,6 +179,7 @@ pub fn run() {
             runtime::question_answer,
             runtime::question_release,
             runtime::card_skip,
+            runtime::card_review,
             runtime::rules_list,
             runtime::rule_remove,
             spend::spend_today,
@@ -608,7 +609,7 @@ mod tests {
         use tauri::Listener;
         let app = tauri::test::mock_app();
         let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
-        for name in ["open-chat", "shortcut"] {
+        for name in ["open-chat", "open-now", "shortcut"] {
             let events = events.clone();
             app.listen_any(name, move |event| {
                 events.lock().unwrap().push((name, event.payload().to_string()))
@@ -619,6 +620,20 @@ mod tests {
         assert!(events.lock().unwrap().is_empty());
         for (size, asked, last, zeca, expected) in [
             ("quick", Some("chat"), Some("chat"), true, ("open-chat", "null")),
+            (
+                "quick",
+                Some("activity"),
+                Some("activity"),
+                true,
+                ("open-now", "null"),
+            ),
+            (
+                "quick",
+                Some("connections"),
+                Some("connections"),
+                false,
+                ("open-now", "null"),
+            ),
             (
                 "quick",
                 Some("chat"),
@@ -934,9 +949,14 @@ fn nest_close<R: tauri::Runtime>(window: tauri::Webview<R>) -> Result<(), String
 }
 
 fn valid_nest_tab(tab: &str) -> bool {
+    if tab.starts_with("connection:") {
+        let parts: Vec<_> = tab.split(':').collect();
+        return tab.len() <= 4096 && parts.len() == 3 && parts.iter().all(|p| !p.is_empty());
+    }
     matches!(
         tab,
         "flock"
+            | "memory"
             | "chat"
             | "activity"
             | "connections"
@@ -954,7 +974,11 @@ fn restored_tab<'a>(asked: Option<&'a str>, last: Option<&'a str>, zeca: bool) -
         .filter(|t| valid_nest_tab(t))
         .or_else(|| last.filter(|t| valid_nest_tab(t)))
         .unwrap_or("flock");
-    if tab == "chat" && !zeca { "flock" } else { tab }
+    if matches!(tab, "chat" | "memory") && !zeca {
+        "flock"
+    } else {
+        tab
+    }
 }
 
 #[tauri::command]
@@ -1298,6 +1322,8 @@ fn show_island_size<R: tauri::Runtime>(app: &AppHandle<R>, size: &str, tab: Opti
     use tauri::Emitter;
     if size == "quick" && tab == Some("chat") && zeca {
         let _ = app.emit_to(ISLAND, "open-chat", ());
+    } else if size == "quick" && matches!(tab, Some("now" | "activity" | "connections")) {
+        let _ = app.emit_to(ISLAND, "open-now", ());
     } else {
         let _ = app.emit_to(ISLAND, "shortcut", if size == "mini" { "fold" } else { "open" });
     }

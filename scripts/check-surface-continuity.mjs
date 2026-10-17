@@ -91,6 +91,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
+      export { createNow } from ${source("island/now.ts")};
       export { focusCard, questionBody } from ${source("island/views.ts")};
       export { applyTheme } from ${source("theme.ts")};
       export { sidePanel } from ${source("surfaces/nest/panels.ts")};
@@ -108,7 +109,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -656,3 +657,52 @@ assert.equal(questionHost.querySelector(".other-input").value, "unfinished answe
 questionHost.querySelectorAll("button").find(b => b.textContent === "Send").click();
 assert.deepEqual(cardEvents.at(-1), ["answer", "skip-question", ["unfinished answer"]]);
 console.log("check-surface-continuity: Quick Skip blocks stale Allow, retains question drafts and resumes only through an explicit action");
+
+const nowEvents = [];
+const nowUI = createNow({ request: (...args) => nowEvents.push(['request', args[0]]), session: s => nowEvents.push(['session', s.id]),
+  relayout() {},
+  connection: (...args) => nowEvents.push(['connection', ...args]), alert: key => nowEvents.push(['alert', key]),
+  chat: () => nowEvents.push(['chat']), memory: () => nowEvents.push(['memory']), room: tab => nowEvents.push(['room', tab]) });
+const attentionSession = { ...skipSession, id: 'now-session', skipped: true };
+const reviewRow = { ...row, item: 'now-review', group: 'to-review', checks: null, review: null, merge: false };
+const failedRow = { ...row, item: 'now-failed', group: 'yours', checks: 'failing', review: null, merge: false };
+const nowView = { sessions: [attentionSession], approval: null, alerts: [], boards: [{ connector: 'github', rows: [reviewRow, failedRow] }], inbox: [
+  ...['offer-one', 'offer-two'].map(request => ({ level: 'needs-you', source: { kind: 'request', request, session: { agent: attentionSession.agent, id: attentionSession.id }, tool: 'Bash', target: request, description: null, question: false, skipped: true } })),
+  { level: 'failed', source: { kind: 'connection', connector: 'github', item: failedRow.item } },
+  { level: 'info', source: { kind: 'connection', connector: 'github', item: reviewRow.item } },
+  { level: 'needs-you', source: { kind: 'chat', count: 2 } }, { level: 'info', source: { kind: 'memory', count: 1 } },
+] };
+document.body.replaceChildren(nowUI.element);
+nowUI.update(nowView, true);
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 6);
+assert.deepEqual(nowEvents, [], 'Drawing the inbox has no effects');
+const nowAt = id => nowUI.element.querySelector(`[data-now="${id}"]`);
+nowAt('request:offer-two').click();
+assert.deepEqual(nowEvents, [['request', 'offer-two']], 'Each offer opens by its own id, including deferred offers of one session');
+const focusNow = nowAt('request:offer-one'); focusNow.focus();
+nowUI.element.querySelector('.now-feed').scrollTop = 91;
+nowUI.update({ ...nowView, sessions: [{ ...attentionSession, step: 'updated metadata' }] }, true);
+assert.equal(document.activeElement.dataset.now, 'request:offer-one');
+assert.equal(nowUI.element.querySelector('.now-feed').scrollTop, 91);
+nowAt('connection:github:now-failed').click(); nowAt('chat').click(); nowAt('memory').click();
+assert.deepEqual(nowEvents.slice(1), [['connection', 'github', 'now-failed'], ['chat'], ['memory']]);
+nowAt('seen-all').focus(); nowAt('seen-all').click();
+assert.equal(document.activeElement.dataset.now, 'request:offer-one', 'Seen hands keyboard focus to a remaining item');
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 5, 'Seen only removes quiet connection news; failures and cards stay');
+assert.ok(nowAt('connection:github:now-failed')); assert.ok(nowAt('request:offer-one'));
+assert.equal(nowEvents.length, 4, 'Marking seen sends no backend action');
+nowUI.update(nowView, false);
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 3, 'Zeca off removes only his Chat and Memory items');
+nowUI.update({ ...nowView, inbox: [{ level: 'info', source: { kind: 'memory', count: null } }] }, true);
+assert.ok(nowUI.element.textContent.includes('Could not read memory proposals.'));
+nowUI.update({ ...nowView, inbox: [] }, true);
+assert.ok(nowUI.element.textContent.includes('Nothing needs your attention'));
+assert.equal(nowUI.element.querySelectorAll('.now-row').length, 0, 'The renderer never reconstructs a competing inbox from sessions or boards');
+assert.equal(nowEvents.length, 4);
+connectionUI.update(connectionView);
+connectionUI.select('github', mergeRow.item);
+assert.equal(cSearch.value, '', 'A Now link reveals its item despite an old search');
+assert.equal(storage.get('vults.connections-query'), '', 'The revealed connection stays visible when reopened');
+assert.ok(connectionUI.element.querySelector('.conn-detail').textContent.includes(mergeRow.title), 'A Now link opens the exact selected detail');
+assert.ok(!connectionEffects.includes('merge'), 'Opening connection detail never merges');
+console.log('check-surface-continuity: Now uses the shared inbox, opens exact deferred offers, retains focus/scroll, separates Seen from decisions and routes connection detail');

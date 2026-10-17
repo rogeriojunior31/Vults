@@ -32,7 +32,10 @@ Minimizing the Nest returns the island and its approval shortcuts. Opening the N
 again restores the window; minimizing does not change its saved Room size.
 
 Reopening from the tray keeps your last tab and Activity subsection until Vults exits.
-Opening a specific view takes priority. If Zeca is off, a saved Chat tab opens Flock.
+Opening a specific view takes priority. If Zeca is off, a saved Chat tab opens Flock. Quick's **Now**
+opens a connection directly in its selected detail, clearing an old filter that would hide it;
+a memory proposal opens Chat's Memory panel. Neither route performs an action. Returning
+from Activity or Connections to Quick opens Now.
 
 Closing with the desktop's close command (such as **Alt+F4**) also waits for the
 Chat draft, navigation and record searches to save. If saving or closing fails,

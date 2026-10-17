@@ -14,6 +14,9 @@ pub struct ViewModel {
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     pub alerts: Vec<AlertView>,
+    /// Actionable items, including deferred offers; surfaces only choose their presentation.
+    #[cfg_attr(test, ts(as = "Option<Vec<crate::attention::AttentionItem>>", optional))]
+    pub inbox: Vec<crate::attention::AttentionItem>,
     /// The most any session wants the user.
     #[cfg_attr(test, ts(as = "Option<Attention>", optional))]
     pub attention: Attention,
@@ -356,7 +359,9 @@ impl State {
                 }
             })
             .collect();
+        let boards = crate::board::view(self);
         ViewModel {
+            inbox: crate::attention::view(self, &boards),
             attention: sessions
                 .iter()
                 .map(|s| s.attention)
@@ -424,7 +429,7 @@ impl State {
                     link: a.url.is_some(),
                 })
                 .collect(),
-            boards: crate::board::view(self),
+            boards,
             look: self.outfit.worn(self.today),
             focus: self.focus.as_ref().map(SessionRef::from),
             front: self.front().map(SessionRef::from),
@@ -630,6 +635,8 @@ pub(crate) mod ts {
             AlertLevel::decl(&cfg),
             Outfit::decl(&cfg),
             ViewModel::decl(&cfg),
+            crate::AttentionItem::decl(&cfg),
+            crate::AttentionSource::decl(&cfg),
             SessionView::decl(&cfg),
             DiffSummary::decl(&cfg),
             ChangeView::decl(&cfg),

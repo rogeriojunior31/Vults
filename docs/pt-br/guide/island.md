@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 15c67be8f4b9 -->
+<!-- source: 0c0d60e6e1c6 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -188,28 +188,31 @@ Deny. Desligue-as em **Settings → General → Notifications**.
 
 ![A ilha aberta em repouso: o bando, cada sessão com seu nome, e um chip para cada uma que pede um olhar](../../assets/island-busy-flock.png)
 
-Aberta, o cabeçalho da ilha tem a marca e o nome, um botão de som, a busca (a paleta, como
-**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo, as cinco abas como ícones,
-como o protótipo as desenha:
+Aberta, a ilha tem no cabeçalho a marca e o nome, o botão de som, a busca (a paleta, como
+**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo ficam as abas:
 
 - **Flock**, com quantas sessões precisam de você;
-- **Chat**, do Zeca, numa forma compacta: o motor e as suas conversas no topo, o campo com um clipe
-  (para entregar arquivos ao Zeca) e o microfone, a pasta e o modelo embaixo;
-- **Activity**: esta semana, contada neste computador, os quatro números e uma barra por projeto (o maior primeiro; por dia quando nenhum projeto tem nome), e **‹ Previous week** / **This week**;
-- **Connections**, com quantas linhas os conectores mostram e você não marcou como vistas: um chip
-  por conector e um card por linha, com **Ask Zeca why**, **Review with Zeca**, **Squash and merge** e **✓**
-  ([Conectores](connectors.md#the-github-card)); sem nenhum ligado, **+** leva às Connections do
-  Nest;
-- **Settings** (a engrenagem): **Presence** e **Fold the island** ali mesmo; a lista de páginas
-  também desenha **Activity** (o interruptor do histórico local) e **Flock & Zeca** (o interruptor do
-  Zeca e de onde o bando vem) ali mesmo; qualquer outra página das Settings no Nest, e **All settings** (em **Agents** enquanto os hooks de um agente faltam ou
-  estão desatualizados, em **General** nos outros casos).
+- **Chat**, a conversa compacta do Zeca, com motor, pasta, anexos e microfone;
+- **Now**, uma caixa única para cards pendentes (inclusive adiados), sessões com falha ou quietas,
+  itens dos conectores que pedem uma ação, solicitações do Chat e propostas de memória. Cada linha
+  abre seu próprio card ou detalhe; abrir nunca responde a uma solicitação, envia uma mensagem,
+  aceita uma proposta nem faz merge;
+- **Settings** (a engrenagem): **Presence** e **Fold the island** aqui, com as outras configurações
+  disponíveis no Nest.
 
-Sobre as abas Chat, Activity, Connections e Settings, os chips das sessões que precisam de você ficam embaixo
-das abas; um deles abre a sessão. Activity tem **Open in the Nest** para o resto.
-O [Nest](nest.md), a janela do próprio Vults, tem abas próprias; a seta no topo do chat
-também o abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (cerca de 500 px na tela, o
-**Quick** do seletor de tamanho):
+O Now mantém cada solicitação separada, mesmo quando uma sessão tem várias. Sua contagem destaca
+solicitações e falhas. **Seen** e **Mark all seen** ocultam notícias tranquilas das conexões até elas
+mudarem; falhas e solicitações continuam. As marcações ficam neste computador e não mudam o GitHub.
+Uma caixa vazia mostra **Nothing needs your attention**. Com o Zeca desligado, o bando independente
+e as conexões continuam; os itens do Chat e da memória dele desaparecem.
+
+Um card pendente fica na frente até ser respondido ou explicitamente adiado. Depois, o Now pode
+abrir e trazer qualquer card adiado de volta pela sua solicitação. Os cards mantêm o prazo original
+e o rascunho da pergunta. **Activity** e **Connections** no rodapé do Now abrem as telas completas no
+[Nest](nest.md). Voltar dessas telas para o Quick abre o Now; o Chat volta para o Chat.
+Os chips das sessões que precisam de você ficam abaixo das abas sobre o Chat e as Settings.
+A música e o uso dos seus planos ficam numa linha abaixo das abas.
+Embaixo, na largura toda da ilha (cerca de 500 px na tela, o **Quick** do seletor de tamanho):
 
 - **em repouso, o bando**: o vult de cada sessão num fio, com o dobro do tamanho, o nome do projeto
   embaixo (numa caixa para a que está na frente) e `!` quando precisa de você (até seis; além disso,

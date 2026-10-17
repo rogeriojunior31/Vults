@@ -195,7 +195,7 @@ void Bridge.appSettings().then((s) => {
   nest.chat.setAccess(s.chatAccess);
   // Asked for the Chat before Zeca was known to be on.
   // Not if the user went elsewhere meanwhile.
-  if (s.zeca && asked === "chat" && nest.current() === "flock") nest.open("chat");
+  if (s.zeca && ["chat", "memory"].includes(asked) && nest.current() === "flock") nest.open(asked);
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {

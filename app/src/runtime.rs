@@ -204,6 +204,7 @@ pub fn start(app: AppHandle) {
     let (tx, rx) = mpsc::channel(64);
     app.manage(Inbox(tx.clone()));
     app.manage(LastView::default());
+    crate::memory::refresh_attention(&app);
 
     let (hooks_tx, mut hooks_rx) = mpsc::channel(64);
     tauri::async_runtime::spawn(async move {
@@ -247,10 +248,12 @@ pub fn start(app: AppHandle) {
     // Once a minute, so silent sessions and stale cards age out. One message a minute is
     // all it costs when nothing is going on.
     let ticker = tx.clone();
+    let memory_app = app.clone();
     tauri::async_runtime::spawn(async move {
         let mut every = tokio::time::interval(Duration::from_secs(60));
         loop {
             every.tick().await;
+            crate::memory::refresh_attention(&memory_app);
             if ticker.send(Msg::Tick).await.is_err() {
                 break;
             }
@@ -617,7 +620,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
 
         crate::phone::sync(&app, &state, now);
-        let view = state.view();
+        let mut view = state.view();
+        if crate::settings::zeca(&app) {
+            view.inbox.extend(crate::chat::attention(&app));
+            view.inbox.extend(crate::memory::attention(&app));
+        }
+        view.inbox.sort_by_key(|i| std::cmp::Reverse(i.level));
         if last_view.as_ref() != Some(&view) {
             publish_view(&app, &view);
             crate::tray::show(&app, &view);
@@ -852,6 +860,25 @@ pub async fn question_answer(
         .send(Msg::User(Intent::Answer {
             request: RequestId(request),
             answers,
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// Reopen one exact offer without answering it.
+#[tauri::command]
+pub async fn card_review(
+    window: tauri::Webview,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::Review {
+            request: RequestId(request),
         }))
         .await
         .map_err(|_| ())

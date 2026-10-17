@@ -166,25 +166,28 @@ or Deny. Turn them off in **Settings → General → Notifications**.
 ![The open island at rest: the flock, every session named, and a chip for each one that needs a look](../assets/island-busy-flock.png)
 
 Open, the island's header has its mark and name, a sound toggle, the search (the palette, as
-**Ctrl+K**), the size switch and the full-screen button. Under it, its five tabs as icons, as
-the prototype draws them:
+**Ctrl+K**), the size switch and the full-screen button. Under it, its tabs are:
 
 - **Flock**, with how many sessions need you;
-- **Chat**, Zeca's, in a compact form: the engine and your conversations at the top, the composer
-  with a paperclip (to hand Zeca files) and the microphone, the folder and model under it;
-- **Activity**: this week, counted on this computer, its four figures and a bar per project (the most first; by day when no project is named), and **‹ Previous week** / **This week**;
-- **Connections**, with how many rows its connectors show and you have not marked seen: a chip per
-  connector and a card per row, with **Ask Zeca why**, **Review with Zeca**, **Squash and merge** and **✓**
-  ([Connectors](connectors.md#the-github-card)); with none on, **+** leads to the Nest's Connections;
-- **Settings** (the gear): **Presence** and **Fold the island** right there; its page list also
-  draws **Activity** (the local history's switch) and **Flock & Zeca** (Zeca's switch and where the
-  flock draws from) in place; any other page of Settings in the Nest, and **All settings** (at **Agents** while an agent's hooks are missing or
-  out of date, at **General** otherwise).
+- **Chat**, Zeca's compact conversation, with its engine, folder, attachments and microphone;
+- **Now**, one inbox for pending cards (including skipped cards), failed or quiet sessions,
+  actionable connector rows, Chat requests and memory proposals. Each row opens its own card
+  or detail; opening never answers a request, sends a message, accepts a proposal or merges;
+- **Settings** (the gear): **Presence** and **Fold the island** here, with the other settings
+  available in the Nest.
 
-Over the Chat, Activity, Connections and Settings tabs, the chips of the sessions that need you stay under the
-tabs; one opens its session. Activity has **Open in the Nest** for the rest.
-The [Nest](nest.md), Vults' own window, has tabs of its own; the arrow at the top of the chat
-also opens it. The song and your plans' usage take a line under the tabs.
+Now keeps each request separate, even when one session has several. Its count highlights
+requests and failures. **Seen** and **Mark all seen** hide quiet connection news until it changes;
+failures and requests remain. The marks stay on this computer and change nothing on GitHub.
+An empty inbox says **Nothing needs your attention**. With Zeca off, the independent flock
+and connections remain; his Chat and Memory items disappear.
+
+A pending card stays in front until answered or explicitly skipped. Then Now can open and
+bring any deferred card back by its request. Cards keep their original deadline and question draft.
+**Activity** and **Connections** at the bottom of Now open the full views in the
+[Nest](nest.md). Returning from those views to Quick opens Now; Chat returns to Chat.
+The chips of sessions that need you stay under the tabs over Chat and Settings.
+The song and your plans' usage take a line under the tabs.
 Below, the island's whole width (about 500 px on screen, the size switch's **Quick**):
 
 - **at rest, the flock**: every session's vult on one wire, twice its size, its project's name under

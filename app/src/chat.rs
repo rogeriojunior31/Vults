@@ -127,11 +127,19 @@ struct Scope {
 }
 
 impl Waiting {
+    fn pending_count(&self) -> usize {
+        self.0
+            .lock()
+            .map(|m| m.values().filter(|a| !a.answer.is_closed()).count())
+            .unwrap_or_default()
+    }
+
     fn shown(&self) -> Vec<WaitingView> {
         self.0
             .lock()
             .map(|m| {
                 m.iter()
+                    .filter(|(_, a)| !a.answer.is_closed())
                     .map(|(id, a)| WaitingView {
                         id: id.clone(),
                         tool: a.tool.clone(),
@@ -298,6 +306,14 @@ impl ChatState {
     }
 }
 
+pub(crate) fn attention(app: &AppHandle) -> Option<vults_core::AttentionItem> {
+    let count = app.try_state::<ChatState>()?.waiting.pending_count();
+    (count > 0).then_some(vults_core::AttentionItem {
+        level: vults_core::Attention::NeedsYou,
+        source: vults_core::AttentionSource::Chat { count },
+    })
+}
+
 /// To both of the chat's windows: the island and the Nest (if it is open).
 fn emit_chat<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload: &S) {
     // Once, to every page: a page's `listen` takes events sent to any target, so one copy sent
@@ -340,6 +356,9 @@ enum Sync {
 }
 
 fn sync(app: &AppHandle, s: Sync) {
+    if !matches!(s, Sync::Draft { .. }) {
+        crate::runtime::recheck(app);
+    }
     emit_chat(app, "chat-sync", &s);
 }
 
@@ -398,6 +417,12 @@ pub async fn chat_send(
                 if let Delta::Permission { detail, .. } = &delta {
                     let outside = detail.outside.clone();
                     app.state::<ChatState>().live(|l| l.outside = outside);
+                }
+                if matches!(
+                    delta,
+                    Delta::Permission { .. } | Delta::Done | Delta::Error { .. } | Delta::Stopped
+                ) {
+                    crate::runtime::recheck(&app);
                 }
                 emit_chat(&app, "chat", &delta);
             }
@@ -1556,6 +1581,21 @@ pub fn clean_inbox() {
 mod tests {
     use super::*;
     use vults_chat::Settings;
+
+    #[test]
+    fn timed_out_chat_offers_leave_the_inbox_and_reopened_chat() {
+        let waiting = Waiting::default();
+        let live = waiting.wait("live", "Bash", "git status");
+        let expired = waiting.wait("expired", "Bash", "git diff");
+        assert_eq!(waiting.pending_count(), 2);
+        drop(expired);
+        assert_eq!(waiting.pending_count(), 1);
+        assert_eq!(waiting.shown().len(), 1);
+        assert_eq!(waiting.shown()[0].id, "live");
+        drop(live);
+        assert_eq!(waiting.pending_count(), 0);
+        assert!(waiting.shown().is_empty());
+    }
 
     #[test]
     fn draft_roundtrip_keeps_multiline_text_files_and_context() {

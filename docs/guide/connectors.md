@@ -34,7 +34,9 @@ for (say, behind SAML sign-in) leaves the rest showing.
 
 ### The GitHub card
 
-Once GitHub has answered, the open island's **Connections** tab shows its card, with a chip for GitHub and a card per row:
+Once GitHub has answered, **Now** in Quick gathers the rows that need an action. A row opens
+its selected detail in the Nest's **Connections**; **Open in GitHub** there opens its link.
+Connections keeps the full list, including quieter rows and releases:
 
 ![The GitHub card: your pull requests, a review waiting, default branches, and a failed check below](../assets/island-github-card.png)
 
@@ -44,7 +46,7 @@ Once GitHub has answered, the open island's **Connections** tab shows its card, 
 - **Default branches**: the latest commit on each, with how its checks went. Repositories without
   checks are left out.
 
-Click a row to open it on GitHub. When a pull request is merged or closed, or a review request
+Select a row for its detail, then choose **Open in GitHub** to follow its link. When a pull request is merged or closed, or a review request
 withdrawn, its alerts go with it.
 
 With Zeca on, a row can ask him about it:
@@ -64,12 +66,13 @@ leaves with the next answer. It merges only the commit the card showed green: if
 since, GitHub refuses. If GitHub refuses (a branch rule, a conflict), the row says why. Each merge writes a line
 in the local trace, and nothing else is merged on its own.
 
-**✓** marks a row seen: it leaves the island, and the tab's count, until it changes (its checks, its
-review, or a branch's latest commit), and stays in the Nest's Connections. **Mark all seen** clears the card at
-once. Which rows you marked is kept on this computer only; GitHub never hears of it.
+**Seen** on quiet Now news hides that row until its checks, review or title changes. **Mark all
+seen** does this for all quiet connection news in Now. Requests and failures remain visible;
+marking seen never approves, merges or changes GitHub. The Nest's Connections keeps the rows.
+The marks are stored on this computer only.
 
-When a check fails, the card keeps what it last saw and shows when it last updated, and the error.
-While a permission card waits, the Connections tab is dimmed until it is answered.
+A failed connector poll keeps the last loaded rows and the last-sync/error message in Connections.
+A permission card stays in front of Quick until answered or explicitly skipped; Now opens afterward.
 
 What the last check saw (the titles, links and check states the card shows, nothing else) is kept
 in `connectors/github.json` in the app's data folder (`~/.local/share/vults/` on Linux), so a

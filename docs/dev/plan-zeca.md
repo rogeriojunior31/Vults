@@ -147,7 +147,21 @@ a skipped offer. Selecting its session reopens the card. Both Flock and Quick ex
 the Needs you strip filters skipped tags and keeps an explicit return through the flock.
 Question drafts survive skipping. Core and renderer checks cover these invariants; native
 validation uses isolated requests without executing an agent command. User acceptance of
-N2.1 is pending; N2.2-N2.9 are not delivered in this slice.
+N2.1 is pending. N2.2 adds Quick's Now inbox: one `ViewModel.inbox`, derived from
+core pending offers, session attention and connector snapshots, with Chat's waiting count
+and locally read memory proposals supplied by app. Each pending offer keeps its own ID,
+including several offers from one session; Review only reorders/reopens that exact offer.
+Quiet connection news can be marked seen, while failures and pending offers remain.
+The destinations reuse Flock, Chat, Memory and the selected Connections detail. Activity
+and Connections return to Now when the Nest goes back to Quick.
+
+N2.2 core/renderer checks cover ordering, skipped offers, exact-request review, silence,
+connector deduplication, Seen versus decisions, Zeca off and retained focus/scroll.
+The native Linux pass covers Black and Light, a full seven-item inbox, bounded feed/header/
+footer, the empty state, separate cards from one session, Memory/Connections destinations,
+a stale connection filter, Seen preserving a failure, and Zeca off. Controlled IPC offers,
+local proposals and a local `gh` fixture executed no agent command or remote action.
+User acceptance of N2.2 is pending; N2.3-N2.9 remain open.
 
 #### N3 Dictation
 

@@ -14,6 +14,10 @@ export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" |
 
 export type ViewModel = { sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
 /**
+ * Actionable items, including deferred offers; surfaces only choose their presentation.
+ */
+inbox?: Array<AttentionItem>,
+/**
  * The most any session wants the user.
  */
 attention?: Attention,
@@ -54,6 +58,10 @@ digest?: DigestView | null,
  * Last week's recap, on Monday morning, until read.
  */
 recap?: CardView | null, };
+
+export type AttentionItem = { level: Attention, source: AttentionSource, };
+
+export type AttentionSource = { "kind": "request", request: string, session: SessionRef, tool: string, target: string, description: string | null, question: boolean, skipped: boolean, } | { "kind": "session", session: SessionRef, } | { "kind": "connection", connector: string, item: string, } | { "kind": "alert", key: string, } | { "kind": "chat", count: number, } | { "kind": "memory", count: number | null, };
 
 export type SessionView = { id: string, agent: AgentKind,
 /**

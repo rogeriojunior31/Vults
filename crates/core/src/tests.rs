@@ -523,10 +523,11 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::DismissRecap => Some(14),
         Intent::MergeRow { .. } => Some(15),
         Intent::Skip { .. } => Some(16),
+        Intent::Review { .. } => Some(17),
     }
 }
 
-const QUIET_INTENTS: usize = 17;
+const QUIET_INTENTS: usize = 18;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
@@ -534,6 +535,7 @@ fn quiet_intents() -> Vec<Intent> {
     for id in ["r1", "q1", "gone"] {
         intents.push(Intent::Release { request: rid(id) });
         intents.push(Intent::Skip { request: rid(id) });
+        intents.push(Intent::Review { request: rid(id) });
     }
     for session in ["a", "b", "gone"] {
         intents.push(Intent::Jump {
@@ -2660,6 +2662,105 @@ fn skipping_one_of_a_sessions_cards_keeps_its_other_card_reachable() {
     assert!(!view.sessions[0].skipped);
     assert_eq!(view.sessions[0].request.as_deref(), Some("r2"));
     assert_eq!(s.ledger.open().count(), 2);
+}
+
+#[test]
+fn the_inbox_keeps_each_offer_and_reviews_the_exact_request_without_answering() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r2"), now);
+    visible(&mut s, asked("b", "q1"), now);
+    visible(&mut s, Input::User(Intent::Skip { request: rid("r2") }), now);
+    let inbox = s.view().inbox;
+    assert_eq!(inbox.len(), 3);
+    assert!(inbox.iter().any(
+        |i| matches!(&i.source, AttentionSource::Request { request, skipped: true, .. } if request == "r2")
+    ));
+    let binding = ledger::Binding::of(s.pending.iter().find(|p| p.request == rid("r2")).unwrap());
+    assert!(reduce(&mut s, Input::User(Intent::Review { request: rid("r2") }), now).is_empty());
+    assert_eq!(s.view().approval.unwrap().request, "r2");
+    assert_eq!(s.focus, Some(key("a")));
+    assert_eq!(s.pending[0].since, now);
+    assert_eq!(ledger::Binding::of(&s.pending[0]), binding);
+    assert_eq!(s.ledger.open().count(), 3);
+    assert!(s.ended.is_empty());
+    assert!(reduce(&mut s, Input::User(Intent::Review { request: rid("gone") }), now).is_empty());
+    visible(&mut s, Input::Tick, now + PENDING_TTL);
+    assert!(
+        s.view()
+            .inbox
+            .iter()
+            .all(|i| !matches!(i.source, AttentionSource::Request { .. }))
+    );
+}
+
+#[test]
+fn the_inbox_lists_actions_without_success_noise_or_duplicate_connector_alerts() {
+    let mut s = State::default();
+    let now = Instant::now();
+    working(&mut s, "quiet", now - Duration::from_secs(16 * 60));
+    visible(&mut s, Input::Tick, now);
+    visible(
+        &mut s,
+        agent(
+            "failed",
+            AgentEvent::StopFailed {
+                error: Some("Build failed".into()),
+            },
+        ),
+        now,
+    );
+    visible(&mut s, agent("done", AgentEvent::Stopped { message: None }), now);
+    let failed = row("pr:me/app#12", "https://github.com/me/app/pull/12");
+    let mut review = failed.clone();
+    review.item = "pr:me/app#13".into();
+    review.group = board::Group::ToReview;
+    review.checks = None;
+    let mut passing = failed.clone();
+    passing.item = "pr:me/app#14".into();
+    passing.checks = Some(board::Checks::Passing);
+    visible(&mut s, card(vec![failed, review, passing]), now);
+    visible(
+        &mut s,
+        alert("pr:me/app#12:ci-failed", "https://github.com/me/app/pull/12"),
+        now,
+    );
+    visible(&mut s, alert("service:unavailable", "https://github.com"), now);
+    let inbox = s.view().inbox;
+    assert_eq!(inbox.len(), 5);
+    assert!(inbox.iter().any(|i| i.level == Attention::Info
+        && matches!(&i.source, AttentionSource::Session { session } if session.id == "quiet")));
+    assert_eq!(
+        inbox
+            .iter()
+            .filter(|i| matches!(i.source, AttentionSource::Connection { .. }))
+            .count(),
+        2
+    );
+    assert_eq!(
+        inbox
+            .iter()
+            .filter(|i| matches!(i.source, AttentionSource::Alert { .. }))
+            .count(),
+        1
+    );
+    assert!(matches!(&inbox[0].source, AttentionSource::Session { session } if session.id == "failed"));
+    assert!(inbox.windows(2).all(|w| w[0].level >= w[1].level));
+    visible(
+        &mut s,
+        Input::Board {
+            connector: "github".into(),
+            rows: None,
+        },
+        now,
+    );
+    assert!(
+        s.view()
+            .inbox
+            .iter()
+            .all(|i| !matches!(i.source, AttentionSource::Connection { .. }))
+    );
 }
 
 #[test]

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: b8bbcb34cf65 -->
+<!-- source: 7708f3e269a2 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -84,6 +84,10 @@ em Agentes abrem sob demanda. Chat e voz mantém as explicações extensas de se
 acesso e API junto dos controles em **Mais**. Explicações abertas e a posição de
 rolagem sobrevivem a atualizações; um campo focado mantém o texto ainda não salvo
 e sua seleção durante uma atualização não relacionada.
+
+O **Now** do Quick abre uma conexão diretamente no detalhe selecionado, limpando um filtro
+antigo que a ocultaria; uma proposta de memória abre o painel Memory do Chat. Nenhum desses
+atalhos executa uma ação. Voltar de Activity ou Connections para o Quick abre o Now.
 
 ## Flock
 

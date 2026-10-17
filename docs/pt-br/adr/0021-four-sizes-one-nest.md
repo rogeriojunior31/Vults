@@ -1,5 +1,5 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: efac77eb9e4e -->
+<!-- source: eb2e3099d757 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
@@ -24,6 +24,11 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   expirado, por uma regra). As superfícies escolhem clipes, ícones, cores e sons, a partir de um
   único view model pequeno (uma projeção por superfície só quando um payload cresce), e falam só em
   `Intent`s, pelos mesmos comandos.
+- **Caixa de ações do Quick**: Flock, Chat e Now, com Settings na engrenagem. O Now apresenta um
+  único `ViewModel.inbox` do core/app, com cards adiados, problemas de sessões, itens dos conectores
+  que pedem uma ação, solicitações do Chat e propostas de memória. Uma linha abre o responsável
+  existente pela interação; nenhuma operação da caixa responde a uma permissão ou executa a ação
+  do destino. Activity e Connections mantêm suas telas completas no Nest.
 - **Quatro tamanhos**: **Mini** é a pílula (340 x 38, o bando e nenhum texto: novidades chegam a
   ela só como corpo, cor ou movimento). **Quick** é a ilha dentro da superfície de camada fixa
   de 720 x 640 pixels lógicos: normalmente com 440 CSS px de largura e 492 CSS px no Chat,
@@ -125,3 +130,6 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   usuário continuam como trabalho futuro.
 - 2026-10-16, [0031](0031-tasks-leave-vults.md): remover Tasks do Nest; preservar D7, gastos e
   orçamento e o limite de D8 para `/continue`.
+
+- 2026-10-17: N2.2 adiciona a caixa Now do Quick, revisão pelo pedido exato e links explícitos aos
+  detalhes existentes do Nest; os cards mantêm sua autoridade, registro e prazo originais.

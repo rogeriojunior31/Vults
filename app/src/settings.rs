@@ -505,6 +505,7 @@ pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {
         crate::voice::cancel(&app);
     }
     crate::tray::refresh_menu(&app);
+    crate::runtime::recheck(&app);
     let _ = app.emit("settings", serde_json::json!({ "zeca": on }));
     Ok(())
 }
@@ -856,6 +857,7 @@ pub fn set_local_embeddings(window: tauri::Webview, app: AppHandle, on: bool) ->
 pub fn set_memory(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
     edit(&app, |s| s.memory = on)?;
+    crate::memory::refresh_attention(&app);
     let _ = app.emit("settings", serde_json::json!({ "memory": on }));
     Ok(())
 }

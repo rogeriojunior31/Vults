@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: c0da37adcd84 -->
+<!-- source: 6715020f540a -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -39,7 +39,9 @@ responder (por exemplo, um que exige login via SAML) não impede o resto de apar
 
 ### O card do GitHub
 
-Depois que o GitHub responde, a aba **Connections** da ilha aberta mostra o card dele, com um chip para o GitHub e um card por linha:
+Depois que o GitHub responde, o **Now** do Quick reúne as linhas que pedem uma ação. Uma linha
+abre seu detalhe selecionado nas **Connections** do Nest; **Open in GitHub** ali abre seu link.
+As Connections mantêm a lista completa, inclusive linhas mais tranquilas e releases:
 
 ![O card do GitHub: seus pull requests, uma revisão esperando, as branches padrão e um check que falhou embaixo](../../assets/island-github-card.png)
 
@@ -50,7 +52,7 @@ Depois que o GitHub responde, a aba **Connections** da ilha aberta mostra o card
 - **Default branches** (branches padrão): o último commit em cada uma, com o resultado dos checks.
   Repositórios sem checks ficam de fora.
 
-Clique em uma linha para abri-la no GitHub. Quando um pull request é mergeado ou fechado, ou uma
+Selecione uma linha para ver o detalhe e escolha **Open in GitHub** para seguir o link. Quando um pull request é mergeado ou fechado, ou uma
 solicitação de revisão é retirada, os alertas dele vão junto.
 
 Com o Zeca ligado, uma linha pode perguntar a ele sobre ela:
@@ -70,14 +72,14 @@ novo, então ela sai com a próxima resposta. Só o commit que o card mostrou ve
 alguém deu push depois, o GitHub recusa. Se o GitHub recusar (uma regra de branch, um conflito), a linha diz por quê.
 Cada merge escreve uma linha no rastro local, e nada é mergeado por conta própria.
 
-**✓** marca uma linha como vista: ela sai da ilha, e da contagem da aba, até mudar (os checks, a revisão
-ou o último commit de uma branch), e continua nas Connections do Nest. **Mark all seen** (marcar todos como
-vistos) limpa o card de uma vez. Quais linhas você marcou fica guardado só neste computador; o
-GitHub nunca fica sabendo.
+**Seen** nas notícias tranquilas do Now oculta aquela linha até os checks, a revisão ou o título
+mudarem. **Mark all seen** faz isso para todas as notícias tranquilas das conexões no Now.
+Solicitações e falhas continuam visíveis; marcar como visto nunca aprova, faz merge nem muda o GitHub.
+As Connections do Nest mantêm as linhas. As marcações ficam somente neste computador.
 
-Quando uma verificação falha, o card mantém o que viu por último e mostra quando foi atualizado pela
-última vez, e o erro. Enquanto um card de permissão espera, a aba Connections fica esmaecida até ele ser
-respondido.
+Uma consulta do conector que falha mantém as últimas linhas carregadas e a informação de sincronização
+ou erro nas Connections. Um card de permissão fica na frente do Quick até ser respondido ou
+explicitamente adiado; o Now abre depois.
 
 O que a última verificação viu (os títulos, links e estados de checks que o card mostra, e nada
 mais) fica guardado em `connectors/github.json` na pasta de dados do app (`~/.local/share/vults/`

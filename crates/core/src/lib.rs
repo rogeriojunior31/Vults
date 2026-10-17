@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod attention;
 pub mod audit;
 pub mod away;
 pub mod board;
@@ -29,6 +30,7 @@ mod view;
 use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
+pub use attention::{AttentionItem, AttentionSource};
 pub use safe_url::SafeUrl;
 use serde::{Deserialize, Serialize};
 pub use view::{
@@ -461,6 +463,10 @@ pub enum Intent {
     },
     /// Defer this card without answering it or changing its deadline.
     Skip {
+        request: RequestId,
+    },
+    /// Open this exact offer without answering it, including another card of the same session.
+    Review {
         request: RequestId,
     },
     /// "Reply in the terminal": the card goes and the agent's terminal asks.
@@ -1150,6 +1156,17 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             {
                 p.skipped = true;
                 state.pending.push_back(p);
+            }
+            Vec::new()
+        }
+        Input::User(Intent::Review { request }) => {
+            if let Some(i) = state.pending.iter().position(|p| {
+                p.request == request && state.sessions.get(&p.session).is_some_and(|s| shows(s, p))
+            }) && let Some(mut p) = state.pending.remove(i)
+            {
+                p.skipped = false;
+                state.focus = Some(p.session.clone());
+                state.pending.push_front(p);
             }
             Vec::new()
         }

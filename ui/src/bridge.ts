@@ -408,6 +408,7 @@ export const Bridge = {
   questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),
   questionRelease: (request: string) => invoke<void>("question_release", { request }),
   cardSkip: (request: string) => invoke<void>("card_skip", { request }),
+  cardReview: (request: string) => invoke<void>("card_review", { request }),
   rulesList: () => invoke<Rule[]>("rules_list"),
   policiesList: () => invoke<PolicyRow[]>("policies_list"),
   /** `replaces`: the policy being edited, revoked too when the text moves it to another folder. */
@@ -713,5 +714,8 @@ export const Bridge = {
   },
   onOpenChat(cb: () => void): void {
     void listen("open-chat", () => cb());
+  },
+  onOpenNow(cb: () => void): void {
+    void listen("open-now", cb);
   },
 };

@@ -3708,3 +3708,27 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .need-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
 .needs-skip-all { min-height: 28px; padding: 4px 8px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; }
 .needs-skip-all:hover { background: var(--raised); color: var(--fg); }
+
+.now-inbox { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 6px 4px; }
+.now-head, .now-links, .now-row { display: flex; align-items: center; gap: 8px; }
+.now-head { justify-content: space-between; }
+.now-head h2 { margin: 0; font-size: var(--text-xl); font-weight: 600; }
+.now-feed { max-height: calc(var(--quick-height, 556px) - 180px); min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.now-row { border-bottom: 1px solid var(--border); }
+.now-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; border: 0; border-radius: var(--radius-control); padding: 12px 4px; background: transparent; color: var(--fg); text-align: left; cursor: pointer; }
+.now-open:hover, .now-seen:hover, .now-link:hover { background: var(--raised); }
+.now-open > svg { flex: none; color: var(--fg-dim); }
+.now-row.needs-you .now-open > svg:first-child { color: var(--warn); }
+.now-row.failed .now-open > svg:first-child { color: var(--error-text); }
+.now-copy { display: grid; gap: 4px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.now-copy strong { font-size: var(--text-m); font-weight: 550; line-height: 1.4; }
+.now-copy small { color: var(--fg-dim); font-size: var(--text-s); line-height: 1.4; }
+.now-seen, .now-link { flex: none; min-height: 28px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: transparent; color: var(--fg-dim); font-size: var(--text-s); cursor: pointer; }
+.now-seen:disabled { opacity: .5; cursor: default; }
+.now-empty { display: grid; justify-items: center; gap: 8px; padding: 20px 8px; text-align: center; }
+.now-empty strong { font-size: var(--text-m); }
+.now-empty p { margin: 0; color: var(--fg-dim); font-size: var(--text-s); }
+.now-links { flex-wrap: wrap; }
+.inner > .main.with-now { display: flex; flex-direction: column; overflow: hidden; }
+.now-inbox { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.now-head, .now-links { flex: none; }
