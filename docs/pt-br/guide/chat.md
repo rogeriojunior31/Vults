@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: ed217dc067bf -->
+<!-- source: daa22968d34e -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -66,6 +66,18 @@ Codex. O Claude oferece Opus, Sonnet e Haiku (os nomes do Claude Code para o mai
 um); o Codex lista os modelos que o seu próprio `codex` oferece, perguntados na primeira vez que você
 abre o seletor com o Codex. O esforço vai de **Low** a **Max**, só com os que o modelo escolhido
 aceita. **Default** deixa cada um para a CLI, como as suas configurações definem.
+
+No Quick e no Nest, um anel e a porcentagem ao lado do modelo mostram a janela ativa mais
+cheia do plano da CLI selecionada. **0%** é um zero informado; janelas ausentes ou expiradas
+ficam sem indicador. **Atenção** começa em 70%, e **Perto do limite** em 90%. Passe o mouse no
+controle para ver cada janela informada e seu horário de renovação, quando conhecido. O nome
+acessível do controle inclui o uso e o estado. As janelas somem no horário de renovação sem
+esperar outra leitura.
+
+Isso reaproveita as leituras existentes da linha de status do Claude Code e as leituras
+opcionais do plano do Codex nas configurações; abrir o Chat não adiciona consultas ao provedor.
+O chat por API não tem indicador de assinatura. As atualizações de uso mantêm o rascunho,
+os arquivos, a posição de leitura e o menu de modelo aberto.
 
 Se uma CLI não conseguir listar os modelos, o seletor mostra uma explicação e
 mantém seu rascunho e sua escolha de modelo. Feche e reabra o seletor para tentar

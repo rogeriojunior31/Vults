@@ -155,7 +155,7 @@ Bridge.onNestTab((tab) => {
   nest.open(tab);
 });
 Bridge.onMemory(() => nest.memoryChanged());
-Bridge.onUsage(() => nest.usageChanged());
+Bridge.onUsage((windows) => { nest.chat.setUsage(windows); nest.usageChanged(); });
 Bridge.onSpend(() => nest.spendChanged());
 
 Bridge.onChat((d) => nest.chat.receive(d));

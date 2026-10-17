@@ -1,5 +1,9 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "{engine} plan: {percent}% used · {status}": "Plan de {engine}: {percent}% usado · {status}",
+  "{selection}. {usage}": "{selection}. {usage}",
+  "{window}: {percent}% used": "{window}: {percent}% usado",
+  "{window}: {percent}% used. Resets {when}.": "{window}: {percent}% usado. Se restablece {when}.",
   "Not reported": "No informado",
   "{n} s": "{n} s",
   "{agent} · Step {step} · {time}": "{agent} · Paso {step} · {time}",

@@ -36,3 +36,14 @@ export function spentLine(today: SpendToday): string {
   if (today.subscription) line += " " + t("On a subscription this is at API prices: your plan does not charge it.");
   return line;
 }
+
+/** A plan window's length, in words. */
+export function usageWindowName(minutes: number): string {
+  if (minutes === 300) return t("5 hours");
+  if (minutes === 10080) return t("A week");
+  if (minutes === 1440) return t("1 day");
+  if (minutes === 60) return t("1 hour");
+  if (minutes % 1440 === 0) return t("{n} days", { n: minutes / 1440 });
+  if (minutes % 60 === 0) return t("{n} hours", { n: minutes / 60 });
+  return t("{n} minutes", { n: minutes });
+}

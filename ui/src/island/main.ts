@@ -165,7 +165,6 @@ Bridge.onVoiceSilence(() => island.chat.voiceSilence());
 Bridge.onVoicePartial((text) => island.chat.voicePartial(text));
 void Bridge.voiceStatus().then((v) => island.chat.setVoiceReady(v.ready));
 Bridge.onUsage(island.setUsage);
-void Bridge.usage().then(island.setUsage);
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void settings.then((s) => {

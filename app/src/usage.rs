@@ -13,7 +13,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use vults_agents::usage::Window;
 use vults_protocol::AgentKind;
 
-use crate::{ISLAND, paths};
+use crate::paths;
 
 /// Usage moves slowly; each read starts a short-lived `codex app-server`.
 const EVERY: Duration = Duration::from_secs(5 * 60);
@@ -37,7 +37,7 @@ pub fn epoch_now() -> i64 {
         .map_or(0, |d| d.as_secs() as i64)
 }
 
-/// An agent's latest windows. The island hears only of a change: Claude Code runs its
+/// An agent's latest windows. Every surface hears only of a change: Claude Code runs its
 /// statusLine on every redraw.
 pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
     let state = app.state::<UsageState>();
@@ -48,7 +48,7 @@ pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
         }
         by_agent.insert(agent, windows);
     }
-    let _ = app.emit_to(ISLAND, "usage", state.all());
+    let _ = app.emit("usage", state.all());
 }
 
 /// Wakes the read loop: the switch just changed, so it need not wait out its sleep.

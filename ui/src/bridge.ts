@@ -680,9 +680,12 @@ export const Bridge = {
   onMedia(cb: (now: NowPlaying | null) => void): void {
     void listen<NowPlaying | null>("media", (e) => cb(e.payload));
   },
-  /** A fresh usage read: every few minutes, while a CLI answers. */
+  /** Subscribe before reading the cache; a late startup read cannot replace a live update. */
   onUsage(cb: (windows: UsageWindow[]) => void): void {
-    void listen<UsageWindow[]>("usage", (e) => cb(e.payload));
+    let updated = false;
+    void listen<UsageWindow[]>("usage", (e) => { updated = true; cb(e.payload); }).then(() =>
+      invoke<UsageWindow[]>("usage").then((windows) => { if (!updated) cb(windows); }, () => {}),
+    ).catch(() => {});
   },
   onPointer(cb: (inside: boolean) => void): void {
     void listen<boolean>("pointer", (e) => cb(e.payload));

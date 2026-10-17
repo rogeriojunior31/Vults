@@ -2218,6 +2218,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   const setUsage = (windows: UsageWindow[]) => {
     usage = windows;
+    chat.setUsage(windows);
     render(raw);
   };
   const setVisitors = (on: boolean) => sky.setVisitors(on);

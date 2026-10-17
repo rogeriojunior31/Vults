@@ -1,5 +1,9 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "{engine} plan: {percent}% used · {status}": "{engine} 套餐：已用 {percent}% · {status}",
+  "{selection}. {usage}": "{selection}。{usage}",
+  "{window}: {percent}% used": "{window}：已用 {percent}%",
+  "{window}: {percent}% used. Resets {when}.": "{window}：已用 {percent}%。重置时间：{when}。",
   "Not reported": "未报告",
   "{n} s": "{n} 秒",
   "{agent} · Step {step} · {time}": "{agent} · 步骤 {step} · {time}",

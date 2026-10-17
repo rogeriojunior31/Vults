@@ -596,3 +596,95 @@ for (const surface of ["island", "nest"]) {
   assert.equal(menuActions, 0, "Browsing, focusing and dismissing selectors never sends, grants access or opens Settings");
 }
 console.log("check-chat-models: both selectors retain focus/rename caret across reads, one open panel, keyboard/IME/Escape/outside dismissal and no implicit actions");
+
+// The plan badge updates only the model control, never the draft, transcript or open choices.
+const actualDateNow = Date.now, originalPlanTimeout = window.setTimeout, originalPlanClear = window.clearTimeout;
+let planNow = 2_000_000, timerId = 0;
+const planTimers = new Map();
+const windowOf = (agent, used_percent, resets_at = null, minutes = 300) => ({ agent, used_percent, resets_at, minutes });
+try {
+  Date.now = () => planNow;
+  for (const surface of ['island', 'nest']) {
+    let modelReads = 0, effects = 0;
+    const chat = new ChatPanel({ models: async () => { modelReads++; return []; }, pick: async () => ({}), keyboard() {},
+      send: async () => { effects++; }, decide: () => { effects++; }, reset: async () => { effects++; return 'claude'; }, setPick: async () => { effects++; },
+    }, () => {}, { window: surface });
+    await tick();
+    chat.load({ ...conversation, busy: false, provider: 'claude', lines: [{ who: 'zeca', text: 'Read this reply first.' }] });
+    chat.draft('Keep this draft'); chat.attach(['/inbox/next.txt']);
+    const trigger = nodes(chat.element).find(n => n.classList.contains('model'));
+    const badge = nodes(trigger).find(n => n.classList.contains('model-usage'));
+    const input = nodes(chat.element).find(n => n.tag === 'textarea');
+    const transcript = nodes(chat.element).find(n => n.className === 'log');
+    const contents = [...transcript.children]; transcript.scrollTop = 96;
+    trigger.click(); const menu = chat.element.querySelector('.model-menu');
+    const choices = [...menu.querySelectorAll('button')]; choices[0].focus();
+    const focused = document.activeElement, reads = modelReads;
+    chat.setUsage([windowOf('claude', 99, 1999), windowOf('claude', 69, 2010), windowOf('claude', 88, 2020, 10080), windowOf('codex', 97, 2030)]);
+    assert.equal(badge.hidden, false); assert.equal(badge.textContent, '88%');
+    assert.equal(badge.classList.contains('warning'), true);
+    assert.ok(trigger.attributes['aria-label'].includes('88% used · Warning'));
+    assert.ok(trigger.title.includes('5 hours: 69% used') && trigger.title.includes('A week: 88% used'));
+    assert.equal(document.activeElement, focused); assert.deepEqual(menu.querySelectorAll('button'), choices);
+    assert.deepEqual(transcript.children, contents); assert.equal(transcript.scrollTop, 96);
+    assert.equal(input.value, 'Keep this draft'); assert.ok(chat.element.textContent.includes('next.txt'));
+    for (const [percent, level] of [[0, 'normal'], [69, 'normal'], [70, 'warning'], [89, 'warning'], [90, 'critical'], [100, 'critical']]) {
+      chat.setUsage([windowOf('claude', percent)]);
+      assert.equal(badge.textContent, `${percent}%`); assert.equal(badge.classList.contains(level), true);
+      assert.equal(badge.querySelector('.usage-ring').style['--used'], `${percent}%`);
+    }
+    chat.setUsage([windowOf('claude', 100, 2000), windowOf('codex', 97)]);
+    assert.equal(badge.hidden, true, 'Expired or another provider’s windows are not current usage');
+    chat.load({ ...conversation, provider: 'codex', busy: false, lines: [] });
+    assert.equal(badge.hidden, false); assert.equal(badge.textContent, '97%');
+    chat.load({ ...conversation, provider: 'api', busy: false, lines: [] });
+    chat.setUsage([windowOf('claude', 93), windowOf('codex', 97)]);
+    assert.equal(badge.hidden, true, 'The API’s Claude bird never borrows Claude Code’s subscription');
+    chat.load({ ...conversation, provider: 'claude', busy: false, lines: [] });
+    chat.setUsage([]); assert.equal(badge.hidden, true);
+    chat.setUsage([windowOf('claude', NaN), windowOf('claude', -1), windowOf('claude', 101)]); assert.equal(badge.hidden, true);
+    window.setTimeout = (fn, ms) => { const id = ++timerId; planTimers.set(id, { fn, ms }); return id; };
+    window.clearTimeout = id => planTimers.delete(id);
+    chat.toggle(true); chat.setUsage([windowOf('claude', 91, 2001), windowOf('claude', 40, 2002)]);
+    const next = [...planTimers.values()].find(t => t.ms === 1000); assert.ok(next, 'One deadline wakes the badge at reset');
+    planNow = 2_001_000; next.fn(); assert.equal(badge.textContent, '40%');
+    const last = [...planTimers.values()].find(t => t.ms === 1000); assert.ok(last);
+    planNow = 2_002_000; last.fn(); assert.equal(badge.hidden, true, 'A window can expire without any new hook');
+    planNow = 2_000_000; chat.setUsage([windowOf('claude', 80, 2010)]); assert.ok(chat.usageTimer);
+    chat.toggle(false); assert.equal(chat.usageTimer, undefined, 'A closed Chat has no reset timer');
+    chat.toggle(true); chat.setEnabled(false); assert.equal(chat.usageTimer, undefined);
+    assert.equal(modelReads, reads, 'Plan updates and expiry never ask for models'); assert.equal(effects, 0);
+    window.setTimeout = originalPlanTimeout; window.clearTimeout = originalPlanClear; planTimers.clear();
+  }
+} finally {
+  Date.now = actualDateNow; window.setTimeout = originalPlanTimeout; window.clearTimeout = originalPlanClear;
+}
+console.log('check-chat-models: provider-scoped plan ring, every threshold, zero/unknown/invalid/API/reset cases, deadline lifecycle, stable menu/draft/files/reading and no actions');
+
+// The real Nest entry forwards live windows to its ChatPanel too.
+voiceEvents.onUsage([{ agent: 'claude', minutes: 300, used_percent: 76, resets_at: null }]);
+assert.equal(nodes(roomChat.element).find(n => n.classList.contains('model-usage')).textContent, '76%');
+
+// The actual Bridge subscribes before reading; a delayed snapshot never overwrites an event.
+const usageIpc = { callback: null, subscribed: null, read: null, calls: [] };
+globalThis.planUsageIpc = usageIpc;
+const bridgeBundles = await build({ configFile: false, root, logLevel: 'silent',
+  plugins: [{ name: 'usage-ipc', enforce: 'pre', resolveId(id) { if (id.startsWith('@tauri-apps/api/')) return '\0usage-'+id.split('/').at(-1); },
+    load(id) {
+      if (id === '\0usage-core') return 'export const invoke = (...args) => {planUsageIpc.calls.push(args);return new Promise(resolve=>planUsageIpc.read=resolve)};';
+      if (id === '\0usage-event') return 'export const emitTo=()=>{};export const listen=(event,cb)=>{planUsageIpc.callback=cb;return new Promise(resolve=>planUsageIpc.subscribed=resolve)};';
+      if (id === '\0usage-window') return 'export const getCurrentWindow=()=>({});';
+    } }], build: { write: false, minify: false, lib: { entry: `${root}src/bridge.ts`, formats: ['es'] } },
+});
+const bridgeChunk = bridgeBundles[0].output.find(p => p.type === 'chunk');
+const { Bridge: usageBridge } = await import(`data:text/javascript;base64,${Buffer.from(bridgeChunk.code).toString('base64')}`);
+const seenUsage = [];
+usageBridge.onUsage(windows => seenUsage.push(windows));
+assert.deepEqual(usageIpc.calls, [], 'No snapshot is read before the listener is ready');
+usageIpc.subscribed(() => {}); await tick(); assert.deepEqual(usageIpc.calls, [['usage']]);
+const liveUsage = [windowOf('codex', 90)]; usageIpc.callback({ payload: liveUsage });
+usageIpc.read([windowOf('claude', 20)]); await tick(); assert.deepEqual(seenUsage, [liveUsage]);
+usageIpc.calls.length = 0; const seededUsage = [];
+usageBridge.onUsage(windows => seededUsage.push(windows));usageIpc.subscribed(() => {});await tick();
+usageIpc.read([]); await tick(); assert.deepEqual(seededUsage, [[]], 'An empty cached snapshot is explicit absence, not zero usage');
+console.log('check-chat-models: actual Nest usage event binding and Bridge listener-before-cache, late read rejection and empty seed');

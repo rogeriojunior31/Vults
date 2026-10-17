@@ -63,6 +63,16 @@ lists the models your own `codex` offers, asked the first time you open the pick
 The effort goes from **Low** to **Max**, with only the ones the chosen model takes. **Default**
 leaves either to the CLI, as your own settings set it.
 
+In Quick and the Nest, a ring and percentage beside the model show the selected CLI's
+fullest active plan window. **0%** is a reported zero; missing or expired windows show no
+indicator. **Warning** starts at 70%, and **Near limit** at 90%. Hover over the control for
+each reported window and its reset time, when known. The control's accessible name includes
+the usage and status. Windows disappear at their reset time without waiting for another read.
+
+This reuses the existing Claude Code status-line readings and the optional Codex plan readings
+in Settings; opening Chat does not add provider requests. The API chat has no subscription
+indicator. Usage updates keep your draft, files, reading position and open model menu.
+
 If a CLI cannot list its models, the picker shows an explanation and keeps your
 draft and model choice. Close and reopen the picker to try again; typing or
 updating the chat does not keep repeating the failed request.

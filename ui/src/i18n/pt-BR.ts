@@ -1,5 +1,9 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "{engine} plan: {percent}% used · {status}": "Plano de {engine}: {percent}% usado · {status}",
+  "{selection}. {usage}": "{selection}. {usage}",
+  "{window}: {percent}% used": "{window}: {percent}% usado",
+  "{window}: {percent}% used. Resets {when}.": "{window}: {percent}% usado. Reinicia {when}.",
   "Not reported": "Não informado",
   "{n} s": "{n} s",
   "{agent} · Step {step} · {time}": "{agent} · Passo {step} · {time}",

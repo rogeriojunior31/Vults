@@ -199,7 +199,28 @@ metrics, named birds, filtered selection, independent scroll/focus, narrow navig
 destructive request arriving over a scrolled overview. Quick/Nest return preserves search,
 status, detail and owner; the empty Flock remains usable with Zeca on. No test executes a tool
 or answers an agent permission. Build, workspace tests, evals and repository checks pass.
-User acceptance of N2.4 is pending; N2.5-N2.9 remain open.
+User acceptance of N2.4 is pending.
+
+N2.5 adds the plan usage ring and percentage to the existing model control in Quick and
+Nest Chat. It selects the fullest active window of the selected CLI, distinguishes a reported
+zero from missing data, and uses the shared 70% warning / 90% critical statuses. The tooltip
+lists each active window and its reported reset time; the accessible name includes usage and
+status. API Chat never borrows Claude Code's subscription. A reset deadline removes expired
+windows without a new hook, and closing or hiding Chat stops its timer.
+
+Usage changes now reach every surface. The shared Bridge subscribes before reading the cache,
+so a delayed initial read cannot overwrite an event. The feature reuses the existing status-line
+relay, Codex opt-in, polling and network gate; opening Chat adds no provider requests. Updates
+touch only the model indicator, preserving the draft, files, transcript and open menu.
+
+Renderer checks cover provider scope, thresholds, zero/unknown/invalid data, expiration,
+timer lifecycle, retained controls and the actual Nest/Bridge event wiring. Native Linux
+validation uses the real status-line hook and a local Codex app-server fixture: initial cache,
+live updates in both surfaces, retained draft and focused choices, automatic expiration,
+provider changes, API absence and the existing Codex switch. Visual checks cover Quick and
+Nest in Black/Light, with Nest at 480 x 360, 760 x 600 and 1180 x 820. No test sends a chat
+message or answers an agent permission. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.5 is pending; N2.6-N2.9 remain open.
 
 #### N3 Dictation
 

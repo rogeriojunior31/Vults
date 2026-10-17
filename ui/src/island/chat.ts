@@ -3,7 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
-import type { ChatDraft } from "../bridge";
+import type { ChatDraft, UsageWindow } from "../bridge";
 import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
 import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
@@ -12,7 +12,8 @@ import { Sound } from "../sound";
 import { icon } from "./icons";
 import { renderFull } from "./markdown";
 import { copyTextButton } from "../clipboard";
-import { t, tk } from "../i18n";
+import { locale, t, tk } from "../i18n";
+import { usageLabel, usageLevel, usageWindowName } from "../cost";
 
 export interface ChatBackend {
   draft?: () => Promise<ChatDraft>;
@@ -316,6 +317,10 @@ export class ChatPanel {
   private readonly menu = el("div", { class: "menu" });
   /** The model and effort: picked per folder before the first message, fixed after it. */
   private readonly modelButton = el("button", { class: "place model" });
+  private readonly planUsage = el("span", { class: "model-usage" });
+  private usage: UsageWindow[] = [];
+  private usageTimer: number | undefined;
+  private selectionLabel = "";
   private readonly modelMenu = el("div", { class: "menu model-menu" });
   private modelOpen = false;
   /** Who answers the cards, as Settings says; the picker shows it and gives some back. */
@@ -376,6 +381,8 @@ export class ChatPanel {
     private readonly opts: ChatPanelOptions = { window: "island" },
   ) {
     this.input.rows = 1;
+    this.planUsage.setAttribute("aria-hidden", "true");
+    document.addEventListener("visibilitychange", () => this.paintUsage());
     this.setup.setAttribute("role", "img");
     this.input.addEventListener("keydown", (e) => {
       if (e.isComposing || e.keyCode === 229) return;
@@ -569,6 +576,48 @@ export class ChatPanel {
   /** Which bird talks: the API chat is Claude too. */
   agent(): AgentKind {
     return this.provider === "api" ? "claude" : this.provider;
+  }
+
+  /** The app's cached plan windows; this never asks a provider or changes the conversation. */
+  setUsage(windows: UsageWindow[]): void {
+    this.usage = windows;
+    this.paintUsage();
+  }
+
+  private paintUsage(): void {
+    window.clearTimeout(this.usageTimer);
+    this.usageTimer = undefined;
+    const now = Date.now() / 1000;
+    // API chat borrows Claude's bird, never its subscription.
+    const live = this.usage.filter(w => this.provider !== "api" && w.agent === this.provider
+      && Number.isFinite(w.used_percent) && w.used_percent >= 0 && w.used_percent <= 100
+      && (w.resets_at === null || w.resets_at > now));
+    const fullest = live.reduce<UsageWindow | null>((a, w) => !a || w.used_percent > a.used_percent ? w : a, null);
+    this.planUsage.hidden = !fullest;
+    const hint = this.compact ? "" : this.started
+      ? t("A conversation keeps its model; New starts another.")
+      : t("The model and effort for new conversations in this folder.");
+    this.modelButton.setAttribute("aria-label", this.selectionLabel);
+    this.modelButton.title = hint;
+    if (!fullest) return;
+    const percent = Math.round(fullest.used_percent);
+    const summary = t("{engine} plan: {percent}% used · {status}", { engine: this.engineName(this.provider), percent, status: usageLabel(percent) });
+    const ring = el("span", { class: "usage-ring" });
+    ring.style.setProperty("--used", `${percent}%`);
+    this.planUsage.className = `model-usage ${usageLevel(percent)}`;
+    this.planUsage.replaceChildren(ring, el("span", { text: `${percent}%` }));
+    this.modelButton.setAttribute("aria-label", t("{selection}. {usage}", { selection: this.selectionLabel, usage: summary }));
+    const windows = live.map(w => {
+      const vars = { window: usageWindowName(w.minutes), percent: w.used_percent };
+      return w.resets_at === null
+        ? t("{window}: {percent}% used", vars)
+        : t("{window}: {percent}% used. Resets {when}.", { ...vars, when: new Date(w.resets_at * 1000).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" }) });
+    });
+    this.modelButton.title = [hint, summary, ...windows].filter(Boolean).join("\n");
+    const next = Math.min(...live.flatMap(w => w.resets_at === null ? [] : [w.resets_at]));
+    if (Number.isFinite(next) && this.enabled && this.open && !document.hidden) {
+      this.usageTimer = window.setTimeout(() => this.paintUsage(), Math.min(2_147_483_647, Math.max(1, (next - now) * 1000)));
+    }
   }
 
   setVoiceReady(on: boolean): void {
@@ -811,6 +860,7 @@ export class ChatPanel {
       this.cancelVoice();
       this.toggle(false);
     }
+    this.paintUsage();
   }
   private enabled = true;
 
@@ -1638,14 +1688,13 @@ export class ChatPanel {
           el("span", { class: "engine-name", text: this.engineName(this.provider) }),
           ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
         ),
+        this.planUsage,
         icon("chevronDown", 11, 2.2),
       );
-      this.modelButton.setAttribute("aria-label", api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label }));
+      this.selectionLabel = api ? this.engineName(this.provider) : t("{engine}, {model}", { engine: this.engineName(this.provider), model: label });
       this.modelButton.setAttribute("aria-expanded", String(this.modelOpen));
     }
-    this.modelButton.title = this.compact ? "" : this.started
-      ? t("A conversation keeps its model; New starts another.")
-      : t("The model and effort for new conversations in this folder.");
+    this.paintUsage();
     this.modelMenu.classList.toggle("on", this.modelOpen);
     if (!this.modelOpen) return;
     // The engines first, as the prototype groups them: the user's own CLIs, then Vults' harness;
