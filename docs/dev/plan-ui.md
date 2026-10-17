@@ -22,8 +22,10 @@ Activity dashboard, Connections triage and grouped Settings. Native checks cover
 three pages at 480, 760 and 1180 px in both themes, panel folding/reset, retained Chat
 drafts and Connections return focus. The Flock/Compact follow-up corrects fixed dark
 surfaces, unreadable diff/control colors and stale canvas palettes on a live theme change.
-This supplies page-level N1 evidence; the corrected theme review and the full
-[UX6 desktop acceptance](#ux6-final-desktop-acceptance) and user acceptance remain open.
+The user validated the corrected Flock/Compact themes in the running app on 2026-10-17
+and accepted N1 for PR review. N1.1-N1.5 are complete. The broader
+[UX6 desktop matrix](#ux6-final-desktop-acceptance) and release smoke remain tracked
+separately, including multiple displays/scales and window ownership.
 
 ## Implementation order
 
