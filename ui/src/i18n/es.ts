@@ -1,5 +1,10 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Skip for now": "Posponer por ahora",
+  "Skip {project} for now": "Posponer {project} por ahora",
+  "Skip all": "Posponer todos",
+  "Show the card": "Mostrar la tarjeta",
+  "Skipped for now. The request still waits for your answer.": "Pospuesto por ahora. La solicitud sigue esperando tu respuesta.",
   "Appearance": "Apariencia",
   "Sound and notifications": "Sonido y notificaciones",
   "Startup and usage": "Inicio y uso",

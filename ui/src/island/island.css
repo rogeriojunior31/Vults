@@ -3701,3 +3701,10 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .chat .saved-row { background: transparent; }
 .chat .saved-row.on { background: var(--raised); box-shadow: inset 2px 0 var(--mark); }
 .chat .saved-row .ghost.icon { min-width: 28px; min-height: 32px; justify-content: center; align-items: center; border: 0; }
+
+.card-skip { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg-dim); cursor: pointer; }
+.card-skip:hover { background: var(--raised); color: var(--fg); }
+.card-head > .card-skip { margin-left: auto; }
+.need-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
+.needs-skip-all { min-height: 28px; padding: 4px 8px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; }
+.needs-skip-all:hover { background: var(--raised); color: var(--fg); }

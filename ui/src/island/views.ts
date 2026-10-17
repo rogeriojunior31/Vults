@@ -77,6 +77,8 @@ export interface CardActions {
   answer(request: string, answers: Answer[]): void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
   release(request: string): void;
+  skip(request: string): void;
+  review(s: SessionView): void;
   /** The "Other" field wants the keyboard (the island never takes it otherwise). */
   keyboard(on: boolean): void;
   /** The card changed size on its own: measure the island again. */
@@ -295,12 +297,24 @@ function askZeca(actions: CardActions): HTMLElement[] {
   ];
 }
 
+export function skipButton(request: string, skip: (request: string) => void, label = t("Skip for now")): HTMLElement {
+  const b = el("button", { class: "card-skip", onclick: () => skip(request) }, icon("close", 14));
+  b.title = label;
+  b.setAttribute("aria-label", label);
+  return b;
+}
+
 function sessionBody(
   s: SessionView,
   approval: ApprovalView | null,
   ticker: Ticker,
   actions: CardActions,
 ): HTMLElement[] {
+  if (s.skipped && s.waiting) return [
+    who(s, t("Needs you")),
+    el("p", { class: "sub", text: t("Skipped for now. The request still waits for your answer.") }),
+    el("div", { class: "actions" }, button(t("Show the card"), "secondary", () => actions.review(s))),
+  ];
   const last = s.step ?? "";
   const dismiss = () => actions.dismiss(s);
   switch (s.status) {
@@ -324,7 +338,7 @@ function sessionBody(
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
       const parts: (HTMLElement | null)[] = [
-        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue),
+        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, skipButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
         // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
@@ -591,7 +605,13 @@ export function questionBody(s: SessionView, approval: ApprovalView, actions: Ca
   const card = el(
     "div",
     { class: "question-card" },
-    el("div", { class: "card-head" }, who(s, t("asks you"), q.header ? el("span", { class: "chip", text: q.header }) : null), count),
+    el("div", { class: "card-head" }, who(s, t("asks you"), q.header ? el("span", { class: "chip", text: q.header }) : null), count,
+      skipButton(approval.request, request => {
+        if (sent) return;
+        sent = true;
+        if (p.other !== null) actions.keyboard(false);
+        actions.skip(request);
+      })),
     el("div", { class: "ask-what", text: q.question }),
     choices,
     el(

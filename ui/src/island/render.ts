@@ -43,7 +43,7 @@ import { settingsQuick, weekQuick, type QuickPage, type QuickSettings } from "./
 import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
-import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, statusText, usageMeters, type MenuActions, type Settled } from "./views";
+import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, skipButton, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
 export interface Actions {
@@ -54,6 +54,7 @@ export interface Actions {
   answer(request: string, answers: Answer[]): void;
   /** A question card goes back to the agent's terminal. */
   release(request: string): void;
+  skip(request: string): void;
   /** The part of the window that takes the pointer; everything else passes through. */
   layout(x: number, y: number, width: number, height: number): void;
   openAlert(key: string): void;
@@ -1136,11 +1137,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A view sets what he wears today (island.ts); the picker's preview wins while it is open.
     if (looksOpen) wear(lookPreview);
     const v = drawn(view);
+    const skipFocused = root.contains(document.activeElement) && document.activeElement?.classList.contains("card-skip");
     // The click holds until core's focus names it: a view sent before core took the click must
     // not swing the front back for a moment.
     if (picked && v.focus && `${v.focus.agent}:${v.focus.id}` === picked) picked = null;
     if (v !== last) cues(v);
     const prev = last;
+    if (prev?.approval?.request !== v.approval?.request) actedLast = null;
     last = v;
     const now = Clock.now();
     const byKey = new Map(v.sessions.map((s) => [key(s), s]));
@@ -1457,6 +1460,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     root.classList.toggle("is-open", mode === "open");
     root.classList.toggle("is-hidden", mode === "hidden");
     reshape(mode);
+    if (skipFocused) (mode === "compact" ? compact : atRest ? habitat.querySelector<HTMLElement>(".habitat-bird")
+      : card?.querySelector<HTMLElement>(".card-skip, button"))?.focus({ preventScroll: true });
   }
 
   function placeSky(): void {
@@ -1588,14 +1593,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   function paintNeeds(sessions: SessionView[], strip = needStrip): void {
     // What a look would answer: a question or a card, a failure, a bird gone quiet for too long.
-    const wanting = sessions.filter((s) => needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud");
+    const wanting = sessions.filter((s) => !s.skipped && (needsYou(s) || s.status === "failed" || s.attention === "failed" || s.silent === "loud"));
     strip.hidden = !wanting.length;
     const tags = wanting.map((s) => {
       const failed = s.status === "failed" || s.attention === "failed";
       const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
       b.title = [s.project || agentName(s), statusText(s)].join(" · ");
-      return b;
+      return el("span", { class: "need-chip" }, b,
+        s.request ? skipButton(s.request, skipCard, t("Skip {project} for now", { project: s.project || agentName(s) })) : null);
     });
+    const requests = wanting.flatMap(s => s.request ? [s.request] : []);
+    if (requests.length > 1) tags.push(el("button", { class: "needs-skip-all", text: t("Skip all"), onclick: () => requests.forEach(skipCard) }));
     strip.replaceChildren(...(strip === topNeeds ? [el("div", { class: "need-tags" }, ...tags)] : tags));
   }
 
@@ -1758,6 +1766,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       presenceNow(),
       zecaShown(),
       s?.waiting,
+      s?.skipped,
       s?.raise,
       s?.silent,
       menu || activity ? [s?.steps, s?.diffs, focusKey(), editorFound] : null,
@@ -1813,19 +1822,29 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     expiryTimer = window.setTimeout(tickExpiry, on ? 1000 : Math.max(1000, left - EXPIRY_SHOWN_MS));
   }
 
-  /** The card last answered here: until the next view takes it away, a second click or key on it
-   *  would only sound again (core ignores it). */
-  let answeredLast: string | null = null;
+  /** Ignore stale controls until core replaces the card after an answer or Skip. */
+  let actedLast: string | null = null;
   /** A click or a shortcut answered the card on screen: it sounds now; what became of it comes
    *  from core with the next view. False when that card was already answered. */
   function answered(request: string, how: "allow" | "deny" | "answered" | "released"): boolean {
-    if (request === answeredLast) return false;
-    answeredLast = request;
+    if (request === actedLast) return false;
+    actedLast = request;
     if (how !== "released") Sound.play(how === "answered" ? "allow" : how);
     return true;
   }
 
+  function skipCard(request: string): void {
+    if (cardOnScreen?.request === request) {
+      actedLast = request;
+      cardOnScreen = null;
+      cardActions.keyboard(false);
+    }
+    actions.skip(request);
+  }
+
   const cardActions = {
+    skip: skipCard,
+    review: (s: SessionView) => toSession(s),
     get keys() {
       return keys;
     },

@@ -91,6 +91,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
+      export { focusCard, questionBody } from ${source("island/views.ts")};
       export { applyTheme } from ${source("theme.ts")};
       export { sidePanel } from ${source("surfaces/nest/panels.ts")};
       export { createWeek } from ${source("surfaces/nest/week.ts")};
@@ -107,7 +108,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -627,3 +628,31 @@ assert.equal(themedScene.colors, null); assert.equal(themedSky.colors, null);
 assert.ok(!paintedThemes.includes(themedScene.canvas) && !paintedThemes.includes(themedSky.canvas), "Hidden canvases invalidate without starting animation");
 Scene.prototype.draw = scenePaint; Sky.prototype.draw = skyPaint;
 console.log("check-surface-continuity: shared theme events win over late startup reads");
+
+const cardEvents = [];
+const cardActions = { keys: {}, skip: id => cardEvents.push(["skip", id]), review: s => cardEvents.push(["review", s.id]),
+  decide: (...args) => cardEvents.push(["decide", ...args]), decideAlways: id => cardEvents.push(["always", id]),
+  answer: (...args) => cardEvents.push(["answer", ...args]), release: id => cardEvents.push(["release", id]),
+  keyboard: on => cardEvents.push(["keyboard", on]), relayout() {}, jump() {}, dismiss() {}, hush() {}, openChat() {} };
+const skipSession = { id: "skip-test", agent: "codex", project: "Alpha", cwd: "/work/alpha", status: "approval", attention: "needs-you", card: true,
+  activity: null, step: null, steps: [], step_count: 0, subagents: 0, waiting: true };
+const skipApproval = { agent: "codex", session: "skip-test", request: "skip-permission", tool: "Bash", target: "git status", questions: [], queue: 1 };
+const permissionCard = focusCard(skipSession, skipApproval, { sync() {} }, new Element("aside"), cardActions, false);
+const oldAllow = permissionCard.querySelectorAll("button").find(b => b.textContent === "Allow");
+permissionCard.querySelector(".card-skip").click(); oldAllow.click();
+assert.deepEqual(cardEvents, [["skip", "skip-permission"]], "Quick Skip cannot fall through to an old Allow control");
+const skippedCard = focusCard({ ...skipSession, skipped: true }, null, { sync() {} }, new Element("aside"), cardActions, false);
+skippedCard.querySelectorAll("button").find(b => b.textContent === "Show the card").click();
+assert.deepEqual(cardEvents.at(-1), ["review", "skip-test"]);
+const questionApproval = { ...skipApproval, request: "skip-question", questions: [{ question: "Choose a label", options: [{ label: "A", description: "" }], multi: false }] };
+const questionHost = new Element("main"); questionHost.append(...questionBody({ ...skipSession, status: "question" }, questionApproval, cardActions));
+questionHost.querySelectorAll("button").find(b => b.textContent === "Other…").click();
+const answerDraft = questionHost.querySelector(".other-input"); answerDraft.value = "unfinished answer"; answerDraft.oninput();
+questionHost.querySelector(".card-skip").click();
+assert.deepEqual(cardEvents.at(-1), ["skip", "skip-question"]);
+assert.ok(!cardEvents.some(([name]) => ["answer", "release", "decide", "always"].includes(name)));
+questionHost.replaceChildren(...questionBody({ ...skipSession, status: "question" }, questionApproval, cardActions));
+assert.equal(questionHost.querySelector(".other-input").value, "unfinished answer", "Skipping preserves the question draft");
+questionHost.querySelectorAll("button").find(b => b.textContent === "Send").click();
+assert.deepEqual(cardEvents.at(-1), ["answer", "skip-question", ["unfinished answer"]]);
+console.log("check-surface-continuity: Quick Skip blocks stale Allow, retains question drafts and resumes only through an explicit action");

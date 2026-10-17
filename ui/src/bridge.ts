@@ -407,6 +407,7 @@ export const Bridge = {
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
   questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),
   questionRelease: (request: string) => invoke<void>("question_release", { request }),
+  cardSkip: (request: string) => invoke<void>("card_skip", { request }),
   rulesList: () => invoke<Rule[]>("rules_list"),
   policiesList: () => invoke<PolicyRow[]>("policies_list"),
   /** `replaces`: the policy being edited, revoked too when the text moves it to another folder. */

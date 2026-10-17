@@ -131,7 +131,10 @@ If the diff body is unavailable, the card returns and expansion is unavailable.
 A session that waits for you is answered on its card, as on the island
 ([Approving from the island](approvals.md)): **Deny**, **Allow** and **Always allow** for a
 permission (**Ctrl+Alt+Y** and **Ctrl+Alt+N** too, while the Nest has the focus), the choices for a
-question. One with no card here (it asks in its terminal) says so.
+question. **Skip for now** defers that card without answering it or renewing its deadline;
+select its session or **Show the card** to reopen it. Skipped cards keep their birds and
+waiting count, while the **Needs you** strip hides their tags. One with no card here
+(it asks in its terminal) says so.
 **Open terminal** shows where Vults can bring its terminal forward
 ([The island](island.md#getting-to-a-session)).
 

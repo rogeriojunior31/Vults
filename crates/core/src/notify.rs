@@ -159,7 +159,7 @@ fn wanted(state: &State) -> BTreeMap<SessionKey, Notice> {
             }
             let quiet = state.prefs(s).mute;
             let who = who(state.lang, &s.key, &s.project);
-            let card = state.pending.iter().find(|p| p.session == s.key);
+            let card = state.pending.iter().find(|p| p.session == s.key && !p.skipped);
             let (kind, body) = match (card, s.status) {
                 (Some(p), _) => (Kind::NeedsYou, ask(p)),
                 (None, Status::Finished) if !quiet => (Kind::Finished, s.note.clone().unwrap_or_default()),

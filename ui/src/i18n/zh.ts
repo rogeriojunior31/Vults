@@ -1,5 +1,10 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Skip for now": "暂时搁置",
+  "Skip {project} for now": "暂时搁置 {project}",
+  "Skip all": "全部搁置",
+  "Show the card": "显示卡片",
+  "Skipped for now. The request still waits for your answer.": "已暂时搁置。该请求仍在等待你的答复。",
   "Appearance": "外观",
   "Sound and notifications": "声音和通知",
   "Startup and usage": "启动和用量",

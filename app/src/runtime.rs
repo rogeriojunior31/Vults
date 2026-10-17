@@ -857,6 +857,25 @@ pub async fn question_answer(
         .map_err(|_| ())
 }
 
+/// Defer a card; the hook's reply handle and deadline are unchanged.
+#[tauri::command]
+pub async fn card_skip(
+    window: tauri::Webview,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::Skip {
+            request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
 /// "Reply in the terminal": the card goes, and the agent asks there.
 #[tauri::command]
 pub async fn question_release(

@@ -1,5 +1,10 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Skip for now": "Adiar por enquanto",
+  "Skip {project} for now": "Adiar {project} por enquanto",
+  "Skip all": "Adiar todos",
+  "Show the card": "Mostrar o card",
+  "Skipped for now. The request still waits for your answer.": "Adiado por enquanto. A solicitação ainda aguarda sua resposta.",
   "Appearance": "Aparência",
   "Sound and notifications": "Som e notificações",
   "Startup and usage": "Inicialização e uso",

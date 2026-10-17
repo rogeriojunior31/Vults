@@ -92,6 +92,7 @@ const nest = createNest(
       decideAlways: (request) => void Bridge.decideAlways(request),
       answer: (request, answers) => void Bridge.questionAnswer(request, answers),
       release: (request) => void Bridge.questionRelease(request),
+      skip: (request) => void Bridge.cardSkip(request),
       diff: (s, step) => Bridge.stepDiff(s.agent, s.id, step),
       usage: () => Bridge.usage(),
       hush: (s, hush) => void Bridge.sessionHush(s.agent, s.id, hush),

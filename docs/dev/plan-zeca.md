@@ -141,6 +141,14 @@ or a policy, and no preset leaves a card unseen (D5).
 | N2.8 | Zeca greets by the time of day, suggestions follow the flock, follow-ups under each reply | `zeca-greeting`, `zeca-suggestions`, `zeca-followups` | Rules in `core` for what is offered; none is an unasked line (K1) |
 | N2.9 | Zeca's moods while you type, search, think, speak and wait on a card | `zeca-moods` | The chat's turn states; K7's flock mood stays in N4 |
 
+N2.1 implementation keeps skipped cards in the core's pending queue and ledger with their
+original deadline. Skip only changes presentation/order; stale local controls cannot redeem
+a skipped offer. Selecting its session reopens the card. Both Flock and Quick expose Skip;
+the Needs you strip filters skipped tags and keeps an explicit return through the flock.
+Question drafts survive skipping. Core and renderer checks cover these invariants; native
+validation uses isolated requests without executing an agent command. User acceptance of
+N2.1 is pending; N2.2-N2.9 are not delivered in this slice.
+
 #### N3 Dictation
 
 The phases of [plan-dictation.md](plan-dictation.md), in this order: V0 (its open R and Q

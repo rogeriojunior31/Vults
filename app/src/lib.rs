@@ -178,6 +178,7 @@ pub fn run() {
             runtime::decide_always,
             runtime::question_answer,
             runtime::question_release,
+            runtime::card_skip,
             runtime::rules_list,
             runtime::rule_remove,
             spend::spend_today,

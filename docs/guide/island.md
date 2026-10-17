@@ -85,7 +85,8 @@ default, and not in *Panel*.
 
 Two things keep it open until you are done:
 
-- **A permission card.** It opens the island by itself and stays until you answer. Nothing else
+- **A permission card.** It opens the island by itself and stays until you answer or choose
+  **Skip for now**. A skipped request keeps its badge and deadline; select its session to reopen it. Nothing else
   opens it by itself: a session that finishes, fails or asks something plays its sound and gets its
   badge.
 - **The chat.** The island never folds while you type.

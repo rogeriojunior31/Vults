@@ -10,7 +10,7 @@ import { t } from "../../i18n";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { agentName, badgeOf, lastDiff, needsYou, questionBody, statusText } from "../../island/views";
+import { agentName, badgeOf, lastDiff, needsYou, questionBody, skipButton, statusText } from "../../island/views";
 import { usageLabel, usageLevel } from "../../cost";
 
 export interface FlockActions {
@@ -30,6 +30,7 @@ export interface FlockActions {
   answer: (request: string, answers: Answer[]) => void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
   release: (request: string) => void;
+  skip: (request: string) => void;
   /** A finished step's diff; null once the session no longer keeps it. */
   diff: (s: SessionView, step: number) => Promise<Diff | null>;
   /** The plans' usage windows, for Full's strip. */
@@ -498,7 +499,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
 
   /** The question card's answers; the Nest has no keyboard to hold and nothing to measure. */
+  function skipCard(request: string): void {
+    onScreen = null;
+    sent = request;
+    asked = null;
+    on.skip(request);
+  }
+
   const questionActions = {
+    skip: skipCard,
+    review: (s: SessionView) => on.focus(s),
     keys: {},
     decide: () => {},
     decideAlways: () => {},
@@ -518,6 +528,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const questionNode = (s: SessionView, question: NonNullable<ViewModel["approval"]>): HTMLElement => {
     if (asked?.request !== question.request)
       asked = { request: question.request, node: el("div", { class: "nest-question" }, ...questionBody(s, question, questionActions)) };
+    const skip = asked.node.querySelector<HTMLElement>(".card-skip");
+    if (skip) skip.dataset.fid = "act:skip";
     return asked.node;
   };
 
@@ -552,7 +564,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     // A finished or failed turn says how it ended (its last reply, its error), as the island does.
     const ended = s.status === "finished" || s.status === "failed";
     const ticker = ask ? null : tickerOf(s);
-    const words = ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
+    const words = s.skipped ? null : ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
     const question = ask && ask.questions.length ? ask : null;
     const permission = ask && !question ? ask : null;
     const command = permission ? [permission.tool, permission.full ?? permission.target].filter(Boolean).join(" · ") : null;
@@ -577,7 +589,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ? el("span", { class: "card-verb", text: s.step_count === 1 ? t("1 step") : t("{n} steps", { n: s.step_count }) })
           : null,
         costChip(s),
-        ask && ask.queue > 1 ? el("div", { class: "card-side" }, el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) })) : null,
+        ask ? el("div", { class: "card-side" },
+          ask.queue > 1 ? el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) }) : null,
+          question ? null : fid(skipButton(ask.request, skipCard), "act:skip")) : null,
       ),
       question ? null : words ? el("p", { class: "card-words", text: words }) : null,
       ticker,
@@ -605,7 +619,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
         zeca ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
       ),
       // No card for it: it asks in its terminal (its card expired or went there, or it has none).
-      waits(s) && !ask ? el("p", { class: "rule-scope", text: t("Needs you: it asks in its terminal.") }) : null,
+      s.skipped && s.waiting ? el("div", { class: "skipped-card" },
+        el("p", { class: "rule-scope", text: t("Skipped for now. The request still waits for your answer.") }),
+        fid(el("button", { class: "outline", text: t("Show the card"), onclick: () => on.focus(s) }), "act:unskip"))
+        : waits(s) && !ask ? el("p", { class: "rule-scope", text: t("Needs you: it asks in its terminal.") }) : null,
       waits(s) ? null : changedOf(s),
     );
   };
@@ -830,7 +847,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
       detailBody.setAttribute("aria-labelledby", `nest-detail-${detail}`);
     }
     body.classList.toggle("details-focus", focusDiff && detail === "diff" && hasEdits);
-    if (had) element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)?.focus();
+    if (had) (element.querySelector<HTMLElement>(`[data-fid="${CSS.escape(had)}"]`)
+      ?? (had === "act:skip" ? element.querySelector<HTMLElement>('[data-fid="act:unskip"]') : null))?.focus();
   };
 
   /** Full's strip: each plan's windows, amber from 70% and red from 90%, as on the island. */
@@ -946,6 +964,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     update: (v) => {
       // What the menu offers was read from the view before: a new one closes it.
       closeMenu();
+      if (view?.approval?.request !== v.approval?.request) sent = null;
       view = v;
       relabel();
       draw();

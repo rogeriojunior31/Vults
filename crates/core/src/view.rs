@@ -111,6 +111,12 @@ pub struct SessionView {
     /// A card of this session waits, first in line or behind another.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub waiting: bool,
+    /// The next card this session can show; deferred cards keep their request id.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub request: Option<String>,
+    /// All of this session's waiting cards were explicitly deferred.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub skipped: bool,
     /// *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
     /// its window. Elsewhere a quick action offers its folder instead (ADR 0011).
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
@@ -262,8 +268,12 @@ impl State {
 
     /// The session whose card is first in line, while its status still waits on it: the card is
     /// what the user must see. A question in the terminal is not the card: only one asked here is.
+    pub(crate) fn active_card(&self) -> Option<&crate::Pending> {
+        self.pending.iter().find(|p| !p.skipped)
+    }
+
     pub(crate) fn card_session(&self) -> Option<&SessionKey> {
-        let p = self.pending.front()?;
+        let p = self.active_card()?;
         let s = self.sessions.get(&p.session)?;
         crate::shows(s, p).then_some(&p.session)
     }
@@ -289,51 +299,61 @@ impl State {
         let card = self.card_session();
         let sessions: Vec<SessionView> = sessions
             .into_iter()
-            .map(|s| SessionView {
-                id: s.key.session_id.clone(),
-                agent: s.key.agent,
-                agent_name: (s.key.agent == AgentKind::Other)
-                    .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
-                    .flatten(),
-                project: s.project.clone(),
-                cwd: s.cwd.clone(),
-                status: s.status,
-                // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
-                attention: match (s.status, s.watch.level) {
-                    (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
-                    (status, _) => status.attention(),
-                },
-                card: card == Some(&s.key),
-                waiting: self
+            .map(|s| {
+                let pending: Vec<_> = self
                     .pending
                     .iter()
-                    .any(|p| p.session == s.key && crate::shows(s, p)),
-                raise: raises(&s.terminal),
-                muted: self.prefs(s).mute,
-                pinned: self.prefs(s).pin,
-                silent: s.watch.level.filter(|_| s.status == Status::Working),
-                activity: s.activity,
-                step: steps(self, s).pop(),
-                steps: steps(self, s),
-                diffs: diffs(s),
-                changes: changes(self, s),
-                touched: touched(s),
-                step_at: s.step_at.iter().copied().collect(),
-                step_count: s.step_count,
-                subagents: s.subagents,
-                cost_usd: s.cost_usd,
-                note: s.note.clone(),
-                editor: editor(&s.terminal),
-                species: species[&s.key],
-                bird_chosen: self
-                    .prefs(s)
-                    .species
-                    .as_deref()
-                    .and_then(crate::flock::chosen)
-                    .is_some(),
-                roost_key: s.repo.as_ref().map(|r| r.key.clone()),
-                roost: s.repo.as_ref().map(|r| r.name.clone()),
-                branch: s.repo.as_ref().and_then(|r| r.branch.clone()),
+                    .filter(|p| p.session == s.key && crate::shows(s, p))
+                    .collect();
+                SessionView {
+                    id: s.key.session_id.clone(),
+                    agent: s.key.agent,
+                    agent_name: (s.key.agent == AgentKind::Other)
+                        .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
+                        .flatten(),
+                    project: s.project.clone(),
+                    cwd: s.cwd.clone(),
+                    status: s.status,
+                    // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
+                    attention: match (s.status, s.watch.level) {
+                        (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
+                        (status, _) => status.attention(),
+                    },
+                    card: card == Some(&s.key),
+                    waiting: !pending.is_empty(),
+                    request: pending
+                        .iter()
+                        .find(|p| !p.skipped)
+                        .or_else(|| pending.first())
+                        .map(|p| p.request.0.clone()),
+                    skipped: !pending.is_empty() && pending.iter().all(|p| p.skipped),
+                    raise: raises(&s.terminal),
+                    muted: self.prefs(s).mute,
+                    pinned: self.prefs(s).pin,
+                    silent: s.watch.level.filter(|_| s.status == Status::Working),
+                    activity: s.activity,
+                    step: steps(self, s).pop(),
+                    steps: steps(self, s),
+                    diffs: diffs(s),
+                    changes: changes(self, s),
+                    touched: touched(s),
+                    step_at: s.step_at.iter().copied().collect(),
+                    step_count: s.step_count,
+                    subagents: s.subagents,
+                    cost_usd: s.cost_usd,
+                    note: s.note.clone(),
+                    editor: editor(&s.terminal),
+                    species: species[&s.key],
+                    bird_chosen: self
+                        .prefs(s)
+                        .species
+                        .as_deref()
+                        .and_then(crate::flock::chosen)
+                        .is_some(),
+                    roost_key: s.repo.as_ref().map(|r| r.key.clone()),
+                    roost: s.repo.as_ref().map(|r| r.name.clone()),
+                    branch: s.repo.as_ref().and_then(|r| r.branch.clone()),
+                }
             })
             .collect();
         ViewModel {
@@ -343,7 +363,7 @@ impl State {
                 .max()
                 .unwrap_or(Attention::Quiet),
             sessions,
-            approval: self.pending.front().map(|p| ApprovalView {
+            approval: self.active_card().map(|p| ApprovalView {
                 request: p.request.0.clone(),
                 agent: p.session.agent,
                 session: p.session.session_id.clone(),

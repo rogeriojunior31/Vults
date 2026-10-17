@@ -522,16 +522,18 @@ fn quiet_index(intent: &Intent) -> Option<usize> {
         Intent::SetProjectBird { .. } => Some(13),
         Intent::DismissRecap => Some(14),
         Intent::MergeRow { .. } => Some(15),
+        Intent::Skip { .. } => Some(16),
     }
 }
 
-const QUIET_INTENTS: usize = 16;
+const QUIET_INTENTS: usize = 17;
 
 /// Every quiet intent, aimed at the waiting permission, the waiting question, and things gone.
 fn quiet_intents() -> Vec<Intent> {
     let mut intents = Vec::new();
     for id in ["r1", "q1", "gone"] {
         intents.push(Intent::Release { request: rid(id) });
+        intents.push(Intent::Skip { request: rid(id) });
     }
     for session in ["a", "b", "gone"] {
         intents.push(Intent::Jump {
@@ -2596,6 +2598,68 @@ fn focus_answers_nothing() {
     assert!(visible(&mut s, focus(Some("a")), now).is_empty());
     assert!(visible(&mut s, focus(None), now).is_empty());
     assert_eq!(s.pending.len(), 1);
+}
+
+#[test]
+fn skipping_preserves_the_offer_and_deadline_until_explicitly_reopened() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, asked("b", "q1"), now + Duration::from_secs(1));
+    let binding = ledger::Binding::of(&s.pending[0]);
+    let skip = |id| Input::User(Intent::Skip { request: rid(id) });
+    assert!(reduce(&mut s, skip("r1"), now).is_empty());
+    assert_eq!(s.view().approval.unwrap().request, "q1");
+    assert!(reduce(&mut s, skip("q1"), now).is_empty());
+    assert!(reduce(&mut s, skip("gone"), now).is_empty());
+    assert!(reduce(&mut s, skip("r1"), now).is_empty());
+    assert!(s.view().approval.is_none());
+    s.presence = Presence::Panel;
+    assert!(
+        notify::Notifier::default()
+            .update(&s, notify::Prefs { on: true })
+            .is_empty(),
+        "Explicitly skipped cards do not reopen a desktop notification"
+    );
+    assert!(
+        s.view()
+            .sessions
+            .iter()
+            .all(|s| s.waiting && s.skipped && !s.card && s.request.is_some())
+    );
+    assert_eq!(s.pending.len(), 2);
+    assert_eq!(s.ledger.open().count(), 2);
+    assert!(s.ended.is_empty());
+    assert_eq!(ledger::Binding::of(&s.pending[0]), binding);
+    // A stale control cannot answer a card the user has deferred.
+    assert!(reduce(&mut s, decide("r1", Decision::Allow), now).is_empty());
+    assert!(reduce(&mut s, answer("q1", vec![one("yes")]), now).is_empty());
+    assert!(reduce(&mut s, focus(Some("a")), now).is_empty());
+    assert_eq!(s.view().approval.unwrap().request, "r1");
+    assert_eq!(s.pending[0].since, now);
+    assert_eq!(ledger::Binding::of(&s.pending[0]), binding);
+    assert!(reduce(&mut s, skip("r1"), now).is_empty());
+    let effects = visible(&mut s, Input::Tick, now + PENDING_TTL);
+    assert_eq!(released(&effects), vec![rid("r1")]);
+    assert_eq!(s.pending.len(), 1);
+    assert!(s.pending[0].skipped);
+    assert!(s.ledger.is_open(&rid("q1")));
+    visible(&mut s, focus(Some("b")), now + PENDING_TTL);
+    assert_eq!(s.view().approval.unwrap().request, "q1");
+}
+
+#[test]
+fn skipping_one_of_a_sessions_cards_keeps_its_other_card_reachable() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("a", "r2"), now);
+    assert!(reduce(&mut s, Input::User(Intent::Skip { request: rid("r1") }), now).is_empty());
+    let view = s.view();
+    assert_eq!(view.approval.unwrap().request, "r2");
+    assert!(!view.sessions[0].skipped);
+    assert_eq!(view.sessions[0].request.as_deref(), Some("r2"));
+    assert_eq!(s.ledger.open().count(), 2);
 }
 
 #[test]

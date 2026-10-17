@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 119036c13227 -->
+<!-- source: 15c67be8f4b9 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -96,7 +96,9 @@ Desligado por padrão, e não vale no *Panel*.
 
 Duas coisas a mantêm aberta até você terminar:
 
-- **Um card de permissão.** Ele abre a ilha sozinho e fica até você responder. Nada mais a abre
+- **Um card de permissão.** Ele abre a ilha sozinho e fica até você responder ou escolher
+  **Adiar por enquanto**. A solicitação adiada mantém seu selo e prazo; selecione a sessão
+  para reabri-la. Nada mais a abre
   sozinho: uma sessão que termina, falha ou pergunta algo toca seu som e ganha seu selo.
 - **O chat.** A ilha nunca se recolhe enquanto você digita.
 

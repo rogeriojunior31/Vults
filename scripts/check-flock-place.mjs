@@ -23,7 +23,7 @@ class Element {
   getContext() { return {}; }
 }
 const nodes = element => [element, ...element.children.flatMap(nodes)];
-globalThis.document = { createElement: tag => new Element(tag), createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; }, body: new Element("body"), addEventListener() {} };
+globalThis.document = { createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag), createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; }, body: new Element("body"), addEventListener() {} };
 globalThis.window = { addEventListener() {}, matchMedia: () => ({ matches: true }), setTimeout: () => 0, clearTimeout() {} };
 globalThis.matchMedia = window.matchMedia;
 globalThis.ResizeObserver = class { observe() {} };
@@ -231,3 +231,19 @@ assert.equal(content.classList.contains("detail-enter"), false, "Manual pause al
 document.body.classList.remove("still");
 assert.deepEqual(actions, [], "Visual refinements never answer, start or stop a session");
 console.log("check-flock-place: attention count, matching bird/card selection, long labels, 12 sessions, narrow/overflow selection, explicit focus and calm tab motion");
+
+const deferredRequests = [];
+const skipping = createFlock({ ...backend, loadPlace: async () => null, skip: request => deferredRequests.push(request) });
+skipping.update(view);
+const staleAllow = button(skipping, "Allow");
+skipping.element.querySelector('[data-fid="act:skip"]').listeners.click();
+assert.deepEqual(deferredRequests, ["permission"]);
+assert.equal(skipping.shortcut(true), false, "Skipping clears the visible card before the backend round trip");
+const beforeStaleClick = actions.length; staleAllow.listeners.click();
+assert.equal(actions.length, beforeStaleClick, "The old Allow control cannot answer a skipped card");
+skipping.update({ ...view, approval: null, sessions: [{ ...session, card: false, waiting: true, skipped: true, request: "permission" }] });
+assert.ok(skipping.element.textContent.includes("The request still waits for your answer"));
+button(skipping, "Show the card").listeners.click(); assert.equal(actions.at(-1), "focus");
+skipping.update(view); assert.equal(skipping.shortcut(true), true, "The same request can be answered after it is explicitly reopened");
+assert.equal(actions.at(-1), "decide");
+console.log("check-flock-place: Skip keeps a resume action, blocks stale mouse/shortcut decisions and restores the same request");

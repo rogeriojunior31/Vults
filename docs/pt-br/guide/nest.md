@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 7e33bb53426e -->
+<!-- source: b8bbcb34cf65 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -138,7 +138,10 @@ volta e a expansão fica indisponível.
 Uma sessão que espera por você é respondida no card dela, como na ilha
 ([Aprovar pela ilha](approvals.md)): **Deny**, **Allow** e **Always allow** para uma permissão
 (**Ctrl+Alt+Y** e **Ctrl+Alt+N** também, enquanto o Nest tem o foco), as escolhas para uma
-pergunta. Uma sem card aqui (ela pergunta no terminal dela) diz isso.
+pergunta. **Adiar por enquanto** adia esse card sem respondê-lo nem renovar seu prazo;
+selecione a sessão ou **Mostrar o card** para reabri-lo. Cards adiados mantêm suas aves e
+a contagem de espera, enquanto a faixa **Needs you** oculta suas tags. Uma sessão sem
+card aqui (ela pergunta no terminal dela) diz isso.
 **Open terminal**
 aparece onde o Vults consegue trazer o terminal dela para a frente
 ([A ilha](island.md#getting-to-a-session)).

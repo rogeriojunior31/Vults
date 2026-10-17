@@ -78,6 +78,14 @@ card: boolean,
  */
 waiting?: boolean,
 /**
+ * The next card this session can show; deferred cards keep their request id.
+ */
+request?: string | null,
+/**
+ * All of this session's waiting cards were explicitly deferred.
+ */
+skipped?: boolean,
+/**
  * *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
  * its window. Elsewhere a quick action offers its folder instead (ADR 0011).
  */

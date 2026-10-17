@@ -17,6 +17,7 @@ const island = createIsland(document.getElementById("island")!, {
   decideAlways: (request) => void Bridge.decideAlways(request),
   answer: (request, answers) => void Bridge.questionAnswer(request, answers),
   release: (request) => void Bridge.questionRelease(request),
+  skip: (request) => void Bridge.cardSkip(request),
   layout: (x, y, w, h) => Dock.layout(x, y, w, h, resting()),
   openAlert: (key) => void Bridge.alertOpen(key),
   jump: (agent, id) => void Bridge.sessionJump(agent, id),

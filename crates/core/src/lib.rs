@@ -459,6 +459,10 @@ pub enum Intent {
         request: RequestId,
         answers: Vec<Answer>,
     },
+    /// Defer this card without answering it or changing its deadline.
+    Skip {
+        request: RequestId,
+    },
     /// "Reply in the terminal": the card goes and the agent's terminal asks.
     Release {
         request: RequestId,
@@ -783,6 +787,8 @@ pub struct Pending {
     pub since: Instant,
     /// How many reminders it has earned by waiting (`notify::reminders`), as of the last tick.
     pub reminders: u32,
+    /// Hidden by an explicit Skip until the user reopens it. Its offer stays live.
+    pub skipped: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -1135,6 +1141,18 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             }
             effects
         }
+        Input::User(Intent::Skip { request }) => {
+            if let Some(i) = state
+                .pending
+                .iter()
+                .position(|p| p.request == request && !p.skipped)
+                && let Some(mut p) = state.pending.remove(i)
+            {
+                p.skipped = true;
+                state.pending.push_back(p);
+            }
+            Vec::new()
+        }
         Input::User(Intent::Jump { session }) => state
             .sessions
             .get(&session)
@@ -1151,8 +1169,9 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                         .pending
                         .iter()
                         .position(|p| &p.session == k && state.sessions.get(k).is_some_and(|s| shows(s, p)))
-                    && let Some(p) = state.pending.remove(i)
+                    && let Some(mut p) = state.pending.remove(i)
                 {
+                    p.skipped = false;
                     state.pending.push_front(p);
                 }
                 state.focus = session;
@@ -1492,6 +1511,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                         cwd,
                         since,
                         reminders: 0,
+                        skipped: false,
                     },
                 );
             }
@@ -1523,6 +1543,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                     cwd,
                     since,
                     reminders: 0,
+                    skipped: false,
                 },
             );
         }
@@ -1930,7 +1951,10 @@ fn redeem_here(
     matches: impl Fn(&Pending) -> bool,
     now: Instant,
 ) -> Option<Pending> {
-    let p = state.pending.iter().find(|p| matches(p))?;
+    let p = state
+        .pending
+        .iter()
+        .find(|p| matches(p) && (!matches!(by, By::Island) || !p.skipped))?;
     let request = p.request.clone();
     let (binding, device) = match by {
         By::Island => (ledger::Binding::of(p), ledger::Device::Island),
