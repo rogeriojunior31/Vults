@@ -1,10 +1,9 @@
 //! What the agents cost, and the user's daily budget (`docs/dev/plan-zeca.md` W9). Costs come from
-//! the agents themselves: a task run's turns (the driver), and a watched Claude Code session's
+//! the agents themselves: continued turns (the driver), and a watched Claude Code session's
 //! statusLine. On a subscription they are what the tokens would cost at API prices.
 //!
 //! The budget is the user's own limit on what Vults starts: at 80 % a notification, and once it is
-//! spent another, and no new session starts from here (a task's start, handoff, review, or a
-//! `/continue`) until the next day. It never stops an agent, and never blocks or slows one Vults
+//! spent another, and no new `/continue` starts until the next day. It never stops an agent, and never blocks or slows one Vults
 //! only watches (rule 1).
 
 use std::sync::Mutex;
@@ -59,19 +58,18 @@ fn step(spent: f64, budget: f64) -> u8 {
     }
 }
 
-/// A run's spend, from the driver: what it reported for a turn (`task:12`; a `/continue` is
-/// `task:0`). Blocking.
-pub fn run(app: &AppHandle, task: i64, roost: &str, plan: &str, usd: f64, tokens: u64) {
-    let source = format!("task:{task}");
+/// A continued turn's reported cost. Legacy `task:N` sources stay in the same ledger.
+pub fn continuation(app: &AppHandle, roost: &str, plan: &str, usd: f64, tokens: u64) {
+    let source = "continue";
     let at = Source {
         day: &today(),
-        source: &source,
+        source,
         roost,
         plan,
     };
     let tokens = i64::try_from(tokens).unwrap_or(i64::MAX);
     if let Err(e) = open().and_then(|mut s| s.spend_add(&at, usd, tokens).map_err(|e| e.to_string())) {
-        tracing::warn!(task, error = %e, "a run's spend not kept");
+        tracing::warn!(error = %e, "a run's spend not kept");
     }
     check(app);
 }
@@ -246,7 +244,7 @@ pub fn refuse(app: &AppHandle) -> Result<(), String> {
     }
 }
 
-/// Today's spend and the budget, for the Nest's Tasks and Activity → Cost.
+/// Today's spend and the budget, for Activity → Cost and Settings.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Today {

@@ -5,6 +5,7 @@ mod audit;
 mod chat;
 mod connectors;
 mod context;
+mod continuation;
 mod doctor;
 mod flock_tools;
 mod folder;
@@ -27,12 +28,10 @@ mod policies;
 mod recall;
 mod records;
 mod roosts;
-mod runs;
 mod runtime;
 mod settings;
 mod sleep;
 mod spend;
-mod tasks;
 mod traces;
 mod tray;
 mod usage;
@@ -181,26 +180,13 @@ pub fn run() {
             runtime::question_release,
             runtime::rules_list,
             runtime::rule_remove,
-            tasks::task_command,
             spend::spend_today,
             spend::budget_set,
-            tasks::tasks_list,
-            tasks::task_create,
-            tasks::task_edit,
-            tasks::task_delete,
-            tasks::task_open_issue,
-            tasks::task_visit_issue,
-            runs::task_start,
-            runs::task_agents,
             records::nest_history,
             records::nest_audit,
             records::nest_traces,
             records::nest_usage,
-            runs::task_start_fresh,
-            runs::task_stop,
-            runs::task_review,
             handoff::continue_command,
-            runs::task_remove_worktree,
             policies::policies_list,
             policies::policy_preview,
             policies::policy_accept,
@@ -555,10 +541,14 @@ mod tests {
     #[test]
     fn reopening_nest_keeps_its_tab_but_explicit_routes_and_zeca_off_win() {
         assert_eq!(super::restored_tab(None, Some("audit"), true), "audit");
-        assert_eq!(super::restored_tab(Some("tasks"), Some("audit"), true), "tasks");
+        assert_eq!(
+            super::restored_tab(Some("connections"), Some("audit"), true),
+            "connections"
+        );
         assert_eq!(super::restored_tab(None, Some("chat"), false), "flock");
         assert_eq!(super::restored_tab(Some("<script>"), Some("cost"), true), "cost");
         assert_eq!(super::restored_tab(None, None, true), "flock");
+        assert_eq!(super::restored_tab(None, Some("tasks"), true), "flock");
     }
 
     #[test]
@@ -945,7 +935,6 @@ fn valid_nest_tab(tab: &str) -> bool {
     matches!(
         tab,
         "flock"
-            | "tasks"
             | "chat"
             | "activity"
             | "connections"

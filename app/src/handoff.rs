@@ -1,5 +1,5 @@
 //! `/continue` in the chat (`docs/dev/plan-zeca.md` W7): words for a watched session that has
-//! stopped, resumed here (`runs::continue_session`). Typed by the user, sent to no model of Zeca's.
+//! stopped, resumed here (`continuation::continue_session`). Typed by the user, sent to no model of Zeca's.
 
 use std::path::PathBuf;
 
@@ -14,7 +14,7 @@ pub struct Said {
     pub detail: Option<String>,
 }
 
-fn said((said, detail): crate::runs::Said) -> Said {
+fn said((said, detail): crate::continuation::Said) -> Said {
     Said { said, detail }
 }
 
@@ -38,7 +38,7 @@ pub async fn continue_command(
     };
     let words = rest.trim().to_string();
     if words == "stop" {
-        return Ok(Some(said(crate::runs::stop_continuation(app).await)));
+        return Ok(Some(said(crate::continuation::stop_continuation(app).await)));
     }
     if words.is_empty() {
         return Ok(Some(said((
@@ -53,6 +53,6 @@ pub async fn continue_command(
         ))));
     };
     Ok(Some(said(
-        crate::runs::continue_session(app, cwd.to_string_lossy().into_owned(), words).await,
+        crate::continuation::continue_session(app, cwd.to_string_lossy().into_owned(), words).await,
     )))
 }

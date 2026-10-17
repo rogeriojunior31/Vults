@@ -48,7 +48,14 @@ The native app was checked on Linux/KWin with isolated data at 1180 x 820 and 48
 four tabs, Cost, the budget-settings link, a saved $5.25 budget, a rejected write from the Nest,
 scroll access to the short-window editor, and costs/budget with Zeca off. The renderer checks
 also cover palette/keyboard order, budget read/save failures, retries and stale responses.
-This is slice evidence; the human R3 release smoke remains pending. N0.3 to N0.6 remain pending.
+N0.3 removes the app's task commands, isolated execution and review loop. `/continue` now uses
+`app/src/continuation.rs`: one owned execution, generation-bound cards, the existing sandbox and
+settings checks, budget checks and cost settlement. Stop releases its unanswered cards even when
+its owned driver must be aborted; watched processes are never stopped. Legacy saved Tasks tabs
+fall back to Flock. N0.3's permission, session/lifecycle and cost checks pass with the full local
+pre-commit sequence.
+
+This is slice evidence; the human R3 release smoke remains pending. N0.4 to N0.6 remain pending.
 
 | # | Slice | Removes | Keeps |
 | --- | --- | --- | --- |

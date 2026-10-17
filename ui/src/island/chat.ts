@@ -69,7 +69,7 @@ const MEMORY_SAID = new Set([
   tk("Nothing remembered holds that."),
   tk("Forgotten."),
   tk("More than one fact holds that; say more:"),
-  // `/continue` (app/src/handoff.rs, runs.rs).
+  // `/continue` (app/src/handoff.rs, continuation.rs).
   tk("No session in this folder stopped in the last ten minutes."),
   tk("That session is still open in its terminal: tell it there."),
   tk("Vults can't tell whether that session is still open: tell it in its terminal."),
