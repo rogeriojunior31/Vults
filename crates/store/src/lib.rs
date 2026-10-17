@@ -11,9 +11,9 @@ pub mod history;
 pub mod journal;
 pub mod proposals;
 pub mod recall;
+mod retired_tasks;
 pub mod sleep;
 pub mod spend;
-pub mod tasks;
 pub mod traces;
 
 use std::path::{Path, PathBuf};
@@ -126,19 +126,19 @@ const MIGRATIONS: &[&str] = &[
     // 13: the consent of the policy that answered, beside each audit line (W2).
     audit::CONSENT,
     // 14: the user's tasks and their criteria (W3).
-    tasks::TABLE,
+    retired_tasks::TABLE,
     // 15: what a task's last session said, and its id (W4).
-    tasks::RUNS,
+    retired_tasks::RUNS,
     // 16: the context pack a task's last handoff left (W5).
-    tasks::PACK,
+    retired_tasks::PACK,
     // 17: a task's last review: its words, verdict and round (W6).
-    tasks::REVIEW,
+    retired_tasks::REVIEW,
     // 18: why the router sent a task where it went (W8).
-    tasks::ROUTE,
+    retired_tasks::ROUTE,
     // 19: what the agents cost, by day, source and roost (W9).
     spend::TABLE,
     // 20: the tokens a task's runs used (W9).
-    tasks::TOKENS,
+    retired_tasks::TOKENS,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -297,6 +297,49 @@ mod tests {
             Store::open(&dir).unwrap().schema_version().unwrap(),
             MIGRATIONS.len() as i64
         );
+    }
+
+    #[test]
+    fn retired_rows_survive_an_upgrade_and_legacy_spend_still_counts() {
+        let dir = temp("retired-upgrade");
+        std::fs::create_dir_all(&dir).unwrap();
+        let conn = Connection::open(path(&dir)).unwrap();
+        for sql in &MIGRATIONS[..14] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.execute(
+            "INSERT INTO tasks (created_ms, updated_ms, goal) VALUES (1, 1, 'Kept work')",
+            [],
+        )
+        .unwrap();
+        conn.pragma_update(None, "user_version", 14).unwrap();
+        drop(conn);
+        let mut store = Store::open(&dir).unwrap();
+        assert_eq!(store.schema_version().unwrap(), 20);
+        assert_eq!(
+            store
+                .conn
+                .query_row("SELECT goal FROM tasks", [], |r| r.get::<_, String>(0))
+                .unwrap(),
+            "Kept work"
+        );
+        store
+            .spend_add(
+                &spend::Source {
+                    day: "2026-10-16",
+                    source: "task:1",
+                    roost: "project",
+                    plan: "subscription",
+                },
+                1.25,
+                100,
+            )
+            .unwrap();
+        drop(store);
+        let store = Store::open(&dir).unwrap();
+        assert_eq!(store.schema_version().unwrap(), 20);
+        assert_eq!(store.spend_day("2026-10-16").unwrap().usd, 1.25);
+        assert_eq!(store.spend_roosts("2026-10-16").unwrap()[0].today, 1.25);
     }
 
     #[test]

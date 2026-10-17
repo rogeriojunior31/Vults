@@ -162,30 +162,6 @@ pub async fn calendar() -> Result<Calendar, Error> {
     calendar_answer(out.status.success(), &out.stdout, &out.stderr)
 }
 
-/// Opens an issue in `repo` (`owner/name`) on the user's login, on their click (a task's **Open an
-/// issue**): its address.
-pub async fn create_issue(repo: &str, title: &str, body: &str) -> Result<String, Error> {
-    if !plain_repo(repo) {
-        return Err(Error::Other("not a GitHub repository".into()));
-    }
-    // Arguments, never a shell: the title and body are the user's text.
-    let out = Command::new("gh")
-        .args([
-            "issue", "create", "--repo", repo, "--title", title, "--body", body,
-        ])
-        .stdin(std::process::Stdio::null())
-        .kill_on_drop(true)
-        .output();
-    let out = tokio::time::timeout(Duration::from_secs(30), out)
-        .await
-        .map_err(|_| Error::Other("GitHub took too long to answer".into()))?
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => Error::Unavailable("The GitHub CLI (gh) isn't installed".into()),
-            _ => Error::Other(format!("can't run gh: {e}")),
-        })?;
-    issue_answer(repo, out.status.success(), &out.stdout, &out.stderr)
-}
-
 /// What `gh` said first, as it said it, without its leading `X ` mark.
 fn first_line(said: &str) -> String {
     let line = said
@@ -260,22 +236,6 @@ fn plain_repo(repo: &str) -> bool {
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
     };
     matches!(repo.split_once('/'), Some((o, n)) if ok(o) && ok(n) && !n.contains('/') && o != "." && o != "..")
-}
-
-/// The issue's address `gh` printed last, only if it is this repository's: GitHub's names know
-/// no case, so `MyOrg/Site` is `myorg/site`.
-fn issue_answer(repo: &str, success: bool, stdout: &[u8], stderr: &[u8]) -> Result<String, Error> {
-    let prefix = format!("https://github.com/{repo}/issues/").to_ascii_lowercase();
-    String::from_utf8_lossy(stdout)
-        .lines()
-        .map(str::trim)
-        .rfind(|l| {
-            l.to_ascii_lowercase()
-                .strip_prefix(&prefix)
-                .is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))
-        })
-        .map(str::to_owned)
-        .ok_or_else(|| gh_error(success, stderr))
 }
 
 fn calendar_answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Calendar, Error> {
@@ -838,24 +798,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn an_issue_answer_is_this_repositorys_address_only() {
+    fn repository_names_are_plain() {
         assert!(plain_repo("me/site") && plain_repo("my-org/site.rs"));
         assert!(
             !plain_repo("me") && !plain_repo("me/site/x") && !plain_repo("../x") && !plain_repo("me/s ite")
         );
-        let out = b"Creating issue in me/site\n\nhttps://github.com/me/site/issues/12\n";
-        assert_eq!(
-            issue_answer("me/site", true, out, b"").ok().as_deref(),
-            Some("https://github.com/me/site/issues/12")
-        );
-        let cased = b"https://github.com/MyOrg/Site/issues/7\n";
-        assert_eq!(
-            issue_answer("myorg/site", true, cased, b"").ok().as_deref(),
-            Some("https://github.com/MyOrg/Site/issues/7")
-        );
-        let elsewhere = b"https://github.com/evil/x/issues/1\n";
-        assert!(issue_answer("me/site", true, elsewhere, b"").is_err());
-        assert!(issue_answer("me/site", false, b"", b"HTTP 403").is_err());
     }
 
     #[test]

@@ -24,7 +24,7 @@ use crate::{full, prompt, target};
 /// An agent that speaks ACP, and how it is started.
 #[derive(Debug)]
 pub struct Agent {
-    /// Its key (a task's owner): `opencode`, `qwen`…
+    /// Its registry key: `opencode`, `qwen`…
     pub name: &'static str,
     /// What the Nest calls it.
     pub title: &'static str,
@@ -888,8 +888,7 @@ impl AgentDriver for AcpDriver {
 
 /// Whether `path` is the folder's own: an absolute path inside it, never in a `.git` (its own, a
 /// submodule's, in any case), read through the links on disk: a link in the clone that points
-/// elsewhere is elsewhere. A task's worker edits nothing else without a card a human would have to
-/// read twice.
+/// elsewhere is elsewhere. A file outside this folder needs its own explicit permission.
 pub fn inside(dir: &Path, path: &str) -> bool {
     let path = Path::new(path);
     if !path.is_absolute() {

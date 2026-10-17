@@ -248,7 +248,7 @@ pub fn prompts() -> Vec<(&'static str, String)> {
 }
 
 /// The system text a CLI run gets: Zeca's persona and its frozen context for the chat, only its
-/// brief for a task's worker (W4).
+/// brief for a continued session.
 pub(crate) fn instructions(spec: &Spec) -> String {
     match spec.role {
         vults_agents::driver::Role::Chat => system(PERSONA, spec.system_append.as_deref()),
@@ -1726,7 +1726,6 @@ mod tests {
             text: "what now?".into(),
             files: vec![PathBuf::from("/inbox/a.rs")],
             context: Some("<today>Sunday</today>".into()),
-            review: None,
         };
         assert_eq!(
             prompt(&turn, None),

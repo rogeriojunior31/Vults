@@ -1,7 +1,7 @@
 //! Every agent Vults knows, in one table (`docs/dev/plan-every-agent.md`, F1): its id (the
-//! installer's, a task's owner, an ACP key), its name, how it travels on the wire, how Settings
+//! installer's id, a CLI engine, an ACP key), its name, how it travels on the wire, how Settings
 //! sets it up, how Vults runs it, and what it can do. The installer, the doctor, the chat's ACP
-//! engines, the tasks' owners and the UI (`ui/src/agents.gen.ts`, generated from here) all read
+//! engines and the UI (`ui/src/agents.gen.ts`, generated from here) all read
 //! it, so a new agent is a row and its parser. Two places stay apart on purpose: the hook's reply
 //! table (`vults-hook` is std and serde_json only) and the protocol's kinds (a wire change).
 
@@ -46,7 +46,7 @@ impl std::fmt::Debug for Setup {
     }
 }
 
-/// How Vults starts it for a task or the chat.
+/// How Vults starts its CLI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Run {
     /// Its own driver in `vults-chat` (Claude Code's stream-json, Codex's app-server).
@@ -296,7 +296,7 @@ impl Entry {
         }
     }
 
-    /// Whether it is still supported: a task may name it, Zeca may delegate to it.
+    /// Whether it is still supported and may be offered as a CLI engine.
     pub fn current(&self) -> bool {
         !matches!(self.setup, Setup::RemoveOnly(_))
     }
@@ -345,7 +345,7 @@ pub fn typescript() -> String {
         "export type InstallAgent = {};\n",
         union(&|e| !matches!(e.setup, Setup::None))
     );
-    out += "/** An agent a task's session can run on (W4). */\n";
+    out += "/** An agent with a supported CLI execution mode. */\n";
     out += &format!("export type Engine = {};\n", union(&|e| e.run != Run::No));
     out
 }

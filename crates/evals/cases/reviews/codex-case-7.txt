@@ -1,6 +1,0 @@
-Odd-length checks passed, but even-length checks failed. unittest discovery ran zero tests; no files were changed. VERDICT: changes
-
-Review comment:
-
-- [P1] Average the two middle values for even-length lists — case-7/stats.py:7-7
-  For even-length lists, this returns the upper middle value instead of the median. For example, `median([1, 2])` returns `2` rather than `1.5`. Average the two middle values for even lengths to meet the explicit acceptance criterion.

@@ -204,9 +204,6 @@ impl AgentDriver for CodexDriver {
 impl CodexDriver {
     async fn turn(&mut self, input: &Input, sink: &dyn Sink) -> Result<(), String> {
         if self.start().await.is_err() {
-            if input.review.is_some() {
-                return Err("Codex: a review needs its app-server".into());
-            }
             // Without an app-server nothing can ask the user, so this fallback stays read-only.
             return codex::turn(&self.spec, &mut self.session, input, sink, &self.stop).await;
         }

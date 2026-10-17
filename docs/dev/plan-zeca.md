@@ -55,7 +55,11 @@ its owned driver must be aborted; watched processes are never stopped. Legacy sa
 fall back to Flock. N0.3's permission, session/lifecycle and cost checks pass with the full local
 pre-commit sequence.
 
-This is slice evidence; the human R3 release smoke remains pending. N0.4 to N0.6 remain pending.
+This is slice evidence; the human R3 release smoke remains pending. N0.4 retires the store's task API and Zeca's router, pack and review modules, including the
+Codex review-only driver path and their eval cases. A fingerprint test pins the original SQL
+of migrations 14 to 20, and an upgrade test preserves old rows and reads `task:N` spend after
+reopening the database. The current schema remains 20. Full local checks pass.
+N0.5 and N0.6 remain pending.
 
 | # | Slice | Removes | Keeps |
 | --- | --- | --- | --- |

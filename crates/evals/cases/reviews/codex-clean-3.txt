@@ -1,1 +1,0 @@
-The full diff correctly implements clamp(x, lo, hi) without changing double. No project tests were present; unittest discovery found zero tests. Boundary, numeric-type, and 1,386 integer-combination checks passed, as did double smoke checks.

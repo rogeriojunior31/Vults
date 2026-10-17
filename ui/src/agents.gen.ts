@@ -29,5 +29,5 @@ export const AGENTS: readonly AgentEntry[] = [
 
 /** An agent the installer knows, by the name its hooks run with. */
 export type InstallAgent = "claude" | "codex" | "antigravity" | "opencode" | "qwen" | "copilot" | "cursor" | "droid" | "kimi" | "gemini";
-/** An agent a task's session can run on (W4). */
+/** An agent with a supported CLI execution mode. */
 export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot" | "kimi";

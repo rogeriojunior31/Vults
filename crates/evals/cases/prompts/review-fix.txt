@@ -1,3 +1,0 @@
-A review of your work (round 1 of 3) found what follows. Fix each point that is right, say why for any you think is wrong, run the tests, commit on this branch, and say what you changed.
-
-- auth.spec.ts:12: still waits on a timer

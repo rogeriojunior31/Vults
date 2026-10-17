@@ -547,18 +547,7 @@ pub async fn chat_send(
     let context = chat.frozen().map(|_| crate::context::volatile(&app, &memories));
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
     crate::journal::chat(&app, "you", chat.folder(), &text, false);
-    chat.send(
-        Turn {
-            text,
-            files,
-            context,
-            review: None,
-        },
-        tx,
-        approver,
-        stop,
-    )
-    .await;
+    chat.send(Turn { text, files, context }, tx, approver, stop).await;
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
     }
