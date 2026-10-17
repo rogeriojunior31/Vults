@@ -1,8 +1,9 @@
 # Atividade
-<!-- source: 24b4fc3b1413 -->
+<!-- source: 88f1a2499700 -->
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
-ano numa grade. **Settings → Activity** mantém os controles de histórico e um botão
+ano numa grade. **Settings → Activity** mantém os controles de histórico e de orçamento diário
+e um botão
 **Open Activity**; o resumo e o calendário ficam no Nest. Tudo é contado neste
 computador, a partir de um histórico local que o Vults guarda enquanto os seus agentes trabalham.
 
@@ -26,6 +27,21 @@ nenhum projeto tem nome. As setas alternam entre a semana anterior e a atual; **
 abre a tela completa de Atividade. As horas no resumo do topo são arredondadas; passe o mouse no
 valor para ver a duração completa. Uma semana ainda não lida mostra uma mensagem de carregamento
 ou erro em vez de totais zerados.
+
+<a id="cost-and-a-daily-budget"></a>
+
+## Custo e um orçamento diário
+
+**Activity → Cost** mostra o gasto registrado de hoje, as janelas dos planos e os custos por dia
+e projeto. Custos de assinatura aparecem a preços de API; não são uma cobrança adicional do plano.
+Medições ausentes continuam desconhecidas. O histórico de gastos existente continua legível.
+
+**Configurar orçamento** abre **Settings → Activity**, o único lugar para editar o orçamento diário.
+Digite dólares, de $0,01 a $10.000, ou deixe vazio para não ter orçamento. Salvar desabilita os
+controles até a escrita terminar; uma falha mantém seu rascunho para outra tentativa.
+Em 80% o Vults avisa; quando acaba, avisa novamente e não inicia sessões novas até amanhã,
+incluindo `/continue`. Nunca para uma sessão em andamento nem bloqueia um agente que você iniciou.
+O Chat do Zeca, os resumos e o sono têm limites próprios e não entram neste orçamento.
 
 <a id="what-a-turn-is"></a>
 

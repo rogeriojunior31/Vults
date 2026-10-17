@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 65fe635c9380 -->
+<!-- source: ed217dc067bf -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -101,16 +101,7 @@ quando o Chat está oculto, a janela está minimizada ou a tela está bloqueada.
 conversa que parou nos últimos dez minutos, como o próximo turno dela: o Vults a retoma aqui, com
 as configurações dela, no sandbox dela, e ela volta a aparecer no bando com os cards dela.
 Só uma sessão cujo processo acabou: uma que ainda está aberta no terminal é recusada, então você
-fala com ela lá. Uma por vez; `/continue stop` encerra. Como o `/task`, não vai para nenhum modelo
-do Zeca.
-
-<a id="cost-and-a-daily-budget"></a>
-<a id="tasks"></a>
-
-## Tarefas
-
-`/task` guarda uma tarefa e `/delegate` começa uma num agente, as duas mandadas para nenhum
-modelo: veja [Tarefas](tasks.md).
+fala com ela lá. Uma por vez; `/continue stop` encerra. Não vai para nenhum modelo do Zeca.
 
 <a id="conversations"></a>
 

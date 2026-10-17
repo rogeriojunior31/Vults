@@ -48,6 +48,8 @@ class Element {
   getContext() { return { clearRect() {}, fillRect() {} }; }
 }
 const pendingSettings = [];
+const pendingBudgets = [];
+let budgetReads = 0;
 let holdSettings = false;
 const root = new Element("div"), events = {}, writes = [], routes = [];
 root.id = "settings";
@@ -76,6 +78,8 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
         writes.push([name, ...args]);
         if (holdSettings) return new Promise((resolve, reject) => pendingSettings.push({ resolve, reject }));
         return;
+      case "spendToday": budgetReads++; return { usd: 1, tokens: 100, budget: 2, subscription: true };
+      case "budgetSet": writes.push([name, ...args]); return new Promise((resolve, reject) => pendingBudgets.push({ resolve, reject }));
       case "nestIsFull": return false;
       case "monitors": case "connectorsStatus": case "rulesList": case "policiesList": case "agentsDoctor": return [];
       case "projectPrefs": return {};
@@ -199,3 +203,76 @@ pendingSettings.at(-1).reject(new Error("Cannot save corner")); await tick();
 assert.equal(widget().value, "2", "Select rollback uses the last successful choice after a pending repaint");
 assert.equal(widget().disabled, false);
 console.log("check-settings-ui: segmented selection and dropdown rollback survive pending repaint");
+
+// The real Settings entry owns budget writes; drafts and pending state survive repaint.
+await go("Activity");
+const budgetInput = () => page().querySelector(".budget-input");
+assert.equal(budgetInput().value, "2");
+budgetInput().value = "5.25"; budgetInput().fire("input");
+await go("General"); await go("Activity");
+assert.equal(budgetInput().value, "5.25", "Navigating back retains the unsaved budget");
+button("Save").fire("click"); await tick();
+assert.deepEqual(writes.at(-1), ["budgetSet", 525]);
+assert.equal(budgetInput().disabled, true);
+events.onSettings({ volume: 75 }); events.onSpend(); await tick();
+assert.equal(budgetInput().value, "5.25");
+assert.equal(budgetInput().disabled, true, "A spend or Settings event cannot unlock a pending save");
+button("Saving…").fire("click"); await tick();
+assert.equal(pendingBudgets.length, 1);
+pendingBudgets[0].reject(new Error("Cannot save this budget.")); await tick();
+assert.equal(budgetInput().disabled, false);
+assert.equal(budgetInput().value, "5.25", "A failed budget save retains its draft");
+assert.ok(page().textContent.includes("Cannot save this budget."));
+button("Save").fire("click"); pendingBudgets[1].resolve(); await tick();
+assert.equal(budgetInput().value, "5.25");
+assert.ok(page().textContent.includes("Saved."));
+const beforeInvalid = writes.length;
+for (const invalid of ["0", "10000.01", "invalid"]) {
+  budgetInput().value = invalid; budgetInput().fire("input"); button("Save").fire("click"); await tick();
+  assert.equal(writes.length, beforeInvalid, "Invalid budgets must never reach native storage");
+}
+budgetInput().value = ""; budgetInput().fire("input"); button("Save").fire("click");
+assert.deepEqual(writes.at(-1), ["budgetSet", null]);
+pendingBudgets[2].resolve(); await tick();
+assert.equal(budgetInput().value, "");
+console.log("check-settings-ui: budget ownership, retained drafts, exact cents, save/retry, duplicate guard, validation and clearing");
+
+await go("General");
+const beforeExternalBudget = budgetReads;
+events.onSettingsSection("activity"); await tick();
+assert.equal(budgetReads, beforeExternalBudget + 1, "A native page request must load the budget just like sidebar navigation");
+assert.equal(budgetInput().disabled, false);
+console.log("check-settings-ui: external Activity navigation loads its budget editor");
+
+// Initial read failures and older responses must never replace a saved budget.
+const budgetBundle = await build({ configFile: false, root: ui, logLevel: "silent", build: {
+  write: false, minify: false, lib: { entry: `${ui}src/surfaces/settings/budget.ts`, formats: ["es"] },
+} });
+const budgetChunk = budgetBundle[0].output.find(p => p.type === "chunk");
+const { createBudget } = await import(`data:text/javascript;base64,${Buffer.from(budgetChunk.code).toString("base64")}`);
+const reads = [], saves = [];
+const editor = createBudget({
+  today: () => new Promise((resolve, reject) => reads.push({ resolve, reject })),
+  setBudget: cents => new Promise((resolve, reject) => saves.push({ cents, resolve, reject })),
+});
+editor.refresh();
+const field = () => editor.element.querySelector("input");
+assert.equal(field().disabled, true);
+reads[0].reject("Budget unavailable."); await tick();
+assert.ok(editor.element.textContent.includes("Budget unavailable."));
+assert.equal(field().disabled, true, "An unreadable budget cannot appear as no limit");
+editor.refresh(); editor.refresh();
+reads[2].resolve({ usd: 1, tokens: 100, budget: 7, subscription: true }); await tick();
+reads[1].reject("Obsolete error."); await tick();
+assert.equal(field().value, "7");
+assert.ok(!editor.element.textContent.includes("Obsolete error."));
+editor.refresh();
+field().value = "8.50"; field().fire("input");
+editor.element.querySelectorAll("button").find(n => n.textContent === "Save").fire("click");
+assert.equal(saves[0].cents, 850);
+editor.refresh();
+assert.equal(reads.length, 4, "A pending budget save cannot start another read");
+saves[0].resolve(); await tick();
+reads[3].resolve({ usd: 1, tokens: 100, budget: 7, subscription: true }); await tick();
+assert.equal(field().value, "8.5", "A read from before the save must not restore the old limit");
+console.log("check-settings-ui: initial budget read failure, stale responses and read/write ordering");

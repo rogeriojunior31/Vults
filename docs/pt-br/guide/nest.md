@@ -1,8 +1,8 @@
 # O Nest
-<!-- source: 38df6c06114a -->
+<!-- source: 1e43f6000e7d -->
 
-O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, as suas
-tarefas, o chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
+O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
+chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
 seta no topo do chat da ilha. Ele é criado quando você abre e some quando você fecha, e abre também
 com o Zeca desligado, só que sem o Chat. Enquanto ele está aberto a ilha sai, com pílula e aves: uma
 superfície na tela por vez. O Nest não tem a barra de título do sistema: o cabeçalho dele o move (um
@@ -11,10 +11,9 @@ clique duplo ocupa a tela) e as bordas e os cantos o redimensionam. Ele abre gra
 card que espera é respondido onde você está: no Nest enquanto você está nele (a janela dele tem o
 foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 
-Tarefas, Atividade e Conexões usam o mesmo fundo preto, cards elevados, escala de títulos
-e controles neutros. Conexões usa a navegação segmentada de Atividade; Tarefas e Conexões
-compartilham os estilos de botões e campos. As cores de status mantêm seus significados,
-com controles legíveis também nas tarefas finalizadas.
+Atividade e Conexões usam o mesmo fundo preto, cards elevados, escala de títulos e controles
+neutros. Conexões usa a navegação segmentada de Atividade. As cores de status mantêm seus
+significados.
 
 As telas de leitura usam os mesmos painéis de carregamento, conteúdo vazio, busca sem resultado
 e erro, com uma explicação curta e a próxima ação disponível. A primeira leitura não mostra
@@ -22,7 +21,7 @@ registros vazios nem resumos zerados enquanto carrega. Se a atualização de Ati
 os últimos registros, projetos ou resumo semanal continuam visíveis com um aviso de possível
 desatualização e **Try again**; uma falha na primeira leitura encerra o aviso de carregamento
 e oferece nova tentativa. Erros técnicos de leitura ficam em **Technical details**. Tentar
-de novo só lê a tela; nunca executa tarefa, responde permissão nem altera o histórico.
+de novo só lê a tela; nunca inicia sessão, responde permissão nem altera o histórico.
 
 Minimizar o Nest devolve a ilha e seus atalhos de aprovação. Abrir o Nest de novo
 restaura a janela; minimizar não altera o tamanho salvo da Sala.
@@ -48,7 +47,7 @@ mantendo os controles do cabeçalho e o rodapé acessíveis.
 O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
 dura (um clique o encerra), o som, a busca (a paleta, como **Ctrl+K**), o seletor de tamanho e o
-botão de tela cheia. Embaixo dele, cinco abas com os seus
+botão de tela cheia. Embaixo dele, quatro abas com os seus
 ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
 traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa
@@ -57,7 +56,7 @@ primeiro ali), onde você o responde. As Configurações continuam uma página p
 config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
 seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
-**Alt+1** a **Alt+5** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
+**Alt+1** a **Alt+4** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
 desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.
@@ -68,7 +67,7 @@ restaura a escolha anterior; uma gravação malsucedida nunca aparece como concl
 
 **Ctrl+K**, no Nest ou na ilha aberta (quando ela tem o teclado: aberta com Ctrl+Alt+Space, ou no
 chat dela), abre a paleta: digite para pular para uma sessão, para
-começar `/task`, `/delegate`, `/continue` ou `/remember` no chat (com o Zeca ligado), ou para abrir uma
+começar `/continue` ou `/remember` no chat (com o Zeca ligado), ou para abrir uma
 aba. Ela nunca responde um card: uma sessão que espera por você só leva até o card dela.
 
 As Configurações usam um título por página e agrupam os controles relacionados de
@@ -136,15 +135,6 @@ pergunta. Uma sem card aqui (ela pergunta no terminal dela) diz isso.
 aparece onde o Vults consegue trazer o terminal dela para a frente
 ([A ilha](island.md#getting-to-a-session)).
 
-## Tasks
-
-As suas [tarefas](tasks.md), sob o roost de cada uma (as sem roost por último): cada uma com o
-objetivo, os critérios, o dono, o status e o custo, por que o roteador escolheu o agente dela, as
-rodadas de revisão como marcas (até três, a última na cor do veredito), os botões que a iniciam,
-revisam ou passam adiante, e o gasto de hoje frente ao seu orçamento diário (definido em Activity →
-Cost). **New task** guarda uma
-sem o chat, que é como você cria uma com o Zeca desligado.
-
 ## Chat
 
 A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
@@ -180,14 +170,15 @@ O que este computador guarda, só lido aqui:
   somam sob ele, com quantos ele tem), uma busca por projeto, branch ou agente, e um card para cada repositório em que uma sessão
   trabalha: as pastas e os branches, as sessões (um clique põe uma na frente em **Flock**), os seus
   pull requests e checks (do card do GitHub; um pull request ou os
-  checks do branch padrão abrem no GitHub), o que o Zeca lembra do projeto e quanto custaram as
-  tarefas dele ([A memória do Zeca](memory.md#project-memory)). **Preferences ↗** abre **Settings →
+  checks do branch padrão abrem no GitHub), o que o Zeca lembra do projeto e quanto custaram os
+  agentes dele ([A memória do Zeca](memory.md#project-memory)). **Preferences ↗** abre **Settings →
   Projects**.
 - **History**: cada turno terminado dos seus agentes, só contagens. Busque nos registros
   carregados por projeto, agente ou estado; **Limpar filtros** restaura a lista.
-- **Cost**: quanto os agentes custaram hoje e o **orçamento diário** que você define aqui, as janelas
-  de uso dos seus planos e o que os agentes custaram nas últimas duas semanas, frente a esse
-  orçamento, e por roost ([Custo e orçamento diário](tasks.md#cost-and-a-daily-budget)).
+- **Cost**: quanto os agentes custaram hoje e o **orçamento diário** definido em
+  **Settings → Activity**, as janelas de uso dos seus planos e o custo das últimas duas semanas,
+  frente a esse orçamento, e por roost. **Configurar orçamento** abre o editor do orçamento
+  ([Custo e orçamento diário](activity.md#cost-and-a-daily-budget)).
 - **Traces**: o trabalho do próprio Zeca, cada turno do chat com o modelo, os tokens e o custo, e
   abaixo dele cada card de ferramenta com quanto tempo esperou por uma resposta; guardado por 30 dias.
 - **Audit**: busque nos registros carregados por projeto, agente, resposta, ferramenta ou comando.

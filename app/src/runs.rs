@@ -1460,10 +1460,7 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
     }
     // A task's session (a clone of its own) goes on from its task, with its brief and its cost.
     if Path::new(&c.cwd).starts_with(crate::paths::data_dir().join("worktrees")) {
-        return (
-            "That session is a task's: go on with it in the Nest's Tasks tab.",
-            None,
-        );
+        return ("That session can't be continued from here.", None);
     }
     let engine = match c.key.agent {
         vults_protocol::AgentKind::Codex => Engine::Codex,

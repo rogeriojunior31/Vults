@@ -1,7 +1,7 @@
-// The Nest's page, with no Tauri in it: the backend comes in, so the lab can draw it too. Five tabs
-// and the gear (ADR 0021): Flock, Tasks, Chat (with its Memory beside it), Activity (Week, By
-// project, History, Cost, Traces, Audit) and Connections. Without Zeca there is no Chat tab.
-import type { MediaAction, NowPlaying, Size } from "../../bridge";
+// The Nest's page takes its backend: four tabs and the gear (ADRs 0021, 0031). Chat keeps
+// Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
+// Without Zeca there is no Chat tab.
+import type { MediaAction, NowPlaying, Size, SpendToday } from "../../bridge";
 import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
@@ -16,7 +16,8 @@ import type { SessionView, ViewModel } from "../../view.gen";
 import { createConnections, type ConnectionsActions } from "./connections";
 import { createFlock, needsYou, type FlockActions } from "./flock";
 import { createNestFoot, createNestHead, NEST_TABS, tabByKey, type NestTab } from "./head";
-import { createBudget, type BudgetBackend } from "./budget";
+import { spentLine } from "../../cost";
+import { viewState } from "./view-state";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRecent } from "./recent";
 import {
@@ -27,7 +28,6 @@ import {
   type RecordsBackend,
 } from "./records";
 import { createRoosts, type RoostsBackend } from "./roosts";
-import { createTasks, type TasksBackend } from "./tasks";
 import { createWeek, type WeekBackend } from "./week";
 
 export interface Nest {
@@ -39,11 +39,11 @@ export interface Nest {
   relabel: () => void;
   /** The memory changed: its panel reads it again, when open. */
   memoryChanged: () => void;
-  /** The tasks changed (`/task`, another window): their tab reads them again, when open. */
-  tasksChanged: () => void;
+  /** Spend or its budget changed: refresh the open records. */
+  spendChanged: () => void;
   /** Zeca switched on or off: the Chat tab comes or goes. */
   setZeca: (on: boolean) => void;
-  /** Opens a tab by its id (`flock`, `tasks`, `chat`, `activity`, `connections`, or an Activity
+  /** Opens a tab by its id (`flock`, `chat`, `activity`, `connections`, or an Activity
    *  sub-tab such as `cost`), as `open_nest` asks; an unknown id is ignored. */
   open: (id: string) => void;
   /** The tab shown now. */
@@ -69,15 +69,13 @@ export interface NestBackend {
   chat: ChatBackend;
   roosts: RoostsBackend;
   memory: MemoryBackend;
-  // Whether Zeca is on, the Nest knows itself.
-  tasks: Omit<TasksBackend, "zeca">;
   records: RecordsBackend;
-  budget: BudgetBackend;
+  spend: () => Promise<SpendToday>;
   week: WeekBackend;
   flock: FlockActions;
   connections: ConnectionsActions;
   /** The gear: Settings. */
-  settings: () => void;
+  settings: (section?: string) => void;
   /** The footer's switch. */
   setZeca: (on: boolean) => void;
   /** The footer's way back. */
@@ -103,24 +101,45 @@ type Sub = "week" | "projects" | "history" | "cost" | "traces" | "audit";
 const TABS = NEST_TABS;
 const SUBS: Sub[] = ["week", "projects", "history", "cost", "traces", "audit"];
 
-/** Activity → Cost: today's spend and the daily budget over the records of what the agents cost. */
+/** Activity owns figures; only Settings edits the daily budget (ADR 0031). */
 function costPart(
-  budget: { element: HTMLElement; refresh: () => void },
+  today: () => Promise<SpendToday>,
   usage: { element: HTMLElement; refresh: () => void },
+  settings: () => void,
 ): { element: HTMLElement; refresh: () => void } {
   const title = el("h2");
   const about = el("p");
+  const spend = el("section", { class: "cost-today" });
+  const configure = el("button", { class: "btn", onclick: settings });
+  let loaded: SpendToday | null = null;
+  let asked = 0;
+  const draw = (error?: unknown) => {
+    spend.replaceChildren(
+      ...(loaded ? [el("p", { text: spentLine(loaded) }),
+        ...(loaded.budget !== null && loaded.usd >= loaded.budget
+          ? [el("p", { text: t("Today's budget is spent: Vults starts no new session until tomorrow.") })] : [])] : []),
+      ...(error !== undefined ? [viewState("error", t("Could not load {name}.", { name: t("Cost") }),
+        loaded ? t("The last loaded view is kept and may be out of date.") : undefined,
+        el("button", { class: "btn", text: t("Try again"), onclick: refresh }), String(error))]
+        : loaded ? [] : [viewState("loading", t("Loading {name}…", { name: t("Cost") }))]),
+    );
+  };
+  const refresh = () => {
+    title.textContent = t("Cost");
+    about.textContent = t("Your plan windows, recorded cost and daily budget on this computer.");
+    configure.textContent = t("Budget settings");
+    const mine = ++asked;
+    draw();
+    void today().then(value => { if (mine === asked) { loaded = value; draw(); } },
+      error => { if (mine === asked) draw(error); });
+    usage.refresh();
+  };
   return {
     element: el("div", { class: "nest-cost" },
-      el("header", { class: "activity-heading" }, el("div", {}, title, about)),
-      budget.element, usage.element,
+      el("header", { class: "activity-heading" }, el("div", {}, title, about), configure),
+      spend, usage.element,
     ),
-    refresh: () => {
-      title.textContent = t("Cost");
-      about.textContent = t("Your plan windows, recorded cost and daily budget on this computer.");
-      budget.refresh();
-      usage.refresh();
-    },
+    refresh,
   };
 }
 
@@ -160,7 +179,6 @@ export function createNest(
       chat.draft(t("What is {project} doing now?", { project: s.project || agentName(s) }));
     },
   });
-  const tasks = createTasks({ ...backend.tasks, zeca: () => zecaOn });
   const memory = createMemory(backend.memory);
   // A row's question for Zeca opens the Chat with it in the composer; nothing is sent.
   const connections = createConnections({
@@ -180,7 +198,7 @@ export function createNest(
     history: createHistory(backend.records.history, backend.records.query),
     cost: (() => {
       const usage = createUsage(backend.records.usage);
-      return costPart(createBudget(backend.budget, usage.refresh), usage);
+      return costPart(backend.spend, usage, () => backend.settings("activity"));
     })(),
     traces: createTraces(backend.records.traces),
     audit: createAudit(backend.records.audit, backend.records.query),
@@ -326,7 +344,6 @@ export function createNest(
 
   const panes: Record<Tab, HTMLElement> = {
     flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element),
-    tasks: el("div", { class: "nest-pane nest-tasks" }, tasks.element),
     chat: chatPane,
     activity: activityPane,
     connections: el("div", { class: "nest-pane nest-connections-pane" }, connections.element),
@@ -338,7 +355,7 @@ export function createNest(
   }
   const head = createNestHead({
     tab: (id) => show(id),
-    gear: backend.settings,
+    gear: () => backend.settings(),
     size: (s) => backend.size(s, currentPlace()),
     search: () => openPalette(),
     sound: backend.sound,
@@ -406,7 +423,6 @@ export function createNest(
     paintNeeds();
     // The habitat draws only while it is in sight.
     flock.setActive(id === "flock" && !document.hidden && !last?.locked);
-    if (id === "tasks") tasks.refresh();
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
     if (id === "chat") {
@@ -439,7 +455,6 @@ export function createNest(
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
     connections.redraw();
-    if (tab === "tasks") tasks.refresh();
     if (tab === "activity") parts[sub].refresh();
     refreshRecent();
   };
@@ -529,8 +544,7 @@ export function createNest(
   const memoryChanged = () => {
     if (!memoryPane.hidden) memory.refresh();
   };
-  const tasksChanged = () => {
-    if (tab === "tasks") tasks.refresh();
+  const spendChanged = () => {
     // A run's spend or answers may have changed what an open record shows.
     if (tab === "activity" && sub !== "week" && sub !== "projects")
       parts[sub].refresh();
@@ -572,7 +586,7 @@ export function createNest(
     e.preventDefault();
     openPalette();
   });
-  // Alt+1 to 5 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
+  // Alt+1 to 4 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
   // leaves Full for the size before it. Neither while typing, composing or speaking.
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !e.isComposing && !e.defaultPrevented && tab === "chat" && chat.cancelVoice()) {
@@ -629,7 +643,7 @@ export function createNest(
     view,
     relabel,
     memoryChanged,
-    tasksChanged,
+    spendChanged,
     setZeca,
     open,
     current: currentPlace,
@@ -641,7 +655,10 @@ export function createNest(
       foot.setSpecies(id);
       paintPortrait();
     },
-    usageChanged: flock.usageChanged,
+    usageChanged: () => {
+      flock.usageChanged();
+      if (tab === "activity" && sub === "cost") parts.cost.refresh();
+    },
     setKeys: (keys) => {
       chat.setKeys(keys);
       flock.setKeys(keys);

@@ -219,16 +219,14 @@ body {
   background: var(--raised);
 }
 /* Workspace cards and actions share Activity's surface hierarchy. */
-.task, .task-spend, .conn-detail, .conn-waiting, .nest-connections .nest-add {
+.cost-today, .conn-detail, .conn-waiting, .nest-connections .nest-add {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--panel);
 }
-.tasks > .activity-heading, .nest-connections > .activity-heading { margin-bottom: 0; }
-.tasks > .activity-heading { flex-wrap: wrap; }
-.tasks > .activity-heading .proposal-actions { flex-wrap: wrap; }
+.nest-connections > .activity-heading { margin-bottom: 0; }
 .nest-connections > .nest-subs { max-width: 100%; margin: 0; }
-.tasks .btn, .task-spend .btn, .nest-connections :is(button.outline, button.primary) {
+.nest-cost .btn, .nest-connections :is(button.outline, button.primary) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -244,12 +242,12 @@ body {
   white-space: normal;
   transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
-.tasks .btn:hover:not(:disabled), .task-spend .btn:hover:not(:disabled), .nest-connections .outline:hover:not(:disabled) { background: var(--border-hover); }
-.tasks .btn.primary, .nest-connections button.primary { background: var(--accent); color: var(--on-accent); font-weight: 600; }
-.tasks .btn.primary:hover:not(:disabled), .nest-connections button.primary:hover:not(:disabled) { background: var(--fg-bright); }
-.tasks .btn:disabled, .task-spend .btn:disabled, .nest-connections :is(button.outline, button.primary):disabled { opacity: 0.5; cursor: default; }
-.task-select, .task-issue-input, .task-budget-input, .task-goal-input, .task-criteria-input, .conn-repo { box-sizing: border-box; }
-:is(.task-select, .task-issue-input, .task-budget-input, .task-goal-input, .task-criteria-input, .conn-repo):focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-shadow); outline: none; }
+.nest-cost .btn:hover:not(:disabled), .nest-connections .outline:hover:not(:disabled) { background: var(--border-hover); }
+.nest-connections button.primary { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.nest-connections button.primary:hover:not(:disabled) { background: var(--fg-bright); }
+.nest-cost .btn:disabled, .nest-connections :is(button.outline, button.primary):disabled { opacity: 0.5; cursor: default; }
+.conn-repo { box-sizing: border-box; }
+.conn-repo:focus-visible { border-color: var(--focus-border); box-shadow: var(--focus-shadow); outline: none; }
 
 /* Connections (the prototype's): connector chips, the chosen one's head and tabs, its rows by
    group beside the one picked. */
@@ -924,210 +922,7 @@ body {
   font-size: 11.5px;
   white-space: pre;
 }
-/* The Tasks tab (W3). */
-.tasks {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-/* Goal, completion and execution are separate reading levels. */
-.task {
-  padding: 20px;
-  min-width: 0;
-}
-.task:is(.done, .dropped) .task-goal { color: var(--fg-dim); }
-.task-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-.task-goal {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-  color: var(--fg);
-}
-.task-status {
-  flex: none;
-  color: var(--fg-dim);
-  font-size: 12px;
-}
-.task.blocked .task-status { color: var(--error-text); }
-.task.done .task-status { color: var(--ok); }
-.task-progress-line {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg-dim);
-}
-.task-progress {
-  appearance: none;
-  border: none;
-  width: 96px;
-  height: 4px;
-  border-radius: 9999px;
-  background: var(--raised);
-  overflow: hidden;
-}
-.task-progress::-webkit-progress-bar { background: var(--raised); }
-.task-progress::-webkit-progress-value { background: var(--mark); }
-.task-progress::-moz-progress-bar { background: var(--mark); }
-.task-execution { margin-left: auto; color: var(--fg); }
-.task-execution::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.task-next {
-  display: flex;
-  gap: 8px;
-  margin: 12px 0;
-  font-size: 12px;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-.task-next > span { color: var(--fg-dim); flex: none; }
-.task-next > strong { font-weight: 500; color: var(--fg); min-width: 0; }
-.task-context {
-  margin: 8px 0;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--fg-muted);
-  overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
-}
-.task-criterion {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 12px;
-  padding: 6px 0;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-.task-check { flex: none; margin-top: 3px; }
-.task-criterion.met span {
-  color: var(--fg-muted);
-  text-decoration: line-through;
-}
-.task .proposal-actions {
-  margin-top: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.task-maintenance {
-  margin-top: 12px;
-}
-.task-maintenance > summary {
-  padding: 6px 0;
-  min-height: 30px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--fg-dim);
-}
-.task-select {
-  min-height: 34px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--fg);
-  background: var(--input);
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
-  padding: 4px 8px;
-}
-.task-select-field {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.task-select-label {
-  color: var(--fg-muted);
-  font-size: 11px;
-}
-.task-new {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.task-new .task-select {
-  min-width: 0;
-  max-width: 100%;
-}
-.task-goal-input,
-.task-criteria-input {
-  font: inherit;
-  font-size: 13px;
-  color: var(--fg);
-  background: var(--input);
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
-  padding: 8px 10px;
-  resize: vertical;
-}
-.tasks-finished {
-  margin: 4px 0 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--fg-muted);
-}
-.task-issue-input,
-.task-budget-input {
-  min-height: 34px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--fg);
-  background: var(--input);
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
-  padding: 4px 8px;
-  width: 170px;
-}
-.task-budget-input {
-  width: 90px;
-}
-/* Today's spend and the daily budget (W9). */
-.task-spend {
-  margin: 6px 0 8px;
-  padding: 16px 20px;
-}
-.task-spend.over {
-  border-color: var(--warn);
-}
-.task-spend-line,
-.roost-cost {
-  margin: 2px 0;
-  font-size: 12px;
-  color: var(--fg-muted);
-}
-.task-budget-label {
-  font-size: 12px;
-  color: var(--fg-muted);
-}
-.task-reply {
-  margin: 4px 0 6px;
-  font-size: 12px;
-  color: var(--fg-muted);
-}
-.task-reply summary {
-  cursor: pointer;
-}
-.task-reply p {
-  margin: 4px 0 0;
-  white-space: pre-wrap;
-  color: var(--fg);
-}
+.roost-cost { margin: 2px 0; font-size: 12px; color: var(--fg-muted); }
 /* Records share a reading order: operation and result, context, then time and counts. */
 .records { display: flex; flex-direction: column; gap: 16px; }
 .records-content { display: contents; }
@@ -1166,15 +961,11 @@ body {
 .usage-status.warning { color: var(--warn); }
 .usage-status.critical { color: var(--error-text); }
 .nest-activity .nest-part:not(.nest-week-part) { padding: 20px 24px 24px; }
-.nest-cost > .task-spend.over { border-color: var(--warn); }
-.nest-cost .task-spend-line { font-size: 14px; line-height: 1.6; }
-.nest-cost .task-budget-input { min-height: 32px; box-sizing: border-box; border-color: var(--control-border); background: var(--input); font-size: 13px; }
-.nest-cost .task-budget-label { color: var(--fg-dim); font-size: 12px; }
 @media (max-width: 600px) {
   .nest-subs { max-width: calc(100% - 32px); margin: 16px 16px 0; }
   .nest-activity .nest-part:not(.nest-week-part) { padding: 16px; }
   .nest-pane:not(.nest-flock-pane) { padding: 16px; }
-  .task, .task-spend, .conn-detail, .conn-waiting, .nest-connections .nest-add { padding: 16px; }
+  .cost-today, .conn-detail, .conn-waiting, .nest-connections .nest-add { padding: 16px; }
   .record { gap: 8px; padding: 12px; }
   .record-title { align-items: flex-start; }
   .record-aside { max-width: 100px; }
@@ -1909,39 +1700,6 @@ button.touched-row:hover,
     margin-top: 10px;
   }
 }
-/* Tasks (U8): each roost's tasks under its name; the review loop's rounds as marks. */
-.tasks-roost {
-  margin: 14px 0 -2px;
-  font: 500 12px var(--font);
-  color: var(--fg-dim);
-}
-.task-rounds-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.task-rounds {
-  display: inline-flex;
-  gap: 4px;
-}
-.task-round {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-}
-.task-round.done {
-  background: var(--fg-muted);
-}
-.task-round.pass {
-  background: var(--ok);
-}
-.task-round.changes {
-  background: var(--warn);
-}
-.task-round.none {
-  background: var(--info);
-}
 /* Recent keeps its search stable while only the results scroll. */
 .nest-recent { display: none; }
 @media (min-width: 900px) {
@@ -2517,9 +2275,6 @@ button.touched-row:hover,
   .nest-recent-search { max-width: none; }
 }
 @media (max-width: 760px) {
-  .task-heading { flex-wrap: wrap; gap: 6px 12px; }
-  .task-goal { flex-basis: 100%; }
-  .tasks-roost { margin-top: 8px; }
   .conn-head { flex-direction: column; gap: 12px; }
   .conn-actions { width: 100%; }
   .conn-repo { flex: 1; min-width: 0; max-width: 100%; }
@@ -2537,10 +2292,13 @@ button.touched-row:hover,
   .nest-recent-back { min-height: 28px; }
 }
 
-:where(.tasks, .nest-connections, .nest-recent) :is(button, input, select, summary):focus-visible {
+:where(.nest-cost, .nest-connections, .nest-recent) :is(button, input, select, summary):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .memory details > summary::after { content: "+"; flex: none; margin-left: auto; padding-left: 8px; color: var(--fg-muted); font: 14px var(--mono); }
 .memory details[open] > summary::after { content: "−"; }
+
+.cost-today { padding: 16px 20px; font-size: 14px; line-height: 1.6; }
+.cost-today > p { margin: 2px 0; }

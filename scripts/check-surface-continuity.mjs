@@ -89,6 +89,8 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
       export { createWeek } from ${source("surfaces/nest/week.ts")};
+      export { paletteItems } from ${source("palette.ts")};
+      export { NEST_TABS, tabByKey } from ${source("surfaces/nest/head.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
       export { Scene } from ${source("island/scene.ts")};
@@ -99,7 +101,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -136,16 +138,16 @@ for (const width of [480, 760, 900, 1180]) {
     quick = new ChatPanel(chat("island"), () => {});
     const quickRoot = new Element("main"); quickRoot.append(quick.element); document.body.replaceChildren(quickRoot);
     await quick.restore();
+    let readSpend = async () => ({ usd: 0, tokens: 0, budget: null, subscription: false });
     const backend = {
       chat: chat("nest"), savePlace: async value => { place = value; },
       flock: { loadPlace: async () => structuredClone(flockPlace), savePlace: async value => { flockPlace = structuredClone(value); },
         diff: async () => null, usage: async () => [], ...Object.fromEntries(["focus", "jump", "review", "decide", "decideAlways", "answer", "release", "hush", "openFolder", "projectPref"].map(name => [name, () => actions.push(name)])) },
       connections: { loadPlace: async () => structuredClone(connectionPlace), savePlace: async value => { connectionPlace = structuredClone(value); },
         status: async () => [], refresh: async () => {}, onMerged() {}, open: () => actions.push("connection:open"), merge: () => actions.push("merge"), settings() {} },
-      records: { query: async (tab, value) => { if (value !== undefined) queries[tab] = value; return queries[tab]; }, history: async () => ({ on: true, turns: [] }), audit: async () => [], usage: async () => [], traces: async () => [] },
+      records: { query: async (tab, value) => { if (value !== undefined) queries[tab] = value; return queries[tab]; }, history: async () => ({ on: true, turns: [] }), audit: async () => [], usage: async () => ({ windows: [], days: [], roosts: [], budget: null, subscription: false }), traces: async () => [] },
       roosts: { query: async value => { if (value !== undefined) queries.projects = value; return queries.projects; }, load: async () => [], week: async () => null },
-      tasks: { load: async () => [], folders: () => [], agents: () => [], today: async () => null },
-      memory: { load: async () => ({ on: false, facts: [], proposals: [] }) }, budget: { today: async () => null },
+      memory: { load: async () => ({ on: false, facts: [], proposals: [] }) }, spend: () => readSpend(),
       week: { activity: async () => ({ history: false, today: "2026-10-14", weeks: ["2026-10-12"], week: { monday: "2026-10-12", sunday: "2026-10-18", turns: 0, headline: "No completed turns.", projects: [], days: [0, 0, 0, 0, 0, 0, 0] }, grid: [] }) },
       settings() {}, setZeca() {}, island: () => backend.size("quick"), sound() {}, media() {}, endDnd() {}, look() {},
       size: size => { requested = resize(async () => {
@@ -168,6 +170,33 @@ for (const width of [480, 760, 900, 1180]) {
     const auditTab = nodes(page).find(node => node.dataset.sub === "audit");
     assert.equal(auditTab.attributes["aria-pressed"], "true");
     assert.deepEqual(auditTab.scrolledIntoView, { block: "nearest", inline: "nearest" }, "Restoring a sub-tab keeps its selection visible in the navigation strip");
+    if (width === 480 && presence === "island") {
+      const reads = [];
+      const originalSpend = readSpend;
+      readSpend = () => new Promise((resolve, reject) => reads.push({ resolve, reject }));
+      nest.open("cost");
+      const today = page.querySelector(".cost-today");
+      assert.ok(today.textContent.includes("Loading"));
+      assert.ok(!today.textContent.includes("$0.00"), "An unreadable spend is not zero");
+      reads[0].reject("Cannot read spend."); await tick();
+      assert.ok(today.textContent.includes("Cannot read spend."));
+      nodes(today).find(n => n.tag === "button" && n.textContent === "Try again").click();
+      reads[1].resolve({ usd: 1, tokens: 100, budget: 2, subscription: true }); await tick();
+      assert.ok(today.textContent.includes("$1.00 of your $2.00"));
+      assert.equal(today.querySelector("input"), null, "Cost never edits the budget");
+      backend.settings = section => actions.push(["settings", section]);
+      nodes(page).find(n => n.tag === "button" && n.textContent === "Budget settings").click();
+      assert.deepEqual(actions.pop(), ["settings", "activity"]);
+      backend.settings = () => {};
+      nest.spendChanged(); nest.spendChanged();
+      reads[3].reject("Latest spend read failed."); await tick();
+      reads[2].resolve({ usd: 99, tokens: 100, budget: 2, subscription: true }); await tick();
+      assert.ok(today.textContent.includes("$1.00 of your $2.00"));
+      assert.ok(today.textContent.includes("Latest spend read failed."));
+      assert.ok(!today.textContent.includes("$99"), "An obsolete spend cannot replace the current result");
+      readSpend = originalSpend;
+      nest.open("audit");
+    }
     nest.open("chat"); nest.chat.draft("More context");
     const character = nest.chat.perchSlot.querySelector(".chat-character");
     const canvas = character.querySelector("canvas");
@@ -529,3 +558,19 @@ weekUI.refresh(); const oldWeek = weekReads.at(-1); weekUI.refresh(); weekReads.
 oldWeek.reject(new Error("Obsolete")); await tick(); assert.equal(weekPage.querySelector(".view-state.error"), null);
 assert.deepEqual(weekEffects, [], "Retrying the recap never clears, exports or changes history settings");
 console.log("check-surface-continuity: Week initial error/retry, retained recap and obsolete read rejection without setting/export actions");
+
+assert.deepEqual(NEST_TABS, ["flock", "chat", "activity", "connections"]);
+for (const zeca of [true, false]) {
+  const tabs = NEST_TABS.filter(id => id !== "chat" || zeca);
+  for (let n = 1; n <= 5; n++) {
+    assert.equal(tabByKey({ code: `Digit${n}`, altKey: true }, zeca), tabs[n - 1]);
+  }
+  const commands = [], routes = [];
+  const items = paletteItems({ sessions: [], focus() {}, review() {},
+    command: zeca ? text => commands.push(text) : null, tab: id => routes.push(id) });
+  assert.ok(!items.some(item => /task|delegate/i.test(item.label)), "No retired entry points remain in the palette");
+  for (const item of items) item.run();
+  assert.deepEqual(routes, tabs);
+  assert.deepEqual(commands, zeca ? ["/continue ", "/remember "] : []);
+}
+console.log("check-surface-continuity: four tabs, keyboard order with Zeca on/off, palette removal and retained continuation/memory");

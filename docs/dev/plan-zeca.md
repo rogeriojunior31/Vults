@@ -39,7 +39,16 @@ migrations 14 to 20 are never edited; their tables stay and are no longer read, 
 migration may drop them after a release. One PR per slice, each passing the full CI.
 
 N0.1 is recorded in [ADR 0031](../adr/0031-tasks-leave-vults.md), with amendments to 0018,
-0020 and 0021. N0.2 to N0.6 and the native release acceptance remain pending.
+0020 and 0021. N0.2 removes the Tasks surface and its Chat/palette entry points; shared
+cost figures stay in Activity and the budget editor moves to Settings. Its small native wiring
+changes move budget writes to Settings and publish spend changes independently of Tasks.
+
+N0.2 validation (2026-10-16): build, renderer checks, Clippy, workspace tests and evals passed.
+The native app was checked on Linux/KWin with isolated data at 1180 x 820 and 480 x 360:
+four tabs, Cost, the budget-settings link, a saved $5.25 budget, a rejected write from the Nest,
+scroll access to the short-window editor, and costs/budget with Zeca off. The renderer checks
+also cover palette/keyboard order, budget read/save failures, retries and stale responses.
+This is slice evidence; the human R3 release smoke remains pending. N0.3 to N0.6 remain pending.
 
 | # | Slice | Removes | Keeps |
 | --- | --- | --- | --- |

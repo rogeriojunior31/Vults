@@ -16,10 +16,9 @@ import { icon as islandIcon, type IconName } from "../../island/icons";
 const icon = (name: IconName, size: number) => islandIcon(name, size, 1.6);
 import { sizeSwitch } from "../../sizes";
 
-export type NestTab = "flock" | "tasks" | "chat" | "activity" | "connections";
+export type NestTab = "flock" | "chat" | "activity" | "connections";
 export const NEST_TABS: NestTab[] = [
   "flock",
-  "tasks",
   "chat",
   "activity",
   "connections",
@@ -27,7 +26,6 @@ export const NEST_TABS: NestTab[] = [
 
 const TAB_ICONS: Record<NestTab | "settings", IconName> = {
   flock: "flock",
-  tasks: "tasks",
   chat: "chat",
   activity: "list",
   connections: "plug",
@@ -208,7 +206,6 @@ export function createNestHead(on: NestHeadActions): NestHead {
   const recount = () => {
     const words: Record<NestTab, string> = {
       flock: t("Flock"),
-      tasks: t("Tasks"),
       chat: t("Chat"),
       activity: t("Activity"),
       connections: t("Connections"),
@@ -420,7 +417,7 @@ export function createNestFoot(on: NestFootActions): NestFoot {
   };
 }
 
-/** Alt+1 to 5: the tab at that place, whatever the layout (a hidden Chat is skipped). Not while
+/** Alt+1 to 4: the tab at that place, whatever the layout (a hidden Chat is skipped). Not while
  * typing or composing. */
 export function tabByKey(e: KeyboardEvent, zeca: boolean): NestTab | undefined {
   const typing = (e.target as Element | null)?.closest?.(
@@ -435,7 +432,7 @@ export function tabByKey(e: KeyboardEvent, zeca: boolean): NestTab | undefined {
     e.metaKey
   )
     return undefined;
-  const n = /^Digit([1-5])$/.exec(e.code);
+  const n = /^Digit([1-4])$/.exec(e.code);
   return n
     ? NEST_TABS.filter((id) => id !== "chat" || zeca)[Number(n[1]) - 1]
     : undefined;

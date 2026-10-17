@@ -11,7 +11,7 @@ import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
 import { agentName, badgeOf, lastDiff, needsYou, questionBody, statusText } from "../../island/views";
-import { usageLabel, usageLevel } from "./budget";
+import { usageLabel, usageLevel } from "../../cost";
 
 export interface FlockActions {
   loadPlace?: () => Promise<FlockPlace | null>;

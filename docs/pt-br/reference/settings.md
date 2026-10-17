@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: df011831ba03 -->
+<!-- source: 8aa5a177ee51 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -79,8 +79,8 @@
 | `zeca` | `true` | O Zeca, o companheiro: desligado, sem chat, microfone ou atalho de fala, e a bandeja fica sem *Chat…*; o bando, os cards, as notificações e os conectores funcionam como sempre |
 | `widget` | ausente | O canto do widget de canto: `top-left`, `top-right`, `bottom-left` ou `bottom-right`; ausente (o padrão) para nenhum widget. Um valor desconhecido é nenhum widget |
 | `projects` | ausente | Escolhas por pasta de projeto, definidas pelas ações rápidas de uma sessão ou em **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: sem sons nem notificações das suas sessões em repouso (um card mantém os dois); `pin`: as suas sessões primeiro; `hide`: as suas sessões fora da ilha, da bandeja e do widget, exceto enquanto uma delas tem um card esperando; `species`: a ave das suas sessões, um id de espécie do renderer (`"vultur"`), qualquer uma menos a do urubu-rei (`"papa"`), ignorada como uma desconhecida (a partir da versão 12). Só as escolhas ligadas são escritas, e um projeto sem nenhuma é removido (a partir da versão 8) |
-| `delegate` | ausente | Em qual agente as tarefas delegadas de um projeto começam, pelo roost dele (`{ "github:me/site": "codex" }`, `claude` ou `codex`), definido com `/delegate default` no chat; quando o projeto tem 10 tarefas terminadas de um tipo, as notas delas escolhem (a partir da versão 19) |
-| `budget_daily_cents` | ausente | O orçamento diário, em centavos de dólar (`500` é $5,00), definido em **Activity → Cost**, no Nest: em 80% uma notificação, e quando acaba outra, e o Vults não inicia nenhuma sessão nova naquele dia. Nunca para nem bloqueia um agente. Ausente, sem orçamento (a partir da versão 20) |
+| `delegate` | ausente | Preferência antiga de agente por roost do projeto, mantida por compatibilidade; o comando removido `/delegate` não a edita mais (a partir da versão 19) |
+| `budget_daily_cents` | ausente | O orçamento diário, em centavos de dólar (`500` é $5,00), definido em **Settings → Activity**: em 80% uma notificação, e quando acaba outra, e o Vults não inicia nenhuma sessão nova naquele dia. Nunca para nem bloqueia um agente. Ausente, sem orçamento (a partir da versão 20) |
 | `budget_told` | ausente | O passo do orçamento já avisado hoje (`2026-10-11:1` para 80%, `:2` quando acabou), para que um reinício não avise de novo (a partir da versão 20) |
 | `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som (e, no *Panel*, a sua notificação). Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
 | `history` | `true` | Guardar um histórico local dos turnos dos agentes para **Settings → Activity**: as contagens de cada turno terminado (12 semanas) e os totais de cada dia (um ano), no `vults.sqlite` da pasta de dados. Desligado, nada novo é guardado e o que existe fica; **Clear history** apaga tudo (a partir da versão 13), e o log de auditoria junto |

@@ -45,8 +45,6 @@ export interface ChatBackend {
   pickFiles?: (title: string) => void;
   /** `/remember` and `/forget` (M6): what the memory says back, or null for any other text. */
   memory?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
-  /** `/task` (W3): what the app says back once the task is kept, or null for any other text. */
-  task?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
   /** `/continue` (W7): words for a stopped session in the folder, or null for any other text. */
   handoff?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
   /** Who answers the chat's cards (ADR 0004); the app takes only less access from here. */
@@ -71,22 +69,6 @@ const MEMORY_SAID = new Set([
   tk("Nothing remembered holds that."),
   tk("Forgotten."),
   tk("More than one fact holds that; say more:"),
-  // `/task` (app/src/tasks.rs).
-  tk("Say what the task is: /task, its goal, then a line for each criterion starting with -."),
-  tk("Task added, with no criteria yet:"),
-  tk("Task added, with 1 criterion:"),
-  tk("Task added, with its criteria:"),
-  // `/delegate` (app/src/tasks.rs).
-  tk("Delegate from a conversation in a repository: a task works in one."),
-  tk("Say which agent: /delegate default claude, or /delegate default codex."),
-  tk("From now on, this project's delegated tasks start on:"),
-  tk("This project has no rule now: its delegated tasks start on Claude Code."),
-  tk("Say what to delegate: /delegate, its goal, then a line for each criterion starting with -."),
-  tk("The task is in the Nest, but it didn't start:"),
-  tk("Delegated by this project's rule to:"),
-  tk("Delegated to the default agent:"),
-  tk("Delegated away from a plan above 85% to:"),
-  tk("Delegated to the agent that finished most tasks like it here:"),
   // `/continue` (app/src/handoff.rs, runs.rs).
   tk("No session in this folder stopped in the last ten minutes."),
   tk("That session is still open in its terminal: tell it there."),
@@ -99,7 +81,6 @@ const MEMORY_SAID = new Set([
   tk("No session is being continued."),
   tk("Say what to tell it: /continue followed by your words."),
   tk("This conversation has no folder: pick one first."),
-  tk("That session is a task's: go on with it in the Nest's Tasks tab."),
   tk("That session couldn't be resumed:"),
   tk("It is still starting: try again in a moment."),
 ]);
@@ -1109,14 +1090,13 @@ export class ChatPanel {
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;
     const files = this.files;
-    // The user's own words for the memory or a task, kept by the app: never a turn, never sent to
+    // The user's own words for memory or continuation, kept by the app: never a turn, never sent to
     // a model. With files attached the command takes only the text, and the files wait for the next
     // message; where nothing keeps commands (the lab), nothing is sent.
     const memory = /^\/(remember|forget)(\s|$)/.test(text);
-    const task = /^\/(task|delegate)(\s|$)/.test(text);
     const handoff = /^\/continue(\s|$)/.test(text);
-    if (memory || task || handoff) {
-      const command = memory ? this.backend.memory : task ? this.backend.task : this.backend.handoff;
+    if (memory || handoff) {
+      const command = memory ? this.backend.memory : this.backend.handoff;
       if (!command) return;
       const answer = await command(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
       if (answer) {

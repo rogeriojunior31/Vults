@@ -94,14 +94,7 @@ send, start or open another conversation, or quit Vults.
 that stopped in the last ten minutes, as its next turn: Vults resumes it here, with its own
 settings, in its sandbox, and it shows in the flock again with its cards. Only a
 session whose process is gone: one still open in its terminal is refused, so you tell it there.
-One at a time; `/continue stop` ends it. Like `/task`, it goes to no model of Zeca's.
-
-<a id="cost-and-a-daily-budget"></a>
-
-## Tasks
-
-`/task` keeps a task and `/delegate` starts one on an agent, both sent to no model: see
-[Tasks](tasks.md).
+One at a time; `/continue stop` ends it. It goes to no model of Zeca's.
 
 ## Conversations
 

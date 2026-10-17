@@ -123,21 +123,16 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   executor, specialist identity and tool connections distinguishable.
 - Zeca's portrait may react to hover, click, work, attachment and voice states.
   Reactions communicate presence and never grant approval authority.
-- With Zeca off, preserve the current independent flock, tasks and other surfaces.
+- With Zeca off, preserve the independent flock, records, costs and other surfaces.
   New specialist Chat behavior must follow its agreed capability contract.
 
-## Agents, tasks and integrations
+## Agents and integrations
 
 - A specialist row explains name, role and executor and offers Chat and Copy/Edit.
   Put full instructions, appearance, skills and scope in its detail or editor.
 - Separate immutable presets and user profiles. Copying a preset creates a user
   profile; appearance and a role label do not grant permissions.
-- A task puts goal, stage, status and criteria before IDs and lifecycle controls.
-  Keep one execution identity across task, conversation, review and flock views.
-- Retain the current issue, budget, workspace, continuation, handoff and review
-  behavior when changing a task's presentation.
-- Keep save/discard visible in long editors. Distinguish stopping owned work,
-  deleting a task and removing its workspace.
+- Keep save/discard visible in long editors. Stopping owned work remains an explicit action.
 - An integration draft, planned tool, verified capability and active connection
   have distinct states. Show Watch, Answer and Drive separately for CLI support.
 - Imported skills retain source and revision. Import, profile activation and

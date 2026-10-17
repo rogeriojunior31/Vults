@@ -1,6 +1,6 @@
 # The Nest
 
-The Nest is Vults' own window, for when the island is too small: the whole flock, your tasks, the
+The Nest is Vults' own window, for when the island is too small: the whole flock, the
 chat, what happened and your connections. Open it from the tray icon (**Nest…**) or with the arrow
 at the top of the island's chat. It is built when you open it and gone when you close it, and it
 opens with Zeca off too, without its Chat. While it is open the island steps aside, pill and birds
@@ -10,17 +10,16 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 **Quick** or **Mini**. A card that waits is answered where you are: in the Nest while you are in it
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
-Tasks, Activity and Connections share the same black page background, raised cards,
-heading scale and neutral controls. Connections uses Activity's segmented navigation;
-Tasks and Connections use the same button and field treatment. Status colors keep
-their existing meaning, including readable finished-task controls.
+Activity and Connections share the same black page background, raised cards, heading scale
+and neutral controls. Connections uses Activity's segmented navigation. Status colors keep
+their existing meaning.
 
 Read views use the same loading, empty, filtered and error panels, with a short explanation
 and the available next action. A first read does not show empty records or zero summaries
 while loading. If refreshing Activity fails, its last loaded records, projects or recap stay
 visible with an out-of-date warning and **Try again**; a first-read failure stops the loading
 message and offers retry. Raw read errors stay under **Technical details**. Retrying only reads
-the view; it never runs a task, answers a permission or changes history settings.
+the view; it never starts a session, answers a permission or changes history settings.
 
 Minimizing the Nest returns the island and its approval shortcuts. Opening the Nest
 again restores the window; minimizing does not change its saved Room size.
@@ -46,7 +45,7 @@ bar's controls and the footer reachable.
 The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
-full-screen button. Under it, five tabs with their
+full-screen button. Under it, four tabs with their
 icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
 brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or
@@ -55,7 +54,7 @@ answer it. Settings stays a page of its own there: it is the only one that chang
 agent's config, a key, a policy or a phone, and it never shows an agent's text. The switch keeps
 the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
-pill. **Alt+1** to **Alt+5** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
+pill. **Alt+1** to **Alt+4** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
 switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.
@@ -66,7 +65,7 @@ restores the previous choice; it never reports success for an unsuccessful write
 
 **Ctrl+K**, in the Nest or the open island (when it has the keyboard: opened with Ctrl+Alt+Space, or
 in its chat), opens the palette: type to jump to a session, to start
-`/task`, `/delegate`, `/continue` or `/remember` in the chat (with Zeca on), or to open a tab. It
+`/continue` or `/remember` in the chat (with Zeca on), or to open a tab. It
 never answers a card: a session that waits for you only leads to its card.
 
 Settings uses one page heading and groups related controls consistently. General's
@@ -129,14 +128,6 @@ question. One with no card here (it asks in its terminal) says so.
 **Open terminal** shows where Vults can bring its terminal forward
 ([The island](island.md#getting-to-a-session)).
 
-## Tasks
-
-Your [tasks](tasks.md), under the roost each belongs to (the ones with none last): each with
-its goal, criteria, owner, status and cost, why the router chose its agent, its review rounds as
-marks (up to three, the last in its verdict's color), the buttons that start, review or hand it
-off, and today's spend against your daily budget (set in Activity → Cost). **New task** keeps one without the chat, which
-is how you make one with Zeca off.
-
 ## Chat
 
 The island's conversation with Zeca, wide, with replies in full Markdown (a link shows its address
@@ -172,12 +163,14 @@ What this computer keeps, read only here:
   with how many it has), a search
   by project, branch or agent, and a card for each repository a session works in: its folders and
   branches, its sessions (a click puts one in front on **Flock**), your pull requests and checks (from the GitHub card; a pull request or the default
-  branch's checks open on GitHub), what Zeca remembers of the project and what its tasks cost
+  branch's checks open on GitHub), what Zeca remembers of the project and what its agents cost
   ([Zeca's memory](memory.md#project-memory)). **Preferences ↗** opens **Settings → Projects**.
 - **History**: each finished turn of your agents, counts only. Search the loaded
   records by project, agent or status; **Clear filters** restores the list.
-- **Cost**: what the agents cost today and the **daily budget** you set here, your plans' usage
-  windows and what the agents cost over the last two weeks, against that budget, and by roost ([Cost and a daily budget](tasks.md#cost-and-a-daily-budget)).
+- **Cost**: what the agents cost today and the **daily budget** set in **Settings → Activity**,
+  your plans' usage windows and what the agents cost over the last two weeks, against that budget,
+  and by roost. **Budget settings** opens the budget editor
+  ([Cost and a daily budget](activity.md#cost-and-a-daily-budget)).
 - **Traces**: Zeca's own work, each chat turn with its model, tokens and cost, and under it each
   tool card with how long it waited for an answer; kept 30 days.
 - **Audit**: search the loaded records by project, agent, answer, tool or command.

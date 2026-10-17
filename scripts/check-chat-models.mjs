@@ -443,7 +443,7 @@ globalThis.voiceTestCreateNest = (_root, backend) => {
   const noop = () => {};
   return globalThis.voiceTestNest = { chat, current: () => "chat", open: noop, setFull: noop,
     setZeca: on => chat.setEnabled(on), setSound: noop, setSpecies: noop, setKeys: noop, setMedia: noop,
-    memoryChanged: noop, usageChanged: noop, tasksChanged: noop, relabel: noop, view: noop, shortcut: noop };
+    memoryChanged: noop, usageChanged: noop, spendChanged: noop, relabel: noop, view: noop, shortcut: noop };
 };
 globalThis.voiceTestBridge = new Proxy({}, { get: (_target, name) => {
   if (name.startsWith("on")) return cb => { voiceEvents[name] = cb; return Promise.resolve(); };
