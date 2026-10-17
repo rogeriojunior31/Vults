@@ -313,6 +313,10 @@ pub enum Delta {
     Tool {
         tool: String,
     },
+    /// Whether any reported tool call is still running; presentation only, never an approval.
+    ToolState {
+        active: bool,
+    },
     /// A command allowed for this conversation ran again without a card.
     Allowed {
         tool: String,
@@ -429,6 +433,7 @@ struct TurnSink<'a> {
     outside: &'a std::sync::Mutex<Option<String>>,
     /// Calls that will bring outside content in, by id, until they end.
     fetching: std::sync::Mutex<std::collections::HashMap<String, String>>,
+    running: std::sync::Mutex<std::collections::HashSet<String>>,
     /// Zeca's own MCP server is this conversation's (see [`brings_outside`]).
     zeca_mcp: bool,
 }
@@ -442,24 +447,37 @@ impl Sink for TurnSink<'_> {
             let delta = match event {
                 Event::Text(text) => Delta::Text { text },
                 Event::Usage(usage) => Delta::Usage(usage),
-                // Tools and the turn's end are for the review (W6) and the Nest; the chat shows
-                // neither yet, and ends its turn when the driver returns.
                 // A call that reads outside taints the conversation once it ran: a denied or failed
                 // fetch brought nothing in. The detail is the whole command, never the card's cut.
                 Event::ToolStart { id, tool, detail, .. } => {
+                    let was_empty = self.running.lock().is_ok_and(|mut calls| {
+                        let empty = calls.is_empty();
+                        calls.insert(id.clone());
+                        empty
+                    });
                     if brings_outside(&tool, &detail, self.zeca_mcp)
                         && let Ok(mut f) = self.fetching.lock()
                     {
                         f.insert(id, tool);
                     }
-                    return;
+                    if !was_empty {
+                        return;
+                    }
+                    Delta::ToolState { active: true }
                 }
                 Event::ToolEnd { id, ok } => {
                     let tool = self.fetching.lock().ok().and_then(|mut f| f.remove(&id));
                     if let (Some(tool), true) = (tool, ok) {
                         taint(self.outside, tool);
                     }
-                    return;
+                    let ended = self
+                        .running
+                        .lock()
+                        .is_ok_and(|mut calls| calls.remove(&id) && calls.is_empty());
+                    if !ended {
+                        return;
+                    }
+                    Delta::ToolState { active: false }
                 }
                 // The turn's end is for the review (W6) and the Nest; the chat ends its turn when
                 // the driver returns.
@@ -951,6 +969,7 @@ impl Chat {
                     stopped,
                     outside: &self.outside,
                     fetching: Default::default(),
+                    running: Default::default(),
                     zeca_mcp: self.provider == Provider::Claude && self.spec.mcp_config.is_some(),
                 };
                 driver.send(turn, &sink).await
@@ -1401,6 +1420,7 @@ mod tests {
             stopped: &stopped,
             outside: &outside,
             fetching: Default::default(),
+            running: Default::default(),
             zeca_mcp: false,
         };
         let cut = "Bash · curl https://example.com/aaaa…";
@@ -1469,6 +1489,7 @@ mod tests {
             stopped: &stopped,
             outside: &outside,
             fetching: Default::default(),
+            running: Default::default(),
             zeca_mcp: false,
         };
         let ls = asked("Bash · ls", None);
@@ -1504,6 +1525,7 @@ mod tests {
             stopped: &stopped,
             outside: &outside,
             fetching: Default::default(),
+            running: Default::default(),
             zeca_mcp: false,
         };
         assert_eq!(sink.ask(ls.clone()).await, Answer::Deny);
@@ -1618,6 +1640,7 @@ mod tests {
             stopped: &stopped,
             outside: &outside,
             fetching: Default::default(),
+            running: Default::default(),
             zeca_mcp: false,
         };
         let start = |id: &str, tool: &str, detail: &str| Event::ToolStart {
@@ -1660,6 +1683,7 @@ mod tests {
         .await;
         assert_eq!(outside.lock().unwrap().as_deref(), Some("Bash"));
         sink.ask(asked("Bash · rm -rf build", None)).await;
+        assert!(matches!(rx.recv().await, Some(Delta::ToolState { active: true })));
         let Some(Delta::Permission { detail, .. }) = rx.recv().await else {
             panic!("a card")
         };
@@ -1669,6 +1693,55 @@ mod tests {
         chat.set_outside(Some("WebFetch".into()));
         chat.reset();
         assert_eq!(chat.outside(), None);
+    }
+
+    #[tokio::test]
+    async fn tool_state_tracks_concurrent_calls_without_approvals_or_stopped_events() {
+        let (tx, mut rx) = mpsc::channel(16);
+        let approver = Answering(Answer::Deny, Default::default());
+        let rules = std::sync::Mutex::new(InConversation::default());
+        let stopped = std::sync::atomic::AtomicBool::new(false);
+        let outside = std::sync::Mutex::new(None);
+        let sink = TurnSink {
+            out: &tx,
+            approver: &approver,
+            rules: &rules,
+            stopped: &stopped,
+            outside: &outside,
+            fetching: Default::default(),
+            running: Default::default(),
+            zeca_mcp: false,
+        };
+        let start = |id: &str| Event::ToolStart {
+            id: id.into(),
+            tool: "Read".into(),
+            target: "Read · file.rs".into(),
+            detail: "file.rs".into(),
+        };
+        sink.event(start("a")).await;
+        sink.event(start("a")).await;
+        sink.event(start("b")).await;
+        assert!(matches!(rx.try_recv(), Ok(Delta::ToolState { active: true })));
+        assert!(rx.try_recv().is_err());
+        for id in ["missing", "a", "a"] {
+            sink.event(Event::ToolEnd {
+                id: id.into(),
+                ok: false,
+            })
+            .await;
+            assert!(rx.try_recv().is_err(), "another call still runs");
+        }
+        sink.event(Event::ToolEnd {
+            id: "b".into(),
+            ok: true,
+        })
+        .await;
+        assert!(matches!(rx.try_recv(), Ok(Delta::ToolState { active: false })));
+        assert_eq!(*outside.lock().unwrap(), None);
+        assert_eq!(*approver.1.lock().unwrap(), (0, Vec::new()));
+        stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+        sink.event(start("stopped")).await;
+        assert!(rx.try_recv().is_err());
     }
 
     #[test]

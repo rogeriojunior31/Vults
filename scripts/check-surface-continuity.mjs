@@ -228,6 +228,8 @@ for (const width of [480, 760, 900, 1180]) {
     document.body.classList.remove("still");
     character.fire("click");
     assert.equal(portrait.playing("zeca"), "hello");
+    nest.chat.element.querySelector("textarea").fire("input");
+    assert.equal(portrait.playing("zeca"), "listen", "Typing cuts a cosmetic greeting at once");
     nest.chat.receive({ kind: "permission", id: "portrait-card", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
     character.fire("click");
     assert.equal(portrait.playing("zeca"), "question", "A waiting card outranks a cosmetic reaction");
@@ -767,3 +769,22 @@ restingSky.update([readyRest], false);
 assert.equal(restFrames, 0, 'A hidden sky schedules no animation');
 window.setTimeout = restTimeout; setDayPart('day'); setMusic(false); Clock.freeze(null);
 console.log('check-surface-continuity: core-owned rest, recent green mark, immediate late mount, call-down, urgent landing, music/night, reduced motion and hidden sky');
+
+// Reduced motion still draws each state, without a repeating frame timer or advancing emotes.
+{
+  const media=window.matchMedia, timeout=window.setTimeout;
+  let reduce=true, scheduled=0;const listeners=[];
+  window.matchMedia=query=>query.includes('prefers-reduced-motion')?{get matches(){return reduce;},addEventListener:(_event,fn)=>listeners.push(fn)}:media(query);
+  window.setTimeout=()=>{scheduled++;return 0;};
+  const scene=new Scene({width:114,height:108,wire:100,zeca:{x:21,wire:100,scale:3},vults:{max:0,scale:1,at:()=>({x:0,wire:100})},skyTop:0,flights:false,reflow:false,emotes:false});
+  scene.colors={wire:'#000',claude:'#000'};
+  const frames=[];scene.cache=()=>({drawShot:(_ctx,shot)=>frames.push(JSON.stringify(shot.frame))});
+  scene.update([],null,{clip:'speak',agent:'claude'});scheduled=0;scene.draw();assert.equal(scheduled,0);
+  Clock.freeze(Clock.now()+1000);scene.draw();assert.equal(frames[0],frames[1],'Repeated paused redraws keep the same pose');
+  scene.update([],null,{clip:'question',agent:'claude'});scheduled=0;scene.draw();assert.equal(scene.playing('zeca'),'question');assert.equal(scheduled,0,'A waiting card updates its static pose without a frame loop');
+  reduce=false;listeners.forEach(fn=>fn());assert.ok(scheduled>0,'Restoring motion refreshes the active scene');scheduled=0;scene.draw();assert.ok(scheduled>0);
+  document.body.classList.add('still');scheduled=0;scene.draw();assert.equal(scheduled,0,'Manual still mode also stops the frame loop');document.body.classList.remove('still');
+  scene.setActive(false);scheduled=0;listeners.forEach(fn=>fn());assert.equal(scheduled,0,'A media change never wakes a hidden scene');
+  window.matchMedia=media;window.setTimeout=timeout;Clock.freeze(null);
+}
+console.log('check-surface-continuity: static state poses under reduced motion/manual pause, no repeating timer, live preference resume and no hidden wake');

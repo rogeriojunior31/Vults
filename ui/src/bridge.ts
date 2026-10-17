@@ -320,6 +320,7 @@ export type OpenedConversation = {
   /** A turn runs: what Zeca said so far, and the cards it waits on. */
   busy: boolean;
   partial: string;
+  tools?: boolean;
   waiting: { id: string; tool: string; target: string; outside: string | null }[];
   provider: ChatProvider;
   /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
@@ -374,6 +375,7 @@ export type ChatDelta =
   /** The user's own choice for the chat answered with no card (ADR 0004). */
   | { kind: "settled"; tool: string; target: string; allow: boolean; by: "policy" | "full-access" }
   | { kind: "tool"; tool: string; outside: boolean }
+  | { kind: "toolstate"; active: boolean }
   | { kind: "done" }
   | { kind: "stopped" }
   | { kind: "error"; message: string };

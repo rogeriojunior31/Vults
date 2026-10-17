@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: b9d15e31987e -->
+<!-- source: 1d16118ea79c -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -48,6 +48,15 @@ sessões e abre o Flock existente, salvando esse rascunho. Esses controles tamb�
 no Quick; somem durante um turno ou quando o último resultado falhou ou foi interrompido.
 As saudações e sugestões usam regras locais, sem chamada ao modelo, fala, notificação ou
 resposta a uma permissão. Com o Zeca desligado, elas não abrem o Chat.
+
+O Zeca escuta brevemente enquanto você digita, pensa enquanto espera pelo modelo ou pela
+transcrição de voz e busca enquanto uma ferramenta informada está em execução. Quando
+chega texto novo na resposta, ele move o bico e se acomoda após uma pausa curta; se o fluxo
+fica quieto, volta a pensar até o turno terminar. É uma reação visual, sem áudio de fala.
+Abrir respostas salvas ou restaurar um rascunho não a reproduz. Toda permissão pendente
+do Chat mantém a pose de pergunta, mesmo quando chegam arquivos ou outra ferramenta
+informa progresso. O movimento reduzido mostra uma pose estática para o estado atual;
+os companheiros escondidos param de desenhar.
 
 No Quick, o compositor começa com uma linha de escrita e cresce conforme você digita, até o limite de altura.
 O clipe, o microfone opcional e Enviar ficam ao lado do rascunho; o clipe mantém o nome acessível

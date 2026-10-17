@@ -118,6 +118,7 @@ pub(crate) async fn turn(
                 let mut results = Vec::new();
                 for b in blocks.iter_mut().filter(|b| b["type"] == "tool_use") {
                     let name = b["name"].as_str().unwrap_or_default().to_string();
+                    let _ = out.send(Delta::ToolState { active: true }).await;
                     let _ = out.send(Delta::Tool { tool: name.clone() }).await;
                     // Input that never read as JSON: the tool is not run with one it wasn't sent.
                     let broken = b.as_object_mut().and_then(|o| o.remove(PARTIAL)).is_some();
@@ -130,6 +131,7 @@ pub(crate) async fn turn(
                     if !error && tools::outside(tools, &name) {
                         crate::taint(outside, name.clone());
                     }
+                    let _ = out.send(Delta::ToolState { active: false }).await;
                     results.push(json!({ "type": "tool_result", "tool_use_id": b["id"], "content": text, "is_error": error }));
                 }
                 messages.push(json!({ "role": "assistant", "content": blocks }));
@@ -796,6 +798,7 @@ mod tests {
         // The kept history is the whole exchange; the chat heard each tool and the answer.
         assert_eq!(history.len(), 6);
         let mut tools_heard = 0;
+        let mut phases = Vec::new();
         let mut usage = None;
         while let Ok(d) = rx.try_recv() {
             match d {
@@ -803,11 +806,13 @@ mod tests {
                     assert_eq!(tool, "echo");
                     tools_heard += 1;
                 }
+                Delta::ToolState { active } => phases.push(active),
                 Delta::Usage(u) => usage = Some(u),
                 _ => {}
             }
         }
         assert_eq!(tools_heard, 2);
+        assert_eq!(phases, [true, false, true, false]);
         // The turn's cost is every step's.
         assert_eq!(usage.unwrap().output, 5 + 5 + 3);
     }

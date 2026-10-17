@@ -294,7 +294,33 @@ reply eligibility and the real Nest entry's failed save and retry. Native Linux 
 covers quiet/working/failed/waiting states, four languages, Black/Light in Quick and Nest,
 and Nest at 480 x 360, 760 x 600 and 1180 x 820. A local CLI fixture supplies one reply;
 no real provider request, agent command or permission answer is made. Build, workspace tests,
-evals and repository checks pass. User acceptance of N2.8 is pending; N2.9 remains open.
+evals and repository checks pass. User acceptance of N2.8 is pending.
+
+N2.9 connects Zeca's existing clips to live Chat events in Quick and the Nest. Typing and
+IME input give a brief listen cue; voice recording listens and transcription thinks.
+Reported tools search until they end; new reply text speaks visually, returning to thought
+during a quiet stream and resting shortly after a successful completion. Saved replies and
+restored drafts never replay these brief cues. Active conversation states cut a cosmetic greeting immediately. Every unanswered permission
+outranks later text, tool notes, attachments and voice. No pose sends a message or answers a card; K7's
+flock-wide mood, semantic reactions and generated speech remain outside this step.
+
+The Chat driver now forwards tool activity as presentation data, tracking simultaneous CLI
+calls by ID and bracketing API reads. The app's existing live snapshot retains this state
+when the disposable Nest is recreated. This leaves approvals and outside-content tracking
+with their existing owners. Reduced motion and manual still mode draw each current scene
+pose and head mark once, without a frame loop; active scenes refresh when the preference
+changes, while short, hidden, locked and disabled companions keep their lifecycle guards.
+Closing or hiding Chat clears its transient reaction timer.
+
+Checks cover concurrent/duplicate/unknown/stopped tool events, both API wires, live versus
+saved poses, pending-card priority, timer cleanup, late initial reads and retained reading,
+focus and caret. Native Linux validation uses a controlled local CLI's real tool/text/card
+events, without running its reported tools or answering its permission. It covers typing,
+search/thought/speech transitions, completion/expiry, saved and active recreation, Quick/Nest
+continuity, Black/Light, 480 x 360, 760 x 600 and 1180 x 820, reduced/manual motion and Zeca
+off. Voice poses use the existing display-only fixture; no microphone or speech service runs.
+Build, workspace tests (876), evals and repository checks pass. N2.1-N2.9 are implemented;
+user acceptance of N2.9 and the final N2 review remain pending.
 
 #### N3 Dictation
 

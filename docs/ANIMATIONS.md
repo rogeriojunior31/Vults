@@ -38,7 +38,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `question` | question | The curious head tilt, held |
 | `done` | done | A hop that lands with a small squash, a wing-and-leg stretch, settle, then the species' signature (see below) |
 | `fail` | fail | Feathers up, a hiss, a shake; then slumped, head hung and a wing let down |
-| `listen` | the chat's mic is open | The head cocked toward you, small nods as you speak |
+| `listen` | live typing in the chat or its mic is open | The head cocked toward you, small nods as you speak |
 | `dance` | music playing (Now playing on), Zeca on his own | A bob on every beat, swaying, a foot tapping |
 | `sleep` | sleep | Fluffed up, the head turned back onto the back so only the crown shows over the shoulders |
 | `swallow` | a file dropped on him | Down to the wire, pick it up, toss the head back and gulp |
@@ -46,7 +46,7 @@ real black vulture does, so the bird reads as a vulture before it reads as a sta
 | `preen` | the pointer resting on Zeca | A bout of grooming, head into the wing |
 | `startle` | a click on Zeca | A jump with the wings flung up, head high |
 | `hello` | the app starting | A landing squash, a bounce up stretched tall and a softer landing; then he turns his head to you and waves a wing |
-| `speak` | Unused: Zeca answers in text only, and nothing in the app plays it. It stays in the sprite and the lab, where the visual tests draw it | Facing the chat, the bill opening and shutting in an uneven beat, a blink between phrases |
+| `speak` | new reply text arriving in Chat, briefly again when the turn completes | Facing the chat, the bill opening and shutting in an uneven beat, a blink between phrases |
 | `fly` | web | A full sortie: take off, flap-flap-flap-glide out, glide home, flare, land, turn; each downstroke lifts the body a row |
 
 The `idle` clip includes a preening bout (head into the wing, quick nibbles), and `done` stretches
@@ -64,14 +64,25 @@ The island plays them so:
 
 - **doze**: a bird resting on a perch where it does not soar nods off with it after 90 seconds,
   ±12% by its session, then sleeps: Zeca on the island's empty wire and in the chat, the Nest's
-  flock and the corner widget (the island's own idle flock soars instead). With reduced motion it
-  goes straight to sleep.
+  flock and the corner widget (the island's own idle flock soars instead). With reduced motion the
+  scene keeps a static pose.
 - **wake**: work wakes a sleeping bird, which stretches before its work clip (or before it takes
   off, for web work). A permission, a question or a failure cuts straight in, with no stretch.
 - **court**: with a song playing (Now playing), the flock's idle birds court on the wire instead of
   soaring, and go back up when it stops. Zeca on his own still dances.
 - **fed**: when Zeca swallows a file in the chat, the swallow runs on into the full crop, which
   goes down while he rests; thinking, listening or another file cuts it short.
+
+In Quick and the Nest, actual conversation events drive the same portrait. Typing keeps
+`listen` for 1.5 seconds after the last input; restoring or filling a draft does not trigger
+it. Reported tool starts and ends drive `search`, including concurrent CLI calls and API
+reads. With no active tool, new reply text keeps `speak` for 1.6 seconds; a quiet stream
+returns to `think`, and successful completion gives one final short reaction. Saved replies
+never replay it. Recording uses `listen`, transcription uses `think`, and every unanswered
+permission outranks files, voice and later text. Closing, hiding, disabling Zeca or replacing
+the conversation clears brief reactions. Active Chat states interrupt a greeting or cosmetic reaction immediately. These poses
+never create speech, execute a tool or answer a permission. Reduced motion and the manual still mode draw the current pose once,
+including its head mark, without a repeating frame timer; hidden scenes stay stopped.
 
 ## Zeca notices you
 

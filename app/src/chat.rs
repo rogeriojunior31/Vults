@@ -91,6 +91,7 @@ pub fn chat_draft_set(
 struct Live {
     /// A turn runs.
     busy: bool,
+    tools: bool,
     started: bool,
     /// The turn's message and what Zeca has said in it so far: not saved until the turn ends.
     sent: Option<(String, Vec<String>)>,
@@ -413,6 +414,7 @@ pub async fn chat_send(
                             s.0.push_str(text);
                             app.state::<ChatState>().live(|l| l.text.push_str(text));
                         }
+                        Delta::ToolState { active } => app.state::<ChatState>().live(|l| l.tools = *active),
                         Delta::Error { message } => s.1 = Some(message.clone()),
                         _ => {}
                     }
@@ -909,12 +911,13 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         return Ok(None);
     };
     // Never the chat's lock: a turn holds it until it ends.
-    let (busy, started, sent, text, outside) = state
+    let (busy, tools, started, sent, text, outside) = state
         .live
         .lock()
         .map(|l| {
             (
                 l.busy,
+                l.tools,
                 l.started,
                 l.sent.clone(),
                 l.text.clone(),
@@ -941,6 +944,7 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
             });
         }
         opened.busy = true;
+        opened.tools = tools;
         opened.partial = text;
         opened.waiting = state.waiting.shown();
         for w in &mut opened.waiting {
@@ -988,6 +992,7 @@ pub struct LineView {
 pub struct Opened {
     /// A turn runs: what Zeca said so far, and the cards it waits on.
     busy: bool,
+    tools: bool,
     partial: String,
     waiting: Vec<WaitingView>,
     provider: Provider,
@@ -1182,6 +1187,7 @@ fn opened(
 ) -> Option<Opened> {
     Some(Opened {
         busy: false,
+        tools: false,
         partial: String::new(),
         waiting: Vec::new(),
         provider: engine_provider(&c.engine)?,

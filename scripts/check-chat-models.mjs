@@ -809,3 +809,46 @@ voiceSaveFails=false;roomChat.element.querySelector('.reply-chip').click();await
 assert.equal(voiceViewActions.at(-1),'flock');assert.equal(voiceRoot.querySelector('.nest-close-error').hidden,true);
 assert.equal(voiceDrafts.at(-1).text,'Keep this draft');
 console.log('check-chat-models: actual Nest core offers, saved Flock navigation, visible save failure, retained draft and explicit retry');
+
+// Drive real conversation events against a deterministic clock; reactions never perform actions.
+{
+  const realPerformance=globalThis.performance, timeout=window.setTimeout, clear=window.clearTimeout;
+  let now=10_000, next=0;const timers=new Map();
+  globalThis.performance={now:()=>now};
+  window.setTimeout=(run,ms)=>{const id=++next;timers.set(id,{run,ms});return id;};
+  window.clearTimeout=id=>timers.delete(id);
+  document.hidden=false;
+  for(const surface of ['island','nest']) {
+    const actions=[];let changes=0;
+    const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},send:async()=>actions.push('send'),decide:()=>actions.push('decide')},()=>changes++,{window:surface});await tick();chat.toggle(true);
+    const input=chat.element.querySelector('textarea');
+    input.value='Unsent question';input.listeners.input({isComposing:true});
+    assert.equal(chat.clip(now),'listen','Typing and IME composition are live listening cues');
+    const before=changes;input.value+='x';input.listeners.input();assert.equal(changes,before,'Continued typing extends the cue without repainting the surface');
+    now+=1500;const expiry=timers.get(chat.reactionTimer);assert.ok(expiry);expiry.run();assert.equal(chat.clip(now),'idle');assert.equal(changes,before+1);
+    input.listeners.input();input.value='';input.listeners.input();assert.equal(chat.clip(now),'idle');
+    chat.restoreDraft({text:'Saved draft',files:[],folder:null,provider:'claude'});assert.equal(chat.clip(now),'idle','Restoring text does not impersonate typing');
+    chat.receive({kind:'toolstate',active:true});chat.load({...conversation,busy:true,tools:false,lines:[]},false,true);assert.equal(chat.clip(now),'search','A live tool event outranks a delayed initial snapshot');
+    chat.load({...conversation,busy:true,lines:[],partial:'Earlier words',tools:true});assert.equal(chat.clip(now),'search','A recreated surface retains current tool activity');
+    const reply=chat.element.querySelector('.zeca'), log=chat.element.querySelector('.log');log.scrollTop=31;input.focus();input.setSelectionRange(2,2);
+    chat.receive({kind:'toolstate',active:false});assert.equal(chat.clip(now),'think');
+    assert.equal(chat.element.querySelector('.zeca'),reply);assert.equal(log.scrollTop,31);assert.equal(input.selectionStart,2);assert.equal(document.activeElement,input);
+    chat.receive({kind:'text',text:'New reply'});assert.equal(chat.clip(now),'speak');
+    now+=1600;assert.equal(chat.clip(now),'think','A quiet stream returns to thinking without assuming it finished');
+    chat.receive({kind:'toolstate',active:true});chat.receive({kind:'text',text:'Text beside a running call'});assert.equal(chat.clip(now),'search');
+    chat.receive({kind:'permission',id:'unanswered',tool:'Bash',target:'git status',description:null,full:null,added:0,removed:0,always:false,outside:null});
+    chat.receive({kind:'tool',tool:'read',outside:false});chat.showVoice('listening');chat.attach(['/inbox/note.txt']);
+    assert.equal(chat.clip(now),'question','Every pending card outranks later notes, voice and attachment reactions');
+    chat.showVoice('off');chat.receive({kind:'stopped'});now+=2000;assert.equal(chat.clip(now),'idle');
+    chat.load({...conversation,busy:true,lines:[]});chat.receive({kind:'text',text:'A completed reply'});chat.receive({kind:'done'});assert.equal(chat.clip(now),'speak');
+    now+=1600;timers.get(chat.reactionTimer).run();assert.equal(chat.clip(now),'idle','Completion is a brief visual reply, never an endless celebration');
+    chat.load({...conversation,lines:[{who:'zeca',text:'Saved reply'}]});assert.equal(chat.clip(now),'idle');
+    input.listeners.input();chat.toggle(false);assert.equal(chat.reactionTimer,undefined);chat.toggle(true);assert.equal(chat.clip(now),'idle');
+    input.listeners.input();document.hidden=true;for(const fn of documentEvents.visibilitychange)fn();assert.equal(chat.reactionTimer,undefined);document.hidden=false;assert.equal(chat.clip(now),'idle');
+    chat.load({...conversation,busy:true,lines:[]});chat.receive({kind:'text',text:'Partial'});chat.receive({kind:'error',message:'Controlled error'});assert.equal(chat.clip(now),'idle');
+    chat.load({...conversation,busy:true,lines:[]});chat.receive({kind:'text',text:'More'});chat.setEnabled(false);assert.equal(chat.clip(now),'idle');assert.equal(chat.reactionTimer,undefined);
+    assert.deepEqual(actions,[],'Pose changes cannot send a message, run a tool or answer a permission');
+  }
+  globalThis.performance=realPerformance;window.setTimeout=timeout;window.clearTimeout=clear;
+}
+console.log('check-chat-models: live typing/IME/tool/stream/completion poses, concurrent-tool priority, pending-card priority, static restoration, bounded expiry, hidden/off/close/error cleanup, no actions');

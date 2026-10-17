@@ -64,6 +64,7 @@ pub(crate) async fn turn(
             let content = (!reply.text.is_empty()).then(|| reply.text.clone());
             messages.push(json!({ "role": "assistant", "content": content, "tool_calls": calls }));
             for c in &reply.calls {
+                let _ = out.send(Delta::ToolState { active: true }).await;
                 let _ = out.send(Delta::Tool { tool: c.name.clone() }).await;
                 let args = if c.arguments.trim().is_empty() {
                     "{}"
@@ -81,6 +82,7 @@ pub(crate) async fn turn(
                     }
                     Err(_) => "The arguments were not valid JSON.".to_string(),
                 };
+                let _ = out.send(Delta::ToolState { active: false }).await;
                 messages.push(json!({ "role": "tool", "tool_call_id": c.id, "content": text }));
             }
             continue;
@@ -783,7 +785,7 @@ mod tests {
         ]);
         let (provider, seen) =
             crate::mock::scripted("openrouter", vec![call("c1", "one"), call("c2", "two"), answer]).await;
-        let (tx, _rx) = mpsc::channel(32);
+        let (tx, mut rx) = mpsc::channel(32);
         let mut history = Vec::new();
         turn(
             &provider,
@@ -800,6 +802,13 @@ mod tests {
         )
         .await
         .unwrap();
+        let mut phases = Vec::new();
+        while let Ok(delta) = rx.try_recv() {
+            if let Delta::ToolState { active } = delta {
+                phases.push(active);
+            }
+        }
+        assert_eq!(phases, [true, false, true, false]);
         let bodies = seen.lock().unwrap().clone();
         assert_eq!(bodies.len(), 3);
         assert_eq!(bodies[0]["tools"][0]["function"]["name"], "echo");

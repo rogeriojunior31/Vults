@@ -50,6 +50,14 @@ they disappear while a turn runs or when the latest result failed or was stopped
 Greetings and offers use local rules, without a model request, spoken line, notification
 or permission answer. With Zeca off, they do not open Chat.
 
+Zeca briefly listens while you type, thinks while waiting for the model or a voice
+transcription, and searches while a reported tool runs. As new reply text arrives, he
+moves his bill, then settles after a short pause; a quiet stream returns to thinking until
+the turn ends. This is a visual reaction, without spoken audio. Opening saved replies or
+restoring a draft does not replay it. Every unanswered Chat permission keeps his question
+pose, even when files arrive or another tool reports progress. Reduced motion shows a
+static pose for the current state; hidden companions stop drawing.
+
 In Quick, the composer starts with one writing line and grows as you type, up to its height limit.
 The paperclip, optional microphone and Send sit beside the draft; the paperclip keeps its
 **Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies

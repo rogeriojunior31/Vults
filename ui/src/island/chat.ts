@@ -314,6 +314,9 @@ export class ChatPanel {
   private folders: Folder[] = [];
   private started = false;
   private swallowUntil = 0;
+  private searching = false;
+  private reaction: { clip: "listen" | "speak"; until: number } | null = null;
+  private reactionTimer: number | undefined;
   /** The pending repaint of the reply being streamed. */
   private streaming: number | undefined;
   private dragOver = false;
@@ -413,7 +416,10 @@ export class ChatPanel {
     this.input.setAttribute("aria-controls", this.mentionMenu.id);
     this.closeMentions();
     this.planUsage.setAttribute("aria-hidden", "true");
-    document.addEventListener("visibilitychange", () => this.paintUsage());
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) this.clearReaction();
+      this.paintUsage();
+    });
     window.addEventListener?.("resize", () => this.sizeMentions());
     this.setup.setAttribute("role", "img");
     this.input.addEventListener("keydown", (e) => {
@@ -439,6 +445,12 @@ export class ChatPanel {
       this.grow();
       this.paintSend();
       this.keepDraft();
+      if (!this.busy) {
+        const before = this.clip(Clock.now());
+        if (this.input.value.trim()) this.react("listen");
+        else this.clearReaction();
+        if (before !== this.clip(Clock.now())) this.changed();
+      }
       if (!(event as InputEvent | undefined)?.isComposing) this.findMentions();
     });
     this.input.addEventListener("compositionstart", () => this.closeMentions());
@@ -903,14 +915,32 @@ export class ChatPanel {
 
   /** What Zeca does while the chat is open. */
   clip(now: number): string {
+    if (!this.enabled) return "idle";
+    if (this.messages.some(m => m.who === "ask" && !m.answer)) return "question";
     if (now < this.swallowUntil) return "swallow";
     if (this.dragOver) return "gape";
-    const last = this.messages[this.messages.length - 1];
-    if (last?.who === "ask" && !last.answer) return "question";
     if (this.voice === "listening") return "listen";
     if (this.voice === "transcribing") return "think";
-    if (this.busy) return "think";
-    return "idle";
+    if (this.busy && this.searching) return "search";
+    if (this.reaction && now < this.reaction.until) return this.reaction.clip;
+    return this.busy ? "think" : "idle";
+  }
+
+  private clearReaction(): void {
+    window.clearTimeout(this.reactionTimer);
+    this.reactionTimer = undefined;
+    this.reaction = null;
+  }
+
+  /** Only live events get a brief reaction; saved replies and hidden surfaces never replay it. */
+  private react(clip: "listen" | "speak"): void {
+    this.clearReaction();
+    if (!this.enabled || !this.open || document.hidden) return;
+    this.reaction = { clip, until: Clock.now() + (clip === "listen" ? 1500 : 1600) };
+    this.reactionTimer = window.setTimeout(() => {
+      this.clearReaction();
+      this.changed();
+    }, clip === "listen" ? 1500 : 1600);
   }
 
   // ── Voice ────────────────────────────────────────────────────────────────
@@ -1082,7 +1112,10 @@ export class ChatPanel {
 
   toggle(open = !this.open): void {
     if (open && !this.enabled) return;
-    if (!open) this.cancelVoice();
+    if (!open) {
+      this.cancelVoice();
+      this.clearReaction();
+    }
     if (open === this.open) return;
     this.open = open;
     this.closeMentions();
@@ -1182,9 +1215,18 @@ export class ChatPanel {
   receive(d: ChatDelta): void {
     this.conversationVersion++;
     if (d.kind === "done" || d.kind === "stopped" || d.kind === "error") this.liveEnded = true;
+    if (d.kind === "toolstate") {
+      this.clearReaction();
+      this.searching = d.active;
+      this.changed();
+      return;
+    }
     const last = this.messages[this.messages.length - 1];
     const follow = this.following && this.atEnd();
     if (d.kind === "text") {
+      if (d.text) {
+        this.react("speak");
+      }
       if (last?.who === "zeca" && !last.error) {
         // Streaming: only the message being written changes. Tokens come many a second, and each
         // repaint re-reads its markdown and renders the island: at most one every STREAM_MS.
@@ -1205,6 +1247,7 @@ export class ChatPanel {
       }
       this.messages.push({ who: "zeca", text: d.text });
     } else if (d.kind === "permission") {
+      this.clearReaction();
       const { id, tool, target, description, full, added, removed, always, outside } = d;
       this.messages.push({
         who: "ask",
@@ -1220,9 +1263,11 @@ export class ChatPanel {
       });
       Sound.play("approval");
     } else if (d.kind === "tool") {
+      this.clearReaction();
       // The API chat's own tools only read: a line says which one it used, no card.
       this.messages.push({ who: "note", text: t("Used {tool}", { tool: d.tool }) });
     } else if (d.kind === "settled") {
+      this.clearReaction();
       // The user's choice answered with no card: the chat says what ran, and on whose word.
       const text =
         d.by === "full-access"
@@ -1232,6 +1277,7 @@ export class ChatPanel {
             : t("Denied by your policy: {target}", { target: d.target });
       this.messages.push({ who: "note", text });
     } else if (d.kind === "allowed") {
+      this.clearReaction();
       // The user's own rule for this conversation answered: the chat says what ran.
       this.messages.push({
         who: "note",
@@ -1240,6 +1286,9 @@ export class ChatPanel {
     } else {
       // Only a turn's failure can be sent again; a mic that would not open has nothing to resend.
       const turn = this.busy;
+      this.clearReaction();
+      this.searching = false;
+      if (d.kind === "done" && turn && last?.who === "zeca" && !last.error && last.text.trim()) this.react("speak");
       this.busy = false;
       if (d.kind === "error")
         this.messages.push({ who: "zeca", text: REFERENCE_ERRORS.has(d.message) ? t(d.message) : d.message, error: true, retry: turn });
@@ -1265,6 +1314,8 @@ export class ChatPanel {
     this.conversationVersion++;
     if (s.kind !== "answered") this.sourceVersion++;
     if (s.kind === "sent") {
+      this.clearReaction();
+      this.searching = false;
       this.draftEdited = true;
       this.liveEnded = false;
       // A conversation that began in the other window: shown where and how it runs.
@@ -1388,6 +1439,8 @@ export class ChatPanel {
     this.input.value = "";
     this.input.style.height = "";
     this.keepDraft();
+    this.clearReaction();
+    this.searching = false;
     this.busy = true;
     this.turnSince = Clock.now();
     this.started = true;
@@ -1429,6 +1482,8 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider): void {
+    this.clearReaction();
+    this.searching = false;
     this.mentions = [];
     this.closeMentions();
     this.conversationVersion++;
@@ -1686,6 +1741,10 @@ export class ChatPanel {
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    if (!preserveLive) {
+      this.clearReaction();
+      this.searching = c.busy && !!c.tools;
+    }
     this.conversationVersion++;
     this.sourceVersion++;
     if (clearDraft) {

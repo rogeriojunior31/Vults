@@ -24,7 +24,7 @@ class Element {
 }
 const nodes = element => [element, ...element.children.flatMap(nodes)];
 globalThis.document = { createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag), createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; }, body: new Element("body"), addEventListener() {} };
-globalThis.window = { addEventListener() {}, matchMedia: () => ({ matches: true }), setTimeout: () => 0, clearTimeout() {} };
+globalThis.window = { addEventListener() {}, matchMedia: () => ({ matches: true, addEventListener() {} }), setTimeout: () => 0, clearTimeout() {} };
 globalThis.matchMedia = window.matchMedia;
 globalThis.ResizeObserver = class { observe() {} };
 globalThis.CSS = { escape: value => value };
@@ -181,7 +181,7 @@ console.log("check-flock-place: ok (filters/detail, ordered saves, recreation, c
 
 let stageWidth = 960, reduced = true;
 Object.defineProperty(Element.prototype, "clientWidth", { get() { return this.className === "habitat-sky" ? stageWidth : 0; } });
-window.matchMedia = () => ({ matches: reduced });
+window.matchMedia = () => ({ matches: reduced, addEventListener() {} });
 globalThis.matchMedia = window.matchMedia;
 const focused = [];
 const many = Array.from({ length: 12 }, (_, i) => ({ ...session, id: `run-${i}`, project: `Project ${i} with a long name`,
