@@ -529,7 +529,7 @@ for (const surface of ["island", "nest"]) {
   failClipboard = false; copy.listeners.click(); await tick(); assert.ok(copy.textContent.includes("Copied"));
   assert.equal(nodes(chat.element).find(n => n.tag === "textarea").value, "Keep my next question");
   chat.receive({ kind: "permission", id: "layout-scope", tool: "Bash", target: "rm /work/old", description: "Remove old output", full: "rm /work/old", added: 0, removed: 0, always: false, outside: "Web" });
-  const permission = nodes(chat.element).find(n => n.className === "ask");
+  const permission = nodes(chat.element).find(n => n.classList.contains("ask"));
   assert.ok(permission.textContent.includes("Permission required"));
   assert.ok(permission.textContent.includes("Folder")); assert.ok(permission.textContent.includes("rm /work/old"));
   assert.ok(permission.textContent.includes("content from outside"));
@@ -852,3 +852,66 @@ console.log('check-chat-models: actual Nest core offers, saved Flock navigation,
   globalThis.performance=realPerformance;window.setTimeout=timeout;window.clearTimeout=clear;
 }
 console.log('check-chat-models: live typing/IME/tool/stream/completion poses, concurrent-tool priority, pending-card priority, static restoration, bounded expiry, hidden/off/close/error cleanup, no actions');
+
+// Activity is display-only; exactly the selected pending request owns each decision.
+for (const surface of ["island", "nest"]) {
+  const decisions = [], timers = [];
+  const oldTimeout = window.setTimeout;
+  window.setTimeout = fn => { timers.push(fn); return timers.length; };
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {},
+    decide: (id, answer) => decisions.push([id, answer]), openSettings() {},
+  }, () => {}, { window: surface });
+  await tick(); chat.toggle(true); chat.element.isConnected = true; chat.element.offsetParent = {};
+  chat.load({ ...conversation, busy: true, lines: [{ who: "you", text: "Inspect this project", files: [] }] });
+  const flush = () => { for (const fn of timers.splice(0)) fn(); };
+  chat.receive({ kind: "activity", event: { type: "reasoning", text: "Provider summary <script>inert</script>" } }); flush();
+  const activity = nodes(chat.element).find(n => n.classList.contains("chat-activity"));
+  assert.ok(activity); assert.ok(!activity.open, "Thinking is available without opening itself over the reply");
+  activity.open = true;
+  chat.receive({ kind: "activity", event: { type: "start", id: "read", tool: "Read", detail: "/work/file.rs" } }); flush();
+  const tool = nodes(activity).find(n => n.classList.contains("activity-tool")); tool.open = true;
+  chat.receive({ kind: "text", text: "The readable answer" });
+  chat.receive({ kind: "activity", event: { type: "reasoning", text: " More summary." } }); flush();
+  assert.equal(nodes(chat.element).find(n => n.classList.contains("chat-activity")), activity);
+  assert.equal(activity.open, true); assert.equal(tool.open, true);
+  assert.equal(nodes(activity).find(n => n.classList.contains("activity-tool")), tool, "Streaming preserves the inspected tool and its disclosure");
+  assert.ok(activity.textContent.includes("Provider summary <script>inert</script> More summary."));
+  assert.ok(activity.textContent.includes("Running"));
+  chat.receive({ kind: "activity", event: { type: "end", id: "read", ok: false } }); flush();
+  assert.ok(tool.textContent.includes("Failed"));
+  const request = (id, target) => ({ kind: "permission", id, tool: "Bash", target, full: target, description: null, added: 0, removed: 0, always: false, outside: null });
+  chat.receive(request("first", "git status"));
+  const first = nodes(chat.element).find(n => n.classList.contains("ask"));
+  const staleAllow = nodes(first).find(n => n.tag === "button" && n.textContent === "Allow");
+  chat.receive(request("second", "git diff"));
+  assert.equal(nodes(chat.element).filter(n => n.classList.contains("ask")).length, 1);
+  assert.ok(chat.element.textContent.includes("Review approval 1 of 2"));
+  nodes(chat.element).find(n => n.attributes["aria-label"] === "Next approval").click();
+  staleAllow.click();
+  assert.deepEqual(decisions, [], "A stale button cannot answer a request now hidden behind the selected one");
+  assert.ok(chat.element.textContent.includes("Review approval 2 of 2"));
+  assert.equal(chat.answerWaiting(true), true);
+  assert.deepEqual(decisions, [["second", "allow"]]);
+  const receipt = nodes(chat.element).find(n => n.classList.contains("approval-receipt"));
+  assert.ok(receipt && !receipt.open, "Answered commands become closed receipts, with details retained");
+  assert.equal(chat.answerWaiting(false), true);
+  assert.deepEqual(decisions, [["second", "allow"], ["first", "deny"]]);
+  chat.receive(request("cancelled", "must never run"));
+  chat.receive({ kind: "done" });
+  assert.equal(chat.answerWaiting(true), false, "Even an unexpected successful end expires its pending cards");
+  assert.ok(chat.element.textContent.includes("Cancelled"));
+  const saved = { reasoning: "Saved public summary", tools: [{ id: "saved", tool: "Read", detail: "file.rs", ok: null }], decisions: [{ tool: "Bash", target: "git status", answer: "allow", by: "human" }], truncated: false };
+  chat.load({ ...conversation, lines: [{ who: "activity", text: JSON.stringify(saved), files: [] }, { who: "zeca", text: "Saved answer", files: [] }] });
+  assert.ok(chat.element.textContent.includes("Saved public summary"));
+  assert.ok(chat.element.textContent.includes("No result reported"), "Missing completion is never presented as success");
+  assert.equal(nodes(chat.element).filter(n => n.classList.contains("ask")).length, 0);
+  assert.equal(decisions.length, 2, "Restored activity cannot replay any decision");
+  chat.load({ ...conversation, busy: true, activity: saved, waiting: [{ id: "restored", tool: "Bash", target: "cut…", full: "whole command with exact scope", description: "Describe scope", added: 4, removed: 2, always: false, outside: "Web" }], lines: [] });
+  assert.ok(chat.element.textContent.includes("whole command with exact scope"));
+  assert.ok(chat.element.textContent.includes("content from outside"));
+  chat.receive({ kind: "stopped" });
+  assert.equal(chat.answerWaiting(true), false);
+  assert.equal(decisions.length, 2);
+  window.setTimeout = oldTimeout;
+}
+console.log("check-chat-models: provider-only reasoning, stable tool disclosures/status, single selected approval, stale buttons/shortcuts, compact receipts, cancellation and display-only restored activity in both surfaces");

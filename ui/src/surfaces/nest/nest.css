@@ -177,6 +177,7 @@ body {
 }
 @media (min-width: 900px) {
   .nest-chat.no-recent .nest-recent { display: none; }
+  .nest-chat:not(.no-recent) .recent-toggle { display: none; }
 }
 /* The gear: Settings. */
 /* Activity: its sub-tabs, then the part chosen. */
@@ -534,7 +535,7 @@ body {
 }
 .nest-chat .chat-character { position: relative; width: 76px; height: 72px; border-radius: var(--radius-control); }
 .nest-chat .chat-character .perch { left: 0; top: 0; transform: scale(calc(2 / 3)); transform-origin: top left; }
-.nest-chat .chat-character:hover { background: var(--float); }
+.nest-chat .chat-character:is(:hover, :focus-visible) .scene { filter: drop-shadow(0 0 2px var(--fg-dim)); }
 .nest-chat .chat-main {
   flex: 1;
   min-height: 0;
@@ -2266,6 +2267,7 @@ button.touched-row:hover,
 
 /* Narrow Room uses the same retained history, without squeezing the composer beside it. */
 @media (max-width: 899px) {
+  .nest-chat.recent-open .recent-toggle { display: none; }
   .nest-chat.recent-open .nest-recent {
     display: flex;
     flex: 1;
@@ -2377,3 +2379,13 @@ button.touched-row:hover,
 }
 
 @media (max-height: 480px) { .nest-flock-tab .flock-stage { display: none; } }
+
+@media (max-height: 480px) {
+  .nest-chat:has(.approval-queue.on) .chat-titlebar { flex-wrap: nowrap; padding: 4px 8px; gap: 4px; }
+  .nest-chat:has(.approval-queue.on) .chat-titlebar .chat-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .nest-chat:has(.approval-queue.on) .chat-titlebar .chat-head { flex: 1; order: 0; flex-wrap: nowrap; }
+  .nest-chat:has(.approval-queue.on) .chat-head .engine-model { display: none; }
+  .nest-chat:has(.approval-queue.on) .chat-head > .ghost:disabled { display: none; }
+  .nest-chat:has(.approval-queue.on) .nest-memory-toggle { width: 28px; padding: 0; }
+  .nest-chat:has(.approval-queue.on) .nest-memory-toggle span { display: none; }
+}

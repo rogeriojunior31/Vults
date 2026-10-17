@@ -26,6 +26,7 @@ const EXIT_GRACE: Duration = Duration::from_secs(2);
 pub(crate) enum Line {
     Session(String),
     Text(String),
+    Reasoning(String),
     Permission {
         id: String,
         tool: String,
@@ -154,7 +155,11 @@ pub(crate) fn parse(raw: &str) -> Line {
             .map_or(Line::Other, |s| Line::Session(s.to_string())),
         Some("stream_event") => {
             let delta = &v["event"]["delta"];
-            if v["event"]["type"] == "content_block_delta" && delta["type"] == "text_delta" {
+            if v["event"]["type"] == "content_block_delta" && delta["type"] == "thinking_delta" {
+                delta["thinking"]
+                    .as_str()
+                    .map_or(Line::Other, |t| Line::Reasoning(t.to_string()))
+            } else if v["event"]["type"] == "content_block_delta" && delta["type"] == "text_delta" {
                 delta["text"]
                     .as_str()
                     .map_or(Line::Other, |t| Line::Text(t.to_string()))
@@ -373,6 +378,7 @@ async fn run(
                 sink.event(Event::Session(s)).await;
             }
             Line::Text(t) => sink.event(Event::Text(t)).await,
+            Line::Reasoning(t) => sink.event(Event::Reasoning(t)).await,
             Line::Tools(events) => {
                 for e in events {
                     sink.event(e).await;
@@ -470,6 +476,16 @@ mod tests {
     use super::*;
 
     // Lines recorded from claude 2.1.285.
+    #[test]
+    fn thinking_stream_is_separate_from_reply_text() {
+        assert_eq!(
+            parse(
+                r#"{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"Inspect the files."}}}"#
+            ),
+            Line::Reasoning("Inspect the files.".into())
+        );
+    }
+
     #[test]
     fn stream_lines() {
         assert_eq!(

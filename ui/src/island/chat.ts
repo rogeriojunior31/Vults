@@ -2,6 +2,8 @@
 // right. Its DOM is built once and updated in place, so the input keeps its focus and text while
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
+import { applyActivity, emptyActivity, readActivity } from "./chat-activity";
+import type { ChatActivity, ChatActivityEvent } from "../bridge";
 import { Clock } from "../clock";
 import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
 import { NAME_BY_KIND } from "../agents";
@@ -152,9 +154,13 @@ type Ask = {
   /** The conversation read content from outside (through this tool) before this card. */
   outside: string | null;
   answer?: ChatAnswer;
+  cancelled?: boolean;
 };
 
+type ActivityMessage = { who: "activity"; data: ChatActivity; ended: boolean };
+
 type Message =
+  | ActivityMessage
   | { who: "you"; text: string; files: string[]; mentions?: ChatMention[] }
   | { who: "zeca"; text: string; error?: boolean; retry?: boolean }
   | { who: "note"; text: string }
@@ -296,6 +302,13 @@ export class ChatPanel {
   private engines: ChatEngines | null = null;
   private enginesAsked = 0;
   private messages: Message[] = [];
+  private selectedAsk: string | null = null;
+  private approvalQueueKey = "";
+  private askNodes = new WeakMap<Ask, HTMLElement>();
+  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, { node: HTMLDetailsElement; status: HTMLElement; detail: HTMLElement }> }>();
+  private activityTimer: number | undefined;
+  private replyBreak = false;
+  private readonly approvalQueue = el("div", { class: "approval-queue" });
   /** The rendered messages, one node per message. */
   private nodes: HTMLElement[] = [];
   private readonly appeared = new WeakSet<Message>();
@@ -592,6 +605,7 @@ export class ChatPanel {
       "div",
       { class: "chat-main" },
       head,
+      this.approvalQueue,
       el("div", { class: "log-box" }, this.log, this.jump),
       el("div", { class: "composer" },
         this.mentionMenu,
@@ -612,6 +626,7 @@ export class ChatPanel {
   /** Its words again: the language is known now, or changed. The panel is built before the app
    *  says which one, so the first call comes from there too. */
   relabel(): void {
+    this.askNodes = new WeakMap();
     this.input.placeholder = t("Ask Zeca…");
     this.input.setAttribute("aria-label", t("Ask Zeca…"));
     this.input.title = t("Type @ to reference a session or project. References limit this turn's flock reads.");
@@ -1215,6 +1230,17 @@ export class ChatPanel {
   receive(d: ChatDelta): void {
     this.conversationVersion++;
     if (d.kind === "done" || d.kind === "stopped" || d.kind === "error") this.liveEnded = true;
+    if (d.kind === "activity") {
+      const activity = this.turnActivity();
+      if (d.event.type === "start") this.replyBreak = true;
+      applyActivity(activity.data, d.event);
+      if (this.activityTimer === undefined) this.activityTimer = window.setTimeout(() => {
+        this.activityTimer = undefined;
+        const follow = this.following && this.atEnd();
+        this.paint(); this.after(follow); this.changed();
+      }, STREAM_MS);
+      return;
+    }
     if (d.kind === "toolstate") {
       this.clearReaction();
       this.searching = d.active;
@@ -1227,7 +1253,7 @@ export class ChatPanel {
       if (d.text) {
         this.react("speak");
       }
-      if (last?.who === "zeca" && !last.error) {
+      if (last?.who === "zeca" && !last.error && !this.replyBreak) {
         // Streaming: only the message being written changes. Tokens come many a second, and each
         // repaint re-reads its markdown and renders the island: at most one every STREAM_MS.
         last.text += d.text;
@@ -1245,6 +1271,7 @@ export class ChatPanel {
         }
         return;
       }
+      this.replyBreak = false;
       this.messages.push({ who: "zeca", text: d.text });
     } else if (d.kind === "permission") {
       this.clearReaction();
@@ -1263,26 +1290,18 @@ export class ChatPanel {
       });
       Sound.play("approval");
     } else if (d.kind === "tool") {
+      this.replyBreak = true;
       this.clearReaction();
       // The API chat's own tools only read: a line says which one it used, no card.
-      this.messages.push({ who: "note", text: t("Used {tool}", { tool: d.tool }) });
+      const activity = this.turnActivity();
+      if (!activity.data.tools.some(tool => tool.tool === d.tool)) applyActivity(activity.data, { type: "start", id: `api:${activity.data.tools.length}`, tool: d.tool, detail: "" });
     } else if (d.kind === "settled") {
       this.clearReaction();
       // The user's choice answered with no card: the chat says what ran, and on whose word.
-      const text =
-        d.by === "full-access"
-          ? t("Ran with full access: {target}", { target: d.target })
-          : d.allow
-            ? t("Allowed by your policy: {target}", { target: d.target })
-            : t("Denied by your policy: {target}", { target: d.target });
-      this.messages.push({ who: "note", text });
+      this.addActivity({ type: "decision", tool: d.tool, target: d.target, answer: d.allow ? "allow" : "deny", by: d.by });
     } else if (d.kind === "allowed") {
       this.clearReaction();
-      // The user's own rule for this conversation answered: the chat says what ran.
-      this.messages.push({
-        who: "note",
-        text: t("Allowed for this conversation: {target}", { target: d.target }),
-      });
+      this.addActivity({ type: "decision", tool: d.tool, target: d.target, answer: "allow", by: "conversation" });
     } else {
       // Only a turn's failure can be sent again; a mic that would not open has nothing to resend.
       const turn = this.busy;
@@ -1294,10 +1313,10 @@ export class ChatPanel {
         this.messages.push({ who: "zeca", text: REFERENCE_ERRORS.has(d.message) ? t(d.message) : d.message, error: true, retry: turn });
       if (d.kind === "stopped")
         this.messages.push({ who: "note", text: t("Stopped.") });
+      for (const message of this.messages) if (message.who === "activity") message.ended = true;
       // Anything still waiting is a no now: it can't be answered any more.
       for (const m of this.messages)
-        if (m.who === "ask" && !m.answer && d.kind !== "done")
-          m.answer = "deny";
+        if (m.who === "ask" && !m.answer) { m.answer = "deny"; m.cancelled = true; this.askNodes.delete(m); }
     }
     this.paint();
     this.after(follow);
@@ -1341,6 +1360,7 @@ export class ChatPanel {
       const m = this.messages.find((m): m is Ask => m.who === "ask" && m.id === s.id);
       if (!m || m.answer) return;
       m.answer = s.answer;
+      this.askNodes.delete(m);
       this.paint();
       this.changed();
     }
@@ -1349,9 +1369,18 @@ export class ChatPanel {
   /** Answers the permission waiting in the chat, if one is; for the global shortcuts. */
   answerWaiting(allow: boolean): boolean {
     if (!this.open || !this.enabled || document.hidden || !this.element.isConnected || this.element.offsetParent === null) return false;
-    const waiting = [...this.messages]
-      .reverse()
-      .find((m): m is Ask => m.who === "ask" && !m.answer);
+    const waiting = this.pendingAsk();
+    const node = waiting && this.askNodes.get(waiting);
+    if (node) {
+      const card = node.getBoundingClientRect(), viewport = this.log.getBoundingClientRect();
+      if (Number.isFinite(card.top)) {
+        const operation = node.querySelector(".code")?.getBoundingClientRect();
+        const actions = node.querySelector(".actions")?.getBoundingClientRect();
+        if (card.bottom <= viewport.top || card.top >= viewport.bottom || !operation || !actions
+          || operation.bottom <= viewport.top || operation.top >= viewport.bottom
+          || actions.top < viewport.top || actions.bottom > viewport.bottom) return false;
+      }
+    }
     if (!waiting) return false;
     this.answer(waiting, allow ? "allow" : "deny");
     return true;
@@ -1507,11 +1536,13 @@ export class ChatPanel {
   }
 
   private answer(m: Ask, answer: ChatAnswer): void {
-    if (m.answer) return;
+    if (m.answer || this.pendingAsk() !== m || !this.messages.includes(m) || !this.enabled || !this.open || document.hidden || !this.element.isConnected || this.element.offsetParent === null) return;
     m.answer = answer;
+    this.askNodes.delete(m);
     Sound.play(answer === "deny" ? "deny" : "allow");
     this.backend.decide(m.id, answer);
     this.paint();
+    this.reviewApproval();
     this.changed();
   }
 
@@ -1575,6 +1606,7 @@ export class ChatPanel {
   }
 
   private messageNode(m: Message): HTMLElement {
+    if (m.who === "activity") return this.activityNode(m);
     if (m.who === "zeca") {
       const last = m === this.messages[this.messages.length - 1];
       if (m.error) {
@@ -1618,7 +1650,113 @@ export class ChatPanel {
     return this.askNode(m);
   }
 
+  private turnActivity(): ActivityMessage {
+    let start = this.messages.length - 1;
+    while (start >= 0 && this.messages[start].who !== "you") start--;
+    const existing = this.messages.slice(start + 1).find((m): m is ActivityMessage => m.who === "activity");
+    if (existing) return existing;
+    const activity: ActivityMessage = { who: "activity", data: emptyActivity(), ended: !this.busy };
+    this.messages.splice(start + 1, 0, activity);
+    return activity;
+  }
+
+  private addActivity(event: ChatActivityEvent): void {
+    applyActivity(this.turnActivity().data, event);
+  }
+
+  private activityNode(m: ActivityMessage): HTMLElement {
+    let kept = this.activityNodes.get(m);
+    if (!kept) {
+      const summary = el("summary");
+      const reasoning = el("pre", { class: "activity-reasoning" });
+      reasoning.tabIndex = 0;
+      reasoning.setAttribute("role", "region");
+      reasoning.setAttribute("aria-label", t("Thinking details"));
+      const tools = el("div", { class: "activity-tools" });
+      const decisions = el("div", { class: "activity-decisions" });
+      const warning = el("p", { class: "activity-warning" });
+      const node = el("details", { class: "chat-activity" }, summary,
+        el("div", { class: "activity-body" }, el("h4", { text: t("Thinking details") }), reasoning, tools, decisions, warning));
+      node.addEventListener("toggle", () => this.changed());
+      kept = { node, summary, reasoning, tools, decisions, warning, toolNodes: new Map() };
+      this.activityNodes.set(m, kept);
+    }
+    const { data } = m;
+    kept.summary.textContent = data.tools.length === 1 ? t("Activity · 1 tool") : data.tools.length ? t("Activity · {n} tools", { n: data.tools.length }) : t("Activity");
+    const reasoning = data.reasoning.trim() ? data.reasoning : t("This engine has not provided thinking details.");
+    if (kept.reasoning.textContent !== reasoning) kept.reasoning.textContent = reasoning;
+    const toolNodes = data.tools.map(tool => {
+      const status = tool.ok === true ? t("Completed") : tool.ok === false ? t("Failed") : m.ended ? t("No result reported") : t("Running");
+      let entry = kept!.toolNodes.get(tool.id);
+      if (!entry) {
+        const label = el("span", { class: "tool-status" });
+        const detail = el("pre", { text: tool.detail || t("No arguments reported.") });
+        detail.tabIndex = 0;
+        detail.setAttribute("role", "region");
+        detail.setAttribute("aria-label", tool.tool);
+        const node = el("details", { class: "activity-tool" }, el("summary", {}, el("span", { text: tool.tool }), label), detail);
+        node.addEventListener("toggle", () => this.changed());
+        entry = { node, status: label, detail };
+        kept!.toolNodes.set(tool.id, entry);
+      }
+      entry.status.textContent = status;
+      entry.status.classList.toggle("failed", tool.ok === false);
+      return entry.node;
+    });
+    if (kept.tools.children.length !== toolNodes.length) kept.tools.replaceChildren(...toolNodes);
+    kept.decisions.replaceChildren(...data.decisions.map(d => {
+      const text = d.by === "full-access" ? t("Ran with full access: {target}", { target: d.target })
+        : d.by === "policy" ? (d.answer === "deny" ? t("Denied by your policy: {target}", { target: d.target }) : t("Allowed by your policy: {target}", { target: d.target }))
+        : d.by === "conversation" || d.answer === "always" ? t("Allowed for this conversation: {target}", { target: d.target })
+        : d.answer === "deny" ? t("You denied: {target}", { target: d.target }) : t("You allowed: {target}", { target: d.target });
+      return el("p", { text });
+    }));
+    kept.warning.textContent = data.truncated ? t("Activity details were shortened to keep this conversation responsive.") : "";
+    return kept.node;
+  }
+
+  private pendingAsk(): Ask | undefined {
+    const pending = this.messages.filter((m): m is Ask => m.who === "ask" && !m.answer);
+    const selected = pending.find(m => m.id === this.selectedAsk) ?? pending[0];
+    this.selectedAsk = selected?.id ?? null;
+    return selected;
+  }
+
+  private reviewApproval(): void {
+    const request = this.pendingAsk();
+    const node = request && this.askNodes.get(request);
+    if (!node) return;
+    node.scrollIntoView?.({ block: "nearest" });
+    node.querySelector<HTMLElement>(".code")?.scrollIntoView?.({ block: "nearest" });
+    node.querySelector<HTMLButtonElement>(".actions button")?.focus({ preventScroll: true });
+  }
+
+  private paintApprovalQueue(): void {
+    const pending = this.messages.filter((m): m is Ask => m.who === "ask" && !m.answer);
+    const key = JSON.stringify([locale(), this.pendingAsk()?.id, pending.map(m => m.id)]);
+    if (key === this.approvalQueueKey) return;
+    this.approvalQueueKey = key;
+    this.approvalQueue.classList.toggle("on", pending.length > 0);
+    if (!pending.length) { this.approvalQueue.replaceChildren(); return; }
+    const current = this.pendingAsk()!;
+    const select = (step: number) => {
+      this.selectedAsk = pending[(pending.indexOf(current) + step + pending.length) % pending.length].id;
+      this.paint(); this.reviewApproval(); this.changed();
+    };
+    const review = el("button", { class: "approval-review", text: t("Review approval {index} of {total}", { index: pending.indexOf(current) + 1, total: pending.length }), onclick: () => this.reviewApproval() });
+    const previous = el("button", { text: "‹", onclick: () => select(-1) });
+    previous.setAttribute("aria-label", t("Previous approval"));
+    const next = el("button", { text: "›", onclick: () => select(1) });
+    next.setAttribute("aria-label", t("Next approval"));
+    const settings = this.backend.openSettings ? el("button", { class: "approval-settings", text: t("Permissions"), onclick: () => this.backend.openSettings?.() }) : null;
+    if (settings) settings.title = t("To reduce repeated requests, choose your policies in Settings. Destructive actions still ask.");
+    this.approvalQueue.replaceChildren(review, ...(pending.length > 1 ? [previous, next] : []), ...(settings ? [settings] : []));
+  }
+
   private askNode(m: Ask): HTMLElement {
+    if (!m.answer && this.pendingAsk() !== m) return el("span", { class: "chat-hidden" });
+    const kept = this.askNodes.get(m);
+    if (kept) return kept;
     const diff =
       m.added || m.removed
         ? el(
@@ -1653,7 +1791,7 @@ export class ChatPanel {
     operation.tabIndex = 0;
     operation.setAttribute("role", "region");
     operation.setAttribute("aria-label", t("Code"));
-    return el(
+    const card = el(
       "div",
       { class: `ask${m.answer ? ` ${m.answer === "always" ? "allow" : m.answer}` : ""}` },
       el(
@@ -1684,16 +1822,26 @@ export class ChatPanel {
             "div",
             { class: `settled-label ${m.answer === "always" ? "allow" : m.answer}` },
             icon(m.answer === "deny" ? "close" : "check", 12, 2.6),
-            el("span", { text: settled[m.answer] }),
+            el("span", { text: m.cancelled ? t("Cancelled") : settled[m.answer] }),
           )
         : el(
             "div",
             { class: "actions" },
             button(t("Deny"), !m.always || m.outside ? "primary" : "secondary", "deny", this.keys.deny),
             button(t("Allow"), !m.always || m.outside ? "secondary" : "primary", "allow", this.keys.allow),
-            m.always ? always : null,
+            m.always ? el("details", { class: "ask-more" }, el("summary", { class: "btn secondary", text: t("More choices") }), always) : null,
           ),
     );
+    if (m.answer) {
+      const receipt = el("details", { class: "approval-receipt" }, el("summary", { text: `${m.cancelled ? t("Cancelled") : settled[m.answer]} · ${m.tool}` }), card);
+      receipt.addEventListener("toggle", () => this.changed());
+      this.askNodes.set(m, receipt);
+      return receipt;
+    }
+    if (!this.appeared.has(m)) card.classList.add("approval-enter");
+    card.addEventListener("animationend", event => { if (event.target === card) card.classList.remove("approval-enter"); });
+    this.askNodes.set(m, card);
+    return card;
   }
 
   /** Re-renders one message in place. */
@@ -1768,6 +1916,7 @@ export class ChatPanel {
     const saved = c.lines.map((l): Message => {
       if (l.who === "you") return { who: "you", text: l.text, files: l.files };
       if (l.who === "error") return { who: "zeca", text: l.text, error: true };
+      if (l.who === "activity") return { who: "activity", data: readActivity(l.text), ended: true };
       if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
       return { who: "zeca", text: l.text };
     });
@@ -1790,9 +1939,10 @@ export class ChatPanel {
       this.busy = true;
       // Its start is not known here: counted from now.
       this.turnSince = Clock.now();
+      if (c.activity) this.messages.push({ who: "activity", data: readActivity(JSON.stringify(c.activity)), ended: false });
       if (c.partial) this.messages.push({ who: "zeca", text: c.partial });
       for (const w of c.waiting)
-        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: null, full: null, added: 0, removed: 0, always: false, outside: w.outside });
+        this.messages.push({ who: "ask", id: w.id, tool: w.tool, target: w.target, description: w.description ?? null, full: w.full ?? null, added: w.added ?? 0, removed: w.removed ?? 0, always: w.always ?? false, outside: w.outside });
     }
     if (clearDraft) this.keepDraft();
     for (const message of this.messages) this.appeared.add(message);
@@ -2251,7 +2401,7 @@ export class ChatPanel {
     const words = el("span", { class: "typing-words" });
     const tick = () => {
       const ms = Clock.now() - this.turnSince;
-      words.textContent = ms < SHOW_ELAPSED_MS ? t("Thinking…") : t("Thinking… {seconds} s", { seconds: Math.floor(ms / 1000) });
+      words.textContent = ms < SHOW_ELAPSED_MS ? (this.searching ? t("Using tools…") : t("Working…")) : t("Working… {seconds} s", { seconds: Math.floor(ms / 1000) });
     };
     tick();
     this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})), words);
@@ -2265,11 +2415,12 @@ export class ChatPanel {
     this.paintOffers();
     this.paintHead();
     this.paintVoice();
-    const last = this.messages[this.messages.length - 1];
     // While a turn runs and nothing waits on the user: before the first word, and between a
     // reply's words and its tools, when the CLI can go quiet for a while.
-    const waiting = this.busy && !(last?.who === "ask" && !last.answer);
+    const waiting = this.busy && !this.pendingAsk();
     this.paintThinking(waiting);
+    this.paintApprovalQueue();
+    const focused = document.activeElement && this.log.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
     this.nodes = this.messages.map((m) => this.node(m));
     this.log.replaceChildren(
       ...(this.messages.length
@@ -2280,6 +2431,7 @@ export class ChatPanel {
           ]),
       ...(waiting && this.thinking ? [this.thinking] : []),
     );
+    if (focused?.isConnected) focused.focus({ preventScroll: true });
     for (const path of this.attachmentNodes.keys()) if (!this.files.includes(path)) this.attachmentNodes.delete(path);
     const attachments = this.files.map((file) => {
       const kept = this.attachmentNodes.get(file);

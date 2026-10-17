@@ -232,6 +232,33 @@ Everything happens on this computer: whisper.cpp transcribes the audio in memory
 never saved or sent anywhere. The models and the detector are checked against their known SHA-256
 before they are used.
 
+## Reading a turn
+
+![One pending approval with its command and actions in the minimum Nest](../assets/nest-chat-approval.png)
+
+The reply stays separate from a collapsed **Activity** disclosure. Open it for the readable
+thinking supplied by the engine and the tools it reported. Each tool exposes its arguments or
+command and its reported completion or failure. Missing results remain **No result reported**;
+Vults does not invent thought text or treat elapsed turn time as measured thinking time. Codex
+shows its public reasoning summaries; engines that do not supply details say so.
+
+Only one pending approval is expanded at a time. **Review approval** returns to that exact
+request; Previous/Next selects another without answering it. New cards enter upward with a short
+transition, disabled with reduced motion. Answered cards collapse into receipts with their scope
+available in detail. A turn ending expires unanswered cards as **Cancelled**. Reading older text
+keeps your scroll position; the review control remains available above the transcript.
+
+Activity is stored locally with the conversation, with recognized secrets redacted, bounded detail
+size and an explicit notice when shortened. Reopening it shows history only: it never replays a command or permission answer.
+Live requests keep their full details when you switch between Quick and Nest.
+
+**Permissions** beside the pending queue opens **Settings → Chat & voice**. **Asks first** asks
+for each command or edit. To reduce repeats, choose your accepted policies there; uncovered calls
+and destructive actions still ask. **Always in this chat** covers only the same exact eligible
+call until the conversation ends. Zeca is instructed to prefer file-reading and search tools for
+simple inspection, and to avoid unnecessary tool calls in ordinary conversation. This guidance
+does not change the permission checks. Collapsing a card never grants access.
+
 ## What it may do
 
 ![Zeca asks in the chat before running a command](../assets/island-chat-permission.png)

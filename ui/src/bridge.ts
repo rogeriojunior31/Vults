@@ -321,7 +321,8 @@ export type OpenedConversation = {
   busy: boolean;
   partial: string;
   tools?: boolean;
-  waiting: { id: string; tool: string; target: string; outside: string | null }[];
+  activity?: ChatActivity;
+  waiting: { id: string; tool: string; target: string; outside: string | null; description?: string | null; full?: string | null; added?: number; removed?: number; always?: boolean }[];
   provider: ChatProvider;
   /** Who it talks to: Claude, Codex, or the API provider it was pinned to. */
   label: string;
@@ -355,8 +356,21 @@ export type ChatAnswer = "allow" | "deny" | "always";
 /** Who answers the chat's cards (ADR 0004): a card, the user's policies, or full access. */
 export type ChatAccess = "ask" | "policies" | "full";
 
+export type ChatActivityEvent =
+  | { type: "reasoning"; text: string }
+  | { type: "start"; id: string; tool: string; detail: string }
+  | { type: "end"; id: string; ok: boolean }
+  | { type: "decision"; tool: string; target: string; answer: string; by: string };
+export type ChatActivity = {
+  reasoning: string;
+  tools: { id: string; tool: string; detail: string; ok: boolean | null }[];
+  decisions: { tool: string; target: string; answer: string; by: string }[];
+  truncated: boolean;
+};
+
 export type ChatDelta =
   | { kind: "text"; text: string }
+  | { kind: "activity"; event: ChatActivityEvent }
   | {
       kind: "permission";
       id: string;

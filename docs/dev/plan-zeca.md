@@ -320,7 +320,25 @@ search/thought/speech transitions, completion/expiry, saved and active recreatio
 continuity, Black/Light, 480 x 360, 760 x 600 and 1180 x 820, reduced/manual motion and Zeca
 off. Voice poses use the existing display-only fixture; no microphone or speech service runs.
 Build, workspace tests (876), evals and repository checks pass. N2.1-N2.9 are implemented;
-user acceptance of N2.9 and the final N2 review remain pending.
+Final N2 acceptance is recorded below.
+
+N2 acceptance follow-up (2026-10-17): Chat keeps provider reasoning and tool arguments/status in
+one closed Activity disclosure per turn. Only the selected pending approval expands; explicit
+Review and Previous/Next retain exact request ownership, and answered cards become closed receipts.
+Ended requests expire as Cancelled. Commands, folder and decision actions fit the 480 x 360 Nest;
+Always moves into More choices. New approvals enter upward, respecting reduced/manual motion.
+The portrait hover follows the sprite silhouette. CLI guidance now avoids unnecessary tools and
+prefers reading/search tools for simple inspection; permission authority and access remain unchanged.
+
+Bounded local activity survives saved/live Quick/Nest recreation; recognized secrets are redacted
+before persistence. Public Codex summaries and Claude thinking events remain separate from reply
+text. Missing reasoning/results are explicit. Checks exercise exact selection, stale controls,
+shortcuts, inert restoration, tool completion/failure, truncation and redaction. Native fixtures
+cover actual stream/card events, command/actions together at minimum size, Black/Light, manual
+reading, disclosure/restoration and cancellation without executing tools or clicking approvals.
+On 2026-10-17, the user accepted N2.1-N2.9 and these follow-ups for the N2 PR. Earlier
+per-slice pending notes record their delivery-time status. The broader desktop matrix and
+R3 release smoke remain separate; N3 follows the N2 merge.
 
 #### N3 Dictation
 

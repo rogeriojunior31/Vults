@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 1d16118ea79c -->
+<!-- source: 5741823445ff -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -259,6 +259,36 @@ aparece enquanto você fala; no processador, escolha o *Base*.
 Tudo acontece neste computador: o whisper.cpp transcreve o áudio na memória, e o áudio nunca é salvo
 nem enviado para lugar nenhum. Os modelos e o detector são conferidos contra o SHA-256 conhecido
 deles antes de serem usados.
+
+<a id="reading-a-turn"></a>
+## Lendo um turno
+
+![Uma aprovação pendente com seu comando e ações no Ninho mínimo](../../assets/nest-chat-approval.png)
+
+A resposta fica separada de uma seção **Atividade** recolhida. Abra para ver o pensamento
+legível fornecido pelo motor e as ferramentas que ele informou. Cada ferramenta mostra seus
+argumentos ou comando e a conclusão ou falha informada. Resultados ausentes ficam como **Nenhum
+resultado informado**; o Vults não inventa pensamento nem trata a duração do turno como tempo
+medido de pensamento. O Codex mostra seus resumos públicos de raciocínio; motores que não fornecem
+detalhes informam isso.
+
+Somente uma aprovação pendente fica expandida por vez. **Revisar aprovação** volta àquela
+solicitação exata; Anterior/Próxima seleciona outra sem responder. Cartões novos entram subindo
+com uma transição curta, desativada com movimento reduzido. Cartões respondidos viram registros
+recolhidos com o escopo disponível nos detalhes. O fim do turno expira os cartões sem resposta como
+**Cancelado**. Ler mensagens anteriores preserva sua rolagem; o controle de revisão continua
+acessível acima da conversa.
+
+A atividade é salva localmente com a conversa, com segredos reconhecidos ocultados, tamanho de detalhes limitado e aviso explícito
+quando reduzida. Reabrir mostra apenas o histórico: nunca repete um comando ou resposta de permissão.
+Solicitações em andamento mantêm seus detalhes completos ao alternar entre Quick e Ninho.
+
+**Permissões** ao lado da fila abre **Configurações → Chat e voz**. **Pergunta antes** pede
+aprovação para cada comando ou edição. Para reduzir repetições, escolha suas políticas aceitas ali;
+chamadas não cobertas e ações destrutivas continuam perguntando. **Sempre neste chat** cobre apenas
+a mesma chamada exata elegível até a conversa acabar. O Zeca recebe a orientação de preferir ferramentas
+de leitura e busca para inspeções simples e evitar chamadas desnecessárias em conversas comuns. Essa
+orientação não muda as verificações de permissão. Recolher um cartão nunca concede acesso.
 
 <a id="what-it-may-do"></a>
 

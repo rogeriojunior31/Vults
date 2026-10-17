@@ -92,6 +92,8 @@ struct Live {
     /// A turn runs.
     busy: bool,
     tools: bool,
+    activity: vults_chat::activity::Activity,
+    permissions: HashMap<String, vults_chat::Detail>,
     started: bool,
     /// The turn's message and what Zeca has said in it so far: not saved until the turn ends.
     sent: Option<(String, Vec<String>)>,
@@ -147,7 +149,7 @@ impl Waiting {
                         id: id.clone(),
                         tool: a.tool.clone(),
                         target: a.target.clone(),
-                        outside: None,
+                        detail: Default::default(),
                     })
                     .collect()
             })
@@ -430,9 +432,39 @@ pub async fn chat_send(
                         _ => {}
                     }
                 }
-                if let Delta::Permission { detail, .. } = &delta {
+                app.state::<ChatState>().live(|l| match &delta {
+                    Delta::Activity { event } => l.activity.apply(event),
+                    Delta::Allowed { tool, target } => {
+                        l.activity.apply(&vults_chat::activity::Event::Decision {
+                            tool: tool.clone(),
+                            target: target.clone(),
+                            answer: "allow".into(),
+                            by: "conversation".into(),
+                        })
+                    }
+                    Delta::Settled {
+                        tool,
+                        target,
+                        allow,
+                        by,
+                    } => l.activity.apply(&vults_chat::activity::Event::Decision {
+                        tool: tool.clone(),
+                        target: target.clone(),
+                        answer: if *allow { "allow" } else { "deny" }.into(),
+                        by: match by {
+                            vults_chat::SettledBy::Policy => "policy",
+                            vults_chat::SettledBy::FullAccess => "full-access",
+                        }
+                        .into(),
+                    }),
+                    _ => {}
+                });
+                if let Delta::Permission { id, detail, .. } = &delta {
                     let outside = detail.outside.clone();
-                    app.state::<ChatState>().live(|l| l.outside = outside);
+                    app.state::<ChatState>().live(|l| {
+                        l.outside = outside;
+                        l.permissions.insert(id.clone(), detail.clone());
+                    });
                 }
                 if matches!(
                     delta,
@@ -613,7 +645,13 @@ pub async fn chat_send(
             crate::journal::chat(&app, "zeca", &folder, &reply, outside.is_some());
         }
         let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
+        let activity = state.live.lock().ok().and_then(|l| {
+            (!l.activity.is_empty())
+                .then(|| serde_json::to_string(&l.activity.for_history()).ok())
+                .flatten()
+        });
         for (who, text) in [
+            ("activity", activity),
             ("zeca", Some(reply).filter(|r| !r.is_empty())),
             ("error", error),
             ("stopped", stopped.then(String::new)),
@@ -813,6 +851,26 @@ pub fn chat_decide(
             ChatAnswer::Always => (vults_chat::Answer::AllowInConversation, Act::AllowInConversation),
         };
         let allow = reply.allows();
+        let full_target = state
+            .live
+            .lock()
+            .ok()
+            .and_then(|mut l| l.permissions.remove(&id))
+            .and_then(|d| d.full)
+            .unwrap_or_else(|| asked.target.clone());
+        state.live(|l| {
+            l.activity.apply(&vults_chat::activity::Event::Decision {
+                tool: asked.tool.clone(),
+                target: full_target,
+                answer: match answer {
+                    ChatAnswer::Deny => "deny",
+                    ChatAnswer::Allow => "allow",
+                    ChatAnswer::Always => "always",
+                }
+                .into(),
+                by: "human".into(),
+            })
+        });
         let _ = asked.answer.send(reply);
         sync(
             window.app_handle(),
@@ -911,7 +969,7 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         return Ok(None);
     };
     // Never the chat's lock: a turn holds it until it ends.
-    let (busy, tools, started, sent, text, outside) = state
+    let (busy, tools, started, sent, text, outside, activity, permissions) = state
         .live
         .lock()
         .map(|l| {
@@ -922,6 +980,8 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
                 l.sent.clone(),
                 l.text.clone(),
                 l.outside.clone(),
+                l.activity.clone(),
+                l.permissions.clone(),
             )
         })
         .unwrap_or_default();
@@ -946,9 +1006,13 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
         opened.busy = true;
         opened.tools = tools;
         opened.partial = text;
+        opened.activity = activity;
         opened.waiting = state.waiting.shown();
         for w in &mut opened.waiting {
-            w.outside.clone_from(&outside);
+            if let Some(detail) = permissions.get(&w.id) {
+                w.detail = detail.clone();
+            }
+            w.detail.outside.clone_from(&outside);
         }
     }
     Ok(Some(opened))
@@ -976,7 +1040,8 @@ pub struct WaitingView {
     id: String,
     tool: String,
     target: String,
-    outside: Option<String>,
+    #[serde(flatten)]
+    detail: vults_chat::Detail,
 }
 
 /// One line of a saved conversation, as the chat shows it.
@@ -994,6 +1059,7 @@ pub struct Opened {
     busy: bool,
     tools: bool,
     partial: String,
+    activity: vults_chat::activity::Activity,
     waiting: Vec<WaitingView>,
     provider: Provider,
     label: String,
@@ -1189,6 +1255,7 @@ fn opened(
         busy: false,
         tools: false,
         partial: String::new(),
+        activity: Default::default(),
         waiting: Vec::new(),
         provider: engine_provider(&c.engine)?,
         label: engine_label(&c.engine),

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: cbe5a6279ecc -->
+<!-- source: 2545882cb5c8 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -164,9 +164,11 @@ A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um lin
 e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
 são respondidos aqui também, com **Deny**, **Allow** e **Always in this chat**, como na ilha.
 A barra de título traz o título da conversa, a pílula do motor (como na ilha: o motor na cor dele e
-o modelo; o menu dela traz os motores, os modelos e o esforço), a pasta e dois botões de painel. O
+o modelo; o menu dela traz os motores, os modelos e o esforço), a pasta e os controles de painel disponíveis. O
 campo de texto tem um clipe: os arquivos que você escolhe vão para este chat, como soltar na ilha. O botão de painel à esquerda abre **Recent**: uma coluna numa janela larga ou no Full,
-ou uma visão própria com **Back to Chat** no Room estreito. As conversas são agrupadas por data,
+ou uma visão própria com **Back to Chat** no Room estreito. Enquanto Recent está visível, seu próprio
+botão de recolher (janela larga) ou Back to Chat (janela estreita) substitui o botão da barra de título.
+As conversas são agrupadas por data,
 com projeto, executor e horário abaixo do título; a conversa atual fica marcada.
 **Search conversations** busca localmente em todos os títulos, pastas e executores carregados,
 inclusive além das primeiras 30 conversas. **Show more** revela o restante. A busca fica neste

@@ -19,6 +19,7 @@ macro_rules! persona {
 }
 
 pub mod acp;
+pub mod activity;
 mod api;
 mod claude;
 mod codex;
@@ -207,8 +208,11 @@ pub fn valid_model(id: &str) -> bool {
 
 const PERSONA: &str = concat!(
     persona!(),
-    " Just use your tools: the app shows the user every command and edit and asks them to approve \
-it, so never ask for permission in your reply. If they say no, accept it and suggest another way."
+    " Use tools only when the user's request needs them; ordinary conversation needs no tools. \
+For simple local inspection, prefer available file-reading and search tools over shell commands. \
+When a command or edit is needed, use the tool: the app handles approval, so do not ask again in \
+your reply. Never split, disguise or reroute an operation to avoid approval. If the user denies \
+it, accept that and suggest another way."
 );
 
 /// Every text the chat sends a model, exactly, for the eval snapshots (`crates/evals`): the
@@ -300,6 +304,10 @@ pub enum Delta {
     /// More reply text, to append.
     Text {
         text: String,
+    },
+    /// Display-only activity, never an approval.
+    Activity {
+        event: activity::Event,
     },
     /// The model wants to run or change something: the UI asks, then answers via the approver.
     Permission {
@@ -446,10 +454,23 @@ impl Sink for TurnSink<'_> {
             }
             let delta = match event {
                 Event::Text(text) => Delta::Text { text },
+                Event::Reasoning(text) => Delta::Activity {
+                    event: activity::Event::Reasoning { text },
+                },
                 Event::Usage(usage) => Delta::Usage(usage),
                 // A call that reads outside taints the conversation once it ran: a denied or failed
                 // fetch brought nothing in. The detail is the whole command, never the card's cut.
                 Event::ToolStart { id, tool, detail, .. } => {
+                    let _ = self
+                        .out
+                        .send(Delta::Activity {
+                            event: activity::Event::Start {
+                                id: id.clone(),
+                                tool: tool.clone(),
+                                detail: detail.clone(),
+                            },
+                        })
+                        .await;
                     let was_empty = self.running.lock().is_ok_and(|mut calls| {
                         let empty = calls.is_empty();
                         calls.insert(id.clone());
@@ -466,6 +487,12 @@ impl Sink for TurnSink<'_> {
                     Delta::ToolState { active: true }
                 }
                 Event::ToolEnd { id, ok } => {
+                    let _ = self
+                        .out
+                        .send(Delta::Activity {
+                            event: activity::Event::End { id: id.clone(), ok },
+                        })
+                        .await;
                     let tool = self.fetching.lock().ok().and_then(|mut f| f.remove(&id));
                     if let (Some(tool), true) = (tool, ok) {
                         taint(self.outside, tool);
@@ -1682,8 +1709,12 @@ mod tests {
         })
         .await;
         assert_eq!(outside.lock().unwrap().as_deref(), Some("Bash"));
+        while matches!(
+            rx.try_recv(),
+            Ok(Delta::Activity { .. } | Delta::ToolState { .. })
+        ) {}
+        // Display events never answer the next card.
         sink.ask(asked("Bash · rm -rf build", None)).await;
-        assert!(matches!(rx.recv().await, Some(Delta::ToolState { active: true })));
         let Some(Delta::Permission { detail, .. }) = rx.recv().await else {
             panic!("a card")
         };
@@ -1721,14 +1752,29 @@ mod tests {
         sink.event(start("a")).await;
         sink.event(start("a")).await;
         sink.event(start("b")).await;
-        assert!(matches!(rx.try_recv(), Ok(Delta::ToolState { active: true })));
-        assert!(rx.try_recv().is_err());
+        let mut states = Vec::new();
+        let mut activities = Vec::new();
+        while let Ok(delta) = rx.try_recv() {
+            match delta {
+                Delta::ToolState { active } => states.push(active),
+                Delta::Activity { event } => activities.push(event),
+                _ => panic!("unexpected decision"),
+            }
+        }
+        assert_eq!(states, vec![true]);
+        assert_eq!(activities.len(), 3);
         for id in ["missing", "a", "a"] {
             sink.event(Event::ToolEnd {
                 id: id.into(),
                 ok: false,
             })
             .await;
+            assert!(matches!(
+                rx.try_recv(),
+                Ok(Delta::Activity {
+                    event: activity::Event::End { .. }
+                })
+            ));
             assert!(rx.try_recv().is_err(), "another call still runs");
         }
         sink.event(Event::ToolEnd {
@@ -1736,6 +1782,12 @@ mod tests {
             ok: true,
         })
         .await;
+        assert!(matches!(
+            rx.try_recv(),
+            Ok(Delta::Activity {
+                event: activity::Event::End { ok: true, .. }
+            })
+        ));
         assert!(matches!(rx.try_recv(), Ok(Delta::ToolState { active: false })));
         assert_eq!(*outside.lock().unwrap(), None);
         assert_eq!(*approver.1.lock().unwrap(), (0, Vec::new()));

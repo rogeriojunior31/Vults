@@ -119,6 +119,16 @@ pub(crate) async fn turn(
                 for b in blocks.iter_mut().filter(|b| b["type"] == "tool_use") {
                     let name = b["name"].as_str().unwrap_or_default().to_string();
                     let _ = out.send(Delta::ToolState { active: true }).await;
+                    let id = b["id"].as_str().unwrap_or_default().to_string();
+                    let _ = out
+                        .send(Delta::Activity {
+                            event: crate::activity::Event::Start {
+                                id: id.clone(),
+                                tool: name.clone(),
+                                detail: b["input"].to_string(),
+                            },
+                        })
+                        .await;
                     let _ = out.send(Delta::Tool { tool: name.clone() }).await;
                     // Input that never read as JSON: the tool is not run with one it wasn't sent.
                     let broken = b.as_object_mut().and_then(|o| o.remove(PARTIAL)).is_some();
@@ -131,6 +141,11 @@ pub(crate) async fn turn(
                     if !error && tools::outside(tools, &name) {
                         crate::taint(outside, name.clone());
                     }
+                    let _ = out
+                        .send(Delta::Activity {
+                            event: crate::activity::Event::End { id, ok: !error },
+                        })
+                        .await;
                     let _ = out.send(Delta::ToolState { active: false }).await;
                     results.push(json!({ "type": "tool_result", "tool_use_id": b["id"], "content": text, "is_error": error }));
                 }
@@ -222,7 +237,15 @@ async fn call(
             .map_err(|_| "The Claude API stopped mid-reply.".to_string())?;
         let Some(chunk) = chunk else { break };
         for event in events.push(&chunk) {
-            if let Some(text) = stream.event(&event)? {
+            let text = stream.event(&event)?;
+            if let Some(text) = stream.reasoning.take() {
+                let _ = out
+                    .send(Delta::Activity {
+                        event: crate::activity::Event::Reasoning { text },
+                    })
+                    .await;
+            }
+            if let Some(text) = text {
                 let _ = out.send(Delta::Text { text }).await;
             }
         }
@@ -236,6 +259,7 @@ const PARTIAL: &str = "_partial_json";
 /// The reply as it streams: content blocks rebuilt from their deltas, to replay next turn.
 #[derive(Default, Debug)]
 struct Stream {
+    reasoning: Option<String>,
     blocks: Vec<Value>,
     stop_reason: Option<String>,
     usage: Usage,
@@ -244,6 +268,7 @@ struct Stream {
 impl Stream {
     /// Handles one server-sent event; returns reply text to show, if any.
     fn event(&mut self, raw: &str) -> Result<Option<String>, String> {
+        self.reasoning = None;
         let data: String = raw
             .lines()
             .filter_map(|l| l.strip_prefix("data:"))
@@ -278,6 +303,9 @@ impl Stream {
                 let mut whole = block[field].as_str().unwrap_or_default().to_string();
                 whole.push_str(piece);
                 block[field] = Value::String(whole);
+                if field == "thinking" && !piece.is_empty() {
+                    self.reasoning = Some(piece.to_string());
+                }
                 if field == "text" && !piece.is_empty() {
                     return Ok(Some(piece.to_string()));
                 }
@@ -442,6 +470,18 @@ fn api_error(error: &Value) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn thinking_uses_the_validated_stream_without_joining_the_reply() {
+        let mut stream = Stream::default();
+        stream.event("data:{\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"thinking\",\"thinking\":\"\"}}\n").unwrap();
+        let delta = "data:{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"Readable summary\"}}\n";
+        assert_eq!(stream.event(delta).unwrap(), None);
+        assert_eq!(stream.reasoning.take().as_deref(), Some("Readable summary"));
+        assert_eq!(stream.blocks[0]["thinking"], "Readable summary");
+        stream.event("data:{\"type\":\"ping\"}\n").unwrap();
+        assert!(stream.reasoning.is_none());
+    }
+
     #[test]
     fn the_stream_says_what_the_turn_cost() {
         let mut s = Stream::default();

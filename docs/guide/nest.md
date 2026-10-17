@@ -154,10 +154,11 @@ The island's conversation with Zeca, wide, with replies in full Markdown (a link
 and is never followed); a message, **New** or another engine in either one shows in both. Cards
 are answered here too, with **Deny**, **Allow** and **Always in this chat**, as on the island.
 The title bar holds the conversation's title, the engine pill (as on the island: the engine in its
-color and its model; its menu holds the engines, the models and the effort), the folder, and two
-panel buttons. The composer has a paperclip: the files you pick go to this chat, as a drop on the
+color and its model; its menu holds the engines, the models and the effort), the folder, and
+the available panel controls. The composer has a paperclip: the files you pick go to this chat, as a drop on the
 island does. The left panel button opens **Recent**: a sidebar in a wide window or Full,
-or a separate view with **Back to Chat** in a narrow Room. Conversations are grouped by date,
+or a separate view with **Back to Chat** in a narrow Room. While Recent is visible, its own fold
+button (wide) or Back to Chat (narrow) replaces the title-bar button. Conversations are grouped by date,
 with their project, executor and time below the title; the current conversation is marked.
 **Search conversations** searches all loaded titles, folders and executors locally, including
 conversations past the initial 30. **Show more** reveals the rest. The search stays on this
