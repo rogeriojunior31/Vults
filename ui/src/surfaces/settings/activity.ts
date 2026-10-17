@@ -12,6 +12,7 @@ export interface Activity {
   /** Mondays to page through, newest first. */
   weeks: string[];
   week: WeekView;
+  previous: WeekView;
   grid: GridDay[];
 }
 
@@ -74,7 +75,18 @@ export function weekLabel(monday: string, sunday: string): string {
 }
 
 function cellsOf(days: { day: string; level: number; title: string }[]): HTMLElement {
-  return el(
+  const months = el("div", { class: "grid-months" });
+  let previous = "";
+  days.forEach((d, i) => {
+    const month = date(d.day).toLocaleDateString(locale(), { month: "short" });
+    if (i % 7 === 0 && month !== previous) {
+      const label = el("span", { text: month });
+      label.style.gridColumn = String(Math.floor(i / 7) + 1);
+      months.append(label);
+      previous = month;
+    }
+  });
+  const grid = el(
     "div",
     { class: "activity-grid" },
     ...days.map((d) => {
@@ -83,10 +95,13 @@ function cellsOf(days: { day: string; level: number; title: string }[]): HTMLEle
       return c;
     }),
   );
+  const labels = el("div", { class: "grid-weekdays" }, ...[0, 2, 4].map(i => el("span", { text: weekdays()[(i + (days[0] ? (date(days[0].day).getDay() + 6) % 7 : 0)) % 7] })));
+  const calendar = el("div", { class: "grid-calendar" }, months, grid);
+  return el("div", { class: "grid-calendar-row" }, labels, calendar);
 }
 
 
-export function gridCard(a: Activity, view: ActivityView, on: ActivityActions): HTMLElement {
+export function gridCard(a: Activity, view: ActivityView, on: Pick<ActivityActions, "tab" | "connectors">): HTMLElement {
   const tabs = el(
     "div",
     { class: "segmented" },

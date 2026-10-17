@@ -86,6 +86,9 @@ pub struct WeekView {
     /// The agent and the project with the most turns; none in an empty week.
     #[cfg_attr(test, ts(as = "Option<crate::view::ts::AgentKind>"))]
     pub top_agent: Option<AgentKind>,
+    /// Recorded turns by agent in this week.
+    #[cfg_attr(test, ts(as = "Vec<(crate::view::ts::AgentKind, u32)>"))]
+    pub agents: Vec<(AgentKind, u32)>,
     pub top_project: Option<String>,
     /// The day with the most active time.
     pub busiest_day: Option<String>,
@@ -180,6 +183,7 @@ pub fn week(lang: i18n::Lang, entries: &[Entry], monday: Date) -> WeekView {
         questions: sum(|e| e.questions),
         failed: sum(|e| u32::from(e.failed)),
         top_agent: top(&agents),
+        agents: agents.iter().map(|(agent, turns)| (*agent, *turns)).collect(),
         top_project: top(&projects).map(str::to_string),
         busiest_day: busiest.map(|i| monday.plus(i as i64).iso()),
         longest_secs: mine.iter().map(|(e, _)| e.secs).max().unwrap_or(0),
@@ -349,6 +353,7 @@ mod tests {
         assert_eq!(w.turns, 4);
         assert_eq!((w.added, w.removed, w.commands), (20, 8, 4));
         assert_eq!(w.top_agent, Some(AgentKind::Claude));
+        assert_eq!(w.agents.iter().map(|(_, turns)| turns).sum::<u32>(), w.turns);
         assert_eq!(w.top_project.as_deref(), Some("site"));
         assert_eq!(w.busiest_day.as_deref(), Some("2026-10-06"));
         assert_eq!(w.longest_secs, 3600);

@@ -1012,6 +1012,7 @@ pub async fn activity(app: AppHandle, monday: Option<String>) -> Result<crate::h
         )
     })
     .await
+    .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())
 }
 

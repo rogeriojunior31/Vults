@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: dbf1600b2767 -->
+<!-- source: a6e490675f12 -->
 
 <a id="where-things-live-linux"></a>
 
@@ -31,7 +31,7 @@
 
 ```json
 {
-  "version": 22,
+  "version": 23,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -43,7 +43,7 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `22` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `23` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
@@ -84,6 +84,7 @@
 | `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som (e, no *Panel*, a sua notificação). Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
 | `history` | `true` | Guardar um histórico local dos turnos dos agentes para **Settings → Activity**: as contagens de cada turno terminado (12 semanas) e os totais de cada dia (um ano), no `vults.sqlite` da pasta de dados. Desligado, nada novo é guardado e o que existe fica; **Clear history** apaga tudo (a partir da versão 13), e o log de auditoria junto |
 | `recap_shown_week` | ausente | A segunda-feira da última semana cujo card de resumo você leu na ilha, para que ele venha uma vez só (a partir da versão 14) |
+| `theme` | `"black"` | **Settings → General → Theme**: `black` ou o tema neutro `light`, compartilhado por todas as janelas. Um valor desconhecido usa Black (a partir da versão 23) |
 | `language` | ausente | O idioma do app: `en`, `pt-BR`, `es` ou `zh` (chinês simplificado), definido em **Settings → General**. Ausente segue o sistema (`LC_ALL`, `LC_MESSAGES` ou `LANG`; o locale do usuário no Windows), e um idioma que o Vults não fala vira inglês (a partir da versão 15) |
 | `notifications` | `true` | Notificações do desktop, só em *Panel* (no topo da tela a ilha já mostra tudo): uma sessão terminou, falhou ou ficou quieta, e um card esperando, na hora. A única ação delas abre a ilha |
 | `visitors` | `true` | De vez em quando, enquanto há sessões abertas, um urubu de fora do bando cruza o céu uma vez, sem nunca pousar |

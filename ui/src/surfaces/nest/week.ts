@@ -1,6 +1,4 @@
-// The Nest's Activity → Week (ADR 0021): the week's recap, the year's grid and the history's switches,
-// the same page Settings drew, in a shadow root with the settings pages' own look so their names
-// never meet the island's.
+// The Week shares settings styles in a shadow root, without leaking names into the island.
 import pagesCss from "../settings/pages.css?inline";
 import activityCss from "./activity.css?inline";
 import stateCss from "./view-state.css?inline";
@@ -20,8 +18,7 @@ export interface WeekBackend {
   activity: (monday: string | null) => Promise<Activity>;
   github: () => Promise<GithubGrid>;
   saveImage: (name: string, png: Uint8Array) => Promise<string | null>;
-  setHistory: (on: boolean) => Promise<void>;
-  clear: () => Promise<void>;
+  settings: () => void;
   /** Settings → Connectors, for the GitHub grid. */
   connectors: () => void;
 }
@@ -101,7 +98,8 @@ export function createWeek(backend: WeekBackend): {
       if (mine === asked) { loading = false; render(); }
     }
   };
-  const on: ActivityActions = {
+  const on: Pick<ActivityActions, "week" | "tab" | "connectors" | "hideProjects" | "saveImage"> & { settings: () => void } = {
+    settings: () => backend.settings(),
     week: (m) => {
       monday = m;
       day = null;
@@ -143,21 +141,6 @@ export function createWeek(backend: WeekBackend): {
         .finally(render);
     },
     connectors: () => backend.connectors(),
-    history: async (keep) => {
-      await backend.setHistory(keep);
-      if (activity) activity = { ...activity, history: keep };
-    },
-    confirmClear: (yes) => {
-      confirming = yes;
-      render();
-    },
-    clear: async () => {
-      await backend.clear();
-      activity = null;
-      confirming = false;
-      monday = null;
-      await read();
-    },
   };
   render();
   return {

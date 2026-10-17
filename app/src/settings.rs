@@ -10,7 +10,16 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 22;
+const VERSION: u32 = 23;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    Light,
+    #[default]
+    #[serde(other)]
+    Black,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
@@ -103,6 +112,8 @@ pub struct Settings {
     /// version 15).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
+    #[serde(default)]
+    pub theme: Theme,
     /// Read Codex's plan usage every few minutes (a request to OpenAI, through the network gate).
     /// Off on a new install; a file from before version 16 has none, and gets it on when a
     /// `codex` is installed, so an upgrade keeps the meters it showed.
@@ -277,6 +288,7 @@ impl Default for Settings {
             history: true,
             recap_shown_week: None,
             language: None,
+            theme: Theme::Black,
             codex_usage: None,
             native_chat: true,
             chat_access: ChatAccess::Ask,
@@ -348,6 +360,7 @@ pub struct Public {
     pub dnd_until: Option<u64>,
     /// The language chosen, or none to follow the system.
     pub language: Option<String>,
+    pub theme: Theme,
     /// The language in use (`pt-BR`): the choice, or the system's.
     pub lang: String,
     /// Where the settings file and the app's data really are (XDG aware), `~` for $HOME.
@@ -388,6 +401,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         dnd_until: s.dnd_until.filter(|t| *t > epoch_now()),
         lang: resolve(s.language.as_deref()).code().to_string(),
         language: s.language,
+        theme: s.theme,
         settings_path: crate::paths::shown(&path()),
         // The trailing separator marks a folder, in the platform's own separator.
         data_path: crate::paths::shown(&crate::paths::data_dir().join("")),
@@ -566,6 +580,14 @@ pub fn resolve(chosen: Option<&str>) -> vults_core::i18n::Lang {
 pub fn lang(app: &AppHandle) -> vults_core::i18n::Lang {
     let state = app.state::<SettingsState>();
     resolve(state.0.lock().ok().and_then(|s| s.language.clone()).as_deref())
+}
+
+#[tauri::command]
+pub fn set_theme(app: AppHandle, window: tauri::Webview, theme: Theme) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.theme = theme)?;
+    let _ = app.emit("settings", serde_json::json!({ "theme": theme }));
+    Ok(())
 }
 
 /// The language chosen (`en`, `pt-BR`, `es`, `zh`), or none to follow the system. Every surface
@@ -1145,6 +1167,7 @@ mod tests {
             history: true,
             recap_shown_week: None,
             language: None,
+            theme: Theme::Black,
             codex_usage: None,
             native_chat: true,
             chat_access: ChatAccess::Ask,
@@ -1339,6 +1362,19 @@ mod tests {
         );
         let (s, clean) = parse(r#"{ "version": 16, "native_chat": false }"#);
         assert!(clean && !s.native_chat);
+    }
+
+    #[test]
+    fn theme_defaults_to_black_and_keeps_a_light_choice() {
+        assert_eq!(Settings::default().theme, Theme::Black);
+        let (light, clean) = parse(r#"{ "version": 23, "theme": "light" }"#);
+        assert!(clean && light.theme == Theme::Light);
+        let encoded = serde_json::to_string(&light).unwrap();
+        assert_eq!(parse(&encoded).0.theme, Theme::Light);
+        assert_eq!(
+            parse(r#"{ "version": 23, "theme": "unknown" }"#).0.theme,
+            Theme::Black
+        );
     }
 
     #[test]

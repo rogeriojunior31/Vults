@@ -1,5 +1,11 @@
 # Activity
 
+Week compares its figures with the preceding calendar week, shows recorded turns by agent and
+labels the year by month and weekday. A missing or zero comparison baseline is stated explicitly.
+An unreadable history is an error with retry, never an empty dashboard. **History settings**
+opens Settings; history retention and clearing stay there. The recap image has its own
+**Hide project names** export option.
+
 The Nest's **Activity → Week** shows what your agents did: a week's recap and the last year as a
 grid. **Settings → Activity** keeps the history and daily budget controls and an
 **Open Activity** button; the recap and calendar have one home in the Nest. Activity is counted on this computer,

@@ -1,3 +1,4 @@
+@import "./pages.css";
 /* The chat panel's look comes from the island; the Nest lays it out as a whole window. */
 @import "../../island/island.css";
 @import "./head.css";

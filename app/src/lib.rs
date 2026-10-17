@@ -207,6 +207,7 @@ pub fn run() {
             settings::set_open_on_hover,
             settings::set_history,
             settings::set_language,
+            settings::set_theme,
             runtime::clear_history,
             runtime::activity,
             history::save_recap_image,

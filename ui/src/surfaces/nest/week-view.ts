@@ -1,10 +1,7 @@
-// The Nest's Activity → Week, as the Living Flock prototype draws it: the kicker, the title and the
-// week's dates with its arrows; four figures in one strip; *Time with the flock* (a bar a day, a day
-// to inspect) beside *Keep a small recap*; the year's grid and the history's switches under them.
-// Only what this computer counted: no figure the history does not hold.
+// Weekly figures use only recorded activity on this computer.
 import { el } from "../../dom";
 import { locale, t } from "../../i18n";
-import { AGENT, duration, gridCard, historyCard, weekday, weekdays, weekLabel, type Activity, type ActivityActions, type ActivityView } from "../settings/activity";
+import { AGENT, duration, gridCard, weekday, weekdays, weekLabel, type Activity, type ActivityActions, type ActivityView } from "../settings/activity";
 import { button, toggle } from "../settings/pieces";
 import { viewState } from "./view-state";
 
@@ -45,7 +42,7 @@ export const WEEK_CSS = `
 `;
 
 /** The page; `day` is the day shown under the bars (Monday is 0), `pick` changes it. */
-export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityActions, day: number | null, pick: (d: number) => void): HTMLElement[] {
+export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<ActivityActions, "week" | "tab" | "connectors" | "hideProjects" | "saveImage"> & { settings: () => void }, day: number | null, pick: (d: number) => void): HTMLElement[] {
   if (!a) return [viewState("loading", t("Reading the history…"))];
   const w = a.week;
   const i = a.weeks.indexOf(w.monday);
@@ -68,13 +65,19 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
       el("h2", { text: i === 0 ? t("This week") : weekLabel(w.monday, w.sunday) }),
       i === 0 ? el("p", { text: weekLabel(w.monday, w.sunday) }) : null,
     ),
-    el("div", { class: "screen-actions" }, nav("‹", t("Older week"), older), nav("›", t("Newer week"), newer)),
+    el("div", { class: "week-actions" },
+      el("button", { class: "week-settings", text: t("History settings"), onclick: on.settings }),
+      el("div", { class: "screen-actions" }, nav("‹", t("Older week"), older), nav("›", t("Newer week"), newer))),
   );
   // What is counted, and that nothing leaves: said once, under the heading.
   const lede = el("details", { class: "activity-privacy" }, el("summary", { text: t("How activity is counted") }), el("p", { text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.") }));
-  if (!w.turns) return [heading, lede, viewState("empty", w.headline), gridCard(a, view, on), historyCard(a, view, on)];
-  const metric = (value: string, label: string, small: string) =>
-    el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }), el("small", { text: small }));
+  if (!w.turns) return [heading, lede, viewState("empty", w.headline), gridCard(a, view, on)];
+  const previous = a.previous;
+  const delta = (now: number, before: number | undefined) => !previous?.turns || before === undefined
+    ? t("No recorded baseline for comparison.")
+    : before === 0 ? t("The previous week's value was zero.") : t("{change}% compared with the previous week", { change: `${now >= before ? "+" : ""}${Math.round((now - before) / before * 100)}` });
+  const metric = (value: string, label: string, small: string, change: string) =>
+    el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }), el("small", { text: small }), el("small", { class: "stat-delta", text: change }));
   const names = weekdays();
   const top = Math.max(1, ...w.days);
   // A week with turns but no time counted has no busiest day: nothing is picked until asked.
@@ -114,9 +117,9 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
     el(
       "div",
       { class: "activity-summary" },
-      metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) })),
-      metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps })),
-      metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files })),
+      metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) }), delta(w.active_secs, previous?.active_secs)),
+      metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps }), delta(w.turns, previous?.turns)),
+      metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files }), delta(w.added + w.removed, previous ? previous.added + previous.removed : undefined)),
       metric(
         String(w.allowed + w.denied + w.answered),
         t("answers"),
@@ -124,6 +127,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
         w.answered
           ? t("{allowed} allowed · {denied} denied · {answered} answered", { allowed: w.allowed, denied: w.denied, answered: w.answered })
           : t("{allowed} allowed · {denied} denied", { allowed: w.allowed, denied: w.denied }),
+        delta(w.allowed + w.denied + w.answered, previous ? previous.allowed + previous.denied + previous.answered : undefined),
       ),
     ),
     // The period and its totals answer first; the counting policy can stay nearby without
@@ -155,8 +159,14 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: ActivityAct
         view.saved ? el("p", { class: `note${view.saved.ok ? " ok" : " error"}`, text: view.saved.text }) : null,
       ),
     ),
+    el("section", { class: "activity-card agent-turns" },
+      el("h3", { text: t("Turns by agent") }),
+      ...(w.agents ?? []).map(([agent, count]) => {
+        const progress = el("progress"); progress.max = w.turns; progress.value = count;
+        progress.setAttribute("aria-label", t(AGENT[agent]));
+        return el("div", { class: "agent-turn" }, el("span", { text: t(AGENT[agent]) }), progress, el("strong", { text: String(count) }));
+      })),
     gridCard(a, view, on),
     lede,
-    historyCard(a, view, on),
   ];
 }

@@ -10,9 +10,14 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 **Quick** or **Mini**. A card that waits is answered where you are: in the Nest while you are in it
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
-Activity and Connections share the same black page background, raised cards, heading scale
-and neutral controls. Connections uses Activity's segmented navigation. Status colors keep
-their existing meaning.
+Activity, Connections and Settings share neutral controls, page headings, cards and view states.
+**Settings → General → Theme** chooses **Black** (the default) or **Light** across every window.
+Activity and Connections use underlined view tabs; status colors keep their meaning.
+
+At widths of 900 px or more, drag the separator of Settings, Connections, Recent or Memory
+to resize that side panel. Double-click resets its width; the fold button keeps a narrow rail.
+The separator also accepts arrow keys, Home/End and Enter. Width and folded state are saved
+locally, without changing selection or drafts. Narrow windows keep their existing navigation.
 
 Read views use the same loading, empty, filtered and error panels, with a short explanation
 and the available next action. A first read does not show empty records or zero summaries
@@ -42,10 +47,10 @@ In a short Chat window, the composer uses less space and the empty conversation'
 suggestions scroll if needed. This applies to wide windows too, keeping the title
 bar's controls and the footer reachable.
 
-The header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
+When there is room, the header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
-full-screen button. Under it, four tabs with their
+full-screen button. The same header holds four tabs with their
 icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
 brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or

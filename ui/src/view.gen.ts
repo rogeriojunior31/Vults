@@ -234,7 +234,11 @@ active_secs: number, turns: number, steps: number, commands: number, files: numb
 /**
  * The agent and the project with the most turns; none in an empty week.
  */
-top_agent: AgentKind | null, top_project: string | null,
+top_agent: AgentKind | null,
+/**
+ * Recorded turns by agent in this week.
+ */
+agents: Array<[AgentKind, number]>, top_project: string | null,
 /**
  * The day with the most active time.
  */

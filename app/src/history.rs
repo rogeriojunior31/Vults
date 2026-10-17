@@ -3,7 +3,6 @@
 //! reads. Counts and folder names only, nothing leaves the machine; Settings → Activity stops it or
 //! clears it.
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -96,6 +95,7 @@ pub fn clear(dir: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
     use vults_core::recap::DayTotal;
 
     fn days(dir: &Path) -> BTreeMap<String, DayTotal> {
@@ -170,6 +170,22 @@ mod tests {
     }
 
     #[test]
+    fn an_unreadable_history_is_not_an_empty_dashboard() {
+        let dir = temp("unreadable");
+        std::fs::write(&dir, "not a directory").unwrap();
+        assert!(
+            activity(
+                &dir,
+                true,
+                Date::new(2026, 10, 9),
+                None,
+                vults_core::i18n::Lang::En
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
     fn the_page_pages_through_this_week_and_every_kept_one() {
         let dir = temp("activity");
         let day = 24 * 3600;
@@ -177,11 +193,14 @@ mod tests {
         append(&dir, &Record::new(&turn(600), NOON, 0)).unwrap();
         append(&dir, &Record::new(&turn(300), NOON - 14 * day, 0)).unwrap();
         let today = Date::new(2026, 10, 9);
-        let a = activity(&dir, true, today, None, vults_core::i18n::Lang::En);
+        let a = activity(&dir, true, today, None, vults_core::i18n::Lang::En).unwrap();
         assert_eq!(a.weeks, ["2026-10-05", "2026-09-21"]);
         assert_eq!((a.week.monday.as_str(), a.week.turns), ("2026-10-05", 1));
+        assert_eq!(a.previous.monday, "2026-09-28");
+        assert_eq!(a.previous.turns, 0);
+        assert_eq!(a.week.agents, [(vults_protocol::AgentKind::Claude, 1)]);
         assert_eq!(a.grid.last().map(|d| d.day.as_str()), Some("2026-10-09"));
-        let older = activity(&dir, true, today, Some("2026-09-23"), vults_core::i18n::Lang::En);
+        let older = activity(&dir, true, today, Some("2026-09-23"), vults_core::i18n::Lang::En).unwrap();
         assert_eq!(
             (older.week.monday.as_str(), older.week.active_secs),
             ("2026-09-21", 300)
@@ -193,7 +212,8 @@ mod tests {
             Date::new(2026, 10, 20),
             None,
             vults_core::i18n::Lang::En,
-        );
+        )
+        .unwrap();
         assert_eq!(later.weeks[0], "2026-10-19");
         assert_eq!(later.week.turns, 0);
     }
@@ -230,6 +250,7 @@ pub struct Activity {
     /// The Mondays to page through, newest first: this week's, and every kept week with a turn.
     pub weeks: Vec<String>,
     pub week: vults_core::recap::WeekView,
+    pub previous: vults_core::recap::WeekView,
     pub grid: Vec<vults_core::recap::GridDay>,
 }
 
@@ -240,23 +261,10 @@ pub fn activity(
     today: Date,
     monday: Option<&str>,
     lang: vults_core::i18n::Lang,
-) -> Activity {
-    let (entries, days) = match open(dir) {
-        Ok(s) => (
-            s.turns().unwrap_or_else(|e| {
-                tracing::warn!("history: can't read the turns: {e}");
-                Vec::new()
-            }),
-            s.days().unwrap_or_else(|e| {
-                tracing::warn!("history: can't read the days: {e}");
-                BTreeMap::new()
-            }),
-        ),
-        Err(e) => {
-            tracing::warn!("history: can't open: {e}");
-            (Vec::new(), BTreeMap::new())
-        }
-    };
+) -> std::io::Result<Activity> {
+    let store = open(dir)?;
+    let entries = store.turns().map_err(std::io::Error::other)?;
+    let days = store.days().map_err(std::io::Error::other)?;
     let this_week = today.monday();
     let mut weeks = vults_core::recap::weeks_with_turns(&entries);
     if !weeks.contains(&this_week) {
@@ -264,13 +272,14 @@ pub fn activity(
     }
     weeks.sort_unstable_by(|a, b| b.cmp(a));
     let monday = monday.and_then(Date::parse).map_or(this_week, Date::monday);
-    Activity {
+    Ok(Activity {
         history,
         today: today.iso(),
         weeks: weeks.iter().map(|d| d.iso()).collect(),
         week: vults_core::recap::week(lang, &entries, monday),
+        previous: vults_core::recap::week(lang, &entries, monday.plus(-7)),
         grid: vults_core::recap::grid(&days, today),
-    }
+    })
 }
 
 /// Bigger than any recap image: anything past it is not one.

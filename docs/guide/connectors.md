@@ -1,5 +1,10 @@
 # Connectors
 
+In the Nest, Connections is a triage list beside the selected detail. Repository marks identify
+rows, the detail shows the change bar and individual checks, and **Refresh** sits beside the sync
+status. Checks start open; your later disclosure choice survives refresh. Narrow windows open
+detail as a separate view and return to the selected row. Merging still needs its own confirmation.
+
 Connectors put news from outside services on the island. Each one is off until you switch it on in
 **Settings → Connectors**.
 
