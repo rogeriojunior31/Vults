@@ -111,6 +111,15 @@ The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own 
 there too. **Memory**, beside it, shows what Zeca
 remembers.
 
+An empty Nest Chat centres Zeca's original 3x portrait above **Ask Zeca** and a vertical list
+of suggestions. Once messages arrive, the same scene uses a smaller 2x perch above the
+composer. Its own space keeps messages clear of the bird throughout scrolling. The slim
+header, tighter message spacing and one-line initial draft leave more room for reading;
+the draft grows as you type. Transcript and composer share a column up to 760 px wide.
+Attachments stay in a bounded horizontal strip, with long filenames readable inside each card.
+Short windows bound the writing field and omit the keyboard hint; at 560 px high or less,
+they also fold the portrait away and use smaller composer controls.
+
 Zeca stays on his perch while the transcript scrolls. Hover over him to get his attention, or
 click **Greet Zeca** to wave while he is idle. Thinking, voice, questions and files use the same
 animations as the island; a greeting never answers a card. In short windows the perch folds away
@@ -224,7 +233,8 @@ before they are used.
 - **Always in this chat** allows that exact call again (the whole command and input, not the card's
   text) without a card, until the conversation ends: **New**, another engine, or Zeca turned off. A
   card that can't name the call whole has no such button. Each time the rule answers, the chat says
-  *Allowed for this conversation* and the audit log keeps it. Rules are never saved.
+  *Allowed for this conversation* and the audit log keeps it. Destructive commands always ask:
+  they never offer this button, and an existing conversation rule cannot answer them. Rules are never saved.
 
 ### Who answers Zeca's cards
 

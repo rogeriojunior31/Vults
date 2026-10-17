@@ -172,6 +172,8 @@ export function createNest(
   portraitButton.addEventListener("pointerleave", () => portrait.lookAt(null));
   portrait.canvas.setAttribute("aria-hidden", "true");
   chat.perchSlot.append(portraitButton);
+  // Outside the scrolling log, the same scene introduces an empty chat and perches by its draft.
+  chat.element.querySelector(".log-box")?.prepend(chat.perchSlot);
   const flock = createFlock({
     ...backend.flock,
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
@@ -386,7 +388,7 @@ export function createNest(
   let last: ViewModel | null = null;
   let sub: Sub = "week";
   const currentPlace = () => tab === "activity" ? sub : tab;
-  const portraitSpace = window.matchMedia("(min-height: 481px)");
+  const portraitSpace = window.matchMedia("(min-height: 561px)");
   const portraitNarrow = window.matchMedia("(max-width: 600px)");
   function paintPortrait(): void {
     portrait.setActive(zecaOn && tab === "chat" && !document.hidden && !last?.locked

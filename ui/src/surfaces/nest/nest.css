@@ -87,9 +87,10 @@ body {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 10px;
-  min-height: 49px;
-  padding: 8px 20px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 4px 16px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--chrome-line);
 }
 .chat-title {
@@ -97,7 +98,7 @@ body {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 650;
   letter-spacing: -0.2px;
   text-overflow: ellipsis;
@@ -134,7 +135,7 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
 }
@@ -510,38 +511,41 @@ body {
 }
 /* The whole window is the chat: none of the island's card around it. */
 .nest-chat .chat {
-  display: grid;
+  display: flex;
   flex: 1;
   min-height: 0;
-  grid-template-columns: 112px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  column-gap: 16px;
   width: auto;
   height: auto;
-  padding: 10px 16px 14px;
+  padding: 8px 24px 12px;
   border: none;
   border-radius: 0;
   background: transparent;
 }
-/* A separate perch keeps the companion visible while only the transcript scrolls. */
+/* The scene stays beside the log; its smaller perch never covers a reply or the composer. */
 .nest-chat .chat-perch {
+  position: absolute;
+  left: max(12px, calc((100% - 760px) / 2 + 12px));
+  bottom: -12px;
+  z-index: 2;
   display: block;
-  align-self: start;
-  width: 112px;
-  height: 108px;
-  margin-top: 16px;
+  width: 76px;
+  height: 72px;
+  min-height: 0;
 }
-.nest-chat .chat:has(.log > .hint:first-child) .chat-perch { align-self: center; margin-top: 0; }
-.nest-chat .chat-character { position: relative; width: 112px; height: 108px; border-radius: var(--radius-card); }
-.nest-chat .chat-character .perch { left: 0; top: 0; transform: none; }
+.nest-chat .chat-character { position: relative; width: 76px; height: 72px; border-radius: var(--radius-control); }
+.nest-chat .chat-character .perch { left: 0; top: 0; transform: scale(calc(2 / 3)); transform-origin: top left; }
 .nest-chat .chat-character:hover { background: var(--float); }
 .nest-chat .chat-main {
   flex: 1;
   min-height: 0;
+  width: 100%;
+  gap: 6px;
 }
 .nest-chat .log-box {
   flex: 1;
   min-height: 0;
+  box-sizing: border-box;
+  padding-bottom: 72px;
 }
 /* The conversation reads in one column, as wide as the composer under it: a reply that runs the
    window's whole width is hard to follow. The log itself stays wide, so its scrollbar keeps to the
@@ -550,23 +554,24 @@ body {
   box-sizing: border-box;
   max-height: none;
   height: 100%;
-  gap: 20px;
-  padding: 20px max(4px, calc((100% - 720px) / 2)) 24px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 10px max(4px, calc((100% - 760px) / 2)) 12px;
+  font-size: 13px;
 }
 .nest-chat .msg.zeca {
-  line-height: 1.6;
+  line-height: 1.55;
 }
+.nest-chat .msg.you { padding: 6px 12px; border-radius: 12px 12px 4px 12px; }
 /* A new turn starts a little apart from the reply before it. */
 .nest-chat .msg.you:not(:first-child) {
-  margin-top: 12px;
+  margin-top: 6px;
 }
 /* A turn's reply signed: Zeca's figure, his name and the engine that wrote it. */
 .nest-chat .msg-who {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 2px;
   line-height: 1;
 }
 .nest-chat .msg-face {
@@ -575,7 +580,7 @@ body {
 }
 .nest-chat .msg-name {
   color: var(--fg-bright);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 .nest-chat .msg-engine {
@@ -617,49 +622,55 @@ body {
 }
 .nest-chat .composer-hint {
   width: 100%;
-  max-width: 720px;
-  margin: 6px auto 0;
+  max-width: 760px;
+  margin: 0 auto;
   color: var(--fg-muted);
-  font: 13px var(--font);
+  font: 12px var(--font);
   text-align: center;
 }
 /* One writing surface contains the draft, file cards and its own action row. */
 .nest-chat .composer {
   width: 100%;
-  max-width: 720px;
-  margin: 8px auto 0;
-  padding: 16px 16px 12px;
+  max-width: 760px;
+  margin: 4px auto 0;
+  padding: 8px 10px 6px;
+  gap: 6px;
   box-sizing: border-box;
 }
 .nest-chat .composer .wave {
-  height: 64px;
+  height: 32px;
 }
 .nest-chat .composer textarea {
-  /* A Nest has room for a thought before it becomes a message. */
-  min-height: 64px;
-  font-size: 14px;
+  min-height: 28px;
+  font-size: 13px;
 }
+.nest-chat .composer-tools :is(.send, .attach, .mic) { min-height: 32px; height: 32px; }
+.nest-chat .composer-tools :is(.send, .mic) { width: 32px; }
+.nest-chat .composer .chips { display: flex; max-height: 56px; gap: 6px; box-sizing: border-box; }
+.nest-chat .composer .chips:empty { display: none; }
+.nest-chat .composer .chip { flex: 0 0 188px; max-height: 56px; box-sizing: border-box; }
+.nest-chat .file-info { max-height: 44px; overflow-y: auto; }
 .nest-chat .suggestions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 .nest-chat .suggestion {
-  align-items: flex-start;
-  min-height: 64px;
-  padding: 12px;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
   line-height: 1.5;
 }
 .nest-chat .suggestion > svg:first-child {
   display: none;
 }
 .nest-chat .chat-greeting {
-  font-size: 20px;
+  font-size: 15px;
 }
-@media (max-width: 600px) {
-  .nest-chat .suggestions { grid-template-columns: 1fr; }
-  .nest-chat .suggestion { min-height: 36px; padding: 8px 12px; }
+@media (max-height: 640px) {
+  .nest-chat .composer textarea { max-height: 72px; }
+  .nest-chat .composer-hint { display: none; }
 }
 /* A short Nest keeps both the message box and its footer reachable. */
-@media (max-height: 480px) {
+@media (max-height: 560px) {
   .chat-titlebar {
     gap: 6px;
     min-height: 0;
@@ -669,7 +680,6 @@ body {
     gap: 4px;
   }
   .nest-chat .chat {
-    grid-template-columns: minmax(0, 1fr);
     padding: 0 12px;
   }
   .nest-chat .chat-perch { display: none; }
@@ -685,7 +695,7 @@ body {
     max-height: 48px;
     padding: 0;
   }
-  .nest-chat .composer-tools :is(.send, .attach, .mic) { height: 28px; }
+  .nest-chat .composer-tools :is(.send, .attach, .mic) { min-height: 28px; height: 28px; }
   .nest-chat .composer-tools :is(.send, .mic) { width: 28px; }
   .nest-chat .composer .chips { display: flex; max-height: 32px; gap: 6px; padding: 0; }
   .nest-chat .composer .chips:empty { display: none; }
@@ -693,29 +703,33 @@ body {
   .nest-chat .file-info { max-height: 28px; overflow-y: auto; }
   .nest-chat .file-icon { width: 20px; height: 28px; }
   .nest-chat .log { padding-top: 4px; padding-bottom: 4px; gap: 12px; }
-  .nest-chat .log-box { min-height: 40px; }
+  .nest-chat .log-box { min-height: 40px; padding-bottom: 0; }
   .nest-chat .composer .wave { height: 24px; }
   .nest-chat .composer-hint {
     display: none;
   }
 }
-/* Empty conversations introduce the actions above the composer, in the same reading column. */
-.nest-chat .chat-main:has(.log > .hint:first-child) {
-  justify-content: safe center;
-}
+/* Empty chat centres its existing scene and suggestions; the draft keeps its own bottom row. */
 .nest-chat .chat-main:has(.log > .hint:first-child) .log-box {
-  flex: 0 1 auto;
-  overflow-y: auto;
-  max-width: 720px;
-  width: 100%;
-  margin: 0 auto 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 0;
 }
 .nest-chat .chat-main:has(.log > .hint:first-child) .log {
+  flex: 0 1 auto;
+  min-height: 0;
   height: auto;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 4px 8px 12px;
+  gap: 8px;
 }
-@media (max-height: 480px) {
-  .nest-chat .chat-main:has(.log > .hint:first-child) .log-box { margin: 0 auto; }
-}
+.nest-chat .chat:not(.has-messages) .chat-perch { position: relative; left: auto; bottom: auto; flex: none; width: 112px; height: 108px; margin: 0 auto 4px; }
+.nest-chat .chat:not(.has-messages) .chat-character { width: 112px; height: 108px; }
+.nest-chat .chat:not(.has-messages) .chat-character .perch { transform: none; }
+.nest-chat .chat .hint { text-align: center; padding: 4px; }
 @media (max-height: 400px) {
   .nest-chat .composer textarea { max-height: 24px; }
 }

@@ -557,9 +557,19 @@ impl InConversation {
 
     /// Whether a rule could bind to this ask: a command or path to name, and the call's input to
     /// hash. Without them a rule would cover every ask that also lacks them, so the card offers
-    /// none.
+    /// none. Destructive calls always keep their card, including rules already in memory.
     pub fn takes(ask: &AgentAsk) -> bool {
+        let whole = ask
+            .input
+            .get("command")
+            .and_then(serde_json::Value::as_str)
+            .or(ask.full.as_deref())
+            .unwrap_or(&ask.target);
         !ask.full.as_deref().unwrap_or(&ask.target).trim().is_empty()
+            && !matches!(
+                vults_core::policy::classify(&ask.tool, whole).class,
+                vults_core::policy::Class::Write { destructive: true }
+            )
             && !ask.input.is_null()
             && ask
                 .input
@@ -577,7 +587,7 @@ impl InConversation {
 
     /// Was this very command allowed for the conversation?
     pub fn allows(&self, ask: &AgentAsk) -> bool {
-        self.0.contains(&Self::key(ask))
+        Self::takes(ask) && self.0.contains(&Self::key(ask))
     }
 
     pub fn clear(&mut self) {
@@ -1553,6 +1563,32 @@ mod tests {
             rules.note(ask, Answer::AllowInConversation);
             assert!(!rules.allows(ask), "{ask:?}");
         }
+    }
+
+    #[test]
+    fn destructive_chat_calls_never_offer_or_redeem_an_always_rule() {
+        for command in [
+            "rm -rf build",
+            "bash -lc 'rm -rf build'",
+            "git reset --hard HEAD~1",
+            "echo safe; rm -rf build",
+        ] {
+            for tool in ["Bash", "shell", "exec_command"] {
+                let ask = AgentAsk {
+                    tool: tool.into(),
+                    input: serde_json::json!({"command":command}),
+                    ..asked("Bash · echo safe", None)
+                };
+                let mut rules = InConversation::default();
+                assert!(!InConversation::takes(&ask), "{ask:?}");
+                rules.note(&ask, Answer::AllowInConversation);
+                assert!(rules.0.is_empty());
+                // An entry created before this guard still cannot answer a destructive call.
+                rules.0.insert(InConversation::key(&ask));
+                assert!(!rules.allows(&ask), "{ask:?}");
+            }
+        }
+        assert!(InConversation::takes(&asked("Bash · cargo test", None)));
     }
 
     #[test]

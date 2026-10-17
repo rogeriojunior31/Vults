@@ -247,7 +247,31 @@ hook, duplicate folders and session IDs, Quick/Nest draft return, Black/Light an
 real MCP stdio server returns only the selected session. A missing target starts no provider
 process and retains its editable draft. No real provider request, agent tool
 execution or permission answer is used. Build, workspace tests, evals and repository checks pass.
-User acceptance of N2.6 is pending; N2.7-N2.9 remain open.
+User acceptance of N2.6 is pending.
+
+N2.7 compacts the existing Nest Chat in Room and Full: a 42 px wide-layout title bar,
+13 px transcript with tighter message spacing, and a one-line initial composer sharing its
+760 px reading column. The empty state centres Zeca's original 3x scene and vertical
+suggestions; populated Chat keeps that same scene at 2x above the composer, outside the
+scrolling log. Reserved space prevents it from covering text at any scroll position.
+Attachments use a bounded horizontal strip; shorter windows cap the growing draft and fold
+the portrait at 560 px, with its animation stopped. Quick keeps its own layout and controls.
+
+The surface check verifies that replacing messages leaves the same companion mounted.
+Native Linux validation covers empty/long Markdown/API states, real quota and reference
+sources, keyboard selectors, retained multiline drafts/files, Recent/Memory and Quick/Nest
+transitions, and Zeca off. Black/Light checks include 480 x 360, 760 x 600 and 1180 x 820;
+24 attachments and ten draft lines also cover 481/560/561 px boundaries, with at least 40 px
+of transcript and reachable writing and action controls. A local CLI fixture supplies text
+and an unanswered permission; no real provider request or agent tool execution is used.
+
+That native pass exposed an existing Chat rule gap: destructive calls still offered Always.
+Conversation-rule eligibility now uses the existing core classifier on the whole command;
+such calls cannot create or redeem an Always rule, including an older in-memory entry.
+The regression covers multiple shell tools, wrappers, compound calls and a cut display target.
+Native cards keep Deny primary and omit Always in both themes at all three standard sizes.
+No permission is answered during validation. Build, workspace tests, evals and repository
+checks pass. User acceptance of N2.7 is pending; N2.8-N2.9 remain open.
 
 #### N3 Dictation
 

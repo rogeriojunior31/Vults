@@ -211,6 +211,7 @@ for (const width of [480, 760, 900, 1180]) {
     nest.open("chat"); nest.chat.draft("More context");
     const character = nest.chat.perchSlot.querySelector(".chat-character");
     const canvas = character.querySelector("canvas");
+    assert.equal(canvas.isConnected, true, "The chat's companion remains mounted outside the scrolling messages");
     const portrait = scenes.get(canvas);
     assert.ok(portrait, "Room uses the production animated scene in the chat's own perch");
     assert.equal(active.get(canvas), true);
@@ -219,6 +220,7 @@ for (const width of [480, 760, 900, 1180]) {
     character.fire("click");
     assert.equal(portrait.playing("zeca"), "think", "Greeting never replaces an active reply");
     nest.chat.load({ ...current, busy: false });
+    assert.equal(canvas.isConnected, true, "Replacing restored messages keeps the same companion attached");
     Clock.freeze(Clock.now() + 1000);
     document.body.classList.add("still");
     character.fire("click");

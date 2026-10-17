@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 34aa9c94b5f6 -->
+<!-- source: 2fb80b6131b2 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -124,6 +124,16 @@ enviar, começar ou abrir outra conversa, ou sair do Vults.
 A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
 ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
+
+O Chat vazio no Nest centraliza o retrato original do Zeca em 3x acima de **Perguntar ao Zeca**
+e de uma lista vertical de sugestões. Quando chegam mensagens, a mesma cena usa um poleiro
+menor em 2x acima do compositor. Seu espaço próprio mantém as mensagens livres da ave
+durante toda a rolagem. O cabeçalho baixo, o espaçamento menor entre mensagens e o rascunho
+inicial de uma linha deixam mais espaço para leitura; o campo cresce conforme você digita.
+Conversa e compositor compartilham uma coluna de até 760 px de largura. Os anexos ficam numa
+faixa horizontal com altura limitada, com nomes longos legíveis dentro de cada cartão.
+Janelas baixas limitam o campo de escrita e omitem a dica de teclado; com até 560 px de altura,
+também recolhem o retrato e usam controles menores no compositor.
 
 O Zeca fica no poleiro enquanto a conversa rola. Passe o mouse nele para chamar sua atenção, ou
 clique em **Cumprimentar o Zeca** para ele acenar enquanto está ocioso. Pensamento, voz, perguntas
@@ -252,8 +262,9 @@ deles antes de serem usados.
 - **Always in this chat** permite aquela chamada exata de novo (o comando e a entrada inteiros,
   não o texto do card) sem card, até a conversa acabar: **New**, outro motor, ou o Zeca desligado.
   Um card que não consegue nomear a chamada inteira não tem esse botão. Toda vez que a regra
-  responde, o chat mostra *Allowed for this conversation* e o log de auditoria guarda. As regras nunca
-  são salvas.
+  responde, o chat mostra *Allowed for this conversation* e o log de auditoria guarda. Comandos
+  destrutivos sempre perguntam: nunca oferecem esse botão, e uma regra existente da conversa
+  não pode respondê-los. As regras nunca são salvas.
 
 <a id="who-answers-zecas-cards"></a>
 
