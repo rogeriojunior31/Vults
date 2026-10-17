@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 7708f3e269a2 -->
+<!-- source: cbe5a6279ecc -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -91,43 +91,51 @@ atalhos executa uma ação. Voltar de Activity ou Connections para o Quick abre 
 
 ## Flock
 
-O bando de ponta a ponta da janela, três vezes maior, cada ave sobre um card com o projeto, o estado
-e o agente da sessão, e ao lado do título quantas estão fora numa saída pela web e quantas estão no
-fio. Um clique numa ave ou num card (ou **↑ ↓**) põe aquela sessão na frente. Um clique direito (ou
-a tecla de menu, ou **Shift+F10**) abre as ações rápidas dela, como na ilha: **Open terminal**, **Open folder**,
-**Activity**, **View the last diff**, **Keep
-in front** (ou **Let the flock choose**), e silenciar, fixar ou esconder o projeto dela. Enquanto
-um card espera, só a **Activity** e o diff daquela sessão podem aparecer.
-Embaixo, **Session details**: **Needs you** deixa só as sessões que esperam por você, e **Find a
-session…** lê projetos, repositórios, branches, agentes e o que cada uma faz agora.
+O bando fica num fio, com o triplo do tamanho, e o nome do projeto sob cada ave. Embaixo,
+uma lista de sessões mostra o estado, o agente, o número do passo, o tempo em execução informado
+e o uso de contexto de cada projeto. Selecione uma ave ou linha (ou use **↑ ↓**) para trazer a
+sessão para a frente. Passe o mouse para ver projeto, branch, agente e estado completos. O clique
+direito, a tecla de menu ou **Shift+F10** abre as ações rápidas existentes: terminal, pasta,
+Activity, último diff, foco, silenciar, fixar e esconder. Um card aguardando mantém a própria
+sessão na frente.
 
-A ave selecionada e seu card compartilham uma marca clara de seleção. Nomes de
-projetos ocupam até duas linhas; passar o mouse num card mostra nome completo,
-branch, agente e estado. **Needs you** inclui o total de sessões aguardando no bando,
-mesmo durante uma busca. O card de detalhes separa o título do projeto de agente e
-estado, e as abas usam uma entrada breve só quando você as troca; atualizações ao
-vivo não a repetem. Movimento reduzido e pausa manual pulam essa entrada.
+Acima da lista, **All sessions**, **Needs you**, **Working**, **Failed** e **Quiet sessions**
+filtram as linhas. Quiet inclui sessões em repouso e aves sinalizadas por silêncio. As contagens
+cobrem todo o bando, mesmo durante uma busca. **Find a session…** lê projetos, repositórios,
+branches, agentes e passos atuais. Filtrar mantém a sessão selecionada e seu card no lugar.
+Lista e detalhes rolam de forma independente. Num Nest estreito, **Back to sessions** abre a
+lista; escolher uma linha volta aos detalhes dela. Numa janela baixa, o fio cede espaço ao
+conteúdo selecionado. Uma nova solicitação volta ao seu card, inclusive com a lista estreita aberta.
 
-A busca, o filtro **Needs you** e a aba de detalhes continuam onde você deixou
-ao fechar e reabrir o Nest ou voltar para a ilha, até sair do Vults. **Clear
-filters** na barra da busca limpa a busca e o Needs you, mantendo a aba de detalhes. Com o Zeca
-desligado, a aba de detalhes dele salva abre **Changes**. Filtrar a lista de
-sessões mantém o card de permissão atual visível; restaurar esses controles
-nunca responde esse card.
+Busca, filtro de estado, aba de detalhes e diff escolhido sobrevivem ao fechar e reabrir o Nest
+ou voltar para a ilha, até sair do Vults. **Clear filters** limpa busca e estado, mantendo o
+detalhe selecionado. Com o Zeca desligado, a aba dele salva abre **Session**. Restaurar a navegação
+só lê o estado local. Atualizações ao vivo preservam rolagem e foco do teclado; trocas de aba
+respeitam movimento reduzido e pausa manual. Esquerda/direita e Home/End percorrem as abas de detalhes.
 
-A sessão da frente tem o card dela à esquerda: o estado, o que está fazendo e, numa que espera, o
-que ela pede (o comando, com **Copy**, e *1 of 2* quando outras esperam). Uma que trabalha mostra no
-topo os passos até agora, os subagentes e o custo, o passo que acabou e o que está em andamento (o
-**+N −M** de uma edição terminada a abre em **Changes**) e, quando ela fica quieta, **Snooze**,
-**Keep going** e **Dismiss**, como na ilha. Uma que terminou ou falhou mostra a última resposta ou o
-erro. Embaixo do card, quantos arquivos a sessão alterou e as linhas adicionadas e removidas. À
-direita, as **Changes** (o diff de cada uma das suas últimas 32 edições, escolhida na lista; **Focus
-diff** dá ao diff a largura toda; embaixo, todos os arquivos que a sessão alterou, e um clique num
-cujo diff ainda está guardado o mostra; num repositório, um arquivo que um comando escreveu durante
-um turno aparece como *by a command*), a **Activity** (os últimos passos, cada um na hora em que começou), o **Context** (worktree, repositório, branch, pasta,
-agente, editor, estado e custo) e, com o Zeca ligado, **Zeca**: **Ask Zeca** abre o Chat com a
-pergunta pronta. No Full, o uso dos seus planos fica embaixo, âmbar a partir de 70% e vermelho a
-partir de 90%.
+O card da sessão selecionada mostra seu estado e o comando ou pergunta que ela faz, com as ações
+existentes. Um turno concluído ou com falha mostra a última resposta ou erro. **Snooze**, **Keep
+going** e **Dismiss** continuam numa sessão sinalizada por silêncio. Abaixo do card:
+
+- **Session** abre por padrão: tempo em execução, custo, uso de contexto, quatro passos recentes e
+  até quatro arquivos alterados. **All steps** e **See the changes** abrem Activity e Changes
+  completas que foram guardadas. Zero informado aparece como zero; uma métrica ausente diz
+  **Not reported** e não tem medidor.
+- **Changes** guarda os últimos 32 diffs de edição, um seletor de alteração e **Focus diff**, além
+  de todos os arquivos alterados acompanhados. Um arquivo com edição guardada abre aquele diff.
+  Um arquivo detectado no repositório durante um turno sem edição informada diz *by a command*,
+  sem inventar contagens de linhas.
+- **Activity** mostra os passos recentes guardados e seus horários de início.
+- **Context** lista projeto, repositório, branch, pasta, agente, editor, estado e métricas informadas.
+- Com o Zeca ligado, **Zeca** abre o Chat com uma pergunta sobre aquela sessão pronta para enviar.
+
+Tempo em execução e contexto são a última leitura informada pela CLI, hoje pela
+[status line](https://code.claude.com/docs/en/statusline) do Claude Code. O tempo inclui execuções
+retomadas; não é deduzido da contagem de passos ou do tempo aberto do Vults. Contexto é a ocupação
+atual e pode cair após uma compactação. Custo é uma estimativa a preços de API, não uma cobrança
+da assinatura. Agentes que não informam esses valores, incluindo os hooks do Codex, mostram
+**Not reported**. Ler o resumo não faz requisição de rede nem muda configuração de agente. No
+Full, o uso dos planos continua embaixo, âmbar a partir de 70% e vermelho a partir de 90%.
 
 Se uma permissão ou pergunta chegar enquanto o **Focus diff** estiver expandido,
 o card volta. A expansão fica indisponível enquanto a solicitação espera. Os

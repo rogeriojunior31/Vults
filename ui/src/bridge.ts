@@ -12,7 +12,8 @@ export type Size = "mini" | "quick" | "room" | "full";
 export interface FlockPlace {
   query: string;
   onlyNeeds: boolean;
-  detail: "diff" | "activity" | "context" | "zeca";
+  detail: "session" | "diff" | "activity" | "context" | "zeca";
+  status?: "working" | "failed" | "quiet" | null;
   change?: { owner: string; step: number; focused: boolean } | null;
 }
 /** A side or corner of the Nest's window, as the compositor takes a resize from it. */

@@ -160,6 +160,12 @@ pub struct SessionView {
     /// What it has cost so far at API prices, when its agent says: a subscription is not charged it.
     #[cfg_attr(test, ts(optional = nullable))]
     pub cost_usd: Option<f64>,
+    /// Running time in the CLI's last report, including resumed runs; not app uptime.
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub elapsed_ms: Option<u64>,
+    /// Current context occupancy in the CLI's last report; unknown is never zero.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub context_percent: Option<f64>,
     /// The question, the last reply or the error that goes with the status.
     pub note: Option<String>,
     /// The editor whose terminal the session runs in ("Cursor", "VS Code").
@@ -359,6 +365,8 @@ impl State {
                     step_count: s.step_count,
                     subagents: s.subagents,
                     cost_usd: s.cost_usd,
+                    elapsed_ms: s.elapsed_ms,
+                    context_percent: s.context_percent,
                     note: s.note.clone(),
                     editor: editor(&s.terminal),
                     species: species[&s.key],

@@ -340,9 +340,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if !windows.is_empty() {
                         crate::usage::set(&app, event.agent, windows);
                     }
-                    let Some(usd) = vults_agents::usage::claude_cost(&event.payload) else {
-                        continue;
-                    };
+                    let usd = vults_agents::usage::claude_cost(&event.payload);
                     let Some(id) = event.payload.get("session_id").and_then(|v| v.as_str()) else {
                         continue;
                     };
@@ -352,15 +350,21 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     };
                     // The day's spend (W9): what the session's total grew by. Only a session the
                     // flock knows, so a stray statusLine never adds to the user's spend.
-                    if state
-                        .sessions
-                        .get(&session)
-                        .is_some_and(|s| s.cost_usd != Some(usd))
+                    if let Some(usd) = usd
+                        && state
+                            .sessions
+                            .get(&session)
+                            .is_some_and(|s| s.cost_usd != Some(usd))
                     {
                         let cwd = state.sessions.get(&session).and_then(|s| s.cwd.clone());
                         crate::spend::watched(&app, event.agent, id.to_string(), cwd, plan, usd);
                     }
-                    Some(Input::Cost { session, usd })
+                    Some(Input::SessionMetrics {
+                        session,
+                        cost_usd: usd,
+                        elapsed_ms: vults_agents::usage::claude_elapsed(&event.payload),
+                        context_percent: vults_agents::usage::claude_context(&event.payload),
+                    })
                 } else {
                     parse(&event)
                 }

@@ -820,9 +820,11 @@ fn steps_and_subagents() {
 fn a_sessions_cost_is_on_its_card() {
     let mut s = State::default();
     let now = Instant::now();
-    let cost = |id: &str, usd| Input::Cost {
+    let cost = |id: &str, usd| Input::SessionMetrics {
         session: key(id),
-        usd,
+        cost_usd: Some(usd),
+        elapsed_ms: None,
+        context_percent: None,
     };
     assert!(visible(&mut s, cost("a", 1.0), now).is_empty());
     assert!(s.sessions.is_empty());
@@ -832,6 +834,48 @@ fn a_sessions_cost_is_on_its_card() {
     visible(&mut s, cost("b", 9.0), now);
     assert_eq!(s.view().sessions[0].cost_usd, Some(0.42));
     assert_eq!(s.sessions.len(), 1);
+}
+
+#[test]
+fn session_metrics_are_reported_snapshots_not_activity_or_permissions() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let metrics = |elapsed_ms, context_percent| Input::SessionMetrics {
+        session: key("a"),
+        cost_usd: None,
+        elapsed_ms,
+        context_percent,
+    };
+    visible(&mut s, metrics(Some(600_000), Some(42.5)), now);
+    assert!(s.sessions.is_empty());
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(&mut s, agent("b", AgentEvent::SessionStarted), now);
+    let rest = s.sessions[&key("a")].rest_since;
+    assert!(visible(&mut s, metrics(Some(600_000), Some(42.5)), now).is_empty());
+    assert_eq!(s.sessions[&key("a")].rest_since, rest);
+    assert_eq!(session_view(&s, "a").elapsed_ms, Some(600_000));
+    assert_eq!(session_view(&s, "a").context_percent, Some(42.5));
+    assert_eq!(session_view(&s, "b").context_percent, None);
+    visible(&mut s, requested("a", "metrics-card"), now);
+    visible(
+        &mut s,
+        metrics(Some(600_001), Some(12.0)),
+        now + Duration::from_secs(1),
+    );
+    assert_eq!(session_view(&s, "a").context_percent, Some(12.0));
+    assert_eq!(s.pending[0].since, now);
+    assert!(s.ledger.is_open(&rid("metrics-card")));
+    assert_eq!(s.view().approval.unwrap().request, "metrics-card");
+    visible(&mut s, metrics(Some(0), Some(0.0)), now + Duration::from_secs(2));
+    assert_eq!(session_view(&s, "a").elapsed_ms, Some(0));
+    assert_eq!(session_view(&s, "a").context_percent, Some(0.0));
+    for context in [Some(-1.0), Some(101.0), Some(f64::NAN), None] {
+        visible(&mut s, metrics(None, context), now + Duration::from_secs(3));
+        assert_eq!(session_view(&s, "a").context_percent, None);
+        assert_eq!(session_view(&s, "a").elapsed_ms, None);
+    }
+    assert_eq!(session_view(&s, "a").status, Status::Approval);
+    assert!(s.ended.is_empty());
 }
 
 /// The app reads a session's repository for its folder; a reading for a folder it left is dropped,
@@ -2612,9 +2656,11 @@ fn rest_has_one_monotonic_deadline_across_metadata_navigation_and_wall_clock_cha
     assert_eq!(s.next_rest(), Some(t + REST_AFTER));
     visible(
         &mut s,
-        Input::Cost {
+        Input::SessionMetrics {
             session: key("a"),
-            usd: 0.4,
+            cost_usd: Some(0.4),
+            elapsed_ms: Some(10_000),
+            context_percent: Some(42.0),
         },
         t + Duration::from_secs(10),
     );

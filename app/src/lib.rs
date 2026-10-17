@@ -458,6 +458,7 @@ mod label_tests {
         let place = FlockPlace {
             query: "Alpha".into(),
             only_needs: true,
+            status: None,
             detail: "context".into(),
             change: Some(FlockChange {
                 owner: "claude:one".into(),
@@ -485,6 +486,7 @@ mod tests {
         let mut place = super::FlockPlace {
             query: "\u{754c}".repeat(4096),
             only_needs: true,
+            status: None,
             detail: "context".into(),
             change: None,
         };
@@ -492,10 +494,17 @@ mod tests {
         place.query.push('x');
         assert!(place.validate().is_err());
         place.query.clear();
-        for detail in ["diff", "activity", "context", "zeca"] {
+        for detail in ["session", "diff", "activity", "context", "zeca"] {
             place.detail = detail.into();
             assert!(place.validate().is_ok());
         }
+        for status in ["working", "failed", "quiet"] {
+            place.status = Some(status.into());
+            assert!(place.validate().is_ok());
+        }
+        place.status = Some("unknown".into());
+        assert!(place.validate().is_err());
+        place.status = None;
         place.detail = "unknown".into();
         assert!(place.validate().is_err());
         place.detail = "diff".into();
@@ -895,6 +904,8 @@ struct FlockChange {
 struct FlockPlace {
     query: String,
     only_needs: bool,
+    #[serde(default)]
+    status: Option<String>,
     detail: String,
     #[serde(default)]
     change: Option<FlockChange>,
@@ -903,7 +914,14 @@ struct FlockPlace {
 impl FlockPlace {
     fn validate(&self) -> Result<(), String> {
         if self.query.chars().count() > 4096
-            || !matches!(self.detail.as_str(), "diff" | "activity" | "context" | "zeca")
+            || !matches!(
+                self.detail.as_str(),
+                "session" | "diff" | "activity" | "context" | "zeca"
+            )
+            || self
+                .status
+                .as_deref()
+                .is_some_and(|s| !matches!(s, "working" | "failed" | "quiet"))
             || self
                 .change
                 .as_ref()

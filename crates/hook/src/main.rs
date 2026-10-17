@@ -234,7 +234,7 @@ mod tests {
     }
 
     #[test]
-    fn a_status_line_forwards_only_the_usage_and_the_cost() {
+    fn a_status_line_forwards_only_numeric_metrics_and_plan_usage() {
         let a = Args::parse(
             ["--agent", "claude", "--statusline"]
                 .map(String::from)
@@ -257,12 +257,28 @@ mod tests {
         assert!(build_event(&a, after, None, |_| None).is_some());
 
         // Recorded from Claude Code 2.1.295 as it starts: the cost is there before any usage, and
-        // nothing else (paths, the repo, the model) goes out.
+        // no paths, repository or model data go out.
         let start = include_str!("../../agents/tests/fixtures/claude-statusline-start.json");
         let e = build_event(&a, start.as_bytes(), None, |_| None).unwrap();
         assert_eq!(
             e.payload,
-            serde_json::json!({ "session_id": "session-redacted", "cost": { "total_cost_usd": 0 } })
+            serde_json::json!({ "session_id": "session-redacted", "cost": { "total_cost_usd": 0, "total_duration_ms": 705 } })
+        );
+        let metrics = br#"{"session_id":"s1","cwd":"/private","model":{"id":"private"},"cost":{"total_duration_ms":30000,"total_api_duration_ms":1},"context_window":{"used_percentage":42.5,"current_usage":{"input_tokens":99},"context_window_size":200000}}"#;
+        let e = build_event(&a, metrics, None, |_| None).unwrap();
+        assert_eq!(
+            e.payload,
+            serde_json::json!({"session_id":"s1","cost":{"total_duration_ms":30000},"context_window":{"used_percentage":42.5}})
+        );
+        assert!(!e.wants_reply);
+        assert!(
+            build_event(
+                &a,
+                br#"{"cost":{"total_duration_ms":-1},"context_window":{"used_percentage":101}}"#,
+                None,
+                |_| None
+            )
+            .is_none()
         );
         // A cost that is no amount is not one.
         let odd = br#"{"session_id":"s1","cost":{"total_cost_usd":-1}}"#;

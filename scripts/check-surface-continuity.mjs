@@ -134,7 +134,7 @@ for (const width of [480, 760, 900, 1180]) {
       boards: [{ connector: "github", rows: [row] }] };
     const originalView = structuredClone(view), actions = [], voiceCalls = [];
     let draft = { text: "Unsent", files: ["/inbox/note.txt"], folder: "/work/alpha", provider: "codex" };
-    let place = "audit", flockPlace = { query: "Alpha", onlyNeeds: true, detail: "context", change: null };
+    let place = "audit", flockPlace = { query: "Alpha", onlyNeeds: true, status: null, detail: "context", change: null };
     let connectionPlace = { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 };
     const queries = { history: "History query", audit: "Audit query", projects: "Project query" };
     const current = { provider: "codex", label: "Codex", folder: "/work/alpha", started: true, model: "gpt", effort: "high", lines: [], busy: true, partial: "", waiting: [] };
@@ -322,7 +322,7 @@ for (const width of [480, 760, 900, 1180]) {
     assert.deepEqual(draft, expectedDraft); assert.equal(place, "audit");
     await mount(true); hiddenIsland();
     assert.equal(nest.current(), "audit");
-    assert.deepEqual(flockPlace, { query: "Alpha", onlyNeeds: true, detail: "context", change: null });
+    assert.deepEqual(flockPlace, { query: "Alpha", onlyNeeds: true, status: null, detail: "context", change: null });
     assert.deepEqual(queries, { history: "History query", audit: "Audit query", projects: "Project query" });
     // Minimize, deliver a pending card to the island, then restore without answering it.
     visibility(true); fsm.setNestHolds(false); fsm.setNestOpen(false); machine.openPinned();

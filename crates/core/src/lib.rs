@@ -548,11 +548,12 @@ pub enum Input {
     /// a session, a card or a bird.
     Chat(AgentUpdate),
     Connector(Alert),
-    /// What a session has cost so far, at API prices (Claude Code's statusLine). A session not
-    /// seen yet is not made for it.
-    Cost {
+    /// A CLI's session metrics snapshot. Missing context stays unknown, not zero; no new session.
+    SessionMetrics {
         session: SessionKey,
-        usd: f64,
+        cost_usd: Option<f64>,
+        elapsed_ms: Option<u64>,
+        context_percent: Option<f64>,
     },
     /// The repository a session's folder is in, read by the app from its `.git` (no network) for
     /// that `cwd`: dropped if the session has moved since. `None` when the folder is in none.
@@ -728,8 +729,12 @@ pub struct Session {
     pub watch: silence::Watch,
     /// The turn being counted, from its prompt to its end (`turns`).
     pub turn: Option<turns::Draft>,
-    /// What it has cost so far at API prices, when its agent says (`Input::Cost`).
+    /// What it has cost so far at API prices, when its agent says (`Input::SessionMetrics`).
     pub cost_usd: Option<f64>,
+    /// The CLI's reported running time; never inferred from steps or app uptime.
+    pub elapsed_ms: Option<u64>,
+    /// The current context occupancy; absent until the CLI reports it.
+    pub context_percent: Option<f64>,
     /// The repository its folder is in (`Input::Repo`).
     pub repo: Option<Repo>,
 }
@@ -920,9 +925,18 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             board::set(state, connector, rows);
             Vec::new()
         }
-        Input::Cost { session, usd } => {
+        Input::SessionMetrics {
+            session,
+            cost_usd,
+            elapsed_ms,
+            context_percent,
+        } => {
             if let Some(s) = state.sessions.get_mut(&session) {
-                s.cost_usd = Some(usd);
+                if let Some(usd) = cost_usd.filter(|n| n.is_finite() && *n >= 0.0) {
+                    s.cost_usd = Some(usd);
+                }
+                s.elapsed_ms = elapsed_ms;
+                s.context_percent = context_percent.filter(|n| (0.0..=100.0).contains(n));
             }
             Vec::new()
         }
@@ -1383,6 +1397,8 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         watch: silence::Watch::default(),
         turn: None,
         cost_usd: None,
+        elapsed_ms: None,
+        context_percent: None,
         repo: None,
     });
     // The latest event knows best where the agent runs (it may have moved to another pane).

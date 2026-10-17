@@ -92,24 +92,40 @@ impl Args {
     }
 }
 
-/// Claude Code's statusLine input carries the whole session (paths, cost, model); only the plan's
-/// usage and the session's cost so far are forwarded. The usage comes after the session's first
-/// reply, the cost from the start; with neither there is nothing to send.
+/// Only numeric session metrics and plan windows leave the status line; paths and model data do not.
 pub fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, Value>> {
     let limits = payload.get("rate_limits").filter(|v| v.is_object());
-    let cost = payload
-        .get("cost")
-        .and_then(|c| c.get("total_cost_usd"))
-        .filter(|v| v.as_f64().is_some_and(|usd| usd.is_finite() && usd >= 0.0));
-    if limits.is_none() && cost.is_none() {
+    let mut cost = Map::new();
+    for field in ["total_cost_usd", "total_duration_ms"] {
+        if let Some(value) = payload.get("cost").and_then(|c| c.get(field)).filter(|v| {
+            if field == "total_duration_ms" {
+                v.as_u64().is_some()
+            } else {
+                v.as_f64().is_some_and(|n| n.is_finite() && n >= 0.0)
+            }
+        }) {
+            cost.insert(field.into(), value.clone());
+        }
+    }
+    let context = payload
+        .get("context_window")
+        .and_then(|c| c.get("used_percentage"))
+        .filter(|v| v.as_f64().is_some_and(|n| (0.0..=100.0).contains(&n)));
+    if limits.is_none() && cost.is_empty() && context.is_none() {
         return None;
     }
     let mut kept = Map::new();
     if let Some(limits) = limits {
         kept.insert("rate_limits".into(), limits.clone());
     }
-    if let Some(usd) = cost {
-        kept.insert("cost".into(), serde_json::json!({ "total_cost_usd": usd }));
+    if !cost.is_empty() {
+        kept.insert("cost".into(), Value::Object(cost));
+    }
+    if let Some(used) = context {
+        kept.insert(
+            "context_window".into(),
+            serde_json::json!({ "used_percentage": used }),
+        );
     }
     if let Some(id) = payload.get("session_id") {
         kept.insert("session_id".into(), id.clone());
@@ -147,7 +163,7 @@ pub fn build_event(
     }
 
     // The JSON usually names the event; argv only fills the gap. `--statusline` always wins:
-    // whatever the input calls itself, only its usage may leave.
+    // whatever the input calls itself, only its metrics may leave.
     let status_line = args.event.as_deref() == Some(protocol::STATUS_LINE_EVENT);
     let event = payload
         .get("hook_event_name")

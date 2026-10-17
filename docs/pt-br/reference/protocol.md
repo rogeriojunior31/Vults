@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 7748899f4b06 -->
+<!-- source: 5be09ee893d8 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -84,10 +84,14 @@ perguntas que ele leu.
 Um evento de `other` nunca tem `wants_reply`: nada no app responde à permissão de outra ferramenta.
 
 `StatusLine` é a entrada de statusLine do Claude Code, enviada por `vults-hook --agent claude --statusline`.
-O payload dele é só `rate_limits` (as janelas de 5 horas e semanal do plano), `cost.total_cost_usd`
-(o que os tokens da sessão custariam em preço de API, para o card dela) e `session_id`; os caminhos, os
-outros números de custo e o modelo da sessão nunca saem do hook. Antes da primeira resposta da sessão
-não há `rate_limits`, e sem custo também nada é enviado. O hook imprime só o que o status line do próprio usuário imprime
+O payload guarda `rate_limits` (as janelas do plano), `session_id`, `cost.total_cost_usd`
+(a estimativa a preços de API), `cost.total_duration_ms` (tempo em execução informado) e
+`context_window.used_percentage` (ocupação atual do contexto). Caminhos da sessão, dados do modelo,
+conteúdo dos tokens e outros campos de custo nunca saem do hook. As métricas numéricas são
+validadas; contexto ausente ou nulo continua desconhecido. Sem métrica válida ou janela de plano,
+nada é enviado. Hooks existentes que mandam só custo ou uso do plano continuam funcionando;
+campos opcionais do payload não mudam o envelope.
+O hook imprime só o que o status line do próprio usuário imprime
 (salvo na instalação, veja [configurações](settings.md)), ou nada quando não há nenhum, então o status line
 do Claude Code fica como era antes.
 

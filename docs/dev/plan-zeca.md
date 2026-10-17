@@ -176,7 +176,30 @@ covers Black and Light, both green Mini birds, Quick, a Nest return during the g
 and the unprompted transition from green at 29 seconds to flight at 31. New work lands only
 its own bird; a new completion starts another grace period; a controlled permission lands
 without a decision or command. Build, workspace tests, evals and repository checks pass.
-User acceptance of N2.3 is pending; N2.4-N2.9 remain open.
+User acceptance of N2.3 is pending.
+
+N2.4 adds a Session overview to the existing Flock owner: reported running time, API-price cost,
+current context occupancy, four recent steps and four changed files, with links to Activity and
+Changes. Rows show agent, step, reported duration and context; named birds share the selected
+session. Status chips filter the list without replacing its selected card. Narrow Room switches
+between list and detail; short windows give the wire's space to content. List and detail retain
+independent scroll; a new request brings its card back to the top without a focus-induced jump.
+
+The existing Claude Code status-line relay now keeps validated numeric duration and context
+alongside cost and plan windows. Paths, model data and transcript contents stay out. Core stores
+per-session snapshots without creating sessions, changing activity, resetting rest or answering
+offers. Missing metrics, including Codex hooks' duration/context, say Not reported; genuine zeros
+stay zero and compaction may lower context. File counts reuse reported edits and the existing
+folder observation, distinguishing command-written files from counted diffs.
+
+Core, hook, parser and renderer checks cover those contracts, retained filters/detail/diffs,
+keyboard navigation and permission priority. Native Linux validation uses six sessions through
+the real hook and covers Black/Light, 480 x 360, 760 x 600 and 1180 x 820, known/zero/unknown
+metrics, named birds, filtered selection, independent scroll/focus, narrow navigation and a
+destructive request arriving over a scrolled overview. Quick/Nest return preserves search,
+status, detail and owner; the empty Flock remains usable with Zeca on. No test executes a tool
+or answers an agent permission. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.4 is pending; N2.5-N2.9 remain open.
 
 #### N3 Dictation
 

@@ -145,6 +145,14 @@ step_count: number, subagents: number,
  */
 cost_usd?: number | null,
 /**
+ * Running time in the CLI's last report, including resumed runs; not app uptime.
+ */
+elapsed_ms?: number | null,
+/**
+ * Current context occupancy in the CLI's last report; unknown is never zero.
+ */
+context_percent?: number | null,
+/**
  * The question, the last reply or the error that goes with the status.
  */
 note: string | null,
