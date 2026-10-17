@@ -1,3 +1,4 @@
+import { sidePanel } from "./panels";
 // The Nest's Connections tab (ADR 0021), as the Living Flock prototype draws it: a chip for each
 // connector that is on, then the chosen one's head (when it last synced, a repository filter,
 // Refresh), its tabs (Inbox, Pull requests, Actions, Releases), its rows, and the row picked in
@@ -181,6 +182,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
             if (detailOpen) element.querySelector<HTMLElement>(".conn-back")?.focus();
           },
         },
+        el("span", { class: "conn-repo-mark", text: (r.facts.repo?.split("/").at(-1) ?? r.name).slice(0, 2).toUpperCase() }),
         icon(iconOf(r), 15, 1.6),
         el("span", { class: "conn-row-words" }, el("strong", { text: r.title }),
           el("span", { class: "conn-row-meta" }, el("small", { text: sub(r) }), isSeen(b.connector, r) ? el("span", { class: "conn-seen", text: t("✓ Seen") }) : null)),
@@ -221,7 +223,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     const acts: HTMLElement[] = [];
     if (r.merge) {
       const label = merging?.state === "running" ? t("Merging…") : merging?.state === "merged" ? t("Merged") : t("Squash and merge");
-      const go = fid(el("button", { class: "primary", text: label, onclick: () => ((asking = k), draw()) }), "act:merge");
+      const go = fid(el("button", { class: asking === k ? "outline" : "primary", text: label, onclick: () => ((asking = k), draw()) }), "act:merge");
       go.disabled = busy(merging);
       acts.push(go);
     }
@@ -289,7 +291,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     if (checkList) {
       const before = checkDisclosures.get(k);
       const state = r.checks ?? "unknown";
-      checkList.open = before?.dataset.state === state ? before.open : r.checks !== "passing";
+      checkList.open = before?.dataset.state === state ? before.open : true;
       checkList.dataset.state = state;
       checkDisclosures.set(k, checkList);
     }
@@ -315,6 +317,15 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       el("div", { class: "conn-detail-head" }, icon(iconOf(r), 14, 1.6), el("span", { text: ref }), end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null),
       el("h3", { text: r.title }),
       context.length ? el("div", { class: "conn-context" }, ...context.map(text => el("span", { text }))) : null,
+      f.diff ? (() => {
+        const added = el("i", { class: "diff-added" });
+        added.style.width = `${f.diff.added / Math.max(1, f.diff.added + f.diff.removed) * 100}%`;
+        const removed = el("i", { class: "diff-removed" });
+        removed.style.width = `${f.diff.removed / Math.max(1, f.diff.added + f.diff.removed) * 100}%`;
+        const bar = el("div", { class: "conn-diff-bar" }, added, removed);
+        bar.setAttribute("role", "img"); bar.setAttribute("aria-label", diffLine(r)!);
+        return bar;
+      })() : null,
       reviewLine(r) ? el("p", { class: "conn-review", text: reviewLine(r)! }) : null,
       acts.length ? el("div", { class: "conn-acts" }, ...acts) : null,
       confirm,
@@ -526,9 +537,12 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         el(
           "header",
           { class: "activity-heading conn-head" },
-          el("div", {}, el("h2", { text: name(board.connector) }), el("p", { class: `conn-status${stale || st?.overBudget ? " stale" : st?.lastOk ? "" : " pending"}`, text: line })),
-          el("div", { class: "conn-actions" }, refresh, fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), "act:manage")),
+          el("div", {}, el("h2", { text: t("Connections") })),
+          el("div", { class: "conn-actions" }, fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), "act:manage")),
         ),
+        el("div", { class: "conn-source" },
+          !chips ? el("span", { class: "conn-chip on", text: name(board.connector) }) : null,
+          el("div", { class: "conn-sync" }, el("p", { class: `conn-status${stale || st?.overBudget ? " stale" : st?.lastOk ? "" : " pending"}`, text: line }), refresh)),
         el(
           "nav",
           { class: "nest-subs conn-tabs" },
@@ -551,6 +565,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
               list.tabIndex = 0;
               list.setAttribute("aria-label", t("Connections"));
               list.setAttribute("role", "region");
+              sidePanel(list, "connections", "Connections", 380, "left", 240, 560);
               return list;
             })(),
             showDetail ? detail(board, pick!, narrow) : null,

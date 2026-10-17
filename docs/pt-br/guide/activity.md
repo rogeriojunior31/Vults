@@ -1,5 +1,11 @@
 # Atividade
-<!-- source: 2ab7fe7e7319 -->
+<!-- source: 37a7c01b6c59 -->
+
+Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
+agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
+zerada é informada explicitamente. Um histórico ilegível gera erro com nova tentativa, nunca uma
+tela vazia. **History settings** abre Configurações; retenção e limpeza do histórico ficam lá.
+A imagem do resumo tem sua própria opção de exportação **Hide project names**.
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
 ano numa grade. **Settings → Activity** mantém os controles de histórico e de orçamento diário

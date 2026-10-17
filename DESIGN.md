@@ -8,9 +8,11 @@ this document defines how the UI presents them.
 
 - Read `ui/src/themes.css` before choosing colors. Reuse its roles in every surface,
   including prototypes, dialogs, settings and embedded workspaces.
-- Keep the black background, neutral chrome, subtle borders and light primary
-  action. Green communicates a result, Zeca or an agent identity; it is not a new
-  background or navigation theme.
+- Black is the default. The optional neutral Light theme uses the same roles and
+  hierarchy across windows. Color communicates status or agent identity; it does
+  not create a separate navigation or page theme.
+- Scene backgrounds, diffs, selections and popovers use theme roles too. A theme
+  change refreshes canvas colors without restarting the birds or their motion.
 - Keep species, accessories, palettes and sprite proportions from the existing
   character renderer. Scale pixel art with integer drawing scales and
   `image-rendering: pixelated`; do not stretch a bird to fill a card.
@@ -29,12 +31,19 @@ this document defines how the UI presents them.
 | Primary / selected mark | `--accent` / `--mark` | `#f5f6f8` / `#e2e6da` |
 | Success / warning / error text | `--ok` / `--warn` / `--error-text` | `#22c55e` / `#f5a524` / `#ff8d97` |
 
-The values above describe the current theme. The CSS tokens remain the source of
+The values above describe Black. Light uses `#fafafa` for ground, `#f0f1f2` for
+chrome/cards, `#e3e5e8` for raised controls and `#1b2028` for text and the primary
+action. Its status and agent colors are darker for contrast.
+
+The values above describe the default theme. The CSS tokens remain the source of
 truth when that theme changes. Keep `--agent-*` colors as agent identity.
 
 ## Scale and spacing
 
 - Use a small spacing scale: 4, 6, 8, 12, 16, 20 and 24 CSS pixels.
+- The shared type scale is `--text-s` (12 px), `--text-m` (13 px), `--text-l`
+  (15 px) and `--text-xl` (18 px). Page figures use 20 px; Settings titles use
+  24 px. Use at most one filled action per header or decision region.
 - Use 12-14 px body text, 11-12 px controls and supporting text, and 15-20 px local
   titles. Reserve smaller text for optional metadata; do not hide a decision,
   command, essential state or action behind tiny type.
@@ -64,6 +73,12 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   region validation lands. Production currently uses Mini 340 x 38 and Quick
   440 CSS px internally (492 in Chat), with a 1.14 UI zoom inside the fixed 720 x 640
   logical-pixel overlay; display scaling must be accounted for.
+- Room/Full share one header row with their tab navigation. At narrow widths,
+  labels give way to named icons. The page body keeps its own layout and scroll.
+- Wide side panels resize by their separator, reset on double-click and fold to
+  a 48 px rail. Arrow keys resize, Home/End reach the bounds and Enter folds;
+  folding keeps selection and drafts. Below 900 px, each page keeps its existing
+  narrow navigation instead of showing a rail.
 - Settings remains the configuration destination. Present the destination clearly
   when another surface needs a privileged setting.
 

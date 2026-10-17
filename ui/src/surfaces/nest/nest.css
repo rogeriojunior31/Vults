@@ -1,3 +1,4 @@
+@import "./pages.css";
 /* The chat panel's look comes from the island; the Nest lays it out as a whole window. */
 @import "../../island/island.css";
 @import "./head.css";
@@ -917,7 +918,7 @@ body {
   padding: 8px 10px;
   overflow-x: auto;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
   font-family: var(--mono, monospace);
   font-size: 11.5px;
   white-space: pre;
@@ -988,7 +989,7 @@ body {
   flex: none;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
-  background: radial-gradient(ellipse at 50% 45%, #202d2b4a, transparent 72%), linear-gradient(#080b0c, #030405);
+  background: var(--bg);
 }
 .habitat-header {
   display: flex;
@@ -1367,7 +1368,7 @@ body {
   gap: 6px;
 }
 .nest-flock-tab .primary .kbd {
-  border-color: rgba(0, 0, 0, 0.4);
+  border-color: color-mix(in srgb, var(--on-accent) 40%, transparent);
 }
 /* Allow on a destructive card: outlined, never the button the eye lands on. */
 .nest-flock-tab .outline.danger {
@@ -1507,7 +1508,7 @@ button.touched-row:hover,
   font-variant-numeric: tabular-nums;
 }
 .touched-counts .added {
-  color: #71dc94;
+  color: var(--ok);
 }
 .touched-counts .removed {
   color: var(--error);
@@ -1540,16 +1541,16 @@ button.touched-row:hover,
   user-select: none;
 }
 .diff-row.plus {
-  background: #22c55e09;
-  color: #9ce2b0;
+  background: color-mix(in srgb, var(--ok) 4%, transparent);
+  color: var(--ok);
 }
 .diff-row.minus {
-  background: #f4505e09;
-  color: #ffa9b0;
+  background: color-mix(in srgb, var(--error-text) 4%, transparent);
+  color: var(--error-text);
 }
 .diff-row.hunk {
-  background: #4796e309;
-  color: #8fb4e8;
+  background: color-mix(in srgb, var(--info) 4%, transparent);
+  color: var(--info);
   font-size: 10px;
 }
 .detail-footnote {
@@ -1568,9 +1569,9 @@ button.touched-row:hover,
   grid-template-columns: 42px 1fr 30px;
   gap: 10px;
   padding: 14px 0;
-  border-bottom: 1px solid #22242a;
+  border-bottom: 1px solid var(--border);
   font-size: 12px;
-  color: #adb2bb;
+  color: var(--fg-dim);
 }
 .detail-content .activity-row time {
   margin-top: 2px;
@@ -1582,7 +1583,7 @@ button.touched-row:hover,
 }
 .detail-content .activity-row > span {
   font-size: 10px;
-  color: #71dc94;
+  color: var(--ok);
 }
 .context-dl {
   display: grid;
@@ -1605,7 +1606,7 @@ button.touched-row:hover,
   align-items: center;
   gap: 8px 20px;
   padding: 10px 20px;
-  border-top: 1px solid #24262c;
+  border-top: 1px solid var(--border);
   background: var(--chrome);
   font-size: 9px;
   color: var(--fg-dim);
@@ -1620,7 +1621,7 @@ button.touched-row:hover,
 }
 .usage-card .meter {
   font: 9px var(--mono);
-  color: #adb2bb;
+  color: var(--fg-dim);
 }
 .usage-card .meter.amber {
   color: var(--warn);
@@ -1860,7 +1861,7 @@ button.touched-row:hover,
   cursor: pointer;
 }
 .app-card .diffbtn:hover {
-  border-color: #3a3d44;
+  border-color: var(--border-hover);
   color: var(--fg);
 }
 .app-card .silence {
@@ -1870,11 +1871,11 @@ button.touched-row:hover,
   gap: 8px;
   margin-top: 14px;
   padding: 10px 12px;
-  border: 1px solid #6a522366;
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
   border-radius: 7px;
-  background: #f5a52408;
+  background: color-mix(in srgb, var(--warn) 3%, transparent);
   font-size: 11px;
-  color: #e6bd78;
+  color: var(--warn);
 }
 .app-card .silence > span {
   flex: 1 1 100%;
@@ -1883,16 +1884,16 @@ button.touched-row:hover,
   color: var(--warn);
 }
 .app-card .silence button.hush:hover {
-  border-color: #8a6a2c;
-  background: #f5a52414;
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
 }
 .app-card .silence button {
   padding: 4px 8px;
-  border: 1px solid #6a5223;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
   border-radius: 5px;
   background: none;
   font-size: 10px;
-  color: #f4d399;
+  color: var(--warn);
   cursor: pointer;
 }
 .app-card .compact-detail {
@@ -1903,7 +1904,7 @@ button.touched-row:hover,
   margin-top: 20px;
   padding: 12px 0 0;
   border: 0;
-  border-top: 1px solid #27292e;
+  border-top: 1px solid var(--border);
   background: none;
   font: 10px var(--mono);
   color: var(--fg-muted);
@@ -1911,7 +1912,7 @@ button.touched-row:hover,
   cursor: pointer;
 }
 .app-card .compact-detail .added {
-  color: #71dc94;
+  color: var(--ok);
 }
 .app-card .compact-detail .removed {
   color: var(--error);
@@ -2060,8 +2061,8 @@ button.touched-row:hover,
   gap: 4px;
   padding: 5px 19px;
   border-top: 0;
-  border-bottom: 1px solid #202227;
-  background: #0b0c0e;
+  border-bottom: 1px solid var(--chrome-line);
+  background: var(--float);
 }
 /* The prototype's small tags: a glyph and a name, as in its tagged strip. */
 .nest-need .need-tag {
@@ -2158,9 +2159,9 @@ button.touched-row:hover,
   display: grid;
   min-width: 220px;
   padding: 6px;
-  border: 1px solid #2b2e33;
+  border: 1px solid var(--control-border);
   border-radius: 9px;
-  background: #121317;
+  background: var(--panel);
   box-shadow: 0 12px 32px #000a;
 }
 .nest-menu[hidden] {
@@ -2204,7 +2205,7 @@ button.touched-row:hover,
   max-width: 300px;
   margin: 0 4px;
   padding: 3px 4px 3px 10px;
-  border: 1px solid #2b2e33;
+  border: 1px solid var(--control-border);
   border-radius: 999px;
   font-size: 11px;
 }
@@ -2217,7 +2218,7 @@ button.touched-row:hover,
   height: 22px;
 }
 .hdr-extras .moon {
-  color: #9aa3ff;
+  color: var(--agent-other);
 }
 @media (max-width: 760px) {
   .hdr-extras .now-playing .song {

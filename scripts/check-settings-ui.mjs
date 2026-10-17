@@ -16,6 +16,7 @@ class Element {
   set textContent(text) { this.replaceChildren(); this.text = text; }
   get textContent() { return (this.text ?? "") + this.children.map(n => n.textContent).join(""); }
   append(...children) { for (const node of children) { node.remove(); node.parentElement = this; this.children.push(node); } }
+  prepend(...children) { this.replaceChildren(...children, ...this.children); }
   replaceChildren(...children) { this.text = ""; for (const n of this.children) n.parentElement = null; this.children = []; this.append(...children); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(n => n !== this); }
   before(...children) { this.parentElement?.append(...children); }
@@ -57,7 +58,7 @@ globalThis.document = { body: new Element("body"), documentElement: new Element(
   getElementById: () => root, createElement: tag => new Element(tag),
   createElementNS: (_ns, tag) => new Element(tag),
   createTextNode: text => { const n = new Element("text"); n.textContent = text; return n; },
-  addEventListener() {}, hidden: false,
+  addEventListener() {}, dispatchEvent() {}, hidden: false,
 };
 document.body.append(root);
 globalThis.window = { setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, addEventListener() {} };
@@ -74,7 +75,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   return async (...args) => {
     switch (name) {
       case "appSettings": return settings;
-      case "setWidget": case "setPresence": case "setSounds":
+      case "setTheme": case "setWidget": case "setPresence": case "setSounds":
         writes.push([name, ...args]);
         if (holdSettings) return new Promise((resolve, reject) => pendingSettings.push({ resolve, reject }));
         return;
@@ -276,3 +277,16 @@ saves[0].resolve(); await tick();
 reads[3].resolve({ usd: 1, tokens: 100, budget: 7, subscription: true }); await tick();
 assert.equal(field().value, "8.5", "A read from before the save must not restore the old limit");
 console.log("check-settings-ui: initial budget read failure, stale responses and read/write ordering");
+
+await go("General");
+const themeControl = () => rowNamed("Theme").querySelector("select");
+assert.equal(themeControl().dataset.savedValue, "0");
+themeControl().value = "1"; themeControl().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setTheme", "light"]); assert.equal(themeControl().disabled, true);
+events.onSettings({ volume: 70 }); assert.equal(themeControl().value, "1"); assert.equal(themeControl().disabled, true);
+pendingSettings.at(-1).reject(new Error("Cannot save theme")); await tick();
+assert.equal(themeControl().value, "0"); assert.equal(themeControl().disabled, false);
+themeControl().value = "1"; themeControl().fire("change"); await tick(); pendingSettings.at(-1).resolve(); await tick();
+assert.equal(themeControl().value, "1");
+assert.equal(page().querySelectorAll(".settings-group-title").length, 4);
+console.log("check-settings-ui: theme pending/repaint/rollback/retry and grouped General settings");

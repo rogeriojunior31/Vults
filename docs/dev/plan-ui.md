@@ -17,6 +17,16 @@ As of 2026-10-16, [N0](plan-zeca.md#n0-remove-tasks) removes Tasks
 are historical; its acceptance rows and removed renderer check no longer apply.
 The current delivery order is N0-N4 in Plan Zeca.
 
+On 2026-10-17, N1.1-N1.4 deliver the shared frame, Black/neutral Light themes,
+Activity dashboard, Connections triage and grouped Settings. Native checks cover the
+three pages at 480, 760 and 1180 px in both themes, panel folding/reset, retained Chat
+drafts and Connections return focus. The Flock/Compact follow-up corrects fixed dark
+surfaces, unreadable diff/control colors and stale canvas palettes on a live theme change.
+The user validated the corrected Flock/Compact themes in the running app on 2026-10-17
+and accepted N1 for PR review. N1.1-N1.5 are complete. The broader
+[UX6 desktop matrix](#ux6-final-desktop-acceptance) and release smoke remain tracked
+separately, including multiple displays/scales and window ownership.
+
 ## Implementation order
 
 ### Current delivery status

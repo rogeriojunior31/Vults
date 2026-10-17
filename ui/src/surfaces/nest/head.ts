@@ -57,7 +57,7 @@ export interface NestCounts {
 }
 
 export interface NestHead {
-  /** The header, then the tabs. */
+  /** One header with the tab navigation. */
   elements: HTMLElement[];
   /** The tab shown, or Settings. */
   set: (on: NestTab | "settings") => void;
@@ -251,6 +251,7 @@ export function createNestHead(on: NestHeadActions): NestHead {
     { class: "app-header" },
     mark,
     el("span", { class: "app-logo", text: "vults" }),
+    nav,
     el("span", { class: "header-spacer" }),
     line,
     extras,
@@ -263,7 +264,7 @@ export function createNestHead(on: NestHeadActions): NestHead {
   // click fills the screen, as a title bar's would.
   for (const e of [header, header.querySelector(".header-spacer"), line, nav]) e?.setAttribute("data-tauri-drag-region", "");
   return {
-    elements: [header, nav],
+    elements: [header],
     set: (id) => {
       for (const b of [...tabs, gear]) {
         const now = b.dataset.tab === id;

@@ -1,6 +1,5 @@
 /* The Nest window's frame (ADR 0021), drawn by the Nest's page and by Settings', with the
-   Living Flock prototype's measures: a 44 px header, 48 px tabs underlined in the light mark, a
-   quiet footer, all on the dark chrome. */
+   Living Flock prototype's shared header and quiet footer. Both themes use the same roles. */
 @import "../../sizes.css";
 
 :where(.app-header, .suite-nav, .app-footer) button {
@@ -67,7 +66,7 @@
 .nest-sizes {
   flex: none;
 }
-/* One track frames the size choices; each choice retains its 24 px target. */
+/* One track frames the size choices; each choice retains its 28 px target. */
 .app-header .size-switch {
   gap: 2px;
   margin: 0;
@@ -289,3 +288,28 @@ body.full .resize-edges,
 body:has(#nest.full) .resize-edges {
   display: none;
 }
+
+/* One Lab header; narrow windows keep the same named tabs as icons. */
+.app-header > .suite-nav { flex: 1; min-width: 0; min-height: 36px; padding: 0; gap: 4px; border: 0; }
+.app-header > .header-spacer { display: none; }
+.app-header .suite-tab { min-height: 32px; padding: 4px 8px; border-radius: var(--radius-control); }
+.app-header .suite-tab.on { background: var(--raised); }
+.app-header .suite-tab.on::after { display: none; }
+.app-header .nest-gear .nav-label { display: none; }
+.app-header .nav-count { background: var(--raised); color: var(--fg-dim); }
+.app-header [data-tab="flock"] .nav-count { color: var(--warn); }
+@media (max-width: 1280px) { .app-header .session-count { display: none; } }
+@media (max-width: 1000px) {
+  .app-header .app-logo, .app-header .nav-label { display: none; }
+  .app-header { gap: 6px; padding-inline: 12px; }
+}
+@media (max-width: 560px) {
+  .app-header { gap: 4px; padding-inline: 10px; }
+  .app-header .nav-count { display: none; }
+  .app-header .suite-tab { padding: 4px 7px; min-width: 28px; justify-content: center; }
+  .app-header > .suite-nav { gap: 0; }
+  .app-header .size-switch .size { padding-inline: 6px; }
+}
+
+.app-header .size-switch .size { min-height: 28px; }
+@media (min-width: 561px) and (max-width: 1000px) { .app-header .suite-tab.on .nav-label { display: inline; } }

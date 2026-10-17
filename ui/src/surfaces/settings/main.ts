@@ -1,3 +1,5 @@
+import { sidePanel } from "../nest/panels";
+import { applyTheme } from "../../theme";
 // Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
@@ -164,6 +166,7 @@ let foldAfter = 15;
 let openOnHover = false;
 /** The language chosen, or null to follow the system. */
 let language: string | null = null;
+let theme: "black" | "light" = "black";
 /** Seconds the open island waits before folding, as the settings offer them. */
 const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let zecaSpecies = "atratus";
@@ -725,9 +728,10 @@ function connectorsPage(): HTMLElement[] {
 function generalPage(): HTMLElement[] {
   return [
     el("h1", { text: t("General") }),
-    el(
-      "section",
-      { class: "card rows" },
+    el("section", { class: "card rows" },
+      el("h2", { class: "settings-group-title", text: t("Appearance") }),
+      row(t("Theme"), t("Black or a neutral light theme, across every window."),
+        dropdown([{ value: "black" as const, label: t("Black") }, { value: "light" as const, label: t("Light") }], theme, async value => { await Bridge.setTheme(value); theme = value; })),
       row(
         t("Language"),
         t("The language of the island, these settings, the tray and the notifications. System follows your desktop's."),
@@ -740,6 +744,9 @@ function generalPage(): HTMLElement[] {
           },
         ),
       ),
+    ),
+    el("section", { class: "card rows" },
+      el("h2", { class: "settings-group-title", text: t("Sound and notifications") }),
       row(
         t("Sounds"),
         t("Short 8-bit blips when a session needs you, finishes or fails, and for connector news."),
@@ -757,70 +764,6 @@ function generalPage(): HTMLElement[] {
           await Bridge.setNowPlaying(on);
           nowPlaying = on;
         }),
-      ),
-      row(
-        t("Codex usage"),
-        t("Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked."),
-        toggle(codexUsage, async (on) => {
-          await Bridge.setCodexUsage(on);
-          codexUsage = on;
-        }),
-      ),
-      row(
-        t("Fold the island"),
-        t("How long the open island stays once the pointer leaves it. A permission keeps it open until you answer."),
-        segmented(
-          FOLD_CHOICES.map((n) => ({ value: n, label: `${n} s` })),
-          foldAfter,
-          async (n) => {
-            await Bridge.setFoldAfter(n);
-            foldAfter = n;
-          },
-        ),
-      ),
-      row(
-        t("Open on hover"),
-        t("Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel."),
-        toggle(openOnHover, async (on) => {
-          await Bridge.setOpenOnHover(on);
-          openOnHover = on;
-        }),
-      ),
-      row(
-        t("Presence"),
-        t("Choose how Vults stays visible. A card always opens the island with its sound."),
-        segmented(
-          [
-            { value: "island" as Presence, label: t("Island") },
-            { value: "panel" as Presence, label: t("Panel") },
-            { value: "quiet" as Presence, label: t("Quiet") },
-            { value: "paused" as Presence, label: t("Paused") },
-          ],
-          presence,
-          async (p) => {
-            await Bridge.setPresence(p);
-            presence = p;
-          },
-        ),
-        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
-      ),
-      row(
-        t("Corner widget"),
-        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you. A click opens the island, on the card when one waits; it never answers one."),
-        dropdown(
-          [
-            { value: null as Corner | null, label: t("Off") },
-            { value: "top-left" as Corner | null, label: t("Top left") },
-            { value: "top-right" as Corner | null, label: t("Top right") },
-            { value: "bottom-left" as Corner | null, label: t("Bottom left") },
-            { value: "bottom-right" as Corner | null, label: t("Bottom right") },
-          ],
-          widget,
-          async (c) => {
-            await Bridge.setWidget(c);
-            widget = c;
-          },
-        ),
       ),
       row(
         t("Do not disturb"),
@@ -846,6 +789,65 @@ function generalPage(): HTMLElement[] {
           notifications = on;
         }),
       ),
+    ),
+    el("section", { class: "card rows" },
+      el("h2", { class: "settings-group-title", text: t("Island") }),
+      row(
+        t("Presence"),
+        t("Choose how Vults stays visible. A card always opens the island with its sound."),
+        segmented(
+          [
+            { value: "island" as Presence, label: t("Island") },
+            { value: "panel" as Presence, label: t("Panel") },
+            { value: "quiet" as Presence, label: t("Quiet") },
+            { value: "paused" as Presence, label: t("Paused") },
+          ],
+          presence,
+          async (p) => {
+            await Bridge.setPresence(p);
+            presence = p;
+          },
+        ),
+        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
+      ),
+      row(
+        t("Fold the island"),
+        t("How long the open island stays once the pointer leaves it. A permission keeps it open until you answer."),
+        segmented(
+          FOLD_CHOICES.map((n) => ({ value: n, label: `${n} s` })),
+          foldAfter,
+          async (n) => {
+            await Bridge.setFoldAfter(n);
+            foldAfter = n;
+          },
+        ),
+      ),
+      row(
+        t("Open on hover"),
+        t("Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel."),
+        toggle(openOnHover, async (on) => {
+          await Bridge.setOpenOnHover(on);
+          openOnHover = on;
+        }),
+      ),
+      row(
+        t("Corner widget"),
+        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you. A click opens the island, on the card when one waits; it never answers one."),
+        dropdown(
+          [
+            { value: null as Corner | null, label: t("Off") },
+            { value: "top-left" as Corner | null, label: t("Top left") },
+            { value: "top-right" as Corner | null, label: t("Top right") },
+            { value: "bottom-left" as Corner | null, label: t("Bottom left") },
+            { value: "bottom-right" as Corner | null, label: t("Bottom right") },
+          ],
+          widget,
+          async (c) => {
+            await Bridge.setWidget(c);
+            widget = c;
+          },
+        ),
+      ),
       row(
         t("Screen"),
         t("Where the island sits. Automatic lets the desktop choose; a chosen screen that is unplugged hands the island back until it returns."),
@@ -866,12 +868,23 @@ function generalPage(): HTMLElement[] {
           },
         ),
       ),
+    ),
+    el("section", { class: "card rows" },
+      el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
       row(
         t("Start with the desktop"),
         t("Opens Vults when you log in."),
         toggle(autostart, async (on) => {
           await Bridge.setAutostart(on);
           autostart = on;
+        }),
+      ),
+      row(
+        t("Codex usage"),
+        t("Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked."),
+        toggle(codexUsage, async (on) => {
+          await Bridge.setCodexUsage(on);
+          codexUsage = on;
         }),
       ),
     ),
@@ -1552,6 +1565,7 @@ function render(): void {
     { class: "sidebar" },
     ...GROUPS.flatMap((g) => [el("p", { class: "nav-group", text: t(g.label) }), ...PAGES.filter((p) => p.group === g.id).map(navButton)]),
   );
+  sidePanel(nav, "settings", "Settings", 200, "left", 160, 280);
   const picker = el("select", { class: "settings-page-picker" });
   picker.setAttribute("aria-label", t("Settings page"));
   for (const p of PAGES) {
@@ -1564,7 +1578,7 @@ function render(): void {
   const title = content.find(node => node.tagName === "H1");
   const intro = content.find(node => node.classList.contains("lede"));
   const main = el("main", { class: `page${page !== drawn ? " page-enter" : ""}` },
-    el("header", { class: "settings-heading" }, title ?? null, intro ?? null),
+    el("header", { class: "settings-heading" }, el("div", { class: "settings-title-line" }, icon(PAGES.find(p => p.id === page)!.icon, 20, 1.6), title ?? null), intro ?? null),
     ...content.filter(node => node !== title && node !== intro));
   for (const node of main.querySelectorAll<HTMLDetailsElement>("details")) node.open = expanded.get(page)?.has(node.dataset.setting ?? "") ?? false;
   root.replaceChildren(picker, nav, main);
@@ -1597,6 +1611,7 @@ void Bridge.appSettings().then((s) => {
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   openOnHover = s.openOnHover;
   language = s.language;
+  theme = applyTheme(s.theme ?? "black", true);
   setLang(s.lang);
   head.relabel();
   foot.relabel();
@@ -1646,6 +1661,8 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  applyTheme(s.theme);
+  if (s.theme !== undefined) { theme = s.theme; render(); }
   // Changed from the island's gear: this page shows it too.
   if (s.flock !== undefined && s.flock !== flock) {
     flock = s.flock;

@@ -1,3 +1,4 @@
+import { sidePanel } from "./panels";
 // The Nest's page takes its backend: four tabs and the gear (ADRs 0021, 0031). Chat keeps
 // Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
 // Without Zeca there is no Chat tab.
@@ -207,6 +208,7 @@ export function createNest(
   // Chat: the conversation, and Zeca's memory beside it when asked for.
   const memoryBack = el("button", { class: "nest-memory-back", text: t("Back to Chat") });
   const memoryPane = el("aside", { class: "nest-memory" }, memoryBack, memory.element);
+  const memoryPanel = sidePanel(memoryPane, "memory", "Memory", 340, "right", 220, 440);
   memoryPane.hidden = true;
   const memoryLabel = el("span", { class: "nest-memory-label", text: t("Memory") });
   const memoryButton = el(
@@ -254,6 +256,7 @@ export function createNest(
   recentButton.setAttribute("aria-pressed", String(wide.matches));
   recentButton.setAttribute("aria-controls", "nest-recent");
   recent.element.id = "nest-recent";
+  const recentPanel = sidePanel(recent.element, "recent", "Conversations", 248, "left", 180, 360);
   /** The conversation going on, for the title: asked with Recent, whatever the window's width. */
   let titled = 0;
   const refreshTitle = () => {
@@ -449,6 +452,7 @@ export function createNest(
     memoryBack.textContent = t("Back to Chat");
     recentButton.title = t("Recent");
     recentButton.setAttribute("aria-label", t("Recent"));
+    memoryPanel.relabel(); recentPanel.relabel();
     foot.relabel();
     head.relabel();
     chat.relabel();

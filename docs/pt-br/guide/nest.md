@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 1e43f6000e7d -->
+<!-- source: 7e33bb53426e -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -11,9 +11,17 @@ clique duplo ocupa a tela) e as bordas e os cantos o redimensionam. Ele abre gra
 card que espera é respondido onde você está: no Nest enquanto você está nele (a janela dele tem o
 foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 
-Atividade e Conexões usam o mesmo fundo preto, cards elevados, escala de títulos e controles
-neutros. Conexões usa a navegação segmentada de Atividade. As cores de status mantêm seus
-significados.
+Atividade, Conexões e Configurações usam controles neutros, títulos, cards e estados de leitura
+compartilhados. **Settings → General → Theme** escolhe **Black** (o padrão) ou **Light** em todas
+as janelas. Atividade e Conexões usam abas sublinhadas; as cores de status mantêm seus significados. O palco do Flock,
+os diffs e os controles do Compact seguem o mesmo tema, incluindo a atualização ao vivo
+das cores dos agentes nas aves e do fio.
+
+Em larguras de pelo menos 900 px, arraste o separador de Settings, Connections, Recent ou Memory
+para redimensionar esse painel lateral. Um clique duplo restaura a largura; o botão de recolher
+mantém uma faixa estreita. O separador também aceita as setas, Home/End e Enter. A largura e o
+estado recolhido ficam salvos localmente, sem alterar seleção ou rascunhos. Janelas estreitas
+mantêm a navegação existente.
 
 As telas de leitura usam os mesmos painéis de carregamento, conteúdo vazio, busca sem resultado
 e erro, com uma explicação curta e a próxima ação disponível. A primeira leitura não mostra
@@ -44,10 +52,10 @@ Em uma janela baixa do Chat, o compositor ocupa menos espaço e as sugestões da
 conversa vazia rolam quando necessário. Isso também vale para janelas largas,
 mantendo os controles do cabeçalho e o rodapé acessíveis.
 
-O cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
+Quando há espaço, o cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
 dura (um clique o encerra), o som, a busca (a paleta, como **Ctrl+K**), o seletor de tamanho e o
-botão de tela cheia. Embaixo dele, quatro abas com os seus
+botão de tela cheia. O mesmo cabeçalho traz quatro abas com os seus
 ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
 traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa

@@ -25,6 +25,7 @@ class Element {
   get lastElementChild() { return this.children.at(-1) ?? null; }
   get isConnected() { return this === document.body || !!this.parentElement?.isConnected; }
   get offsetParent() { return this.isConnected && !this.hidden && this.parentElement?.offsetParent !== null ? this.parentElement ?? this : null; }
+  removeEventListener(event, fn) { this.listeners[event] = (this.listeners[event] ?? []).filter(f => f !== fn); }
   addEventListener(event, fn) { (this.listeners[event] ??= []).push(fn); }
   fire(event, value = {}) { for (const fn of this.listeners[event] ?? []) fn({ target: this, ...value }); }
   setAttribute(name, value) { this.attributes[name] = value; }
@@ -62,6 +63,7 @@ globalThis.document = { hidden: false, body: new Element("body"),
   createDocumentFragment: () => new Element("fragment"),
   querySelector: selector => document.body.querySelector(selector),
   addEventListener: (event, fn) => (documentEvents[event] ??= []).push(fn),
+  dispatchEvent: event => { for (const fn of documentEvents[event.type] ?? []) fn(event); },
 };
 globalThis.window = { innerWidth: 480, innerHeight: 640,
   setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
@@ -74,6 +76,7 @@ globalThis.window = { innerWidth: 480, innerHeight: 640,
   }, addEventListener: (_event, fn) => mediaChanges.push({ query, fn }) }),
 };
 globalThis.matchMedia = window.matchMedia;
+globalThis.devicePixelRatio = 1;
 globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
 globalThis.requestAnimationFrame = () => 0;
 globalThis.ResizeObserver = class { observe() {} };
@@ -88,11 +91,14 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
+      export { applyTheme } from ${source("theme.ts")};
+      export { sidePanel } from ${source("surfaces/nest/panels.ts")};
       export { createWeek } from ${source("surfaces/nest/week.ts")};
       export { paletteItems } from ${source("palette.ts")};
       export { NEST_TABS, tabByKey } from ${source("surfaces/nest/head.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
+      export { Sky } from ${source("island/sky.ts")};
       export { Scene } from ${source("island/scene.ts")};
       export { Clock } from ${source("clock.ts")};
       export { savedClose, savedTransition } from ${source("surfaces/nest/close.ts")};
@@ -101,7 +107,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -467,7 +473,7 @@ const healthy = [{ id: "github", enabled: true, lastOk: Date.now() / 1000, error
 const cHost = new Element("main"); cHost.append(connectionUI.element); document.body.replaceChildren(cHost);
 connectionUI.update(connectionView); connectionReads.at(-1).resolve(healthy); await tick();
 const cAt = id => connectionUI.element.querySelector(`[data-fid="${id}"]`);
-assert.equal(connectionUI.element.querySelectorAll(".conn-chip").length, 0, "A single connection is named once, with one settings entry point");
+assert.equal(connectionUI.element.querySelectorAll(".conn-chip").length, 1, "The connector is named once below the Connections page heading");
 assert.equal(connectionUI.element.querySelectorAll('[data-fid="act:manage"]').length, 1);
 const cSearch = connectionUI.element.querySelector(".conn-search");
 assert.equal(cSearch.getAttribute("aria-label"), "Search connections");
@@ -485,7 +491,7 @@ cAt("act:repo").value = "org/beta"; cAt("act:repo").fire("change");
 assert.equal(connectionUI.element.querySelectorAll(".conn-row").length, 1);
 cAt("act:repo").value = ""; cAt("act:repo").fire("change");
 cAt("row:org/alpha#7").fire("click");
-assert.equal(connectionUI.element.querySelector(".conn-check-list").open, false, "Successful checks start collapsed");
+assert.equal(connectionUI.element.querySelector(".conn-check-list").open, true, "Checks are visible on the initial triage view");
 const detailBefore = connectionUI.element.querySelector(".conn-detail");
 assert.ok(nodes(detailBefore).indexOf(cAt("act:merge")) < nodes(detailBefore).indexOf(cAt("act:checks")), "Actions precede an arbitrarily long check list");
 connectionUI.element.querySelector(".conn-list").scrollTop = 120;
@@ -541,7 +547,7 @@ console.log("check-surface-continuity: Connections search/filter/empty states, i
 const weekReads = [], weekEffects = [];
 const weekUI = createWeek({ activity: () => new Promise((resolve, reject) => weekReads.push({ resolve, reject })),
   github: async () => ({ state: "off" }), saveImage: async () => { weekEffects.push("save"); return null; },
-  setHistory: async () => { weekEffects.push("history"); }, clear: async () => { weekEffects.push("clear"); }, connectors: () => weekEffects.push("settings") });
+  settings: () => weekEffects.push("history-settings"), connectors: () => weekEffects.push("settings") });
 const weekPage = weekUI.element.shadowRoot.querySelector(".page");
 weekUI.refresh(); assert.ok(weekPage.textContent.includes("Reading the history"));
 weekReads[0].reject(new Error("History unavailable")); await tick();
@@ -557,6 +563,16 @@ assert.ok(weekPage.textContent.includes("Known recap")); assert.ok(weekPage.text
 weekUI.refresh(); const oldWeek = weekReads.at(-1); weekUI.refresh(); weekReads.at(-1).resolve(recap); await tick();
 oldWeek.reject(new Error("Obsolete")); await tick(); assert.equal(weekPage.querySelector(".view-state.error"), null);
 assert.deepEqual(weekEffects, [], "Retrying the recap never clears, exports or changes history settings");
+const populatedWeek = { ...recap.week, turns: 4, active_secs: 120, steps: 12, added: 8, removed: 2, files: 2,
+  allowed: 0, denied: 0, answered: 0, longest_secs: 60, agents: [["codex", 4]], days: [120, 0, 0, 0, 0, 0, 0] };
+weekUI.refresh(); weekReads.at(-1).resolve({ ...recap, week: populatedWeek, previous: { ...populatedWeek, turns: 2, active_secs: 60 } }); await tick();
+assert.ok(weekPage.textContent.includes("+100% compared with the previous week"));
+assert.ok(weekPage.textContent.includes("The previous week's value was zero."));
+assert.ok(weekPage.textContent.includes("Turns by agent"));
+assert.ok(!weekPage.textContent.includes("Keep a history"), "Activity does not edit retention settings");
+weekUI.refresh(); weekReads.at(-1).resolve({ ...recap, week: populatedWeek, previous: { ...populatedWeek, turns: 0 } }); await tick();
+assert.ok(weekPage.textContent.includes("No recorded baseline for comparison."));
+
 console.log("check-surface-continuity: Week initial error/retry, retained recap and obsolete read rejection without setting/export actions");
 
 assert.deepEqual(NEST_TABS, ["flock", "chat", "activity", "connections"]);
@@ -574,3 +590,40 @@ for (const zeca of [true, false]) {
   assert.deepEqual(commands, zeca ? ["/continue ", "/remember "] : []);
 }
 console.log("check-surface-continuity: four tabs, keyboard order with Zeca on/off, palette removal and retained continuation/memory");
+
+const panelHost = new Element("div"), panel = new Element("aside"), retainedInput = new Element("input");
+panelHost.clientWidth = 1180; panelHost.append(panel); panel.append(retainedInput); retainedInput.value = "unsent draft";
+sidePanel(panel, "check-panel", "Memory", 300, "left", 180, 400);
+const handle = panel.querySelector(".panel-handle"), foldPanel = panel.querySelector(".panel-fold");
+handle.fire("keydown", { key: "ArrowRight", preventDefault() {} }); assert.equal(handle.getAttribute("aria-valuenow"), "320");
+foldPanel.click(); assert.equal(foldPanel.getAttribute("aria-expanded"), "false");
+assert.equal(retainedInput.value, "unsent draft"); assert.ok(panel.contains(retainedInput));
+const recreatedPanel = new Element("aside"); sidePanel(recreatedPanel, "check-panel", "Memory", 300, "left", 180, 400);
+assert.equal(recreatedPanel.querySelector(".panel-fold").getAttribute("aria-expanded"), "false");
+handle.fire("dblclick"); assert.equal(handle.getAttribute("aria-valuenow"), "300"); assert.equal(foldPanel.getAttribute("aria-expanded"), "true");
+handle.fire("pointerdown", { button: 0, clientX: 100, pointerId: 1, preventDefault() {} });
+handle.fire("pointermove", { clientX: 5000 }); handle.fire("pointerup"); assert.equal(handle.getAttribute("aria-valuenow"), "400");
+handle.fire("keydown", { key: "Home", preventDefault() {} }); assert.equal(handle.getAttribute("aria-valuenow"), "180");
+weekPage.querySelector(".week-settings").click(); assert.deepEqual(weekEffects, ["history-settings"]);
+console.log("check-surface-continuity: resized/folded panel state, retained draft, reset, pointer/keyboard bounds and Settings-owned retention");
+
+// Both canvas owners must refresh live colors even when animation is paused.
+const scenePaint = Scene.prototype.draw, skyPaint = Sky.prototype.draw;
+const paintedThemes = [];
+Scene.prototype.draw = function () { paintedThemes.push(this.canvas); };
+Sky.prototype.draw = function () { paintedThemes.push(this.canvas); };
+const themedScene = new Scene({ width: 100, height: 40, wire: 30, zeca: null, vults: { max: 0, scale: 1, at: () => ({ x: 0, wire: 30 }) } });
+const themedSky = new Sky(() => {});
+themedScene.colors = themedSky.colors = { wire: "old-theme" };
+document.documentElement = new Element("html");
+applyTheme("black", true); applyTheme("light"); applyTheme("black", true);
+assert.equal(document.documentElement.getAttribute("data-theme"), "light", "A stale startup read cannot undo a newer theme event");
+applyTheme("black"); assert.equal(document.documentElement.getAttribute("data-theme"), "black");
+assert.equal(themedScene.colors, null); assert.equal(themedSky.colors, null);
+assert.ok(paintedThemes.includes(themedScene.canvas) && paintedThemes.includes(themedSky.canvas));
+themedScene.setActive(false); themedSky.update([], false); paintedThemes.length = 0;
+themedScene.colors = themedSky.colors = { wire: "old-theme" }; applyTheme("light");
+assert.equal(themedScene.colors, null); assert.equal(themedSky.colors, null);
+assert.ok(!paintedThemes.includes(themedScene.canvas) && !paintedThemes.includes(themedSky.canvas), "Hidden canvases invalidate without starting animation");
+Scene.prototype.draw = scenePaint; Sky.prototype.draw = skyPaint;
+console.log("check-surface-continuity: shared theme events win over late startup reads");

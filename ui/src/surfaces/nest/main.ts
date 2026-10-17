@@ -1,3 +1,4 @@
+import { applyTheme } from "../../theme";
 // The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
 // (ADR 0021, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
 // conversation in full Markdown: the same chat, so a message sent in either shows in both. Its
@@ -74,8 +75,7 @@ const nest = createNest(
       activity: (monday) => Bridge.activity(monday),
       github: () => Bridge.githubCalendar(),
       saveImage: (name, png) => Bridge.saveRecapImage(name, png),
-      setHistory: (on) => Bridge.setHistory(on),
-      clear: () => Bridge.clearHistory(),
+      settings: () => void Bridge.openSettings("activity"),
       connectors: () => void Bridge.openSettings("connectors"),
     },
     flock: {
@@ -185,6 +185,7 @@ Bridge.onView((v) => {
   nest.view(v);
 });
 void Bridge.appSettings().then((s) => {
+  applyTheme(s.theme ?? "black", true);
   setLang(s.lang);
   nest.setZeca(s.zeca);
   nest.setSound(s.sounds);
@@ -197,6 +198,7 @@ void Bridge.appSettings().then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {
+  applyTheme(s.theme);
   if (s.lang !== undefined) {
     setLang(s.lang);
     nest.relabel();

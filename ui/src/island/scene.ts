@@ -225,7 +225,7 @@ export class Scene {
   private timer: number | undefined;
   /** One frame cache per species: frames are cached by object, and each set has its own. */
   private readonly caches = new Map<SpriteSet, FrameCache>();
-  /** Theme colors, read once: getComputedStyle on every frame is not free. */
+  /** Cached between theme changes; style reads on every frame are expensive. */
   private colors: ({ wire: string } & Record<SessionView["agent"], string>) | null = null;
   /** Off screen: birds still follow their sessions, but nothing is drawn. */
   private active = true;
@@ -245,6 +245,10 @@ export class Scene {
     this.canvas.className = "scene";
     this.ctx = this.canvas.getContext("2d")!;
     this.size(this.layout.height);
+    document.addEventListener("themechange", () => {
+      this.colors = null;
+      if (this.active) this.draw();
+    });
   }
 
 

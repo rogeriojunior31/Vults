@@ -1,3 +1,4 @@
+import { applyTheme } from "../../theme";
 // The corner widget's window: the island's view in, a click out that brings the island up. It has
 // no commands of its own (ADR 0021).
 import { Bridge } from "../../bridge";
@@ -19,12 +20,14 @@ Bridge.onView((view) => {
   widget.render(view);
 });
 void Bridge.appSettings().then((s) => {
+  applyTheme(s.theme ?? "black", true);
   setLang(s.lang);
   setZecaSpecies(s.zecaSpecies);
   setZeca(s.zeca);
   widget.setPaused(s.presence === "paused");
 });
 Bridge.onSettings((s) => {
+  applyTheme(s.theme);
   if (s.lang !== undefined) setLang(s.lang);
   if (s.zecaSpecies !== undefined) setZecaSpecies(s.zecaSpecies);
   if (s.zeca !== undefined) setZeca(s.zeca);

@@ -1,5 +1,11 @@
 # Conectores
-<!-- source: 11e618f4e60f -->
+<!-- source: c0da37adcd84 -->
+
+No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
+repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
+**Refresh** fica ao lado do estado de sincronização. Os checks começam abertos; sua escolha de
+expandir ou recolher é mantida nas atualizações. Janelas estreitas abrem o detalhe separado e
+voltam à linha selecionada. O merge continua exigindo sua própria confirmação.
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.

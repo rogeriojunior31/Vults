@@ -1,3 +1,4 @@
+import { applyTheme } from "../theme";
 // The island window: Tauri in, DOM out.
 import { Bridge, type Place } from "../bridge";
 import * as Dock from "./dock";
@@ -129,7 +130,7 @@ const nestHolds = (holds: boolean) => {
 Bridge.onNestHolds(nestHolds);
 void Bridge.nestHoldsCards().then(nestHolds, () => {});
 // After the settings too: with Zeca off there is no hello at all.
-const settings = Bridge.appSettings();
+const settings = Bridge.appSettings().then(s => { applyTheme(s.theme, true); return s; });
 void Promise.all([placed, settings.catch(() => null)]).then(([p, s]) => {
   if ((p && p.presence !== "island") || s?.zeca === false) return;
   Bridge.firstName().then(island.greet, () => island.greet(null));
@@ -181,6 +182,7 @@ void settings.then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
 Bridge.onSettings((s) => {
+  applyTheme(s.theme);
   if (s.lang !== undefined) {
     setLang(s.lang);
     island.chat.relabel();

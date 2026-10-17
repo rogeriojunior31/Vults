@@ -33,6 +33,7 @@ class Element {
   replaceWith(node) { this.parentElement.children.splice(this.parentElement.children.indexOf(this), 1, node); node.parentElement = this.parentElement; }
   addEventListener(event, fn) { this.listeners[event] = fn; }
   setAttribute(name, value) { this.attributes[name] = value; }
+  getAttribute(name) { return this.attributes[name]; }
   toggleAttribute() {}
   focus() { document.activeElement = this; }
   scrollTo() {}
@@ -41,7 +42,7 @@ class Element {
   toDataURL() { return "data:image/png;base64,"; }
 }
 const documentEvents = {};
-globalThis.document = { body: new Element("body"), addEventListener: (event, fn) => (documentEvents[event] ??= []).push(fn), createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag),
+globalThis.document = { body: new Element("body"), dispatchEvent() {}, addEventListener: (event, fn) => (documentEvents[event] ??= []).push(fn), createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag),
   createDocumentFragment: () => new Element("fragment"),
   createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; } };
 globalThis.window = globalThis;

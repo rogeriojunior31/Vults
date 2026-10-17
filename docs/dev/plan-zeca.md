@@ -102,6 +102,27 @@ not reworked here; N1 changes their frame only.
 | N1.4 | Settings | Groups as cards, categories with icons and a larger title; Settings owns every value, Activity every figure |
 | N1.5 | Acceptance | UX6's [desktop matrix](plan-ui.md#ux6-final-desktop-acceptance), then each page side by side with the prototype |
 
+N1.1-N1.4 implementation is delivered on `feat/n1-pages-theme` (2026-10-17): the
+shared single-row frame, optional neutral Light theme beside default Black, retained
+resizable/foldable side panels, recorded weekly comparisons and agent totals, connection
+triage, and grouped Settings. History retention stays in Settings; Activity links there.
+
+The native Linux pass covered Activity, Connections and Settings at 480 x 360,
+760 x 600 and 1180 x 820 in both themes, including scroll reachability, narrow detail
+return/focus, panel reset/folding and a retained Chat draft. Black layouts were compared
+with the prototype in the same WebKit runtime. Controlled local history and GitHub
+responses supplied populated states; they are not usage or live-account evidence.
+On 2026-10-17, the user validated the corrected Flock/Compact themes in the running app,
+accepted N1.5 and requested the N1 PR before N2. N1.1-N1.5 are complete. The broader
+UX6 desktop matrix (multiple displays/scales and window ownership) and R3 release
+smoke remain tracked separately.
+
+The Flock/Compact theme follow-up replaces fixed dark surfaces, pale diff text and control
+colors with shared roles. Active canvases refresh their palettes on a theme change; hidden
+ones invalidate without starting animation. Native checks cover Flock at 480/760/1180 px,
+Quick and Mini in both schemes, populated sessions, an unanswered permission and live
+switching with motion paused. Representative text contrast is checked in the native renderer.
+
 #### N2 Flock and Chat
 
 Each item ships with its real source of state; a mocked value in the prototype becomes a read in
