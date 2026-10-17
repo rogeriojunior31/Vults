@@ -27,7 +27,7 @@ starts it over ACP or a native driver, so every permission comes to us).
 | Kimi Code | Yes | No: asks in its prompt; a card in a task | ACP |
 | Amp, Hermes, Crush, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
 
-`AgentKind` is `Claude | Codex | OpenCode | Qwen | Copilot | Other`, protocol `VERSION` 8. An
+`AgentKind` is `Claude | Codex | OpenCode | Qwen | Copilot | Other`, protocol `VERSION` 9. An
 answerable agent needs its own kind (*Always* rules and policies are keyed by it); an observe-only
 one is `Other` with an `agent_name`, a registry row and its parser. `Other` never waits for a reply
 (G1 changes that).

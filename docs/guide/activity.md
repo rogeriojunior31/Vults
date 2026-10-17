@@ -1,8 +1,8 @@
 # Activity
 
 The Nest's **Activity → Week** shows what your agents did: a week's recap and the last year as a
-grid. **Settings → Activity** keeps the history controls and an **Open Activity** button;
-the recap and calendar have one home in the Nest. Activity is counted on this computer,
+grid. **Settings → Activity** keeps the history and daily budget controls and an
+**Open Activity** button; the recap and calendar have one home in the Nest. Activity is counted on this computer,
 from a local history that Vults keeps as your agents work.
 
 The Nest groups Activity into six views, with the same navigation and summary style:
@@ -24,6 +24,19 @@ top, four totals and time by project (up to four projects), or a small daily cha
 is named. The arrows switch between the previous week and this week; **Open in the Nest** opens
 the full Activity view. Hours in the top summary are rounded; hover that figure for the full
 duration. An unread week shows a loading or error message instead of zero totals.
+
+## Cost and a daily budget
+
+**Activity → Cost** shows today's recorded spend, plan windows and costs by day and project.
+Subscription costs are shown at API prices; they are not an extra charge to your plan.
+Missing measurements stay unknown. Existing spend history remains readable.
+
+**Budget settings** opens **Settings → Activity**, the only place to edit the daily budget.
+Enter US dollars, from $0.01 to $10,000, or leave it empty for no budget. Saving disables the
+controls until the write finishes; a failed write keeps your draft for another attempt.
+At 80% Vults notifies you; once spent, it notifies you again and starts no new session until
+tomorrow, including `/continue`. It never stops a running session or blocks an agent you started.
+Zeca's Chat, summaries and sleep have their own limits and are not counted in this budget.
 
 ## What a turn is
 
@@ -75,8 +88,9 @@ and is asked through `gh` once when the tab opens, then kept an hour in memory, 
   the sleep's runs, and the snapshot of the flock kept for Zeca's MCP server, in one go, leaving
   one line in the audit log: that you cleared it, and when.
   What stays: what Zeca remembers (his memory files, **Settings → Chat & voice → Memory**), the
-  policies you accepted, your paired phones, your tasks and what the agents cost
-  ([Safety](../safety.md)).
+  policies you accepted, your paired phones and recorded agent costs
+  ([Safety](../safety.md)). Tables from retired features stay untouched; their old cost rows
+  remain readable in **Cost**.
 - The history lives in one local database, `vults.sqlite` (each turn for 12 weeks, each day's
   totals for a year), in `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` on Windows). See
   [Settings and files](../reference/settings.md).

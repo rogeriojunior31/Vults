@@ -12,7 +12,7 @@ import { NAME_BY_ID } from "../../agents";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
-import { money, usageLabel, usageLevel } from "./budget";
+import { money, usageLabel, usageLevel } from "../../cost";
 import { viewState } from "./view-state";
 
 export interface RecordsBackend {

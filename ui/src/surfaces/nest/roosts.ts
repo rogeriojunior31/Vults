@@ -6,7 +6,7 @@ import { duration } from "../../duration";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { statusWords } from "../../island/views";
-import { money } from "./budget";
+import { money } from "../../cost";
 import { viewState } from "./view-state";
 
 const CHECKS = {

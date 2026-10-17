@@ -108,7 +108,7 @@ async fn an_acp_agent_asks_stops_and_resumes() {
     // A command asks; the yes is the agent's "once", never its "always".
     let work = folder(&root, "card", "card");
     let spec = Spec {
-        system_append: Some("You work on task 3.".into()),
+        system_append: Some("Keep edits in this folder.".into()),
         role: vults_agents::driver::Role::Worker,
         ..Spec::in_dir(work.clone())
     };
@@ -127,7 +127,10 @@ async fn an_acp_agent_asks_stops_and_resumes() {
     assert!(!sent.contains(r#""optionId":"always""#), "{sent}");
     // No file system or terminal of ours; the brief leads the first prompt.
     assert!(sent.contains(r#""terminal":false"#), "{sent}");
-    assert!(sent.contains(r"You work on task 3.\n\nclean the build"), "{sent}");
+    assert!(
+        sent.contains(r"Keep edits in this folder.\n\nclean the build"),
+        "{sent}"
+    );
     let events = sink.events();
     assert!(events.contains(&Event::Text("hello".into())));
     assert!(events.contains(&Event::ToolEnd {
@@ -155,7 +158,7 @@ async fn an_acp_agent_asks_stops_and_resumes() {
     let again = Record::default();
     assert_eq!(driver.send(&input("and now?"), &again).await, Ok(()));
     let sent = got(&work);
-    assert_eq!(sent.matches("You work on task 3.").count(), 1, "{sent}");
+    assert_eq!(sent.matches("Keep edits in this folder.").count(), 1, "{sent}");
     let share = again.events().iter().find_map(|e| match e {
         Event::Usage(u) => u.cost_usd,
         _ => None,

@@ -150,7 +150,6 @@ node scripts/check-nest-close.mjs  # saved close, failure and retry, no desktop 
 node scripts/check-chat-models.mjs  # model read failure and explicit retry, no browser server
 node scripts/check-flock-place.mjs  # retained flock navigation, no browser server
 node scripts/check-project-search.mjs  # retained project search, no browser server
-node scripts/check-task-actions.mjs  # task disclosures and confirmations, no browser server
 node scripts/check-surface-continuity.mjs  # Nest/Quick handoff, drafts, owners and card visibility
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings

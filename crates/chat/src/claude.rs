@@ -71,7 +71,7 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
         }
         Settings::Project => cmd.args(["--setting-sources", "user,project,local"]),
     };
-    if matches!(spec.sandbox, Sandbox::Native | Sandbox::ReadOnly) {
+    if spec.sandbox == Sandbox::Native {
         // Every command in bubblewrap, and still a card before each: Claude Code would otherwise
         // run a sandboxed command unasked (rule 2). No way out of the sandbox, and no run at all
         // when it can't start, rather than a silent unsandboxed one.
@@ -603,12 +603,12 @@ mod tests {
     }
 
     #[test]
-    fn a_tasks_worker_runs_sandboxed_still_asking_and_without_zecas_persona() {
+    fn a_continued_session_runs_sandboxed_still_asking_and_without_zecas_persona() {
         let spec = Spec {
             settings: Settings::User,
             sandbox: vults_agents::driver::Sandbox::Native,
             role: vults_agents::driver::Role::Worker,
-            system_append: Some("Task brief.".into()),
+            system_append: Some("Continuation brief.".into()),
             ..Spec::in_dir("/w".into())
         };
         let args: Vec<String> = command(&spec, &Turn::default(), None)
@@ -638,7 +638,10 @@ mod tests {
             .windows(2)
             .find(|w| w[0] == "--append-system-prompt")
             .unwrap();
-        assert_eq!(system[1], "Task brief.", "a worker gets its brief, not Zeca");
+        assert_eq!(
+            system[1], "Continuation brief.",
+            "a worker gets its brief, not Zeca"
+        );
     }
 
     #[test]

@@ -1,6 +1,0 @@
-Ordinary key=value parsing works, but values containing '=' raise ValueError. Unittest discovery found no tests; pytest is unavailable. Direct checks reproduced the bug.
-
-Review comment:
-
-- [P2] Split each line only at the first equals sign — case-10/conf.py:9-9
-  For valid input such as `token=a=b`, `line.split('=')` produces three items, causing `ValueError` instead of returning `{'token': 'a=b'}`. This violates the explicit requirement that values may contain `=`. Limit the split to the first separator.

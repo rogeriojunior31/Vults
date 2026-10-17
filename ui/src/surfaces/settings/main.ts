@@ -14,6 +14,7 @@ import { policiesSection, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { historyCard, type Activity, type ActivityActions } from "./activity";
+import { createBudget } from "./budget";
 import { phoneEvent, phonePage, refreshPhone } from "./phone";
 import { Sound } from "../../sound";
 import { icon, type IconName } from "../../island/icons";
@@ -59,6 +60,8 @@ interface Panel {
 }
 
 const root = document.getElementById("settings")!;
+const budget = createBudget({ today: Bridge.spendToday, setBudget: Bridge.budgetSet });
+Bridge.onSpend(() => { if (page === "activity") budget.refresh(); });
 // Settings is a webview of the Nest's window (ADR 0021), under the Nest's own header: a tab goes
 // back to the Nest's webview, the size switch keeps Settings in front.
 let nestFull = false;
@@ -116,7 +119,7 @@ const setNestFull = (on: boolean) => {
 };
 void Bridge.nestIsFull().then(setNestFull, () => {});
 Bridge.onNestFull(setNestFull);
-// Alt+1 to 5 as in the Nest; Esc leaves Full for Room.
+// Alt+1 to 4 as in the Nest; Esc leaves Full for Room.
 window.addEventListener("keydown", (e) => {
   const pick = tabByKey(e, zeca);
   if (pick) {
@@ -881,7 +884,7 @@ function generalPage(): HTMLElement[] {
       row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
       row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
       row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
-      row(t("The Nest's tabs"), t("Choose Flock, Tasks, Chat, Activity or Connections. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
+      row(t("The Nest's tabs"), t("Choose Flock, Chat, Activity or Connections. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–4" })),
     )),
   ];
 }
@@ -1472,7 +1475,29 @@ function renderPhone(): void {
   if (page === "phone") render();
 }
 
+function choosePage(next: Page): void {
+  page = next;
+  navigated = true;
+  location.hash = next;
+  apiMessage = null;
+  if (next === "agents") doctorAsked = false;
+  if (next === "approvals") {
+    void refreshRules();
+    void refreshPolicies(() => page === "approvals" && render());
+  }
+  if (next === "projects") void refreshProjects();
+  if (next === "activity") {
+    clearing = false;
+    void refreshActivity();
+    budget.refresh();
+  }
+  if (next === "chat") void refreshApi();
+  if (next === "phone") void refreshPhone(renderPhone);
+  render();
+}
+
 function render(): void {
+  if (page === "activity") budget.relabel();
   const scroll = page === drawn ? (root.querySelector("main.page")?.scrollTop ?? 0) : 0;
   if (drawn) expanded.set(drawn, new Set([...root.querySelectorAll<HTMLDetailsElement>("details")].filter(node => node.open).map(node => node.dataset.setting ?? "")));
   const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
@@ -1497,6 +1522,7 @@ function render(): void {
               ? [el("h1", { text: t("Activity") }),
                 el("p", { class: "lede", text: t("Choose what stays on this computer. Recaps and records are in Activity.") }),
                 el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week"))),
+                budget.element,
                 historyCard(activity, { confirming: clearing }, activityActions)]
             : page === "connectors"
               ? connectorsPage()
@@ -1519,25 +1545,7 @@ function render(): void {
     if (p.id === page) b.setAttribute("aria-current", "page");
     return b;
   };
-  const choosePage = (next: Page) => {
-    page = next;
-    navigated = true;
-    location.hash = next;
-    apiMessage = null;
-    if (next === "agents") doctorAsked = false;
-    if (next === "approvals") {
-      void refreshRules();
-      void refreshPolicies(() => page === "approvals" && render());
-    }
-    if (next === "projects") void refreshProjects();
-    if (next === "activity") {
-      clearing = false;
-      void refreshActivity();
-    }
-    if (next === "chat") void refreshApi();
-    if (next === "phone") void refreshPhone(renderPhone);
-    render();
-  };
+
   // The Nest's header above already says whose settings these are: groups, then pages.
   const nav = el(
     "nav",
@@ -1578,7 +1586,7 @@ render();
 // By the panel the open island may cover this window's corner: a click here folds it, as a click
 // outside a panel's popup closes it (the island keeps a waiting card).
 window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}), { capture: true });
-if (page === "activity") void refreshActivity();
+if (page === "activity") { void refreshActivity(); budget.refresh(); }
 if (page === "phone") void refreshPhone(renderPhone);
 Bridge.onPhone(phoneEvent);
 void Bridge.appSettings().then((s) => {
@@ -1634,12 +1642,7 @@ void refreshMonitors();
 // The tray asks an open window for one page (Set up agents…).
 Bridge.onSettingsSection((section) => {
   const p = asked(section);
-  if (!p) return;
-  navigated = true;
-  page = p;
-  location.hash = p;
-  if (p === "agents") doctorAsked = false;
-  render();
+  if (p) choosePage(p);
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {

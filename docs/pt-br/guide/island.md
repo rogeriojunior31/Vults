@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 3a71a158ccba -->
+<!-- source: 119036c13227 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -30,7 +30,7 @@ lugar dele. Toda outra sessão é um **vult**.
 
 As aves encenam o que as sessões fazem: leem, bicam o fio enquanto editam, levantam voo para a web e
 abrem as asas quando uma permissão espera (com uma marca sobre a cabeça; ao amanhecer as aves
-em descanso abrem as delas ao sol, sem marca). Sessões novas chegam voando (uma que uma tarefa sua começou decola do lugar do Zeca na pílula, ou da ave da frente quando há uma lá); as que terminam vão embora.
+em descanso abrem as delas ao sol, sem marca). Sessões novas chegam voando; as que terminam vão embora.
 Com movimento reduzido, elas ficam nos poleiros. **Settings → Flock & Zeca** escolhe o conjunto de espécies,
 a espécie do Zeca e os visitantes raros. [Animações](../ANIMATIONS.md) lista cada clipe.
 
@@ -204,9 +204,9 @@ como o protótipo as desenha:
   estão desatualizados, em **General** nos outros casos).
 
 Sobre as abas Chat, Activity, Connections e Settings, os chips das sessões que precisam de você ficam embaixo
-das abas; um deles abre a sessão. Activity tem **Open in the Nest** para o resto, e as suas tarefas
-ficam no [Nest](nest.md), a janela do próprio Vults, com abas próprias, que a seta no topo do chat
-também abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (cerca de 500 px na tela, o
+das abas; um deles abre a sessão. Activity tem **Open in the Nest** para o resto.
+O [Nest](nest.md), a janela do próprio Vults, tem abas próprias; a seta no topo do chat
+também o abre. A música e o uso dos seus planos ficam numa linha abaixo das abas. Embaixo, na largura toda da ilha (cerca de 500 px na tela, o
 **Quick** do seletor de tamanho):
 
 - **em repouso, o bando**: o vult de cada sessão num fio, com o dobro do tamanho, o nome do projeto

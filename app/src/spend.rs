@@ -1,10 +1,9 @@
 //! What the agents cost, and the user's daily budget (`docs/dev/plan-zeca.md` W9). Costs come from
-//! the agents themselves: a task run's turns (the driver), and a watched Claude Code session's
+//! the agents themselves: continued turns (the driver), and a watched Claude Code session's
 //! statusLine. On a subscription they are what the tokens would cost at API prices.
 //!
 //! The budget is the user's own limit on what Vults starts: at 80 % a notification, and once it is
-//! spent another, and no new session starts from here (a task's start, handoff, review, or a
-//! `/continue`) until the next day. It never stops an agent, and never blocks or slows one Vults
+//! spent another, and no new `/continue` starts until the next day. It never stops an agent, and never blocks or slows one Vults
 //! only watches (rule 1).
 
 use std::sync::Mutex;
@@ -15,7 +14,7 @@ use vults_protocol::AgentKind;
 use vults_store::Store;
 use vults_store::spend::Source;
 
-/// The highest budget the Nest takes: $10,000 a day.
+/// The highest budget Settings takes: $10,000 a day.
 const MAX_CENTS: u32 = 1_000_000;
 
 /// Held while the budget's news is weighed.
@@ -59,19 +58,18 @@ fn step(spent: f64, budget: f64) -> u8 {
     }
 }
 
-/// A run's spend, from the driver: what it reported for a turn (`task:12`; a `/continue` is
-/// `task:0`). Blocking.
-pub fn run(app: &AppHandle, task: i64, roost: &str, plan: &str, usd: f64, tokens: u64) {
-    let source = format!("task:{task}");
+/// A continued turn's reported cost. Legacy `task:N` sources stay in the same ledger.
+pub fn continuation(app: &AppHandle, roost: &str, plan: &str, usd: f64, tokens: u64) {
+    let source = "continue";
     let at = Source {
         day: &today(),
-        source: &source,
+        source,
         roost,
         plan,
     };
     let tokens = i64::try_from(tokens).unwrap_or(i64::MAX);
     if let Err(e) = open().and_then(|mut s| s.spend_add(&at, usd, tokens).map_err(|e| e.to_string())) {
-        tracing::warn!(task, error = %e, "a run's spend not kept");
+        tracing::warn!(error = %e, "a run's spend not kept");
     }
     check(app);
 }
@@ -198,6 +196,7 @@ fn tell(app: &AppHandle, day: &str, step: u8) {
 
 /// Says the budget's news once a day per step. Blocking.
 fn check(app: &AppHandle) {
+    let _ = app.emit("spend-changed", ());
     let Some(budget) = budget(app) else {
         return;
     };
@@ -225,7 +224,6 @@ fn check(app: &AppHandle) {
         &money(budget),
     );
     crate::notify::plain(app, title, body);
-    let _ = app.emit("tasks-changed", ());
 }
 
 /// Before Vults starts a session: refused once today's budget is spent. A day Vults can't read
@@ -246,7 +244,7 @@ pub fn refuse(app: &AppHandle) -> Result<(), String> {
     }
 }
 
-/// Today's spend and the budget, for the Nest's Tasks and Activity → Cost.
+/// Today's spend and the budget, for Activity → Cost and Settings.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Today {
@@ -273,12 +271,10 @@ pub async fn spend_today(app: AppHandle) -> Result<Today, String> {
     .map_err(|e| e.to_string())?
 }
 
-/// The daily budget in cents, or none for no budget; from the Nest only.
+/// The daily budget in cents, or none for no budget; from Settings only.
 #[tauri::command]
 pub async fn budget_set(app: AppHandle, window: tauri::Webview, cents: Option<u32>) -> Result<(), String> {
-    if window.label() != crate::NEST {
-        return Err("only the Nest can do this".into());
-    }
+    crate::settings_page(&window)?;
     let cents = cents.filter(|c| *c > 0);
     if cents.is_some_and(|c| c > MAX_CENTS) {
         return Err("That budget is too high.".into());
@@ -300,7 +296,6 @@ pub async fn budget_set(app: AppHandle, window: tauri::Webview, cents: Option<u3
         check(&a);
     })
     .await;
-    let _ = app.emit("tasks-changed", ());
     Ok(())
 }
 

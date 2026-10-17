@@ -1,7 +1,7 @@
 # 0021. Surfaces: one core, four sizes, a card answered where you are
 
 **Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from 0008, 0009, 0022, 0023, 0024
-and 0030.
+and 0030. Amended on 2026-10-16 by [0031](0031-tasks-leave-vults.md): the Nest has no Tasks tab.
 
 ## Context
 
@@ -48,11 +48,14 @@ meant to steer whatever reads them.
   its need strip with its sound (*Quiet* only quiets what happens at rest). In
   *Paused* `core` does not acknowledge cards and releases them at once, so the agent asks in its
   terminal with no wait, and connectors stop polling.
-- **The Nest** has five tabs, Flock, Tasks, Chat, Activity (Week with *By project*, History, Cost,
-  Traces, Audit) and Connections, with Memory a side panel of the Chat, Settings behind a gear and
+- **The Nest** has four tabs, Flock, Chat, Connections and Activity (Week with *By project*,
+  History, Cost, Traces, Audit), with Memory a side panel of the Chat, Settings behind a gear and
   the agents' capability table in Settings › Agents. Changing size keeps the selection: the session
   is core's `focus`; the tab, filters and chosen connection are look the app hands to the Nest. The
-  Nest opens with Zeca off, without the Chat tab and *Ask Zeca*.
+  Nest opens with Zeca off, without the Chat tab and *Ask Zeca* (D7). Activity keeps the spend
+  figures, including historical `task:N` rows; Settings keeps the budget value. `/continue` remains
+  in Chat; it does not bring back a Tasks surface. Stop is available only for an execution Vults
+  started through its supported driver (D8), never merely because it watches a flock session.
 - **One surface at a time** (the island and the Nest stay two surfaces underneath). While the Nest is open and in sight (Room or Full), the island is
   hidden, pill and sky and all, with no region that takes the mouse. It comes back when the Nest
   closes or goes back to Quick or Mini (or is minimized, where the system says so); the footer's
@@ -104,3 +107,5 @@ meant to steer whatever reads them.
   Geometry accounts for zoom once and clamps to the viewport before measurement.
   Initial native configuration matches the runtime's 720 x 640 size; Mini and the
   other Quick tabs retain their widths. User-selectable paired widths remain future work.
+- 2026-10-16, [0031](0031-tasks-leave-vults.md): remove Tasks from the Nest; preserve D7, spend and
+  budget, and the D8 boundary for `/continue`.

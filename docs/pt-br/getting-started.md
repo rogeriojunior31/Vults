@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: cccbb0bbe2b1 -->
+<!-- source: 83095f80a879 -->
 
 <a id="install"></a>
 
@@ -101,8 +101,7 @@ as notificações. O que os seus agentes dizem fica nas palavras deles.
 - [Aprovando pela ilha](guide/approvals.md)
 - [Atividade](guide/activity.md)
 - [Outros agentes](guide/other-agents.md)
-- [O Nest](guide/nest.md): o bando inteiro, tarefas, registros e conexões
-- [Tarefas](guide/tasks.md)
+- [O Nest](guide/nest.md): o bando inteiro, chat, registros e conexões
 - [Conversando com o Zeca](guide/chat.md)
 - [A memória do Zeca](guide/memory.md)
 - [Conectores](guide/connectors.md)

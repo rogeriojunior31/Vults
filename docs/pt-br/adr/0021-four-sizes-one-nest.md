@@ -1,8 +1,8 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: bfcedb139961 -->
+<!-- source: efac77eb9e4e -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
-0023, da 0024 e da 0030.
+0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
 
 <a id="context"></a>
 
@@ -55,12 +55,15 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   faixa de quem precisa de você com o seu som (o *Quiet* só silencia o que acontece em
   repouso). Em *Paused*, o `core` não confirma cards e os libera na hora, então o agente pergunta no
   terminal sem esperar, e os conectores param o polling.
-- **O Nest** tem cinco abas, Flock, Tasks, Chat, Activity (Week com *By project*, History, Cost,
-  Traces, Audit) e Connections, com Memory num painel lateral do Chat, as Configurações atrás de uma
+- **O Nest** tem quatro abas, Flock, Chat, Connections e Activity (Week com *By project*, History,
+  Cost, Traces, Audit), com Memory num painel lateral do Chat, as Configurações atrás de uma
   engrenagem e a tabela de capacidades dos agentes em Configurações › Agents. Trocar de tamanho
   mantém a seleção: a sessão é o `focus` do core; a aba, os filtros e a conexão escolhida são
   aparência que o app entrega ao Nest. O Nest abre com o Zeca desligado, sem a aba Chat e sem *Ask
-  Zeca*.
+  Zeca* (D7). Activity mantém os números de gastos, incluindo registros históricos `task:N`;
+  as Configurações mantêm o valor do orçamento. `/continue` continua no Chat; ele não traz de
+  volta uma superfície de Tasks. Stop só fica disponível para uma execução que o Vults iniciou
+  pelo driver suportado (D8), nunca só porque ele observa uma sessão do bando.
 - **Uma superfície por vez** (a ilha e o Nest continuam duas superfícies por baixo). Enquanto o Nest está aberto e à vista (Room ou Full), a ilha fica
   escondida, pílula, céu e tudo, sem nenhuma região que pegue o mouse. Ela volta quando o Nest
   fecha ou volta para Quick ou Mini (ou é minimizado, onde o sistema diz isso); o **Back to the
@@ -120,3 +123,5 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   da medição. A configuração nativa inicial acompanha os 720 x 640 do runtime; Mini
   e as outras abas do Quick mantêm suas larguras. Larguras pareadas escolhidas pelo
   usuário continuam como trabalho futuro.
+- 2026-10-16, [0031](0031-tasks-leave-vults.md): remover Tasks do Nest; preservar D7, gastos e
+  orçamento e o limite de D8 para `/continue`.

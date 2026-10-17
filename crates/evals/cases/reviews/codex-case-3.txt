@@ -1,6 +1,0 @@
-The clamp criterion is not met; direct checks fail for below-range and in-range values. Unittest discovered no tests, and pytest is not installed.
-
-Review comment:
-
-- [P1] Apply the lower and upper bounds in the correct order — case-3/nums.py:6-6
-  For any ordered bounds `lo < hi`, this expression always returns `hi`. For example, `clamp(5, 0, 10)` and `clamp(-1, 0, 10)` both return `10`, rather than `5` and `0`. Use `max(lo, min(hi, x))` to preserve in-range values and clamp below-range values correctly.

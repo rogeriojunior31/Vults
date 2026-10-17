@@ -2,7 +2,7 @@
 // (ADR 0021, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
 // conversation in full Markdown: the same chat, so a message sent in either shows in both. Its
 // cards, and the flock's, are answered here while the user is in it (ADR 0021).
-import { Bridge, type OtherAgent } from "../../bridge";
+import { Bridge } from "../../bridge";
 import { setLang, t } from "../../i18n";
 import { el } from "../../dom";
 import { savedClose, savedTransition } from "./close";
@@ -10,11 +10,6 @@ import { createNest } from "./render";
 import { shownKeys } from "../../island/views";
 import { moltSeason, setMolt } from "../../character/director";
 import { followClock, onDayPart } from "../../island/daypart";
-
-/** The flock's folders now, for a new task's roost. */
-let folders: { cwd: string; project: string }[] = [];
-// The ACP agents installed here, read once: the Tasks tab draws again when they come.
-let otherAgents: OtherAgent[] = [];
 
 const nest = createNest(
   document.getElementById("nest")!,
@@ -37,7 +32,6 @@ const nest = createNest(
       rename: (id, title) => Bridge.chatRename(id, title),
       remove: (id) => Bridge.chatDelete(id),
       memory: (text, folder) => Bridge.memoryCommand(text, folder),
-      task: (text, folder) => Bridge.taskCommand(text, folder),
       handoff: (text, folder) => Bridge.continueCommand(text, folder),
       setAccess: (access) => Bridge.setChatAccess(access),
       openSettings: () => void Bridge.openSettings("chat"),
@@ -68,27 +62,7 @@ const nest = createNest(
       decide: (id, accept) => Bridge.memoryDecide(id, accept),
       undo: (id) => Bridge.memoryUndo(id),
     },
-    tasks: {
-      load: (closed) => Bridge.tasksList(closed),
-      create: (goal, criteria, folder) =>
-        Bridge.taskCreate(goal, criteria, folder),
-      edit: (id, edit) => Bridge.taskEdit(id, edit),
-      remove: (id) => Bridge.taskDelete(id),
-      openIssue: (id) => Bridge.taskOpenIssue(id),
-      visit: (id) => Bridge.taskVisitIssue(id),
-      folders: () => folders,
-      start: (id, engine) => Bridge.taskStart(id, engine),
-      startFresh: (id, engine) => Bridge.taskStartFresh(id, engine),
-      stop: (id) => Bridge.taskStop(id),
-      review: (id) => Bridge.taskReview(id),
-      removeWorktree: (id) => Bridge.taskRemoveWorktree(id),
-      today: () => Bridge.spendToday(),
-      agents: () => otherAgents,
-    },
-    budget: {
-      today: () => Bridge.spendToday(),
-      setBudget: (cents) => Bridge.budgetSet(cents),
-    },
+    spend: () => Bridge.spendToday(),
     records: {
       query: Bridge.recordQuery,
       history: () => Bridge.nestHistory(),
@@ -134,7 +108,7 @@ const nest = createNest(
       merge: (connector, item) => Bridge.boardMerge(connector, item),
       onMerged: (cb) => Bridge.onRowMerged(cb),
     },
-    settings: () => void Bridge.openSettings(),
+    settings: (section) => void Bridge.openSettings(section),
     savePlace: Bridge.nestTabSet,
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
@@ -181,14 +155,7 @@ Bridge.onNestTab((tab) => {
 });
 Bridge.onMemory(() => nest.memoryChanged());
 Bridge.onUsage(() => nest.usageChanged());
-Bridge.onTasks(() => nest.tasksChanged());
-void Bridge.taskAgents().then(
-  (a) => {
-    otherAgents = a;
-    nest.tasksChanged();
-  },
-  () => {},
-);
+Bridge.onSpend(() => nest.spendChanged());
 
 Bridge.onChat((d) => nest.chat.receive(d));
 // Allow and Deny's keys come here while the user is in the Nest (ADR 0021).
@@ -211,7 +178,7 @@ let lastView: Parameters<typeof nest.view>[0] | null = null;
 onDayPart(() => lastView && nest.view(lastView));
 Bridge.onView((v) => {
   lastView = v;
-  folders = v.sessions.flatMap((s) =>
+  const folders = v.sessions.flatMap((s) =>
     s.cwd ? [{ cwd: s.cwd, project: s.project }] : [],
   );
   nest.chat.setFolders(folders, null);

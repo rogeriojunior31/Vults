@@ -1,5 +1,5 @@
 # Vults
-<!-- source: e3f9b399ff40 -->
+<!-- source: 7436bc7adc5f -->
 
 O Vults mostra seus agentes de código na sua área de trabalho e te dá um companheiro para trabalhar junto.
 **O bando**: cada sessão do Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code é um urubu que mostra o que está
@@ -13,7 +13,6 @@ usa e escuta a sua voz. Ele é opcional: desligue-o e o bando funciona sem ele.
 - [A ilha](guide/island.md)
 - [Aprovando pela ilha](guide/approvals.md)
 - [O Nest](guide/nest.md)
-- [Tarefas](guide/tasks.md)
 - [Conversando com o Zeca](guide/chat.md)
 - [A memória do Zeca](guide/memory.md)
 - [Conectores](guide/connectors.md)

@@ -121,3 +121,6 @@ body.still #settings .page-enter { animation: none; }
   #settings .settings-disclosure > summary { padding: 16px; }
   #settings .settings-page-picker { min-height: 36px; }
 }
+
+.budget-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.budget-controls .budget-input { width: 110px; }

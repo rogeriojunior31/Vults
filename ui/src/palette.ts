@@ -1,5 +1,5 @@
 // The command palette (ADR 0021, plan-zeca K9): Ctrl+K in the island and the Nest. It jumps to a
-// session, puts `/task`, `/delegate`, `/continue` or `/remember` in the chat to finish, and opens a
+// session, puts `/continue` or `/remember` in the chat to finish, and opens a
 // tab. It never answers a card (D1): a session that waits only leads to its card.
 import { el } from "./dom";
 import { t } from "./i18n";
@@ -40,15 +40,12 @@ export function paletteItems(c: PaletteContext): PaletteItem[] {
   const run = c.command;
   const commands = run
     ? [
-        { label: "/task", hint: t("A new task: its goal, then a line per criterion"), run: () => run("/task ") },
-        { label: "/delegate", hint: t("Send a task to the agent that suits its roost"), run: () => run("/delegate ") },
         { label: "/continue", hint: t("Hand off to a session that stopped"), run: () => run("/continue ") },
         { label: "/remember", hint: t("Keep a fact for Zeca"), run: () => run("/remember ") },
       ]
     : [];
   const tabs: [string, string][] = [
     ["flock", t("Open the Flock")],
-    ["tasks", t("Open Tasks")],
     ...(run ? ([["chat", t("Open the Chat")]] as [string, string][]) : []),
     ["activity", t("Open Activity")],
     ["connections", t("Open Connections")],

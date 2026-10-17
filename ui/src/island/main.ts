@@ -75,7 +75,6 @@ const island = createIsland(document.getElementById("island")!, {
     openNest: () => void changeView(() => Bridge.openNest("chat")),
     pickFiles: (title) => Bridge.chatPickFiles(title),
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
-    task: (text, folder) => Bridge.taskCommand(text, folder),
     handoff: (text, folder) => Bridge.continueCommand(text, folder),
     pick: (folder) => Bridge.chatPick(folder),
     setPick: (folder, provider, pick) => Bridge.setChatPick(folder, provider, pick),

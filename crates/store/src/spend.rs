@@ -1,4 +1,4 @@
-//! What the agents cost (`docs/dev/plan-zeca.md` W9), by local day, by what spent it (a task's run,
+//! What the agents cost (`docs/dev/plan-zeca.md` W9), by local day, by what spent it (a continuation,
 //! a watched session) and by roost: for the Nest's costs and the user's daily budget. Dollars are
 //! what the agent itself reported, never guessed from a price list; on a subscription they are
 //! what the tokens would cost at API prices, which the plan does not charge.
@@ -30,7 +30,7 @@ pub(crate) const TABLE: &str = "
 pub struct Source<'a> {
     /// `YYYY-MM-DD`, the user's local day.
     pub day: &'a str,
-    /// `task:12`, or a watched session's `claude:<id>`.
+    /// `continue`, a watched session's `claude:<id>`, or a legacy `task:N` source.
     pub source: &'a str,
     /// The roost's key; empty outside any.
     pub roost: &'a str,

@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { AgentKind, Diff, RowView, SessionView, ViewModel } from "./view.gen";
-import type { Engine, InstallAgent } from "./agents.gen";
+import type { InstallAgent } from "./agents.gen";
 import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
@@ -157,56 +157,8 @@ export interface Rule {
   target: string;
 }
 
-/** A task (plan-zeca W3), as the Nest's Tasks tab shows it. */
-export interface TaskRow {
-  id: number;
-  goal: string;
-  criteria: { text: string; done: boolean }[];
-  /** The roost's name; empty outside a repository. */
-  roost: string;
-  /** Its key: two repositories may share a name. */
-  roostKey: string;
-  folder: string;
-  owner: string;
-  status: "open" | "doing" | "blocked" | "done" | "dropped";
-  costUsd: number | null;
-  /** The tokens its runs used (W9). */
-  tokens: number | null;
-  issue: string | null;
-  canOpenIssue: boolean;
-  /** A session Vults started for it is running (W4). */
-  running: boolean;
-  canStart: boolean;
-  hasWorktree: boolean;
-  /** The end of what its last session said. */
-  reply: string | null;
-  /** It has a session to go on with, or to hand off (W5). */
-  hasSession: boolean;
-  /** The agent that session ran on. */
-  sessionEngine: Engine | null;
-  /** The context pack its last handoff left. */
-  pack: string | null;
-  /** Why the router sent it to its agent (W8): `rule:codex`, `default:claude`,
-   *  `quota:codex:claude:91`, `score:codex:6:6`. */
-  route: string | null;
-  /** Its last review (W6): the reviewer's words, verdict and round. */
-  review: string | null;
-  reviewVerdict: "pass" | "changes" | "none" | null;
-  reviewRound: number | null;
-  updatedMs: number;
-}
-
-/** The agents a task's session can run on (W4), from the agents' registry. */
+/** CLI execution engines, from the agents' registry. */
 export type { Engine } from "./agents.gen";
-
-/** An agent that speaks ACP, installed here (W10). */
-export type OtherAgent = { name: Engine; title: string };
-
-export type TaskEdit =
-  | { kind: "status"; status: string }
-  | { kind: "owner"; owner: string }
-  | { kind: "criterion"; index: number; done: boolean }
-  | { kind: "issue"; issue: string };
 
 /** A policy the user accepted (ADR 0004), as it stands. */
 export interface PolicyRow {
@@ -664,32 +616,14 @@ export const Bridge = {
     invoke<void>("roost_share_apply", { key, file, fingerprint }),
   continueCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("continue_command", { text, folder }),
-  taskCommand: (text: string, folder: string | null) =>
-    invoke<{ said: string; detail: string | null } | null>("task_command", { text, folder }),
-  tasksList: (closed: boolean) => invoke<TaskRow[]>("tasks_list", { closed }),
   nestHistory: () => invoke<HistoryView>("nest_history"),
   nestAudit: () => invoke<AuditRow[]>("nest_audit"),
   nestTraces: () => invoke<TraceRow[]>("nest_traces"),
   nestUsage: () => invoke<UsageView>("nest_usage"),
-  taskAgents: () => invoke<OtherAgent[]>("task_agents"),
   spendToday: () => invoke<SpendToday>("spend_today"),
   budgetSet: (cents: number | null) => invoke<void>("budget_set", { cents }),
-  taskCreate: (goal: string, criteria: string[], folder: string | null) => invoke<number>("task_create", { goal, criteria, folder }),
-  taskEdit: (id: number, edit: TaskEdit) => invoke<void>("task_edit", { id, edit }),
-  taskDelete: (id: number) => invoke<void>("task_delete", { id }),
-  /** Opens an issue in the task's GitHub repository, through the user's gh: its address. */
-  taskOpenIssue: (id: number) => invoke<string>("task_open_issue", { id }),
-  taskVisitIssue: (id: number) => invoke<void>("task_visit_issue", { id }),
-  /** The chosen agent in the task's own clone, sandboxed; its cards come to the island. */
-  taskStart: (id: number, engine: Engine) => invoke<void>("task_start", { id, engine }),
-  /** A handoff: the session writes a context pack, and a new one starts from it (W5). */
-  taskStartFresh: (id: number, engine: Engine) => invoke<void>("task_start_fresh", { id, engine }),
-  taskStop: (id: number) => invoke<void>("task_stop", { id }),
-  /** The other agent reviews the task's branch, up to three rounds with fixes between (W6). */
-  taskReview: (id: number) => invoke<void>("task_review", { id }),
-  taskRemoveWorktree: (id: number) => invoke<void>("task_remove_worktree", { id }),
-  onTasks(cb: () => void): void {
-    void listen("tasks-changed", () => cb());
+  onSpend(cb: () => void): void {
+    void listen("spend-changed", () => cb());
   },
   memoryCommand: (text: string, folder: string | null) =>
     invoke<{ said: string; detail: string | null } | null>("memory_command", { text, folder }),
