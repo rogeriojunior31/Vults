@@ -115,10 +115,10 @@ pill has no room over the heads and keeps its badges.
   is (an Old World vulture or a condor) glides in from the right, rides the island's thermal once
   and goes on its way, never landing; it passes behind the cards and rows, never over their text.
   Off in Settings → Flock & Zeca; none with reduced motion or while the island is hidden.
-- After two seconds idle, a session's bird takes off into the shared sky below the island. A
-  finished session (the agent waiting for the next prompt) plays its done clip first, then takes
-  off once that clip and the species' signature are over (six to eight seconds after its done
-  state shows); its "done" badge stays until you dismiss it.
+- An idle or successfully finished session keeps a green circle for 30 seconds, then loses the
+  mark and takes off into the shared sky below the island. Core owns the monotonic rest deadline;
+  metadata, navigation and returning from the Nest never restart it. The done clip and species'
+  signature play on the perch during that grace period; the finished reply stays available.
   Each session keeps its bird across compact/open transitions, at its own phase and lap speed.
   The flock circles indefinitely while idle, by day. Work brings only that session's bird down;
   opening the island leaves the other birds in flight. No sessions means no decorative flock.
@@ -140,8 +140,9 @@ pill has no room over the heads and keeps its badges.
 - The sky is a transparent, pointer-free canvas inside the existing 720 by 640 desktop surface;
   it does not enlarge the input region or remap the Linux layer-shell window.
 - With reduced motion (including changes while flying), birds return to their static scenes.
-  An idle bird on its perch dozes after 90 seconds, and an idle bird takes off after 2, each ±12% by
-  its session, so the flock never moves in step. Hidden scenes stop their drawing timers.
+  An idle bird on its perch dozes after 90 seconds, ±12% by its session. The 30-second rest boundary
+  stays exact; flight phases and lap speeds vary per session. Calling a soaring bird down keeps it
+  perched for another 30 seconds without changing core's deadline. Hidden scenes stop their drawing timers.
 - The agent shows as a small band at the base of the neck (Claude orange, Codex teal, OpenCode pink, Qwen indigo, Copilot blue, any other tool, Antigravity included, violet), never as the
   bird's color.
 - A clip plays at least 600 ms before a calmer one replaces it; approval, question and failure cut in

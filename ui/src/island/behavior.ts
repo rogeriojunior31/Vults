@@ -56,6 +56,8 @@ const EMOTE: Partial<Record<SessionView["status"], string>> = {
 };
 
 export function emoteFor(s: SessionView): string | null {
+  if ((s.status === "idle" || s.status === "finished") && s.rested === false) return "done";
+  if (s.status === "finished" && s.rested === true) return null;
   if (s.status === "idle" && music) return "music";
   return EMOTE[s.status] ?? null;
 }

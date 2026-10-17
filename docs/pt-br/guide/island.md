@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 0c0d60e6e1c6 -->
+<!-- source: 81104f745f20 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -73,14 +73,21 @@ Ligue-o de volta no mesmo lugar; sem reiniciar, nos dois casos.
 o Zeca à esquerda com a sessão da frente, até oito vults espalhados pelo fio e, embaixo, uma linha
 fina por plano com o uso dele, nas cores dos medidores de uso (âmbar a partir de 70%, vermelho a
 partir de 90%). Para as sessões, as cores significam o
-mesmo em todo lugar: âmbar para uma permissão, ciano para uma pergunta, verde quando concluiu,
+mesmo em todo lugar: âmbar para uma permissão, ciano para uma pergunta, verde para repouso recente,
 vermelho quando falhou. Um vult num desses estados usa um selo dessa cor e com uma forma própria,
 para que nenhum estado dependa só da cor: um triângulo para uma permissão, um losango para uma
-pergunta, um círculo quando concluiu, um quadrado quando falhou. Enquanto alguém precisa de você a
+pergunta, um círculo para repouso recente, um quadrado quando falhou. Enquanto alguém precisa de você a
 borda da pílula pulsa em âmbar; quando uma sessão falhou (e ninguém precisa de você) ela fica
 vermelha; um ponto ciano no canto diz que um conector tem novidade. Deixe o ponteiro sobre um vult e ele olha para você (um
 que está no ar desce); **clique** nele para abrir a ilha na sessão dele, ou **clique com o botão
 direito** para as ações rápidas dele. As novidades de conectores esperam na ilha aberta.
+
+Uma sessão ociosa ou concluída com sucesso mantém seu círculo verde por 30 segundos. Depois a marca
+some e, de dia, sua ave circula no céu da ilha. Abrir o Quick ou voltar do Nest mantém esse prazo.
+Trabalho, uma permissão ou uma pergunta trazem a ave de volta para baixo. Ao amanhecer, ao entardecer
+e à noite, com movimento reduzido ou animação pausada, as aves ficam pousadas; aves ociosas também
+ficam no fio enquanto toca música. A resposta concluída continua disponível depois que a marca
+verde some.
 
 **Clique** em qualquer outro ponto da pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
 linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
@@ -246,7 +253,8 @@ para as últimas 32 edições da sessão, até 400 linhas cada; um mais longo av
 
 ![O diff de uma edição concluída no lugar do card: ticker.ts +4 −2, com números de linha](../../assets/island-live-diff.png)
 
-**OK** diz que você viu: o selo some e a sessão aparece como ociosa. Sem ninguém no fio, o card
+**OK** diz que você viu: a sessão aparece como ociosa. Para uma conclusão bem-sucedida, o prazo
+original de repouso continua valendo. Sem ninguém no fio, o card
 oferece **Ask Zeca**.
 
 O Zeca repara em você: olha para o ponteiro, ajeita as penas se você o deixa sobre ele e se assusta

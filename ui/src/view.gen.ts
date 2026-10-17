@@ -73,6 +73,10 @@ agent_name?: string | null, project: string,
  */
 cwd: string | null, status: Status,
 /**
+ * None while busy; false during the first 30 seconds of rest, then true until work returns.
+ */
+rested?: boolean | null,
+/**
  * What the status asks of the user.
  */
 attention: Attention,

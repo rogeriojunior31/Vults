@@ -2603,6 +2603,94 @@ fn focus_answers_nothing() {
 }
 
 #[test]
+fn rest_has_one_monotonic_deadline_across_metadata_navigation_and_wall_clock_changes() {
+    let mut s = State::default();
+    let t = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), t);
+    assert_eq!(s.sessions[&key("a")].rest_since, Some(t));
+    assert_eq!(session_view(&s, "a").rested, Some(false));
+    assert_eq!(s.next_rest(), Some(t + REST_AFTER));
+    visible(
+        &mut s,
+        Input::Cost {
+            session: key("a"),
+            usd: 0.4,
+        },
+        t + Duration::from_secs(10),
+    );
+    visible(&mut s, focus(Some("a")), t + Duration::from_secs(20));
+    visible(&mut s, Input::Clock(10_000_000), t + Duration::from_secs(25));
+    visible(&mut s, Input::Tick, t + REST_AFTER - Duration::from_millis(1));
+    assert_eq!(session_view(&s, "a").rested, Some(false));
+    assert_eq!(s.next_rest(), Some(t + REST_AFTER));
+    assert!(visible(&mut s, Input::Tick, t + REST_AFTER).is_empty());
+    assert_eq!(s.view().sessions[0].rested, Some(true));
+    assert_eq!(s.next_rest(), None);
+    visible(
+        &mut s,
+        agent("a", AgentEvent::PromptSubmitted),
+        t + Duration::from_secs(31),
+    );
+    assert_eq!(s.sessions[&key("a")].rest_since, None);
+    assert_eq!(session_view(&s, "a").rested, None);
+    visible(
+        &mut s,
+        agent("a", AgentEvent::Stopped { message: None }),
+        t + Duration::from_secs(35),
+    );
+    visible(
+        &mut s,
+        agent("a", AgentEvent::SubagentStopped),
+        t + Duration::from_secs(40),
+    );
+    assert_eq!(
+        s.sessions[&key("a")].rest_since,
+        Some(t + Duration::from_secs(35))
+    );
+    assert_eq!(session_view(&s, "a").rested, Some(false));
+    assert_eq!(s.next_rest(), Some(t + Duration::from_secs(65)));
+    visible(&mut s, Input::Tick, t + Duration::from_secs(65));
+    assert_eq!(session_view(&s, "a").rested, Some(true));
+    visible(
+        &mut s,
+        agent("a", AgentEvent::StopFailed { error: None }),
+        t + Duration::from_secs(66),
+    );
+    assert_eq!(session_view(&s, "a").rested, None);
+    assert_eq!(s.next_rest(), None);
+}
+
+#[test]
+fn the_next_rest_wakes_each_session_without_touching_a_waiting_offer() {
+    let mut s = State::default();
+    let t = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), t);
+    visible(
+        &mut s,
+        agent("b", AgentEvent::SessionStarted),
+        t + Duration::from_secs(10),
+    );
+    assert_eq!(s.next_rest(), Some(t + REST_AFTER));
+    visible(&mut s, requested("a", "r1"), t + Duration::from_secs(20));
+    let since = s.pending[0].since;
+    assert_eq!(s.next_rest(), Some(t + Duration::from_secs(40)));
+    assert!(visible(&mut s, Input::Tick, t + Duration::from_secs(40)).is_empty());
+    assert_eq!(session_view(&s, "a").rested, None);
+    assert_eq!(session_view(&s, "b").rested, Some(true));
+    assert_eq!(s.next_rest(), None);
+    assert_eq!(s.pending[0].since, since);
+    assert!(s.ledger.is_open(&rid("r1")));
+    assert_eq!(s.view().approval.unwrap().request, "r1");
+    assert!(s.ended.is_empty());
+    visible(
+        &mut s,
+        agent("b", AgentEvent::SessionEnded),
+        t + Duration::from_secs(41),
+    );
+    assert_eq!(s.next_rest(), None);
+}
+
+#[test]
 fn skipping_preserves_the_offer_and_deadline_until_explicitly_reopened() {
     let mut s = State::default();
     let now = Instant::now();

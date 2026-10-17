@@ -1,5 +1,5 @@
 # Animações
-<!-- source: 44288c838224 -->
+<!-- source: 6f822e0e293c -->
 
 O Zeca e os vults são urubus-de-cabeça-preta (*Coragyps atratus*). Cada clipe nasce de algo que um
 urubu-de-cabeça-preta de verdade faz, para que a ave seja lida como urubu antes de ser lida como luz de status.
@@ -129,10 +129,10 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
   (um abutre do Velho Mundo ou um condor) chega planando pela direita, sobe uma vez na térmica da ilha
   e segue o caminho, sem nunca pousar; ele passa por trás dos cards e das linhas, nunca por cima do texto deles.
   Desligue em Settings → Flock & Zeca; nenhum com movimento reduzido ou enquanto a ilha está escondida.
-- Depois de dois segundos ociosa, a ave de uma sessão decola para o céu compartilhado abaixo da ilha. Uma
-  sessão concluída (o agente esperando o próximo prompt) toca primeiro o clipe de concluído, depois decola
-  quando esse clipe e a assinatura da espécie acabam (seis a oito segundos depois que o estado de concluído
-  aparece); o selo "done" dela fica até você dispensá-lo.
+- Uma sessão ociosa ou concluída com sucesso mantém um círculo verde por 30 segundos, depois perde a
+  marca e decola para o céu compartilhado abaixo da ilha. O core controla o prazo monotônico de repouso;
+  metadados, navegação e a volta do Nest nunca o reiniciam. O clipe de concluído e a assinatura da
+  espécie tocam no poleiro durante esse intervalo; a resposta concluída continua disponível.
   Cada sessão mantém a sua ave nas transições entre compacto e aberto, na própria fase e velocidade de volta.
   O bando circula sem parar enquanto está ocioso, de dia. Trabalho traz para baixo só a ave daquela
   sessão; abrir a ilha deixa as outras aves voando. Sem sessões, não há bando decorativo.
@@ -154,9 +154,10 @@ compacta não tem espaço sobre as cabeças e mantém os selos dela.
 - O céu é um canvas transparente e sem ponteiro dentro da superfície de desktop existente de 720 por 640;
   ele não aumenta a região de entrada nem remapeia a janela layer-shell do Linux.
 - Com movimento reduzido (inclusive mudanças durante o voo), as aves voltam às suas cenas estáticas.
-  Uma ave ociosa no poleiro cochila depois de 90 segundos, e uma ave ociosa decola depois de 2, cada
-  uma ±12% conforme a sessão, para o bando nunca se mexer no mesmo passo. Cenas escondidas param os
-  timers de desenho.
+  Uma ave ociosa no poleiro cochila depois de 90 segundos, ±12% conforme a sessão. O limite de repouso
+  de 30 segundos continua exato; as fases e velocidades de volta variam por sessão. Chamar uma ave
+  voando para baixo a mantém pousada por mais 30 segundos sem mudar o prazo do core. Cenas escondidas
+  param os timers de desenho.
 - O agente aparece como uma pequena faixa na base do pescoço (laranja Claude, verde-azulado Codex, rosa OpenCode, índigo Qwen, azul Copilot, violeta para qualquer outra ferramenta, o Antigravity incluído), nunca como a
   cor da ave.
 - Um clipe toca pelo menos 600 ms antes que um mais calmo o substitua; aprovação, pergunta e falha entram

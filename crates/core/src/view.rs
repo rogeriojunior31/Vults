@@ -106,6 +106,9 @@ pub struct SessionView {
     /// The project folder, where the chat works when this session is in front.
     pub cwd: Option<String>,
     pub status: Status,
+    /// None while busy; false during the first 30 seconds of rest, then true until work returns.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub rested: Option<bool>,
     /// What the status asks of the user.
     pub attention: Attention,
     /// The card first in line is this session's, and its status still waits on it: the island
@@ -249,6 +252,14 @@ pub struct ApprovalView {
 }
 
 impl State {
+    /// The next rest boundary: app wakes exactly then, even if no hook event arrives.
+    pub fn next_rest(&self) -> Option<std::time::Instant> {
+        self.sessions
+            .values()
+            .filter_map(|s| s.rest_since.map(|at| at + crate::REST_AFTER))
+            .filter(|at| self.now.is_none_or(|now| *at > now))
+            .min()
+    }
     /// The diff of a session's step, while the step is kept.
     pub fn diff(&self, key: &SessionKey, step: u32) -> Option<&Diff> {
         let s = self.sessions.get(key)?;
@@ -317,6 +328,10 @@ impl State {
                     project: s.project.clone(),
                     cwd: s.cwd.clone(),
                     status: s.status,
+                    rested: s.rest_since.map(|at| {
+                        self.now
+                            .is_some_and(|now| now.saturating_duration_since(at) >= crate::REST_AFTER)
+                    }),
                     // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
                     attention: match (s.status, s.watch.level) {
                         (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,

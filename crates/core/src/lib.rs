@@ -66,6 +66,8 @@ pub const PENDING_TTL: Duration =
 const SESSION_TTL: Duration = Duration::from_secs(30 * 60);
 /// A finished session lingers this long before leaving.
 const FINISHED_TTL: Duration = Duration::from_secs(10 * 60);
+/// A resting session keeps its recent green mark before it may take to the sky.
+pub const REST_AFTER: Duration = Duration::from_secs(30);
 
 /// What an agent is doing right now; each one has its own animation clip.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -699,6 +701,8 @@ pub struct Session {
     pub step_count: u32,
     pub subagents: u32,
     pub updated: Instant,
+    /// Idle and successful completion share one rest; metadata and navigation never restart it.
+    pub rest_since: Option<Instant>,
     /// When the session first showed up: the oldest of a project is its king.
     pub started: Instant,
     pub terminal: Terminal,
@@ -799,6 +803,8 @@ pub struct Pending {
 
 #[derive(Clone, Debug, Default)]
 pub struct State {
+    /// The latest monotonic time supplied to reduce; views never read the system clock.
+    pub now: Option<Instant>,
     pub sessions: BTreeMap<SessionKey, Session>,
     /// Every permission or question waiting for a human, oldest first. The island shows the first; each one
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
@@ -867,7 +873,15 @@ impl State {
 }
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
+    state.now = Some(now);
     let effects = apply(state, input, now);
+    for s in state.sessions.values_mut() {
+        if matches!(s.status, Status::Idle | Status::Finished) {
+            s.rest_since.get_or_insert(now);
+        } else {
+            s.rest_since = None;
+        }
+    }
     flock::keep(
         &mut state.breeds,
         state.flock,
@@ -1356,6 +1370,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         step_count: 0,
         subagents: 0,
         updated: now,
+        rest_since: None,
         started: now,
         terminal: Terminal::default(),
         note: None,

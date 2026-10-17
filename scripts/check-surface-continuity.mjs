@@ -91,6 +91,9 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
+      export { setDayPart } from ${source("island/daypart.ts")};
+      export { setMusic, emoteFor } from ${source("island/behavior.ts")};
+      export { badgeOf } from ${source("island/views.ts")};
       export { createNow } from ${source("island/now.ts")};
       export { focusCard, questionBody } from ${source("island/views.ts")};
       export { applyTheme } from ${source("theme.ts")};
@@ -109,7 +112,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -706,3 +709,59 @@ assert.equal(storage.get('vults.connections-query'), '', 'The revealed connectio
 assert.ok(connectionUI.element.querySelector('.conn-detail').textContent.includes(mergeRow.title), 'A Now link opens the exact selected detail');
 assert.ok(!connectionEffects.includes('merge'), 'Opening connection detail never merges');
 console.log('check-surface-continuity: Now uses the shared inbox, opens exact deferred offers, retains focus/scroll, separates Seen from decisions and routes connection detail');
+
+// The renderer consumes the core's rest stage, including on a late mount.
+const restSession = { ...skipSession, id: 'rest-clock', status: 'idle', attention: 'quiet', waiting: false, card: false, rested: false, species: 'atratus' };
+assert.equal(badgeOf(restSession), 'finished');
+assert.equal(badgeOf({ ...restSession, rested: true }), undefined);
+assert.equal(badgeOf({ ...restSession, status: 'approval', rested: null }), 'approval');
+assert.equal(badgeOf({ ...restSession, rested: null }), undefined, 'Dismissing a failure cannot invent a successful rest');
+assert.equal(emoteFor({ ...restSession, status: 'finished', rested: false }), 'done');
+assert.equal(emoteFor(restSession), 'done');
+assert.equal(emoteFor({ ...restSession, status: 'finished', rested: true }), null);
+const skyContext = new Proxy({}, { get: () => () => {} });
+function restSky() {
+  const sky = new Sky(() => {});
+  sky.ctx = skyContext; sky.colors = {};
+  sky.cache = () => ({ drawShot() {} });
+  sky.setVisitors(false);
+  sky.place(new Map([['codex:rest-clock', { x: 120, y: 30, scale: 1 }]]), { left: 0, top: 0, width: 340, height: 38, radius: 14 });
+  return sky;
+}
+setDayPart('day'); setMusic(false); Clock.freeze(0);
+const restingSky = restSky();
+restingSky.update([restSession], true);
+Clock.freeze(60_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'A local clock cannot advance a recent core state');
+const readyRest = { ...restSession, rested: true };
+restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+const reopenedSky = restSky(); reopenedSky.update([readyRest], true);
+assert.equal(reopenedSky.owns('codex:rest-clock'), true, 'Mounting a new renderer cannot restart the core rest');
+restingSky.call('codex:rest-clock');
+Clock.freeze(65_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false);
+Clock.freeze(89_999); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'Calling a bird down keeps a local visual rest');
+Clock.freeze(90_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+restingSky.update([{ ...readyRest, status: 'approval', attention: 'needs-you', rested: null }], true);
+Clock.freeze(92_000); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'A permission lands the bird without answering it');
+setDayPart('night'); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), false);
+setDayPart('day'); setMusic(true); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'Music keeps idle courtship on the wire');
+setMusic(false); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+restingSky.motion = { matches: true }; restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false, 'Reduced motion keeps the bird perched');
+restingSky.motion = { matches: false }; document.body.classList.add('still'); restingSky.draw();
+assert.equal(restingSky.owns('codex:rest-clock'), false);
+document.body.classList.remove('still'); restingSky.update([readyRest], true);
+assert.equal(restingSky.owns('codex:rest-clock'), true);
+let restFrames = 0; const restTimeout = window.setTimeout; window.setTimeout = () => { restFrames++; return 0; };
+restingSky.update([readyRest], false);
+assert.equal(restFrames, 0, 'A hidden sky schedules no animation');
+window.setTimeout = restTimeout; setDayPart('day'); setMusic(false); Clock.freeze(null);
+console.log('check-surface-continuity: core-owned rest, recent green mark, immediate late mount, call-down, urgent landing, music/night, reduced motion and hidden sky');

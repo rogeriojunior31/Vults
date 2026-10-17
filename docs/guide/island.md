@@ -63,13 +63,19 @@ Turn him back on in the same place; no restart either way.
 Zeca on the left with the session in front, up to eight vults spread along the wire, and under it a
 hairline per plan showing its usage, in the usage meters' colors (amber from 70%, red from 90%).
 For sessions, colors mean the
-same everywhere: amber for a permission, cyan for a question, green when done, red when it failed. A
+same everywhere: amber for a permission, cyan for a question, green for recent rest, red when it failed. A
 vult in one of those states wears a badge of that color, and of its own shape, so no state rests on
-color alone: a triangle for a permission, a diamond for a question, a circle when done, a square
+color alone: a triangle for a permission, a diamond for a question, a circle for recent rest, a square
 when it failed. While someone needs you the pill's edge pulses amber; when a session failed (and
 nobody needs you) it stays red; a cyan dot at its corner says a connector has news. Rest the pointer on a vult and it looks at you (one in the air comes down);
 **click** it to open the island on its session, **right-click** it for its quick actions. Connector
 news waits in the open island.
+
+An idle or successfully finished session keeps its green circle for 30 seconds. Then the mark goes
+and, by day, its bird circles in the island's sky. Opening Quick or returning from the Nest keeps
+that deadline. Work, a permission or a question brings the bird back down. At dawn, dusk and night,
+with reduced motion or paused animation, birds stay perched; idle birds also stay on the wire while
+music plays. The finished reply remains available after the green mark goes.
 
 **Click** anywhere else on the pill to open the island. It folds back 15 seconds after the pointer leaves (a thin line
 at the bottom counts down; coming back cancels it). The size switch at the top right
@@ -221,7 +227,8 @@ session's last 32 edits, up to 400 lines each; a longer one says it stops short.
 
 ![A finished edit's diff in place of the card: ticker.ts +4 −2, with line numbers](../assets/island-live-diff.png)
 
-**OK** says you have seen it: the badge goes and the session shows as idle. With nobody on the wire,
+**OK** says you have seen it: the session shows as idle. For a successful completion, the original
+rest deadline still holds. With nobody on the wire,
 the card offers **Ask Zeca**.
 
 Zeca notices you: he looks toward the pointer, preens if you rest it on him, and startles at a click.

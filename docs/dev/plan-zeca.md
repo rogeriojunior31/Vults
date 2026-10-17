@@ -161,7 +161,22 @@ The native Linux pass covers Black and Light, a full seven-item inbox, bounded f
 footer, the empty state, separate cards from one session, Memory/Connections destinations,
 a stale connection filter, Seen preserving a failure, and Zeca off. Controlled IPC offers,
 local proposals and a local `gh` fixture executed no agent command or remote action.
-User acceptance of N2.2 is pending; N2.3-N2.9 remain open.
+User acceptance of N2.2 is pending.
+
+N2.3 gives idle and successfully finished sessions one monotonic 30-second rest deadline in
+core. Metadata, navigation and the wall clock cannot restart it. App wakes at the next rest
+boundary without waiting for a hook; Mini and Quick keep a green mark until then and reuse
+the existing sky. The front bird now wears its Mini badge too. Work, permissions and questions
+cancel rest and land that bird; night, music, reduced motion and hidden scenes keep their
+existing motion rules. Calling a circling bird down keeps a local 30-second perch break.
+
+Core/renderer checks cover the exact boundary, staggered sessions, waiting offers remaining
+open, late mounts, call-down, urgent landing and motion exceptions. The native Linux pass
+covers Black and Light, both green Mini birds, Quick, a Nest return during the grace period,
+and the unprompted transition from green at 29 seconds to flight at 31. New work lands only
+its own bird; a new completion starts another grace period; a controlled permission lands
+without a decision or command. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.3 is pending; N2.4-N2.9 remain open.
 
 #### N3 Dictation
 

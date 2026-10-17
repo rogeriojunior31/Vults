@@ -318,7 +318,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     // The turns whose folder is being looked at.
     let mut folders = Folders::default();
 
-    while let Some(msg) = rx.recv().await {
+    while let Some(msg) = match state.next_rest() {
+        Some(at) => tokio::select! {
+            msg = rx.recv() => msg,
+            _ = tokio::time::sleep_until(at.into()) => Some(Msg::Tick),
+        },
+        None => rx.recv().await,
+    } {
         let now = Instant::now();
         let input = match msg {
             Msg::Hook(Incoming::Event(event)) => {

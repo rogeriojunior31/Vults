@@ -1072,7 +1072,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const song = media?.playing && (!front || status === "idle") ? media : null;
     const paused = presenceNow() === "paused";
     const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? t("Agents ask in their terminals") : zecaShown() ? t("Nothing running") : t("Start an agent and it lands here");
-    const vults = compactScene.slots().filter((s) => s.key !== "zeca");
+    const vults = compactScene.slots();
     const name = song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running");
     const failed = shown.filter((s) => s.status === "failed" || s.attention === "failed").length;
     compact.setAttribute(
@@ -1102,7 +1102,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const byKey = new Map(shown.map((s) => [key(s), s]));
     badges.replaceChildren(
       ...vults.flatMap((slot) => {
-        const kind = badgeOf(byKey.get(slot.key));
+        const kind = badgeOf(slot.key === "zeca" ? front ?? undefined : byKey.get(slot.key));
         if (!kind) return [];
         const b = el("span", { class: `badge ${kind}` });
         b.style.left = `${slot.x + slot.width - 4}px`;

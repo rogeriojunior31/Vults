@@ -43,7 +43,7 @@ export function statusText(s: SessionView): string {
 export const needsYou = (s: SessionView): boolean => s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true;
 export const statusClass = (s: SessionView): string => (s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status);
 
-/** Statuses that need a look, worn as a badge by a bird that is not in front. */
+/** Statuses that need a look, worn as a badge on the wire. */
 export const BADGE: Partial<Record<SessionView["status"], string>> = {
   approval: "approval",
   question: "question",
@@ -54,6 +54,7 @@ export const BADGE: Partial<Record<SessionView["status"], string>> = {
 /** A bird's badge: its state's, or a quiet bird's flag (grey, then amber when loud). */
 export function badgeOf(s: SessionView | undefined): string | undefined {
   if (!s) return undefined;
+  if ((s.status === "idle" || s.status === "finished") && s.rested !== undefined) return s.rested === false ? "finished" : undefined;
   return BADGE[s.status] ?? (s.silent ? `silent ${s.silent}` : undefined);
 }
 
@@ -84,7 +85,7 @@ export interface CardActions {
   /** The card changed size on its own: measure the island again. */
   relayout(): void;
   jump(agent: SessionView["agent"], id: string): void;
-  /** OK on a finished or failed card: seen, the badge goes. */
+  /** OK on a finished or failed card: seen; recent successful rest keeps its deadline. */
   dismiss(s: SessionView): void;
   /** The answer to a quiet bird: snooze its flag, keep going, or dismiss it for the run. */
   hush(s: SessionView, hush: Hush): void;
