@@ -343,6 +343,14 @@ R3 release smoke remain separate; N3 follows the N2 merge.
 The N2 PR also repairs Windows test startup: all MSVC executables receive the Common Controls
 v6 manifest, including the library test harness. This follows the Tauri build workaround and
 retains the existing tests rather than excluding the Waiting regression from Windows.
+Reference fixtures also use drive-qualified project paths on Windows without loosening path validation.
+
+On 2026-10-17, Security CI picked up retirement advisories RUSTSEC-2026-0370/0371/0372:
+zvariant, zbus_names and zvariant_derive moved into zbus 6. The current Tauri/ashpd/ksni stack
+still pulls zbus 5. Like the existing GTK3 retirement exceptions, deny.toml lists only these
+informational IDs, with removal tied to the desktop stack's zbus 6 migration. Vulnerability,
+license and source checks retain their existing settings. Upstream record:
+https://github.com/z-galaxy/zbus/issues/2043.
 
 #### N3 Dictation
 

@@ -110,11 +110,19 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    fn folder(path: &str) -> String {
+        if cfg!(windows) {
+            format!("C:{path}")
+        } else {
+            path.into()
+        }
+    }
+
     fn view() -> Value {
         json!({"sessions":[
-            {"agent":"claude","id":"same","project":"site","cwd":"/one/site","step":"first"},
-            {"agent":"codex","id":"same","project":"site","cwd":"/two/site","step":"second"},
-            {"agent":"codex","id":"other","project":"site","cwd":"/one/site","step":"third"}
+            {"agent":"claude","id":"same","project":"site","cwd":folder("/one/site"),"step":"first"},
+            {"agent":"codex","id":"same","project":"site","cwd":folder("/two/site"),"step":"second"},
+            {"agent":"codex","id":"other","project":"site","cwd":folder("/one/site"),"step":"third"}
         ]})
     }
 
@@ -125,7 +133,7 @@ mod tests {
             id: "same".into(),
         };
         let project = Target::Project {
-            cwd: "/one/site".into(),
+            cwd: folder("/one/site"),
         };
         let selected = |target| Mention {
             token: "@\"site\"".into(),
@@ -155,7 +163,7 @@ mod tests {
         assert!(
             resolve(
                 "Edited away",
-                vec![selected(Target::Project { cwd: "/gone".into() })],
+                vec![selected(Target::Project { cwd: folder("/gone") })],
                 &view()
             )
             .unwrap()
@@ -164,12 +172,12 @@ mod tests {
         assert!(
             resolve(
                 "@\"site\"",
-                vec![selected(Target::Project { cwd: "/gone".into() })],
+                vec![selected(Target::Project { cwd: folder("/gone") })],
                 &view()
             )
             .is_err()
         );
-        assert!(validate(&vec![selected(Target::Project { cwd: "/ok".into() }); 9]).is_err());
+        assert!(validate(&vec![selected(Target::Project { cwd: folder("/ok") }); 9]).is_err());
         assert!(
             validate(&[Mention {
                 token: "@site".into(),
@@ -204,7 +212,7 @@ mod tests {
         assert_eq!(source.view().unwrap()["sessions"].as_array().unwrap().len(), 1);
         assert_eq!(source.usage(), json!([{"agent":"codex"}]));
         let empty = Source {
-            targets: vec![Target::Project { cwd: "/gone".into() }],
+            targets: vec![Target::Project { cwd: folder("/gone") }],
             ..source
         };
         assert_eq!(empty.view().unwrap()["sessions"], json!([]));
