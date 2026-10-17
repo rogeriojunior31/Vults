@@ -8,7 +8,7 @@ Agent coverage has its own board, [plan-every-agent.md](plan-every-agent.md).
 0.2.0 is tagged when N2 is done, after the R3 smoke; one release per stage of the
 [order of work](#order-of-work-2026-10-16), 0.2.x after it
 ([ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md), amended by
-[0021](../adr/0021-four-sizes-one-nest.md)). Linux first; Android is the one exception.
+[0031](../adr/0031-tasks-leave-vults.md)). Linux first; Android is the one exception.
 
 ## Left to do
 
@@ -38,9 +38,12 @@ context pack (W5), the review loop (W6), the router behind `/delegate` (W8). The
 migrations 14 to 20 are never edited; their tables stay and are no longer read, and a later
 migration may drop them after a release. One PR per slice, each passing the full CI.
 
+N0.1 is recorded in [ADR 0031](../adr/0031-tasks-leave-vults.md), with amendments to 0018,
+0020 and 0021. N0.2 to N0.6 and the native release acceptance remain pending.
+
 | # | Slice | Removes | Keeps |
 | --- | --- | --- | --- |
-| N0.1 | ADR | A new ADR: Tasks leave Vults, and 0.2.0 moves from wave 4 to N2; it amends 0018, 0020 and 0021 (Surfaces, D7, D8, the R3 smoke) | — |
+| N0.1 | ADR | [0031](../adr/0031-tasks-leave-vults.md): Tasks leave Vults, and 0.2.0 moves from wave 4 to N2; it amends 0018, 0020 and 0021 (Surfaces, D7, D8, the R3 smoke) | — |
 | N0.2 | Surfaces | The Nest's Tasks tab (`surfaces/nest/tasks.ts`, its CSS, `budget.ts` moved), `/task` and `/delegate` in the chat and the palette, "Open Tasks", their strings in the three languages, `scripts/check-task-actions.mjs` and its CI step | The day's spend and its budget: the figures in Activity › Cost, the value in Settings |
 | N0.3 | App | `app/src/tasks.rs`, the `task_*` commands, `runs.rs`' task start, fresh start, stop, review and worktree removal, `tasks-changed` | `/continue` (W7, `handoff.rs`): its driver code moves out of `runs.rs` into its own module; D8 still stops only what Vults started |
 | N0.4 | Crates | `store::tasks` readers and writers, `zeca::router`, `zeca::review` and the review evals | The migrations; spend rows already written as `task:N` stay readable |
@@ -150,7 +153,9 @@ Mocked features and synthetic runs are references, not native completion evidenc
 ### Release gate
 
 - [ ] **R3 smoke** in the real app, by a person at the desktop: the island, a card, the chat, voice,
-  GitHub, and the Nest, on the Living Flock UI as refined by N1 (Tasks left in N0).
+  GitHub, and the Nest, on the Living Flock UI as refined by N1 (Tasks left in N0). Check the
+  remaining Nest areas, `/continue` and its owned Stop, spend and budget, and Zeca off
+  ([ADR 0031](../adr/0031-tasks-leave-vults.md)).
 - [ ] **Tag** the stage's release: 0.1.9 after N1, 0.2.0 after N2 ([releasing.md](releasing.md)).
 
 ### Flock board
