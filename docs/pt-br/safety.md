@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: c593bd1bcc35 -->
+<!-- source: 59f9d0d700e6 -->
 
 O que o Vults promete:
 
@@ -115,7 +115,7 @@ qualquer lugar além do próprio app.
 | Os cards e as respostas de um telefone pareado (**Settings → Phone**, desligado até você ligar) | O app: cada card que ele manda, e uma leitura da caixa de cada telefone a cada 25 s; pelo portão de rede (10.000 por dia) | O relay que você escolheu, que só vê mensagens seladas; em **Direto**, este computador escuta no endereço que você deu | `crates/relay/src/client.rs`, `app/src/phone.rs` |
 | A lista de modelos do Codex | Você, abrindo o seletor de modelo do chat com o Codex (uma vez por execução) | O `codex` em que você fez login, pelo `model/list` do `codex app-server` | `crates/chat/src/codex_server.rs` |
 | Um turno do chat pelo `claude` ou pelo `codex` | Você, a cada mensagem | O motor que você escolheu; a CLI fala com o próprio serviço no seu login | `crates/chat/src/claude.rs`, `codex.rs`, `codex_server.rs` |
-| A sessão de uma tarefa (o `claude` ou o `codex app-server` na worktree da tarefa) | Você, ao clicar em **Start with Claude Code** ou **Start with Codex** numa tarefa; o turno dela roda até acabar ou você dar **Stop** | A CLI fala com o próprio serviço no seu login, no sandbox dela, cada comando perguntando antes | `app/src/runs.rs`, `crates/chat/src/claude.rs`, `codex_server.rs` |
+| Uma sessão retomada (o `claude` ou o `codex app-server` na pasta existente dela) | Você, ao digitar `/continue <palavras>` no Chat; `/continue stop` para apenas essa execução | A CLI fala com o próprio serviço no seu login, no sandbox dela, cada comando perguntando antes | `app/src/continuation.rs`, `crates/chat/src/claude.rs`, `codex_server.rs` |
 | A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos e meio minuto depois que uma janela reinicia, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
 | Um dia passado do diário do Zeca resumido (**Settings → Chat & voice → Memory → A summary of each day**, desligado até você ligar) | O app, numa passada de hora em hora: cada dia passado sem resumo desde que você ligou, até 3 por passada; pelo portão de rede (8 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | Um embedding de um resumo do diário ou da sua mensagem, para lembrar (**Recall by meaning**, desligado até você ligar) | O app, na passada de hora em hora do diário para cada resumo sem um, e antes de cada mensagem do chat | Um Ollama em `127.0.0.1` com o `nomic-embed-text`, nunca por um proxy; nada sai do computador | `crates/chat/src/embed.rs`, `app/src/recall.rs` |
@@ -123,7 +123,6 @@ qualquer lugar além do próprio app.
 | O sono do Zeca (**Let Zeca sleep on it**, desligado até você ligar): o que ele lembra sobre você e entre projetos, e os resumos dos últimos 7 dias | O app, uma vez por dia a partir das 2h enquanto nada trabalha; pelo portão de rede (4 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; as junções dele esperam o seu sim | `app/src/sleep.rs`, `crates/chat/src/summary.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | O interruptor de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
-| Uma issue a partir de uma tarefa (pelo `gh`) | Você, ao clicar em **Open an issue** numa tarefa do Nest | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | Um squash merge do seu pull request (pelo `gh`), com uma linha no rastro local | Você, ao clicar em **Squash and merge** na linha dele nas Connections da ilha, e depois em **Merge** | O conector do GitHub ligado; só o seu próprio pull request, aprovado, com os checks passando | `crates/connectors/src/github.rs`, `app/src/connectors.rs` |
 | O download de um modelo de voz | Você, com um clique em **Settings → Chat & voice → Voice** | Nada até você clicar; do Hugging Face (`ggerganov/whisper.cpp`), conferido pelo SHA-256 | `crates/voice/src/models.rs` |
 | O download do detector de fala (Silero VAD, menos de 1 MB) | O app, sozinho, fora do portão, enquanto a voz está ligada e ele falta | Um modelo de voz que você escolheu; do Hugging Face (`ggml-org/whisper-vad`), conferido pelo SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |

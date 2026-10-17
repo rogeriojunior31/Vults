@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: eefd06cd3354 -->
+<!-- source: beabc48e6065 -->
 
 Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -44,19 +44,16 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Claude Code | um card | um card | linhas, numeradas | na hora, quando o Vults o iniciou | bubblewrap, se ligado | sim |
 | Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o modo de sandbox dele | sim |
 | Antigravity | o terminal dele | o terminal dele | linhas | pelo Vults, ainda não | nenhum | ainda não |
-| OpenCode | um card | um card (OpenCode 1) | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
-| Qwen Code | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | um contêiner, se ligado | uma tarefa, por ACP |
-| Copilot CLI | um card | nenhuma | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
+| OpenCode | um card | um card (OpenCode 1) | linhas | não pelo Vults | nenhum | não |
+| Qwen Code | um card | o terminal dele | linhas | não pelo Vults | um contêiner, se ligado | não |
+| Copilot CLI | um card | nenhuma | linhas | não pelo Vults | nenhum | não |
 | Cursor | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
 | Factory Droid | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
-| Kimi Code | o terminal dele; um card numa tarefa | o terminal dele | linhas | na hora, quando o Vults o iniciou | nenhum | uma tarefa, por ACP |
+| Kimi Code | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
 
-O Vults para um turno, e mantém a sessão, só numa sessão que ele iniciou (a do chat, ou a de uma
-tarefa): nenhum sinal faz isso, um sinal encerra a sessão inteira. OpenCode, Qwen Code e
-Copilot CLI pegam tarefas pelo [Agent Client Protocol](https://agentclientprotocol.com) (**Start with
-another agent…** na aba Tasks, quando o agente está instalado); veja
-[Tarefas](tasks.md). O sandbox do Codex depende do modo:
-`workspace-write` escreve só na pasta dele, nas pastas temporárias e nas pastas que recebe. *Se
+O Vults para apenas os próprios turnos do Chat ou uma sessão que retomou pelo `/continue`
+([Chat](chat.md#continuing-a-session)). Uma sessão observada no terminal continua sob seu controle.
+O sandbox do Codex depende do modo: `workspace-write` escreve só na pasta dele, nas pastas temporárias e nas pastas que recebe. *Se
 ligado*: o sandbox fica desligado até você ligar nesse agente. Nenhum desses sandboxes foi testado
 com o Vults ainda.
 
@@ -122,10 +119,6 @@ dele aparecem como `kimi` (conferido com o Kimi Code 2.1.1).
 A ilha mostra cada passo, as linhas de uma edição, um comando que falhou e quando um turno para. O
 Kimi avisa o hook `PermissionRequest` sobre uma permissão sem esperar resposta, então a ilha mostra
 que ela espera no terminal do Kimi e o Kimi pergunta ele mesmo ([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)).
-
-O Kimi também pega tarefas por ACP (`kimi acp`), e ali cada escrita e cada comando é um card da ilha.
-A sessão dele é posta no modo do Kimi que pergunta quando começa: o seu `default_permission_mode` na
-config dele, senão, rodaria toda ferramenta sem perguntar, enquanto a sessão ainda diz que pergunta.
 
 ## OpenCode
 

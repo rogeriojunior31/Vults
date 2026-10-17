@@ -12,6 +12,11 @@ finding on the current head before changing production or closing it. The source
 roadmaps were rewritten on 2026-10-12; later release/doc commits do not make the
 prototype a new production baseline.
 
+As of 2026-10-16, [N0](plan-zeca.md#n0-remove-tasks) removes Tasks
+([ADR 0031](../adr/0031-tasks-leave-vults.md)). References to its delivered UI below
+are historical; its acceptance rows and removed renderer check no longer apply.
+The current delivery order is N0-N4 in Plan Zeca.
+
 ## Implementation order
 
 ### Current delivery status
@@ -212,9 +217,8 @@ command search, empty results, clear/focus and query retention on refresh. It
 bundles the production renderer with a small DOM stub; no Lab, browser server or
 new dependency is required. CI runs it with the existing geometry check.
 
-Run `node scripts/check-task-actions.mjs` for visible execution actions, retained
-disclosure state, continuation on the actual session engine, handoff/review and
-distinct removal confirmations. CI runs the same production renderer check.
+The former Tasks renderer check was retired in N0 along with its surface.
+The Tasks rows below record the earlier acceptance only.
 
 In the real app, repeat the following at 480 x 360 and a normal Room width:
 
@@ -389,7 +393,7 @@ mock-runtime event checks are recorded separately from this desktop pass.
 | --- | --- | --- |
 | State and B05 | Select a session; set Flock filters; select a Connections repository/item; select Activity > Audit; write Chat text and attach a file. Switch Room/Full, Escape, Quick/Mini and reopen. | The current route, session, filters, item and unsent draft/files/source remain. No conversation or run is created and no card is answered. |
 | Pending card and ownership | During a Claude/Codex request, open Nest, minimize, restore and return to Quick. Repeat with Chat open and then a different tab or Settings. | The card remains reachable; only the visible authorized card responds to an explicit decision. Quick's requested return waits for saved Nest closure. |
-| Zeca off | Disable Zeca, open Nest, switch sizes and close/reopen while a Flock request waits. | Flock, Tasks and Connections work; Chat stays unavailable and the request is not answered or lost. |
+| Zeca off | Disable Zeca, open Nest, switch sizes and close/reopen while a Flock request waits. | Flock and Connections work; Chat stays unavailable and the request is not answered or lost. |
 | Geometry and desktop | Use 480 x 360 and a wide/short Nest, move across displays/scales and minimize/restore. Click outside the visible island and type in another app. | No clipped primary action, extra click-catching region or stolen keyboard; one visible surface and matching input region. |
 
 - [ ] Final desktop matrix accepted by the user after reviewing this PR.
@@ -657,7 +661,7 @@ permissions and execution owners; add no dependency.
 
 | Order / owner | Implementation | Renderer acceptance |
 | --- | --- | --- |
-| 1 / UX4-UX5 Tasks | Goal heading, native named criteria progress, separate lifecycle and execution status, next criterion, secondary project/cost context; retain criteria and maintenance | `check-task-actions.mjs`: start/continue/stop, criteria, explicit agent choice, confirmations, drafts and focus |
+| 1 / UX4-UX5 Tasks | Goal heading, native named criteria progress, separate lifecycle and execution status, next criterion, secondary project/cost context; retain criteria and maintenance | Historical Tasks check, retired in N0: start/continue/stop, criteria, explicit agent choice, confirmations, drafts and focus |
 | 2 / UX5 Connections | Title, review/check summary and primary actions first; technical facts/command in retained native details | `check-surface-continuity.mjs`: selected detail and filters, expanded context through poll, check/action order, explicit merge/cancel and duplicate guard |
 | 3 / UX1-UX2 Frame | Shared header icons and footer targets, readable footer, pencil for appearance; short windows reclaim navigation height | Existing Settings and Nest production-renderer checks retain actions, accessible labels and selected navigation; native target/overflow review below |
 | 4 / UX4 Chat history | Stable local search across all loaded rows, date groups, project/executor/time, current selection, initial 30 and Show more | Production Recent check: query/focus, empty and filtered states, older result, more rows, busy guard, stale-list retry and obsolete responses |

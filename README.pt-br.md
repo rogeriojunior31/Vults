@@ -1,4 +1,4 @@
-<!-- source: 4de2feebd7c6 -->
+<!-- source: eac4fb0674d4 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-de-cabeça-preta em 8 bits">
 </p>
@@ -120,16 +120,15 @@ embaixo com as mudanças, a atividade e o contexto dela. Puxe as bordas para o t
 
 Online em [rogeriojunior31.github.io/docs/vults](https://rogeriojunior31.github.io/docs/vults/),
 atualizada a cada versão, ou aqui: [Primeiros passos](docs/pt-br/getting-started.md) ·
-[A ilha](docs/pt-br/guide/island.md) · [O Nest](docs/pt-br/guide/nest.md) · [Tarefas](docs/pt-br/guide/tasks.md) · [Aprovações](docs/pt-br/guide/approvals.md) ·
+[A ilha](docs/pt-br/guide/island.md) · [O Nest](docs/pt-br/guide/nest.md) · [Aprovações](docs/pt-br/guide/approvals.md) ·
 [Chat](docs/pt-br/guide/chat.md) · [A memória do Zeca](docs/pt-br/guide/memory.md) ·
 [Conectores](docs/pt-br/guide/connectors.md) · [Atividade](docs/pt-br/guide/activity.md) ·
 [Outros agentes](docs/pt-br/guide/other-agents.md) · [O telefone](docs/pt-br/guide/phone.md) ·
 [Configurações e arquivos](docs/pt-br/reference/settings.md) ·
 [Arquitetura](docs/pt-br/architecture.md) · [Decisões](docs/pt-br/adr/README.md).
 
-**O que vem a seguir:** a 0.2.0 traz as Operações: tarefas que o Zeca entrega ao agente certo,
-políticas que você escreve e aprova, e uma revisão do trabalho antes de ele entrar. O que mudou em
-cada versão está no [changelog](CHANGELOG.md).
+**O que vem a seguir:** a 0.1.9 refina as páginas e o tema; a 0.2.0 traz os novos fluxos do Flock e do Chat.
+Veja as etapas no [Plano Zeca](docs/dev/plan-zeca.md) e as mudanças publicadas no [changelog](CHANGELOG.md).
 
 ## Contribuindo
 

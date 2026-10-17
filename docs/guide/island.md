@@ -27,7 +27,7 @@ takes his spot. Every other session is a **vult**.
 
 The birds act out what their sessions do: they read, peck the wire while editing, take off for the
 web, and spread their wings when a permission waits (with a mark over the head; at dawn the resting
-birds open theirs to the sun, with no mark). New sessions fly in (one a task of yours started takes off from Zeca's place on the pill, or from the bird in front when one sits there); ended ones fly off. Reduced
+birds open theirs to the sun, with no mark). New sessions fly in; ended ones fly off. Reduced
 motion keeps them on their perches. **Settings → Flock & Zeca** picks the species pool, Zeca's species and
 the rare visitors. [Animations](../ANIMATIONS.md) lists every clip.
 

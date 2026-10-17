@@ -118,16 +118,15 @@ the one picked below with its changes, activity and context. Pull its edges to a
 
 Online at [rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/),
 updated on each release, or here: [Getting started](docs/getting-started.md) ·
-[The island](docs/guide/island.md) · [The Nest](docs/guide/nest.md) · [Tasks](docs/guide/tasks.md) · [Approvals](docs/guide/approvals.md) ·
+[The island](docs/guide/island.md) · [The Nest](docs/guide/nest.md) · [Approvals](docs/guide/approvals.md) ·
 [Chat](docs/guide/chat.md) · [Zeca's memory](docs/guide/memory.md) ·
 [Connectors](docs/guide/connectors.md) · [Activity](docs/guide/activity.md) ·
 [Other agents](docs/guide/other-agents.md) · [The phone](docs/guide/phone.md) ·
 [Settings and files](docs/reference/settings.md) · [Architecture](docs/architecture.md) ·
 [Decisions](docs/adr/README.md).
 
-**What's next:** 0.2.0 brings Operations: tasks Zeca hands to the right agent, policies you write
-and approve, and a review of the work before it lands. What changed in each release is in the
-[changelog](CHANGELOG.md).
+**What's next:** 0.1.9 refines the pages and theme; 0.2.0 brings the new Flock and Chat workflows.
+See [Plan Zeca](docs/dev/plan-zeca.md) for the stages and the [changelog](CHANGELOG.md) for released changes.
 
 ## Contributing
 

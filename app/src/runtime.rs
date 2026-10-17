@@ -901,7 +901,7 @@ pub async fn rule_remove(app: AppHandle, index: usize, inbox: tauri::State<'_, I
 }
 
 /// A request for a human that the app makes itself, for an agent it runs whose approvals come on
-/// its own channel (a task's Codex, W4): the same path as a hook's request, so the same card,
+/// its own channel (a continued Codex session): the same path as a hook's request, so the same card,
 /// rules, policies, phone and audit; its answer comes back here. No answer in a hook's time is a
 /// decline.
 pub async fn ask_human(app: &AppHandle, event: vults_protocol::Event) -> vults_ipc::Local {

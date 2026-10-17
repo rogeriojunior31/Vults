@@ -55,17 +55,26 @@ its owned driver must be aborted; watched processes are never stopped. Legacy sa
 fall back to Flock. N0.3's permission, session/lifecycle and cost checks pass with the full local
 pre-commit sequence.
 
-This is slice evidence; the human R3 release smoke remains pending. N0.4 retires the store's task API and Zeca's router, pack and review modules, including the
+N0.4 retires the store's task API and Zeca's router, pack and review modules, including the
 Codex review-only driver path and their eval cases. A fingerprint test pins the original SQL
 of migrations 14 to 20, and an upgrade test preserves old rows and reads `task:N` spend after
 reopening the database. The current schema remains 20. Full local checks pass.
+
 N0.5 removes `VULTS_TASK`, core's dispatched flag and the corresponding sprite take-off.
 Protocol 9 rejects older envelopes; the hook retains only terminal metadata, `VULTS_ZECA`
 and the `VULTS_RUN` driver channel. Protocol/hook regressions and the full local checks pass.
 The normal arrival and departure animations remain. The Linux/KWin app was checked with
 isolated data at 1180 x 820 and 480 x 360: hook-created session arrival/end, Flock, Cost, a saved
-budget and the Settings-only write guard. `/continue` reports no eligible session and stops only
-an owned continuation. N0.6 remains pending.
+budget and the Settings-only write guard. `/continue` reports no eligible session or owned
+continuation for the tested commands.
+
+N0.6 removes the Tasks guide and its navigation links, updates the published guides and
+request inventory in both languages, and aligns the README with N0-N4. `site.json` already
+describes approvals, Chat and Zeca without Tasks; the GitHub issue template stays.
+The final source audit retains shipped SQL and upgrade tests, historical cost sources, negative
+entry-point tests, native agent tool names, embedding/async tasks and ordinary prose; no active
+Tasks execution, review, router or UI remains. Local checks and the translation/link audit pass.
+The human R3 release smoke remains pending.
 
 | # | Slice | Removes | Keeps |
 | --- | --- | --- | --- |

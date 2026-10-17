@@ -74,6 +74,6 @@ pub struct Caps {
     pub diffs: Diffs,
     pub stop: Stop,
     pub sandbox: Sandbox,
-    /// Vults can run it itself (the chat's engines today; tasks from W4).
+    /// Vults can run it itself (Chat and continued sessions).
     pub starts: bool,
 }

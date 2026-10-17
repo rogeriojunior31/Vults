@@ -30,7 +30,7 @@ pub(crate) const TABLE: &str = "
 /// One span. `attrs` is a JSON object of OpenTelemetry attributes (`gen_ai.usage.input_tokens`…).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Span {
-    /// The turn (or task) it belongs to.
+    /// The turn it belongs to.
     pub trace: String,
     pub span: String,
     pub parent: Option<String>,

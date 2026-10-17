@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 88f1a2499700 -->
+<!-- source: 2ab7fe7e7319 -->
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
 ano numa grade. **Settings → Activity** mantém os controles de histórico e de orçamento diário
@@ -109,7 +109,8 @@ hora na memória, nunca em disco.
   Zeca, tudo de uma vez, deixando uma linha no log de
   auditoria: que você o limpou, e quando. O que fica: o que o Zeca lembra (os arquivos de memória
   dele, **Settings → Chat & voice → Memory**), as políticas que você aceitou, os seus telefones
-  pareados, as suas tarefas e o que os agentes custaram ([Segurança](../safety.md)).
+  pareados e os custos registrados dos agentes ([Segurança](../safety.md)). As tabelas de recursos
+  removidos ficam intactas; os custos antigos continuam disponíveis em **Cost**.
 - O histórico fica num banco local, `vults.sqlite` (cada turno por 12 semanas, os totais de cada
   dia por um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). Veja
   [Configurações e arquivos](../reference/settings.md).

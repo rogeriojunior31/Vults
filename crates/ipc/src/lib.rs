@@ -66,7 +66,7 @@ impl ReplyHandle {
     }
 
     /// A handle for a request the app makes itself, for an agent it runs whose approvals come on
-    /// its own channel (a task's Codex, W4): the same card, rules and policies as a hook's, answered
+    /// its own channel (a continued Codex session): the same card, rules and policies as a hook's, answered
     /// into [`LocalReply`] instead of a connection.
     pub fn local() -> (Self, LocalReply) {
         let (tx, rx) = mpsc::channel(4);
