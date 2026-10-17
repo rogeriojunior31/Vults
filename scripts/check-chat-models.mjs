@@ -358,11 +358,11 @@ console.log("check-chat-models: Room-only editable suggestions, both file picker
 for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}) }, () => {}, { window: surface });
   await tick();
-  const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting" && !node.hidden);
+  const greetings = () => nodes(chat.element).filter(node => node.className === "chat-greeting" && !node.parentElement.hidden);
   const engine = nodes(chat.element).find(node => node.className === "model-box engine-box");
   assert.equal(engine.parentElement.className, surface === "island" ? "chat-foot" : "chat-head", "Only Quick moves its executor beside the draft; Room keeps its existing header");
   assert.equal(greetings().length, 1, "The recipient is introduced once");
-  assert.equal(greetings()[0].parentElement.className, surface === "island" ? "chat-head" : "hint", "Quick introduces the empty conversation beside its companion; Room keeps its empty state");
+  assert.equal(greetings()[0].parentElement.parentElement.className, surface === "island" ? "chat-head" : "hint", "Quick introduces the empty conversation beside its companion; Room keeps its empty state");
   assert.equal(chat.element.classList.contains("has-messages"), false, "An empty chat has no message-state marker");
   chat.load({ ...conversation, busy: true, lines: [] });
   assert.equal(chat.element.classList.contains("has-messages"), true, "Thinking already reserves the conversation space");
@@ -434,7 +434,8 @@ for (const surface of ["island", "nest"]) {
 console.log("check-chat-models: both companions retain streaming thought, decision priority, voice, transcription and attachment expressions");
 
 // Load Room's real entry point: a working ChatPanel alone cannot catch missing native wiring.
-const voiceEvents = {}, voiceCalls = [], voiceDrafts = [];
+const voiceEvents = {}, voiceCalls = [], voiceDrafts = [], voiceViewActions = [];
+let voiceSaveFails = false;
 const voiceRoot = new Element("main");
 document.getElementById = () => voiceRoot;
 document.documentElement = new Element("html");
@@ -442,7 +443,7 @@ globalThis.location = { hash: "#chat" };
 globalThis.voiceTestCreateNest = (_root, backend) => {
   const chat = new ChatPanel(backend.chat, () => {}, { window: "nest" });
   const noop = () => {};
-  return globalThis.voiceTestNest = { chat, current: () => "chat", open: noop, setFull: noop,
+  return globalThis.voiceTestNest = { chat, current: () => "chat", open: tab => voiceViewActions.push(tab), flushState: () => chat.flushDraft(), setFull: noop,
     setZeca: on => chat.setEnabled(on), setSound: noop, setSpecies: noop, setKeys: noop, setMedia: noop,
     memoryChanged: noop, usageChanged: noop, spendChanged: noop, relabel: noop, view: noop, shortcut: noop };
 };
@@ -455,7 +456,7 @@ globalThis.voiceTestBridge = new Proxy({}, { get: (_target, name) => {
       case "voiceStop": voiceCalls.push(["stop"]); return "Spoken words";
       case "voiceCancel": voiceCalls.push(["cancel"]); return;
       case "chatSend": assert.fail("Dictation never sends a message");
-      case "chatDraftSet": voiceDrafts.push(args[0]); return;
+      case "chatDraftSet": voiceDrafts.push(args[0]); if (voiceSaveFails) throw new Error("Draft save unavailable."); return;
       case "chatDraft": return { text: "Existing draft", files: [], folder: "/work", provider: "claude" };
       case "chatCurrent": return null;
       case "chatModels": case "taskAgents": return [];
@@ -748,3 +749,63 @@ for(const surface of ['island','nest']) {
   assert.equal(chat.started,false,'A failed reference never pins a new conversation');
 }
 console.log('check-chat-models: rejected references retain editable text, files, identities and the unstarted conversation in both surfaces');
+
+// Live core offers update their own controls, keeping the transcript and editable source intact.
+for (const surface of ['island','nest']) {
+  const drafts=[], actions=[];
+  const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>drafts.push(d),openFlock:()=>actions.push('flock'),send:async()=>actions.push('send')},()=>{},{window:surface});
+  await tick();
+  const input=chat.element.querySelector('textarea');
+  const sessions=[{agent:'codex',id:'same',project:'site',cwd:'/one/site'},{agent:'claude',id:'same',project:'site',cwd:'/two/site'},{agent:'codex',id:'next',project:'site',cwd:'/three/site'}];
+  const offers={greeting:'Good morning',caption:'site is waiting for your answer.',suggestions:[{id:'waiting',text:'What is site waiting for?',session:{agent:'codex',id:'next'}}],followups:['explain','next','flock']};
+  chat.setSessions(sessions);chat.setOffers(offers);
+  chat.restoreDraft({text:'Keep my notes',files:['/inbox/notes.txt'],folder:'/execution',provider:'claude'});
+  const suggestions=chat.element.querySelectorAll('.suggestion');
+  assert.equal(suggestions.length,surface==='nest'?1:0);
+  if(surface==='nest') {
+    suggestions[0].focus();chat.setOffers({...offers,greeting:'Good afternoon'});
+    assert.equal(document.activeElement,suggestions[0],'A greeting refresh retains the offered button and focus');
+    suggestions[0].click();await chat.flushDraft();
+    assert.ok(input.value.startsWith('Keep my notes\n\nWhat is site waiting for?'));
+    assert.deepEqual(drafts.at(-1).mentions[0].target,{kind:'session',agent:'codex',id:'next'});
+    assert.ok(input.value.includes('next'),'Duplicate session names keep the exact ID in their token');
+    assert.deepEqual(drafts.at(-1).files,['/inbox/notes.txt']);assert.equal(drafts.at(-1).folder,'/execution');
+    const before=input.value;chat.setSessions([]);suggestions[0].click();assert.equal(input.value,before,'An expired exact session is not inserted');chat.setSessions(sessions);
+    suggestions[0].focus();chat.setOffers({...offers,suggestions:[]});assert.equal(document.activeElement,input,'A removed offer returns focus to the editor');
+    suggestions[0].click();assert.equal(input.value,before,'Detached offers are inert');
+  }
+  chat.load({...conversation,lines:[{who:'you',text:'Question',files:[]},{who:'zeca',text:'Older reply'},{who:'you',text:'Next question',files:[]},{who:'zeca',text:'Latest reply'}]});
+  const log=chat.element.querySelector('.log'), replies=chat.element.querySelectorAll('.zeca'), reply=replies.at(-1);
+  const group=reply.querySelector('.reply-chips');assert.ok(group);assert.equal(replies[0].querySelector('.reply-chips'),null);
+  assert.equal(group.children.length,3);assert.equal(group.attributes['aria-label'],'Continue the conversation');
+  log.scrollTop=27;input.focus();input.setSelectionRange(2,2);const text=input.value;
+  chat.setOffers({...offers,greeting:'Good evening',followups:['next']});
+  assert.equal(chat.element.querySelectorAll('.zeca').at(-1),reply);assert.equal(log.scrollTop,27);assert.equal(document.activeElement,input);assert.equal(input.selectionStart,2);assert.equal(input.value,text);
+  group.children[0].click();await chat.flushDraft();assert.ok(input.value.endsWith('What should I check next?'));assert.deepEqual(actions,[]);
+  chat.setOffers(offers);group.children[0].click();await chat.flushDraft();assert.ok(input.value.endsWith('Explain your last reply more simply.'));
+  group.children[2].click();await tick();assert.deepEqual(actions,['flock']);
+  const stale=group.children[0];chat.load({...conversation,lines:[{who:'error',text:'Failed reply'}]});
+  assert.equal(chat.element.querySelector('.reply-chips'),null);const unchanged=input.value;stale.click();assert.equal(input.value,unchanged);
+  chat.load({...conversation,busy:true,partial:'Still writing',lines:[]});assert.equal(chat.element.querySelector('.reply-chips'),null);stale.click();assert.equal(input.value,unchanged);
+  chat.load({...conversation,lines:[{who:'stopped',text:''}]});assert.equal(chat.element.querySelector('.reply-chips'),null);
+  chat.load({...conversation,lines:[{who:'zeca',text:'Finished'}]});chat.setEnabled(false);stale.click();assert.equal(input.value,unchanged);
+  assert.deepEqual(actions,['flock'],'Suggestions never send, execute a tool or answer a card');
+}
+console.log('check-chat-models: core greetings/offers, exact draft references, stale/disabled guards, latest settled reply, stable reading/caret/focus and explicit Flock navigation in both surfaces');
+
+// The real Nest entry routes this new action through the same save/error guard as size changes.
+roomChat.setEnabled(true);
+roomChat.load({...conversation,lines:[{who:'zeca',text:'Ready to review'}]});
+voiceEvents.onView({sessions:[{agent:'claude',id:'entry',project:'wired',cwd:'/wired'}],chat:{greeting:'Good morning',caption:'Current flock',suggestions:[],followups:['flock']}});
+assert.equal(roomChat.element.querySelectorAll('.reply-chip').length,1,'The actual Nest entry supplies core offers');
+roomInput.value='Keep this draft';roomInput.listeners.input();await tick();
+const navigationCount=voiceViewActions.length;
+voiceSaveFails=true;roomChat.element.querySelector('.reply-chip').click();await tick();await tick();
+assert.equal(voiceViewActions.length,navigationCount,'A failed save keeps the same view');
+assert.equal(voiceRoot.querySelector('.nest-close-error').hidden,false);
+assert.ok(voiceRoot.textContent.includes('Could not change the view'));
+assert.equal(roomInput.value,'Keep this draft');
+voiceSaveFails=false;roomChat.element.querySelector('.reply-chip').click();await tick();await tick();
+assert.equal(voiceViewActions.at(-1),'flock');assert.equal(voiceRoot.querySelector('.nest-close-error').hidden,true);
+assert.equal(voiceDrafts.at(-1).text,'Keep this draft');
+console.log('check-chat-models: actual Nest core offers, saved Flock navigation, visible save failure, retained draft and explicit retry');

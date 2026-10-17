@@ -76,6 +76,7 @@ const island = createIsland(document.getElementById("island")!, {
     rename: (id, title) => Bridge.chatRename(id, title),
     remove: (id) => Bridge.chatDelete(id),
     openNest: () => void changeView(() => Bridge.openNest("chat")),
+    openFlock: () => void changeView(() => Bridge.openNest("flock")),
     pickFiles: (title) => Bridge.chatPickFiles(title),
     memory: (text, folder) => Bridge.memoryCommand(text, folder),
     handoff: (text, folder) => Bridge.continueCommand(text, folder),

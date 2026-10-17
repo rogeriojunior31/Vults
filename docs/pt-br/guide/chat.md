@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2fb80b6131b2 -->
+<!-- source: b9d15e31987e -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -12,7 +12,7 @@ longas e opções de motor, modelo e esforço que quebram linha. Uma conversa in
 seu modelo fixado dentro do menu, sem uma dica flutuante cobrindo as opções.
 O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos após o zoom).
 O chat vazio no Quick fica baixo: o Zeca usa seu retrato original em 3x ao lado de
-**Perguntar ao Zeca**, com o rascunho e os controles logo abaixo. O título some e o retrato
+uma saudação, com o rascunho e os controles logo abaixo. O título some e o retrato
 passa para 2x quando chegam mensagens. A superfície cresce com o conteúdo real da conversa
 até atingir a altura disponível da ilha; então só a conversa rola. Começar uma conversa
 vazia libera a altura anterior. Abrir, carregar e fechar o menu de motor não muda essa altura:
@@ -35,8 +35,20 @@ Só um seletor fica aberto por vez. **↑/↓** no botão abre a lista e foca um
 **Esc** devolve o foco ao botão. Clicar fora fecha a lista. O carregamento dos modelos mantém
 na opção o foco, e as atualizações preservam um título de conversa ainda em edição.
 
-Numa conversa CLI vazia no Room, os cartões de perguntas preenchem o rascunho e focam o campo.
-Edite antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
+O Chat vazio saúda você pelo horário local do desktop: bom dia a partir das 05:00, boa
+tarde a partir das 12:00 e boa noite das 18:00 às 04:59. O texto de apoio prioriza uma sessão
+esperando resposta, depois uma falha, depois trabalho ativo ou um bando tranquilo. No Room
+e no Full, os cartões de perguntas seguem essas mesmas regras. Uma pergunta sobre sessão
+inclui sua referência **@** exata; mantém seu texto, arquivos e pasta de execução.
+Edite o rascunho antes de apertar **Enviar** ou **Enter**; clicar numa sugestão não a envia.
+
+Sob a última resposta concluída, **Explique de forma mais simples** e **O que devo verificar
+agora?** acrescentam uma pergunta ao rascunho editável. **Abrir Flock** aparece quando há
+sessões e abre o Flock existente, salvando esse rascunho. Esses controles também aparecem
+no Quick; somem durante um turno ou quando o último resultado falhou ou foi interrompido.
+As saudações e sugestões usam regras locais, sem chamada ao modelo, fala, notificação ou
+resposta a uma permissão. Com o Zeca desligado, elas não abrem o Chat.
+
 No Quick, o compositor começa com uma linha de escrita e cresce conforme você digita, até o limite de altura.
 O clipe, o microfone opcional e Enviar ficam ao lado do rascunho; o clipe mantém o nome acessível
 e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própria acima dele. Suas mensagens ficam em balões à direita;

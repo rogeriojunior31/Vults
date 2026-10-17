@@ -1235,6 +1235,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const mode: Mode = fsm.mode;
 
     chat.setSessions(v.sessions);
+    chat.setOffers(v.chat ?? null);
     chat.setFolders(
       shown.flatMap((s) => (s.cwd ? [{ cwd: s.cwd, project: s.project }] : [])),
       front?.cwd ?? null,

@@ -11,6 +11,8 @@ use crate::{
 #[cfg_attr(test, derive(ts_rs::TS))]
 // `ts(optional)` touches only the TypeScript: the lab's older states leave those fields out.
 pub struct ViewModel {
+    #[cfg_attr(test, ts(as = "Option<crate::chat::ChatView>", optional))]
+    pub chat: crate::chat::ChatView,
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     pub alerts: Vec<AlertView>,
@@ -384,6 +386,7 @@ impl State {
             .collect();
         let boards = crate::board::view(self);
         ViewModel {
+            chat: crate::chat::view(&sessions, self.local_hour, self.lang),
             inbox: crate::attention::view(self, &boards),
             attention: sessions
                 .iter()
@@ -658,6 +661,9 @@ pub(crate) mod ts {
             AlertLevel::decl(&cfg),
             Outfit::decl(&cfg),
             ViewModel::decl(&cfg),
+            crate::chat::ChatView::decl(&cfg),
+            crate::chat::ChatSuggestion::decl(&cfg),
+            crate::chat::ChatFollowup::decl(&cfg),
             crate::AttentionItem::decl(&cfg),
             crate::AttentionSource::decl(&cfg),
             SessionView::decl(&cfg),

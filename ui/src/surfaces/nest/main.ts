@@ -37,6 +37,7 @@ const nest = createNest(
       setAccess: (access) => Bridge.setChatAccess(access),
       openSettings: () => void Bridge.openSettings("chat"),
       engines: () => Bridge.chatEngines(),
+      openFlock: () => void changeSize(async () => nest.open("flock")),
       pickFiles: (title) => Bridge.chatPickFiles(title),
       voice: {
         start: (tap) => Bridge.voiceStart(tap),
@@ -180,6 +181,7 @@ onDayPart(() => lastView && nest.view(lastView));
 Bridge.onView((v) => {
   lastView = v;
   nest.chat.setSessions(v.sessions);
+  nest.chat.setOffers(v.chat ?? null);
   const folders = v.sessions.flatMap((s) =>
     s.cwd ? [{ cwd: s.cwd, project: s.project }] : [],
   );

@@ -1,5 +1,11 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Explain your last reply more simply.": "Explique sua última resposta de forma mais simples.",
+  "Explain more simply": "Explique de forma mais simples",
+  "What should I check next?": "O que devo verificar agora?",
+  "Open Flock": "Abrir Flock",
+  "Continue the conversation": "Continuar a conversa",
+  "Suggested questions": "Perguntas sugeridas",
   "Type @ to reference a session or project. References limit this turn's flock reads.": "Digite @ para mencionar uma sessão ou projeto. As referências limitam as leituras do bando neste turno.",
   "Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.": "Enter envia, Shift+Enter inicia outra linha, ↑ recupera sua última mensagem e @ menciona o bando.",
   "Sessions and projects": "Sessões e projetos",

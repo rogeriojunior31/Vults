@@ -271,7 +271,30 @@ such calls cannot create or redeem an Always rule, including an older in-memory 
 The regression covers multiple shell tools, wrappers, compound calls and a cut display target.
 Native cards keep Deny primary and omit Always in both themes at all three standard sizes.
 No permission is answered during validation. Build, workspace tests, evals and repository
-checks pass. User acceptance of N2.7 is pending; N2.8-N2.9 remain open.
+checks pass. User acceptance of N2.7 is pending.
+
+N2.8 adds a pure `ViewModel.chat` with time-of-day greetings and offers derived from the
+flock. The app supplies its local hour on the existing clock updates. Core rules prioritize
+a waiting session, then a failure, then active work or an empty flock; session questions
+carry the exact agent and session ID. All sentences have the four language variants.
+These are offers inside an explicitly opened Chat, not K1's proactive speech: no model
+request, sound, notification, permission answer or automatic opening is added.
+
+Room and Full show the offered questions in the empty conversation; clicks append to the
+editable draft using N2.6 references and retain files and the execution folder. Quick keeps
+only the compact greeting and caption. Both layouts offer simple continuations under the
+latest completed successful reply, including a saved reply, without guessing its meaning.
+Question chips fill the draft; Open Flock uses the existing save/error transition owner.
+Streaming, errors, stopped turns and Zeca off cannot activate continuations. Core refreshes
+update the offers without replacing messages, scrolling the transcript or moving the caret.
+
+Core checks cover greeting boundaries, languages, offer priority and unchanged waiting
+permissions. Renderer checks cover exact identities, obsolete offers, focus, retained drafts,
+reply eligibility and the real Nest entry's failed save and retry. Native Linux validation
+covers quiet/working/failed/waiting states, four languages, Black/Light in Quick and Nest,
+and Nest at 480 x 360, 760 x 600 and 1180 x 820. A local CLI fixture supplies one reply;
+no real provider request, agent command or permission answer is made. Build, workspace tests,
+evals and repository checks pass. User acceptance of N2.8 is pending; N2.9 remains open.
 
 #### N3 Dictation
 

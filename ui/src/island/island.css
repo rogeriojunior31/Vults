@@ -3310,8 +3310,8 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 }
 #island .chat .hint { padding: 4px; }
 #island .chat .chat-greeting { margin: 0; font-size: 14px; line-height: 1.4; }
-#island .chat-head > .chat-greeting { margin-right: auto; }
-#island .chat-head > .chat-greeting[hidden] { display: none; }
+#island .chat-head > .chat-intro { margin-right: auto; }
+#island .chat-head > .chat-intro[hidden] { display: none; }
 #island .chat:not(.has-messages) .chat-head { min-height: 108px; padding-left: 120px; }
 #island .chat:not(.has-messages) .chat-perch { width: 112px; height: 108px; }
 #island .chat:not(.has-messages) .chat-perch .perch { transform: none; }
@@ -3746,3 +3746,11 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .mention-menu strong, .mention-menu small { display: block; }
 .mention-menu small { color: var(--fg-muted); font-weight: 400; }
 .mention-menu .menu-item[aria-selected="true"] { background: var(--raised); }
+
+.chat-caption { margin: 0; color: var(--fg-dim); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.chat-intro { min-width: 0; }
+.reply-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.reply-chips:empty { display: none; }
+.reply-chip { min-height: 28px; padding: 4px 9px; border: 1px solid var(--line); border-radius: var(--radius-card); color: var(--fg-dim); background: var(--float); font-size: 11px; text-align: left; }
+.reply-chip:hover { color: var(--fg); background: var(--raised); }
+#island .chat-caption { font-size: 11px; }

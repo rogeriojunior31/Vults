@@ -3,7 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
-import type { ChatDraft, ChatMention, UsageWindow, SessionView } from "../bridge";
+import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
 import { NAME_BY_KIND } from "../agents";
 import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
@@ -42,6 +42,8 @@ export interface ChatBackend {
   voice?: VoiceBackend;
   /** Opens the conversation in the Nest; absent in the Nest itself. */
   openNest?: () => void;
+  /** Opens the existing Flock without answering or starting anything. */
+  openFlock?: () => void;
   /** The paperclip: the system's file chooser, titled in the user's language; what it picks comes
    *  back as a drop does. */
   pickFiles?: (title: string) => void;
@@ -280,6 +282,12 @@ export class ChatPanel {
   /** The island moves its perch here; the Nest keeps its own scene in the same slot. */
   readonly perchSlot = el("div", { class: "chat-perch" });
   private readonly greeting = el("h2", { class: "chat-greeting" });
+  private readonly caption = el("p", { class: "chat-caption" });
+  private readonly intro = el("div", { class: "chat-intro" }, this.greeting, this.caption);
+  private readonly suggestions = el("div", { class: "suggestions" });
+  private readonly replySuggestions = el("div", { class: "reply-chips" });
+  private readonly apiNotice = el("p");
+  private offers: ChatView | null = null;
   private open = false;
   private provider: ChatProvider = "claude";
   /** The API chat: offered only while it can be used (a key saved, or a local model). */
@@ -551,7 +559,7 @@ export class ChatPanel {
       ? el(
           "div",
           { class: "chat-head" },
-          this.greeting,
+          this.intro,
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
           ...(this.backend.openNest ? [this.nestButton()] : []),
@@ -592,7 +600,6 @@ export class ChatPanel {
   /** Its words again: the language is known now, or changed. The panel is built before the app
    *  says which one, so the first call comes from there too. */
   relabel(): void {
-    this.greeting.textContent = t("Ask Zeca");
     this.input.placeholder = t("Ask Zeca…");
     this.input.setAttribute("aria-label", t("Ask Zeca…"));
     this.input.title = t("Type @ to reference a session or project. References limit this turn's flock reads.");
@@ -734,6 +741,87 @@ export class ChatPanel {
     if (this.mentionMenu.classList.contains("on")) this.findMentions();
   }
 
+  /** Core offers are presentation only: no model call, notification, sound or turn. */
+  setOffers(offers: ChatView | null): void {
+    if (JSON.stringify(offers) === JSON.stringify(this.offers)) return;
+    this.offers = offers;
+    this.paintOffers();
+  }
+
+  private sessionMention(s: SessionView): { label: string; mention: ChatMention } {
+    const agent = s.agent_name ?? (s.agent === "other" ? t("Agent") : NAME_BY_KIND[s.agent]);
+    const duplicates = this.sessions.filter(other => other.agent === s.agent && other.project === s.project).length > 1;
+    const label = t("Session: {session}", { session: `${agent} · ${s.project}` });
+    const tokenLabel = duplicates ? `${label} · ${s.id}` : label;
+    return { label, mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "session", agent: s.agent, id: s.id } } };
+  }
+
+  private chooseSuggestion(id: string): void {
+    if (!this.enabled) return;
+    const offered = this.offers?.suggestions.find(q => q.id === id);
+    if (!offered) {
+      if (!this.offers && SUGGESTIONS.includes(id)) this.draft(t(id));
+      return;
+    }
+    let text = offered.text;
+    if (offered.session) {
+      const session = this.sessions.find(s => s.agent === offered.session!.agent && s.id === offered.session!.id);
+      if (!session) return;
+      this.mentions = this.mentions.filter(m => this.input.value.includes(m.token));
+      let reference = this.mentions.find(m => m.target.kind === "session" && m.target.agent === session.agent && m.target.id === session.id);
+      if (!reference) {
+        if (this.mentions.length >= 8) return;
+        reference = this.sessionMention(session).mention;
+        this.mentions.push(reference);
+      }
+      if (!this.input.value.includes(reference.token)) text += `\n${reference.token}`;
+    }
+    this.draft(text);
+  }
+
+  private chooseFollowup(id: string): void {
+    const last = this.messages[this.messages.length - 1];
+    if (!this.enabled || this.busy || last?.who !== "zeca" || last.error || !last.text.trim() || !this.offers?.followups.includes(id as ChatView["followups"][number])) return;
+    if (id === "flock") {
+      this.backend.openFlock?.();
+    } else this.draft(id === "explain" ? t("Explain your last reply more simply.") : t("What should I check next?"));
+  }
+
+  private paintOffers(): void {
+    this.greeting.textContent = this.offers?.greeting ?? t("Ask Zeca");
+    const api = t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.");
+    this.caption.textContent = this.offers?.caption ?? t("Ask anything, or drop a file on the island.");
+    this.caption.hidden = !this.offers && (this.compact || this.provider === "api");
+    this.apiNotice.textContent = api;
+    this.apiNotice.hidden = this.provider !== "api";
+    this.intro.hidden = this.compact && (this.messages.length > 0 || this.busy);
+    const questions = this.compact ? [] : this.offers?.suggestions ?? (this.provider === "api" ? [] : SUGGESTIONS.map(q => ({ id: q, text: t(q), session: null })));
+    this.offerButtons(this.suggestions, questions.map(q => ({ id: q.id, text: q.text })), id => this.chooseSuggestion(id));
+    const labels = { explain: t("Explain more simply"), next: t("What should I check next?"), flock: t("Open Flock") };
+    const followups = (this.offers?.followups ?? []).filter(id => id !== "flock" || !!this.backend.openFlock);
+    this.offerButtons(this.replySuggestions, followups.map(id => ({ id, text: labels[id] })), id => this.chooseFollowup(id));
+    this.replySuggestions.setAttribute("role", "group");
+    this.replySuggestions.setAttribute("aria-label", t("Continue the conversation"));
+    this.suggestions.setAttribute("role", "group");
+    this.suggestions.setAttribute("aria-label", t("Suggested questions"));
+  }
+
+  private offerButtons(container: HTMLElement, rows: { id: string; text: string }[], choose: (id: string) => void): void {
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>("button")];
+    const active = buttons.find(b => b === document.activeElement)?.dataset.offer;
+    container.replaceChildren(...rows.map(row => {
+      const kept = buttons.find(b => b.dataset.offer === row.id);
+      const button = kept ?? el("button", { class: container === this.suggestions ? "suggestion" : "reply-chip", onclick: () => choose(row.id) });
+      button.dataset.offer = row.id;
+      button.textContent = row.text;
+      return button;
+    }));
+    if (active) {
+      const kept = [...container.querySelectorAll<HTMLButtonElement>("button")].find(b => b.dataset.offer === active);
+      (kept ?? this.input).focus({ preventScroll: true });
+    }
+  }
+
   private closeMentions(): void {
     this.mentionMenu.classList.remove("on");
     this.input.setAttribute("aria-expanded", "false");
@@ -762,11 +850,7 @@ export class ChatPanel {
       rows.push({ label, detail: cwd, mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "project", cwd } } });
     }
     for (const s of this.sessions) {
-      const agent = s.agent_name ?? (s.agent === "other" ? t("Agent") : NAME_BY_KIND[s.agent]);
-      const duplicates = this.sessions.filter(other => other.agent === s.agent && other.project === s.project).length > 1;
-      const label = t("Session: {session}", { session: `${agent} · ${s.project}` });
-      const tokenLabel = duplicates ? `${label} · ${s.id}` : label;
-      rows.push({ label, detail: [s.cwd, s.id].filter(Boolean).join(" · "), mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "session", agent: s.agent, id: s.id } } });
+      rows.push({ ...this.sessionMention(s), detail: [s.cwd, s.id].filter(Boolean).join(" · ") });
     }
     this.mentionStart = end - (typed.length + 1);
     this.mentionRows = rows.filter(r => `${r.label} ${r.detail}`.toLocaleLowerCase().includes(query)
@@ -1449,6 +1533,7 @@ export class ChatPanel {
       // In the Nest's wide column a turn's reply is signed, so each one reads apart from the next.
       if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who === "you") b.append(this.signature());
       b.append((this.opts.render ?? renderFull)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
+      if (last && !this.busy && m.text.trim()) b.append(this.replySuggestions);
       return b;
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
@@ -2118,7 +2203,7 @@ export class ChatPanel {
 
   private paint(): void {
     this.element.classList.toggle("has-messages", this.messages.length > 0 || this.busy);
-    this.greeting.hidden = this.compact && (this.messages.length > 0 || this.busy);
+    this.paintOffers();
     this.paintHead();
     this.paintVoice();
     const last = this.messages[this.messages.length - 1];
@@ -2131,30 +2216,8 @@ export class ChatPanel {
       ...(this.messages.length
         ? this.nodes
         : [
-            ...(this.compact && this.provider !== "api" ? [] : [el("div", { class: "hint" },
-              this.compact ? null : this.greeting,
-              el("p", { text:
-                this.provider === "api"
-                  ? t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.")
-                  : t("Ask anything, or drop a file on the island."),
-              }),
-            )]),
-            el(
-              "div",
-              { class: "suggestions" },
-              ...(this.compact || this.provider === "api" ? [] : SUGGESTIONS).map((q) =>
-                el("button", {
-                  class: "suggestion",
-                  onclick: () => {
-                    this.input.value = t(q);
-                    this.keepDraft();
-                    this.paintSend();
-                    this.grow();
-                    this.input.focus();
-                  },
-                }, icon("chat", 16), el("span", { text: t(q) }), icon("chevron", 13)),
-              ),
-            ),
+            ...(this.compact ? (this.provider === "api" ? [el("div", { class: "hint" }, this.apiNotice)] : []) : [el("div", { class: "hint" }, this.intro, this.apiNotice)]),
+            this.suggestions,
           ]),
       ...(waiting && this.thinking ? [this.thinking] : []),
     );

@@ -12,7 +12,7 @@ export type AlertLevel = "info" | "ok" | "warn" | "error";
 
 export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses" | "west-coast" | "fitted-cap" | "mountain-hat" | "headband" | "dreads" | "front-knot" | "durag" | "crown" | "bucket-hat" | "clock-chain" | "headphones" | "shutter-shades" | "chrome-chain" | "eye-patch";
 
-export type ViewModel = { sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
+export type ViewModel = { chat?: ChatView, sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
 /**
  * Actionable items, including deferred offers; surfaces only choose their presentation.
  */
@@ -58,6 +58,12 @@ digest?: DigestView | null,
  * Last week's recap, on Monday morning, until read.
  */
 recap?: CardView | null, };
+
+export type ChatView = { greeting: string, caption: string, suggestions: Array<ChatSuggestion>, followups: Array<ChatFollowup>, };
+
+export type ChatSuggestion = { id: string, text: string, session: SessionRef | null, };
+
+export type ChatFollowup = "explain" | "next" | "flock";
 
 export type AttentionItem = { level: Attention, source: AttentionSource, };
 

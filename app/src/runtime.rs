@@ -494,11 +494,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         if matches!(input, Input::Agent(_) | Input::RunEnded(_) | Input::Tick)
             && let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
         {
-            core::reduce(
-                &mut state,
-                Input::Clock(i64::try_from(d.as_secs()).unwrap_or(0)),
-                now,
-            );
+            let unix = i64::try_from(d.as_secs()).unwrap_or(0);
+            let hour = ((unix + i64::from(crate::history::local_offset(unix))).div_euclid(3600))
+                .rem_euclid(24) as u8;
+            core::reduce(&mut state, Input::LocalHour(hour), now);
+            core::reduce(&mut state, Input::Clock(unix), now);
         }
 
         let effects = core::reduce(&mut state, input, now);

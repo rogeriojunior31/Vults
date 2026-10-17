@@ -10,7 +10,7 @@ Its menu opens upward across the footer width, with one scroll area for long lis
 and wrapping engine, model and effort options. A started conversation explains its pinned
 model inside the menu rather than covering the choices with a tooltip.
 Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
-An empty Quick Chat stays short: Zeca uses his original 3x portrait beside **Ask Zeca**,
+An empty Quick Chat stays short: Zeca uses his original 3x portrait beside a greeting,
 with the draft and controls directly below. The title disappears and his portrait uses 2x
 when messages arrive. The surface grows with the actual transcript until it reaches the
 available overlay height, then only the transcript scrolls. Starting an empty conversation
@@ -36,8 +36,20 @@ Only one selector opens at a time. **↑/↓** on its trigger opens it and focus
 chooses; **Esc** returns focus to the trigger. Clicking outside dismisses it. Model reads
 retain the focused choice, and refreshes preserve an unfinished conversation title.
 
-In an empty Room CLI conversation, the question cards fill the draft and focus the
-input. Edit it before pressing **Send** or **Enter**; clicking a suggestion does not send it.
+An empty Chat greets you by the desktop's local time: morning from 05:00, afternoon from
+12:00, evening from 18:00 through 04:59. Its caption reflects a waiting session first,
+then a failure, then active work or a quiet flock. In Room and Full, the question cards
+follow those same rules. A session question includes its exact **@** reference; it keeps
+your existing text, files and execution folder. Edit the draft before pressing **Send**
+or **Enter**; clicking a suggestion does not send it.
+
+Under the latest completed reply, **Explain more simply** and **What should I check next?**
+append a question to your editable draft. **Open Flock** appears when sessions exist and
+opens the existing Flock while saving that draft. These controls appear in Quick too;
+they disappear while a turn runs or when the latest result failed or was stopped.
+Greetings and offers use local rules, without a model request, spoken line, notification
+or permission answer. With Zeca off, they do not open Chat.
+
 In Quick, the composer starts with one writing line and grows as you type, up to its height limit.
 The paperclip, optional microphone and Send sit beside the draft; the paperclip keeps its
 **Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies

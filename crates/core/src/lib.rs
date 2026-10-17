@@ -12,6 +12,7 @@ pub mod audit;
 pub mod away;
 pub mod board;
 pub mod calendar;
+pub mod chat;
 pub mod flock;
 pub mod handoff;
 pub mod i18n;
@@ -600,6 +601,8 @@ pub enum Input {
     /// The wall clock in Unix seconds, from the app before each agent event and on every tick:
     /// each step keeps the time it started (`now` is monotonic, and stops through a suspend).
     Clock(i64),
+    /// The desktop's local hour; the core never reads the system clock itself.
+    LocalHour(u8),
     /// The preset the user chose. *Paused* sends every waiting card to its terminal.
     SetPresence(Presence),
     /// Do not disturb until then, or `None` to end it (Settings, the island).
@@ -841,6 +844,7 @@ pub struct State {
     pub today: Option<looks::Date>,
     /// The wall clock the app last said (`Input::Clock`), and when.
     pub clock: Option<(Instant, i64)>,
+    pub local_hour: Option<u8>,
     /// The session the user put in front; forgotten when it leaves.
     pub focus: Option<SessionKey>,
     pub presence: Presence,
@@ -1087,6 +1091,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::User(Intent::DismissDigest) => {
             state.digest = None;
+            Vec::new()
+        }
+        Input::LocalHour(hour) => {
+            state.local_hour = (hour < 24).then_some(hour);
             Vec::new()
         }
         Input::SetLang(lang) => {

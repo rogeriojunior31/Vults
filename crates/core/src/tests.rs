@@ -5192,3 +5192,94 @@ fn a_phone_never_makes_a_rule_of_a_target_it_saw_cut() {
     assert!(ask("Bash · cargo test".into()));
     assert!(!ask(format!("Bash · {}", "x".repeat(MAX_PHONE_TARGET))));
 }
+
+#[test]
+fn chat_offers_follow_local_time_and_flock_without_effects_or_answers() {
+    use chat::ChatFollowup::{Explain, Flock, Next};
+    use i18n::Lang;
+    let now = Instant::now();
+    let mut s = State::default();
+    for (lang, morning, afternoon, evening) in [
+        (Lang::En, "Good morning", "Good afternoon", "Good evening"),
+        (Lang::PtBr, "Bom dia", "Boa tarde", "Boa noite"), // check-english:allow
+        (Lang::Es, "Buenos días", "Buenas tardes", "Buenas noches"), // check-english:allow
+        (Lang::Zh, "早上好", "下午好", "晚上好"),
+    ] {
+        reduce(&mut s, Input::SetLang(lang), now);
+        for (hour, expected) in [
+            (0, evening),
+            (4, evening),
+            (5, morning),
+            (11, morning),
+            (12, afternoon),
+            (17, afternoon),
+            (18, evening),
+            (23, evening),
+        ] {
+            assert!(reduce(&mut s, Input::LocalHour(hour), now).is_empty());
+            let view = s.view().chat;
+            assert_eq!(view.greeting, expected);
+            assert_eq!(view.followups, [Explain, Next]);
+            assert_eq!(
+                view.suggestions.iter().map(|q| q.id.as_str()).collect::<Vec<_>>(),
+                ["help", "recent"]
+            );
+            assert!(
+                view.suggestions
+                    .iter()
+                    .all(|q| q.session.is_none() && !q.text.is_empty())
+            );
+        }
+    }
+    reduce(&mut s, Input::SetLang(Lang::En), now);
+    assert!(reduce(&mut s, Input::LocalHour(24), now).is_empty());
+    assert_eq!(s.view().chat.greeting, "Ask Zeca");
+    visible(&mut s, agent("working", AgentEvent::PromptSubmitted), now);
+    assert!(s.view().chat.caption.starts_with("One agent"));
+    assert_eq!(
+        s.view().chat.suggestions[0].session.as_ref().unwrap().id,
+        "working"
+    );
+    visible(&mut s, agent("thinking", AgentEvent::PromptSubmitted), now);
+    assert!(s.view().chat.caption.starts_with("2 agents"));
+    visible(
+        &mut s,
+        agent("failed", AgentEvent::StopFailed { error: None }),
+        now,
+    );
+    assert_eq!(s.view().chat.suggestions[0].id, "failed");
+    visible(&mut s, requested("waiting", "unanswered"), now);
+    let approval = s.view().approval.unwrap();
+    for lang in [Lang::En, Lang::PtBr, Lang::Es, Lang::Zh] {
+        reduce(&mut s, Input::SetLang(lang), now);
+        assert!(reduce(&mut s, Input::LocalHour(12), now).is_empty());
+        let view = s.view();
+        assert_eq!(view.approval.unwrap().request, approval.request);
+        assert_eq!(view.chat.followups, [Explain, Next, Flock]);
+        assert_eq!(
+            view.chat
+                .suggestions
+                .iter()
+                .map(|q| q.id.as_str())
+                .collect::<Vec<_>>(),
+            ["waiting", "failed", "recent"]
+        );
+        assert_eq!(
+            view.chat.suggestions[0].session,
+            Some(SessionRef {
+                agent: AgentKind::Claude,
+                id: "waiting".into()
+            })
+        );
+        assert_eq!(view.chat.suggestions[1].session.as_ref().unwrap().id, "failed");
+        assert!(!view.chat.caption.is_empty());
+    }
+    // Empty or still undiscovered folders retain a meaningful agent name.
+    let mut sessions = s.view().sessions;
+    sessions.retain(|row| row.id == "waiting");
+    sessions[0].project.clear();
+    assert_eq!(
+        chat::view(&sessions, Some(12), Lang::En).caption,
+        "claude is waiting for your answer."
+    );
+}
