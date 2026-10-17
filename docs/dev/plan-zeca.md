@@ -340,6 +340,10 @@ On 2026-10-17, the user accepted N2.1-N2.9 and these follow-ups for the N2 PR. E
 per-slice pending notes record their delivery-time status. The broader desktop matrix and
 R3 release smoke remain separate; N3 follows the N2 merge.
 
+The N2 PR also repairs Windows test startup: all MSVC executables receive the Common Controls
+v6 manifest, including the library test harness. This follows the Tauri build workaround and
+retains the existing tests rather than excluding the Waiting regression from Windows.
+
 #### N3 Dictation
 
 The phases of [plan-dictation.md](plan-dictation.md), in this order: V0 (its open R and Q
