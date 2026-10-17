@@ -20,7 +20,7 @@ struct Run {
     interrupter: Option<Arc<dyn Interrupter>>,
     turn: Option<tauri::async_runtime::JoinHandle<()>>,
     cost: Arc<Mutex<Spent>>,
-    sink: Option<Arc<RunSink>>,
+    session: Option<(AgentKind, Arc<Mutex<Option<String>>>)>,
 }
 
 #[derive(Default)]
@@ -47,7 +47,7 @@ fn reserve() -> Result<u64, String> {
         interrupter: None,
         turn: None,
         cost: Arc::default(),
-        sink: None,
+        session: None,
     });
     Ok(generation)
 }
@@ -65,7 +65,7 @@ struct RunSink {
     app: AppHandle,
     dir: String,
     agent: AgentKind,
-    session: Mutex<Option<String>>,
+    session: Arc<Mutex<Option<String>>>,
     generation: u64,
     roost: String,
 }
@@ -222,9 +222,8 @@ fn patch(changes: &serde_json::Value) -> Option<String> {
     Some(out)
 }
 
-async fn withdraw(app: &AppHandle, sink: &RunSink, failure: Option<&str>) {
-    let agent = sink.agent;
-    if let Some(session) = sink.session.lock().ok().and_then(|s| s.clone()) {
+async fn withdraw(app: &AppHandle, agent: AgentKind, session: &Mutex<Option<String>>, failure: Option<&str>) {
+    if let Some(session) = session.lock().ok().and_then(|s| s.clone()) {
         crate::runtime::run_ended(app, ended(agent, &session, failure)).await;
     }
 }
@@ -404,23 +403,30 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
         .unwrap_or_default();
     // A resume that fails at once (a transcript it can't find) is said in the chat, not only logged.
     let (first, failed_fast) = tokio::sync::oneshot::channel::<String>();
-    let sink = Arc::new(RunSink {
+    let session = Arc::new(Mutex::new(Some(c.key.session_id.clone())));
+    let sink = RunSink {
         cost,
         app: done_app.clone(),
         dir: cwd,
         agent: c.key.agent,
-        session: Mutex::new(Some(c.key.session_id.clone())),
+        session: session.clone(),
         generation,
         roost,
-    });
+    };
     if let Ok(mut slot) = current().lock()
         && let Some(run) = slot.as_mut().filter(|run| run.generation == generation)
     {
-        run.sink = Some(sink.clone());
+        run.session = Some((c.key.agent, session));
     }
     let running = tauri::async_runtime::spawn(async move {
         let result = turn(generation, driver, &words, &sink, &stopped).await;
-        withdraw(&done_app, &sink, result.as_ref().err().map(String::as_str)).await;
+        withdraw(
+            &done_app,
+            sink.agent,
+            &sink.session,
+            result.as_ref().err().map(String::as_str),
+        )
+        .await;
         if let Err(e) = result {
             tracing::warn!(error = %e, "a continued session's turn failed");
             let _ = first.send(e);
@@ -438,7 +444,7 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
     ("Continuing this session; it shows in the flock:", Some(project))
 }
 pub async fn stop_continuation(app: AppHandle) -> Said {
-    let (generation, interrupter, turn, cost, sink) = {
+    let (generation, interrupter, turn, cost, session) = {
         let Ok(mut slot) = current().lock() else {
             return ("It is still starting: try again in a moment.", None);
         };
@@ -454,7 +460,7 @@ pub async fn stop_continuation(app: AppHandle) -> Said {
             run.interrupter.clone(),
             turn,
             run.cost.clone(),
-            run.sink.clone(),
+            run.session.clone(),
         )
     };
     if let Some(i) = interrupter {
@@ -465,8 +471,8 @@ pub async fn stop_continuation(app: AppHandle) -> Said {
     if tokio::time::timeout(STOP_WAIT, &mut turn).await.is_err() {
         turn.abort();
         let _ = turn.await;
-        if let Some(sink) = sink {
-            withdraw(&app, &sink, None).await;
+        if let Some((agent, session)) = session {
+            withdraw(&app, agent, &session, None).await;
         }
         let _ = tauri::async_runtime::spawn_blocking(move || settle(Some(&app), &cost)).await;
         release(generation);
