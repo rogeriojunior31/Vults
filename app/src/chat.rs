@@ -43,6 +43,8 @@ pub struct Draft {
     files: Vec<String>,
     folder: Option<String>,
     provider: Option<Provider>,
+    #[serde(default)]
+    mentions: Vec<crate::mentions::Mention>,
 }
 
 impl Draft {
@@ -54,7 +56,7 @@ impl Draft {
         {
             return Err("Chat draft is too large.".into());
         }
-        Ok(())
+        crate::mentions::validate(&self.mentions)
     }
 }
 
@@ -339,6 +341,7 @@ enum Sync {
         folder: Option<String>,
         model: Option<String>,
         effort: Option<String>,
+        mentions: Vec<crate::mentions::Mention>,
     },
     Reset {
         from: String,
@@ -371,10 +374,21 @@ pub async fn chat_send(
     text: String,
     files: Vec<String>,
     folder: Option<String>,
+    mentions: Option<Vec<crate::mentions::Mention>>,
 ) -> Result<(), String> {
     if !crate::settings::zeca(&app) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }
+    use crate::flock_tools::Source as _;
+    let mentions = mentions.unwrap_or_default();
+    let targets = crate::mentions::resolve(&text, mentions.clone(), &app.view().unwrap_or_default())?;
+    let source: Arc<dyn crate::flock_tools::Source> = match &targets {
+        Some(targets) => Arc::new(crate::mentions::Source {
+            source: Arc::new(app.clone()),
+            targets: targets.clone(),
+        }),
+        None => Arc::new(app.clone()),
+    };
     // Only our own inbox copies may be attached, never an arbitrary path from the webview.
     let inbox = paths::inbox_dir();
     let files: Vec<PathBuf> = files
@@ -456,7 +470,7 @@ pub async fn chat_send(
     // After the folder: the memory's tool proposes for the roost the conversation is in.
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
     if chat.provider() == Provider::ClaudeApi {
-        let mut tools = crate::flock_tools::all(Arc::new(app.clone()));
+        let mut tools = crate::flock_tools::all(source.clone());
         tools.extend(crate::recall::tools(&app));
         tools.extend(crate::memory::tools(&app, chat.folder()));
         // The web only while the user has it on: off, the model is never offered it (Z7).
@@ -466,6 +480,9 @@ pub async fn chat_send(
             ))));
         }
         chat.set_tools(tools);
+    }
+    if chat.provider() == Provider::Claude {
+        crate::mcp::keep_scope(targets.as_deref())?;
     }
     if !chat.started() {
         let pick = pick_for(&app, chat.folder(), chat.provider());
@@ -532,6 +549,7 @@ pub async fn chat_send(
             folder: Some(folder_key(Some(chat.folder()))).filter(|f| !f.is_empty()),
             model: model.map(str::to_string),
             effort: effort.map(|e| e.name().to_string()),
+            mentions: mentions.clone(),
         },
     );
     state.live(|l| {
@@ -567,9 +585,9 @@ pub async fn chat_send(
     if let Ok(mut t) = state.waiting.1.lock() {
         *t = Some(turn.clone());
     }
-    // Only a conversation that began with the frozen part knows what the blocks are (one saved
-    // before M2 does not, and its system prompt can't change now).
-    let context = chat.frozen().map(|_| crate::context::volatile(&app, &memories));
+    // Older conversations omit general context; an explicit reference still carries its scope.
+    let context = (chat.frozen().is_some() || targets.is_some())
+        .then(|| crate::context::volatile(source.as_ref(), &memories));
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
     crate::journal::chat(&app, "you", chat.folder(), &text, false);
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
@@ -1604,6 +1622,13 @@ mod tests {
             files: vec!["/inbox/change.patch".into()],
             folder: Some("/project".into()),
             provider: Some(Provider::Codex),
+            mentions: vec![crate::mentions::Mention {
+                token: "@\"site\"".into(),
+                target: crate::mentions::Target::Session {
+                    agent: "codex".into(),
+                    id: "exact-session".into(),
+                },
+            }],
         };
         draft.validate().unwrap();
         let restored: Draft = serde_json::from_str(&serde_json::to_string(&draft).unwrap()).unwrap();
@@ -1611,6 +1636,10 @@ mod tests {
         assert_eq!(restored.files, draft.files);
         assert_eq!(restored.folder, draft.folder);
         assert_eq!(restored.provider, draft.provider);
+        assert_eq!(restored.mentions, draft.mentions);
+        let old: Draft =
+            serde_json::from_str(r#"{"text":"old draft","files":[],"folder":null,"provider":null}"#).unwrap();
+        assert!(old.mentions.is_empty());
         assert!(
             Draft {
                 text: "x".repeat(1024 * 1024 + 1),

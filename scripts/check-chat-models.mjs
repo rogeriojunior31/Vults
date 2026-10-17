@@ -688,3 +688,63 @@ usageIpc.calls.length = 0; const seededUsage = [];
 usageBridge.onUsage(windows => seededUsage.push(windows));usageIpc.subscribed(() => {});await tick();
 usageIpc.read([]); await tick(); assert.deepEqual(seededUsage, [[]], 'An empty cached snapshot is explicit absence, not zero usage');
 console.log('check-chat-models: actual Nest usage event binding and Bridge listener-before-cache, late read rejection and empty seed');
+
+// References use stable identities and selecting an option only changes the editable draft.
+for (const surface of ['island','nest']) {
+  const sent=[], drafts=[];
+  const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>drafts.push(d),send:async(...args)=>sent.push(args)},()=>{},{window:surface});
+  await tick(); chat.toggle(true);
+  const input=chat.element.querySelector('textarea'), menu=chat.element.querySelector('.mention-menu');
+  const sessions=[{agent:'claude',id:'shared',project:'same name',cwd:'/one/same name'},{agent:'codex',id:'shared',project:'same name',cwd:'/two/same name'},{agent:'codex',id:'next',project:'same name',cwd:'/one/same name'}];
+  chat.setSessions(sessions);
+  chat.element.isConnected=true;
+  const type=(value,caret=value.length)=>{input.value=value;input.setSelectionRange(caret,caret);input.listeners.input();};
+  const key=key=>input.listeners.keydown({key,preventDefault(){},stopPropagation(){}});
+  type('Email user@example.com');assert.equal(menu.classList.contains('on'),false);
+  type('@same name');assert.equal(menu.children.length,5,'Project searches include spaces');
+  input.listeners.keydown({key:'Enter',shiftKey:true,preventDefault(){assert.fail('Shift+Enter stays native even with suggestions')}});
+  assert.equal(menu.classList.contains('on'),false);assert.equal(sent.length,0);
+  type('Review @same then explain',12);assert.equal(menu.classList.contains('on'),true);
+  assert.equal(menu.children.length,5);assert.ok(menu.textContent.includes('/one/same name')&&menu.textContent.includes('/two/same name'));
+  assert.equal(input.attributes['aria-expanded'],'true');
+  key('ArrowDown'); const selected=input.attributes['aria-activedescendant'];
+  chat.setSessions([...sessions]);assert.equal(input.attributes['aria-activedescendant'],selected,'A live view keeps the active identity');
+  key('Enter');await tick();assert.equal(sent.length,0);assert.ok(input.value.endsWith(' then explain'));
+  const project=drafts.at(-1).mentions[0];assert.deepEqual(project.target,{kind:'project',cwd:'/two/same name'});
+  assert.ok(input.value.includes(project.token));assert.equal(menu.classList.contains('on'),false);
+  const copy=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>drafts.push(d)},()=>{},{window:surface});await tick();
+  copy.restoreDraft(drafts.at(-1));await copy.flushDraft();assert.deepEqual(drafts.at(-1).mentions,[project]);
+  type(input.value+' @claude');
+  const mouseChoice=menu.children[0];
+  mouseChoice.listeners.pointerdown({preventDefault(){}});
+  for(const listener of documentEvents.pointerdown)listener({target:mouseChoice});
+  assert.equal(menu.classList.contains('on'),true,'A real pointer sequence keeps the row until click');
+  mouseChoice.click();await tick();assert.equal(drafts.at(-1).mentions.length,2);assert.equal(sent.length,0);
+  type(input.value+' @');for(const listener of documentEvents.pointerdown)listener({target:document.body});assert.equal(menu.classList.contains('on'),false);
+  type(input.value+' @codex');key('ArrowDown');key('Tab');await tick();
+  assert.equal(sent.length,0);assert.deepEqual(drafts.at(-1).mentions[2].target,{kind:'session',agent:'codex',id:'next'});
+  const references=[...drafts.at(-1).mentions], text=input.value;
+  type(text+' @');key('Escape');assert.equal(menu.classList.contains('on'),false);assert.ok(input.value.endsWith(' @'));
+  type(text+' @');input.listeners.compositionstart();assert.equal(menu.classList.contains('on'),false);
+  input.listeners.keydown({key:'Enter',isComposing:true,preventDefault(){assert.fail('IME is native')}});assert.equal(sent.length,0);
+  type(text);key('Enter');await tick();await tick();assert.equal(sent.length,1);assert.deepEqual(sent[0][3],references);assert.equal(sent[0][2],null,'References do not change the execution folder');
+  chat.receive({kind:'done'});type('');await tick();assert.equal(drafts.at(-1).mentions,undefined);
+  type('@codex');assert.equal(menu.classList.contains('on'),true);chat.toggle(false);assert.equal(menu.classList.contains('on'),false);
+  chat.toggle(true);type('@');chat.setEnabled(false);assert.equal(menu.classList.contains('on'),false);
+}
+console.log('check-chat-models: both surfaces reference exact sessions/projects, caret insertion, keyboard/IME/dismissal, live identity, draft transfer and explicit send without folder changes');
+voiceEvents.onView({sessions:[{agent:'claude',id:'entry',project:'wired',cwd:'/wired'}]});
+roomInput.value='@wired';roomInput.setSelectionRange(6,6);roomInput.listeners.input();
+assert.ok(roomChat.element.querySelector('.mention-menu').textContent.includes('wired'),'The actual Nest entry supplies live sessions');
+
+for(const surface of ['island','nest']) {
+  const writes=[];
+  const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},saveDraft:async d=>writes.push(d),send:async()=>{throw "A referenced session or project is no longer in the flock. Remove its reference and choose again.";}},()=>{},{window:surface});
+  await tick();
+  const ref={token:'@"Session: missing"',target:{kind:'session',agent:'codex',id:'gone'}};
+  chat.restoreDraft({text:'Review '+ref.token,files:['/inbox/review.txt'],folder:null,provider:'claude',mentions:[ref]});
+  const input=chat.element.querySelector('textarea');input.listeners.keydown({key:'Enter',preventDefault(){}});await tick();await tick();
+  assert.equal(input.value,'Review '+ref.token);assert.deepEqual(writes.at(-1).mentions,[ref]);assert.deepEqual(writes.at(-1).files,['/inbox/review.txt']);
+  assert.equal(chat.started,false,'A failed reference never pins a new conversation');
+}
+console.log('check-chat-models: rejected references retain editable text, files, identities and the unstarted conversation in both surfaces');

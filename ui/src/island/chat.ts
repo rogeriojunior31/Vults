@@ -3,7 +3,8 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { Clock } from "../clock";
-import type { ChatDraft, UsageWindow } from "../bridge";
+import type { ChatDraft, ChatMention, UsageWindow, SessionView } from "../bridge";
+import { NAME_BY_KIND } from "../agents";
 import { drawFrame, frameWidth } from "../character/sprites";
 import { ZECA } from "../character/zeca";
 import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
@@ -19,7 +20,7 @@ export interface ChatBackend {
   draft?: () => Promise<ChatDraft>;
   current?: () => Promise<OpenedConversation | null>;
   saveDraft?: (draft: ChatDraft) => Promise<void>;
-  send(text: string, files: string[], folder: string | null): Promise<void>;
+  send(text: string, files: string[], folder: string | null, mentions?: ChatMention[]): Promise<void>;
   decide(id: string, answer: ChatAnswer): void;
   /** Stops the turn running now. */
   stop(): void;
@@ -86,6 +87,13 @@ const MEMORY_SAID = new Set([
   tk("It is still starting: try again in a moment."),
 ]);
 
+const REFERENCE_ERRORS = new Set([
+  tk("Chat references are invalid or too large."),
+  tk("A referenced session or project is no longer in the flock. Remove its reference and choose again."),
+  tk("Choose flock references from the @ suggestions again before sending."),
+  tk("Could not prepare the chat's flock references. Try again."),
+]);
+
 /** What a `/remember` or `/forget` says back: an English sentence to translate, and the memory's
  * own detail (why it refused, the facts to choose from). */
 export interface MemorySaid {
@@ -145,7 +153,7 @@ type Ask = {
 };
 
 type Message =
-  | { who: "you"; text: string; files: string[] }
+  | { who: "you"; text: string; files: string[]; mentions?: ChatMention[] }
   | { who: "zeca"; text: string; error?: boolean; retry?: boolean }
   | { who: "note"; text: string }
   | Ask;
@@ -240,7 +248,8 @@ export class ChatPanel {
   flushDraft(): Promise<void> {
     if (!this.restored && this.backend.draft) return this.restore().then(() => this.flushDraft());
     this.draftEdited = true;
-    const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider };
+    this.mentions = this.mentions.filter(m => this.input.value.includes(m.token));
+    const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider, ...(this.mentions.length ? { mentions: [...this.mentions] } : {}) };
     this.draftSaved = this.draftSaved.catch(() => {}).then(() => this.backend.saveDraft?.(draft));
     return this.draftSaved;
   }
@@ -255,6 +264,8 @@ export class ChatPanel {
     if (initial && this.draftEdited) return;
     this.draftEdited = true;
     this.input.value = draft.text;
+    this.mentions = (draft.mentions ?? []).filter(m => draft.text.includes(m.token));
+    this.closeMentions();
     this.files = [...draft.files];
     if (!this.started && (draft.text || draft.files.length || draft.folder)) {
       this.folder = draft.folder;
@@ -352,6 +363,12 @@ export class ChatPanel {
   private readonly composerHint = el("p", { class: "composer-hint" });
   private readonly attachLabel = el("span");
   private readonly input = document.createElement("textarea");
+  private mentions: ChatMention[] = [];
+  private sessions: SessionView[] = [];
+  private readonly mentionMenu = el("div", { class: "menu mention-menu" });
+  private mentionRows: { label: string; detail: string; mention: ChatMention }[] = [];
+  private mentionIndex = 0;
+  private mentionStart = 0;
   private readonly send = el("button", {
     class: "send",
     onclick: () => this.sendOrStop(),
@@ -381,22 +398,45 @@ export class ChatPanel {
     private readonly opts: ChatPanelOptions = { window: "island" },
   ) {
     this.input.rows = 1;
+    this.mentionMenu.id = `${this.menuId}-mentions`;
+    this.mentionMenu.setAttribute("role", "listbox");
+    this.mentionMenu.setAttribute("aria-label", t("Sessions and projects"));
+    this.input.setAttribute("aria-autocomplete", "list");
+    this.input.setAttribute("aria-controls", this.mentionMenu.id);
+    this.closeMentions();
     this.planUsage.setAttribute("aria-hidden", "true");
     document.addEventListener("visibilitychange", () => this.paintUsage());
+    window.addEventListener?.("resize", () => this.sizeMentions());
     this.setup.setAttribute("role", "img");
     this.input.addEventListener("keydown", (e) => {
       if (e.isComposing || e.keyCode === 229) return;
+      if (e.shiftKey && (e.key === "Enter" || e.key === "Tab")) { this.closeMentions(); return; }
+      if (this.mentionMenu.classList.contains("on") && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
+        e.preventDefault(); e.stopPropagation();
+        if (e.key === "Escape") this.closeMentions();
+        else if (e.key === "Enter" || e.key === "Tab") this.pickMention();
+        else {
+          this.mentionIndex = (this.mentionIndex + (e.key === "ArrowDown" ? 1 : -1) + this.mentionRows.length) % this.mentionRows.length;
+          this.paintMentions();
+        }
+        return;
+      }
       // Escape is the island's: it closes the chat from anywhere.
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         void this.submit();
       } else if (e.key === "ArrowUp" && !this.input.value && this.recall()) e.preventDefault();
     });
-    this.input.addEventListener("input", () => {
+    this.input.addEventListener("input", (event) => {
       this.grow();
       this.paintSend();
       this.keepDraft();
+      if (!(event as InputEvent | undefined)?.isComposing) this.findMentions();
     });
+    this.input.addEventListener("compositionstart", () => this.closeMentions());
+    this.input.addEventListener("compositionend", () => this.findMentions());
+    this.input.addEventListener("click", () => this.findMentions());
+    this.input.addEventListener("keyup", (e) => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) this.findMentions(); });
     this.place.addEventListener("click", () => {
       if (this.started || this.provider === "api") return;
       this.menuOpen = !this.menuOpen;
@@ -483,6 +523,8 @@ export class ChatPanel {
     document.addEventListener("pointerdown", event => {
       if (!this.element.isConnected) return;
       const target = event.target as Node | null;
+      if (this.mentionMenu.contains(target) || target === this.input) return;
+      this.closeMentions();
       if (this.menuPanels().some(({ menu, trigger }) => menu.contains(target) || trigger.contains(target))) return;
       this.closeMenus();
     });
@@ -532,6 +574,7 @@ export class ChatPanel {
       head,
       el("div", { class: "log-box" }, this.log, this.jump),
       el("div", { class: "composer" },
+        this.mentionMenu,
         this.chips,
         this.input,
         this.wave,
@@ -552,8 +595,9 @@ export class ChatPanel {
     this.greeting.textContent = t("Ask Zeca");
     this.input.placeholder = t("Ask Zeca…");
     this.input.setAttribute("aria-label", t("Ask Zeca…"));
+    this.input.title = t("Type @ to reference a session or project. References limit this turn's flock reads.");
     this.log.setAttribute("aria-label", t("Chat"));
-    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.");
+    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.");
     this.attachLabel.textContent = t("Attach a file");
     this.chips.setAttribute("role", "group");
     this.chips.setAttribute("aria-label", t("Attachments"));
@@ -683,6 +727,94 @@ export class ChatPanel {
       this.folder = front;
       this.paintHead();
     } else if (changed) this.paintHead();
+  }
+
+  setSessions(sessions: SessionView[]): void {
+    this.sessions = sessions;
+    if (this.mentionMenu.classList.contains("on")) this.findMentions();
+  }
+
+  private closeMentions(): void {
+    this.mentionMenu.classList.remove("on");
+    this.input.setAttribute("aria-expanded", "false");
+    this.input.setAttribute("aria-activedescendant", "");
+    this.mentionRows = [];
+    this.mentionIndex = 0;
+  }
+
+  private findMentions(): void {
+    if (!this.enabled) { this.closeMentions(); return; }
+    const end = this.input.selectionStart ?? this.input.value.length;
+    const before = this.input.value.slice(0, end);
+    const typed = /(?:^|\s)@([^@"\n]*)$/u.exec(before)?.[1];
+    if (typed === undefined || this.mentions.length >= 8 || this.input.selectionEnd !== null && this.input.selectionEnd !== undefined && this.input.selectionEnd !== end) {
+      this.closeMentions(); return;
+    }
+    const query = typed.toLocaleLowerCase();
+    if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMenus();
+    const previous = this.mentionRows[this.mentionIndex]?.mention.token;
+    const rows: typeof this.mentionRows = [];
+    const projects = new Map(this.sessions.filter(s => s.cwd).map(s => [s.cwd!, s.project]));
+    for (const [cwd, project] of projects) {
+      const duplicates = [...projects.values()].filter(p => p === project).length > 1;
+      const label = t("Project: {project}", { project });
+      const tokenLabel = duplicates ? t("Project: {project}", { project: cwd }) : label;
+      rows.push({ label, detail: cwd, mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "project", cwd } } });
+    }
+    for (const s of this.sessions) {
+      const agent = s.agent_name ?? (s.agent === "other" ? t("Agent") : NAME_BY_KIND[s.agent]);
+      const duplicates = this.sessions.filter(other => other.agent === s.agent && other.project === s.project).length > 1;
+      const label = t("Session: {session}", { session: `${agent} · ${s.project}` });
+      const tokenLabel = duplicates ? `${label} · ${s.id}` : label;
+      rows.push({ label, detail: [s.cwd, s.id].filter(Boolean).join(" · "), mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "session", agent: s.agent, id: s.id } } });
+    }
+    this.mentionStart = end - (typed.length + 1);
+    this.mentionRows = rows.filter(r => `${r.label} ${r.detail}`.toLocaleLowerCase().includes(query)
+      && !this.mentions.some(m => m.token === r.mention.token)).slice(0, 8);
+    if (!this.mentionRows.length) { this.closeMentions(); return; }
+    this.mentionIndex = Math.max(0, this.mentionRows.findIndex(r => r.mention.token === previous));
+    this.paintMentions();
+  }
+
+  private paintMentions(): void {
+    this.mentionMenu.replaceChildren(...this.mentionRows.map((row, i) => {
+      const button = el("button", { class: `menu-item${i === this.mentionIndex ? " on" : ""}`, onclick: () => { this.mentionIndex = i; this.pickMention(); } },
+        el("strong", { text: row.label }), el("small", { text: row.detail }));
+      button.id = `${this.mentionMenu.id}-${i}`;
+      button.setAttribute("role", "option");
+      button.tabIndex = -1;
+      button.setAttribute("aria-selected", String(i === this.mentionIndex));
+      button.addEventListener("pointerdown", event => event.preventDefault());
+      return button;
+    }));
+    this.mentionMenu.classList.add("on");
+    this.sizeMentions();
+    this.input.setAttribute("aria-expanded", "true");
+    this.input.setAttribute("aria-activedescendant", `${this.mentionMenu.id}-${this.mentionIndex}`);
+    this.mentionMenu.children[this.mentionIndex]?.scrollIntoView?.({ block: "nearest" });
+  }
+
+  private sizeMentions(): void {
+    if (!this.mentionMenu.classList.contains("on")) return;
+    const box = this.element.getBoundingClientRect();
+    const composer = this.mentionMenu.parentElement?.getBoundingClientRect();
+    const zoom = box.height / this.element.offsetHeight || 1;
+    if (composer && Number.isFinite(composer.top - box.top)) {
+      this.mentionMenu.style.maxHeight = `${Math.max(40, Math.min(240, (composer.top - box.top) / zoom - 6))}px`;
+    }
+  }
+
+  private pickMention(): void {
+    const row = this.mentionRows[this.mentionIndex];
+    if (!row) return;
+    const end = this.input.selectionStart ?? this.input.value.length;
+    const inserted = `${row.mention.token} `;
+    this.input.value = this.input.value.slice(0, this.mentionStart) + inserted + this.input.value.slice(end);
+    this.mentions.push(row.mention);
+    const caret = this.mentionStart + inserted.length;
+    this.input.setSelectionRange(caret, caret);
+    this.closeMentions();
+    this.grow(); this.paintSend(); this.keepDraft(); this.input.focus();
   }
 
   /** What Zeca does while the chat is open. */
@@ -869,6 +1001,7 @@ export class ChatPanel {
     if (!open) this.cancelVoice();
     if (open === this.open) return;
     this.open = open;
+    this.closeMentions();
     this.paintDrop();
     this.menuOpen = false;
     this.modelOpen = false;
@@ -1025,7 +1158,7 @@ export class ChatPanel {
       const turn = this.busy;
       this.busy = false;
       if (d.kind === "error")
-        this.messages.push({ who: "zeca", text: d.message, error: true, retry: turn });
+        this.messages.push({ who: "zeca", text: REFERENCE_ERRORS.has(d.message) ? t(d.message) : d.message, error: true, retry: turn });
       if (d.kind === "stopped")
         this.messages.push({ who: "note", text: t("Stopped.") });
       // Anything still waiting is a no now: it can't be answered any more.
@@ -1059,7 +1192,7 @@ export class ChatPanel {
         this.picksSeq++;
         this.picks = { [s.provider]: { model: s.model, effort: s.effort } };
       }
-      this.messages.push({ who: "you", text: s.text, files: s.files });
+      this.messages.push({ who: "you", text: s.text, files: s.files, mentions: s.mentions });
       this.busy = true;
       this.turnSince = Clock.now();
       this.started = true;
@@ -1104,6 +1237,7 @@ export class ChatPanel {
     const you = this.lastYou();
     if (!you?.text) return false;
     this.input.value = you.text;
+    this.mentions = [...(you.mentions ?? [])];
     this.grow();
     this.paintSend();
     this.keepDraft();
@@ -1125,6 +1259,7 @@ export class ChatPanel {
     const you = this.lastYou();
     if (this.busy || !you) return;
     this.input.value = you.text;
+    this.mentions = [...(you.mentions ?? [])];
     this.files = [...new Set([...this.files, ...you.files])];
     void this.submit();
   }
@@ -1160,7 +1295,11 @@ export class ChatPanel {
         return;
       }
     }
-    this.messages.push({ who: "you", text, files });
+    const mentions = this.mentions.filter(m => text.includes(m.token));
+    const wasStarted = this.started;
+    this.messages.push({ who: "you", text, files, mentions });
+    this.mentions = [];
+    this.closeMentions();
     this.files = [];
     this.input.value = "";
     this.input.style.height = "";
@@ -1177,8 +1316,18 @@ export class ChatPanel {
     this.changed();
     try {
       await this.draftSaved;
-      await this.backend.send(text, files, this.folder);
+      await this.backend.send(text, files, this.folder, mentions);
     } catch (e) {
+      if (REFERENCE_ERRORS.has(String(e))) {
+        this.started = wasStarted;
+        // A rejected reference starts no turn; keep it editable without replacing newer typing.
+        if (!this.input.value && !this.files.length) {
+          this.input.value = text;
+          this.files = files;
+          this.mentions = mentions;
+          this.grow(); this.keepDraft();
+        }
+      }
       this.receive({ kind: "error", message: String(e) });
     }
   }
@@ -1196,6 +1345,8 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider): void {
+    this.mentions = [];
+    this.closeMentions();
     this.conversationVersion++;
     this.sourceVersion++;
     this.liveEnded = false;
@@ -1251,6 +1402,7 @@ export class ChatPanel {
 
   /** Measure content before the island measures its native hit region; menus never size the log. */
   fitContents(): void {
+    this.sizeMentions();
     if (!this.compact || !this.element.isConnected) return;
     const top = this.log.scrollTop;
     const height = this.log.style.height;
@@ -1453,6 +1605,8 @@ export class ChatPanel {
     this.sourceVersion++;
     if (clearDraft) {
       this.input.value = "";
+      this.mentions = [];
+      this.closeMentions();
       this.files = [];
     }
     this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
@@ -1841,6 +1995,11 @@ export class ChatPanel {
   }
 
   private closeMenus(returnFocus = false): boolean {
+    if (this.mentionMenu.classList.contains("on")) {
+      this.closeMentions();
+      if (returnFocus) this.input.focus();
+      return true;
+    }
     const open = this.menuPanels().find(({ menu }) => menu.classList.contains("on"));
     if (!open) return false;
     this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
@@ -1858,6 +2017,7 @@ export class ChatPanel {
   }
 
   private paintHead(): void {
+    if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMentions();
     const active = document.activeElement as HTMLInputElement | null;
     const panel = active ? this.menuPanels().find(({ menu }) => menu.contains(active)) : null;
     const choice = panel ? active?.dataset.choice : null;

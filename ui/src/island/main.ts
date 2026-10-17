@@ -66,7 +66,7 @@ const island = createIsland(document.getElementById("island")!, {
     draft: Bridge.chatDraft,
     current: Bridge.chatCurrent,
     saveDraft: Bridge.chatDraftSet,
-    send: (text, files, folder) => Bridge.chatSend(text, files, folder),
+    send: (text, files, folder, mentions) => Bridge.chatSend(text, files, folder, mentions),
     decide: (id, answer) => void Bridge.chatDecide(id, answer),
     stop: () => void Bridge.chatStop(),
     reset: (provider) => Bridge.chatReset(provider),

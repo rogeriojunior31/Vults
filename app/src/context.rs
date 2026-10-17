@@ -3,9 +3,8 @@
 
 use std::path::Path;
 
-use tauri::AppHandle;
 use vults_zeca::context::{self, Now};
-use vults_zeca::flock::{Flock, FlockReader};
+use vults_zeca::flock::FlockReader;
 use vults_zeca::memory::Memory;
 
 use crate::flock_tools::Source;
@@ -35,16 +34,16 @@ pub fn frozen(dir: Option<&Path>, folder: &Path) -> String {
 }
 
 /// The volatile part, now: the user's clock, the island's flock and what recall found (M5).
-pub fn volatile(app: &AppHandle, memories: &[context::Passage]) -> String {
+pub fn volatile(source: &dyn Source, memories: &[context::Passage]) -> String {
     let unix = crate::history::unix_now();
     let now = Now {
         unix,
         offset: crate::history::local_offset(unix),
     };
-    let flock = app
+    let flock = source
         .view()
         .map(|v| crate::flock_tools::flock(&v))
-        .unwrap_or_else(Flock::default);
+        .unwrap_or_default();
     context::volatile(now, &FlockReader::new(flock), memories)
 }
 

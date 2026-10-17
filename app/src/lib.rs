@@ -19,6 +19,7 @@ mod log;
 mod mcp;
 mod media;
 mod memory;
+mod mentions;
 mod notify;
 mod open;
 mod panel;

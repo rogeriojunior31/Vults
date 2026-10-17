@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: daa22968d34e -->
+<!-- source: 34aa9c94b5f6 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -86,6 +86,32 @@ de novo; digitar ou atualizar o chat não repete continuamente a consulta que fa
 A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
 pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
 **New** começa outra. O modelo do chat por API é escolhido em **Settings → Chat & voice**.
+
+<a id="referencing-the-flock"></a>
+
+## Mencionando o bando
+
+Digite **@** no rascunho para encontrar uma sessão ou projeto aberto. Busque pelo projeto,
+agente, pasta ou ID da sessão. **↑/↓** percorrem as sugestões; **Enter**, **Tab** ou um clique
+inserem a referência escolhida. O foco continua no rascunho, e escolher nunca envia uma
+mensagem. **Esc** fecha as sugestões. Uma referência aparece como `@"Sessão: Codex · site"`
+ou `@"Projeto: site"`; nomes repetidos mostram a pasta completa ou o ID da sessão. Você pode
+selecionar até oito referências, incluindo várias sessões numa mensagem.
+
+Uma referência de sessão seleciona aquele agente e ID exatos. Uma referência de projeto
+seleciona as sessões do bando naquela pasta exata, incluindo seus diferentes agentes.
+Ao enviar, o contexto do bando e as ferramentas que o consultam leem somente essas seleções
+naquele turno. Isso funciona nos motores CLI e API. As referências não mudam a pasta de
+trabalho da conversa nem respondem aos cards, e as mensagens anteriores continuam na
+conversa. Sem referências, o contexto habitual do bando continua igual.
+
+As referências acompanham o rascunho ainda não enviado entre Quick e Nest, junto com os
+anexos. Remova a referência inteira entre aspas para deixar de incluí-la. Se editar, colar
+ou recuperar uma referência sem sua seleção, escolha-a novamente nas sugestões de **@**.
+Se uma sessão ou projeto mencionado tiver saído do bando, o Vults pede para remover a
+referência e escolher novamente antes de iniciar um turno, mantendo o rascunho e os anexos
+editáveis. Uma conversa salva mantém o texto legível da referência; selecione-a novamente se
+trouxer esse texto para um novo rascunho.
 
 <a id="the-nest"></a>
 

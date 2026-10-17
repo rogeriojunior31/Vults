@@ -1,5 +1,14 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Type @ to reference a session or project. References limit this turn's flock reads.": "输入 @ 以引用会话或项目。引用会限制本轮的鸟群读取范围。",
+  "Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.": "Enter 发送，Shift+Enter 换行，↑ 调出上一条消息，@ 引用鸟群。",
+  "Sessions and projects": "会话和项目",
+  "Project: {project}": "项目：{project}",
+  "Session: {session}": "会话：{session}",
+  "Chat references are invalid or too large.": "聊天引用无效或过大。",
+  "A referenced session or project is no longer in the flock. Remove its reference and choose again.": "引用的会话或项目已不在鸟群中。请移除引用并重新选择。",
+  "Choose flock references from the @ suggestions again before sending.": "发送前，请从 @ 建议中重新选择鸟群引用。",
+  "Could not prepare the chat's flock references. Try again.": "无法准备聊天的鸟群引用。请重试。",
   "{engine} plan: {percent}% used · {status}": "{engine} 套餐：已用 {percent}% · {status}",
   "{selection}. {usage}": "{selection}。{usage}",
   "{window}: {percent}% used": "{window}：已用 {percent}%",
@@ -205,7 +214,6 @@ export default {
   "Auto": "自动",
   "Copy": "复制",
   "Copied": "已复制",
-  "Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.": "Enter 发送，Shift+Enter 换行，↑ 找回你上一条消息。",
   "Do not disturb is on: no sounds or notifications. Click to end it.": "勿扰已开启：没有声音和通知。点击结束。",
   "Settings": "设置",
   "Agents ask in their terminals": "智能体在各自的终端里询问",

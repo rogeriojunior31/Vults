@@ -1,5 +1,14 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Type @ to reference a session or project. References limit this turn's flock reads.": "Digite @ para mencionar uma sessão ou projeto. As referências limitam as leituras do bando neste turno.",
+  "Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.": "Enter envia, Shift+Enter inicia outra linha, ↑ recupera sua última mensagem e @ menciona o bando.",
+  "Sessions and projects": "Sessões e projetos",
+  "Project: {project}": "Projeto: {project}",
+  "Session: {session}": "Sessão: {session}",
+  "Chat references are invalid or too large.": "As referências do chat são inválidas ou grandes demais.",
+  "A referenced session or project is no longer in the flock. Remove its reference and choose again.": "Uma sessão ou projeto mencionado não está mais no bando. Remova a referência e escolha novamente.",
+  "Choose flock references from the @ suggestions again before sending.": "Escolha novamente as referências do bando nas sugestões de @ antes de enviar.",
+  "Could not prepare the chat's flock references. Try again.": "Não foi possível preparar as referências do bando para o chat. Tente novamente.",
   "{engine} plan: {percent}% used · {status}": "Plano de {engine}: {percent}% usado · {status}",
   "{selection}. {usage}": "{selection}. {usage}",
   "{window}: {percent}% used": "{window}: {percent}% usado",
@@ -205,7 +214,6 @@ export default {
   "Auto": "Automático",
   "Copy": "Copiar",
   "Copied": "Copiado",
-  "Enter sends, Shift+Enter starts a new line, and ↑ brings back your last message.": "Enter envia, Shift+Enter começa uma nova linha e ↑ traz de volta a sua última mensagem.",
   "Do not disturb is on: no sounds or notifications. Click to end it.": "Não perturbe está ligado: sem sons nem notificações. Clique para desligar.",
   "Settings": "Configurações",
   "Agents ask in their terminals": "Os agentes perguntam nos terminais deles",

@@ -19,7 +19,7 @@ const nest = createNest(
       draft: Bridge.chatDraft,
       current: Bridge.chatCurrent,
       saveDraft: Bridge.chatDraftSet,
-      send: (text, files, folder) => Bridge.chatSend(text, files, folder),
+      send: (text, files, folder, mentions) => Bridge.chatSend(text, files, folder, mentions),
       decide: (id, answer) => void Bridge.chatDecide(id, answer),
       stop: () => void Bridge.chatStop(),
       reset: (provider) => Bridge.chatReset(provider),
@@ -179,6 +179,7 @@ let lastView: Parameters<typeof nest.view>[0] | null = null;
 onDayPart(() => lastView && nest.view(lastView));
 Bridge.onView((v) => {
   lastView = v;
+  nest.chat.setSessions(v.sessions);
   const folders = v.sessions.flatMap((s) =>
     s.cwd ? [{ cwd: s.cwd, project: s.project }] : [],
   );

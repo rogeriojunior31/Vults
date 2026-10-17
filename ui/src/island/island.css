@@ -3739,3 +3739,10 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .model-usage.critical { color: var(--error-text); }
 .usage-ring { display: inline-block; width: 14px; height: 14px; flex: none; border-radius: 50%; background: conic-gradient(currentColor var(--used), var(--control-border) 0); mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0); }
 #island .model-usage { flex-direction: column; gap: 2px; font-size: 11px; line-height: 12px; }
+
+.composer { position: relative; }
+.composer > .mention-menu { top: auto; bottom: calc(100% + 6px); left: 0; right: 0; min-width: 0; max-width: none; max-height: min(240px, 35vh); overflow-y: auto; box-sizing: border-box; z-index: 5; }
+.mention-menu .menu-item { flex: none; min-height: 36px; white-space: normal; overflow-wrap: anywhere; }
+.mention-menu strong, .mention-menu small { display: block; }
+.mention-menu small { color: var(--fg-muted); font-weight: 400; }
+.mention-menu .menu-item[aria-selected="true"] { background: var(--raised); }

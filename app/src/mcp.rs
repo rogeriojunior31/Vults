@@ -31,6 +31,43 @@ pub fn flock_file() -> PathBuf {
     crate::paths::data_dir().join("zeca-flock.json")
 }
 
+fn scope_file() -> PathBuf {
+    crate::paths::data_dir().join("zeca-flock-scope.json")
+}
+
+/// Written before each Claude turn; its long-lived MCP server reads the current scope per call.
+pub fn keep_scope(targets: Option<&[crate::mentions::Target]>) -> Result<(), String> {
+    write_private(
+        &scope_file(),
+        &json!({"pid":std::process::id(),"targets":targets}).to_string(),
+    )
+    .map_err(|_| "Could not prepare the chat's flock references. Try again.".into())
+}
+
+fn scoped_flock(snap: &Value, scope: &Value) -> Result<Value, String> {
+    if scope["pid"] != snap["pid"] {
+        return Err(NOT_RUNNING.into());
+    }
+    let mut flock = snap["flock"].clone();
+    let targets = scope
+        .get("targets")
+        .ok_or("The chat's flock scope is unavailable.")?;
+    if !targets.is_null() {
+        let targets: Vec<crate::mentions::Target> =
+            serde_json::from_value(targets.clone()).map_err(|e| e.to_string())?;
+        // Keys and redacted sessions have the same order; missing keys never broaden a scope.
+        if let Some(sessions) = flock["sessions"].as_array_mut() {
+            let mut index = 0;
+            sessions.retain(|_| {
+                let keep = targets.iter().any(|t| t.matches(&snap["keys"][index]));
+                index += 1;
+                keep
+            });
+        }
+    }
+    Ok(flock)
+}
+
 /// This program as a path that stays valid: the AppImage itself (not its mount, gone when the app
 /// quits), and the installed path even after an update replaced the file the app runs from (Linux
 /// then reads `… (deleted)`).
@@ -97,7 +134,13 @@ pub fn keep_flock(view: &vults_core::ViewModel) {
         return;
     };
     let flock = crate::flock_tools::flock(&view);
-    let text = json!({ "pid": std::process::id(), "flock": flock }).to_string();
+    let keys: Vec<Value> = view["sessions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|s| json!({"agent":s["agent"],"id":s["id"],"cwd":s["cwd"]}))
+        .collect();
+    let text = json!({ "pid": std::process::id(), "flock": flock, "keys":keys }).to_string();
     {
         let Ok(mut last) = LAST.lock() else {
             return;
@@ -210,7 +253,10 @@ fn call(name: &str, args: &Value, folder: &Path) -> Result<Value, String> {
             if !snap["pid"].as_u64().is_some_and(alive) {
                 return Err(NOT_RUNNING.into());
             }
-            Ok(snap["flock"].clone())
+            let scope = std::fs::read_to_string(scope_file())
+                .map_err(|_| "The chat's flock scope is unavailable.".to_string())?;
+            let scope: Value = serde_json::from_str(&scope).map_err(|e| e.to_string())?;
+            scoped_flock(&snap, &scope)
         }
         "recall" => {
             memory()?;
@@ -348,6 +394,36 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_cli_reads_only_its_current_turns_selected_sessions() {
+        let snap = json!({"pid":42,"keys":[
+            {"agent":"claude","id":"same","cwd":"/one/site"},
+            {"agent":"codex","id":"same","cwd":"/two/site"},
+            {"agent":"codex","id":"next","cwd":"/one/site"}
+        ],"flock":{"sessions":[{"doing":"first"},{"doing":"second"},{"doing":"third"}]}});
+        let scope = |targets| json!({"pid":42,"targets":targets});
+        assert_eq!(scoped_flock(&snap, &scope(Value::Null)).unwrap(), snap["flock"]);
+        let session = scope(json!([{"kind":"session","agent":"codex","id":"same"}]));
+        assert_eq!(
+            scoped_flock(&snap, &session).unwrap()["sessions"],
+            json!([{"doing":"second"}])
+        );
+        let project = scope(json!([{"kind":"project","cwd":"/one/site"}]));
+        assert_eq!(
+            scoped_flock(&snap, &project).unwrap()["sessions"],
+            json!([{"doing":"first"},{"doing":"third"}])
+        );
+        assert_eq!(
+            scoped_flock(&snap, &scope(json!([]))).unwrap()["sessions"],
+            json!([])
+        );
+        assert!(scoped_flock(&snap, &json!({"pid":41,"targets":null})).is_err());
+        assert!(scoped_flock(&snap, &json!({"pid":42})).is_err());
+        let mut old = snap;
+        old["keys"] = Value::Null;
+        assert_eq!(scoped_flock(&old, &session).unwrap()["sessions"], json!([]));
+    }
 
     #[test]
     fn it_speaks_mcp() {

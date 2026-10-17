@@ -220,7 +220,34 @@ live updates in both surfaces, retained draft and focused choices, automatic exp
 provider changes, API absence and the existing Codex switch. Visual checks cover Quick and
 Nest in Black/Light, with Nest at 480 x 360, 760 x 600 and 1180 x 820. No test sends a chat
 message or answers an agent permission. Build, workspace tests, evals and repository checks pass.
-User acceptance of N2.5 is pending; N2.6-N2.9 remain open.
+User acceptance of N2.5 is pending.
+
+N2.6 adds shared Chat suggestions for session and project references typed with `@`.
+Filtering uses live flock data, including full folders and session IDs for duplicate names.
+Arrow keys select; Enter, Tab and clicks insert a readable quoted reference without sending.
+Escape, outside clicks, IME composition and leaving Chat dismiss the menu. Its overlay is
+bounded to the available conversation area, independently of transcript sizing. Draft sync
+retains the exact reference targets between Quick and the disposable Nest.
+
+On send, the app validates at most eight selections, resolves agent plus session ID or the
+exact project folder, and limits the current turn's flock context and API tools to their union.
+Claude Code's existing read-only MCP flock tool applies the same selection on each call,
+through a private, atomic turn-scope file and identity keys beside its redacted snapshot.
+Missing targets and unbound quoted references fail before a provider turn starts; edited-away
+references restore ordinary flock context. References never change the working folder, answer
+cards or grant access, and prior conversation messages remain intact. Saved history retains
+readable reference text; a recalled reference without its selection must be selected again.
+
+Renderer checks cover both surfaces, keyboard/IME/caret and full pointer sequences, duplicate identities,
+live selection, draft transfer, explicit sending and unchanged folders. Rust checks cover
+validation, exact scopes, missing/edited references, API tool/context filtering, MCP selection
+and old/new draft serialization. Native Linux validation uses four sessions from the real
+hook, duplicate folders and session IDs, Quick/Nest draft return, Black/Light and Nest at
+480 x 360, 760 x 600 and 1180 x 820. A local Claude fixture captures the real prompt; the
+real MCP stdio server returns only the selected session. A missing target starts no provider
+process and retains its editable draft. No real provider request, agent tool
+execution or permission answer is used. Build, workspace tests, evals and repository checks pass.
+User acceptance of N2.6 is pending; N2.7-N2.9 remain open.
 
 #### N3 Dictation
 

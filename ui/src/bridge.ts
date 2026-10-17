@@ -329,7 +329,8 @@ export type OpenedConversation = {
 };
 
 /** What one of the chat's windows did, for the other to show too; each skips its own (`from`). */
-export type ChatDraft = { text: string; files: string[]; folder: string | null; provider: ChatProvider | null };
+export type ChatMention = { token: string; target: { kind: "session"; agent: string; id: string } | { kind: "project"; cwd: string } };
+export type ChatDraft = { text: string; files: string[]; folder: string | null; provider: ChatProvider | null; mentions?: ChatMention[] };
 export type ConnectionsPlace = {
   chosen: string | null;
   picked: string | null;
@@ -339,7 +340,7 @@ export type ConnectionsPlace = {
 };
 export type ChatSync =
   | { kind: "draft"; from: string; draft: ChatDraft }
-  | { kind: "sent"; from: string; text: string; files: string[]; provider: ChatProvider; folder: string | null; model: string | null; effort: string | null }
+  | { kind: "sent"; from: string; text: string; files: string[]; provider: ChatProvider; folder: string | null; model: string | null; effort: string | null; mentions?: ChatMention[] }
   | { kind: "reset"; from: string; provider: ChatProvider }
   | { kind: "opened"; from: string; conversation: OpenedConversation }
   | { kind: "answered"; from: string; id: string; answer: ChatAnswer };
@@ -565,7 +566,7 @@ export const Bridge = {
   apiModelSet: (provider: string, model: string) => invoke<void>("api_model_set", { provider, model }),
   /** The chat's paperclip: the system's file chooser; picked files arrive as `files`, like a drop. */
   chatPickFiles: (title: string) => void invoke<void>("chat_pick_files", { title }),
-  chatSend: (text: string, files: string[], folder: string | null) => invoke<void>("chat_send", { text, files, folder }),
+  chatSend: (text: string, files: string[], folder: string | null, mentions: ChatMention[] = []) => invoke<void>("chat_send", { text, files, folder, mentions }),
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),

@@ -81,6 +81,29 @@ The choice is remembered per folder and per engine: a new conversation in that f
 it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
 midway; **New** starts another. The API chat's model is chosen in **Settings → Chat & voice**.
 
+## Referencing the flock
+
+Type **@** in the draft to find an open session or project. Search by its project, agent,
+folder or session ID. **↑/↓** move through suggestions; **Enter**, **Tab** or a click inserts
+the selected reference. The draft keeps focus, and selecting never sends a message. **Esc**
+dismisses the suggestions. A reference looks like `@"Session: Codex · site"` or
+`@"Project: site"`; duplicate names show their full folder or session ID. You can select up to
+eight references, including several sessions in one message.
+
+A session reference selects that exact agent and session ID. A project reference selects
+the flock sessions in that exact folder, including its different agents. When you send,
+the turn's flock context and flock tools read only those selections. This works with the
+CLI and API engines. References do not switch the conversation's working folder or answer
+cards, and earlier messages remain in the conversation. With no references, the usual
+flock context is unchanged.
+
+References follow the unsent draft between Quick and the Nest, together with attachments.
+Remove the whole quoted reference to stop including it. If you edit, paste or recall a
+reference without its selection, choose it from **@** suggestions again. If a referenced
+session or project has left the flock, Vults asks you to remove it and choose again before
+starting a turn, keeping the draft and attachments editable. A saved conversation keeps the
+reference's readable text; reselect it if you bring that text back into a new draft.
+
 ## The Nest
 
 The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own window. Its
