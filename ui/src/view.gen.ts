@@ -87,11 +87,6 @@ raise?: boolean,
  */
 muted?: boolean,
 /**
- * A task Vults started for the user (`VULTS_TASK` in its environment): its bird takes off
- * from Zeca.
- */
-dispatched?: boolean,
-/**
  * Its project is pinned: it comes first on the wire.
  */
 pinned?: boolean,

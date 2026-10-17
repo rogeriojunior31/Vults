@@ -12,10 +12,10 @@
 
 ## Messages
 
-Hook to app, version 8:
+Hook to app, version 9:
 
 ```json
-{ "kind": "event", "v": 8, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 9, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
@@ -35,7 +35,7 @@ Hook to app, version 8:
   cards. Setting the variable elsewhere only hides that agent from the island; its own terminal
   still asks. Every process the chat's CLI starts inherits it: a `claude` the chat launches through
   a command is hidden too.
-- `terminal`: every field is optional. `env` only lists the variables that were set among those identifying the terminal, plus `VULTS_TASK` in a session one of your tasks started (its bird takes off from Zeca).
+- `terminal`: every field is optional. `env` only lists the variables that were set among those identifying the terminal, without execution metadata.
   `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
   hook's own working folder.
 - `payload`: the agent's hook JSON without `tool_response`, `transcript_path` (and Antigravity's
@@ -59,10 +59,10 @@ flag has the short timeout of every other event, so it never waits.
 App to hook, only when `wants_reply` is true:
 
 ```json
-{ "kind": "waiting", "v": 8, "id": "18f…-1a2b" }
-{ "kind": "decision", "v": 8, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 8, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 8, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 9, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 9, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 9, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 9, "id": "18f…-1a2b" }
 ```
 
 `waiting` comes first, once the card is on screen: a human is being asked, and the decision may
@@ -87,7 +87,9 @@ status line looks as it did before.
 
 Version 2 added `other` and `agent_name`, then `gemini`. Version 3 added `answer`. Version 4 added
 `opencode`, which an older hook sent as `other`. Version 5 added `waiting`, then `qwen`, which an older hook sends as
-`other` (the app reads it as any other tool's, without a card). Version 6 added `zeca`. Version 7 removed `gemini`: hooks left from Gemini CLI send nothing. Version 8 added `copilot`. The app installs its own hook when it starts, so the two
+`other` (the app reads it as any other tool's, without a card). Version 6 added `zeca`. Version 7 removed `gemini`: hooks left from Gemini CLI send nothing. Version 8 added `copilot`. Version 9 removes the retired `VULTS_TASK` metadata.
+`VULTS_ZECA` still marks Chat; `VULTS_RUN` still keeps `/continue` permissions on the
+driver's own channel, so its hooks never ask the same permission twice. The app installs its own hook when it starts, so the two
 always speak the same version; an event from another version gets `unsupported`.
 
 A connection that gets no reply, a reply for another `id`, or `unsupported` makes the hook print

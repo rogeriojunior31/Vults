@@ -59,7 +59,13 @@ This is slice evidence; the human R3 release smoke remains pending. N0.4 retires
 Codex review-only driver path and their eval cases. A fingerprint test pins the original SQL
 of migrations 14 to 20, and an upgrade test preserves old rows and reads `task:N` spend after
 reopening the database. The current schema remains 20. Full local checks pass.
-N0.5 and N0.6 remain pending.
+N0.5 removes `VULTS_TASK`, core's dispatched flag and the corresponding sprite take-off.
+Protocol 9 rejects older envelopes; the hook retains only terminal metadata, `VULTS_ZECA`
+and the `VULTS_RUN` driver channel. Protocol/hook regressions and the full local checks pass.
+The normal arrival and departure animations remain. The Linux/KWin app was checked with
+isolated data at 1180 x 820 and 480 x 360: hook-created session arrival/end, Flock, Cost, a saved
+budget and the Settings-only write guard. `/continue` reports no eligible session and stops only
+an owned continuation. N0.6 remains pending.
 
 | # | Slice | Removes | Keeps |
 | --- | --- | --- | --- |

@@ -118,10 +118,6 @@ pub struct SessionView {
     /// Its project is muted: no sound for it here, no desktop notification.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub muted: bool,
-    /// A task Vults started for the user (`VULTS_TASK` in its environment): its bird takes off
-    /// from Zeca.
-    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
-    pub dispatched: bool,
     /// Its project is pinned: it comes first on the wire.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub pinned: bool,
@@ -314,7 +310,6 @@ impl State {
                     .any(|p| p.session == s.key && crate::shows(s, p)),
                 raise: raises(&s.terminal),
                 muted: self.prefs(s).mute,
-                dispatched: dispatched(&s.terminal),
                 pinned: self.prefs(s).pin,
                 silent: s.watch.level.filter(|_| s.status == Status::Working),
                 activity: s.activity,
@@ -455,13 +450,6 @@ fn raises(t: &Terminal) -> bool {
     let x11 = env("XDG_SESSION_TYPE").eq_ignore_ascii_case("x11")
         || (!has("XDG_SESSION_TYPE") && !has("WAYLAND_DISPLAY") && has("DISPLAY"));
     pane || (t.pid.is_some() && (kde || x11))
-}
-
-/// Started by one of the user's tasks: the run sets `VULTS_TASK` to its id.
-fn dispatched(t: &Terminal) -> bool {
-    t.env
-        .get("VULTS_TASK")
-        .is_some_and(|id| id.parse::<u64>().is_ok_and(|n| n > 0))
 }
 
 /// The session's kept steps as text, oldest first; those a rule allowed say so.

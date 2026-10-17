@@ -49,8 +49,6 @@ pub const TERMINAL_VARS: &[&str] = &[
     "XDG_SESSION_TYPE",
     "DISPLAY",
     "WAYLAND_DISPLAY",
-    // Not a terminal: a task Vults started (`app/src/runs.rs`), whose bird takes off from Zeca.
-    "VULTS_TASK",
 ];
 
 #[derive(Debug, Clone)]
@@ -358,6 +356,21 @@ mod tests {
     fn build(raw: &[u8]) -> Option<Event> {
         let args = Args::parse(["--agent", "claude"].map(String::from).into_iter());
         build_event(&args, raw, None, |_| None, None, "x".into())
+    }
+
+    #[test]
+    fn retired_execution_metadata_is_not_forwarded() {
+        let args = Args::parse(["--agent", "claude"].map(String::from).into_iter());
+        let raw = br#"{"hook_event_name":"PermissionRequest","session_id":"s","tool_name":"Bash","tool_input":{"command":"ls"}}"#;
+        let env = |name: &str| match name {
+            "VULTS_TASK" => Some("12".into()),
+            "TERM_PROGRAM" => Some("kitty".into()),
+            _ => None,
+        };
+        let event = build_event(&args, raw, None, env, None, "x".into()).unwrap();
+        assert_eq!(event.terminal.env.len(), 1);
+        assert_eq!(event.terminal.env["TERM_PROGRAM"], "kitty");
+        assert!(event.wants_reply && !event.zeca);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: e5661872218e -->
+<!-- source: 7748899f4b06 -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -17,10 +17,10 @@ O `vults-hook` e o app trocam um objeto JSON por linha através de um socket loc
 
 ## Mensagens
 
-Do hook para o app, versão 8:
+Do hook para o app, versão 9:
 
 ```json
-{ "kind": "event", "v": 8, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
+{ "kind": "event", "v": 9, "id": "18f…-1a2b", "agent": "claude", "event": "PermissionRequest",
   "wants_reply": true,
   "terminal": { "cwd": "/home/me/project", "pid": 4242, "env": { "TERM_PROGRAM": "kitty" } },
   "payload": { "tool_name": "Bash", "tool_input": { "command": "cargo test" } } }
@@ -40,7 +40,7 @@ Do hook para o app, versão 8:
   Definir a variável em outro lugar só esconde aquele agente da ilha; o terminal dele continua
   perguntando. Todo processo que a CLI do chat inicia a herda: um `claude` que o chat abre por um
   comando também fica escondido.
-- `terminal`: todos os campos são opcionais. `env` lista só as variáveis definidas entre as que identificam o terminal, mais `VULTS_TASK` numa sessão que uma tarefa sua começou (a ave dela decola do Zeca).
+- `terminal`: todos os campos são opcionais. `env` lista só as variáveis definidas entre as que identificam o terminal, sem metadados de execução.
   `cwd` é o `cwd` do payload, senão a primeira entrada de `workspacePaths` (Antigravity) ou `workspace_roots` (Cursor), senão a
   pasta de trabalho do próprio hook.
 - `payload`: o JSON de hook do agente sem `tool_response`, `transcript_path` (e os `transcriptPath` e
@@ -65,10 +65,10 @@ flag tem o timeout curto de todos os outros eventos, então ela nunca espera.
 Do app para o hook, só quando `wants_reply` é true:
 
 ```json
-{ "kind": "waiting", "v": 8, "id": "18f…-1a2b" }
-{ "kind": "decision", "v": 8, "id": "18f…-1a2b", "decision": "allow" }
-{ "kind": "answer", "v": 8, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
-{ "kind": "unsupported", "v": 8, "id": "18f…-1a2b" }
+{ "kind": "waiting", "v": 9, "id": "18f…-1a2b" }
+{ "kind": "decision", "v": 9, "id": "18f…-1a2b", "decision": "allow" }
+{ "kind": "answer", "v": 9, "id": "18f…-1a2b", "answers": ["Blue", ["S", "M"]] }
+{ "kind": "unsupported", "v": 9, "id": "18f…-1a2b" }
 ```
 
 `waiting` vem primeiro, assim que o card está na tela: um humano está sendo consultado, e a decisão
@@ -93,7 +93,9 @@ do Claude Code fica como era antes.
 
 A versão 2 adicionou `other` e `agent_name`, depois `gemini`. A versão 3 adicionou `answer`. A versão 4
 adicionou `opencode`, que um hook mais antigo mandava como `other`. A versão 5 adicionou `waiting`, depois `qwen`, que um
-hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). A versão 6 adicionou `zeca`. A versão 7 removeu `gemini`: os hooks que sobraram do Gemini CLI não mandam nada. A versão 8 adicionou `copilot`. O app instala o próprio hook quando inicia, então os dois
+hook mais antigo manda como `other` (o app o lê como o de qualquer outra ferramenta, sem card). A versão 6 adicionou `zeca`. A versão 7 removeu `gemini`: os hooks que sobraram do Gemini CLI não mandam nada. A versão 8 adicionou `copilot`. A versão 9 remove os metadados antigos de `VULTS_TASK`.
+`VULTS_ZECA` continua marcando o Chat; `VULTS_RUN` mantém as permissões de `/continue`
+no canal próprio do driver, para os hooks não perguntarem a mesma permissão duas vezes. O app instala o próprio hook quando inicia, então os dois
 sempre falam a mesma versão; um evento de outra versão recebe `unsupported`.
 
 Uma conexão que não recebe resposta, uma resposta para outro `id`, ou `unsupported` fazem o hook não

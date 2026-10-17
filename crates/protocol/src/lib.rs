@@ -8,14 +8,13 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const VERSION: u32 = 8;
+pub const VERSION: u32 = 9;
 
 /// Set to `1` on the chat's own CLI process (Zeca's): the hook marks its events ([`Event::zeca`]).
 pub const ZECA_ENV: &str = "VULTS_ZECA";
 
-/// Set to `1` on a task's session that Vults runs and asks on the driver's own channel (Codex's
-/// app-server, ACP): the hook relays no question of its own there, or the island would show two
-/// cards for one call (W10).
+/// Set to `1` on a continued session that asks on the driver's own permission channel:
+/// the hook observes its work without asking the same permission twice.
 pub const RUN_ENV: &str = "VULTS_RUN";
 
 /// Largest line either side accepts, newline included.
@@ -127,8 +126,7 @@ pub struct Terminal {
     /// The agent process (the hook's parent), when the OS tells us.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pid: Option<u32>,
-    /// Terminal-identifying environment variables that were set (`TERM_PROGRAM`, `WT_SESSION`…),
-    /// and `VULTS_TASK` in a session one of the user's tasks started.
+    /// Terminal-identifying environment variables that were set (`TERM_PROGRAM`, `WT_SESSION`…).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub env: BTreeMap<String, String>,
 }
@@ -273,7 +271,7 @@ mod tests {
         let wire: Value = serde_json::from_slice(&encode(&event())).unwrap();
         assert_eq!(
             wire,
-            json!({ "kind": "event", "v": 8, "id": "abc", "agent": "codex", "event": "PermissionRequest",
+            json!({ "kind": "event", "v": 9, "id": "abc", "agent": "codex", "event": "PermissionRequest",
                     "wants_reply": true, "terminal": { "cwd": "/w", "pid": 7 },
                     "payload": { "tool_name": "Bash" } })
         );
@@ -395,6 +393,11 @@ mod tests {
             decode_event(line),
             Err(DecodeError::Unsupported { id: "x".into() })
         );
+        let retired = br#"{"kind":"event","v":8,"id":"retired","agent":"claude","event":"Stop","wants_reply":false,"terminal":{"env":{"VULTS_TASK":"1"}},"payload":{}}"#;
+        assert_eq!(
+            decode_event(retired),
+            Err(DecodeError::Unsupported { id: "retired".into() })
+        );
         // A hook from before OpenCode was an agent of its own.
         let v3 = br#"{"kind":"event","v":3,"id":"y","agent":"other","agent_name":"opencode","event":"Stop","wants_reply":false,"terminal":{},"payload":{}}"#;
         assert_eq!(decode_event(v3), Err(DecodeError::Unsupported { id: "y".into() }));
@@ -403,8 +406,8 @@ mod tests {
     #[test]
     fn garbage_is_malformed() {
         assert_eq!(decode_event(b"not json"), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":8,"id":"x"}"#), Err(DecodeError::Malformed));
-        assert_eq!(decode_event(br#"{"v":8}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":9,"id":"x"}"#), Err(DecodeError::Malformed));
+        assert_eq!(decode_event(br#"{"v":9}"#), Err(DecodeError::Malformed));
     }
 
     #[test]
