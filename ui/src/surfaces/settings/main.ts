@@ -1,9 +1,10 @@
+import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
 import { applyTheme } from "../../theme";
 // Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess } from "../../bridge";
+import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess, type DictationPermission, type DictationMusic } from "../../bridge";
 import { SPECIES, speciesSet } from "../../character/flock";
 import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
@@ -14,6 +15,7 @@ import { el } from "../../dom";
 import { button, diff, disclosure, row, saveSetting, toggle } from "./pieces";
 import { policiesSection, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
+import { createDictationDoctor } from "./dictation-doctor";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { historyCard, type Activity, type ActivityActions } from "./activity";
 import { createBudget } from "./budget";
@@ -24,7 +26,7 @@ import { createNestFoot, createNestHead, tabByKey } from "../nest/head";
 import { needsYou } from "../nest/flock";
 import type { SessionView } from "../../view.gen";
 
-type Page = "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
+type Page = "dictation" | "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
 
 /** The sidebar's groups, in the prototype's order: how it feels, the work, the system. */
 const GROUPS = [
@@ -36,6 +38,7 @@ const GROUPS = [
 const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; icon: IconName }[] = [
   { id: "general", label: tk("General"), group: "experience", icon: "gear" },
   { id: "chat", label: tk("Chat & voice"), group: "experience", icon: "chat" },
+  { id: "dictation", label: tk("Dictation"), group: "experience", icon: "mic" },
   { id: "flock", label: tk("Flock & Zeca"), group: "experience", icon: "flock" },
   { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
   { id: "approvals", label: tk("Approvals"), group: "work", icon: "list" },
@@ -61,7 +64,19 @@ interface Panel {
   pending: { install: boolean; preview: InstallPreview } | null;
 }
 
+const dictation = dictationStatus(true);
+const dictationDoctor = createDictationDoctor({ report: Bridge.dictationDoctor, start: Bridge.dictationMicStart,
+  status: Bridge.dictationMicStatus, stop: Bridge.dictationMicStop });
 const root = document.getElementById("settings")!;
+let boundShortcuts: Record<string, string> = {};
+const boundKeys = (...ids: string[]) => ids.map(id => boundShortcuts[id]?.trim() || t("Not bound")).join(" · ");
+const keepShortcuts = (keys: Record<string, string>) => {
+  boundShortcuts = keys;
+  if (page === "general" || page === "dictation") render();
+};
+Bridge.onShortcutKeys(keepShortcuts);
+void Bridge.shortcutKeys().then(keepShortcuts, () => {});
+
 const budget = createBudget({ today: Bridge.spendToday, setBudget: Bridge.budgetSet });
 Bridge.onSpend(() => { if (page === "activity") budget.refresh(); });
 // Settings is a webview of the Nest's window (ADR 0021), under the Nest's own header: a tab goes
@@ -104,6 +119,7 @@ const foot = createNestFoot({
 });
 root.after(foot.element);
 Bridge.onView((v) => {
+  dictation.context(v);
   const f = v.focus;
   const s = f ? v.sessions.find((x) => x.agent === f.agent && x.id === f.id) : undefined;
   front = s ? { agent: s.agent, id: s.id } : undefined;
@@ -121,7 +137,7 @@ const setNestFull = (on: boolean) => {
 };
 void Bridge.nestIsFull().then(setNestFull, () => {});
 Bridge.onNestFull(setNestFull);
-// Alt+1 to 4 as in the Nest; Esc leaves Full for Room.
+// Alt+1 to 5 as in the Nest; Esc leaves Full for Room.
 window.addEventListener("keydown", (e) => {
   const pick = tabByKey(e, zeca);
   if (pick) {
@@ -149,6 +165,66 @@ let savedVolume = 50;
 let nowPlaying = false;
 let codexUsage = false;
 let nativeChat = true;
+let dictationInsert = false;
+let dictationCaption = true;
+let dictationSound = true;
+let dictationKeep = "30";
+let dictationKeepChanged = false;
+let dictationMicrophone: string | null = null;
+let dictationMicrophoneChanged = false;
+let dictationCutRepeats = true;
+let dictationRetryBase = true;
+let dictationVocabulary = false;
+let dictationProjectVocabulary = false;
+let dictationVocabularyChanged = false;
+let dictationProjectVocabularyChanged = false;
+let dictationCutRepeatsChanged = false;
+let dictationRetryBaseChanged = false;
+let dictationSpokenCode = true;
+let dictationSpokenCodeChanged = false;
+let dictationMusic: DictationMusic = "lower";
+let dictationMusicChanged = false;
+let dictationCancelByVoice = true;
+let dictationCancelByVoiceChanged = false;
+let microphoneSaving = false;
+let microphones: string[] | null = null;
+let microphonesLoading = false;
+let microphonesFailed = false;
+let dictationDoubleTap = true;
+let dictationSpaceLock = true;
+let dictationEscapeCancel = true;
+let dictationDoubleTapChanged = false;
+let dictationSpaceLockChanged = false;
+let dictationEscapeCancelChanged = false;
+let dictationInsertChanged = false;
+let dictationEraseConfirm = false;
+let dictationErasing = false;
+let dictationEraseFailed = false;
+let dictationErased = false;
+let shortcutsOpening = false;
+let shortcutsOpenFailed = false;
+let dictationInsertAvailable = false;
+const permissionErrors = new Set([
+  tk("Dictation insertion is changed in Settings."),
+  tk("Dictation insertion requires native X11 or Plasma Wayland."),
+  tk("The keyboard permission token is unavailable."),
+  tk("Insertion is off, but its saved keyboard token could not be removed. Retry turning insertion off."),
+  tk("The keyboard permission worker is unavailable."),
+  tk("Enable dictation insertion in Settings first."),
+  tk("Dictation insertion is unavailable."),
+]);
+async function permissionWrite<T>(write: () => Promise<T>): Promise<T> {
+  try { return await write(); } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(permissionErrors.has(message) ? t(message) : message);
+  }
+}
+let permissionFailure: string | null = null;
+let dictationWayland = false;
+let permissionEvents = 0;
+let dictationPermission: DictationPermission = "off";
+Bridge.onDictationPermission(state => { permissionEvents++; dictationPermission = state; if (page === "dictation") render(); });
+void Bridge.dictationPermission().then(state => { if (permissionEvents) return; dictationPermission = state; if (page === "dictation") render(); }, () => {});
 /** Who answers the chat's cards (ADR 0004). */
 let chatAccess: ChatAccess = "ask";
 /** Zeca's memory (M4): the journal, and each day summed up by a small model. */
@@ -892,13 +968,250 @@ function generalPage(): HTMLElement[] {
       "section",
       { class: "card rows" },
       row(t("Allow / Deny from anywhere"), t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
-      row(t("Talk to the chat"), t("Hold to speak after choosing a voice model in Chat & voice."), el("span", { class: "kbd", text: "Ctrl+Alt+V" })),
+      row(t("Dictation / Chat voice"), t("Choose a local voice model in Chat & voice. Outside Vults, hold to dictate; hands-free gestures follow Dictation settings. In focused Chat, fill its draft."), el("span", { class: "kbd", text: boundKeys("talk") })),
+      row(t("Dictation settings"), t("Configure dictation keys, feedback, insertion and history in its own page."), button(t("Dictation settings"), () => choosePage("dictation"))),
       row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
       row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
       row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
       row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
-      row(t("The Nest's tabs"), t("Choose Flock, Chat, Activity or Connections. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–4" })),
+      row(t("The Nest's tabs"), t("Choose Flock, Chat, Activity, Connections or Dictation. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
     )),
+  ];
+}
+
+async function refreshMicrophones(): Promise<void> {
+  if (microphonesLoading || microphoneSaving) return;
+  microphonesLoading = true;
+  microphonesFailed = false;
+  if (page === "dictation") render();
+  try {
+    microphones = await Bridge.dictationMicrophones();
+  } catch {
+    microphonesFailed = true;
+  } finally {
+    microphonesLoading = false;
+    if (page === "dictation") render();
+  }
+}
+
+function dictationPage(): HTMLElement[] {
+  const microphoneChoices: { value: string | null; label: string }[] = [
+    { value: null, label: t("System default microphone") },
+    ...(microphones ?? []).map(name => ({ value: name, label: name })),
+  ];
+  if (dictationMicrophone !== null && !(microphones ?? []).includes(dictationMicrophone)) {
+    microphoneChoices.push({ value: dictationMicrophone, label: microphones === null ? dictationMicrophone
+      : t("{name} (unavailable)", { name: dictationMicrophone }) });
+  }
+  const microphone = dropdown(microphoneChoices, dictationMicrophone, async device => {
+    microphoneSaving = true;
+    render();
+    try {
+      await Bridge.setDictationMicrophone(device);
+      dictationMicrophone = device;
+      dictationMicrophoneChanged = true;
+    } finally {
+      microphoneSaving = false;
+      if (page === "dictation") render();
+    }
+  });
+  (microphone as HTMLSelectElement).disabled = microphonesLoading;
+  const refresh = button(t("Refresh microphones"), () => void refreshMicrophones());
+  (refresh as HTMLButtonElement).disabled = microphonesLoading || microphoneSaving;
+  refresh.dataset.setting = "Refresh microphones";
+  const microphoneFeedback = el("p", { class: `note${microphonesFailed ? " error" : ""}`, text: microphonesLoading
+    ? t("Loading microphones…") : microphonesFailed
+      ? microphones === null ? t("Could not list microphones. Refresh to try again.")
+        : t("Could not refresh microphones. The last list may be out of date. Refresh to try again.")
+      : t("No microphones found. Connect one and refresh.") });
+  microphoneFeedback.setAttribute("role", microphonesFailed ? "alert" : "status");
+  const shortcutEditor = button(t("Change in KDE…"), () => {
+    if (shortcutsOpening) return;
+    shortcutsOpening = true;
+    shortcutsOpenFailed = false;
+    render();
+    void Bridge.openShortcutSettings().catch(() => { shortcutsOpenFailed = true; }).finally(() => {
+      shortcutsOpening = false;
+      if (page === "dictation") render();
+    });
+  });
+  (shortcutEditor as HTMLButtonElement).disabled = shortcutsOpening;
+  const shortcutFeedback = el("p", { class: `note${shortcutsOpenFailed ? " error" : ""}`, text: shortcutsOpenFailed
+    ? t("Could not open KDE Shortcuts. Open your desktop's shortcut settings manually, or try again.")
+    : t("Opening KDE Shortcuts…") });
+  shortcutFeedback.setAttribute("role", shortcutsOpenFailed ? "alert" : "status");
+  const erase = button(t("Erase"), () => {
+    if (dictationErasing) return;
+    dictationErasing = true;
+    dictationEraseFailed = false;
+    dictationErased = false;
+    render();
+    void Bridge.dictationClear().then(() => {
+      dictationEraseConfirm = false;
+      dictationErased = true;
+    }, () => { dictationEraseFailed = true; }).finally(() => {
+      dictationErasing = false;
+      if (page === "dictation") render();
+    });
+  });
+  (erase as HTMLButtonElement).disabled = dictationErasing;
+  erase.dataset.setting = "Erase dictation confirmation";
+  const cancel = button(t("Cancel"), () => { dictationEraseConfirm = false; dictationEraseFailed = false; render(); });
+  (cancel as HTMLButtonElement).disabled = dictationErasing;
+  cancel.dataset.setting = "Cancel dictation erasure";
+  const confirmation = el("div", { class: "note" },
+    el("p", { text: t("Erase every retained dictation? Usage totals stay.") }),
+    el("div", { class: "actions" }, erase, cancel));
+  confirmation.setAttribute("role", "group");
+  confirmation.setAttribute("aria-label", t("Erase dictation history"));
+  confirmation.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !dictationErasing) {
+      event.preventDefault(); dictationEraseConfirm = false; dictationEraseFailed = false; render();
+    }
+  });
+  const feedback = el("p", { class: `note${dictationEraseFailed ? " error" : ""}`, text: dictationErasing
+    ? t("Erasing dictation history…") : dictationEraseFailed ? t("Could not erase dictation history. Try again.")
+    : t("Dictation history erased. Usage totals stay.") });
+  feedback.setAttribute("role", dictationEraseFailed ? "alert" : "status");
+  return [
+    el("h1", { text: t("Dictation") }),
+    el("p", { class: "lede", text: t("Speak in another app. Transcription stays on this computer, with your choice of insertion and history.") }),
+    el("div", { class: "actions" }, button(t("Dictation history"), () => void Bridge.openNest("dictation"))),
+    el("h2", { text: t("Keyboard shortcuts") }),
+    el("section", { class: "card rows" },
+      row(t("Dictation / Chat voice"), t("Choose a local voice model in Chat & voice. Outside Vults, hold to dictate; hands-free gestures follow Dictation settings. In focused Chat, fill its draft."), el("span", { class: "kbd", text: boundKeys("talk") })),
+      row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), el("span", { class: "kbd", text: boundKeys("talk-again") })),
+      row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), el("span", { class: "kbd", text: boundKeys("talk-cancel") })),
+      row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops manage global keys in their own settings."), shortcutEditor),
+      ...(shortcutsOpening || shortcutsOpenFailed ? [shortcutFeedback] : []),
+      row(t("Recording mode"), t("Hold to dictate. Optionally double-tap to keep recording hands-free, then press the shortcut again to finish."),
+        dropdown([{ value: true, label: t("Hold + double tap") }, { value: false, label: t("Hold only") }], dictationDoubleTap, async on => {
+          await Bridge.setDictationGesture("doubleTap", on);
+          dictationDoubleTap = on; dictationDoubleTapChanged = true;
+        })),
+      row(t("Space locks recording"), t("X11 only. Space keeps recording after you release the talk shortcut. When off, Space behaves like other typing and can discard a held recording."), (() => {
+        const control = toggle(dictationSpaceLock, async on => {
+          await Bridge.setDictationGesture("spaceLock", on);
+          dictationSpaceLock = on; dictationSpaceLockChanged = true;
+        });
+        if (dictationWayland) control.setAttribute("disabled", "");
+        return control;
+      })()),
+      row(t("Esc cancels dictation"), t("X11 only. Esc discards recording or transcription. When off, Esc does not cancel dictation."), (() => {
+        const control = toggle(dictationEscapeCancel, async on => {
+          await Bridge.setDictationGesture("escapeCancel", on);
+          dictationEscapeCancel = on; dictationEscapeCancelChanged = true;
+        });
+        if (dictationWayland) control.setAttribute("disabled", "");
+        return control;
+      })()),
+      row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it. English, Portuguese and Spanish; works on X11 and Wayland."), toggle(dictationCancelByVoice, async on => {
+        await Bridge.setDictationProcessing("cancelByVoice", on);
+        dictationCancelByVoice = on; dictationCancelByVoiceChanged = true;
+      })),
+      el("p", { class: "hint", text: t("Independent dictation only, checked after recording stops. To dictate a sentence ending in a cancel phrase, turn this off.") }),
+      el("p", { class: "hint", text: t("Changes apply to the next dictation. The global Cancel voice shortcut always works. Space and Esc require an available X11 key listener.") }),
+    ),
+    el("h2", { text: t("Your words") }),
+    el("section", { class: "card rows" },
+      row(t("Help the model with these words"), t("Give Whisper your dictionary words as local context. Off by default; currently only Turbo with fixed English is qualified by synthetic tests. Other models and languages keep their existing prompts."), toggle(dictationVocabulary, async on => {
+        await Bridge.setDictationProcessing("vocabulary", on);
+        dictationVocabulary = on; dictationVocabularyChanged = true;
+      })),
+      row(t("Project vocabulary"), t("Add cached package, module, file and branch names from the captured session or an unambiguous editor/terminal title. Local only, off by default, with the same Turbo/English restriction."), toggle(dictationProjectVocabulary, async on => {
+        await Bridge.setDictationProcessing("projectVocabulary", on);
+        dictationProjectVocabulary = on; dictationProjectVocabularyChanged = true;
+      })),
+      el("p", { class: "hint", text: t("Dictionary words come first under the shared 224-token limit. Changes apply to the next recording. Edit Dictionary and Snippets in Dictation; Chat is unchanged.") }),
+    ),
+    el("h2", { text: t("Voice") }),
+    el("section", { class: "card rows" },
+      row(t("Dictation microphone"), t("Used for the next independent dictation. If missing, capture uses the system default or another input. Chat keeps its system default microphone."), microphone),
+      el("div", { class: "actions" }, refresh),
+      ...(microphonesLoading || microphonesFailed || microphones?.length === 0 ? [microphoneFeedback] : []),
+      row(t("Voice model and language"), t("Shared with Chat & voice. Dictation stays available with Zeca off."), button(t("Chat & voice"), () => choosePage("chat"))),
+      row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in the preview and final text. Sound annotations and standalone silence phrases are still removed when this is off."), toggle(dictationCutRepeats, async on => {
+        await Bridge.setDictationProcessing("cutRepeats", on);
+        dictationCutRepeats = on; dictationCutRepeatsChanged = true;
+      })),
+      row(t("Retry empty dictation with Base"), t("Retry once only when the selected model returns no text, speech was detected and a different Base model is already installed. Shows retry feedback and never downloads a model."), toggle(dictationRetryBase, async on => {
+        await Bridge.setDictationProcessing("retryBase", on);
+        dictationRetryBase = on; dictationRetryBaseChanged = true;
+      })),
+      el("p", { class: "hint", text: t("Processing choices apply to the next independent dictation. Active recordings keep their choices; Chat keeps its existing processing.") }),
+      row(t("Music while you speak"), t("Temporarily lower or pause playing media during independent dictation. Restore each player when recording stops or is cancelled, unless you changed it. Uses local media controls, separately from Now playing; unavailable players are left alone."), dropdown([
+        { value: "lower" as const, label: t("Lower to 25%") },
+        { value: "pause" as const, label: t("Pause it") },
+        { value: "leave" as const, label: t("Leave it") },
+      ], dictationMusic, async mode => {
+        await Bridge.setDictationMusic(mode);
+        dictationMusic = mode; dictationMusicChanged = true;
+      })),
+      row(t("Dictation start sound"), t("Play a short cue when recording starts. Respects sound volume and Do Not Disturb."), toggle(dictationSound, async (on) => {
+        await Bridge.setDictationSound(on);
+        dictationSound = dictation.startSound(on);
+      })),
+      row(t("Dictation captions"), t("Show clipped words and the final transcript near the island. Captions take no clicks and disappear two seconds after completion."), toggle(dictationCaption, async (on) => {
+        await Bridge.setDictationCaption(on);
+        dictationCaption = dictation.captions(on);
+      })),
+    ),
+    el("h2", { text: t("Terminals & sessions") }),
+    el("section", { class: "card rows" },
+      row(t("Spoken code"), t("In recognized terminals or sessions, join identifier chunks around spoken dot, slash, underscore, dash and colon in English, Portuguese or Spanish. Other apps keep their text. Changes apply to the next dictation."), toggle(dictationSpokenCode, async on => {
+        await Bridge.setDictationProcessing("spokenCode", on);
+        dictationSpokenCode = on; dictationSpokenCodeChanged = true;
+      })),
+      el("p", { class: "hint", text: t("Preserves case and existing punctuation; never adds an ending period. This changes text only and never submits it.") }),
+    ),
+    el("h2", { text: t("Paste") }),
+    el("section", { class: "card rows" },
+      el("p", { class: "hint", text: t("App recognition works on X11 and Plasma Wayland. GNOME and wlroots Wayland may leave the app unknown. Background copying requires desktop support; if unavailable, dictation shows an error.") }),
+      row(t("Insert dictation in supported editors and tmux panes"), t("Off by default. Pastes in KWrite, GNOME Text Editor, Mousepad or Leafpad, or inserts one line into an exact tmux flock pane in XTerm or Kitty. Waiting cards, unknown panes and focus changes keep the text copied. Plasma Wayland requires desktop keyboard permission. Nothing is submitted."), (() => {
+        const control = toggle(dictationInsert, async (on) => {
+          permissionFailure = await permissionWrite(() => Bridge.setDictationInsert(on));
+          dictationInsert = on;
+          dictationInsertChanged = true;
+          render();
+        });
+        if (!dictationInsertAvailable && !dictationInsert) control.setAttribute("disabled", "");
+        return control;
+      })()),
+      el("p", { class: "hint", text: t("Insertion temporarily replaces the clipboard and restores only its previous text, up to 64 KiB. Images and rich formats are not restored. A newer copy is kept. Clipboard history exclusion depends on the desktop. Native X11 or Plasma Wayland with ext-data-control is required.") }),
+      ...(permissionFailure ? [el("p", { class: "note error", text: permissionErrors.has(permissionFailure) ? t(permissionFailure) : permissionFailure }),
+        ...(!dictationInsert ? [(() => {
+          const control = button(t("Retry token removal"), () => saveSetting(control, async () => {
+            permissionFailure = await permissionWrite(() => Bridge.setDictationInsert(false));
+            render();
+          }, () => {}));
+          return control;
+        })()] : [])] : []),
+      ...(dictationInsert && dictationWayland ? [row(t("Wayland keyboard access"), t({
+        off: tk("Keyboard access is inactive. On Wayland, request access here to enable insertion."),
+        requesting: tk("Waiting for the desktop keyboard permission dialog. You can turn insertion off to cancel."),
+        ready: tk("Keyboard access is ready. The restore token is kept only in the OS keyring."),
+        temporary: tk("Keyboard access is ready for this run. No reusable token was saved; request access again after restarting."),
+        unavailable: tk("Keyboard access is unavailable or was revoked. Dictation keeps copying; retry only when you want another desktop prompt."),
+      }[dictationPermission]), (() => {
+        const control = button(t("Request keyboard access"), () => saveSetting(control, () => permissionWrite(Bridge.retryDictationPermission), () => {}));
+        if (["requesting", "ready", "temporary"].includes(dictationPermission)) control.setAttribute("disabled", "");
+        return control;
+      })())] : []),
+    ),
+    el("h2", { text: t("Privacy") }),
+    el("section", { class: "card rows" },
+      row(t("Keep dictation history"), t("Only text is kept on this computer. Shortening retention erases older text immediately. Usage totals stay; audio and previous clipboard contents are never saved."),
+        dropdown([{ value: "0", label: t("Do not keep") }, { value: "7", label: t("7 days") }, { value: "30", label: t("30 days") }, { value: "365", label: t("1 year") }, { value: "all", label: t("Always") }],
+          dictationKeep, async value => { await Bridge.setDictationKeep(value); dictationKeep = value; dictationKeepChanged = true; })),
+      row(t("Erase dictation history"), t("Every retained dictation is erased. Measured daily and app totals stay. Copy again keeps its existing in-memory lifetime."), button(t("Erase dictation history…"), () => {
+        if (dictationErasing) return;
+        dictationEraseConfirm = true; dictationEraseFailed = false; dictationErased = false; render();
+        root.querySelector<HTMLElement>('[data-setting="Erase dictation confirmation"]')?.focus();
+      })),
+      ...(dictationEraseConfirm ? [confirmation] : []),
+      ...(dictationErasing || dictationEraseFailed || dictationErased ? [feedback] : []),
+    ),
+    dictationDoctor.element,
   ];
 }
 
@@ -1043,7 +1356,9 @@ function chatPage(): HTMLElement[] {
     el("section", { class: "card rows" }, ...rows),
     ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
     el("h2", { text: t("Voice") }),
-    el("section", { class: "card rows" }, ...voiceRows()),
+    el("section", { class: "card rows" },
+      row(t("Dictation settings"), t("Independent dictation uses this same local model and language."), button(t("Dictation settings"), () => choosePage("dictation"))),
+      ...voiceRows()),
   ];
 }
 
@@ -1442,7 +1757,7 @@ function flockPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         "Zeca",
-        t("The companion who chats and listens. Off, the flock, cards, notifications and connectors work as ever, with no chat, microphone or talk shortcut; the session in front keeps its own bird and an empty wire stays empty."),
+        t("The companion who chats and listens. Off, the flock, cards, notifications, connectors and independent local dictation keep working; Chat is unavailable."),
         toggle(zeca, async (on) => {
           await Bridge.setZeca(on);
           zeca = on;
@@ -1506,6 +1821,7 @@ function choosePage(next: Page): void {
   }
   if (next === "chat") void refreshApi();
   if (next === "phone") void refreshPhone(renderPhone);
+  if (next === "dictation" && microphones === null && !microphonesFailed) void refreshMicrophones();
   render();
 }
 
@@ -1516,6 +1832,8 @@ function render(): void {
   const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
   const focus = drawn === page && active && root.contains(active) && active.dataset.setting ? active : null;
   const editable = focus && (focus.tagName === "TEXTAREA" || (focus.tagName === "INPUT" && !["checkbox", "range"].includes(focus.type))) && !focus.readOnly;
+  dictationDoctor.visible(page === "dictation" && !document.hidden);
+  dictationDoctor.relabel();
   head.setZeca(zeca);
   head.setSound(sounds);
   foot.setZeca(zeca);
@@ -1523,6 +1841,8 @@ function render(): void {
   const content =
     page === "general"
       ? generalPage()
+      : page === "dictation"
+        ? dictationPage()
       : page === "agents"
         ? agentsPage()
         : page === "chat"
@@ -1597,6 +1917,7 @@ function render(): void {
 }
 
 render();
+if (page === "dictation") void refreshMicrophones();
 // By the panel the open island may cover this window's corner: a click here folds it, as a click
 // outside a panel's popup closes it (the island keeps a waiting card).
 window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}), { capture: true });
@@ -1604,6 +1925,20 @@ if (page === "activity") { void refreshActivity(); budget.refresh(); }
 if (page === "phone") void refreshPhone(renderPhone);
 Bridge.onPhone(phoneEvent);
 void Bridge.appSettings().then((s) => {
+  dictationCaption = dictation.captions(s.dictationCaption, true);
+  dictationSound = dictation.startSound(s.dictationSound, true);
+  if (!dictationKeepChanged) dictationKeep = s.dictationKeep;
+  if (!dictationMicrophoneChanged) dictationMicrophone = s.dictationMicrophone;
+  if (!dictationCutRepeatsChanged) dictationCutRepeats = s.dictationCutRepeats;
+  if (!dictationRetryBaseChanged) dictationRetryBase = s.dictationRetryBase;
+  if (!dictationVocabularyChanged) dictationVocabulary = s.dictationVocabulary ?? false;
+  if (!dictationProjectVocabularyChanged) dictationProjectVocabulary = s.dictationProjectVocabulary ?? false;
+  if (!dictationSpokenCodeChanged) dictationSpokenCode = s.dictationSpokenCode;
+  if (!dictationMusicChanged) dictationMusic = s.dictationMusic;
+  if (!dictationCancelByVoiceChanged) dictationCancelByVoice = s.dictationCancelByVoice;
+  if (!dictationDoubleTapChanged) dictationDoubleTap = s.dictationDoubleTap;
+  if (!dictationSpaceLockChanged) dictationSpaceLock = s.dictationSpaceLock;
+  if (!dictationEscapeCancelChanged) dictationEscapeCancel = s.dictationEscapeCancel;
   sounds = s.sounds;
   volume = savedVolume = s.volume;
   autostart = s.autostart;
@@ -1613,12 +1948,16 @@ void Bridge.appSettings().then((s) => {
   language = s.language;
   theme = applyTheme(s.theme ?? "black", true);
   setLang(s.lang);
+  dictation.relabel();
   head.relabel();
   foot.relabel();
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   codexUsage = s.codexUsage;
   nativeChat = s.nativeChat;
+  if (!dictationInsertChanged) dictationInsert = s.dictationInsert;
+  dictationInsertAvailable = s.dictationInsertAvailable;
+  dictationWayland = s.dictationWayland;
   chatAccess = s.chatAccess;
   memory = s.memory;
   journalSummary = s.journalSummary;
@@ -1661,7 +2000,22 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  if (s.dictationMusic !== undefined) { dictationMusic = s.dictationMusic; dictationMusicChanged = true; if (page === "dictation") render(); }
+  if (s.dictationCancelByVoice !== undefined) { dictationCancelByVoice = s.dictationCancelByVoice; dictationCancelByVoiceChanged = true; if (page === "dictation") render(); }
+  if (s.dictationSpokenCode !== undefined) { dictationSpokenCode = s.dictationSpokenCode; dictationSpokenCodeChanged = true; if (page === "dictation") render(); }
+  if (s.dictationCutRepeats !== undefined) { dictationCutRepeats = s.dictationCutRepeats; dictationCutRepeatsChanged = true; if (page === "dictation") render(); }
+  if (s.dictationVocabulary !== undefined) { dictationVocabulary = s.dictationVocabulary; dictationVocabularyChanged = true; if (page === "dictation") render(); }
+  if (s.dictationProjectVocabulary !== undefined) { dictationProjectVocabulary = s.dictationProjectVocabulary; dictationProjectVocabularyChanged = true; if (page === "dictation") render(); }
+  if (s.dictationRetryBase !== undefined) { dictationRetryBase = s.dictationRetryBase; dictationRetryBaseChanged = true; if (page === "dictation") render(); }
+  if (s.dictationMicrophone !== undefined) { dictationMicrophone = s.dictationMicrophone; dictationMicrophoneChanged = true; if (page === "dictation") render(); }
+  if (s.dictationDoubleTap !== undefined) { dictationDoubleTap = s.dictationDoubleTap; dictationDoubleTapChanged = true; if (page === "dictation") render(); }
+  if (s.dictationSpaceLock !== undefined) { dictationSpaceLock = s.dictationSpaceLock; dictationSpaceLockChanged = true; if (page === "dictation") render(); }
+  if (s.dictationEscapeCancel !== undefined) { dictationEscapeCancel = s.dictationEscapeCancel; dictationEscapeCancelChanged = true; if (page === "dictation") render(); }
+  if (s.dictationKeep !== undefined) { dictationKeep = s.dictationKeep; dictationKeepChanged = true; if (page === "dictation") render(); }
+  if (s.dictationSound !== undefined) { dictationSound = dictation.startSound(s.dictationSound); if (page === "dictation") render(); }
+  if (s.dictationCaption !== undefined) { dictationCaption = dictation.captions(s.dictationCaption); if (page === "dictation") render(); }
   applyTheme(s.theme);
+  if (s.dictationInsert !== undefined) { dictationInsert = s.dictationInsert; dictationInsertChanged = true; if (page === "dictation") render(); }
   if (s.theme !== undefined) { theme = s.theme; render(); }
   // Changed from the island's gear: this page shows it too.
   if (s.flock !== undefined && s.flock !== flock) {
@@ -1674,6 +2028,7 @@ Bridge.onSettings((s) => {
   }
   if (s.lang !== undefined) {
     setLang(s.lang);
+    dictation.relabel();
     head.relabel();
     foot.relabel();
     if (s.language !== undefined) language = s.language;
@@ -1729,7 +2084,9 @@ void getVersion()
 window.setInterval(() => {
   if (!document.hidden) void refreshConnectors();
 }, 15_000);
+window.addEventListener("pagehide", () => dictationDoctor.visible(false));
 document.addEventListener("visibilitychange", () => {
+  dictationDoctor.visible(page === "dictation" && !document.hidden);
   if (!document.hidden) void refreshConnectors();
 });
 // An agent's files change outside the app (a relay built, a hook edited by hand): read them again

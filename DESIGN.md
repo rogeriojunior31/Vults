@@ -81,6 +81,10 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   narrow navigation instead of showing a rail.
 - Settings remains the configuration destination. Present the destination clearly
   when another surface needs a privileged setting.
+- Dictation's Nest area owns its work pages and links to Settings > Dictation for
+  configuration and Diagnostics, and Activity > Dictation for figures. Its shared
+  transcription model and language stay in Settings > Chat & voice. These owners
+  land with their N3 phases; do not duplicate settings in the area.
 
 ## Priority and disclosure
 
@@ -122,7 +126,9 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
 - Use a short header for recipient, executor, conversation history and creation.
   Group source, context and memory controls together; avoid duplicating them above
   and below the transcript.
-- Keep an editable draft, attachments and Send visible. Quick provides at least
+- Keep an editable draft, attachments and Send visible. The Nest and Quick composer use one
+  rounded writing row, with attachment on the left and microphone/Send on the right. The Nest
+  rests near 52-54 px high; multiline drafts grow within their bounds and files stay above it. Quick provides at least
   one comfortable draft line that grows with its content, with a small animated
   companion beside conversation actions and the executor beside the draft. The
   minimum Nest uses a smaller composer while retaining at least 40 px of transcript space.
@@ -165,6 +171,11 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   states distinctly, with a useful next action when available.
 - Combine state text and a shape or icon with color. Keep usage warnings consistent:
   70-89% warns; 90% and above is critical, with an explicit label.
+- Active dictation may add a neutral line over the flock and an optional caption
+  below it. No idle hint or buttons; the caption takes no focus or mouse input and
+  clears within two seconds of completion. Cards retain visible commands, actions
+  and their original deadline; the line and caption yield when space is short.
+  Feedback respects the fixed overlay and one-surface rule, including a visible Nest.
 - Distinguish API estimates, subscription usage, observed cost and missing data.
   Missing measurements are unknown, not zero.
 

@@ -150,7 +150,11 @@ for (const width of [480, 760, 900, 1180]) {
     const quickRoot = new Element("main"); quickRoot.append(quick.element); document.body.replaceChildren(quickRoot);
     await quick.restore();
     let readSpend = async () => ({ usd: 0, tokens: 0, budget: null, subscription: false });
+    const settingsRoutes = [];
+    let dictationReads = 0;
     const backend = {
+      dictation: { statistics: async period => ({ period, usage: { count: 0, words: 0, secs: 0, saved_minutes: null, wpm: null }, days: [], apps: [], apps_complete: true }), words: async () => ({ words: [], replacements: [], snippets: [] }), change: async () => {}, trySentence: async () => ({ text: "", cancelled: false, segments: [] }), load: async () => { dictationReads++; return { retention: "30", rows: [], today: null }; },
+        remove: async () => actions.push("dictation:remove"), clear: async () => actions.push("dictation:clear"), again: async () => actions.push("dictation:again") },
       chat: chat("nest"), savePlace: async value => { place = value; },
       flock: { loadPlace: async () => structuredClone(flockPlace), savePlace: async value => { flockPlace = structuredClone(value); },
         diff: async () => null, usage: async () => [], ...Object.fromEntries(["focus", "jump", "review", "decide", "decideAlways", "answer", "release", "hush", "openFolder", "projectPref"].map(name => [name, () => actions.push(name)])) },
@@ -160,7 +164,7 @@ for (const width of [480, 760, 900, 1180]) {
       roosts: { query: async value => { if (value !== undefined) queries.projects = value; return queries.projects; }, load: async () => [], week: async () => null },
       memory: { load: async () => ({ on: false, facts: [], proposals: [] }) }, spend: () => readSpend(),
       week: { activity: async () => ({ history: false, today: "2026-10-14", weeks: ["2026-10-12"], week: { monday: "2026-10-12", sunday: "2026-10-18", turns: 0, headline: "No completed turns.", projects: [], days: [0, 0, 0, 0, 0, 0, 0] }, grid: [] }) },
-      settings() {}, setZeca() {}, island: () => backend.size("quick"), sound() {}, media() {}, endDnd() {}, look() {},
+      settings: section => settingsRoutes.push(section), setZeca() {}, island: () => backend.size("quick"), sound() {}, media() {}, endDnd() {}, look() {},
       size: size => { requested = resize(async () => {
         if (size === "room" || size === "full") nest.setFull(size === "full");
         else { await close({ preventDefault() {} }); if (size === "quick") machine.open(0); else machine.fold(0); }
@@ -195,10 +199,11 @@ for (const width of [480, 760, 900, 1180]) {
       reads[1].resolve({ usd: 1, tokens: 100, budget: 2, subscription: true }); await tick();
       assert.ok(today.textContent.includes("$1.00 of your $2.00"));
       assert.equal(today.querySelector("input"), null, "Cost never edits the budget");
+      const originalSettings = backend.settings;
       backend.settings = section => actions.push(["settings", section]);
       nodes(page).find(n => n.tag === "button" && n.textContent === "Budget settings").click();
       assert.deepEqual(actions.pop(), ["settings", "activity"]);
-      backend.settings = () => {};
+      backend.settings = originalSettings;
       nest.spendChanged(); nest.spendChanged();
       reads[3].reject("Latest spend read failed."); await tick();
       reads[2].resolve({ usd: 99, tokens: 100, budget: 2, subscription: true }); await tick();
@@ -342,6 +347,25 @@ for (const width of [480, 760, 900, 1180]) {
     assert.ok(page.textContent.includes("Current permission"));
     await nest.flushState(); await close({ preventDefault() {} }); await mount(false);
     assert.equal(nest.current(), "flock"); assert.deepEqual(draft, expectedDraft);
+    const readsBefore = dictationReads;
+    for (const tab of ["flock", "chat", "activity", "connections", "dictation", "chat"]) {
+      nest.open(tab); await tick();
+      if (tab === "dictation") {
+        page.querySelector(".dictation-history").querySelectorAll("button").find(button => button.textContent === "Dictation settings").fire("click");
+        assert.deepEqual(settingsRoutes, ["dictation"], "The work area links to the central Dictation settings owner");
+      }
+      const panes = page.children.filter(node => node.getAttribute("role") === "tabpanel");
+      assert.equal(panes.length, 5);
+      assert.deepEqual(panes.filter(node => !node.hidden).map(node => node.id), [`nest-pane-${tab === "chat" ? "flock" : tab}`],
+        "Only the selected pane is shown, with Zeca-off Chat returning to Flock");
+    }
+    assert.equal(dictationReads, readsBefore + 1, "History loads when its own tab opens, not while Chat is selected");
+    assert.ok(!page.querySelector(".dictation-history").textContent.includes("Reading dictation history"), "Opening Dictation settles its loading state");
+    nest.open("dictation"); await tick();
+    page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Statistics").fire("click"); await tick();
+    assert.equal(nest.current(), "dictation-statistics", "The area links to Activity's single statistics owner");
+    await nest.flushState();
+    assert.equal(place, "dictation-statistics", "Statistics navigation survives the Room/Full handoff");
     nest.open("connections"); await nest.flushState();
     assert.equal(connectionPlace.picked, row.item); assert.equal(connectionPlace.repo, "org/alpha");
     assert.deepEqual(view, originalView, "Layouts retain the same selected session/run/request owner");
@@ -564,9 +588,10 @@ assert.ok(weekPage.textContent.includes("Could not load This week"));
 assert.ok(!weekPage.textContent.includes("Reading the history"));
 const weekRetry = weekPage.querySelectorAll("button").find(b => b.textContent === "Try again");
 weekRetry.focus(); weekRetry.fire("click"); weekRetry.fire("click"); assert.equal(weekReads.length, 2);
-const recap = { history: true, today: "2026-10-15", weeks: ["2026-10-12"], grid: [],
+const recap = { dictatedWords: 135, history: true, today: "2026-10-15", weeks: ["2026-10-12"], grid: [],
   week: { monday: "2026-10-12", sunday: "2026-10-18", turns: 0, headline: "Known recap", projects: [], days: [0, 0, 0, 0, 0, 0, 0] } };
 weekReads[1].resolve(recap); await tick(); assert.ok(weekPage.textContent.includes("Known recap"));
+assert.ok(weekPage.textContent.includes("135") && weekPage.textContent.includes("Dictated words"), "Dictation totals remain visible without agent turns");
 weekUI.refresh(); weekReads[2].reject(new Error("Stale recap")); await tick();
 assert.ok(weekPage.textContent.includes("Known recap")); assert.ok(weekPage.textContent.includes("last loaded view is kept"));
 weekUI.refresh(); const oldWeek = weekReads.at(-1); weekUI.refresh(); weekReads.at(-1).resolve(recap); await tick();
@@ -584,7 +609,7 @@ assert.ok(weekPage.textContent.includes("No recorded baseline for comparison."))
 
 console.log("check-surface-continuity: Week initial error/retry, retained recap and obsolete read rejection without setting/export actions");
 
-assert.deepEqual(NEST_TABS, ["flock", "chat", "activity", "connections"]);
+assert.deepEqual(NEST_TABS, ["flock", "chat", "activity", "connections", "dictation"]);
 for (const zeca of [true, false]) {
   const tabs = NEST_TABS.filter(id => id !== "chat" || zeca);
   for (let n = 1; n <= 5; n++) {
@@ -598,7 +623,7 @@ for (const zeca of [true, false]) {
   assert.deepEqual(routes, tabs);
   assert.deepEqual(commands, zeca ? ["/continue ", "/remember "] : []);
 }
-console.log("check-surface-continuity: four tabs, keyboard order with Zeca on/off, palette removal and retained continuation/memory");
+console.log("check-surface-continuity: five tabs, keyboard order with Zeca on/off, palette removal and retained continuation/memory");
 
 const panelHost = new Element("div"), panel = new Element("aside"), retainedInput = new Element("input");
 panelHost.clientWidth = 1180; panelHost.append(panel); panel.append(retainedInput); retainedInput.value = "unsent draft";

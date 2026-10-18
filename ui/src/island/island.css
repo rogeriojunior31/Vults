@@ -1,3 +1,4 @@
+@import "../dictation.css";
 @import "../themes.css";
 @import "../sizes.css";
 
@@ -2221,6 +2222,10 @@ button.ghost:hover {
 }
 .composer:hover { border-color: var(--border-hover); }
 .composer:focus-within { border-color: var(--focus-border); box-shadow: var(--focus-shadow); }
+.composer-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; }
+.composer-row > .attach { grid-column: 1; grid-row: 1; }
+.composer-row > :is(textarea, .wave) { grid-column: 2; grid-row: 1; min-width: 0; }
+.composer-row > .composer-tools { grid-column: 3; grid-row: 1; }
 .composer-tools {
   display: flex;
   flex: none;
@@ -3321,16 +3326,16 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 #island .chat .suggestion { display: block; min-height: 52px; box-sizing: border-box; padding: 8px; line-height: 1.4; }
 #island .chat .suggestion > svg { display: none; }
 #island .composer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
   padding: 6px 8px;
   border-radius: var(--radius-composer);
 }
-#island .composer-tools { grid-column: 2; }
+#island .composer-tools { grid-column: 3; }
 #island .composer .chips { grid-column: 1 / -1; }
-#island .composer :is(textarea, .wave) { grid-column: 1; min-width: 0; }
+#island .composer :is(textarea, .wave) { grid-column: 2; min-width: 0; }
 #island .composer .attach { width: 32px; height: 32px; padding: 0; }
 #island .composer .attach > span { display: none; }
 #island .chat .composer textarea { padding: 6px 4px; appearance: none; overflow-x: hidden; scrollbar-width: thin; }

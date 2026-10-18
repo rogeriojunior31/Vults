@@ -41,6 +41,9 @@ jobs:
           node scripts/check-chat-models.mjs
           node scripts/check-flock-place.mjs
           node scripts/check-settings-ui.mjs
+          node scripts/check-dictation-words.mjs
+          node scripts/check-dictation-statistics.mjs
+          node scripts/check-dictation-diagnostics.mjs
           node scripts/check-project-search.mjs
           node scripts/check-surface-continuity.mjs
       # rustup reads rust-toolchain.toml on the first cargo call.

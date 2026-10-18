@@ -654,3 +654,22 @@ pub(crate) fn chat(lang: Lang, text: ChatText, project: &str, n: usize) -> Strin
         (Lang::Zh, AskRecent) => "最近有什么变化？".into(),
     }
 }
+
+/// Descriptions for the independent dictation shortcuts shown in the desktop's consent dialog.
+pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
+    Some(match (lang, id) {
+        (Lang::En, "talk") => "Dictate, or speak to a focused Vults Chat",
+        (Lang::PtBr, "talk") => "Ditar ou falar no Chat do Vults em foco",
+        (Lang::Es, "talk") => "Dictar o hablar en el Chat de Vults enfocado",
+        (Lang::Zh, "talk") => "听写，或向获得焦点的 Vults 聊天说话",
+        (Lang::En, "talk-again") => "Copy the last dictation again",
+        (Lang::PtBr, "talk-again") => "Copiar novamente o último ditado",
+        (Lang::Es, "talk-again") => "Volver a copiar el último dictado",
+        (Lang::Zh, "talk-again") => "再次复制上次听写",
+        (Lang::En, "talk-cancel") => "Cancel dictation or Chat voice",
+        (Lang::PtBr, "talk-cancel") => "Cancelar o ditado ou a voz do Chat",
+        (Lang::Es, "talk-cancel") => "Cancelar el dictado o la voz del Chat",
+        (Lang::Zh, "talk-cancel") => "取消听写或聊天语音",
+        _ => return None,
+    })
+}

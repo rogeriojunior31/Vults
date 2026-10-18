@@ -1,6 +1,6 @@
   /* Lab · Dictation (plan-dictation V0.7). Hold the talk key in any app, speak, let go: whisper.cpp transcribes on this
      computer, your words and snippets fix the text, and Vults pastes it where the cursor is. The area has its own side
-     list, in three groups (Voice, Your words, System), and owns its settings; Settings › Chat & voice links to it. The
+     list; configuration lives in Settings and figures in Activity, with links from the area. The
      island shows dictation over the flock, in grey, and a card always wins.
      Voice commands (V8) use their own key: understood on this computer with no model, they move around the flock and
      read what Vults already knows; they never type into an app and never answer a card. */
@@ -100,8 +100,8 @@
   const DX_HEAD={
     history:()=>['Dictation','Hold Ctrl+Alt+V in any app, speak and let go. The text goes where the cursor is.',key(button('Try it','quiet-control',()=>dxSimulate()),'dictation-try')],
     commands:()=>['Voice commands','Hold the command key, say what to do in Vults and let go. Understood on this computer with no model; it never types into an app.',...(settings.dictCommands?[key(button('Try a command','quiet-control',()=>dxCommand()),'dictation-try-command')]:[])],
-    talk:()=>['Talk with Zeca','Off by default. On, your voice goes to the realtime model you choose, with your key in the keyring, a daily budget and a trace. Dictation stays on this computer.',...(settings.zecaVoice?[key(button('Start a conversation','quiet-control',()=>dxIsland('speaking')),'zeca-talk')]:[])],
-    meetings:()=>['Meetings','Records your microphone and the computer\'s sound. No bot joins the call; the audio is deleted after the transcript.',dx.recording?key(button('Stop and transcribe','quiet-control',()=>{dx.recording=false;toast('Transcribing…');dxOpen('meetings');}),'meeting-stop'):key(button('Record a call','quiet-control',()=>{dx.recording=true;dxOpen('meetings');}),'meeting-record')],
+    talk:()=>['Talk with Zeca','Off by default. On, your voice goes to the realtime model you choose, with your key in the keyring, a daily budget and a trace. Dictation stays on this computer.',...(settings.zeca&&settings.zecaVoice?[key(button('Start a conversation','quiet-control',()=>dxIsland('speaking')),'zeca-talk')]:[])],
+    meetings:()=>['Meetings','Records your microphone and the computer\'s sound. No bot joins the call; the audio is deleted after the transcript.',dx.recording?key(button('Stop and transcribe','quiet-control',()=>{dx.recording=false;toast('Transcribing…');dxOpen('meetings');}),'meeting-stop'):key(button('Record a call','quiet-control',()=>confirm('Record a call','This preview simulates microphone and system audio. In the app, each recording uses private temporary audio, deleted after transcription, failure or cancellation.',()=>{dx.recording=true;dxOpen('meetings');},'default','Record a call')),'meeting-record')],
     dictionary:()=>['Dictionary','Names and terms Vults always spells right.'],
     snippets:()=>['Snippets','Say the short phrase and Vults pastes the whole text, unchanged.'],
     styles:()=>['Styles','An optional clean-up by a model, set per app. It is a filter, never an assistant.'],
@@ -176,7 +176,7 @@
     const from=field('When I say',''),to=field('Write','');
     host.append(settingsGroup(phrase('Replacements · {n}',{n:dxReplacements.length}),el('p','pane-note','They also fix the names in voice commands.'),dxPairs(dxReplacements.map(r=>[r.from,r.to]),['When I say','Write'],i=>dxReplacements.splice(i,1)),
       el('div','dx-add',null,from.element,to.element,key(button('Add','quiet-control',()=>{if(!from.control.value.trim()||!to.control.value.trim()){toast('Fill in both sides.');return;}dxReplacements.push({from:raw(from.control.value.trim()),to:raw(to.control.value.trim())});setArea('dictation',state.mode);toast('Added');}),'add-replacement'))));
-    host.append(settingsGroup('How it is applied',switchRow('dictHint','Help the model with these words','Your first words go to whisper as vocabulary. Only with Small, where it was measured to help.'),switchRow('dictProject','Project vocabulary',"Dictating into a session, or into a terminal or editor whose window title names a project, adds its file, crate and branch names."),el('p','pane-note','Whole words, any case; a space and a hyphen count the same. Nothing is learned on its own.')));
+    host.append(settingsGroup('How it is applied',el('p','pane-note','Whole words, any case; a space and a hyphen count the same. Nothing is learned on its own.')));dxSettingsLink(host);
     const box=field('Try a sentence',L('open a pull request on cloud code and send it to my email'),'textarea'),out=el('div','dx-try-out');
     const run=()=>out.replaceChildren(el('small',null,'Becomes, before any clean-up:'),dxRender(dxApply(box.control.value)));
     box.control.addEventListener('input',run);run();host.append(key(el('section','dx-try',null,box.element,out),'dictation-try-sentence'));
@@ -219,7 +219,7 @@
     host.append(el('div','week-panel dx-stats-panel',null,el('h3','lab-panel-title','Words per day, last 2 weeks'),chart),el('div','week-panel dx-stats-panel',null,el('h3','lab-panel-title','Where you dictate'),apps));
   }
 
-  /* The area owns its settings (R6), page by page; the voice model stays in Settings › Chat & voice, shared with the chat. */
+  // Configuration is rendered only in Settings; the shared voice model stays in Chat & voice.
   const dxKeys=(...names)=>el('span','dx-keys',null,...names.map(kbd));
   function dxSettingsPage(host){
     host.append(settingsGroup('Key',key(setting('Dictation key','Through the desktop\'s shortcuts portal: KDE asks once and lets you change it. This is the key it saved.',el('div','control-group',null,dxKeys('Ctrl','Alt','V'),button('Change in KDE…','quiet-control',()=>toast('Opens System Settings › Shortcuts › Vults')))),'dict-key'),
@@ -240,14 +240,14 @@
         switchRow('dictRepeats','Cut repeats','Whisper sometimes loops a phrase or invents “Thank you.” in silence; Vults cuts it before pasting.'),
         switchRow('dictPlanB','Plan B','Speech heard but no text: try again with Base and say so on the island.')),
       settingsGroup('Paste',switchRow('dictTerminals','Terminals use Ctrl+Shift+V','Konsole, kitty, Alacritty, WezTerm and the VS Code terminal.'),
-        switchRow('dictClipboard','Give the clipboard back','What you had copied comes back 0.7 s later, only if nothing else changed it. Dictation stays out of Klipper.'),
+        switchRow('dictClipboard','Give the clipboard back','Restores text after 0.7 s only if unchanged. Images and rich formats are not restored; clipboard history exclusion depends on the desktop.'),
         setting('No text field','The text stays in the clipboard and the island says “Ctrl+V to paste”.',null)),
-      settingsGroup('Meetings',switchRow('dictSummary','Summary and to-dos','After each meeting, through the chat\'s model and the network gate. The transcript itself stays on this computer.')),
-      settingsGroup('Privacy',optionRow('dictKeep','Keep the history','Audio is never saved; only the text, on this computer.',[{value:'0',label:'Do not keep'},{value:'7',label:'7 days'},{value:'30',label:'30 days'},{value:'365',label:'1 year'},{value:'all',label:'Always'}]),
+      settingsGroup('Meetings',switchRow('dictSummary','Summary and to-dos','Sends the transcript, never audio, to the selected model. Off by default; up to 20 attempts per rolling 24 hours, through the gate.')),
+      settingsGroup('Privacy',optionRow('dictKeep','Keep the history','Dictation audio stays in memory. Meetings use temporary audio; history keeps only text on this computer.',[{value:'0',label:'Do not keep'},{value:'7',label:'7 days'},{value:'30',label:'30 days'},{value:'365',label:'1 year'},{value:'all',label:'Always'}]),
         setting('Erase the history','Statistics stay.',button('Erase…','',()=>confirm('Erase the history','Every dictation on this computer is erased. Statistics stay.',()=>{dxHistory.length=0;toast('History erased');},'danger','Erase')))));
   }
-  function dxCommandsPage(host){
-    host.append(settingsGroup('Voice commands',key(switchRow('dictCommands','Voice commands','Hold the command key, say what to do in Vults and let go. Understood on this computer with no model; it never types into an app.',()=>dxOpen(dx.tab)),'dict-commands'),
+  function dxCommandSettings(host){
+    host.append(settingsGroup('Voice commands',key(switchRow('dictCommands','Voice commands','Hold the command key, say what to do in Vults and let go. Understood on this computer with no model; it never types into an app.',dxRefreshSettings),'dict-commands'),
         ...(settings.dictCommands?[setting('Command key','A second key in the shortcuts portal, so a command never ends up pasted as text.',el('div','control-group',null,dxKeys('Ctrl','Alt','Z'),button('Change in KDE…','quiet-control',()=>toast('Opens System Settings › Shortcuts › Vults')))),
           setting('Names it understands',"Your sessions' projects and agents, and the replacements in Your words. One or two letters off still counts; when two names fit, it asks which.",null),
           optionRow('dictCommandElse','When it is not a command',"Sent to Zeca, it is answered through the chat's model, as if you had typed it.",['Say so on the island','Send it to Zeca as a message']),
@@ -257,23 +257,39 @@
             setting('Quiet a project','“mute web”, “pin api”, “hide docs”',null),
             setting('Again and undo','“and docs too”, “same for web”, “undo”. Vults remembers the last command for 90 s.',null),
             setting('Never','“approve”, “allow”, “yes” to a card: cards are answered with a click or a shortcut.',null)]),'dict-commands-list')]:[])));
+  }
+  function dxRefreshSettings(){
+    const host=$('.workspace-view'),top=host.scrollTop,active=document.activeElement,key=active?.dataset.key,label=active?.getAttribute('aria-label');
+    openSettings('dictation');host.scrollTop=top;
+    $$('.settings-content button').find(b=>key?b.dataset.key===key:label&&b.getAttribute('aria-label')===label)?.focus({preventScroll:true});
+  }
+  function dxSettingsLink(host){host.append(key(button('Dictation settings','quiet-control',()=>openSettings('dictation')),'dx-open-settings'));}
+  function dxCommandsPage(host){
+    dxSettingsLink(host);
     const list=el('div','dx-list');host.append(el('h3','lab-panel-title','Recent commands'),list);
     const fill=()=>{list.replaceChildren();const rows=dxHistory.filter(h=>h.command);for(const h of rows)list.append(dxCommandLine(h,fill));if(!rows.length)list.append(el('p','pane-note','Nothing here yet.'));dx.fresh=null;};fill();
   }
-  function dxStylesPage(host){
-    host.append(settingsGroup('Clean-up',key(switchRow('dictCleanup','Clean up with a model','A request on your behalf, through the network gate with its own budget and trace. Off, only your words and snippets apply.',()=>dxOpen(dx.tab)),'dict-cleanup'),
+  function dxStyleSettings(host){
+    host.append(settingsGroup('Clean-up',key(switchRow('dictCleanup','Clean up with a model','Off by default. Up to 2,000 attempts per rolling 24 hours, including local models; through the gate. When unavailable, keep the raw text.',dxRefreshSettings),'dict-cleanup'),
         ...(settings.dictCleanup?[key(optionRow('dictCleanupModel','Clean-up model','Local stays on this computer. A filter, never an assistant: a question is pasted as a question.',['Chat & voice · claude-haiku-4-5','Local · Ollama · qwen3:1.7b']),'dict-cleanup-model'),
-          optionRow('dictStyle','Default style',null,Object.values(DX_STYLES).map(([label])=>label)),
           optionRow('dictWriteIn','Write in','Speak one language, paste another. Code, commands and your words stay as they are.',['The spoken language','English','Espa\u00f1ol']),
           switchRow('dictSessionsEnglish','Agent sessions in English','Only what goes to the flock\'s sessions.'),
           more('Style per app',dxApps.map(a=>setting(a.app,null,choose(phrase('Style for {app}',{app:L(a.app)}),Object.entries(DX_STYLES).map(([value,[label]])=>({value,label})),a.style,value=>{a.style=value;toast('Saved');}))))]:[])));
+    if(!settings.dictCleanup)return;
     const cards=el('div','dx-styles');
-    for(const [id,[name,about]] of Object.entries(DX_STYLES)){const b=key(button(null,'dx-style',()=>{changedSetting('dictStyle',name);dxOpen('styles');}),'dx-style-'+id);b.append(el('strong',null,name),el('small',null,about));b.setAttribute('aria-pressed',String(settings.dictStyle===name));cards.append(b);}
-    host.append(settingsGroup('Default style',...(settings.dictCleanup?[]:[el('p','pane-note','Off: every line is pasted as spoken.')]),cards));
+    for(const [id,[name,about]] of Object.entries(DX_STYLES)){const b=key(button(null,'dx-style',()=>{changedSetting('dictStyle',name);dxRefreshSettings();}),'dx-style-'+id);b.append(el('strong',null,name),el('small',null,about));b.setAttribute('aria-pressed',String(settings.dictStyle===name));cards.append(b);}
+    host.append(settingsGroup('Default style',cards));
+  }
+  function dxStylesPage(host){
+    dxSettingsLink(host);
+    const cards=el('div','dx-styles');
+    for(const [name,about] of Object.values(DX_STYLES))cards.append(el('article','dx-style',null,el('strong',null,name),el('small',null,about)));
+    host.append(cards);
   }
   // Settings › Dictation: the values, then Diagnostics at the end.
   function dictationSettings(content){
-    dxSettingsPage(content);
+    dxSettingsPage(content);dxCommandSettings(content);dxStyleSettings(content);dxTalkSettings(content);
+    content.append(settingsGroup('Your words',switchRow('dictHint','Help the model with these words','Your first words go to whisper as vocabulary. Only with Small, where it was measured to help.'),switchRow('dictProject','Project vocabulary',"Dictating into a session, or into a terminal or editor whose window title names a project, adds its file, crate and branch names.")));
     content.append(el('h3','settings-title dx-settings-sub','Diagnostics'),settingsGroup('Microphone',setting('Test the microphone','Speak for three seconds; Vults measures the level and the noise.',button('Test','quiet-control',()=>toast('Good: clear speech, low noise (−52 dB).')))));
     dxDiagnosticsPage(content);
   }
@@ -282,13 +298,18 @@
       settingsGroup('This computer',setting('Wayland · KWin 6 · shortcuts and paste portals ready',null,chip('done','Ready'))));
   }
   /* Talking with Zeca (K8, V6). Off by default; on, audio leaves this computer. */
-  function dxTalkPage(host){
-    host.append(settingsGroup("Zeca's voice",key(switchRow('zecaVoice','Talk with Zeca',null,()=>dxOpen('talk')),'zeca-voice'),
+  function dxTalkSettings(host){
+    host.append(settingsGroup("Zeca's voice",key(switchRow('zecaVoice','Talk with Zeca',null,dxRefreshSettings),'zeca-voice'),
       ...(settings.zecaVoice?[optionRow('zecaVoiceModel','Realtime model',null,['OpenAI · gpt-realtime','Google · Gemini Live']),optionRow('zecaBudget','Budget per day','Past it, Zeca answers in text and says so.',['$0.50','$1','$3']),
         optionRow('zecaTurn','When you are done','Fast answers after 1 s of silence; Patient waits out sentences that sound unfinished.',['Fast','Balanced','Patient']),
         switchRow('zecaBarge','Interrupt by speaking','Speak over him and he stops. Needs headphones or PipeWire\'s echo cancellation.'),
-        switchRow('zecaFollowUp','Answer without the key','After Zeca asks you something, the mic opens for 8 s, shown on the island.')]:[]),
+        switchRow('zecaFollowUp','Answer without the key','Off by default. After Zeca asks in an active voice conversation, listen for at most 8 s, visibly and cancellably. Cards and tools never reopen it.')]:[]),
       setting('Never answers a card','Permissions and agents\' questions are answered with a click or a shortcut, never by voice.',chip('quiet','Always'))));
+  }
+
+  function dxTalkPage(host){
+    dxSettingsLink(host);host.append(settingsGroup("Zeca's voice",setting('Talk with Zeca',null,chip('quiet',settings.zeca&&settings.zecaVoice?'On':'Off')),
+      ...(settings.zeca&&settings.zecaVoice?[setting('Realtime model',null,el('span',null,null,document.createTextNode(settings.zecaVoiceModel))),setting('Budget per day',null,el('span','counter',null,document.createTextNode(settings.zecaBudget)))]:[])));
   }
 
   /* The island while dictating: a grey line over the flock. The birds stay underneath and come back when it ends; the
@@ -337,7 +358,7 @@
     if(s==='session'){line.append(glyph('flock'),text);text.textContent=phrase('In session {session} · {app}: review it and press Enter',{session:'api',app:'Codex'});}
     if(s==='held'){line.append(el('span','shape shape-needs'),text);text.textContent=phrase('{session} is waiting on a card: the text is in the clipboard',{session:'api'});}
     if(s==='clipboard'){line.append(glyph('copy'),text,hint(kbd('Ctrl+V'),el('span',null,'to paste')));text.textContent=L('No text field: it is in the clipboard');}
-    if(s==='failed'){line.append(el('span','shape shape-failed'),text);text.textContent=L('Heard nothing. Check the microphone in Dictation › Settings.');}
+    if(s==='failed'){line.append(el('span','shape shape-failed'),text);text.textContent=L('Heard nothing. Check the microphone in Settings › Dictation.');}
     if(s==='speaking'||s==='interrupted'){line.append(glyph(s==='speaking'?'sound':'mic'));dxBands(line,s==='speaking');line.append(text,hint(el('span',null,s==='speaking'?'speak to interrupt':'listening')));text.textContent=L(s==='speaking'?'api finished: 3 tests passed, the diff waits for your review.':'Stopped. Go ahead.');}
     host.setAttribute('data-tooltip',text.textContent);host.append(line);
     // The caption shows only what the island cannot: what was heard, the words so far, or a line cut short.

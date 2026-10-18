@@ -11,10 +11,12 @@ grid. **Settings → Activity** keeps the history and daily budget controls and 
 **Open Activity** button; the recap and calendar have one home in the Nest. Activity is counted on this computer,
 from a local history that Vults keeps as your agents work.
 
-The Nest groups Activity into six views, with the same navigation and summary style:
+The Nest groups Activity into seven views, with the same navigation and summary style:
 
 - **Week**: totals, time per day, the yearly grid and a recap to save. Select a day to read its
   exact duration; **How activity is counted** explains the counting rules.
+- **Dictation**: measured words, estimated time saved, speed, daily bars and top applications.
+  Week also shows dictated words for its selected calendar week, independent of agent history.
 - **By project**: time per repository, worktrees, sessions, pull requests and project memory.
 - **History**: finished turns grouped by project, with the result, agent, counts and duration.
 - **Cost**: today's budget, plan windows, the last two weeks of cost and tokens, and cost by project.
@@ -30,6 +32,29 @@ top, four totals and time by project (up to four projects), or a small daily cha
 is named. The arrows switch between the previous week and this week; **Open in the Nest** opens
 the full Activity view. Hours in the top summary are rounded; hover that figure for the full
 duration. An unread week shows a loading or error message instead of zero totals.
+
+## Dictation statistics
+
+Open **Activity → Dictation**, or **Dictation → Statistics**. Choose **Last 7 days**, **Last 30 days**
+or **All time**. Local usage totals stay available after transcript erasure, expiry or **Do not keep**;
+reusing a dictation does not count again. Empty periods show unknown figures, with explicit
+loading, retry and stale-data feedback when a read fails.
+
+Time saved is `max(0, words / 45 - audio seconds / 60)` minutes. Speed uses measured audio duration,
+with zero below one second. Daily bars use local calendar dates; all-time figures include every
+recorded day while the chart shows at most the latest 90 calendar days. Select a bar to read it.
+The top eight applications are ordered by words, with an explicit unknown application when needed.
+
+Migration 24 starts independent daily application totals. Older lifetime application totals are
+preserved; a weekly/monthly breakdown missing those old measurements is labeled partial.
+No transcript, session or window title is added to these usage aggregates. Retained stage timings
+still follow transcript retention and appear in
+[Settings > Dictation > Diagnostics](dictation.md#diagnostics). Usage totals and memory-only session
+counters have separate lifetimes. **Dictation settings** opens that configuration page. Room/Full keep the selected statistics period.
+
+![Dictation statistics with synthetic usage in the native app](../assets/dictation-statistics.png)
+
+Native validation example with synthetic totals; these figures are not the reader's usage.
 
 ## Cost and a daily budget
 
@@ -91,10 +116,11 @@ and is asked through `gh` once when the tab opens, then kept an hour in memory, 
 - **Clear history…** asks once, then removes the turns and days, the audit log of your answers,
   the local trace of requests (Zeca's turns and every request made on your behalf), Zeca's saved
   conversations, his journal, the day summaries and their recall data, the memory proposals and
-  the sleep's runs, and the snapshot of the flock kept for Zeca's MCP server, in one go, leaving
-  one line in the audit log: that you cleared it, and when.
+  the sleep's runs, saved dictation transcripts and the snapshot of the flock kept for Zeca's MCP
+  server, in one go, leaving one line in the audit log: that you cleared it, and when.
   What stays: what Zeca remembers (his memory files, **Settings → Chat & voice → Memory**), the
-  policies you accepted, your paired phones and recorded agent costs
+  policies you accepted, your paired phones, recorded agent costs, measured dictation totals and
+  the user-maintained dictionary, replacements and snippets
   ([Safety](../safety.md)). Tables from retired features stay untouched; their old cost rows
   remain readable in **Cost**.
 - The history lives in one local database, `vults.sqlite` (each turn for 12 weeks, each day's

@@ -38,7 +38,7 @@ pub fn activate(pids: &[u32], folder: &str) -> bool {
 
 /// A unique bus name as the bus hands it out (`:1.42`), nothing else: it is the one string the
 /// script holds.
-fn is_unique_name(name: &str) -> bool {
+pub(crate) fn is_unique_name(name: &str) -> bool {
     let Some(rest) = name.strip_prefix(':') else {
         return false;
     };
@@ -114,7 +114,7 @@ impl Reply {
 
 /// `$XDG_RUNTIME_DIR` when it is ours and private: a script written to a shared folder could be
 /// swapped, or a symlink planted there written through.
-fn script_dir() -> Option<PathBuf> {
+pub(crate) fn script_dir() -> Option<PathBuf> {
     let dir = PathBuf::from(std::env::var_os("XDG_RUNTIME_DIR")?);
     let meta = std::fs::symlink_metadata(&dir).ok()?;
     let ours = Some(meta.uid()) == super::my_uid();
@@ -122,7 +122,7 @@ fn script_dir() -> Option<PathBuf> {
 }
 
 /// Removes the script file whatever happens.
-struct ScriptFile(PathBuf);
+pub(crate) struct ScriptFile(pub(crate) PathBuf);
 
 impl Drop for ScriptFile {
     fn drop(&mut self) {
@@ -130,7 +130,7 @@ impl Drop for ScriptFile {
     }
 }
 
-fn write_script(dir: &Path, name: &str, text: &str) -> Option<ScriptFile> {
+pub(crate) fn write_script(dir: &Path, name: &str, text: &str) -> Option<ScriptFile> {
     let path = dir.join(format!("{name}.js"));
     let mut file = std::fs::OpenOptions::new()
         .write(true)

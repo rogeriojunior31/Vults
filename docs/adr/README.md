@@ -19,9 +19,10 @@ the context it was made in and what it costs. Code and guides say *what* the app
 | Surfaces | [0021](0021-four-sizes-one-nest.md) Surfaces: one core, four sizes, a card answered where you are | Accepted | 0008, 0009, 0022, 0023, 0024, 0030 |
 | Voice | [0028](0028-spoken-replies-through-a-realtime-model.md) Voice: local listening, opt-in spoken replies | Accepted | 0013 |
 | Tasks removal | [0031](0031-tasks-leave-vults.md) Tasks leave Vults; releases follow N0 to N4 | Accepted | |
+| Dictation | [0032](0032-dictation-into-other-apps.md) Dictation into other apps | Accepted | |
 
 A number in the last column was a record of its own until 2026-10-12; an old commit or PR that
-cites it means the record it was folded into. Numbers are never reused: the next topic is 0032.
+cites it means the record it was folded into. Numbers are never reused: the next topic is 0033.
 
 ## Writing one
 

@@ -1,11 +1,13 @@
-//! Push-to-talk for the chat. The microphone is recorded into memory (never to disk), then
+//! Local speech for Chat and independent dictation. Audio stays in memory (never on disk), then is
 //! transcribed on this computer by whisper.cpp with a model the user downloaded on purpose.
 //! Nothing here sends audio anywhere.
 
+mod gate;
 mod models;
 mod preview;
 mod record;
 mod vad;
+pub mod vocabulary;
 
 use std::mem::ManuallyDrop;
 use std::path::Path;
@@ -13,11 +15,24 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use models::{MODELS, Model, VAD, download, installed, model, model_path, vad_path};
+pub use preview::Preview;
 pub use record::{AutoStop, Recorder};
 use vad::{EndOfSpeech, Vad};
 
 /// What whisper takes: 16 kHz, mono, f32.
-pub const SAMPLE_RATE: u32 = 16_000;
+pub use vults_audio::SAMPLE_RATE;
+
+/// Whether Silero heard speech, for a caller deciding whether an empty transcript needs a retry.
+pub fn has_speech(pcm: &[f32], model: &Path) -> Result<bool, String> {
+    Vad::load(model)?.speech(pcm).map(|speech| !speech.is_empty())
+}
+
+/// A final decode's text and the number of repetitive runs collapsed by its filter.
+#[derive(Debug, Default)]
+pub struct Transcript {
+    pub text: String,
+    pub loops_cut: u64,
+}
 
 /// A loaded model, kept between recordings: loading takes longer than a short transcription.
 pub struct Transcriber {
@@ -75,7 +90,65 @@ impl Transcriber {
         // Whisper invents words on silence (*Thank you.*, *Obrigado.*): only the speech goes in, and
         // a recording with none gives no text.
         let pcm = speech_only(pcm, vad);
-        Ok(self.decode(pcm, language, None)?.unwrap_or_default())
+        Ok(self
+            .decode(pcm, language, None, true, None)?
+            .unwrap_or_default()
+            .text)
+    }
+
+    /// Final transcription with token-level cancellation. `cut_repeats` affects loops only;
+    /// silence artifacts and sound annotations are always filtered. Keep this per call because
+    /// the cached model also serves Chat.
+    pub fn transcribe_cancellable(
+        &self,
+        pcm: &[f32],
+        language: Option<&str>,
+        vad: Option<&Path>,
+        stop: &AtomicBool,
+        cut_repeats: bool,
+    ) -> Result<Option<String>, String> {
+        if stop.load(Ordering::SeqCst) {
+            return Ok(None);
+        }
+        self.decode(speech_only(pcm, vad), language, Some(stop), cut_repeats, None)
+            .map(|text| text.map(|text| text.text))
+    }
+
+    /// Per-call local vocabulary; callers gate measured model/language pairs and user choice.
+    /// This does not update the cached model or apply any post-transcription replacements.
+    pub fn transcribe_with_vocabulary(
+        &self,
+        pcm: &[f32],
+        language: Option<&str>,
+        vad: Option<&Path>,
+        stop: &AtomicBool,
+        cut_repeats: bool,
+        words: &[String],
+    ) -> Result<Option<String>, String> {
+        self.transcribe_measured(pcm, language, vad, stop, cut_repeats, words)
+            .map(|text| text.map(|text| text.text))
+    }
+
+    /// Final-only measurements: preview passes never contribute to diagnostic counters.
+    pub fn transcribe_measured(
+        &self,
+        pcm: &[f32],
+        language: Option<&str>,
+        vad: Option<&Path>,
+        stop: &AtomicBool,
+        cut_repeats: bool,
+        words: &[String],
+    ) -> Result<Option<Transcript>, String> {
+        if stop.load(Ordering::SeqCst) {
+            return Ok(None);
+        }
+        self.decode(
+            speech_only(pcm, vad),
+            language,
+            Some(stop),
+            cut_repeats,
+            Some(words),
+        )
     }
 
     /// The live preview while the user still speaks: the whole recording so far, trimmed by the
@@ -86,8 +159,11 @@ impl Transcriber {
         pcm: &[f32],
         language: Option<&str>,
         stop: &AtomicBool,
+        cut_repeats: bool,
+        words: &[String],
     ) -> Result<Option<String>, String> {
-        self.decode(trim_silence(pcm), language, Some(stop))
+        self.decode(trim_silence(pcm), language, Some(stop), cut_repeats, Some(words))
+            .map(|text| text.map(|text| text.text))
     }
 
     fn decode(
@@ -95,10 +171,12 @@ impl Transcriber {
         pcm: &[f32],
         language: Option<&str>,
         stop: Option<&AtomicBool>,
-    ) -> Result<Option<String>, String> {
+        cut_repeats: bool,
+        words: Option<&[String]>,
+    ) -> Result<Option<Transcript>, String> {
         let stopped = || stop.is_some_and(|s| s.load(Ordering::SeqCst));
         if pcm.len() < SAMPLE_RATE as usize / 2 {
-            return Ok(Some(String::new()));
+            return Ok(Some(Transcript::default()));
         }
         let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
         if stopped() {
@@ -108,8 +186,21 @@ impl Transcriber {
         let mut params = whisper_rs::FullParams::new(whisper_rs::SamplingStrategy::Greedy { best_of: 1 });
         params.set_language(Some(language.unwrap_or("auto")));
         // The words a coding chat uses, so they come out as written, not as they sound.
-        if let Some(prompt) = language.filter(|_| self.prompt).and_then(vocabulary) {
-            params.set_initial_prompt(prompt);
+        let seed = language.filter(|_| self.prompt).and_then(vocabulary);
+        let prompt = if let Some(words) = words.filter(|words| !words.is_empty()) {
+            vocabulary::build(language.and_then(vocabulary), words, |text| {
+                // Byte-level BPE needs no more tokens than input bytes plus its leading space.
+                self.ctx
+                    .tokenize(text, text.len() + 16)
+                    .map_err(|e| e.to_string())
+            })?
+        } else {
+            None
+        };
+        if let Some(prompt) = &prompt {
+            params.set_tokens(prompt);
+        } else if let Some(seed) = seed {
+            params.set_initial_prompt(seed);
         }
         params.set_no_speech_thold(NO_SPEECH);
         params.set_n_threads(threads());
@@ -142,13 +233,7 @@ impl Transcriber {
             .filter(|s| s.no_speech_probability() < NO_SPEECH)
             .map(|s| s.to_string().trim().to_string())
             .collect();
-        let text = clean(&text.join(" "));
-        // Only punctuation left (*.*): nothing was said.
-        Ok(Some(if text.chars().any(char::is_alphanumeric) {
-            text
-        } else {
-            String::new()
-        }))
+        Ok(Some(gate::measured(&text.join(" "), cut_repeats)))
     }
 }
 
@@ -234,48 +319,12 @@ fn threads() -> i32 {
     (n / 2).clamp(1, 8) as i32
 }
 
-/// Whisper marks sounds it heard but did not understand: `[BLANK_AUDIO]`, `(music)`. Those are
-/// not words the user said.
-fn clean(text: &str) -> String {
-    let mut out = String::new();
-    let mut depth = 0u32;
-    for c in text.chars() {
-        match c {
-            '[' | '(' => depth += 1,
-            ']' | ')' => depth = depth.saturating_sub(1),
-            _ if depth == 0 => out.push(c),
-            _ => {}
-        }
-    }
-    let mut text = out.split_whitespace().collect::<Vec<_>>().join(" ");
-    for p in [".", ",", "?", "!"] {
-        text = text.replace(&format!(" {p}"), p);
-    }
-    text
-}
-
-/// Linear resampling and down-mixing to what whisper takes. Speech needs nothing finer.
+/// Compatibility helper; capture itself propagates resampling failures to its caller.
 pub fn to_whisper(samples: &[f32], channels: u16, rate: u32) -> Vec<f32> {
-    let channels = usize::from(channels.max(1));
-    let mono: Vec<f32> = samples
-        .chunks(channels)
-        .map(|frame| frame.iter().sum::<f32>() / frame.len() as f32)
-        .collect();
-    if rate == SAMPLE_RATE || mono.is_empty() {
-        return mono;
-    }
-    let step = f64::from(rate) / f64::from(SAMPLE_RATE);
-    let len = (mono.len() as f64 / step) as usize;
-    (0..len)
-        .map(|i| {
-            let at = i as f64 * step;
-            let j = at as usize;
-            let frac = (at - j as f64) as f32;
-            let a = mono[j];
-            let b = mono.get(j + 1).copied().unwrap_or(a);
-            a + (b - a) * frac
-        })
-        .collect()
+    vults_audio::resample(samples, channels, rate).unwrap_or_else(|error| {
+        tracing::warn!(%error, "audio resampling failed");
+        Vec::new()
+    })
 }
 
 #[cfg(test)]
@@ -319,12 +368,5 @@ mod tests {
         soft.extend(tone(rate).iter().map(|s| s * 0.1));
         assert!(trim_silence(&soft).len() >= rate);
         assert!(vocabulary("pt").is_some() && vocabulary("ja").is_none());
-    }
-
-    #[test]
-    fn sounds_whisper_could_not_read_are_dropped() {
-        assert_eq!(clean(" [BLANK_AUDIO] "), "");
-        assert_eq!(clean("Hello (music) there [laughs]."), "Hello there.");
-        assert_eq!(clean("Why is the build failing?"), "Why is the build failing?");
     }
 }

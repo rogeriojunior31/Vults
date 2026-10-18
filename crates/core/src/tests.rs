@@ -86,6 +86,75 @@ fn rid(id: &str) -> RequestId {
 }
 
 #[test]
+fn dictation_rechecks_permissions_questions_deferred_cards_and_session_identity() {
+    let mut state = State::default();
+    let now = Instant::now();
+    reduce(&mut state, agent("a", AgentEvent::SessionStarted), now);
+    let terminal = state.sessions[&key("a")].terminal.clone();
+    assert_eq!(
+        state.dictation_safety(&key("a"), &terminal),
+        DictationSafety::Ready
+    );
+    reduce(&mut state, requested("a", "r1"), now);
+    assert_eq!(
+        state.dictation_safety(&key("a"), &terminal),
+        DictationSafety::Waiting
+    );
+    reduce(&mut state, Input::User(Intent::Skip { request: rid("r1") }), now);
+    assert_eq!(
+        state.dictation_safety(&key("a"), &terminal),
+        DictationSafety::Waiting
+    );
+    // A parallel tool update must not make a still-live, deferred card safe to type into.
+    state.sessions.get_mut(&key("a")).expect("session").status = Status::Working;
+    assert_eq!(
+        state.dictation_safety(&key("a"), &terminal),
+        DictationSafety::Waiting
+    );
+    state.sessions.get_mut(&key("a")).expect("session").status = Status::Approval;
+    reduce(
+        &mut state,
+        Input::User(Intent::Review { request: rid("r1") }),
+        now,
+    );
+    reduce(&mut state, decide("r1", Decision::Deny), now);
+    assert!(state.pending.is_empty());
+    assert_eq!(
+        state.dictation_safety(&key("a"), &terminal),
+        DictationSafety::Ready
+    );
+    reduce(
+        &mut state,
+        agent(
+            "a",
+            AgentEvent::Question {
+                message: "Continue?".into(),
+            },
+        ),
+        now,
+    );
+    assert_eq!(
+        state.dictation_safety(&key("a"), &terminal),
+        DictationSafety::Waiting
+    );
+    let mut changed = terminal.clone();
+    changed.pid = Some(99);
+    assert_eq!(
+        state.dictation_safety(&key("a"), &changed),
+        DictationSafety::Unavailable
+    );
+    assert_eq!(
+        state.dictation_safety(&key("missing"), &terminal),
+        DictationSafety::Unavailable
+    );
+    state.locked = true;
+    assert_eq!(
+        state.dictation_safety(&key("a"), &terminal),
+        DictationSafety::Unavailable
+    );
+}
+
+#[test]
 fn a_request_is_acked_and_answered_once() {
     let mut s = State::default();
     let now = Instant::now();
@@ -3059,6 +3128,18 @@ fn open_terminal_raises_a_window_in_any_x11_session_but_promises_no_wayland_one(
     assert!(!raise_with(None, &[("KITTY_WINDOW_ID", "3")]));
     let kitty = [("KITTY_WINDOW_ID", "3"), ("KITTY_LISTEN_ON", "unix:/tmp/kitty")];
     assert!(raise_with(None, &kitty));
+    assert!(!raise_with(None, &[("WEZTERM_PANE", "17")]));
+    let wezterm = [
+        ("WEZTERM_PANE", "17"),
+        ("WEZTERM_UNIX_SOCKET", "/run/user/1000/wezterm/gui-sock-42"),
+    ];
+    assert!(raise_with(None, &wezterm));
+    for socket in ["", "relative", "tcp:localhost:5000", "/tmp/bad\npath"] {
+        assert!(!raise_with(
+            None,
+            &[("WEZTERM_PANE", "17"), ("WEZTERM_UNIX_SOCKET", socket)]
+        ));
+    }
 }
 
 #[test]

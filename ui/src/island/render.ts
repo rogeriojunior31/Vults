@@ -14,7 +14,7 @@ import type { WeekView } from "../view.gen";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
-import { OPEN_ZOOM, quickBounds, quickPixels } from "./geometry";
+import { DICTATION_HEIGHT, OPEN_ZOOM, quickBounds, quickPixels } from "./geometry";
 import { idleClip, setMusic } from "./behavior";
 import { onDayPart } from "./daypart";
 import { ChatPanel, type ChatBackend } from "./chat";
@@ -225,6 +225,9 @@ function alertRow(a: AlertView, actions: Actions): HTMLElement {
 
 export interface Island {
   render(v: ViewModel): void;
+  /** Transient feedback reserves its own row; cards keep their usual layout. */
+  setDictation(line: HTMLElement | null): void;
+  onDictationLayout(layout: (rect: DOMRect, visible: boolean) => void): void;
   openNow(): void;
   /** The view on screen, to re-render after a setting changes. */
   last(): ViewModel;
@@ -275,6 +278,9 @@ export interface Island {
 
 export function createIsland(root: HTMLElement, actions: Actions): Island {
   const fsm = new IslandMachine();
+  let dictationLine: HTMLElement | null = null;
+  let dictationSpace = 0;
+  let dictationLayout: ((rect: DOMRect, visible: boolean) => void) | undefined;
   const sky = new Sky(() => {
     compactScene.refresh(); focusScene.refresh(); habitatScene.refresh();
   });
@@ -326,7 +332,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   inner.style.setProperty("zoom", String(OPEN_ZOOM));
   let boundsShown = "";
   const fitQuick = () => {
-    const bounds = quickBounds(window.innerWidth, window.innerHeight);
+    const bounds = quickBounds(window.innerWidth, window.innerHeight, dictationSpace);
     const signature = `${bounds.width}|${bounds.chatWidth}|${bounds.height}`;
     if (signature === boundsShown) return;
     boundsShown = signature;
@@ -688,12 +694,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   wake.addEventListener("pointerleave", () => {
     if (!windowPointer && !root.matches(":hover")) pointerOut();
   });
-  // A click on the compact pill opens it. Only on the pill: a click on Fold must not bubble up
-  // and open the island again.
+  // The transient row shares Mini's normal open action; it never selects a bird underneath it.
   root.addEventListener("click", (e) => {
-    if (fsm.mode !== "compact" || !compact.contains(e.target as Node)) return;
+    const onFlock = compact.contains(e.target as Node);
+    if (fsm.mode !== "compact" || (!onFlock && !(dictationSpace && e.target === root))) return;
     // A click on a vult opens the island on its session; a waiting card keeps the front.
-    const k = cardWaits ? null : vultAt(e.clientX);
+    const k = cardWaits || !onFlock ? null : vultAt(e.clientX);
     const s = k ? order.find((o) => key(o) === k) : undefined;
     if (s) pick(s, false);
     fsm.click();
@@ -1484,6 +1490,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // A connector's card takes the whole overview, and that edge is its corner: every bird lands
     // in the header instead, side by side in the gap after the name (the rest share its last spot).
     const rect = root.getBoundingClientRect();
+    dictationLayout?.(rect, dictationSpace > 0);
     const brand = boardShown && fsm.mode === "open" ? headerSlot.querySelector(".header-brand") : null;
     const tools = brand?.parentElement?.querySelector(".header-actions");
     const gap = brand && tools && { from: brand.getBoundingClientRect().right, bottom: brand.getBoundingClientRect().bottom,
@@ -1927,18 +1934,31 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let sent = "";
 
   function target(mode: Mode): { w: number; h: number; r: number } {
-    if (mode === "hidden") return { w: HIDDEN_W, h: 0, r: RADIUS.compact };
+    if (mode === "hidden") return {
+      w: dictationSpace ? Math.min(COMPACT_W, window.innerWidth) : HIDDEN_W,
+      h: dictationSpace, r: RADIUS.compact,
+    };
     if (mode === "compact")
-      return { w: COMPACT_W, h: COMPACT_H, r: RADIUS.compact };
+      return { w: COMPACT_W, h: COMPACT_H + dictationSpace, r: RADIUS.compact };
     // Layout dimensions include the zoom explicitly; the frame and input region use screen pixels.
     return {
-      ...quickPixels(inner.offsetWidth, inner.offsetHeight),
+      ...quickPixels(inner.offsetWidth, inner.offsetHeight, dictationSpace),
       r: RADIUS.open,
     };
   }
 
   /** Moves the shape toward the mode's size, and tells the window which part takes the pointer. */
   function reshape(mode: Mode): void {
+    const shown = !!dictationLine && !raw.locked && !raw.approval && !raw.sessions.some(s => s.card || s.waiting)
+      && !chat.hasWaitingApproval() && !raw.inbox?.some(item => item.source.kind === "chat" && item.source.count > 0)
+      && !nestIsOpen() && presenceNow() !== "paused" && window.innerHeight >= COMPACT_H + DICTATION_HEIGHT;
+    if (dictationLine) dictationLine.hidden = !shown;
+    dictationSpace = shown ? DICTATION_HEIGHT : 0;
+    root.classList.toggle("has-dictation", shown);
+    root.style.setProperty("--dictation-space", `${dictationSpace}px`);
+    inner.style.top = `${dictationSpace / OPEN_ZOOM}px`;
+    compact.style.top = `${dictationSpace}px`;
+    fitQuick();
     if (mode === "open" && main.contains(chat.element)) chat.fitContents();
     const t = target(mode);
     const now = performance.now();
@@ -2033,6 +2053,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     fsm.hold(open);
   };
   const shortcut = (id: string) => {
+    if (id === "talk-cancel") { chat.cancelVoice(); return; }
     if (id === "talk" || id === "talk-up") {
       chat.holdToTalk(id === "talk");
       return;
@@ -2245,6 +2266,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     render(raw);
   };
   return {
+    onDictationLayout(layout) { dictationLayout = layout; },
+    setDictation(line) {
+      if (dictationLine === line) return;
+      dictationLine?.remove();
+      dictationLine = line;
+      if (line) root.append(line);
+      reshape(fsm.mode);
+    },
     render, openNow: () => { fsm.open(Clock.now()); openQuick("now"); }, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, settingsChanged: quickSettingsChanged, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,

@@ -4,6 +4,82 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Reconcile the current dictation statistics and Diagnostics guides, Settings reference and Nest navigation in English and Brazilian Portuguese. Add a local validation checklist, explain the separate lifetimes of usage/timings/session counters, and retain real-desktop and Small/Vulkan latency acceptance as pending.
+
+- Add Diagnostics at the end of Dictation settings: an explicit six-second local microphone test with speech bands, estimated dBFS noise floor and input verdict; current audio/desktop/GPU/VAD state; memory-only loop/retry/Copied counters; and retained stage p50/p95. Cancel tests on departure, lock, voice start or lost page contact, without transcription, history, clipboard or permission requests.
+
+- Add Activity > Dictation statistics with 7-day, 30-day and lifetime usage, estimated time saved, speed, daily bars and top apps. Keep usage after transcript erasure, label legacy app attribution gaps, retain period filters and include dictated words in Week even without agent turns.
+
+- Record local dictation stage timings and per-stage p50/p95 over the newest 50 retained deliveries. Keep legacy/unused measurements unknown, exclude cancelled/failed/empty work and replay, and erase timings with transcript retention. Activity statistics and Settings diagnostics present these measurements.
+
+- Add Dictionary and Snippets work pages for saved dictation words, ordered replacements and literal snippets, with explicit deletion, retry and retained drafts. Try a sentence uses the real local pipeline with highlighted changes, cancellation and optional terminal context, without audio, models, clipboard or history. Add the two opt-in vocabulary controls in Dictation settings, retaining the measured Turbo/English restriction.
+
+- Add optional local project vocabulary for dictation: cache package/dependency/module/file names and branch per known Git working tree, refresh on session start, and select from captured session context or an unambiguous editor/terminal title. Freeze context across preview/final, prioritize personal dictionary words under the existing 224-token cap and model/language gate, and leave the preference off by default. Configure it in Settings > Dictation > Your words.
+
+- Add optional per-recording dictionary context for Whisper preview/final dictation, off by default and capped at 224 tokens. Qualify only Turbo with fixed English from offline synthetic WER and silence/noise comparisons; keep other pairs on their existing prompts, preserve Chat and recheck Base retries. Configure vocabulary in Dictation settings; human-speech validation remains pending.
+
+- Apply saved Your words rules to independent final dictation: protected literal snippets, ordered replacements and eligible dictionary spelling before terminal-context spoken code. Keep per-recording snapshots, original/written history and replay behavior; preserve control-character barriers and reject oversized processing before delivery. Dictionary and Snippets work pages own editing.
+
+- Store dictation dictionary words, ordered replacements and literal snippets locally behind Nest-only commands. Reject case-insensitive duplicate words/triggers, update replacement sources without reordering, and preserve preferences when clearing history.
+
+- Reconcile the dictation guide, settings reference and architecture with the working N3 build. Document supported automatic-insertion destinations and manual-paste fallbacks, current controls and their privacy boundaries in English and Brazilian Portuguese. Keep later prototype features distinct from available behavior.
+
+- Add Music while you speak in Dictation settings: lower playing media to at most 25%, pause it or leave it alone. Restore each untouched player's own state after capture/cancellation; preserve user changes and skip crashed/restarted players. Local MPRIS controls stay separate from Now playing and never delay microphone capture.
+
+- Add optional cancel-by-voice for independent dictation, on by default on X11 and Wayland. Whole or trailing English/Portuguese/Spanish cancel phrases discard the final transcript before delivery, report Cancelled and save no history or totals. Active recordings keep their choice; replay and Chat bypass spoken cancellation.
+
+- Add spoken-code punctuation for captured terminals and sessions, with a saved switch in Dictation settings. Join English, Portuguese and Spanish punctuation terms inside identifiers while preserving prose/unknown targets, case and control bytes. Retained history keeps heard and written text; replay never reformats or submits it.
+
+- Add saved dictation processing choices for repetition removal and the one-time Base fallback. Preview and final text use each recording's choices; defaults stay on, silence cleanup remains active, and disabling fallback skips its extra speech check. Chat keeps its existing processing.
+
+- Add a saved microphone choice for independent dictation, with explicit device refresh and loading/error/empty feedback. Disconnected preferences stay selected, capture keeps its existing missing-input fallback, and Chat keeps using its default microphone.
+
+- Add saved dictation gesture choices: hold with optional double tap, Space-lock and Esc cancellation. Defaults stay enabled, active turns keep their original choices, and the global Cancel shortcut always works. Space/Esc controls explain their X11 requirement and are unavailable on Wayland.
+
+- Add **Change in KDE…** to Dictation settings, opening the installed desktop shortcut editor with failure/retry feedback. Current key labels keep following desktop binding events.
+
+- Move current dictation controls into Settings > Dictation, linked from History, General and Chat & voice. Keep shared model/language setup in Chat & voice and add confirmed history erasure with failure/retry feedback. Existing choices and permission ownership are preserved.
+
+- Keep inactive Nest tabs hidden even when a later pane style uses flex or grid, preventing Dictation from appearing below Chat.
+
+- Put the Nest and Compact Chat drafts in a single rounded row, with attachment on the left and microphone/Send on the right, preserving growing drafts and the separate file strip.
+
+- Add the Nest Dictation history page with local search, measured daily figures, heard/written text, copy/reuse and confirmed deletion. Retention is visible in General until the dedicated settings page arrives; active dictations now update history without storing audio or previous clipboard contents.
+
+- Prepare the local dictation history store with retention, independent daily/app totals and transcript erasure. Live recordings still keep their last text only in memory until History and privacy controls are connected.
+
+- Add an optional dictation start cue that respects sound volume, mute and Do Not Disturb. It plays once per new recording and stays silent on surface changes, snapshots, failures and cancellations.
+
+- Show localized Unicode word totals after confirmed dictation delivery. Caption expiry preserves the total; active recordings, failures and cancellations never reuse a previous count. Correction totals await their later processing features.
+
+- Add optional two-row dictation captions for clipped lines and confirmed delivery text. They yield to cards and limited space, take no clicks, and expire at the original two-second deadline across surface changes. General's dictation controls hold the switch until the dedicated settings page arrives.
+
+- Show real microphone bands and the shared local GPU preview during global dictation. Cancellation and capture end discard the preview; reduced motion keeps the text without moving bands.
+
+- Give Mini and Quick a reserved neutral dictation row with phase icons. Waiting cards and screen lock hide feedback immediately; the row follows zoom and either dock anchor within the fixed overlay.
+
+- Open terminal targets the WezTerm instance recorded by the hook, without loading Lua configuration, starting a server or falling back to a different instance. Direct WezTerm dictation stays copy-only because its input overlays do not have a distinct pane identity.
+
+- Add exact tmux dictation delivery for flock sessions in XTerm/UXTerm or Kitty, with live permission/question and deferred-card guards, literal single-line input without Enter, and distinct In session or Copied/waiting feedback. Other terminal transports remain copy-only.
+
+- Add opt-in dictation paste on Plasma Wayland through a keyboard-only desktop portal grant. Settings shows permission state and explicit retries; restore tokens stay only in the OS keyring. Focus checkpoints and a native text lease protect the destination and newer copies. Terminal paste chords remain disabled; exact tmux delivery has its separate checks.
+
+- Add off-by-default dictation paste in supported native X11 text editors, with focus checks, honest Pasted feedback and conditional clipboard-text restoration that preserves newer copies. Settings explains the clipboard limits. Other apps stay copy-only; terminal delivery uses the separate exact tmux path.
+
+- On X11, Space can lock a held dictation and Esc cancels recording or transcription. Other non-modifier keys discard the initial hold/tap; actual shortcut chords and repeats are ignored, and the listener closes when the turn ends. Wayland keeps the existing double-tap and separate cancel shortcut.
+
+- Fix global dictation showing Copied while Wayland kept the previous clipboard. Background copying now uses native clipboard support and confirms the text by reading it back; unavailable access is reported as an error.
+
+- Global dictation observes the foreground app on X11 and Plasma Wayland and names it in copied feedback, with a terminal paste hint. Unsupported or late observations stay unknown; this context does not authorize insertion.
+
+- Local global dictation copies text without opening Chat, including with Zeca off. Hold or double-tap to record, cancel with its own shortcut, and copy the last result again; desktop bindings are shown in Settings and follow remapping. Additional session transports remain later N3 steps.
+
+- Chat voice preview and final transcripts reduce long repetition loops and omit known standalone silence artifacts. Technical text in parentheses and brackets is preserved.
+
+- Chat voice filters brief noise and keeps short pauses within a phrase while preserving its 1.5-second end-of-speech pause.
+
+- Chat voice uses improved audio conversion while keeping its one-minute recording limit; capture failures are reported instead of silently returning incomplete audio.
+
 - Reopening the Nest from the tray keeps the last tab and Activity subsection during the app session; explicit routes still take priority, and Zeca off returns Chat to Flock.
 
 - Reopening a minimized Nest restores its window. Minimization returns approval shortcuts to the island and does not overwrite the saved Room size.

@@ -38,6 +38,17 @@ confidence-threshold = 0.9
 [licenses.private]
 ignore = true
 
+# Arboard's Windows-only dependencies: reviewed permissive Boost license, scoped to these versions.
+[[licenses.exceptions]]
+name = "clipboard-win"
+version = "=5.4.1"
+allow = ["BSL-1.0"]
+
+[[licenses.exceptions]]
+name = "error-code"
+version = "=3.4.0"
+allow = ["BSL-1.0"]
+
 [bans]
 # Tauri's tree carries many duplicate versions; flagging them would only be noise.
 multiple-versions = "allow"

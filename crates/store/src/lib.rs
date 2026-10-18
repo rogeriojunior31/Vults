@@ -1,12 +1,14 @@
 //! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
 //! the history of turns ([`history`]), the audit log ([`audit`]), the user's consents
-//! ([`consents`]), traces ([`traces`]) and Zeca's conversations ([`conversations`]).
+//! ([`consents`]), traces ([`traces`]), Zeca's conversations ([`conversations`]) and the
+//! text-only dictation history API ([`dictations`]).
 
 pub mod audit;
 pub mod consents;
 pub mod conversations;
 pub mod devices;
+pub mod dictations;
 pub mod history;
 pub mod journal;
 pub mod proposals;
@@ -15,6 +17,7 @@ mod retired_tasks;
 pub mod sleep;
 pub mod spend;
 pub mod traces;
+pub mod words;
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -139,6 +142,14 @@ const MIGRATIONS: &[&str] = &[
     spend::TABLE,
     // 20: the tokens a task's runs used (W9).
     retired_tasks::TOKENS,
+    // 21: text-only dictation history and independent usage totals (N3 V1.13).
+    dictations::TABLE,
+    // 22: user-maintained dictation dictionary, replacements and snippets (N3 V2.1).
+    words::TABLE,
+    // 23: nullable stage timings on retained delivered dictations (N3 V4.1).
+    dictations::TIMINGS,
+    // 24: content-free daily application word totals, independent of transcript retention.
+    dictations::statistics::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -241,7 +252,7 @@ impl Store {
 
     /// Settings → Activity → Clear history: the history, the audit log, the traces, Zeca's
     /// conversations and his journal, in one transaction (all go, or none), then compacted; the
-    /// 0.1.x files too if any are left.
+    /// 0.1.x files too if any are left. Dictation text goes too; its independent usage totals stay.
     pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
         let tx = self
             .conn
@@ -250,7 +261,7 @@ impl Store {
             "DELETE FROM turns; DELETE FROM days; DELETE FROM traces;
              DELETE FROM chat_messages; DELETE FROM conversations;
              DELETE FROM journal; DELETE FROM journal_days; DELETE FROM recall_vectors;
-             DELETE FROM memory_proposals; DELETE FROM sleep_runs;",
+             DELETE FROM memory_proposals; DELETE FROM sleep_runs; DELETE FROM dictations;",
         )?;
         audit::clear_audit_in(&tx)?;
         tx.commit()?;
@@ -315,7 +326,7 @@ mod tests {
         conn.pragma_update(None, "user_version", 14).unwrap();
         drop(conn);
         let mut store = Store::open(&dir).unwrap();
-        assert_eq!(store.schema_version().unwrap(), 20);
+        assert_eq!(store.schema_version().unwrap(), MIGRATIONS.len() as i64);
         assert_eq!(
             store
                 .conn
@@ -337,7 +348,7 @@ mod tests {
             .unwrap();
         drop(store);
         let store = Store::open(&dir).unwrap();
-        assert_eq!(store.schema_version().unwrap(), 20);
+        assert_eq!(store.schema_version().unwrap(), MIGRATIONS.len() as i64);
         assert_eq!(store.spend_day("2026-10-16").unwrap().usd, 1.25);
         assert_eq!(store.spend_roosts("2026-10-16").unwrap()[0].today, 1.25);
     }

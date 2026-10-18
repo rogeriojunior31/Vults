@@ -10,10 +10,11 @@
     "lab": "Lead: Flock, Chat (with Memory), Connections, Activity, Dictation. Tasks were removed on 2026-10-16. The gear opens Settings. Full screen is the Lab maximized."
   },
   "approved": {
-    "date": "2026-10-15",
-    "proposals": ["P1 single prototype in git", "P2 Island · Compact · Lab", "P3 one card, three densities", "P4 Compact: Flock · Chat · Now", "P5 Lab navigation", "P6 one detail for sessions and task runs", "P7 connections for you and for Zeca", "P8 Zeca's chat as an agent", "P9 design rules", "P10 coverage manifest", "P11 hygiene"]
+    "date": "2026-10-17",
+    "initialDate": "2026-10-15",
+    "proposals": ["P1 single prototype in git", "P2 Island · Compact · Lab", "P3 one card, three densities", "P4 Compact: Flock · Chat · Now", "P5 Lab navigation", "P6 one detail for sessions and task runs", "P7 connections for you and for Zeca", "P8 Zeca's chat as an agent", "P9 design rules", "P10 coverage manifest", "P11 hygiene", "P12 Dictation (accepted 2026-10-17)"]
   },
-  "pending": ["P12 Dictation: a sixth Lab tab (History, Your words, Meetings, Statistics), Settings › Dictation, Zeca's voice in Settings › Chat & voice, the island over the flock (docs/dev/plan-dictation.md V0.9)"],
+  "pending": [],
   "sources": ["template.html", "preview.js", "workspace.js", "cards.js", "island.js", "compact.js", "lab.js", "connections.js", "records.js", "settings.js", "memory.js", "dictation.js", "copy.json", "features.json", "layout.mjs"],
   "reference": {
     "project": "open-claude-ui",

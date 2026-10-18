@@ -6,6 +6,10 @@ mod chat;
 mod connectors;
 mod context;
 mod continuation;
+#[cfg(target_os = "linux")]
+mod dictation;
+mod dictation_history;
+mod dictation_words;
 mod doctor;
 mod flock_tools;
 mod folder;
@@ -31,6 +35,8 @@ mod records;
 mod roosts;
 mod runtime;
 mod settings;
+#[cfg(target_os = "linux")]
+mod shortcut_route;
 mod sleep;
 mod spend;
 mod traces;
@@ -138,6 +144,10 @@ pub fn run() {
             chat::chat_conversations,
             roosts::roosts,
             doctor::agents_doctor,
+            doctor::dictation::dictation_doctor,
+            doctor::dictation::microphone::dictation_mic_start,
+            doctor::dictation::microphone::dictation_mic_status,
+            doctor::dictation::microphone::dictation_mic_stop,
             roosts::roost_share_preview,
             roosts::roost_share_apply,
             chat::chat_current,
@@ -219,6 +229,14 @@ pub fn run() {
             settings::set_now_playing,
             settings::set_codex_usage,
             settings::set_native_chat,
+            settings::set_dictation_insert,
+            settings::set_dictation_caption,
+            settings::set_dictation_sound,
+            settings::set_dictation_gesture,
+            settings::set_dictation_processing,
+            settings::set_dictation_music,
+            settings::dictation_microphones,
+            settings::set_dictation_microphone,
             settings::set_chat_access,
             settings::web_settings,
             settings::set_web,
@@ -271,6 +289,19 @@ pub fn run() {
             nest_is_open,
             nest_holds_cards,
             shortcut_keys,
+            open_shortcut_settings,
+            dictation_status,
+            dictation_history::dictation_history,
+            dictation_history::dictation_statistics,
+            dictation_words::dictation_words,
+            dictation_words::dictation_words_change,
+            dictation_words::dictation_try,
+            dictation_history::dictation_delete,
+            dictation_history::dictation_clear,
+            dictation_history::dictation_paste_again,
+            dictation_history::set_dictation_keep,
+            dictation_permission,
+            retry_dictation_permission,
             first_name,
         ])
         .on_window_event(|win, event| {
@@ -281,6 +312,14 @@ pub fn run() {
                 // the compositor closing it because its monitor left: bring it back.
                 api.prevent_close();
                 revive(win.app_handle(), win.label());
+            }
+            #[cfg(target_os = "linux")]
+            if let tauri::WindowEvent::Focused(focused) = event {
+                dictation::permission::focus_changed(win.app_handle(), win.label(), *focused);
+            }
+            #[cfg(target_os = "linux")]
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                dictation::permission::focus_changed(win.app_handle(), win.label(), false);
             }
             if let tauri::WindowEvent::Focused(true) = event
                 && !SURFACES.contains(&win.label())
@@ -345,6 +384,8 @@ pub fn run() {
             tray::start(&handle)?;
             handle.manage(ShortcutKeys::default());
             #[cfg(target_os = "linux")]
+            dictation::start(&handle);
+            #[cfg(target_os = "linux")]
             listen_shortcuts(&handle);
             notify::start(&handle);
             runtime::start(handle.clone());
@@ -361,6 +402,11 @@ pub fn run() {
             app.run(|app, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
+                    #[cfg(target_os = "linux")]
+                    {
+                        dictation::permission::shutdown(app);
+                        dictation::cancel(app, true);
+                    }
                     save_nest_size(app);
                     vults_ipc::remove_socket();
                     // No flock for Zeca's MCP server once the app is gone.
@@ -445,6 +491,45 @@ mod label_tests {
         assert!(settings_page(settings.as_ref()).is_ok());
         assert!(settings_page(nest.as_ref()).is_err());
         assert!(settings_page(island.as_ref()).is_err());
+        assert!(open_shortcut_settings(nest.as_ref().clone()).is_err());
+        assert!(open_shortcut_settings(island.as_ref().clone()).is_err());
+        for view in [nest.as_ref(), island.as_ref()] {
+            assert!(
+                settings::set_dictation_music(
+                    app.handle().clone(),
+                    view.clone(),
+                    vults_platform::music::Mode::Pause
+                )
+                .is_err()
+            );
+            assert!(
+                settings::set_dictation_processing(
+                    app.handle().clone(),
+                    view.clone(),
+                    "retryBase".into(),
+                    false
+                )
+                .is_err()
+            );
+            assert!(
+                settings::set_dictation_microphone(
+                    app.handle().clone(),
+                    view.clone(),
+                    Some("USB mic".into())
+                )
+                .is_err()
+            );
+            assert!(tauri::async_runtime::block_on(settings::dictation_microphones(view.clone())).is_err());
+            assert!(
+                settings::set_dictation_gesture(
+                    app.handle().clone(),
+                    view.clone(),
+                    "doubleTap".into(),
+                    false
+                )
+                .is_err()
+            );
+        }
         assert!(policies::from_settings(settings.as_ref()).is_ok());
         assert!(policies::from_settings(nest.as_ref()).is_err());
         assert!(nest_record_query(settings.as_ref().clone(), "history".into(), Some("test".into())).is_err());
@@ -559,6 +644,11 @@ mod tests {
             "connections"
         );
         assert_eq!(super::restored_tab(None, Some("chat"), false), "flock");
+        assert_eq!(super::restored_tab(None, Some("dictation"), false), "dictation");
+        assert_eq!(
+            super::restored_tab(None, Some("dictation-statistics"), false),
+            "dictation-statistics"
+        );
         assert_eq!(super::restored_tab(Some("<script>"), Some("cost"), true), "cost");
         assert_eq!(super::restored_tab(None, None, true), "flock");
         assert_eq!(super::restored_tab(None, Some("tasks"), true), "flock");
@@ -578,40 +668,6 @@ mod tests {
         assert!(!super::update_nest_focus(&mut state, Some(true), None));
         assert!(super::update_nest_focus(&mut state, None, Some(true)));
         assert!(!super::update_nest_focus(&mut state, Some(false), Some(false)));
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn talk_release_returns_to_its_recording_surface_after_focus_changes() {
-        let talk_nest = super::AtomicBool::new(false);
-        assert_eq!(
-            super::shortcut_target("talk", true, true, &talk_nest),
-            super::NEST
-        );
-        assert_eq!(
-            super::shortcut_target("talk", false, false, &talk_nest),
-            super::NEST
-        );
-        assert_eq!(
-            super::shortcut_target("allow", true, false, &talk_nest),
-            super::ISLAND
-        );
-        assert_eq!(
-            super::shortcut_target("deny", true, true, &talk_nest),
-            super::NEST
-        );
-        assert_eq!(
-            super::shortcut_target("talk", true, false, &talk_nest),
-            super::ISLAND
-        );
-        assert_eq!(
-            super::shortcut_target("talk", false, true, &talk_nest),
-            super::ISLAND
-        );
-        assert_eq!(
-            super::shortcut_target("open", true, true, &talk_nest),
-            super::ISLAND
-        );
     }
 
     #[test]
@@ -722,6 +778,15 @@ fn shortcut_keys(state: tauri::State<'_, ShortcutKeys>) -> std::collections::BTr
     state.0.lock().map(|m| m.clone()).unwrap_or_default()
 }
 
+#[tauri::command]
+fn open_shortcut_settings<R: tauri::Runtime>(window: tauri::Webview<R>) -> Result<(), String> {
+    settings_page(&window)?;
+    #[cfg(target_os = "linux")]
+    return vults_platform::shortcuts::open_settings();
+    #[cfg(not(target_os = "linux"))]
+    Err("KDE Shortcuts is unavailable on this platform.".into())
+}
+
 /// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
 /// core; the rest go to the island, which decides whether a card is on screen to answer (a press
 /// with nothing waiting does nothing). Allow, Deny and Talk go to the Nest while the user is in it.
@@ -732,10 +797,22 @@ fn listen_shortcuts(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let emit = app.clone();
         let keys = app.clone();
-        let talk_nest = AtomicBool::new(false);
+        let words = app.clone();
+        let router = std::sync::Arc::new(std::sync::Mutex::new(shortcut_route::Router::default()));
+        let bound_router = router.clone();
         let result = vults_platform::shortcuts::listen(
             vults_brand::BUNDLE_ID,
+            move |id| vults_core::i18n::dictation_shortcut(settings::lang(&words), id).map(str::to_owned),
             move |bound| {
+                // Rebinding may not deliver the old key's release.
+                bound_router.lock().unwrap_or_else(|e| e.into_inner()).reset();
+                if let Some(state) = keys.try_state::<dictation::State>() {
+                    state.shortcuts_changed();
+                }
+                voice::cancel(&keys);
+                for surface in [ISLAND, NEST] {
+                    let _ = keys.emit_to(surface, "shortcut", "talk-cancel");
+                }
                 tracing::info!(count = bound.len(), "global shortcuts bound");
                 let map: std::collections::BTreeMap<_, _> = bound.into_iter().collect();
                 if let Ok(mut kept) = keys.state::<ShortcutKeys>().0.lock() {
@@ -762,35 +839,86 @@ fn listen_shortcuts(app: &AppHandle) {
                     }
                     return;
                 }
-                // The talk key is the chat's mic: nothing to hold with Zeca off.
-                if let Some(event) = vults_platform::shortcuts::island_event(id, down, settings::zeca(&emit))
-                {
-                    let to = shortcut_target(id, down, NEST_HOLDS.load(Ordering::Relaxed), &talk_nest);
+                if id == "talk-cancel" {
+                    if down {
+                        dictation::key(&emit, id, true);
+                        voice::cancel(&emit);
+                        for surface in [ISLAND, NEST] {
+                            let _ = emit.emit_to(surface, "shortcut", "talk-cancel");
+                        }
+                    }
+                    return;
+                }
+                if id == "talk-again" {
+                    dictation::key(&emit, id, down);
+                    return;
+                }
+                if id == "talk" {
+                    use shortcut_route::{Surface, Target};
+                    let focus = if NEST_IN.lock().map(|s| s.0).unwrap_or(false) {
+                        if NEST_HOLDS.load(Ordering::Relaxed) {
+                            Surface::Nest
+                        } else {
+                            Surface::Other
+                        }
+                    } else if emit
+                        .get_webview_window(ISLAND)
+                        .is_some_and(|w| w.is_focused().unwrap_or(false))
+                    {
+                        Surface::Island
+                    } else if emit.windows().values().any(|w| w.is_focused().unwrap_or(false)) {
+                        Surface::Other
+                    } else {
+                        Surface::External
+                    };
+                    let target = router.lock().unwrap_or_else(|e| e.into_inner()).talk(
+                        down,
+                        focus,
+                        settings::zeca(&emit),
+                        dictation::active(&emit),
+                    );
+                    match target {
+                        Some(Target::Dictation) => dictation::key(&emit, id, down),
+                        Some(target) => {
+                            if down {
+                                dictation::cancel(&emit, false);
+                            }
+                            let to = if target == Target::Nest { NEST } else { ISLAND };
+                            let event = if down { "talk" } else { "talk-up" };
+                            let _ = emit.emit_to(to, "shortcut", event);
+                        }
+                        None => {}
+                    }
+                    return;
+                }
+                // Ctrl+Alt+Space is also Open: Space-lock must keep the recording's focus.
+                if id == "open" && dictation::holds_space(&emit) {
+                    return;
+                }
+                if let Some(event) = vults_platform::shortcuts::island_event(id, down) {
+                    let to = if matches!(id, "allow" | "deny") && NEST_HOLDS.load(Ordering::Relaxed) {
+                        NEST
+                    } else {
+                        ISLAND
+                    };
                     let _ = emit.emit_to(to, "shortcut", event);
                 }
             },
         )
         .await;
+        dictation::cancel(&app, true);
+        voice::cancel(&app);
+        if let Ok(mut keys) = app.state::<ShortcutKeys>().0.lock() {
+            keys.clear();
+        }
+        let _ = app.emit(
+            "shortcut-keys",
+            std::collections::BTreeMap::<String, String>::new(),
+        );
         if let Err(e) = result {
             tracing::warn!("global shortcuts unavailable: {e}");
         }
     });
-}
-
-/// Talk release belongs to its press even if focus moved; decisions follow the current surface.
-#[cfg(target_os = "linux")]
-fn shortcut_target(id: &str, down: bool, in_nest: bool, talk_nest: &AtomicBool) -> &'static str {
-    let nest = match id {
-        "talk" => {
-            if down {
-                talk_nest.store(in_nest, Ordering::Relaxed);
-            }
-            talk_nest.load(Ordering::Relaxed)
-        }
-        "allow" | "deny" => in_nest,
-        _ => false,
-    };
-    if nest { NEST } else { ISLAND }
 }
 
 /// For the island's hello; none when the account only has a login name.
@@ -979,6 +1107,8 @@ fn valid_nest_tab(tab: &str) -> bool {
             | "chat"
             | "activity"
             | "connections"
+            | "dictation"
+            | "dictation-statistics"
             | "week"
             | "projects"
             | "history"
@@ -1147,6 +1277,9 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
     let _ = window.unminimize();
     let _ = window.show();
     let _ = window.set_focus();
+    if hidden == SETTINGS {
+        doctor::dictation::stop_mic(app);
+    }
     if let Some(w) = app.get_webview(hidden) {
         set_shown(&w, false);
     }
@@ -1168,6 +1301,9 @@ static NEST_HOLDS: AtomicBool = AtomicBool::new(false);
 /// answers the cards and takes Allow / Deny's keys, and the island stays aside; anywhere else a
 /// card opens the island (ADR 0021).
 fn nest_holds(app: &AppHandle, focused: Option<bool>, shown: Option<bool>) {
+    if focused == Some(false) {
+        doctor::dictation::stop_mic(app);
+    }
     use tauri::Emitter;
     let Ok(mut state) = NEST_IN.lock() else {
         return;
@@ -1394,4 +1530,40 @@ pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
     // A page id is a plain word: nothing else reaches the URL or the event.
     let section = section.filter(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_lowercase()));
     nest_window(app, None, section, None);
+}
+
+#[tauri::command]
+fn dictation_permission(app: AppHandle) -> String {
+    #[cfg(target_os = "linux")]
+    return dictation::permission::status(app);
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = app;
+        "unavailable".into()
+    }
+}
+
+#[tauri::command]
+async fn retry_dictation_permission(app: AppHandle, window: tauri::Webview) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    return dictation::permission::retry(app, window).await;
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (app, window);
+        Err("Dictation insertion is unavailable.".into())
+    }
+}
+
+#[tauri::command]
+fn dictation_status(app: AppHandle) -> Option<serde_json::Value> {
+    #[cfg(target_os = "linux")]
+    return app
+        .try_state::<dictation::State>()
+        .and_then(|s| s.status())
+        .and_then(|status| serde_json::to_value(status).ok());
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = app;
+        None
+    }
 }

@@ -33,6 +33,13 @@ async fn changed(app: &AppHandle, now: bool) {
         return;
     }
     tracing::info!(locked = now, "screen lock");
+    if now {
+        crate::doctor::dictation::stop_mic(app);
+    }
+    #[cfg(target_os = "linux")]
+    if now {
+        crate::dictation::cancel(app, true);
+    }
     crate::connectors::apply(app);
     crate::runtime::set_locked(app, now).await;
 }

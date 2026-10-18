@@ -45,7 +45,7 @@ impl Pace {
 /// The preview running beside a recording. Dropping it stops it: a pass under way is aborted, and
 /// its text, if it comes anyway, is never shown.
 #[derive(Debug)]
-pub(crate) struct Preview {
+pub struct Preview {
     stop: Arc<AtomicBool>,
 }
 
@@ -56,6 +56,8 @@ impl Preview {
         audio: Audio,
         load: impl FnOnce() -> Result<Arc<Transcriber>, String> + Send + 'static,
         language: Option<String>,
+        cut_repeats: bool,
+        words: impl Fn() -> Vec<String> + Send + 'static,
         show: impl Fn(String) + Send + 'static,
     ) -> Self {
         let stop = Arc::new(AtomicBool::new(false));
@@ -63,7 +65,15 @@ impl Preview {
         let spawned = std::thread::Builder::new()
             .name("voice-preview".into())
             .spawn(move || {
-                if let Err(e) = run(&audio, load, language.as_deref(), &show, &flag) {
+                if let Err(e) = run(
+                    &audio,
+                    load,
+                    language.as_deref(),
+                    cut_repeats,
+                    words,
+                    &show,
+                    &flag,
+                ) {
                     tracing::warn!("voice preview: {e}");
                 }
             });
@@ -84,6 +94,8 @@ fn run(
     audio: &Audio,
     load: impl FnOnce() -> Result<Arc<Transcriber>, String>,
     language: Option<&str>,
+    cut_repeats: bool,
+    words: impl Fn() -> Vec<String>,
     show: &dyn Fn(String),
     stop: &AtomicBool,
 ) -> Result<(), String> {
@@ -102,7 +114,7 @@ fn run(
             continue;
         }
         let pcm = audio.all();
-        let text = transcriber.preview(&pcm, language, stop)?;
+        let text = transcriber.preview(&pcm, language, stop, cut_repeats, &words())?;
         pace.done(now, now.elapsed(), pcm.len());
         match text {
             // Stopped meanwhile: the final transcription is on its way.
@@ -175,13 +187,17 @@ mod tests {
             .collect();
         let t = Transcriber::load(std::path::Path::new(&model), false).expect("model");
         let stop = AtomicBool::new(false);
-        let text = t.preview(&words, Some("en"), &stop).expect("preview");
+        let text = t.preview(&words, Some("en"), &stop, true, &[]).expect("preview");
         assert!(text.is_some_and(|t| t.contains("fellow Americans")));
         // Stopped while it decodes: it gives up instead of finishing.
         // Three times the speech, so a whole pass is long enough to see it cut short.
         let long: Vec<f32> = [&words[..], &words[..], &words[..]].concat();
         let started = Instant::now();
-        assert!(t.preview(&long, Some("en"), &stop).expect("preview").is_some());
+        assert!(
+            t.preview(&long, Some("en"), &stop, true, &[])
+                .expect("preview")
+                .is_some()
+        );
         let whole = started.elapsed();
         let started = Instant::now();
         let aborted = std::thread::scope(|s| {
@@ -189,7 +205,7 @@ mod tests {
                 std::thread::sleep(MS(30));
                 stop.store(true, Ordering::SeqCst);
             });
-            t.preview(&long, Some("en"), &stop).expect("preview")
+            t.preview(&long, Some("en"), &stop, true, &[]).expect("preview")
         });
         assert_eq!(aborted, None);
         assert!(
@@ -197,6 +213,16 @@ mod tests {
             "aborted after {:?}, a whole pass takes {whole:?}",
             started.elapsed()
         );
+        assert_eq!(
+            t.transcribe_cancellable(&words, Some("en"), None, &stop, true)
+                .expect("cancelled final"),
+            None
+        );
+        stop.store(false, Ordering::SeqCst);
+        let cancellable = t
+            .transcribe_cancellable(&words, Some("en"), None, &stop, true)
+            .expect("cancellable final");
+        assert!(cancellable.is_some_and(|text| text.contains("your country")));
         let final_text = t.transcribe(&words, Some("en"), None).expect("final");
         assert!(final_text.contains("your country"), "{final_text}");
     }

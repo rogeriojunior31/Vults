@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 5741823445ff -->
+<!-- source: 2137c072eab9 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -59,16 +59,16 @@ informa progresso. O movimento reduzido mostra uma pose estática para o estado 
 os companheiros escondidos param de desenhar.
 
 No Quick, o compositor começa com uma linha de escrita e cresce conforme você digita, até o limite de altura.
-O clipe, o microfone opcional e Enviar ficam ao lado do rascunho; o clipe mantém o nome acessível
+O compositor usa uma linha arredondada: clipe à esquerda, rascunho no centro e microfone
+opcional/Enviar à direita; o clipe mantém o nome acessível
 e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própria acima dele. Suas mensagens ficam em balões à direita;
 as respostas seguem na coluna da conversa.
 
-O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há chat nem microfone, o atalho
-de fala não faz nada e os arquivos soltos na ilha não são aceitos. Veja
-[Sem o Zeca](island.md#without-zeca). No KDE Plasma, o desktop continua reservando **Ctrl+Alt+V**
-para o app enquanto isso; para usar a tecla em outra coisa, limpe *Hold to speak to the chat* em
-Configurações do Sistema → Atalhos; a tecla de fala então fica desligada até você dar uma tecla a
-ela de novo ali.
+O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há Chat nem
+microfone do Chat, e arquivos soltos na ilha não são aceitos. O [ditado local independente](dictation.md#global-dictation-first-slice)
+continua funcionando, inclusive sua tecla de fala. Veja [Sem o Zeca](island.md#without-zeca).
+Altere as teclas globais em Configurações do Sistema → Atalhos; Settings > General mostra os
+vínculos informados pelo desktop.
 
 <a id="where-it-works"></a>
 
@@ -151,7 +151,10 @@ e de uma lista vertical de sugestões. Quando chegam mensagens, a mesma cena usa
 menor em 2x acima do compositor. Seu espaço próprio mantém as mensagens livres da ave
 durante toda a rolagem. O cabeçalho baixo, o espaçamento menor entre mensagens e o rascunho
 inicial de uma linha deixam mais espaço para leitura; o campo cresce conforme você digita.
-Conversa e compositor compartilham uma coluna de até 760 px de largura. Os anexos ficam numa
+O compositor usa uma linha arredondada de cerca de 52-54 px de altura em repouso, com anexo à
+esquerda e microfone/Enviar à direita. Janelas baixas mantêm os controles menores e textos
+longos continuam rolando dentro do limite. Conversa e compositor compartilham uma coluna de
+até 760 px de largura. Os anexos ficam numa
 faixa horizontal com altura limitada, com nomes longos legíveis dentro de cada cartão.
 Janelas baixas limitam o campo de escrita e omitem a dica de teclado; com até 560 px de altura,
 também recolhem o retrato e usam controles menores no compositor.
@@ -231,17 +234,22 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 
 ## Falando em vez de digitar
 
+O ditado independente tem seus controles em **Settings → Dictation**, com um link em Chat e voz.
+O modelo e idioma abaixo são compartilhados pelos dois fluxos; ditado continua disponível com o
+Zeca desligado.
+
 Ligue uma vez em **Settings → Chat & voice → Voice**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
-e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece ao lado de Anexar na barra de ações do compositor,
+e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece ao lado de Enviar, à direita do rascunho,
 tanto no Nest quanto na ilha.
 
 - Clique no microfone e fale. Ele para sozinho depois de cerca de 1,5 s de silêncio após as suas
   palavras, ou quando você clica de novo; as palavras caem no campo de entrada para você ler e
   corrigir, e aí **Enter** as envia. O silêncio antes de você começar nunca o interrompe; se uma
   pausa o interromper, clique de novo para continuar.
-- Ou segure **Ctrl+Alt+V** de qualquer lugar: o chat abre e o Zeca escuta enquanto você segura
-  (pausas nunca o interrompem); soltar transforma tudo em texto. A tecla pode ser trocada em
-  Configurações do Sistema → Atalhos.
+- Ou segure **Ctrl+Alt+V** enquanto uma superfície do Chat do Vults tem foco: o Zeca escuta
+  enquanto você segura (pausas não interrompem); soltar preenche o rascunho. Fora do Vults, a
+  mesma tecla usa o [ditado independente](dictation.md#global-dictation-first-slice) e copia o
+  texto. Altere a tecla em Configurações do Sistema → Atalhos.
 - Em Sala ou Tela cheia, o atalho usa o chat dessa janela enquanto ela tem foco.
   As barras de volume e a prévia da fala também ficam nela. Sair do Chat, ocultar
   ou fechar a janela, ou bloquear a tela cancela uma gravação ativa.

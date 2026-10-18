@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 2545882cb5c8 -->
+<!-- source: 119f7e236fca -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -17,7 +17,7 @@ as janelas. Atividade e Conexões usam abas sublinhadas; as cores de status mant
 os diffs e os controles do Compact seguem o mesmo tema, incluindo a atualização ao vivo
 das cores dos agentes nas aves e do fio.
 
-Em larguras de pelo menos 900 px, arraste o separador de Settings, Connections, Recent ou Memory
+Em larguras de pelo menos 900 px, arraste o separador de Settings, Connections, Dictation, Recent ou Memory
 para redimensionar esse painel lateral. Um clique duplo restaura a largura; o botão de recolher
 mantém uma faixa estreita. O separador também aceita as setas, Home/End e Enter. A largura e o
 estado recolhido ficam salvos localmente, sem alterar seleção ou rascunhos. Janelas estreitas
@@ -55,7 +55,7 @@ mantendo os controles do cabeçalho e o rodapé acessíveis.
 Quando há espaço, o cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
 dura (um clique o encerra), o som, a busca (a paleta, como **Ctrl+K**), o seletor de tamanho e o
-botão de tela cheia. O mesmo cabeçalho traz quatro abas com os seus
+botão de tela cheia. O mesmo cabeçalho traz cinco abas com os seus
 ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
 traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa
@@ -64,7 +64,7 @@ primeiro ali), onde você o responde. As Configurações continuam uma página p
 config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
 seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
-**Alt+1** a **Alt+4** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
+**Alt+1** a **Alt+5** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
 desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.
@@ -188,9 +188,11 @@ Uma restauração atrasada preserva qualquer texto digitado depois.
 
 O que este computador guarda, só lido aqui:
 
-- **Week**: os quatro números da semana (tempo com os seus agentes, turnos, linhas alteradas, as
-  suas respostas), uma barra por dia (um clique mostra aquele dia), **Save as image…** com ou sem
+- **Week**: os números da semana dos agentes (tempo, turnos, linhas alteradas, as
+  suas respostas), palavras ditadas, uma barra por dia (um clique mostra aquele dia), **Save as image…** com ou sem
   os nomes dos projetos, e a grade do ano, com os interruptores do histórico ([Atividade](activity.md)).
+- **Ditado**: uso medido nos últimos 7 dias, 30 dias ou em todo o período, com barras diárias e
+  aplicativos mais usados ([Estatísticas do ditado](activity.md#dictation-statistics)). O período escolhido sobrevive à reabertura.
 - **By project**: o tempo de cada projeto nesta semana em barras (os worktrees de um repositório
   somam sob ele, com quantos ele tem), uma busca por projeto, branch ou agente, e um card para cada repositório em que uma sessão
   trabalha: as pastas e os branches, as sessões (um clique põe uma na frente em **Flock**), os seus
@@ -230,7 +232,7 @@ ligado aguardando seu primeiro card mostra a espera ou o erro com Atualizar e Co
 um status que não pôde ser lido oferece **Try again**, sem tratar o conector como desligado.
 Quando o limite diário de requisições se esgota, o motivo da espera fica explícito.
 
-No GitHub, quatro abas mantêm suas contagens: **Inbox** (o que espera por você: revisões pedidas
+No GitHub, cinco abas mantêm suas contagens: **Inbox** (o que espera por você: revisões pedidas
 a você, seus pull requests falhando, devolvidos ou prontos para merge e um branch padrão
 falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos seus branches padrão;
 em vermelho com quantos falham) e **Releases** (a mais recente de cada repositório). A busca
@@ -256,3 +258,21 @@ Uma atualização que falha mantém as linhas atuais e permite tentar de novo. *
 título mais discreto sem esmaecer o status ou as ações. **Add a connection** lista só conectores
 suportados que estão comprovadamente desligados; **Turn on in Settings…** e **Manage connections**
 abrem o único lugar que liga um conector ([Conectores](connectors.md)).
+
+<a id="dictation"></a>
+
+## Ditado
+
+A quinta aba abre o [histórico de ditado](dictation.md#dictation-history), inclusive com o Zeca
+desligado. A lista lateral agrupa Voz, Suas palavras e Sistema. **Histórico**, **Dicionário** e
+**Trechos** são páginas funcionais. O Dicionário edita palavras e substituições ordenadas e
+oferece **Testar uma frase** com as regras locais reais; Trechos salva conteúdo literal.
+Rascunhos e a página selecionada sobrevivem a mudanças entre Room/Full. Os links de configurações
+abrem **Settings > Ditado**, que reúne teclas, feedback, inserção, privacidade e as duas opções
+de vocabulário. O modelo e idioma compartilhados continuam em **Chat e voz**. O Diagnóstico fica
+no fim de Configurações > Ditado, com teste explícito de microfone e tempos retidos por etapa
+([Diagnóstico](dictation.md#diagnostics)). **Estatísticas** abre Atividade > Ditado. As demais entradas
+estão marcadas como etapas futuras. Janelas estreitas mostram os destinos disponíveis numa faixa
+horizontal curta; as páginas de trabalho rolam separadamente. O Histórico mantém busca, detalhes
+abertos e posição de leitura; excluir transcrições mantém os totais medidos e as preferências de
+Suas palavras. Veja o [processamento das suas palavras](dictation.md#your-words-processing).

@@ -398,6 +398,7 @@ export class ChatPanel {
     onclick: () => this.sendOrStop(),
   });
   private voice: Voice = "off";
+  private voiceRun = 0;
   /** The mic opening, for a stop that comes before it is open. */
   private starting: Promise<void> | null = null;
   /** A voice model is chosen and downloaded: the mic shows. */
@@ -610,9 +611,8 @@ export class ChatPanel {
       el("div", { class: "composer" },
         this.mentionMenu,
         this.chips,
-        this.input,
-        this.wave,
-        el("div", { class: "composer-tools" }, this.attachButton(), this.mic, this.send),
+        el("div", { class: "composer-row" }, this.attachButton(), this.input, this.wave,
+          el("div", { class: "composer-tools" }, this.mic, this.send)),
       ),
       compact ? null : this.composerHint,
       compact ? el("div", { class: "chat-foot" }, el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu), el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setup) : null,
@@ -1005,10 +1005,12 @@ export class ChatPanel {
   private async startVoice(tap: boolean): Promise<void> {
     const voice = this.backend.voice;
     if (!voice) return;
+    const run = ++this.voiceRun;
     this.levels = Array(WAVE_BARS).fill(0);
     this.partial = "";
     this.showVoice("listening");
     this.starting = voice.start(tap).catch((e) => {
+      if (run !== this.voiceRun) return;
       this.showVoice("off");
       this.receive({ kind: "error", message: String(e) });
     });
@@ -1018,20 +1020,24 @@ export class ChatPanel {
   private async stopVoice(): Promise<void> {
     const voice = this.backend.voice;
     if (!voice) return;
+    const run = this.voiceRun;
     // A key let go before the mic opened: stop once it has, or the stop finds nothing.
     await this.starting;
-    if (this.voice !== "listening") return;
+    if (run !== this.voiceRun || this.voice !== "listening") return;
     this.showVoice("transcribing");
     try {
       const text = (await voice.stop()).trim();
+      if (run !== this.voiceRun) return;
       if (text) {
         const before = this.input.value.trimEnd();
         this.input.value = before ? `${before} ${text}` : text;
         this.keepDraft();
       }
     } catch (e) {
+      if (run !== this.voiceRun) return;
       this.receive({ kind: "error", message: String(e) });
     }
+    if (run !== this.voiceRun) return;
     this.showVoice("off");
     // Measured once the input shows again: hidden while transcribing, it would measure 0.
     this.grow();
@@ -1070,9 +1076,10 @@ export class ChatPanel {
     this.input.focus();
   }
 
-  /** Escape while listening drops the recording instead of closing the chat. */
+  /** Cancellation invalidates opening, recording and transcription before another turn can start. */
   cancelVoice(): boolean {
-    if (this.voice !== "listening") return false;
+    if (this.voice === "off") return false;
+    this.voiceRun++;
     this.backend.voice?.cancel();
     this.showVoice("off");
     return true;
@@ -1713,6 +1720,10 @@ export class ChatPanel {
     }));
     kept.warning.textContent = data.truncated ? t("Activity details were shortened to keep this conversation responsive.") : "";
     return kept.node;
+  }
+
+  hasWaitingApproval(): boolean {
+    return this.messages.some(m => m.who === "ask" && !m.answer);
   }
 
   private pendingAsk(): Ask | undefined {

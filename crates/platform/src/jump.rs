@@ -9,10 +9,13 @@
 //! Every value goes to a command as an argument, never through a shell; a script only holds
 //! numbers read from /proc and names we checked.
 
-mod kwin;
-mod x11;
+pub(crate) mod kwin;
+#[cfg(test)]
+mod wezterm_tests;
+pub(crate) mod x11;
 
 use std::collections::BTreeMap;
+use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::MetadataExt;
 use std::process::{Command, Stdio};
 
@@ -153,8 +156,18 @@ fn multiplexer_commands(env: &BTreeMap<String, String>) -> Vec<Vec<String>> {
             &format!("id:{win}"),
         ]));
     }
-    if let Some(pane) = id(env.get("WEZTERM_PANE")) {
-        out.push(cmd(&["wezterm", "cli", "activate-pane", "--pane-id", pane]));
+    if let Some(pane) = id(env.get("WEZTERM_PANE")).filter(|pane| pane.parse::<u64>().is_ok())
+        && wezterm_socket(env).is_some()
+    {
+        out.push(cmd(&[
+            "wezterm",
+            "--skip-config",
+            "cli",
+            "--no-auto-start",
+            "activate-pane",
+            "--pane-id",
+            pane,
+        ]));
     }
     out
 }
@@ -163,8 +176,10 @@ fn multiplexer_commands(env: &BTreeMap<String, String>) -> Vec<Vec<String>> {
 fn multiplexer(env: &BTreeMap<String, String>) -> bool {
     let mut any = false;
     for argv in multiplexer_commands(env) {
-        let ok = Command::new(&argv[0])
-            .args(&argv[1..])
+        let Some(mut command) = multiplexer_command(&argv, env) else {
+            continue;
+        };
+        let ok = command
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -175,36 +190,60 @@ fn multiplexer(env: &BTreeMap<String, String>) -> bool {
     any
 }
 
+fn wezterm_socket(env: &BTreeMap<String, String>) -> Option<&str> {
+    let path = env.get("WEZTERM_UNIX_SOCKET")?.as_str();
+    if !path.starts_with('/') || path.len() > 107 || path.chars().any(char::is_control) {
+        return None;
+    }
+    let meta = std::fs::symlink_metadata(path).ok()?;
+    (meta.file_type().is_socket() && meta.uid() == my_uid()?).then_some(path)
+}
+
+fn multiplexer_command(argv: &[String], env: &BTreeMap<String, String>) -> Option<Command> {
+    let mut command = Command::new(argv.first()?);
+    command.args(&argv[1..]);
+    if argv[0] == "wezterm" {
+        // A pane number belongs to one server; ambient/default discovery can select another.
+        command.env("WEZTERM_UNIX_SOCKET", wezterm_socket(env)?);
+        command.env_remove("WEZTERM_PANE");
+    }
+    Some(command)
+}
+
 /// Our own user id, read from /proc.
-fn my_uid() -> Option<u32> {
+pub(crate) fn my_uid() -> Option<u32> {
     std::fs::metadata("/proc/self").ok().map(|m| m.uid())
 }
 
 /// `pid` and its parents, nearest first, read from /proc. The walk stops at a process of another
 /// user (sshd, a display manager, sudo): no window of theirs is the session's.
-fn ancestors(pid: u32) -> Vec<u32> {
+pub(crate) fn ancestors(pid: u32) -> Vec<u32> {
     let Some(uid) = my_uid() else {
         return Vec::new();
     };
+    ancestors_with(pid, |current| {
+        let dir = format!("/proc/{current}");
+        if std::fs::metadata(&dir).ok()?.uid() != uid {
+            return None;
+        }
+        let parent = std::fs::read_to_string(format!("{dir}/stat"))
+            .ok()
+            .and_then(|stat| {
+                // A command name may contain spaces or parentheses.
+                stat.rsplit_once(')')?.1.split_whitespace().nth(1)?.parse().ok()
+            });
+        Some(parent)
+    })
+}
+
+pub(crate) fn ancestors_with(pid: u32, mut parent: impl FnMut(u32) -> Option<Option<u32>>) -> Vec<u32> {
     let mut chain = Vec::new();
     let mut current = pid;
-    while current > 1 && chain.len() < 32 {
-        let dir = format!("/proc/{current}");
-        if std::fs::metadata(&dir).map_or(true, |m| m.uid() != uid) {
-            break;
-        }
+    while current > 1 && chain.len() < 32 && !chain.contains(&current) {
+        let Some(next) = parent(current) else { break };
         chain.push(current);
-        let Ok(stat) = std::fs::read_to_string(format!("{dir}/stat")) else {
-            break;
-        };
-        // The command name is in parentheses and may contain spaces: read after the last ')'.
-        let Some(rest) = stat.rsplit_once(')').map(|(_, r)| r) else {
-            break;
-        };
-        let Some(ppid) = rest.split_whitespace().nth(1).and_then(|p| p.parse().ok()) else {
-            break;
-        };
-        current = ppid;
+        let Some(next) = next else { break };
+        current = next;
     }
     chain
 }
@@ -292,6 +331,62 @@ mod tests {
         ]);
         assert!(multiplexer_commands(&kitty).is_empty());
         assert!(multiplexer_commands(&env(&[("WEZTERM_PANE", "")])).is_empty());
+    }
+
+    #[test]
+    fn wezterm_navigation_pins_the_hook_socket_without_loading_config_or_starting_a_server() {
+        use std::os::unix::{fs::symlink, net::UnixListener};
+        let path = std::env::temp_dir().join(format!("vults-wezterm-jump-{}", std::process::id()));
+        let listener = UnixListener::bind(&path).expect("owned temporary socket");
+        let value = path.to_str().expect("socket path");
+        let context = env(&[("WEZTERM_PANE", "17"), ("WEZTERM_UNIX_SOCKET", value)]);
+        let commands = multiplexer_commands(&context);
+        assert_eq!(
+            commands,
+            [vec![
+                "wezterm",
+                "--skip-config",
+                "cli",
+                "--no-auto-start",
+                "activate-pane",
+                "--pane-id",
+                "17"
+            ]]
+        );
+        let command = multiplexer_command(&commands[0], &context).expect("command");
+        assert!(
+            command
+                .get_envs()
+                .any(|(key, val)| key == "WEZTERM_UNIX_SOCKET" && val == Some(std::ffi::OsStr::new(value)))
+        );
+        assert!(
+            command
+                .get_envs()
+                .any(|(key, val)| key == "WEZTERM_PANE" && val.is_none())
+        );
+        assert!(multiplexer_commands(&env(&[("WEZTERM_PANE", "17")])).is_empty());
+        for pane in ["", "--help", "1;bad", "%17", "default:1"] {
+            assert!(
+                multiplexer_commands(&env(&[("WEZTERM_PANE", pane), ("WEZTERM_UNIX_SOCKET", value)]))
+                    .is_empty()
+            );
+        }
+        let link = path.with_extension("link");
+        symlink(&path, &link).expect("test symlink");
+        assert!(
+            multiplexer_commands(&env(&[
+                ("WEZTERM_PANE", "17"),
+                ("WEZTERM_UNIX_SOCKET", link.to_str().expect("link"))
+            ]))
+            .is_empty()
+        );
+        std::fs::remove_file(link).expect("remove link");
+        drop(listener);
+        std::fs::remove_file(&path).expect("remove socket");
+        assert!(
+            multiplexer_command(&commands[0], &context).is_none(),
+            "a disappeared socket must not start or discover a replacement"
+        );
     }
 
     #[test]

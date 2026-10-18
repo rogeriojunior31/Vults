@@ -1,5 +1,5 @@
 # Decisões
-<!-- source: 1405ae897322 -->
+<!-- source: 0b8af8aebb7a -->
 
 Registros de decisão de arquitetura (ADRs): um arquivo por tema que molda o projeto, com a regra em
 vigor, o contexto em que foi feita e o que ela custa. O código e os guias dizem *o que* o app faz;
@@ -20,10 +20,11 @@ estes registros dizem *por quê*.
 | Superfícies | [0021](0021-four-sizes-one-nest.md) Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está | Aceita | 0008, 0009, 0022, 0023, 0024, 0030 |
 | Voz | [0028](0028-spoken-replies-through-a-realtime-model.md) Voz: escuta local, respostas faladas opcionais | Aceita | 0013 |
 | Remoção de Tasks | [0031](0031-tasks-leave-vults.md) Tasks sai do Vults; releases seguem N0 a N4 | Aceita | |
+| Ditado | [0032](0032-dictation-into-other-apps.md) Ditado em outros aplicativos | Aceita | |
 
 Um número da última coluna foi um registro próprio até 2026-10-12; um commit ou PR antigo que o
 cita quer dizer o registro em que ele foi incorporado. Números nunca são reusados: o próximo tema é
-o 0032.
+o 0033.
 
 <a id="writing-one"></a>
 

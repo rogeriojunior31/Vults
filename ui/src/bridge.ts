@@ -404,7 +404,22 @@ export interface Dropped {
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
 export type Theme = "black" | "light";
-export type SettingsChange = { theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
+export type DictationWords = {
+  words: string[];
+  replacements: { id: number; from: string; to: string }[];
+  snippets: { id: number; trigger: string; text: string }[];
+};
+export type DictationWordsChange =
+  | { action: "addWord" | "deleteWord"; word: string }
+  | { action: "setReplacement"; from: string; to: string }
+  | { action: "deleteReplacement" | "deleteSnippet"; id: number }
+  | { action: "addSnippet"; trigger: string; text: string };
+
+export type DictationTry = { text: string; cancelled: boolean; segments: { text: string; kind: "snippet" | "replacement" | "spelling" | "spokenCode" | null; rule: string | null }[] };
+
+export type DictationMusic = "lower" | "pause" | "leave";
+
+export type SettingsChange = { theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -477,7 +492,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -502,6 +517,31 @@ export const Bridge = {
   setFlock: (flock: Flock) => invoke<void>("set_flock", { flock }),
   setNowPlaying: (on: boolean) => invoke<void>("set_now_playing", { on }),
   setCodexUsage: (on: boolean) => invoke<void>("set_codex_usage", { on }),
+  dictationPermission: () => invoke<DictationPermission>("dictation_permission"),
+  onDictationPermission: (cb: (state: DictationPermission) => void) => { void listen<DictationPermission>("dictation-permission", e => cb(e.payload)); },
+  retryDictationPermission: () => invoke<void>("retry_dictation_permission"),
+  dictationWords: () => invoke<DictationWords>("dictation_words"),
+  dictationTry: (text: string, terminal: boolean) => invoke<DictationTry>("dictation_try", { text, terminal }),
+  changeDictationWords: (edit: DictationWordsChange) => invoke<void>("dictation_words_change", { edit }),
+  dictationHistory: () => invoke<DictationHistory>("dictation_history"),
+  dictationStatistics: (period: DictationPeriod) => invoke<DictationStatistics>("dictation_statistics", { period }),
+  dictationDelete: (id: number) => invoke<void>("dictation_delete", { id }),
+  dictationClear: () => invoke<void>("dictation_clear"),
+  dictationPasteAgain: (id: number) => invoke<void>("dictation_paste_again", { id }),
+  setDictationKeep: (value: string) => invoke<void>("set_dictation_keep", { value }),
+  onDictationHistory(cb: (erased: boolean) => void): void { void listen<boolean>("dictation-history", e => cb(e.payload)); },
+  dictationDoctor: () => invoke<DictationDiagnostics>("dictation_doctor"),
+  dictationMicStart: () => invoke<number>("dictation_mic_start"),
+  dictationMicStatus: (id: number) => invoke<DictationMicTest>("dictation_mic_status", { id }),
+  dictationMicStop: (id: number) => invoke<void>("dictation_mic_stop", { id }),
+  dictationMicrophones: () => invoke<string[]>("dictation_microphones"),
+  setDictationMicrophone: (device: string | null) => invoke<void>("set_dictation_microphone", { device }),
+  setDictationMusic: (mode: DictationMusic) => invoke<void>("set_dictation_music", { mode }),
+  setDictationProcessing: (key: "cutRepeats" | "retryBase" | "spokenCode" | "cancelByVoice" | "vocabulary" | "projectVocabulary", on: boolean) => invoke<void>("set_dictation_processing", { key, on }),
+  setDictationGesture: (key: "doubleTap" | "spaceLock" | "escapeCancel", on: boolean) => invoke<void>("set_dictation_gesture", { key, on }),
+  setDictationSound: (on: boolean) => invoke<void>("set_dictation_sound", { on }),
+  setDictationCaption: (on: boolean) => invoke<void>("set_dictation_caption", { on }),
+  setDictationInsert: (on: boolean) => invoke<string | null>("set_dictation_insert", { on }),
   setNativeChat: (on: boolean) => invoke<void>("set_native_chat", { on }),
   /** More access only from Settings; the chat's picker only gives some back. */
   setChatAccess: (access: ChatAccess) => invoke<void>("set_chat_access", { access }),
@@ -682,6 +722,10 @@ export const Bridge = {
   /** A global shortcut was pressed: "allow" or "deny". */
   /** The pointer came onto or left the island's window (GTK's word, in order; see `pointer`). */
   /** The mic's loudness (0..1) while recording, every 50 ms. */
+  dictationStatus: () => invoke<DictationStatus | null>("dictation_status"),
+  onDictation(cb: (status: DictationStatus) => void): void {
+    void listen<DictationStatus>("dictation", (event) => cb(event.payload));
+  },
   onVoiceLevel(cb: (level: number) => void): void {
     void listen<number>("voice-level", (e) => cb(e.payload));
   },
@@ -728,6 +772,7 @@ export const Bridge = {
   },
   /** The keys bound so far (the binding may have happened before this window loaded). */
   shortcutKeys: () => invoke<Record<string, string>>("shortcut_keys"),
+  openShortcutSettings: () => invoke<void>("open_shortcut_settings"),
   /** The keys the desktop bound, by shortcut id, to show on the buttons. */
   onShortcutKeys(cb: (keys: Record<string, string>) => void): void {
     void listen<Record<string, string>>("shortcut-keys", (e) => cb(e.payload));
@@ -743,3 +788,63 @@ export const Bridge = {
     void listen("open-now", cb);
   },
 };
+
+export interface DictationStatus {
+  words?: number | null;
+  text?: string | null;
+  caption_until?: number | null;
+  bands?: number[];
+  partial?: string | null;
+  app?: string | null;
+  terminal?: boolean;
+  session?: { agent: string; session_id: string } | null;
+  session_name?: string | null;
+  sequence: number;
+  generation: number;
+  phase: "session" | "held" | "pasted" | "listening" | "locked" | "finishing" | "working" | "retrying" | "copied" | "empty" | "cancelled" | "failed";
+  error: string | null;
+}
+
+export type DictationPermission = "off" | "requesting" | "ready" | "temporary" | "unavailable";
+
+export interface DictationRow {
+  id: number; at: number; app: string | null; session: string | null;
+  heard: string; text: string; style: string; language: string | null;
+  secs: number; words: number; fixes: number | null; outcome: string;
+  timings: DictationTimings;
+}
+export interface DictationTimings {
+  total_ms: number | null; stt_ms: number | null; pipeline_ms: number | null;
+  cleanup_ms: number | null; insert_ms: number | null;
+}
+export interface DictationTimingDistribution {
+  count: number; p50_ms: number | null; p95_ms: number | null;
+}
+export interface DictationHistory {
+  retention: string;
+  rows: DictationRow[];
+  today: { words: number; secs: number; count: number } | null;
+  timing_summary: Record<"total" | "stt" | "pipeline" | "cleanup" | "insert", DictationTimingDistribution>;
+}
+
+export type DictationPeriod = "week" | "month" | "all";
+export interface DictationStatistics {
+  period: DictationPeriod; from: string | null; through: string;
+  usage: { words: number; secs: number; count: number; saved_minutes: number | null; wpm: number | null };
+  days: { day: string; words: number; count: number }[];
+  chart_limited: boolean;
+  apps: { app: string | null; words: number }[];
+  apps_complete: boolean;
+}
+
+export interface DictationDiagnostics {
+  system: { host: string | null; device: string | null; rate: number | null; session: string;
+    shortcuts: string; keyboard: string; kwin: string; gpu: boolean; vad: boolean };
+  counters: { loops: number; retries: number; copied: number };
+  timings: DictationHistory["timing_summary"] | null;
+}
+export interface DictationMicTest {
+  id: number; phase: "running" | "done" | "stopped" | "error"; elapsed_ms: number;
+  bands: number[]; noise_db: number | null;
+  verdict: "ok" | "no-signal" | "noisy" | "clipping" | null;
+}

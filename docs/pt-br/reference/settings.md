@@ -1,5 +1,10 @@
 # Configurações e arquivos
-<!-- source: a6e490675f12 -->
+<!-- source: 0eb0c5bc86f4 -->
+
+**Configurações > Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
+somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
+retidos por etapa. Não acrescenta configuração persistente nem pede permissão ao desktop. Veja
+[Diagnóstico](../guide/dictation.md#diagnostics).
 
 <a id="where-things-live-linux"></a>
 
@@ -22,16 +27,60 @@
 | `$XDG_RUNTIME_DIR/vults.sock` | O socket com que o hook conversa (modo `0600`) |
 | `~/.config/autostart/` | A entrada que **Start with the desktop** adiciona |
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | As chaves de API do chat, uma por provedor para o qual você deu uma (nunca em arquivo) |
+| Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `dictation-keyboard-restore-token` | O token de restauração de teclado RemoteDesktop do ditado, quando há persistência; consumido uma vez, renovado após uma autorização e removido ao desligar a inserção. Nunca fica em arquivo nem é exposto a uma webview |
 | `~/.local/state/vults/logs/` | O log: um arquivo por dia, os últimos cinco são mantidos. Ele registra o que aconteceu (nomes de eventos, decisões, erros), nunca comandos, caminhos ou texto do chat |
+
+O dicionário, as regras de substituição e os trechos mantidos pelo usuário para o ditado usam
+`vults.sqlite` (esquema 22). São preferências, separadas das transcrições gravadas: o prazo,
+a exclusão de transcrições e **Clear history** os preservam. A exclusão individual remove a
+entrada escolhida. Cada gravação independente captura essas entradas para o processamento local
+do texto final. O vocabulário opcional do modelo usa apenas palavras do dicionário, conforme
+as combinações de modelo/idioma medidas abaixo. Edite entradas em **Ditado > Dicionário / Trechos** e confira regras salvas com **Testar uma frase**. Veja o [processamento das suas
+palavras](../guide/dictation.md#your-words-processing) para ordem, conteúdo literal dos trechos
+e limites de tamanho.
 
 `$XDG_CONFIG_HOME` e `$XDG_DATA_HOME` substituem `~/.config` e `~/.local/share` quando estão definidas.
 **Settings → About** mostra a versão do app e os caminhos reais.
+
+As teclas globais de ditado aparecem em **Settings > Dictation > Keyboard shortcuts**.
+**Alterar no KDE…** abre o editor de atalhos instalado do KDE; falhas ao iniciar permitem tentar
+novamente. Em outros desktops, altere os atalhos globais nas configurações do próprio desktop.
+Abrir esse editor não grava preferências do Vults nem configurações de agentes.
+
+<a id="dictation-settings"></a>
+
+## Configurações do ditado
+
+**Settings > Ditado** reúne os controles do ditado independente. **Chat e voz** reúne o modelo
+local e o idioma falado compartilhados. O link **Configurações do ditado** no Histórico abre a
+mesma página. Mudanças de microfone, gesto, processamento, vocabulário e música valem para a próxima gravação;
+um turno ativo mantém essas escolhas capturadas. Preferências de legenda/som continuam ativas,
+o prazo entra em vigor imediatamente e desligar a inserção revoga as capacidades pendentes.
+
+| Grupo | Controles disponíveis |
+| --- | --- |
+| Atalhos de teclado | Atalhos atuais do desktop, editor de atalhos do KDE, segurar/toque duplo, Espaço/Esc no X11 e cancelamento falado |
+| Voz | Microfone e atualização, link de modelo/idioma compartilhados, remoção de repetições, nova tentativa com Base, música, aviso inicial e legendas |
+| Suas palavras | Contexto opcional do dicionário e vocabulário do projeto; ambos desligados por padrão, limitados à combinação qualificada Turbo/inglês fixo |
+| Terminais e sessões | Pontuação de código falado |
+| Colagem | Inserção opcional em editores/tmux, permissão real de teclado e nova tentativa explícita |
+| Privacidade | Prazo do Histórico e exclusão confirmada |
+| Diagnóstico | Teste explícito de microfone, estado atual do sistema, contadores da execução e tempos retidos por etapa |
+
+Edite palavras do dicionário, regras de substituição e trechos literais nas páginas de trabalho
+de **Ditado** no Nest; **Testar uma frase** mostra as regras locais salvas sem usar modelo, área
+de transferência ou histórico. As regras locais de texto funcionam com qualquer idioma de
+transcrição; só o contexto opcional de vocabulário do Whisper tem a restrição modelo/idioma.
+O Diagnóstico lê o estado atual; só a ação explícita **Testar microfone** grava, e esse teste
+para se você mudar o microfone. Ele não acrescenta preferências salvas. Estilos e modos adicionais
+de entrega chegam em fases futuras. Veja o [guia de ditado](../guide/dictation.md)
+para destinos compatíveis, comportamento da área de transferência e limites de privacidade.
 
 ## settings.json
 
 ```json
 {
-  "version": 23,
+  "version": 35,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -43,12 +92,27 @@
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `23` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `35` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
-| `voice_model` | ausente | O modelo de voz do chat (`base`, `small`, `turbo`), baixado em `~/.local/share/vults/voice/` (junto com o detector de fala, `ggml-silero-v6.2.0.bin`); ausente deixa a voz desligada |
+| `voice_model` | ausente | O modelo de voz compartilhado pelo Chat e pelo ditado (`base`, `small`, `turbo`), baixado em `~/.local/share/vults/voice/` (junto com o detector de fala, `ggml-silero-v6.2.0.bin`); ausente deixa a voz desligada. Cada gravação do Chat guarda até um minuto de áudio; o ditado independente guarda até dez minutos |
 | `voice_language` | ausente | O idioma que o usuário fala para a voz: um código (`pt`, `en`), `auto` para detectar a cada vez, ausente para seguir o idioma do sistema |
+| `dictation_insert` | `false` | Desligado até ativar em **Settings > Dictation**. Cola em editores simples compatíveis no X11 nativo ou Plasma Wayland, reconferindo o foco e usando uma reserva condicional de texto simples da área de transferência (até 64 KiB); sem Enter. O Wayland solicita apenas teclado pelo portal e guarda um token de restauração somente no chaveiro do sistema; recusa/revogação mantém a cópia até tentar novamente em Settings. Painéis tmux exatos do bando no XTerm/UXTerm ou Kitty podem receber uma linha sem controles de até 8 KiB após verificar a sessão e seus cartões atuais, sem alterar a área de transferência; outros destinos de terminal ficam apenas na cópia. Imagens e formatos ricos não são restaurados; a exclusão do histórico depende do desktop. Veja [Ditado](../guide/dictation.md#opt-in-x11-insertion) (a partir da versão 24) |
+| `dictation_caption` | `true` | Mostra linhas cortadas do ditado ou a transcrição final confirmada em uma legenda de duas linhas que deixa cliques passarem. Cards e espaço limitado têm prioridade; a legenda termina após dois segundos, mesmo trocando de superfície. Configurada em **Settings > Dictation** (a partir da versão 25) |
+| `dictation_sound` | `true` | Aviso curto ao iniciar uma gravação, respeitando a opção de sons, o volume e o Não Perturbe. Trocas de superfície e configurações não repetem o aviso. Configurado em **Settings > Dictation** (a partir da versão 26) |
+| `dictation_music` | `"lower"` | **Settings > Ditado > Voz > Música enquanto você fala**: `"lower"` limita players MPRIS que já tocam a 25%, sem elevar os mais baixos; `"pause"` os pausa; `"leave"` não abre uma conexão de controle de mídia. Restaura o volume/reprodução de cada player não alterado após captura, cancelamento ou falha. Preserva mudanças do usuário e players que fecharam/reiniciaram. Somente controles locais, sem metadados de faixas/rede, separado de Tocando agora; o Chat e futuras reuniões não usam isso. Capturado na próxima gravação (a partir da versão 33) |
+| `dictation_cancel_by_voice` | `true` | **Settings > Dictation > Keyboard shortcuts > Cancelar por voz**: descarta a transcrição final independente composta de, ou terminada com, uma frase inteira de cancelamento em inglês, português ou espanhol. Executado após encerrar a gravação, antes da conversão/entrega, no X11 e Wayland. Não copia, insere ou envia nada nem salva histórico ou totais; mantém o último ditado bem-sucedido. A reutilização e o Chat não passam por ele. Capturado na próxima gravação (a partir da versão 32) |
+| `dictation_spoken_code` | `true` | **Settings > Dictation > Terminais e sessões > Código falado**: converte pontuação falada em inglês/português/espanhol entre partes de identificadores apenas para destinos reconhecidos como terminal/sessão. Preserva maiúsculas, minúsculas, pontuação existente e caracteres de controle; nunca acrescenta Enter. Aplicativos de prosa e destinos desconhecidos mantêm seu texto. Capturado para a próxima gravação; o Histórico mantém o texto ouvido e escrito, sem reformatar na reutilização (a partir da versão 31) |
+| `dictation_cut_repeats` | `true` | **Settings > Dictation > Voice > Remover repetições em sequência**: reduz sequências longas de repetição na prévia e no texto final do ditado independente. Desligado mantém as repetições; marcações de som conhecidas e frases isoladas associadas a silêncio continuam sendo removidas. O Chat mantém seu filtro existente. Capturado no início de cada gravação (a partir da versão 30) |
+| `dictation_retry_base` | `true` | **Settings > Dictation > Voice > Tentar com Base quando o ditado vier vazio**: permite uma única nova tentativa visível para texto vazio quando houve fala detectada e um modelo Base diferente está instalado. Desligado pula essa verificação extra de fala e a nova tentativa; erros não geram nova tentativa. Nunca baixa um modelo. Capturado no início de cada gravação independente (a partir da versão 30) |
+| `dictation_vocabulary` | `false` | Contexto local opcional do dicionário para o ditado independente, limitado a 224 tokens incluindo o contexto de programação e entradas inteiras. Qualificado atualmente só para Turbo com inglês fixo (escolhido ou resolvido pelo sistema), em testes sintéticos de WER/silêncio; Base, Small, português, outros idiomas e detecção automática mantêm seus prompts anteriores. Prévia/final compartilham a visão capturada na gravação; a nova tentativa com Base verifica seu modelo real e fica sem contexto de dicionário. Nunca inclui conteúdo de substituições/trechos nem altera o Chat. Configurado em **Configurações > Ditado > Suas palavras > Ajudar o modelo com estas palavras** (a partir da versão 34) |
+| `dictation_project_vocabulary` | `false` | Opção independente para usar nomes locais do projeto no ditado, com a mesma restrição Turbo/inglês fixo e limite compartilhado de 224 tokens. Lê árvores de trabalho Git conhecidas ao iniciar a sessão/atualizar o repositório: nomes de pacotes e dependências Cargo/npm, membros próximos do workspace, módulos/arquivos e branch; sem conteúdo do código nem comandos. Prefere a pasta da sessão em foco; caso contrário exige um projeto conhecido sem ambiguidade no título de um terminal/editor. Palavras do dicionário pessoal têm prioridade. Cache em memória, worktrees separadas, contexto da primeira decodificação fixo para prévia/final; contexto ausente/tardio/ambíguo não acrescenta nada. Configurado em **Configurações > Ditado > Suas palavras > Vocabulário do projeto** (a partir da versão 35) |
+| `dictation_microphone` | ausente | O nome da entrada escolhida em **Settings > Dictation > Voice** para o ditado independente. Ausente segue o padrão do sistema. Se a entrada salva não for encontrada, usa o padrão ou outra entrada sem mudar a preferência; uma entrada listada que não puder ser aberta mostra um erro. O Chat mantém seu próprio padrão. Listar/atualizar não grava; mudanças valem a partir da próxima captura (a partir da versão 29) |
+| `dictation_double_tap` | `true` | **Settings > Dictation > Modo de gravação**: permite toque duplo para gravar com as mãos livres. Desligado, toques curtos são descartados imediatamente; segurar por pelo menos 300 ms continua funcionando. Independente da trava por Espaço. Mudanças valem a partir da próxima gravação (a partir da versão 28) |
+| `dictation_space_lock` | `true` | Espaço mantém uma gravação segurada com as mãos livres no X11. Desligado, Espaço segue o cancelamento por digitação comum e não reserva o atalho de Abrir a ilha. Indisponível no Wayland; exige um listener de teclas X11 reconhecido. Mudanças valem a partir da próxima gravação (a partir da versão 28) |
+| `dictation_escape_cancel` | `true` | Esc cancela a captura, sua cauda ou a transcrição no X11. Desligado, Esc deixa o ditado continuar. O atalho separado Cancelar voz sempre funciona. Indisponível no Wayland. Mudanças valem a partir da próxima gravação (a partir da versão 28) |
+| `dictation_keep` | `"30"` | Prazo das transcrições de ditado: `"0"` (não guardar), `"7"`, `"30"`, `"365"` ou `"all"`. Configurado em **Settings > Dictation**. Reduzir o prazo apaga textos antigos imediatamente; abrir o histórico e gravar também aplica o prazo. Totais por dia/aplicativo permanecem após apagar ou escolher Não guardar. Áudio e clipboard anterior nunca são gravados (a partir da versão 27) |
 | `now_playing` | `false` | Mostra na ilha a música que seus players estão tocando (MPRIS no Linux), com tocar, pausar e pular |
 | `codex_usage` | `false` | Lê o uso do plano do Codex para a ilha a cada 5 minutos (e meio minuto depois que uma janela reinicia), pelo codex em que você fez login (cada leitura chega à OpenAI, pelo portão de rede do app). Desligado numa instalação nova; um arquivo de antes da versão 16 o recebe ligado quando há um `codex` no `PATH`, para que uma atualização mantenha os medidores que mostrava (a partir da versão 16) |
 | `web` | `false` | As ferramentas de web do Zeca no chat por API: uma busca e a leitura de uma página que o modelo pode pedir, cada uma uma requisição pelo portão de rede. Desligado, elas nunca são oferecidas |
@@ -76,7 +140,7 @@
 | `zeca_look` | `"auto"` | O que o Zeca usa: `auto` (o visual do calendário: `witch-hat` de 1º de outubro a 1º de novembro, `santa-hat` de 1º a 26 de dezembro, `party-hat` de 31 de dezembro a 2 de janeiro, `bunny-ears` da Sexta-feira Santa à segunda-feira depois da Páscoa), `none`, ou um desses ou um visual do ano todo (`sunglasses`, `west-coast`, `fitted-cap`, `mountain-hat`, `headband`, `dreads`, `front-knot`, `durag`, `crown`, `bucket-hat`, `clock-chain`, `headphones`, `shutter-shades`, `chrome-chain`, `eye-patch`). Um desconhecido vira `auto` |
 | `flock` | `"brazil"` | De onde vêm as aves das outras sessões: `brazil` (os urubus do Brasil), `americas` (com os dois condores) ou `world` (todos os urubus). Cada projeto sorteia a espécie dele daqui, a mesma a cada início; mudar isto sorteia todos os projetos de novo. O urubu-rei vem pelo papel de qualquer jeito |
 | `presence` | `"island"` | A predefinição de presença: `island` (o bando no topo da tela), `panel` (o Zeca na bandeja do painel; a ilha abre perto do painel quando você clica nele ou quando um card precisa de você), `quiet` (nada em repouso; um card ainda abre a ilha com o seu som) ou `paused` (os cards vão na hora para os terminais dos agentes, os conectores param, sem notificações). Arquivos da versão 4 guardam `island` ou `panel` e são lidos como estão. Um valor desconhecido vira `island` |
-| `zeca` | `true` | O Zeca, o companheiro: desligado, sem chat, microfone ou atalho de fala, e a bandeja fica sem *Chat…*; o bando, os cards, as notificações e os conectores funcionam como sempre |
+| `zeca` | `true` | O Zeca, o companheiro: desligado, sem Chat ou microfone do Chat, e a bandeja fica sem *Chat…*; o ditado local independente, o bando, os cards, as notificações e os conectores continuam funcionando |
 | `widget` | ausente | O canto do widget de canto: `top-left`, `top-right`, `bottom-left` ou `bottom-right`; ausente (o padrão) para nenhum widget. Um valor desconhecido é nenhum widget |
 | `projects` | ausente | Escolhas por pasta de projeto, definidas pelas ações rápidas de uma sessão ou em **Settings → Projects**: `{ "/home/me/site": { "pin": true }, "/home/me/x": { "mute": true, "hide": true } }`. `mute`: sem sons nem notificações das suas sessões em repouso (um card mantém os dois); `pin`: as suas sessões primeiro; `hide`: as suas sessões fora da ilha, da bandeja e do widget, exceto enquanto uma delas tem um card esperando; `species`: a ave das suas sessões, um id de espécie do renderer (`"vultur"`), qualquer uma menos a do urubu-rei (`"papa"`), ignorada como uma desconhecida (a partir da versão 12). Só as escolhas ligadas são escritas, e um projeto sem nenhuma é removido (a partir da versão 8) |
 | `budget_daily_cents` | ausente | O orçamento diário, em centavos de dólar (`500` é $5,00), definido em **Settings → Activity**: em 80% uma notificação, e quando acaba outra, e o Vults não inicia nenhuma sessão nova naquele dia. Nunca para nem bloqueia um agente. Ausente, sem orçamento (a partir da versão 20) |
