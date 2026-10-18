@@ -140,7 +140,7 @@ mod tests {
 
     use super::*;
 
-    /// A silent player on the user's session bus, as Spotify or a browser would show up.
+    /// A silent player on a private session bus, as Spotify or a browser would show up.
     struct Fake {
         playing: Arc<Mutex<bool>>,
     }
@@ -177,10 +177,23 @@ mod tests {
 
     #[tokio::test]
     async fn a_player_on_the_bus_is_seen_and_obeys() {
-        // CI has no session bus: nothing to test there.
-        let Ok(bus) = Connection::session().await else {
+        // Real desktop players must not compete with this fixture or see its control calls.
+        if std::env::var_os("VULTS_MEDIA_TEST_CHILD").is_none() {
+            let status = std::process::Command::new("dbus-run-session")
+                .arg("--")
+                .arg(std::env::current_exe().expect("test binary"))
+                .args([
+                    "--exact",
+                    "mpris::tests::a_player_on_the_bus_is_seen_and_obeys",
+                    "--nocapture",
+                ])
+                .env("VULTS_MEDIA_TEST_CHILD", "1")
+                .status()
+                .expect("private D-Bus session");
+            assert!(status.success());
             return;
-        };
+        }
+        let bus = Connection::session().await.expect("private session bus");
         let name = format!("{PREFIX}vultures_test_{}", std::process::id());
         let playing = Arc::new(Mutex::new(true));
         bus.object_server()

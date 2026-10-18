@@ -25,6 +25,8 @@ vults-platform.workspace = true
 vults-chat.workspace = true
 vults-media.workspace = true
 vults-voice.workspace = true
+vults-audio.workspace = true
+vults-dictation.workspace = true
 vults-store.workspace = true
 vults-link.workspace = true
 vults-relay.workspace = true
@@ -43,6 +45,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 tracing-appender = "0.2"
 serde.workspace = true
 serde_json.workspace = true
+toml_edit = "0.25"
 tokio.workspace = true
 
 # Voice on the GPU (Vulkan) on Linux: 6x to 30x faster than the CPU. Windows stays on the CPU for now.

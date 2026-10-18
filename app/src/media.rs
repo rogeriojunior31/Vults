@@ -1,5 +1,6 @@
 //! What is playing, on the island. The watcher runs only while the setting is on; off, nothing
-//! reads the bus and the island forgets the song.
+//! reads track metadata and the island forgets the song. Independent dictation has its own
+//! temporary volume/playback control in `platform::music`.
 
 use std::sync::Mutex;
 

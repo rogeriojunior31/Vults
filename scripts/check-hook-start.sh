@@ -21,7 +21,8 @@ XDG_RUNTIME_DIR="$work/run" hyperfine --shell=none --warmup 5 --runs 100 \
   --input "$work/event.json" --output null --export-json "$work/result.json" \
   "$hook --agent claude PreToolUse"
 
-mean_ms=$(jq '.results[0].mean * 100000 | round / 100' "$work/result.json")
+# Hyperfine 2 nests wall-clock statistics; CI may still provide the 1.x format.
+mean_ms=$(jq '(.results[0].mean // .results[0].summary.time_wall_clock.mean) * 100000 | round / 100' "$work/result.json")
 if awk -v m="$mean_ms" -v c="$CEILING_MS" 'BEGIN { exit !(m > c) }'; then
   echo "check-hook-start: mean ${mean_ms} ms is above the ${CEILING_MS} ms ceiling"
   exit 1

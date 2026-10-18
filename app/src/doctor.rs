@@ -7,6 +7,8 @@
 //! The `PATH` is the app's own, the one the chat runs its engines by: an agent a desktop launch
 //! can't see (a shell rc's PATH) shows as not installed though its hooks still work.
 
+pub(crate) mod dictation;
+
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};

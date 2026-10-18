@@ -484,17 +484,19 @@ pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
     })
 }
 
-/// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, wezterm, kitty with its
-/// socket), or, with the agent's process known, a window on KDE or in an X11 session. Elsewhere
+/// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, kitty/wezterm with their
+/// sockets), or, with the agent's process known, a window on KDE or in an X11 session. Elsewhere
 /// on Wayland `jump` still tries an XWayland window, but that is not promised (ADR 0011). Keep in
 /// step with `platform::jump::methods`.
 fn raises(t: &Terminal) -> bool {
     let has = |k: &str| t.env.get(k).is_some_and(|v| !v.trim().is_empty());
     let env = |k: &str| t.env.get(k).map_or("", String::as_str);
-    let pane = ["HERDR_WORKSPACE_ID", "TMUX_PANE", "WEZTERM_PANE"]
-        .into_iter()
-        .any(has)
-        || (has("KITTY_WINDOW_ID") && has("KITTY_LISTEN_ON"));
+    let pane = ["HERDR_WORKSPACE_ID", "TMUX_PANE"].into_iter().any(has)
+        || (has("KITTY_WINDOW_ID") && has("KITTY_LISTEN_ON"))
+        || (env("WEZTERM_PANE").parse::<u64>().is_ok()
+            && env("WEZTERM_UNIX_SOCKET").starts_with('/')
+            && env("WEZTERM_UNIX_SOCKET").len() <= 107
+            && !env("WEZTERM_UNIX_SOCKET").chars().any(char::is_control));
     let kde = env("XDG_CURRENT_DESKTOP")
         .split(':')
         .any(|d| d.eq_ignore_ascii_case("kde"));

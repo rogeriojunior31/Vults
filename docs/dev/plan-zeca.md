@@ -358,6 +358,203 @@ The phases of [plan-dictation.md](plan-dictation.md), in this order: V0 (its ope
 answered first), V1, V2, V4, V8, V3 (after Z6), V5, V7 (after M7), V6 (= K8). The Dictation tab,
 Settings › Dictation and Activity › Dictation land on the N1 frame.
 
+N3 started on 2026-10-17 in `feat/n3-dictation`. The maintainer accepted V0.1 and authorized
+continuing with the planned defaults. [ADR 0028](../adr/0028-spoken-replies-through-a-realtime-model.md#dictation-and-meetings)
+records local vocabulary, bounded opt-in follow-up listening, temporary meeting audio and model
+license evidence. V0.2 is recorded in [ADR 0032](../adr/0032-dictation-into-other-apps.md): exact
+targets rechecked before delivery, clipboard ownership, keyboard-only portal permission with a
+keyring token, and a current-state guard against inserting into a waiting session. Both records
+have reviewed pt-BR translations. V0.3 is recorded in ADR 0021 and DESIGN.md: Dictation is
+the fifth Nest tab as its phases land, its seven work pages link to central Settings and
+Activity, and transient feedback preserves focus, the fixed overlay and card priority. The
+Nest carries feedback while visible; dictation does not wake the hidden island. No audio or UI
+behavior changes yet. V0.4 is recorded in ADR 0019: model features stay independently off by
+default, with 2,000 clean-up attempts, 20 summary attempts and a US$1 default realtime limit in
+any rolling 24 hours. Local providers retain the switch, request quota and trace; only remote
+monetary accounting is exempt. The count-only gate must gain spend reservations before V6
+ships; this decision does not register or enable any request. V0.5 integrates the phase rows
+and related ids in [Dictation (N3)](#dictation-n3). The maintainer accepted the V0.9 prototype
+on 2026-10-17; P12 is approved in the scope manifest. Its fixes cover Alt+6, separate size
+shortcuts, Black/Light, central Settings, conditional-control focus and simulated meeting consent.
+No production behavior is inferred from that approval.
+
+V1.1 now extracts `vults-audio`: named/default microphone capture, continuous 16 kHz mono
+resampling, bounded memory and nine speech bands at about 30 Hz. Chat keeps its Recorder API,
+one-minute limit, Silero watcher and GPU preview; the shared capture accepts up to ten minutes
+for later callers. Seven audio tests and sixteen voice tests (with real installed Base/Silero
+models and a public speech fixture) pass, as do workspace Clippy (all targets) and the dependency audit. Guides,
+architecture, settings reference and translations follow the extraction. The maintainer reported
+validation and accepted V1.1 on 2026-10-17; a separate desktop/device matrix was not reported.
+
+V1.2 now applies hysteresis and smoothing to Silero probabilities, with 250 ms minimum speech
+and 400 ms minimum silence. Queued edges and reset isolate each analysis. Short pauses stay
+inside a segment; Chat retains its 1.5 s end-of-turn pause. All 26 audio/voice tests pass with
+real installed models, including four WAV fixtures with 40 ms edge tolerances and the existing
+Chat end-of-speech and transcription regressions. This is automated evidence, not a new native
+microphone pass.
+
+V1.3 adds the pure transcript gate to the common preview/final decoder. It reduces six-or-more
+word/phrase or Unicode character loops to one occurrence, with a 60-character unit cap, and
+omits whole-result silence phrases in four languages. Short repetitions, longer sentences
+containing those phrases and technical brackets survive. A standalone matching phrase is
+omitted even when intentionally spoken; the guide records that tradeoff. All 28 audio/voice
+tests pass with installed models, including real-model Chat regressions and a public reported
+output fixture; workspace Clippy passes. Native microphone/release acceptance remains separate.
+V1.4 now adds the dependency-free `dictation` Connect crate. Caller-owned monotonic time drives
+hold/double-tap/Space-lock/cancel gestures; Finish carries the 600 ms capture-tail deadline.
+Sixteen integration tests cover timing boundaries, delayed ticks, repeated key events and reset
+following capture failure. This code performs no IO and does not bind a key or open a microphone.
+V1.5/V1.6 now wire the portal and first clipboard-only runtime together. Talk remains independent
+of Zeca, focused Chat retains its draft path, release follows its press owner, and new shortcuts
+cancel or copy the last result. Bound keys and remapping are reported by the desktop. The local
+worker captures up to ten minutes, honors its tail, shares voice decoding and can retry an already
+installed Base model. Generation checks and token cancellation prevent stale writes. The maintainer's
+native check found GTK reporting Copied while Wayland kept the old clipboard: a probe reproduced
+that false success. Native data-control now handles Wayland background copying, a retained arboard
+owner handles X11, and read-back must match before Copied. The native Plasma regression and an
+independent GTK observer on isolated Xvfb both pass. No XWayland-only fallback is used on Wayland;
+missing background access produces a translated error. Nothing pastes, submits or writes history.
+A temporary translated status follows the island/Nest owner without focus or input-region changes;
+snapshots preserve it across mounts without rewinding newer progress. All 199 selected subsystem
+tests, the UI build/renderer logic checks, workspace Clippy and cargo-deny pass. Native desktop
+consent, microphone/clipboard and X11/Wayland acceptance remain pending because no computer-use
+surface was available. V1.7 now reads foreground context without activating a window: EWMH
+on X11 and a read-only, sender-checked KWin script on Plasma Wayland. Other Wayland desktops,
+late/failed reads and ambiguous session ancestry remain unknown. Status names the observed app
+and offers a terminal paste hint; titles/window identities remain private in memory. Cancellation
+and new turns reject old observations. This asynchronous read is context, not proof of exact
+key-down focus or pane identity: exact capture and delivery checks remain prerequisites for
+insertion. History's app display awaits V1.13, and native X11/Plasma acceptance remains open.
+All 207 selected subsystem tests, the UI build, renderer checks and workspace Clippy pass.
+V1.8 now adds live-only XI2 observation on X11: Space locks Holding, other non-modifier keys
+cancel Holding/TapWait, and Esc also cancels the capture tail or decoding. Actual Talk/Copy-again
+chords and repeats are ignored. Map changes refresh lookup. The worker invalidates stale callbacks
+and closes the listener on cancellation, completion or failure; the default Space/Open collision
+keeps focus at the destination. Unknown bindings and Wayland retain portal-only controls.
+A private Xvfb smoke proves native events reach the listener and foreground without a grab,
+and that dropping the handle stops it. Real X11 desktop/portal/microphone acceptance remains open.
+V1.9 now adds opt-in paste in supported plain native X11 editors. A separate synchronous target
+tracks the original window/focus child/process; focus loss, held keys and clipboard changes block
+Ctrl+V. Its in-memory clipboard owner restores previous text atomically only while the lease still
+owns it, preserving new equal-text copies and overlapping dictations. The Settings-only switch
+starts off, explains text-only restoration/history limits, and outcome feedback distinguishes
+Pasted from Copied. The private-Xvfb smoke covers native dispatch, clipboard requests and races;
+real desktop/microphone and visual acceptance remain open. All terminals, IDEs, unknown apps and
+Wayland stay copy-only in V1.9.
+V1.10 now implements the Plasma Wayland path: an explicit keyboard-only RemoteDesktop grant,
+keyring-only rotating restore token, reusable session, honest permission state and explicit retry
+following refusal/revocation. A preexisting KWin focus epoch plus a compositor checkpoint validates
+the same editor; Vults focus invalidates the destination. Native ext-data-control restores the
+previous text in place without reclaiming selection, preserving a new owner's copy. The isolated
+headless-KWin/GTK smoke uses real focus/clipboard APIs and a simulated RemoteDesktop boundary;
+actual desktop consent/editor/microphone and visual acceptance remain open. No full native matrix
+is closed.
+V1.11 now implements exact tmux delivery for XTerm/UXTerm and Kitty hosts. The captured
+window, pane, client and agent process are checked again, then core's live permission/question/card
+state gates literal single-line bytes without Enter. Deferred cards still wait. A server ack yields
+In session without touching the clipboard; unsupported or unsafe targets copy instead. Direct
+Kitty cannot acknowledge send-text, and WezTerm's copy/search overlay shares its underlying pane
+id. Those direct transports therefore remain supported clipboard fallbacks under ADR 0032.
+WezTerm's separate Open terminal action now pins the hook's same-user socket and never starts or
+selects another instance; this is navigation only. Existing Vults Chat uses its unsent draft;
+removed task-run composers stay removed. V1.11's supported implementation is complete, with actual
+native desktop/microphone/visual acceptance still open. V1.12 is in progress: Mini/Quick now
+reserve a neutral feedback row above the flock, with production icons for existing phases,
+translated text, immediate card/lock priority and bounded Quick geometry under zoom/dock changes.
+Real microphone bands and the shared GPU-only local preview now follow the recording's ordered
+status path and survive a surface handoff. Capture end clears both; cancellation/new generations
+reject late updates without logging or storing preview text. Reduced motion hides moving bands.
+Conditional two-row captions now use free space outside the island's input region, with card/lock
+priority and an original two-second deadline that survives a surface handoff. General's existing
+dictation controls own the caption switch until V1.15; schema 25 preserves explicit choices.
+Confirmed delivery now shows a localized Unicode word total from the committed text. Unknown
+counts stay absent, and failure/cancellation cannot reuse old totals. Correction totals await
+the replacement/clean-up features. The optional start cue now has one persistent island owner,
+uses shared mute/volume/Do Not Disturb guards and never replays on snapshots or surface changes.
+General holds the schema-26 sound switch until V1.15. The maintainer accepted the previous UI
+slices; native listening acceptance of the new cue remains pending. Ownership and computed
+geometry checks pass; native font/overflow and the full X11/Wayland visual matrix remain pending.
+V1.13's store implementation adds migration 21 for text-only dictations and independent
+daily/app totals. Retention (Not kept, 7/30/365 days, Always) prunes on history open and record;
+clear/delete preserve totals and erase transcript pages. Zero-word results add nothing, and
+unknown corrections remain absent. V1.13 supplied the API without enabling transcript writes;
+the next task connects the History page and visible privacy controls.
+V1.14 now connects that API: the fifth Dictation tab owns searchable retained history, measured
+figures and explicit copy/reuse/erase actions. General temporarily owns the schema-27 privacy
+selector (30 days by default) until V1.15. Real captures record once, and erase/retention changes
+reject old in-flight writes; Copy again never creates a new measurement or reuses an old window.
+At the maintainer's request, Chat also uses a slimmer single-row composer in Nest and Quick,
+with attachment left, microphone/Send right and a separate file strip. Native acceptance is pending.
+V1.15's first slice centralizes current controls in Settings > Dictation (keys, Voice, Paste,
+Privacy), linking History, General and Chat & voice to it. Shared model/language editing stays
+in Chat & voice; no key/default changes from schema 27. Privacy erasure uses explicit confirmation
+and guarded failure/retry. A Settings-only **Change in KDE…** action now launches the installed
+KDE shortcut editor with pending/error/retry feedback and no binding writes. Schema 28 now saves
+hold/double-tap, Space-lock and Esc-cancel choices with existing defaults. Settings-only writes
+apply after a successful save; each new recording snapshots its gestures. Raw-key switches are
+unavailable on Wayland, and the global Cancel shortcut always works. Schema 29 adds an optional
+independent-dictation microphone, read by the next capture. Settings-only inventory loads on
+entry or explicit refresh without recording; failures retain the last list and disconnected
+preferences stay selected. The existing missing-input fallback and Chat default stay intact.
+Schema 30 now saves optional repetition removal and one-time Base fallback, both on by default.
+The next capture snapshots these choices for preview and final decode; Chat retains its existing
+filter. Disabled fallback skips its extra speech check, and errors never trigger retry. Current
+runtime controls are wired. V1.16 adds original spoken-code conversion for captured terminals
+and sessions with a schema-31 switch (on, matching the prototype), literal identifier punctuation
+in English/Portuguese/Spanish, unchanged prose/unknown targets and preserved control bytes.
+Heard/written history keeps the difference, and replay bypasses conversion. V1.17 adds final
+whole/trailing spoken cancellation in English/Portuguese/Spanish, on by default in schema 32.
+It discards the independent turn before conversion/delivery, releases its resources, records no
+history/totals and preserves the previous success. A recording keeps its captured choice;
+manual replay and Chat bypass the check. V1.18 adds per-recording local MPRIS lowering/pause/leave
+(schema 33), restoration after capture/cancellation and guards for user changes and crashed/restarted
+players. Quieter/paused players stay untouched; no track metadata is read. The maintainer reported
+local V1.18 validation on 2026-10-17. V1.19 reconciles user docs, settings and architecture,
+isolates the media regression test from real players and records automated/native-fixture evidence
+plus the unreported desktop matrix cells in the detailed plan. Delivery/meeting switches and
+full desktop-matrix acceptance remain open; no broader sign-off is inferred. The app stays stopped.
+At the maintainer's request, V2.1 now prepares schema-22 dictionary/replacement/snippet storage
+and Nest-only typed list/edit commands. Unicode duplicate keys, stable replacement order and
+literal snippet bodies are local preferences retained across history clearing. The command/data
+checks are automated. V2.2 now applies a per-recording snapshot after raw spoken cancellation:
+opaque literal snippets, ordered replacements, eligible dictionary spellings and context-bound
+code edits. Unicode matching preserves controls, output is bounded, annotated segments retain
+changes, and history distinguishes heard/written text and processing style. Work runs outside
+the control lock with a generation recheck before delivery. Replay and Chat bypass it; failures
+preserve the previous success. V2.3 adds per-recording dictionary context, off by default in
+schema 34, capped by the model tokenizer at 224 tokens including the coding seed. Preview/final
+share the snapshot; Base retry rechecks its own model, and Chat never inherits the context.
+Only Turbo/fixed English qualifies from the 20-sentence-per-language synthetic WER comparison
+and empty silence/noise fixtures. Base/Small and Portuguese remain blocked despite improved
+sentence WER. Exact results, hashes and human-speech limitations are recorded in the detailed
+plan and voice fixtures. Dictionary/Snippets pages and vocabulary controls are delivered in V2.5;
+V2.4 now adds independently opt-in project names in schema 35, off by default. Bounded local
+Cargo/npm/module/file/branch extraction refreshes on session start and repository refresh,
+with separate cache entries for each Git working tree. The captured session cwd or an
+unambiguous editor/terminal title selects the names; stale/late/unknown context adds nothing.
+Preview/final share a generation-bound frozen snapshot, with personal dictionary words first
+under V2.3's existing cap and gate. No source bodies, commands or network requests are used,
+and project names do not become saved spelling rules. Small workspace and recording fixtures
+pass. No project-name accuracy improvement is inferred. V2.5 now provides Dictionary/Snippets
+work pages, literal entry forms, confirmed deletion, retained drafts and read/write retry.
+Its Nest-only sentence preview uses saved rules with cancellation/optional terminal context and
+inert highlights, with no audio/model/clipboard/history effects. Settings owns both vocabulary
+switches. Renderer/Settings/continuity checks and isolated native Tauri Black/Light validation at
+normal/minimum sizes passed; the native instance is closed afterward. V2.6 now reconciles the
+English/pt-BR guides, settings reference, architecture and Unreleased notes, with a concrete
+local check example and an acceptance/evidence matrix in the detailed plan. Its checkpoint has
+303 affected-package tests, build/renderer checks, targeted Clippy and repository guards.
+V2 implementation/docs are delivered; maintainer acceptance and real-speech checks remain
+pending. V4.1-V4.3 now implement retained stage timings and p50/p95 (migration 23), Activity >
+Dictation usage with daily application totals (migration 24), and Settings > Dictation Diagnostics.
+Diagnostics reads existing audio/shortcut/keyboard/GPU/VAD state, keeps final-decode/retry/Copied
+counters in memory and offers an explicit six-second, memory-only microphone test. V4.4 reconciles
+English/pt-BR docs and records the evidence and maintainer checklist. Automated checks and isolated
+native Black/Light/minimum-size reads pass; real-microphone/compositor acceptance and the Small/Vulkan
+release-to-pasted p95 target below two seconds remain unmeasured. Next in the recorded implementation
+order is V8.1, the pure local voice-command normalizer and phrase tables; V3 Styles remains later.
+No V1 native matrix sign-off or N3 completion is inferred; real-speech/desktop acceptance remains separate.
+
 #### N4 The rest
 
 Taken in the order of the sections below, each redrawn on the new UI before it lands: UX7 to
@@ -411,7 +608,7 @@ independent.
 | UX8 | Native Agents workspace, profiles and specialist Chat/context | New feature, staged, after N0; built on the current session pipeline |
 | UX9 | Studio skill library/import/reimport and verified tool connections | New feature after UX8; native storage and reviewed configuration contracts |
 | UX10 | Scoped investigations, retained evidence and implementation/review handoff | Later feature; one verified route before engine expansion |
-| UX11 | Debrief, risk/batches/questions, routines, proposals, moods/voice/ACP and observed-cost views | Alongside K1-K8/K10, M7, W2/W9b and the original Flock board |
+| UX11 | Debrief, risk/batches/questions, routines, proposals, moods/voice/ACP and observed-cost views; voice lands with V6/V7 | Alongside K1-K8/K10, M7, W2/W9b and the original Flock board |
 | UX12 | Registry-backed agent support and Android permission/service views | Alongside Every agent and L3-L5; G1/G2 remain proposed |
 
 Check the review's findings against the current head in the running application.
@@ -465,8 +662,46 @@ card), #27 `nomes` (species names in the four languages), #46 `som` (hisses and 
 | K5 | Learning from the flock: a command denied 3 times, a correction repeated to agents, the same CI step failing → a roost proposal or an `AGENTS.md` diff | M6, M9 | At least one useful proposal per week of use |
 | K6 | Skills in the `SKILL.md` format; writing to `~/.claude/skills` follows rule 3 | M6 | A skill Zeca wrote used by Claude in a session |
 | K7 | Mood from the flock (calm, alert, worried, celebrating) drives animation and tone; he looks at the bird he talks about | K1 | A running-app review per mood |
-| K8 | Voice on the same brain: an opt-in realtime model (replaces C9), open mic (P9), moving-around commands (C11); never answers a card | Z6, G9 | A spoken question uses `flock_list` |
+| K8 | Voice on the same brain (V6): an opt-in realtime model (replaces C9), turn-taking and barge-in, bounded opt-in follow-up listening after Zeca asks (P9); V8's local commands tried before the model; never answers a card | Z6, G9, V1, V8 | A spoken question uses `flock_list` |
 | K10 | Zeca as an ACP agent: Zed, JetBrains and Neovim talk to him, with memory and the flock | M7 | A Zeca session in Zed answers about the flock |
+
+### Dictation (N3)
+
+Integrated on 2026-10-17 (V0.5). The detail and substeps stay in
+[plan-dictation.md](plan-dictation.md); ids are `V<phase>.<step>`. Delivery order is V0, V1,
+V2, V4, V8, V3, V5, V7, V6. Recording a contract is not completion of its runtime or native
+acceptance. V0.1-V0.5 are recorded and V0.6-V0.9/P12 were accepted in the prototype on
+2026-10-17. The maintainer accepted V1.1 on that date; V1.2 is implemented with automated
+regression checks. V1.3 adds the shared transcript gate and V1.4 adds the pure key logic, both
+with automated evidence. V1.5/V1.6 implement clipboard-only dictation.
+V1.7-V1.18 add guarded native delivery, island feedback, History, Settings and local text/music
+controls. V1.18 has maintainer validation; V1.19 records the docs and regression checkpoint
+with unreported cells of the full desktop matrix still open. V2.1-V2.5 implement Your words
+storage, final-text rules, restricted opt-in Whisper/project context, work pages and sentence
+preview. V2.6 records the documentation/regression checkpoint and remaining acceptance; synthetic
+WER and isolated native UI evidence do not establish real microphone/desktop acceptance.
+V4.1-V4.3 implement stage timings, Activity statistics and Settings diagnostics. V4.4 records the
+documentation checkpoint and remaining acceptance: real input/grants and the Small/Vulkan p95 target
+are still open. The next implementation step is V8.1, in the recorded order above. Each backend
+and production UI step follows its own prerequisites and running-app criteria. These rows belong to N3, including
+K8's voice work; the other K rows remain N4. Tasks stays removed.
+
+| # | Step | Needs | Done when |
+|---|---|---|---|
+| V0 | Decisions in ADRs 0028, 0032, 0021 and 0019; integrated prototype in four languages | G9 | Decisions recorded and P12 prototype visually accepted on 2026-10-17; runtime/native acceptance remains with each phase |
+| V1 | Dictation into apps: shared audio capture, key machine, focus at key-down, clipboard lease, XTest/portal insertion, guarded session delivery, island, History and Settings; works with Zeca off | V0; each backend substep's own prerequisites | X11 and Plasma Wayland smoke passes with Zeca on and off, including a waiting session and honest delivery outcomes |
+| V2 | Your words (X5 reopened locally): dictionary, replacements, snippets, whisper/project vocabulary and Try a sentence | V1 | Measured WER improves with the dictionary on in the fixture set |
+| V3 | Styles: clean-up as a text filter, Prompt, translation and per-app choice, through the selected API or local provider and the gate | V1, Z6 | Injection and question evals pass; timeout or invalid output uses the raw text |
+| V4 | Statistics and Diagnostics; stage timings p50/p95 | V1 | Release-to-pasted p95 is shown and below 2 s with Small on Vulkan |
+| V5 | Meetings: mic/system audio, temporary WAV cleanup, licensed diarization through `ort`, opt-in summary, MD/SRT/VTT export | V1, V0's meeting decision | A 30-minute call yields speakers and a transcript, plus a summary when enabled, with no audio left on disk |
+| V6 | K8's voice delivery: turn machine, end of turn, opt-in realtime client with spend accounting, playback/heard prefix, AEC and shared flock tools | Z6, G9, V1, V8 | A spoken question uses `flock_list`; budget and interruption checks pass; K8 has one implementation through V6 |
+| V7 | `vults_dictate`: a question card filled by voice and sent with explicit confirmation | V1, M7's `ask_user` follow-up, V7.1's ADR alignment | An agent's question is answered by voice with human confirmation and an audit row; never a permission |
+| V8 | Local voice commands (takes C11): own key, parser/name resolver, non-answer intents and flock reads, 90 s context and undo | V1, V2 | Open api, read who waits, mute web and docs, then undo, without a model; H1 covers the command path |
+
+M7's existing MCP server is not the question-card follow-up required by V7. That interface and
+V7.1's explicit ADR alignment must land first; these rows do not relax the current prohibition
+on answering cards by voice. Z6 and M7 retain their existing Done entries and outstanding
+follow-ups; this integration does not claim those follow-ups are implemented.
 
 ### Mobile (wave 6)
 
@@ -531,9 +766,10 @@ Watch: the folded island vanished once in an R3 pass (likely the harness switchi
 the sunglasses' summer window is still to choose; Codex keys hook trust by position, so removing
 ours may make Codex ask again for a later hook.
 
-**Dropped (2026-10-12):** X1 side panel, X2 a bird on the desktop, X3 a voice per vult, X4 Vercel,
-X5 voice dictionary and cloud transcription, X8 perch together; W10's Gemini CLI check (Gemini CLI
-retired, #310).
+**Dropped (2026-10-12):** X1 side panel, X2 a bird on the desktop, X3 a voice per vult (reconsider
+after V6), X4 Vercel, cloud transcription, X8 perch together; W10's Gemini CLI check (Gemini CLI
+retired, #310). X5's voice dictionary was dropped then and reopened as local-only V2 on
+2026-10-17; its cloud transcription remains dropped.
 
 **Dropped (2026-10-16):** Tasks (W3) and what only they used: runs in their own clone (W4), the
 handoff through a context pack (W5), the review loop and its live check (W6), the router behind
@@ -552,7 +788,8 @@ Each settles a conflict between earlier plans, a review and the code.
 | Layers | Zeca's brain is the `zeca` crate (Connect), never depending on `vults-core`; his body stays in Experience; `check-layers.sh` reads `cargo metadata` |
 | Agent drivers | The `AgentDriver` trait in `agents` (Core, no tokio), implemented in `chat`, injected by `app` |
 | Zeca's own work | Never a session: his CLI carries `VULTS_ZECA=1`, the hook marks the event, `core` routes it to the chat |
-| Surfaces | One Nest window, built when opened (D6): Flock, Chat, Connections, Activity (Tasks left in N0), plus Settings as its own webview ([0021](../adr/0021-four-sizes-one-nest.md)) |
+| Surfaces | One Nest window, built when opened (D6): Flock, Chat, Connections, Activity (Tasks left in N0); Dictation is the fifth tab as N3 phases land. Settings keeps its own webview ([0021](../adr/0021-four-sizes-one-nest.md)) |
+| Dictation | A pure Connect crate for key/text logic, capture in `audio`, insertion in `platform`, orchestration in `app`; no text into a waiting session; Settings owns values and Activity the figures ([0032](../adr/0032-dictation-into-other-apps.md), [0021](../adr/0021-four-sizes-one-nest.md)) |
 | Permissions | Zeca never answers one; only a policy the user wrote may allow or deny (ADR 0004); destructive always asks (ADR 0004) |
 | Requests nobody asked for | ADR 0019: each off by default, its own switch, budget and local trace, through one gate in `app` |
 | A phone approving | ADR 0004: a `BIOMETRIC_STRONG` signature counts as a click; D1 is "the island and the phone" |
@@ -614,6 +851,8 @@ Each invariant has an automatic guard; a step that weakens one does not pass rev
 | The layer surface is never resized or unmapped | A checklist line in every platform PR |
 | The island's look changes only on purpose | Running-app review after visual changes |
 | Settings written by older versions still load | Fixtures (H4) |
+| Dictation never answers a permission | Required before N3 delivery: a waiting session yields Copied (V1.11); H1 covers voice intents (V6.6) and commands (V8.3) |
+| Meetings leave no audio archive | Required before V5 delivery: temporary-WAV cleanup on success, failure, cancellation and startup after an interrupted run (V5.1) |
 | The Rust and TS views agree | Generated TS with a freshness test (H2) |
 | Layers, language and brand | `check-layers`, `check-english`, `check-i18n`, `check-brand` |
 
@@ -633,7 +872,7 @@ lines dismissed unread < 20 % (K1); card wait time down after K3; the debrief op
 | A messaging gateway (Telegram and the like) | No | Zeca lives on the desktop, the editor and the phone |
 | A duel (one task on two agents) | Put off | Doubles the cost; the score teaches the same |
 | A2A | Put off | ACP and MCP cover coding agents |
-| Wake word | No | Voice by shortcut or opt-in realtime |
+| Wake word | No | Hands-free dictation is a double tap (V1); realtime follow-up is separately opted in and bounded |
 | Agents started without permissions | Never | Rule 2 |
 
 ## References
@@ -866,8 +1105,8 @@ Not the mobile L1 to L5 above: these are the Living Flock look steps.
 | C7 | Research: how each agent could be stopped (see D8) | #152 |
 | C8 | A quiet bird | #120 |
 | C9 | Zeca spoke; removed (local voice too poor), replaced by K8 | #123, #129 |
-| C10 | Moved to X5, dropped | |
-| C11 | Moved to K8 | |
+| C10 | Moved to X5; reopened as local-only V2 on 2026-10-17 | |
+| C11 | Moved to local voice commands V8; reused by K8/V6 | |
 | P1 | Moved to S1 | |
 | P2 | Moved to M3 | |
 | P3 | Moved to W1 | |

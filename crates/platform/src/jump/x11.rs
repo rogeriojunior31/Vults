@@ -13,11 +13,11 @@ pub fn activate(ancestors: &[u32], folder: &str) -> bool {
     try_activate(ancestors, folder).unwrap_or(false)
 }
 
-fn atom(conn: &RustConnection, name: &str) -> Fallible<u32> {
+pub(crate) fn atom(conn: &RustConnection, name: &str) -> Fallible<u32> {
     Ok(conn.intern_atom(false, name.as_bytes())?.reply()?.atom)
 }
 
-fn cardinal(conn: &RustConnection, window: Window, prop: u32) -> Option<u32> {
+pub(crate) fn cardinal(conn: &RustConnection, window: Window, prop: u32) -> Option<u32> {
     let reply = conn
         .get_property(false, window, prop, AtomEnum::CARDINAL, 0, 1)
         .ok()?
@@ -27,7 +27,7 @@ fn cardinal(conn: &RustConnection, window: Window, prop: u32) -> Option<u32> {
 }
 
 /// `_NET_WM_NAME` (UTF-8), else the legacy `WM_NAME`.
-fn title(conn: &RustConnection, window: Window, net_wm_name: u32, utf8: u32) -> String {
+pub(crate) fn title(conn: &RustConnection, window: Window, net_wm_name: u32, utf8: u32) -> String {
     let read = |prop: u32, kind: u32| {
         conn.get_property(false, window, prop, kind, 0, 1024)
             .ok()

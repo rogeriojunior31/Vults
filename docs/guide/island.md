@@ -48,7 +48,8 @@ wire, permission and question cards, the Allow / Deny shortcuts, notifications, 
 presets. What goes with him:
 
 - The chat, its tab, files dropped on the island, the Nest's Chat, the tray's *Chat…*, the
-  microphone and the talk shortcut. The usage meters stay: they read your agents' subscriptions.
+  Chat microphone. Independent [dictation](dictation.md#global-dictation-first-slice) and its
+  shortcut stay available. The usage meters stay: they read your agents' subscriptions.
 - His hello at start-up.
 - His place on the wire: the session in front sits there as its own bird, and with nobody running
   the pill reads *Nothing running*.
@@ -272,6 +273,13 @@ move between sessions: at rest the boxed name moves, in a session the next one o
   workspace and unminimized (of several windows, the one titled after the session's folder first);
 - on GNOME, Hyprland or Sway under Wayland, only a terminal running through XWayland.
 
+WezTerm pane navigation requires both `WEZTERM_PANE` and `WEZTERM_UNIX_SOCKET` from the hook.
+Vults uses only that same-user local socket, skips Lua configuration and never starts or discovers
+another server. An older session without the socket can still raise its window on supported
+desktops; otherwise **Open terminal** is unavailable until a hook event supplies the metadata.
+This is navigation only: direct WezTerm [dictation](dictation.md#exact-tmux-session-delivery) stays
+on the clipboard.
+
 When there is nothing to bring forward, the card says so. A session started in VS Code's or Cursor's
 terminal carries a **VS Code** or **Cursor** tag, and its button raises that editor instead, on KDE
 and in X11 sessions.
@@ -282,7 +290,9 @@ Global shortcuts work from any window:
   ([Approvals](approvals.md)).
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** put the next or previous session in front. A waiting card stays in
   front; the keys choose who comes after it.
-- **Ctrl+Alt+V**, held, talks to the chat ([Speaking](chat.md#speaking-instead-of-typing)).
+- **Ctrl+Alt+V**, held, fills a focused Vults Chat draft; outside Vults it copies a
+  [local dictation](dictation.md#global-dictation-first-slice). **Ctrl+Alt+X** cancels voice;
+  **Ctrl+Alt+B** copies the last dictation again.
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** and **Ctrl+Alt+3** switch to Mini, Quick and Room.
 - **Ctrl+K**, in the open island or the Nest, opens the [palette](nest.md).
 - **Ctrl+Alt+Space** opens the island and hands it the keyboard until it folds:

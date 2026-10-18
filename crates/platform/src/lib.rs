@@ -7,6 +7,20 @@ pub mod linux;
 pub mod jump;
 
 #[cfg(target_os = "linux")]
+pub mod focus;
+
+#[cfg(target_os = "linux")]
+pub mod clipboard;
+
+#[cfg(target_os = "linux")]
+pub mod insert;
+
+#[cfg(target_os = "linux")]
+pub mod raw_keys;
+
+pub mod music;
+
+#[cfg(target_os = "linux")]
 pub mod shortcuts;
 
 #[cfg(target_os = "linux")]

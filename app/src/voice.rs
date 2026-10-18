@@ -27,7 +27,7 @@ pub struct VoiceState {
 
 /// What the user speaks, as whisper takes it: the setting, else the system's language.
 /// None lets whisper detect it, which misses on short phrases.
-fn language(app: &AppHandle) -> Option<String> {
+pub(crate) fn language(app: &AppHandle) -> Option<String> {
     match settings::voice_language(app).as_deref() {
         Some("auto") => None,
         Some(code) => Some(code.to_string()),
@@ -79,7 +79,7 @@ fn take_recording<T>(recording: &Mutex<Option<(String, T)>>, target: &str) -> Op
         .map(|(_, recorder)| recorder)
 }
 
-fn models_dir() -> PathBuf {
+pub(crate) fn models_dir() -> PathBuf {
     paths::data_dir().join("voice")
 }
 
@@ -212,6 +212,8 @@ async fn fetch_vad() {
 /// Turns voice off: the mic goes from the island; downloaded models stay on disk.
 #[tauri::command]
 pub fn voice_off(app: AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    crate::dictation::cancel(&app, true);
     settings::edit(&app, |s| s.voice_model = None)?;
     let model = app
         .state::<VoiceState>()
@@ -233,6 +235,7 @@ fn announce(app: &AppHandle) {
 /// tells the recording's webview, which stops it as a click would). Held down: only the key ends it.
 #[tauri::command]
 pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) -> Result<(), String> {
+    crate::doctor::dictation::stop_mic(&app);
     // The mic serves Zeca's chat only (ADR 0018).
     if !crate::settings::zeca(&app) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
@@ -254,6 +257,8 @@ pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) ->
                 }),
             }
         });
+    #[cfg(target_os = "linux")]
+    crate::dictation::cancel(&app, false);
     // A recording still going is dropped first, so its preview never shows in this one.
     cancel(&app);
     let levels = app.clone();
@@ -311,6 +316,11 @@ pub fn voice_cancel(app: AppHandle, window: tauri::Webview) {
     ));
 }
 
+pub fn recording(app: &AppHandle) -> bool {
+    app.try_state::<VoiceState>()
+        .is_some_and(|s| s.recording.lock().map_or(true, |r| r.is_some()))
+}
+
 /// Zeca off, or a new recording: stop the microphone regardless of its surface.
 pub fn cancel(app: &AppHandle) {
     drop(
@@ -322,7 +332,7 @@ pub fn cancel(app: &AppHandle) {
     );
 }
 
-fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
+pub(crate) fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
     let state = app.state::<VoiceState>();
     let cached = || {
         state

@@ -6078,5 +6078,55 @@
     "Arquivos alterados · {n}",
     "Archivos cambiados · {n}",
     "已更改文件 · {n}"
+  ],
+  "Finished": [
+    "Concluído",
+    "Terminado",
+    "已完成"
+  ],
+  "What it said last": [
+    "Última mensagem",
+    "Último mensaje",
+    "上一条消息"
+  ],
+  "Add": [
+    "Adicionar",
+    "Añadir",
+    "添加"
+  ],
+  "On": [
+    "Ligado",
+    "Activado",
+    "已开启"
+  ],
+  "This preview simulates microphone and system audio. In the app, each recording uses private temporary audio, deleted after transcription, failure or cancellation.": [
+    "Esta prévia simula o microfone e o áudio do sistema. No app, cada gravação usa áudio temporário privado, apagado após a transcrição, falha ou cancelamento.",
+    "Esta vista previa simula el micrófono y el audio del sistema. En la app, cada grabación usa audio temporal privado que se elimina tras transcribir, fallar o cancelar.",
+    "此预览模拟麦克风和系统音频。应用中的每次录音都使用私密临时音频，并在转录完成、失败或取消后删除。"
+  ],
+  "Restores text after 0.7 s only if unchanged. Images and rich formats are not restored; clipboard history exclusion depends on the desktop.": [
+    "Restaura o texto após 0,7 s só se ele não mudou. Imagens e formatos ricos não são restaurados; a exclusão do histórico depende do desktop.",
+    "Restaura el texto tras 0,7 s solo si no cambió. No restaura imágenes ni formatos enriquecidos; excluirlo del historial depende del escritorio.",
+    "仅在内容未变时于 0.7 秒后恢复文本。不会恢复图片或富文本；是否排除剪贴板历史取决于桌面环境。"
+  ],
+  "Sends the transcript, never audio, to the selected model. Off by default; up to 20 attempts per rolling 24 hours, through the gate.": [
+    "Envia a transcrição, nunca o áudio, ao modelo escolhido. Desligado por padrão; até 20 tentativas em qualquer janela de 24 horas, pelo portão de rede.",
+    "Envía la transcripción, nunca audio, al modelo elegido. Desactivado por defecto; hasta 20 intentos en cualquier ventana de 24 horas, a través de la puerta de red.",
+    "向所选模型发送转录文本，绝不发送录音。默认关闭；通过网络网关，每个滚动 24 小时最多尝试 20 次。"
+  ],
+  "Dictation audio stays in memory. Meetings use temporary audio; history keeps only text on this computer.": [
+    "O áudio do ditado fica na memória. Reuniões usam áudio temporário; o histórico guarda só texto neste computador.",
+    "El audio del dictado queda en memoria. Las reuniones usan audio temporal; el historial solo guarda texto en este equipo.",
+    "听写音频仅保存在内存中。会议使用临时音频；历史记录仅在本机保存文本。"
+  ],
+  "Off by default. Up to 2,000 attempts per rolling 24 hours, including local models; through the gate. When unavailable, keep the raw text.": [
+    "Desligado por padrão. Até 2.000 tentativas em qualquer janela de 24 horas, incluindo modelos locais, pelo portão de rede. Se indisponível, mantém o texto bruto.",
+    "Desactivado por defecto. Hasta 2.000 intentos en cualquier ventana de 24 horas, incluidos modelos locales, a través de la puerta de red. Si no está disponible, conserva el texto original.",
+    "默认关闭。通过网关，每个滚动 24 小时最多尝试 2,000 次，包括本地模型。不可用时保留原始文本。"
+  ],
+  "Off by default. After Zeca asks in an active voice conversation, listen for at most 8 s, visibly and cancellably. Cards and tools never reopen it.": [
+    "Desligado por padrão. Após uma pergunta do Zeca numa conversa de voz ativa, escuta por até 8 s, de forma visível e cancelável. Cards e ferramentas nunca reabrem o microfone.",
+    "Desactivado por defecto. Tras una pregunta de Zeca en una conversación de voz activa, escucha hasta 8 s, de forma visible y cancelable. Las tarjetas y herramientas nunca reabren el micrófono.",
+    "默认关闭。在进行中的语音对话里，Zeca 提问后最多聆听 8 秒，状态可见且可取消。卡片和工具绝不会重新打开麦克风。"
   ]
 }

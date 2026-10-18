@@ -59,15 +59,16 @@ pose, even when files arrive or another tool reports progress. Reduced motion sh
 static pose for the current state; hidden companions stop drawing.
 
 In Quick, the composer starts with one writing line and grows as you type, up to its height limit.
-The paperclip, optional microphone and Send sit beside the draft; the paperclip keeps its
+The composer uses one rounded writing row: the paperclip on the left, draft in the middle,
+and optional microphone and Send on the right; the paperclip keeps its
 **Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies
 read in the conversation column.
 
-The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no chat, no microphone
-and the talk shortcut does nothing, and files dropped on the island are not taken. See
-[Without Zeca](island.md#without-zeca). On KDE Plasma the desktop keeps **Ctrl+Alt+V** for the app
-meanwhile; to use the key elsewhere, clear *Hold to speak to the chat* in System Settings →
-Shortcuts; the talk key then stays off until you give it a key there again.
+The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no Chat
+or Chat microphone, and files dropped on the island are not taken. Independent
+[local dictation](dictation.md#global-dictation-first-slice) still works, including its talk key.
+See [Without Zeca](island.md#without-zeca). Change the global keys in System Settings → Shortcuts;
+Settings > General shows the bindings the desktop reports.
 
 ## Where it works
 
@@ -135,7 +136,10 @@ An empty Nest Chat centres Zeca's original 3x portrait above **Ask Zeca** and a 
 of suggestions. Once messages arrive, the same scene uses a smaller 2x perch above the
 composer. Its own space keeps messages clear of the bird throughout scrolling. The slim
 header, tighter message spacing and one-line initial draft leave more room for reading;
-the draft grows as you type. Transcript and composer share a column up to 760 px wide.
+the draft grows as you type. The composer uses one rounded row about 52-54 px high at rest,
+with attachment on the left and microphone/Send on the right. Short windows keep their smaller
+controls and long drafts still scroll within their limit. Transcript and composer share a
+column up to 760 px wide.
 Attachments stay in a bounded horizontal strip, with long filenames readable inside each card.
 Short windows bound the writing field and omit the keyboard hint; at 560 px high or less,
 they also fold the portrait away and use smaller composer controls.
@@ -205,15 +209,19 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 
 ## Speaking instead of typing
 
+Independent dictation has its own controls in **Settings → Dictation**, also linked from Chat &
+voice. The model and language below are shared by both paths; dictation stays available with Zeca off.
+
 Turn it on once in **Settings → Chat & voice → Voice**: download a model (*Base* is 60 MB and quick; *Small*
-and *Large v3 Turbo* understand accents and names better). A mic appears beside Attach in the composer's action row, both in the Nest and on the island.
+and *Large v3 Turbo* understand accents and names better). A mic appears beside Send, to the right of the draft, both in the Nest and on the island.
 
 - Click the mic and speak. It stops by itself after about 1.5 s of quiet after your words, or when
   you click again; the words land in the input for you to read and fix, then **Enter** sends them.
   Silence before you start never stops it; if a pause does, click again to go on.
-- Or hold **Ctrl+Alt+V** from anywhere: the chat opens and Zeca listens while you hold it (pauses
-  never stop it); letting go turns it into text. The key can be changed in System Settings →
-  Shortcuts.
+- Or hold **Ctrl+Alt+V** while a Vults Chat surface has focus: Zeca listens while you hold it
+  (pauses never stop it); letting go fills its draft. Outside Vults the same key uses
+  [independent dictation](dictation.md#global-dictation-first-slice) and copies the text.
+  Change the key in System Settings → Shortcuts.
 - In Room or Full, the shortcut uses that window's chat while it has focus. Its
   waveform and speech preview stay there too. Leaving Chat, hiding or closing
   the window, or locking the screen cancels an active recording.

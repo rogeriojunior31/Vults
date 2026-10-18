@@ -11,6 +11,8 @@ import { setLang, t } from "../i18n";
 import { followClock } from "./daypart";
 import { savedTransition } from "../surfaces/nest/close";
 
+import { dictationStatus } from "./dictation";
+
 Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
   decide: (request, decision) => void Bridge.decide(request, decision),
@@ -93,6 +95,13 @@ const island = createIsland(document.getElementById("island")!, {
     },
   },
 });
+let dictationViewReady = false;
+let dictationSettingsReady = false;
+// Only the persistent island owns audio; other surfaces render the same status silently.
+const dictation = dictationStatus(false, island.setDictation, () => {
+  if (dictationViewReady && dictationSettingsReady && !island.last().locked) Sound.play("peek");
+});
+island.onDictationLayout(dictation.layout);
 const changeView = savedTransition(() => island.chat.flushDraft(), () => {
   island.chat.toggle(true);
   island.chat.receive({ kind: "error", message: t("Could not change the view. Your draft stays here; try again.") });
@@ -121,6 +130,7 @@ const nestOpen = (open: boolean) => {
   if (open && island.chat.isOpen()) island.chat.toggle(false);
   setNestOpen(open);
   nestShown = open;
+  dictation.visible(!open);
   island.render(island.last());
 };
 Bridge.onNestOpen(nestOpen);
@@ -139,8 +149,10 @@ void Promise.all([placed, settings.catch(() => null)]).then(([p, s]) => {
   Bridge.firstName().then(island.greet, () => island.greet(null));
 });
 Bridge.onView((view) => {
+  dictation.context(view, island.chat.hasWaitingApproval());
   setZecaLook(view.look ?? null);
   island.render(view);
+  dictationViewReady = true;
 });
 Bridge.onChat((d) => island.chat.receive(d));
 Bridge.onChatSync((s) => island.chat.sync(s));
@@ -169,10 +181,14 @@ Bridge.onUsage(island.setUsage);
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void settings.then((s) => {
+  dictation.captions(s.dictationCaption, true);
+  dictation.startSound(s.dictationSound, true);
   setLang(s.lang);
+  dictation.relabel();
   island.chat.relabel();
   Sound.setEnabled(s.sounds);
   Sound.setVolume(s.volume);
+  dictationSettingsReady = true;
   island.setFoldAfter(s.foldAfter);
   island.setOpenOnHover(s.openOnHover);
   setZecaSpecies(s.zecaSpecies);
@@ -185,9 +201,12 @@ void settings.then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => island.chat.setApi(api));
 Bridge.onSettings((s) => {
+  if (s.dictationSound !== undefined) dictation.startSound(s.dictationSound);
+  if (s.dictationCaption !== undefined) dictation.captions(s.dictationCaption);
   applyTheme(s.theme);
   if (s.lang !== undefined) {
     setLang(s.lang);
+    dictation.relabel();
     island.chat.relabel();
   }
   if (s.sounds !== undefined) Sound.setEnabled(s.sounds);

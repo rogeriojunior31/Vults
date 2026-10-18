@@ -4,7 +4,10 @@
 use std::ops::Range;
 use std::path::Path;
 
-use whisper_rs::{WhisperVadContext, WhisperVadContextParams, WhisperVadParams};
+use whisper_rs::{WhisperVadContext, WhisperVadContextParams};
+
+mod hysteresis;
+use hysteresis::{Hysteresis, Transition};
 
 use crate::SAMPLE_RATE;
 
@@ -18,7 +21,10 @@ const MARGIN: usize = SAMPLE_RATE as usize / 5; // 200 ms
 const SHORTEST: usize = 512;
 
 #[derive(Debug)]
-pub struct Vad(WhisperVadContext);
+pub struct Vad {
+    model: WhisperVadContext,
+    detector: Hysteresis,
+}
 
 impl Vad {
     /// Quick (the model is under 1 MB), so it is loaded for each recording.
@@ -31,25 +37,43 @@ impl Vad {
         // Loading sets up ggml's backends (Vulkan among them), which must not race a model load.
         let _busy = crate::WHISPER.lock().unwrap_or_else(|e| e.into_inner());
         WhisperVadContext::new(path, params)
-            .map(Self)
+            .map(|model| Self {
+                model,
+                detector: Hysteresis::default(),
+            })
             .map_err(|e| format!("can't load the VAD model: {e}"))
     }
 
     /// The stretches of speech in 16 kHz mono audio, as sample ranges, in order.
     pub fn speech(&mut self, pcm: &[f32]) -> Result<Vec<Range<usize>>, String> {
+        // The watcher reanalyses overlapping windows, not successive streaming chunks.
+        self.detector.reset();
         if pcm.len() < SHORTEST {
             return Ok(Vec::new());
         }
-        let segments = self
-            .0
-            .segments_from_samples(WhisperVadParams::default(), pcm)
+        // whisper.cpp resets its recurrent state on each detect_speech call too.
+        self.model
+            .detect_speech(pcm)
             .map_err(|e| format!("the VAD failed: {e}"))?;
-        // whisper.cpp gives centiseconds.
-        let at = |cs: f32| ((cs.max(0.0) * SAMPLE_RATE as f32 / 100.0) as usize).min(pcm.len());
-        Ok(segments
-            .map(|s| at(s.start)..at(s.end))
-            .filter(|r| !r.is_empty())
-            .collect())
+        if self.model.probabilities().len() != pcm.len().div_ceil(SHORTEST) {
+            return Err("the VAD returned an incomplete speech analysis".into());
+        }
+        for (probability, frame) in self.model.probabilities().iter().zip(pcm.chunks(SHORTEST)) {
+            if !probability.is_finite() || !(0.0..=1.0).contains(probability) {
+                return Err("the VAD returned an invalid speech probability".into());
+            }
+            self.detector.push(*probability, frame.len());
+        }
+        self.detector.finish();
+        let mut start = 0;
+        let mut speech = Vec::new();
+        while let Some(transition) = self.detector.pop() {
+            match transition {
+                Transition::Start(at) => start = at,
+                Transition::End(at) => speech.push(start..at),
+            }
+        }
+        Ok(speech)
     }
 }
 
@@ -237,6 +261,47 @@ mod tests {
     }
 
     #[test]
+    fn wav_fixtures_keep_speech_and_ignore_breath_noise() {
+        let Some(mut vad) = real_vad() else { return };
+        let fixtures: [(&str, &[u8]); 4] = [
+            ("speech", include_bytes!("../tests/fixtures/speech.wav")),
+            ("pauses", include_bytes!("../tests/fixtures/pauses.wav")),
+            ("silence", include_bytes!("../tests/fixtures/silence.wav")),
+            (
+                "breath noise",
+                include_bytes!("../tests/fixtures/breath-noise.wav"),
+            ),
+        ];
+        for (name, wav) in fixtures {
+            let expected: &[Range<usize>] = match name {
+                "speech" => &[9728..37888],
+                "pauses" => &[9728..70656, 84480..112640],
+                _ => &[],
+            };
+            // These checked-in fixtures have a canonical PCM16 mono header, with no metadata.
+            assert_eq!(&wav[..4], b"RIFF");
+            assert_eq!(&wav[36..40], b"data");
+            let pcm: Vec<f32> = wav[44..]
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|b| f32::from(i16::from_le_bytes(*b)) / 32768.0)
+                .collect();
+            let speech = vad.speech(&pcm).expect("fixture VAD");
+            assert_eq!(speech.len(), expected.len(), "{name}: {speech:?}");
+            for (actual, expected) in speech.iter().zip(expected) {
+                assert!(
+                    actual.start.abs_diff(expected.start) <= S / 25
+                        && actual.end.abs_diff(expected.end) <= S / 25,
+                    "{name}: {actual:?}, expected {expected:?} within 40 ms"
+                );
+            }
+            assert!(vad.speech(&[]).expect("empty turn").is_empty());
+            assert_eq!(vad.speech(&pcm).expect("next turn"), speech, "{name}: reset");
+        }
+    }
+
+    #[test]
     fn silero_finds_the_speech_and_the_end_of_it() {
         let (Some(mut vad), Some(words)) = (real_vad(), jfk()) else {
             return;
@@ -266,16 +331,17 @@ mod tests {
         );
         // It ends the pause after the last word ("country", 10.5 s into the file), give or take
         // 200 ms; also for its last sentence alone.
-        let pause = PAUSE as f32 / S as f32;
         for from in [0, 8 * S] {
             let mut pcm = vec![0.0; S];
             pcm.extend(&words[from..]);
             pcm.extend(vec![0.0; 3 * S]);
             let last_word = S + S * 21 / 2 - from;
-            let late = late(stop_at(&pcm, |w| vad.speech(w).expect("vad")), last_word);
+            let stopped = stop_at(&pcm, |w| vad.speech(w).expect("vad"));
+            let elapsed = stopped.saturating_sub(last_word);
             assert!(
-                (late - pause).abs() <= 0.2,
-                "from {from}: stopped {late:.2} s after the last word"
+                elapsed.abs_diff(PAUSE) <= S / 5,
+                "from {from}: stopped {:.2} s after the last word",
+                late(stopped, last_word)
             );
         }
     }

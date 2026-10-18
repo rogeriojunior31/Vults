@@ -1,4 +1,4 @@
-  const settings = { theme:'jaragua', zeca:true, sounds:false, volume:50, notifications:true, presence:'Island', fold:15, hover:false, autostart:false, media:false, usage:true, history:true, memory:true, summary:false, suggestions:true, sleep:false, embeddings:false, voice:true, voiceModel:'Small', voiceLanguage:'Automatic', access:'Asks first', native:true, web:false, webEngine:'Brave', github:true, visitors:true, animations:prefs.motion, species:'atratus', outfit:'auto', pool:'Brazil', language:'pt-BR', dailyBudget:10, phone:false, transport:'Relay', provider:'CLI', chatFolder:'Vults', recordsCleared:false, dnd:'Off', screen:'Follow the pointer', widget:'Off',
+  const settings = { theme:'black', zeca:true, sounds:false, volume:50, notifications:true, presence:'Island', fold:15, hover:false, autostart:false, media:false, usage:true, history:true, memory:true, summary:false, suggestions:true, sleep:false, embeddings:false, voice:true, voiceModel:'Small', voiceLanguage:'Automatic', access:'Asks first', native:true, web:false, webEngine:'Brave', github:true, visitors:true, animations:prefs.motion, species:'atratus', outfit:'auto', pool:'Brazil', language:'pt-BR', dailyBudget:10, phone:false, transport:'Relay', provider:'CLI', chatFolder:'Vults', recordsCleared:false, dnd:'Off', screen:'Follow the pointer', widget:'Off',
     dictMode:'Hold + double tap', dictSpace:true, dictSession:true, dictAutoSend:false, dictSpokenCode:true, dictAgentsAsk:false, dictMic:'System default', dictSound:true, dictRepeats:true, dictPlanB:true, dictTerminals:true, dictClipboard:true, dictCleanup:false, dictCleanupModel:'Chat & voice · claude-haiku-4-5', dictStyle:'Natural', dictWriteIn:'The spoken language', dictSessionsEnglish:false, dictSummary:false, dictKeep:'30', dictHint:true, dictProject:true, dictSayCancel:true, dictDuck:'Lower to 25%', dictCaption:true, dictCommands:true, dictCommandElse:'Say so on the island',
     zecaVoice:false, zecaVoiceModel:'OpenAI · gpt-realtime', zecaBudget:'$1', zecaTurn:'Balanced', zecaBarge:true, zecaFollowUp:false,
     rules:[{agent:'Codex',tool:'Bash',target:'npm run build',cwd:'~/Projects/Vults'},{agent:'Claude Code',tool:'Read',target:'docs/**',cwd:'~/Projects/docs'}],
@@ -346,7 +346,7 @@
   }
   /* Themes are generated from sp-night.json: each flavour's tokens fill the roles Vults reads. Black is
      today's app theme (themes.css), kept as the fallback. */
-  const THEMES=[...Object.entries(SP_NIGHT.flavors).map(([value,f])=>({value,label:raw(f.label)})),{value:'black',label:'Black'}];
+  const THEMES=[...Object.entries(SP_NIGHT.flavors).map(([value,f])=>({value,label:raw(f.label)})),{value:'black',label:'Black'},{value:'light',label:'Light'}];
   const mixHex=(a,b,t)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,'0')).join('');
   function flavorVars(c){
     const r=k=>c[SP_NIGHT.roles[k]];
@@ -360,14 +360,14 @@
   }
   let themeVars=[];
   function applyTheme(value){
-    settings.theme=THEMES.some(t=>t.value===value)?value:'jaragua';
+    settings.theme=THEMES.some(t=>t.value===value)?value:'black';
     for(const name of themeVars)root.style.removeProperty(name);themeVars=[];
     const flavor=SP_NIGHT.flavors[settings.theme];
     if(flavor)for(const [name,v] of Object.entries(flavorVars(flavor.colors))){root.style.setProperty(name,v);themeVars.push(name);}
-    root.setAttribute('data-flavor',settings.theme);for(const pick of $$('.theme-select,.settings-theme'))pick.value=settings.theme;
+    root.setAttribute('data-theme',settings.theme==='light'?'light':'black');root.setAttribute('data-flavor',settings.theme);for(const pick of $$('.theme-select,.settings-theme'))pick.value=settings.theme;
     // The scenes cache their wire and agent colors: redraw them in the new flavour.
     for(const scene of activeScenes){scene.colors=null;scene.refresh?.();}
-    document.body?.style&&(document.body.style.background=flavor?flavor.colors[SP_NIGHT.roles.bg]:'#000');
+    document.body?.style&&(document.body.style.background=getComputedStyle(root).getPropertyValue('--bg').trim()||'#000');
   }
   /* MODULES */
   const SCREEN_REVIEW=[
@@ -516,7 +516,8 @@
     if(event.defaultPrevented||event.isComposing||event.keyCode===229)return;
     if(!$('.editor-overlay').hidden||!$('.dialog-overlay').hidden)return;
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openPalette();return;}
-    if(event.altKey&&['1','2','3','4','5','6'].includes(event.key)){event.preventDefault();setArea(LAB_NAV[Number(event.key)-1][2],state.mode==='full'?'full':'room');return;}
+    const tab=event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey?LAB_NAV[Number(event.key)-1]:null;
+    if(tab){event.preventDefault();setArea(tab[2],state.mode==='full'?'full':'room');return;}
     // Ctrl+Alt+Y / N answer the card on screen, as the app's global shortcuts do; never one that is not shown.
     if(event.ctrlKey&&event.altKey&&['y','n'].includes(event.key?.toLowerCase())){const card=$('.request-card');const b=card?.querySelector('[data-key="'+(event.key.toLowerCase()==='y'?'allow':'deny')+'"]');if(b){event.preventDefault();b.click();}return;}
     if(event.ctrlKey&&event.altKey&&['1','2','3'].includes(event.key)){event.preventDefault();setMode(['mini','quick','room'][Number(event.key)-1]);}

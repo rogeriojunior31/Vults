@@ -46,6 +46,7 @@ globalThis.document = { body: new Element("body"), dispatchEvent() {}, addEventL
   createDocumentFragment: () => new Element("fragment"),
   createTextNode: text => { const node = new Element("text"); node.textContent = text; return node; } };
 globalThis.window = globalThis;
+globalThis.addEventListener = () => {};
 globalThis.setTimeout = globalThis.setInterval = () => 0;
 globalThis.requestAnimationFrame = () => 0;
 globalThis.getComputedStyle = () => ({ lineHeight: "20", borderTopWidth: "1", borderBottomWidth: "1" });
@@ -335,15 +336,15 @@ for (const surface of ["island", "nest"]) {
   assert.ok(draft.includes("project"));
   assert.equal(document.activeElement, input);
   assert.equal(sends, 0, "A suggestion only prepares the editable draft");
-  tools.children[0].listeners.click();
+  input.parentElement.children[0].listeners.click();
   assert.deepEqual(picked, ["Attach a file"]);
   chat.attach(["/inbox/123-project.plan.md", "/work/.gitignore", "/work/README", "/work/design.review.png"]);
   const files = nodes(composer).find(node => node.className === "chips");
-  assert.equal(input.parentElement, composer);
+  assert.equal(input.parentElement.className, "composer-row");
   assert.equal(files.parentElement, composer, "File cards belong to the same draft surface");
   assert.equal(files.attributes["aria-label"], "Attachments");
-  assert.equal(tools.parentElement, composer);
-  assert.equal(tools.children[0].attributes["aria-label"], "Attach a file", "The icon-only file picker keeps its explicit accessible name");
+  assert.equal(tools.parentElement, input.parentElement, "Microphone and Send share the draft row");
+  assert.equal(input.parentElement.children[0].attributes["aria-label"], "Attach a file", "The left attachment action retains its explicit accessible name");
   assert.deepEqual(files.children.map(file => file.querySelector("small").textContent), ["MD", "File", "File", "PNG"]);
   assert.ok(files.children[0].textContent.includes("project.plan.md"), "Inbox timestamps stay out of the visible name");
   files.children[1].querySelector("button").listeners.click();
@@ -417,11 +418,14 @@ for (const surface of ["island", "nest"]) {
   const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {} }, () => {}, { window: surface });
   await tick();
   chat.load({ ...conversation, busy: true, lines: [{ who: "zeca", text: "A reply already streaming" }] });
+  assert.equal(chat.hasWaitingApproval(), false);
   assert.equal(chat.clip(performance.now()), "think", "Thinking continues through streamed words, not only before the first one");
   chat.receive({ kind: "permission", id: "expression-only", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+  assert.equal(chat.hasWaitingApproval(), true, "A new Chat card suppresses dictation before the next core view");
   chat.showVoice("listening");
   assert.equal(chat.clip(performance.now()), "question", "A pending decision keeps the question pose");
   chat.receive({ kind: "stopped" });
+  assert.equal(chat.hasWaitingApproval(), false, "An expired Chat card releases feedback priority");
   assert.equal(chat.clip(performance.now()), "listen");
   chat.showVoice("transcribing");
   assert.equal(chat.clip(performance.now()), "think");
@@ -435,7 +439,7 @@ console.log("check-chat-models: both companions retain streaming thought, decisi
 
 // Load Room's real entry point: a working ChatPanel alone cannot catch missing native wiring.
 const voiceEvents = {}, voiceCalls = [], voiceDrafts = [], voiceViewActions = [];
-let voiceSaveFails = false;
+let voiceSaveFails = false, pendingVoiceStop = false, resolveVoiceStop;
 const voiceRoot = new Element("main");
 document.getElementById = () => voiceRoot;
 document.documentElement = new Element("html");
@@ -453,7 +457,7 @@ globalThis.voiceTestBridge = new Proxy({}, { get: (_target, name) => {
     switch (name) {
       case "voiceStatus": return { ready: true };
       case "voiceStart": voiceCalls.push(["start", ...args]); return;
-      case "voiceStop": voiceCalls.push(["stop"]); return "Spoken words";
+      case "voiceStop": voiceCalls.push(["stop"]); return pendingVoiceStop ? new Promise(resolve => { resolveVoiceStop = resolve; }) : "Spoken words";
       case "voiceCancel": voiceCalls.push(["cancel"]); return;
       case "chatSend": assert.fail("Dictation never sends a message");
       case "chatDraftSet": voiceDrafts.push(args[0]); if (voiceSaveFails) throw new Error("Draft save unavailable."); return;
@@ -501,7 +505,28 @@ assert.equal(roomMic.hidden, true);
 assert.deepEqual(voiceCalls.at(-1), ["cancel"], "Turning voice off cancels Room's recording");
 voiceEvents.onSettings({ voice: true });
 assert.equal(roomMic.hidden, false);
+voiceEvents.onDictation({ sequence: 1, generation: 1, phase: "listening", error: null });
+const roomDictation = nodes(document.body).find(node => node.classList.contains("dictation-status"));
+assert.equal(roomDictation.hidden, false);
+voiceEvents.onChat({ kind: "permission", id: "dictation-priority", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+assert.equal(roomDictation.hidden, true, "The real Nest entry yields dictation feedback to a new Chat card before a core view");
+voiceEvents.onChat({ kind: "stopped" });
+assert.equal(roomDictation.hidden, false);
 console.log("check-chat-models: real Room entry wires voice status/settings, microphone, preview, silence, transcription draft and cancellation");
+pendingVoiceStop = true;
+roomMic.listeners.click(); await tick();
+voiceEvents.onVoiceSilence(); await tick();
+assert.equal(roomChat.cancelVoice(), true, "Cancel also discards an in-flight Chat transcription");
+const externalFocus = new Element("input"); externalFocus.focus();
+const keptVoiceDraft = roomInput.value;
+roomMic.listeners.click(); await tick();
+resolveVoiceStop("Cancelled late words"); await tick();
+assert.equal(roomInput.value, keptVoiceDraft, "An old transcript cannot fill a cancelled or newer draft");
+assert.equal(document.activeElement, externalFocus, "An old transcript cannot pull focus from a dictation destination");
+assert.ok(roomChat.element.textContent.includes("Listening…"), "The new recording survives the old result");
+roomChat.cancelVoice(); pendingVoiceStop = false;
+console.log("check-chat-models: cancelling Chat transcription rejects late text, focus and state changes across a new recording");
+
 
 // Rich replies keep links inert, expose local scrolling and copy failures without touching drafts.
 let clipboardCalls = 0, failClipboard = true;

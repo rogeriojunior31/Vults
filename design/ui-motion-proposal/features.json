@@ -1174,7 +1174,7 @@
   {
    "id": "dictation-area",
    "area": "Lab",
-   "feature": "Dictation, a sixth Lab tab with its own side list: Voice, Your words, System",
+   "feature": "Dictation, the fifth Lab tab after Tasks removal with its own side list: Voice, Your words, System",
    "status": "planned",
    "phase": "V1",
    "at": {
@@ -1334,8 +1334,8 @@
    "phase": "V3",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "styles"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-cleanup\"]"
   },
@@ -1373,8 +1373,8 @@
    "phase": "V6",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "talk"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"zeca-voice\"]"
   },
@@ -1553,8 +1553,8 @@
    "phase": "V8",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "commands"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-commands\"]"
   },
@@ -1566,8 +1566,8 @@
    "phase": "V8",
    "at": {
     "mode": "room",
-    "area": "dictation",
-    "dxTab": "commands"
+    "area": "settings",
+    "category": "dictation"
    },
    "expect": "[data-key=\"dict-commands-list\"]"
   },

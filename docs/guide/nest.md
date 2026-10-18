@@ -16,7 +16,7 @@ Activity and Connections use underlined view tabs; status colors keep their mean
 diffs and Compact controls follow the same theme, including live changes to the birds'
 agent colors and wire.
 
-At widths of 900 px or more, drag the separator of Settings, Connections, Recent or Memory
+At widths of 900 px or more, drag the separator of Settings, Connections, Dictation, Recent or Memory
 to resize that side panel. Double-click resets its width; the fold button keeps a narrow rail.
 The separator also accepts arrow keys, Home/End and Enter. Width and folded state are saved
 locally, without changing selection or drafts. Narrow windows keep their existing navigation.
@@ -55,7 +55,7 @@ bar's controls and the footer reachable.
 When there is room, the header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
-full-screen button. The same header holds four tabs with their
+full-screen button. The same header holds five tabs with their
 icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
 brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or
@@ -64,7 +64,7 @@ answer it. Settings stays a page of its own there: it is the only one that chang
 agent's config, a key, a policy or a phone, and it never shows an agent's text. The switch keeps
 the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
-pill. **Alt+1** to **Alt+4** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
+pill. **Alt+1** to **Alt+5** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
 switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.
@@ -177,9 +177,11 @@ restoration leaves any newer typing alone.
 
 What this computer keeps, read only here:
 
-- **Week**: the week's four figures (time with your agents, turns, lines changed, your answers), a
+- **Week**: the week's agent figures (time, turns, lines changed, your answers), dictated words, a
   bar a day (a click shows that day), **Save as image…** with or without the project names, and
   the year's grid, with the history's switches ([Activity](activity.md)).
+- **Dictation**: measured usage for the last 7 days, 30 days or all time, with daily bars and top apps
+  ([Dictation statistics](activity.md#dictation-statistics)). The selected period survives reopening.
 - **By project**: this week's time per project in bars (a repository's worktrees add up under it,
   with how many it has), a search
   by project, branch or agent, and a card for each repository a session works in: its folders and
@@ -241,3 +243,18 @@ A failed refresh keeps the current rows and allows another attempt. **✓ Seen**
 title without fading its status or actions. **Add a connection** lists only supported connectors
 known to be off; **Turn on in Settings…** and **Manage connections** open the only place that
 turns one on ([Connectors](connectors.md)).
+
+## Dictation
+
+The fifth tab opens [dictation history](dictation.md#dictation-history), including with Zeca off.
+Its side list groups Voice, Your words and System. **History**, **Dictionary** and **Snippets**
+are working pages. Dictionary edits words and ordered replacements and offers **Try a sentence**
+through the real local text rules; Snippets saves literal bodies. Drafts and the selected work
+page survive Room/Full changes. Settings links open **Settings > Dictation**, which owns keys,
+feedback, insertion, privacy and the two opt-in vocabulary switches. The shared model and
+language remain in **Chat & voice**. Diagnostics is at the end of Settings > Dictation, with an
+explicit microphone test and the retained stage timings ([Diagnostics](dictation.md#diagnostics)).
+**Statistics** opens Activity > Dictation. Other entries are marked as later steps. Narrow windows
+show available destinations in a short horizontal row; work pages scroll independently.
+History retains its search, disclosures and reading position; deleting transcripts keeps
+measured usage totals and Your words preferences. See [Your words processing](dictation.md#your-words-processing).

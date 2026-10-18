@@ -7,6 +7,6 @@ body.dock-bottom {
   align-items: flex-end;
 }
 /* At rest by the panel nothing is drawn: no notch, no shape still shrinking. */
-body.panel #island.is-hidden {
+body.panel #island.is-hidden:not(.has-dictation) {
   visibility: hidden;
 }

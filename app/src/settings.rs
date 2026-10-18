@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 23;
+const VERSION: u32 = 35;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -60,6 +60,37 @@ pub struct Settings {
     /// What the user speaks: a code (`pt`), `auto` to detect it, absent to follow the system.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_language: Option<String>,
+    /// Explicit permission to paste into validated native X11 editors. Off by default.
+    #[serde(default)]
+    pub dictation_insert: bool,
+    #[serde(default = "yes")]
+    pub dictation_caption: bool,
+    #[serde(default = "yes")]
+    pub dictation_sound: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dictation_microphone: Option<String>,
+    #[serde(default = "yes")]
+    pub dictation_cut_repeats: bool,
+    #[serde(default = "yes")]
+    pub dictation_retry_base: bool,
+    #[serde(default)]
+    pub dictation_vocabulary: bool,
+    #[serde(default)]
+    pub dictation_project_vocabulary: bool,
+    #[serde(default = "yes")]
+    pub dictation_spoken_code: bool,
+    #[serde(default = "yes")]
+    pub dictation_cancel_by_voice: bool,
+    #[serde(default)]
+    pub dictation_music: vults_platform::music::Mode,
+    #[serde(default = "yes")]
+    pub dictation_double_tap: bool,
+    #[serde(default = "yes")]
+    pub dictation_space_lock: bool,
+    #[serde(default = "yes")]
+    pub dictation_escape_cancel: bool,
+    #[serde(default = "dictation_keep")]
+    pub dictation_keep: String,
     /// Zeca's species, a renderer id (`ui/src/character/flock/species.ts`); an unknown one draws
     /// the black vulture.
     #[serde(default = "zeca_species")]
@@ -253,8 +284,30 @@ fn volume() -> u8 {
 /// The choices the settings offer; anything else in the file is brought into this range.
 const FOLD_AFTER: std::ops::RangeInclusive<u32> = 5..=120;
 
+fn dictation_keep() -> String {
+    "30".into()
+}
+
 fn fold_after() -> u32 {
     15
+}
+
+impl Settings {
+    pub fn dictation_capture_options(&self) -> vults_audio::CaptureOptions {
+        vults_audio::CaptureOptions {
+            device: self.dictation_microphone.clone(),
+            max_seconds: 600,
+        }
+    }
+
+    #[cfg(any(target_os = "linux", test))]
+    pub fn dictation_options(&self) -> vults_dictation::GestureOptions {
+        vults_dictation::GestureOptions {
+            double_tap: self.dictation_double_tap,
+            space_lock: self.dictation_space_lock,
+            escape_cancel: self.dictation_escape_cancel,
+        }
+    }
 }
 
 impl Default for Settings {
@@ -275,6 +328,21 @@ impl Default for Settings {
             now_playing: false,
             voice_model: None,
             voice_language: None,
+            dictation_insert: false,
+            dictation_caption: true,
+            dictation_sound: true,
+            dictation_microphone: None,
+            dictation_cut_repeats: true,
+            dictation_retry_base: true,
+            dictation_vocabulary: false,
+            dictation_project_vocabulary: false,
+            dictation_spoken_code: true,
+            dictation_cancel_by_voice: true,
+            dictation_music: Default::default(),
+            dictation_double_tap: true,
+            dictation_space_lock: true,
+            dictation_escape_cancel: true,
+            dictation_keep: dictation_keep(),
             zeca_species: zeca_species(),
             zeca_look: Default::default(),
             flock: Default::default(),
@@ -318,6 +386,40 @@ pub struct SettingsState(pub Mutex<Settings>);
 /// What the windows may read.
 #[derive(Serialize, Clone)]
 pub struct Public {
+    #[serde(rename = "dictationKeep")]
+    pub dictation_keep: String,
+    #[serde(rename = "dictationSound")]
+    pub dictation_sound: bool,
+    #[serde(rename = "dictationCutRepeats")]
+    pub dictation_cut_repeats: bool,
+    #[serde(rename = "dictationVocabulary")]
+    pub dictation_vocabulary: bool,
+    #[serde(rename = "dictationProjectVocabulary")]
+    pub dictation_project_vocabulary: bool,
+    #[serde(rename = "dictationRetryBase")]
+    pub dictation_retry_base: bool,
+    #[serde(rename = "dictationMusic")]
+    pub dictation_music: vults_platform::music::Mode,
+    #[serde(rename = "dictationCancelByVoice")]
+    pub dictation_cancel_by_voice: bool,
+    #[serde(rename = "dictationSpokenCode")]
+    pub dictation_spoken_code: bool,
+    #[serde(rename = "dictationMicrophone")]
+    pub dictation_microphone: Option<String>,
+    #[serde(rename = "dictationDoubleTap")]
+    pub dictation_double_tap: bool,
+    #[serde(rename = "dictationSpaceLock")]
+    pub dictation_space_lock: bool,
+    #[serde(rename = "dictationEscapeCancel")]
+    pub dictation_escape_cancel: bool,
+    #[serde(rename = "dictationCaption")]
+    pub dictation_caption: bool,
+    #[serde(rename = "dictationInsert")]
+    pub dictation_insert: bool,
+    #[serde(rename = "dictationInsertAvailable")]
+    pub dictation_insert_available: bool,
+    #[serde(rename = "dictationWayland")]
+    pub dictation_wayland: bool,
     pub sounds: bool,
     pub volume: u8,
     /// Starts with the desktop session (an XDG autostart entry on Linux).
@@ -375,6 +477,23 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     use tauri_plugin_autostart::ManagerExt;
     let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
     Public {
+        dictation_caption: s.dictation_caption,
+        dictation_sound: s.dictation_sound,
+        dictation_microphone: s.dictation_microphone.clone(),
+        dictation_cut_repeats: s.dictation_cut_repeats,
+        dictation_retry_base: s.dictation_retry_base,
+        dictation_vocabulary: s.dictation_vocabulary,
+        dictation_project_vocabulary: s.dictation_project_vocabulary,
+        dictation_spoken_code: s.dictation_spoken_code,
+        dictation_cancel_by_voice: s.dictation_cancel_by_voice,
+        dictation_music: s.dictation_music,
+        dictation_double_tap: s.dictation_double_tap,
+        dictation_space_lock: s.dictation_space_lock,
+        dictation_escape_cancel: s.dictation_escape_cancel,
+        dictation_keep: s.dictation_keep.clone(),
+        dictation_wayland: dictation_wayland(),
+        dictation_insert: s.dictation_insert,
+        dictation_insert_available: cfg!(target_os = "linux") && dictation_insert_available(),
         sounds: s.sounds,
         volume: s.volume.min(VOLUME_MAX),
         monitor: s.monitor,
@@ -769,6 +888,217 @@ pub fn set_native_chat(app: AppHandle, on: bool) -> Result<(), String> {
     Ok(())
 }
 
+fn dictation_wayland() -> bool {
+    #[cfg(target_os = "linux")]
+    return vults_platform::insert::wayland_available();
+    #[cfg(not(target_os = "linux"))]
+    false
+}
+
+fn dictation_insert_available() -> bool {
+    #[cfg(target_os = "linux")]
+    return vults_platform::insert::available();
+    #[cfg(not(target_os = "linux"))]
+    false
+}
+
+#[cfg(target_os = "linux")]
+pub fn dictation_insert(app: &AppHandle) -> bool {
+    app.state::<SettingsState>()
+        .0
+        .lock()
+        .map(|s| s.dictation_insert)
+        .unwrap_or(false)
+}
+
+fn validate_microphone(device: Option<&str>) -> Result<(), String> {
+    if device
+        .is_some_and(|name| name.trim().is_empty() || name.len() > 512 || name.chars().any(char::is_control))
+    {
+        return Err("Invalid microphone name.".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn dictation_microphones<R: tauri::Runtime>(
+    window: tauri::Webview<R>,
+) -> Result<Vec<String>, String> {
+    crate::settings_page(&window)?;
+    tauri::async_runtime::spawn_blocking(vults_audio::microphones)
+        .await
+        .map_err(|_| "Could not list microphones.")?
+}
+
+#[tauri::command]
+pub fn set_dictation_microphone<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    device: Option<String>,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    validate_microphone(device.as_deref())?;
+    crate::doctor::dictation::stop_mic(&app);
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    next.dictation_microphone = device.clone();
+    save(&next).map_err(|_| "Could not save the dictation microphone.")?;
+    *saved = next;
+    drop(saved);
+    let _ = app.emit("settings", serde_json::json!({ "dictationMicrophone": device }));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_dictation_music<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    mode: vults_platform::music::Mode,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    next.dictation_music = mode;
+    save(&next).map_err(|_| "Could not save the dictation music choice.")?;
+    *saved = next;
+    drop(saved);
+    let _ = app.emit("settings", serde_json::json!({ "dictationMusic": mode }));
+    Ok(())
+}
+
+fn change_dictation_processing(settings: &mut Settings, key: &str, on: bool) -> Result<&'static str, String> {
+    match key {
+        "projectVocabulary" => {
+            settings.dictation_project_vocabulary = on;
+            Ok("dictationProjectVocabulary")
+        }
+        "vocabulary" => {
+            settings.dictation_vocabulary = on;
+            Ok("dictationVocabulary")
+        }
+        "cutRepeats" => {
+            settings.dictation_cut_repeats = on;
+            Ok("dictationCutRepeats")
+        }
+        "retryBase" => {
+            settings.dictation_retry_base = on;
+            Ok("dictationRetryBase")
+        }
+        "spokenCode" => {
+            settings.dictation_spoken_code = on;
+            Ok("dictationSpokenCode")
+        }
+        "cancelByVoice" => {
+            settings.dictation_cancel_by_voice = on;
+            Ok("dictationCancelByVoice")
+        }
+        _ => Err("Unknown dictation processing choice.".into()),
+    }
+}
+
+#[tauri::command]
+pub fn set_dictation_processing<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    key: String,
+    on: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    let field = change_dictation_processing(&mut next, &key, on)?;
+    save(&next).map_err(|_| "Could not save dictation processing choices.")?;
+    *saved = next;
+    drop(saved);
+    let _ = app.emit("settings", serde_json::json!({ field: on }));
+    Ok(())
+}
+
+fn change_dictation_gesture(settings: &mut Settings, key: &str, on: bool) -> Result<&'static str, String> {
+    match key {
+        "doubleTap" => {
+            settings.dictation_double_tap = on;
+            Ok("dictationDoubleTap")
+        }
+        "spaceLock" => {
+            settings.dictation_space_lock = on;
+            Ok("dictationSpaceLock")
+        }
+        "escapeCancel" => {
+            settings.dictation_escape_cancel = on;
+            Ok("dictationEscapeCancel")
+        }
+        _ => Err("Unknown dictation gesture.".into()),
+    }
+}
+
+#[tauri::command]
+pub fn set_dictation_gesture<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    key: String,
+    on: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let settings = app.state::<SettingsState>();
+    let mut saved = settings.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    let field = change_dictation_gesture(&mut next, &key, on)?;
+    save(&next).map_err(|_| "Could not save dictation gestures.")?;
+    #[cfg(target_os = "linux")]
+    if let Some(worker) = app.try_state::<crate::dictation::State>() {
+        worker.configure(next.dictation_options());
+    }
+    *saved = next;
+    drop(saved);
+    let _ = app.emit("settings", serde_json::json!({ field: on }));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_dictation_sound(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.dictation_sound = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "dictationSound": on }));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_dictation_caption(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.dictation_caption = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "dictationCaption": on }));
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_dictation_insert(
+    app: AppHandle,
+    window: tauri::Webview,
+    on: bool,
+) -> Result<Option<String>, String> {
+    if window.label() != crate::SETTINGS {
+        return Err("Dictation insertion is changed in Settings.".into());
+    }
+    if on && !dictation_insert_available() {
+        return Err("Dictation insertion requires native X11 or Plasma Wayland.".into());
+    }
+    #[cfg(target_os = "linux")]
+    {
+        if !on {
+            crate::dictation::permission::revoke(&app);
+        }
+        crate::dictation::cancel(&app, false);
+    }
+    edit(&app, |s| s.dictation_insert = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "dictationInsert": on }));
+    #[cfg(target_os = "linux")]
+    return Ok(crate::dictation::permission::configure(app, on, true).await.err());
+    #[cfg(not(target_os = "linux"))]
+    Ok(None)
+}
+
 /// Who answers the chat's permissions now.
 pub fn chat_access(app: &AppHandle) -> ChatAccess {
     let state = app.state::<SettingsState>();
@@ -1126,6 +1456,205 @@ mod tests {
     }
 
     #[test]
+    fn project_vocabulary_migrates_off_and_has_an_independent_choice() {
+        let (mut old, clean) = parse(r#"{ "version": 34, "dictation_vocabulary": true }"#);
+        assert!(clean && !old.dictation_project_vocabulary && old.dictation_vocabulary);
+        assert_eq!(
+            change_dictation_processing(&mut old, "projectVocabulary", true).unwrap(),
+            "dictationProjectVocabulary"
+        );
+        let (loaded, clean) = parse(&serde_json::to_string(&old).unwrap());
+        assert!(clean && loaded.dictation_project_vocabulary && loaded.dictation_vocabulary);
+        let (invalid, clean) = parse(
+            r#"{ "version": 35, "dictation_project_vocabulary": "bad", "dictation_vocabulary": true }"#,
+        );
+        assert!(!clean && !invalid.dictation_project_vocabulary && invalid.dictation_vocabulary);
+    }
+
+    #[test]
+    fn vocabulary_is_opt_in_and_round_trips_without_changing_other_processing() {
+        let (mut old, clean) = parse(r#"{ "version": 33 }"#);
+        assert!(clean && !old.dictation_vocabulary);
+        assert_eq!(
+            change_dictation_processing(&mut old, "vocabulary", true).unwrap(),
+            "dictationVocabulary"
+        );
+        let (loaded, clean) = parse(&serde_json::to_string(&old).unwrap());
+        assert!(clean && loaded.dictation_vocabulary && loaded.dictation_retry_base);
+        let (invalid, clean) =
+            parse(r#"{ "version": 34, "dictation_vocabulary": "bad", "dictation_retry_base": false }"#);
+        assert!(!clean && !invalid.dictation_vocabulary && !invalid.dictation_retry_base);
+    }
+
+    #[test]
+    fn music_migrates_and_validates_the_saved_choice() {
+        use vults_platform::music::Mode;
+        let (old, clean) = parse(r#"{ "version": 32 }"#);
+        assert!(clean);
+        assert_eq!(old.dictation_music, Mode::Lower);
+        for mode in [Mode::Lower, Mode::Pause, Mode::Leave] {
+            let mut saved = old.clone();
+            saved.dictation_music = mode;
+            let (loaded, clean) = parse(&serde_json::to_string(&saved).unwrap());
+            assert!(clean);
+            assert_eq!(loaded.dictation_music, mode);
+            assert!(loaded.dictation_cancel_by_voice);
+        }
+        let (invalid, clean) =
+            parse(r#"{ "version": 33, "dictation_music": "play", "dictation_cancel_by_voice": false }"#);
+        assert!(!clean && !invalid.dictation_cancel_by_voice);
+        assert_eq!(invalid.dictation_music, Mode::Lower);
+        assert!(serde_json::from_str::<Mode>(r#""play""#).is_err());
+    }
+
+    #[test]
+    fn voice_cancel_migrates_and_keeps_the_saved_choice() {
+        let (mut old, clean) = parse(r#"{ "version": 31 }"#);
+        assert!(clean && old.dictation_cancel_by_voice);
+        assert_eq!(
+            change_dictation_processing(&mut old, "cancelByVoice", false).unwrap(),
+            "dictationCancelByVoice"
+        );
+        let (loaded, clean) = parse(&serde_json::to_string(&old).unwrap());
+        assert!(clean && !loaded.dictation_cancel_by_voice);
+        assert!(loaded.dictation_spoken_code && loaded.dictation_escape_cancel);
+        let (invalid, clean) = parse(
+            r#"{ "version": 32, "dictation_cancel_by_voice": "bad", "dictation_escape_cancel": false }"#,
+        );
+        assert!(!clean && invalid.dictation_cancel_by_voice && !invalid.dictation_escape_cancel);
+    }
+
+    #[test]
+    fn spoken_code_defaults_on_and_keeps_an_explicit_choice() {
+        let (mut old, clean) = parse(r#"{ "version": 30 }"#);
+        assert!(clean && old.dictation_spoken_code);
+        assert_eq!(
+            change_dictation_processing(&mut old, "spokenCode", false).unwrap(),
+            "dictationSpokenCode"
+        );
+        let (loaded, clean) = parse(&serde_json::to_string(&old).unwrap());
+        assert!(clean && !loaded.dictation_spoken_code);
+        assert!(loaded.dictation_cut_repeats && loaded.dictation_retry_base);
+        let (invalid, clean) =
+            parse(r#"{ "version": 31, "dictation_spoken_code": "bad", "dictation_retry_base": false }"#);
+        assert!(!clean && invalid.dictation_spoken_code && !invalid.dictation_retry_base);
+    }
+
+    #[test]
+    fn dictation_processing_migrates_and_keeps_independent_choices() {
+        let (mut settings, clean) = parse(r#"{ "version": 29 }"#);
+        assert!(clean && settings.dictation_cut_repeats && settings.dictation_retry_base);
+        assert_eq!(
+            change_dictation_processing(&mut settings, "cutRepeats", false).unwrap(),
+            "dictationCutRepeats"
+        );
+        assert!(settings.dictation_retry_base);
+        assert_eq!(
+            change_dictation_processing(&mut settings, "retryBase", false).unwrap(),
+            "dictationRetryBase"
+        );
+        let (loaded, clean) = parse(&serde_json::to_string(&settings).unwrap());
+        assert!(clean && !loaded.dictation_cut_repeats && !loaded.dictation_retry_base);
+        assert!(change_dictation_processing(&mut settings, "unknown", true).is_err());
+        assert_eq!(loaded, settings);
+        let (invalid, clean) =
+            parse(r#"{ "version": 30, "dictation_cut_repeats": "bad", "dictation_retry_base": false }"#);
+        assert!(!clean && invalid.dictation_cut_repeats && !invalid.dictation_retry_base);
+    }
+
+    #[test]
+    fn dictation_microphone_migrates_and_capture_keeps_its_snapshot() {
+        let (mut settings, clean) = parse(r#"{ "version": 28 }"#);
+        assert!(clean && settings.dictation_microphone.is_none());
+        assert_eq!(settings.dictation_capture_options().max_seconds, 600);
+        settings.dictation_microphone = Some("USB mic".into());
+        let options = settings.dictation_capture_options();
+        let (loaded, clean) = parse(&serde_json::to_string(&settings).unwrap());
+        assert!(clean);
+        assert_eq!(loaded.dictation_microphone.as_deref(), Some("USB mic"));
+        settings.dictation_microphone = None;
+        assert_eq!(options.device.as_deref(), Some("USB mic"));
+        assert!(settings.dictation_capture_options().device.is_none());
+        assert!(validate_microphone(None).is_ok());
+        assert!(validate_microphone(Some("Disconnected microphone")).is_ok());
+        for name in ["", " ", "bad\nname", "bad\0name", &"x".repeat(513)] {
+            assert!(validate_microphone(Some(name)).is_err());
+        }
+        let (invalid, clean) =
+            parse(r#"{ "version": 29, "dictation_microphone": false, "dictation_double_tap": false }"#);
+        assert!(!clean && invalid.dictation_microphone.is_none());
+        assert!(!invalid.dictation_double_tap);
+    }
+
+    #[test]
+    fn dictation_gestures_migrate_round_trip_and_reject_unknown_keys() {
+        let (old, clean) = parse(r#"{ "version": 27 }"#);
+        assert!(clean);
+        assert_eq!(
+            old.dictation_options(),
+            vults_dictation::GestureOptions::default()
+        );
+        let mut changed = old.clone();
+        for (key, field) in [
+            ("doubleTap", "dictationDoubleTap"),
+            ("spaceLock", "dictationSpaceLock"),
+            ("escapeCancel", "dictationEscapeCancel"),
+        ] {
+            assert_eq!(change_dictation_gesture(&mut changed, key, false).unwrap(), field);
+        }
+        let (loaded, clean) = parse(&serde_json::to_string(&changed).unwrap());
+        assert!(clean);
+        assert_eq!(
+            loaded.dictation_options(),
+            vults_dictation::GestureOptions {
+                double_tap: false,
+                space_lock: false,
+                escape_cancel: false
+            }
+        );
+        assert!(change_dictation_gesture(&mut changed, "unknown", true).is_err());
+        assert_eq!(changed, loaded);
+        let (invalid, clean) =
+            parse(r#"{ "version": 28, "dictation_double_tap": "bad", "dictation_space_lock": false }"#);
+        assert!(!clean);
+        assert!(invalid.dictation_double_tap);
+        assert!(!invalid.dictation_space_lock);
+    }
+
+    #[test]
+    fn dictation_insertion_is_an_explicit_opt_in() {
+        let (old, _) = parse(r#"{ "version": 23 }"#);
+        assert!(!old.dictation_insert);
+        let (enabled, clean) = parse(r#"{ "version": 24, "dictation_insert": true }"#);
+        assert!(clean && enabled.dictation_insert);
+    }
+
+    #[test]
+    fn dictation_retention_defaults_to_thirty_days_and_keeps_not_kept() {
+        let (old, _) = parse(r#"{ "version": 26 }"#);
+        assert_eq!(old.dictation_keep, "30");
+        let (disabled, clean) = parse(r#"{ "version": 27, "dictation_keep": "0" }"#);
+        assert!(clean);
+        assert_eq!(disabled.dictation_keep, "0");
+    }
+
+    #[test]
+    fn dictation_sound_defaults_on_and_keeps_an_explicit_choice() {
+        let (old, _) = parse(r#"{ "version": 25 }"#);
+        assert!(old.dictation_sound);
+        let (disabled, clean) = parse(r#"{ "version": 26, "dictation_sound": false }"#);
+        assert!(clean && !disabled.dictation_sound);
+    }
+
+    #[test]
+    fn dictation_caption_defaults_on_and_keeps_an_explicit_choice() {
+        let (old, _) = parse(r#"{ "version": 24 }"#);
+        assert!(old.dictation_caption);
+        let (disabled, clean) = parse(r#"{ "version": 25, "dictation_caption": false }"#);
+        assert!(clean && !disabled.dictation_caption);
+    }
+
+    #[test]
     fn open_on_hover_is_off_until_turned_on() {
         let (s, _) = parse(r#"{ "version": 10, "fold_after": 30 }"#);
         assert!(!s.open_on_hover, "a version 10 file has no key: off");
@@ -1156,6 +1685,21 @@ mod tests {
             now_playing: true,
             voice_model: Some("small".into()),
             voice_language: Some("pt".into()),
+            dictation_insert: false,
+            dictation_caption: true,
+            dictation_sound: true,
+            dictation_microphone: None,
+            dictation_cut_repeats: true,
+            dictation_retry_base: true,
+            dictation_vocabulary: false,
+            dictation_project_vocabulary: false,
+            dictation_spoken_code: true,
+            dictation_cancel_by_voice: true,
+            dictation_music: Default::default(),
+            dictation_double_tap: true,
+            dictation_space_lock: true,
+            dictation_escape_cancel: true,
+            dictation_keep: dictation_keep(),
             zeca_species: "papa".into(),
             zeca_look: Outfit::Sunglasses,
             flock: Flock::World,

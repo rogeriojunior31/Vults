@@ -1,0 +1,15 @@
+[package]
+name = "vults-audio"
+description = "Bounded microphone capture, 16 kHz mono resampling and speech metering"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+cpal = "0.18"
+rubato = "5.0"
+rustfft = "6.4"
+
+[lints]
+workspace = true

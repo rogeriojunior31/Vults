@@ -1,5 +1,5 @@
 # Protocolo do hook
-<!-- source: 5be09ee893d8 -->
+<!-- source: d64e4dac619e -->
 
 O `vults-hook` e o app trocam um objeto JSON por linha através de um socket local.
 
@@ -41,6 +41,8 @@ Do hook para o app, versão 9:
   perguntando. Todo processo que a CLI do chat inicia a herda: um `claude` que o chat abre por um
   comando também fica escondido.
 - `terminal`: todos os campos são opcionais. `env` lista só as variáveis definidas entre as que identificam o terminal, sem metadados de execução.
+  A navegação no WezTerm exige o par `WEZTERM_PANE` e `WEZTERM_UNIX_SOCKET`; só o ID do painel
+  nunca seleciona um servidor padrão. O socket é contexto local, não autorização para permissões ou digitação.
   `cwd` é o `cwd` do payload, senão a primeira entrada de `workspacePaths` (Antigravity) ou `workspace_roots` (Cursor), senão a
   pasta de trabalho do próprio hook.
 - `payload`: o JSON de hook do agente sem `tool_response`, `transcript_path` (e os `transcriptPath` e

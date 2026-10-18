@@ -12,7 +12,7 @@ export const WEEK_CSS = `
 .screen-actions button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: none; color: var(--fg); font-size: 20px; cursor: pointer; }
 .screen-actions button:hover:not(:disabled) { background: var(--float); }
 .screen-actions button:disabled { opacity: 0.35; cursor: default; }
-.activity-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.activity-summary { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 .screen-columns { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
 .card { min-width: 0; padding: 20px; border-color: var(--border); border-radius: var(--radius-card); background: var(--panel); }
 .week-chart { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; height: 180px; margin-top: 24px; }
@@ -71,13 +71,15 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
   );
   // What is counted, and that nothing leaves: said once, under the heading.
   const lede = el("details", { class: "activity-privacy" }, el("summary", { text: t("How activity is counted") }), el("p", { text: t("What your agents did, counted on this computer: each finished turn's length, agent, project folder name and counts (steps, commands, lines, your answers). Never a prompt, a command or a path, and nothing leaves this computer.") }));
-  if (!w.turns) return [heading, lede, viewState("empty", w.headline), gridCard(a, view, on)];
+  const metric = (value: string, label: string, small?: string, change?: string) =>
+    el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }),
+      small ? el("small", { text: small }) : null, change ? el("small", { class: "stat-delta", text: change }) : null);
+  const dictated = metric(a.dictatedWords == null ? t("Unknown") : a.dictatedWords.toLocaleString(locale()), t("Dictated words"));
+  if (!w.turns) return [heading, el("div", { class: "activity-summary" }, dictated), lede, viewState("empty", w.headline), gridCard(a, view, on)];
   const previous = a.previous;
   const delta = (now: number, before: number | undefined) => !previous?.turns || before === undefined
     ? t("No recorded baseline for comparison.")
     : before === 0 ? t("The previous week's value was zero.") : t("{change}% compared with the previous week", { change: `${now >= before ? "+" : ""}${Math.round((now - before) / before * 100)}` });
-  const metric = (value: string, label: string, small: string, change: string) =>
-    el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }), el("small", { text: small }), el("small", { class: "stat-delta", text: change }));
   const names = weekdays();
   const top = Math.max(1, ...w.days);
   // A week with turns but no time counted has no busiest day: nothing is picked until asked.
@@ -117,6 +119,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     el(
       "div",
       { class: "activity-summary" },
+      dictated,
       metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) }), delta(w.active_secs, previous?.active_secs)),
       metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps }), delta(w.turns, previous?.turns)),
       metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files }), delta(w.added + w.removed, previous ? previous.added + previous.removed : undefined)),

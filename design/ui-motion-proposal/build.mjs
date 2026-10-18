@@ -28,7 +28,8 @@ const result = await build({
 const assets = result[0].output.find(part => part.type === 'chunk').code
   .replace(/[^\x00-\x7f]/g, char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
 const theme = (await readFile(new URL('../../ui/src/themes.css', here), 'utf8'))
-  .replaceAll(':root', '#vults-ui-proposal').replaceAll('[data-theme="black"]', '#vults-ui-proposal');
+  .replaceAll(':root', '#vults-ui-proposal').replaceAll('[data-theme="black"]', '#vults-ui-proposal[data-theme="black"]')
+  .replaceAll('[data-theme="light"]', '#vults-ui-proposal[data-theme="light"]');
 const template = await readFile(new URL('template.html', here), 'utf8');
 const logic = await readFile(new URL('preview.js', here), 'utf8');
 // Modules share the workspace's scope; their order is the order they are read in.

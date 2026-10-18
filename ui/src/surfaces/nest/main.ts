@@ -1,3 +1,4 @@
+import { dictationStatus } from "../../island/dictation";
 import { applyTheme } from "../../theme";
 // The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
 // (ADR 0021, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
@@ -12,6 +13,7 @@ import { shownKeys } from "../../island/views";
 import { moltSeason, setMolt } from "../../character/director";
 import { followClock, onDayPart } from "../../island/daypart";
 
+const dictation = dictationStatus(true);
 const nest = createNest(
   document.getElementById("nest")!,
   {
@@ -63,6 +65,12 @@ const nest = createNest(
       load: () => Bridge.memoryView(),
       decide: (id, accept) => Bridge.memoryDecide(id, accept),
       undo: (id) => Bridge.memoryUndo(id),
+    },
+    dictation: {
+      statistics: Bridge.dictationStatistics,
+      load: Bridge.dictationHistory, remove: Bridge.dictationDelete,
+      clear: Bridge.dictationClear, again: Bridge.dictationPasteAgain,
+      words: Bridge.dictationWords, change: Bridge.changeDictationWords, trySentence: Bridge.dictationTry,
     },
     spend: () => Bridge.spendToday(),
     records: {
@@ -156,10 +164,13 @@ Bridge.onNestTab((tab) => {
   nest.open(tab);
 });
 Bridge.onMemory(() => nest.memoryChanged());
+Bridge.onDictationHistory(erased => nest.dictationChanged(erased));
 Bridge.onUsage((windows) => { nest.chat.setUsage(windows); nest.usageChanged(); });
 Bridge.onSpend(() => nest.spendChanged());
 
-Bridge.onChat((d) => nest.chat.receive(d));
+let lastView: Parameters<typeof nest.view>[0] | null = null;
+const dictationContext = () => dictation.context(lastView ?? { sessions: [], approval: null }, nest.chat.hasWaitingApproval());
+Bridge.onChat((d) => { nest.chat.receive(d); dictationContext(); });
 // Allow and Deny's keys come here while the user is in the Nest (ADR 0021).
 Bridge.onShortcut((id) => nest.shortcut(id));
 void Bridge.shortcutKeys().then((keys) => nest.setKeys(shownKeys(keys)), () => {});
@@ -169,17 +180,17 @@ Bridge.onMedia((now) => nest.setMedia(now));
 void Bridge.mediaNow().then((now) => nest.setMedia(now), () => {});
 // The Nest's paperclip: the files it picked, never the island's.
 Bridge.onFiles((d) => d.to === "nest" && nest.chat.attach(d.copied, d.refused));
-Bridge.onChatSync((s) => nest.chat.sync(s));
+Bridge.onChatSync((s) => { nest.chat.sync(s); dictationContext(); });
 Bridge.onVoiceLevel((level) => nest.chat.voiceLevel(level));
 Bridge.onVoiceSilence(() => nest.chat.voiceSilence());
 Bridge.onVoicePartial((text) => nest.chat.voicePartial(text));
 void Bridge.voiceStatus().then((v) => nest.chat.setVoiceReady(v.ready), () => {});
 // The sessions' folders, for a new conversation (the view comes now, then with each change).
-let lastView: Parameters<typeof nest.view>[0] | null = null;
 // The hour turning changes what the habitat's idle birds do (sunning, sleeping).
 onDayPart(() => lastView && nest.view(lastView));
 Bridge.onView((v) => {
   lastView = v;
+  dictationContext();
   nest.chat.setSessions(v.sessions);
   nest.chat.setOffers(v.chat ?? null);
   const folders = v.sessions.flatMap((s) =>
@@ -189,8 +200,10 @@ Bridge.onView((v) => {
   nest.view(v);
 });
 void Bridge.appSettings().then((s) => {
+  dictation.captions(s.dictationCaption, true);
   applyTheme(s.theme ?? "black", true);
   setLang(s.lang);
+  dictation.relabel();
   nest.setZeca(s.zeca);
   nest.setSound(s.sounds);
   nest.setSpecies(s.zecaSpecies);
@@ -202,9 +215,12 @@ void Bridge.appSettings().then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {
+  if (s.dictationKeep !== undefined) nest.dictationChanged(true);
+  if (s.dictationCaption !== undefined) dictation.captions(s.dictationCaption);
   applyTheme(s.theme);
   if (s.lang !== undefined) {
     setLang(s.lang);
+    dictation.relabel();
     nest.relabel();
   }
   if (s.zeca !== undefined) nest.setZeca(s.zeca);

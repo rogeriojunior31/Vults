@@ -36,6 +36,8 @@ Hook to app, version 9:
   still asks. Every process the chat's CLI starts inherits it: a `claude` the chat launches through
   a command is hidden too.
 - `terminal`: every field is optional. `env` only lists the variables that were set among those identifying the terminal, without execution metadata.
+  WezTerm navigation needs the pair `WEZTERM_PANE` and `WEZTERM_UNIX_SOCKET`; a pane id alone
+  never selects a default server. The socket is local context, not permission or typing authority.
   `cwd` is the payload's `cwd`, else the first entry of `workspacePaths` (Antigravity) or `workspace_roots` (Cursor), else the
   hook's own working folder.
 - `payload`: the agent's hook JSON without `tool_response`, `transcript_path` (and Antigravity's

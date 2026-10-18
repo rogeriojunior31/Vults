@@ -9,9 +9,17 @@ publish.workspace = true
 [dependencies]
 vults-brand.workspace = true
 vults-protocol.workspace = true
+serde_json.workspace = true
+serde.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-ashpd = { version = "0.13", default-features = false, features = ["tokio", "global_shortcuts", "file_chooser"] }
+arboard = { version = "3.7", default-features = false }
+# Keep clipboard text in memory; 0.9.4 also supports ext-data-control.
+wl-clipboard-rs = "0.9.4"
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+rustix = { version = "1", features = ["event", "fs"] }
+ashpd = { version = "0.13", default-features = false, features = ["tokio", "global_shortcuts", "file_chooser", "remote_desktop", "screencast"] }
 futures-util = { version = "0.3", default-features = false }
 gtk = "0.18"
 gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
@@ -22,7 +30,7 @@ ksni = "0.3"
 png = "0.18"
 # Open terminal: a short-lived runtime for the KWin reply, and EWMH on X11 (pure Rust, no libX11).
 tokio = { workspace = true }
-x11rb = { version = "0.13", default-features = false }
+x11rb = { version = "0.13", default-features = false, features = ["xinput", "xtest", "xfixes", "xkb"] }
 zbus = { version = "5", default-features = false, features = ["tokio"] }
 
 [target.'cfg(windows)'.dependencies]

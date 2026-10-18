@@ -47,6 +47,16 @@ pub struct Inbox(mpsc::Sender<Msg>);
 
 #[derive(Debug)]
 enum Msg {
+    #[cfg(target_os = "linux")]
+    DictationSessions {
+        reply: std::sync::mpsc::SyncSender<Vec<(core::SessionKey, vults_protocol::Terminal)>>,
+    },
+    #[cfg(target_os = "linux")]
+    DictationSafety {
+        session: core::SessionKey,
+        terminal: vults_protocol::Terminal,
+        reply: std::sync::mpsc::SyncSender<core::DictationSafety>,
+    },
     Rules(Vec<core::Rule>),
     Policies(Vec<core::policies::Active>),
     Flock(core::flock::Flock),
@@ -163,31 +173,41 @@ fn look_at_folder(
     });
 }
 
-/// Reads the repository of a session just heard from, off the loop, when its folder is new to us
-/// or the last reading is older than [`REPO_FRESH`]. Never a second one while one is out: a folder
+/// Reads a session's repository off the loop on a new folder, session start or after [`REPO_FRESH`].
+/// Never a second one while one is out: a folder
 /// that hangs (a stuck network share) holds one blocking thread, not one per minute.
 fn read_repo(
+    app: &AppHandle,
     state: &core::State,
     repos: &mut Readings,
     key: core::SessionKey,
     now: Instant,
     tx: &mpsc::Sender<Msg>,
+    session_started: bool,
 ) {
     // A session core forgot (it ended) is read anew if it comes back.
     let Some(cwd) = state.sessions.get(&key).and_then(|s| s.cwd.clone()) else {
         repos.remove(&key);
         return;
     };
-    if repos
-        .get(&key)
-        .is_some_and(|(at, when, out)| *out || (*at == cwd && now.duration_since(*when) < REPO_FRESH))
-    {
+    if repos.get(&key).is_some_and(|(at, when, out)| {
+        *out || (!session_started && *at == cwd && now.duration_since(*when) < REPO_FRESH)
+    }) {
         return;
     }
     repos.insert(key.clone(), (cwd.clone(), now, true));
     let tx = tx.clone();
+    #[cfg(target_os = "linux")]
+    let app = app.clone();
+    #[cfg(not(target_os = "linux"))]
+    let _ = app;
     tauri::async_runtime::spawn_blocking(move || {
-        let repo = crate::roosts::repo_of(std::path::Path::new(&cwd)).map(|r| core::Repo {
+        let repo = crate::roosts::repo_of(std::path::Path::new(&cwd));
+        #[cfg(target_os = "linux")]
+        if let Some(repo) = &repo {
+            crate::dictation::project::refresh(&app, repo);
+        }
+        let repo = repo.map(|r| core::Repo {
             key: r.key(),
             name: r.name(),
             branch: r.branch,
@@ -327,6 +347,26 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     } {
         let now = Instant::now();
         let input = match msg {
+            #[cfg(target_os = "linux")]
+            Msg::DictationSafety {
+                session,
+                terminal,
+                reply,
+            } => {
+                let _ = reply.send(state.dictation_safety(&session, &terminal));
+                continue;
+            }
+            #[cfg(target_os = "linux")]
+            Msg::DictationSessions { reply } => {
+                let _ = reply.send(
+                    state
+                        .sessions
+                        .iter()
+                        .map(|(key, session)| (key.clone(), session.terminal.clone()))
+                        .collect(),
+                );
+                continue;
+            }
             Msg::Hook(Incoming::Event(event)) => {
                 tracing::debug!(agent = ?event.agent, event = %event.event, "hook");
                 // The plan's usage, not a session's: it goes to the header, never to the core. The
@@ -483,7 +523,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         };
         let Some(input) = input else { continue };
         let heard = match &input {
-            Input::Agent(update) | Input::RunEnded(update) => Some(update.session.clone()),
+            Input::Agent(update) | Input::RunEnded(update) => Some((
+                update.session.clone(),
+                matches!(update.event, core::AgentEvent::SessionStarted),
+            )),
             _ => None,
         };
         if matches!(input, Input::Tick) {
@@ -502,8 +545,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
 
         let effects = core::reduce(&mut state, input, now);
-        if let Some(key) = heard {
-            read_repo(&state, &mut repos, key, now, &tx);
+        if let Some((key, started)) = heard {
+            read_repo(&app, &state, &mut repos, key, now, &tx, started);
         }
         for effect in effects {
             match effect {
@@ -980,6 +1023,38 @@ pub async fn run_ended(app: &AppHandle, update: core::AgentUpdate) {
     let _ = app.state::<Inbox>().0.send(Msg::RunEnded(update)).await;
 }
 
+/// Request context without doing process IO on the domain loop.
+#[cfg(target_os = "linux")]
+pub(crate) fn dictation_sessions(
+    app: &AppHandle,
+) -> std::sync::mpsc::Receiver<Vec<(core::SessionKey, vults_protocol::Terminal)>> {
+    let (reply, receive) = std::sync::mpsc::sync_channel(1);
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let _ = inbox.0.try_send(Msg::DictationSessions { reply });
+    }
+    receive
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn dictation_safety(
+    app: &AppHandle,
+    session: core::SessionKey,
+    terminal: vults_protocol::Terminal,
+) -> core::DictationSafety {
+    let (reply, receive) = std::sync::mpsc::sync_channel(1);
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let _ = inbox.0.try_send(Msg::DictationSafety {
+            session,
+            terminal,
+            reply,
+        });
+    }
+    // A late answer carries no action and can never release queued input.
+    receive
+        .recv_timeout(Duration::from_millis(100))
+        .unwrap_or(core::DictationSafety::Unavailable)
+}
+
 /// The sessions in `cwd` that may be continued (`handoff`), the latest first.
 pub async fn continuable(app: &AppHandle, cwd: String) -> Vec<core::handoff::Candidate> {
     let (reply, answer) = tokio::sync::oneshot::channel();
@@ -1075,8 +1150,10 @@ pub async fn activity(app: AppHandle, monday: Option<String>) -> Result<crate::h
 /// Removes the local history: every turn and day, at once.
 #[tauri::command]
 pub async fn clear_history(app: AppHandle) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(|| crate::history::clear(&crate::history::dir()))
-        .await
+    let cleared =
+        tauri::async_runtime::spawn_blocking(|| crate::history::clear(&crate::history::dir())).await;
+    let _ = app.emit("dictation-history", true);
+    cleared
         .map_err(|e| e.to_string())?
         .map_err(|e| format!("can't clear the history: {e}"))?;
     // Its saved record is gone with the rest: the chat's next message starts a new one.

@@ -38,6 +38,7 @@ pub const TERMINAL_VARS: &[&str] = &[
     // kitty's remote control socket: `kitty @` from outside kitty needs it.
     "KITTY_LISTEN_ON",
     "WEZTERM_PANE",
+    "WEZTERM_UNIX_SOCKET",
     "KONSOLE_DBUS_SESSION",
     "TMUX",
     "TMUX_PANE",
@@ -387,6 +388,25 @@ mod tests {
         assert_eq!(event.terminal.env.len(), 1);
         assert_eq!(event.terminal.env["TERM_PROGRAM"], "kitty");
         assert!(event.wants_reply && !event.zeca);
+    }
+
+    #[test]
+    fn wezterm_context_keeps_the_instance_without_forwarding_unrelated_environment() {
+        let args = Args::parse(["--agent", "claude"].map(String::from).into_iter());
+        let raw = br#"{"hook_event_name":"SessionStart","session_id":"s"}"#;
+        let env = |name: &str| match name {
+            "WEZTERM_PANE" => Some("17".into()),
+            "WEZTERM_UNIX_SOCKET" => Some("/run/user/1000/wezterm/gui-sock-42".into()),
+            "UNRELATED_SECRET" => Some("must not leave the environment".into()),
+            _ => None,
+        };
+        let event = build_event(&args, raw, None, env, Some(42), "x".into()).unwrap();
+        assert_eq!(event.terminal.env.len(), 2);
+        assert_eq!(event.terminal.env["WEZTERM_PANE"], "17");
+        assert_eq!(
+            event.terminal.env["WEZTERM_UNIX_SOCKET"],
+            "/run/user/1000/wezterm/gui-sock-42"
+        );
     }
 
     #[test]

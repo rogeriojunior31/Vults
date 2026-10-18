@@ -1,3 +1,4 @@
+@import "../../dictation.css";
 @import "../nest/pages.css";
 @import "../../themes.css";
 @import "./pages.css";
@@ -26,6 +27,7 @@ body.full {
   border: 0;
   border-radius: 0;
 }
+body.dictation-caption-open { padding-bottom: var(--dictation-caption-space); }
 #settings {
   display: flex;
   flex: 1;
@@ -134,3 +136,17 @@ body.still #settings .page-enter { animation: none; }
 #settings .settings-title-line > svg { flex: none; color: var(--fg-dim); }
 
 #settings .card > .settings-group-title { margin: 0; padding: 14px 0 4px; font-size: var(--text-s); color: var(--fg-dim); }
+
+#settings .dictation-diagnostics { display: grid; gap: 16px; min-width: 0; }
+#settings .dictation-diagnostics h3 { font-size: var(--text-l); }
+#settings .diagnostic-facts { margin: 0; }
+#settings .diagnostic-fact { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); padding: 8px 0; }
+#settings .diagnostic-fact dt, #settings .diagnostic-fact dd { min-width: 0; overflow-wrap: anywhere; }
+#settings .diagnostic-fact dd { margin: 0; text-align: end; color: var(--fg-dim); }
+#settings .diagnostic-bands { display: flex; gap: 4px; height: 32px; align-items: center; }
+#settings .diagnostic-bands progress { width: 0; min-width: 0; flex: 1; height: 12px; accent-color: var(--accent); }
+#settings .diagnostic-table-scroll { overflow: auto; max-width: 100%; }
+#settings .diagnostic-timings { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+#settings .diagnostic-timings caption { text-align: start; color: var(--fg-dim); padding-bottom: 8px; }
+#settings .diagnostic-timings th, #settings .diagnostic-timings td { text-align: end; padding: 8px; border-bottom: 1px solid var(--border); }
+#settings .diagnostic-timings th:first-child { text-align: start; }

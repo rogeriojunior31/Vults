@@ -23,6 +23,8 @@ vults-connectors = { path = "crates/connectors" }
 vults-secrets = { path = "crates/secrets" }
 vults-media = { path = "crates/media" }
 vults-voice = { path = "crates/voice" }
+vults-audio = { path = "crates/audio" }
+vults-dictation = { path = "crates/dictation" }
 vults-store = { path = "crates/store" }
 vults-evals = { path = "crates/evals" }
 vults-spike = { path = "crates/spike" }

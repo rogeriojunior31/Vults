@@ -14,6 +14,7 @@ export interface Activity {
   week: WeekView;
   previous: WeekView;
   grid: GridDay[];
+  dictatedWords: number | null;
 }
 
 /** The *GitHub* tab: the user's contribution calendar, only with the GitHub connector on. */

@@ -102,6 +102,14 @@ pub enum Status {
     RateLimited,
 }
 
+/// A delivery-time check, never authority to answer a card.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DictationSafety {
+    Ready,
+    Waiting,
+    Unavailable,
+}
+
 /// How much a session wants the user, in order: the higher, the more it does. Surfaces choose the
 /// sound, the icon and the color; the level is the same for all of them (ADR 0021).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -866,6 +874,24 @@ pub struct State {
 }
 
 impl State {
+    pub fn dictation_safety(&self, key: &SessionKey, captured: &Terminal) -> DictationSafety {
+        let Some(session) = self.sessions.get(key) else {
+            return DictationSafety::Unavailable;
+        };
+        if self.locked || session.terminal != *captured {
+            return DictationSafety::Unavailable;
+        }
+        if matches!(session.status, Status::Approval | Status::Question)
+            || self.pending.iter().any(|card| card.session == *key)
+        {
+            return DictationSafety::Waiting;
+        }
+        if matches!(session.status, Status::Failed | Status::RateLimited) {
+            return DictationSafety::Unavailable;
+        }
+        DictationSafety::Ready
+    }
+
     /// What the user chose for this session's project; nothing for one without a folder.
     pub fn prefs(&self, s: &Session) -> ProjectPrefs {
         s.cwd

@@ -152,7 +152,7 @@ assert.equal(untranslated.length,0,'Untranslated sentences: '+untranslated.slice
 
 console.log('coverage ok');process.exit(0);
 }
-assert.equal(saves,0,'Loading the prototype does not publish state.');
+assert.equal(saves,0,'Loading the prototype does not publish state.');assert.equal(root.getAttribute('data-theme'),'black','Black is the default production theme.');
 assert.equal(find('.portrait').children[0].tagName,'CANVAS','The production sprite renderer is mounted.');
 
 /* Names: Island · Compact · Lab, and nothing else. */
@@ -165,6 +165,10 @@ for(const area of ['flock','chat','connections','activity','settings']){P.setAre
 /* Navigation: Compact has three tabs, the Lab five; Settings is the gear in both. */
 P.setArea('chat','quick');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-summary']);
 P.setArea('flock','room');assert.deepEqual(all('.product-nav button').map(b=>b.dataset.key),['nav-flock','nav-chat','nav-connections','nav-activity','nav-dictation']);
+keydown(root,'5',{altKey:true});assert.equal(P.state.area,'dictation','Alt+5 opens the fifth tab.');
+assert.doesNotThrow(()=>keydown(root,'6',{altKey:true}),'A retired tab shortcut is ignored.');assert.equal(P.state.area,'dictation');
+keydown(root,'1',{ctrlKey:true,altKey:true});assert.equal(P.state.mode,'mini','Size shortcuts do not select a tab.');
+P.setArea('flock','room');
 find('[data-key="head-settings"]').click();assert.equal(P.state.area,'settings');
 P.setArea('chat','quick');find('[data-key="head-settings"]').click();assert.equal(find('.action-menu').hidden,false,'The Compact gear opens quick settings in place.');assert.equal(P.state.mode,'quick');
 change(all('.action-menu select')[1],'1 h');assert.ok(find('[data-key="dnd"]'),'Do not disturb shows its moon.');find('[data-key="dnd"]').click();assert.equal(find('[data-key="dnd"]'),null);
@@ -250,7 +254,9 @@ P.setArea('chat','room');assert.ok(find('.conversation-row .row-tools'));
 find('[data-label="Rename"]').click();type(find('.editor-content input'),'Renamed');submitEditor();assert.ok(text('.room-recent').includes('Renamed'));
 
 for(const flavor of ['noite','garoa','jaragua']){change(find('.theme-select'),flavor);assert.equal(root.getAttribute('data-flavor'),flavor);assert.ok(/^#/.test(root.style['--bg'])&&root.style['--tab-accent'],'The '+flavor+' flavour sets the roles from sp-night.json.');}
-change(find('.theme-select'),'black');assert.equal(root.style['--bg'],undefined,'Black falls back to the app theme.');change(find('.theme-select'),'jaragua');
+change(find('.theme-select'),'black');assert.equal(root.style['--bg'],undefined,'Black falls back to the app theme.');
+change(find('.theme-select'),'light');assert.equal(root.getAttribute('data-theme'),'light');assert.equal(root.style['--bg'],undefined,'Light uses production CSS roles.');
+change(find('.theme-select'),'jaragua');
 /* Every Lab side panel is flexible. */
 for(const [area,id] of [['flock','flock-list'],['chat','recent'],['connections','conn'],['settings','settings']]){
   P.views.connectionFace='you';P.setArea(area,'room');const fold=find('[data-key="fold-'+id+'"]');assert.ok(fold,'The '+id+' panel can fold.');
@@ -307,16 +313,16 @@ assert.deepEqual(commandStates,['commanded','answered','refused','commanded','co
 assert.equal(all('.dx-entry').length,commandsBefore+6);assert.ok(text('.dx-entry.dx-new').includes('docs com som de novo'),'Undo reverses the command it remembers.');
 P.setArea('settings','room');find('.settings-categories [data-key="dictation"]').click();
 assert.equal(P.settings.dictCommands,true);assert.equal(P.settings.dictSayCancel,true);assert.ok(find('[data-key="dict-duck"]')&&find('[data-key="dict-caption"]'));
-P.dictation.tab='commands';P.setArea('dictation','room');assert.ok(find('[data-key="dict-commands-list"]'));find('[data-key="dict-commands"] .toggle').click();assert.ok(!find('[data-key="dict-commands-list"]'),'Commands off asks nothing more.');P.settings.dictCommands=true;
+P.dictation.tab='commands';P.setArea('dictation','room');assert.equal(find('.dx-page .toggle'),null,'Work pages cannot enable model features.');find('[data-key="dx-open-settings"]').click();assert.equal(P.state.area,'settings');assert.equal(P.state.category,'dictation');assert.ok(find('[data-key="dict-commands-list"]'));find('[data-key="dict-commands"] .toggle').click();assert.ok(!find('[data-key="dict-commands-list"]'),'Commands off asks nothing more.');P.settings.dictCommands=true;
 P.setArea('settings','room');find('.settings-categories [data-key="dictation"]').click();assert.ok(find('[data-key="dict-key"]')&&find('[data-key="dict-diagnostics"]'),'Settings › Dictation holds the values and Diagnostics.');
 P.dictation.tab='history';P.setArea('dictation','room');find('[data-key="dx-page-settings"]').click();assert.equal(P.state.area,'settings');assert.equal(P.state.category,'dictation');
 P.setArea('dictation','room');find('[data-key="dx-page-stats"]').click();assert.equal(P.state.area,'activity');assert.ok(find('.dx-chart'),'Dictation figures live in Activity.');
-assert.equal(P.settings.dictCleanup,false);assert.equal(P.settings.dictAutoSend,false);assert.equal(P.settings.dictAgentsAsk,false);assert.ok(!find('[data-key="dict-cleanup-model"]'),'The clean-up is off and asks nothing.');
-P.dictation.tab='styles';P.setArea('dictation','room');assert.equal(all('.dx-style').length,4);find('[data-key="dict-cleanup"] .toggle').click();assert.ok(find('[data-key="dict-cleanup-model"]'),'Turning it on shows its model.');
+P.setArea('settings','room');P.state.category='dictation';P.setArea('settings','room');assert.equal(P.settings.dictCleanup,false);assert.equal(P.settings.dictAutoSend,false);assert.equal(P.settings.dictAgentsAsk,false);assert.ok(!find('[data-key="dict-cleanup-model"]'),'The clean-up is off and asks nothing.');assert.equal(all('.settings-content .dx-style').length,0,'Off hides clean-up style controls.');
+P.dictation.tab='styles';P.setArea('dictation','room');assert.equal(all('.dx-style').length,4);assert.equal(find('.dx-page .toggle'),null);find('[data-key="dx-open-settings"]').click();find('.workspace-view').scrollTop=480;find('[data-key="dict-cleanup"] .toggle').focus();find('[data-key="dict-cleanup"] .toggle').click();assert.equal(find('.workspace-view').scrollTop,480);assert.equal(document.activeElement,find('[data-key="dict-cleanup"] .toggle'),'Revealing settings retains keyboard focus.');assert.equal(P.state.area,'settings','Enabling clean-up stays in Settings.');assert.ok(find('[data-key="dict-cleanup-model"]'),'Turning it on shows its model.');
 P.dictation.tab='history';P.setArea('dictation','room');assert.ok(text('.dx-list').includes('Fix the failing parser test'),'With the clean-up a session gets the English prompt.');P.settings.dictCleanup=false;
 P.settings.dictKeep='0';P.setArea('dictation','room');assert.ok(find('.empty-state'),'Do not keep hides the history.');P.settings.dictKeep='30';
-P.dictation.tab='meetings';P.setArea('dictation','room');find('[data-key="meeting-record"]').click();assert.ok(find('.dx-recording'));find('[data-key="meeting-stop"]').click();assert.ok(!find('.dx-recording'));P.dictation.tab='history';
-P.dictation.tab='talk';P.setArea('dictation','room');assert.equal(P.settings.zecaVoice,false);find('[data-key="zeca-voice"] .toggle').click();assert.ok(text('.dx-page').includes('gpt-realtime'));P.settings.zecaVoice=false;P.dictation.tab='history';
+P.dictation.tab='meetings';P.setArea('dictation','room');find('[data-key="meeting-record"]').click();assert.equal(P.dictation.recording,false,'Recording waits for consent.');assert.equal(find('.dialog-overlay').hidden,false);all('.confirmation-actions button')[0].click();assert.equal(P.dictation.recording,false,'Cancel leaves the microphone off.');find('[data-key="meeting-record"]').click();confirmDialog();assert.ok(find('.dx-recording'));find('[data-key="meeting-stop"]').click();assert.ok(!find('.dx-recording'));P.dictation.tab='history';
+P.dictation.tab='talk';P.setArea('dictation','room');assert.equal(P.settings.zecaVoice,false);assert.equal(find('.dx-page .toggle'),null);find('[data-key="dx-open-settings"]').click();find('[data-key="zeca-voice"] .toggle').click();assert.equal(P.state.area,'settings');assert.ok(text('.settings-content').includes('gpt-realtime'));P.setArea('dictation','room');assert.ok(find('[data-key="zeca-talk"]'));P.settings.zeca=false;P.setArea('dictation','room');assert.equal(find('[data-key="zeca-talk"]'),null,'Zeca off keeps dictation but cannot start voice chat.');P.settings.zeca=true;P.settings.zecaVoice=false;P.dictation.tab='history';
 P.setArea('settings','room');
 find('.settings-categories [data-key="approvals"]').click();all('.settings-content button').find(b=>b.textContent==='Editar').click();type(find('.editor-content textarea'),'allow command "npm run build"\nallow command "npm test"');submitEditor();runTimers();
 assert.ok(find('.editor-content .diff-add'),'A policy change is reviewed as a diff.');submitEditor();assert.ok(P.settings.policies[0].text.includes('npm test'));

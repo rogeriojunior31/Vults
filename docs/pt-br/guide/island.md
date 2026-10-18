@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 81104f745f20 -->
+<!-- source: 58292a7ea7c3 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -55,8 +55,9 @@ O Zeca é opcional. **Settings → Flock & Zeca → Zeca** o desliga; o bando co
 fio, cards de permissão e de pergunta, os atalhos de Allow / Deny, notificações, conectores e as
 predefinições. O que vai com ele:
 
-- O chat, sua aba, os arquivos soltos na ilha, o Chat do Nest, o *Chat…* da bandeja, o microfone e o
-  atalho de fala. Os medidores de uso ficam: eles leem as assinaturas dos seus agentes.
+- O chat, sua aba, os arquivos soltos na ilha, o Chat do Nest, o *Chat…* da bandeja e o microfone
+  do Chat. O [ditado independente](dictation.md#global-dictation-first-slice) e seu atalho continuam
+  disponíveis. Os medidores de uso ficam: eles leem as assinaturas dos seus agentes.
 - O olá dele na inicialização.
 - O lugar dele no fio: a sessão da frente fica ali como a própria ave, e sem ninguém rodando a pílula
   diz *Nothing running*.
@@ -307,6 +308,13 @@ passam de uma sessão a outra: em repouso o nome na caixa muda, numa sessão a p
   de trabalho e desminimizada (de várias janelas, primeiro a que tem no título a pasta da sessão);
 - no GNOME, Hyprland ou Sway sob Wayland, só um terminal rodando pelo XWayland.
 
+A navegação de painéis do WezTerm exige `WEZTERM_PANE` e `WEZTERM_UNIX_SOCKET` enviados pelo hook.
+O Vults usa apenas esse socket local do mesmo usuário, ignora a configuração Lua e nunca inicia
+nem descobre outro servidor. Uma sessão antiga sem o socket ainda pode abrir sua janela nos
+desktops compatíveis; fora deles, **Abrir terminal** fica indisponível até um evento do hook trazer
+os metadados. Isso serve apenas para navegação: o [ditado](dictation.md#exact-tmux-session-delivery)
+direto no WezTerm continua na área de transferência.
+
 Quando não há nada para trazer, o card avisa. Uma sessão iniciada no terminal do VS Code ou do Cursor
 leva uma etiqueta **VS Code** ou **Cursor**, e o botão dela traz esse editor, no KDE e
 em sessões X11.
@@ -317,7 +325,9 @@ Os atalhos globais funcionam de qualquer janela:
   ([Aprovações](approvals.md)).
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** põem a próxima ou a anterior sessão na frente. Um card esperando
   fica na frente; as teclas escolhem quem vem depois dele.
-- **Ctrl+Alt+V**, segurado, fala com o chat ([Falar](chat.md#speaking-instead-of-typing)).
+- **Ctrl+Alt+V**, segurado, preenche o rascunho do Chat do Vults em foco; fora do Vults, copia um
+  [ditado local](dictation.md#global-dictation-first-slice). **Ctrl+Alt+X** cancela a voz;
+  **Ctrl+Alt+B** copia novamente o último ditado.
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** e **Ctrl+Alt+3** trocam para Mini, Quick e Room.
 - **Ctrl+K**, na ilha aberta ou no Nest, abre a [paleta](nest.md).
 - **Ctrl+Alt+Space** abre a ilha e entrega o teclado a ela até ela se recolher:

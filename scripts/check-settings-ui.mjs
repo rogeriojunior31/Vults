@@ -48,6 +48,11 @@ class Element {
   setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
 }
+let initialSettingsReady;
+const initialSettings = new Promise(resolve => { initialSettingsReady = resolve; });
+const pendingErases = [];
+const microphoneReads = [];
+const pendingShortcutOpens = [];
 const pendingSettings = [];
 const pendingBudgets = [];
 let budgetReads = 0;
@@ -67,15 +72,23 @@ globalThis.location = { hash: "#general" };
 globalThis.Option = class extends Element {
   constructor(label, value, _default, selected) { super("option"); this.textContent = label; this.value = value; this.selected = selected; }
 };
-const settings = { sounds: true, volume: 50, foldAfter: 15, lang: "en", language: null, zeca: true,
+const settings = { dictationVocabulary: true, dictationProjectVocabulary: true, dictationMusic: "lower", dictationCancelByVoice: true, dictationSpokenCode: true, dictationCutRepeats: true, dictationRetryBase: true, dictationMicrophone: null, dictationInsert: false, dictationInsertAvailable: true, dictationWayland: true, dictationKeep: "30", dictationCaption: true, dictationSound: true, dictationDoubleTap: true, dictationSpaceLock: true, dictationEscapeCancel: true, sounds: true, volume: 50, foldAfter: 15, lang: "en", language: null, zeca: true,
   zecaSpecies: "atratus", zecaLook: "auto", flock: "brazil", nativeChat: true, chatAccess: "ask", memory: true,
   presence: "island", settingsPath: "/home/example/settings.json", dataPath: "/home/example/vults" };
 globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   if (name.startsWith("on")) return cb => { events[name] = cb; };
   return async (...args) => {
     switch (name) {
-      case "appSettings": return settings;
-      case "setTheme": case "setWidget": case "setPresence": case "setSounds":
+      case "appSettings": return initialSettings;
+      case "dictationMicrophones": return new Promise((resolve, reject) => microphoneReads.push({ resolve, reject }));
+      case "dictationClear": writes.push([name]); return new Promise((resolve, reject) => pendingErases.push({ resolve, reject }));
+      case "openShortcutSettings": writes.push([name]); return new Promise((resolve, reject) => pendingShortcutOpens.push({ resolve, reject }));
+      case "setDictationInsert": writes.push([name, ...args]); return null;
+      case "retryDictationPermission": writes.push([name]); return;
+      case "dictationDoctor": return { system: { host: null, device: null, rate: null, session: "unknown", shortcuts: "unavailable", keyboard: "off", kwin: "unverified", gpu: false, vad: false }, counters: { loops: 0, retries: 0, copied: 0 }, timings: null };
+      case "dictationStatus": return null;
+      case "dictationPermission": return "off";
+      case "setDictationMusic": case "setDictationProcessing": case "setDictationMicrophone": case "setDictationGesture": case "setTheme": case "setWidget": case "setPresence": case "setSounds": case "setDictationKeep":
         writes.push([name, ...args]);
         if (holdSettings) return new Promise((resolve, reject) => pendingSettings.push({ resolve, reject }));
         return;
@@ -116,6 +129,8 @@ const bundle = await build({ configFile: false, root: ui, logLevel: "silent", pl
 const chunk = bundle[0].output.find(p => p.type === "chunk");
 await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const tick = () => new Promise(resolve => setImmediate(resolve));
+events.onSettings({ dictationVocabulary: false, dictationProjectVocabulary: false, dictationMusic: "leave", dictationCancelByVoice: false, dictationSpokenCode: false, dictationCutRepeats: false, dictationRetryBase: false, dictationMicrophone: "Disconnected mic", dictationInsert: true, dictationDoubleTap: false, dictationSpaceLock: false, dictationEscapeCancel: false });
+initialSettingsReady(settings);
 await tick();
 const page = () => root.querySelector("main.page");
 const nav = label => root.querySelectorAll("button.nav").find(n => n.textContent === label);
@@ -153,13 +168,13 @@ button("Clear history…").fire("click");
 assert.ok(page().textContent.includes("This can't be undone."));
 button("Cancel").fire("click");
 assert.deepEqual(writes, [], "Navigation, disclosures, draft restoration and cancel never write settings or clear history");
-for (const label of ["Approvals", "Projects", "Connectors", "Phone", "Flock & Zeca", "About"]) {
+for (const label of ["Dictation", "Approvals", "Projects", "Connectors", "Phone", "Flock & Zeca", "About"]) {
   await go(label);
   assert.equal(page().querySelectorAll("h1").length, 1, `${label} keeps one page heading`);
   assert.ok(page().querySelector(".settings-heading"));
 }
 assert.deepEqual(writes, []);
-console.log("check-settings-ui: all ten pages, single headings, disclosed diagnostics/shortcuts, retained scroll/focus/draft, Activity routing and explicit history confirmation");
+console.log("check-settings-ui: all eleven pages, single headings, disclosed diagnostics/shortcuts, retained scroll/focus/draft, Activity routing and explicit history confirmation");
 
 await go("General");
 const soundsRow = () => page().querySelectorAll(".row").find(n => n.querySelector(".row-title")?.textContent === "Sounds");
@@ -290,3 +305,185 @@ themeControl().value = "1"; themeControl().fire("change"); await tick(); pending
 assert.equal(themeControl().value, "1");
 assert.equal(page().querySelectorAll(".settings-group-title").length, 4);
 console.log("check-settings-ui: theme pending/repaint/rollback/retry and grouped General settings");
+
+await go("Dictation");
+const musicControl = () => rowNamed("Music while you speak").querySelector("select");
+assert.equal(musicControl().dataset.savedValue, "2", "Late bootstrap cannot undo the newer music choice");
+assert.deepEqual(musicControl().querySelectorAll("option").map(o => o.textContent), ["Lower to 25%", "Pause it", "Leave it"]);
+musicControl().value = "1"; musicControl().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationMusic", "pause"]);
+const musicWrites = writes.length;
+events.onSettings({ volume: 75 });
+assert.equal(musicControl().disabled, true);
+musicControl().fire("change"); await tick();
+assert.equal(writes.length, musicWrites);
+pendingSettings.at(-1).reject(new Error("Disk unavailable")); await tick();
+assert.equal(musicControl().value, "2");
+assert.equal(musicControl().disabled, false);
+musicControl().value = "0"; musicControl().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationMusic", "lower"]);
+events.onSettings({ dictationMusic: "lower" });
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(musicControl().value, "0");
+console.log("check-settings-ui: music choice bootstrap, pending repaint, failure rollback and explicit retry");
+for (const [label, key, field] of [["Help the model with these words", "vocabulary", "dictationVocabulary"], ["Project vocabulary", "projectVocabulary", "dictationProjectVocabulary"], ["Cancel by voice", "cancelByVoice", "dictationCancelByVoice"], ["Spoken code", "spokenCode", "dictationSpokenCode"], ["Remove repeated loops", "cutRepeats", "dictationCutRepeats"], ["Retry empty dictation with Base", "retryBase", "dictationRetryBase"]]) {
+  const control = () => rowNamed(label).querySelector("input");
+  assert.equal(control().checked, false, "Late bootstrap cannot undo a newer processing choice");
+  control().checked = true; control().fire("change"); await tick();
+  assert.deepEqual(writes.at(-1), ["setDictationProcessing", key, true]);
+  const count = writes.length;
+  events.onSettings({ volume: 75 });
+  assert.equal(control().disabled, true);
+  control().fire("change"); await tick();
+  assert.equal(writes.length, count, "A repaint cannot duplicate a processing save");
+  pendingSettings.at(-1).reject(new Error("Disk unavailable")); await tick();
+  assert.equal(control().checked, false);
+  assert.equal(control().disabled, false);
+  control().checked = true; control().fire("change"); await tick();
+  events.onSettings({ [field]: true });
+  pendingSettings.at(-1).resolve(); await tick();
+  assert.equal(control().checked, true);
+}
+console.log("check-settings-ui: independent processing choices, late-bootstrap race, pending redraw, failure rollback and explicit retry");
+const modeControl = () => rowNamed("Recording mode").querySelector("select");
+assert.equal(modeControl().dataset.savedValue, "1", "Late bootstrap cannot undo newer gesture choices");
+for (const name of ["Space locks recording", "Esc cancels dictation"]) {
+  const control = rowNamed(name).querySelector("input");
+  assert.equal(control.checked, false);
+  assert.equal(control.hasAttribute("disabled"), true, "Raw chords are unavailable on Wayland");
+}
+modeControl().value = "0"; modeControl().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationGesture", "doubleTap", true]);
+events.onSettings({ volume: 70 });
+assert.equal(modeControl().disabled, true);
+modeControl().fire("change");
+assert.deepEqual(writes.at(-1), ["setDictationGesture", "doubleTap", true]);
+pendingSettings.at(-1).reject(new Error("Disk unavailable")); await tick();
+assert.equal(modeControl().value, "1", "Failed save restores the previous mode");
+modeControl().value = "0"; modeControl().fire("change"); await tick();
+events.onSettings({ dictationDoubleTap: true });
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(modeControl().value, "0");
+console.log("check-settings-ui: gesture choices, late-bootstrap guard, unavailable Wayland chords and mode save/repaint/rollback/retry");
+const microphoneControl = () => rowNamed("Dictation microphone").querySelector("select");
+assert.equal(microphoneReads.length, 1, "Only Dictation navigation loads the input list; reentry reuses the pending read");
+assert.equal(microphoneControl().disabled, true);
+assert.ok(page().textContent.includes("Loading microphones"));
+assert.ok(microphoneControl().textContent.includes("Disconnected mic"), "A late bootstrap preserves the newer microphone choice");
+await go("General");
+microphoneReads[0].reject(new Error("Audio server unavailable")); await tick();
+await go("Dictation");
+assert.equal(microphoneReads.length, 1, "Read failures need explicit retry");
+assert.ok(page().textContent.includes("Could not list microphones"));
+button("Refresh microphones").fire("click"); await tick();
+button("Refresh microphones").fire("click");
+assert.equal(microphoneReads.length, 2, "Pending reads cannot be duplicated");
+microphoneReads[1].resolve(["USB mic"]); await tick();
+assert.ok(microphoneControl().textContent.includes("Disconnected mic (unavailable)"));
+assert.equal(microphoneControl().dataset.savedValue, "2", "A disconnected saved device never changes preference implicitly");
+const microphoneWrites = () => writes.filter(write => write[0] === "setDictationMicrophone");
+assert.equal(microphoneWrites().length, 0);
+microphoneControl().value = "1"; microphoneControl().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationMicrophone", "USB mic"]);
+events.onSettings({ volume: 70 });
+assert.equal(microphoneControl().disabled, true);
+assert.equal(button("Refresh microphones").disabled, true);
+button("Refresh microphones").fire("click");
+assert.equal(microphoneReads.length, 2, "Inventory cannot reorder a pending selection");
+microphoneControl().fire("change"); await tick();
+assert.equal(microphoneWrites().length, 1);
+pendingSettings.at(-1).reject(new Error("Disk full")); await tick();
+assert.equal(microphoneControl().value, "2", "A failed save restores the disconnected preference");
+microphoneControl().value = "1"; microphoneControl().fire("change"); await tick();
+events.onSettings({ dictationMicrophone: "USB mic" });
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(microphoneControl().value, "1");
+assert.equal(button("Refresh microphones").disabled, false);
+button("Refresh microphones").fire("click"); await tick();
+microphoneReads[2].reject(new Error("Audio server disconnected")); await tick();
+assert.ok(microphoneControl().textContent.includes("USB mic"), "A failed refresh retains its last list");
+assert.ok(page().textContent.includes("The last list may be out of date"));
+button("Refresh microphones").fire("click"); await tick();
+microphoneReads[3].resolve([]); await tick();
+assert.ok(page().textContent.includes("No microphones found"));
+assert.ok(microphoneControl().textContent.includes("USB mic (unavailable)"));
+microphoneControl().value = "0"; microphoneControl().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationMicrophone", null]);
+events.onSettings({ dictationMicrophone: null }); pendingSettings.at(-1).resolve(); await tick();
+assert.equal(microphoneControl().value, "0", "System default clears the saved device");
+console.log("check-settings-ui: lazy microphone inventory, loading/error/stale/empty, explicit retry, disconnected preference, save rollback and default restoration");
+
+const retentionControl = () => rowNamed("Keep dictation history").querySelector("select");
+assert.equal(retentionControl().dataset.savedValue, "2");
+retentionControl().value = "0"; retentionControl().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationKeep", "0"]);
+assert.equal(retentionControl().disabled, true);
+events.onSettings({ volume: 80 });
+assert.equal(retentionControl().disabled, true, "A repaint cannot start a duplicate retention write");
+pendingSettings.at(-1).reject(new Error("Erasure failed")); await tick();
+assert.equal(retentionControl().value, "2");
+assert.equal(retentionControl().disabled, false);
+retentionControl().value = "1"; retentionControl().fire("change"); await tick();
+events.onSettings({ dictationKeep: "7" });
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(retentionControl().value, "1");
+assert.deepEqual(writes.at(-1), ["setDictationKeep", "7"]);
+console.log("check-settings-ui: dictation retention, explicit choice, shared pending guard, failure rollback and native settings acknowledgement");
+
+assert.equal(rowNamed("Insert dictation in supported editors and tmux panes").querySelector("input").checked, true,
+  "A delayed bootstrap cannot undo a newer insertion setting");
+const beforePermission = writes.length;
+events.onDictationPermission("unavailable");
+assert.ok(page().textContent.includes("Keyboard access is unavailable"));
+assert.equal(button("Request keyboard access").hasAttribute("disabled"), false);
+assert.equal(writes.length, beforePermission, "Navigating to the page never requests desktop permission");
+button("Request keyboard access").fire("click"); await tick();
+assert.deepEqual(writes.at(-1), ["retryDictationPermission"]);
+events.onDictationPermission("ready");
+assert.equal(button("Request keyboard access").hasAttribute("disabled"), true);
+events.onShortcutKeys({ talk: "Meta+V", "talk-again": "Meta+B", "talk-cancel": "Meta+X" });
+assert.ok(page().textContent.includes("Meta+V") && page().textContent.includes("Meta+B") && page().textContent.includes("Meta+X"));
+assert.equal(pendingShortcutOpens.length, 0, "Entering Settings never launches a desktop editor");
+button("Change in KDE…").fire("click");
+assert.equal(pendingShortcutOpens.length, 1);
+assert.ok(page().querySelectorAll('[role="status"]').some(n => n.textContent.includes("Opening KDE Shortcuts")));
+events.onSettings({ volume: 60 });
+assert.equal(button("Change in KDE…").disabled, true);
+button("Change in KDE…").fire("click");
+assert.equal(pendingShortcutOpens.length, 1, "Repainting cannot duplicate a pending launch");
+await go("General");
+pendingShortcutOpens[0].reject(new Error("Desktop entry missing")); await tick();
+await go("Dictation");
+assert.ok(page().querySelector('[role="alert"]').textContent.includes("Could not open KDE Shortcuts"));
+button("Change in KDE…").fire("click");
+assert.equal(page().querySelector('[role="alert"]'), null, "Retry clears the previous failure");
+pendingShortcutOpens[1].resolve(); await tick();
+assert.equal(button("Change in KDE…").disabled, false);
+assert.ok(!page().textContent.includes("Opening KDE Shortcuts"));
+assert.ok(page().textContent.includes("Meta+V"), "Launching the editor never guesses a new binding");
+console.log("check-settings-ui: explicit KDE shortcut launch, retained pending state, failure/retry and no duplicate launch");
+button("Erase dictation history…").fire("click");
+const confirmation = () => page().querySelectorAll('[role="group"]').find(n => n.getAttribute("aria-label") === "Erase dictation history");
+assert.ok(confirmation());
+confirmation().fire("keydown", { key: "Escape", preventDefault() {} });
+assert.equal(pendingErases.length, 0);
+assert.equal(confirmation(), undefined, "Escape cancels the confirmation without erasing");
+button("Erase dictation history…").fire("click"); button("Erase").fire("click");
+assert.equal(pendingErases.length, 1);
+events.onSettings({ volume: 65 });
+assert.equal(button("Erase").disabled, true);
+button("Erase").fire("click"); assert.equal(pendingErases.length, 1, "A repaint cannot duplicate erasure");
+pendingErases[0].reject(new Error("Disk unavailable")); await tick();
+assert.ok(page().textContent.includes("Could not erase dictation history"));
+assert.ok(!page().textContent.includes("Dictation history erased"));
+button("Erase").fire("click"); pendingErases[1].resolve(); await tick();
+assert.ok(page().textContent.includes("Dictation history erased. Usage totals stay."));
+assert.equal(confirmation(), undefined);
+button("Dictation history").fire("click"); await tick(); assert.equal(routes.at(-1), "dictation");
+button("Chat & voice").fire("click"); assert.equal(page().querySelector("h1").textContent, "Chat & voice");
+button("Dictation settings").fire("click"); assert.equal(page().querySelector("h1").textContent, "Dictation");
+await go("General");
+assert.equal(rowNamed("Keep dictation history"), undefined, "General links to the single settings owner");
+button("Dictation settings").fire("click"); assert.equal(page().querySelector("h1").textContent, "Dictation");
+assert.equal(writes.filter(write => write[0] === "dictationClear").length, 2);
+console.log("check-settings-ui: dedicated Dictation navigation/keys, shared model link, late-settings race, explicit portal retry and erase confirmation/failure/retry without duplicate writes");

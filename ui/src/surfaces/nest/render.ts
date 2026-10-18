@@ -1,3 +1,5 @@
+import { createDictationArea, type DictationAreaBackend } from "./dictation/area";
+import { createDictationStatistics } from "./dictation/statistics";
 import { sidePanel } from "./panels";
 // The Nest's page takes its backend: four tabs and the gear (ADRs 0021, 0031). Chat keeps
 // Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
@@ -40,6 +42,7 @@ export interface Nest {
   relabel: () => void;
   /** The memory changed: its panel reads it again, when open. */
   memoryChanged: () => void;
+  dictationChanged: (erased?: boolean) => void;
   /** Spend or its budget changed: refresh the open records. */
   spendChanged: () => void;
   /** Zeca switched on or off: the Chat tab comes or goes. */
@@ -68,6 +71,7 @@ export interface Nest {
 
 export interface NestBackend {
   chat: ChatBackend;
+  dictation: DictationAreaBackend;
   roosts: RoostsBackend;
   memory: MemoryBackend;
   records: RecordsBackend;
@@ -98,9 +102,9 @@ export interface NestBackend {
 const ROOSTS_EVERY_MS = 1500;
 
 type Tab = NestTab;
-type Sub = "week" | "projects" | "history" | "cost" | "traces" | "audit";
+type Sub = "week" | "projects" | "history" | "cost" | "traces" | "audit" | "dictation-statistics";
 const TABS = NEST_TABS;
-const SUBS: Sub[] = ["week", "projects", "history", "cost", "traces", "audit"];
+const SUBS: Sub[] = ["week", "dictation-statistics", "projects", "history", "cost", "traces", "audit"];
 
 /** Activity owns figures; only Settings edits the daily budget (ADR 0031). */
 function costPart(
@@ -194,9 +198,11 @@ export function createNest(
           }
         : null,
   });
+  const dictationArea = createDictationArea(backend.dictation, () => backend.settings("dictation"), () => open("dictation-statistics"));
   // Activity's parts, each read again when its sub-tab opens.
   const parts: Record<Sub, { element: HTMLElement; refresh: () => void; flush?: () => Promise<void> }> = {
     week: createWeek(backend.week),
+    "dictation-statistics": createDictationStatistics(backend.dictation.statistics, () => backend.settings("dictation")),
     projects: createRoosts(backend.roosts),
     history: createHistory(backend.records.history, backend.records.query),
     cost: (() => {
@@ -334,6 +340,7 @@ export function createNest(
   };
   const subPanes: Record<Sub, HTMLElement> = {
     week: part("week"),
+    "dictation-statistics": part("dictation-statistics"),
     projects: part("projects"),
     history: part("history"),
     cost: part("cost"),
@@ -351,6 +358,7 @@ export function createNest(
     flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element),
     chat: chatPane,
     activity: activityPane,
+    dictation: el("div", { class: "nest-pane nest-dictation-pane" }, dictationArea.element),
     connections: el("div", { class: "nest-pane nest-connections-pane" }, connections.element),
   };
   for (const id of TABS) {
@@ -430,6 +438,7 @@ export function createNest(
     flock.setActive(id === "flock" && !document.hidden && !last?.locked);
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
+    if (id === "dictation") dictationArea.refresh();
     if (id === "chat") {
       chat.toggle(true);
       refreshRecent();
@@ -441,6 +450,7 @@ export function createNest(
     portraitButton.title = t("Greet Zeca");
     const subWords: Record<Sub, string> = {
       week: t("Week"),
+      "dictation-statistics": t("Dictation"),
       projects: t("By project"),
       history: t("History"),
       cost: t("Cost"),
@@ -461,6 +471,7 @@ export function createNest(
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
     connections.redraw();
+    dictationArea.relabel();
     if (tab === "activity") parts[sub].refresh();
     refreshRecent();
   };
@@ -614,7 +625,7 @@ export function createNest(
     e.preventDefault();
     openPalette();
   });
-  // Alt+1 to 4 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
+  // Alt+1 to 5 pick a tab by the key's place, whatever the layout (a hidden Chat is skipped); Esc
   // leaves Full for the size before it. Neither while typing, composing or speaking.
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !e.isComposing && !e.defaultPrevented && tab === "chat" && chat.cancelVoice()) {
@@ -671,6 +682,11 @@ export function createNest(
     view,
     relabel,
     memoryChanged,
+    dictationChanged: (erased = false) => {
+      if (erased) dictationArea.invalidate();
+      if (tab === "dictation") dictationArea.refresh();
+      if (tab === "activity" && (sub === "dictation-statistics" || sub === "week")) parts[sub].refresh();
+    },
     spendChanged,
     setZeca,
     open,
@@ -692,6 +708,7 @@ export function createNest(
       flock.setKeys(keys);
     },
     shortcut: (id) => {
+      if (id === "talk-cancel") { chat.cancelVoice(); return; }
       if (id === "talk" || id === "talk-up") {
         if (id === "talk" && zecaOn && !document.hidden && !last?.locked && root.isConnected) {
           if (portraitNarrow.matches) setMemory(false);

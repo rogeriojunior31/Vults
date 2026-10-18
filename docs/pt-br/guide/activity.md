@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 37a7c01b6c59 -->
+<!-- source: 394a84b352f9 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -13,10 +13,13 @@ e um botão
 **Open Activity**; o resumo e o calendário ficam no Nest. Tudo é contado neste
 computador, a partir de um histórico local que o Vults guarda enquanto os seus agentes trabalham.
 
-O Nest organiza Atividade em seis telas, com o mesmo estilo de navegação e resumo:
+O Nest organiza Atividade em sete telas, com o mesmo estilo de navegação e resumo:
 
 - **Week**: totais, tempo por dia, a grade anual e um resumo para salvar. Selecione um dia para
   ler a duração exata; **Como a atividade é contada** explica as regras de contagem.
+- **Ditado**: palavras medidas, estimativa de tempo economizado, velocidade, barras diárias e
+  aplicativos mais usados. Semana também mostra as palavras ditadas na semana do calendário
+  selecionada, independentemente do histórico dos agentes.
 - **By project**: tempo por repositório, worktrees, sessões, pull requests e memória do projeto.
 - **History**: turnos concluídos agrupados por projeto, com resultado, agente, contagens e duração.
 - **Cost**: orçamento de hoje, janelas dos planos, custo e tokens das últimas duas semanas e custo por projeto.
@@ -33,6 +36,33 @@ nenhum projeto tem nome. As setas alternam entre a semana anterior e a atual; **
 abre a tela completa de Atividade. As horas no resumo do topo são arredondadas; passe o mouse no
 valor para ver a duração completa. Uma semana ainda não lida mostra uma mensagem de carregamento
 ou erro em vez de totais zerados.
+
+<a id="dictation-statistics"></a>
+
+## Estatísticas do ditado
+
+Abra **Atividade → Ditado** ou **Ditado → Estatísticas**. Escolha **Últimos 7 dias**, **Últimos 30 dias**
+ou **Todo o período**. Os totais locais continuam disponíveis após apagar ou expirar transcrições,
+ou escolher **Não guardar**; reutilizar um ditado não conta outra vez. Períodos vazios mostram
+números desconhecidos, com indicações explícitas de carregamento, nova tentativa e dados antigos
+quando a leitura falha.
+
+O tempo economizado é `max(0, palavras / 45 - segundos de áudio / 60)` minutos. A velocidade usa a
+duração medida do áudio, com zero abaixo de um segundo. As barras usam datas do calendário local;
+os números de todo o período incluem todos os dias registrados, enquanto o gráfico mostra no máximo
+os últimos 90 dias. Selecione uma barra para ler o valor. Os oito aplicativos mais usados são ordenados
+por palavras, com indicação explícita de aplicativo desconhecido quando necessário.
+
+A migração 24 inicia os totais diários independentes por aplicativo. Os totais antigos de todo o
+período são preservados; o detalhamento semanal/mensal sem essas medições antigas é indicado como
+parcial. Nenhuma transcrição, sessão ou título de janela é acrescentado a esses agregados. Os tempos
+por etapa ainda seguem a retenção das transcrições e aparecem em
+[Configurações > Ditado > Diagnóstico](dictation.md#diagnostics). Os totais de uso e os contadores
+somente na memória da execução têm durações independentes. **Configurações do ditado** abre essa página. Room/Full mantêm o período de estatísticas.
+
+![Estatísticas de ditado com uso sintético no app nativo](../../assets/dictation-statistics.png)
+
+Exemplo de validação nativa com totais sintéticos; esses números não são o uso de quem está lendo.
 
 <a id="cost-and-a-daily-budget"></a>
 
@@ -111,11 +141,13 @@ hora na memória, nunca em disco.
 - **Clear history…** pergunta uma vez, depois apaga os turnos e dias, o log de auditoria das suas
   respostas, o trace local de pedidos (os turnos do Zeca e cada pedido feito em seu nome), as
   conversas salvas do Zeca, o diário dele, os resumos dos dias e os dados de lembrança deles, as
-  propostas de memória, as execuções do sono e o retrato do bando guardado para o servidor MCP do
+  propostas de memória, as execuções do sono, as transcrições salvas de ditado e o retrato do bando
+  guardado para o servidor MCP do
   Zeca, tudo de uma vez, deixando uma linha no log de
   auditoria: que você o limpou, e quando. O que fica: o que o Zeca lembra (os arquivos de memória
   dele, **Settings → Chat & voice → Memory**), as políticas que você aceitou, os seus telefones
-  pareados e os custos registrados dos agentes ([Segurança](../safety.md)). As tabelas de recursos
+  pareados, os custos registrados dos agentes, os totais medidos de ditado e o dicionário, as
+  substituições e os trechos mantidos pelo usuário ([Segurança](../safety.md)). As tabelas de recursos
   removidos ficam intactas; os custos antigos continuam disponíveis em **Cost**.
 - O histórico fica num banco local, `vults.sqlite` (cada turno por 12 semanas, os totais de cada
   dia por um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). Veja

@@ -2,6 +2,8 @@
 
 **Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from 0008, 0009, 0022, 0023, 0024
 and 0030. Amended on 2026-10-16 by [0031](0031-tasks-leave-vults.md): the Nest has no Tasks tab.
+Amended on 2026-10-17 for N3 V0.3: the Dictation area and its feedback contract. These additions
+land with their feature phases; the decision does not claim production UI or native validation.
 
 ## Context
 
@@ -23,8 +25,9 @@ meant to steer whatever reads them.
   connector rows, Chat requests and memory proposals. A row opens its existing interaction
   owner; no inbox operation answers a permission or executes the destination's action.
   Activity and Connections keep their full views in the Nest.
-- **Four sizes**: **Mini** is the pill (340 x 38, the flock and no text: news reaches it only as a
-  body, a color or a motion). **Quick** is the island inside the fixed 720 x 640 logical-pixel
+- **Four sizes**: **Mini** is the pill (340 x 38, the flock and no text at rest: news reaches it
+  only as a body, a color or a motion; active dictation has the transient feedback below).
+  **Quick** is the island inside the fixed 720 x 640 logical-pixel
   layer surface: 440 CSS px wide normally, 492 CSS px in Chat, before the UI's 1.14 zoom
   (502 and 561 logical px respectively). Height stays within 556 CSS px (634 after zoom),
   clamped further if the viewport is smaller. Only the measured visible rectangle takes input.
@@ -53,14 +56,44 @@ meant to steer whatever reads them.
   its need strip with its sound (*Quiet* only quiets what happens at rest). In
   *Paused* `core` does not acknowledge cards and releases them at once, so the agent asks in its
   terminal with no wait, and connectors stop polling.
-- **The Nest** has four tabs, Flock, Chat, Connections and Activity (Week with *By project*,
-  History, Cost, Traces, Audit), with Memory a side panel of the Chat, Settings behind a gear and
+- **The Nest** has Flock, Chat, Connections and Activity (Week with *By project*,
+  History, Cost, Traces, Audit), with Dictation as the fifth tab when N3 delivers it. Memory is a
+  side panel of the Chat, with Settings behind a gear and
   the agents' capability table in Settings › Agents. Changing size keeps the selection: the session
   is core's `focus`; the tab, filters and chosen connection are look the app hands to the Nest. The
   Nest opens with Zeca off, without the Chat tab and *Ask Zeca* (D7). Activity keeps the spend
   figures, including historical `task:N` rows; Settings keeps the budget value. `/continue` remains
   in Chat; it does not bring back a Tasks surface. Stop is available only for an execution Vults
   started through its supported driver (D8), never merely because it watches a flock session.
+- **Dictation has one owner for each kind of content.** Its Nest area owns History, Voice
+  commands, Talk with Zeca, Meetings, Dictionary, Snippets and Styles as those phases ship.
+  Its side list links to **Settings > Dictation**, which owns configuration and Diagnostics,
+  and **Activity > Dictation**, which owns aggregate figures (V4). The shared transcription
+  model and language stay in **Settings > Chat & voice**; links open that existing owner.
+  No second Settings page lives in the Dictation area. Model switches, keys, budgets, insertion
+  permission and agent-config changes remain in the Settings webview with their existing
+  authority checks. Transcripts and meeting content stay in the Nest's webview; Diagnostics
+  in Settings shows technical measurements, not transcripts or agent text. Selection, filters,
+  drafts and an active recording survive size changes and visits to Settings or Activity.
+  With Zeca off, independent dictation stays available; Talk with Zeca follows his opt-in.
+- **Dictation feedback stays over the flock.** While active, a neutral grey line can show
+  listening, hands-free, transcribing, retry, cancellation, failure or the delivery outcome
+  established under [0032](0032-dictation-into-other-apps.md). Later phases add voice-command and
+  spoken-reply states. There is no idle hint, second navigation, Undo or other button on this
+  line; a normal island click still opens Quick. Color stays on status shapes, and a card's
+  amber edge remains visible. An optional caption below carries heard text, clipped words or
+  the result only when it adds information, with at most two rows for the result. It has no
+  controls, takes neither focus nor mouse input and clears within two seconds of completion.
+  Long text truncates within the surface, with the full line available in its detail or tooltip.
+  The overlay stays mapped at its fixed size; caption drawing must not enlarge its input region.
+- **Cards always take priority over dictation.** An arriving card opens in its existing owner
+  immediately, with its controls and command readable; dictation never hides it, covers it,
+  delays its notification or extends its deadline. If space is short, the line and caption
+  yield to the card. Feedback does not answer it or grant insertion into a waiting session
+  ([0032](0032-dictation-into-other-apps.md)). Dictation does not override the one-surface rule:
+  while the Nest is visible, its active page carries feedback without forcing Mini or showing
+  the hidden island. Cards keep the existing island/Nest routing. Feedback never steals focus
+  from the captured destination.
 - **One surface at a time** (the island and the Nest stay two surfaces underneath). While the Nest is open and in sight (Room or Full), the island is
   hidden, pill and sky and all, with no region that takes the mouse. It comes back when the Nest
   closes or goes back to Quick or Mini (or is minimized, where the system says so); the footer's
@@ -79,7 +112,7 @@ meant to steer whatever reads them.
   `policies::from_settings`). The two webviews share the origin's storage, which Settings never reads. Settings shows no agent's text: its frame holds tab names and counts,
   the size switch, sound, full screen, and a footer that switches Zeca and brings up the terminal of
   the session in front (it keeps only who that session is). Its pages are General, Agents, Chat &
-  voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca, About.
+  voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca, About; N3 adds Dictation.
 
 ## Consequences
 
@@ -94,6 +127,10 @@ meant to steer whatever reads them.
   show-all. Opening on Settings loads the Nest's page too, hidden and resting. An event the app
   sends reaches every webview's listeners; a page still draws only what it asked for.
 - On Wayland the compositor places the Nest's window; it cannot be pinned under the island's spot.
+- N3 UI checks must exercise each dictation state alongside an arriving permission or question,
+  with Zeca on and off, Black and Light, and reduced motion. Native validation covers Mini/Quick
+  geometry, focus and input regions, plus Room at 480 x 360 and larger sizes, on X11 and Plasma
+  Wayland. The prototype's P12 visual review and the later running-app sign-offs remain separate.
 
 ## History
 
@@ -117,3 +154,6 @@ meant to steer whatever reads them.
 
 - 2026-10-17: N2.2 adds Quick's Now inbox, exact-request review and explicit links to the existing
   Nest details; cards keep their original authority, ledger and deadline.
+- 2026-10-17: N3 V0.3 adds the phased fifth Nest tab, Settings and Activity ownership, transient
+  dictation feedback and card priority. It follows R6's revised central Settings decision and
+  Tasks removal; neither a sixth tab nor area-owned privileged settings is introduced.

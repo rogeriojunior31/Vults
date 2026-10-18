@@ -1,8 +1,11 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: eb2e3099d757 -->
+<!-- source: 144d575cd905 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
+Alterada em 2026-10-17 para a N3 V0.3: a área de Ditado e seu contrato de apresentação de estado.
+Essas adições chegam nas fases de seus recursos; a decisão não afirma entrega da interface em
+produção nem validação nativa.
 
 <a id="context"></a>
 
@@ -29,8 +32,9 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   que pedem uma ação, solicitações do Chat e propostas de memória. Uma linha abre o responsável
   existente pela interação; nenhuma operação da caixa responde a uma permissão ou executa a ação
   do destino. Activity e Connections mantêm suas telas completas no Nest.
-- **Quatro tamanhos**: **Mini** é a pílula (340 x 38, o bando e nenhum texto: novidades chegam a
-  ela só como corpo, cor ou movimento). **Quick** é a ilha dentro da superfície de camada fixa
+- **Quatro tamanhos**: **Mini** é a pílula (340 x 38, o bando e nenhum texto em repouso: novidades
+  chegam a ela só como corpo, cor ou movimento; o ditado ativo tem o estado transitório abaixo).
+  **Quick** é a ilha dentro da superfície de camada fixa
   de 720 x 640 pixels lógicos: normalmente com 440 CSS px de largura e 492 CSS px no Chat,
   antes do zoom de 1,14 da interface (502 e 561 pixels lógicos, respectivamente).
   A altura fica dentro de 556 CSS px (634 após o zoom), reduzida quando a área disponível
@@ -60,8 +64,9 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   faixa de quem precisa de você com o seu som (o *Quiet* só silencia o que acontece em
   repouso). Em *Paused*, o `core` não confirma cards e os libera na hora, então o agente pergunta no
   terminal sem esperar, e os conectores param o polling.
-- **O Nest** tem quatro abas, Flock, Chat, Connections e Activity (Week com *By project*, History,
-  Cost, Traces, Audit), com Memory num painel lateral do Chat, as Configurações atrás de uma
+- **O Nest** tem Flock, Chat, Connections e Activity (Week com *By project*, History,
+  Cost, Traces, Audit), com Dictation como quinta aba quando a N3 a entregar. Memory fica num
+  painel lateral do Chat, com as Configurações atrás de uma
   engrenagem e a tabela de capacidades dos agentes em Configurações › Agents. Trocar de tamanho
   mantém a seleção: a sessão é o `focus` do core; a aba, os filtros e a conexão escolhida são
   aparência que o app entrega ao Nest. O Nest abre com o Zeca desligado, sem a aba Chat e sem *Ask
@@ -69,6 +74,39 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   as Configurações mantêm o valor do orçamento. `/continue` continua no Chat; ele não traz de
   volta uma superfície de Tasks. Stop só fica disponível para uma execução que o Vults iniciou
   pelo driver suportado (D8), nunca só porque ele observa uma sessão do bando.
+- **Ditado tem um responsável por cada tipo de conteúdo.** Sua área no Nest contém Histórico,
+  Comandos de voz, Conversar com Zeca, Reuniões, Dicionário, Trechos prontos e Estilos conforme
+  essas fases são entregues. A lista lateral oferece links para **Settings > Dictation**, que
+  concentra a configuração e o Diagnóstico, e **Activity > Dictation**, que concentra os números
+  agregados (V4). O modelo de transcrição e o idioma compartilhados ficam em **Settings > Chat &
+  voice**; os links abrem esse responsável existente. Não há uma segunda página de Configurações
+  dentro da área de Ditado. Interruptores de modelos, chaves, orçamentos, permissão de inserção e
+  alterações nas configurações dos agentes continuam na webview das Configurações, com suas
+  verificações de autoridade existentes. Transcrições e conteúdo de reuniões ficam na webview
+  do Nest; o Diagnóstico nas Configurações mostra medições técnicas, não transcrições nem texto
+  dos agentes. Seleção, filtros, rascunhos e uma gravação ativa sobrevivem à troca de tamanho e
+  às visitas às Configurações ou à Activity. Com Zeca desligado, o ditado independente continua
+  disponível; Conversar com Zeca segue a ativação opcional dele.
+- **O estado do ditado fica sobre o bando.** Durante a atividade, uma linha cinza neutra pode
+  mostrar escuta, mãos livres, transcrição, nova tentativa, cancelamento, falha ou o resultado
+  da entrega estabelecido pela [0032](0032-dictation-into-other-apps.md). Fases posteriores
+  adicionam estados de comandos de voz e respostas faladas. Não há dica em repouso, segunda
+  navegação, Desfazer ou outro botão nessa linha; um clique normal na ilha continua abrindo o
+  Quick. A cor fica nas formas de estado, e a borda âmbar do card permanece visível. Uma legenda
+  opcional abaixo mostra texto ouvido, palavras cortadas ou o resultado só quando acrescenta
+  informação, com no máximo duas linhas para o resultado. Ela não tem controles, não recebe
+  foco nem entrada do mouse e desaparece em até dois segundos após a conclusão. Texto longo é
+  truncado dentro da superfície, com a linha completa disponível no detalhe ou na dica. A
+  sobreposição continua mapeada no tamanho fixo; desenhar a legenda não pode ampliar sua região
+  de entrada.
+- **Cards sempre têm prioridade sobre o ditado.** Um card que chega abre imediatamente no
+  responsável existente, com seus controles e comando legíveis; o ditado nunca o esconde,
+  cobre, atrasa sua notificação ou estende seu prazo. Se faltar espaço, a linha e a legenda
+  cedem lugar ao card. Mostrar estado não o responde nem concede inserção numa sessão em
+  espera ([0032](0032-dictation-into-other-apps.md)). O ditado não sobrepõe a regra de uma
+  superfície por vez: enquanto o Nest está visível, sua página ativa mostra o estado sem forçar
+  o Mini nem mostrar a ilha escondida. Cards mantêm o encaminhamento existente entre ilha e
+  Nest. Mostrar estado nunca rouba o foco do destino capturado.
 - **Uma superfície por vez** (a ilha e o Nest continuam duas superfícies por baixo). Enquanto o Nest está aberto e à vista (Room ou Full), a ilha fica
   escondida, pílula, céu e tudo, sem nenhuma região que pegue o mouse. Ela volta quando o Nest
   fecha ou volta para Quick ou Mini (ou é minimizado, onde o sistema diz isso); o **Back to the
@@ -89,7 +127,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   tem nomes e contagens das abas, a troca de tamanho, som, tela cheia, e um rodapé que liga e
   desliga o Zeca e traz à frente o terminal da sessão da frente (ela guarda só quem é essa sessão).
   As páginas são General, Agents, Chat & voice, Approvals, Projects, Activity, Connectors, Phone,
-  Flock & Zeca, About.
+  Flock & Zeca, About; a N3 adiciona Dictation.
 
 <a id="consequences"></a>
 
@@ -107,6 +145,11 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   pediu.
 - No Wayland, o compositor posiciona a janela do Nest; ela não pode ser presa embaixo do lugar da
   ilha.
+- As verificações de interface da N3 devem exercitar cada estado de ditado junto à chegada de
+  uma permissão ou pergunta, com Zeca ligado e desligado, Black e Light e movimento reduzido.
+  A validação nativa cobre geometria, foco e regiões de entrada no Mini/Quick, além do Room em
+  480 x 360 e tamanhos maiores, no X11 e no Plasma Wayland. A revisão visual P12 do protótipo e
+  os aceites posteriores no app em execução continuam separados.
 
 <a id="history"></a>
 
@@ -133,3 +176,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
 
 - 2026-10-17: N2.2 adiciona a caixa Now do Quick, revisão pelo pedido exato e links explícitos aos
   detalhes existentes do Nest; os cards mantêm sua autoridade, registro e prazo originais.
+- 2026-10-17: a N3 V0.3 adiciona a quinta aba do Nest por fases, a responsabilidade das
+  Configurações e da Activity, o estado transitório do ditado e a prioridade dos cards. Segue a
+  decisão revisada de R6 por Configurações centrais e a remoção de Tasks; não introduz sexta aba
+  nem configurações privilegiadas próprias da área.

@@ -89,7 +89,7 @@ pub fn prune(dir: &Path, today: Date) -> std::io::Result<()> {
 pub fn clear(dir: &Path) -> std::io::Result<()> {
     // The flock's snapshot for Zeca's MCP server goes too; the next view writes it anew.
     let _ = std::fs::remove_file(crate::mcp::flock_file());
-    open(dir)?.clear_all(dir).map_err(std::io::Error::other)
+    crate::dictation_history::clearing(|| open(dir)?.clear_all(dir).map_err(std::io::Error::other))
 }
 
 #[cfg(test)]
@@ -219,6 +219,47 @@ mod tests {
     }
 
     #[test]
+    fn dictation_only_weeks_remain_available_without_agent_history() {
+        let dir = temp("dictation-only-week");
+        let entry = vults_store::dictations::Entry {
+            at: NOON,
+            app: None,
+            session: None,
+            heard: "heard words".into(),
+            text: "written words".into(),
+            style: "verbatim".into(),
+            language: None,
+            secs: 30.0,
+            words: 135,
+            fixes: None,
+            outcome: "copied".into(),
+            timings: Default::default(),
+        };
+        Store::open(&dir)
+            .unwrap()
+            .dictation_add(
+                &entry,
+                Date::new(2026, 9, 25),
+                vults_store::dictations::Retention::NotKept,
+                NOON,
+            )
+            .unwrap();
+        let result = activity(
+            &dir,
+            false,
+            Date::new(2026, 10, 9),
+            Some("2026-09-21"),
+            vults_core::i18n::Lang::En,
+        )
+        .unwrap();
+        assert!(!result.history);
+        assert_eq!(result.weeks, ["2026-10-05", "2026-09-21"]);
+        assert_eq!(result.week.turns, 0);
+        assert_eq!(result.dictated_words, Some(135));
+        assert_eq!(serde_json::to_value(result).unwrap()["dictatedWords"], 135);
+    }
+
+    #[test]
     fn clear_leaves_nothing() {
         let dir = temp("clear");
         append(&dir, &Record::new(&turn(60), NOON, 0)).unwrap();
@@ -252,6 +293,7 @@ pub struct Activity {
     pub week: vults_core::recap::WeekView,
     pub previous: vults_core::recap::WeekView,
     pub grid: Vec<vults_core::recap::GridDay>,
+    pub dictated_words: Option<i64>,
 }
 
 /// The page's data for the week of `monday` (this week's when none, or one that does not read).
@@ -267,10 +309,19 @@ pub fn activity(
     let days = store.days().map_err(std::io::Error::other)?;
     let this_week = today.monday();
     let mut weeks = vults_core::recap::weeks_with_turns(&entries);
+    weeks.extend(
+        store
+            .dictation_days()
+            .map_err(std::io::Error::other)?
+            .keys()
+            .filter_map(|day| Date::parse(day))
+            .map(Date::monday),
+    );
     if !weeks.contains(&this_week) {
         weeks.push(this_week);
     }
     weeks.sort_unstable_by(|a, b| b.cmp(a));
+    weeks.dedup();
     let monday = monday.and_then(Date::parse).map_or(this_week, Date::monday);
     Ok(Activity {
         history,
@@ -279,6 +330,12 @@ pub fn activity(
         week: vults_core::recap::week(lang, &entries, monday),
         previous: vults_core::recap::week(lang, &entries, monday.plus(-7)),
         grid: vults_core::recap::grid(&days, today),
+        dictated_words: {
+            let usage = store
+                .dictation_usage(monday, monday.plus(6))
+                .map_err(std::io::Error::other)?;
+            (usage.count > 0).then_some(usage.words)
+        },
     })
 }
 
