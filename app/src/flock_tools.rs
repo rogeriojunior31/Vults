@@ -105,6 +105,24 @@ fn brief(s: &Session) -> Value {
     })
 }
 
+fn detail(s: &Session) -> Value {
+    let mut value = brief(s);
+    value["steps"] = json!(s.steps);
+    value
+}
+
+/// Voice commands already resolved an exact identity; do not guess again from its display label.
+pub fn session_detail_exact(view: &Value, key: &vults_core::SessionKey) -> Option<Value> {
+    let session = view["sessions"]
+        .as_array()?
+        .iter()
+        .find(|s| s["id"].as_str() == Some(&key.session_id) && s["agent"] == json!(key.agent))?;
+    let mut selected = view.clone();
+    selected["sessions"] = json!([session]);
+    let flock = flock(&selected);
+    flock.sessions.first().map(detail)
+}
+
 const NO_INPUT: fn() -> Value = || json!({ "type": "object", "properties": {} });
 
 #[derive(Debug)]
@@ -182,11 +200,7 @@ impl Tool for SessionDetail {
         let wanted = input["session"].as_str().unwrap_or_default();
         let found: Vec<&Session> = r.sessions().iter().filter(|s| named(s, wanted)).collect();
         match found.as_slice() {
-            [s] => {
-                let mut v = brief(s);
-                v["steps"] = json!(s.steps);
-                answer(v)
-            }
+            [s] => answer(detail(s)),
             [] => failed(json!({
                 "error": format!("No session named {wanted}."),
                 "sessions": r.sessions().iter().map(brief).collect::<Vec<_>>(),
@@ -210,8 +224,10 @@ impl Tool for PendingAsks {
         NO_INPUT()
     }
     fn call<'a>(&'a self, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
-        let r = reader(self.0.as_ref());
-        answer(json!({ "waiting": r.waiting().map(brief).collect::<Vec<_>>() }))
+        answer(
+            cached_read(&self.0.view().unwrap_or_default(), Value::Null, "pending_asks")
+                .expect("Known local read"),
+        )
     }
 }
 
@@ -250,6 +266,25 @@ fn open_rows(rows: &Value) -> Value {
     )
 }
 
+/// Synchronous local reads let command admission and cancellation share one short lock.
+/// No request is made: both values are already cached by their existing owners.
+pub fn cached_read(view: &Value, usage: Value, name: &str) -> Option<Value> {
+    Some(match name {
+        "pending_asks" => {
+            json!({"waiting":FlockReader::new(flock(view)).waiting().map(brief).collect::<Vec<_>>()})
+        }
+        "usage" => json!({"windows":usage}),
+        "github_snapshot" => {
+            let board = view["boards"]
+                .as_array()?
+                .iter()
+                .find(|board| board["connector"] == "github")?;
+            json!({"rows":open_rows(&board["rows"])})
+        }
+        _ => return None,
+    })
+}
+
 impl Tool for GithubSnapshot {
     fn name(&self) -> &str {
         "github_snapshot"
@@ -261,18 +296,12 @@ impl Tool for GithubSnapshot {
         NO_INPUT()
     }
     fn call<'a>(&'a self, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
-        let board = self.0.view().and_then(|v| {
-            v["boards"]
-                .as_array()?
-                .iter()
-                .find(|b| b["connector"] == "github")
-                .cloned()
-        });
-        match board {
-            Some(b) => answer(json!({ "rows": open_rows(&b["rows"]) })),
-            None => failed(json!({ "error": "The GitHub connector is off, or has nothing yet." })),
+        match cached_read(&self.0.view().unwrap_or_default(), Value::Null, "github_snapshot") {
+            Some(value) => answer(value),
+            None => failed(json!({"error":"The GitHub connector is off, or has nothing yet."})),
         }
     }
+
     /// Titles and names come from GitHub: outside content (Z8).
     fn reads_outside(&self) -> bool {
         true

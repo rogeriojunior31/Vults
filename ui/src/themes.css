@@ -83,3 +83,7 @@
 }
 
 input::placeholder, textarea::placeholder { color: var(--fg-muted); opacity: 1; }
+
+.voice-command-help { color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); overflow-wrap: anywhere; }
+.voice-command-help dt { margin-top: 12px; color: var(--fg); font-weight: 600; }
+.voice-command-help dd { margin: 4px 0 0; }

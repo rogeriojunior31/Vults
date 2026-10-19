@@ -6,9 +6,12 @@ measured island feedback, searchable History, Dictionary/Snippets, Activity stat
 Settings with Diagnostics. Nothing is submitted automatically. Features shown only in the separate
 approved prototype are not enabled here.
 
+Model sources, licenses and the experimental meeting installer are documented in
+[Meeting model artifacts](../reference/meeting-models.md).
+
 ## Voice available today
 
-Use [Chat's voice input](chat.md#speaking-instead-of-typing) after choosing a local model in **Settings > Chat & voice**.
+Use [Chat's voice input](chat.md#speaking-instead-of-typing) after choosing a local model in **Dictation > Voice**.
 Each Chat recording keeps up to one minute of audio in memory. The preview and final transcript
 use the same local model; you review the draft before sending it.
 
@@ -33,23 +36,24 @@ For a first dictation, choose a model, focus your destination, hold the talk sho
 release. Wait for **Copied**, then paste there. Automatic insertion is a separate choice and
 only supports the destinations below; it never sends Enter.
 
-Choose and install a local voice model in **Settings > Chat & voice**. The desktop asks for the
-new global shortcut bindings; **Settings > Dictation > Keyboard shortcuts** shows the actual
+Choose and install a local voice model in **Dictation > Voice**. The desktop asks for the
+new global shortcut bindings; **Dictation > Keyboard shortcuts** shows the actual
 bindings and updates when you change them in the desktop settings. **Change in KDE…** opens
 KDE System Settings > Shortcuts through its installed desktop entry. If that entry is missing
 or cannot launch, the page offers retry; other desktops use their own shortcut settings. Vults
 does not edit desktop bindings itself. Suggested keys:
 
-- **Ctrl+Alt+V**: outside Vults, hold for at least 300 ms, speak and release. Capture keeps the
+- **Ctrl+Alt+V**: hold for at least 300 ms, speak and release. Capture keeps the
   last 600 ms before local transcription. Two short taps, the second within 400 ms of the first
   release, keep recording hands-free; the next tap finishes. A single short tap is discarded.
 - **Ctrl+Alt+X**: cancel dictation or Chat voice, including dictation that is already transcribing.
 - **Ctrl+Alt+B**: copy the last successful dictation again. It does not interrupt an active turn.
 
-An active dictation keeps its owner if focus moves. A focused Vults Chat uses its existing draft
-path; the talk shortcut does not start a recording from Settings. Its separate microphone test
-starts only with **Test microphone** in Diagnostics. With Zeca off, independent dictation still works.
-In **Settings > Dictation > Keyboard shortcuts**, choose **Hold + double tap** (the default)
+The shortcut always starts independent dictation, including with a Vults window focused. It never
+opens Chat or starts its microphone. Use the microphone button in Chat to dictate into its draft.
+An active dictation keeps its owner if focus moves. The separate microphone diagnostic starts only
+with **Test microphone**. Independent dictation works with Zeca on or off.
+In **Dictation > Keyboard shortcuts**, choose **Hold + double tap** (the default)
 or **Hold only**. Hold only discards short taps immediately; a second tap starts a fresh hold.
 Space-lock remains an independent choice even in Hold only mode. **Space locks recording** and
 **Esc cancels dictation** default on and can be changed on X11; their controls are unavailable
@@ -72,7 +76,7 @@ available. No raw keys are observed through XWayland. If an X11 listener or its 
 cannot be recognized, the portal's hold, double-tap and cancel controls still work. Key observation
 ends with the turn and keeps no typed text or key history.
 
-**Settings > Dictation > Voice > Dictation microphone** chooses an input for independent
+**Dictation > Voice > Dictation microphone** chooses an input for independent
 local dictation; Chat keeps using its system default. The page lists inputs without recording,
 and **Refresh microphones** updates that list explicitly. Loading, failed reads, stale lists
 and no inputs have separate feedback. A disconnected saved microphone stays selected as
@@ -82,34 +86,35 @@ listed but cannot open reports an error. Choose **System default microphone** to
 preference. The choice is saved on this computer and used by the next recording; an active
 recording keeps its input. Opening the page or refreshing never starts a recording.
 
-**Settings > Dictation > Voice** also owns **Remove repeated loops** and **Retry empty
+**Dictation > Voice** also owns **Remove repeated loops** and **Retry empty
 dictation with Base**; both start on. Turning loop removal off keeps repetitions in both the
 preview and final text. Known sound annotations and standalone silence phrases are still removed.
 Turning Base retry off skips the extra speech check and second decode for an empty result.
 Choices are saved locally and captured when a new independent recording starts; changing them
 never changes an active turn or Chat's processing. Neither choice downloads or contacts a model.
 
-The temporary status stays on the island, or in the Nest when it is open. Mini and Quick reserve
-a neutral row above the flock, with an icon and text for listening, hands-free capture,
-finishing, transcription, retry and each delivery outcome. Long lines are truncated within that
-row. It does not take focus. A waiting card or a locked screen hides the feedback immediately;
-expired feedback does not return when the card leaves. The island keeps its fixed native overlay
-and accounts for the row before applying Quick's zoom and the top or bottom dock anchor.
+On Linux, temporary status appears in a separate capsule at the bottom center of the selected
+screen, clear of desktop panels. It uses the production Black/Light theme and never takes focus
+or mouse input. Listening shows a microphone and nine measured audio bands; hands-free capture
+adds an amber border. Finishing, transcription, retry and delivery outcomes show their existing
+text. The capsule disappears after the result expires and has no idle hint or new controls.
+The island and Nest do not repeat this feedback. If the capsule cannot be created, their existing
+inline status remains available. A waiting card, locked screen or Paused presence hides the capsule;
+expired feedback does not return when a card leaves. Its fixed native surface is never resized.
 
 During listening and hands-free capture, nine bands follow the microphone's measured audio.
-On a supported GPU, the existing local voice preview also shows the words heard so far in the
-same row. These tentative words can change before final transcription; CPU-only capture still
+On a supported GPU, the existing local voice preview can show the words heard so far in the optional caption. These tentative words can change before final transcription; CPU-only capture still
 shows the bands and state, followed by the final clipboard or insertion result. Preview text
 stays in memory, is discarded when capture ends and is never written to the app log or history.
 Cancelling or starting another dictation rejects late audio and preview updates. Reduced motion
 hides the moving bands while retaining the state and words.
 
-**Settings > Dictation > Voice > Dictation start sound** controls a short start cue;
+**Dictation > Voice > Dictation start sound** controls a short start cue;
 it starts on and follows the app's sound switch, volume and Do Not Disturb. Only a new recording
 plays it. Opening another surface, changing this setting or returning from mute never replays
 a cue. Failures and cancellations stay silent.
 
-**Settings > Dictation > Voice > Dictation captions** controls the optional caption;
+**Dictation > Voice > Dictation captions** controls the optional caption;
 it starts on. The caption expands a clipped line or shows the final text after a confirmed copy
 or delivery, in at most two rows. It uses free space below a top-docked island or above a
 bottom-docked island; a full-height Quick view leaves it hidden. In the Nest or Settings it sits
@@ -157,20 +162,20 @@ limited; recognizing an application does not grant insertion.
 | Konsole, including tmux inside Konsole | Copied; paste manually | Copied; paste manually |
 | KWrite, GNOME Text Editor, Mousepad, Leafpad | Opt-in paste after focus and clipboard checks | Opt-in paste with a ready keyboard grant and focus/clipboard checks |
 | Tracked flock session in an exact tmux pane hosted by XTerm/UXTerm or Kitty | Opt-in literal single-line delivery after live session/pane checks | Same checks, plus the ready keyboard grant |
-| Focused Vults Chat with Zeca on | Fill its unsent draft | Fill its unsent draft |
+| Any focused Vults window | Copied; paste manually | Copied; paste manually |
 
 Firefox, Kate and Konsole keep manual paste even when the insertion switch is on. Direct Kitty
 or WezTerm panes also remain copy-only without the supported exact tmux path. A fallback reports
 **Copied** rather than **Pasted** or **In session**. On Wayland, copying additionally requires
 the clipboard protocol described above; it can fail honestly when that protocol is unavailable.
 
-With Zeca off, the talk key uses independent dictation even over the Nest or island; there is no
-Chat draft to fill. Settings does not start a recording. An already active independent dictation
-keeps its original owner when focus moves; returning focus never restores an insertion capability.
+The talk key uses independent dictation over the Nest, island and Settings as well as other apps.
+It does not switch tabs or fill Chat automatically. An active dictation keeps its original owner
+when focus moves; returning focus never restores an insertion capability.
 
 ## Cancel by voice
 
-**Settings > Dictation > Keyboard shortcuts > Cancel by voice** starts on and works on X11
+**Dictation > Keyboard shortcuts > Cancel by voice** starts on and works on X11
 and Wayland. End the recording normally; the final transcript is checked before spoken-code
 conversion and before any clipboard write or insertion. These whole phrases cancel when said
 alone or at the end of the transcript:
@@ -202,7 +207,7 @@ the same replacement source updates its text without changing its order. **Snipp
 triggers and literal bodies, including spaces and line breaks. Deletion asks for confirmation;
 failed saves retain the draft and offer another attempt. These pages do not change Chat voice.
 
-**Settings > Dictation > Your words > Help the model with these words** is off by default.
+**Dictation > Vocabulary > Help the model with these words** is off by default.
 When enabled, only Turbo with fixed English receives the coding seed plus dictionary words,
 limited to 224 model tokens with whole entries. English may be chosen
 directly or resolved from the system language; automatic detection is excluded. Preview and final
@@ -215,7 +220,7 @@ do not establish human-speech accuracy; real microphone validation remains pendi
 post-transcription rules below still work with every transcription language, independently of
 model vocabulary. You do not need either vocabulary switch to use replacements or snippets.
 
-**Settings > Dictation > Your words > Project vocabulary** is independently off by default.
+**Dictation > Vocabulary > Project vocabulary** is independently off by default.
 When enabled, Vults caches names from known Git projects:
 Cargo/npm packages and dependencies, shallow workspace members, module names, root file names
 and the branch. It reads small manifests and file names locally; it does not read source bodies,
@@ -301,7 +306,7 @@ name or a microphone recording will improve. Restore any preferences you changed
 
 ## Music while you speak
 
-**Settings > Dictation > Voice > Music while you speak** offers **Lower to 25%** (the default),
+**Dictation > Voice > Music while you speak** offers **Lower to 25%** (the default),
 **Pause it** and **Leave it**. The next independent recording keeps this choice until it stops,
 including cancellation. Chat voice and future meeting capture do not use this control.
 
@@ -319,7 +324,7 @@ Restoration runs in the background; microphone capture does not wait for a media
 
 ## Spoken code
 
-**Settings > Dictation > Terminals & sessions > Spoken code** starts on. For a recognized
+**Dictation > Paste > Terminals & sessions > Spoken code** starts on. For a recognized
 terminal or session captured for the dictation, it joins identifier chunks around these terms:
 
 | Language | Spoken terms for `.`, `/`, `_`, `-`, `:` |
@@ -334,7 +339,7 @@ chunks on both sides. Whitespace outside a converted chain stays intact; line br
 control characters are never removed to create a chain. This is literal punctuation syntax,
 not prose interpretation: turn it off when you want those words verbatim in a terminal.
 
-Prose apps, unknown targets and focused Vults Chat keep their text. Changing the setting applies
+Prose apps, unknown targets and the Chat microphone keep their text. Changing the setting applies
 to the next recording. A terminal's clipboard fallback keeps its converted text; formatting never
 grants insertion, sends Enter or bypasses a waiting session. Copy again and History reuse the
 already delivered text without formatting it again. When retained, History's **Show what was
@@ -343,7 +348,7 @@ or previous clipboard contents are added to history.
 
 ## Opt-in X11 insertion
 
-In **Settings > Dictation > Paste**, enable **Insert dictation in supported editors and tmux panes** only
+In **Dictation > Paste**, enable **Insert dictation in supported editors and tmux panes** only
 if you want Vults to insert text. It starts off, including after upgrading. This first
 implementation supports KWrite, GNOME Text Editor, Mousepad and Leafpad. Other apps and IDEs keep the clipboard path;
 terminal delivery requires the exact tmux checks below. Native X11 is described below; Plasma Wayland uses the separate
@@ -444,22 +449,94 @@ accepted the insertion, not that the agent submitted or executed it. Successful 
 does not touch the clipboard; **Copy again** remains an explicit clipboard-only action.
 
 Plasma Wayland requires the existing keyboard grant even for this path; a refusal or revocation
-never falls through to terminal IPC. Focused Vults Chat continues to fill its current unsent draft.
+never falls through to terminal IPC. Only the Chat microphone fills its unsent draft directly;
+the dictation shortcut keeps the independent delivery path.
 The former Lab/Quick task-run composers were removed in N0 and are not recreated.
 
-## Coming in N3
+<a id="coming-in-n3"></a>
 
-History, dictation gesture/input/processing choices, measured feedback, captions, spoken code,
-spoken cancellation and music control are available in this build. Chat keeps its one-minute
-recording limit; independent dictation keeps up to ten minutes. Local Your words processing is
-connected with Dictionary/Snippets editing, vocabulary controls and sentence preview. Activity's Dictation
-statistics show measured usage, and Settings > Dictation includes Diagnostics. Styles,
-Meetings and voice commands remain later steps. No placeholder page runs a simulated recording or model request.
+## Styles and text clean-up
 
-Model clean-up, meeting summaries and realtime voice remain separate, off-by-default features.
-Ordinary transcription stays local. Dictation never answers an agent's permission; see
-[the insertion rules](../adr/0032-dictation-into-other-apps.md) and
-[voice and recording rules](../adr/0028-spoken-replies-through-a-realtime-model.md).
+Open **Dictation > Styles** to configure optional final-text clean-up. It uses the API provider
+selected in **Settings > Chat & voice**, including local Ollama/LM Studio. It is separate from the
+local speech model in **Dictation > Voice** and never uses a chat CLI, tools or Zeca's conversation.
+
+**Clean up with a model** starts off. Before enabling it, review the provider/model, the text and
+spelling/style context it receives, the rolling quota and possible provider charges. Cloud providers
+receive text outside this computer; local providers use literal loopback addresses. No audio is sent.
+Opening Styles reads local preferences and key-presence metadata without calling a model or fetching
+its model list. A missing key or unreadable provider prevents enabling; **Chat & voice** opens the
+shared provider editor. Local dictation and Your words processing keep working with clean-up off.
+
+| Style | Intended result |
+| --- | --- |
+| As spoken | Keep the local result, including snippets, replacements and spoken-code processing; no model request or translation |
+| Natural | Remove hesitations and repetitions while preserving the speaker's phrasing |
+| Polished | Use full sentences and written punctuation |
+| Prompt | Organize an instruction for the agent as text, without answering or executing it |
+
+These are editing goals, not a guarantee of semantic faithfulness. Questions should remain questions;
+review the written result before sending it. Protected local edits stay literal, including during
+translation. **Write in** chooses English, Brazilian Portuguese, Spanish, Simplified Chinese or the
+spoken language; it does not change Whisper's input language. **Agent sessions in English** starts
+off and overrides Write in only in recognized flock sessions, which keep Prompt.
+
+With clean-up enabled, recognized sessions use Prompt; otherwise an explicit **Style per app** choice
+wins over the application's category, then the global **Default style** applies to uncategorized apps:
+
+| Captured application | Default |
+| --- | --- |
+| Known terminals and editors, including Obsidian | As spoken |
+| Known mail applications | Polished |
+| Known chat applications | Natural |
+| Other identified applications | Default style, initially Natural |
+| Missing focus or unreadable style preferences | Local text, without a model |
+
+Expand **Style per app** to choose a preset, add an application's name/desktop ID or reset it with
+**Use app default**. Exact reviewed desktop aliases share preferences; browser titles and URLs do not
+select mail/chat styles. Choices freeze when recording starts. Later style/language edits affect the
+next recording. Turning clean-up off or changing its provider/model/key cancels in-flight filtering;
+later consent cannot revive an old recording.
+
+At most one tool-free request follows local processing. The deadline is four seconds normally,
+eight with an output-language choice and twelve for Prompt, including Prompt with translation.
+Invalid replies, unavailable providers, timeout or exhausted/unreadable quota keep the complete local
+result, including local text rules. Cancelling the dictation itself still discards it. No failed
+request is automatically retried. Admission consumes one of 2,000 attempts per rolling 24 hours,
+including local calls and admitted attempts that fail or are interrupted. The ledger survives restart
+and Clear history; removing/recreating it cannot renew an existing consent's quota.
+
+Only request metadata enters the trace. Heard/written text and applied style/output-language labels
+follow Dictation history retention. A failed filter keeps local processing labels; an old row does not
+invent a translation. Clean-up timings are recorded when filtering is measured, including a fallback;
+unmeasured stages stay Unknown. Meeting summaries and realtime voice remain later, separate features.
+Dictation never answers an agent's permission; see [insertion rules](../adr/0032-dictation-into-other-apps.md)
+and [voice and recording rules](../adr/0028-spoken-replies-through-a-realtime-model.md).
+
+### Check styles locally
+
+1. Use a disposable sentence and the spoken language you actually use in **Dictation > Voice**.
+   With clean-up off, dictate into your usual editor, check the actual delivery result, and paste
+   manually after **Copied**. Local snippets/replacements still apply; no filter request should appear.
+2. If you choose to test a provider, review the disclosure and enable clean-up explicitly. Editors
+   default to As spoken: set your test editor to Natural under **Style per app** to exercise a model.
+   Dictate a question such as "Can you explain the next step?" It should remain a question, with no
+   answer, tool action or submission. Exact wording may differ between providers.
+3. Check Polished and Prompt with disposable text, then a different Write in language. Verify meaning,
+   names and literal snippets, and compare **Show what was heard** with the written text. Keep input
+   language and output language distinct. With As spoken selected, Write in should make no request.
+4. Turn clean-up off during filtering. Local text should remain available unless you also cancel the
+   dictation. A slow/unavailable provider should keep the local result. Check the delivery outcome
+   separately: model success never grants insertion or submits text. Automated checks cover malformed
+   responses, quota boundaries and lost-ledger failures; do not spend 2,000 live calls to test a limit.
+5. Restore the preferences you changed. Check the page in Black/Light and Room/Full, including a short,
+   narrow window. Returning to Dictation during the app run should restore the configuration section;
+   work-page links open their named destination. No microphone or provider request starts on navigation.
+
+Use this checklist for real-speech/provider acceptance. Authored cassettes, local HTTP doubles and
+isolated native UI fixtures establish their tested contracts, not live-model quality or desktop
+insertion acceptance. A useful report includes model/provider, spoken/output languages, style,
+desktop, actual delivery result and the failed step; no personal transcript or API key is needed.
 
 ## Dictation history
 
@@ -476,15 +553,15 @@ time saved compares dictation time against typing at 45 words per minute, floore
 Unknown correction counts stay absent. These figures survive deleting transcript rows.
 
 Retained deliveries also save local stage timings in milliseconds: transcription (including model
-loading and any Base retry), text processing and confirmed delivery. The total starts when you
+loading and any Base retry), text processing, optional clean-up and confirmed delivery. The total starts when you
 release the held key, press to finish hands-free recording or reach the capture limit; it includes
 the microphone tail and time waiting for the worker. Delivery ends when copying or native dispatch
 returns; it does not measure the destination app's rendering. The history API provides per-stage p50/p95
 using nearest ranks over the newest 50 retained deliveries, ignoring unknown measurements.
-Old entries and the unused clean-up stage stay unknown. Cancellation, failure, empty results and
+Old entries and unmeasured stages stay unknown. Optional clean-up can have a measured duration even when it keeps local text. Cancellation, failure, empty results and
 replay add no samples. Erasure, expiry and **Do not keep** remove these timings with their rows;
 daily/app usage totals stay independent. [Activity > Dictation](activity.md#dictation-statistics)
-shows usage figures; **Settings > Dictation > Diagnostics** shows the stage timings.
+shows usage figures; **Dictation > Diagnostics** shows the stage timings.
 
 **Copy** uses the clipboard with success/failure feedback. **Use again** asks the existing
 Copy again worker to copy that retained entry and remember it as the last text. Follow the
@@ -497,14 +574,18 @@ cached transcripts even if the next read fails. Clearing all history or changing
 invalidates earlier in-flight history writes; Copy again's existing in-memory lifetime stays
 separate from retained history. Audio and the previous clipboard are never written to history.
 
-**Dictation settings** leads to **Settings > Dictation**. Its Keyboard shortcuts, Voice, Paste,
-Terminals & sessions, Your words and Privacy groups own the existing controls; General and Chat & voice link here. Model and
-language changes remain shared in **Chat & voice**. **Privacy > Keep dictation history** offers
+In compact windows, search comes before the figures; expand **Today’s dictation** to read them. An explicit disclosure choice survives size changes.
+
+The **Dictation** tab has one shared navigation for work and configuration. Choose **Voice**,
+**Keyboard shortcuts**, **Command settings**, **Vocabulary**, **Styles**, **Paste**, **Privacy** or
+**Diagnostics** to configure that part, without leaving the tab. The shared model and spoken
+language are edited in **Voice**; **Chat & voice** links there. Configuration stays in its privileged
+webview and does not display transcript contents. **Privacy > Keep dictation history** offers
 the retention choice. Choose **Do not keep**, **7 days**, **30 days**
 (the default), **1 year** or **Always**. Shortening retention immediately erases older text;
 opening history and recording also prune it. **Do not keep** writes no transcript or session to
 the history, while measured daily/app totals still update. Dictionary/Snippets are working
-pages. **Statistics** opens Activity > Dictation; Styles, meetings and voice commands remain later steps.
+pages, alongside Voice commands. **Statistics** opens Activity > Dictation; meetings remain a later step.
 **Privacy > Erase dictation
 history…** uses the same confirmed erasure as the work page, with explicit failure and retry.
 Recording mode, microphone, repetition removal, Base retry, spoken code, spoken cancellation
@@ -513,7 +594,7 @@ later steps. Active recordings retain their captured choices.
 
 ## Diagnostics
 
-Open **Settings > Dictation > Diagnostics** at the end of the page. **Refresh diagnostics** reads
+Open **Dictation > Diagnostics**. **Refresh diagnostics** reads
 current audio, desktop and local model state without starting capture or requesting a desktop grant.
 The selected input uses dictation's normal missing-device fallback; its name and **native input rate**
 refer to the device format, before resampling to 16 kHz. An unavailable input remains unknown.
@@ -549,7 +630,7 @@ and a few quick samples do not establish a latency guarantee for a particular mo
 
 ## Check statistics and Diagnostics locally
 
-1. In **Settings > Dictation > Diagnostics**, use **Refresh diagnostics**. Confirm that it does not
+1. In **Dictation > Diagnostics**, use **Refresh diagnostics**. Confirm that it does not
    record or ask for a desktop grant. An unavailable probe should stay unavailable/unknown; X11 does
    not need RemoteDesktop or the KWin focus script.
 2. Choose **Test microphone**, stay quiet for two seconds, then speak. Check the bands, noise estimate
@@ -559,7 +640,7 @@ and a few quick samples do not establish a latency guarantee for a particular mo
    **In session** result and its final text. In **Activity > Dictation**, check the new words, daily
    bar and application attribution. A destination that could not be identified belongs to Unknown.
 4. Return to Diagnostics and refresh. A retained successful dictation should add a timing sample;
-   unused model clean-up stays Unknown. **Copy again** should leave usage and timing samples unchanged;
+   unmeasured clean-up stays Unknown; measured clean-up can record time even when falling back to local text. **Copy again** should leave usage and timing samples unchanged;
    a successful copy may increment the separate Copied counter. Cancelling a new dictation adds no samples.
 5. If you retained a disposable test transcript, delete just that entry from History. Its timing sample
    disappears after refresh while usage totals remain. With **Do not keep**, subsequent successful
@@ -572,5 +653,180 @@ and a few quick samples do not establish a latency guarantee for a particular mo
 
 When reporting a problem, include the app version, desktop/session and scale, selected microphone,
 model/language, actual delivery outcome, the relevant timing sample counts and the steps that failed.
-There is no need to share the dictated text. These checks cover the current V4 screens; voice commands,
-Styles, Meetings and realtime voice are still separate development steps.
+There is no need to share the dictated text. These checks cover the V4 screens; the commands checklist below covers V8. Full-length meetings and realtime voice remain later steps.
+
+## Voice commands development status
+
+V8.1 adds a pure command grammar in English, Brazilian Portuguese and Spanish. It recognizes
+navigation, project preferences and read requests, plus explicit sequences such as `next session
+and then who is waiting?`. Every part must be recognized; an unknown part produces no command batch,
+and a card-answer request such as `next session and then approve` refuses the whole utterance.
+Case, accents, punctuation, opening fillers and polite phrasing are normalized. Target names remain
+unresolved descriptions, including punctuation-folded names such as `api-gateway` -> `api gateway`.
+The parser does not execute those descriptions, record audio or submit text.
+
+V8.2 adds the name resolver over a local snapshot of project/agent names and Your words replacements.
+Aliases apply only when their target is a complete known name. Matching tries aliases, exact names,
+a single whole word, then the closest Unicode edit distance: one edit for queries up to four normalized
+characters, two for longer queries. Single-word queries compare each name's words too, so `apy` is
+ambiguous between `api` and `api-gateway`, while the saved alias `cloud code` -> `Claude Code` resolves
+directly. Ties remain choices; the clarification state accepts only an original choice within 90 seconds,
+expires without renewal, and becomes invalid if any choice disappears or changes its normalized name.
+
+V8.3 adds a local dispatcher for navigation, mute/pin/hide and reads of pending cards, session details,
+cached plan usage and the current GitHub card. Reads use templates in all four app languages, without
+a model or a fresh network request. A sequence is applied only after every command and target is ready;
+an ambiguous or unavailable later step leaves earlier steps unapplied. A reply to a clarification
+revalidates the original choices and previously resolved targets before the batch can run. Multiple
+sessions in the same folder share project preferences, while navigation requires an exact session.
+
+The dispatcher keeps repeat/undo context for 90 seconds. `same for web` repeats the last supported action
+or session read with a new target; `undo` restores the last preference's actual previous value or the
+previous focused session. It does not reverse terminal/folder opens or reads. An intervening preference
+or focus change, moved folder or missing previous session prevents undo. Locking or cancelling clears
+the context. Card answers, release/skip/review and merges cannot be dispatched by voice commands.
+
+V8.4 connects the command key to the shared local capture/transcription worker and the runtime's
+dispatcher. Hold **Ctrl+Alt+Z** for at least 300 ms, speak and release; the desktop may bind a different
+key, shown under **Dictation > Command settings > Command key**. It works with Zeca
+off and never fills Chat's draft. This mode uses hold only, with the same microphone tail; dictation's
+double-tap/Space lock and spoken text transformations do not apply. **Ctrl+Alt+X** cancels capture and
+command context. On X11, Esc/typing cancellation also invalidates the recording.
+
+The active surface shows Command, Command done, Answer, Which one?, Not by voice or Not a command.
+The optional caption carries what was heard and clears within two seconds; a clarification line keeps
+only the remaining original 90-second deadline across surfaces and unsuccessful replies. Feedback
+uses the existing Black/Light roles and yields to cards, locked screens and short-window controls.
+Long results remain readable in History. The inactive island/Nest does not duplicate feedback.
+
+The command path never invokes clipboard, editor or terminal text insertion. With History enabled,
+it retains what was heard and the result as a **Voice command**, without **Use again**; the backend
+also rejects replay. Commands do not add dictated words, typing time or delivery latency samples.
+Copy last dictation still uses the last successful ordinary dictation, including after a command.
+An unrecognized utterance reports that it is not a command by default.
+
+V8.5 adds **Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
+Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its
+**What you can say** guide lists supported phrases; **Dictionary** opens the same names/replacements
+editor used by dictation. The settings link opens the privileged **Dictation** destination.
+The page filters the newest 500 retained dictations, so older commands may be outside that window.
+
+**Dictation > Command settings** owns:
+
+- **Enable voice commands**, on by default. Turning it off stops a command recording or pending handoff
+  and clears clarification/repeat/undo context. Ordinary dictation and Copy last dictation keep working.
+- **Command key**, the desktop's actual binding; change it through the existing desktop shortcut editor.
+- **Names it understands**, explaining current project/agent names, dictionary aliases and clarification.
+- **When it is not a command**, default **Say so on the island**. Explicitly choosing **Send it to Zeca
+  as a message** allows an unknown utterance to use the current Chat conversation and its provider/model,
+  access rules, network gate, budget and traces. Zeca must be on; Chat must be idle with no unsent text,
+  files or references. Nothing is added to or sent from the existing draft. A busy or unavailable Chat
+  reports failure locally rather than queuing a later turn. A new conversation keeps its selected
+  folder/provider; changing that source during preparation cancels the handoff. Refusal, unresolved names and expired or
+  stale clarifications never enter this fallback. Changing either choice invalidates old command tickets.
+- **What you can say**, the same read-only phrase guide as the work page. Chinese UI explains the supported
+  English/Portuguese/Spanish grammar; it does not claim Chinese speech commands.
+
+A successful handoff says **Sent to Zeca. Follow the reply in Chat.** The transcript and reply appear in
+the current Chat, using its ordinary tool cards and Stop action. Command history retains the handoff
+status, not a duplicate of the streamed reply. Cancelling an admitted Chat turn uses Chat's Stop action.
+
+For local validation, try `next session`, `who is waiting?`, `mute web`, `same for docs` and `undo` with
+matching active projects. Try an ambiguous name and answer one offered choice; wait 90 seconds and
+check expiry. `approve` and `next session and then approve` must refuse without answering a waiting
+card, with either fallback setting. With fallback off, an unknown sentence stays local. With it on,
+check Chat idle, busy, draft present and Zeca off; disable/re-enable while transcription is pending and
+verify the old recording never sends. Review the work page in Black and Light, including 480 x 360.
+Real microphone, compositor and end-to-end provider acceptance remain separate from isolated native
+UI fixtures and automated checks; continuing to the next phase does not sign them off.
+
+## Meeting recording check
+
+Optional speaker-analysis files can be prepared in **Dictation > Meeting settings > Meeting speaker models
+(experimental)**. Review the package, confirm the download consent and install within one minute.
+The installer shows progress and cancellation, and preserves existing versions on failure.
+Installation continues when navigating away; an unconfirmed review is discarded. It never
+activates speaker labels or recording. See [Meeting model artifacts](../reference/meeting-models.md)
+for licenses, verification and the persistent request limit.
+
+On Linux, **Dictation > Meetings** offers recording and local transcription for a check of up to
+one minute. Choose an installed local model in **Dictation > Voice** first. This works with Zeca
+off. Recording/transcribing alone makes no network request or automatic model download.
+Full-length meetings, saved meetings and export are not available yet.
+
+Choose **Review audio sources** to read the microphone and system-output monitor without opening
+an audio stream or loading a model. Check both identifiers, any fallback warning, the selected
+local model and spoken language. Inform the participants, then confirm temporary audio capture
+and local transcription with the checkbox and **Record and transcribe**. Each review permits one
+start and expires after a minute. Changed default sources fail before opening either stream;
+review again. Capture stays bound to the reviewed names. A changed voice model or language
+requires a new review before starting, and cancels a recording or transcription already running.
+
+The neutral line, state, timer and actions stay outside the scroll area. **Stop recording** closes
+both streams, then transcribes the microphone and system audio locally, one after the other. At
+one minute recording stops itself and follows the same path. The page shows transcription progress;
+the microphone is closed while the local model loads and works. Ordinary dictation keeps its
+independent stream and has priority over background meeting decoding. Background chunks yield
+through Whisper's cooperative abort callback; a native cold model load already in progress cannot
+be interrupted, so cancellation may wait for it before cleanup finishes.
+
+**Cancel recording** or **Cancel transcription** discards the result. Leaving Meetings, hiding,
+minimizing or closing its window, losing the page connection, changing voice preferences or locking
+the screen cancels pending work. The native owner requires a heartbeat within two seconds; a stale
+page cannot continue recording or transcribing. Returning never starts work automatically.
+
+After both sources finish and temporary audio cleanup succeeds, **Transcript** offers separate
+**Microphone** and **System audio** views. Empty speech is stated explicitly. Segment times are
+model estimates on each source's own recording clock, without inferred synchronization between
+sources. Normal builds do not identify speakers. Text stays only in memory on this page: **Discard transcript**,
+leaving, closing, locking or reviewing a new recording removes it. It is never inserted into another
+app, copied automatically, added to dictation History or written to the database. Failure or
+cancellation publishes no partial transcript; another attempt needs a new reviewed recording.
+
+A developer build with `--features meeting-speakers` additionally offers **Also identify voices
+for this recording (experimental)** during source review. It is unchecked for each recording;
+installing models alone never enables it. With this choice, the local preview shows anonymous
+**Voice N** or **Unknown voice**, using model-estimated word times where available. Uncertain
+speech remains unknown; if speaker analysis fails or its files are missing, the transcript stays
+available without identification. Voices are separate for Microphone and System audio and may be
+wrong. This preview does not qualify independent PT/EN accuracy or extend the one-minute capture.
+
+Only this explicit check saves audio temporarily, under `meeting-audio/` in Vults' data folder.
+The directory is private (0700), with 0600 WAVs and an exclusive lock retained through local
+transcription. Normal completion, cancellation and failure attempt cleanup; startup removes
+interrupted files without opening a source. A cleanup error remains visible and no new audio is
+opened until recovery succeeds. Other webviews cannot control a check or read its transcript.
+Chat/dictation audio still stays in memory, and voice never answers a permission card.
+
+
+### Summary and to-dos
+
+Before recording, open **Dictation > Meeting settings** and review **Enable meeting summaries**.
+It is off by default and independent of dictation cleanup. The page identifies the API chat provider
+and model that will receive transcript text, never audio. Choose that destination and, for a cloud
+provider, save its key in **Chat & voice** first. Ollama/LM Studio must use literal loopback; their
+calls still require the same consent and quota. Installing speaker models grants none of this consent.
+
+After a local transcript finishes, open **Summary** and click **Generate summary**. Nothing is sent
+just by recording, opening a tab or returning to the page. There are at most 20 attempts per rolling
+24 hours, including local calls, failures and interruptions; provider charges may apply. A single
+120-second deadline covers the attempt. **Cancel summary** stops only notes generation and keeps
+this transcript. Disabling consent or changing the provider/model/key also cancels pending notes.
+Failures or invalid model replies keep the original transcript and require an explicit new attempt.
+
+**Summary** shows the title, summary and key points. **To-dos** lists meeting notes with owners and
+deadlines only when stated; missing values stay unassigned/not stated. These are inert notes, never
+executable Tasks. Models can misread commitments: compare the notes with **Transcript**. The two
+sources' clocks and anonymous voice labels do not establish a shared identity or timeline.
+
+The tabs support Left/Right, Home and End. Generate/Cancel stays outside the scrolling notes, also
+in the minimum window; **Summary details** keeps provider and request terms available. While summaries
+are off, the tab explains why and links to **Meeting settings**. Opening that configuration leaves
+Meetings and discards the temporary transcript, so enable summaries before recording. Leaving,
+hiding/closing the window, locking or reviewing another recording discards transcript and notes;
+there is no saved summary archive or export in this step.
+
+The storage/export backend is prepared for explicit text-only snapshots, source-local speaker
+renames and Markdown/SRT/VTT files. It is not connected to the recording check yet: nothing is saved
+automatically, and archive/export controls arrive with the full Meetings page. Subtitle exports use
+one selected source because microphone and system clocks cannot be combined safely.

@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-18",
+  "scope": "Synthetic timeline and language-tag regressions only; no speech, human annotations, model inference or PT/EN accuracy measurement.",
+  "profile": {
+    "collarMs": 0,
+    "includesOverlap": true,
+    "mapping": "Exact one-to-one subset optimization per source",
+    "unknownActivity": "One unmappable stream, deduplicated; never an identity candidate"
+  },
+  "runtimeOrModelLoaded": false,
+  "audioRead": false,
+  "networkRequests": 0,
+  "productionQualified": false,
+  "reports": {
+    "en": {
+      "schema": 1,
+      "referenceSha256": "41a4377255036fdbc2b936d581cd303e90df7cdd7df8328a9c099bc0ffd402aa",
+      "predictionSha256": "4914b90de01ecceec10c2488eb3f11a1d71d3e5945500e48e2c7791edf0c85bb",
+      "clock": {
+        "recording": "synthetic-en",
+        "source": "system",
+        "wavSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "durationMs": 10000
+      },
+      "language": "en",
+      "annotation": "synthetic",
+      "split": "evaluation",
+      "collarMs": 0,
+      "includesOverlap": true,
+      "referenceSpeakerMs": 5000,
+      "missedSpeakerMs": 0,
+      "falseAlarmSpeakerMs": 0,
+      "confusedSpeakerMs": 0,
+      "correctSpeakerMs": 5000,
+      "unknownActivityMs": 0,
+      "referenceSpeakers": 2,
+      "predictedSpeakers": 2,
+      "der": 0.0,
+      "productionQualified": false
+    },
+    "pt": {
+      "schema": 1,
+      "referenceSha256": "b9f21f0612246af6d4e180e679c93d055626d4f6266464712edea0e43a34af2f",
+      "predictionSha256": "39cc4b7e8e1a260f3d79104113b2bd4fcc0667542ba0da9f55ff62be1aee48cd",
+      "clock": {
+        "recording": "synthetic-pt",
+        "source": "system",
+        "wavSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "durationMs": 10000
+      },
+      "language": "pt",
+      "annotation": "synthetic",
+      "split": "evaluation",
+      "collarMs": 0,
+      "includesOverlap": true,
+      "referenceSpeakerMs": 5000,
+      "missedSpeakerMs": 0,
+      "falseAlarmSpeakerMs": 0,
+      "confusedSpeakerMs": 2000,
+      "correctSpeakerMs": 3000,
+      "unknownActivityMs": 0,
+      "referenceSpeakers": 2,
+      "predictedSpeakers": 2,
+      "der": 0.4,
+      "productionQualified": false
+    }
+  },
+  "validation": {
+    "scorerUnitTests": 12,
+    "optionalSpikeTests": 3,
+    "cliIntegrationTests": 1,
+    "workspacePassed": 1187,
+    "workspaceIgnored": 9,
+    "spikeAllFeaturesPassed": 21,
+    "scorerOracles": {
+      "rectangularMatchingMatrices": 729,
+      "framewiseTapePairs": 36
+    },
+    "workspaceClippy": true,
+    "optionalFeatureClippy": true,
+    "cargoDeny": true
+  },
+  "remaining": [
+    "Reviewed, consented human PT/EN meeting corpus and independently verified annotations",
+    "Disjoint calibration/evaluation split and acceptance limits frozen before tuning",
+    "Physical microphone/system source-clock, echo and long-session resource acceptance",
+    "Production speaker labels remain off"
+  ]
+}

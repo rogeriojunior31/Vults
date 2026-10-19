@@ -19,5 +19,8 @@ vults-store.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 
+[dev-dependencies]
+vults-dictation.workspace = true
+
 [lints]
 workspace = true

@@ -1,6 +1,6 @@
 //! Opt-in insertion. Terminal capabilities cannot dispatch a generic paste chord.
 
-mod kwin;
+pub(crate) mod kwin;
 mod lease;
 mod portal;
 mod session;

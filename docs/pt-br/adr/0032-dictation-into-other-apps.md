@@ -1,5 +1,5 @@
 # 0032. Ditado em outros aplicativos
-<!-- source: bde596a1ac01 -->
+<!-- source: ced45b70bf84 -->
 
 **Status:** Aceita, 2026-10-17, sob a instrução do mantenedor para continuar a N3 com os padrões
 planejados. Este é o contrato da V0.2; captura, inserção e validação nativa chegam separadamente.
@@ -62,8 +62,9 @@ de permissão deve continuar com o humano sob a [0004](0004-a-human-answers-perm
   não afirmam que outro aplicativo enviou, executou ou salvou algo. Falha de escrita na área de
   transferência é erro, nunca *Copiado*.
 - **Ditado é independente do Zeca.** Com Zeca desligado, a tecla de fala, transcrição local,
-  inserção e histórico continuam funcionando. Um campo de composição do Chat do Vults em foco
-  mantém seu caminho de rascunho existente; não envia uma mensagem automaticamente. A ilha
+  inserção e histórico continuam funcionando. O atalho de fala sempre usa o ditado independente,
+  mesmo sobre janelas do Vults. Somente o botão de microfone do Chat preenche diretamente seu
+  rascunho; nunca envia uma mensagem automaticamente. A ilha
   nunca toma o foco do destino para mostrar o progresso do ditado nem esconde um card pendente.
 - **O histórico guarda só texto, com retenção.** Guardar texto ouvido e entregue, resultado e
   tempos no armazenamento local, não o áudio nem o conteúdo anterior da área de transferência.
@@ -96,3 +97,6 @@ de permissão deve continuar com o humano sob a [0004](0004-a-human-answers-perm
 - 2026-10-17: definir os limites da N3 V0.2 para destino, área de transferência, capacidade de
   teclado e permissões. Usar 0032 porque a [0031](0031-tasks-leave-vults.md) já registra a remoção
   de Tasks.
+
+- 2026-10-19: reservar o atalho global de fala para o ditado independente, seja qual for o foco;
+  a entrada de voz no rascunho do Chat continua sendo uma ação explícita no botão de microfone.

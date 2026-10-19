@@ -87,6 +87,7 @@ struct Hardware {
     transcript: Mutex<String>,
     config: Mutex<Config>,
     copies: Mutex<Vec<String>>,
+    commands: Mutex<Vec<String>>,
     phases: Mutex<Vec<String>>,
     hook: Mutex<Option<Hook>>,
     failed_start: AtomicBool,
@@ -210,6 +211,11 @@ impl Backend for Fake {
             self.0.phases.lock().expect("test operation").push(phase.into());
         }
     }
+    fn command(&self, text: String, ticket: Ticket) -> Result<(), String> {
+        self.hook("command");
+        ticket.dispatch(|| self.0.commands.lock().expect("Commands").push(text));
+        Ok(())
+    }
 }
 
 struct Harness {
@@ -226,6 +232,7 @@ impl Harness {
             transcript: Mutex::new("spoken words".into()),
             config: Mutex::new(Config::default()),
             copies: Mutex::default(),
+            commands: Mutex::default(),
             phases: Mutex::default(),
             hook: Mutex::default(),
             failed_start: AtomicBool::new(false),
@@ -932,50 +939,27 @@ fn history_replay_updates_last_success_only_after_delivery() {
 }
 
 #[test]
-fn rebinding_releases_both_shortcut_latches_without_the_old_key_up() {
-    use crate::shortcut_route::{Router, Surface, Target};
-
-    for (surface, owner) in [
-        (Surface::External, Target::Dictation),
-        (Surface::Nest, Target::Nest),
-        (Surface::Island, Target::Island),
-    ] {
-        let mut h = Harness::new();
-        let mut router = Router::default();
-        assert_eq!(router.talk(true, surface, true, false), Some(owner));
-        if owner == Target::Dictation {
-            h.state.key("talk", true).unwrap();
-            h.next();
-        }
-        router.reset();
-        h.state.shortcuts_changed();
-        if owner == Target::Dictation {
-            h.next();
-        }
-        assert!(!h.state.active());
-        assert_eq!(h.fake.0.watches.load(Ordering::SeqCst), 0);
-        h.state.configure(GestureOptions {
-            double_tap: false,
-            ..Default::default()
-        });
-        assert_eq!(
-            router.talk(true, Surface::External, true, h.state.active()),
-            Some(Target::Dictation)
-        );
-        assert!(
-            h.state.key("talk", true).is_some(),
-            "The first replacement press starts recording"
-        );
-        h.next();
-        assert!(h.state.active());
-        assert!(!h.state.control.lock().unwrap().keys.options().double_tap);
-        assert_eq!(
-            router.talk(false, Surface::Other, true, true),
-            Some(Target::Dictation)
-        );
-        h.state.key("talk", false);
-        assert!(!h.state.active(), "The replacement release reaches its recording");
-    }
+fn rebinding_releases_the_dictation_latch_without_the_old_key_up() {
+    let mut h = Harness::new();
+    h.state.key("talk", true).unwrap();
+    h.next();
+    h.state.shortcuts_changed();
+    h.next();
+    assert!(!h.state.active());
+    assert_eq!(h.fake.0.watches.load(Ordering::SeqCst), 0);
+    h.state.configure(GestureOptions {
+        double_tap: false,
+        ..Default::default()
+    });
+    assert!(
+        h.state.key("talk", true).is_some(),
+        "The first replacement press starts recording"
+    );
+    h.next();
+    assert!(h.state.active());
+    assert!(!h.state.control.lock().unwrap().keys.options().double_tap);
+    h.state.key("talk", false);
+    assert!(!h.state.active(), "The replacement release reaches its recording");
 }
 
 #[test]
@@ -1023,7 +1007,7 @@ fn stage_timings_cover_release_tail_and_each_delivery_but_exclude_cancelled_work
             );
             assert_eq!(entry.timings.stt_ms, Some(40));
             assert!(entry.timings.pipeline_ms.is_some());
-            assert_eq!(entry.timings.cleanup_ms, None, "Clean-up is not implemented");
+            assert_eq!(entry.timings.cleanup_ms, None, "No clean-up was requested");
             assert!(entry.timings.insert_ms.unwrap() >= 5);
             h.state.copy_again(None).unwrap();
             h.next();
@@ -1419,4 +1403,174 @@ fn text_growth_failure_never_copies_or_overwrites_previous_success() {
     );
     assert_eq!(h.fake.0.phases.lock().unwrap().last().unwrap(), "failed");
     assert_eq!(h.fake.0.watches.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn command_capture_bypasses_text_processing_clipboard_and_last_dictation() {
+    let mut h = Harness::new();
+    h.fake.0.config.lock().expect("Config").words.replacements = vec![("spoken".into(), "approve".into())];
+    let ticket = h
+        .state
+        .key_at("talk-command", true, h.state.origin)
+        .expect("Command starts");
+    assert!(ticket.is_command());
+    h.next();
+    h.state
+        .key_at("talk-command", false, h.state.origin + Duration::from_millis(300));
+    h.next();
+    h.worker.advance(Duration::from_millis(900));
+    h.next();
+    assert_eq!(*h.fake.0.commands.lock().expect("Commands"), ["spoken words"]);
+    assert!(h.fake.0.copies.lock().expect("Clipboard").is_empty());
+    assert!(h.state.control.lock().expect("Control").last.is_none());
+    assert!(!h.state.active());
+}
+
+#[test]
+fn a_different_key_cannot_release_command_capture_and_stale_dispatch_is_rejected() {
+    let mut h = Harness::new();
+    let ticket = h
+        .state
+        .key_at("talk-command", true, h.state.origin)
+        .expect("Command starts");
+    h.next();
+    h.state
+        .key_at("talk", false, h.state.origin + Duration::from_millis(300));
+    assert!(h.state.active());
+    assert!(h.receive.try_recv().is_err());
+    h.state.cancel(false);
+    h.next();
+    assert!(
+        ticket
+            .dispatch(|| panic!("A cancelled command must never run"))
+            .is_none()
+    );
+    assert!(h.fake.0.copies.lock().expect("Clipboard").is_empty());
+    assert!(h.fake.0.commands.lock().expect("Commands").is_empty());
+}
+
+#[test]
+fn cancellation_after_decode_prevents_command_admission_and_copy_again_keeps_only_dictation() {
+    let mut h = Harness::new();
+    h.state.control.lock().expect("Control").last = Some("previous dictation".into());
+    h.state.key_at("talk-command", true, h.state.origin);
+    h.next();
+    h.state
+        .key_at("talk-command", false, h.state.origin + Duration::from_millis(300));
+    h.next();
+    h.worker.advance(Duration::from_millis(900));
+    h.cancel_at("command");
+    h.next();
+    h.next();
+    assert!(h.fake.0.commands.lock().expect("Commands").is_empty());
+    h.state.copy_again(None).expect("Copy previous dictation");
+    h.next();
+    assert_eq!(
+        *h.fake.0.copies.lock().expect("Clipboard"),
+        ["previous dictation"]
+    );
+}
+
+#[test]
+fn command_tickets_keep_their_mode_when_another_recording_replaces_them() {
+    let h = Harness::new();
+    let command = h.state.key("talk-command", true).expect("Command starts");
+    h.state.cancel(false);
+    h.state.key("talk-command", false);
+    let dictation = h.state.key("talk", true).expect("Dictation starts");
+    assert!(command.is_command());
+    assert!(!command.valid());
+    assert!(!dictation.is_command());
+}
+
+#[test]
+fn command_setting_changes_invalidate_handoffs_without_interrupting_dictation() {
+    let h = Harness::new();
+    h.state.control.lock().unwrap().last = Some("ordinary dictation".into());
+    let ordinary = h.state.key("talk", true).expect("Dictation");
+    h.state.cancel_commands();
+    assert!(ordinary.valid());
+    h.state.cancel(false);
+    h.state.key("talk", false);
+    let command = h.state.key("talk-command", true).expect("Command");
+    h.state.cancel_commands();
+    assert!(!command.valid());
+    assert!(
+        command
+            .dispatch(|| panic!("A cancelled handoff cannot send"))
+            .is_none()
+    );
+    assert_eq!(
+        h.state.control.lock().unwrap().last.as_deref(),
+        Some("ordinary dictation")
+    );
+    h.state.key("talk-command", false);
+    let next = h
+        .state
+        .key("talk-command", true)
+        .expect("A new command can start");
+    next.command_result("asked", "Which one?".into(), "open apy", None);
+    h.state.cancel_commands();
+    assert!(
+        !next.valid(),
+        "A completed clarification ticket cannot survive a settings change"
+    );
+}
+
+#[test]
+fn cleanup_keeps_typed_local_edits_and_retained_heard_text_with_measured_outcomes() {
+    use vults_dictation::cleanup::{Options, Request, Style};
+    for applied in [false, true] {
+        let h = Harness::new();
+        let ticket = h.state.key("talk", true).unwrap();
+        ticket.history_started(42);
+        ticket.history_measured(2.0, Some("en".into()));
+        let config = Config {
+            words: vults_dictation::text::Rules {
+                snippets: vec![("signature".into(), "Private literal payload $1".into())],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let output = ticket
+            .prepare_output("please add signature", &config)
+            .unwrap()
+            .unwrap();
+        let req = Request::build(
+            &output,
+            &Options {
+                style: Style::Natural,
+                ..Options::default()
+            },
+        )
+        .unwrap()
+        .unwrap();
+        assert!(
+            !req.messages()
+                .last()
+                .unwrap()
+                .text
+                .contains("Private literal payload")
+        );
+        assert_eq!(req.original(), "please add Private literal payload $1");
+        ticket.history_cleanup(
+            Duration::from_millis(17),
+            applied.then_some(vults_dictation::styles::Resolved {
+                style: vults_dictation::cleanup::Style::Polished,
+                write_in: Some(vults_dictation::cleanup::Language::Spanish),
+            }),
+        );
+        assert!(ticket.commit(req.original(), || Ok(())).unwrap());
+        let (entry, _) = ticket.history_entry("copied").unwrap();
+        assert_eq!(entry.heard, "please add signature");
+        assert_eq!(entry.text, req.original());
+        assert_eq!(entry.timings.cleanup_ms, Some(17));
+        assert_eq!(entry.style, if applied { "polished" } else { "your-words" });
+        assert_eq!(entry.language.as_deref(), Some("en"));
+        assert_eq!(entry.output_language.as_deref(), applied.then_some("es"));
+        h.state.cancel(false);
+        ticket.history_cleanup(Duration::from_millis(999), None);
+        assert!(ticket.prepare_output("late", &config).unwrap().is_none());
+        assert!(ticket.history_entry("copied").is_none());
+    }
 }

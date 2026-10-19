@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 394a84b352f9 -->
+<!-- source: 35f53ec8dd4e -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -57,7 +57,7 @@ A migração 24 inicia os totais diários independentes por aplicativo. Os totai
 período são preservados; o detalhamento semanal/mensal sem essas medições antigas é indicado como
 parcial. Nenhuma transcrição, sessão ou título de janela é acrescentado a esses agregados. Os tempos
 por etapa ainda seguem a retenção das transcrições e aparecem em
-[Configurações > Ditado > Diagnóstico](dictation.md#diagnostics). Os totais de uso e os contadores
+[Ditado > Diagnóstico](dictation.md#diagnostics). Os totais de uso e os contadores
 somente na memória da execução têm durações independentes. **Configurações do ditado** abre essa página. Room/Full mantêm o período de estatísticas.
 
 ![Estatísticas de ditado com uso sintético no app nativo](../../assets/dictation-statistics.png)
@@ -147,7 +147,8 @@ hora na memória, nunca em disco.
   auditoria: que você o limpou, e quando. O que fica: o que o Zeca lembra (os arquivos de memória
   dele, **Settings → Chat & voice → Memory**), as políticas que você aceitou, os seus telefones
   pareados, os custos registrados dos agentes, os totais medidos de ditado e o dicionário, as
-  substituições e os trechos mantidos pelo usuário ([Segurança](../safety.md)). As tabelas de recursos
+  substituições, os trechos e os estilos por aplicativo mantidos pelo usuário, além das admissões de cota da limpeza sem conteúdo
+  ([Segurança](../safety.md)). As tabelas de recursos
   removidos ficam intactas; os custos antigos continuam disponíveis em **Cost**.
 - O histórico fica num banco local, `vults.sqlite` (cada turno por 12 semanas, os totais de cada
   dia por um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). Veja

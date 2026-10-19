@@ -5364,3 +5364,26 @@ fn chat_offers_follow_local_time_and_flock_without_effects_or_answers() {
         "claude is waiting for your answer."
     );
 }
+
+#[test]
+fn voice_commands_allow_only_navigation_and_project_preferences() {
+    let mut intents = quiet_intents();
+    intents.extend([
+        Intent::Decide {
+            request: rid("r1"),
+            decision: Decision::Allow,
+        },
+        Intent::DecideAlways { request: rid("r1") },
+        Intent::Answer {
+            request: rid("q1"),
+            answers: vec![],
+        },
+    ]);
+    for intent in intents {
+        assert_eq!(
+            intent.voice_command_allowed(),
+            matches!(quiet_index(&intent), Some(2 | 5 | 6 | 7 | 8 | 10)),
+            "{intent:?}"
+        );
+    }
+}

@@ -1,0 +1,267 @@
+{
+  "recordedAt": "2026-10-18",
+  "scope": "Controlled fixtures constructed from two public speech recordings; not real meetings or a human-annotated DER corpus.",
+  "host": {
+    "cpu": "AMD Ryzen 7 5700X3D",
+    "target": "x86_64-unknown-linux-gnu",
+    "profile": "dev",
+    "intraThreads": 1,
+    "interThreads": 1,
+    "runtime": "ONNX Runtime 1.30.0",
+    "rssMethod": "wait4 ru_maxrss, whole process; KiB on Linux",
+    "timeMethod": "One run per fixture, warm filesystem; loadMs/totalMs exclude input hashing/reading."
+  },
+  "modelScopeEvidence": {
+    "source": "https://modelscope.cn/api/v1/models/iic/speech_campplus_sv_zh-cn_16k-common",
+    "model": "iic/speech_campplus_sv_zh-cn_16k-common",
+    "revision": "master",
+    "license": "Apache License 2.0",
+    "responseSha256": "b12aeb629bb834e0061a6361ea2fab1d1c63cfaaa2258abe19513195f7736bf0",
+    "upstreamLastUpdatedUnix": 1781811658
+  },
+  "fixtures": {
+    "single": {
+      "sha256": "f57c96d3a0be367e2990aeec4db1b454d715a1d6a964388a5848d462cda5806a",
+      "samples": 208000,
+      "durationMs": 13000
+    },
+    "alternating": {
+      "sha256": "8094bfe6581b621d12cf29ea72b90982eb226f8791fab8fd87287c94dc40dca1",
+      "samples": 509680,
+      "durationMs": 31855
+    },
+    "overlap": {
+      "sha256": "a05bb0aa80c663fbaae49c370297f0261949a0c658c17909b36705c71912546c",
+      "samples": 427360,
+      "durationMs": 26710
+    },
+    "silence": {
+      "sha256": "ee7bea4232762775f8fce9b3e27e4d3948c8ac6a45a87ca769f703d6eed0b448",
+      "samples": 160000,
+      "durationMs": 10000
+    }
+  },
+  "results": {
+    "single": {
+      "experimental": true,
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "runtimeSha256": "c902c70b3003c0e99fada202f37478c515ae9bba7944c2b2abd0017bae0c82ed",
+      "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+      "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "wavSha256": "f57c96d3a0be367e2990aeec4db1b454d715a1d6a964388a5848d462cda5806a",
+      "durationMs": 13000,
+      "loadMs": 135,
+      "totalMs": 374,
+      "speakers": 1,
+      "observations": 2,
+      "turns": [
+        {
+          "startMs": 1305,
+          "endMs": 3228,
+          "speaker": 0
+        },
+        {
+          "startMs": 4258,
+          "endMs": 5371,
+          "speaker": 0
+        },
+        {
+          "startMs": 6367,
+          "endMs": 8583,
+          "speaker": 0
+        },
+        {
+          "startMs": 9123,
+          "endMs": 11536,
+          "speaker": 0
+        }
+      ],
+      "peakRssKiB": 122192
+    },
+    "alternating": {
+      "experimental": true,
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "runtimeSha256": "c902c70b3003c0e99fada202f37478c515ae9bba7944c2b2abd0017bae0c82ed",
+      "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+      "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "wavSha256": "8094bfe6581b621d12cf29ea72b90982eb226f8791fab8fd87287c94dc40dca1",
+      "durationMs": 31855,
+      "loadMs": 136,
+      "totalMs": 900,
+      "speakers": 2,
+      "observations": 9,
+      "turns": [
+        {
+          "startMs": 1305,
+          "endMs": 3228,
+          "speaker": 0
+        },
+        {
+          "startMs": 4258,
+          "endMs": 5371,
+          "speaker": 0
+        },
+        {
+          "startMs": 6367,
+          "endMs": 8583,
+          "speaker": 0
+        },
+        {
+          "startMs": 9123,
+          "endMs": 11755,
+          "speaker": 0
+        },
+        {
+          "startMs": 13549,
+          "endMs": 18515,
+          "speaker": 1
+        },
+        {
+          "startMs": 20118,
+          "endMs": 21991,
+          "speaker": 0
+        },
+        {
+          "startMs": 23127,
+          "endMs": 23667,
+          "speaker": 0
+        },
+        {
+          "startMs": 23701,
+          "endMs": 24224,
+          "speaker": 0
+        },
+        {
+          "startMs": 25220,
+          "endMs": 27413,
+          "speaker": 0
+        },
+        {
+          "startMs": 27941,
+          "endMs": 30473,
+          "speaker": 0
+        }
+      ],
+      "peakRssKiB": 123576
+    },
+    "overlap": {
+      "experimental": true,
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "runtimeSha256": "c902c70b3003c0e99fada202f37478c515ae9bba7944c2b2abd0017bae0c82ed",
+      "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+      "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "wavSha256": "a05bb0aa80c663fbaae49c370297f0261949a0c658c17909b36705c71912546c",
+      "durationMs": 26710,
+      "loadMs": 142,
+      "totalMs": 728,
+      "speakers": 2,
+      "observations": 6,
+      "turns": [
+        {
+          "startMs": 1305,
+          "endMs": 3228,
+          "speaker": 0
+        },
+        {
+          "startMs": 4258,
+          "endMs": 5371,
+          "speaker": 0
+        },
+        {
+          "startMs": 6367,
+          "endMs": 8718,
+          "speaker": 0
+        },
+        {
+          "startMs": 9106,
+          "endMs": 11637,
+          "speaker": 0
+        },
+        {
+          "startMs": 13245,
+          "endMs": 15101,
+          "speaker": null
+        },
+        {
+          "startMs": 13515,
+          "endMs": 18802,
+          "speaker": 1
+        },
+        {
+          "startMs": 16232,
+          "endMs": 17396,
+          "speaker": null
+        },
+        {
+          "startMs": 17500,
+          "endMs": 17536,
+          "speaker": null
+        },
+        {
+          "startMs": 18802,
+          "endMs": 18886,
+          "speaker": null
+        },
+        {
+          "startMs": 20388,
+          "endMs": 25304,
+          "speaker": 1
+        }
+      ],
+      "peakRssKiB": 122396
+    },
+    "silence": {
+      "experimental": true,
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "runtimeSha256": "c902c70b3003c0e99fada202f37478c515ae9bba7944c2b2abd0017bae0c82ed",
+      "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+      "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "wavSha256": "ee7bea4232762775f8fce9b3e27e4d3948c8ac6a45a87ca769f703d6eed0b448",
+      "durationMs": 10000,
+      "loadMs": 137,
+      "totalMs": 177,
+      "speakers": 0,
+      "observations": 0,
+      "turns": [],
+      "peakRssKiB": 105648
+    }
+  },
+  "rejectionChecks": [
+    {
+      "case": "no_arguments",
+      "error": "Error: \"usage: vults-diarization-spike --runtime ABSOLUTE_LIBRARY --runtime-sha256 SHA256 --segmentation MODEL --embedding MODEL --wav CONSENTED_WAV\""
+    },
+    {
+      "case": "runtime_hash",
+      "error": "Error: \"artifact fingerprint mismatch; no model/runtime was loaded\""
+    },
+    {
+      "case": "model_hash",
+      "error": "Error: \"artifact fingerprint mismatch; no model/runtime was loaded\""
+    },
+    {
+      "case": "stereo",
+      "error": "Error: \"the spike requires a nonempty mono 16 kHz PCM16 WAV, at most 180 seconds\""
+    },
+    {
+      "case": "wrong_rate",
+      "error": "Error: \"the spike requires a nonempty mono 16 kHz PCM16 WAV, at most 180 seconds\""
+    },
+    {
+      "case": "empty",
+      "error": "Error: \"the spike requires a nonempty mono 16 kHz PCM16 WAV, at most 180 seconds\""
+    },
+    {
+      "case": "oversize",
+      "error": "Error: \"the spike requires a nonempty mono 16 kHz PCM16 WAV, at most 180 seconds\""
+    },
+    {
+      "case": "symlink",
+      "error": "Error: \"the spike requires regular files, not symlinks or devices\""
+    }
+  ]
+}

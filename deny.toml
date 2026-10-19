@@ -49,6 +49,12 @@ name = "error-code"
 version = "=3.4.0"
 allow = ["BSL-1.0"]
 
+# Reviewed permissive decompressor license; retain its unmodified notice in meeting assets.
+[[licenses.exceptions]]
+name = "libbz2-rs-sys"
+version = "=0.2.5"
+allow = ["bzip2-1.0.6"]
+
 [bans]
 # Tauri's tree carries many duplicate versions; flagging them would only be noise.
 multiple-versions = "allow"

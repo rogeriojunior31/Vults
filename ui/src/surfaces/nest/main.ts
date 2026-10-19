@@ -14,6 +14,7 @@ import { moltSeason, setMolt } from "../../character/director";
 import { followClock, onDayPart } from "../../island/daypart";
 
 const dictation = dictationStatus(true);
+Bridge.onDictationOverlayReady(dictation.relocated);
 const nest = createNest(
   document.getElementById("nest")!,
   {
@@ -67,6 +68,12 @@ const nest = createNest(
       undo: (id) => Bridge.memoryUndo(id),
     },
     dictation: {
+      meetings: {
+        status: Bridge.meetingStatus, transcript: Bridge.meetingTranscript, prepare: Bridge.meetingPrepare, begin: Bridge.meetingBegin,
+        end: Bridge.meetingEnd, recover: Bridge.meetingRecover,
+        summary: { settings: Bridge.appSettings, providers: Bridge.apiProviders, status: Bridge.meetingSummaryStatus,
+          begin: Bridge.meetingSummaryBegin, cancel: Bridge.meetingSummaryCancel },
+      },
       statistics: Bridge.dictationStatistics,
       load: Bridge.dictationHistory, remove: Bridge.dictationDelete,
       clear: Bridge.dictationClear, again: Bridge.dictationPasteAgain,
@@ -120,6 +127,7 @@ const nest = createNest(
     },
     settings: (section) => void Bridge.openSettings(section),
     savePlace: Bridge.nestTabSet,
+    openDictation: () => void Bridge.openNest("dictation"),
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
     island: () => void changeSize(() => Bridge.setSize("quick", nest.current())),
@@ -215,6 +223,7 @@ void Bridge.appSettings().then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {
+  if (s.meetingSummary !== undefined || s.api !== undefined || s.dictationCleanup !== undefined || s.dictationStyle !== undefined || s.dictationWriteIn !== undefined || s.dictationSessionsEnglish !== undefined) nest.dictationChanged();
   if (s.dictationKeep !== undefined) nest.dictationChanged(true);
   if (s.dictationCaption !== undefined) dictation.captions(s.dictationCaption);
   applyTheme(s.theme);

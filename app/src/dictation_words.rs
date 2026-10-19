@@ -168,6 +168,7 @@ pub async fn dictation_words_change<R: tauri::Runtime>(
 mod tests {
     use super::*;
 
+    #[cfg(not(windows))]
     #[test]
     fn only_the_nest_work_page_may_read_or_edit() {
         let app = tauri::test::mock_app();

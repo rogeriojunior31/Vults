@@ -76,6 +76,7 @@ pub struct Entry {
     pub text: String,
     pub style: String,
     pub language: Option<String>,
+    pub output_language: Option<String>,
     pub secs: f64,
     pub words: i64,
     /// Unknown until a processing stage measures corrections; never an invented zero.
@@ -102,6 +103,7 @@ fn entry(r: &Row<'_>) -> rusqlite::Result<(i64, Entry)> {
             text: r.get(5)?,
             style: r.get(6)?,
             language: r.get(7)?,
+            output_language: r.get(17)?,
             secs: r.get(8)?,
             words: r.get(9)?,
             fixes: r.get(10)?,
@@ -134,13 +136,16 @@ impl Store {
             || !e.secs.is_finite()
             || e.secs < 0.0
             || e.fixes.is_some_and(|n| n < 0)
-            || !matches!(e.outcome.as_str(), "copied" | "pasted" | "session" | "held")
+            || !matches!(
+                e.outcome.as_str(),
+                "copied" | "pasted" | "session" | "held" | "command"
+            )
         {
             return Err(Error::Invalid("Invalid dictation measurements or outcome."));
         }
         if e.heard.len() > 256 * 1024
             || e.text.len() > 256 * 1024
-            || [&e.app, &e.session, &e.language]
+            || [&e.app, &e.session, &e.language, &e.output_language]
                 .iter()
                 .any(|s| s.as_ref().is_some_and(|s| s.len() > 1024))
             || e.style.len() > 128
@@ -154,34 +159,36 @@ impl Store {
             return Ok(None);
         }
         let tx = self.conn.transaction()?;
-        tx.execute(
-            "INSERT INTO dictation_days(day, words, secs, count) VALUES (?1, ?2, ?3, 1)
+        if e.outcome != "command" {
+            tx.execute(
+                "INSERT INTO dictation_days(day, words, secs, count) VALUES (?1, ?2, ?3, 1)
              ON CONFLICT(day) DO UPDATE SET words = words + excluded.words,
                 secs = secs + excluded.secs, count = count + 1",
-            params![day.iso(), e.words, e.secs],
-        )?;
-        if let Some(app) = &e.app {
-            tx.execute(
-                "INSERT INTO dictation_apps(app, words) VALUES (?1, ?2)
+                params![day.iso(), e.words, e.secs],
+            )?;
+            if let Some(app) = &e.app {
+                tx.execute(
+                    "INSERT INTO dictation_apps(app, words) VALUES (?1, ?2)
                  ON CONFLICT(app) DO UPDATE SET words = words + excluded.words",
-                params![app, e.words],
+                    params![app, e.words],
+                )?;
+            }
+            tx.execute(
+                "INSERT INTO dictation_app_days(day, app, words) VALUES (?1, ?2, ?3)
+             ON CONFLICT(day, app) DO UPDATE SET words = words + excluded.words",
+                params![day.iso(), e.app.as_deref().unwrap_or(""), e.words],
             )?;
         }
-        tx.execute(
-            "INSERT INTO dictation_app_days(day, app, words) VALUES (?1, ?2, ?3)
-             ON CONFLICT(day, app) DO UPDATE SET words = words + excluded.words",
-            params![day.iso(), e.app.as_deref().unwrap_or(""), e.words],
-        )?;
         let keep =
             retention.cutoff(now).is_none_or(|cutoff| e.at >= cutoff) && retention != Retention::NotKept;
         let id = if keep {
             tx.execute(
                 "INSERT INTO dictations(at, app, session, heard, text, style, language, secs, words, fixes, outcome,
-                    total_ms, stt_ms, pipeline_ms, cleanup_ms, insert_ms)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+                    total_ms, stt_ms, pipeline_ms, cleanup_ms, insert_ms, output_language)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
                 params![e.at, e.app, e.session, e.heard, e.text, e.style, e.language,
                     e.secs, e.words, e.fixes, e.outcome, e.timings.total_ms, e.timings.stt_ms,
-                    e.timings.pipeline_ms, e.timings.cleanup_ms, e.timings.insert_ms],
+                    e.timings.pipeline_ms, e.timings.cleanup_ms, e.timings.insert_ms, e.output_language],
             )?;
             Some(tx.last_insert_rowid())
         } else {
@@ -211,7 +218,7 @@ impl Store {
     pub fn dictations(&self, limit: u32) -> Result<Vec<(i64, Entry)>, Error> {
         let mut stmt = self.conn.prepare(
             "SELECT id, at, app, session, heard, text, style, language, secs, words, fixes, outcome,
-                total_ms, stt_ms, pipeline_ms, cleanup_ms, insert_ms
+                total_ms, stt_ms, pipeline_ms, cleanup_ms, insert_ms, output_language
              FROM dictations ORDER BY at DESC, id DESC LIMIT ?1",
         )?;
         Ok(stmt
@@ -224,7 +231,7 @@ impl Store {
             .conn
             .query_row(
                 "SELECT id, at, app, session, heard, text, style, language, secs, words, fixes, outcome,
-                total_ms, stt_ms, pipeline_ms, cleanup_ms, insert_ms FROM dictations WHERE id = ?1",
+                total_ms, stt_ms, pipeline_ms, cleanup_ms, insert_ms, output_language FROM dictations WHERE id = ?1",
                 [id],
                 entry,
             )
@@ -292,6 +299,29 @@ mod tests {
 
     const NOW: i64 = 2_000_000_000;
 
+    #[test]
+    fn output_language_belongs_to_retained_delivered_text_without_relabeling_heard_language() {
+        let dir = crate::temp("style-language");
+        let mut db = Store::open(&dir).unwrap();
+        let mut e = sample(100);
+        e.language = Some("pt".into());
+        e.output_language = Some("en".into());
+        e.style = "prompt".into();
+        let id = db
+            .dictation_add(
+                &e,
+                vults_core::looks::Date::of(100, 0),
+                crate::dictations::Retention::Days30,
+                100,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(db.dictation(id).unwrap(), Some(e.clone()));
+        assert_eq!(db.dictations(1).unwrap()[0].1, e);
+        db.dictations_prune(crate::dictations::Retention::NotKept, 100)
+            .unwrap();
+        assert!(db.dictation(id).unwrap().is_none());
+    }
     pub(super) fn sample(at: i64) -> Entry {
         Entry {
             at,
@@ -301,6 +331,7 @@ mod tests {
             text: "Written example".into(),
             style: "verbatim".into(),
             language: Some("en".into()),
+            output_language: None,
             secs: 2.5,
             words: 2,
             fixes: None,
@@ -611,5 +642,23 @@ mod tests {
             "Unknown apps never become fabricated measurements"
         );
         assert_eq!(store.dictation_days().unwrap()[&day().iso()].count, 1);
+    }
+    #[test]
+    fn commands_follow_retention_without_changing_dictation_usage_or_timings() {
+        for retention in [Retention::Always, Retention::NotKept] {
+            let mut store = Store::open(&crate::temp("command-history")).unwrap();
+            let mut command = sample(NOW);
+            command.outcome = "command".into();
+            command.style = "command".into();
+            command.timings.total_ms = Some(500);
+            let id = store.dictation_add(&command, day(), retention, NOW).unwrap();
+            assert_eq!(id.is_some(), retention == Retention::Always);
+            assert!(store.dictation_days().unwrap().is_empty());
+            assert!(store.dictation_apps().unwrap().is_empty());
+            assert_eq!(store.dictation_timings().unwrap().total.count, 0);
+            if let Some(id) = id {
+                assert_eq!(store.dictation(id).unwrap().unwrap(), command);
+            }
+        }
     }
 }

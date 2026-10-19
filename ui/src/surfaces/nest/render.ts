@@ -1,3 +1,4 @@
+import { DICTATION_WORK_PAGES } from "./dictation/navigation";
 import { createDictationArea, type DictationAreaBackend } from "./dictation/area";
 import { createDictationStatistics } from "./dictation/statistics";
 import { sidePanel } from "./panels";
@@ -96,6 +97,7 @@ export interface NestBackend {
   /** The size switch (ADR 0021), with the tab shown now to keep the place. */
   size: (size: Size, tab: string) => void;
   savePlace?: (tab: string) => Promise<void>;
+  openDictation?: () => void;
 }
 
 /** How often By project may ask again while the flock moves: each ask reads the repositories. */
@@ -198,7 +200,7 @@ export function createNest(
           }
         : null,
   });
-  const dictationArea = createDictationArea(backend.dictation, () => backend.settings("dictation"), () => open("dictation-statistics"));
+  const dictationArea = createDictationArea(backend.dictation, section => backend.settings(section ?? "dictation"), () => open("dictation-statistics"));
   // Activity's parts, each read again when its sub-tab opens.
   const parts: Record<Sub, { element: HTMLElement; refresh: () => void; flush?: () => Promise<void> }> = {
     week: createWeek(backend.week),
@@ -367,7 +369,7 @@ export function createNest(
     panes[id].setAttribute("aria-labelledby", `nest-tab-${id}`);
   }
   const head = createNestHead({
-    tab: (id) => show(id),
+    tab: (id) => chooseTab(id),
     gear: () => backend.settings(),
     size: (s) => backend.size(s, currentPlace()),
     search: () => openPalette(),
@@ -427,6 +429,10 @@ export function createNest(
     parts[id].refresh();
     rememberPlace();
   }
+  function chooseTab(id: Tab): void {
+    if (id === "dictation" && backend.openDictation) backend.openDictation();
+    else show(id);
+  }
   function show(id: Tab): void {
     if (id === "chat" && !zecaOn) id = "flock";
     tab = id;
@@ -438,6 +444,7 @@ export function createNest(
     flock.setActive(id === "flock" && !document.hidden && !last?.locked);
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
+    dictationArea.setActive(id === "dictation");
     if (id === "dictation") dictationArea.refresh();
     if (id === "chat") {
       chat.toggle(true);
@@ -589,6 +596,8 @@ export function createNest(
       }
       return;
     }
+    const workPage = DICTATION_WORK_PAGES.find(p => id === `dictation-${p}`);
+    if (workPage) { dictationArea.select(workPage); show("dictation"); return; }
     if ((TABS as string[]).includes(id)) return show(id as Tab);
     if ((SUBS as string[]).includes(id)) {
       sub = id as Sub;
@@ -616,7 +625,7 @@ export function createNest(
               chat.draft(text);
             }
           : null,
-        tab: open,
+        tab: id => { if (id === "dictation") chooseTab("dictation"); else open(id); },
       }),
     );
   }
@@ -658,7 +667,7 @@ export function createNest(
     const pick = tabByKey(e, zecaOn);
     if (pick) {
       e.preventDefault();
-      show(pick);
+      chooseTab(pick);
     }
   });
   const setFull = (on: boolean) => {
@@ -709,14 +718,6 @@ export function createNest(
     },
     shortcut: (id) => {
       if (id === "talk-cancel") { chat.cancelVoice(); return; }
-      if (id === "talk" || id === "talk-up") {
-        if (id === "talk" && zecaOn && !document.hidden && !last?.locked && root.isConnected) {
-          if (portraitNarrow.matches) setMemory(false);
-          show("chat");
-        }
-        if (tab === "chat" && !document.hidden && !last?.locked && root.isConnected) chat.holdToTalk(id === "talk");
-        return;
-      }
       if (id !== "allow" && id !== "deny") return;
       const allow = id === "allow";
       if (tab === "chat") chat.answerWaiting(allow);

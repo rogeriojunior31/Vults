@@ -141,7 +141,7 @@ fn load(
         .map(|(id, e)| {
             serde_json::json!({
                 "id": id, "at": e.at, "app": e.app, "session": e.session, "heard": e.heard,
-                "text": e.text, "style": e.style, "language": e.language, "secs": e.secs,
+                "text": e.text, "style": e.style, "language": e.language, "outputLanguage": e.output_language, "secs": e.secs,
                 "words": e.words, "fixes": e.fixes, "outcome": e.outcome,
                 "timings": e.timings,
             })
@@ -225,6 +225,7 @@ pub async fn dictation_paste_again(app: AppHandle, id: i64) -> Result<(), String
             .dictation(id)
             .map_err(|_| "Could not read dictation history.")?
             .ok_or("This dictation is no longer in history.")?;
+        let text = replay_text(entry)?;
         #[cfg(target_os = "linux")]
         {
             if crate::lock::locked(&app) {
@@ -232,11 +233,11 @@ pub async fn dictation_paste_again(app: AppHandle, id: i64) -> Result<(), String
             }
             app.try_state::<crate::dictation::State>()
                 .ok_or("The dictation worker is unavailable.")?
-                .copy_again(Some(entry.text))
+                .copy_again(Some(text))
         }
         #[cfg(not(target_os = "linux"))]
         {
-            let _ = entry;
+            let _ = text;
             Err("Dictation is available on Linux.".into())
         }
     })
@@ -244,10 +245,42 @@ pub async fn dictation_paste_again(app: AppHandle, id: i64) -> Result<(), String
     .map_err(|_| "Could not copy dictation again.".to_string())?
 }
 
+fn replay_text(entry: vults_store::dictations::Entry) -> Result<String, String> {
+    if entry.outcome == "command" {
+        Err("Voice commands cannot be pasted from history.".into())
+    } else {
+        Ok(entry.text)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn command_history_is_rejected_before_any_replay_worker_or_clipboard_call() {
+        let mut entry = Entry {
+            at: 0,
+            app: None,
+            session: None,
+            heard: "mute api".into(),
+            text: "Command completed.".into(),
+            style: "command".into(),
+            language: None,
+            output_language: None,
+            secs: 1.0,
+            words: 2,
+            fixes: None,
+            outcome: "command".into(),
+            timings: Default::default(),
+        };
+        assert!(replay_text(entry.clone()).is_err());
+        entry.outcome = "copied".into();
+        assert_eq!(
+            replay_text(entry).expect("Regular dictation"),
+            "Command completed."
+        );
+    }
     #[test]
     fn reads_real_totals_hides_expired_text_and_an_erase_invalidates_old_capture() {
         let dir = std::env::temp_dir().join(format!("vults-dictation-history-{}", std::process::id()));
@@ -262,6 +295,7 @@ mod tests {
             text: "written words".into(),
             style: "verbatim".into(),
             language: None,
+            output_language: None,
             secs: 2.0,
             words: 2,
             fixes: None,

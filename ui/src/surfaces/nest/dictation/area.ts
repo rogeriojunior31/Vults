@@ -1,48 +1,42 @@
+import { createMeetings, type MeetingBackend } from "./meetings";
+import { createDictationNavigation, type DictationWorkPage } from "./navigation";
+import { voiceCommandHelp } from "../../../voice-command-help";
 import { el } from "../../../dom";
-import { t, tk } from "../../../i18n";
-import { icon, type IconName } from "../../../island/icons";
-import { sidePanel } from "../panels";
+import { t } from "../../../i18n";
 import { createDictationHistory, type DictationBackend } from "./history";
 import { createYourWords, type WordsBackend } from "./words";
 import type { DictationPeriod, DictationStatistics } from "../../../bridge";
 
-export type DictationAreaBackend = DictationBackend & WordsBackend & { statistics(period: DictationPeriod): Promise<DictationStatistics> };
-export function createDictationArea(backend: DictationAreaBackend, settings: () => void, statistics: () => void) {
-  const history = createDictationHistory(backend, settings);
-  const words = createYourWords(backend, settings);
-  let selected: "history" | "dictionary" | "snippets" = "history";
-  const nav = el("nav", { class: "dictation-nav" });
-  const groups = el("div", { class: "dictation-groups" });
-  nav.append(groups);
-  const panel = sidePanel(nav, "dictation", "Dictation", 210, "left", 180, 300);
-  const element = el("div", { class: "dictation-area" }, nav, history.element, words.dictionary, words.snippets);
-  const refresh = () => { if (selected === "history") history.refresh(); else words.refresh(); };
-  const select = (id: typeof selected) => { selected = id; relabel(); refresh(); nav.querySelector<HTMLButtonElement>(`[data-dictation-page="${id}"]`)?.focus(); };
+export type DictationAreaBackend = DictationBackend & WordsBackend & { statistics(period: DictationPeriod): Promise<DictationStatistics>; meetings?: MeetingBackend };
+export function createDictationArea(backend: DictationAreaBackend, settings: (section?: string) => void, statistics: () => void) {
+  const configure = () => settings();
+  const history = createDictationHistory(backend, configure);
+  const commands = createDictationHistory(backend, () => settings("dictationcommands"), true);
+  const help = el("details");
+  const names = el("button", { onclick: () => select("dictionary") });
+  const guidance = el("div", {}, help, names);
+  commands.element.querySelector("header")!.after(guidance);
+  const words = createYourWords(backend, configure);
+  const meetings = createMeetings(backend.meetings, () => settings("dictationvoice"), () => settings("dictationmeetings"));
+  let active = false;
+  let selected: DictationWorkPage = "history";
+  const navigation = createDictationNavigation(selected, id => select(id), id => settings(`dictation${id}`), statistics);
+  const nav = navigation.element;
+  const element = el("div", { class: "dictation-area" }, nav, history.element, commands.element, words.dictionary, words.snippets, meetings.element);
+  const refresh = () => { meetings.setActive(active && selected === "meetings"); if (selected === "meetings") { meetings.refresh(); return; } if (selected === "history") history.refresh(); else if (selected === "commands") commands.refresh(); else words.refresh(); };
+  const select = (id: DictationWorkPage) => { selected = id; relabel(); refresh(); };
   const relabel = () => {
-    panel.relabel(); history.relabel(); words.relabel();
+    navigation.select(selected); history.relabel(); commands.relabel(); words.relabel(); meetings.relabel();
+    const open = help.open;
+    help.replaceChildren(el("summary", { text: t("What you can say") }), voiceCommandHelp());
+    help.open = open;
+    names.textContent = t("Dictionary");
+    meetings.element.hidden = selected !== "meetings";
+    commands.element.hidden = selected !== "commands";
     history.element.hidden = selected !== "history";
     words.dictionary.hidden = selected !== "dictionary";
     words.snippets.hidden = selected !== "snippets";
-    nav.setAttribute("aria-label", t("Dictation pages"));
-    const button = (label: string, glyph: IconName, click?: () => void) => {
-      const b = el("button", { onclick: click }, icon(glyph, 14), el("span", { text: label }));
-      b.disabled = !click;
-      if (!click) b.title = t("Available in a later step.");
-      return b;
-    };
-    const page = (id: typeof selected, text: string, glyph: IconName) => {
-      const b = button(text, glyph, () => select(id));
-      b.dataset.dictationPage = id;
-      if (selected === id) b.setAttribute("aria-current", "page");
-      return b;
-    };
-    const current = page("history", t("History"), "mic");
-    groups.replaceChildren(el("h3", { text: t("Voice") }), current,
-      ...([[tk("Voice commands"), "flock"], [tk("Talk with Zeca"), "chat"], [tk("Meetings"), "person"]] as [string, IconName][]).map(([label, glyph]) => button(t(label), glyph)),
-      el("h3", { text: t("Your words") }),
-      page("dictionary", t("Dictionary"), "file"), page("snippets", t("Snippets"), "tag"), button(t("Styles"), "pencil"),
-      el("h3", { text: t("System") }), button(t("Dictation settings"), "gear", settings), button(t("Statistics"), "bars", statistics));
   };
   relabel();
-  return { element, refresh, relabel, invalidate: history.invalidate };
+  return { element, refresh, relabel, select, setActive(on: boolean) { active = on; meetings.setActive(on && selected === "meetings"); }, invalidate: () => { history.invalidate(); commands.invalidate(); } };
 }

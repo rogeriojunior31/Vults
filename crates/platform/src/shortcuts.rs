@@ -26,7 +26,12 @@ pub const SHORTCUTS: &[(&str, &str, &str)] = &[
         "CTRL+ALT+Y",
     ),
     ("deny", "Deny the permission waiting on the island", "CTRL+ALT+N"),
-    ("talk", "Dictate, or speak to a focused Vults Chat", "CTRL+ALT+V"),
+    ("talk", "Dictate text without opening Chat", "CTRL+ALT+V"),
+    (
+        "talk-command",
+        "Speak a command for Vults without typing into an app",
+        "CTRL+ALT+Z",
+    ),
     ("talk-again", "Copy the last dictation again", "CTRL+ALT+B"),
     ("talk-cancel", "Cancel dictation or Chat voice", "CTRL+ALT+X"),
     ("next", "Put the next session in front", "CTRL+ALT+J"),
@@ -39,17 +44,12 @@ pub const SHORTCUTS: &[(&str, &str, &str)] = &[
     ("room", "Open the Nest (Room)", "CTRL+ALT+3"),
 ];
 
-/// What a press (`down`) or a release of shortcut `id` tells the island, if anything. Only the talk
-/// key cares about being let go. Dictation remains available with Zeca off.
+/// Dictation is handled by the app worker; its keys never open a Chat surface.
 pub fn island_event(id: &str, down: bool) -> Option<String> {
-    if !SHORTCUTS.iter().any(|s| s.0 == id) {
+    if !down || matches!(id, "talk" | "talk-command" | "talk-again") {
         return None;
     }
-    match (id, down) {
-        (_, true) => Some(id.to_string()),
-        ("talk", false) => Some("talk-up".to_string()),
-        _ => None,
-    }
+    SHORTCUTS.iter().any(|s| s.0 == id).then(|| id.to_owned())
 }
 
 /// Binds the shortcuts, reports the keys the desktop actually bound (`bound`: id → how to press
@@ -161,20 +161,22 @@ mod tests {
     }
 
     #[test]
-    fn a_press_reaches_the_island_and_only_talk_has_a_release() {
+    fn only_presentation_and_decision_presses_reach_the_island() {
         assert_eq!(island_event("allow", true).as_deref(), Some("allow"));
         assert_eq!(island_event("allow", false), None);
-        assert_eq!(island_event("talk", true).as_deref(), Some("talk"));
-        assert_eq!(island_event("talk", false).as_deref(), Some("talk-up"));
+        assert_eq!(island_event("open", true).as_deref(), Some("open"));
+        assert_eq!(island_event("unknown", true), None);
     }
 
     #[test]
     fn dictation_is_independent_of_chat_and_auxiliary_keys_only_press() {
-        for id in ["talk-again", "talk-cancel", "deny", "open"] {
+        for id in ["talk-cancel", "deny", "open"] {
             assert_eq!(island_event(id, true).as_deref(), Some(id));
             assert_eq!(island_event(id, false), None);
         }
-        for id in ["talk", "talk-again", "talk-cancel"] {
+        for id in ["talk", "talk-command", "talk-again"] {
+            assert_eq!(island_event(id, true), None);
+            assert_eq!(island_event(id, false), None);
             assert_eq!(SHORTCUTS.iter().filter(|s| s.0 == id).count(), 1);
         }
     }

@@ -26,6 +26,8 @@ mod codex;
 mod codex_server;
 pub mod drivers;
 pub mod embed;
+pub mod filter;
+pub mod meeting_summary;
 #[cfg(test)]
 mod mock;
 mod openai;

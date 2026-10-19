@@ -21,7 +21,7 @@ pub struct Model {
     #[serde(skip)]
     file: &'static str,
     #[serde(skip)]
-    sha256: &'static str,
+    pub sha256: &'static str,
     /// Whether the vocabulary prompt helps it. Measured on short clips of Brazilian Portuguese
     /// speech: Base made 5 of 8 worse with it (it even wrote a Spanish spelling) and Turbo 3 of 8
     /// (it added words never said); only Small came out ahead, better on 4 and worse on 2.

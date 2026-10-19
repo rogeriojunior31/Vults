@@ -50,8 +50,9 @@ under [0004](0004-a-human-answers-permissions.md).
   and *Copied* when the text was only copied. These do not claim that another app submitted,
   executed or saved anything. A failed clipboard write is an error, never *Copied*.
 - **Dictation is independent of Zeca.** With Zeca off, the talk key, local transcription,
-  insertion and history still work. A focused Vults Chat composer keeps its existing draft
-  path; it does not submit a chat message automatically. The island never takes focus from
+  insertion and history still work. The talk shortcut always uses independent dictation, even
+  over Vults windows. Only the Chat microphone button fills its draft directly; it never submits
+  a chat message automatically. The island never takes focus from
   the destination to show dictation progress and never hides a pending card.
 - **History is text only, with retention.** Keep the heard text and delivered text, outcome and
   timings in the local store, not the audio or previous clipboard. Offer a retention choice and
@@ -75,3 +76,6 @@ under [0004](0004-a-human-answers-permissions.md).
 
 - 2026-10-17: define N3 V0.2's target, clipboard, keyboard capability and permission boundaries.
   Use 0032 because [0031](0031-tasks-leave-vults.md) already records Tasks removal.
+
+- 2026-10-19: reserve the global talk shortcut for independent dictation regardless of focus;
+  Chat draft voice input remains an explicit microphone-button action.

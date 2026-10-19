@@ -49,7 +49,7 @@ Migration 24 starts independent daily application totals. Older lifetime applica
 preserved; a weekly/monthly breakdown missing those old measurements is labeled partial.
 No transcript, session or window title is added to these usage aggregates. Retained stage timings
 still follow transcript retention and appear in
-[Settings > Dictation > Diagnostics](dictation.md#diagnostics). Usage totals and memory-only session
+[Dictation > Diagnostics](dictation.md#diagnostics). Usage totals and memory-only session
 counters have separate lifetimes. **Dictation settings** opens that configuration page. Room/Full keep the selected statistics period.
 
 ![Dictation statistics with synthetic usage in the native app](../assets/dictation-statistics.png)
@@ -120,7 +120,7 @@ and is asked through `gh` once when the tab opens, then kept an hour in memory, 
   server, in one go, leaving one line in the audit log: that you cleared it, and when.
   What stays: what Zeca remembers (his memory files, **Settings → Chat & voice → Memory**), the
   policies you accepted, your paired phones, recorded agent costs, measured dictation totals and
-  the user-maintained dictionary, replacements and snippets
+  the user-maintained dictionary, replacements, snippets and per-app styles, and content-free clean-up quota admissions
   ([Safety](../safety.md)). Tables from retired features stay untouched; their old cost rows
   remain readable in **Cost**.
 - The history lives in one local database, `vults.sqlite` (each turn for 12 weeks, each day's

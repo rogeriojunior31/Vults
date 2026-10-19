@@ -114,7 +114,7 @@ pub async fn dictation_doctor(app: AppHandle, window: tauri::Webview) -> Result<
                 .is_some_and(|s| s.portal.focus_ready()),
         );
         #[cfg(not(target_os = "linux"))]
-        let (keyboard, focus) = ("unavailable".into(), false);
+        let (keyboard, focus) = (String::from("unavailable"), false);
         Ok(Report {
             system: system(
                 vults_audio::input_info(device.as_deref()),

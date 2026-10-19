@@ -1,0 +1,227 @@
+{
+  "recordedAt": "2026-10-19",
+  "scope": "Initial public human-speech calibration, not held-out quality acceptance. No model settings were tuned and production speaker labels remain off.",
+  "frozenManifestSha256": "7a8647bd367e4cf1f4f4363d5eb5d026edd5c1321ab437ae68c179d3de0ea5e0",
+  "frozenManifest": {
+    "schema": 1,
+    "frozenBeforeInference": "2026-10-19T11:09:20.848699+00:00",
+    "purpose": "Initial human-speech calibration only; not a disjoint held-out or production qualification corpus.",
+    "selection": "First 120 seconds of each chosen original source; no outcome-based selection or tuning.",
+    "profile": {
+      "durationMs": 120000,
+      "collarMs": 0,
+      "includesOverlap": true,
+      "cosineDistanceThreshold": 0.7,
+      "derDiagnosticTarget": 0.2,
+      "targetIsProductionAcceptance": false
+    },
+    "sources": [
+      {
+        "language": "en",
+        "recording": "IS1000a",
+        "license": "CC-BY-4.0",
+        "clock": {
+          "recording": "IS1000a-first120",
+          "source": "public-mix",
+          "wavSha256": "5b4ec0eded489b05eb11fb594b7e90df62fc4245ded073e524189c2b6baddb3b",
+          "durationMs": 120000
+        },
+        "originalWavSha256": "25c9a48237c1f23bc419702f89234467a1b9efedbac16d9673f52d6a8c1c6a57",
+        "annotationSha256": "fc26dc4947a86ed4838725ed50fb5a9fdc6ce140707f25348ed977c3ed03c1aa",
+        "referenceSha256": "f996ae0138fba8d46a50da80f6d16b0560f5039d8beee753e64710271ca82981",
+        "referenceTurns": 11,
+        "referenceSpeakers": 3,
+        "format": {
+          "sampleRate": 16000,
+          "channels": 1,
+          "sampleWidth": 2
+        },
+        "annotationSemantics": "word-derived RTTM from manual AMI 1.6.2; only_words"
+      },
+      {
+        "language": "pt",
+        "recording": "bfamdl02",
+        "license": "CC-BY-NC-SA-4.0",
+        "clock": {
+          "recording": "bfamdl02-first120",
+          "source": "public-mix",
+          "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+          "durationMs": 120000
+        },
+        "originalWavSha256": "58cc9f973840b98aafbc609773e122eda3383c39b6847cdf41547925ade683ff",
+        "annotationSha256": "108dabf1822253e5658e9f56c7f5eb196bd11942ed4429c721058640f912b7e4",
+        "referenceSha256": "32ca185a86b64d52cabd0c4d13b0c1d7bff375a230cb7b679d1c71d7fcb7ff95",
+        "referenceTurns": 84,
+        "referenceSpeakers": 2,
+        "format": {
+          "sampleRate": 22050,
+          "channels": 2,
+          "sampleWidth": 2
+        },
+        "annotationSemantics": "manual WinPitch UNIT alignment; utterance intervals, not word-level speech activity"
+      }
+    ]
+  },
+  "sources": {
+    "ami": {
+      "audio": {
+        "source": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/HeadsetAudio/IS1000a.Mix-Headset.wav",
+        "size": 50645452,
+        "sha256": "25c9a48237c1f23bc419702f89234467a1b9efedbac16d9673f52d6a8c1c6a57"
+      },
+      "annotations": {
+        "source": "https://raw.githubusercontent.com/BUTSpeechFIT/AMI-diarization-setup/2509d8933721023fab4def2618aabd5c28eb82e9/only_words/rttms/train/IS1000a.rttm",
+        "size": 22260,
+        "sha256": "fc26dc4947a86ed4838725ed50fb5a9fdc6ce140707f25348ed977c3ed03c1aa"
+      },
+      "uem": {
+        "source": "https://raw.githubusercontent.com/BUTSpeechFIT/AMI-diarization-setup/2509d8933721023fab4def2618aabd5c28eb82e9/uems/train/IS1000a.uem",
+        "size": 28,
+        "sha256": "373432396b58e6f027d5e5d25d0100dab1a67ff48f44816acab5395e70767af9"
+      },
+      "revision": "2509d8933721023fab4def2618aabd5c28eb82e9",
+      "license": "CC-BY-4.0 for corpus; Apache-2.0 setup repository",
+      "licenseSource": "https://groups.inf.ed.ac.uk/ami/corpus/",
+      "annotationSource": "https://github.com/BUTSpeechFIT/AMI-diarization-setup",
+      "attribution": "J. Carletta et al., The AMI meeting corpus: A pre-announcement, 2006; F. Landini et al., VBx",
+      "partition": "train; calibration only"
+    },
+    "coral": {
+      "archive": {
+        "source": "https://www.c-oral-brasil.org/files/bfamdl02.zip",
+        "size": 31775309,
+        "sha256": "5dfb337f7ae7c5534a4030c0d52764304c2a920bc42c5911b15606583c0ee271"
+      },
+      "sampleSource": "https://www.c-oral-brasil.org/english-site/c-oral-brasil-i_example.php",
+      "licenseSource": "https://www.c-oral-brasil.org/c-oral-brasil-i.php",
+      "license": "CC-BY-NC-SA-4.0; public sample used only for this local noncommercial research check",
+      "attribution": "Tommaso Raso and Heliana Mello (eds.), C-ORAL-BRASIL I, Editora UFMG, 2012",
+      "audioMember": "bfamdl02.wav",
+      "annotationMember": "bfamdl02.xml"
+    }
+  },
+  "environment": {
+    "target": "x86_64-unknown-linux-gnu",
+    "profile": "dev",
+    "runtime": "ONNX Runtime 1.31.0 CPU",
+    "intraThreads": 1,
+    "interThreads": 1,
+    "rssMethod": "Linux wait4 ru_maxrss for each complete native child; KiB",
+    "timing": "One run per clip; totalMs includes native load/inference/final WAV hash, excludes first hash/model admission; wallSeconds includes the complete child.",
+    "cpu": "AMD Ryzen 7 5700X3D 8-Core Processor"
+  },
+  "results": {
+    "en": {
+      "quality": {
+        "schema": 1,
+        "referenceSha256": "f996ae0138fba8d46a50da80f6d16b0560f5039d8beee753e64710271ca82981",
+        "predictionSha256": "3e15840a292b049a8e6f43167f854a0e19ee14e022bb38bf7db6617b59a39e7c",
+        "clock": {
+          "recording": "IS1000a-first120",
+          "source": "public-mix",
+          "wavSha256": "5b4ec0eded489b05eb11fb594b7e90df62fc4245ded073e524189c2b6baddb3b",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 5534,
+        "falseAlarmSpeakerMs": 15329,
+        "confusedSpeakerMs": 2631,
+        "correctSpeakerMs": 20445,
+        "unknownActivityMs": 6333,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 3,
+        "der": 0.8211814051031108,
+        "productionQualified": false
+      },
+      "speakers": 3,
+      "observations": 22,
+      "totalMs": 3859,
+      "resources": {
+        "peakRssKiB": 130344,
+        "wallSeconds": 4.811,
+        "cpuUserSeconds": 4.295003,
+        "cpuSystemSeconds": 0.445469,
+        "method": "Linux wait4, whole native child process"
+      },
+      "modelPins": {
+        "runtimeSha256": "469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e",
+        "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+        "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11"
+      },
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "meetsProvisionalDiagnosticTarget": false
+    },
+    "pt": {
+      "quality": {
+        "schema": 1,
+        "referenceSha256": "32ca185a86b64d52cabd0c4d13b0c1d7bff375a230cb7b679d1c71d7fcb7ff95",
+        "predictionSha256": "f8bfd96edd85110d518ea0ec577300412b1658fb05f80f45a62e7fdc53044c83",
+        "clock": {
+          "recording": "bfamdl02-first120",
+          "source": "public-mix",
+          "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 26617,
+        "falseAlarmSpeakerMs": 641,
+        "confusedSpeakerMs": 26015,
+        "correctSpeakerMs": 81269,
+        "unknownActivityMs": 793,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 1,
+        "der": 0.3978536381356375,
+        "productionQualified": false
+      },
+      "speakers": 1,
+      "observations": 41,
+      "totalMs": 8950,
+      "resources": {
+        "peakRssKiB": 155668,
+        "wallSeconds": 10.017,
+        "cpuUserSeconds": 8.850574,
+        "cpuSystemSeconds": 1.124109,
+        "method": "Linux wait4, whole native child process"
+      },
+      "modelPins": {
+        "runtimeSha256": "469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e",
+        "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+        "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11"
+      },
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "meetsProvisionalDiagnosticTarget": false
+    }
+  },
+  "verification": {
+    "standaloneMatchesNativeQuality": true,
+    "independentMillisecondRasterAndExhaustiveMappingMatches": true,
+    "sourceHashesMatchFrozenManifest": true,
+    "spikeTestsPassed": 21,
+    "microphoneOrSystemCapture": false,
+    "personalProfileUsed": false,
+    "sourceAudioOrAnnotationsRedistributed": false,
+    "modelTuning": false,
+    "productionQualified": false
+  },
+  "decision": "No-go for automatic speaker labels. Both calibration clips exceed the predeclared provisional DER target of 0.20.",
+  "limitations": [
+    "One preselected 120-second calibration clip per language; no held-out set or confidence interval.",
+    "AMI uses word-derived speech intervals; C-ORAL uses manual utterance-level alignment including within-utterance pauses; rates are not directly comparable across corpora.",
+    "AMI recording is from the published training partition; model-training independence is not established.",
+    "C-ORAL sample is an informal conversation, not a captured desktop meeting.",
+    "Physical microphone/system alignment, echo, noise, quiet/short turns and long-session resource acceptance remain open.",
+    "Portuguese baseline collapses two annotated voices into one; simultaneous-observation merge constraints need investigation without outcome-based threshold tuning."
+  ]
+}

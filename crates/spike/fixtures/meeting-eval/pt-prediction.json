@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "clock": {
+    "recording": "synthetic-pt",
+    "source": "system",
+    "wavSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "durationMs": 10000
+  },
+  "turns": [
+    {
+      "startMs": 0,
+      "endMs": 2000,
+      "speaker": 0
+    },
+    {
+      "startMs": 2000,
+      "endMs": 3000,
+      "speaker": 1
+    },
+    {
+      "startMs": 3000,
+      "endMs": 5000,
+      "speaker": 0
+    }
+  ]
+}

@@ -247,14 +247,11 @@ turns one on ([Connectors](connectors.md)).
 ## Dictation
 
 The fifth tab opens [dictation history](dictation.md#dictation-history), including with Zeca off.
-Its side list groups Voice, Your words and System. **History**, **Dictionary** and **Snippets**
-are working pages. Dictionary edits words and ordered replacements and offers **Try a sentence**
-through the real local text rules; Snippets saves literal bodies. Drafts and the selected work
-page survive Room/Full changes. Settings links open **Settings > Dictation**, which owns keys,
-feedback, insertion, privacy and the two opt-in vocabulary switches. The shared model and
-language remain in **Chat & voice**. Diagnostics is at the end of Settings > Dictation, with an
-explicit microphone test and the retained stage timings ([Diagnostics](dictation.md#diagnostics)).
-**Statistics** opens Activity > Dictation. Other entries are marked as later steps. Narrow windows
-show available destinations in a short horizontal row; work pages scroll independently.
-History retains its search, disclosures and reading position; deleting transcripts keeps
-measured usage totals and Your words preferences. See [Your words processing](dictation.md#your-words-processing).
+The shared navigation groups History, Voice commands, Dictionary and Snippets with separate
+configuration pages: Voice, Keyboard shortcuts, Command settings, Vocabulary, Styles, Paste,
+Privacy and Diagnostics. The shared transcription model/language editor lives in Voice; Chat
+links there. Configuration keeps its privileged webview; transcripts stay in Nest.
+Statistics opens Activity > Dictation. Narrow windows use a labeled page picker; the content
+scrolls independently. History search, disclosures, drafts and reading position survive size
+changes. Erasing transcripts keeps measured usage and Your words preferences. See
+[Your words processing](dictation.md#your-words-processing).

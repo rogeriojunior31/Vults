@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 119f7e236fca -->
+<!-- source: 9e7b2edd5a30 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -264,15 +264,11 @@ abrem o único lugar que liga um conector ([Conectores](connectors.md)).
 ## Ditado
 
 A quinta aba abre o [histórico de ditado](dictation.md#dictation-history), inclusive com o Zeca
-desligado. A lista lateral agrupa Voz, Suas palavras e Sistema. **Histórico**, **Dicionário** e
-**Trechos** são páginas funcionais. O Dicionário edita palavras e substituições ordenadas e
-oferece **Testar uma frase** com as regras locais reais; Trechos salva conteúdo literal.
-Rascunhos e a página selecionada sobrevivem a mudanças entre Room/Full. Os links de configurações
-abrem **Settings > Ditado**, que reúne teclas, feedback, inserção, privacidade e as duas opções
-de vocabulário. O modelo e idioma compartilhados continuam em **Chat e voz**. O Diagnóstico fica
-no fim de Configurações > Ditado, com teste explícito de microfone e tempos retidos por etapa
-([Diagnóstico](dictation.md#diagnostics)). **Estatísticas** abre Atividade > Ditado. As demais entradas
-estão marcadas como etapas futuras. Janelas estreitas mostram os destinos disponíveis numa faixa
-horizontal curta; as páginas de trabalho rolam separadamente. O Histórico mantém busca, detalhes
-abertos e posição de leitura; excluir transcrições mantém os totais medidos e as preferências de
-Suas palavras. Veja o [processamento das suas palavras](dictation.md#your-words-processing).
+desligado. A navegação compartilhada reúne Histórico, Comandos de voz, Dicionário e Trechos com
+páginas separadas de configuração: Voz, Atalhos de teclado, Configurações dos comandos,
+Vocabulário, Estilos, Colagem, Privacidade e Diagnóstico. O editor compartilhado de modelo e idioma
+de transcrição fica em Voz; o Chat oferece um link. A configuração mantém sua webview privilegiada;
+as transcrições ficam no Nest. Estatísticas abre Atividade > Ditado. Janelas estreitas usam um seletor
+de página com rótulo; o conteúdo rola separadamente. Busca, detalhes, rascunhos e posição de leitura
+sobrevivem à troca de tamanho. Excluir transcrições mantém uso medido e preferências de Suas palavras.
+Veja o [processamento das suas palavras](dictation.md#your-words-processing).

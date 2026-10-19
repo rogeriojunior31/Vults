@@ -8,18 +8,31 @@ publish.workspace = true
 
 [dependencies]
 vults-audio.workspace = true
+hound = "3.5"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream"] }
 futures-util = { version = "0.3", default-features = false }
 serde.workspace = true
 sha2 = "0.10"
 tokio = { workspace = true, features = ["fs"] }
 tracing = "0.1"
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["load-dynamic", "api-24"], optional = true }
+tar = { version = "0.4", default-features = false, optional = true }
+flate2 = { version = "1", optional = true }
+bzip2 = { version = "0.6", optional = true }
+knf-rs = { version = "=0.3.2", optional = true }
 whisper-rs = { version = "0.16", features = ["tracing_backend"] }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
 
 [features]
+# Explicit developer installation only until app gate/UI integration is delivered.
+meeting-assets = ["dep:tar", "dep:flate2", "dep:bzip2"]
+# Explicitly supplied native runtime/models; not enabled by the app.
+diarization = ["dep:ort", "dep:knf-rs"]
 # Transcribe on the GPU (AMD, Intel, NVIDIA alike). Building needs the Vulkan headers and glslc.
 vulkan = ["whisper-rs/vulkan"]
 

@@ -548,6 +548,36 @@ pub enum Intent {
     },
 }
 
+impl Intent {
+    /// Voice commands navigate and change project preferences; they never manage a card or merge.
+    /// Exhaustive so a new intent needs an explicit decision at this boundary (ADR 0004).
+    pub fn voice_command_allowed(&self) -> bool {
+        match self {
+            Self::Focus { .. }
+            | Self::FocusNext
+            | Self::FocusPrevious
+            | Self::Jump { .. }
+            | Self::OpenFolder { .. }
+            | Self::SetProjectPref { .. } => true,
+            Self::Decide { .. }
+            | Self::DecideAlways { .. }
+            | Self::Answer { .. }
+            | Self::Release { .. }
+            | Self::Skip { .. }
+            | Self::Review { .. }
+            | Self::OpenAlert { .. }
+            | Self::DismissAlert { .. }
+            | Self::OpenRow { .. }
+            | Self::MergeRow { .. }
+            | Self::OpenFile { .. }
+            | Self::Hush { .. }
+            | Self::DismissDigest
+            | Self::DismissRecap
+            | Self::SetProjectBird { .. } => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
     /// An owned driver's whole turn ended, including any still-waiting subagent cards.

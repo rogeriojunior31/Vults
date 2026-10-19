@@ -1,5 +1,5 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: 144d575cd905 -->
+<!-- source: aaf95dad0b56 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
@@ -43,7 +43,8 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   ao tamanho anterior. A sobreposição de layer-shell nunca passa do seu tamanho fixo.
 - **As superfícies em repouso são superfícies de camada** mapeadas uma vez num tamanho fixo, cada
   uma com a sua região de entrada; o widget de canto fica num canto que o usuário escolhe e não é uma janela para arrastar. Em
-  repouso vive uma webview (a ilha, mais o widget se escolhido); o Nest é criado quando aberto. A
+  repouso vivem a ilha e a webview passiva de ditado no Linux, mais o widget se escolhido; o Nest
+  é criado quando aberto. A superfície do ditado fica transparente quando ociosa. A
   paleta não é uma superfície: ela abre dentro da página da ilha ou do Nest.
 - **Um card é respondido onde o usuário está: na ilha ou no Nest.** A ilha guarda os cards de
   permissão e de pergunta e o Ctrl+Alt+Y/N (no modo painel ela se ancora pela bandeja, a mesma
@@ -75,38 +76,32 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   volta uma superfície de Tasks. Stop só fica disponível para uma execução que o Vults iniciou
   pelo driver suportado (D8), nunca só porque ele observa uma sessão do bando.
 - **Ditado tem um responsável por cada tipo de conteúdo.** Sua área no Nest contém Histórico,
-  Comandos de voz, Conversar com Zeca, Reuniões, Dicionário, Trechos prontos e Estilos conforme
-  essas fases são entregues. A lista lateral oferece links para **Settings > Dictation**, que
-  concentra a configuração e o Diagnóstico, e **Activity > Dictation**, que concentra os números
-  agregados (V4). O modelo de transcrição e o idioma compartilhados ficam em **Settings > Chat &
-  voice**; os links abrem esse responsável existente. Não há uma segunda página de Configurações
-  dentro da área de Ditado. Interruptores de modelos, chaves, orçamentos, permissão de inserção e
-  alterações nas configurações dos agentes continuam na webview das Configurações, com suas
-  verificações de autoridade existentes. Transcrições e conteúdo de reuniões ficam na webview
-  do Nest; o Diagnóstico nas Configurações mostra medições técnicas, não transcrições nem texto
-  dos agentes. Seleção, filtros, rascunhos e uma gravação ativa sobrevivem à troca de tamanho e
-  às visitas às Configurações ou à Activity. Com Zeca desligado, o ditado independente continua
-  disponível; Conversar com Zeca segue a ativação opcional dele.
-- **O estado do ditado fica sobre o bando.** Durante a atividade, uma linha cinza neutra pode
-  mostrar escuta, mãos livres, transcrição, nova tentativa, cancelamento, falha ou o resultado
-  da entrega estabelecido pela [0032](0032-dictation-into-other-apps.md). Fases posteriores
-  adicionam estados de comandos de voz e respostas faladas. Não há dica em repouso, segunda
-  navegação, Desfazer ou outro botão nessa linha; um clique normal na ilha continua abrindo o
-  Quick. A cor fica nas formas de estado, e a borda âmbar do card permanece visível. Uma legenda
-  opcional abaixo mostra texto ouvido, palavras cortadas ou o resultado só quando acrescenta
-  informação, com no máximo duas linhas para o resultado. Ela não tem controles, não recebe
-  foco nem entrada do mouse e desaparece em até dois segundos após a conclusão. Texto longo é
-  truncado dentro da superfície, com a linha completa disponível no detalhe ou na dica. A
-  sobreposição continua mapeada no tamanho fixo; desenhar a legenda não pode ampliar sua região
-  de entrada.
-- **Cards sempre têm prioridade sobre o ditado.** Um card que chega abre imediatamente no
-  responsável existente, com seus controles e comando legíveis; o ditado nunca o esconde,
-  cobre, atrasa sua notificação ou estende seu prazo. Se faltar espaço, a linha e a legenda
-  cedem lugar ao card. Mostrar estado não o responde nem concede inserção numa sessão em
-  espera ([0032](0032-dictation-into-other-apps.md)). O ditado não sobrepõe a regra de uma
-  superfície por vez: enquanto o Nest está visível, sua página ativa mostra o estado sem forçar
-  o Mini nem mostrar a ilha escondida. Cards mantêm o encaminhamento existente entre ilha e
-  Nest. Mostrar estado nunca rouba o foco do destino capturado.
+  Comandos de voz, Conversar com Zeca, Reuniões, Dicionário e Trechos prontos conforme essas
+  fases são entregues. A aba Ditado também apresenta sua configuração em páginas separadas de
+  Voz, Atalhos de teclado, Configurações dos comandos, Vocabulário, Estilos, Colagem, Privacidade
+  e Diagnóstico, com a mesma navegação das páginas de trabalho. Voz reúne o modelo de transcrição
+  e idioma falado compartilhados; Chat e voz oferece um link. Estatísticas abre **Activity >
+  Dictation**, responsável pelos números agregados. A configuração continua na webview de
+  Configurações, com as verificações de rótulo existentes; o Nest não ganha autoridade sobre
+  modelos, chaves, orçamentos, permissão de inserção nem configuração dos agentes. Cada opção
+  tem um único editor. Transcrições e conteúdo de reuniões ficam na webview do Nest; o Diagnóstico
+  mostra medições técnicas, não transcrições nem texto dos agentes. Seleção, filtros, rascunhos e
+  uma gravação ativa sobrevivem à troca de tamanho e às visitas às Configurações ou à Activity.
+  Com Zeca desligado, o ditado independente continua disponível; Conversar com Zeca segue a
+  ativação opcional dele.
+- **O feedback de ditado no Linux tem sua cápsula passiva.** Uma superfície fixa centralizada
+  embaixo mostra um microfone e bandas medidas durante a escuta, borda âmbar com mãos livres e os
+  estados existentes de transcrição/resultado. Usa o tema de produção, nunca recebe teclado ou
+  cliques e fica transparente quando ociosa. Uma legenda opcional acima mostra texto ouvido ou
+  resultado e mantém a expiração existente de dois segundos após o resultado. Não há botões nem
+  um responsável separado por áudio. O feedback de ilha/Nest fica oculto enquanto essa superfície
+  existe; uma falha de criação mantém o feedback interno. É uma exceção passiva de status à regra
+  das superfícies principais ilha/Nest.
+- **Cards sempre têm prioridade sobre o ditado.** Cards pendentes, bloqueio de tela e presença
+  Paused ocultam a cápsula; resultados expirados não voltam depois. O feedback nunca cobre,
+  responde ou atrasa um card, concede inserção nem rouba foco. Cards mantêm seu encaminhamento
+  existente entre ilha/Nest. A superfície fixa continua mapeada com região de entrada vazia,
+  mesmo quando visível.
 - **Uma superfície por vez** (a ilha e o Nest continuam duas superfícies por baixo). Enquanto o Nest está aberto e à vista (Room ou Full), a ilha fica
   escondida, pílula, céu e tudo, sem nenhuma região que pegue o mouse. Ela volta quando o Nest
   fecha ou volta para Quick ou Mini (ou é minimizado, onde o sistema diz isso); o **Back to the
@@ -117,7 +112,8 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   redimensionam. Ela tem duas webviews sob um único cabeçalho, a do Nest (`nest`) e a das
   Configurações (`settings`), uma visível por vez. A engrenagem mostra as Configurações; uma aba
   mostra o Nest; `open_settings(section)` abre a janela nas Configurações, numa página quando
-  pedida.
+  pedida. A configuração do Ditado usa essa mesma webview privilegiada e mantém a aba Ditado
+  selecionada.
 - **Só a webview das Configurações tem os poderes**: escrever a config de um agente
   ([0005](0005-agent-configs-backup-diff-click.md)), salvar ou apagar uma chave, criar ou retirar
   uma política, parear, revogar ou alcançar um celular ([0004](0004-a-human-answers-permissions.md)),
@@ -127,7 +123,8 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   tem nomes e contagens das abas, a troca de tamanho, som, tela cheia, e um rodapé que liga e
   desliga o Zeca e traz à frente o terminal da sessão da frente (ela guarda só quem é essa sessão).
   As páginas são General, Agents, Chat & voice, Approvals, Projects, Activity, Connectors, Phone,
-  Flock & Zeca, About; a N3 adiciona Dictation.
+  Flock & Zeca e About. A configuração do Ditado na N3 usa essa webview sob sua própria aba,
+  fora da lista global de Configurações.
 
 <a id="consequences"></a>
 
@@ -180,3 +177,12 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   Configurações e da Activity, o estado transitório do ditado e a prioridade dos cards. Segue a
   decisão revisada de R6 por Configurações centrais e a remoção de Tasks; não introduz sexta aba
   nem configurações privilegiadas próprias da área.
+
+- 2026-10-18: reunir a configuração do ditado na aba Ditado a pedido do mantenedor, com um
+  editor por opção e navegação compartilhada. Mover os controles de transcrição compartilhados
+  para lá e oferecer um link no Chat. Manter a configuração na webview de Configurações e as
+  páginas com transcrições no Nest; a autoridade sobre aprovações, gravação e comandos privilegiados
+  continua igual.
+
+- 2026-10-19: mover o status de ditado no Linux para uma cápsula passiva inferior, com feedback
+  interno como alternativa na falha de criação; preservar prioridade de cards/bloqueio e foco capturado.

@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 58292a7ea7c3 -->
+<!-- source: 2ed601972b1a -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -325,9 +325,11 @@ Os atalhos globais funcionam de qualquer janela:
   ([Aprovações](approvals.md)).
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** põem a próxima ou a anterior sessão na frente. Um card esperando
   fica na frente; as teclas escolhem quem vem depois dele.
-- **Ctrl+Alt+V**, segurado, preenche o rascunho do Chat do Vults em foco; fora do Vults, copia um
-  [ditado local](dictation.md#global-dictation-first-slice). **Ctrl+Alt+X** cancela a voz;
+- **Ctrl+Alt+V**, segurado, inicia o [ditado independente](dictation.md#global-dictation-first-slice)
+  em qualquer app em foco, inclusive o Vults. Nunca abre o Chat; use seu botão de microfone para ditar no rascunho. **Ctrl+Alt+X** cancela a voz;
   **Ctrl+Alt+B** copia novamente o último ditado.
+- **Ctrl+Alt+Z**, segurado por pelo menos 300 ms, fala um [comando de voz local](dictation.md#voice-commands-development-status)
+  para o Vults, inclusive com o Zeca desligado. Nunca digita em outro aplicativo nem responde a cards.
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** e **Ctrl+Alt+3** trocam para Mini, Quick e Room.
 - **Ctrl+K**, na ilha aberta ou no Nest, abre a [paleta](nest.md).
 - **Ctrl+Alt+Space** abre a ilha e entrega o teclado a ela até ela se recolher:

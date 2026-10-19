@@ -11,11 +11,14 @@ pub mod devices;
 pub mod dictations;
 pub mod history;
 pub mod journal;
+pub mod meetings;
 pub mod proposals;
 pub mod recall;
+pub mod requests;
 mod retired_tasks;
 pub mod sleep;
 pub mod spend;
+pub mod styles;
 pub mod traces;
 pub mod words;
 
@@ -150,6 +153,12 @@ const MIGRATIONS: &[&str] = &[
     dictations::TIMINGS,
     // 24: content-free daily application word totals, independent of transcript retention.
     dictations::statistics::TABLE,
+    // 25: durable model-attempt quota, independent of erasable history/traces.
+    requests::TABLE,
+    // 26: per-app style preferences and retained output language.
+    styles::TABLE,
+    // 27: explicitly saved, text-only meetings and source-local speakers.
+    meetings::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two
@@ -201,6 +210,7 @@ impl Store {
         conn.busy_timeout(Duration::from_secs(2))?;
         // A REPLACE deletes the row it replaces: with this, that fires the delete guards too.
         conn.pragma_update(None, "recursive_triggers", true)?;
+        conn.pragma_update(None, "foreign_keys", true)?;
         // WAL survives a crash mid-write and lets a reader run beside the writer. Switching a new
         // file needs it to itself, which the busy handler does not always wait for: retry.
         let mut tries = 0;
@@ -252,7 +262,7 @@ impl Store {
 
     /// Settings → Activity → Clear history: the history, the audit log, the traces, Zeca's
     /// conversations and his journal, in one transaction (all go, or none), then compacted; the
-    /// 0.1.x files too if any are left. Dictation text goes too; its independent usage totals stay.
+    /// 0.1.x files too if any are left. Dictation text goes too; usage totals and quota admissions stay.
     pub fn clear_all(&mut self, dir: &Path) -> Result<(), Error> {
         let tx = self
             .conn
@@ -261,7 +271,7 @@ impl Store {
             "DELETE FROM turns; DELETE FROM days; DELETE FROM traces;
              DELETE FROM chat_messages; DELETE FROM conversations;
              DELETE FROM journal; DELETE FROM journal_days; DELETE FROM recall_vectors;
-             DELETE FROM memory_proposals; DELETE FROM sleep_runs; DELETE FROM dictations;",
+             DELETE FROM meetings; DELETE FROM memory_proposals; DELETE FROM sleep_runs; DELETE FROM dictations;",
         )?;
         audit::clear_audit_in(&tx)?;
         tx.commit()?;

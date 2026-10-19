@@ -13,6 +13,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         island: resolve(here, "index.html"),
+        dictation: resolve(here, "dictation.html"),
         settings: resolve(here, "settings.html"),
         widget: resolve(here, "widget.html"),
         nest: resolve(here, "nest.html"),

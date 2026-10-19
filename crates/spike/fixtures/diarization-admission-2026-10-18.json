@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-10-18",
+  "scope": "V5.5 offline model admission and checked-memory loading; not real-meeting acceptance or app activation.",
+  "fixture": "crates/voice/tests/fixtures/speech.wav; public-domain JFK excerpt; provenance in adjacent README.md",
+  "nativeRuntime": "ONNX Runtime 1.30.0, existing local Linux x86-64 runtime, CPU sessions with one intra/inter-op thread",
+  "measurement": "Single dev-profile smoke run; input reading/hashing/admission excluded from loadMs/totalMs. Not a performance benchmark.",
+  "result": {
+    "experimental": true,
+    "threshold": 0.7,
+    "distance": "average-linkage cosine distance",
+    "runtimeSha256": "c902c70b3003c0e99fada202f37478c515ae9bba7944c2b2abd0017bae0c82ed",
+    "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+    "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+    "wavSha256": "b2f803cd887a4d3c41542dcf3540772a526e64ef82138b17663259c367579dad",
+    "durationMs": 3400,
+    "loadMs": 135,
+    "totalMs": 208,
+    "speakers": 1,
+    "observations": 1,
+    "turns": [
+      {
+        "startMs": 427,
+        "endMs": 2418,
+        "speaker": 0
+      }
+    ]
+  },
+  "sameSizeCorruption": "Changed one byte of the embedding graph; rejected with fingerprint error and empty stdout before native initialization."
+}

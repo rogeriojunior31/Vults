@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 59f9d0d700e6 -->
+<!-- source: 01d944bcef41 -->
 
 O que o Vults promete:
 
@@ -47,9 +47,20 @@ O que o Vults promete:
   Zeca leva a data e a hora e uma linha para cada sessão (agente, projeto, estado, o passo dela com
   os segredos redigidos), nunca o comando de um card. Com a memória ligada, o que o Zeca lembra
   entra quando uma conversa começa, e até 3 trechos lembrados vão com cada mensagem.
-- **O microfone só escuta enquanto você segura uma gravação.** A voz fica desligada até você baixar um
+- **A voz do Chat grava apenas na memória.** A voz do Chat fica desligada até você baixar um
   modelo; depois o mic grava só na memória enquanto o botão dele está vermelho (no máximo um minuto), e
-  o whisper.cpp transcreve neste computador. O áudio nunca é salvo nem enviado para lugar nenhum.
+  o whisper.cpp transcreve neste computador. O áudio do Chat e do ditado nunca é salvo nem enviado para lugar nenhum.
+- **Verificações de gravação de reuniões exigem consentimento explícito.** No Linux, Ditado > Reuniões
+  captura um microfone e um monitor da saída do sistema conferidos por até um minuto em WAVs temporários
+  privados. A transcrição local mantém a trava de limpeza; concluir/cancelar remove o áudio e a
+  inicialização limpa sobras de interrupções. A transcrição fica apenas na página atual, sem gravação
+  no banco. Sair da página ou bloquear a tela cancela o trabalho pendente e descarta a transcrição.
+  Não há arquivo de áudio nem reunião salva. O backend de resumos tem consentimento próprio,
+  desligado por padrão, e envia apenas o texto da transcrição ao modelo escolhido do chat por API,
+  sem ferramentas e com prazo de 120 segundos. Ative em Ditado > Configurações de reuniões e
+  depois escolha explicitamente Gerar resumo na aba Resumo; gravar/transcrever sozinho nunca pede
+  um resumo. Cancelar as notas ou
+  uma falha na requisição preserva a transcrição local.
 - **O Now playing fica desligado até você ligar.** Aí o app lê seus players de mídia pelo
   session bus (MPRIS no Linux) para mostrar a música; isso nunca é guardado nem enviado para lugar nenhum.
 - **O que o app pede por conta própria passa por um portão só.** Uma requisição feita sem um
@@ -109,6 +120,8 @@ qualquer lugar além do próprio app.
 | Requisição | Quem inicia | O que a liga | Onde |
 |---|---|---|---|
 | Um turno do chat por uma API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama e LM Studio em `127.0.0.1`) | Você, a cada mensagem | O provedor e a chave que você escolheu; enviado só a esse provedor | `crates/chat/src/api.rs`, `openai.rs`, `providers.rs` |
+| Limpeza opcional do texto ditado | O app, após o ditado local, somente com **Ditado > Estilos > Limpar com um modelo** ligado (preferência separada `dictation_cleanup`, desligada por padrão) | O provedor de API selecionado em Chat & voice, ou Ollama/LM Studio em IP literal de loopback; o portão reserva uma das 2.000 tentativas em 24 horas móveis antes do envio, incluindo falhas e chamadas locais. Sem ferramentas, proxies, redirecionamentos ou novas tentativas automáticas; falha/prazo esgotado mantém o texto local | `crates/chat/src/filter.rs`, `app/src/dictation/cleanup.rs`, `app/src/gate.rs` |
+| Resumos opcionais de reuniões | Um pedido explícito do Ninho após consentimento separado em `meeting_summary`; nunca iniciado apenas pela gravação | Provedor/modelo escolhido do chat por API, incluindo Ollama/LM Studio em IP literal de loopback; `meeting-summary` registra de forma durável até 20 tentativas por 24 horas móveis, incluindo falhas/chamadas locais. Sem ferramentas, proxies, redirecionamentos ou novas tentativas automáticas; cancelamento, bloqueio/saída da página ou mudanças de provedor/modelo/chave revogam trabalho pendente. Apenas notas validadas e limitadas podem aparecer; falhas preservam a transcrição | `app/src/meetings/summary.rs`, `app/src/gate.rs`, `crates/chat/src/filter.rs` |
 | A lista de modelos de um provedor | Você, ao abrir **Settings → Chat & voice** com uma chave salva (ou um Ollama ou LM Studio local), ou com **Try again** | O provedor e a chave que você escolheu | `crates/chat/src/providers.rs` |
 | Uma busca na web (a web do Zeca, **Settings → Chat & voice**, desligada até você ligar) | O modelo do chat por API, num turno que você mandou; pelo portão de rede (200 por dia, com as leituras de página) | Brave Search ou Tavily com a sua chave, ou o seu SearXNG | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
 | A leitura de uma página (o mesmo interruptor) | O modelo do chat por API, num turno que você mandou; pelo portão de rede (os mesmos 200) | O site da página, só endereços públicos; o texto dela então vai para o seu provedor de API numa chamada própria, sem ferramentas | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
@@ -124,7 +137,8 @@ qualquer lugar além do próprio app.
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | O interruptor de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | Um squash merge do seu pull request (pelo `gh`), com uma linha no rastro local | Você, ao clicar em **Squash and merge** na linha dele nas Connections da ilha, e depois em **Merge** | O conector do GitHub ligado; só o seu próprio pull request, aprovado, com os checks passando | `crates/connectors/src/github.rs`, `app/src/connectors.rs` |
-| O download de um modelo de voz | Você, com um clique em **Settings → Chat & voice → Voice** | Nada até você clicar; do Hugging Face (`ggerganov/whisper.cpp`), conferido pelo SHA-256 | `crates/voice/src/models.rs` |
+| O download de um modelo de voz | Você, com um clique em **Dictation > Voice** | Nada até você clicar; do Hugging Face (`ggerganov/whisper.cpp`), conferido pelo SHA-256 | `crates/voice/src/models.rs` |
+| Downloads opcionais dos modelos/runtime de reuniões | Você, depois de revisar fontes/licenças e confirmar em **Ditado > Configurações de reuniões**; sem início ou retomada automática | Revisão de uso único, válida por um minuto e vinculada ao manifesto e ao registro; o gate do app reserva cada tentativa HTTPS, incluindo redirecionamentos, no limite de 24 em qualquer janela de 24 horas. Rastros locais sem conteúdo; hashes/licenças fixos; a navegação mantém a tarefa explícita, cancelar ou encerrar a interrompe; nenhuma análise de falantes é ativada | `crates/voice/src/meeting/assets/download.rs`, `app/src/meeting_assets.rs`, `app/src/gate/meeting_assets.rs` |
 | O download do detector de fala (Silero VAD, menos de 1 MB) | O app, sozinho, fora do portão, enquanto a voz está ligada e ele falta | Um modelo de voz que você escolheu; do Hugging Face (`ggml-org/whisper-vad`), conferido pelo SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |
 | O uso do plano do Claude Code | O Claude Code, que o entrega à nossa status line | Nenhuma requisição nossa | o hook |
 | A checagem de atualização | Ainda não existe (ADR 0019) | Vai ficar desligada até você ligar, pelo portão | — |

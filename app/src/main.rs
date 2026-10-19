@@ -2,6 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // Disable native telemetry before any runtime can create an uploader or persistent ID.
+    // SAFETY: process entry, before the MCP server, Tauri, GTK or application worker threads.
+    unsafe { std::env::set_var("ORT_DISABLE_TELEMETRY", "1") };
     // Zeca's MCP server for the chat's Claude Code: no window, no Tauri.
     if vults_app::serve_mcp_if_asked() {
         return;

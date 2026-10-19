@@ -1,11 +1,14 @@
-//! Dictation gestures, without a clock, microphone, desktop or permission authority.
-//! The caller supplies monotonic elapsed time, handles actions and ticks past a tap deadline.
+//! Pure dictation gestures, text rules and voice-command grammar; no IO or permission authority.
+//! Key gestures use caller-supplied monotonic time; command names remain unresolved descriptions.
 
 #![forbid(unsafe_code)]
 
 use std::time::Duration;
 use unicode_segmentation::UnicodeSegmentation;
 
+pub mod cleanup;
+pub mod command;
+pub mod styles;
 pub mod text;
 
 /// Unicode word boundaries, including unspaced scripts; punctuation and emoji are not words.

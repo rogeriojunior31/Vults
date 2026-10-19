@@ -34,6 +34,23 @@ hysteresis, transition/reset and synthetic Chat pause tests still run.
 | breath-noise.wav | 36c908fd93f322e351ea80eda3928600352e87b158c46d55021cd953ed390d2b |
 
 
+## Meeting transcription
+
+The meeting regression inserts this public-domain `speech.wav` at 3 and 33 seconds in a
+40-second in-memory WAV. `VOICE_TEST_MODEL` enables local inference checks for text and
+source-clock segment times across a chunk boundary, silent chunks, token cancellation and
+model reuse after abort. No microphone, app, network, model download or user audio is involved.
+
+```sh
+VOICE_TEST_MODEL=/path/to/installed/model.bin \
+cargo test -p vults-voice --features vulkan local_model_keeps_two_speech_offsets_and_silence_empty
+```
+
+Without a model, deterministic tests still exercise every-sample coverage, quiet cuts, bounded
+memory, continuous resampling, integer/float formats, truncated input, timing offsets, progress,
+output budgets, cancellation and the scheduler/Whisper abort callback's interactive priority.
+These tests establish neither diarization nor word-aligned timing or real-meeting accuracy.
+
 ## Transcript fixtures
 
 `transcript-loops.tsv` contains synthetic regression inputs and expected outputs, separated by

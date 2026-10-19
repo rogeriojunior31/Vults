@@ -10,7 +10,7 @@ use tauri::{AppHandle, Manager};
 #[derive(Default)]
 pub struct Locked(AtomicBool);
 
-pub fn locked(app: &AppHandle) -> bool {
+pub fn locked<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
     app.try_state::<Locked>()
         .is_some_and(|l| l.0.load(Ordering::Relaxed))
 }
@@ -35,6 +35,7 @@ async fn changed(app: &AppHandle, now: bool) {
     tracing::info!(locked = now, "screen lock");
     if now {
         crate::doctor::dictation::stop_mic(app);
+        crate::meetings::cancel(app);
     }
     #[cfg(target_os = "linux")]
     if now {

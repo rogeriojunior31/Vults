@@ -332,6 +332,17 @@ pub fn cancel(app: &AppHandle) {
     );
 }
 
+#[cfg(target_os = "linux")]
+pub(crate) fn cached_transcriber(app: &AppHandle, id: &str) -> Option<Arc<Transcriber>> {
+    app.state::<VoiceState>()
+        .loaded
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .as_ref()
+        .filter(|(have, _)| have == id)
+        .map(|(_, model)| model.clone())
+}
+
 pub(crate) fn transcriber(app: &AppHandle, id: &str) -> Result<Arc<Transcriber>, String> {
     let state = app.state::<VoiceState>();
     let cached = || {

@@ -1,9 +1,10 @@
 //! Independent local dictation, with opt-in validated editor/session delivery and clipboard fallback.
 
+pub(crate) mod cleanup;
 pub(crate) mod permission;
 pub(crate) mod project;
 use crate::dictation_history as history;
-mod worker;
+pub(crate) mod worker;
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -16,6 +17,7 @@ use worker::{Backend, Clip, Ticket};
 pub(crate) use worker::State;
 
 pub fn start(app: &AppHandle) {
+    cleanup::start(app);
     app.manage(FocusBusy::default());
     app.manage(project::Cache::default());
     permission::start(app);
@@ -39,31 +41,65 @@ pub fn start(app: &AppHandle) {
 }
 
 pub fn key(app: &AppHandle, id: &str, down: bool) {
-    if id == "talk" && down {
+    if matches!(id, "talk" | "talk-command") && down {
         crate::doctor::dictation::stop_mic(app);
+    }
+    if id == "talk-cancel" && down {
+        crate::runtime::cancel_voice_commands(app);
     }
     let observed = std::time::Instant::now();
     if crate::lock::locked(app) {
         cancel(app, true);
         return;
     }
+    let settings = app.state::<crate::settings::SettingsState>();
+    let Ok(saved) = settings.0.lock() else {
+        return;
+    };
+    if id == "talk-command" && down && !saved.dictation_commands {
+        return;
+    }
     if let Some(state) = app.try_state::<State>() {
         // The async app-context reader is never a paste capability.
-        let target = (id == "talk" && down && crate::settings::dictation_insert(app))
+        let target = (id == "talk" && down && saved.dictation_insert)
             .then(|| {
                 app.try_state::<permission::Insertion>()
                     .and_then(|s| s.portal.capture())
                     .or_else(vults_platform::insert::Target::capture)
             })
             .flatten();
-        if let Some(ticket) = state.key_at(id, down, observed) {
+        let style_session = (saved.dictation_cleanup && id == "talk" && down)
+            .then(|| target.as_ref().and_then(|target| capture_session(app, target)))
+            .flatten();
+        let ticket = state.key_at(id, down, observed);
+        if let Some(ticket) = &ticket {
+            ticket.pin_cleanup(
+                (id == "talk" && down)
+                    .then(|| {
+                        cleanup::snapshot(
+                            app,
+                            &saved,
+                            target.as_ref().map(|t| t.window()),
+                            style_session.is_some(),
+                        )
+                    })
+                    .flatten(),
+            );
+        }
+        drop(saved);
+        if let Some(ticket) = ticket {
+            if id == "talk-command" {
+                return;
+            }
             if let Some(target) = target {
                 ticket.pin(target);
             }
             // Capture can start while the same key callback verifies local pane metadata.
-            if let Some(target) = ticket.insertion()
-                && let Some(session) = capture_session(app, &target)
-            {
+            if let Some(session) = style_session.or_else(|| {
+                ticket
+                    .insertion()
+                    .and_then(|target| capture_session(app, &target))
+            }) {
                 ticket.pin_session(session);
             }
             observe(app, ticket);
@@ -72,6 +108,9 @@ pub fn key(app: &AppHandle, id: &str, down: bool) {
 }
 
 pub fn cancel(app: &AppHandle, forget: bool) {
+    if forget {
+        crate::runtime::cancel_voice_commands(app);
+    }
     if let Some(state) = app.try_state::<State>() {
         state.cancel(forget);
     }
@@ -220,6 +259,7 @@ struct Recording {
 
 #[derive(Clone)]
 struct Config {
+    cleanup: Option<cleanup::Choice>,
     model: String,
     language: Option<String>,
     vad: Option<PathBuf>,
@@ -236,6 +276,7 @@ struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            cleanup: None,
             model: String::new(),
             language: None,
             vad: None,
@@ -262,13 +303,29 @@ impl Backend for Native {
     ) -> Option<Self::Keys> {
         let bindings = self.app.try_state::<crate::ShortcutKeys>()?;
         let bindings = bindings.0.lock().ok()?;
-        let mut actual = vec![bindings.get("talk")?.clone()];
+        let key = if ticket.is_command() {
+            "talk-command"
+        } else {
+            "talk"
+        };
+        let mut actual = vec![bindings.get(key)?.clone()];
         if let Some(again) = bindings.get("talk-again").filter(|key| !key.trim().is_empty()) {
             actual.push(again.clone());
         }
         drop(bindings);
         let live = ticket.clone();
-        match vults_platform::raw_keys::listen(&actual, move || live.valid(), input) {
+        let app = self.app.clone();
+        let command = ticket.is_command();
+        match vults_platform::raw_keys::listen(
+            &actual,
+            move || live.valid(),
+            move |key| {
+                if command && key == vults_platform::raw_keys::Key::Escape {
+                    crate::runtime::cancel_voice_commands(&app);
+                }
+                input(key);
+            },
+        ) {
             Ok(Some(keys)) if ticket.attach_keys(keys.active()) => Some(keys),
             Ok(_) => None,
             Err(_) => {
@@ -316,6 +373,7 @@ impl Backend for Native {
             })
             .map_err(|_| "settings are busy")?;
         let config = Config {
+            cleanup: ticket.cleanup_choice(),
             model,
             language: crate::voice::language(&self.app),
             vad: vults_voice::vad_path(&crate::voice::models_dir()),
@@ -428,7 +486,19 @@ impl Backend for Native {
             },
         )?;
         ticket.history_transcribed(started.elapsed());
-        ticket.prepare_text(&text, &config)
+        if ticket.is_command() {
+            return ticket.prepare_text(&text, &config);
+        }
+        let Some(output) = ticket.prepare_output(&text, &config)? else {
+            return Ok(None);
+        };
+        let raw = output.text();
+        let text = config
+            .cleanup
+            .as_ref()
+            .and_then(|choice| cleanup::apply(&self.app, ticket, choice, &output, &config.words.words))
+            .unwrap_or(raw);
+        Ok(ticket.valid().then_some(text))
     }
 
     fn copy(&self, text: String, ticket: Ticket) -> Result<Option<vults_platform::insert::Outcome>, String> {
@@ -526,7 +596,17 @@ impl Backend for Native {
         Ok(Some(outcome))
     }
 
+    fn command(&self, text: String, ticket: Ticket) -> Result<(), String> {
+        let replacements = crate::dictation_words::rules(&crate::history::dir())
+            .map_err(|_| "Could not read dictation words.")?
+            .replacements;
+        crate::runtime::voice_command(&self.app, text, ticket, replacements)
+    }
+
     fn show(&self, ticket: &Ticket, phase: &str, error: Option<&str>) {
+        if phase == "cancelled" && ticket.is_command() {
+            crate::runtime::cancel_voice_commands(&self.app);
+        }
         if let Some(status) = ticket.notice(phase, error) {
             if phase == "copied" {
                 crate::doctor::dictation::copied();
@@ -585,4 +665,44 @@ fn decode(
         return Ok(String::new());
     }
     run("base")
+}
+
+pub(crate) fn command_result(
+    app: &AppHandle,
+    ticket: &Ticket,
+    heard: &str,
+    report: crate::voice_commands::Report,
+    deadline: Option<std::time::Instant>,
+) {
+    use crate::voice_commands::Feedback;
+    let phase = match report.feedback {
+        Feedback::Done | Feedback::SentToChat => "commanded",
+        Feedback::Answer => "answered",
+        Feedback::WhichOne => "asked",
+        Feedback::NotByVoice => "refused",
+        Feedback::NotCommand => "unknown",
+        Feedback::UnknownName if !report.choices.is_empty() => "asked",
+        _ => "failed",
+    };
+    let text = if report.choices.is_empty() {
+        report.text
+    } else {
+        format!(
+            "{}\n{}",
+            report.text,
+            report
+                .choices
+                .iter()
+                .map(|choice| choice.name.as_str())
+                .collect::<Vec<_>>()
+                .join("; ")
+        )
+    };
+    if let Some(status) = ticket.command_result(phase, text.clone(), heard, deadline) {
+        let _ = app.emit("dictation", status);
+        if let Some((entry, epoch)) = ticket.command_history(heard, &text) {
+            let app = app.clone();
+            tauri::async_runtime::spawn_blocking(move || history::record(&app, entry, epoch));
+        }
+    }
 }

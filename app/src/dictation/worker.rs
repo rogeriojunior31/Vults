@@ -28,6 +28,7 @@ pub(super) trait Backend: Clone + Send + 'static {
     /// None discards this dictation; replay uses the already delivered text directly.
     fn transcribe(&self, clip: Clip, ticket: &Ticket) -> Result<Option<String>, String>;
     fn copy(&self, text: String, ticket: Ticket) -> Result<Option<vults_platform::insert::Outcome>, String>;
+    fn command(&self, text: String, ticket: Ticket) -> Result<(), String>;
     fn show(&self, ticket: &Ticket, phase: &str, error: Option<&str>);
 }
 
@@ -48,6 +49,9 @@ struct Control {
     history: Option<History>,
     released: Option<Duration>,
     project_words: Arc<OnceLock<Vec<String>>>,
+    command: bool,
+    held: Option<bool>,
+    cleanup: Arc<OnceLock<Option<super::cleanup::Choice>>>,
 }
 
 struct History {
@@ -57,6 +61,7 @@ struct History {
     language: Option<String>,
     heard: Option<String>,
     style: &'static str,
+    output_language: Option<String>,
     timings: Timings,
 }
 
@@ -80,6 +85,9 @@ pub(crate) struct Status {
     text: Option<String>,
     words: Option<usize>,
     caption_until: Option<i64>,
+    command: bool,
+    result: Option<String>,
+    expires_at: Option<i64>,
 }
 
 impl Control {
@@ -91,6 +99,7 @@ impl Control {
         self.history = None;
         self.released = None;
         self.project_words = Arc::default();
+        self.cleanup = Arc::default();
         self.target = None;
         self.insertion = None;
         self.session = None;
@@ -100,13 +109,125 @@ impl Control {
 }
 
 #[derive(Clone)]
-pub(super) struct Ticket {
+pub(crate) struct Ticket {
     control: Arc<Mutex<Control>>,
     generation: u64,
     stop: Arc<AtomicBool>,
+    command: bool,
+    cleanup: Arc<OnceLock<Option<super::cleanup::Choice>>>,
+}
+
+impl std::fmt::Debug for Ticket {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Ticket")
+            .field("generation", &self.generation)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Ticket {
+    #[cfg(test)]
+    pub(crate) fn test_command() -> Self {
+        let control = Arc::new(Mutex::new(Control {
+            command: true,
+            busy: true,
+            ..Control::default()
+        }));
+        Self::new(&control, &control.lock().unwrap())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_cancel(&self) {
+        self.control.lock().unwrap().next();
+    }
+
+    pub(super) fn pin_cleanup(&self, choice: Option<super::cleanup::Choice>) {
+        let _ = self.cleanup.set(choice);
+    }
+    pub(super) fn cleanup_choice(&self) -> Option<super::cleanup::Choice> {
+        self.cleanup.get().cloned().flatten()
+    }
+    pub(super) fn history_cleanup(&self, took: Duration, applied: Option<vults_dictation::styles::Resolved>) {
+        let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
+        if state.generation == self.generation
+            && let Some(history) = &mut state.history
+        {
+            history.timings.cleanup_ms = Some(milliseconds(took));
+            if let Some(applied) = applied {
+                history.style = applied.style.id();
+                history.output_language = applied.write_in.map(|language| language.code().into());
+            }
+        }
+    }
+    pub fn is_command(&self) -> bool {
+        self.command
+    }
+
+    /// Admission and cancellation have one ordering; the closure only reads cached data/reduces core.
+    pub fn dispatch<T>(&self, run: impl FnOnce() -> T) -> Option<T> {
+        let state = self.control.lock().unwrap_or_else(|e| e.into_inner());
+        (state.generation == self.generation).then(run)
+    }
+
+    pub fn command_result(
+        &self,
+        phase: &str,
+        result: String,
+        heard: &str,
+        deadline: Option<Instant>,
+    ) -> Option<Status> {
+        {
+            let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
+            if state.generation != self.generation {
+                return None;
+            }
+            if let Some(history) = &mut state.history {
+                history.heard = Some(heard.into());
+                history.style = "command";
+            }
+        }
+        let mut status = self.notice(phase, None)?;
+        status.text = Some(heard.into());
+        status.result = Some(result);
+        if let Some(deadline) = deadline {
+            status.expires_at = Some(
+                crate::traces::now_ms()
+                    .saturating_add(milliseconds(deadline.saturating_duration_since(Instant::now()))),
+            );
+        }
+        let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
+        if state.generation != self.generation {
+            return None;
+        }
+        state.notice = Some((status.clone(), Instant::now()));
+        Some(status)
+    }
+
+    pub fn command_history(&self, text: &str, result: &str) -> Option<(vults_store::dictations::Entry, u64)> {
+        let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
+        if state.generation != self.generation {
+            return None;
+        }
+        let history = state.history.take()?;
+        Some((
+            vults_store::dictations::Entry {
+                at: history.at,
+                app: None,
+                session: None,
+                heard: text.into(),
+                text: result.into(),
+                style: "command".into(),
+                language: history.language,
+                output_language: history.output_language,
+                secs: history.secs?,
+                words: i64::try_from(vults_dictation::word_count(text)).ok()?,
+                fixes: None,
+                outcome: "command".into(),
+                timings: history.timings,
+            },
+            history.epoch,
+        ))
+    }
     pub fn project_words(&self) -> Arc<OnceLock<Vec<String>>> {
         let state = self.control.lock().unwrap_or_else(|e| e.into_inner());
         if state.generation == self.generation {
@@ -133,6 +254,7 @@ impl Ticket {
                 language: None,
                 heard: None,
                 style: "verbatim",
+                output_language: None,
                 timings: Timings::default(),
             });
         }
@@ -187,6 +309,7 @@ impl Ticket {
                 text,
                 style: style.into(),
                 language: history.language,
+                output_language: history.output_language,
                 secs: history.secs?,
                 words,
                 fixes: None,
@@ -197,7 +320,19 @@ impl Ticket {
         ))
     }
 
-    pub fn prepare_text(&self, heard: &str, config: &Config) -> Result<Option<String>, String> {
+    pub(super) fn prepare_text(&self, heard: &str, config: &Config) -> Result<Option<String>, String> {
+        if self.is_command() {
+            return Ok(self.valid().then(|| heard.to_owned()));
+        }
+        self.prepare_output(heard, config)
+            .map(|output| output.map(|p| p.text()))
+    }
+
+    pub(super) fn prepare_output(
+        &self,
+        heard: &str,
+        config: &Config,
+    ) -> Result<Option<vults_dictation::text::Processed>, String> {
         let started = Instant::now();
         let technical = {
             let state = self.control.lock().unwrap_or_else(|e| e.into_inner());
@@ -235,10 +370,10 @@ impl Ticket {
                 }
             };
         }
-        Ok(Some(text))
+        Ok(Some(output))
     }
 
-    pub fn pin_session(&self, session: super::SessionTarget) {
+    pub(super) fn pin_session(&self, session: super::SessionTarget) {
         let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
         if state.generation == self.generation && state.busy {
             if let Some(target) = &mut state.target {
@@ -248,7 +383,7 @@ impl Ticket {
         }
     }
 
-    pub fn session(&self) -> Option<Arc<super::SessionTarget>> {
+    pub(super) fn session(&self) -> Option<Arc<super::SessionTarget>> {
         let state = self.control.lock().unwrap_or_else(|e| e.into_inner());
         (state.generation == self.generation)
             .then(|| state.session.clone())
@@ -284,6 +419,17 @@ impl Ticket {
             .then(|| state.last.clone())
             .flatten();
         let status = Status {
+            command: state.command,
+            result: None,
+            expires_at: terminal(phase).then(|| {
+                crate::traces::now_ms().saturating_add(if phase == "asked" {
+                    90_000
+                } else if phase == "failed" {
+                    8_000
+                } else {
+                    3_000
+                })
+            }),
             sequence: state.sequence,
             generation: self.generation,
             phase: phase.to_owned(),
@@ -305,11 +451,7 @@ impl Ticket {
                 .flatten(),
             words: text.as_deref().map(vults_dictation::word_count),
             text,
-            caption_until: matches!(
-                phase,
-                "session" | "held" | "pasted" | "copied" | "empty" | "cancelled" | "failed"
-            )
-            .then(|| crate::traces::now_ms().saturating_add(2_000)),
+            caption_until: terminal(phase).then(|| crate::traces::now_ms().saturating_add(2_000)),
         };
         state.notice = Some((status.clone(), Instant::now()));
         Some(status)
@@ -377,6 +519,8 @@ impl Ticket {
             control: control.clone(),
             generation: state.generation,
             stop: state.stop.clone(),
+            command: state.command,
+            cleanup: state.cleanup.clone(),
         }
     }
     pub fn stop(&self) -> &AtomicBool {
@@ -433,16 +577,27 @@ impl State {
         self.cancel(false);
         // The old binding may never release; it must not latch the replacement key.
         let _ = self.key_at("talk", false, Instant::now());
+        let _ = self.key_at("talk-command", false, Instant::now());
     }
 
     pub fn status(&self) -> Option<Status> {
         let state = self.control.lock().unwrap_or_else(|e| e.into_inner());
         let (status, since) = state.notice.as_ref()?;
-        let terminal = matches!(
-            status.phase.as_str(),
-            "session" | "held" | "pasted" | "copied" | "empty" | "cancelled" | "failed"
-        );
-        if terminal && since.elapsed() > Duration::from_secs(if status.phase == "failed" { 8 } else { 3 }) {
+        let terminal = terminal(&status.phase);
+        if status
+            .expires_at
+            .is_some_and(|until| crate::traces::now_ms() >= until)
+        {
+            return None;
+        }
+        let duration = if status.phase == "asked" {
+            90
+        } else if status.phase == "failed" {
+            8
+        } else {
+            3
+        };
+        if terminal && since.elapsed() > Duration::from_secs(duration) {
             return None;
         }
         let mut snapshot = status.clone();
@@ -508,14 +663,36 @@ impl State {
             return None;
         }
         let key = match (id, down) {
-            ("talk", true) => KeyEvent::Press,
-            ("talk", false) => KeyEvent::Release,
+            ("talk" | "talk-command", true) => KeyEvent::Press,
+            ("talk" | "talk-command", false) => KeyEvent::Release,
             ("talk-cancel", true) => {
                 self.cancel(false);
                 return None;
             }
             _ => return None,
         };
+        {
+            let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
+            let command = id == "talk-command";
+            if down {
+                if state.held.is_some() {
+                    return None;
+                }
+                if state.command != command {
+                    state.keys = KeyLogic::default();
+                    state.next();
+                }
+                state.command = command;
+                state.held = Some(command);
+            } else {
+                if state.held.is_some_and(|held| held != command)
+                    || (state.held.is_none() && state.command != command)
+                {
+                    return None;
+                }
+                state.held = None;
+            }
+        }
         if let Some(command) = event(
             &self.control,
             key,
@@ -537,6 +714,7 @@ impl State {
             return Err("Dictation is busy. Finish or cancel it first.".into());
         }
         control.next();
+        control.command = false;
         control.busy = true;
         let text = text.or_else(|| control.last.clone()).unwrap_or_default();
         let ticket = Ticket::new(&self.control, &control);
@@ -547,19 +725,31 @@ impl State {
         Ok(())
     }
 
+    pub fn cancel_commands(&self) {
+        self.cancel_current(false, true);
+    }
+
     pub fn cancel(&self, forget: bool) {
+        self.cancel_current(forget, false);
+    }
+
+    fn cancel_current(&self, forget: bool, commands_only: bool) {
         let mut control = self.control.lock().unwrap_or_else(|e| e.into_inner());
+        if commands_only && !control.command {
+            return;
+        }
         let active = control.busy || control.keys.phase() != Phase::Idle;
-        if !active && !forget {
+        if !active && !forget && !commands_only {
             return;
         }
         control.keys.reset();
+        control.held = None;
         control.next();
         control.busy = false;
         if forget {
             control.last = None;
         }
-        if !active {
+        if !active && !commands_only {
             return;
         }
         let ticket = Ticket::new(&self.control, &control);
@@ -572,7 +762,15 @@ impl State {
 fn event(control: &Arc<Mutex<Control>>, key: KeyEvent, now: Duration) -> Option<Command> {
     let mut state = control.lock().unwrap_or_else(|e| e.into_inner());
     if key == KeyEvent::Press {
-        let options = state.options;
+        let options = if state.command {
+            GestureOptions {
+                double_tap: false,
+                space_lock: false,
+                escape_cancel: true,
+            }
+        } else {
+            state.options
+        };
         state.keys.configure(options);
     }
     let action = state.keys.update(key, now)?;
@@ -601,6 +799,7 @@ fn raw_event(ticket: &Ticket, key: vults_platform::raw_keys::Key, now: Duration)
     };
     if action == Action::Cancel {
         state.keys.reset();
+        state.held = None;
         state.next();
         state.busy = false;
     }
@@ -747,6 +946,9 @@ impl<B: Backend> Worker<B> {
         }
         let delivery_started = Instant::now();
         let result = match result {
+            Ok(Some(text)) if !text.is_empty() && ticket.is_command() => {
+                self.backend.command(text, ticket.clone()).map(|()| "working")
+            }
             Ok(Some(text)) if !text.is_empty() => match self.backend.copy(text, ticket.clone()) {
                 Ok(Some(vults_platform::insert::Outcome::Pasted)) => Ok("pasted"),
                 Ok(Some(vults_platform::insert::Outcome::Copied)) => Ok("copied"),
@@ -785,6 +987,8 @@ impl<B: Backend> Worker<B> {
         }
         self.keys = None;
         match result {
+            // The runtime owns the final command result, which may already have arrived.
+            Ok("working") if ticket.is_command() => {}
             Ok(phase) => self.backend.show(&ticket, phase, None),
             Err(error) => self.backend.show(&ticket, "failed", Some(&error)),
         }
@@ -797,4 +1001,22 @@ impl<B: Backend> Worker<B> {
 
 fn milliseconds(elapsed: Duration) -> i64 {
     i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
+}
+
+fn terminal(phase: &str) -> bool {
+    matches!(
+        phase,
+        "session"
+            | "held"
+            | "pasted"
+            | "copied"
+            | "empty"
+            | "cancelled"
+            | "failed"
+            | "commanded"
+            | "answered"
+            | "asked"
+            | "refused"
+            | "unknown"
+    )
 }

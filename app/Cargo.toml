@@ -24,7 +24,7 @@ vults-agent-config.workspace = true
 vults-platform.workspace = true
 vults-chat.workspace = true
 vults-media.workspace = true
-vults-voice.workspace = true
+vults-voice = { workspace = true, features = ["meeting-assets"] }
 vults-audio.workspace = true
 vults-dictation.workspace = true
 vults-store.workspace = true
@@ -50,12 +50,17 @@ tokio.workspace = true
 
 # Voice on the GPU (Vulkan) on Linux: 6x to 30x faster than the CPU. Windows stays on the CPU for now.
 [target.'cfg(target_os = "linux")'.dependencies]
+vults-audio = { workspace = true, features = ["meeting-capture"] }
 vults-voice = { workspace = true, features = ["vulkan"] }
 # Desktop notifications (org.freedesktop.Notifications): the zbus already in the tree, no new crate.
 zbus = { version = "5", default-features = false, features = ["tokio"] }
 futures-util = { version = "0.3", default-features = false }
 # The Nest's window: a hidden webview marked no-show-all (the gtk already in the tree).
 gtk = "0.18"
+
+[features]
+# Developer preview only; normal builds retain the diarization quality gate.
+meeting-speakers = ["vults-voice/diarization"]
 
 [lints]
 workspace = true

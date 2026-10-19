@@ -9,6 +9,7 @@ mod continuation;
 #[cfg(target_os = "linux")]
 mod dictation;
 mod dictation_history;
+mod dictation_overlay;
 mod dictation_words;
 mod doctor;
 mod flock_tools;
@@ -22,6 +23,8 @@ mod lock;
 mod log;
 mod mcp;
 mod media;
+mod meeting_assets;
+mod meetings;
 mod memory;
 mod mentions;
 mod notify;
@@ -35,14 +38,13 @@ mod records;
 mod roosts;
 mod runtime;
 mod settings;
-#[cfg(target_os = "linux")]
-mod shortcut_route;
 mod sleep;
 mod spend;
 mod traces;
 mod tray;
 mod usage;
 mod voice;
+pub mod voice_commands;
 mod web_tools;
 mod widget;
 mod writer;
@@ -75,7 +77,7 @@ pub(crate) fn settings_page<R: tauri::Runtime>(window: &tauri::Webview<R>) -> Re
 
 /// The windows that are layer surfaces (mapped once at a fixed size, one input region each).
 /// Each needs an entry in `layer_spec`, `app/capabilities/` and, for its own page, `ui/vite.config.ts`.
-pub const SURFACES: &[&str] = &[ISLAND, WIDGET];
+pub const SURFACES: &[&str] = &[ISLAND, WIDGET, dictation_overlay::LABEL];
 
 /// How each surface sits on the screen.
 #[cfg(target_os = "linux")]
@@ -96,6 +98,7 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
         }
         // Never built from here: `widget::build` uses the corner the setting holds.
         WIDGET => Some(widget::layer_spec(widget::Corner::BottomRight)),
+        dictation_overlay::LABEL => Some(dictation_overlay::layer_spec()),
         _ => None,
     }
 }
@@ -156,6 +159,7 @@ pub fn run() {
             nest_connections_place,
             nest_connections_place_set,
             nest_tab_set,
+            dictation_section_set,
             nest_record_query,
             nest_flock_place,
             nest_close,
@@ -233,6 +237,12 @@ pub fn run() {
             settings::set_dictation_caption,
             settings::set_dictation_sound,
             settings::set_dictation_gesture,
+            settings::set_dictation_commands,
+            settings::set_dictation_cleanup,
+            settings::set_meeting_summary,
+            settings::set_dictation_style_options,
+            settings::dictation_styles,
+            settings::set_dictation_app_style,
             settings::set_dictation_processing,
             settings::set_dictation_music,
             settings::dictation_microphones,
@@ -291,6 +301,21 @@ pub fn run() {
             shortcut_keys,
             open_shortcut_settings,
             dictation_status,
+            dictation_overlay::dictation_overlay_ready,
+            dictation_overlay::dictation_overlay_started,
+            meetings::meeting_status,
+            meetings::meeting_transcript,
+            meetings::summary::meeting_summary_status,
+            meetings::summary::meeting_summary_begin,
+            meetings::summary::meeting_summary_cancel,
+            meetings::meeting_prepare,
+            meetings::meeting_begin,
+            meetings::meeting_end,
+            meetings::meeting_recover,
+            meeting_assets::meeting_assets_status,
+            meeting_assets::meeting_assets_review,
+            meeting_assets::meeting_assets_begin,
+            meeting_assets::meeting_assets_cancel,
             dictation_history::dictation_history,
             dictation_history::dictation_statistics,
             dictation_words::dictation_words,
@@ -305,6 +330,9 @@ pub fn run() {
             first_name,
         ])
         .on_window_event(|win, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) && win.label() == dictation_overlay::LABEL {
+                dictation_overlay::reset(win.app_handle());
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event
                 && SURFACES.contains(&win.label())
             {
@@ -350,9 +378,14 @@ pub fn run() {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             handle.manage(media::MediaState::default());
+            handle.manage(dictation_overlay::Ready::default());
             handle.manage(voice::VoiceState::default());
+            meetings::init(&handle);
+            handle.manage(meeting_assets::AssetsState::default());
             handle.manage(usage::UsageState::default());
             init_surface(&handle, ISLAND);
+            #[cfg(target_os = "linux")]
+            dictation_overlay::build(&handle);
             panel::apply(&handle);
             widget::apply(&handle);
             media::apply(&handle, settings::now_playing(&handle));
@@ -402,10 +435,13 @@ pub fn run() {
             app.run(|app, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
+                    meetings::shutdown(app);
+                    meeting_assets::shutdown(app);
                     #[cfg(target_os = "linux")]
                     {
                         dictation::permission::shutdown(app);
                         dictation::cancel(app, true);
+                        dictation::cleanup::shutdown(app);
                     }
                     save_nest_size(app);
                     vults_ipc::remove_socket();
@@ -451,7 +487,9 @@ pub fn place_surfaces(app: &AppHandle) {
         };
         let wanted = settings::monitor(app);
         let _ = app.run_on_main_thread(move || {
-            if let Ok(gtk) = win.gtk_window() {
+            if *label == dictation_overlay::LABEL {
+                dictation_overlay::place(&win);
+            } else if let Ok(gtk) = win.gtk_window() {
                 vults_platform::linux::place(&gtk, label, wanted.as_deref());
             }
         });
@@ -494,6 +532,32 @@ mod label_tests {
         assert!(open_shortcut_settings(nest.as_ref().clone()).is_err());
         assert!(open_shortcut_settings(island.as_ref().clone()).is_err());
         for view in [nest.as_ref(), island.as_ref()] {
+            assert!(settings::set_meeting_summary(app.handle().clone(), view.clone(), true).is_err());
+            assert!(settings::set_dictation_cleanup(app.handle().clone(), view.clone(), true).is_err());
+            assert!(
+                settings::set_dictation_style_options(
+                    app.handle().clone(),
+                    view.clone(),
+                    vults_dictation::cleanup::Style::Natural,
+                    None,
+                    false
+                )
+                .is_err()
+            );
+            assert!(settings::dictation_styles(view.clone()).is_err());
+            assert!(
+                settings::set_dictation_app_style(
+                    app.handle().clone(),
+                    view.clone(),
+                    "Konsole".into(),
+                    Some(vults_dictation::cleanup::Style::Prompt)
+                )
+                .is_err()
+            );
+            assert!(
+                settings::set_dictation_commands(app.handle().clone(), view.clone(), "chat".into(), true)
+                    .is_err()
+            );
             assert!(
                 settings::set_dictation_music(
                     app.handle().clone(),
@@ -649,9 +713,59 @@ mod tests {
             super::restored_tab(None, Some("dictation-statistics"), false),
             "dictation-statistics"
         );
+        for tab in [
+            "dictation-history",
+            "dictation-commands",
+            "dictation-dictionary",
+            "dictation-snippets",
+        ] {
+            assert_eq!(super::restored_tab(Some(tab), None, false), tab);
+        }
         assert_eq!(super::restored_tab(Some("<script>"), Some("cost"), true), "cost");
         assert_eq!(super::restored_tab(None, None, true), "flock");
         assert_eq!(super::restored_tab(None, Some("tasks"), true), "flock");
+    }
+
+    #[test]
+    fn dictation_restores_only_a_known_configuration_for_its_own_tab() {
+        for section in [
+            "dictationvoice",
+            "dictationkeys",
+            "dictationcommands",
+            "dictationwords",
+            "dictationstyles",
+            "dictationmeetings",
+            "dictationpaste",
+            "dictationprivacy",
+            "dictationdiagnostics",
+        ] {
+            assert_eq!(
+                super::restored_dictation_section(Some("dictation"), Some(section)),
+                Some(section)
+            );
+            for tab in [
+                None,
+                Some("chat"),
+                Some("settings"),
+                Some("dictation-history"),
+                Some("dictation-dictionary"),
+            ] {
+                assert_eq!(super::restored_dictation_section(tab, Some(section)), None);
+            }
+        }
+        for invalid in [
+            "",
+            "agents",
+            "dictation",
+            "dictation-history",
+            "dictationstyles<script>",
+        ] {
+            assert_eq!(
+                super::restored_dictation_section(Some("dictation"), Some(invalid)),
+                None
+            );
+        }
+        assert_eq!(super::restored_dictation_section(Some("dictation"), None), None);
     }
 
     #[test]
@@ -789,7 +903,7 @@ fn open_shortcut_settings<R: tauri::Runtime>(window: tauri::Webview<R>) -> Resul
 
 /// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
 /// core; the rest go to the island, which decides whether a card is on screen to answer (a press
-/// with nothing waiting does nothing). Allow, Deny and Talk go to the Nest while the user is in it.
+/// with nothing waiting does nothing). Allow and Deny go to the Nest while the user is in it.
 #[cfg(target_os = "linux")]
 fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;
@@ -798,18 +912,16 @@ fn listen_shortcuts(app: &AppHandle) {
         let emit = app.clone();
         let keys = app.clone();
         let words = app.clone();
-        let router = std::sync::Arc::new(std::sync::Mutex::new(shortcut_route::Router::default()));
-        let bound_router = router.clone();
         let result = vults_platform::shortcuts::listen(
             vults_brand::BUNDLE_ID,
             move |id| vults_core::i18n::dictation_shortcut(settings::lang(&words), id).map(str::to_owned),
             move |bound| {
                 // Rebinding may not deliver the old key's release.
-                bound_router.lock().unwrap_or_else(|e| e.into_inner()).reset();
                 if let Some(state) = keys.try_state::<dictation::State>() {
                     state.shortcuts_changed();
                 }
                 voice::cancel(&keys);
+                runtime::cancel_voice_commands(&keys);
                 for surface in [ISLAND, NEST] {
                     let _ = keys.emit_to(surface, "shortcut", "talk-cancel");
                 }
@@ -849,46 +961,8 @@ fn listen_shortcuts(app: &AppHandle) {
                     }
                     return;
                 }
-                if id == "talk-again" {
+                if matches!(id, "talk" | "talk-again" | "talk-command") {
                     dictation::key(&emit, id, down);
-                    return;
-                }
-                if id == "talk" {
-                    use shortcut_route::{Surface, Target};
-                    let focus = if NEST_IN.lock().map(|s| s.0).unwrap_or(false) {
-                        if NEST_HOLDS.load(Ordering::Relaxed) {
-                            Surface::Nest
-                        } else {
-                            Surface::Other
-                        }
-                    } else if emit
-                        .get_webview_window(ISLAND)
-                        .is_some_and(|w| w.is_focused().unwrap_or(false))
-                    {
-                        Surface::Island
-                    } else if emit.windows().values().any(|w| w.is_focused().unwrap_or(false)) {
-                        Surface::Other
-                    } else {
-                        Surface::External
-                    };
-                    let target = router.lock().unwrap_or_else(|e| e.into_inner()).talk(
-                        down,
-                        focus,
-                        settings::zeca(&emit),
-                        dictation::active(&emit),
-                    );
-                    match target {
-                        Some(Target::Dictation) => dictation::key(&emit, id, down),
-                        Some(target) => {
-                            if down {
-                                dictation::cancel(&emit, false);
-                            }
-                            let to = if target == Target::Nest { NEST } else { ISLAND };
-                            let event = if down { "talk" } else { "talk-up" };
-                            let _ = emit.emit_to(to, "shortcut", event);
-                        }
-                        None => {}
-                    }
                     return;
                 }
                 // Ctrl+Alt+Space is also Open: Space-lock must keep the recording's focus.
@@ -958,6 +1032,24 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
         nest_window(app, None, None, full);
         return;
     }
+    let section = DICTATION_SECTION.lock().ok().and_then(|s| s.clone());
+    if let Some(section) = restored_dictation_section(tab, section.as_deref()) {
+        nest_window(app, None, Some(section), full);
+        return;
+    }
+    if matches!(
+        tab,
+        Some(
+            "dictation-history"
+                | "dictation-commands"
+                | "dictation-dictionary"
+                | "dictation-snippets"
+                | "dictation-meetings"
+        )
+    ) && let Ok(mut section) = DICTATION_SECTION.lock()
+    {
+        *section = None;
+    }
     // An existing webview already owns its current tab; restore only after recreation.
     if tab.is_none() && app.get_webview(NEST).is_some() {
         nest_window(app, Some(""), None, full);
@@ -972,6 +1064,37 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
 }
 
 static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+// Only presentation survives tab changes; configuration stays in its own webview.
+static DICTATION_SECTION: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+fn valid_dictation_section(section: &str) -> bool {
+    matches!(
+        section,
+        "dictationvoice"
+            | "dictationkeys"
+            | "dictationcommands"
+            | "dictationwords"
+            | "dictationstyles"
+            | "dictationmeetings"
+            | "dictationpaste"
+            | "dictationprivacy"
+            | "dictationdiagnostics"
+    )
+}
+
+fn restored_dictation_section<'a>(tab: Option<&str>, section: Option<&'a str>) -> Option<&'a str> {
+    section.filter(|section| tab == Some("dictation") && valid_dictation_section(section))
+}
+
+#[tauri::command]
+fn dictation_section_set(window: tauri::Webview, section: String) -> Result<(), String> {
+    settings_page(&window)?;
+    if !valid_dictation_section(&section) {
+        return Err("Invalid Dictation navigation state.".into());
+    }
+    *DICTATION_SECTION.lock().map_err(|e| e.to_string())? = Some(section);
+    Ok(())
+}
 
 #[derive(Default)]
 struct RecordQueries {
@@ -1108,6 +1231,11 @@ fn valid_nest_tab(tab: &str) -> bool {
             | "activity"
             | "connections"
             | "dictation"
+            | "dictation-history"
+            | "dictation-commands"
+            | "dictation-dictionary"
+            | "dictation-snippets"
+            | "dictation-meetings"
             | "dictation-statistics"
             | "week"
             | "projects"
@@ -1240,11 +1368,15 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                             // Both webviews' headers show it.
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0021).
+                            if minimized {
+                                meetings::cancel(&app2);
+                            }
                             let _ = app2.emit_to(ISLAND, "nest-open", !minimized);
                         }
                     }
                     tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
                     tauri::WindowEvent::Destroyed => {
+                        meetings::cancel(&app2);
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
                         nest_holds(&app2, Some(false), Some(false));
                         save_nest_size(&app2);

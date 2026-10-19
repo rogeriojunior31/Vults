@@ -1,0 +1,40 @@
+@import "../../themes.css";
+@import "../../dictation.css";
+
+html, body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+body.dictation-overlay .dictation-status {
+  bottom: 10px;
+  max-width: calc(100% - 32px);
+  min-height: 38px;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--float);
+  color: var(--fg);
+}
+.dictation-overlay .dictation-status:is([data-phase="listening"], [data-phase="locked"]) {
+  min-width: 128px;
+  justify-content: center;
+}
+.dictation-overlay .dictation-status:is([data-phase="listening"], [data-phase="locked"]) .dictation-words {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.dictation-overlay .dictation-status[data-phase="locked"] { border-color: var(--warn); }
+.dictation-overlay .dictation-status[data-phase="failed"] { color: var(--error-text); }
+.dictation-overlay .dictation-bands { height: 20px; gap: 3px; }
+.dictation-overlay .dictation-bands i { height: 20px; width: 3px; }
+.dictation-overlay .dictation-caption {
+  border: 1px solid var(--border);
+  background: var(--float);
+}

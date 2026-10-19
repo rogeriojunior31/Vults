@@ -2,8 +2,13 @@
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
 //! polls, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
-//! summary, the memory's suggestions and Zeca's sleep. Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
-//! way out from appearing unlisted.
+//! summary, the memory's suggestions, Zeca's sleep, opted-in dictation clean-up and meeting summaries.
+//! Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
+//! way out from appearing unlisted. Explicit meeting installation uses its own one-use review
+//! adapter below, with durable admission for every HTTP attempt.
+
+mod meeting_assets;
+pub use meeting_assets::MeetingAssetsGate;
 
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -38,8 +43,45 @@ pub const SUGGEST_BUDGET: usize = 20;
 /// a later pass).
 pub const SLEEP: &str = "sleep";
 pub const SLEEP_BUDGET: usize = 4;
+pub const CLEANUP: &str = "dictation-cleanup";
+pub const CLEANUP_BUDGET: usize = 2000;
+pub const MEETING_SUMMARY: &str = "meeting-summary";
+pub const MEETING_SUMMARY_BUDGET: usize = 20;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
+
+/// Own a durable admission until its async caller receives it, including detached blocking work.
+pub(crate) struct Reservation {
+    span: Option<Span>,
+    directory: std::path::PathBuf,
+    started: Instant,
+}
+impl Reservation {
+    pub(crate) fn new(span: Span, directory: std::path::PathBuf) -> Self {
+        Self {
+            span: Some(span),
+            directory,
+            started: Instant::now(),
+        }
+    }
+    pub(crate) fn take(mut self) -> Option<Span> {
+        self.span.take()
+    }
+}
+impl Drop for Reservation {
+    fn drop(&mut self) {
+        if let Some(mut span) = self.span.take() {
+            span.end_ms = span
+                .start_ms
+                .saturating_add(i64::try_from(self.started.elapsed().as_millis()).unwrap_or(i64::MAX));
+            span.status = "error".into();
+            span.attrs["vults.outcome"] = json!("cancelled");
+            if let Ok(mut store) = vults_store::Store::open_current(&self.directory) {
+                let _ = store.finish_request(&span);
+            }
+        }
+    }
+}
 
 /// Requests one feature may make in any 24 hours. A feature not named here has none: it must
 /// choose its budget before its first request.
@@ -51,6 +93,9 @@ pub fn budget(feature: &str) -> usize {
         JOURNAL => JOURNAL_BUDGET,
         SUGGEST => SUGGEST_BUDGET,
         SLEEP => SLEEP_BUDGET,
+        CLEANUP => CLEANUP_BUDGET,
+        MEETING_SUMMARY => MEETING_SUMMARY_BUDGET,
+        meeting_assets::FEATURE => meeting_assets::BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
     }
@@ -58,7 +103,13 @@ pub fn budget(feature: &str) -> usize {
 
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
-    if feature == USAGE {
+    if feature == meeting_assets::FEATURE {
+        false
+    } else if feature == MEETING_SUMMARY {
+        s.meeting_summary && s.meeting_summary_budget.is_some()
+    } else if feature == CLEANUP {
+        s.dictation_cleanup && s.dictation_cleanup_budget.is_some()
+    } else if feature == USAGE {
         s.codex_usage.unwrap_or(false)
     } else if feature == WEB {
         s.web
@@ -130,13 +181,67 @@ impl NetGate {
 
 impl vults_connectors::Gate for NetGate {
     fn allow(&self, connector: &str) -> bool {
-        self.allow_at(connector, Instant::now())
+        connector != CLEANUP
+            && connector != MEETING_SUMMARY
+            && connector != meeting_assets::FEATURE
+            && self.allow_at(connector, Instant::now())
     }
 
     fn done(&self, connector: &str, ok: bool, took: Duration) {
         let end_ms = crate::traces::now_ms();
         let took_ms = i64::try_from(took.as_millis()).unwrap_or(0);
         (self.trace)(request_span(connector, ok, end_ms - took_ms, end_ms));
+    }
+}
+
+impl NetGate {
+    /// N3 needs a durable admission before sending, including local calls and interrupted attempts.
+    #[cfg(any(target_os = "linux", test))]
+    pub fn reserve_cleanup(
+        &self,
+        store: &mut vults_store::Store,
+        identity: &str,
+        provider: &str,
+        model: &str,
+        local: bool,
+    ) -> Option<Span> {
+        self.reserve_text(store, identity, CLEANUP, provider, model, local)
+    }
+
+    pub fn reserve_meeting_summary(
+        &self,
+        store: &mut vults_store::Store,
+        identity: &str,
+        provider: &str,
+        model: &str,
+        local: bool,
+    ) -> Option<Span> {
+        self.reserve_text(store, identity, MEETING_SUMMARY, provider, model, local)
+    }
+
+    fn reserve_text(
+        &self,
+        store: &mut vults_store::Store,
+        identity: &str,
+        feature: &str,
+        provider: &str,
+        model: &str,
+        local: bool,
+    ) -> Option<Span> {
+        if !self.allow_at(feature, Instant::now()) {
+            return None;
+        }
+        let now = crate::traces::now_ms();
+        let mut span = request_span(feature, false, now, now);
+        span.status = "started".into();
+        span.attrs["vults.provider"] = json!(provider);
+        span.attrs["gen_ai.request.model"] = json!(model);
+        span.attrs["vults.local"] = json!(local);
+        store
+            .reserve_request(identity, feature, budget(feature), &span)
+            .ok()
+            .filter(|ok| *ok)
+            .map(|_| span)
     }
 }
 
@@ -151,6 +256,8 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(JOURNAL);
         features.push(SUGGEST);
         features.push(SLEEP);
+        features.push(CLEANUP);
+        features.push(MEETING_SUMMARY);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -196,6 +303,9 @@ fn feature(key: &str) -> &'static str {
         JOURNAL => "journal",
         SUGGEST => "memory",
         SLEEP => "sleep",
+        CLEANUP => "dictation-cleanup",
+        MEETING_SUMMARY => "meeting-summary",
+        meeting_assets::FEATURE => "meeting-assets",
         _ => "connectors",
     }
 }
@@ -204,18 +314,24 @@ fn feature(key: &str) -> &'static str {
 /// give a fresh budget.
 pub fn seed(features: &[&str]) -> BTreeMap<String, Vec<i64>> {
     let since = crate::traces::now_ms() - DAY_MS;
-    let Ok(store) = vults_store::Store::open(&crate::history::dir()) else {
-        return BTreeMap::new();
-    };
+    let store = vults_store::Store::open(&crate::history::dir());
     features
         .iter()
         .map(|c| {
-            (
-                c.to_string(),
+            let times = if matches!(*c, CLEANUP | MEETING_SUMMARY) {
                 store
-                    .span_starts("request", &span_name(c), since)
-                    .unwrap_or_default(),
-            )
+                    .as_ref()
+                    .ok()
+                    .and_then(|s| s.request_attempt_starts(c, since).ok())
+                    .unwrap_or_else(|| vec![crate::traces::now_ms(); budget(c)])
+            } else {
+                store
+                    .as_ref()
+                    .ok()
+                    .and_then(|s| s.span_starts("request", &span_name(c), since).ok())
+                    .unwrap_or_default()
+            };
+            (c.to_string(), times)
         })
         .collect()
 }
@@ -406,6 +522,109 @@ mod tests {
         assert!(!switched_on(&s, PHONE));
         s.phone = true;
         assert!(switched_on(&s, PHONE) && !switched_on(&s, WEB));
+    }
+
+    #[test]
+    fn cleanup_has_an_independent_opt_in_and_durable_non_bypassable_admission() {
+        use vults_connectors::Gate;
+        let mut settings = crate::settings::Settings::default();
+        settings.connectors.insert(CLEANUP.into(), true);
+        assert!(!switched_on(&settings, CLEANUP));
+        settings.dictation_cleanup = true;
+        assert!(!switched_on(&settings, CLEANUP));
+        settings.dictation_cleanup_budget = Some("fixture".into());
+        assert!(switched_on(&settings, CLEANUP));
+        assert_eq!(budget(CLEANUP), 2000);
+        let dir = std::env::temp_dir().join(format!("vults-cleanup-gate-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = vults_store::Store::open(&dir).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let (off, _) = gate(false, 2, BTreeMap::new());
+        assert!(
+            off.reserve_cleanup(&mut store, &identity, "ollama", "fixture", true)
+                .is_none()
+        );
+        let (on, _) = gate(true, 2, BTreeMap::new());
+        assert!(
+            !on.allow(CLEANUP),
+            "Generic admission cannot bypass durable reservation"
+        );
+        let span = on
+            .reserve_cleanup(&mut store, &identity, "ollama", "fixture", true)
+            .unwrap();
+        assert_eq!(
+            span.attrs,
+            json!({"vults.feature":"dictation-cleanup","vults.target":"dictation-cleanup","vults.provider":"ollama","gen_ai.request.model":"fixture","vults.local":true})
+        );
+        assert!(
+            on.reserve_cleanup(&mut store, &identity, "ollama", "fixture", true)
+                .is_some()
+        );
+        assert!(
+            on.reserve_cleanup(&mut store, &identity, "ollama", "fixture", true)
+                .is_none()
+        );
+        assert_eq!(store.request_attempt_starts(CLEANUP, 0).unwrap().len(), 2);
+        assert_eq!(store.spans(10).unwrap().len(), 2);
+        drop(store);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn meeting_summary_requires_separate_consent_and_twenty_durable_attempts_even_locally() {
+        use vults_connectors::Gate;
+        let mut settings = crate::settings::Settings::default();
+        settings.connectors.insert(MEETING_SUMMARY.into(), true);
+        settings.dictation_cleanup = true;
+        settings.dictation_cleanup_budget = Some("cleanup".into());
+        assert!(!switched_on(&settings, MEETING_SUMMARY));
+        settings.meeting_summary = true;
+        assert!(!switched_on(&settings, MEETING_SUMMARY));
+        settings.meeting_summary_budget = Some("summary".into());
+        assert!(switched_on(&settings, MEETING_SUMMARY));
+        let dir = std::env::temp_dir().join(format!("vults-summary-gate-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = vults_store::Store::open(&dir).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let off = NetGate::new(|_| false, budget, BTreeMap::new(), |_| {});
+        assert!(
+            off.reserve_meeting_summary(&mut store, &identity, "ollama", "fixture", true)
+                .is_none()
+        );
+        assert_eq!(budget(MEETING_SUMMARY), 20);
+        for index in 0..20 {
+            // Restarting the gate and alternating destinations cannot refresh this feature's quota.
+            let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+            assert!(!gate.allow(MEETING_SUMMARY));
+            assert!(
+                gate.reserve_meeting_summary(
+                    &mut store,
+                    &identity,
+                    if index % 2 == 0 { "ollama" } else { "anthropic" },
+                    "fixture",
+                    index % 2 == 0
+                )
+                .is_some()
+            );
+        }
+        store.clear_all(&dir).unwrap();
+        drop(store);
+        let mut store = vults_store::Store::open_current(&dir).unwrap();
+        let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+        assert!(
+            gate.reserve_meeting_summary(&mut store, &identity, "ollama", "other-model", true)
+                .is_none()
+        );
+        assert_eq!(
+            store.request_attempt_starts(MEETING_SUMMARY, 0).unwrap().len(),
+            20
+        );
+        assert!(
+            gate.reserve_cleanup(&mut store, &identity, "ollama", "fixture", true)
+                .is_some()
+        );
+        drop(store);
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

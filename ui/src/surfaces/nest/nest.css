@@ -1,3 +1,5 @@
+@import "../../dictation-navigation.css";
+@import "../../dictation-styles.css";
 @import "./pages.css";
 /* The chat panel's look comes from the island; the Nest lays it out as a whole window. */
 @import "../../island/island.css";
@@ -2400,13 +2402,8 @@ button.touched-row:hover,
 /* Dictation keeps the shared frame; only the transcript column scrolls. */
 .nest-pane.nest-dictation-pane { padding: 0; display: flex; overflow: hidden; }
 .dictation-area { display: flex; flex: 1; min-width: 0; min-height: 0; }
-.dictation-nav { padding: 16px; background: var(--chrome); border-right: 1px solid var(--border); overflow-y: auto; }
-.dictation-groups { display: flex; flex-direction: column; gap: 4px; }
-.dictation-groups h3 { margin: 12px 0 4px; color: var(--fg-dim); font: 600 var(--text-s)/1.5 var(--font); }
 .dictation-area button { min-height: 32px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--raised); color: var(--fg); padding: 6px 10px; font: 500 var(--text-s)/1.4 var(--font); cursor: pointer; }
 .dictation-area button:disabled { opacity: .5; cursor: default; }
-.dictation-groups button { display: flex; align-items: center; gap: 8px; text-align: left; border: 0; background: transparent; }
-.dictation-groups button[aria-current] { background: var(--raised); }
 .dictation-area :is(button, input, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dictation-history { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: 20px 24px; }
 .dictation-history[hidden] { display: none; }
@@ -2432,6 +2429,7 @@ button.touched-row:hover,
 .dictation-heading > div { flex: 1; min-width: 160px; }
 .dictation-heading h2 { margin: 0; font-size: var(--text-xl); }
 .dictation-heading p, .dictation-note { margin: 8px 0; color: var(--fg-dim); font: var(--text-s)/1.6 var(--font); }
+.dictation-figures[hidden] { display: none; }
 .dictation-figures { display: flex; flex-wrap: wrap; gap: 20px; padding: 16px 0; }
 .dictation-figures > div { display: flex; flex-direction: column; gap: 4px; min-width: 100px; }
 .dictation-figures strong { font-size: 20px; font-variant-numeric: tabular-nums; }
@@ -2452,9 +2450,64 @@ button.touched-row:hover,
 .dictation-danger { color: var(--error-text) !important; }
 @media (max-width: 899px) {
   .dictation-area { flex-direction: column; }
-  .dictation-nav { flex: none; padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
-  .dictation-groups { flex-direction: row; align-items: center; }
-  .dictation-groups h3, .dictation-groups button:disabled { display: none; }
-  .dictation-groups button { flex: none; white-space: nowrap; }
 }
 @media (max-width: 600px) { .dictation-history { padding: 16px; } }
+
+.dictation-summary[hidden] { display: none; }
+.dictation-summary > summary { min-height: 28px; color: var(--fg-dim); font: 500 var(--text-s)/1.5 var(--font); cursor: pointer; }
+.dictation-summary > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (min-width: 900px) and (min-height: 561px) {
+  .dictation-summary > summary { display: none; }
+}
+@media (max-width: 600px), (max-height: 560px) {
+  .dictation-history { padding: 12px 16px; }
+  .dictation-history .dictation-heading { gap: 8px; }
+  .dictation-history .dictation-heading p { display: none; }
+  .dictation-history .dictation-toolbar { margin: 8px 0; }
+  .dictation-history .dictation-toolbar button { padding: 4px 8px; }
+  .dictation-summary { margin: 8px 0; }
+  .dictation-summary .dictation-figures { gap: 12px; padding: 8px 0; }
+}
+
+.meeting-check { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; padding: 20px 24px; }
+.meeting-check > header, .meeting-state, .meeting-actions { flex-shrink: 0; }
+.meeting-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; padding-inline: 2px; }
+.meeting-check[hidden], .meeting-check [hidden] { display: none; }
+.meeting-check h2 { font-size: var(--text-xl); margin: 0 0 8px; }
+.meeting-check p { font-size: var(--text-m); line-height: 1.5; color: var(--fg-dim); margin: 8px 0; max-width: 76ch; }
+.meeting-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-block: 12px; }
+.meeting-state p { color: var(--fg); margin: 0; }
+.meeting-state output { font: var(--text-l) var(--mono); color: var(--fg); }
+.meeting-recording-line { flex-basis: 100%; height: 3px; background: var(--fg-dim); border-radius: 2px; }
+.meeting-sources { display: grid; grid-template-columns: minmax(90px, auto) minmax(0, 1fr); gap: 8px 12px; font-size: var(--text-m); }
+.meeting-sources dt { color: var(--fg-dim); }
+.meeting-sources dd { margin: 0; overflow-wrap: anywhere; font-family: var(--mono); }
+.meeting-consent { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-m); line-height: 1.5; margin-block: 12px; }
+.meeting-consent input { flex-shrink: 0; margin-top: 3px; }
+.meeting-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-block: 8px; }
+.meeting-actions button { min-height: 32px; }
+.meeting-check .meeting-feedback { color: var(--error-text); }
+@media (max-width: 899px), (max-height: 560px) { .meeting-check { padding: 12px 16px; } }
+
+.meeting-actions button.meeting-primary { background: var(--accent); color: var(--on-accent); }
+@media (max-height: 560px) { .meeting-state { margin-block: 6px; } .meeting-check h2 { margin-bottom: 2px; } .meeting-actions { padding-block: 4px; } }
+
+.meeting-body.meeting-with-transcript { flex: 1 1 auto; }
+.meeting-transcript summary { cursor: pointer; font-size: var(--text-m); color: var(--fg-dim); padding-block: 8px; }
+.meeting-transcript-sources { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 0 8px; }
+.meeting-transcript-sources button[aria-pressed="true"] { border-color: var(--fg-dim); color: var(--fg); background: var(--raised); }
+.meeting-segment { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding-block: 8px; border-bottom: 1px solid var(--border); }
+.meeting-segment-time { font: var(--text-s) var(--mono); color: var(--fg-dim); padding-top: 2px; }
+.meeting-segment p { margin: 0; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.meeting-tabs { display: flex; flex-shrink: 0; gap: 4px; padding-bottom: 8px; }
+.meeting-tabs button { min-height: 32px; padding: 6px 12px; }
+.meeting-tabs button[aria-selected="true"] { background: var(--raised); color: var(--fg); border-color: var(--fg-dim); }
+.meeting-notes h3 { font-size: var(--text-l); margin: 16px 0 8px; overflow-wrap: anywhere; }
+.meeting-notes h4 { font-size: var(--text-m); margin: 16px 0 8px; }
+.meeting-notes li { font-size: var(--text-m); line-height: 1.5; padding-block: 4px; overflow-wrap: anywhere; }
+.meeting-notes .meeting-note-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
+.meeting-notes .meeting-todo-metadata { margin: 2px 0; }
+
+.meeting-notes > details > summary { font-size: var(--text-m); color: var(--fg-dim); cursor: pointer; padding-block: 8px; }
+@media (max-height: 560px) { .meeting-check > header { display: none; } }

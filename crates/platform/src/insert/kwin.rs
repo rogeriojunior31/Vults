@@ -1,6 +1,7 @@
 //! A read-only focus epoch running before key-down, with a compositor checkpoint before paste.
 use crate::focus::Window;
 use crate::jump::kwin::{is_unique_name, script_dir, write_script};
+use futures_util::StreamExt;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
@@ -10,7 +11,7 @@ const INTERFACE: &str = "io.github.rogeriojunior31.vults.DictationFocus";
 const KWIN: &str = "org.kde.KWin";
 
 #[derive(Clone, Default)]
-pub(super) struct Snapshot {
+pub(crate) struct Snapshot {
     pub sequence: u64,
     pub window: Option<Window>,
 }
@@ -20,13 +21,15 @@ struct Data {
     snapshot: Snapshot,
     pending: Option<(u64, oneshot::Sender<Snapshot>)>,
     nonce: u64,
+    revoked: bool,
 }
 
-pub(super) struct Watch {
+pub(crate) struct Watch {
     data: Arc<Mutex<Data>>,
     next: mpsc::UnboundedSender<u64>,
     conn: zbus::Connection,
     name: String,
+    owner_changed: tokio::task::JoinHandle<()>,
     _file: crate::jump::kwin::ScriptFile,
 }
 
@@ -67,7 +70,7 @@ impl Reply {
         let Ok(mut data) = self.data.lock() else {
             return;
         };
-        if sequence < data.snapshot.sequence {
+        if data.revoked || sequence < data.snapshot.sequence {
             return;
         }
         data.snapshot = Snapshot { sequence, window };
@@ -84,8 +87,16 @@ impl Reply {
 
 impl Watch {
     pub async fn start() -> Option<Self> {
+        Self::named("dictation-focus").await
+    }
+
+    pub(crate) async fn named(purpose: &str) -> Option<Self> {
         let conn = zbus::Connection::session().await.ok()?;
         let bus = zbus::fdo::DBusProxy::new(&conn).await.ok()?;
+        let mut owner_changes = bus
+            .receive_name_owner_changed_with_args(&[(0, KWIN)])
+            .await
+            .ok()?;
         let owner = bus.get_name_owner(KWIN.try_into().ok()?).await.ok()?.to_string();
         let data = Arc::new(Mutex::new(Data::default()));
         let (next, receive) = mpsc::unbounded_channel();
@@ -101,9 +112,19 @@ impl Watch {
             .await
             .ok()?;
         let code = script(conn.unique_name()?.as_str())?;
-        let name = format!("{}-dictation-focus-{}", vults_brand::SLUG, std::process::id());
+        let name = format!("{}-{purpose}-{}", vults_brand::SLUG, std::process::id());
         let file = write_script(&script_dir()?, &name, &code)?;
+        let watched = data.clone();
+        let owner_changed = tokio::spawn(async move {
+            let _ = owner_changes.next().await;
+            if let Ok(mut data) = watched.lock() {
+                data.revoked = true;
+                data.snapshot = Snapshot::default();
+                data.pending = None;
+            }
+        });
         let watch = Self {
+            owner_changed,
             data,
             next,
             conn,
@@ -165,6 +186,12 @@ impl Watch {
     }
 
     pub async fn close(&self) {
+        if let Ok(mut data) = self.data.lock() {
+            data.revoked = true;
+            data.snapshot = Snapshot::default();
+            data.pending = None;
+        }
+        self.owner_changed.abort();
         let _ = self.next.send(0);
         let _ = tokio::time::timeout(Duration::from_millis(500), async {
             let proxy = zbus::Proxy::new(&self.conn, KWIN, "/Scripting", "org.kde.kwin.Scripting").await?;
@@ -200,6 +227,12 @@ fn script(reply: &str) -> Option<String> {
 }})();
 "#
     ))
+}
+
+impl Drop for Watch {
+    fn drop(&mut self) {
+        self.owner_changed.abort();
+    }
 }
 
 #[cfg(test)]

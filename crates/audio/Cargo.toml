@@ -11,5 +11,19 @@ cpal = "0.18"
 rubato = "5.0"
 rustfft = "6.4"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+hound = { version = "3.5", optional = true }
+libc = { workspace = true, optional = true }
+pulseaudio = { version = "0.3", optional = true }
+socket2 = { version = "0.6", optional = true }
+
+[features]
+# Bounded meeting checks; the app opens sources only after explicit consent.
+meeting-capture = ["dep:pulseaudio", "dep:socket2", "dep:hound", "dep:libc"]
+
+[[example]]
+name = "meeting-capture"
+required-features = ["meeting-capture"]
+
 [lints]
 workspace = true

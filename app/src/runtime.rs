@@ -48,6 +48,14 @@ pub struct Inbox(mpsc::Sender<Msg>);
 #[derive(Debug)]
 enum Msg {
     #[cfg(target_os = "linux")]
+    VoiceCommand {
+        text: String,
+        ticket: crate::dictation::worker::Ticket,
+        replacements: Vec<(String, String)>,
+    },
+    #[cfg(target_os = "linux")]
+    CancelVoiceCommands,
+    #[cfg(target_os = "linux")]
     DictationSessions {
         reply: std::sync::mpsc::SyncSender<Vec<(core::SessionKey, vults_protocol::Terminal)>>,
     },
@@ -284,6 +292,8 @@ pub fn start(app: AppHandle) {
 
 async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>) {
     let mut state = State::default();
+    #[cfg(target_os = "linux")]
+    let mut voice_commands = crate::voice_commands::Commands::new(Instant::now());
     if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
         state.rules = s.rules.clone();
         state.policies = crate::policies::active();
@@ -346,7 +356,54 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         None => rx.recv().await,
     } {
         let now = Instant::now();
+        #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
+        let mut command_effects: Option<Vec<Effect>> = None;
         let input = match msg {
+            #[cfg(target_os = "linux")]
+            Msg::CancelVoiceCommands => {
+                voice_commands.cancel();
+                continue;
+            }
+            #[cfg(target_os = "linux")]
+            Msg::VoiceCommand {
+                text,
+                ticket,
+                replacements,
+            } => {
+                if crate::lock::locked(&app) {
+                    voice_commands.cancel();
+                    continue;
+                }
+                let usage = serde_json::to_value(crate::usage::usage(app.clone())).unwrap_or_default();
+                let settings = app.state::<crate::settings::SettingsState>();
+                let Ok(saved) = settings.0.lock() else {
+                    continue;
+                };
+                if !saved.dictation_commands {
+                    voice_commands.cancel();
+                    continue;
+                }
+                let report =
+                    ticket.dispatch(|| voice_commands.execute(&mut state, &text, &replacements, usage, now));
+                let fallback = saved.dictation_command_chat;
+                drop(saved);
+                let Some(mut report) = report else {
+                    continue;
+                };
+                if report.chat_fallback(fallback) {
+                    crate::chat::voice_command(app.clone(), text, ticket);
+                    continue;
+                }
+                command_effects = Some(std::mem::take(&mut report.effects));
+                crate::dictation::command_result(
+                    &app,
+                    &ticket,
+                    &text,
+                    report,
+                    voice_commands.question_deadline(),
+                );
+                None
+            }
             #[cfg(target_os = "linux")]
             Msg::DictationSafety {
                 session,
@@ -521,33 +578,39 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 continue;
             }
         };
-        let Some(input) = input else { continue };
-        let heard = match &input {
-            Input::Agent(update) | Input::RunEnded(update) => Some((
-                update.session.clone(),
-                matches!(update.event, core::AgentEvent::SessionStarted),
-            )),
-            _ => None,
-        };
-        if matches!(input, Input::Tick) {
-            repos.retain(|key, _| state.sessions.contains_key(key));
-            folders.turns.retain(|key, _| state.sessions.contains_key(key));
-        }
-        // Each step keeps the wall-clock time it started, which the core cannot read itself.
-        if matches!(input, Input::Agent(_) | Input::RunEnded(_) | Input::Tick)
-            && let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
-        {
-            let unix = i64::try_from(d.as_secs()).unwrap_or(0);
-            let hour = ((unix + i64::from(crate::history::local_offset(unix))).div_euclid(3600))
-                .rem_euclid(24) as u8;
-            core::reduce(&mut state, Input::LocalHour(hour), now);
-            core::reduce(&mut state, Input::Clock(unix), now);
-        }
+        let effects = if let Some(input) = input {
+            let heard = match &input {
+                Input::Agent(update) | Input::RunEnded(update) => Some((
+                    update.session.clone(),
+                    matches!(update.event, core::AgentEvent::SessionStarted),
+                )),
+                _ => None,
+            };
+            if matches!(input, Input::Tick) {
+                repos.retain(|key, _| state.sessions.contains_key(key));
+                folders.turns.retain(|key, _| state.sessions.contains_key(key));
+            }
+            // Each step keeps the wall-clock time it started, which the core cannot read itself.
+            if matches!(input, Input::Agent(_) | Input::RunEnded(_) | Input::Tick)
+                && let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+            {
+                let unix = i64::try_from(d.as_secs()).unwrap_or(0);
+                let hour = ((unix + i64::from(crate::history::local_offset(unix))).div_euclid(3600))
+                    .rem_euclid(24) as u8;
+                core::reduce(&mut state, Input::LocalHour(hour), now);
+                core::reduce(&mut state, Input::Clock(unix), now);
+            }
 
-        let effects = core::reduce(&mut state, input, now);
-        if let Some((key, started)) = heard {
-            read_repo(&app, &state, &mut repos, key, now, &tx, started);
-        }
+            let effects = core::reduce(&mut state, input, now);
+            if let Some((key, started)) = heard {
+                read_repo(&app, &state, &mut repos, key, now, &tx, started);
+            }
+            effects
+        } else if let Some(effects) = command_effects {
+            effects
+        } else {
+            continue;
+        };
         for effect in effects {
             match effect {
                 Effect::AckPermission(id) => {
@@ -1532,7 +1595,7 @@ pub const ISLAND_SIZE: (i32, i32) = (720, 640);
 /// own surface's region, never another's.
 #[tauri::command]
 pub fn layout(app: AppHandle, window: tauri::WebviewWindow, x: i32, y: i32, width: i32, height: i32) {
-    if !crate::SURFACES.contains(&window.label()) {
+    if !crate::SURFACES.contains(&window.label()) || window.label() == crate::dictation_overlay::LABEL {
         return;
     }
     let _ = app.run_on_main_thread(move || {
@@ -1550,7 +1613,7 @@ pub fn layout(app: AppHandle, window: tauri::WebviewWindow, x: i32, y: i32, widt
 /// terminal. Asked by the window itself.
 #[tauri::command]
 pub fn surface_keyboard(app: AppHandle, window: tauri::WebviewWindow, on: bool, exclusive: Option<bool>) {
-    if !crate::SURFACES.contains(&window.label()) {
+    if !crate::SURFACES.contains(&window.label()) || window.label() == crate::dictation_overlay::LABEL {
         return;
     }
     let _ = app.run_on_main_thread(move || {
@@ -1577,6 +1640,30 @@ pub fn place_top_center(win: &tauri::WebviewWindow) {
         let origin = monitor.position().to_logical::<f64>(scale);
         let x = origin.x + (screen.width - f64::from(width)) / 2.0;
         let _ = win.set_position(tauri::LogicalPosition::new(x, origin.y));
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn voice_command(
+    app: &AppHandle,
+    text: String,
+    ticket: crate::dictation::worker::Ticket,
+    replacements: Vec<(String, String)>,
+) -> Result<(), String> {
+    app.state::<Inbox>()
+        .0
+        .try_send(Msg::VoiceCommand {
+            text,
+            ticket,
+            replacements,
+        })
+        .map_err(|_| "The voice command worker is unavailable.".into())
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn cancel_voice_commands<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let _ = inbox.0.try_send(Msg::CancelVoiceCommands);
     }
 }
 

@@ -658,10 +658,14 @@ pub(crate) fn chat(lang: Lang, text: ChatText, project: &str, n: usize) -> Strin
 /// Descriptions for the independent dictation shortcuts shown in the desktop's consent dialog.
 pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
     Some(match (lang, id) {
-        (Lang::En, "talk") => "Dictate, or speak to a focused Vults Chat",
-        (Lang::PtBr, "talk") => "Ditar ou falar no Chat do Vults em foco",
-        (Lang::Es, "talk") => "Dictar o hablar en el Chat de Vults enfocado",
-        (Lang::Zh, "talk") => "听写，或向获得焦点的 Vults 聊天说话",
+        (Lang::En, "talk-command") => "Speak a command for Vults without typing into an app",
+        (Lang::PtBr, "talk-command") => "Falar um comando para o Vults sem digitar em outro aplicativo",
+        (Lang::Es, "talk-command") => "Decir un comando para Vults sin escribir en otra aplicación",
+        (Lang::Zh, "talk-command") => "向 Vults 说出命令，而不在应用中输入文字",
+        (Lang::En, "talk") => "Dictate text without opening Chat",
+        (Lang::PtBr, "talk") => "Ditar texto sem abrir o Chat",
+        (Lang::Es, "talk") => "Dictar texto sin abrir el Chat",
+        (Lang::Zh, "talk") => "听写文字，不打开聊天",
         (Lang::En, "talk-again") => "Copy the last dictation again",
         (Lang::PtBr, "talk-again") => "Copiar novamente o último ditado",
         (Lang::Es, "talk-again") => "Volver a copiar el último dictado",
@@ -672,4 +676,250 @@ pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
         (Lang::Zh, "talk-cancel") => "取消听写或聊天语音",
         _ => return None,
     })
+}
+
+/// Local command feedback, shared by the dispatcher and its future island presentation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VoiceFeedback {
+    Done,
+    SentToChat,
+    ChatUnavailable,
+    Answer,
+    WhichOne,
+    NotByVoice,
+    NotCommand,
+    UnknownName,
+    Expired,
+    Stale,
+    NoContext,
+    CannotUndo,
+    Unavailable,
+    Locked,
+    NoWaiting,
+    NoUsage,
+    NoPullRequests,
+}
+
+pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
+    use VoiceFeedback::*;
+    match (lang, feedback) {
+        (Lang::En, SentToChat) => "Sent to Zeca. Follow the reply in Chat.",
+        (Lang::PtBr, SentToChat) => "Enviado ao Zeca. Acompanhe a resposta no Chat.",
+        (Lang::Es, SentToChat) => "Enviado a Zeca. Sigue la respuesta en Chat.",
+        (Lang::Zh, SentToChat) => "已发送给 Zeca。请在聊天中查看回复。",
+        (Lang::En, ChatUnavailable) => "Could not send to Zeca. Check Chat, finish any draft and try again.",
+        (Lang::PtBr, ChatUnavailable) => {
+            "Não foi possível enviar ao Zeca. Confira o Chat, conclua o rascunho e tente novamente."
+        }
+        (Lang::Es, ChatUnavailable) => {
+            "No se pudo enviar a Zeca. Revisa Chat, termina el borrador e inténtalo de nuevo."
+        }
+        (Lang::Zh, ChatUnavailable) => "无法发送给 Zeca。请检查聊天，完成草稿后重试。",
+        (Lang::En, Done) => "Command completed.",
+        (Lang::PtBr, Done) => "Comando concluído.",
+        (Lang::Es, Done) => "Comando completado.",
+        (Lang::Zh, Done) => "命令已完成。",
+        (Lang::En, Answer) => "Here is the local snapshot.",
+        (Lang::PtBr, Answer) => "Aqui está o retrato local.",
+        (Lang::Es, Answer) => "Aquí está la información local.",
+        (Lang::Zh, Answer) => "这是本地快照。",
+        (Lang::En, WhichOne) => "Which one? Say one of these names within 90 seconds.",
+        (Lang::PtBr, WhichOne) => "Qual deles? Diga um destes nomes em até 90 segundos.",
+        (Lang::Es, WhichOne) => "¿Cuál? Di uno de estos nombres en un plazo de 90 segundos.",
+        (Lang::Zh, WhichOne) => "哪一个？请在 90 秒内说出其中一个名称。",
+        (Lang::En, NotByVoice) => "Voice commands cannot answer cards. Use the card or your terminal.",
+        (Lang::PtBr, NotByVoice) => "Comandos de voz não respondem a cards. Use o card ou seu terminal.",
+        (Lang::Es, NotByVoice) => "Los comandos de voz no responden tarjetas. Usa la tarjeta o tu terminal.",
+        (Lang::Zh, NotByVoice) => "语音命令无法回答卡片。请使用卡片或终端。",
+        (Lang::En, NotCommand) => "That is not a voice command.",
+        (Lang::PtBr, NotCommand) => "Isso não é um comando de voz.",
+        (Lang::Es, NotCommand) => "Eso no es un comando de voz.",
+        (Lang::Zh, NotCommand) => "这不是语音命令。",
+        (Lang::En, UnknownName) => "No current project or agent matches that name.",
+        (Lang::PtBr, UnknownName) => "Nenhum projeto ou agente atual corresponde a esse nome.",
+        (Lang::Es, UnknownName) => "Ningún proyecto o agente actual coincide con ese nombre.",
+        (Lang::Zh, UnknownName) => "当前没有与该名称匹配的项目或智能体。",
+        (Lang::En, Expired) => "That question expired. Say the command again.",
+        (Lang::PtBr, Expired) => "Essa pergunta expirou. Diga o comando novamente.",
+        (Lang::Es, Expired) => "Esa pregunta caducó. Di el comando de nuevo.",
+        (Lang::Zh, Expired) => "该问题已过期。请重新说出命令。",
+        (Lang::En, Stale) => "The choices changed. Say the command again.",
+        (Lang::PtBr, Stale) => "As opções mudaram. Diga o comando novamente.",
+        (Lang::Es, Stale) => "Las opciones cambiaron. Di el comando de nuevo.",
+        (Lang::Zh, Stale) => "选项已变化。请重新说出命令。",
+        (Lang::En, NoContext) => "There is no recent command to repeat or undo.",
+        (Lang::PtBr, NoContext) => "Não há comando recente para repetir ou desfazer.",
+        (Lang::Es, NoContext) => "No hay un comando reciente para repetir o deshacer.",
+        (Lang::Zh, NoContext) => "没有可重复或撤销的近期命令。",
+        (Lang::En, CannotUndo) => "That command cannot be undone now. No changes were made.",
+        (Lang::PtBr, CannotUndo) => "Esse comando não pode ser desfeito agora. Nada foi alterado.",
+        (Lang::Es, CannotUndo) => "Ese comando no puede deshacerse ahora. No se cambió nada.",
+        (Lang::Zh, CannotUndo) => "现在无法撤销该命令。未进行任何更改。",
+        (Lang::En, Unavailable) => {
+            "That command is unavailable in the current snapshot. No changes were made."
+        }
+        (Lang::PtBr, Unavailable) => "Esse comando está indisponível no retrato atual. Nada foi alterado.",
+        (Lang::Es, Unavailable) => {
+            "Ese comando no está disponible con la información actual. No se cambió nada."
+        }
+        (Lang::Zh, Unavailable) => "当前快照无法执行该命令。未进行任何更改。",
+        (Lang::En, Locked) => "Voice commands are unavailable while the screen is locked.",
+        (Lang::PtBr, Locked) => "Comandos de voz ficam indisponíveis com a tela bloqueada.",
+        (Lang::Es, Locked) => "Los comandos de voz no están disponibles con la pantalla bloqueada.",
+        (Lang::Zh, Locked) => "锁屏时无法使用语音命令。",
+        (Lang::En, NoWaiting) => "No session is waiting on a card.",
+        (Lang::PtBr, NoWaiting) => "Nenhuma sessão está esperando uma resposta em um card.",
+        (Lang::Es, NoWaiting) => "Ninguna sesión espera una respuesta en una tarjeta.",
+        (Lang::Zh, NoWaiting) => "没有会话正在等待卡片回复。",
+        (Lang::En, NoUsage) => "No plan usage is available in the local snapshot.",
+        (Lang::PtBr, NoUsage) => "Não há uso do plano disponível no retrato local.",
+        (Lang::Es, NoUsage) => "No hay datos de uso del plan en la información local.",
+        (Lang::Zh, NoUsage) => "本地快照中没有套餐使用情况。",
+        (Lang::En, NoPullRequests) => "The local GitHub snapshot has no open pull requests.",
+        (Lang::PtBr, NoPullRequests) => "O retrato local do GitHub não tem pull requests abertos.",
+        (Lang::Es, NoPullRequests) => "La información local de GitHub no tiene pull requests abiertos.",
+        (Lang::Zh, NoPullRequests) => "本地 GitHub 快照中没有待处理的拉取请求。",
+    }
+}
+
+pub fn voice_waiting(lang: Lang, agent: &str, project: &str) -> String {
+    match lang {
+        Lang::En => format!("{agent} in {project} is waiting for your answer on a card."),
+        Lang::PtBr => format!("{agent} em {project} está esperando sua resposta em um card."),
+        Lang::Es => format!("{agent} en {project} espera tu respuesta en una tarjeta."),
+        Lang::Zh => format!("{project} 中的 {agent} 正在等待你回复卡片。"),
+    }
+}
+
+pub fn voice_usage(lang: Lang, agent: &str, used: u64, minutes: u64) -> String {
+    let left = 100u64.saturating_sub(used);
+    match lang {
+        Lang::En => format!("{agent}: {used}% used and {left}% remaining in the {minutes}-minute window."),
+        Lang::PtBr => format!("{agent}: {used}% usado e {left}% restante na janela de {minutes} minutos."),
+        Lang::Es => format!("{agent}: {used}% usado y {left}% restante en la ventana de {minutes} minutos."),
+        Lang::Zh => format!("{agent}：{minutes} 分钟窗口内已用 {used}%，剩余 {left}%。"),
+    }
+}
+
+pub fn voice_pull_request(
+    lang: Lang,
+    name: &str,
+    title: &str,
+    checks: Option<crate::board::Checks>,
+) -> String {
+    use crate::board::Checks::*;
+    match (lang, checks) {
+        (Lang::En, Some(Passing)) => format!("Pull request {name}: {title}. Checks are passing."),
+        (Lang::PtBr, Some(Passing)) => format!("Pull request {name}: {title}. Os checks estão passando."),
+        (Lang::Es, Some(Passing)) => format!("Pull request {name}: {title}. Los checks pasan."),
+        (Lang::Zh, Some(Passing)) => format!("拉取请求 {name}：{title}。检查已通过。"),
+        (Lang::En, Some(Failing)) => format!("Pull request {name}: {title}. Checks are failing."),
+        (Lang::PtBr, Some(Failing)) => format!("Pull request {name}: {title}. Os checks estão falhando."),
+        (Lang::Es, Some(Failing)) => format!("Pull request {name}: {title}. Los checks fallan."),
+        (Lang::Zh, Some(Failing)) => format!("拉取请求 {name}：{title}。检查失败。"),
+        (Lang::En, Some(Running)) => format!("Pull request {name}: {title}. Checks are running."),
+        (Lang::PtBr, Some(Running)) => format!("Pull request {name}: {title}. Os checks estão em andamento."),
+        (Lang::Es, Some(Running)) => format!("Pull request {name}: {title}. Los checks están en curso."),
+        (Lang::Zh, Some(Running)) => format!("拉取请求 {name}：{title}。检查正在运行。"),
+        (Lang::En, None) => format!("Pull request {name}: {title}. Check status is unavailable."),
+        (Lang::PtBr, None) => format!("Pull request {name}: {title}. O estado dos checks está indisponível."),
+        (Lang::Es, None) => {
+            format!("Pull request {name}: {title}. El estado de los checks no está disponible.")
+        }
+        (Lang::Zh, None) => format!("拉取请求 {name}：{title}。检查状态不可用。"),
+    }
+}
+
+pub fn voice_session(lang: Lang, agent: &str, project: &str, status: crate::Status) -> String {
+    use crate::Status::*;
+    match (lang, status) {
+        (Lang::En, Idle) => format!("{agent} in {project} is idle."),
+        (Lang::PtBr, Idle) => format!("{agent} em {project} está ocioso."),
+        (Lang::Es, Idle) => format!("{agent} en {project} está inactivo."),
+        (Lang::Zh, Idle) => format!("{project} 中的 {agent} 处于空闲状态。"),
+        (Lang::En, Thinking) => format!("{agent} in {project} is thinking."),
+        (Lang::PtBr, Thinking) => format!("{agent} em {project} está pensando."),
+        (Lang::Es, Thinking) => format!("{agent} en {project} está pensando."),
+        (Lang::Zh, Thinking) => format!("{project} 中的 {agent} 正在思考。"),
+        (Lang::En, Working) => format!("{agent} in {project} is working."),
+        (Lang::PtBr, Working) => format!("{agent} em {project} está trabalhando."),
+        (Lang::Es, Working) => format!("{agent} en {project} está trabajando."),
+        (Lang::Zh, Working) => format!("{project} 中的 {agent} 正在工作。"),
+        (Lang::En, Approval) => format!("{agent} in {project} is waiting for permission."),
+        (Lang::PtBr, Approval) => format!("{agent} em {project} está esperando uma permissão."),
+        (Lang::Es, Approval) => format!("{agent} en {project} está esperando un permiso."),
+        (Lang::Zh, Approval) => format!("{project} 中的 {agent} 正在等待权限批准。"),
+        (Lang::En, Question) => format!("{agent} in {project} is waiting for an answer."),
+        (Lang::PtBr, Question) => format!("{agent} em {project} está esperando uma resposta."),
+        (Lang::Es, Question) => format!("{agent} en {project} está esperando una respuesta."),
+        (Lang::Zh, Question) => format!("{project} 中的 {agent} 正在等待回答。"),
+        (Lang::En, Finished) => format!("{agent} in {project} finished."),
+        (Lang::PtBr, Finished) => format!("{agent} em {project} terminou."),
+        (Lang::Es, Finished) => format!("{agent} en {project} terminó."),
+        (Lang::Zh, Finished) => format!("{project} 中的 {agent} 已完成。"),
+        (Lang::En, Failed) => format!("{agent} in {project} failed."),
+        (Lang::PtBr, Failed) => format!("{agent} em {project} falhou."),
+        (Lang::Es, Failed) => format!("{agent} en {project} falló."),
+        (Lang::Zh, Failed) => format!("{project} 中的 {agent} 执行失败。"),
+        (Lang::En, RateLimited) => format!("{agent} in {project} is rate limited."),
+        (Lang::PtBr, RateLimited) => format!("{agent} em {project} está limitado pela cota."),
+        (Lang::Es, RateLimited) => format!("{agent} en {project} está limitado por la cuota."),
+        (Lang::Zh, RateLimited) => format!("{project} 中的 {agent} 已达到速率限制。"),
+    }
+}
+
+/// Headings and source-local voice labels for text-only meeting exports.
+#[derive(Debug)]
+pub struct MeetingExport {
+    pub microphone: &'static str,
+    pub system: &'static str,
+    pub summary: &'static str,
+    pub points: &'static str,
+    pub todos: &'static str,
+    pub unknown: &'static str,
+}
+
+pub fn meeting_export(lang: Lang) -> MeetingExport {
+    match lang {
+        Lang::En => MeetingExport {
+            microphone: "Microphone",
+            system: "System audio",
+            summary: "Summary",
+            points: "Key points",
+            todos: "To-dos",
+            unknown: "Unknown voice",
+        },
+        Lang::PtBr => MeetingExport {
+            microphone: "Microfone",
+            system: "Áudio do sistema",
+            summary: "Resumo",
+            points: "Pontos principais",
+            todos: "A fazer",
+            unknown: "Voz desconhecida",
+        },
+        Lang::Es => MeetingExport {
+            microphone: "Micrófono",
+            system: "Audio del sistema",
+            summary: "Resumen",
+            points: "Puntos clave",
+            todos: "Pendientes",
+            unknown: "Voz desconocida",
+        },
+        Lang::Zh => MeetingExport {
+            microphone: "麦克风",
+            system: "系统音频",
+            summary: "摘要",
+            points: "要点",
+            todos: "待办事项",
+            unknown: "未知声音",
+        },
+    }
+}
+
+pub fn meeting_voice(lang: Lang, number: u32) -> String {
+    match lang {
+        Lang::En => format!("Voice {number}"),
+        Lang::PtBr | Lang::Es => format!("Voz {number}"),
+        Lang::Zh => format!("声音 {number}"),
+    }
 }

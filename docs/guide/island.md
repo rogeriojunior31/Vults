@@ -290,9 +290,11 @@ Global shortcuts work from any window:
   ([Approvals](approvals.md)).
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** put the next or previous session in front. A waiting card stays in
   front; the keys choose who comes after it.
-- **Ctrl+Alt+V**, held, fills a focused Vults Chat draft; outside Vults it copies a
-  [local dictation](dictation.md#global-dictation-first-slice). **Ctrl+Alt+X** cancels voice;
+- **Ctrl+Alt+V**, held, starts [independent dictation](dictation.md#global-dictation-first-slice)
+  in any focused app, including Vults. It never opens Chat; use its microphone button for draft input. **Ctrl+Alt+X** cancels voice;
   **Ctrl+Alt+B** copies the last dictation again.
+- **Ctrl+Alt+Z**, held for at least 300 ms, speaks a [local voice command](dictation.md#voice-commands-development-status)
+  for Vults, including with Zeca off. It never types into another app or answers a card.
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** and **Ctrl+Alt+3** switch to Mini, Quick and Room.
 - **Ctrl+K**, in the open island or the Nest, opens the [palette](nest.md).
 - **Ctrl+Alt+Space** opens the island and hands it the keyboard until it folds:

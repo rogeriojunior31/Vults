@@ -1,17 +1,17 @@
-//! Local speech for Chat and independent dictation. Audio stays in memory (never on disk), then is
-//! transcribed on this computer by whisper.cpp with a model the user downloaded on purpose.
-//! Nothing here sends audio anywhere.
+//! Local speech with an explicitly downloaded whisper.cpp model. Chat and dictation keep audio
+//! in memory; the meeting API reads already-open WAVs owned by its caller. No audio is sent anywhere.
 
 mod gate;
+pub mod meeting;
 mod models;
 mod preview;
 mod record;
+mod scheduler;
 mod vad;
 pub mod vocabulary;
 
 use std::mem::ManuallyDrop;
 use std::path::Path;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use models::{MODELS, Model, VAD, download, installed, model, model_path, vad_path};
@@ -43,14 +43,15 @@ pub struct Transcriber {
 }
 
 /// Held while a model (or the VAD) loads, while a model decodes or is freed, and while the GPUs are
-/// listed: the live preview and the final transcription
-/// never run at once, even on two models (one swapped in Settings mid-recording). Two contexts at
-/// work at once on Vulkan crash ggml (seen in this crate's tests).
-static WHISPER: Mutex<()> = Mutex::new(());
+/// listed. Interactive work interrupts meeting decoding at its next abort check and runs first.
+/// Optional CPU ONNX analysis shares this slot to keep meetings behind interactive speech.
+/// Two contexts at work at once on Vulkan crash ggml (seen in this crate's tests), including
+/// two models after a Settings change during a recording.
+static WHISPER: scheduler::Scheduler = scheduler::Scheduler::new();
 
 impl Drop for Transcriber {
     fn drop(&mut self) {
-        let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
+        let _busy = WHISPER.lock();
         // SAFETY: dropped once, here, and never used after.
         unsafe { ManuallyDrop::drop(&mut self.ctx) };
     }
@@ -64,19 +65,35 @@ impl std::fmt::Debug for Transcriber {
 
 impl Transcriber {
     pub fn load(model: &Path, prompt: bool) -> Result<Self, String> {
+        let _busy = WHISPER.lock();
+        Ok(Self {
+            ctx: ManuallyDrop::new(Self::context(model)?),
+            prompt,
+        })
+    }
+
+    /// Cold meeting loads wait behind interactive work. A native load already in progress
+    /// cannot be aborted; cancellation discards its context before returning.
+    pub fn load_background(model: &Path, stop: &AtomicBool) -> Result<Option<Self>, String> {
+        let Some(_busy) = WHISPER.background(stop) else {
+            return Ok(None);
+        };
+        let ctx = Self::context(model)?;
+        if stop.load(Ordering::SeqCst) {
+            return Ok(None);
+        }
+        Ok(Some(Self {
+            ctx: ManuallyDrop::new(ctx),
+            prompt: false,
+        }))
+    }
+
+    fn context(model: &Path) -> Result<whisper_rs::WhisperContext, String> {
         // whisper.cpp logs every layer it loads to stderr; through `tracing` it stays quiet.
         whisper_rs::install_logging_hooks();
         let path = model.to_str().ok_or("the model path is not UTF-8")?;
-        let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
-        let ctx = whisper_rs::WhisperContext::new_with_params(
-            path,
-            whisper_rs::WhisperContextParameters::default(),
-        )
-        .map_err(|e| format!("can't load the voice model: {e}"))?;
-        Ok(Self {
-            ctx: ManuallyDrop::new(ctx),
-            prompt,
-        })
+        whisper_rs::WhisperContext::new_with_params(path, whisper_rs::WhisperContextParameters::default())
+            .map_err(|e| format!("can't load the voice model: {e}"))
     }
 
     /// Blocking: seconds of CPU on a long recording. `language` is a code (`pt`, `en`) or None to
@@ -178,7 +195,7 @@ impl Transcriber {
         if pcm.len() < SAMPLE_RATE as usize / 2 {
             return Ok(Some(Transcript::default()));
         }
-        let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
+        let _busy = WHISPER.lock();
         if stopped() {
             return Ok(None);
         }
@@ -245,7 +262,7 @@ pub fn gpu() -> bool {
         static GPU: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
         // Listing the devices starts ggml's Vulkan state, which guards itself with no lock.
         *GPU.get_or_init(|| {
-            let _busy = WHISPER.lock().unwrap_or_else(|e| e.into_inner());
+            let _busy = WHISPER.lock();
             !whisper_rs::vulkan::list_devices().is_empty()
         })
     }
@@ -330,6 +347,16 @@ pub fn to_whisper(samples: &[f32], channels: u16, rate: u32) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_cancelled_background_load_never_opens_the_model() {
+        let stop = AtomicBool::new(true);
+        assert!(
+            Transcriber::load_background(Path::new("missing-unopened-meeting-model.bin"), &stop)
+                .expect("cancelled before model admission")
+                .is_none()
+        );
+    }
 
     #[test]
     fn audio_becomes_16_khz_mono() {
