@@ -196,6 +196,7 @@ impl vults_connectors::Gate for NetGate {
 
 impl NetGate {
     /// N3 needs a durable admission before sending, including local calls and interrupted attempts.
+    #[cfg(any(target_os = "linux", test))]
     pub fn reserve_cleanup(
         &self,
         store: &mut vults_store::Store,

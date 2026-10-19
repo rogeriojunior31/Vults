@@ -57,6 +57,7 @@ enum Undo {
 
 #[derive(Debug)]
 struct Pending {
+    #[cfg(target_os = "linux")]
     deadline: Instant,
     commands: Vec<Command>,
     selected: BTreeMap<usize, Name>,
@@ -73,6 +74,7 @@ pub struct Commands {
 }
 
 impl Commands {
+    #[cfg(target_os = "linux")]
     pub(crate) fn question_deadline(&self) -> Option<Instant> {
         self.pending.as_ref().map(|pending| pending.deadline)
     }
@@ -186,6 +188,7 @@ impl Commands {
                             return report(lang, Feedback::Stale);
                         };
                         self.pending = Some(Pending {
+                            #[cfg(target_os = "linux")]
                             deadline: now + CONTEXT_WINDOW,
                             commands,
                             selected,

@@ -2962,3 +2962,8 @@ explicitly, the virtual entry reuses the existing cross-platform virtual-module 
 and the multi-command UI
 step runs in Bash so an intermediate failure cannot be hidden by PowerShell. A follow-up portability
 review covers the non-Linux app modules and test imports; local suites were rerun before resubmission.
+
+Windows application compilation also identified Linux-only cleanup admission and clarification
+feedback deadline accessors. They now follow their production callers' platform guards, while
+cleanup reservation tests and semantic clarification expiry remain cross-platform. Workspace CI
+uses `--no-fail-fast` to collect failures across crates in one run instead of stopping at the first.
