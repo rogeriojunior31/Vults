@@ -137,7 +137,7 @@ export function createDictationDoctor(api: Backend) {
   }
   function relabel() {
     drawMic(); drawReport();
-    element.replaceChildren(el("h2", { text: t("Diagnostics") }), micBody, reportBody);
+    element.replaceChildren(micBody, reportBody);
   }
   relabel();
   return { element, relabel, visible(on: boolean) {

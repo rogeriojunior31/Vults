@@ -1,0 +1,1298 @@
+{
+  "recordedAt": "2026-10-19",
+  "scope": "Offline Silero speech-mask diagnostic, never applied by the app. No new dependency or model threshold tuning.",
+  "previousEvidence": {
+    "file": "diarization-refinements-2026-10-19.json",
+    "sha256": "cc9388457a2c85c976b5f25f6c9bbeb97da5e461867b0380625e4121e4df5dc2"
+  },
+  "frozenPlan": {
+    "sha256": "04fa092b30f2ed6a1fc408a19cf1db524b010d053d2281e9a6da9d7f89461887",
+    "plan": {
+      "schema": 1,
+      "frozenBeforeInference": "2026-10-19T12:00:24.857651+00:00",
+      "candidate": "Intersect unchanged diarization turns with the existing Silero speech regions, using the existing 200 ms per-region margin; keep unknown identities, source time and overlap. No audio concatenation or label changes.",
+      "detector": {
+        "file": "ggml-silero-v6.2.0.bin",
+        "sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+        "on": 0.5,
+        "off": 0.35,
+        "smoothingAlpha": 0.35,
+        "minSpeechMs": 250,
+        "minSilenceMs": 400,
+        "paddingMs": 200,
+        "cpuThreads": 1
+      },
+      "selection": "Prior four human first-120-second clips plus the same six controlled quiet/noise/echo transforms; new TS3003a first120 is chosen before candidate output as a recording-disjoint diagnostic evaluation. Add a 200 ms public-domain speech excerpt at 2 s in a 10 s silence control.",
+      "acceptance": "False alarms and DER must not increase, missed speaker-ms must not increase, and no previously covered reference turn (especially <=250 ms) may lose all activity on any case. No threshold or margin sweep. Reject general filtering if any check fails.",
+      "scope": "Offline diagnostic only. Known sources and transformed variants are calibration; TS3003a is new to this experiment, but model/speaker-training independence is not established. No independent Portuguese human evaluation or app activation.",
+      "productionQualified": false
+    }
+  },
+  "manifest": {
+    "inputs": [
+      {
+        "name": "en",
+        "clock": {
+          "recording": "IS1000a-first120",
+          "source": "public-mix",
+          "wavSha256": "5b4ec0eded489b05eb11fb594b7e90df62fc4245ded073e524189c2b6baddb3b",
+          "durationMs": 120000
+        },
+        "referenceSha256": "f996ae0138fba8d46a50da80f6d16b0560f5039d8beee753e64710271ca82981",
+        "annotation": "human",
+        "split": "calibration",
+        "referenceTurns": 11,
+        "referenceSpeakers": 3
+      },
+      {
+        "name": "pt",
+        "clock": {
+          "recording": "bfamdl02-first120",
+          "source": "public-mix",
+          "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+          "durationMs": 120000
+        },
+        "referenceSha256": "32ca185a86b64d52cabd0c4d13b0c1d7bff375a230cb7b679d1c71d7fcb7ff95",
+        "annotation": "human",
+        "split": "calibration",
+        "referenceTurns": 84,
+        "referenceSpeakers": 2
+      },
+      {
+        "name": "en-expanded",
+        "clock": {
+          "recording": "IS1009a-first120",
+          "source": "public-mix",
+          "wavSha256": "03f9cefb7018a4529c0bf94ab2a4d6a4ba16128fd03b6c0764425ec2677d9954",
+          "durationMs": 120000
+        },
+        "referenceSha256": "773c11b329fc0d9367d509b34021626f31fc34884ae71475afbf1434d9c0d71d",
+        "annotation": "human",
+        "split": "calibration",
+        "referenceTurns": 17,
+        "referenceSpeakers": 4
+      },
+      {
+        "name": "en-final",
+        "clock": {
+          "recording": "ES2004a-first120",
+          "source": "public-mix",
+          "wavSha256": "f1d66664d87a7f8fe98c8cb44e61d26e8f97c8eaba1572234fcb2c38703f21ba",
+          "durationMs": 120000
+        },
+        "referenceSha256": "e784893424a7756453d9999ffc415151c42100bc86be51ef98296ea975c4582b",
+        "annotation": "human",
+        "split": "evaluation",
+        "referenceTurns": 20,
+        "referenceSpeakers": 3
+      },
+      {
+        "name": "en-new",
+        "clock": {
+          "recording": "TS3003a-first120",
+          "source": "public-mix",
+          "wavSha256": "12b29461406fe6725138fff370086ce15bb9bcab47c21801043e3ac88e3ea9f5",
+          "durationMs": 120000
+        },
+        "referenceSha256": "5a20f23ae39a3da70019af0c787d6adcfad65d57f38dcec50e07197236b77eab",
+        "annotation": "human",
+        "split": "evaluation",
+        "referenceTurns": 16,
+        "referenceSpeakers": 4
+      },
+      {
+        "name": "en-quiet",
+        "clock": {
+          "recording": "IS1000a-first120-quiet",
+          "source": "public-mix",
+          "wavSha256": "72f7825a7b2bdf80a04ea46b24e8245f3bbcc6f3a96d661ed47d4f9f0b77f2e4",
+          "durationMs": 120000
+        },
+        "referenceSha256": "7a62695eff9fab0b3ac551921a6b00d11e928126d954e0a6e7e80f89eebda8bf",
+        "annotation": "controlled",
+        "split": "calibration"
+      },
+      {
+        "name": "en-noise",
+        "clock": {
+          "recording": "IS1000a-first120-noise",
+          "source": "public-mix",
+          "wavSha256": "58ed24e83934f26957f086149c66e248e86c4447b50b727f8857d1bb9fd7b84e",
+          "durationMs": 120000
+        },
+        "referenceSha256": "a6fe04dd5888f00257cd93d208235871bc2b0199a14396d93cf0305db8c3bf0e",
+        "annotation": "controlled",
+        "split": "calibration"
+      },
+      {
+        "name": "en-echo",
+        "clock": {
+          "recording": "IS1000a-first120-echo",
+          "source": "public-mix",
+          "wavSha256": "806f2445b4619aec57cb3e16ddadef0d70efaf905abb53a9f42ea3e01de2b275",
+          "durationMs": 120000
+        },
+        "referenceSha256": "a62e71444ba3cb187514196d194b38cec0acce0dc98bbf7f9f24a4e28a554a6c",
+        "annotation": "controlled",
+        "split": "calibration"
+      },
+      {
+        "name": "pt-quiet",
+        "clock": {
+          "recording": "bfamdl02-first120-quiet",
+          "source": "public-mix",
+          "wavSha256": "9f2c9be3789a8503f5b112e2e3bbc006e33e83d40559df5586fe964d328a30b8",
+          "durationMs": 120000
+        },
+        "referenceSha256": "08c059359c4e2faecdaef55da59b361cfb3600146c8029d03ecaad5c31dee1c7",
+        "annotation": "controlled",
+        "split": "calibration"
+      },
+      {
+        "name": "pt-noise",
+        "clock": {
+          "recording": "bfamdl02-first120-noise",
+          "source": "public-mix",
+          "wavSha256": "b76f08d92842c3493b2ab0c08fba24a99727690176b0a1b32c3a0ad828203ef2",
+          "durationMs": 120000
+        },
+        "referenceSha256": "2ec56329084bb6a15d63ef9744f9b365df08ed83015732e84549f5420fb2a937",
+        "annotation": "controlled",
+        "split": "calibration"
+      },
+      {
+        "name": "pt-echo",
+        "clock": {
+          "recording": "bfamdl02-first120-echo",
+          "source": "public-mix",
+          "wavSha256": "e022249ad12c8360be63bcbd54b6cfbf491b588bf5dcdb3ebbfe287c8b8b0c99",
+          "durationMs": 120000
+        },
+        "referenceSha256": "79f399da243c3df847d80e601cb8f6ee06984810cef914417a0372cb4108abc8",
+        "annotation": "controlled",
+        "split": "calibration"
+      },
+      {
+        "name": "short-control",
+        "clock": {
+          "recording": "public-short-excerpt",
+          "source": "controlled",
+          "wavSha256": "1d3dc69af29387afd713725ff0423c3074f44d8472e5f5b17e6888118253b3ec",
+          "durationMs": 10000
+        },
+        "referenceSha256": "9c3067506d0f1ed835a45e0aa24337c683060c55f20434d5d2710b62a20c41c9",
+        "annotation": "controlled",
+        "split": "calibration",
+        "sourceFixtureSha256": "b2f803cd887a4d3c41542dcf3540772a526e64ef82138b17663259c367579dad",
+        "excerptStartMs": 1000,
+        "excerptDurationMs": 200,
+        "note": "Controlled speech fragment, not a human-annotated word."
+      }
+    ],
+    "downloads": {
+      "en-original.wav": {
+        "source": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/HeadsetAudio/IS1000a.Mix-Headset.wav",
+        "size": 50645452,
+        "sha256": "25c9a48237c1f23bc419702f89234467a1b9efedbac16d9673f52d6a8c1c6a57"
+      },
+      "en.rttm": {
+        "source": "https://raw.githubusercontent.com/BUTSpeechFIT/AMI-diarization-setup/2509d8933721023fab4def2618aabd5c28eb82e9/only_words/rttms/train/IS1000a.rttm",
+        "size": 22260,
+        "sha256": "fc26dc4947a86ed4838725ed50fb5a9fdc6ce140707f25348ed977c3ed03c1aa"
+      },
+      "en-expanded-original.wav": {
+        "source": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/HeadsetAudio/IS1009a.Mix-Headset.wav",
+        "size": 26844093,
+        "sha256": "6eb5a0ede0d9e72794f976ce7bea5b78133eae969f99b4c5418b43c2468d25b1"
+      },
+      "en-expanded.rttm": {
+        "source": "https://raw.githubusercontent.com/BUTSpeechFIT/AMI-diarization-setup/2509d8933721023fab4def2618aabd5c28eb82e9/only_words/rttms/test/IS1009a.rttm",
+        "size": 11080,
+        "sha256": "ba38d35ca567f3f1e061d90fdc33579ce60d2060fc8664eaeb77d2e0fcd88b01"
+      },
+      "en-final-original.wav": {
+        "source": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/HeadsetAudio/ES2004a.Mix-Headset.wav",
+        "size": 33579394,
+        "sha256": "3e2560b19bee6952c7c7ce041b0f1ea8a7ea9468044c4eea79d2a2c67e24ab0f"
+      },
+      "en-final.rttm": {
+        "source": "https://raw.githubusercontent.com/BUTSpeechFIT/AMI-diarization-setup/2509d8933721023fab4def2618aabd5c28eb82e9/only_words/rttms/test/ES2004a.rttm",
+        "size": 14796,
+        "sha256": "9869c6146c2fd9595403edb36c2caeda65c12ffa2c0af4ce48d6814b673fd5a9"
+      },
+      "en-new-original.wav": {
+        "source": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/HeadsetAudio/TS3003a.Mix-Headset.wav",
+        "size": 48180608,
+        "sha256": "b6ce59ff735c234afdd94b13744aa26f6785af746170543fd03b33160e920a6d"
+      },
+      "en-new.rttm": {
+        "source": "https://raw.githubusercontent.com/BUTSpeechFIT/AMI-diarization-setup/2509d8933721023fab4def2618aabd5c28eb82e9/only_words/rttms/test/TS3003a.rttm",
+        "size": 14427,
+        "sha256": "57137f098ee3be9b8d77c9faa4b16e9155e821bdbf21b974dd8771d7e646d185"
+      },
+      "pt.zip": {
+        "source": "https://www.c-oral-brasil.org/files/bfamdl02.zip",
+        "size": 31775309,
+        "sha256": "5dfb337f7ae7c5534a4030c0d52764304c2a920bc42c5911b15606583c0ee271"
+      },
+      "vad.bin": {
+        "source": "https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v6.2.0.bin",
+        "size": 885098,
+        "sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987"
+      }
+    },
+    "priorStressRecipe": {
+      "schema": 1,
+      "frozenBeforeStressInference": "2026-10-19T11:35:09.679554+00:00",
+      "purpose": "Controlled calibration stress diagnostics, not independent human evaluation or physical device validation.",
+      "sources": [
+        "IS1000a-first120",
+        "bfamdl02-first120"
+      ],
+      "variants": {
+        "quiet": {
+          "gain": 0.1
+        },
+        "noise": {
+          "snrDb": 15,
+          "distribution": "uniform",
+          "generator": "32-bit LCG: state=(1664525*state+1013904223) mod 2^32; u=state/2^32*2-1",
+          "seed": 1,
+          "rms": "whole source mono PCM RMS, not speech-only RMS"
+        },
+        "echo": {
+          "delayMs": 200,
+          "gain": 0.35
+        }
+      },
+      "reference": "Original anonymous intervals propagated to the transformed source clock; echo adds a same-speaker copy shifted by 200 ms and clipped at 120000 ms. Mark annotation controlled and split calibration. No waveform speech realignment or human reannotation.",
+      "format": "Canonical PCM16 mono WAV, original sample rate; stereo averaged before transformation; round to nearest integer ties even and clamp to [-32768,32767].",
+      "acceptance": "Diagnostic only. Compare against reconstructed former 17-ms gap filling; no tuning or activation from these controls."
+    }
+  },
+  "nativeConfiguration": {
+    "threshold": 0.7,
+    "distance": "average-linkage cosine distance",
+    "coactivityConstraints": true,
+    "fillsSpeechGaps": false,
+    "runtimeSha256": "469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e",
+    "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+    "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+    "argmaxTieBreak": "first"
+  },
+  "results": {
+    "en": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "f996ae0138fba8d46a50da80f6d16b0560f5039d8beee753e64710271ca82981",
+        "predictionSha256": "3e15840a292b049a8e6f43167f854a0e19ee14e022bb38bf7db6617b59a39e7c",
+        "clock": {
+          "recording": "IS1000a-first120",
+          "source": "public-mix",
+          "wavSha256": "5b4ec0eded489b05eb11fb594b7e90df62fc4245ded073e524189c2b6baddb3b",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 5534,
+        "falseAlarmSpeakerMs": 15329,
+        "falseAlarmWithoutReferenceSpeakerMs": 15329,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 2631,
+        "correctSpeakerMs": 20445,
+        "unknownActivityMs": 6333,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 3,
+        "der": 0.8211814051031108,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "f996ae0138fba8d46a50da80f6d16b0560f5039d8beee753e64710271ca82981",
+        "predictionSha256": "1dcb85f40c0d8d72e13f8299a94f099887cc875e5810fd7e80222529e25fa321",
+        "clock": {
+          "recording": "IS1000a-first120",
+          "source": "public-mix",
+          "wavSha256": "5b4ec0eded489b05eb11fb594b7e90df62fc4245ded073e524189c2b6baddb3b",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 10769,
+        "falseAlarmSpeakerMs": 1368,
+        "falseAlarmWithoutReferenceSpeakerMs": 1368,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 2377,
+        "correctSpeakerMs": 15464,
+        "unknownActivityMs": 2382,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 3,
+        "der": 0.5073051380636141,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": true,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 19196,
+      "additionalMissedSpeakerMs": 5235,
+      "newlyUncoveredReferenceTurns": 1,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 12,
+      "nativeBaselineMs": 3838,
+      "nativeVadDiagnosticMs": 1803,
+      "resources": {
+        "wallSeconds": 6.522,
+        "peakRssKiB": 130876,
+        "cpuUserSeconds": 5.596891,
+        "cpuSystemSeconds": 0.879968,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "pt": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "32ca185a86b64d52cabd0c4d13b0c1d7bff375a230cb7b679d1c71d7fcb7ff95",
+        "predictionSha256": "33a08a3741e1f45986ba263607a764e1cd8d7a599e155b6d654f16510738f5f3",
+        "clock": {
+          "recording": "bfamdl02-first120",
+          "source": "public-mix",
+          "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 17880,
+        "falseAlarmSpeakerMs": 3847,
+        "falseAlarmWithoutReferenceSpeakerMs": 649,
+        "excessOverlapSpeakerMs": 3198,
+        "confusedSpeakerMs": 1428,
+        "correctSpeakerMs": 114593,
+        "unknownActivityMs": 793,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 2,
+        "der": 0.17292626642071382,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "32ca185a86b64d52cabd0c4d13b0c1d7bff375a230cb7b679d1c71d7fcb7ff95",
+        "predictionSha256": "3b80c5fa550a6bc2a136892feb411feca77f7aee9d6729878a822e99332ca766",
+        "clock": {
+          "recording": "bfamdl02-first120",
+          "source": "public-mix",
+          "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 18446,
+        "falseAlarmSpeakerMs": 3656,
+        "falseAlarmWithoutReferenceSpeakerMs": 458,
+        "excessOverlapSpeakerMs": 3198,
+        "confusedSpeakerMs": 1428,
+        "correctSpeakerMs": 114027,
+        "unknownActivityMs": 793,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 2,
+        "der": 0.17572684296607194,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": false,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": true
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 757,
+      "additionalMissedSpeakerMs": 566,
+      "newlyUncoveredReferenceTurns": 0,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 18,
+      "nativeBaselineMs": 9093,
+      "nativeVadDiagnosticMs": 5184,
+      "resources": {
+        "wallSeconds": 15.331,
+        "peakRssKiB": 149216,
+        "cpuUserSeconds": 12.926236,
+        "cpuSystemSeconds": 2.325407,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "en-expanded": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "773c11b329fc0d9367d509b34021626f31fc34884ae71475afbf1434d9c0d71d",
+        "predictionSha256": "a2960b1f7402f7a65d43d15bb3a4e966118d6803a2aef3ac76d45a8ddfe45012",
+        "clock": {
+          "recording": "IS1009a-first120",
+          "source": "public-mix",
+          "wavSha256": "03f9cefb7018a4529c0bf94ab2a4d6a4ba16128fd03b6c0764425ec2677d9954",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 61730,
+        "missedSpeakerMs": 2514,
+        "falseAlarmSpeakerMs": 10445,
+        "falseAlarmWithoutReferenceSpeakerMs": 9776,
+        "excessOverlapSpeakerMs": 669,
+        "confusedSpeakerMs": 24749,
+        "correctSpeakerMs": 34467,
+        "unknownActivityMs": 851,
+        "referenceSpeakers": 4,
+        "predictedSpeakers": 2,
+        "der": 0.6108537178033371,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "773c11b329fc0d9367d509b34021626f31fc34884ae71475afbf1434d9c0d71d",
+        "predictionSha256": "3bf2ffc9b5bafc949dc2af11b1d753a9bf07bea0bb57e0b4952d5d1af1b6f656",
+        "clock": {
+          "recording": "IS1009a-first120",
+          "source": "public-mix",
+          "wavSha256": "03f9cefb7018a4529c0bf94ab2a4d6a4ba16128fd03b6c0764425ec2677d9954",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 61730,
+        "missedSpeakerMs": 3540,
+        "falseAlarmSpeakerMs": 7335,
+        "falseAlarmWithoutReferenceSpeakerMs": 6666,
+        "excessOverlapSpeakerMs": 669,
+        "confusedSpeakerMs": 24605,
+        "correctSpeakerMs": 33585,
+        "unknownActivityMs": 851,
+        "referenceSpeakers": 4,
+        "predictedSpeakers": 2,
+        "der": 0.5747610562125385,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": true,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": true
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 4136,
+      "additionalMissedSpeakerMs": 1026,
+      "newlyUncoveredReferenceTurns": 0,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 12,
+      "nativeBaselineMs": 4930,
+      "nativeVadDiagnosticMs": 1856,
+      "resources": {
+        "wallSeconds": 7.685,
+        "peakRssKiB": 143680,
+        "cpuUserSeconds": 6.750604,
+        "cpuSystemSeconds": 0.842842,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "en-final": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "e784893424a7756453d9999ffc415151c42100bc86be51ef98296ea975c4582b",
+        "predictionSha256": "6eb17fc861a79e6583466fdac6333de6377645890d0346a61c89c553902dbe51",
+        "clock": {
+          "recording": "ES2004a-first120",
+          "source": "public-mix",
+          "wavSha256": "f1d66664d87a7f8fe98c8cb44e61d26e8f97c8eaba1572234fcb2c38703f21ba",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "evaluation",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 61600,
+        "missedSpeakerMs": 12538,
+        "falseAlarmSpeakerMs": 3244,
+        "falseAlarmWithoutReferenceSpeakerMs": 2362,
+        "excessOverlapSpeakerMs": 882,
+        "confusedSpeakerMs": 3516,
+        "correctSpeakerMs": 45546,
+        "unknownActivityMs": 3003,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 1,
+        "der": 0.31327922077922077,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "e784893424a7756453d9999ffc415151c42100bc86be51ef98296ea975c4582b",
+        "predictionSha256": "714e88aebe220e4de510fe42bbb0ce5bd8177f25d10890e35b25560cccd0d382",
+        "clock": {
+          "recording": "ES2004a-first120",
+          "source": "public-mix",
+          "wavSha256": "f1d66664d87a7f8fe98c8cb44e61d26e8f97c8eaba1572234fcb2c38703f21ba",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "evaluation",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 61600,
+        "missedSpeakerMs": 23223,
+        "falseAlarmSpeakerMs": 1159,
+        "falseAlarmWithoutReferenceSpeakerMs": 485,
+        "excessOverlapSpeakerMs": 674,
+        "confusedSpeakerMs": 2821,
+        "correctSpeakerMs": 35556,
+        "unknownActivityMs": 1547,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 1,
+        "der": 0.44160714285714286,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": false,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 12770,
+      "additionalMissedSpeakerMs": 10685,
+      "newlyUncoveredReferenceTurns": 4,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 0,
+      "speechRegions": 19,
+      "nativeBaselineMs": 4389,
+      "nativeVadDiagnosticMs": 1806,
+      "resources": {
+        "wallSeconds": 7.103,
+        "peakRssKiB": 143600,
+        "cpuUserSeconds": 6.238539,
+        "cpuSystemSeconds": 0.8164319999999999,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "en-new": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "5a20f23ae39a3da70019af0c787d6adcfad65d57f38dcec50e07197236b77eab",
+        "predictionSha256": "24b5ead4395171783d15d4e98aeaa3616de0c9cf677955861e3d36cdf4a88dc0",
+        "clock": {
+          "recording": "TS3003a-first120",
+          "source": "public-mix",
+          "wavSha256": "12b29461406fe6725138fff370086ce15bb9bcab47c21801043e3ac88e3ea9f5",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "evaluation",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 86654,
+        "missedSpeakerMs": 12670,
+        "falseAlarmSpeakerMs": 509,
+        "falseAlarmWithoutReferenceSpeakerMs": 148,
+        "excessOverlapSpeakerMs": 361,
+        "confusedSpeakerMs": 1978,
+        "correctSpeakerMs": 72006,
+        "unknownActivityMs": 2347,
+        "referenceSpeakers": 4,
+        "predictedSpeakers": 2,
+        "der": 0.1749140258960925,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "5a20f23ae39a3da70019af0c787d6adcfad65d57f38dcec50e07197236b77eab",
+        "predictionSha256": "437d141bf734e19d8bd5c109b45c079a0628c6fb9df78dbcd8df6fc7ec611911",
+        "clock": {
+          "recording": "TS3003a-first120",
+          "source": "public-mix",
+          "wavSha256": "12b29461406fe6725138fff370086ce15bb9bcab47c21801043e3ac88e3ea9f5",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "evaluation",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 86654,
+        "missedSpeakerMs": 25545,
+        "falseAlarmSpeakerMs": 384,
+        "falseAlarmWithoutReferenceSpeakerMs": 97,
+        "excessOverlapSpeakerMs": 287,
+        "confusedSpeakerMs": 1155,
+        "correctSpeakerMs": 59954,
+        "unknownActivityMs": 1450,
+        "referenceSpeakers": 4,
+        "predictedSpeakers": 2,
+        "der": 0.3125533731853117,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": false,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 13000,
+      "additionalMissedSpeakerMs": 12875,
+      "newlyUncoveredReferenceTurns": 4,
+      "newlyUncoveredShortReferenceTurns": 1,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 30,
+      "nativeBaselineMs": 4953,
+      "nativeVadDiagnosticMs": 1816,
+      "resources": {
+        "wallSeconds": 7.665,
+        "peakRssKiB": 143896,
+        "cpuUserSeconds": 6.752823,
+        "cpuSystemSeconds": 0.866497,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "en-quiet": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "7a62695eff9fab0b3ac551921a6b00d11e928126d954e0a6e7e80f89eebda8bf",
+        "predictionSha256": "542772836ebdb15e83625b0089d0d66dbaea6c6de87ad77aa50bc6d8cb88f6ae",
+        "clock": {
+          "recording": "IS1000a-first120-quiet",
+          "source": "public-mix",
+          "wavSha256": "72f7825a7b2bdf80a04ea46b24e8245f3bbcc6f3a96d661ed47d4f9f0b77f2e4",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 5568,
+        "falseAlarmSpeakerMs": 15279,
+        "falseAlarmWithoutReferenceSpeakerMs": 15279,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 2614,
+        "correctSpeakerMs": 20428,
+        "unknownActivityMs": 6299,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 3,
+        "der": 0.8200279622509612,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "7a62695eff9fab0b3ac551921a6b00d11e928126d954e0a6e7e80f89eebda8bf",
+        "predictionSha256": "53748596e0ab18d3d205fe06db169f1ca7eba1e9086ba765fad630644ef6eac8",
+        "clock": {
+          "recording": "IS1000a-first120-quiet",
+          "source": "public-mix",
+          "wavSha256": "72f7825a7b2bdf80a04ea46b24e8245f3bbcc6f3a96d661ed47d4f9f0b77f2e4",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 17938,
+        "falseAlarmSpeakerMs": 99,
+        "falseAlarmWithoutReferenceSpeakerMs": 99,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 547,
+        "correctSpeakerMs": 10125,
+        "unknownActivityMs": 547,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 2,
+        "der": 0.6495630898287312,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": true,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 27550,
+      "additionalMissedSpeakerMs": 12370,
+      "newlyUncoveredReferenceTurns": 3,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 8,
+      "nativeBaselineMs": 3884,
+      "nativeVadDiagnosticMs": 1800,
+      "resources": {
+        "wallSeconds": 6.602,
+        "peakRssKiB": 130796,
+        "cpuUserSeconds": 5.705905,
+        "cpuSystemSeconds": 0.8522449999999999,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "en-noise": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "a6fe04dd5888f00257cd93d208235871bc2b0199a14396d93cf0305db8c3bf0e",
+        "predictionSha256": "ca2ca80a66e0008a1fc37d5c9e7f23eb129107e55145f5519d01305d273532b0",
+        "clock": {
+          "recording": "IS1000a-first120-noise",
+          "source": "public-mix",
+          "wavSha256": "58ed24e83934f26957f086149c66e248e86c4447b50b727f8857d1bb9fd7b84e",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 7371,
+        "falseAlarmSpeakerMs": 14600,
+        "falseAlarmWithoutReferenceSpeakerMs": 14600,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 3808,
+        "correctSpeakerMs": 17431,
+        "unknownActivityMs": 6233,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 3,
+        "der": 0.9010485844110451,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "a6fe04dd5888f00257cd93d208235871bc2b0199a14396d93cf0305db8c3bf0e",
+        "predictionSha256": "08f02e0d38fcbd2f8abad911dceb2dbdbb01ed7f4ff41d92b4ccfafddd59af14",
+        "clock": {
+          "recording": "IS1000a-first120-noise",
+          "source": "public-mix",
+          "wavSha256": "58ed24e83934f26957f086149c66e248e86c4447b50b727f8857d1bb9fd7b84e",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 17323,
+        "falseAlarmSpeakerMs": 152,
+        "falseAlarmWithoutReferenceSpeakerMs": 152,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 68,
+        "correctSpeakerMs": 11219,
+        "unknownActivityMs": 68,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 2,
+        "der": 0.6131772107654666,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": true,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 24400,
+      "additionalMissedSpeakerMs": 9952,
+      "newlyUncoveredReferenceTurns": 2,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 9,
+      "nativeBaselineMs": 3814,
+      "nativeVadDiagnosticMs": 1799,
+      "resources": {
+        "wallSeconds": 6.521,
+        "peakRssKiB": 130944,
+        "cpuUserSeconds": 5.675678,
+        "cpuSystemSeconds": 0.811128,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "en-echo": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "a62e71444ba3cb187514196d194b38cec0acce0dc98bbf7f9f24a4e28a554a6c",
+        "predictionSha256": "de6e6dba3a1656e45d1dc45199e294247d6eee4ef8cc5fdcb776fa9cbdb6c314",
+        "clock": {
+          "recording": "IS1000a-first120-echo",
+          "source": "public-mix",
+          "wavSha256": "806f2445b4619aec57cb3e16ddadef0d70efaf905abb53a9f42ea3e01de2b275",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 30810,
+        "missedSpeakerMs": 5187,
+        "falseAlarmSpeakerMs": 13923,
+        "falseAlarmWithoutReferenceSpeakerMs": 12898,
+        "excessOverlapSpeakerMs": 1025,
+        "confusedSpeakerMs": 7026,
+        "correctSpeakerMs": 18597,
+        "unknownActivityMs": 6982,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 2,
+        "der": 0.8482960077896787,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "a62e71444ba3cb187514196d194b38cec0acce0dc98bbf7f9f24a4e28a554a6c",
+        "predictionSha256": "1f91b969757b80b6d50d63b0977377aba64eb67669a3da66cafefe20154569e5",
+        "clock": {
+          "recording": "IS1000a-first120-echo",
+          "source": "public-mix",
+          "wavSha256": "806f2445b4619aec57cb3e16ddadef0d70efaf905abb53a9f42ea3e01de2b275",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 30810,
+        "missedSpeakerMs": 13572,
+        "falseAlarmSpeakerMs": 3035,
+        "falseAlarmWithoutReferenceSpeakerMs": 2010,
+        "excessOverlapSpeakerMs": 1025,
+        "confusedSpeakerMs": 5154,
+        "correctSpeakerMs": 12084,
+        "unknownActivityMs": 3719,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 2,
+        "der": 0.7062966569295683,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": true,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 19273,
+      "additionalMissedSpeakerMs": 8385,
+      "newlyUncoveredReferenceTurns": 4,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 2,
+      "speechRegions": 10,
+      "nativeBaselineMs": 3741,
+      "nativeVadDiagnosticMs": 1810,
+      "resources": {
+        "wallSeconds": 6.441,
+        "peakRssKiB": 132988,
+        "cpuUserSeconds": 5.561336,
+        "cpuSystemSeconds": 0.842417,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "pt-quiet": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "08c059359c4e2faecdaef55da59b361cfb3600146c8029d03ecaad5c31dee1c7",
+        "predictionSha256": "ead3ce09f5b52f5c1db70c8066f9d3b81969066cd29658735e5ff62fbea6c681",
+        "clock": {
+          "recording": "bfamdl02-first120-quiet",
+          "source": "public-mix",
+          "wavSha256": "9f2c9be3789a8503f5b112e2e3bbc006e33e83d40559df5586fe964d328a30b8",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 17811,
+        "falseAlarmSpeakerMs": 3865,
+        "falseAlarmWithoutReferenceSpeakerMs": 649,
+        "excessOverlapSpeakerMs": 3216,
+        "confusedSpeakerMs": 1394,
+        "correctSpeakerMs": 114696,
+        "unknownActivityMs": 776,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 2,
+        "der": 0.17229146907043263,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "08c059359c4e2faecdaef55da59b361cfb3600146c8029d03ecaad5c31dee1c7",
+        "predictionSha256": "e4f27a5f81a306a741cea169615850a4617092e2d77177ff298716007a519d20",
+        "clock": {
+          "recording": "bfamdl02-first120-quiet",
+          "source": "public-mix",
+          "wavSha256": "9f2c9be3789a8503f5b112e2e3bbc006e33e83d40559df5586fe964d328a30b8",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 21064,
+        "falseAlarmSpeakerMs": 3614,
+        "falseAlarmWithoutReferenceSpeakerMs": 398,
+        "excessOverlapSpeakerMs": 3216,
+        "confusedSpeakerMs": 1394,
+        "correctSpeakerMs": 111443,
+        "unknownActivityMs": 776,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 2,
+        "der": 0.19471101784153966,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": false,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 3504,
+      "additionalMissedSpeakerMs": 3253,
+      "newlyUncoveredReferenceTurns": 1,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 18,
+      "nativeBaselineMs": 7343,
+      "nativeVadDiagnosticMs": 3449,
+      "resources": {
+        "wallSeconds": 11.738,
+        "peakRssKiB": 147808,
+        "cpuUserSeconds": 10.53464,
+        "cpuSystemSeconds": 1.128566,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "pt-noise": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "2ec56329084bb6a15d63ef9744f9b365df08ed83015732e84549f5420fb2a937",
+        "predictionSha256": "faab5d36edcc32ad5cc63322e11f2ef52f58bc3f828c6862813f9f9b1e41cdb5",
+        "clock": {
+          "recording": "bfamdl02-first120-noise",
+          "source": "public-mix",
+          "wavSha256": "b76f08d92842c3493b2ab0c08fba24a99727690176b0a1b32c3a0ad828203ef2",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 17939,
+        "falseAlarmSpeakerMs": 4108,
+        "falseAlarmWithoutReferenceSpeakerMs": 1151,
+        "excessOverlapSpeakerMs": 2957,
+        "confusedSpeakerMs": 1615,
+        "correctSpeakerMs": 114347,
+        "unknownActivityMs": 759,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 2,
+        "der": 0.17671264591003802,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "2ec56329084bb6a15d63ef9744f9b365df08ed83015732e84549f5420fb2a937",
+        "predictionSha256": "73d44663a6486854a4f7db5eb4c37b8da0440cf1a32de0feb431868b45553712",
+        "clock": {
+          "recording": "bfamdl02-first120-noise",
+          "source": "public-mix",
+          "wavSha256": "b76f08d92842c3493b2ab0c08fba24a99727690176b0a1b32c3a0ad828203ef2",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 18850,
+        "falseAlarmSpeakerMs": 3708,
+        "falseAlarmWithoutReferenceSpeakerMs": 751,
+        "excessOverlapSpeakerMs": 2957,
+        "confusedSpeakerMs": 1439,
+        "correctSpeakerMs": 113612,
+        "unknownActivityMs": 759,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 2,
+        "der": 0.17921449429055794,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": false,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 1311,
+      "additionalMissedSpeakerMs": 911,
+      "newlyUncoveredReferenceTurns": 1,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 17,
+      "nativeBaselineMs": 7387,
+      "nativeVadDiagnosticMs": 3438,
+      "resources": {
+        "wallSeconds": 11.758,
+        "peakRssKiB": 144612,
+        "cpuUserSeconds": 10.547808999999999,
+        "cpuSystemSeconds": 1.163486,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "pt-echo": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "79f399da243c3df847d80e601cb8f6ee06984810cef914417a0372cb4108abc8",
+        "predictionSha256": "52df6cf22cb22ffec20ed9c3f4c094629a2af954de8ac909ae92017da155802e",
+        "clock": {
+          "recording": "bfamdl02-first120-echo",
+          "source": "public-mix",
+          "wavSha256": "e022249ad12c8360be63bcbd54b6cfbf491b588bf5dcdb3ebbfe287c8b8b0c99",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 144295,
+        "missedSpeakerMs": 18408,
+        "falseAlarmSpeakerMs": 15559,
+        "falseAlarmWithoutReferenceSpeakerMs": 216,
+        "excessOverlapSpeakerMs": 15343,
+        "confusedSpeakerMs": 11659,
+        "correctSpeakerMs": 114228,
+        "unknownActivityMs": 8649,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 3,
+        "der": 0.316199452510482,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "79f399da243c3df847d80e601cb8f6ee06984810cef914417a0372cb4108abc8",
+        "predictionSha256": "6b3b9d43a20bf00380252701168ca2e547d04cc26bbd7a49ec71c511450435dc",
+        "clock": {
+          "recording": "bfamdl02-first120-echo",
+          "source": "public-mix",
+          "wavSha256": "e022249ad12c8360be63bcbd54b6cfbf491b588bf5dcdb3ebbfe287c8b8b0c99",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 144295,
+        "missedSpeakerMs": 19293,
+        "falseAlarmSpeakerMs": 15379,
+        "falseAlarmWithoutReferenceSpeakerMs": 36,
+        "excessOverlapSpeakerMs": 15343,
+        "confusedSpeakerMs": 11659,
+        "correctSpeakerMs": 113343,
+        "unknownActivityMs": 8649,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 3,
+        "der": 0.321085276690114,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": false,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 1065,
+      "additionalMissedSpeakerMs": 885,
+      "newlyUncoveredReferenceTurns": 2,
+      "newlyUncoveredShortReferenceTurns": 0,
+      "baselineCoveredShortReferenceTurns": 2,
+      "speechRegions": 12,
+      "nativeBaselineMs": 6853,
+      "nativeVadDiagnosticMs": 3475,
+      "resources": {
+        "wallSeconds": 11.257,
+        "peakRssKiB": 147208,
+        "cpuUserSeconds": 10.035636,
+        "cpuSystemSeconds": 1.163877,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    },
+    "short-control": {
+      "baseline": {
+        "schema": 1,
+        "referenceSha256": "9c3067506d0f1ed835a45e0aa24337c683060c55f20434d5d2710b62a20c41c9",
+        "predictionSha256": "cecd4254487cb3bb45e9895a90c23eb817ac7c8b32ccd0b7ea85d227e6945aa9",
+        "clock": {
+          "recording": "public-short-excerpt",
+          "source": "controlled",
+          "wavSha256": "1d3dc69af29387afd713725ff0423c3074f44d8472e5f5b17e6888118253b3ec",
+          "durationMs": 10000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 200,
+        "missedSpeakerMs": 30,
+        "falseAlarmSpeakerMs": 66,
+        "falseAlarmWithoutReferenceSpeakerMs": 66,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 170,
+        "correctSpeakerMs": 0,
+        "unknownActivityMs": 236,
+        "referenceSpeakers": 1,
+        "predictedSpeakers": 0,
+        "der": 1.33,
+        "productionQualified": false
+      },
+      "gated": {
+        "schema": 1,
+        "referenceSha256": "9c3067506d0f1ed835a45e0aa24337c683060c55f20434d5d2710b62a20c41c9",
+        "predictionSha256": "a97ed2d1ab7925978e554b04ce8a0916a98790a527b9cf71cd8eee503e327542",
+        "clock": {
+          "recording": "public-short-excerpt",
+          "source": "controlled",
+          "wavSha256": "1d3dc69af29387afd713725ff0423c3074f44d8472e5f5b17e6888118253b3ec",
+          "durationMs": 10000
+        },
+        "language": "en",
+        "annotation": "controlled",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 200,
+        "missedSpeakerMs": 200,
+        "falseAlarmSpeakerMs": 0,
+        "falseAlarmWithoutReferenceSpeakerMs": 0,
+        "excessOverlapSpeakerMs": 0,
+        "confusedSpeakerMs": 0,
+        "correctSpeakerMs": 0,
+        "unknownActivityMs": 0,
+        "referenceSpeakers": 1,
+        "predictedSpeakers": 0,
+        "der": 1.0,
+        "productionQualified": false
+      },
+      "acceptance": {
+        "falseAlarmsDoNotIncrease": true,
+        "derDoesNotIncrease": true,
+        "missedSpeechDoesNotIncrease": false,
+        "noNewlyUncoveredReferenceTurns": false
+      },
+      "passed": false,
+      "removedActivitySpeakerMs": 236,
+      "additionalMissedSpeakerMs": 170,
+      "newlyUncoveredReferenceTurns": 1,
+      "newlyUncoveredShortReferenceTurns": 1,
+      "baselineCoveredShortReferenceTurns": 1,
+      "speechRegions": 0,
+      "nativeBaselineMs": 939,
+      "nativeVadDiagnosticMs": 169,
+      "resources": {
+        "wallSeconds": 1.906,
+        "peakRssKiB": 123780,
+        "cpuUserSeconds": 1.791692,
+        "cpuSystemSeconds": 0.10774199999999999,
+        "method": "Linux wait4, combined native baseline and VAD child"
+      }
+    }
+  },
+  "sourceLicenses": {
+    "ami": {
+      "license": "CC-BY-4.0",
+      "licenseSource": "https://groups.inf.ed.ac.uk/ami/corpus/",
+      "attribution": "J. Carletta et al., The AMI meeting corpus: A pre-announcement (2006); F. Landini et al., VBx",
+      "annotationRevision": "2509d8933721023fab4def2618aabd5c28eb82e9"
+    },
+    "coral": {
+      "license": "CC-BY-NC-SA-4.0; local noncommercial research only",
+      "licenseSource": "https://www.c-oral-brasil.org/c-oral-brasil-i.php",
+      "attribution": "Tommaso Raso and Heliana Mello (eds.), C-ORAL-BRASIL I, Editora UFMG, 2012"
+    },
+    "vad": {
+      "license": "MIT",
+      "modelSource": "https://huggingface.co/ggml-org/whisper-vad",
+      "upstream": "https://github.com/snakers4/silero-vad",
+      "catalog": "crates/voice/src/models.rs"
+    },
+    "shortControl": {
+      "license": "Public domain, inherited from the tracked fixture",
+      "source": "crates/voice/tests/fixtures/README.md"
+    }
+  },
+  "verification": {
+    "allTenKnownBaselineQualityReportsMatchPrevious": true,
+    "all24NativeReportsMatchStandaloneAndIndependentMillisecondRaster": true,
+    "noSpeechMaskAddsActivityOrChangesSpeakerIds": true,
+    "modelThresholdTuning": false,
+    "appFilterEnabled": false,
+    "productionQualified": false,
+    "microphoneOrSystemCapture": false,
+    "personalProfileUsed": false,
+    "sourceAudioOrAnnotationTurnsRedistributed": false,
+    "featureVoiceTestsPassed": 91,
+    "featureVoiceTestsIgnored": 5,
+    "spikeTestsPassed": 23,
+    "explicitNativeTestsPassed": 4,
+    "defaultVoiceTestsPassedWithSileroFixtures": 57,
+    "vadAdmissionRejectionsPassed": 3,
+    "ordinaryNativeRunKeepsDiagnosticNull": true,
+    "everyGatedIntervalKeepsAnOriginalIdentityAndBounds": true
+  },
+  "acceptancePassed": false,
+  "limitations": [
+    "Known clips and controlled transforms are calibration; only TS3003a is a new recording for this experiment. Speaker identity and model-training independence are not established.",
+    "No independent Portuguese human evaluation source or physical microphone/system echo/alignment acceptance.",
+    "Short control is a controlled 200 ms fragment, not a human-annotated complete word. Other short-turn checks use supplied reference intervals.",
+    "Silero inference cannot abort mid-call. Diagnostic admission waits behind interactive work; its whole-source bounded native call holds the scheduler slot and is not a production preemption implementation.",
+    "Model paths must be trusted and immutable during use; Linux keeps the verified descriptor through native loading and detects persistent edits by rehashing. This is not an immutable snapshot.",
+    "Masking speech cannot fix speaker identity merges or excess overlapping voices while speech continues.",
+    "Missed time follows the supplied references: C-ORAL utterance intervals include pauses. Its extra missed time alone does not prove loss of phonetic content; acoustic validation remains open."
+  ],
+  "decision": "Reject general speech masking: at least one frozen no-regression/short-speech gate failed. Keep the diagnostic opt-in only; do not change the app or baseline diarization."
+}

@@ -113,6 +113,16 @@ fn private_wayland_lease_restores_without_reclaiming_and_focus_checkpoints_are_l
             "the private editor is recognized: {:?}",
             first.window.as_ref().map(|w| &w.class)
         );
+        let styles = crate::focus::Tracker::start()
+            .await
+            .expect("read-only style tracker without a portal grant");
+        let frozen = styles.snapshot().expect("key-down application context");
+        assert_eq!(Some(&frozen), first.window.as_ref());
+        assert_eq!(
+            mock.starts.load(Ordering::SeqCst),
+            0,
+            "Style context never requests keyboard permission"
+        );
         let other = gtk::ApplicationWindow::new(&application);
         other.set_title("Second private editor");
         other.show_all();
@@ -125,6 +135,21 @@ fn private_wayland_lease_restores_without_reclaiming_and_focus_checkpoints_are_l
         assert!(
             changed.sequence > first.sequence,
             "same-app windows still change the focus epoch"
+        );
+        settle(|| {
+            styles.snapshot().as_ref().map(|w| &w.identity) == changed.window.as_ref().map(|w| &w.identity)
+        })
+        .await;
+        assert_ne!(styles.snapshot().unwrap().identity, frozen.identity);
+        assert_eq!(
+            Some(&frozen),
+            first.window.as_ref(),
+            "The recording keeps its original context"
+        );
+        styles.close().await;
+        assert!(
+            watch.checkpoint().await.is_some(),
+            "Closing the style tracker cannot unload the insertion tracker"
         );
         other.close();
         for _ in 0..30 {

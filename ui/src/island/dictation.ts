@@ -4,10 +4,11 @@ import { Bridge, type DictationStatus, type ViewModel } from "../bridge";
 import { icon, type IconName } from "./icons";
 import { dictationCaptionTop } from "./geometry";
 
-const ended = new Set(["session", "held", "pasted", "copied", "empty", "cancelled", "failed"]);
+const ended = new Set(["session", "held", "pasted", "copied", "empty", "cancelled", "failed", "commanded", "answered", "asked", "refused", "unknown"]);
 const delivered = new Set(["session", "held", "pasted", "copied"]);
 
 const copyErrors = new Set([
+  tk("The voice command worker is unavailable."),
   tk("Could not read dictation words."),
   tk("Dictation text processing exceeded its size limit."),
   tk("This Wayland desktop does not provide background clipboard access."),
@@ -45,6 +46,8 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
   caption.hidden = true;
   document.body.append(caption);
   let visible = true;
+  let relocated = false;
+  const floating = document.body.classList.contains("dictation-overlay");
   let soundEnabled = false;
   let soundSettingChanged = false;
   let captionsEnabled = false;
@@ -70,12 +73,12 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
       || (captionDeadline !== null && Date.now() >= captionDeadline) || (mount && !anchorVisible)) {
       hide(); return;
     }
-    const text = delivered.has(current.phase) && current.text ? current.text
+    const text = floating && ["listening", "locked"].includes(current.phase) ? current.partial ?? "" : (delivered.has(current.phase) || current.command) && current.text ? current.text
       : words.clientWidth > 0 && words.scrollWidth > words.clientWidth ? words.textContent : "";
     if (!text) { hide(); return; }
     const rect = mount ? anchor : line.getBoundingClientRect();
     if (!rect || rect.width < 120) { hide(); return; }
-    caption.style.width = `${Math.min(rect.width, Math.max(0, window.innerWidth - 24))}px`;
+    caption.style.width = `${Math.min(floating ? 420 : rect.width, Math.max(0, window.innerWidth - 24))}px`;
     if (caption.textContent !== text) caption.textContent = text;
     caption.hidden = false;
     const height = caption.offsetHeight;
@@ -90,11 +93,14 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
   }
   const relabel = () => {
     if (!current) return;
+    const error = current.error ? (copyErrors.has(current.error) ? t(current.error) : current.error) : "";
     const text = {
-      listening: () => current?.partial ? t("Listening: {text}", { text: current.partial }) : t("Dictation: listening…"),
+      listening: () => current?.command
+        ? current.partial ? t("Command: {text}", { text: current.partial }) : t("Command: listening…")
+        : current?.partial ? t("Listening: {text}", { text: current.partial }) : t("Dictation: listening…"),
       locked: () => current?.partial ? t("Hands-free: {text}", { text: current.partial }) : t("Dictation: hands-free listening…"),
-      finishing: () => t("Dictation: finishing recording…"),
-      working: () => t("Dictation: transcribing locally…"),
+      finishing: () => current?.command ? t("Command: finishing recording…") : t("Dictation: finishing recording…"),
+      working: () => current?.command ? t("Command: transcribing locally…") : t("Dictation: transcribing locally…"),
       retrying: () => t("Dictation: retrying with the installed Base model…"),
       pasted: () => t("Pasted in {app}. Review it in your editor.", { app: current?.app ?? "" }),
       session: () => t("In session {session}. Review it in your terminal.", { session: current?.session_name ?? "" }),
@@ -104,14 +110,20 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
           ? t("Copied from dictation in {app}. Use Ctrl+Shift+V to paste.", { app: current.app })
           : t("Copied from dictation in {app}. Paste it in your app.", { app: current.app })
         : t("Copied. Use your app's Paste command."),
-      empty: () => t("No dictation text to copy."),
-      cancelled: () => t("Dictation cancelled."),
-      failed: () => t("Dictation failed: {error}", { error: current?.error ? (copyErrors.has(current.error) ? t(current.error) : current.error) : "" }),
+      empty: () => current?.command ? t("No voice command was heard.") : t("No dictation text to copy."),
+      cancelled: () => current?.command ? t("Voice command cancelled.") : t("Dictation cancelled."),
+      failed: () => current?.result || (current?.command ? t("Voice command failed: {error}", { error }) : t("Dictation failed: {error}", { error })),
+      commanded: () => t("Command done: {result}", { result: current?.result ?? "" }),
+      answered: () => t("Answer: {result}", { result: current?.result ?? "" }),
+      asked: () => current?.result || t("Which one?"),
+      refused: () => t("Not by voice: {result}", { result: current?.result ?? "" }),
+      unknown: () => t("Not a command: {result}", { result: current?.result ?? "" }),
     }[current.phase];
     const glyph: Record<DictationStatus["phase"], IconName> = {
       listening: "mic", locked: "pin", finishing: "stop", working: "bars", retrying: "retry",
       pasted: "check", session: "flock", held: "pause", copied: "copy", empty: "mute",
       cancelled: "close", failed: "close",
+      commanded: "check", answered: "flock", asked: "flock", refused: "close", unknown: "close",
     };
     if (drawnPhase !== current.phase) {
       mark.replaceChildren(icon(glyph[current.phase], 12));
@@ -127,7 +139,7 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
     paintCaption();
   };
   const show = () => {
-    const hidden = !visible || blocked || expired;
+    const hidden = relocated || !visible || blocked || expired;
     const changed = requestedHidden !== hidden;
     // Meter frames must not undo renderer priority or remeasure an unchanged row.
     if (changed) {
@@ -157,6 +169,7 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
     },
     layout(rect: DOMRect, shown: boolean) { anchor = rect; anchorVisible = shown; paintCaption(); },
     visible(on: boolean) { visible = on; show(); },
+    relocated(on: boolean) { relocated = on; show(); },
     context(view: Pick<ViewModel, "locked" | "approval" | "sessions" | "inbox">, chatWaiting = false) {
       // A new card wins immediately, including one arriving halfway through a recording.
       blocked = chatWaiting || !!view.locked || !!view.approval || view.sessions.some(s => s.card || s.waiting)
@@ -168,6 +181,8 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
       // Snapshots and meter frames must never replay a recording's start cue.
       if (!initial && status.generation !== current?.generation && status.phase === "listening" && soundEnabled) onStart?.();
       const meterOnly = current && current.phase === status.phase && current.partial === status.partial
+        && current.command === status.command && current.result === status.result
+        && current.expires_at === status.expires_at
         && current.text === status.text && current.app === status.app && current.terminal === status.terminal
         && current.session_name === status.session_name && current.error === status.error
         && current.caption_until === status.caption_until && current.words === status.words;
@@ -181,11 +196,13 @@ export function dictationStatus(inNest = false, mount?: (line: HTMLElement | nul
         paintCaption();
       }, Math.max(0, captionDeadline - Date.now()));
       if (!meterOnly) relabel();
-      expired = false;
+      expired = typeof status.expires_at === "number" && status.expires_at <= Date.now();
       show();
       if (!meterOnly) paintCaption();
       if (ended.has(status.phase)) {
-        timer = setTimeout(() => { expired = true; show(); }, status.phase === "failed" ? 8000 : 3000);
+        const duration = status.phase === "asked" ? 90000 : status.phase === "failed" ? 8000 : 3000;
+        timer = setTimeout(() => { expired = true; show(); }, typeof status.expires_at === "number"
+          ? Math.max(0, Math.min(duration, status.expires_at - Date.now())) : duration);
       }
     },
   };

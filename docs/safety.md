@@ -44,9 +44,18 @@ What Vults promises:
   carries the date and time and a line for each session (agent, project, state, its step with
   secrets redacted), never a card's command. With the memory on, what Zeca remembers joins when a
   conversation starts, and up to 3 recalled passages go with each message.
-- **The microphone only listens while you hold a recording.** Voice is off until you download a
+- **Chat voice uses memory-only recording.** Chat voice is off until you download a
   model; then the mic records into memory only while its button is red (a minute at most), and
-  whisper.cpp transcribes it on this computer. The audio is never saved or sent anywhere.
+  whisper.cpp transcribes it on this computer. Chat and dictation audio are never saved or sent anywhere.
+- **Meeting recording checks require explicit consent.** On Linux, Dictation > Meetings captures
+  a reviewed microphone and system-output monitor for up to one minute into private temporary WAVs.
+  Local transcription retains the cleanup lock; completion/cancel removes audio and startup cleans
+  interrupted files. Transcripts stay only in the current page, without database writes. Leaving the
+  page or locking the screen cancels pending work and discards its transcript. There is no audio
+  archive or saved meeting. The summary backend has independent, default-off consent and sends only
+  transcript text through the selected API chat model, with no tools and a 120-second deadline.
+  Enable it in Dictation > Meeting settings, then explicitly choose Generate summary on the
+  Summary tab; recording/transcribing alone never requests a summary. Canceling notes or a failed request leaves the local transcript intact.
 - **Now playing is off until you turn it on.** Then the app reads your media players over the
   session bus (MPRIS on Linux) to show the song; it is never stored or sent anywhere.
 - **What the app asks on its own goes through one gate.** A request made without a click at that
@@ -102,6 +111,8 @@ anywhere but the app.
 | Request | Who starts it | What turns it on | Where |
 |---|---|---|---|
 | A chat turn through an API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama and LM Studio on `127.0.0.1`) | You, with each message | The provider and key you chose; sent only to that provider | `crates/chat/src/api.rs`, `openai.rs`, `providers.rs` |
+| Optional dictation text clean-up | The app, after local dictation, only with **Dictation > Styles > Clean up with a model** on (separate `dictation_cleanup` preference, default off) | The selected Chat & voice API provider, or literal-loopback Ollama/LM Studio; gate reserves one of 2,000 attempts per rolling 24 hours before sending, including failures and local calls. No tools, proxies, redirects or automatic retries; failure/timeout keeps local text | `crates/chat/src/filter.rs`, `app/src/dictation/cleanup.rs`, `app/src/gate.rs` |
+| Optional meeting summaries | An explicit Nest request after separate `meeting_summary` consent; never triggered by recording alone | Selected API chat provider/model, including literal-loopback Ollama/LM Studio; `meeting-summary` durably charges up to 20 attempts per rolling 24 hours, including failures/local calls. No tools, proxies, redirects or automatic retries; cancellation, lock/page departure or provider/model/key changes revoke pending work. Only bounded validated notes can appear; transcripts are retained on failure | `app/src/meetings/summary.rs`, `app/src/gate.rs`, `crates/chat/src/filter.rs` |
 | The list of a provider's models | You, opening **Settings → Chat & voice** with a key saved (or a local Ollama or LM Studio), or with **Try again** | The provider and key you chose | `crates/chat/src/providers.rs` |
 | A web search (Zeca's web, **Settings → Chat & voice**, off until you turn it on) | The API chat's model, during a turn you sent; through the network gate (200 a day, with page reads) | Brave Search or Tavily with your key, or your own SearXNG | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
 | A web page read (the same switch) | The API chat's model, during a turn you sent; through the network gate (the same 200) | The page's site, public addresses only; its text then goes to your API provider in a call of its own, with no tools | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
@@ -117,7 +128,8 @@ anywhere but the app.
 | A connector's check (GitHub, through `gh`) | The app, on its own schedule | Each connector's switch in **Settings → Connectors**, through the network gate (3,000 a day) | `crates/connectors/src/github.rs` |
 | Your GitHub contribution calendar (through `gh`) | You, opening **Settings → Activity**'s GitHub tab | The GitHub connector on | `crates/connectors/src/github.rs` |
 | A squash merge of your pull request (through `gh`), with a line in the local trace | You, clicking **Squash and merge** on its row in the island's Connections, then **Merge** | The GitHub connector on; only your own pull request, approved, with its checks passing | `crates/connectors/src/github.rs`, `app/src/connectors.rs` |
-| A voice model's download | You, with a click in **Settings → Chat & voice → Voice** | Nothing until you click; from Hugging Face (`ggerganov/whisper.cpp`), checked against its SHA-256 | `crates/voice/src/models.rs` |
+| A voice model's download | You, with a click in **Dictation > Voice** | Nothing until you click; from Hugging Face (`ggerganov/whisper.cpp`), checked against its SHA-256 | `crates/voice/src/models.rs` |
+| Optional meeting model/runtime downloads | You, after reviewing sources/licenses and confirming in **Dictation > Meeting settings**; no automatic start or resume | One-use, one-minute review bound to manifest and ledger; app gate reserves each HTTPS attempt, redirects included, within 24 per rolling 24 hours. Content-free local traces; pinned hashes/licenses; navigation keeps the explicit job running, cancellation or quitting stops it; no speaker analysis is activated | `crates/voice/src/meeting/assets/download.rs`, `app/src/meeting_assets.rs`, `app/src/gate/meeting_assets.rs` |
 | The speech detector's download (Silero VAD, under 1 MB) | The app, by itself, outside the gate, while voice is on and it is missing | A voice model you chose; from Hugging Face (`ggml-org/whisper-vad`), checked against its SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |
 | Claude Code's plan usage | Claude Code, which hands it to our status line | No request of ours | the hook |
 | The update check | Not built yet (ADR 0019) | It will be off until you turn it on, through the gate | — |

@@ -15,6 +15,7 @@ pub enum Job {
     /// An audit line, at its time (Unix seconds).
     Audit(i64, Audit),
     Span(Span),
+    FinishRequest(Span),
     /// A line said in one of Zeca's conversations: who, the text, the files' names, when (ms).
     Say(ConversationId, &'static str, String, Vec<String>, i64),
     /// What resumes a conversation after a turn: the CLI's session, the API's history, the tool
@@ -33,6 +34,7 @@ impl Job {
         match self {
             Self::Audit(at, line) => store.append_audit(*at, line),
             Self::Span(span) => store.append_span(span),
+            Self::FinishRequest(span) => store.finish_request(span),
             Self::Say(id, who, text, files, ms) => store.conversation_say(*id, who, text, files, *ms),
             Self::Save(id, session, history, outside, ms) => store.conversation_save(
                 *id,
@@ -47,7 +49,7 @@ impl Job {
     fn what(&self) -> &'static str {
         match self {
             Self::Audit(..) => "audit line",
-            Self::Span(_) => "trace span",
+            Self::Span(_) | Self::FinishRequest(_) => "trace span",
             Self::Say(..) | Self::Save(..) => "conversation",
         }
     }

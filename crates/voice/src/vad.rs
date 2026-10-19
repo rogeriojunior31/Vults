@@ -1,6 +1,7 @@
 //! Silero VAD through whisper.cpp: where the speech is in a recording, and when the user has
 //! finished talking.
 
+use std::mem::ManuallyDrop;
 use std::ops::Range;
 use std::path::Path;
 
@@ -16,58 +17,101 @@ use crate::SAMPLE_RATE;
 /// soon enough to feel like it stopped when the user did. The recorder's window is twice as long.
 pub(crate) const PAUSE: usize = SAMPLE_RATE as usize * 3 / 2; // 1.5 s
 /// Kept around the speech: the VAD's edges are tight, and a clipped first syllable is misheard.
-const MARGIN: usize = SAMPLE_RATE as usize / 5; // 200 ms
+pub(crate) const MARGIN: usize = SAMPLE_RATE as usize / 5; // 200 ms
 /// Shorter than one Silero window (32 ms) is nothing to look at.
 const SHORTEST: usize = 512;
 
+/// Explicit offline profiles; meeting experiments never retune Chat or dictation.
+#[cfg(feature = "diarization")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpeechProfile {
+    /// The existing smoothed detector with speech/silence confirmation.
+    Dictation,
+    /// Raw frames at probability >= 0.5, without smoothing or minimum dwell.
+    MeetingFrames,
+}
+
 #[derive(Debug)]
 pub struct Vad {
-    model: WhisperVadContext,
+    model: ManuallyDrop<WhisperVadContext>,
     detector: Hysteresis,
+}
+
+impl Drop for Vad {
+    fn drop(&mut self) {
+        let _busy = crate::WHISPER.lock();
+        // SAFETY: the only owned context is freed once, under the shared native-work slot.
+        unsafe { ManuallyDrop::drop(&mut self.model) };
+    }
 }
 
 impl Vad {
     /// Quick (the model is under 1 MB), so it is loaded for each recording.
     pub fn load(model: &Path) -> Result<Self, String> {
+        let _busy = crate::WHISPER.lock();
+        Ok(Self {
+            model: ManuallyDrop::new(Self::context(model)?),
+            detector: Hysteresis::default(),
+        })
+    }
+
+    fn context(model: &Path) -> Result<WhisperVadContext, String> {
+        // Callers hold the native-work slot: ggml backend initialization is process-global.
         whisper_rs::install_logging_hooks();
         let path = model.to_str().ok_or("the VAD model path is not UTF-8")?;
         let mut params = WhisperVadContextParams::default();
         // Small work on short audio; the transcription wants the cores.
         params.set_n_threads(1);
-        // Loading sets up ggml's backends (Vulkan among them), which must not race a model load.
-        let _busy = crate::WHISPER.lock().unwrap_or_else(|e| e.into_inner());
-        WhisperVadContext::new(path, params)
-            .map(|model| Self {
-                model,
-                detector: Hysteresis::default(),
-            })
-            .map_err(|e| format!("can't load the VAD model: {e}"))
+        WhisperVadContext::new(path, params).map_err(|e| format!("can't load the VAD model: {e}"))
+    }
+
+    #[cfg(feature = "diarization")]
+    pub(crate) fn speech_background(
+        model: &Path,
+        pcm: &[f32],
+        stop: &std::sync::atomic::AtomicBool,
+        profile: SpeechProfile,
+    ) -> Result<Option<Vec<Range<usize>>>, String> {
+        let Some(_busy) = crate::WHISPER.background(stop) else {
+            return Ok(None);
+        };
+        // Keep construction, inference and destruction inside the same native-work slot.
+        let mut model = Self::context(model)?;
+        let speech = match profile {
+            SpeechProfile::Dictation => Self::speech_locked(&mut model, &mut Hysteresis::default(), pcm)?,
+            SpeechProfile::MeetingFrames if pcm.len() < SHORTEST => Vec::new(),
+            SpeechProfile::MeetingFrames => {
+                Self::detect(&mut model, pcm)?;
+                frame_regions(model.probabilities(), pcm.len())
+            }
+        };
+        Ok((!stop.load(std::sync::atomic::Ordering::SeqCst)).then_some(speech))
     }
 
     /// The stretches of speech in 16 kHz mono audio, as sample ranges, in order.
     pub fn speech(&mut self, pcm: &[f32]) -> Result<Vec<Range<usize>>, String> {
+        let _busy = crate::WHISPER.lock();
+        Self::speech_locked(&mut self.model, &mut self.detector, pcm)
+    }
+
+    fn speech_locked(
+        model: &mut WhisperVadContext,
+        detector: &mut Hysteresis,
+        pcm: &[f32],
+    ) -> Result<Vec<Range<usize>>, String> {
         // The watcher reanalyses overlapping windows, not successive streaming chunks.
-        self.detector.reset();
+        detector.reset();
         if pcm.len() < SHORTEST {
             return Ok(Vec::new());
         }
-        // whisper.cpp resets its recurrent state on each detect_speech call too.
-        self.model
-            .detect_speech(pcm)
-            .map_err(|e| format!("the VAD failed: {e}"))?;
-        if self.model.probabilities().len() != pcm.len().div_ceil(SHORTEST) {
-            return Err("the VAD returned an incomplete speech analysis".into());
+        Self::detect(model, pcm)?;
+        for (probability, frame) in model.probabilities().iter().zip(pcm.chunks(SHORTEST)) {
+            detector.push(*probability, frame.len());
         }
-        for (probability, frame) in self.model.probabilities().iter().zip(pcm.chunks(SHORTEST)) {
-            if !probability.is_finite() || !(0.0..=1.0).contains(probability) {
-                return Err("the VAD returned an invalid speech probability".into());
-            }
-            self.detector.push(*probability, frame.len());
-        }
-        self.detector.finish();
+        detector.finish();
         let mut start = 0;
         let mut speech = Vec::new();
-        while let Some(transition) = self.detector.pop() {
+        while let Some(transition) = detector.pop() {
             match transition {
                 Transition::Start(at) => start = at,
                 Transition::End(at) => speech.push(start..at),
@@ -75,6 +119,44 @@ impl Vad {
         }
         Ok(speech)
     }
+
+    fn detect(model: &mut WhisperVadContext, pcm: &[f32]) -> Result<(), String> {
+        // whisper.cpp resets its recurrent state on each detect_speech call too.
+        model
+            .detect_speech(pcm)
+            .map_err(|e| format!("the VAD failed: {e}"))?;
+        let probabilities = model.probabilities();
+        if probabilities.len() != pcm.len().div_ceil(SHORTEST) {
+            return Err("the VAD returned an incomplete speech analysis".into());
+        }
+        if probabilities
+            .iter()
+            .any(|p| !p.is_finite() || !(0.0..=1.0).contains(p))
+        {
+            return Err("the VAD returned an invalid speech probability".into());
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "diarization")]
+fn frame_regions(probabilities: &[f32], samples: usize) -> Vec<Range<usize>> {
+    let mut regions: Vec<Range<usize>> = Vec::new();
+    for (index, &probability) in probabilities.iter().enumerate() {
+        if probability < 0.5 {
+            continue;
+        }
+        let start = index * SHORTEST;
+        let end = (start + SHORTEST).min(samples);
+        if let Some(last) = regions.last_mut()
+            && last.end == start
+        {
+            last.end = end;
+        } else {
+            regions.push(start..end);
+        }
+    }
+    regions
 }
 
 /// The recording from its first speech to its last, with a margin; nothing when there is none.
@@ -115,6 +197,32 @@ mod tests {
     use super::*;
 
     const S: usize = SAMPLE_RATE as usize;
+
+    #[cfg(feature = "diarization")]
+    #[test]
+    fn meeting_frames_keep_short_bursts_and_partial_edges_without_filling_quiet() {
+        assert_eq!(frame_regions(&[0.5], 17), vec![0..17]);
+        assert_eq!(
+            frame_regions(&[0.0, 0.5, 0.9, 0.499, 0.5], 4 * SHORTEST + 17),
+            vec![SHORTEST..3 * SHORTEST, 4 * SHORTEST..4 * SHORTEST + 17]
+        );
+        assert!(frame_regions(&[0.0, 0.499], 2 * SHORTEST).is_empty());
+        assert!(frame_regions(&[], 0).is_empty());
+        let probabilities = [0.0, 0.0, 1.0, 1.0, 0.0];
+        let mut dictation = Hysteresis::default();
+        for p in probabilities {
+            dictation.push(p, SHORTEST);
+        }
+        dictation.finish();
+        assert!(
+            dictation.pop().is_none(),
+            "dictation still rejects the short burst"
+        );
+        assert_eq!(
+            frame_regions(&probabilities, 5 * SHORTEST),
+            vec![2 * SHORTEST..4 * SHORTEST]
+        );
+    }
 
     #[test]
     fn the_speech_and_a_margin_are_kept() {
@@ -227,6 +335,53 @@ mod tests {
     fn real_vad() -> Option<Vad> {
         let path = std::env::var_os("VOICE_TEST_VAD")?;
         Some(Vad::load(Path::new(&path)).expect("the VAD model loads"))
+    }
+
+    #[test]
+    #[ignore = "requires an explicitly supplied trusted Silero model"]
+    fn native_detection_and_destruction_wait_for_the_shared_slot() {
+        use std::sync::mpsc;
+        use std::time::{Duration, Instant};
+
+        let mut bypassed = Vec::new();
+        for detect in [true, false] {
+            let mut vad = real_vad().expect("explicit trusted VAD model");
+            let busy = crate::WHISPER.lock();
+            let (done, completed) = mpsc::channel();
+            let worker = std::thread::spawn(move || {
+                if detect {
+                    let speech = vad.speech(&vec![0.0; S]).expect("native detection");
+                    assert!(speech.is_empty());
+                    done.send(()).expect("detection completed");
+                    drop(vad);
+                } else {
+                    drop(vad);
+                    done.send(()).expect("destruction completed");
+                }
+            });
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let mut escaped = false;
+            while !crate::WHISPER.foreground_waiting() {
+                if completed.try_recv().is_ok() {
+                    escaped = true;
+                    break;
+                }
+                if Instant::now() >= deadline {
+                    break;
+                }
+                std::thread::park_timeout(Duration::from_millis(1));
+            }
+            let queued = crate::WHISPER.foreground_waiting();
+            drop(busy);
+            worker.join().expect("VAD worker");
+            if escaped || !queued {
+                bypassed.push(if detect { "detection" } else { "destruction" });
+            }
+        }
+        assert!(
+            bypassed.is_empty(),
+            "native operations bypassed the shared slot: {bypassed:?}"
+        );
     }
 
     /// whisper.cpp's samples/jfk.wav (16 kHz mono 16-bit), from `VOICE_TEST_WAV`.

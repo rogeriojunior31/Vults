@@ -209,22 +209,21 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 
 ## Speaking instead of typing
 
-Independent dictation has its own controls in **Settings → Dictation**, also linked from Chat &
-voice. The model and language below are shared by both paths; dictation stays available with Zeca off.
+Independent dictation has its own configuration pages under **Dictation**. **Dictation > Voice**
+owns the shared model and spoken language, also linked from Chat & voice. Dictation stays
+available with Zeca off.
 
-Turn it on once in **Settings → Chat & voice → Voice**: download a model (*Base* is 60 MB and quick; *Small*
+Turn it on once in **Dictation > Voice**: download a model (*Base* is 60 MB and quick; *Small*
 and *Large v3 Turbo* understand accents and names better). A mic appears beside Send, to the right of the draft, both in the Nest and on the island.
 
 - Click the mic and speak. It stops by itself after about 1.5 s of quiet after your words, or when
   you click again; the words land in the input for you to read and fix, then **Enter** sends them.
   Silence before you start never stops it; if a pause does, click again to go on.
-- Or hold **Ctrl+Alt+V** while a Vults Chat surface has focus: Zeca listens while you hold it
-  (pauses never stop it); letting go fills its draft. Outside Vults the same key uses
-  [independent dictation](dictation.md#global-dictation-first-slice) and copies the text.
-  Change the key in System Settings → Shortcuts.
-- In Room or Full, the shortcut uses that window's chat while it has focus. Its
-  waveform and speech preview stay there too. Leaving Chat, hiding or closing
-  the window, or locking the screen cancels an active recording.
+- **Ctrl+Alt+V** always uses [independent dictation](dictation.md#global-dictation-first-slice),
+  even while Chat has focus. It never opens Chat or starts this microphone. Use the microphone
+  button to fill this draft directly; independent dictation follows its normal copy/insertion path.
+- In Room or Full, the microphone's waveform and speech preview stay in that window. Leaving
+  Chat, hiding or closing the window, or locking the screen cancels its active recording.
 - **Esc** while it listens throws the recording away. A recording stops by itself after a minute.
 - **Language you speak** follows your system's; pick another, or *Detect it each time*. A fixed
   language is far more reliable on short phrases. *Base* is weak outside English: in Portuguese use

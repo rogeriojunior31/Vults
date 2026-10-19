@@ -1,3 +1,4 @@
+import { appliedStyle, appliedLanguage } from "../../../dictation-styles";
 import type { DictationHistory, DictationRow } from "../../../bridge";
 import { copyTextButton } from "../../../clipboard";
 import { el } from "../../../dom";
@@ -11,12 +12,18 @@ export interface DictationBackend {
   again(id: number): Promise<void>;
 }
 
-export function createDictationHistory(backend: DictationBackend, settings: () => void) {
+export function createDictationHistory(backend: DictationBackend, settings: () => void, commandsOnly = false) {
   const element = el("section", { class: "dictation-history" });
   const title = el("h2");
   const about = el("p");
   const configure = el("button", { onclick: settings });
   const figures = el("div", { class: "dictation-figures" });
+  const summary = el("summary");
+  const metrics = el("details", { class: "dictation-summary" }, summary, figures);
+  const wide = window.matchMedia("(min-width: 900px) and (min-height: 561px)");
+  let compactMetrics = false;
+  metrics.addEventListener("toggle", () => { if (!wide.matches) compactMetrics = metrics.open; });
+  wide.addEventListener("change", () => { metrics.open = wide.matches || compactMetrics; });
   const search = el("input", { class: "dictation-search" });
   search.type = "search";
   const refresh = el("button", { onclick: () => { if (!loading && !busy) void read(); } });
@@ -26,8 +33,8 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
   const list = el("div", { class: "dictation-list" });
   list.tabIndex = -1;
   const limit = el("p", { class: "dictation-note" });
-  element.append(el("header", { class: "dictation-heading" }, el("div", {}, title, about), configure), figures,
-    el("div", { class: "dictation-toolbar" }, search, refresh, erase), feedback, confirmation, list, limit);
+  element.append(el("header", { class: "dictation-heading" }, el("div", {}, title, about), configure),
+    el("div", { class: "dictation-toolbar" }, search, refresh, erase), metrics, feedback, confirmation, list, limit);
   let data: DictationHistory | null = null;
   let asked = 0, loading = false, busy = false;
   let failed = false, actionError = false, requested = false;
@@ -38,18 +45,23 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
   const retry = el("button", { onclick: () => { if (!loading && !busy) void read(); } });
   const focusConfirmation = () => confirmation.querySelector<HTMLButtonElement>("button")?.focus();
   const paint = () => {
-    title.textContent = t("Dictation history");
-    about.textContent = t("Hold the dictation key in another app, speak and release. Only text is kept on this computer.");
-    configure.textContent = t("Dictation settings");
-    search.placeholder = t("Search what you dictated");
-    search.setAttribute("aria-label", t("Search what you dictated"));
+    title.textContent = commandsOnly ? t("Voice commands") : t("Dictation history");
+    about.textContent = commandsOnly ? t("Hold the command key to control Vults. Recent commands and their results stay on this computer under Dictation history retention.") : t("Hold the dictation key in another app, speak and release. Only text is kept on this computer.");
+    configure.textContent = commandsOnly ? t("Command settings") : t("Dictation settings");
+    summary.textContent = t("Today’s dictation");
+    metrics.hidden = commandsOnly;
+    metrics.open = wide.matches || compactMetrics;
+    search.placeholder = commandsOnly ? t("Search voice commands") : t("Search what you dictated");
+    search.setAttribute("aria-label", search.placeholder);
     refresh.textContent = loading ? t("Loading") : t("Refresh");
     refresh.disabled = loading || busy;
+    erase.hidden = commandsOnly;
+    figures.hidden = commandsOnly;
     erase.textContent = t("Erase dictation history…");
     erase.disabled = !data?.rows.length || loading || busy;
     retry.textContent = t("Try again"); retry.disabled = loading || busy;
     list.setAttribute("aria-busy", String(loading || busy));
-    list.setAttribute("aria-label", t("Dictation history"));
+    list.setAttribute("aria-label", commandsOnly ? t("Recent commands") : t("Dictation history"));
     const stats = data?.today;
     const known = stats && stats.count > 0;
     const tile = (value: string, label: string) => el("div", {}, el("strong", { text: value }), el("span", { text: label }));
@@ -80,19 +92,19 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
       confirmation.append(el("p", { text: confirming === "all" ? t("Erase every retained dictation? Usage totals stay.") : t("Erase this dictation? Usage totals stay.") }), accept, cancel);
     }
     list.replaceChildren();
-    limit.textContent = t("Search covers the newest 500 retained dictations. Time saved estimates typing at 45 words per minute.");
+    limit.textContent = commandsOnly ? t("Search covers commands among the newest 500 retained dictations.") : t("Search covers the newest 500 retained dictations. Time saved estimates typing at 45 words per minute.");
     if (!data) {
       if (!failed) list.append(viewState("loading", t("Reading dictation history…")));
       return;
     }
     if (data.retention === "0") {
-      list.append(viewState("empty", t("Dictation history is not kept."), t("Usage totals still update. Copy again keeps the last successful text in memory only.")));
+      list.append(viewState("empty", t("Dictation history is not kept."), commandsOnly ? t("Commands still work; no transcript or result is saved.") : t("Usage totals still update. Copy again keeps the last successful text in memory only.")));
       return;
     }
     const query = search.value.trim().toLocaleLowerCase(locale());
-    const rows = data.rows.filter(row => !query || `${row.heard}\n${row.text}\n${row.app ?? ""}\n${row.session ?? ""}`.toLocaleLowerCase(locale()).includes(query));
+    const rows = data.rows.filter(row => (!commandsOnly || row.outcome === "command") && (!query || `${row.heard}\n${row.text}\n${row.app ?? ""}\n${row.session ?? ""}`.toLocaleLowerCase(locale()).includes(query)));
     if (!rows.length) {
-      list.append(viewState("empty", query ? t("No dictations match your search.") : t("Nothing dictated yet."), query ? t("Try another search or clear it.") : t("Use the dictation key outside Vults to add your first entry.")));
+      list.append(viewState("empty", query ? (commandsOnly ? t("No commands match your search.") : t("No dictations match your search.")) : (commandsOnly ? t("No voice commands yet.") : t("Nothing dictated yet.")), query ? t("Try another search or clear it.") : commandsOnly ? t("Hold the command key, say a supported phrase and release.") : t("Use the dictation key outside Vults to add your first entry.")));
       return;
     }
     let group: string | undefined;
@@ -120,9 +132,14 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
     heard.addEventListener("toggle", () => heard.open ? expanded.add(row.id) : expanded.delete(row.id));
     const time = el("time", { text: new Date(row.at * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) });
     time.dateTime = new Date(row.at * 1000).toISOString();
-    const outcome = row.outcome === "pasted" ? t("Pasted") : row.outcome === "session" ? t("In session") : row.outcome === "held" ? t("Copied; session is waiting") : t("Copied");
+    const command = row.outcome === "command";
+    const outcome = command ? t("Voice command") : row.outcome === "pasted" ? t("Pasted") : row.outcome === "session" ? t("In session") : row.outcome === "held" ? t("Copied; session is waiting") : t("Copied");
+    const style = command ? null : appliedStyle(row.style);
+    const language = command ? null : appliedLanguage(row.outputLanguage);
     const metadata = el("div", { class: "dictation-meta" }, time,
-      el("span", { text: t("{outcome} · {app}", { outcome, app: row.app || t("Unknown app") }) }),
+      el("span", { text: command ? outcome : t("{outcome} · {app}", { outcome, app: row.app || t("Unknown app") }) }),
+      style ? el("span", { text: style }) : null,
+      language ? el("span", { text: language }) : null,
       row.session ? el("bdi", { text: row.session }) : null,
       el("span", { text: row.words === 1 ? t("1 word") : t("{count} words", { count: number(row.words) }) }),
       el("span", { text: t("{s} s", { s: number(row.secs) }) }),
@@ -136,7 +153,7 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
       button.disabled = busy;
       button.dataset.historyAction = `${index}-${row.id}`;
     }
-    return el("article", { class: "dictation-entry" }, transcript, heard, metadata, el("div", { class: "dictation-actions" }, again, copy, remove));
+    return el("article", { class: "dictation-entry" }, transcript, heard, metadata, el("div", { class: "dictation-actions" }, command ? null : again, copy, remove));
   };
   const read = async () => {
     const mine = ++asked;

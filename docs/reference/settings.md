@@ -1,6 +1,6 @@
 # Settings and files
 
-**Settings > Dictation > Diagnostics** provides an explicit six-second, memory-only microphone test,
+**Dictation > Diagnostics** provides an explicit six-second, memory-only microphone test,
 current audio/desktop/model status, counters since app start and retained stage timings. It adds no
 persistent setting and requests no desktop grant. See [Diagnostics](../guide/dictation.md#diagnostics).
 
@@ -17,6 +17,7 @@ persistent setting and requests no desktop grant. See [Diagnostics](../guide/dic
 | `~/.local/share/vults/vults.sqlite` | The local database: the history of agent turns (counts only), for Settings → Activity, the audit log of answers to cards (90 days), the policies you accepted (kept until you revoke them, and after), the phones you paired (their public keys and the last counter each signed with; revoked ones stay, so a revoked phone never comes back), Zeca's traces (30 days), his conversations (the newest 200), the journal and its day summaries (90 days), recall vectors, memory proposals (decided ones kept 90 days), sleep runs and what the agents cost by day and roost (see [Safety](../safety.md)). **Clear history** empties most of it ([what it removes and what stays](../guide/activity.md#the-history)). Earlier versions' `history.jsonl` and `days.json` move into it on first start |
 | `~/.local/share/vults/memory/` | Zeca's memory: a git repository of small Markdown files, each change a commit (mode of the folder as your umask makes it). **Clear history** leaves it; delete the folder to erase his facts ([Zeca's memory](../guide/memory.md)) |
 | `~/.local/share/vults/voice/` | The voice models you downloaded and the speech detector |
+| `~/.local/share/vults/meeting-audio/` | Private temporary audio for explicit one-minute recording/transcription checks; retained through local transcription, removed on completion/cancellation and recovered at startup after interruption. No audio archive |
 | `~/.local/share/vults/backups/` | Dated backups of the files Vults edits inside a project, such as a `CLAUDE.md` it made read `AGENTS.md` (never kept in the repository) |
 | `~/.local/share/vults/zeca-mcp.json` | The MCP config the chat's Claude Code gets with `--mcp-config`: this app run as Zeca's server (`vults --zeca-mcp`); mode `0600` |
 | `~/.local/share/vults/zeca-flock.json` | The island's sessions (redacted) for that server's `flock_list`, rewritten when they change and removed when the app quits; mode `0600` |
@@ -35,18 +36,40 @@ Edit entries in **Dictation > Dictionary / Snippets**, and preview saved rules w
 [Your words processing](../guide/dictation.md#your-words-processing) for order,
 literal snippet behavior and size limits.
 
+Migration 25 adds a content-free clean-up admission ledger (attempt id, feature and time). Clear history
+preserves it so erasing transcripts/traces cannot renew the rolling request quota. The settings binding
+to its identity prevents a missing or recreated database from granting fresh consent or quota. Expired admissions
+are removed at the next admitted attempt; future timestamps remain charged after clock rollback.
+
+Migration 26 adds per-app `dictation_styles` preferences, preserved by retention and Clear history,
+and nullable retained `output_language`. Only a successful clean-up sets output language; failure
+keeps the local processing style and the spoken language unchanged.
+
 `$XDG_CONFIG_HOME` and `$XDG_DATA_HOME` replace `~/.config` and `~/.local/share` when they are set.
 **Settings → About** shows the app's version and the real paths.
 
-The global dictation keys are shown in **Settings > Dictation > Keyboard shortcuts**.
+The global dictation keys are shown in **Dictation > Keyboard shortcuts**.
+**Ctrl+Alt+V** always starts independent dictation; it never opens Chat. The Chat microphone
+button fills its draft separately.
+**Voice commands > Command key** shows the desktop's actual binding (suggested **Ctrl+Alt+Z**); hold and release
+to control Vults without typing into another app. It uses the shared local model and microphone,
+with hold-only gestures and a separate command path; text transformations and insertion do not apply.
 **Change in KDE…** opens the installed KDE shortcut editor; launch failures offer retry.
 On other desktops, change global keys in the desktop's own settings. Opening this editor
 does not write Vults preferences or agent configurations.
 
 ## Dictation settings
 
-**Settings > Dictation** owns the independent-dictation controls. **Chat & voice** owns the shared
-local model and spoken language. History's **Dictation settings** link opens the same page.
+**Meeting settings > Meeting speaker models (experimental)** owns the optional, reviewed model/runtime
+installation. It shows progress and cancellation and does not activate analysis. Files live under
+`~/.local/share/vults/voice/meetings/`; no persistent enable preference is added. See
+[Meeting model artifacts](meeting-models.md) for sources, licenses and request limits.
+
+The **Dictation** tab owns its configuration pages, alongside History, Voice commands,
+Dictionary, Snippets and Meetings. **Voice** owns the shared local model and spoken language; **Chat & voice**
+links there. Configuration uses the privileged Settings webview, without showing transcripts or
+changing command authority. The global Settings sidebar no longer duplicates these pages. During the app run, the Dictation tab
+restores its last configuration section; Voice commands links directly to Command settings.
 Microphone, gesture, processing, vocabulary and music changes apply to the next recording; an active turn
 keeps those captured choices. Caption/sound preferences remain live, retention takes effect
 immediately, and turning insertion off immediately revokes pending insertion capabilities.
@@ -54,10 +77,11 @@ immediately, and turning insertion off immediately revokes pending insertion cap
 | Group | Available controls |
 | --- | --- |
 | Keyboard shortcuts | Current desktop bindings, KDE shortcut editor, hold/double tap, X11 Space/Esc and spoken cancellation |
-| Voice | Microphone and refresh, shared model/language link, repetition removal, Base retry, music, start cue and captions |
-| Your words | Opt-in dictionary context and project vocabulary; both off by default, limited to qualified Turbo/fixed English |
-| Terminals & sessions | Spoken-code punctuation |
-| Paste | Opt-in editor/tmux insertion, actual keyboard permission and explicit retry |
+| Command settings | Enabled by default, actual command binding, names/aliases, local unknown feedback or explicit Chat fallback, supported phrases |
+| Voice | Shared model/language editor, microphone and refresh, repetition removal, Base retry, music, start cue and captions |
+| Vocabulary | Opt-in dictionary context and project vocabulary; both off by default, limited to qualified Turbo/fixed English |
+| Paste | Spoken-code punctuation, opt-in editor/tmux insertion, actual keyboard permission and explicit retry |
+| Styles | Separate clean-up consent, provider/data/quota disclosure, style/output language, session English and per-app overrides |
 | Privacy | History retention and confirmed erasure |
 | Diagnostics | Explicit microphone test, current system status, session counters and retained stage timings |
 
@@ -66,14 +90,14 @@ pages; **Try a sentence** previews saved local text rules without a model, clipb
 The local text rules work with every transcription language; only Whisper's optional vocabulary
 context has the model/language restriction. Diagnostics reads current state; only its explicit
 **Test microphone** action records, and that test stops if you change the microphone. It adds no
-saved preference. Styles and additional delivery modes arrive in later phases. See the [dictation guide](../guide/dictation.md)
+saved preference. Additional delivery modes arrive in later phases. See the [dictation guide](../guide/dictation.md)
 for supported destinations, clipboard behavior and privacy limits.
 
 ## settings.json
 
 ```json
 {
-  "version": 35,
+  "version": 39,
   "connectors": { "github": true },
   "sounds": true,
   "volume": 50,
@@ -85,27 +109,36 @@ for supported destinations, clipboard behavior and privacy limits.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `version` | `35` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
+| `version` | `39` | Schema version, so later releases can migrate the file. If it is newer than the app's (you went back to an older release), the app (from 0.1.1 on) uses the keys it knows, keeps the file as it was in `settings.json.v<version>-<time>` and says so in the log; the next change you make saves only the keys it knows, as its own version. Until then each start keeps another copy. If no copy can be kept, changes are not saved. To go back to the newer release's settings, restore that copy. An older file is read with defaults for the keys it lacks, and is saved as the app's version |
 | `connectors` | `{}` | Connector id → switched on |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
 | `voice_model` | absent | The shared Chat/dictation voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vults/voice/` (with the speech detector, `ggml-silero-v6.2.0.bin`); absent keeps voice off. Each Chat recording keeps up to one minute of audio; independent dictation keeps up to ten minutes |
 | `voice_language` | absent | What the user speaks for the voice: a code (`pt`, `en`), `auto` to detect it each time, absent to follow the system's language |
-| `dictation_insert` | `false` | Off until enabled in **Settings > Dictation**. Paste into supported plain editors on native X11 or Plasma Wayland, with focus revalidation and a conditional plain-text clipboard lease (up to 64 KiB); no Enter. Wayland requests a keyboard-only portal grant and stores a restore token only in the OS keyring; refusal/revocation keeps copying until an explicit Settings retry. Exact tmux flock panes in XTerm/UXTerm or Kitty can receive one control-free line up to 8 KiB after live session/card checks, without touching the clipboard; other terminal targets stay copy-only. Images and rich formats are not restored; clipboard history exclusion depends on the desktop. See [Dictation](../guide/dictation.md#opt-in-x11-insertion) (from version 24) |
-| `dictation_caption` | `true` | Show clipped dictation lines or the final confirmed transcript in a two-row, click-through caption. Cards and limited space take priority; completion captions expire after two seconds across surface changes. Set in **Settings > Dictation** (from version 25) |
-| `dictation_sound` | `true` | Short cue for a new recording, through the shared sound switch, volume and Do Not Disturb. Surface changes and settings never replay it. Set in **Settings > Dictation** (from version 26) |
-| `dictation_music` | `"lower"` | **Settings > Dictation > Voice > Music while you speak**: `"lower"` caps already playing MPRIS players at 25% without raising quieter players; `"pause"` pauses them; `"leave"` opens no media-control connection. Restore each untouched player's own volume/playback after capture, cancellation or failure. User changes and crashed/restarted players are left alone. Local controls only, no track metadata/network, separate from Now playing; Chat and future meetings bypass it. Captured at the next recording (from version 33) |
-| `dictation_cancel_by_voice` | `true` | **Settings > Dictation > Keyboard shortcuts > Cancel by voice**: discard an independent final transcript that consists of or ends with a whole cancel phrase in English, Portuguese or Spanish. Runs after recording ends, before code conversion/delivery, on X11 and Wayland. Copies/inserts/submits nothing and stores no history or totals; keeps the previous success. Replay and Chat bypass it. Captured at the next recording (from version 32) |
-| `dictation_spoken_code` | `true` | **Settings > Dictation > Terminals & sessions > Spoken code**: convert English/Portuguese/Spanish spoken punctuation between identifier chunks only for recognized terminal/session targets. Preserves case, existing punctuation and control bytes; never adds Enter. Prose apps and unknown targets keep their text. Captured for the next recording; History keeps heard and written text, and replay is not reformatted (from version 31) |
-| `dictation_cut_repeats` | `true` | **Settings > Dictation > Voice > Remove repeated loops**: collapse long repetition loops in both preview and final independent dictation. Off preserves repetitions; known sound annotations and standalone silence phrases are still removed. Chat keeps its existing filter. Captured at the start of each recording (from version 30) |
-| `dictation_retry_base` | `true` | **Settings > Dictation > Voice > Retry empty dictation with Base**: allow one visible retry only for empty text when speech was detected and a different Base model is installed. Off skips that extra speech check and retry; errors are not retried. Never downloads a model. Captured at the start of each independent recording (from version 30) |
-| `dictation_vocabulary` | `false` | Optional local dictionary context for independent dictation, capped at 224 tokens including the coding seed and whole entries. Currently qualified only for Turbo with fixed English (chosen or resolved from the system), on synthetic WER/silence fixtures; Base, Small, Portuguese, other languages and automatic detection keep their existing prompts. Preview/final share the recording snapshot; Base retry checks its actual model and stays unprimed. Never includes replacement/snippet bodies or changes Chat. Set in **Settings > Dictation > Your words > Help the model with these words** (from version 34) |
-| `dictation_project_vocabulary` | `false` | Independently opt in to local project names for dictation, under the same Turbo/fixed-English gate and shared 224-token cap. Read known Git working trees on session start/repository refresh: Cargo/npm package and dependency names, shallow workspace members, module/file names and branch; no source bodies or commands. Prefer the focused session's working folder; otherwise require an unambiguous known project in a terminal/editor title. Personal dictionary words have priority. Cache in memory, keep worktrees separate, freeze the first decode's context for preview/final; missing/late/ambiguous context adds nothing. Set in **Settings > Dictation > Your words > Project vocabulary** (from version 35) |
-| `dictation_microphone` | absent | The input name chosen in **Settings > Dictation > Voice** for independent dictation. Absent follows the system default. A missing saved input falls back to the default or another input without changing the preference; a listed input that cannot open reports an error. Chat keeps its own default. Listing/refreshing does not record; changes apply to the next capture (from version 29) |
-| `dictation_double_tap` | `true` | **Settings > Dictation > Recording mode**: allow double tap for hands-free capture. Off, short taps are discarded immediately; holding for at least 300 ms still works. Independent of Space-lock. Changes apply to the next recording (from version 28) |
+| `dictation_insert` | `false` | Off until enabled in **Dictation > Paste**. Paste into supported plain editors on native X11 or Plasma Wayland, with focus revalidation and a conditional plain-text clipboard lease (up to 64 KiB); no Enter. Wayland requests a keyboard-only portal grant and stores a restore token only in the OS keyring; refusal/revocation keeps copying until an explicit Settings retry. Exact tmux flock panes in XTerm/UXTerm or Kitty can receive one control-free line up to 8 KiB after live session/card checks, without touching the clipboard; other terminal targets stay copy-only. Images and rich formats are not restored; clipboard history exclusion depends on the desktop. See [Dictation](../guide/dictation.md#opt-in-x11-insertion) (from version 24) |
+| `dictation_caption` | `true` | Show clipped dictation lines or the final confirmed transcript in a two-row, click-through caption. Cards and limited space take priority; completion captions expire after two seconds across surface changes. Set in **Dictation > Voice** (from version 25) |
+| `dictation_cleanup` | `false` | Separate opt-in for one tool-free text clean-up request through the selected Chat & voice API provider after local dictation. Fallback after four seconds (eight for translation, twelve for Prompt) preserves local text; disabling or provider/model/key changes cancel filtering. Gate quota: 2,000 attempts per rolling 24 hours, including local calls, failures and interruptions. Captured at key-down; no CLI path. Set in **Dictation > Styles** (from version 37) |
+| `dictation_cleanup_budget` | absent | Internal local ledger identity saved on first explicit cleanup enablement; retained while off and across Clear history. Missing/mismatched/unreadable budget state denies cleanup requests; never sent to the provider (from version 37) |
+| `meeting_summary` | `false` | Independent consent for the meeting-summary backend through the selected API chat provider/model; never inherited from dictation cleanup. Configured in **Dictation > Meeting settings**; the Summary/To-dos tabs stay in Nest. An explicit Nest request requires a finished transcript and durably reserves one of 20 attempts per rolling 24 hours (local calls and failures included), with a total 120-second deadline. Disabling or provider/model/key changes cancel work; failures preserve local text (from version 39) |
+| `meeting_summary_budget` | absent | Local ledger identity bound on first explicit summary enablement; retained while off and across Clear history. Missing/mismatched identity or an unreadable ledger denies calls; replacing the database never silently renews consent (from version 39) |
+| `dictation_style` | `"natural"` | Global fallback for identified apps without a category/override: `"verbatim"`, `"natural"`, `"polished"`, `"prompt"`. Per-app rows live in `dictation_styles`; sessions keep Prompt. Missing focus stays local; styles never enable clean-up (from version 38; controls in **Dictation > Styles**) |
+| `dictation_write_in` | absent | Optional output language: `"en"`, `"pt-BR"`, `"es"`, `"zh"`; absent keeps the spoken language. Verbatim makes no request and does not translate. Captured at key-down, with applied output language retained separately from heard language (from version 38) |
+| `dictation_sessions_english` | `false` | Override output language with English only for recognized flock sessions, using Prompt. Other apps keep Write in; ambiguous session context never opts into English. Requires the separate cleanup switch (from version 38) |
+| `dictation_commands` | `true` | Enable the separate hold-only command key. Disabling cancels command capture/handoffs and context, preserving ordinary dictation and Copy again (from version 36) |
+| `dictation_command_chat` | `false` | Explicit fallback for unknown speech to the current idle Chat, with Zeca on and no unsent draft/files/references. Uses its model, gate, budget, traces and approval rules; refused/ambiguous/stale commands stay local. Settings-only changes invalidate old tickets (from version 36) |
+| `dictation_sound` | `true` | Short cue for a new recording, through the shared sound switch, volume and Do Not Disturb. Surface changes and settings never replay it. Set in **Dictation > Voice** (from version 26) |
+| `dictation_music` | `"lower"` | **Dictation > Voice > Music while you speak**: `"lower"` caps already playing MPRIS players at 25% without raising quieter players; `"pause"` pauses them; `"leave"` opens no media-control connection. Restore each untouched player's own volume/playback after capture, cancellation or failure. User changes and crashed/restarted players are left alone. Local controls only, no track metadata/network, separate from Now playing; Chat and future meetings bypass it. Captured at the next recording (from version 33) |
+| `dictation_cancel_by_voice` | `true` | **Dictation > Keyboard shortcuts > Cancel by voice**: discard an independent final transcript that consists of or ends with a whole cancel phrase in English, Portuguese or Spanish. Runs after recording ends, before code conversion/delivery, on X11 and Wayland. Copies/inserts/submits nothing and stores no history or totals; keeps the previous success. Replay and Chat bypass it. Captured at the next recording (from version 32) |
+| `dictation_spoken_code` | `true` | **Dictation > Paste > Terminals & sessions > Spoken code**: convert English/Portuguese/Spanish spoken punctuation between identifier chunks only for recognized terminal/session targets. Preserves case, existing punctuation and control bytes; never adds Enter. Prose apps and unknown targets keep their text. Captured for the next recording; History keeps heard and written text, and replay is not reformatted (from version 31) |
+| `dictation_cut_repeats` | `true` | **Dictation > Voice > Remove repeated loops**: collapse long repetition loops in both preview and final independent dictation. Off preserves repetitions; known sound annotations and standalone silence phrases are still removed. Chat keeps its existing filter. Captured at the start of each recording (from version 30) |
+| `dictation_retry_base` | `true` | **Dictation > Voice > Retry empty dictation with Base**: allow one visible retry only for empty text when speech was detected and a different Base model is installed. Off skips that extra speech check and retry; errors are not retried. Never downloads a model. Captured at the start of each independent recording (from version 30) |
+| `dictation_vocabulary` | `false` | Optional local dictionary context for independent dictation, capped at 224 tokens including the coding seed and whole entries. Currently qualified only for Turbo with fixed English (chosen or resolved from the system), on synthetic WER/silence fixtures; Base, Small, Portuguese, other languages and automatic detection keep their existing prompts. Preview/final share the recording snapshot; Base retry checks its actual model and stays unprimed. Never includes replacement/snippet bodies or changes Chat. Set in **Dictation > Vocabulary > Help the model with these words** (from version 34) |
+| `dictation_project_vocabulary` | `false` | Independently opt in to local project names for dictation, under the same Turbo/fixed-English gate and shared 224-token cap. Read known Git working trees on session start/repository refresh: Cargo/npm package and dependency names, shallow workspace members, module/file names and branch; no source bodies or commands. Prefer the focused session's working folder; otherwise require an unambiguous known project in a terminal/editor title. Personal dictionary words have priority. Cache in memory, keep worktrees separate, freeze the first decode's context for preview/final; missing/late/ambiguous context adds nothing. Set in **Dictation > Vocabulary > Project vocabulary** (from version 35) |
+| `dictation_microphone` | absent | The input name chosen in **Dictation > Voice** for independent dictation. Absent follows the system default. A missing saved input falls back to the default or another input without changing the preference; a listed input that cannot open reports an error. Chat keeps its own default. Listing/refreshing does not record; changes apply to the next capture (from version 29) |
+| `dictation_double_tap` | `true` | **Dictation > Keyboard shortcuts > Recording mode**: allow double tap for hands-free capture. Off, short taps are discarded immediately; holding for at least 300 ms still works. Independent of Space-lock. Changes apply to the next recording (from version 28) |
 | `dictation_space_lock` | `true` | Space keeps a held recording running hands-free on X11. Off, Space follows ordinary typing cancellation and does not reserve the Open-island shortcut. Unavailable on Wayland; requires a recognized X11 key listener. Changes apply to the next recording (from version 28) |
 | `dictation_escape_cancel` | `true` | Esc cancels capture, its tail or transcription on X11. Off, Esc leaves the turn running. The separately bound Cancel voice shortcut always works. Unavailable on Wayland. Changes apply to the next recording (from version 28) |
-| `dictation_keep` | `"30"` | Dictation transcript retention: `"0"` (not kept), `"7"`, `"30"`, `"365"`, or `"all"`. Set in **Settings > Dictation**. Shortening retention erases old text immediately; history open and recording prune it too. Daily/app totals survive erasure and Not kept. Audio and previous clipboard contents are never stored (from version 27) |
+| `dictation_keep` | `"30"` | Dictation transcript retention: `"0"` (not kept), `"7"`, `"30"`, `"365"`, or `"all"`. Set in **Dictation > Privacy**. Shortening retention erases old text immediately; history open and recording prune it too. Daily/app totals survive erasure and Not kept. Audio and previous clipboard contents are never stored (from version 27) |
 | `now_playing` | `false` | Show the song your media players are playing on the island (MPRIS on Linux), with play, pause and skip |
 | `codex_usage` | `false` | Read Codex's plan usage for the island every 5 minutes (and half a minute after a window resets), through the codex you logged into (each read reaches OpenAI, through the app's network gate). Off on a new install; a file from before version 16 gets it on when a `codex` is on the `PATH`, so an upgrade keeps the meters it showed (from version 16) |
 | `web` | `false` | Zeca's web tools for the API chat: a search and a page read the model may ask for, each a request through the network gate. Off, it is never offered them |

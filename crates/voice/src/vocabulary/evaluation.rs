@@ -165,7 +165,7 @@ fn vocabulary_wer_on_twenty_sentences_per_language() {
     {
         let transcriber = crate::Transcriber::load(&crate::model_path(&models, model), model.prompt).unwrap();
         {
-            let _busy = crate::WHISPER.lock().unwrap();
+            let _busy = crate::WHISPER.lock();
             let many: Vec<String> = (0..1000).map(|i| format!("Project{i}")).collect();
             let tokens = super::build(crate::vocabulary("pt"), &many, |text| {
                 transcriber

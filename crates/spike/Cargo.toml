@@ -1,5 +1,6 @@
 [package]
 name = "vults-spike"
+default-run = "vults-spike"
 description = "The spike kit (dev only, never in the app): a fake model, a fake app, a terminal for TUIs, to record a real agent's hooks without an account"
 version.workspace = true
 edition.workspace = true
@@ -16,6 +17,29 @@ vults-agent-config.workspace = true
 vults-core.workspace = true
 vults-protocol.workspace = true
 serde_json.workspace = true
+serde.workspace = true
+tokio = { workspace = true, optional = true }
+vults-voice = { workspace = true, optional = true }
+sha2 = "0.10"
+
+[features]
+meeting-assets = ["dep:tokio", "dep:vults-voice", "vults-voice/meeting-assets"]
+# Explicit offline experiment only. No model/runtime downloads or app linkage.
+diarization = ["dep:vults-voice", "vults-voice/diarization"]
+
+[[bin]]
+name = "vults-diarization-spike"
+path = "src/diarization/main.rs"
+required-features = ["diarization"]
+
+[[bin]]
+name = "vults-meeting-eval"
+path = "src/meeting-eval/main.rs"
+
+[[bin]]
+name = "vults-meeting-assets"
+path = "src/diarization/assets.rs"
+required-features = ["meeting-assets"]
 
 [target.'cfg(unix)'.dependencies]
 libc.workspace = true

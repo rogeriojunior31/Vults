@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 35;
+const VERSION: u32 = 39;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -67,6 +67,26 @@ pub struct Settings {
     pub dictation_caption: bool,
     #[serde(default = "yes")]
     pub dictation_sound: bool,
+    #[serde(default = "yes")]
+    pub dictation_commands: bool,
+    #[serde(default)]
+    pub dictation_cleanup: bool,
+    /// A lost ledger cannot silently renew an already authorized request budget.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dictation_cleanup_budget: Option<String>,
+    /// Independent consent; toggling it never resets the durable request ledger.
+    #[serde(default)]
+    pub meeting_summary: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meeting_summary_budget: Option<String>,
+    #[serde(default = "natural_style")]
+    pub dictation_style: vults_dictation::cleanup::Style,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dictation_write_in: Option<vults_dictation::cleanup::Language>,
+    #[serde(default)]
+    pub dictation_sessions_english: bool,
+    #[serde(default)]
+    pub dictation_command_chat: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dictation_microphone: Option<String>,
     #[serde(default = "yes")]
@@ -284,6 +304,10 @@ fn volume() -> u8 {
 /// The choices the settings offer; anything else in the file is brought into this range.
 const FOLD_AFTER: std::ops::RangeInclusive<u32> = 5..=120;
 
+fn natural_style() -> vults_dictation::cleanup::Style {
+    vults_dictation::cleanup::Style::Natural
+}
+
 fn dictation_keep() -> String {
     "30".into()
 }
@@ -293,6 +317,11 @@ fn fold_after() -> u32 {
 }
 
 impl Settings {
+    #[cfg(any(target_os = "linux", test))]
+    pub fn command_chat(&self) -> bool {
+        self.dictation_commands && self.dictation_command_chat && self.zeca
+    }
+
     pub fn dictation_capture_options(&self) -> vults_audio::CaptureOptions {
         vults_audio::CaptureOptions {
             device: self.dictation_microphone.clone(),
@@ -331,6 +360,15 @@ impl Default for Settings {
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
+            dictation_commands: true,
+            dictation_cleanup: false,
+            dictation_cleanup_budget: None,
+            meeting_summary: false,
+            meeting_summary_budget: None,
+            dictation_style: natural_style(),
+            dictation_write_in: None,
+            dictation_sessions_english: false,
+            dictation_command_chat: false,
             dictation_microphone: None,
             dictation_cut_repeats: true,
             dictation_retry_base: true,
@@ -390,6 +428,20 @@ pub struct Public {
     pub dictation_keep: String,
     #[serde(rename = "dictationSound")]
     pub dictation_sound: bool,
+    #[serde(rename = "dictationCommands")]
+    pub dictation_commands: bool,
+    #[serde(rename = "dictationCleanup")]
+    pub dictation_cleanup: bool,
+    #[serde(rename = "meetingSummary")]
+    pub meeting_summary: bool,
+    #[serde(rename = "dictationStyle")]
+    pub dictation_style: vults_dictation::cleanup::Style,
+    #[serde(rename = "dictationWriteIn")]
+    pub dictation_write_in: Option<vults_dictation::cleanup::Language>,
+    #[serde(rename = "dictationSessionsEnglish")]
+    pub dictation_sessions_english: bool,
+    #[serde(rename = "dictationCommandChat")]
+    pub dictation_command_chat: bool,
     #[serde(rename = "dictationCutRepeats")]
     pub dictation_cut_repeats: bool,
     #[serde(rename = "dictationVocabulary")]
@@ -479,6 +531,13 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     Public {
         dictation_caption: s.dictation_caption,
         dictation_sound: s.dictation_sound,
+        dictation_commands: s.dictation_commands,
+        dictation_cleanup: s.dictation_cleanup,
+        meeting_summary: s.meeting_summary,
+        dictation_style: s.dictation_style,
+        dictation_write_in: s.dictation_write_in,
+        dictation_sessions_english: s.dictation_sessions_english,
+        dictation_command_chat: s.dictation_command_chat,
         dictation_microphone: s.dictation_microphone.clone(),
         dictation_cut_repeats: s.dictation_cut_repeats,
         dictation_retry_base: s.dictation_retry_base,
@@ -1051,6 +1110,179 @@ pub fn set_dictation_gesture<R: tauri::Runtime>(
     #[cfg(target_os = "linux")]
     if let Some(worker) = app.try_state::<crate::dictation::State>() {
         worker.configure(next.dictation_options());
+    }
+    *saved = next;
+    drop(saved);
+    let _ = app.emit("settings", serde_json::json!({ field: on }));
+    Ok(())
+}
+
+fn bind_request_budget(
+    expected: &mut Option<String>,
+    store: &vults_store::Store,
+) -> Result<(), &'static str> {
+    let identity = store
+        .request_budget_id()
+        .map_err(|_| "Could not read model request budget.")?;
+    if expected.as_ref().is_some_and(|saved| *saved != identity) {
+        return Err("The model request budget is unavailable.");
+    }
+    *expected = Some(identity);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_meeting_summary<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    on: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    if on {
+        let store = if saved.meeting_summary_budget.is_some() {
+            vults_store::Store::open_current(&crate::history::dir())
+        } else {
+            vults_store::Store::open(&crate::history::dir())
+        }
+        .map_err(|_| "Could not read meeting summary budget.")?;
+        bind_request_budget(&mut next.meeting_summary_budget, &store)?;
+    }
+    next.meeting_summary = on;
+    save(&next).map_err(|_| "Could not save meeting summary choice.")?;
+    *saved = next;
+    drop(saved);
+    crate::meetings::summary::invalidate(&app);
+    let _ = app.emit("settings", serde_json::json!({"meetingSummary":on}));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_dictation_cleanup<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    on: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    if on {
+        let store = if saved.dictation_cleanup_budget.is_some() {
+            vults_store::Store::open_current(&crate::history::dir())
+        } else {
+            vults_store::Store::open(&crate::history::dir())
+        }
+        .map_err(|_| "Could not read dictation cleanup budget.")?;
+        bind_request_budget(&mut next.dictation_cleanup_budget, &store)?;
+        #[cfg(target_os = "linux")]
+        if let Some(state) = app.try_state::<crate::dictation::cleanup::State>() {
+            state.reload_styles(&store);
+        }
+    }
+    next.dictation_cleanup = on;
+    save(&next).map_err(|_| "Could not save dictation cleanup choice.")?;
+    #[cfg(target_os = "linux")]
+    crate::dictation::cleanup::invalidate(&app);
+    *saved = next;
+    drop(saved);
+    #[cfg(target_os = "linux")]
+    crate::dictation::cleanup::ensure_focus(&app);
+    let _ = app.emit("settings", serde_json::json!({"dictationCleanup":on}));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_dictation_style_options<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    style: vults_dictation::cleanup::Style,
+    write_in: Option<vults_dictation::cleanup::Language>,
+    sessions_english: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    next.dictation_style = style;
+    next.dictation_write_in = write_in;
+    next.dictation_sessions_english = sessions_english;
+    save(&next).map_err(|_| "Could not save dictation style choices.")?;
+    *saved = next;
+    drop(saved);
+    let _=app.emit("settings",serde_json::json!({"dictationStyle":style,"dictationWriteIn":write_in,"dictationSessionsEnglish":sessions_english}));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn dictation_styles<R: tauri::Runtime>(
+    window: tauri::Webview<R>,
+) -> Result<BTreeMap<String, String>, String> {
+    crate::settings_page(&window)?;
+    vults_store::Store::open(&crate::history::dir())
+        .and_then(|s| s.dictation_styles())
+        .map_err(|_| "Could not read dictation styles.".into())
+}
+
+#[tauri::command]
+pub fn set_dictation_app_style<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    identity: String,
+    style: Option<vults_dictation::cleanup::Style>,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let identity =
+        vults_dictation::styles::app_id(&identity).ok_or("Choose a valid application identity.")?;
+    let settings = app.state::<SettingsState>();
+    let _saved = settings.0.lock().map_err(|_| "settings are busy")?;
+    let store =
+        vults_store::Store::open(&crate::history::dir()).map_err(|_| "Could not save dictation style.")?;
+    store
+        .dictation_style_set(&identity, style.map(|s| s.id()))
+        .map_err(|_| "Could not save dictation style.")?;
+    #[cfg(target_os = "linux")]
+    if let Some(state) = app.try_state::<crate::dictation::cleanup::State>() {
+        state.reload_styles(&store);
+    }
+    drop(_saved);
+    let _ = app.emit("dictation-styles", ());
+    Ok(())
+}
+
+/// Both choices are privileged: the fallback authorizes a Chat model request.
+#[tauri::command]
+pub fn set_dictation_commands<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    key: String,
+    on: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    let field = match key.as_str() {
+        "enabled" => {
+            next.dictation_commands = on;
+            "dictationCommands"
+        }
+        "chat" => {
+            next.dictation_command_chat = on;
+            "dictationCommandChat"
+        }
+        _ => return Err("Unknown voice command setting.".into()),
+    };
+    save(&next).map_err(|_| "Could not save voice command choices.")?;
+    #[cfg(target_os = "linux")]
+    {
+        // Cancel even when re-enabled: no ticket may inherit a later grant.
+        if let Some(worker) = app.try_state::<crate::dictation::State>() {
+            worker.cancel_commands();
+        }
+        crate::runtime::cancel_voice_commands(&app);
     }
     *saved = next;
     drop(saved);
@@ -1639,6 +1871,119 @@ mod tests {
     }
 
     #[test]
+    fn cleanup_consent_stays_bound_to_the_original_budget_across_disable_and_database_loss() {
+        let dir = std::env::temp_dir().join(format!("vults-cleanup-consent-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let store = vults_store::Store::open(&dir).unwrap();
+        let mut settings = Settings::default();
+        bind_request_budget(&mut settings.dictation_cleanup_budget, &store).unwrap();
+        settings.dictation_cleanup = true;
+        let (mut loaded, clean) = parse(&serde_json::to_string(&settings).unwrap());
+        assert!(clean);
+        assert_eq!(loaded.dictation_cleanup_budget, settings.dictation_cleanup_budget);
+        loaded.dictation_cleanup = false;
+        bind_request_budget(&mut loaded.dictation_cleanup_budget, &store).unwrap();
+        drop(store);
+        std::fs::remove_dir_all(&dir).unwrap();
+        let recreated = vults_store::Store::open(&dir).unwrap();
+        assert!(bind_request_budget(&mut loaded.dictation_cleanup_budget, &recreated).is_err());
+        assert_eq!(loaded.dictation_cleanup_budget, settings.dictation_cleanup_budget);
+        drop(recreated);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn style_defaults_and_bad_values_preserve_cleanup_consent_and_other_preferences() {
+        use vults_dictation::cleanup::{Language, Style};
+        let (old, clean) = parse(r#"{"version":37}"#);
+        assert!(clean);
+        assert_eq!(old.dictation_style, Style::Natural);
+        assert_eq!(old.dictation_write_in, None);
+        assert!(!old.dictation_sessions_english && !old.dictation_cleanup);
+        for language in [
+            Language::English,
+            Language::BrazilianPortuguese,
+            Language::Spanish,
+            Language::SimplifiedChinese,
+        ] {
+            for style in [Style::Verbatim, Style::Natural, Style::Polished, Style::Prompt] {
+                let saved = Settings {
+                    dictation_style: style,
+                    dictation_write_in: Some(language),
+                    dictation_sessions_english: true,
+                    ..Default::default()
+                };
+                let (loaded, clean) = parse(&serde_json::to_string(&saved).unwrap());
+                assert!(clean);
+                assert_eq!(loaded, saved);
+                assert!(!loaded.dictation_cleanup);
+            }
+        }
+        let (invalid, clean) = parse(
+            r#"{"version":38,"dictation_style":"assistant","dictation_write_in":"guess","dictation_sessions_english":"yes","dictation_insert":true}"#,
+        );
+        assert!(!clean);
+        assert_eq!(invalid.dictation_style, Style::Natural);
+        assert_eq!(invalid.dictation_write_in, None);
+        assert!(!invalid.dictation_sessions_english && !invalid.dictation_cleanup);
+        assert!(invalid.dictation_insert);
+    }
+
+    #[test]
+    fn meeting_summary_consent_defaults_off_and_cannot_rebind_a_replaced_ledger() {
+        let (mut settings, clean) = parse(r#"{"version":38,"dictation_cleanup":true}"#);
+        assert!(clean && !settings.meeting_summary && settings.meeting_summary_budget.is_none());
+        let dir = std::env::temp_dir().join(format!("vults-summary-consent-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let store = vults_store::Store::open(&dir).unwrap();
+        bind_request_budget(&mut settings.meeting_summary_budget, &store).unwrap();
+        settings.meeting_summary = true;
+        let (mut loaded, clean) = parse(&serde_json::to_string(&settings).unwrap());
+        assert!(clean && loaded.meeting_summary);
+        loaded.meeting_summary = false;
+        bind_request_budget(&mut loaded.meeting_summary_budget, &store).unwrap();
+        assert_eq!(loaded.meeting_summary_budget, settings.meeting_summary_budget);
+        drop(store);
+        std::fs::remove_dir_all(&dir).unwrap();
+        let recreated = vults_store::Store::open(&dir).unwrap();
+        assert!(bind_request_budget(&mut loaded.meeting_summary_budget, &recreated).is_err());
+        assert_eq!(loaded.meeting_summary_budget, settings.meeting_summary_budget);
+        let (invalid, clean) = parse(r#"{"version":39,"meeting_summary":"yes"}"#);
+        assert!(!clean && !invalid.meeting_summary);
+        drop(recreated);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn dictation_cleanup_is_a_separate_explicit_opt_in() {
+        let (old, clean) = parse(r#"{"version":36,"zeca":true,"dictation_commands":true}"#);
+        assert!(clean && !old.dictation_cleanup);
+        let (on, clean) = parse(r#"{"version":37,"dictation_cleanup":true}"#);
+        assert!(clean && on.dictation_cleanup);
+        let (bad, clean) = parse(r#"{"version":37,"dictation_cleanup":"yes"}"#);
+        assert!(!clean && !bad.dictation_cleanup);
+    }
+
+    #[test]
+    fn command_fallback_requires_an_explicit_valid_choice_and_zeca() {
+        let (mut old, clean) = parse(r#"{"version":35}"#);
+        assert!(clean && old.dictation_commands && !old.dictation_command_chat);
+        assert!(!old.command_chat());
+        old.dictation_command_chat = true;
+        assert!(old.command_chat());
+        old.zeca = false;
+        assert!(!old.command_chat());
+        old.zeca = true;
+        old.dictation_commands = false;
+        assert!(!old.command_chat());
+        let (saved, clean) =
+            parse(r#"{"version":36,"dictation_commands":false,"dictation_command_chat":true}"#);
+        assert!(clean && !saved.dictation_commands && saved.dictation_command_chat && !saved.command_chat());
+        let (invalid, clean) = parse(r#"{"version":36,"dictation_command_chat":"true"}"#);
+        assert!(!clean && !invalid.dictation_command_chat && !invalid.command_chat());
+    }
+
+    #[test]
     fn dictation_sound_defaults_on_and_keeps_an_explicit_choice() {
         let (old, _) = parse(r#"{ "version": 25 }"#);
         assert!(old.dictation_sound);
@@ -1688,6 +2033,15 @@ mod tests {
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
+            dictation_commands: true,
+            dictation_cleanup: false,
+            dictation_cleanup_budget: None,
+            meeting_summary: false,
+            meeting_summary_budget: None,
+            dictation_style: natural_style(),
+            dictation_write_in: None,
+            dictation_sessions_english: false,
+            dictation_command_chat: false,
             dictation_microphone: None,
             dictation_cut_repeats: true,
             dictation_retry_base: true,

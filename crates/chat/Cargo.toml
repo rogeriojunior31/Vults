@@ -13,10 +13,12 @@ serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"
 tokio = { workspace = true, features = ["process"] }
+unicode-normalization = "0.1"
 vults-secrets.workspace = true
 vults-agents.workspace = true
 vults-protocol.workspace = true
 vults-core.workspace = true
+vults-dictation.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc.workspace = true

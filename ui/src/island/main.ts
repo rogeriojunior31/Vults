@@ -102,6 +102,7 @@ const dictation = dictationStatus(false, island.setDictation, () => {
   if (dictationViewReady && dictationSettingsReady && !island.last().locked) Sound.play("peek");
 });
 island.onDictationLayout(dictation.layout);
+Bridge.onDictationOverlayReady(dictation.relocated);
 const changeView = savedTransition(() => island.chat.flushDraft(), () => {
   island.chat.toggle(true);
   island.chat.receive({ kind: "error", message: t("Could not change the view. Your draft stays here; try again.") });

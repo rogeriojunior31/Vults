@@ -48,6 +48,11 @@ pub struct Draft {
 }
 
 impl Draft {
+    #[cfg(target_os = "linux")]
+    fn has_content(&self) -> bool {
+        !self.text.trim().is_empty() || !self.files.is_empty() || !self.mentions.is_empty()
+    }
+
     fn validate(&self) -> Result<(), String> {
         if self.text.len() > 1024 * 1024
             || self.files.len() > 256
@@ -379,9 +384,151 @@ pub async fn chat_send(
     folder: Option<String>,
     mentions: Option<Vec<crate::mentions::Mention>>,
 ) -> Result<(), String> {
-    if !crate::settings::zeca(&app) {
-        return Err("Zeca is off (Settings → Flock & Zeca).".into());
+    send(
+        app,
+        Origin::Window(window.label().into()),
+        text,
+        files,
+        folder,
+        mentions,
+    )
+    .await
+}
+
+enum Origin {
+    Window(String),
+    #[cfg(target_os = "linux")]
+    Voice(crate::dictation::worker::Ticket),
+}
+
+impl Origin {
+    fn label(&self) -> &str {
+        match self {
+            Self::Window(label) => label,
+            #[cfg(target_os = "linux")]
+            Self::Voice(_) => "voice-command",
+        }
     }
+
+    fn is_voice(&self) -> bool {
+        match self {
+            Self::Window(_) => false,
+            #[cfg(target_os = "linux")]
+            Self::Voice(_) => true,
+        }
+    }
+
+    fn reserve<'a>(&self, state: &'a ChatState) -> Result<Option<tokio::sync::MutexGuard<'a, Chat>>, String> {
+        if self.is_voice() {
+            state
+                .chat
+                .try_lock()
+                .map(Some)
+                .map_err(|_| "Chat is busy.".into())
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn check<R: tauri::Runtime>(&self, app: &tauri::AppHandle<R>) -> Result<(), String> {
+        let settings = app.state::<SettingsState>();
+        let saved = settings.0.lock().map_err(|_| "settings are busy")?;
+        if !saved.zeca {
+            return Err("Zeca is off (Settings → Flock & Zeca).".into());
+        }
+        #[cfg(target_os = "linux")]
+        if let Self::Voice(ticket) = self {
+            if !saved.command_chat() || crate::lock::locked(app) || ticket.dispatch(|| ()).is_none() {
+                return Err("Voice command handoff was cancelled.".into());
+            }
+            let state = app.state::<ChatState>();
+            let draft = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
+            if draft.has_content() {
+                return Err("Finish the Chat draft before sending a voice command.".into());
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn voice_command(app: AppHandle, text: String, ticket: crate::dictation::worker::Ticket) {
+    tauri::async_runtime::spawn(async move {
+        let origin = Origin::Voice(ticket.clone());
+        if send(app.clone(), origin, text.clone(), Vec::new(), None, None)
+            .await
+            .is_err()
+        {
+            voice_result(
+                &app,
+                &ticket,
+                &text,
+                vults_core::i18n::VoiceFeedback::ChatUnavailable,
+            );
+        }
+    });
+}
+
+#[cfg(target_os = "linux")]
+fn voice_result(
+    app: &AppHandle,
+    ticket: &crate::dictation::worker::Ticket,
+    heard: &str,
+    feedback: vults_core::i18n::VoiceFeedback,
+) {
+    let lang = crate::settings::lang(app);
+    crate::dictation::command_result(
+        app,
+        ticket,
+        heard,
+        crate::voice_commands::Report {
+            feedback,
+            text: vults_core::i18n::voice_feedback(lang, feedback).into(),
+            choices: Vec::new(),
+            effects: Vec::new(),
+        },
+        None,
+    );
+}
+
+#[cfg(target_os = "linux")]
+fn check_voice_source(state: &ChatState, expected: &Draft, provider: Provider) -> Result<(), String> {
+    let current = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
+    if current.folder != expected.folder
+        || current.provider != expected.provider
+        || expected.provider.is_some_and(|picked| picked != provider)
+    {
+        return Err("Chat source changed. Say the voice command again.".into());
+    }
+    Ok(())
+}
+
+async fn send(
+    app: AppHandle,
+    origin: Origin,
+    text: String,
+    files: Vec<String>,
+    folder: Option<String>,
+    mentions: Option<Vec<crate::mentions::Mention>>,
+) -> Result<(), String> {
+    origin.check(&app)?;
+    // Voice never queues behind a turn or a conversation change, including local memory reads.
+    let state = app.state::<ChatState>();
+    let reserved = origin.reserve(&state)?;
+    #[cfg(target_os = "linux")]
+    let voice_source = if let Some(chat) = &reserved {
+        let draft = state.draft.lock().map_err(|_| "Chat draft is busy.")?.clone();
+        check_voice_source(&state, &draft, chat.provider())?;
+        Some(draft)
+    } else {
+        None
+    };
+    #[cfg(target_os = "linux")]
+    let folder = voice_source
+        .as_ref()
+        .and_then(|draft| draft.folder.clone())
+        .or(folder);
+
     use crate::flock_tools::Source as _;
     let mentions = mentions.unwrap_or_default();
     let targets = crate::mentions::resolve(&text, mentions.clone(), &app.view().unwrap_or_default())?;
@@ -480,8 +627,11 @@ pub async fn chat_send(
     // What the journal holds about this message (M5), before the chat is locked: a slow local
     // model must never hold Stop back. Nothing with the memory off.
     let memories = crate::recall::passages(&app, &text, crate::recall::PREFETCH, true).await;
-    let state = app.state::<ChatState>();
-    let mut chat = state.chat.lock().await;
+    let mut chat = match reserved {
+        Some(chat) => chat,
+        None => state.chat.lock().await,
+    };
+    origin.check(&app)?;
     // Turned off while this turn waited for the lock: `stop` found no turn to end.
     if !crate::settings::zeca(&app) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
@@ -573,10 +723,16 @@ pub async fn chat_send(
     };
     let shown: Vec<String> = files.iter().map(|f| f.to_string_lossy().into_owned()).collect();
     let (model, effort) = chat.pick();
+    // Preflight can await local IO; an old recording cannot inherit a later opt-in.
+    origin.check(&app)?;
+    #[cfg(target_os = "linux")]
+    if let Some(expected) = &voice_source {
+        check_voice_source(&state, expected, chat.provider())?;
+    }
     sync(
         &app,
         Sync::Sent {
-            from: window.label().to_string(),
+            from: origin.label().to_string(),
             text: text.clone(),
             files: shown.clone(),
             provider: chat.provider(),
@@ -624,6 +780,10 @@ pub async fn chat_send(
         .then(|| crate::context::volatile(source.as_ref(), &memories));
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
     crate::journal::chat(&app, "you", chat.folder(), &text, false);
+    #[cfg(target_os = "linux")]
+    if let Origin::Voice(ticket) = &origin {
+        voice_result(&app, ticket, &text, vults_core::i18n::VoiceFeedback::SentToChat);
+    }
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
     if let Ok(mut s) = state.stop.lock() {
         *s = None;
@@ -1450,6 +1610,9 @@ pub async fn api_providers(app: AppHandle) -> ApiProviders {
 pub async fn api_provider_set(app: AppHandle, provider: String) -> Result<(), String> {
     let p = self::provider(&provider)?;
     settings::edit(&app, |s| s.api_provider = p.id.to_string())?;
+    #[cfg(target_os = "linux")]
+    crate::dictation::cleanup::invalidate(&app);
+    crate::meetings::summary::invalidate(&app);
     announce(&app).await;
     Ok(())
 }
@@ -1463,7 +1626,12 @@ pub async fn api_model_set(app: AppHandle, provider: String, model: String) -> R
     }
     settings::edit(&app, |s| {
         s.api_models.insert(p.id.to_string(), model);
-    })
+    })?;
+    #[cfg(target_os = "linux")]
+    crate::dictation::cleanup::invalidate(&app);
+    crate::meetings::summary::invalidate(&app);
+    announce(&app).await;
+    Ok(())
 }
 
 /// The provider's chat models, asked live with the saved key.
@@ -1507,6 +1675,9 @@ pub async fn api_key_set(
     tauri::async_runtime::spawn_blocking(move || secrets::set(p.secret(), &key))
         .await
         .map_err(|_| "Can't save the key.".to_string())??;
+    #[cfg(target_os = "linux")]
+    crate::dictation::cleanup::invalidate(&app);
+    crate::meetings::summary::invalidate(&app);
     tracing::info!(provider = p.id, "api key saved");
     announce(&app).await;
     Ok(())
@@ -1519,6 +1690,9 @@ pub async fn api_key_clear(window: tauri::Webview, app: AppHandle, provider: Str
     tauri::async_runtime::spawn_blocking(move || secrets::delete(p.secret()))
         .await
         .map_err(|_| "Can't remove the key.".to_string())??;
+    #[cfg(target_os = "linux")]
+    crate::dictation::cleanup::invalidate(&app);
+    crate::meetings::summary::invalidate(&app);
     tracing::info!(provider = p.id, "api key removed");
     announce(&app).await;
     Ok(())
@@ -1672,6 +1846,69 @@ pub fn clean_inbox() {
 mod tests {
     use super::*;
     use vults_chat::Settings;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn voice_handoff_rechecks_opt_in_draft_ticket_and_never_queues() {
+        let app = tauri::test::mock_app();
+        app.manage(SettingsState(std::sync::Mutex::new(
+            crate::settings::Settings::default(),
+        )));
+        app.manage(ChatState::new());
+        let ticket = crate::dictation::worker::Ticket::test_command();
+        let origin = Origin::Voice(ticket.clone());
+        assert!(origin.check(app.handle()).is_err(), "No implicit model grant");
+        let settings = app.state::<SettingsState>();
+        settings.0.lock().unwrap().dictation_command_chat = true;
+        assert!(origin.check(app.handle()).is_ok());
+        let chat = app.state::<ChatState>();
+        let reserved = origin.reserve(&chat).unwrap().unwrap();
+        assert!(
+            origin.reserve(&chat).is_err(),
+            "A busy Chat cannot queue a voice turn"
+        );
+        drop(reserved);
+        for draft in [Draft { text: "unfinished".into(), ..Draft::default() },
+            Draft { files: vec!["/inbox/file".into()], ..Draft::default() },
+            serde_json::from_value::<Draft>(serde_json::json!({"text":"", "files":[], "folder":null,"provider":null,"mentions":[{"token":"@api", "target":{"kind":"session", "agent":"codex", "id":"a"}}]})).unwrap()] {
+            *chat.draft.lock().unwrap() = draft;
+            assert!(origin.check(app.handle()).is_err(), "Never inherit a composer draft");
+        }
+        *chat.draft.lock().unwrap() = Draft::default();
+        settings.0.lock().unwrap().zeca = false;
+        assert!(origin.check(app.handle()).is_err());
+        settings.0.lock().unwrap().zeca = true;
+        settings.0.lock().unwrap().dictation_commands = false;
+        assert!(origin.check(app.handle()).is_err());
+        settings.0.lock().unwrap().dictation_commands = true;
+        assert!(origin.check(app.handle()).is_ok());
+        ticket.test_cancel();
+        assert!(
+            origin.check(app.handle()).is_err(),
+            "A later grant cannot revive a cancelled ticket"
+        );
+        assert!(!chat.live.lock().unwrap().busy);
+        assert_eq!(chat.current(), None);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn voice_preflight_keeps_the_selected_folder_and_rejects_changed_sources() {
+        let state = ChatState::new();
+        let expected = Draft {
+            folder: Some("/work/api".into()),
+            provider: Some(Provider::Codex),
+            ..Draft::default()
+        };
+        *state.draft.lock().unwrap() = expected.clone();
+        assert!(check_voice_source(&state, &expected, Provider::Codex).is_ok());
+        assert!(check_voice_source(&state, &expected, Provider::Claude).is_err());
+        state.draft.lock().unwrap().folder = Some("/work/web".into());
+        assert!(check_voice_source(&state, &expected, Provider::Codex).is_err());
+        *state.draft.lock().unwrap() = expected.clone();
+        state.draft.lock().unwrap().provider = Some(Provider::Claude);
+        assert!(check_voice_source(&state, &expected, Provider::Codex).is_err());
+    }
 
     #[test]
     fn timed_out_chat_offers_leave_the_inbox_and_reopened_chat() {

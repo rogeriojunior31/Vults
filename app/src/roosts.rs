@@ -740,13 +740,16 @@ mod tests {
         let r = repo_within(&root, Path::new("/nowhere")).unwrap();
         assert_eq!((r.branch, r.origin), (None, None));
         // And a `.git` file that is a FIFO is no repository at all.
-        let other = temp("fifo2").join("r");
+        let ceiling = temp("fifo2");
+        let other = ceiling.join("r");
         std::fs::create_dir_all(&other).unwrap();
         std::process::Command::new("mkfifo")
             .arg(other.join(".git"))
             .status()
             .unwrap();
-        assert_eq!(repo_within(&other, Path::new("/nowhere")), None);
+        // A repository above the fixture must not change this FIFO assertion.
+        std::fs::create_dir_all(ceiling.join(".git")).unwrap();
+        assert_eq!(repo_within(&other, &ceiling), None);
     }
 
     #[test]

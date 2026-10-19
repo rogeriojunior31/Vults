@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: be269b258c5a -->
+<!-- source: d57c87105ad2 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -54,9 +54,9 @@ crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
 | `spike` | O kit de spike (só para desenvolvimento, nunca no app): um modelo falso, um app falso no socket do hook e um terminal para as TUIs, para gravar os hooks de um agente de verdade sem conta; o `scripts/spike.sh` roda o kit para cada agente | ser ligado ao app |
 | `secrets` | O chaveiro do sistema (Secret Service, Credential Manager), indexado pelo bundle id | Tauri, arquivos |
 | `connectors` | Vults Connect: o trait `Connector`, o runtime de polling, GitHub | Tauri, core |
-| `audio` | Captura do microfone em sua própria thread (cpal), dispositivo por nome com alternativa padrão e monitores ignorados, mono a 16 kHz limitado na memória (rubato), nível escalar e nove faixas de fala (rustfft); nenhuma transcrição ou áudio gravado em disco | Tauri, core, transcrição, rede |
-| `voice` | Push-to-talk do Chat sobre `audio`, limite de um minuto por gravação, fim de fala pelo Silero e whisper.cpp/prévia ao vivo neste computador, downloads de modelos conferidos por SHA-256 | Tauri, core |
-| `dictation` | Gestos puros com tempo monotônico injetado (segurar, toque duplo, travar com Espaço, cancelar e prazo de 600 ms de áudio adicional), comparação de cancelamento falado e pontuação de código falado em contexto de terminal | IO, async, Tauri, core, a rede |
+| `audio` | Captura do microfone em sua própria thread (cpal), dispositivo por nome com alternativa padrão e monitores ignorados, mono a 16 kHz limitado na memória (rubato), nível escalar e nove faixas de fala (rustfft); a captura opcional de reuniões no Linux mantém WAVs temporários privados; nenhuma transcrição | Tauri, core, transcrição, rede |
+| `voice` | Push-to-talk do Chat sobre `audio`, limite de um minuto por gravação, fim de fala pelo Silero e whisper.cpp/prévia ao vivo neste computador, downloads de modelos conferidos por SHA-256; transcrição local de WAVs de reuniões em blocos limitados, com horários por segmento, cancelamento e prioridade para a fala interativa | Tauri, core |
+| `dictation` | Gestos puros com tempo monotônico injetado (segurar, toque duplo, travar com Espaço, cancelar e prazo de 600 ms de áudio adicional), comparação de cancelamento falado, pontuação de código falado em contexto de terminal, gramática de comandos de voz e resolução de nomes de projetos/agentes | IO, async, Tauri, core, a rede |
 | `media` | O que está tocando (MPRIS pelo session bus, pelos sinais dele) e tocar/pausar/pular | Tauri, core |
 | `platform` | Superfícies/regiões de entrada no Linux, bandeja, atalhos globais, pular para o terminal, capacidades de foco, reservas da área de transferência, inserção protegida por XTest/portal/tmux e mudanças temporárias de volume/reprodução MPRIS | Tauri, core |
 | `app` | O shell Tauri: o loop do runtime, effects, comandos, bandeja, configurações | — |
@@ -73,14 +73,132 @@ GitHub (`src/island/board.ts`), que o Nest também desenha, e o visual das pági
 
 ## Ditado local
 
+`dictation::command` fornece a gramática da V8.1 sem um chamador em execução. A normalização Unicode
+de caixa/acentos/pontuação produz chaves lexicais; a remoção inicial de cortesia/muletas e as formas
+de verbos iniciais pertencem somente às cláusulas de comando. Tabelas em inglês, português e espanhol
+retornam descrições com nomes de destino ainda não resolvidos, nunca intents do core. Conectores
+explícitos de sequência produzem um lote só se todas as cláusulas forem reconhecidas; frases que
+respondem a cards recusam toda a fala. A análise é limitada a 4 KiB e oito comandos, sem IO, microfone,
+modelo, área de transferência ou histórico.
+
+A V8.2 acrescenta `command::names`, uma cópia independente das identidades de projetos/agentes e das
+substituições salvas. Aliases elegíveis apontam para nomes conhecidos completos; a resolução prioriza
+aliases, nomes exatos, palavras inteiras isoladas e correspondências por distância Levenshtein Unicode
+limitada. Consultas aproximadas de uma palavra também comparam as palavras de cada nome; assim,
+`apy` mantém tanto `api` quanto `api-gateway`. Empates na menor distância continuam ambíguos;
+identidades distintas nunca são agrupadas pelo rótulo. Um relógio injetado limita um esclarecimento
+às opções originais por 90 segundos, sem renovar o prazo quando uma resposta não resolve a dúvida.
+Uma opção removida ou renomeada invalida a pergunta; uma resposta bem-sucedida a consome. Nenhuma
+resolução executa ações.
+
+O `app::voice_commands::Commands` da V8.3 aceita uma transcrição somente do responsável pelo estado
+no runtime e prepara um lote sobre uma cópia desse estado. Só `Focus`, `FocusNext`, `FocusPrevious`,
+`Jump`, `OpenFolder` e `SetProjectPref` passam pelo limite exaustivo de `Intent::voice_command_allowed`;
+respostas a cards, liberação/adiamento/revisão e merges ficam excluídos. Lotes não resolvidos,
+recusados ou indisponíveis descartam a cópia e todos os efeitos. Um lote bem-sucedido efetiva a cópia
+e devolve os efeitos ao executor existente. Identidades qualificadas de sessões distinguem rótulos
+duplicados; preferências são agrupadas pela pasta exata. Lotes pendentes preservam as identidades
+dos destinos anteriores e as revalidam quando a pergunta é resolvida. Repetir e desfazer guardam
+90 segundos de contexto com tempo injetado; desfazer uma preferência restaura o valor anterior só
+enquanto a pasta da sessão e o valor esperado ainda corresponderem. Desfazer o foco verifica o foco
+atual e a sessão anterior ainda ativa. Bloqueio/cancelamento limpa o contexto e a pergunta.
+
+Consultas reutilizam `flock_tools` sobre a visão local atual e o uso em cache, incluindo
+`session_detail_exact` com chave exata e o mesmo formatador de detalhes com segredos ocultos já
+existente. Cards pendentes, estado/etapas de sessões, uso e linhas do GitHub viram frases completas
+nos quatro idiomas. Títulos externos continuam como texto inerte; essas consultas não usam modelo,
+busca na rede, escrita na área de transferência nem resposta falada a cards.
+
+A V8.4 fixa o modo de ditado/comando em cada ticket do worker antes da captura. O atalho separado
+`talk-command` do portal sempre entra nesse worker, inclusive com o Zeca desligado ou o Chat em foco.
+A captura de comandos usa gestos de apenas segurar e a transcrição local compartilhada, sem
+transformações de texto, observação de foco/painel nem área de transferência/inserção. O worker lê
+os aliases salvos fora do loop do core e enfileira a transcrição com seu ticket. O runtime a admite
+sob a trava curta de cancelamento do ticket, chama o dispatcher síncrono de dados em cache e executa
+os efeitos pelo executor existente. Não há await nem IO nessa admissão. Um ticket substituído ou
+cancelado não pode executar trabalho enfileirado.
+
+A linha/legenda existente de ditado, com um único responsável por exibição, apresenta a captura e os
+resultados dos comandos. A expiração absoluta impede que trocas de superfície ou respostas sem
+resolução renovem os 90 segundos originais de esclarecimento; a legenda do que foi ouvido continua
+expirando em até dois segundos. Cards e layouts restritos mantêm prioridade. O Histórico registra
+comandos com um resultado distinto e a mesma ordenação de prazo/exclusão, sem agregados de uso/tempo
+de entrega do ditado. Não há repetição na UI, e o backend rejeita repetir linhas de comandos.
+Copiar novamente mantém somente ditado comum.
+
+A V8.5 acrescenta o controle de comandos em Settings (ligado por padrão) e o envio separado de falas
+desconhecidas ao Chat, desligado por padrão. Alterar qualquer escolha cancela tickets e contexto de
+comandos sem interromper o ditado comum. A página de comandos do Nest filtra o histórico retido e
+compartilha o guia de frases com Settings. Somente uma fala desconhecida, sem recusa nem esclarecimento
+ativo, pode pedir envio ao Chat. Reserva o Chat atual livre, recusa texto/arquivos/referências por
+enviar e reconfere configurações, bloqueio, ticket e pasta/provedor selecionados após a preparação
+assíncrona. Conversas novas usam essa pasta, sem mudar o destino de uma conversa já iniciada. Nenhum turno espera
+na fila do Chat. A mensagem admitida usa o envio normal da conversa atual, suas ferramentas, portão,
+orçamento, rastros e aprovações; a resposta aparece no Chat. Não herda o rascunho do compositor nem
+altera a autoridade sobre aprovações. Após a admissão, o Chat é responsável por Parar.
+
+A V3.1 introduz `vults-dictation::cleanup` como contrato puro de prompt/resposta.
+Envolve os dados escapados de transcrição/aplicativo/grafia em turnos reais de mensagens, demonstrando
+perguntas e imperativos como texto. Edições locais tipadas são substituídas por marcas opacas sem
+colisão; seu conteúdo fica fora do prompt do modelo e só é restaurado literalmente após validar a
+sequência. Limites de entrada/saída, controles, pontuação explícita de perguntas e plausibilidade de
+palavras/caracteres rejeitam respostas inadequadas, mantendo o original local completo. Essas
+verificações não provam fidelidade semântica. A V3.2 conecta a preferência separada `dictation_cleanup`,
+desligada por padrão (esquema 37 de Settings), a uma chamada sem ferramentas pelo provedor de API
+selecionado em Chat & voice, incluindo Ollama/LM Studio em IP literal de loopback. A escolha capturada
+ao pressionar a tecla não herda consentimento posterior; mudar a preferência, o provedor/modelo ou a
+chave invalida a limpeza em andamento. O worker dedicado preserva a transcrição local e as verificações
+finais de inserção/cards/destino. Falha ou prazo de quatro segundos mantém o texto local completo;
+tradução tem prazo de oito segundos e Prompt tem doze.
+
+O portão admite até 2.000 tentativas em 24 horas móveis, incluindo chamadas locais. A migração 25
+acrescenta um registro de admissão sem conteúdo e o rastro inicial, gravados juntos antes do HTTP.
+Reservas sobrevivem a reinício, falha/interrupção e Clear history. Settings vincula o consentimento à
+identidade do registro; registro ausente, ilegível ou recriado impede requisições, sem renovar a cota. A conclusão atualiza apenas rastros preservados com provedor/modelo/local/tempo/resultado
+e tokens conhecidos, nunca transcrição/áudio/área de transferência/chave nem uso inventado. O cliente
+HTTP desativa proxies, redirecionamentos e novas tentativas. A V3.3 fixa aplicativo/estilo/idioma de
+saída no callback da tecla. Terminais/editores usam Como falado, e-mail usa Polido, chats usam Natural
+e sessões reconhecidas do bando usam Prompt. Uma escolha explícita por aplicativo precede o padrão
+da categoria; sessões mantêm Prompt. Outros aplicativos identificados usam o padrão global (Natural).
+Foco ausente ou preferências ilegíveis mantém o texto local sem modelo. Apenas aliases exatos e
+revisados do desktop compartilham escolhas; títulos de janela/URLs nunca selecionam estilo.
+O esquema 38 de Settings acrescenta estilo global, idioma de saída opcional e inglês nas sessões,
+desligado por padrão. Inglês nas sessões precede o idioma global apenas em sessões reconhecidas;
+Como falado nunca traduz nem chama modelo.
+
+A migração 26 acrescenta `dictation_styles(app, style)`, preservada por Clear history, e
+`output_language` opcional no histórico, separado do idioma ouvido. O worker registra estilo/idioma
+aplicados apenas após sucesso da limpeza; falhas mantêm o estilo do processamento local. Mudanças de
+estilo/idioma valem na próxima gravação sem alterar a escolha já capturada. X11 lê a identidade em
+foco no callback da tecla; Plasma Wayland reutiliza o observador KWin verificado com script de vida
+separada, preparado ao ativar a limpeza, sem permissão de teclado pelo portal. Perda do observador ou
+ambiguidade mantém o texto local; contexto assíncrono da interface não muda uma escolha capturada.
+A V3.4 acrescenta nas Configurações o consentimento separado da limpeza, a divulgação do provedor,
+os cartões de estilo, as escolhas de idioma/inglês nas sessões e as opções por aplicativo recolhidas.
+As leituras usam apenas configurações e metadados locais do provedor; abrir Estilos não testa modelos
+nem busca sua lista. Escritas pendentes, eventos recentes e leituras antigas preservam sua ordem;
+falhas mantêm a opção de recarregar, e é possível desligar um recurso já ativo mesmo com falha nas
+leituras auxiliares. A aba Ditado apresenta um único editor de Estilos pelo destino privilegiado
+`dictationstyles` de Configurações, junto às páginas Voz, Atalhos de teclado, Configurações dos
+comandos, Vocabulário, Colagem, Privacidade e Diagnóstico. Links de páginas de trabalho voltam à
+webview de transcrições do Nest; configurar não concede poderes ao Nest. Voz reúne os controles de
+transcrição compartilhados, com um link em Chat e voz, e o Histórico nomeia apenas estilos/idiomas
+aplicados conhecidos. Textos e cartões
+compartilhados usam o tema de produção e os quatro idiomas da interface. Esse caminho não acrescenta
+autoridade de aprovação nem execução. O processo guarda uma seção de configuração validada do
+Ditado separada da aba de trabalho do Nest. Só Configurações pode lembrar essa seção; uma rota
+explícita de trabalho a remove, e voltar pelo cabeçalho/teclado do Ditado usa o responsável nativo
+para restaurar a webview correta. O armazenamento compartilhado da origem não concede autoridade
+de configuração.
+
 O ditado independente tem seu próprio worker cancelável no `app`; não passa amostras do microfone
-nem transcrições pelo loop de eventos dos agentes. O roteador de atalhos liga cada soltura de tecla
-a quem recebeu o pressionamento. O Chat do Vults em foco com o Zeca ligado usa sua entrada de voz
-no rascunho; aplicativos externos e superfícies com o Zeca desligado usam ditado independente.
-Configurações não inicia ditado; seu diagnóstico explícito de microfone tem uma captura separada e limitada.
+nem transcrições pelo loop de eventos dos agentes. O atalho de fala do desktop vai diretamente para
+esse worker ao pressionar e soltar, independentemente do app em foco ou do Zeca. Não pode abrir o
+Chat nem iniciar sua voz. Somente o botão de microfone do Chat preenche diretamente seu rascunho.
+As páginas de configuração mantêm seu diagnóstico explícito, separado e limitado de microfone.
 
 ```text
-desktop talk shortcut -> app::shortcut_route -> app::dictation worker (generation)
+desktop talk shortcut -> app::dictation worker (generation)
                                                   |
                               audio::Capture (16 kHz mono, <= 10 min, memory only)
                                   |                               |
@@ -97,10 +215,18 @@ desktop talk shortcut -> app::shortcut_route -> app::dictation worker (generatio
                                   |                    guarded delivery or clipboard
                                   |                               |
                                   +--> ordered feedback <-- confirmed outcome
-                                      island / Nest               |
+                              passive dictation capsule           |
                                                          dictation history + totals
                                                           (store, retention choice)
 ```
+
+No Linux, `app::dictation_overlay` mapeia uma superfície passiva de camada de 480 x 160, centralizada
+embaixo e acima dos painéis do desktop. Sua região de entrada vazia e teclado desativado preservam
+o foco do destino. Reutiliza o responsável de status/tema de produção e eventos locais, sem ser
+dona de microfone ou rede. Uma consulta de disponibilidade somente de leitura oculta indicadores
+internos duplicados; falha de construção mantém a alternativa da ilha/Nest. Cards, bloqueio,
+presença pausada, expiração e legendas opcionais mantêm suas regras. A ilha continua sendo a única
+responsável pelo som de início.
 
 Cada turno captura suas escolhas de microfone e processamento. Cancelar invalida trabalhos
 atrasados de captura, prévia, decodificação e entrega; reutilizar usa o texto já entregue e nunca
@@ -181,7 +307,7 @@ na frase descartam respostas antigas da prévia assíncrona. Configurações man
 opcionais de vocabulário; as páginas de trabalho só levam até lá.
 
 A V2.3 acrescenta contexto opcional do dicionário no esquema 34 de Configurações (desligado por
-padrão; controle em Configurações > Ditado > Suas palavras). Cada gravação captura a opção e o dicionário uma vez. Prévia/final
+padrão; controle em Ditado > Vocabulário). Cada gravação captura a opção e o dicionário uma vez. Prévia/final
 passam só as palavras do dicionário para `voice`; uma nova tentativa com Base reconfere seu modelo
 real. O tokenizador do modelo limita o contexto de programação mais entradas inteiras a 224
 tokens; ignora palavras vazias, com controles ou repetidas. Os tokens pertencem a uma decodificação,
@@ -192,7 +318,7 @@ bloqueados mesmo onde o WER das frases melhorou. A origem e os resultados dos te
 `crates/voice/tests/fixtures/README.md`; WER sintético é separado da aceitação humana no desktop.
 
 A V2.4 acrescenta a preferência independente `dictation_project_vocabulary` (esquema 35, desligada
-por padrão, controle em Configurações > Ditado > Suas palavras). O leitor existente de repositório, fora do loop, atualiza o
+por padrão, controle em Ditado > Vocabulário). O leitor existente de repositório, fora do loop, atualiza o
 cache opcional em memória no início da sessão e na atualização comum do repositório. Cada árvore
 de trabalho Git tem sua própria entrada (máximo de 128), para não misturar branches e membros
 entre worktrees de um mesmo pouso. O extrator lê nomes e dependências Cargo/npm, membros do

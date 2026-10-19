@@ -79,12 +79,14 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   a 48 px rail. Arrow keys resize, Home/End reach the bounds and Enter folds;
   folding keeps selection and drafts. Below 900 px, each page keeps its existing
   narrow navigation instead of showing a rail.
-- Settings remains the configuration destination. Present the destination clearly
-  when another surface needs a privileged setting.
-- Dictation's Nest area owns its work pages and links to Settings > Dictation for
-  configuration and Diagnostics, and Activity > Dictation for figures. Its shared
-  transcription model and language stay in Settings > Chat & voice. These owners
-  land with their N3 phases; do not duplicate settings in the area.
+- General configuration stays behind the gear. Dictation configuration lives under
+  the Dictation tab, alongside its work pages, using one shared navigation.
+- Dictation has separate Voice, Keyboard shortcuts, Command settings, Vocabulary,
+  Styles, Meeting settings, Paste, Privacy and Diagnostics pages. Voice owns the shared Chat/dictation
+  transcription model and spoken language; Chat & voice links there. Statistics
+  links to Activity > Dictation. Do not duplicate editors.
+- Configuration pages still run in the privileged Settings webview. Work pages with
+  transcripts remain in Nest; a visual tab never grants powers to another webview.
 
 ## Priority and disclosure
 

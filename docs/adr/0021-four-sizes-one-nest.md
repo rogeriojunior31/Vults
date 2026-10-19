@@ -35,8 +35,8 @@ meant to steer whatever reads them.
   within the screen. **Full** is the Nest maximized or in full screen; Esc returns to the size
   before it. The layer-shell overlay never grows past its fixed size.
 - **Surfaces at rest are layer surfaces** mapped once at a fixed size, one input region each; the
-  corner widget sits in a corner the user picks and is not a window to drag. At rest one webview lives (the island, plus the
-  widget if chosen); the Nest is created when opened. The palette is not a surface: it opens inside
+  corner widget sits in a corner the user picks and is not a window to drag. At rest the island and passive Linux dictation webview live, plus the
+  widget if chosen; the Nest is created when opened. The dictation surface stays transparent when idle. The palette is not a surface: it opens inside
   the island's or the Nest's page.
 - **A card is answered where the user is: on the island or in the Nest.** The island holds
   permission and question cards and Ctrl+Alt+Y/N (in panel mode it anchors by the tray, the same
@@ -66,34 +66,28 @@ meant to steer whatever reads them.
   in Chat; it does not bring back a Tasks surface. Stop is available only for an execution Vults
   started through its supported driver (D8), never merely because it watches a flock session.
 - **Dictation has one owner for each kind of content.** Its Nest area owns History, Voice
-  commands, Talk with Zeca, Meetings, Dictionary, Snippets and Styles as those phases ship.
-  Its side list links to **Settings > Dictation**, which owns configuration and Diagnostics,
-  and **Activity > Dictation**, which owns aggregate figures (V4). The shared transcription
-  model and language stay in **Settings > Chat & voice**; links open that existing owner.
-  No second Settings page lives in the Dictation area. Model switches, keys, budgets, insertion
-  permission and agent-config changes remain in the Settings webview with their existing
-  authority checks. Transcripts and meeting content stay in the Nest's webview; Diagnostics
+  commands, Talk with Zeca, Meetings, Dictionary and Snippets as those phases ship.
+  The Dictation tab also presents its configuration in separate Voice, Keyboard shortcuts,
+  Command settings, Vocabulary, Styles, Paste, Privacy and Diagnostics pages, with the same
+  navigation as its work pages. Voice owns the shared transcription model and spoken language;
+  Chat & voice links there. Statistics links to **Activity > Dictation**, the aggregate owner.
+  Configuration still runs in the Settings webview, with existing label checks; Nest gains no
+  model, key, budget, insertion-permission or agent-config authority. Each setting has one editor.
+  Transcripts and meeting content stay in the Nest's webview; Diagnostics
   in Settings shows technical measurements, not transcripts or agent text. Selection, filters,
   drafts and an active recording survive size changes and visits to Settings or Activity.
   With Zeca off, independent dictation stays available; Talk with Zeca follows his opt-in.
-- **Dictation feedback stays over the flock.** While active, a neutral grey line can show
-  listening, hands-free, transcribing, retry, cancellation, failure or the delivery outcome
-  established under [0032](0032-dictation-into-other-apps.md). Later phases add voice-command and
-  spoken-reply states. There is no idle hint, second navigation, Undo or other button on this
-  line; a normal island click still opens Quick. Color stays on status shapes, and a card's
-  amber edge remains visible. An optional caption below carries heard text, clipped words or
-  the result only when it adds information, with at most two rows for the result. It has no
-  controls, takes neither focus nor mouse input and clears within two seconds of completion.
-  Long text truncates within the surface, with the full line available in its detail or tooltip.
-  The overlay stays mapped at its fixed size; caption drawing must not enlarge its input region.
-- **Cards always take priority over dictation.** An arriving card opens in its existing owner
-  immediately, with its controls and command readable; dictation never hides it, covers it,
-  delays its notification or extends its deadline. If space is short, the line and caption
-  yield to the card. Feedback does not answer it or grant insertion into a waiting session
-  ([0032](0032-dictation-into-other-apps.md)). Dictation does not override the one-surface rule:
-  while the Nest is visible, its active page carries feedback without forcing Mini or showing
-  the hidden island. Cards keep the existing island/Nest routing. Feedback never steals focus
-  from the captured destination.
+- **Linux dictation feedback has its own passive capsule.** A fixed bottom-centered surface
+  shows a microphone and measured bands while listening, an amber border hands-free, and existing
+  transcription/result states. It uses the production theme, never takes keyboard or pointer
+  input, and stays transparent when idle. An optional caption above holds heard/result text and
+  retains its existing two-second result expiry. There are no buttons or independent audio
+  owners. Island/Nest feedback is suppressed while this surface exists; creation failure retains
+  inline feedback. This is a passive status exception to the main island/Nest surface rule.
+- **Cards always take priority over dictation.** Pending cards, screen lock and Paused presence
+  hide the capsule; expired results do not return afterward. Feedback never covers, answers or
+  delays a card, grants insertion, or steals focus. Cards retain their existing island/Nest
+  routing. The fixed surface remains mapped with an empty input region, even while visible.
 - **One surface at a time** (the island and the Nest stay two surfaces underneath). While the Nest is open and in sight (Room or Full), the island is
   hidden, pill and sky and all, with no region that takes the mouse. It comes back when the Nest
   closes or goes back to Quick or Mini (or is minimized, where the system says so); the footer's
@@ -103,7 +97,8 @@ meant to steer whatever reads them.
   title bar: the prototype's rounded frame, a header that moves it, edges that resize it. It holds
   two webviews under one header, the Nest's (`nest`) and Settings' (`settings`), one shown at a
   time. The gear shows Settings; a tab shows the Nest; `open_settings(section)` opens the window on
-  Settings, at a page when asked.
+  Settings, at a page when asked. Dictation configuration uses that same privileged webview
+  while keeping the Dictation tab selected.
 - **Only Settings' webview holds the powers**: writing an agent's config
   ([0005](0005-agent-configs-backup-diff-click.md)), saving or clearing a key, making or taking a
   policy, pairing, revoking or reaching a phone ([0004](0004-a-human-answers-permissions.md)), and
@@ -112,7 +107,8 @@ meant to steer whatever reads them.
   `policies::from_settings`). The two webviews share the origin's storage, which Settings never reads. Settings shows no agent's text: its frame holds tab names and counts,
   the size switch, sound, full screen, and a footer that switches Zeca and brings up the terminal of
   the session in front (it keeps only who that session is). Its pages are General, Agents, Chat &
-  voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca, About; N3 adds Dictation.
+  voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca and About. N3 Dictation
+  configuration uses this webview under its own tab, outside the global Settings sidebar.
 
 ## Consequences
 
@@ -157,3 +153,11 @@ meant to steer whatever reads them.
 - 2026-10-17: N3 V0.3 adds the phased fifth Nest tab, Settings and Activity ownership, transient
   dictation feedback and card priority. It follows R6's revised central Settings decision and
   Tasks removal; neither a sixth tab nor area-owned privileged settings is introduced.
+
+- 2026-10-18: consolidate dictation configuration under the Dictation tab at the maintainer's
+  request, with one editor per setting and shared navigation. Move the shared transcription
+  controls there and link from Chat. Keep configuration in the Settings webview and all
+  transcript work pages in Nest; approval, recording and privileged-command authority is unchanged.
+
+- 2026-10-19: move Linux dictation status to a passive bottom capsule, with existing inline
+  feedback as a creation-failure fallback; preserve card/lock priority and the captured focus.

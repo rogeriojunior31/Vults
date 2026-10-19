@@ -21,13 +21,25 @@ pub fn resample(samples: &[f32], channels: u16, rate: u32) -> Result<Vec<f32>, S
     Ok(out)
 }
 
-pub(crate) struct Converter {
+/// Stateful mono conversion to 16 kHz, retaining filter history across input blocks.
+/// Call `finish` once at EOF to flush the exact remaining sample count.
+pub struct Converter {
     fft: Option<Fft<f32>>,
     pending: Vec<f32>,
     skip: usize,
     rate: u32,
     input: usize,
     output: usize,
+}
+
+impl std::fmt::Debug for Converter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MonoResampler")
+            .field("rate", &self.rate)
+            .field("input", &self.input)
+            .field("output", &self.output)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Converter {
@@ -55,6 +67,9 @@ impl Converter {
     }
 
     pub fn push(&mut self, samples: &[f32]) -> Result<Vec<f32>, String> {
+        if samples.iter().any(|sample| !sample.is_finite()) {
+            return Err("audio contains a non-finite sample".into());
+        }
         self.input += samples.len();
         let Some(fft) = self.fft.as_ref() else {
             self.output += samples.len();
@@ -85,7 +100,7 @@ impl Converter {
     }
 
     pub fn finish(mut self) -> Result<Vec<f32>, String> {
-        let wanted = self.input * SAMPLE_RATE as usize / self.rate as usize;
+        let wanted = (self.input as u64 * u64::from(SAMPLE_RATE) / u64::from(self.rate)) as usize;
         let mut out = Vec::new();
         while self.output < wanted {
             let frames = self
@@ -105,6 +120,14 @@ impl Converter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_rejected_block_does_not_advance_the_stream() {
+        let mut stream = Converter::new(48_000).expect("resampler");
+        assert!(stream.push(&[f32::NAN]).is_err());
+        assert!(stream.push(&[f32::INFINITY]).is_err());
+        assert!(stream.finish().expect("no input admitted").is_empty());
+    }
 
     #[test]
     fn callback_boundaries_do_not_change_the_signal() {

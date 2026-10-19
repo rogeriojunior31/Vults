@@ -21,7 +21,9 @@ class Element {
 }
 const all = n => [n, ...n.children.flatMap(all)];
 globalThis.document = { createElement: tag => new Element(tag), createElementNS: (_, tag) => new Element(tag), documentElement: {} };
-globalThis.window = { clearTimeout() {}, setTimeout() { return 0; } };
+const metricListeners = [];
+const metricsMedia = { matches: true, addEventListener: (_event, callback) => metricListeners.push(callback) };
+globalThis.window = { matchMedia: () => metricsMedia, clearTimeout() {}, setTimeout() { return 0; } };
 let copied = [], copyFails = false;
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { clipboard: { async writeText(text) { if (copyFails) throw Error("No clipboard"); copied.push(text); } } } });
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
@@ -30,7 +32,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent", plugi
 }], build: { write: false, minify: false, lib: { entry: `${root}src/surfaces/nest/dictation/history.ts`, formats: ["es"] } } });
 const { createDictationHistory, setLang } = await import(`data:text/javascript;base64,${Buffer.from(bundles[0].output.find(p => p.type === "chunk").code).toString("base64")}`);
 const tick = () => new Promise(resolve => setImmediate(resolve));
-const row = (id, text) => ({ id, at: 2_000_000_000 - (id === 2 ? 86_400 : 0), app: "<img src=x>", session: "codex:api", heard: `heard ${text}`, text, words: 2, secs: 2.5, style: "verbatim", language: "en", fixes: null, outcome: "copied" });
+const row = (id, text) => ({ id, at: 2_000_000_000 - (id === 2 ? 86_400 : 0), app: "<img src=x>", session: "codex:api", heard: `heard ${text}`, text, words: 2, secs: 2.5, style: "polished", outputLanguage: "es", language: "en", fixes: null, outcome: "copied" });
 let data = { retention: "30", rows: [row(1, "<script>inert text</script>"), row(2, "Other words")], today: { words: 4, secs: 5, count: 2 } };
 let loads = 0, removals = [], clears = 0, again = [], failRead = false, failAction = false, settings = 0, deferred;
 const view = createDictationHistory({
@@ -48,6 +50,8 @@ assert.equal(loads, 0, "Constructing a hidden page never reads history");
 assert.ok(view.element.textContent.includes("Reading dictation history"));
 view.refresh(); await tick();
 assert.equal(entries().length, 2);
+assert.ok(entries()[0].textContent.includes("Polished"));
+assert.ok(entries()[0].textContent.includes("In Spanish"));
 assert.equal(nodes().filter(n => n.className === "dictation-day").length, 2);
 assert.ok(view.element.textContent.includes("<script>inert text</script>"));
 assert.equal(entries()[0].children[0].children.length, 0, "Transcript HTML is inert");
@@ -106,6 +110,54 @@ assert.ok(!view.element.textContent.includes("Newest result"));
 failRead = false; data.rows = [row(5, "x".repeat(8000))]; view.refresh(); await tick();
 for (const lang of ["pt-BR", "es", "zh"]) { setLang(lang); view.relabel(); assert.ok(!view.element.textContent.includes("Dictation history")); }
 setLang("en"); view.relabel(); named("Dictation settings").click(); assert.equal(settings, 1);
+
+data.rows = [{...row(9,"Command completed."),outcome:"command",style:"command",heard:"mute api"}];
+view.refresh();await tick();
+assert.equal(entries().length,1);
+assert.ok(view.element.textContent.includes("Voice command"));
+assert.ok(!nodes().some(node=>node.tag==="button" && node.textContent==="Use again"),"Command history never offers replay or paste");
+assert.ok(!view.element.textContent.includes("Unknown app"));
+assert.ok(nodes().some(node=>node.tag==="button" && node.textContent==="Copy"),"Copying the result stays an explicit text action");
+
+const metrics = nodes().find(n => n.className === "dictation-summary");
+assert.equal(metrics.open, true, "Wide history shows its figures");
+metricsMedia.matches = false; metricListeners.forEach(fn => fn());
+assert.equal(metrics.open, false, "Compact history starts with figures folded");
+assert.ok(view.element.children.indexOf(nodes().find(n => n.className === "dictation-toolbar")) < view.element.children.indexOf(metrics), "Search precedes optional figures");
+metrics.open = true; metrics.listeners.toggle();
+view.relabel(); assert.equal(metrics.open,true,"Refreshing labels retains the compact disclosure choice");
+metricsMedia.matches = true; metricListeners.forEach(fn => fn());
+metricsMedia.matches = false; metricListeners.forEach(fn => fn());
+assert.equal(metrics.open,true,"Room/compact transitions retain an explicitly opened summary");
+
+const commandView = createDictationHistory({
+  load: async () => structuredClone(data), remove: async id => { data.rows = data.rows.filter(r => r.id !== id); },
+  clear: async () => { throw Error("The filtered command page cannot clear all dictations"); },
+  again: async () => { throw Error("Commands cannot replay"); },
+}, () => settings++, true);
+data.rows.push(row(10, "ordinary dictation"));
+commandView.refresh(); await tick();
+const commandNodes = () => all(commandView.element);
+assert.equal(commandNodes().filter(n => n.className === "dictation-entry").length, 1);
+assert.ok(!commandView.element.textContent.includes("ordinary dictation"));
+assert.ok(commandNodes().find(n => n.className === "dictation-figures").hidden, "Command page has no dictation figures");
+assert.ok(commandNodes().find(n => n.tag === "button" && n.textContent === "Erase dictation history…").hidden, "No bulk erasure from a filtered page");
+assert.ok(!commandNodes().some(n => n.tag === "button" && n.textContent === "Use again"));
+const commandSearch = commandView.element.querySelector("input");
+commandSearch.value = "mute api"; commandSearch.listeners.input();
+assert.equal(commandNodes().filter(n => n.className === "dictation-entry").length, 1, "Heard text is searchable");
+commandSearch.value = "missing"; commandSearch.listeners.input();
+assert.ok(commandView.element.textContent.includes("No commands match your search"));
+commandSearch.value = ""; commandSearch.listeners.input();
+commandNodes().find(n => n.tag === "button" && n.textContent === "Delete…").click();
+commandNodes().find(n => n.tag === "button" && n.textContent === "Erase").click(); await tick();
+assert.deepEqual(data.rows.map(r => r.id), [10], "Individual erase preserves ordinary history");
+assert.ok(commandView.element.textContent.includes("No voice commands yet"));
+for (const language of ["pt-BR", "es", "zh"]) {
+  setLang(language); commandView.relabel();
+  assert.ok(!commandView.element.textContent.includes("No voice commands yet"));
+}
+setLang("en");
 const css = readFileSync(`${root}src/surfaces/nest/nest.css`, "utf8");
 assert.match(css, /#nest\s*>\s*\[role="tabpanel"\]\[hidden\][^{]*\{[^}]*display:\s*none/,
   "The tab owner's hidden rule must outrank class-based flex/grid pane styles, independent of source order");

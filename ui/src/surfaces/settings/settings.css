@@ -1,3 +1,5 @@
+@import "../../dictation-navigation.css";
+@import "../../dictation-styles.css";
 @import "../../dictation.css";
 @import "../nest/pages.css";
 @import "../../themes.css";
@@ -150,3 +152,21 @@ body.still #settings .page-enter { animation: none; }
 #settings .diagnostic-timings caption { text-align: start; color: var(--fg-dim); padding-bottom: 8px; }
 #settings .diagnostic-timings th, #settings .diagnostic-timings td { text-align: end; padding: 8px; border-bottom: 1px solid var(--border); }
 #settings .diagnostic-timings th:first-child { text-align: start; }
+
+@media (max-width: 899px) {
+  #settings.dictation-workspace { flex-direction: column; }
+}
+
+.meeting-assets { padding: 14px 16px; overflow-wrap: anywhere; }
+.meeting-assets > summary { cursor: pointer; font-weight: 600; }
+.meeting-assets [hidden] { display: none !important; }
+.meeting-assets p { margin: 10px 0; }
+.meeting-assets progress { width: 100%; accent-color: var(--accent); }
+.meeting-assets-consent { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; line-height: 1.5; }
+.meeting-assets-consent input { flex: 0 0 auto; margin-top: 3px; }
+.meeting-assets .actions { flex-wrap: wrap; }
+
+.meeting-assets-package { margin-top: 12px; }
+.meeting-assets-package > summary { cursor: pointer; color: var(--fg-dim); }
+
+.meeting-summary-settings p { overflow-wrap: anywhere; }

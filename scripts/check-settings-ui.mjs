@@ -15,7 +15,7 @@ class Element {
   };
   set textContent(text) { this.replaceChildren(); this.text = text; }
   get textContent() { return (this.text ?? "") + this.children.map(n => n.textContent).join(""); }
-  append(...children) { for (const node of children) { node.remove(); node.parentElement = this; this.children.push(node); } }
+  append(...children) { for (const node of children) { node.remove(); node.parentElement = this; this.children.push(node); if (this.tagName === "SELECT" && node.tagName === "OPTION" && (node.selected || this.children.length === 1)) this.value = node.value; } }
   prepend(...children) { this.replaceChildren(...children, ...this.children); }
   replaceChildren(...children) { this.text = ""; for (const n of this.children) n.parentElement = null; this.children = []; this.append(...children); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(n => n !== this); }
@@ -27,7 +27,7 @@ class Element {
       const s = part.trim();
       const attr = s.match(/\[([^=\]]+)(?:="([^"]*)")?\]/);
       if (attr) {
-        const val = attr[1].startsWith("data-") ? this.dataset[attr[1].slice(5)] : this.attributes[attr[1]];
+        const val = attr[1].startsWith("data-") ? this.dataset[attr[1].slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] : this.attributes[attr[1]];
         if (attr[2] !== undefined ? val !== attr[2] : val === undefined) return false;
       }
       const plain = s.replace(/\[[^\]]*\]/g, "");
@@ -48,6 +48,9 @@ class Element {
   setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
 }
+let diagnosticReads = 0, micStartReady;
+const rememberedSections = [];
+const stoppedMics = [];
 let initialSettingsReady;
 const initialSettings = new Promise(resolve => { initialSettingsReady = resolve; });
 const pendingErases = [];
@@ -72,7 +75,7 @@ globalThis.location = { hash: "#general" };
 globalThis.Option = class extends Element {
   constructor(label, value, _default, selected) { super("option"); this.textContent = label; this.value = value; this.selected = selected; }
 };
-const settings = { dictationVocabulary: true, dictationProjectVocabulary: true, dictationMusic: "lower", dictationCancelByVoice: true, dictationSpokenCode: true, dictationCutRepeats: true, dictationRetryBase: true, dictationMicrophone: null, dictationInsert: false, dictationInsertAvailable: true, dictationWayland: true, dictationKeep: "30", dictationCaption: true, dictationSound: true, dictationDoubleTap: true, dictationSpaceLock: true, dictationEscapeCancel: true, sounds: true, volume: 50, foldAfter: 15, lang: "en", language: null, zeca: true,
+const settings = { dictationCommands: true, dictationCommandChat: false, dictationVocabulary: true, dictationProjectVocabulary: true, dictationMusic: "lower", dictationCancelByVoice: true, dictationSpokenCode: true, dictationCutRepeats: true, dictationRetryBase: true, dictationMicrophone: null, dictationInsert: false, dictationInsertAvailable: true, dictationWayland: true, dictationKeep: "30", dictationCaption: true, dictationSound: true, dictationDoubleTap: true, dictationSpaceLock: true, dictationEscapeCancel: true, sounds: true, volume: 50, foldAfter: 15, lang: "en", language: null, zeca: true,
   zecaSpecies: "atratus", zecaLook: "auto", flock: "brazil", nativeChat: true, chatAccess: "ask", memory: true,
   presence: "island", settingsPath: "/home/example/settings.json", dataPath: "/home/example/vults" };
 globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
@@ -80,15 +83,18 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   return async (...args) => {
     switch (name) {
       case "appSettings": return initialSettings;
+      case "rememberDictationSection": rememberedSections.push(args[0]); return;
       case "dictationMicrophones": return new Promise((resolve, reject) => microphoneReads.push({ resolve, reject }));
       case "dictationClear": writes.push([name]); return new Promise((resolve, reject) => pendingErases.push({ resolve, reject }));
       case "openShortcutSettings": writes.push([name]); return new Promise((resolve, reject) => pendingShortcutOpens.push({ resolve, reject }));
       case "setDictationInsert": writes.push([name, ...args]); return null;
       case "retryDictationPermission": writes.push([name]); return;
-      case "dictationDoctor": return { system: { host: null, device: null, rate: null, session: "unknown", shortcuts: "unavailable", keyboard: "off", kwin: "unverified", gpu: false, vad: false }, counters: { loops: 0, retries: 0, copied: 0 }, timings: null };
+      case "dictationMicStart": return new Promise(resolve => { micStartReady=resolve; });
+      case "dictationMicStop": stoppedMics.push(args[0]); return;
+      case "dictationDoctor": diagnosticReads++; return { system: { host: null, device: null, rate: null, session: "unknown", shortcuts: "unavailable", keyboard: "off", kwin: "unverified", gpu: false, vad: false }, counters: { loops: 0, retries: 0, copied: 0 }, timings: null };
       case "dictationStatus": return null;
       case "dictationPermission": return "off";
-      case "setDictationMusic": case "setDictationProcessing": case "setDictationMicrophone": case "setDictationGesture": case "setTheme": case "setWidget": case "setPresence": case "setSounds": case "setDictationKeep":
+      case "setDictationCommands": case "setDictationMusic": case "setDictationProcessing": case "setDictationMicrophone": case "setDictationGesture": case "setTheme": case "setWidget": case "setPresence": case "setSounds": case "setDictationKeep":
         writes.push([name, ...args]);
         if (holdSettings) return new Promise((resolve, reject) => pendingSettings.push({ resolve, reject }));
         return;
@@ -100,7 +106,10 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "installStatus": return { installed: false, hookReady: true, statusLine: "ours", configPath: "/home/example/agent.json" };
       case "apiProviders": return { selected: "example", providers: [{ id: "example", label: "Example", local: false, hasKey: false }] };
       case "webSettings": return { on: false, engine: "brave", hasKey: false };
-      case "voiceStatus": return { ready: false, models: [], downloading: [], language: null };
+      case "voiceStatus": return { ready: false, models: [
+        {id:"base",label:"Base: fast, but weak outside English",size:60000000,installed:false},
+        {id:"small",label:"Small: good in Portuguese and other languages",size:190000000,installed:false},
+        {id:"turbo",label:"Large v3 Turbo: the most accurate; best with a GPU",size:574000000,installed:false}], downloading: [], language: null };
       case "phoneSettings": return { on: false, transport: "relay", relay: null, devices: [] };
       case "activity": return { history: true };
       case "openNest": routes.push(args[0]); return;
@@ -121,7 +130,7 @@ const bundle = await build({ configFile: false, root: ui, logLevel: "silent", pl
     if (id === "\0settings-version") return 'export const getVersion = async () => "test";';
     if (id === "\0settings-head") return `
       const noop = () => {};
-      export const createNestHead = () => ({ elements: [], set: noop, setZeca: noop, setSound: noop, setFull: noop, setCounts: noop, relabel: noop });
+      export const createNestHead = actions => { globalThis.settingsHeadActions = actions; return ({ elements: [], set: id => { globalThis.settingsSelectedTab = id; }, setZeca: noop, setSound: noop, setFull: noop, setCounts: noop, relabel: noop }); };
       export const createNestFoot = () => ({ element: document.createElement("footer"), setZeca: noop, setSpecies: noop, setTerminal: noop, relabel: noop });
       export const tabByKey = () => null;`;
   },
@@ -129,12 +138,19 @@ const bundle = await build({ configFile: false, root: ui, logLevel: "silent", pl
 const chunk = bundle[0].output.find(p => p.type === "chunk");
 await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const tick = () => new Promise(resolve => setImmediate(resolve));
-events.onSettings({ dictationVocabulary: false, dictationProjectVocabulary: false, dictationMusic: "leave", dictationCancelByVoice: false, dictationSpokenCode: false, dictationCutRepeats: false, dictationRetryBase: false, dictationMicrophone: "Disconnected mic", dictationInsert: true, dictationDoubleTap: false, dictationSpaceLock: false, dictationEscapeCancel: false });
+events.onSettings({ dictationCommands: false, dictationCommandChat: true, dictationVocabulary: false, dictationProjectVocabulary: false, dictationMusic: "leave", dictationCancelByVoice: false, dictationSpokenCode: false, dictationCutRepeats: false, dictationRetryBase: false, dictationMicrophone: "Disconnected mic", dictationInsert: true, dictationDoubleTap: false, dictationSpaceLock: false, dictationEscapeCancel: false });
 initialSettingsReady(settings);
 await tick();
 const page = () => root.querySelector("main.page");
 const nav = label => root.querySelectorAll("button.nav").find(n => n.textContent === label);
-const go = async label => { nav(label).fire("click"); await tick(); };
+const go = async label => {
+  if (label === "Dictation") events.onSettingsSection("dictation");
+  else { if (!nav(label)) globalThis.settingsHeadActions.gear(); nav(label).fire("click"); }
+  await tick();
+};
+const dictationPage = async id => {
+  root.querySelectorAll("[data-dictation-page]").find(n => n.dataset.dictationPage === `dictation${id}`).fire("click"); await tick();
+};
 const detail = label => page().querySelectorAll("details").find(n => n.dataset.setting === label);
 const button = label => page().querySelectorAll("button").find(n => n.textContent === label);
 assert.equal(root.querySelector(".page-kicker"), null, "Settings is not repeated above the page title");
@@ -327,6 +343,7 @@ pendingSettings.at(-1).resolve(); await tick();
 assert.equal(musicControl().value, "0");
 console.log("check-settings-ui: music choice bootstrap, pending repaint, failure rollback and explicit retry");
 for (const [label, key, field] of [["Help the model with these words", "vocabulary", "dictationVocabulary"], ["Project vocabulary", "projectVocabulary", "dictationProjectVocabulary"], ["Cancel by voice", "cancelByVoice", "dictationCancelByVoice"], ["Spoken code", "spokenCode", "dictationSpokenCode"], ["Remove repeated loops", "cutRepeats", "dictationCutRepeats"], ["Retry empty dictation with Base", "retryBase", "dictationRetryBase"]]) {
+  await dictationPage(["vocabulary", "projectVocabulary"].includes(key) ? "words" : key === "cancelByVoice" ? "keys" : key === "spokenCode" ? "paste" : "voice");
   const control = () => rowNamed(label).querySelector("input");
   assert.equal(control().checked, false, "Late bootstrap cannot undo a newer processing choice");
   control().checked = true; control().fire("change"); await tick();
@@ -345,6 +362,7 @@ for (const [label, key, field] of [["Help the model with these words", "vocabula
   assert.equal(control().checked, true);
 }
 console.log("check-settings-ui: independent processing choices, late-bootstrap race, pending redraw, failure rollback and explicit retry");
+await dictationPage("keys");
 const modeControl = () => rowNamed("Recording mode").querySelector("select");
 assert.equal(modeControl().dataset.savedValue, "1", "Late bootstrap cannot undo newer gesture choices");
 for (const name of ["Space locks recording", "Esc cancels dictation"]) {
@@ -365,6 +383,7 @@ events.onSettings({ dictationDoubleTap: true });
 pendingSettings.at(-1).resolve(); await tick();
 assert.equal(modeControl().value, "0");
 console.log("check-settings-ui: gesture choices, late-bootstrap guard, unavailable Wayland chords and mode save/repaint/rollback/retry");
+await dictationPage("voice");
 const microphoneControl = () => rowNamed("Dictation microphone").querySelector("select");
 assert.equal(microphoneReads.length, 1, "Only Dictation navigation loads the input list; reentry reuses the pending read");
 assert.equal(microphoneControl().disabled, true);
@@ -413,6 +432,7 @@ events.onSettings({ dictationMicrophone: null }); pendingSettings.at(-1).resolve
 assert.equal(microphoneControl().value, "0", "System default clears the saved device");
 console.log("check-settings-ui: lazy microphone inventory, loading/error/stale/empty, explicit retry, disconnected preference, save rollback and default restoration");
 
+await dictationPage("privacy");
 const retentionControl = () => rowNamed("Keep dictation history").querySelector("select");
 assert.equal(retentionControl().dataset.savedValue, "2");
 retentionControl().value = "0"; retentionControl().fire("change"); await tick();
@@ -430,6 +450,7 @@ assert.equal(retentionControl().value, "1");
 assert.deepEqual(writes.at(-1), ["setDictationKeep", "7"]);
 console.log("check-settings-ui: dictation retention, explicit choice, shared pending guard, failure rollback and native settings acknowledgement");
 
+await dictationPage("paste");
 assert.equal(rowNamed("Insert dictation in supported editors and tmux panes").querySelector("input").checked, true,
   "A delayed bootstrap cannot undo a newer insertion setting");
 const beforePermission = writes.length;
@@ -441,8 +462,13 @@ button("Request keyboard access").fire("click"); await tick();
 assert.deepEqual(writes.at(-1), ["retryDictationPermission"]);
 events.onDictationPermission("ready");
 assert.equal(button("Request keyboard access").hasAttribute("disabled"), true);
-events.onShortcutKeys({ talk: "Meta+V", "talk-again": "Meta+B", "talk-cancel": "Meta+X" });
+events.onShortcutKeys({ talk: "Meta+V", "talk-again": "Meta+B", "talk-cancel": "Meta+X", "talk-command": "Meta+Z" });
+await dictationPage("keys");
 assert.ok(page().textContent.includes("Meta+V") && page().textContent.includes("Meta+B") && page().textContent.includes("Meta+X"));
+await dictationPage("commands");
+assert.ok(rowNamed("Command key").textContent.includes("Meta+Z"), "Dictation shows the command key's actual desktop binding");
+assert.ok(page().textContent.includes("Hold to control Vults"), "The command key stays in its documented Dictation owner");
+await dictationPage("keys");
 assert.equal(pendingShortcutOpens.length, 0, "Entering Settings never launches a desktop editor");
 button("Change in KDE…").fire("click");
 assert.equal(pendingShortcutOpens.length, 1);
@@ -453,7 +479,7 @@ button("Change in KDE…").fire("click");
 assert.equal(pendingShortcutOpens.length, 1, "Repainting cannot duplicate a pending launch");
 await go("General");
 pendingShortcutOpens[0].reject(new Error("Desktop entry missing")); await tick();
-await go("Dictation");
+await go("Dictation"); await dictationPage("keys");
 assert.ok(page().querySelector('[role="alert"]').textContent.includes("Could not open KDE Shortcuts"));
 button("Change in KDE…").fire("click");
 assert.equal(page().querySelector('[role="alert"]'), null, "Retry clears the previous failure");
@@ -462,6 +488,7 @@ assert.equal(button("Change in KDE…").disabled, false);
 assert.ok(!page().textContent.includes("Opening KDE Shortcuts"));
 assert.ok(page().textContent.includes("Meta+V"), "Launching the editor never guesses a new binding");
 console.log("check-settings-ui: explicit KDE shortcut launch, retained pending state, failure/retry and no duplicate launch");
+await dictationPage("privacy");
 button("Erase dictation history…").fire("click");
 const confirmation = () => page().querySelectorAll('[role="group"]').find(n => n.getAttribute("aria-label") === "Erase dictation history");
 assert.ok(confirmation());
@@ -479,11 +506,79 @@ assert.ok(!page().textContent.includes("Dictation history erased"));
 button("Erase").fire("click"); pendingErases[1].resolve(); await tick();
 assert.ok(page().textContent.includes("Dictation history erased. Usage totals stay."));
 assert.equal(confirmation(), undefined);
-button("Dictation history").fire("click"); await tick(); assert.equal(routes.at(-1), "dictation");
-button("Chat & voice").fire("click"); assert.equal(page().querySelector("h1").textContent, "Chat & voice");
-button("Dictation settings").fire("click"); assert.equal(page().querySelector("h1").textContent, "Dictation");
+root.querySelectorAll("[data-dictation-page]").find(n => n.dataset.dictationPage === "history").fire("click"); await tick();
+assert.equal(routes.at(-1), "dictation-history");
+await go("Chat & voice");
+assert.equal(rowNamed("Language you speak"),undefined,"Chat links to the shared voice editor instead of duplicating it");
+button("Dictation settings").fire("click"); assert.equal(page().querySelector("h1").textContent, "Voice");
+assert.equal(globalThis.settingsSelectedTab,"dictation");
+assert.equal(root.querySelector(".settings-page-picker"),null,"Dictation has only its own navigation");
 await go("General");
 assert.equal(rowNamed("Keep dictation history"), undefined, "General links to the single settings owner");
-button("Dictation settings").fire("click"); assert.equal(page().querySelector("h1").textContent, "Dictation");
+assert.ok(!root.querySelectorAll("button.nav").some(n=>n.textContent==="Dictation"),"Dictation settings leave the global Settings sidebar");
+button("Dictation settings").fire("click"); assert.equal(globalThis.settingsSelectedTab,"dictation");
+await dictationPage("commands");
 assert.equal(writes.filter(write => write[0] === "dictationClear").length, 2);
 console.log("check-settings-ui: dedicated Dictation navigation/keys, shared model link, late-settings race, explicit portal retry and erase confirmation/failure/retry without duplicate writes");
+
+const commandSwitch = () => rowNamed("Enable voice commands").querySelector("input");
+const fallback = () => rowNamed("When it is not a command").querySelector("select");
+assert.equal(commandSwitch().checked, false, "A late bootstrap cannot undo a newer command choice");
+assert.equal(fallback().disabled, true);
+assert.equal(fallback().value, "1", "Disabled commands preserve the separately chosen fallback");
+commandSwitch().checked = true; commandSwitch().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationCommands", "enabled", true]);
+events.onSettings({ volume: 60 });
+assert.equal(commandSwitch().disabled, true);
+pendingSettings.at(-1).reject(new Error("Disk unavailable")); await tick();
+assert.equal(commandSwitch().checked, false);
+assert.equal(fallback().disabled, true);
+commandSwitch().checked = true; commandSwitch().fire("change"); await tick();
+events.onSettings({ dictationCommands: true });
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(fallback().disabled, false);
+fallback().value = "0"; fallback().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationCommands", "chat", false]);
+events.onSettings({ volume: 65 });
+assert.equal(fallback().disabled, true);
+pendingSettings.at(-1).reject(new Error("Disk unavailable")); await tick();
+assert.equal(fallback().value, "1", "A failed fallback change restores the explicit saved grant");
+fallback().value = "0"; fallback().fire("change"); await tick();
+events.onSettings({ dictationCommandChat: false });
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(fallback().value, "0");
+assert.ok(page().textContent.includes("Refused commands and ambiguous names stay local"));
+assert.ok(page().textContent.includes("What you can say"));
+console.log("check-settings-ui: voice command opt-in, late bootstrap, pending repaints, failed saves, retry, binding and shared phrase guide");
+
+events.onSettingsSection("dictationstyles"); await tick();
+assert.equal(page().querySelector("h1").textContent,"Styles");
+assert.equal(document.activeElement,page(),"Cross-webview navigation focuses the destination");
+assert.equal(globalThis.settingsSelectedTab,"dictation","Configuration remains in the Dictation tab");
+assert.equal(root.querySelectorAll(".dictation-nav").length,1);
+const picker = root.querySelector(".dictation-page-picker");
+picker.value="dictationprivacy";picker.onchange();await tick();
+assert.equal(page().querySelector("h1").textContent,"Privacy","The narrow picker reaches the same editor");
+root.querySelectorAll("[data-dictation-page]").find(n=>n.dataset.dictationPage==="dictionary").fire("click");await tick();
+assert.equal(routes.at(-1),"dictation-dictionary","Work-page links return to the transcript webview");
+assert.equal(diagnosticReads,0,"Other configuration pages do not read Diagnostics");
+events.onSettingsSection("dictationdiagnostics");await tick();
+assert.equal(diagnosticReads,1);
+button("Test microphone").fire("click");await tick();
+await dictationPage("privacy");
+micStartReady(42);await tick();
+assert.deepEqual(stoppedMics,[42],"Leaving Diagnostics stops a microphone whose start completed late");
+assert.ok(!page().textContent.includes("Microphone test"));
+console.log("check-settings-ui: shared Dictation navigation, one editor, narrow picker, exact work-page routing and late microphone cancellation");
+
+events.onSettingsSection("dictationstyles"); await tick();
+assert.equal(rememberedSections.at(-1), "dictationstyles", "Configuration navigation remembers a bounded native destination");
+await go("General"); assert.equal(rememberedSections.at(-1), "dictationstyles", "Visiting global Settings preserves the Dictation destination");
+events.onSettingsSection("dictationvoice");await tick();
+for (const lang of ["pt-BR", "es", "zh"]) {
+  events.onSettings({ lang });
+  for (const english of ["Base: fast, but weak outside English", "Small: good in Portuguese and other languages", "Large v3 Turbo: the most accurate; best with a GPU"])
+    assert.ok(!page().textContent.includes(english), "Known model descriptions use the active UI language");
+}
+events.onSettings({lang:"en"});assert.ok(page().textContent.includes("Base: fast, but weak outside English"));
+console.log("check-settings-ui: retained Dictation configuration and localized voice-model descriptions");

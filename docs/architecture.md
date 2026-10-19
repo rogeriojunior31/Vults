@@ -51,9 +51,9 @@ crate in Connect, which reads the flock but never answers a permission
 | `spike` | The spike kit (dev only, never in the app): a fake model, a fake app on the hook's socket and a terminal for TUIs, to record a real agent's hooks without an account; `scripts/spike.sh` runs it per agent | being linked into the app |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
 | `connectors` | Vults Connect: the `Connector` trait, the polling runtime, GitHub | Tauri, core |
-| `audio` | Microphone capture on its own thread (cpal), named device/default fallback with monitors skipped, bounded 16 kHz mono in memory (rubato), scalar level and nine speech bands (rustfft); no transcript or audio written to disk | Tauri, core, transcription, the network |
-| `voice` | Chat push-to-talk over `audio`, a one-minute recording cap, Silero end-of-speech and whisper.cpp/live preview on this computer, model downloads checked by SHA-256 | Tauri, core |
-| `dictation` | Pure key gestures with injected monotonic time (hold, double tap, Space lock, cancellation and a 600 ms microphone-tail deadline), spoken-cancel matching and terminal-context spoken-code punctuation | IO, async, Tauri, core, the network |
+| `audio` | Microphone capture on its own thread (cpal), named device/default fallback with monitors skipped, bounded 16 kHz mono in memory (rubato), scalar level and nine speech bands (rustfft); optional Linux meeting capture owns private temporary WAVs; no transcription | Tauri, core, transcription, the network |
+| `voice` | Chat push-to-talk over `audio`, a one-minute recording cap, Silero end-of-speech and whisper.cpp/live preview on this computer, model downloads checked by SHA-256; bounded local meeting-WAV transcription with segment timestamps, cancellation and priority for interactive speech | Tauri, core |
+| `dictation` | Pure key gestures with injected monotonic time (hold, double tap, Space lock, cancellation and a 600 ms microphone-tail deadline), spoken-cancel matching, terminal-context spoken-code punctuation, voice-command grammar and project/agent name resolution | IO, async, Tauri, core, the network |
 | `media` | What is playing (MPRIS over the session bus, by its signals) and play/pause/skip | Tauri, core |
 | `platform` | Linux surfaces/input regions, tray, global shortcuts, jump-to-terminal, focus capabilities, clipboard leases, guarded XTest/portal/tmux insertion and temporary MPRIS volume/playback changes | Tauri, core |
 | `app` | The Tauri shell: the runtime loop, effects, commands, tray, settings | — |
@@ -68,13 +68,119 @@ card (`src/island/board.ts`), which the Nest draws too, and the settings pages' 
 
 ## Local dictation
 
+`dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/
+punctuation folding produces lexical keys; anchored politeness/filler stripping and leading verb
+forms belong only to command clauses. English, Portuguese and Spanish tables return descriptions
+with unresolved target names, never core intents. Explicit sequence connectors produce a batch only
+if every clause parses; card-answer phrases refuse the whole utterance. Parsing is bounded to 4 KiB
+and eight commands and uses no IO, microphone, model, clipboard or history.
+
+V8.2 adds `command::names`, an owned snapshot of project/agent identities and saved replacements.
+Eligible aliases target complete known names; resolution ranks aliases, exact names, single whole
+words and bounded Unicode Levenshtein matches. Single-word fuzzy queries also compare each name's
+words, so `apy` keeps both `api` and `api-gateway`. A closest-distance tie stays ambiguous; distinct
+identities never collapse by label. An injected clock limits a clarification to its original options
+for 90 seconds, without renewal on unsuccessful replies. A missing or renamed option invalidates
+the question; a successful reply consumes it. No resolution executes an action.
+
+V8.3's `app::voice_commands::Commands` accepts a transcript only from the runtime state owner and
+prepares a batch against a clone of that state. Only `Focus`, `FocusNext`, `FocusPrevious`, `Jump`,
+`OpenFolder` and `SetProjectPref` pass the exhaustive `Intent::voice_command_allowed` boundary;
+card answers, release/skip/review and merges are excluded. Unresolved, refused or unavailable batches
+discard the clone and all effects. A successful batch commits it and returns effects for the existing
+executor. Qualified session identities disambiguate duplicate labels; preferences group by exact
+folder. Pending batches retain earlier target identities and revalidate them when a question resolves.
+Repeat and undo keep 90 seconds of injected-time context; preference undo restores the previous value
+only while the session's folder and expected value still match. Focus undo checks the current focus
+and previous live session. Lock/cancel clears the context and question.
+
+Reads reuse `flock_tools` over the current local view and cached usage, including an exact-key
+`session_detail_exact` that shares the existing redacted detail formatter. Pending cards, session
+status/steps, usage and GitHub rows become complete templates in all four languages. Outside titles
+stay inert text; these reads have no model, network fetch, clipboard write or spoken answer.
+
+V8.4 pins dictation/command mode into each worker ticket before capture. The separate `talk-command`
+portal binding always enters that worker, including with Zeca off or Chat focused. Command capture
+uses hold-only gestures and the shared local transcription path, bypassing text transformations,
+focus/pane observation and clipboard/insertion. The worker reads saved aliases off the core loop and
+queues a transcript with its ticket. The runtime admits it under the ticket's short cancellation lock,
+calls the synchronous cached-data dispatcher and runs its effects through the existing executor.
+There is no await or IO inside that admission. A replaced/cancelled ticket cannot execute queued work.
+
+The existing single-owner dictation line/caption carries command capture and results. Absolute result
+expiry prevents surface handoffs or unsuccessful replies from renewing a clarification's original
+90 seconds; the heard-text caption still expires within two seconds. Cards and constrained layouts
+retain priority. History records commands with a distinct outcome under the same retention/erase
+ordering, without dictation usage/timing aggregates. UI replay is absent and backend replay rejects
+command rows. Copy again retains only ordinary dictation.
+
+V8.5 adds the Settings-owned command switch (on by default) and a separate, default-off unknown-speech
+Chat fallback. Either choice cancels command tickets and context without interrupting ordinary dictation.
+The Nest's command page filters retained history and shares the phrase guide with Settings. Only an
+unrecognized, non-refused utterance without an active clarification can request a Chat handoff. It
+reserves the existing idle Chat, rejects unsent text/files/references, and rechecks settings, lock,
+ticket and selected folder/provider after asynchronous preflight. New conversations use that selected
+folder, without rebinding an established conversation. No turn queues behind Chat. The accepted message uses the current
+conversation's ordinary send, tools, gate, budget, traces and approvals; its reply streams in Chat.
+It neither inherits the composer draft nor changes approval authority. Once admitted, Chat owns Stop.
+
+V3.1 introduces `vults-dictation::cleanup` as a pure prompt/reply contract.
+It wraps escaped transcript/application/spelling data in real message turns, with questions and
+imperatives demonstrated as text. Typed local edits are replaced by opaque, collision-free marks;
+their payload stays outside the model prompt and is restored literally only after sequence validation.
+Bounded input/output, controls, explicit question punctuation and word/character plausibility checks
+reject unusable replies while retaining the complete local original. These checks do not prove
+semantic faithfulness. V3.2 connects a separate, default-off `dictation_cleanup` switch (Settings
+schema 37) to one tool-free call through the selected Chat & voice API provider, including literal
+loopback Ollama/LM Studio. A key-down snapshot cannot inherit later consent; switch, provider/model
+or key changes invalidate in-flight filtering. The dedicated worker keeps local transcription and
+final insertion/card/target checks intact. Failure or the 4-second deadline keeps the complete local
+text; translation has an 8-second deadline and Prompt has 12 seconds.
+
+The gate admits at most 2,000 attempts per rolling 24 hours, local calls included. Migration 25 adds
+a content-free admission ledger and starting trace committed together before HTTP. Reservations survive
+restart, failed/interrupted requests and Clear history. Settings binds consent to the ledger identity;
+a missing, unreadable or recreated ledger denies requests instead of granting a fresh allowance.
+Completion updates only surviving traces with provider/model/local/timing/outcome and known token
+counts, never transcript/audio/clipboard/key or invented usage. The HTTP client disables proxies,
+redirects and retries. V3.3 resolves a frozen application/style/output-language choice in the key-down
+callback. Terminals/editors default to Verbatim, mail to Polished, chat apps to Natural and recognized
+flock sessions to Prompt. An explicit app override precedes category defaults; sessions retain Prompt.
+Other identified apps use the global default (Natural). Missing focus or unreadable preferences keeps
+local text without a model. Exact reviewed desktop aliases share overrides; window titles/URLs never
+select a style. Settings schema 38 adds a global style, optional output language and default-off
+session English. Session English takes priority over the global output language only in recognized
+sessions; Verbatim never translates or calls a model.
+
+Migration 26 adds `dictation_styles(app, style)`, preserved by Clear history, and nullable retained
+`output_language`, independent of the heard language. The worker records applied style/output language
+only on successful filtering; failures retain the local processing style. Style/language edits apply
+to the next recording without mutating a frozen choice. X11 reads foreground identity in the key
+callback; Plasma Wayland reuses the checked KWin observer with a separate script lifetime, warmed
+when clean-up is enabled, without a keyboard portal grant. Observer loss/ambiguity stays local;
+asynchronous UI context cannot relabel a captured choice. V3.4 adds the Settings-owned clean-up switch, provider disclosure,
+style cards, output-language/session-English choices and collapsed app overrides. UI reads use local
+settings/provider metadata only; no model probe or model-list fetch runs on opening Styles. Pending
+writes, newer events and stale reads retain their ordering; failure keeps a reload path and an already
+enabled feature can still be disabled when ancillary reads fail. The Dictation tab presents one Styles editor through the privileged
+`dictationstyles` Settings destination, alongside its Voice, Keyboard shortcuts, Command settings,
+Vocabulary, Paste, Privacy and Diagnostics pages. Work-page links return to Nest's transcript
+webview; configuration grants no powers to Nest. Voice owns the shared transcription controls,
+with a link from Chat & voice, and History names only known applied styles/output
+languages. Shared style copy/cards use the production theme and all four UI languages. This path
+adds no approval or execution authority. The process keeps a validated Dictation configuration
+section separately from Nest's work tab. Only Settings can remember that section; an explicit
+work-page route clears it, and returning through the Dictation header/keyboard uses the native
+owner to restore the correct webview. No shared-origin storage grants configuration authority.
+
 Independent dictation has its own cancellable worker in `app`; it does not pass microphone
-frames or transcripts through the agent event loop. The shortcut router pins each key release
-to its press owner. A focused Vults Chat with Zeca on uses its existing draft voice path;
-external apps and Zeca-off surfaces use independent dictation. Settings cannot start dictation; its explicit microphone diagnostic has a separate bounded capture.
+frames or transcripts through the agent event loop. The desktop talk shortcut goes directly to that
+worker on both press and release, regardless of the focused app or Zeca. It cannot open Chat or
+start Chat voice. Only the Chat microphone button fills its draft directly. Configuration pages
+keep their separate explicit, bounded microphone diagnostic.
 
 ```text
-desktop talk shortcut -> app::shortcut_route -> app::dictation worker (generation)
+desktop talk shortcut -> app::dictation worker (generation)
                                                   |
                               audio::Capture (16 kHz mono, <= 10 min, memory only)
                                   |                               |
@@ -91,10 +197,17 @@ desktop talk shortcut -> app::shortcut_route -> app::dictation worker (generatio
                                   |                    guarded delivery or clipboard
                                   |                               |
                                   +--> ordered feedback <-- confirmed outcome
-                                      island / Nest               |
+                              passive dictation capsule           |
                                                          dictation history + totals
                                                           (store, retention choice)
 ```
+
+On Linux `app::dictation_overlay` maps a fixed 480 x 160 passive layer surface at the bottom center,
+clear of desktop panels. Its empty input region and disabled keyboard keep the destination's
+focus. It reuses the production status owner/theme and local events, with no microphone or network
+owner. A read-only availability check suppresses duplicate inline indicators; failed construction
+keeps the island/Nest fallback. Cards, lock, paused presence, expiry and optional captions keep
+their existing authority. The island remains the single start-sound owner.
 
 Every turn captures its microphone and processing choices. Cancellation invalidates late
 capture, preview, decode and delivery work; replay uses already delivered text and never repeats
@@ -164,7 +277,7 @@ require explicit deletion confirmation and reload saved data. Failed reads keep 
 with retry, and sentence changes discard stale asynchronous preview responses. Settings owns
 the two opt-in vocabulary controls; work pages only link there.
 
-V2.3 adds opt-in dictionary context in Settings schema 34 (default off; control in Settings > Dictation > Your words).
+V2.3 adds opt-in dictionary context in Settings schema 34 (default off; control in Dictation > Vocabulary).
 Each recording captures the flag and dictionary once. Preview/final pass only dictionary words
 to `voice`; a Base retry rechecks its actual model. The model tokenizer caps the combined coding
 seed and whole entries at 224 tokens; blank/control-bearing/duplicate words are skipped. Tokens
@@ -175,7 +288,7 @@ blocked even where sentence WER improved. Fixture provenance/results live in
 `crates/voice/tests/fixtures/README.md`; synthetic WER is separate from human desktop acceptance.
 
 V2.4 adds an independent `dictation_project_vocabulary` preference (schema 35, default off,
-control in Settings > Dictation > Your words). The existing off-loop repository reader refreshes its opt-in memory
+control in Dictation > Vocabulary). The existing off-loop repository reader refreshes its opt-in memory
 cache on session start and ordinary repository refresh. Each Git working tree keeps its own
 entry (128 maximum), so branches and members do not bleed between worktrees of one roost.
 The extractor reads Cargo/npm names and dependencies, literal or trailing-`/*` workspace members,

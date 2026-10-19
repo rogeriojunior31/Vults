@@ -225,6 +225,7 @@ mod tests {
             at: NOON,
             app: None,
             session: None,
+            output_language: None,
             heard: "heard words".into(),
             text: "written words".into(),
             style: "verbatim".into(),

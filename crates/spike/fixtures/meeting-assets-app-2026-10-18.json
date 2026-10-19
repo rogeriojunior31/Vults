@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-18",
+  "environment": "Linux x86-64 GNU; native Tauri/WebKitGTK under isolated X11/Xvfb",
+  "appHttpRequests": 0,
+  "personalAudioUsed": false,
+  "personalProfileUsed": false,
+  "actualBackendAssertions": {
+    "actualBackend": true,
+    "foreignWebviewCommandsRejected": 4,
+    "reviewWithoutConsentRejected": true,
+    "staleReviewRejected": true,
+    "quotaBlockedBeforeHTTP": true,
+    "stagingCleaned": true,
+    "cancelledReview": true
+  },
+  "layouts": [
+    {
+      "case": "review layout",
+      "theme": "black",
+      "width": 1180,
+      "height": 820,
+      "overflow": false
+    },
+    {
+      "case": "review layout",
+      "theme": "black",
+      "width": 480,
+      "height": 360,
+      "overflow": false
+    },
+    {
+      "case": "review layout",
+      "theme": "light",
+      "width": 1180,
+      "height": 820,
+      "overflow": false
+    },
+    {
+      "case": "review layout",
+      "theme": "light",
+      "width": 480,
+      "height": 360,
+      "overflow": false
+    }
+  ],
+  "controlledNativeRenderer": {
+    "case": "controlled native status rendering",
+    "progress": true,
+    "ready": true,
+    "speakerAnalysisStillOff": true,
+    "translated": 3
+  },
+  "offlineValidation": {
+    "workspacePassed": 1174,
+    "workspaceIgnored": 9,
+    "voiceOptionalPassed": 89,
+    "voiceOptionalIgnored": 4,
+    "evalsPassed": 8,
+    "rendererScriptsPassed": 16,
+    "workspaceClippy": true,
+    "optionalFeatureClippy": true,
+    "cargoDeny": true
+  },
+  "limitations": [
+    "Progress and installed-state native views used controlled responses, not a fresh download.",
+    "Earlier public-download/runtime evidence is recorded separately.",
+    "Real PT/EN speech quality, independent source-clock acceptance and production speaker analysis remain open.",
+    "check-task-actions.mjs named by AGENTS.md is absent in this branch."
+  ]
+}

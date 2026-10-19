@@ -72,6 +72,12 @@ try {
   assert.equal(line.textContent, "Copied. Use your app's Paste command.");
   view.visible(true);
   assert.equal(line.hidden, false);
+  view.relocated(true);
+  view.visible(false); view.visible(true);
+  view.context({ sessions: [], approval: null });
+  assert.equal(line.hidden, true, "The desktop capsule owns feedback across Nest/focus changes");
+  view.relocated(false);
+  assert.equal(line.hidden, false, "Unavailable overlay retains inline feedback");
   timers.values().next().value();
   view.visible(false); view.visible(true);
   assert.equal(line.hidden, true, "Expired feedback cannot reappear when the Nest closes");
@@ -321,10 +327,59 @@ try {
     assert.equal(played, 2, "Nest and Settings have no audio owner");
     event(frame(14, 8, "failed")); event(frame(15, 9, "cancelled"));
     assert.equal(played, 2, "Failures and cancellations are silent");
-  } finally {
+    bodyClasses.add("dictation-overlay"); bodyClasses.add("dock-bottom");
+  const floating = dictationStatus();
+  const floatingLine = nodes.at(-2), floatingCaption = nodes.at(-1);
+  floatingLine.children[2].clientWidth = 1;
+  floatingLine.children[2].scrollWidth = 180;
+  floating.captions(true);
+  floating.update(status(1, "listening"));
+  assert.equal(floatingCaption.hidden, true, "A compact mic does not repeat the listening label in a caption");
+  floating.update({ ...status(2, "listening"), partial: "Actual heard words" });
+  assert.equal(floatingCaption.textContent, "Actual heard words");
+  assert.equal(floatingCaption.hidden, false);
+  floating.update(status(3, "locked"));
+  assert.equal(floatingCaption.hidden, true, "Hands-free without a preview stays compact");
+  floating.update({ ...status(4, "copied"), text: "Confirmed result", caption_until: Date.now() + 2000 });
+  assert.equal(floatingCaption.textContent, "Confirmed result");
+  floating.context({ locked: true, approval: null, sessions: [] });
+  assert.equal(floatingLine.hidden, true);
+  assert.equal(floatingCaption.hidden, true);
+  bodyClasses.delete("dictation-overlay"); bodyClasses.delete("dock-bottom");
+  console.log("check-dictation-status: floating capsule has no filler caption; heard/final text, lock priority and inline fallback pass");
+} finally {
     globalThis.AudioContext = nativeAudio;
     globalThis.performance = nativePerformance;
   }
+
+  setLang("en");
+  const commands = dictationStatus(true);
+  const commandLine = nodes.at(-2), commandCaption = nodes.at(-1);
+  let commandSequence = 1;
+  commands.captions(true);
+  for (const phase of ["listening", "commanded", "answered", "asked", "refused", "unknown"]) {
+    commands.update({ ...status(commandSequence++, phase), command: true, result: "<img> inert result", text: "what was heard", caption_until: Date.now() + 2000 });
+    assert.equal(commandLine.dataset.phase, phase);
+    assert.equal(commandLine.hidden, false);
+    if (phase !== "listening") {
+      assert.ok(commandLine.textContent.includes("<img> inert result"));
+      assert.equal(commandCaption.textContent, "what was heard", "The caption carries the transcript, not an instruction or result");
+    }
+    for (const language of ["pt-BR", "es", "zh"]) { setLang(language); commands.relabel(); assert.ok(commandLine.textContent); }
+    setLang("en");
+  }
+  commands.update({ ...status(commandSequence++, "asked"), command: true, result: "Which one? api or web", expires_at: Date.now() + 500 });
+  assert.ok([...delays.values()].includes(500), "A handoff or unknown reply keeps only the remaining question lifetime");
+  commands.visible(false); commands.visible(true);
+  commands.update({ ...status(commandSequence++, "asked"), command: true, result: "expired question", expires_at: Date.now() - 1 });
+  assert.equal(commandLine.hidden, true, "An expired command question cannot reappear on another surface");
+  commands.update({ ...status(commandSequence++, "answered"), command: true, result: "Safe local answer" });
+  commands.context({ locked: false, approval: {}, sessions: [] });
+  assert.equal(commandLine.hidden, true, "Voice answers preserve card priority");
+  commands.context({ locked: false, approval: null, sessions: [] });
+  commands.visible(false);
+  assert.equal(commandLine.hidden, true, "The inactive surface yields command feedback ownership");
+  console.log("check-dictation-status: command capture/results/refusal/unknown, inert text, heard caption, four languages, absolute question expiry and card/surface priority");
 } finally {
   Date.now = nativeNow;
   globalThis.setTimeout = nativeTimeout;

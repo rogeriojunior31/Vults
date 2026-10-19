@@ -993,15 +993,6 @@ export class ChatPanel {
     if (this.voice === "listening") void this.stopVoice();
   }
 
-  /** The talk shortcut: held down records, let go transcribes. It opens the chat if needed. */
-  holdToTalk(down: boolean): void {
-    if (!this.backend.voice || !this.voiceReady || !this.enabled) return;
-    if (down && this.voice === "off") {
-      this.toggle(true);
-      void this.startVoice(false);
-    } else if (!down && this.voice === "listening") void this.stopVoice();
-  }
-
   private async startVoice(tap: boolean): Promise<void> {
     const voice = this.backend.voice;
     if (!voice) return;

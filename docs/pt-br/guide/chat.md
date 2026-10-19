@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2137c072eab9 -->
+<!-- source: fc4528af62ed -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -234,11 +234,11 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 
 ## Falando em vez de digitar
 
-O ditado independente tem seus controles em **Settings → Dictation**, com um link em Chat e voz.
-O modelo e idioma abaixo são compartilhados pelos dois fluxos; ditado continua disponível com o
-Zeca desligado.
+O ditado independente tem suas páginas de configuração em **Ditado**. **Ditado > Voz** reúne
+o modelo e idioma falado compartilhados, com um link em Chat e voz. O ditado continua disponível
+com o Zeca desligado.
 
-Ligue uma vez em **Settings → Chat & voice → Voice**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
+Ligue uma vez em **Ditado > Voz**: baixe um modelo (*Base* tem 60 MB e é rápido; *Small*
 e *Large v3 Turbo* entendem melhor sotaques e nomes). Um microfone aparece ao lado de Enviar, à direita do rascunho,
 tanto no Nest quanto na ilha.
 
@@ -246,13 +246,12 @@ tanto no Nest quanto na ilha.
   palavras, ou quando você clica de novo; as palavras caem no campo de entrada para você ler e
   corrigir, e aí **Enter** as envia. O silêncio antes de você começar nunca o interrompe; se uma
   pausa o interromper, clique de novo para continuar.
-- Ou segure **Ctrl+Alt+V** enquanto uma superfície do Chat do Vults tem foco: o Zeca escuta
-  enquanto você segura (pausas não interrompem); soltar preenche o rascunho. Fora do Vults, a
-  mesma tecla usa o [ditado independente](dictation.md#global-dictation-first-slice) e copia o
-  texto. Altere a tecla em Configurações do Sistema → Atalhos.
-- Em Sala ou Tela cheia, o atalho usa o chat dessa janela enquanto ela tem foco.
-  As barras de volume e a prévia da fala também ficam nela. Sair do Chat, ocultar
-  ou fechar a janela, ou bloquear a tela cancela uma gravação ativa.
+- **Ctrl+Alt+V** sempre usa o [ditado independente](dictation.md#global-dictation-first-slice),
+  mesmo com o Chat em foco. Nunca abre o Chat nem inicia este microfone. Use o botão de microfone
+  para preencher diretamente este rascunho; o ditado independente segue seu caminho normal de
+  cópia/inserção.
+- Em Sala ou Tela cheia, as barras de volume e a prévia da fala do microfone ficam nessa janela.
+  Sair do Chat, ocultar ou fechar a janela, ou bloquear a tela cancela sua gravação ativa.
 - **Esc** enquanto ele escuta descarta a gravação. Uma gravação para sozinha depois de um minuto.
 - **Language you speak** (idioma que você fala) segue o do seu sistema; escolha outro, ou *Detect
   it each time*. Um idioma fixo é muito mais confiável em frases curtas. O *Base* é fraco fora do

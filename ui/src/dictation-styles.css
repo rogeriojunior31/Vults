@@ -1,0 +1,16 @@
+.dictation-style-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; min-width: 0; }
+.dictation-style-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 0; padding: 14px; min-width: 0; text-align: start; color: var(--fg); background: var(--float); border: 1px solid var(--control-border); border-radius: var(--radius-card); font: inherit; overflow-wrap: anywhere; }
+.dictation-style-card strong { font-size: var(--text-m); }
+.dictation-style-card span { color: var(--fg-dim); font-size: var(--text-s); }
+button.dictation-style-card { cursor: pointer; }
+.dictation-style-card[aria-pressed="true"], .dictation-style-card[data-selected="true"] { background: var(--raised); border-color: var(--mark); }
+button.dictation-style-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.dictation-cleanup-settings { display: grid; gap: 16px; min-width: 0; }
+.dictation-cleanup-settings > h2 { margin-bottom: 0; }
+.dictation-cleanup-settings .note, .dictation-cleanup-settings .hint { overflow-wrap: anywhere; }
+.dictation-cleanup-settings .field { min-width: 0; max-width: 100%; }
+.cleanup-app-form { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
+.cleanup-app-form input { flex: 1 1 180px; width: 0; }
+.dictation-styles .dictation-note { overflow-wrap: anywhere; }
+
+#settings .dictation-cleanup-settings .row > select.field { width: 240px; max-width: 100%; }

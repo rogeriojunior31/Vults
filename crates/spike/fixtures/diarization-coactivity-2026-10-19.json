@@ -1,0 +1,169 @@
+{
+  "recordedAt": "2026-10-19",
+  "scope": "Development-only coactivity clustering correction, measured on the original calibration clips. Not held-out acceptance or production qualification.",
+  "baselineArtifact": "meeting-human-calibration-2026-10-19.json",
+  "baselineArtifactSha256": "7d9449b04fc10c6d69cd7829caab4289cab1997afd8b5459dc243af7b80b037d",
+  "frozenManifestSha256": "7a8647bd367e4cf1f4f4363d5eb5d026edd5c1321ab437ae68c179d3de0ea5e0",
+  "change": {
+    "policy": "Embedded local observations active together in an owned segmentation frame cannot receive the same global label, including after intermediate group merges.",
+    "source": "Seven-class powerset segmentation; unknown observations do not create constraints.",
+    "implementation": "Symmetric infinite pair distance prevents forbidden average-linkage merges.",
+    "cosineDistanceThreshold": 0.7,
+    "modelPinsChanged": false,
+    "embeddingPolicyChanged": false,
+    "appNativeAnalysisEnabled": false
+  },
+  "environment": {
+    "target": "x86_64-unknown-linux-gnu",
+    "profile": "dev",
+    "runtime": "ONNX Runtime 1.31.0 CPU",
+    "intraThreads": 1,
+    "interThreads": 1,
+    "rssMethod": "Linux wait4 ru_maxrss for each complete native child; KiB",
+    "timing": "One run per clip; totalMs includes native load/inference/final WAV hash, excludes first hash/model admission; wallSeconds includes the complete child.",
+    "cpu": "AMD Ryzen 7 5700X3D 8-Core Processor"
+  },
+  "results": {
+    "en": {
+      "quality": {
+        "schema": 1,
+        "referenceSha256": "f996ae0138fba8d46a50da80f6d16b0560f5039d8beee753e64710271ca82981",
+        "predictionSha256": "3e15840a292b049a8e6f43167f854a0e19ee14e022bb38bf7db6617b59a39e7c",
+        "clock": {
+          "recording": "IS1000a-first120",
+          "source": "public-mix",
+          "wavSha256": "5b4ec0eded489b05eb11fb594b7e90df62fc4245ded073e524189c2b6baddb3b",
+          "durationMs": 120000
+        },
+        "language": "en",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 28610,
+        "missedSpeakerMs": 5534,
+        "falseAlarmSpeakerMs": 15329,
+        "confusedSpeakerMs": 2631,
+        "correctSpeakerMs": 20445,
+        "unknownActivityMs": 6333,
+        "referenceSpeakers": 3,
+        "predictedSpeakers": 3,
+        "der": 0.8211814051031108,
+        "productionQualified": false
+      },
+      "speakers": 3,
+      "observations": 22,
+      "totalMs": 3847,
+      "resources": {
+        "peakRssKiB": 130324,
+        "wallSeconds": 4.715,
+        "cpuUserSeconds": 4.24566,
+        "cpuSystemSeconds": 0.454615,
+        "method": "Linux wait4, whole native child process"
+      },
+      "modelPins": {
+        "runtimeSha256": "469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e",
+        "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+        "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11"
+      },
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "coactivityConstraints": true,
+      "meetsProvisionalDiagnosticTarget": false
+    },
+    "pt": {
+      "quality": {
+        "schema": 1,
+        "referenceSha256": "32ca185a86b64d52cabd0c4d13b0c1d7bff375a230cb7b679d1c71d7fcb7ff95",
+        "predictionSha256": "33a08a3741e1f45986ba263607a764e1cd8d7a599e155b6d654f16510738f5f3",
+        "clock": {
+          "recording": "bfamdl02-first120",
+          "source": "public-mix",
+          "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+          "durationMs": 120000
+        },
+        "language": "pt",
+        "annotation": "human",
+        "split": "calibration",
+        "collarMs": 0,
+        "includesOverlap": true,
+        "referenceSpeakerMs": 133901,
+        "missedSpeakerMs": 17880,
+        "falseAlarmSpeakerMs": 3847,
+        "confusedSpeakerMs": 1428,
+        "correctSpeakerMs": 114593,
+        "unknownActivityMs": 793,
+        "referenceSpeakers": 2,
+        "predictedSpeakers": 2,
+        "der": 0.17292626642071382,
+        "productionQualified": false
+      },
+      "speakers": 2,
+      "observations": 41,
+      "totalMs": 9029,
+      "resources": {
+        "peakRssKiB": 148248,
+        "wallSeconds": 10.052,
+        "cpuUserSeconds": 8.937969,
+        "cpuSystemSeconds": 1.080605,
+        "method": "Linux wait4, whole native child process"
+      },
+      "modelPins": {
+        "runtimeSha256": "469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e",
+        "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+        "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11"
+      },
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "coactivityConstraints": true,
+      "meetsProvisionalDiagnosticTarget": true
+    }
+  },
+  "comparison": {
+    "en": {
+      "baselineDer": 0.8211814051031108,
+      "candidateDer": 0.8211814051031108,
+      "baselineSpeakers": 3,
+      "candidateSpeakers": 3,
+      "baselineFalseAlarmSpeakerMs": 15329,
+      "candidateFalseAlarmSpeakerMs": 15329,
+      "baselineConfusedSpeakerMs": 2631,
+      "candidateConfusedSpeakerMs": 2631
+    },
+    "pt": {
+      "baselineDer": 0.3978536381356375,
+      "candidateDer": 0.17292626642071382,
+      "baselineSpeakers": 1,
+      "candidateSpeakers": 2,
+      "baselineFalseAlarmSpeakerMs": 641,
+      "candidateFalseAlarmSpeakerMs": 3847,
+      "baselineConfusedSpeakerMs": 26015,
+      "candidateConfusedSpeakerMs": 1428
+    }
+  },
+  "verification": {
+    "sourceAndReferenceHashesMatchOriginalFrozenManifest": true,
+    "standaloneMatchesNativeQuality": true,
+    "independentMillisecondRasterAndExhaustiveMappingMatches": true,
+    "directAndIntermediateMergeRegressionPassed": true,
+    "spikeTestsPassed": 21,
+    "voiceTestsPassed": 90,
+    "microphoneOrSystemCapture": false,
+    "personalProfileUsed": false,
+    "sourceAudioOrAnnotationsRedistributed": false,
+    "thresholdTuning": false,
+    "productionQualified": false,
+    "explicitNativeTestsPassed": 3
+  },
+  "decision": "Keep automatic speaker labels unavailable. Portuguese calibration separates two voices and DER improves, but false alarms increase; English prediction is unchanged and exceeds the provisional target.",
+  "limitations": [
+    "One preselected 120-second calibration clip per language; no held-out set or confidence interval.",
+    "AMI uses word-derived speech intervals; C-ORAL uses manual utterance-level alignment including within-utterance pauses; rates are not directly comparable across corpora.",
+    "AMI recording is from the published training partition; model-training independence is not established.",
+    "C-ORAL sample is an informal conversation, not a captured desktop meeting.",
+    "Physical microphone/system alignment, echo, noise, quiet/short turns and long-session resource acceptance remain open.",
+    "This candidate was developed after inspecting the calibration failure. The same recordings cannot provide held-out acceptance, even when the provisional target is met.",
+    "Predicted coactivity may itself be wrong. This constraint does not validate segmentation, speaker identity or physical microphone/system synchronization.",
+    "This is a development correction before the previously planned disjoint evaluation gate. That release gate remains unmet."
+  ]
+}

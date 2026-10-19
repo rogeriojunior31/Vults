@@ -17,6 +17,13 @@ class Element {
   set textContent(text) { this.replaceChildren(); this.text = text; }
   get textContent() { return (this.text ?? "") + this.children.map(node => node.textContent).join(""); }
   append(...children) { for (const node of children) { node.remove(); node.parentElement = this; this.children.push(node); } }
+  after(...children) {
+    const parent = this.parentElement;
+    if (!parent) return;
+    for (const node of children) node.remove();
+    parent.children.splice(parent.children.indexOf(this) + 1, 0, ...children);
+    for (const node of children) node.parentElement = parent;
+  }
   prepend(...children) { this.append(...children); this.children = [...children, ...this.children.filter(node => !children.includes(node))]; }
   replaceChildren(...children) { this.text = ""; for (const node of this.children) node.parentElement = null; this.children = []; this.append(...children); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(node => node !== this); this.parentElement = null; }
@@ -88,6 +95,7 @@ const source = path => JSON.stringify(`${root}src/${path}`.replaceAll("\\", "/")
 const bundles = await build({ configFile: false, root, logLevel: "silent",
   plugins: [{ name: "continuity-entry", resolveId: id => id.endsWith("continuity-entry") ? "\0continuity-entry" : null,
     load: id => id === "\0continuity-entry" ? `
+      export { createMeetings } from ${source("surfaces/nest/dictation/meetings.ts")};
       export { createMemory } from ${source("surfaces/nest/memory.ts")};
       export { createConnections } from ${source("surfaces/nest/connections.ts")};
       export { createRecent } from ${source("surfaces/nest/recent.ts")};
@@ -112,7 +120,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -151,6 +159,7 @@ for (const width of [480, 760, 900, 1180]) {
     await quick.restore();
     let readSpend = async () => ({ usd: 0, tokens: 0, budget: null, subscription: false });
     const settingsRoutes = [];
+    let dictationReturns = 0;
     let dictationReads = 0;
     const backend = {
       dictation: { statistics: async period => ({ period, usage: { count: 0, words: 0, secs: 0, saved_minutes: null, wpm: null }, days: [], apps: [], apps_complete: true }), words: async () => ({ words: [], replacements: [], snippets: [] }), change: async () => {}, trySentence: async () => ({ text: "", cancelled: false, segments: [] }), load: async () => { dictationReads++; return { retention: "30", rows: [], today: null }; },
@@ -164,6 +173,7 @@ for (const width of [480, 760, 900, 1180]) {
       roosts: { query: async value => { if (value !== undefined) queries.projects = value; return queries.projects; }, load: async () => [], week: async () => null },
       memory: { load: async () => ({ on: false, facts: [], proposals: [] }) }, spend: () => readSpend(),
       week: { activity: async () => ({ history: false, today: "2026-10-14", weeks: ["2026-10-12"], week: { monday: "2026-10-12", sunday: "2026-10-18", turns: 0, headline: "No completed turns.", projects: [], days: [0, 0, 0, 0, 0, 0, 0] }, grid: [] }) },
+      openDictation: () => { dictationReturns++; },
       settings: section => settingsRoutes.push(section), setZeca() {}, island: () => backend.size("quick"), sound() {}, media() {}, endDnd() {}, look() {},
       size: size => { requested = resize(async () => {
         if (size === "room" || size === "full") nest.setFull(size === "full");
@@ -242,11 +252,14 @@ for (const width of [480, 760, 900, 1180]) {
     nest.chat.load(current);
     Clock.freeze(null);
     nest.chat.setVoiceReady(true);
-    nest.open("flock"); nest.shortcut("talk"); await tick();
-    assert.equal(nest.current(), "chat", "Room's talk shortcut opens its own chat");
-    assert.deepEqual(voiceCalls.at(-1), ["start", "nest", false]);
-    nest.shortcut("talk-up"); await tick();
-    assert.deepEqual(voiceCalls.at(-1), ["stop", "nest"]);
+    nest.open("flock");
+    const beforeDictation = voiceCalls.length;
+    nest.shortcut("talk"); nest.shortcut("talk-up"); await tick();
+    assert.equal(nest.current(), "flock", "The dictation shortcut never opens Chat");
+    assert.equal(voiceCalls.length, beforeDictation, "Dictation events never start Chat voice");
+    nest.open("chat");
+    nest.shortcut("talk"); nest.shortcut("talk-up"); await tick();
+    assert.equal(voiceCalls.length, beforeDictation, "A focused Chat cannot steal dictation");
     const mic = nest.chat.element.querySelector(".mic");
     const area = nest.chat.element.querySelector("textarea");
     mic.fire("click"); await tick();
@@ -306,6 +319,8 @@ for (const width of [480, 760, 900, 1180]) {
     const escape = { key: "Escape", target: page, preventDefault() { this.defaultPrevented = true; } };
     for (const fn of windowEvents.keydown ?? []) fn(escape);
     await requested; assert.equal(page.classList.contains("full"), false); assert.equal(nest.current(), "chat");
+    page.querySelectorAll("button").find(b=>b.dataset.tab==="dictation").click();
+    assert.equal(dictationReturns,1,"The header returns through the native Dictation owner rather than opening a hidden work page");
     nest.open("connections"); await nest.flushState();
     assert.equal(active.get(canvas), false, "Leaving Chat stops its renderer");
     assert.deepEqual(connectionPlace, { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 });
@@ -362,6 +377,30 @@ for (const width of [480, 760, 900, 1180]) {
     assert.equal(dictationReads, readsBefore + 1, "History loads when its own tab opens, not while Chat is selected");
     assert.ok(!page.querySelector(".dictation-history").textContent.includes("Reading dictation history"), "Opening Dictation settles its loading state");
     nest.open("dictation"); await tick();
+    page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Styles").click(); await tick();
+    assert.equal(settingsRoutes.at(-1), "dictationstyles", "Styles opens the single privileged editor inside the Dictation workspace");
+    assert.equal(page.querySelector(".dictation-styles"),null,"No second read-only settings page remains");
+    nest.open("dictation-dictionary");await tick();
+    assert.equal(page.querySelector(".your-words").hidden,false,"Settings can return to an exact Dictation work page");
+    page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "History").click(); await tick();
+    const commandNav = () => page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Voice commands");
+    assert.ok(!commandNav().disabled);
+    commandNav().click(); await tick();
+    const workPage = () => page.querySelectorAll(".dictation-history").find(element => !element.hidden);
+    assert.equal(workPage().querySelector("h2").textContent, "Voice commands");
+    workPage().querySelectorAll("button").find(button=>button.textContent==="Command settings").click();
+    assert.equal(settingsRoutes.at(-1),"dictationcommands","Command settings opens its own configuration directly");
+    const commandSearch = workPage().querySelector("input");
+    commandSearch.value = "Keep this command search"; commandSearch.fire("input");
+    workPage().querySelector("details").open = true;
+    page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Dictionary").click();
+    commandNav().click(); await tick();
+    nest.open("chat"); nest.open("dictation"); await tick();
+    assert.equal(workPage().querySelector("h2").textContent, "Voice commands", "Tab handoffs retain the command work page");
+    assert.equal(workPage().querySelector("input"), commandSearch);
+    assert.equal(commandSearch.value, "Keep this command search");
+    assert.equal(workPage().querySelector("details").open, true);
+    assert.ok(!actions.includes("dictation:again") && !actions.includes("dictation:clear"));
     page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Statistics").fire("click"); await tick();
     assert.equal(nest.current(), "dictation-statistics", "The area links to Activity's single statistics owner");
     await nest.flushState();
@@ -813,3 +852,100 @@ console.log('check-surface-continuity: core-owned rest, recent green mark, immed
   window.matchMedia=media;window.setTimeout=timeout;Clock.freeze(null);
 }
 console.log('check-surface-continuity: static state poses under reduced motion/manual pause, no repeating timer, live preference resume and no hidden wake');
+
+// Recording is an explicit, page-owned action; stale completions cannot restart a hidden check.
+{
+  let snapshot = { id: 0, phase: "idle", elapsedMs: 0, maxSeconds: 60, microphone: null, monitor: null, fallback: false, error: null, modelId: "base", language: "en", hasTranscript: false };
+  const calls = [];
+  let start = null;
+  const backend = {
+    transcript: async id => { calls.push(["transcript", id]); return { id, microphone: { durationMs: 1200, segments: [{ startMs: 100, endMs: 900, text: "Keep <script> as literal transcript text." }] }, system: { durationMs: 1200, segments: [] } }; },
+    status: async id => { calls.push(["status", id]); return { ...snapshot }; },
+    prepare: async () => { calls.push(["prepare"]); snapshot = { ...snapshot, id: snapshot.id+1, phase: "ready", microphone: "mic <literal>", monitor: "speakers.monitor", fallback: true }; return { ...snapshot }; },
+    begin: async (id, consent) => { calls.push(["begin", id, consent]); if (start) return start.promise; snapshot = { ...snapshot, phase: "recording", elapsedMs: 1_250 }; return { ...snapshot }; },
+    end: async (id, cancel) => { calls.push(["end", id, cancel]); snapshot = { ...snapshot, phase: cancel ? "cancelled" : "finished", hasTranscript: !cancel }; return { ...snapshot }; },
+    recover: async () => { calls.push(["recover"]); snapshot = { ...snapshot, phase: "idle", error: null }; return { ...snapshot }; },
+  };
+  const meeting = createMeetings(backend); document.body.append(meeting.element);
+  const button = label => meeting.element.querySelectorAll("button").find(button => button.textContent === label);
+  const consent = meeting.element.querySelector("input");
+  assert.equal(calls.length, 0, "Mounting a hidden page never reads sources or records");
+  meeting.setActive(true); await tick();
+  assert.deepEqual(calls.map(call => call[0]), ["status"]);
+  button("Review audio sources").click(); await tick();
+  assert.ok(meeting.element.textContent.includes("mic <literal>"));
+  assert.equal(button("Record and transcribe").disabled, true);
+  button("Record and transcribe").click(); assert.equal(calls.filter(call => call[0]==="begin").length, 0);
+  consent.checked = true; consent.fire("change");
+  button("Record and transcribe").click(); await tick();
+  assert.deepEqual(calls.find(call => call[0]==="begin"), ["begin", 1, true]);
+  assert.equal(consent.checked, false);
+  assert.equal(meeting.element.querySelector("output").textContent, "00:01");
+  assert.equal(button("Stop recording").hidden, false);
+  button("Stop recording").click(); await tick();
+  assert.ok(meeting.element.textContent.includes("Transcript ready. Temporary audio was deleted."));
+  assert.equal(button("Stop recording").hidden, true);
+  await tick();
+  assert.ok(meeting.element.textContent.includes("Keep <script> as literal transcript text."));
+  assert.equal(meeting.element.querySelectorAll("script").length, 0);
+  const rows = meeting.element.querySelector(".meeting-transcript-rows");
+  const row = rows.firstElementChild;
+  const disclosure = meeting.element.querySelector(".meeting-transcript").querySelector("details");
+  disclosure.open = true;
+  meeting.relabel(); assert.equal(rows.firstElementChild, row, "Polling/relabel retains transcript nodes and selection");
+  assert.equal(disclosure.open, true, "Polling retains transcript details");
+  button("System audio").click(); assert.ok(rows.textContent.includes("No speech was detected in this source."));
+  assert.equal(button("System audio").getAttribute("aria-pressed"), "true");
+  button("Microphone").click();
+  button("Discard transcript").click(); await tick();
+  assert.equal(meeting.element.querySelector(".meeting-transcript").hidden, true);
+  button("Review audio sources").click(); await tick();
+  assert.equal(consent.checked, false, "Each review needs a new explicit confirmation");
+  consent.checked = true; consent.fire("change"); button("Record and transcribe").click(); await tick();
+  meeting.setActive(false); await tick();
+  assert.deepEqual(calls.at(-1), ["end", 2, true], "Leaving the work page cancels the active check");
+  meeting.setActive(true); await tick();
+  button("Review audio sources").click(); await tick();
+  let resolve; start = { promise: new Promise(done => { resolve = done; }), resolve: value => resolve(value) };
+  consent.checked = true; consent.fire("change"); button("Record and transcribe").click();
+  meeting.setActive(false);
+  start.resolve({ ...snapshot, phase: "starting" }); await tick();
+  assert.deepEqual(calls.at(-1), ["end", 3, true], "A late start response is cancelled rather than drawn on a hidden page");
+  assert.equal(consent.checked, false);
+  meeting.element.remove();
+}
+console.log("check-surface-continuity: explicit meeting consent, source review, stop/cancel, hidden ownership and late-start cleanup");
+
+// The developer preview requires a separate per-recording choice and never shares source IDs.
+{
+  let snapshot = { id: 1, phase: "idle", elapsedMs: 0, maxSeconds: 60, microphone: "mic", monitor: "out.monitor", fallback: false, error: null, modelId: "base", language: "en", hasTranscript: false, identificationAvailable: true };
+  const calls = [];
+  const data = { id: 1, microphone: { durationMs: 4000, attribution: "analyzed", segments: [
+    { startMs: 100, endMs: 500, text: "Hello", speaker: 0 }, { startMs: 500, endMs: 900, text: "world.", speaker: 0 },
+    { startMs: 1000, endMs: 1500, text: "Uncertain.", speaker: null }, { startMs: 1800, endMs: 2000, text: "Other voice.", speaker: 1 },
+  ] }, system: { durationMs: 4000, attribution: "unavailable", segments: [{ startMs: 0, endMs: 1500, text: "Kept without labels.", speaker: null }] } };
+  const view = createMeetings({ status: async () => ({ ...snapshot }), prepare: async () => ({ ...snapshot, phase: "ready" }),
+    begin: async (id, consent, identify) => { calls.push([id, consent, identify]); snapshot = { ...snapshot, phase: "finished", hasTranscript: true }; return { ...snapshot }; },
+    transcript: async () => structuredClone(data), end: async () => ({ ...snapshot, phase: "cancelled", hasTranscript: false }), recover: async () => snapshot });
+  document.body.append(view.element); view.setActive(true); await tick();
+  const button = text => view.element.querySelectorAll("button").find(b => b.textContent === text);
+  button("Review audio sources").click(); await tick();
+  const [consent, identify] = view.element.querySelectorAll("input");
+  assert.equal(!!identify.checked, false);
+  identify.checked = true; consent.checked = true; consent.fire("change");
+  button("Record and transcribe").click(); await tick(); await tick();
+  assert.deepEqual(calls, [[1, true, true]]);
+  assert.equal(identify.checked, false, "A speaker choice is not reused for another recording");
+  const rows = view.element.querySelector(".meeting-transcript-rows");
+  assert.equal(rows.children.length, 3, "Adjacent words of the same voice remain readable");
+  assert.ok(rows.textContent.includes("Voice 1 Hello world."));
+  assert.ok(rows.textContent.includes("Unknown voice Uncertain."));
+  assert.ok(rows.textContent.includes("00:01.00–00:01.50"), "Subsecond words never appear to have zero duration");
+  assert.ok(rows.textContent.includes("Voice 2 Other voice."));
+  assert.equal(data.microphone.segments.length, 4, "Rendering does not alter source word timing");
+  button("System audio").click();
+  assert.ok(rows.textContent.includes("Unknown voice Kept without labels."));
+  assert.ok(view.element.textContent.includes("Voice identification was unavailable. The transcript is kept without labels."));
+  view.setActive(false); await tick(); view.element.remove();
+}
+console.log("check-surface-continuity: speaker preview opt-in, readable model words, unknown/failure fallback and separate sources");

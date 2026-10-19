@@ -1,0 +1,53 @@
+{
+  "recordedAt": "2026-10-18",
+  "scope": "Optional V5.5 bounded native worker, not app activation or meeting-quality acceptance.",
+  "host": "Linux x86-64, Ryzen 7 5700X3D, CPU-only intra/inter-op threads 1, ONNX Runtime 1.30.0, dev executable.",
+  "timing": "One run, warm filesystem. totalMs includes runtime hash/init, WAV read/normalization, model load, inference and session destruction; excludes model admission and input fingerprint. Whole-process peak RSS from wait4 (KiB). Not a distribution or 30-minute meeting benchmark.",
+  "nativeChecks": [
+    "complete public-speech pipeline and discard cancellation after final window",
+    "observe ONNX termination and discard an active operation",
+    "foreground admission first, then successful native retry with fresh options"
+  ],
+  "sources": {
+    "public_speech": "crates/voice/tests/fixtures/speech.wav; public-domain JFK excerpt; see adjacent README.md",
+    "limit_silence": "180 seconds of mono 16 kHz PCM16 zero samples, generated only for the resource-bound check"
+  },
+  "results": {
+    "public_speech": {
+      "experimental": true,
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "runtimeSha256": "c902c70b3003c0e99fada202f37478c515ae9bba7944c2b2abd0017bae0c82ed",
+      "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+      "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "wavSha256": "b2f803cd887a4d3c41542dcf3540772a526e64ef82138b17663259c367579dad",
+      "durationMs": 3400,
+      "totalMs": 950,
+      "speakers": 1,
+      "observations": 1,
+      "turns": [
+        {
+          "startMs": 427,
+          "endMs": 2418,
+          "speaker": 0
+        }
+      ],
+      "peakRssKiB": 124272
+    },
+    "limit_silence": {
+      "experimental": true,
+      "threshold": 0.7,
+      "distance": "average-linkage cosine distance",
+      "runtimeSha256": "c902c70b3003c0e99fada202f37478c515ae9bba7944c2b2abd0017bae0c82ed",
+      "segmentationSha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+      "embeddingSha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "wavSha256": "db53be14aa287280246c251865c00737de1c0d43104630cfa24968482a37689e",
+      "durationMs": 180000,
+      "totalMs": 4036,
+      "speakers": 0,
+      "observations": 0,
+      "turns": [],
+      "peakRssKiB": 135728
+    }
+  }
+}

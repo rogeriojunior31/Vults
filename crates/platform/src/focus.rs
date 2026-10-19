@@ -74,6 +74,41 @@ pub fn read() -> Option<Window> {
     }
 }
 
+/// Read-only style context. It never carries a keyboard grant or insertion capability.
+pub struct Tracker(crate::insert::kwin::Watch);
+impl std::fmt::Debug for Tracker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Tracker").finish_non_exhaustive()
+    }
+}
+impl Tracker {
+    pub async fn start() -> Option<Self> {
+        crate::insert::wayland_available().then_some(())?;
+        crate::insert::kwin::Watch::named("dictation-styles")
+            .await
+            .map(Self)
+    }
+    pub fn snapshot(&self) -> Option<Window> {
+        self.0.snapshot().window
+    }
+    pub async fn close(&self) {
+        self.0.close().await;
+    }
+}
+
+/// Synchronous X11 observation for the key callback; Wayland needs its pre-existing Tracker.
+pub fn key_down() -> Option<Window> {
+    let env = |key| std::env::var(key).unwrap_or_default();
+    (method(
+        &env("XDG_SESSION_TYPE"),
+        &env("WAYLAND_DISPLAY"),
+        &env("DISPLAY"),
+        &env("XDG_CURRENT_DESKTOP"),
+    ) == Some(Method::X11))
+    .then(x11::read)
+    .flatten()
+}
+
 /// Only an unambiguous ancestry match is context for a flock session. Shared terminal servers,
 /// tabs and multiplexers do not establish which pane has focus, even with just one known session.
 pub fn session<'a, K>(window: &Window, sessions: &'a [(K, Terminal)]) -> Option<&'a K> {

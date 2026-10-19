@@ -1,0 +1,12 @@
+3D-Speaker CAM++ speaker embedding model
+Original weights: iic/speech_campplus_sv_zh-cn_16k-common
+https://modelscope.cn/models/iic/speech_campplus_sv_zh-cn_16k-common
+Code: https://github.com/modelscope/3D-Speaker
+Declared code and weights license: Apache-2.0 (reviewed 2026-10-18).
+
+The ONNX conversion is published by k2-fsa:
+https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models
+Conversion recipe:
+https://github.com/k2-fsa/sherpa-onnx/blob/master/scripts/3dspeaker/export-onnx.py
+Vults does not modify the downloaded graph or link the publishing engine.
+See CAMPLUS-LICENSE.txt for the upstream Apache License 2.0.

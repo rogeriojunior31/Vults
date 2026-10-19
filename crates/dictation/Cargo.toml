@@ -1,12 +1,13 @@
 [package]
 name = "vults-dictation"
-description = "Pure dictation gestures and transcript metrics"
+description = "Pure dictation gestures, text rules, voice-command grammar and name resolution"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
 [dependencies]
+serde.workspace = true
 unicode-segmentation = "1.13"
 unicode-normalization = "0.1"
 

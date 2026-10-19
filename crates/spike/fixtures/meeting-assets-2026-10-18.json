@@ -1,0 +1,104 @@
+{
+  "recordedAt": "2026-10-18",
+  "scope": "Optional developer installer; no app gate/UI entry point or automatic speaker labels enabled.",
+  "bundle": "meeting-analysis-linux-x64-20261018",
+  "review": "ca4794c24dc45f6a41d99e4559070f3edd421d9b22de6100ac6c27ee2018fcfc",
+  "downloadBytes": 46647585,
+  "files": [
+    {
+      "name": "BZIP2-LICENSE.txt",
+      "bytes": 2123,
+      "sha256": "54e1fd7bd53273e601c9599eb162a004dacddee031ae297ee7109a7beb93b1c2"
+    },
+    {
+      "name": "CAMPLUS-LICENSE.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "name": "CAMPLUS-NOTICE.txt",
+      "bytes": 644,
+      "sha256": "43e114a09f86e71e7231fe025951c1abf2ca36e6e44fccc2439328061d9df35f"
+    },
+    {
+      "name": "ONNXRUNTIME-LICENSE.txt",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "name": "ONNXRUNTIME-PRIVACY.md",
+      "bytes": 6571,
+      "sha256": "ea592b16d154ff2de759ba5210350c64593c378c1bbd0a2aa4ddef777edbf358"
+    },
+    {
+      "name": "ONNXRUNTIME-THIRD-PARTY-NOTICES.txt",
+      "bytes": 338088,
+      "sha256": "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3"
+    },
+    {
+      "name": "SEGMENTATION-LICENSE.txt",
+      "bytes": 1061,
+      "sha256": "14d7016ad68e7394d6e6b78d96cc2ae431c905287b89674cfdf021e79e62b8ba"
+    },
+    {
+      "name": "embedding.onnx",
+      "bytes": 28281138,
+      "sha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11"
+    },
+    {
+      "name": "libonnxruntime.so.1.31.0",
+      "bytes": 29345384,
+      "sha256": "469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e"
+    },
+    {
+      "name": "segmentation.onnx",
+      "bytes": 5992913,
+      "sha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079"
+    }
+  ],
+  "httpAttempts": [
+    {
+      "artifact": "segmentation",
+      "outcome": "Complete",
+      "elapsedMs": 20
+    },
+    {
+      "artifact": "segmentation",
+      "outcome": "Complete",
+      "elapsedMs": 204
+    },
+    {
+      "artifact": "embedding",
+      "outcome": "Complete",
+      "elapsedMs": 26
+    },
+    {
+      "artifact": "embedding",
+      "outcome": "Complete",
+      "elapsedMs": 769
+    },
+    {
+      "artifact": "runtime",
+      "outcome": "Complete",
+      "elapsedMs": 24
+    },
+    {
+      "artifact": "runtime",
+      "outcome": "Complete",
+      "elapsedMs": 290
+    }
+  ],
+  "cachedRevalidationHttpAttempts": 0,
+  "nativeRuntime": "Official Microsoft ONNX Runtime 1.31.0 Linux x64 CPU package, supplied by this installed bundle.",
+  "nativeChecks": [
+    "complete the public-domain speech pipeline and discard late cancellation",
+    "observe native termination of an active controlled operation",
+    "foreground-first admission and successful fresh-options native retry"
+  ],
+  "privacy": "ORT_DISABLE_TELEMETRY=1 supplied at native test process startup; runtime API telemetry option false; missing startup setting rejects loading before file IO.",
+  "limits": [
+    "Not a real PT/EN meeting acceptance or full-duration benchmark.",
+    "App consent, persistent request quota/trace adapter and install UI remain pending.",
+    "Existing corrupt versions are reported and preserved; no automatic repair or deletion of committed versions."
+  ]
+}

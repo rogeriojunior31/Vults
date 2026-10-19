@@ -1,0 +1,414 @@
+{
+  "recordedAt": "2026-10-19",
+  "scope": "Default-off V5.5 engineering preview, not independent quality qualification. Aggregate only; no speech or recognized text.",
+  "productionQualified": false,
+  "normalAppEnabled": false,
+  "wordAttribution": {
+    "plan": {
+      "beforeInference": "2026-10-19T14:58:48.963761+00:00",
+      "modelSha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+      "purpose": "Diagnose real word-timestamp attribution coverage on known calibration, not acceptance; no invented word timing or nearest-speaker fallback.",
+      "sources": [
+        "tracked-public-3.4s",
+        "TS3003a-first120",
+        "bfamdl02-first120"
+      ],
+      "checks": [
+        "return only model-derived non-overlapping word times reproducing complete filtered segment text; otherwise retain whole segment",
+        "record known vs unknown coverage",
+        "do not activate app labels or claim held-out quality"
+      ]
+    },
+    "shortPublicSpeech": {
+      "durationMs": 3400,
+      "segments": 5,
+      "labelled": 5
+    },
+    "missingAssets": {
+      "segments": 5,
+      "labelled": 0,
+      "attribution": "Unavailable"
+    },
+    "calibration": [
+      {
+        "language": "en",
+        "asrWordsOrFallbackSegments": 155,
+        "labelled": 102,
+        "unknown": 53,
+        "labelledMs": 44730,
+        "referenceCoveredLabelledMs": 44730,
+        "correctReferenceSpeakerMs": 44730,
+        "wrongReferenceSpeakerMs": 0,
+        "referenceAbsentLabelledMs": 0,
+        "restrictedAgreement": 1.0,
+        "sourceWavSha256": "12b29461406fe6725138fff370086ce15bb9bcab47c21801043e3ac88e3ea9f5",
+        "referenceInputSha256": "c3b99e1d064dbb698ebfccdda68199248251ac37ce24c57020280d4c72e153fa"
+      },
+      {
+        "language": "pt",
+        "asrWordsOrFallbackSegments": 276,
+        "labelled": 195,
+        "unknown": 81,
+        "labelledMs": 52270,
+        "referenceCoveredLabelledMs": 52039,
+        "correctReferenceSpeakerMs": 51563,
+        "wrongReferenceSpeakerMs": 476,
+        "referenceAbsentLabelledMs": 231,
+        "restrictedAgreement": 0.9908530140855897,
+        "sourceWavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+        "referenceInputSha256": "9e718811c0f1b11b077d1264a8b5fbabfdd19d02188546f96f68cdf543de242e"
+      }
+    ],
+    "interpretation": "Known calibration only; best injective anonymous-label mapping on reference-covered assigned time, including overlapping reference voices. Excludes Unknown and reference-absent time; not WER, semantic accuracy or held-out acceptance."
+  },
+  "longDiarization": {
+    "durationMs": 1800000,
+    "wallSeconds": 61.556,
+    "peakRssKiB": 158916,
+    "observations": 420,
+    "speakers": 6,
+    "turns": 394,
+    "productionQualified": false,
+    "source": "First 1800 seconds of AMI IS1000b.Mix-Headset.wav, CC-BY-4.0, public corpus",
+    "sourceWavSha256": "8c98416fcf6e22cd0071314ab8774b24c1ce4683e33c0b0d47a61e2bacc9e437",
+    "plan": {
+      "recording": "IS1000b-first1800",
+      "source": {
+        "name": "IS1000b",
+        "url": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/HeadsetAudio/IS1000b.Mix-Headset.wav",
+        "size": 74997452
+      },
+      "originalSha256": "0f71e5018a283adf85e949f456a4c360d4fb8d9c195d29ed82b4b38d0d9a724d",
+      "wavSha256": "8c98416fcf6e22cd0071314ab8774b24c1ce4683e33c0b0d47a61e2bacc9e437",
+      "durationMs": 1800000,
+      "purpose": "Real public thirty-minute speech resource/continuity check, not quality acceptance; no reference or speaker/model-training independence claim.",
+      "frozenBeforeInference": "2026-10-19T14:54:35.588380+00:00",
+      "acceptance": {
+        "durationMs": 1800000,
+        "maximumWallSeconds": 1800,
+        "maximumRssKiB": 524288,
+        "maximumObservations": 1080,
+        "validSourceLocalIntervals": true
+      }
+    },
+    "interpretation": "One Linux CPU child process, wait4 peak RSS, diarization only; no ASR, capture or quality evaluation."
+  },
+  "embeddingComparison": {
+    "plan": {
+      "frozenBeforeInference": "2026-10-19T14:51:46.081081+00:00",
+      "purpose": "Reference bilingual CAM++ comparison; known calibration only, not acceptance; unchanged threshold0.7, segmentation, window ownership and minimum embedding speech. Reject promotion if any DER regression; no threshold sweep.",
+      "profiles": [
+        "original",
+        "advanced bilingual"
+      ],
+      "sourceHashes": {
+        "en120.wav": "12b29461406fe6725138fff370086ce15bb9bcab47c21801043e3ac88e3ea9f5",
+        "pt120.wav": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+        "en-reference.json": "c3b99e1d064dbb698ebfccdda68199248251ac37ce24c57020280d4c72e153fa",
+        "pt-reference.json": "9e718811c0f1b11b077d1264a8b5fbabfdd19d02188546f96f68cdf543de242e"
+      },
+      "independentPtAccess": "Additional corpus download requests name/email/institution; no form submitted or access gate bypassed."
+    },
+    "results": [
+      {
+        "language": "en",
+        "profile": "original",
+        "quality": {
+          "schema": 1,
+          "referenceSha256": "7889fad0a009165a20103fa785298b9812680255f06e8481881cd3fb52560935",
+          "predictionSha256": "24b5ead4395171783d15d4e98aeaa3616de0c9cf677955861e3d36cdf4a88dc0",
+          "clock": {
+            "recording": "TS3003a-first120",
+            "source": "public-mix",
+            "wavSha256": "12b29461406fe6725138fff370086ce15bb9bcab47c21801043e3ac88e3ea9f5",
+            "durationMs": 120000
+          },
+          "language": "en",
+          "annotation": "human",
+          "split": "calibration",
+          "collarMs": 0,
+          "includesOverlap": true,
+          "referenceSpeakerMs": 86654,
+          "missedSpeakerMs": 12670,
+          "falseAlarmSpeakerMs": 509,
+          "falseAlarmWithoutReferenceSpeakerMs": 148,
+          "excessOverlapSpeakerMs": 361,
+          "confusedSpeakerMs": 1978,
+          "correctSpeakerMs": 72006,
+          "unknownActivityMs": 2347,
+          "referenceSpeakers": 4,
+          "predictedSpeakers": 2,
+          "der": 0.1749140258960925,
+          "productionQualified": false
+        },
+        "speakers": 2,
+        "observations": 25,
+        "totalMs": 4108,
+        "wallSeconds": 4.978
+      },
+      {
+        "language": "en",
+        "profile": "advanced",
+        "quality": {
+          "schema": 1,
+          "referenceSha256": "7889fad0a009165a20103fa785298b9812680255f06e8481881cd3fb52560935",
+          "predictionSha256": "dc5b4d098d81557a18da53cc65124cdc46d61d693e411c4d9bea9f7af19bce31",
+          "clock": {
+            "recording": "TS3003a-first120",
+            "source": "public-mix",
+            "wavSha256": "12b29461406fe6725138fff370086ce15bb9bcab47c21801043e3ac88e3ea9f5",
+            "durationMs": 120000
+          },
+          "language": "en",
+          "annotation": "human",
+          "split": "calibration",
+          "collarMs": 0,
+          "includesOverlap": true,
+          "referenceSpeakerMs": 86654,
+          "missedSpeakerMs": 12670,
+          "falseAlarmSpeakerMs": 509,
+          "falseAlarmWithoutReferenceSpeakerMs": 148,
+          "excessOverlapSpeakerMs": 361,
+          "confusedSpeakerMs": 1978,
+          "correctSpeakerMs": 72006,
+          "unknownActivityMs": 2347,
+          "referenceSpeakers": 4,
+          "predictedSpeakers": 2,
+          "der": 0.1749140258960925,
+          "productionQualified": false
+        },
+        "speakers": 3,
+        "observations": 25,
+        "totalMs": 4106,
+        "wallSeconds": 4.984
+      },
+      {
+        "language": "pt",
+        "profile": "original",
+        "quality": {
+          "schema": 1,
+          "referenceSha256": "90dab5142e819a9c1dc83a19a2225abd4a8f90b58423c78b45a4f978f7f8e8cc",
+          "predictionSha256": "33a08a3741e1f45986ba263607a764e1cd8d7a599e155b6d654f16510738f5f3",
+          "clock": {
+            "recording": "bfamdl02-first120",
+            "source": "public-mix",
+            "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+            "durationMs": 120000
+          },
+          "language": "pt",
+          "annotation": "human",
+          "split": "calibration",
+          "collarMs": 0,
+          "includesOverlap": true,
+          "referenceSpeakerMs": 133901,
+          "missedSpeakerMs": 17880,
+          "falseAlarmSpeakerMs": 3847,
+          "falseAlarmWithoutReferenceSpeakerMs": 649,
+          "excessOverlapSpeakerMs": 3198,
+          "confusedSpeakerMs": 1428,
+          "correctSpeakerMs": 114593,
+          "unknownActivityMs": 793,
+          "referenceSpeakers": 2,
+          "predictedSpeakers": 2,
+          "der": 0.17292626642071382,
+          "productionQualified": false
+        },
+        "speakers": 2,
+        "observations": 41,
+        "totalMs": 6758,
+        "wallSeconds": 7.782
+      },
+      {
+        "language": "pt",
+        "profile": "advanced",
+        "quality": {
+          "schema": 1,
+          "referenceSha256": "90dab5142e819a9c1dc83a19a2225abd4a8f90b58423c78b45a4f978f7f8e8cc",
+          "predictionSha256": "33a08a3741e1f45986ba263607a764e1cd8d7a599e155b6d654f16510738f5f3",
+          "clock": {
+            "recording": "bfamdl02-first120",
+            "source": "public-mix",
+            "wavSha256": "6687141479a1ece882914803bd2748ba7a182bea057f14eeaa5becb212151d9d",
+            "durationMs": 120000
+          },
+          "language": "pt",
+          "annotation": "human",
+          "split": "calibration",
+          "collarMs": 0,
+          "includesOverlap": true,
+          "referenceSpeakerMs": 133901,
+          "missedSpeakerMs": 17880,
+          "falseAlarmSpeakerMs": 3847,
+          "falseAlarmWithoutReferenceSpeakerMs": 649,
+          "excessOverlapSpeakerMs": 3198,
+          "confusedSpeakerMs": 1428,
+          "correctSpeakerMs": 114593,
+          "unknownActivityMs": 793,
+          "referenceSpeakers": 2,
+          "predictedSpeakers": 2,
+          "der": 0.17292626642071382,
+          "productionQualified": false
+        },
+        "speakers": 2,
+        "observations": 41,
+        "totalMs": 6788,
+        "wallSeconds": 7.814
+      }
+    ],
+    "promoted": false
+  },
+  "nativeRenderer": {
+    "realStatusIdentificationAvailable": true,
+    "command": {
+      "consent": true,
+      "identifySpeakers": true
+    },
+    "controlledResponses": true,
+    "physicalCaptureTested": false,
+    "layouts": [
+      {
+        "phase": "ready",
+        "theme": "black",
+        "size": [
+          1180,
+          820
+        ],
+        "overflow": false,
+        "inputs": [
+          {
+            "checked": false,
+            "disabled": false
+          },
+          {
+            "checked": false,
+            "disabled": false
+          }
+        ],
+        "bodyHeight": 306
+      },
+      {
+        "phase": "ready",
+        "theme": "black",
+        "size": [
+          480,
+          360
+        ],
+        "overflow": false,
+        "inputs": [
+          {
+            "checked": false,
+            "disabled": false
+          },
+          {
+            "checked": false,
+            "disabled": false
+          }
+        ],
+        "bodyHeight": 58
+      },
+      {
+        "phase": "ready",
+        "theme": "light",
+        "size": [
+          480,
+          360
+        ],
+        "overflow": false,
+        "inputs": [
+          {
+            "checked": false,
+            "disabled": false
+          },
+          {
+            "checked": false,
+            "disabled": false
+          }
+        ],
+        "bodyHeight": 58
+      },
+      {
+        "phase": "ready",
+        "theme": "light",
+        "size": [
+          1180,
+          820
+        ],
+        "overflow": false,
+        "inputs": [
+          {
+            "checked": false,
+            "disabled": false
+          },
+          {
+            "checked": false,
+            "disabled": false
+          }
+        ],
+        "bodyHeight": 306
+      },
+      {
+        "phase": "transcript",
+        "theme": "black",
+        "size": [
+          1180,
+          820
+        ],
+        "overflow": false,
+        "rows": 34,
+        "bodyHeight": 563
+      },
+      {
+        "phase": "transcript",
+        "theme": "black",
+        "size": [
+          480,
+          360
+        ],
+        "overflow": false,
+        "rows": 34,
+        "bodyHeight": 98
+      },
+      {
+        "phase": "transcript",
+        "theme": "light",
+        "size": [
+          480,
+          360
+        ],
+        "overflow": false,
+        "rows": 34,
+        "bodyHeight": 98
+      },
+      {
+        "phase": "transcript",
+        "theme": "light",
+        "size": [
+          1180,
+          820
+        ],
+        "overflow": false,
+        "rows": 34,
+        "bodyHeight": 563
+      }
+    ]
+  },
+  "review": "Independent read-only review resolved explicit flock unlock after cleanup and shared recording-stop checks during installed-file verification. No further concrete correctness finding. Independent release quality remains open.",
+  "validation": {
+    "workspaceTests": "passed",
+    "allFeatureVoice": {
+      "passed": 118,
+      "ignored": 7,
+      "nativeIgnoredExecutedSeparately": 5
+    },
+    "previewAppTests": 233,
+    "evals": 8,
+    "spikeAllFeatures": "passed",
+    "productionRendererBuild": "passed; existing >500 kB chunk warning",
+    "workspaceAndFeatureClippy": "passed",
+    "cargoDeny": "advisories, bans, licenses and sources passed",
+    "repositoryGuards": "brand, English, i18n, layers, network and README passed; 37 documentation translation hashes current",
+    "rendererChecks": "surface continuity, meeting installer, geometry, record search, Nest close, chat models and flock place passed",
+    "unavailableCheck": "AGENTS lists scripts/check-task-actions.mjs but that file does not exist in this checkout; not run",
+    "cleanup": "Isolated Tauri, Vite and owned Xvfb processes stopped; disposable audio, weights and profile removed; personal voice models and shared build target preserved"
+  }
+}
