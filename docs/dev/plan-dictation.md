@@ -2967,3 +2967,8 @@ Windows application compilation also identified Linux-only cleanup admission and
 feedback deadline accessors. They now follow their production callers' platform guards, while
 cleanup reservation tests and semantic clarification expiry remain cross-platform. Workspace CI
 uses `--no-fail-fast` to collect failures across crates in one run instead of stopping at the first.
+
+The complete Windows test run had one remaining failure: the pre-cancelled installation test
+expected the supported-platform cancellation result instead of the unsupported-platform error.
+The test now checks each platform's contract and zero request admissions on both paths; production
+installation behavior is unchanged. All other Windows workspace targets passed that run.

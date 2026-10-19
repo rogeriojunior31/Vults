@@ -226,12 +226,20 @@ async fn denied_gate_stale_review_and_pre_cancelled_installs_send_no_request() {
     assert_eq!(gate.attempts.load(Ordering::SeqCst), 0);
     let cancel = Cancel::default();
     cancel.cancel();
-    assert!(
-        install(root.clone(), &review_id(), &gate, cancel, |_| {})
-            .await
-            .expect("cancel")
-            .is_none()
-    );
+    let cancelled = install(root.clone(), &review_id(), &gate, cancel, |_| {}).await;
+    if cfg!(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "gnu"
+    )) {
+        assert!(cancelled.expect("cancel").is_none());
+    } else {
+        assert_eq!(
+            cancelled.expect_err("unsupported platform"),
+            "meeting assets are supported on Linux x86-64 only"
+        );
+    }
+    assert_eq!(gate.attempts.load(Ordering::SeqCst), 0);
     assert!(!root.exists());
     #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
     {
