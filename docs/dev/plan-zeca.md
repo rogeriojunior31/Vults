@@ -716,9 +716,10 @@ K8's voice work; the other K rows remain N4. Tasks stays removed.
 
 M7's existing MCP server is not the question-card follow-up required by V7. V7.1 aligned ADR 0028
 on 2026-10-19: dictation may edit a typed text question, with a separate human click/Enter to send;
-voice cannot answer a permission. The M7 question lifecycle and V7.2/V7.3 enforcement must land
-before that flow is available. Z6 and M7 retain their existing Done entries and outstanding
-follow-ups; this integration does not claim those follow-ups are implemented.
+voice cannot answer a permission. V7.2.1 provides the backend lifecycle and Linux requester proof;
+the app/MCP round trip, composer, dictation and V7.3 enforcement must land before that flow is
+available. Z6 and M7 retain their existing Done entries and outstanding follow-ups; this integration
+does not claim those follow-ups are implemented.
 
 ### Mobile (wave 6)
 
@@ -1452,3 +1453,18 @@ Independent authority/translation review and all 1,234 workspace tests, 10 evals
 local-only transcription without provider clean-up. The bilingual safety guide also catches up
 with V5.8's explicit meeting snapshots/export retention. No native rerun is needed for this
 documentation-only step; the app remains closed.
+
+**2026-10-19 V7.2.1 text-question backend.** A pure question slot binds each editable draft to the
+verified process incarnations, connection nonce, exact question/request and generation. It expires
+at an absolute deadline, consumes confirmation once and clears pending text on revocation; invalid
+input cannot replace a live draft. Linux requester proofs retain and recheck the actual same-user
+process chain, start times, parent links and executable identities, using kernel credentials for
+socket peers. Content-free terminal receipts reuse the audit format and are tested through the store.
+The app does not call these APIs yet: no MCP tool, listener, composer, capture or agent setting is
+added. V7.2.2 owns the verified text round trip and runtime audit; V7.2.3 adds local dictation, with
+V7.3 still owning external-agent setup. See Plan Dictation's V7.2 delivery sequence.
+
+All 1,246 workspace tests (10 documented ignores), 10 evals, workspace Clippy, renderer build,
+18 renderer checks and guards pass. Independent review's shell-name attribution finding is fixed
+with executable identity checks and a regression, including resolved multicall aliases. Final
+review has no remaining blocker. No renderer or native app behavior changes in this backend step.

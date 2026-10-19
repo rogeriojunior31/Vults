@@ -2474,6 +2474,46 @@ to match V5.8's explicit text saves and independent exported copies. The app sta
     confirmation.
 - Tests: an MCP round trip with a fake agent; the audit row.
 
+### V7.2 delivery sequence
+
+1. **V7.2.1 Lifecycle and requester proof** — implemented 2026-10-19; backend only.
+   `core::questions::Slot` retains one typed question and editable draft per authenticated
+   connection, with an absolute 120-second deadline, a fresh app-owned connection nonce, process
+   incarnations, request/question binding and a monotonic generation. Confirmation consumes the
+   draft once; replacement, cancellation, expiry, disconnect, departure and lock can revoke it.
+   No text is interpreted as an action or permission. Replay protection retains at most 256 request
+   ids per connection and then requires a new connection; invalid input preserves the live draft.
+   Linux `peer::requester` captures kernel socket credentials or the real stdio process ancestry,
+   skips only verified system-shell executables while retaining their wrappers, and rechecks
+   same-user PID/start time, parent and executable identity. Unrecognized wrappers stay the client.
+   It refuses unavailable, dead or changed processes. Content-free receipts convert to the existing
+   audit format; a store regression verifies persistence without prompt, draft or raw RPC id.
+   These are library APIs: the app does not invoke them or advertise a question tool yet.
+2. **V7.2.2 Text question round trip** — next. Connect the verified relay and typed lifecycle to
+   `app/src/mcp.rs`, the runtime-owned composer and the durable audit. Revalidate proof before
+   publishing and confirming, generate the connection nonce in the app, revoke on every departure
+   event and process exit, and handle cancellation, delivery failure and lost acknowledgement
+   without retrying a consumed reply. Test a real MCP round trip with a fake agent, including
+   stale clients and duplicate/late input. Preserve existing permission and hook-question paths.
+3. **V7.2.3 Local dictation into the draft** — after the text round trip. Route only the physical
+   dictation key to the selected question; keep capture and confirmation separate, preserve manual
+   edits, IME/Shift+Enter behavior and all cancellation gates, and validate the native island/composer.
+   No provider clean-up, chat fallback or spoken permission answers. The default-off external-agent
+   offering and config changes remain V7.3.
+
+V7.2.1 validation covers draft-only input, once-only confirmation, every revocation, exact deadline
+boundaries, connection/process/question binding, replay limits, live Linux credentials/ancestry,
+process exit and metadata-only audit storage. This backend slice starts no microphone, UI,
+network request or MCP listener, and leaves the app closed. V7.2's tool/round-trip acceptance is
+still pending with V7.2.2/V7.2.3.
+
+Validation: all 1,246 workspace tests pass (10 documented ignores), along with 10 evals, workspace
+Clippy, the renderer build, 18 renderer checks and repository guards. Independent code review
+caught mutable process names being used to skip shell wrappers; the fix checks the resolved,
+root-owned system executable identity and rejects multicall aliases. The spoofed-name regression
+passes and the final review has no remaining blocker. Native UI validation does not apply to this
+library-only change; no audio/model request was made.
+
 **V7.3 Offer it to agents** (M)
 - Build: add the tool to agents' MCP configs only through `agent-config` (rule 3: backup, diff, click); the
   switch "Agents may ask for a spoken answer" in Settings › Dictation › Agents (off).

@@ -21,6 +21,7 @@ pub mod looks;
 pub mod notify;
 pub mod policies;
 pub mod policy;
+pub mod questions;
 pub mod recap;
 pub mod redact;
 mod safe_url;
