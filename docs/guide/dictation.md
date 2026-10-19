@@ -858,3 +858,18 @@ cancels it. **Clear all history** in Activity settings also removes every saved 
 pending archive reads/saves, even when dictation retention is off. Dictation-only erasure and its
 retention setting do not remove meetings. The list and details clear on lock or departure and reload
 when reopened. Saving, viewing, renaming, deleting and exporting use no model or network request.
+
+## Agent question dictation (planned)
+
+The [voice decision](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+defines a future `vults_dictate(question)` flow over M7's `ask_user`. Neither tool, its question
+composer nor an Agents dictation setting is available yet. The existing MCP read/proposal server
+does not provide this flow, and adding it to an agent's configuration cannot enable voice access.
+
+In the planned flow, you use the dictation key on a displayed text question, review/edit the final
+transcript, then send it with a separate click or Enter. An agent cannot open the microphone, and
+speech, silence or key release cannot submit the draft. A permission card never accepts dictation
+or a spoken approval/denial. Ordinary dictation still cannot insert text into a waiting agent session.
+Cancelling, leaving, locking, expiry or losing the requesting client discards the unsent question
+draft. This path uses local transcription, without model clean-up or a provider request.
+Implementation and its default-off agent offering follow this decision in separate steps.

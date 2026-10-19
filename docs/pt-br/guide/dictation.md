@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 88aea44d8ca8 -->
+<!-- source: 69071b2cb77f -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -961,3 +961,21 @@ remove todas as reuniões salvas e invalida leituras/gravações pendentes do ar
 retenção do ditado desligada. A exclusão exclusiva do ditado e seu prazo de retenção não removem
 reuniões. A lista e os detalhes são limpos ao bloquear ou sair e recarregam ao reabrir. Salvar, ver,
 renomear, excluir e exportar não usam modelo nem requisição à rede.
+
+<a id="agent-question-dictation-planned"></a>
+## Ditado em perguntas de agentes (planejado)
+
+A [decisão de voz](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+define um futuro fluxo `vults_dictate(question)` sobre o `ask_user` da M7. Nenhuma dessas ferramentas,
+seu compositor de perguntas ou uma configuração de Agentes no ditado está disponível ainda. O servidor
+MCP existente de leituras/propostas não oferece esse fluxo, e adicioná-lo à configuração de um agente
+não pode habilitar acesso à voz.
+
+No fluxo planejado, você usa a tecla de ditado em uma pergunta de texto exibida, revisa/edita a
+transcrição final e depois a envia com um clique separado ou Enter. Um agente não pode abrir o
+microfone, e fala, silêncio ou soltar a tecla não podem enviar o rascunho. Um card de permissão nunca
+aceita ditado nem aprovação/negação falada. O ditado comum continua sem inserir texto em uma sessão
+de agente esperando resposta. Cancelar, sair, bloquear, expirar ou perder o cliente solicitante
+descarta o rascunho da pergunta não enviado. Esse caminho usa transcrição local, sem limpeza por
+modelo nem requisição a provedor. A implementação e sua oferta aos agentes, desligada
+por padrão, seguem esta decisão em etapas separadas.

@@ -358,6 +358,12 @@ it exactly: the same agent, folder, tool and target ([ADR 0004](adr/0004-a-human
 into an `AnswerQuestion` effect. A test feeds
 every other input in every order and checks none of them answers.
 
+M7's future `ask_user`/`vults_dictate` question interface is separate from this hook reply path and
+is not implemented. [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+permits local dictation into its typed text draft only, with a separate human click/Enter to send.
+The verified client/question lifetime, once-only reply and audit must land before voice wiring;
+no transcript becomes a permission intent, a rule or a policy.
+
 ## The island on Wayland
 
 The island is a layer-shell surface mapped once, at a fixed size, and never resized or hidden: KWin

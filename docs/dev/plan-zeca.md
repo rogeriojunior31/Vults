@@ -714,9 +714,10 @@ K8's voice work; the other K rows remain N4. Tasks stays removed.
 | V7 | `vults_dictate`: a question card filled by voice and sent with explicit confirmation | V1, M7's `ask_user` follow-up, V7.1's ADR alignment | An agent's question is answered by voice with human confirmation and an audit row; never a permission |
 | V8 | Local voice commands (takes C11): own key, parser/name resolver, non-answer intents and flock reads, 90 s context and undo | V1, V2 | Open api, read who waits, mute web and docs, then undo, without a model; H1 covers the command path |
 
-M7's existing MCP server is not the question-card follow-up required by V7. That interface and
-V7.1's explicit ADR alignment must land first; these rows do not relax the current prohibition
-on answering cards by voice. Z6 and M7 retain their existing Done entries and outstanding
+M7's existing MCP server is not the question-card follow-up required by V7. V7.1 aligned ADR 0028
+on 2026-10-19: dictation may edit a typed text question, with a separate human click/Enter to send;
+voice cannot answer a permission. The M7 question lifecycle and V7.2/V7.3 enforcement must land
+before that flow is available. Z6 and M7 retain their existing Done entries and outstanding
 follow-ups; this integration does not claim those follow-ups are implemented.
 
 ### Mobile (wave 6)
@@ -1437,3 +1438,17 @@ save and all four languages without audio/model requests. EN/PT guide and catalo
 maintainer acceptance remains separate. The app/server and synthetic profile are cleaned after QA.
 Independent V5.5 speech qualification, full-length capture and default-on speaker labels remain
 unqualified; this step does not change those gates. See the V5.8 record in Plan Dictation.
+
+**2026-10-19 V7.1 question-draft decision.** The delivery order after V5 is V7, then V6. ADR 0028
+now defines user-started local dictation into a typed M7 question draft and a separate human
+click/Enter to send. It requires verified requester/question/generation binding, revocation on
+lock/departure/expiry/disconnect, once-only replies and content-minimal audit. Voice never answers
+permissions; ADR 0004 and ADR 0027 are unchanged. EN/PT record and user guide distinguish the
+decision from shipped behavior. Next: V7.2's M7 question lifecycle and verified MCP round trip,
+then dictation/composer wiring; the external-agent switch/config offer belongs to V7.3. No runtime,
+agent config, setting, microphone or network request changes in V7.1.
+Independent authority/translation review and all 1,234 workspace tests, 10 evals, Clippy, build,
+18 renderer checks and guards pass; documentation marks/links are current. The review clarifies
+local-only transcription without provider clean-up. The bilingual safety guide also catches up
+with V5.8's explicit meeting snapshots/export retention. No native rerun is needed for this
+documentation-only step; the app remains closed.

@@ -55,7 +55,8 @@ Linux port), `[DD]` (reference app, dictation and dictionary), `[VA]` (reference
 
 Rules that hold as they are: [ADR 0002](../adr/0002-rust-backend-no-sidecars.md) (Rust only, no Python
 sidecar), [ADR 0028](../adr/0028-spoken-replies-through-a-realtime-model.md) (local transcription, audio in
-memory, no GPL in the binary, voice never answers a card), [ADR 0004](../adr/0004-a-human-answers-permissions.md)
+memory, no GPL in the binary, voice never answers a permission; V7.1 question drafts require human
+confirmation), [ADR 0004](../adr/0004-a-human-answers-permissions.md)
 and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) (model clean-up is a request on the user's behalf).
 
 | # | Today | Proposal | Why |
@@ -2439,10 +2440,30 @@ automatic labels or qualify full-length capture.
 
 ## V7 MCP `vults_dictate`
 
-**V7.1 ADR 0028 / M7 alignment** (S)
+**V7.1 ADR 0028 / M7 alignment** (S) — delivered 2026-10-19; decision only
 - Build: record that a *question* card (M7's `ask_user`, a card answered with text) may be filled by
   dictation and is sent with a click or Enter. Permission cards never take voice. ADR 0027/G1 is
   unaffected.
+
+The [living voice record](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+now distinguishes typed question drafts from permission decisions. Capture is user-started and
+local; only a separate click or unmodified Enter sends the final editable text. The verified client,
+exact question, generation and lifetime own capture and reply. Lock/departure, replacement, expiry
+and disconnect revoke pending work; replies are consumed at most once and audited without a second
+transcript. IME/Shift+Enter and literal approval-like text cannot trigger permission authority.
+
+This is the next module after V5 in the authoritative delivery order; V6 has not started. The shipped
+M7 read/proposal server still has no `ask_user` or `vults_dictate`. V7.2 must implement the typed M7
+question lifecycle/client verification/audit round trip before capture/composer wiring. V7.3 owns
+external agent setup and its default-off switch. No runtime or config change is claimed here.
+
+Validation: the independent authority/EN-PT review found no permission expansion or false shipped
+claim. Its wording fixes distinguish local Whisper inference from remote audio and explicitly
+exclude provider clean-up from question drafts. All 1,234 workspace tests (10 documented ignores),
+10 evals, workspace Clippy, renderer build, 18 renderer checks and repository guards pass; reviewed
+translation marks and changed-page links/fragments pass. There is no renderer/runtime change to
+exercise in a native app. The safety guide also corrects the old ephemeral-only meeting statement
+to match V5.8's explicit text saves and independent exported copies. The app stays closed.
 
 **V7.2 The tool** (M)
 - Build:
@@ -2707,8 +2728,8 @@ measurements here rather than maintaining a second phase table.
 - The decisions table points to the pure dictation layer, platform insertion and Settings/Activity
   owners. The required guard rows name the waiting-session and temporary-audio checks; those
   tests must land with production behavior and are not claimed to exist at this documentation step.
-- M7's `ask_user` follow-up is still needed for V7. V7.1 must align ADR 0028 before a question
-  composer can accept dictation with explicit human confirmation. Permission cards remain excluded.
+- M7's `ask_user` follow-up is still needed for V7. V7.1 aligned ADR 0028 on 2026-10-19; the question
+  composer and its enforcement remain V7.2/V7.3 work. Permission cards remain excluded.
 - V0.9/P12 was accepted on 2026-10-17. That review does not replace production native smoke,
   gate implementation or model-license checks.
 

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: d57c87105ad2 -->
+<!-- source: 7865956856d9 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -397,6 +397,12 @@ ela exatamente: o mesmo agente, pasta, ferramenta e alvo ([ADR 0004](adr/0004-a-
 (`QuestionAsked`) espera do mesmo jeito, e só um `Intent::Answer` que se encaixe nas perguntas dela a transforma
 num effect `AnswerQuestion`. Um teste alimenta
 todas as outras entradas em todas as ordens e verifica que nenhuma delas responde.
+
+A futura interface de perguntas `ask_user`/`vults_dictate` da M7 é separada desse caminho de
+respostas do hook e não foi implementada. A [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+permite ditado local apenas em seu rascunho de texto tipado, com clique/Enter humano separado para
+enviar. O vínculo verificado com o cliente e o prazo da pergunta, resposta de uso único e auditoria
+precisam chegar antes da integração de voz; nenhuma transcrição vira intent de permissão, regra ou política.
 
 <a id="the-island-on-wayland"></a>
 

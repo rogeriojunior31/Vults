@@ -47,12 +47,18 @@ What Vults promises:
 - **Chat voice uses memory-only recording.** Chat voice is off until you download a
   model; then the mic records into memory only while its button is red (a minute at most), and
   whisper.cpp transcribes it on this computer. Chat and dictation audio are never saved or sent anywhere.
+- **Agent-question dictation is planned, not available.** [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+  permits only local text entry into a future typed question draft; a separate human click/Enter
+  sends it to the verified requester. An agent cannot open the mic, and speech cannot answer a
+  permission. The M7 question interface and its default-off voice offering are not implemented yet.
 - **Meeting recording checks require explicit consent.** On Linux, Dictation > Meetings captures
   a reviewed microphone and system-output monitor for up to one minute into private temporary WAVs.
   Local transcription retains the cleanup lock; completion/cancel removes audio and startup cleans
-  interrupted files. Transcripts stay only in the current page, without database writes. Leaving the
-  page or locking the screen cancels pending work and discards its transcript. There is no audio
-  archive or saved meeting. The summary backend has independent, default-off consent and sends only
+  interrupted files. Unsaved transcripts stay only in the current page. Leaving the page or locking
+  the screen cancels pending work and discards unsaved text. **Save meeting** explicitly keeps a
+  text-only snapshot of the current transcript/completed notes; no audio archive exists. Clear all
+  history removes saved meetings too, while exported files remain independent copies. See
+  [Saved meetings and export](guide/dictation.md#saved-meetings-and-export). The summary backend has independent, default-off consent and sends only
   transcript text through the selected API chat model, with no tools and a 120-second deadline.
   Enable it in Dictation > Meeting settings, then explicitly choose Generate summary on the
   Summary tab; recording/transcribing alone never requests a summary. Canceling notes or a failed request leaves the local transcript intact.

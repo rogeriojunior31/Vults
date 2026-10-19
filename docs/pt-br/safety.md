@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 01d944bcef41 -->
+<!-- source: b0ef3930b30a -->
 
 O que o Vults promete:
 
@@ -50,12 +50,20 @@ O que o Vults promete:
 - **A voz do Chat grava apenas na memória.** A voz do Chat fica desligada até você baixar um
   modelo; depois o mic grava só na memória enquanto o botão dele está vermelho (no máximo um minuto), e
   o whisper.cpp transcreve neste computador. O áudio do Chat e do ditado nunca é salvo nem enviado para lugar nenhum.
+- **O ditado em perguntas de agentes é planejado, não está disponível.** A [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+  permite apenas entrada local de texto em um futuro rascunho de pergunta tipado; um clique/Enter
+  humano separado o envia ao solicitante verificado. Um agente não pode abrir o mic, e a fala não
+  pode responder a uma permissão. A interface de perguntas da M7 e sua oferta de voz, desligada por
+  padrão, ainda não foram implementadas.
 - **Verificações de gravação de reuniões exigem consentimento explícito.** No Linux, Ditado > Reuniões
   captura um microfone e um monitor da saída do sistema conferidos por até um minuto em WAVs temporários
   privados. A transcrição local mantém a trava de limpeza; concluir/cancelar remove o áudio e a
-  inicialização limpa sobras de interrupções. A transcrição fica apenas na página atual, sem gravação
-  no banco. Sair da página ou bloquear a tela cancela o trabalho pendente e descarta a transcrição.
-  Não há arquivo de áudio nem reunião salva. O backend de resumos tem consentimento próprio,
+  inicialização limpa sobras de interrupções. A transcrição não salva fica apenas na página atual.
+  Sair da página ou bloquear a tela cancela o trabalho pendente e descarta o texto não salvo.
+  **Salvar reunião** mantém explicitamente uma cópia somente de texto da transcrição e das notas
+  concluídas atuais; não há arquivo de áudio. Apagar todo o histórico também remove reuniões salvas,
+  enquanto arquivos exportados permanecem como cópias independentes. Veja
+  [Reuniões salvas e exportação](guide/dictation.md#saved-meetings-and-export). O backend de resumos tem consentimento próprio,
   desligado por padrão, e envia apenas o texto da transcrição ao modelo escolhido do chat por API,
   sem ferramentas e com prazo de 120 segundos. Ative em Ditado > Configurações de reuniões e
   depois escolha explicitamente Gerar resumo na aba Resumo; gravar/transcrever sozinho nunca pede

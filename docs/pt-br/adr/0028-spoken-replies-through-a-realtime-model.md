@@ -1,8 +1,9 @@
 # 0028. Voz: escuta local, respostas faladas opcionais
-<!-- source: 8f1209c5c71a -->
+<!-- source: 70698222472b -->
 
 **Status:** Aceita, 2026-10-12. Consolidada em 2026-10-12 a partir da 0013.
 Alterada em 2026-10-17 para ditado, escuta limitada de respostas e áudio temporário de reuniões.
+Alterada em 2026-10-19 para rascunhos de perguntas com confirmação humana (V7.1); essa interface ainda não foi implementada.
 A V0.1 foi aceita pelo mantenedor; a implementação da N3 continua em etapas.
 
 <a id="context"></a>
@@ -32,8 +33,9 @@ usuário a tirou do plano em 2026-10-12.
   do crate `sherpa-onnx`, que liga o `espeak-ng` (GPL-3.0). Uma ferramenta GPL que o usuário
   instalou pode rodar como um processo separado. Cada motor ou modelo que roda localmente tem a
   licença conferida (código e modelo) antes de entrar.
-- **A voz nunca responde a um card** ([0004](0004-a-human-answers-permissions.md)), diga o modelo o
-  que disser.
+- **A voz nunca responde a uma permissão** ([0004](0004-a-human-answers-permissions.md)), diga o
+  modelo o que disser. O ditado só pode editar um rascunho de pergunta elegível pelo contrato de
+  confirmação separado abaixo; a fala por si só nunca envia a resposta de um card.
 
 <a id="consequences"></a>
 
@@ -79,19 +81,72 @@ Elas definem o contrato da N3; o aceite não significa que os recursos já foram
   do download na referência de modelos antes de oferecê-lo. Um modelo proposto não está
   aprovado por aparecer no plano. As dependências continuam passando pelo `cargo deny`;
   nenhum motor ligado a GPL entra no binário.
-- **A voz continua sem responder a um card.** Nenhuma destas cláusulas altera a
+- **A autoridade sobre permissões não muda.** Nenhuma destas cláusulas altera a
   [0004](0004-a-human-answers-permissions.md). Texto falado nunca é interpretado como aprovação
-  ou negação. Um futuro campo de composição em cards de pergunta exige sua própria decisão
-  e uma confirmação humana separada para enviar; esta emenda não o habilita.
+  ou negação. O contrato de rascunhos de perguntas abaixo permite entrada de texto, com uma ação
+  humana separada para enviar.
 
 A resposta de oito segundos e os arquivos temporários de reunião são as exceções explícitas
 às regras de escuta e armazenamento. O ditado em outros aplicativos segue a
 [0032](0032-dictation-into-other-apps.md).
 
+<a id="human-confirmed-question-drafts"></a>
+## Rascunhos de perguntas com confirmação humana
+
+A V7.1 define este contrato para o futuro compositor de perguntas `ask_user` da M7 e
+`vults_dictate(question)`. O servidor MCP de leituras/propostas já entregue na M7 não oferece essa
+interface. Esta decisão, por si só, não adiciona ferramenta, controle de microfone, configuração
+nem instalação em um agente.
+
+- **Uma pergunta de texto é um tipo de pedido distinto.** Somente o compositor de perguntas
+  tipado e sem autoridade de permissão do app é elegível. Um rótulo do cliente, o texto da pergunta
+  ou uma transcrição não pode transformar uma permissão em pergunta de texto. A resposta é texto,
+  nunca Allow, Deny, regra Always, mudança de política ou decisão pelo celular. Os caminhos de
+  permissões e perguntas por hook existentes não ganham acesso ao ditado com esta decisão.
+- **Um agente não pode abrir o microfone.** O usuário inicia a captura local, somente na memória,
+  na pergunta exibida, pressionando sua tecla de ditado. O pedido do agente, foco,
+  notificações e escuta de respostas em tempo real nunca iniciam nem estendem essa captura. A opção
+  planejada *Agentes podem pedir uma resposta falada* vem desligada; configurar MCP, por si só,
+  não concede acesso à voz. V7.2/V7.3 precisam implementar as restrições antes de oferecer esse fluxo.
+- **A fala edita um rascunho; o humano envia.** Mostre a transcrição final em um compositor editável.
+  Enviar exige um clique separado ou Enter sem modificadores nesse compositor em foco, após a
+  captura terminar. Soltar a tecla, silêncio, concluir a transcrição, falar "enviar" ou um pedido
+  do agente/modelo não pode enviar. Shift+Enter e composição por IME mantêm seu comportamento de
+  edição. Transcrição vazia, falha ou cancelada nunca envia. Rascunhos de perguntas usam somente
+  transcrição local: sem limpeza opcional por modelo, requisição a provedor, comandos de voz ou
+  encaminhamento ao Chat.
+- **Vincular toda a troca ao seu dono.** A M7 deve verificar o cliente solicitante pela ascendência
+  de processos, sem confiar em um nome/PID informado. Vincule captura, rascunho e envio confirmado
+  a esse cliente, à pergunta ativa exata e à sua geração/prazo. Confira esses vínculos novamente ao
+  publicar o texto e enviá-lo; consuma uma resposta confirmada no máximo uma vez. Substituição,
+  expiração, desconexão do cliente, navegação, ocultar/fechar ou bloqueio da tela invalidam trabalho
+  pendente e apagam o rascunho não enviado. Áudio, decodificação ou confirmações de envio atrasadas
+  não podem preencher nem responder outra pergunta. Falha de envio é explícita; uma nova tentativa
+  não pode duplicar uma resposta já consumida.
+- **Separar autoridade, privacidade e instalação.** O áudio da pergunta fica na memória para
+  transcrição local; nada vai para um modelo remoto nem para o disco. Uma resposta confirmada vai
+  somente ao cliente solicitante verificado. A M7 registra
+  localmente o resultado com o vínculo do pedido e o solicitante verificado, sem áudio, segredos
+  nem uma cópia da transcrição. Nenhum caminho de voz alcança `Intent::Decide` ou `DecideAlways`.
+  Configurar MCP em agentes externos continua exigindo backup datado, diff visível e clique pela
+  [0005](0005-agent-configs-backup-diff-click.md). A
+  [0027](0027-an-open-reply-for-any-tool.md) e seu protocolo de respostas do hook não mudam.
+
+A V7.2 começa pelo ciclo de vida tipado de perguntas da M7, identidade verificada do cliente,
+cancelamento, resposta de uso único e teste completo de auditoria. Depois conecta o ditado local
+e o compositor. Seus testes de regressão devem cobrir donos forjados/substituídos, gerações antigas,
+bloqueio/saída, confirmação duplicada, confirmação de recebimento perdida, IME/Enter e texto literal
+parecido com aprovação que nunca se torna uma decisão de permissão. A V7.3 oferece a função aos
+agentes separadamente, com a opção desligada por padrão e edição revisada da configuração.
+Até essas etapas chegarem, o comportamento atual de cards e microfone permanece como foi entregue.
+
 <a id="history"></a>
 
 ## Histórico
 
+- 2026-10-19: a N3 V7.1 distingue o rascunho de pergunta ditado da autoridade sobre permissões.
+  Somente uma confirmação humana separada pode enviá-lo; o ciclo de perguntas da M7 e as restrições
+  de V7.2/V7.3 continuam sem implementação. A ADR 0004 e a ADR 0027 não mudam.
 - 2026-10-17 (aceita pelo mantenedor): a N3 V0.1 define vocabulário local, escuta opcional
   limitada para respostas, áudio temporário de reuniões e a comprovação de licença exigida
   para novos modelos.
