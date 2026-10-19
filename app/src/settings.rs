@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 39;
+const VERSION: u32 = 40;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -60,6 +60,9 @@ pub struct Settings {
     /// What the user speaks: a code (`pt`), `auto` to detect it, absent to follow the system.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_language: Option<String>,
+    /// External clients may request text questions; capture still requires a physical key.
+    #[serde(default)]
+    pub question_agents: bool,
     /// Explicit permission to paste into validated native X11 editors. Off by default.
     #[serde(default)]
     pub dictation_insert: bool,
@@ -357,6 +360,7 @@ impl Default for Settings {
             now_playing: false,
             voice_model: None,
             voice_language: None,
+            question_agents: false,
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
@@ -424,6 +428,8 @@ pub struct SettingsState(pub Mutex<Settings>);
 /// What the windows may read.
 #[derive(Serialize, Clone)]
 pub struct Public {
+    #[serde(rename = "questionAgents")]
+    pub question_agents: bool,
     #[serde(rename = "dictationKeep")]
     pub dictation_keep: String,
     #[serde(rename = "dictationSound")]
@@ -529,6 +535,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     use tauri_plugin_autostart::ManagerExt;
     let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
     Public {
+        question_agents: s.question_agents,
         dictation_caption: s.dictation_caption,
         dictation_sound: s.dictation_sound,
         dictation_commands: s.dictation_commands,
@@ -1698,6 +1705,16 @@ mod tests {
         r#"{ "agent": "claude", "cwd": "/home/me/p", "tool": "Bash", "target": "Bash · cargo test" }"#;
 
     #[test]
+    fn external_question_access_defaults_off_and_survives_only_an_explicit_saved_boolean() {
+        let (old, clean) = parse(r#"{ "version": 39 }"#);
+        assert!(clean && !old.question_agents);
+        let (on, clean) = parse(r#"{ "version": 40, "question_agents": true }"#);
+        assert!(clean && on.question_agents);
+        assert!(parse(&serde_json::to_string(&on).unwrap()).0.question_agents);
+        let (bad, clean) = parse(r#"{ "version": 40, "question_agents": "yes" }"#);
+        assert!(!clean && !bad.question_agents);
+    }
+    #[test]
     fn one_bad_field_keeps_the_rest() {
         let text =
             format!(r#"{{ "version": 1, "rules": [{RULE}], "now_playing": "yes", "fold_after": 30 }}"#);
@@ -2051,6 +2068,7 @@ mod tests {
             now_playing: true,
             voice_model: Some("small".into()),
             voice_language: Some("pt".into()),
+            question_agents: false,
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,

@@ -63,7 +63,7 @@ pub(crate) fn read(input: impl BufRead, tx: mpsc::SyncSender<Result<Value, ()>>)
     }
 }
 
-pub(super) fn run() {
+pub(crate) fn run(questions_only: bool) {
     let (tx, rx) = mpsc::sync_channel(16);
     std::thread::spawn(move || read(std::io::stdin().lock(), tx));
     let folder = std::env::current_dir().unwrap_or_default();
@@ -72,7 +72,8 @@ pub(super) fn run() {
         std::io::stdout().lock(),
         &folder,
         crate::questions::transport::path().ok(),
-        questions_on(),
+        || questions_on(questions_only),
+        questions_only,
     );
 }
 pub(crate) fn serve(
@@ -80,7 +81,8 @@ pub(crate) fn serve(
     mut out: impl Write,
     folder: &Path,
     path: Option<PathBuf>,
-    enabled: bool,
+    enabled: impl Fn() -> bool,
+    questions_only: bool,
 ) {
     let mut pending: Option<Pending> = None;
     let mut used = BTreeSet::new();
@@ -171,7 +173,7 @@ pub(crate) fn serve(
             let valid = args.as_object().is_some_and(|args| args.len() == 1)
                 && question.is_some()
                 && key.len() <= 128;
-            let failure = if !enabled || !ready {
+            let failure = if !enabled() || !ready {
                 Some("Text questions are unavailable for this MCP client.")
             } else if !valid {
                 Some("Give only a nonempty question of at most 4096 bytes.")
@@ -212,7 +214,12 @@ pub(crate) fn serve(
             });
             continue;
         }
-        if let Some(reply) = answer(&msg, folder)
+        let reply = if questions_only {
+            question_answer(&msg, enabled())
+        } else {
+            answer(&msg, folder)
+        };
+        if let Some(reply) = reply
             && write(&mut out, reply).is_err()
         {
             break;

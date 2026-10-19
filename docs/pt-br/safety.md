@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: fc48b132b00c -->
+<!-- source: ba872c88a22d -->
 
 O que o Vults promete:
 
@@ -51,13 +51,15 @@ O que o Vults promete:
   modelo; depois o mic grava só na memória enquanto o botão dele está vermelho (no máximo um minuto), e
   o whisper.cpp transcreve neste computador. O áudio do Chat e do ditado nunca é salvo nem enviado para lugar nenhum.
 - **Perguntas de texto exigem um Enviar humano separado.** No Linux, o `ask_user` da M7 aceita apenas
-  um solicitante ativo verificado e iniciado pelo Vults. A resposta é consumida uma vez e auditada
+  um solicitante ativo verificado. Clientes externos precisam do consentimento separado em Ditado > Agentes,
+  desligado por padrão; o servidor exclusivo de perguntas não tem ferramentas de bando ou memória. A resposta é consumida uma vez e auditada
   sem uma segunda cópia do texto, antes da entrega. Sair, bloquear, expirar e desconectar invalidam
   rascunhos pendentes; uma resposta consumida nunca é reenviada após uma entrega incerta. Ela nunca
   responde a uma permissão. O [ditado em perguntas de agentes](guide/dictation.md#agent-question-dictation)
   começa somente pela tecla física e edita o rascunho por transcrição local, somente na memória.
-  Sua oferta a agentes externos, desligada por padrão, continua planejada; um agente não pode
-  abrir o mic nem habilitar voz por configuração MCP.
+  Desativar o acesso externo invalida perguntas pendentes; reativar não as retoma. Alterar a
+  configuração de agentes exige seu próprio diff, backup e clique. Um agente não pode abrir o mic
+  nem habilitar voz por configuração MCP.
 - **Verificações de gravação de reuniões exigem consentimento explícito.** No Linux, Ditado > Reuniões
   captura um microfone e um monitor da saída do sistema conferidos por até um minuto em WAVs temporários
   privados. A transcrição local mantém a trava de limpeza; concluir/cancelar remove o áudio e a

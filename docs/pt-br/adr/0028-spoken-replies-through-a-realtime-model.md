@@ -1,5 +1,5 @@
 # 0028. Voz: escuta local, respostas faladas opcionais
-<!-- source: af658d8f832a -->
+<!-- source: 6271effb320a -->
 
 **Status:** Aceita, 2026-10-12. Consolidada em 2026-10-12 a partir da 0013.
 Alterada em 2026-10-17 para ditado, escuta limitada de respostas e áudio temporário de reuniões.
@@ -97,8 +97,9 @@ A resposta de oito segundos e os arquivos temporários de reunião são as exce�
 A V7.1 define este contrato para o compositor de perguntas `ask_user` da M7 e
 `vults_dictate(question)`. A V7.2.2 implementa o `ask_user` digitado da M7 para clientes verificados
 iniciados pelo app no Linux. A V7.2.3 conecta ditado local no rascunho pela tecla física e o alias
-`vults_dictate` para esses clientes; a configuração de agentes externos continua na V7.3.
-Esta decisão por si só não adiciona controle de microfone, configuração nem instalação de agente.
+`vults_dictate` para esses clientes. A V7.3 adiciona o consentimento externo desligado por padrão,
+um servidor exclusivo de perguntas e a configuração revisada do Claude Code/Codex. Esta decisão
+por si só não adiciona controle de microfone nem instalação.
 
 - **Uma pergunta de texto é um tipo de pedido distinto.** Somente o compositor de perguntas
   tipado e sem autoridade de permissão do app é elegível. Um rótulo do cliente, o texto da pergunta
@@ -108,8 +109,8 @@ Esta decisão por si só não adiciona controle de microfone, configuração nem
 - **Um agente não pode abrir o microfone.** O usuário inicia a captura local, somente na memória,
   na pergunta exibida, pressionando sua tecla de ditado. O pedido do agente, foco,
   notificações e escuta de respostas em tempo real nunca iniciam nem estendem essa captura. A opção
-  planejada *Agentes podem pedir uma resposta falada* vem desligada; configurar MCP, por si só,
-  não concede acesso à voz. V7.2/V7.3 precisam implementar as restrições antes de oferecer esse fluxo.
+  *Agentes podem pedir uma resposta falada* vem desligada; configurar MCP, por si só, não concede
+  acesso à voz. A V7.3 aplica essa restrição a clientes externos sem ampliar a autoridade de permissões.
 - **A fala edita um rascunho; o humano envia.** Mostre a transcrição final em um compositor editável.
   Enviar exige um clique separado ou Enter sem modificadores nesse compositor em foco, após a
   captura terminar. Soltar a tecla, silêncio, concluir a transcrição, falar "enviar" ou um pedido
@@ -145,6 +146,10 @@ Até essas etapas chegarem, o comportamento atual de cards e microfone permanece
 <a id="history"></a>
 
 ## Histórico
+
+- 2026-10-19: a V7.3 adiciona perguntas externas desligadas por padrão, ordenação da revogação de
+  consentimento e configuração MCP revisada somente em Configurações. As regras de permissões
+  existentes e de captura pela tecla física não mudam.
 
 - 2026-10-19: a V7.2.3 implementa ditado local em perguntas pela tecla física com aplicação/envio
   separados e verificações de cancelamento. A configuração externa continua na V7.3; a autoridade

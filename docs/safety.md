@@ -48,12 +48,14 @@ What Vults promises:
   model; then the mic records into memory only while its button is red (a minute at most), and
   whisper.cpp transcribes it on this computer. Chat and dictation audio are never saved or sent anywhere.
 - **Text questions require a separate human Send.** On Linux, M7's `ask_user` accepts only a
-  verified live requester started by Vults. The reply is consumed once and audited without a second
+  verified live requester. External clients need their own default-off Dictation > Agents consent;
+  their question-only server has no flock or memory tools. The reply is consumed once and audited without a second
   copy of its text, before delivery. Leaving, lock, expiry and disconnection revoke pending drafts;
   a consumed reply is never retried after an uncertain delivery. It never answers a permission.
   [Agent-question dictation](guide/dictation.md#agent-question-dictation) starts only on a physical
-  key and edits the draft through local, memory-only transcription. Its default-off external-agent
-  offering remains planned; an agent cannot open the mic or enable voice via MCP config.
+  key and edits the draft through local, memory-only transcription. Turning external access off
+  revokes pending questions; turning it on again cannot resume them. Agent configuration changes
+  require their own diff, backup and click. An agent cannot open the mic or enable voice via MCP config.
 - **Meeting recording checks require explicit consent.** On Linux, Dictation > Meetings captures
   a reviewed microphone and system-output monitor for up to one minute into private temporary WAVs.
   Local transcription retains the cleanup lock; completion/cancel removes audio and startup cleans

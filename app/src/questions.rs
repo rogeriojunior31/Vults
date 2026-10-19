@@ -7,11 +7,14 @@ use vults_core::questions::{Owner, Revocation, Slot, Ticket};
 use vults_peer::requester::Requester;
 
 mod capture;
+pub(crate) mod install;
 pub(crate) mod transport;
 pub(crate) use capture::{admit_ordinary, cancel as cancel_capture, invalidate as invalidate_capture, key};
 #[derive(Debug, Default)]
 pub(crate) struct Active {
     live: std::sync::atomic::AtomicBool,
+    external: std::sync::atomic::AtomicBool,
+    access_changed: std::sync::Mutex<Option<Instant>>,
     route: std::sync::Mutex<capture::Routing>,
 }
 pub(crate) fn active(app: &AppHandle) -> bool {
@@ -58,6 +61,7 @@ pub(crate) enum Command {
         id: u64,
         result: Option<Result<String, String>>,
     },
+    AccessChanged(oneshot::Sender<()>),
     Tick,
     Audited(u64, bool),
     Delivered(u64, bool),
@@ -106,6 +110,7 @@ struct Pending {
     expires: Instant,
     touched: Instant,
     presented: bool,
+    external: bool,
 }
 struct Delivery {
     pending: Pending,
@@ -124,8 +129,25 @@ pub(crate) struct Questions {
     recording: Option<Recording>,
     start_recording: bool,
     next_recording: u64,
+    external_enabled: bool,
+    external_changed: Option<Instant>,
 }
 impl Questions {
+    pub(crate) fn allow_external(&mut self, on: bool, changed: Option<Instant>) {
+        let revoked = !on || self.external_changed != changed;
+        self.external_enabled = on;
+        self.external_changed = changed;
+        if revoked
+            && self
+                .pending
+                .as_ref()
+                .or_else(|| self.delivery.as_ref().map(|d| &d.pending))
+                .is_some_and(|p| p.external)
+        {
+            self.finish(Revocation::Cancelled, "cancelled");
+        }
+    }
+
     fn finish(&mut self, reason: Revocation, phase: &str) {
         self.stop_recording();
         let consumed = self.delivery.is_some();
@@ -223,9 +245,15 @@ impl Questions {
                 received,
                 reply,
             } => {
-                if locked || surface.is_empty() || !proof.launched_by(std::process::id()) {
+                let external = !proof.launched_by(std::process::id());
+                if locked
+                    || surface.is_empty()
+                    || (external
+                        && (!self.external_enabled || self.external_changed.is_some_and(|at| received < at)))
+                {
                     let _ = reply.send(Err(
-                        "Text questions are available only to a live agent started by Vults.".into(),
+                        "External text questions are off. Enable them in Dictation > Agents before asking."
+                            .into(),
                     ));
                     return None;
                 }
@@ -278,6 +306,7 @@ impl Questions {
                     expires: offer.expires,
                     touched: now,
                     presented: false,
+                    external,
                 });
             }
             Command::Disconnect(connection) => {
@@ -539,6 +568,9 @@ impl Questions {
                     }
                 }
             }
+            Command::AccessChanged(reply) => {
+                let _ = reply.send(());
+            }
             Command::Tick => {}
         }
         None
@@ -589,6 +621,14 @@ pub(crate) fn publish(app: &AppHandle, questions: &mut Questions) {
                 .map(|o| o.token.clone());
             route.current = questions.recording.as_ref().map(|r| r.press.clone());
         }
+        state.external.store(
+            questions
+                .pending
+                .as_ref()
+                .or_else(|| questions.delivery.as_ref().map(|d| &d.pending))
+                .is_some_and(|p| p.external),
+            std::sync::atomic::Ordering::Release,
+        );
         let was = state.live.swap(live, std::sync::atomic::Ordering::AcqRel);
         if live && !was {
             crate::voice::cancel(app);
@@ -615,6 +655,76 @@ pub(crate) fn depart(app: &AppHandle, surface: &str) {
     invalidate_capture(app);
     crate::runtime::question_try(app, Command::Depart(surface.into()));
 }
+pub(crate) fn external_enabled(app: &AppHandle) -> bool {
+    app.state::<crate::settings::SettingsState>()
+        .0
+        .lock()
+        .is_ok_and(|s| s.question_agents)
+}
+fn with_consent<T>(
+    settings: &std::sync::Mutex<crate::settings::Settings>,
+    changed: &std::sync::Mutex<Option<Instant>>,
+    transition: impl FnOnce(bool, Option<Instant>) -> T,
+) -> T {
+    let Ok(saved) = settings.lock() else {
+        return transition(false, None);
+    };
+    let Ok(changed) = changed.lock() else {
+        return transition(false, None);
+    };
+    // A reply handoff and revoking consent must have one order. No native or model IO runs here.
+    transition(saved.question_agents, *changed)
+}
+pub(crate) fn with_access<T>(app: &AppHandle, transition: impl FnOnce(bool, Option<Instant>) -> T) -> T {
+    let settings = app.state::<crate::settings::SettingsState>();
+    let active = app.state::<Active>();
+    with_consent(&settings.0, &active.access_changed, transition)
+}
+
+#[tauri::command]
+pub(crate) async fn question_agents_set(
+    app: AppHandle,
+    window: tauri::Webview,
+    on: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    {
+        let state = app.state::<crate::settings::SettingsState>();
+        let mut saved = state.0.lock().map_err(|_| "Settings are busy.")?;
+        let mut next = saved.clone();
+        next.question_agents = on;
+        let state = app.state::<Active>();
+        let mut changed = state
+            .access_changed
+            .lock()
+            .map_err(|_| "Question access is busy.")?;
+        crate::settings::save(&next).map_err(|_| "Could not save agent question access.")?;
+        *saved = next;
+        *changed = Some(Instant::now());
+    }
+    if app
+        .state::<Active>()
+        .external
+        .load(std::sync::atomic::Ordering::Acquire)
+    {
+        invalidate_capture(&app);
+    }
+    install::clear(&app);
+    let (reply, rx) = oneshot::channel();
+    // The saved choice remains authoritative even if the runtime is already closing.
+    if crate::runtime::question(&app, Command::AccessChanged(reply))
+        .await
+        .is_ok()
+    {
+        let _ = rx.await;
+    }
+    let _ = app.emit(
+        "settings",
+        serde_json::json!({"questionAgents": external_enabled(&app)}),
+    );
+    Ok(())
+}
+
 fn page(window: &tauri::Webview) -> Result<String, String> {
     match window.label() {
         crate::ISLAND | crate::NEST => Ok(window.label().into()),

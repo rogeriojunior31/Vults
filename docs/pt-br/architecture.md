@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 2243400ef603 -->
+<!-- source: 63f0c40a3233 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -401,8 +401,13 @@ todas as outras entradas em todas as ordens e verifica que nenhuma delas respond
 A interface Linux de perguntas de texto `ask_user` da M7 é separada desse caminho de respostas do
 hook. Um socket privado do mesmo usuário conecta o relay stdio ao runtime do app. O PID do par obtido
 do kernel, a identidade do executável, o início dos processos e a ancestralidade retida vinculam o
-pedido a um cliente ativo iniciado diretamente pelo app; cabeçalhos fornecidos pelo cliente não
-comprovam a identidade. O runtime possui o `core::questions::Slot`, seu nonce novo por conexão, prazo
+pedido a um cliente ativo verificado; cabeçalhos fornecidos pelo cliente não comprovam a identidade.
+Clientes iniciados pelo app usam o servidor de chat existente. Clientes externos usam
+`--questions-mcp`, que expõe somente ferramentas de perguntas, e precisam do consentimento separado
+em Ditado > Agentes, desligado por padrão. A geração do consentimento e o horário de recebimento do
+transporte recusam pedidos antigos enfileirados após uma nova concessão. As travas de configurações
+e consentimento permanecem presas durante as transições do runtime, incluindo a entrega da resposta,
+impedindo uma revogação entre a leitura do acesso e a entrega. O runtime possui o `core::questions::Slot`, seu nonce novo por conexão, prazo
 absoluto, concessão da superfície e confirmação única do rascunho. Ele adia a entrega até a auditoria
 sem conteúdo ser persistida, enquanto continua processando invalidações. O relay confirma após
 descarregar a resposta MCP no fluxo; falha/perda de confirmação nunca reutiliza o texto consumido.
@@ -419,7 +424,13 @@ tardios restaurem palavras canceladas. Captura/transcrição nativas nunca bloqu
 do gravador do Chat compartilham a trava de roteamento; concessões de microfone revogadas não voltam
 a valer após fechar uma pergunta. Um Status correspondente do renderer precisa confirmar a exibição
 da pergunta antes que a captura possa selecioná-la.
-Nenhum texto de pergunta vira intent de permissão, regra ou política; a configuração de agentes externos continua na V7.3.
+Nenhum texto de pergunta vira intent de permissão, regra ou política. Somente Configurações pode
+mostrar/aplicar a configuração MCP exclusiva de perguntas do Claude Code/Codex. Um plano em cache
+vincula agente, executável, escolha de instalação/remoção, diff exato e fingerprint. `agent-config`
+fornece leitura estrita, backup datado e gravação atômica; entradas antigas/estrangeiras são recusadas.
+A entrada gerenciada pode acompanhar a mudança de caminho do executável, preservando os demais
+servidores, hooks e a confiança. Gerações de leitura da UI, versões de eventos de consentimento e
+gerações de saída impedem a volta de respostas antigas de configuração, estado ou prévia.
 
 <a id="the-island-on-wayland"></a>
 

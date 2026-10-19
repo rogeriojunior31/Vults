@@ -1,5 +1,18 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Loading…": "Cargando…",
+  "Agents may ask for a spoken answer": "Los agentes pueden pedir una respuesta hablada",
+  "Allow local agents to show a text question. You choose whether to dictate, review the words and send separately. This never approves a tool.": "Permite que los agentes locales muestren una pregunta de texto. Tú eliges si dictar, revisas el texto y lo envías por separado. Esto nunca aprueba una herramienta.",
+  "Off by default. Turning this off cancels pending external questions; their configuration files stay in place until you review removal.": "Desactivado por defecto. Al desactivarlo se cancelan las preguntas externas pendientes; sus archivos de configuración se conservan hasta que revises su eliminación.",
+  "Setup is available for Claude Code and Codex. Restart the agent after changing its configuration. Your agent may still ask before calling an MCP tool.": "La configuración está disponible para Claude Code y Codex. Reinicia el agente después de cambiarla. Tu agente aún puede pedir permiso antes de llamar a una herramienta MCP.",
+  "Could not load agent question settings. Refresh to try again.": "No se pudo cargar la configuración de preguntas de agentes. Actualiza para volver a intentarlo.",
+  "Could not complete the change. Refresh the status and review a new diff before trying again.": "No se pudo completar el cambio. Actualiza el estado y revisa un nuevo diff antes de volver a intentarlo.",
+  "Configuration saved. Backup: {path}": "Configuración guardada. Copia de seguridad: {path}",
+  "Configuration saved.": "Configuración guardada.",
+  "This configuration could not be read or safely edited. Check the file before trying again.": "No se pudo leer o editar esta configuración de forma segura. Comprueba el archivo antes de volver a intentarlo.",
+  "Review removal…": "Revisar eliminación…",
+  "Review setup…": "Revisar configuración…",
+  "Configuration diff": "Diferencias de configuración",
   "Could not stop dictation. Try again.": "No se pudo detener el dictado. Inténtalo de nuevo.",
   "The transcription does not fit. Your draft was kept; cancel dictation and shorten it.": "La transcripción supera el límite. Se conservó tu borrador; cancela el dictado y acórtalo.",
   "Could not apply the transcription. Your draft was kept; cancel dictation to continue.": "No se pudo aplicar la transcripción. Se conservó tu borrador; cancela el dictado para continuar.",

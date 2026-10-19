@@ -718,9 +718,10 @@ M7's existing MCP server is not the question-card follow-up required by V7. V7.1
 on 2026-10-19: dictation may edit a typed text question, with a separate human click/Enter to send;
 voice cannot answer a permission. V7.2.1 provides the backend lifecycle and Linux requester proof;
 V7.2.2 connects typed `ask_user` for app-owned clients in Quick/Nest; V7.2.3 adds physical-key local
-draft dictation for those verified app-owned clients. V7.3 still owns the default-off external-agent
-offering and config enforcement. Z6 and M7 retain their existing Done entries and outstanding follow-ups; this integration
-does not claim those follow-ups are implemented.
+draft dictation for those verified app-owned clients. V7.3 adds a default-off question-only server
+for external Linux clients and reviewed Claude Code/Codex setup. Full agent-session and real-human
+speech acceptance remain open. Z6 and M7 retain their existing Done entries and outstanding
+follow-ups; this integration does not claim those follow-ups are implemented.
 
 ### Mobile (wave 6)
 
@@ -750,7 +751,8 @@ recorded Cursor session (C1), C5 (Amp, Pi, Hermes), C6 (Crush, Goose, Grok Build
   backup and click. Done when a watched Codex session's tokens count in the day.
 - **M7**: V7.2.2 delivers typed `ask_user` for app-owned Linux clients. The `vults-zeca` MCP for
   Codex remains a follow-up (it reads MCP only from its own config, so rule 3 applies); external
-  offering and its default-off switch belong to V7.3.
+  question-only offering and its default-off switch shipped in V7.3, with reviewed Claude Code/Codex
+  setup. This does not install the broader `vults-zeca` server for Codex.
 - **W2**: other agents' shells carry a working folder (`workdir`, `directory`) and searches may name
   a folder the card does not show; show them on the card, for humans too. Policies allow only for
   Claude Code until then.
@@ -1501,3 +1503,19 @@ All 1,256 workspace tests (10 documented ignores), 10 evals, Clippy, build, 18 r
 guards pass. Native controlled-response QA covers Black/Light Quick/Nest, the 480 x 360 minimum,
 four languages and retained manual text after final dictation; no synthetic event opened a microphone.
 Real-human microphone/speech acceptance remains separate. Next: V7.3 external-agent opt-in/config.
+
+
+**2026-10-19 V7.3 reviewed external-agent setup.** A saved default-off Dictation > Agents choice
+admits verified external Linux clients to a dedicated question-only MCP server. Consent generations
+cancel old external work; serialized runtime/handoff checks prevent revoked access from sending a
+reply. The physical dictation key and separate human Send remain mandatory for the voice draft path.
+Claude Code/Codex setup, executable-path updates and removal use exact reviewed plans, fingerprints,
+dated backups and atomic writes; other servers, hooks and trust entries remain intact. Removal works
+with access off. Renderer lifecycle/read generations invalidate stale diffs and status responses.
+Independent review has no remaining blocker. Native Black/Light QA covers wide/minimum windows,
+scrolled actions, four languages and the real setting RPC in an isolated profile; config changes use
+controlled responses rather than actual agent files. The app/server and isolated cache are cleaned.
+Full agent sessions and real-human speech remain acceptance gates. See Plan Dictation's V7.3 record;
+the next engineering phase is V6, following the recorded V7-before-V6 delivery order.
+All 1,263 workspace tests (10 documented ignores), 10 evals, workspace Clippy, renderer build,
+18 renderer checks, formatting and repository guards pass. No dependencies changed.

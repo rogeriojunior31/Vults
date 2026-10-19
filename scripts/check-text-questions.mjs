@@ -70,10 +70,11 @@ const bundles = await build({ configFile: false, root: ui, logLevel: 'silent', p
  resolveId: id => id.endsWith(entry) ? '\0'+entry : null,
  load: id => id === '\0'+entry ? `export { questionCard } from ${JSON.stringify(ui+'src/questions.ts')};
  export { connectQuestions } from ${JSON.stringify(ui+'src/question-bridge.ts')};
+ export { createQuestionAgents } from ${JSON.stringify(ui+'src/surfaces/settings/question-agents.ts')};
  export { setLang } from ${JSON.stringify(ui+'src/i18n/index.ts')};`
  : id === ui+'src/bridge.ts' ? 'export const Bridge = globalThis.questionBridge;' : null,
  }], build: { write: false, minify: false, lib: { entry, formats: ['es'] } } });
-const { questionCard, connectQuestions, setLang } = await import(`data:text/javascript;base64,${Buffer.from(bundles[0].output.find(p=>p.type==='chunk').code).toString('base64')}`);
+const { questionCard, connectQuestions, createQuestionAgents, setLang } = await import(`data:text/javascript;base64,${Buffer.from(bundles[0].output.find(p=>p.type==='chunk').code).toString('base64')}`);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const view = (seq, token = 'a') => ({ seq, surface: 'island', phase: 'pending', offer: { token, question: '<img src=x> Which branch?', draft: '', clientPid: 42, seconds: 119 } });
 const named = (root, text) => nodes(root).find(n => n.tagName==='BUTTON' && n.textContent===text);
@@ -191,3 +192,50 @@ reads.at(-1).resolve(view(22,'after-ordered-leave')); await tick();
 assert.ok(mounted,'The fresh status discovers a new post-barrier question');
 another.depart(); leaves.at(-1).resolve({seq:23,surface:'',phase:'',offer:null}); await tick();
 console.log('check-text-questions: ok (confirmation, IME/modifiers, UTF-8 limits, retained edits, stale ack/status, ordered departure, queued replacement, visibility, local dictation append/IME/cancel/failure, four languages)');
+
+
+const settingsReads=[], installs=[], previews=[], writes=[], switches=[];
+const agents=createQuestionAgents({
+ settings:()=>{const d=deferred();settingsReads.push(d);return d.promise;},
+ status:()=>{const d=deferred();installs.push(d);return d.promise;},
+ set:on=>{const d=deferred();switches.push({...d,on});return d.promise;},
+ preview:(agent,install)=>{const d=deferred();previews.push({...d,agent,install});return d.promise;},
+ apply:(agent,install,fingerprint)=>{const d=deferred();writes.push({...d,agent,install,fingerprint});return d.promise;},
+});
+document.body.append(agents.element);agents.visible(true);
+const statusRows=[{agent:'claude',path:'/home/test/.claude.json',installed:false,error:null},{agent:'codex',path:'/home/test/.codex/config.toml',installed:true,error:null}];
+settingsReads[0].resolve({questionAgents:false});installs[0].resolve(statusRows);await tick();
+let control=agents.element.querySelector('input');assert.equal(control.checked,false);
+let setup=named(agents.element,'Review setup…');assert.equal(setup.disabled,true,'Default-off access cannot install');
+assert.equal(named(agents.element,'Review removal…').disabled,false,'Removal remains available while access is off');
+control.checked=true;control.fire('change');await tick();assert.equal(switches.length,1);assert.equal(writes.length,0);
+switches[0].resolve();await tick();assert.equal(agents.element.querySelector('input').checked,true);
+named(agents.element,'Review setup…').fire('click');await tick();assert.equal(previews.length,1);assert.equal(writes.length,0,'Review cannot write');
+previews[0].resolve({diff:'+ literal <script> stays inert',fingerprint:'seen'});await tick();
+assert.equal(nodes(agents.element).filter(n=>n.tagName==='SCRIPT').length,0);
+assert.ok(named(agents.element,'Write the file'));
+named(agents.element,'Write the file').fire('click');named(agents.element,'Write the file')?.fire('click');await tick();
+assert.equal(writes.length,1,'A reviewed click consumes one config plan');
+assert.deepEqual([writes[0].agent,writes[0].install,writes[0].fingerprint],['claude',true,'seen']);
+writes[0].resolve('/tmp/config.bak-2026');await tick();
+settingsReads.at(-1).resolve({questionAgents:true});installs.at(-1).resolve(statusRows.map(s=>({...s,installed:true})));await tick();
+assert.ok(agents.element.textContent.includes('/tmp/config.bak-2026'));
+let row=nodes(agents.element).find(n=>n.tagName==='SECTION'&&n.textContent.includes('Claude Code'));
+named(row,'Review removal…').fire('click');await tick();agents.visible(false);
+previews.at(-1).resolve({diff:'- old',fingerprint:'old'});await tick();assert.equal(named(agents.element,'Write the file'),undefined,'Departure cannot restore a config plan');
+agents.visible(true);agents.changed(false);
+settingsReads.at(-1).resolve({questionAgents:true});installs.at(-1).resolve(statusRows);await tick();
+assert.equal(agents.element.querySelector('input').checked,false,'A settings event beats an older bootstrap read');
+assert.ok(named(agents.element,'Review setup…'),'A consent event cannot swallow the status read');
+agents.changed(true);named(agents.element,'Review setup…').fire('click');await tick();agents.changed(false);
+previews.at(-1).resolve({diff:'+ stale consent',fingerprint:'stale'});await tick();
+assert.equal(named(agents.element,'Write the file'),undefined,'Consent revocation invalidates a late config preview');
+const beforeReads=settingsReads.length;
+agents.refresh();agents.refresh();
+settingsReads[beforeReads+1].resolve({questionAgents:false});installs[beforeReads+1].resolve(statusRows.map(s=>({...s,installed:true})));await tick();
+settingsReads[beforeReads].resolve({questionAgents:true});installs[beforeReads].resolve(statusRows);await tick();
+assert.equal(nodes(agents.element).filter(n=>n.tagName==='BUTTON'&&n.textContent==='Review removal…').length,2,'An older refresh cannot overwrite newer installed status');
+assert.equal(agents.element.querySelector('input').checked,false);
+for(const lang of ['pt-BR','es','zh']){setLang(lang);agents.relabel();assert.ok(!agents.element.textContent.includes('Agents may ask for a spoken answer'));}
+setLang('en');agents.visible(false);
+console.log('Agent question settings: default off, reviewed single write, backup, removal while off, inert diff, navigation and consent races, translations pass');

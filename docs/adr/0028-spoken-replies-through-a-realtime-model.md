@@ -82,8 +82,8 @@ listening and storage rules. Dictation into other apps follows
 V7.1 defines this contract for M7's future `ask_user` question composer and
 `vults_dictate(question)`. V7.2.2 implements M7's typed `ask_user` for verified app-owned clients on
 Linux. V7.2.3 connects physical-key local draft dictation and the `vults_dictate` alias for those
-clients; external-agent setup remains V7.3. This decision adds no
-microphone control, setting or agent installation by itself.
+clients. V7.3 adds the default-off external-client consent, a question-only server and reviewed
+Claude Code/Codex setup. This decision adds no microphone control or installation by itself.
 
 - **A text question is a distinct request kind.** Only the app's typed, non-permission question
   composer is eligible. A caller's label, question text or transcript cannot turn a permission into
@@ -91,9 +91,9 @@ microphone control, setting or agent installation by itself.
   decision. Existing permission and hook question paths gain no dictation access from this decision.
 - **An agent cannot open the microphone.** The user starts local, memory-only capture on the
   displayed question by pressing its dictation key. The agent's request, focus,
-  notifications and realtime follow-up listening never start or extend capture. The planned
+  notifications and realtime follow-up listening never start or extend capture. The
   *Agents may ask for a spoken answer* setting is off by default; configuring MCP alone grants
-  no voice access. V7.2/V7.3 must supply the enforcement before offering this flow.
+  no voice access. V7.3 enforces this for external clients without expanding permission authority.
 - **Speech edits a draft; the human sends it.** Show the final transcript in an editable composer.
   Send requires a separate click or unmodified Enter in that focused composer after capture has
   ended. Key release, silence, transcription completion, a spoken "send" or an agent/model request
@@ -122,6 +122,9 @@ V7.3 separately offers the feature to agents with the off-by-default setting and
 Until those steps land, existing card and microphone behavior stays as shipped.
 
 ## History
+
+- 2026-10-19: V7.3 adds default-off external text questions, consent revocation ordering and
+  Settings-only reviewed MCP setup. Existing permission and physical-key capture rules are unchanged.
 
 - 2026-10-19: V7.2.3 implements physical-key local question dictation with a separate apply/send
   barrier and cancellation guards. External-agent setup remains V7.3; permission authority is unchanged.

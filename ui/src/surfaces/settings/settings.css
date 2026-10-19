@@ -170,3 +170,7 @@ body.still #settings .page-enter { animation: none; }
 .meeting-assets-package > summary { cursor: pointer; color: var(--fg-dim); }
 
 .meeting-summary-settings p { overflow-wrap: anywhere; }
+
+#settings .question-agents .path { overflow-wrap: anywhere; }
+#settings .question-agents > .card { margin-block: 16px; }
+#settings .question-agents details pre { white-space: pre-wrap; overflow-wrap: anywhere; }

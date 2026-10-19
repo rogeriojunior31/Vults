@@ -107,7 +107,13 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
 
 /// Runs this binary as Zeca's MCP server when asked (`vults --zeca-mcp`, M7): true when it did.
 pub fn serve_mcp_if_asked() -> bool {
-    if std::env::args().nth(1).as_deref() != Some(mcp::ARG) {
+    let argument = std::env::args().nth(1);
+    #[cfg(target_os = "linux")]
+    if argument.as_deref() == Some(mcp::QUESTIONS_ARG) {
+        mcp::stdio::run(true);
+        return true;
+    }
+    if argument.as_deref() != Some(mcp::ARG) {
         return false;
     }
     mcp::run();
@@ -137,6 +143,14 @@ pub fn run() {
             runtime::current_view,
             #[cfg(target_os = "linux")]
             questions::text_question_status,
+            #[cfg(target_os = "linux")]
+            questions::question_agents_set,
+            #[cfg(target_os = "linux")]
+            questions::install::question_install_status,
+            #[cfg(target_os = "linux")]
+            questions::install::question_install_preview,
+            #[cfg(target_os = "linux")]
+            questions::install::question_install_apply,
             #[cfg(target_os = "linux")]
             questions::text_question_action,
             #[cfg(target_os = "linux")]
@@ -749,6 +763,7 @@ mod tests {
             "dictationwords",
             "dictationstyles",
             "dictationmeetings",
+            "dictationagents",
             "dictationpaste",
             "dictationprivacy",
             "dictationdiagnostics",
@@ -1091,6 +1106,7 @@ fn valid_dictation_section(section: &str) -> bool {
             | "dictationwords"
             | "dictationstyles"
             | "dictationmeetings"
+            | "dictationagents"
             | "dictationpaste"
             | "dictationprivacy"
             | "dictationdiagnostics"

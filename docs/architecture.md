@@ -360,14 +360,18 @@ every other input in every order and checks none of them answers.
 
 M7's Linux `ask_user` text-question interface is separate from this hook reply path. A private
 same-user socket connects the stdio relay to the app's runtime. Kernel peer PID, executable identity,
-process start times and retained ancestry bind it to a live client directly started by the app;
-self-supplied headers cannot establish ownership. The runtime owns `core::questions::Slot`, its fresh
+process start times and retained ancestry bind it to a verified live client; self-supplied headers
+cannot establish ownership. App-owned clients use the existing chat server. External clients use
+`--questions-mcp`, whose dispatch exposes only question tools, and need the separate default-off
+Dictation > Agents consent. The consent generation and transport receive time reject old queued
+requests after a new grant. Settings/consent guards stay held through runtime transitions, including
+reply handoff, so revocation cannot race between an access read and delivery. The runtime owns `core::questions::Slot`, its fresh
 connection nonce, absolute deadline, surface lease and once-only draft confirmation. It defers delivery
 until the content-free audit is durable, while continuing to process revocation messages. The relay
 acknowledges after flushing the MCP response; failure/lost acknowledgement never reuses consumed text.
 Permission cards take priority. Only the owning island/Nest webview can edit or confirm; lock,
 navigation, departure, expiry and disconnect invalidate pending work and late completions.
-[ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts) also
+The question-draft contract in [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
 is implemented by a physical-key-only local recording bound to the live question token and recording
 id. `vults_dictate` aliases the same typed `ask_user` exchange. Capture uses the existing microphone
 and cached local transcriber, with admission/lifetime guards and no provider, download, clipboard or
@@ -376,7 +380,12 @@ separate human Send. Cancellation and every dictation transition advance the vie
 snapshots cannot restore cancelled words. Native capture/decode never blocks the runtime loop. Ordinary worker admission and Chat recorder
 registration share the routing fence; revocable microphone grants cannot revive after a question
 closes. A matching renderer Status must acknowledge displaying a question before capture can select it.
-No question text becomes a permission intent, rule or policy; external-agent setup remains V7.3.
+No question text becomes a permission intent, rule or policy. Only Settings can preview/apply the
+question-only MCP configuration for Claude Code/Codex. A cached plan binds the agent, executable,
+install/removal choice, exact diff and fingerprint. `agent-config` supplies strict reads, dated backup
+and atomic writes; stale/foreign entries are refused. The managed entry can follow an executable
+path update, while other servers, hooks and trust remain intact. UI read generations, consent-event
+versions and departure epochs prevent stale configuration/status/preview replies from returning.
 
 ## The island on Wayland
 

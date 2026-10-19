@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: ba34d8905172 -->
+<!-- source: cc29e6eb6e4c -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -998,6 +998,36 @@ card de permissão nunca aceita ditado nem aprovação/negação falada. O ditad
 inserir texto em uma sessão de agente esperando resposta. Os dois nomes da ferramenta usam o mesmo
 pedido tipado e a auditoria `ask_user` sem conteúdo.
 
-A oferta de Agentes, desligada por padrão, e a configuração de agentes externos continuam na V7.3.
-Clientes externos são recusados mesmo quando configurados manualmente; adicionar uma configuração
-MCP não habilita acesso ao microfone.
+<a id="external-agent-setup"></a>
+### Configuração de agentes externos
+
+No Linux, abra **Ditado > Agentes** e ative **Agentes podem pedir uma resposta falada**. A opção vem
+desligada em instalações novas e atualizações sem uma escolha salva. Uma configuração MCP sozinha
+não habilita o acesso. Desativar cancela perguntas externas, incluindo gravação ou entrega auditada
+pendentes; reativar exige uma nova pergunta. Uma resposta já entregue ao relay não pode ser recolhida:
+a entrega incerta continua consumida e não deve ser repetida.
+
+Escolha **Revisar configuração…** para Claude Code ou Codex, leia o diff da configuração e escolha
+**Gravar o arquivo**. A prévia não grava nada. O instalador mantém um backup datado, recusa um arquivo
+alterado/ilegível ou outro servidor usando seu nome e preserva os demais servidores, hooks e a
+confiança do Codex. O servidor exclusivo de perguntas não expõe as ferramentas de bando, diário ou
+memória do Zeca. Ele roda localmente pelo executável deste app, sem requisição a modelo/provedor nem
+acesso automático ao microfone.
+
+Reinicie o agente após configurar. Peça que use `ask_user` ou `vults_dictate` para uma pergunta de
+texto e responda no Quick/Nest. O processo solicitante precisa continuar ativo e verificado neste
+computador. O agente pode pedir sua própria permissão antes de chamar uma ferramenta MCP; a opção
+do Vults não muda a política de permissões dele. Reconecte o agente se ele guardou uma lista vazia de
+ferramentas enquanto a opção estava desligada. Os instaladores integrados cobrem esses dois clientes;
+outros clientes não estão incluídos nas verificações de compatibilidade da instalação.
+
+**Revisar remoção…** continua disponível com o acesso desligado. Desativar o acesso deixa os arquivos
+de configuração no lugar; remover exige seu próprio diff e clique. **Revisar configuração…** em uma
+entrada instalada também atualiza o caminho gerenciado do executável após mover o app. Nenhuma
+instalação ou remoção de hooks está incluída nessa operação.
+
+Os instaladores usam a configuração MCP do usuário do Claude Code (`~/.claude.json`, ou `.claude.json`
+no `CLAUDE_CONFIG_DIR` explícito) e o `config.toml` do Codex na pasta configurada dele. A entrada do
+servidor no Codex define um prazo de 150 segundos para a ferramenta, cobrindo os dois minutos da
+pergunta. Esses formatos seguem a [documentação MCP do Claude Code](https://code.claude.com/docs/en/mcp#user-scope)
+e a [documentação MCP do Codex](https://developers.openai.com/codex/mcp).

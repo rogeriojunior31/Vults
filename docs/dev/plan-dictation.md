@@ -2590,9 +2590,38 @@ languages and manual text preserved through final append. No automated event sta
 real-human speech/model/device acceptance remains open. QA uses an isolated profile and is stopped/
 removed after validation. External-agent opt-in/config installation remains V7.3.
 
-**V7.3 Offer it to agents** (M)
+**V7.3 Offer it to agents** (M) — implemented 2026-10-19; real-client/speech acceptance remains open
 - Build: add the tool to agents' MCP configs only through `agent-config` (rule 3: backup, diff, click); the
   switch "Agents may ask for a spoken answer" in Settings › Dictation › Agents (off).
+
+The dedicated Linux `vults --questions-mcp` server exposes only `ask_user` and `vults_dictate`.
+External requests require the saved default-off choice and verified live requester proof, including
+when someone configures a server manually. Consent generations reject queued requests from an older
+grant; turning access off cancels pending external questions and capture. Runtime transitions and
+the actual audited reply handoff hold the same consent guard. App-owned Chat questions keep their
+existing authority; this setting grants neither permission answers nor automatic microphone access.
+
+Settings offers reviewed setup, update and removal for Claude Code and Codex. Plans bind the exact
+config, diff and fingerprint; a separate click uses `agent-config` for dated backup and atomic write.
+Other servers, hooks and Codex trust entries are preserved. An installer ownership marker allows a
+reviewed executable-path update without granting question authority. Removal remains available with
+access off. Stale reads, consent events, navigation and overlapping refreshes cannot restore an old
+diff or enable its Apply action. All user-facing strings ship in four languages; EN/PT guides and
+ADR 0028 document the current behavior.
+
+Evidence: real-process MCP regressions cover external discovery, default-off runtime refusal,
+on/off/on generations, audited cancellation, serialized consent/reply handoff and once-only confirmed
+delivery. Temporary config fixtures cover foreign entries, stale plans, preserved servers/trust,
+managed path updates and exact backups. Renderer regressions cover review-before-write, duplicate
+Apply, stale navigation/consent/refresh responses and translations. Independent review reports no
+remaining blocker. Native Black/Light checks cover 1180 x 820 and 480 x 360, reachable scrolled actions,
+all four languages and the actual privileged setting RPC in an isolated profile. Config responses
+in native UI QA are controlled fixtures; no real agent config is written. The QA app/server and
+profile are stopped/removed. Full agent sessions and real-human microphone/speech acceptance remain
+open; those release gates are not replaced by fixtures. Next engineering phase: V6.
+
+All 1,263 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy, renderer
+build, all 18 renderer checks, formatting and repository guards. No dependencies changed.
 
 ---
 

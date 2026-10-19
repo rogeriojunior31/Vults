@@ -1,5 +1,18 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Loading…": "正在加载…",
+  "Agents may ask for a spoken answer": "允许代理请求语音回答",
+  "Allow local agents to show a text question. You choose whether to dictate, review the words and send separately. This never approves a tool.": "允许本地代理显示文字问题。你可以选择听写，检查文字后再单独发送。这绝不会批准工具操作。",
+  "Off by default. Turning this off cancels pending external questions; their configuration files stay in place until you review removal.": "默认关闭。关闭后会取消待处理的外部问题；配置文件会保留，直到你检查并确认移除。",
+  "Setup is available for Claude Code and Codex. Restart the agent after changing its configuration. Your agent may still ask before calling an MCP tool.": "可为 Claude Code 和 Codex 配置。更改配置后请重启代理。代理在调用 MCP 工具前仍可能请求许可。",
+  "Could not load agent question settings. Refresh to try again.": "无法加载代理问题设置。请刷新后重试。",
+  "Could not complete the change. Refresh the status and review a new diff before trying again.": "无法完成更改。请刷新状态并检查新的差异，然后重试。",
+  "Configuration saved. Backup: {path}": "配置已保存。备份：{path}",
+  "Configuration saved.": "配置已保存。",
+  "This configuration could not be read or safely edited. Check the file before trying again.": "无法读取或安全编辑此配置。请检查文件后重试。",
+  "Review removal…": "检查移除…",
+  "Review setup…": "检查配置…",
+  "Configuration diff": "配置差异",
   "Could not stop dictation. Try again.": "无法停止听写。请重试。",
   "The transcription does not fit. Your draft was kept; cancel dictation and shorten it.": "转写内容超出限制。草稿已保留；请取消听写并缩短内容。",
   "Could not apply the transcription. Your draft was kept; cancel dictation to continue.": "无法应用转写内容。草稿已保留；请取消听写后继续。",

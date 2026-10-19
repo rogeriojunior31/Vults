@@ -892,5 +892,34 @@ voice commands, copy/insert text elsewhere or save dictation history. A permissi
 dictation or a spoken approval/denial. Ordinary dictation still cannot insert text into a waiting
 agent session. Both question tool names use the same typed request and content-free `ask_user` audit.
 
-The default-off Agents offering and external-agent setup remain V7.3 work. External clients are
-refused even when configured manually; adding an MCP configuration cannot enable microphone access.
+### External agent setup
+
+On Linux, open **Dictation > Agents** and turn on **Agents may ask for a spoken answer**. It is off
+on a new install and when upgrading without a saved choice. An MCP configuration alone cannot enable
+access. Turning it off cancels external questions, including pending recording or audited delivery;
+turning it on again requires a new question. A reply already handed off cannot be recalled: uncertain
+delivery remains consumed and must not be retried.
+
+Choose **Review setup…** for Claude Code or Codex, read the configuration diff and choose **Write the
+file**. Previewing writes nothing. The installer keeps a dated backup, refuses a changed/unreadable
+file or another server using its name, and preserves other servers, hooks and Codex trust. The
+question-only server does not expose Zeca's flock, journal or memory tools. It runs locally as this
+app's executable, without a model/provider request or automatic microphone access.
+
+Restart the agent after setup. Ask it to use `ask_user` or `vults_dictate` for a text question, then
+answer in Quick/Nest. The requesting process must still be alive and verified on this computer.
+The agent may ask for its own permission before calling an MCP tool; the Vults switch does not
+change the agent's permission policy. Reconnect the agent if it cached an empty tool list while
+the option was off. Built-in installers currently cover these two clients; other clients are not
+included in the installation compatibility checks.
+
+**Review removal…** remains available when access is off. Turning access off leaves configuration
+files in place; removal needs its own diff and click. **Review setup…** on an installed entry also
+updates the managed executable path after moving the app. No hook installation or removal is
+included in this operation.
+
+The installers use Claude Code's user MCP configuration (`~/.claude.json`, or `.claude.json` in its
+explicit `CLAUDE_CONFIG_DIR`) and Codex's `config.toml` in its configured home. Codex's server entry
+sets a 150-second tool timeout to cover the question's two-minute lifetime. These formats follow the
+[Claude Code MCP documentation](https://code.claude.com/docs/en/mcp#user-scope) and
+[Codex MCP documentation](https://developers.openai.com/codex/mcp).

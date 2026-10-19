@@ -10,10 +10,17 @@ fn question_process_fixture() {
     let Ok(role) = std::env::var("VULTS_QUESTION_TEST_ROLE") else {
         return;
     };
-    if role == "agent" {
+    if role == "agent" || role == "external-wrapper" {
         let status = ProcessCommand::new(std::env::current_exe().unwrap())
             .args(["--exact", FIXTURE])
-            .env("VULTS_QUESTION_TEST_ROLE", "relay")
+            .env(
+                "VULTS_QUESTION_TEST_ROLE",
+                if role == "external-wrapper" {
+                    "agent"
+                } else {
+                    "relay"
+                },
+            )
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -32,7 +39,8 @@ fn question_process_fixture() {
         stream,
         std::path::Path::new("/"),
         Some(std::env::var_os("VULTS_QUESTION_TEST_SOCKET").unwrap().into()),
-        true,
+        || true,
+        std::env::var("VULTS_QUESTION_TEST_EXTERNAL").is_ok_and(|value| value == "yes"),
     );
     std::process::exit(0);
 }
@@ -46,6 +54,9 @@ struct Fixture {
 }
 impl Fixture {
     async fn new() -> Self {
+        Self::with_external(false).await
+    }
+    async fn with_external(external: bool) -> Self {
         use std::os::unix::fs::DirBuilderExt;
         let dir = std::env::temp_dir().join(format!(
             "vults-q-{}-{}",
@@ -61,7 +72,11 @@ impl Fixture {
         let server = tokio::spawn(transport::serve(question_path.clone(), tx));
         let child = ProcessCommand::new(std::env::current_exe().unwrap())
             .args(["--exact", FIXTURE])
-            .env("VULTS_QUESTION_TEST_ROLE", "agent")
+            .env(
+                "VULTS_QUESTION_TEST_ROLE",
+                if external { "external-wrapper" } else { "agent" },
+            )
+            .env("VULTS_QUESTION_TEST_EXTERNAL", if external { "yes" } else { "" })
             .env("VULTS_QUESTION_TEST_MCP", mcp_path)
             .env("VULTS_QUESTION_TEST_SOCKET", &question_path)
             .stdin(Stdio::null())
@@ -558,4 +573,140 @@ async fn cancelled_and_replaced_captures_cannot_mutate_or_send_another_question(
     hub.handle(Command::Tick, crate::ISLAND, true, true);
     assert!(active.cancelled.load(std::sync::atomic::Ordering::Acquire));
     assert!(!hub.active());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn external_questions_require_current_consent_and_do_not_inherit_reenabled_access() {
+    let mut fixture = Fixture::with_external(true).await;
+    let mut hub = Questions::default();
+    fixture.send(json!({"jsonrpc":"2.0","id":70,"method":"tools/call","params":{"name":"ask_user","arguments":{"question":"Initially off"}}}));
+    let open = fixture.next().await;
+    if let Command::Open { ref proof, .. } = open {
+        assert!(!proof.launched_by(std::process::id()));
+    } else {
+        panic!("expected real external proof");
+    }
+    hub.handle(open, crate::ISLAND, false, true);
+    assert_eq!(fixture.read()["result"]["isError"], true);
+    assert!(!hub.active());
+    hub.allow_external(true, None);
+    let token = fixture.open_named(&mut hub, 71, "vults_dictate").await;
+    assert!(hub.pending.as_ref().unwrap().external);
+    let (_, edited) = Fixture::action(&mut hub, &token, "edit", "Private external draft");
+    assert!(edited.await.unwrap().is_ok());
+    // A fast off/on cannot resurrect the pending request, even if the runtime sees only the last choice.
+    let changed = Instant::now();
+    hub.allow_external(true, Some(changed));
+    assert!(!hub.active());
+    assert_eq!(fixture.read()["result"]["isError"], true);
+    fixture.send(json!({"jsonrpc":"2.0","id":72,"method":"tools/call","params":{"name":"ask_user","arguments":{"question":"Queued before the new grant"}}}));
+    let mut stale = loop {
+        let command = fixture.next().await;
+        if matches!(command, Command::Open { .. }) {
+            break command;
+        }
+        hub.handle(command, crate::ISLAND, false, true);
+    };
+    if let Command::Open { ref mut received, .. } = stale {
+        *received = changed - Duration::from_millis(1);
+    }
+    hub.handle(stale, crate::ISLAND, false, true);
+    assert_eq!(fixture.read()["result"]["isError"], true);
+    assert!(!hub.active());
+    let token = fixture.open(&mut hub, 73).await;
+    let (work, action) = Fixture::action(&mut hub, &token, "send", "Confirmed external text");
+    let (connection, records) = work.unwrap();
+    assert!(persist_at(fixture.dir.clone(), records).await);
+    hub.allow_external(false, Some(Instant::now()));
+    hub.handle(Command::Audited(connection, true), crate::ISLAND, false, true);
+    assert!(action.await.unwrap().is_err());
+    assert_eq!(fixture.read()["result"]["isError"], true);
+    assert_eq!(hub.view.phase, "failed");
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn external_mode_lists_only_question_tools_and_delivers_only_confirmed_text() {
+    let mut fixture = Fixture::with_external(true).await;
+    fixture.send(json!({"jsonrpc":"2.0","id":80,"method":"tools/list"}));
+    let list = fixture.read();
+    let names: Vec<_> = list["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|tool| tool["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["ask_user", "vults_dictate"]);
+    fixture.send(
+        json!({"jsonrpc":"2.0","id":81,"method":"tools/call","params":{"name":"flock_list","arguments":{}}}),
+    );
+    assert_eq!(fixture.read()["result"]["isError"], true);
+    let mut hub = Questions::default();
+    hub.allow_external(true, None);
+    let token = fixture.open(&mut hub, 82).await;
+    let (work, action) = Fixture::action(&mut hub, &token, "send", "Exact external reply");
+    let (connection, records) = work.unwrap();
+    assert!(persist_at(fixture.dir.clone(), records).await);
+    hub.handle(Command::Audited(connection, true), crate::ISLAND, false, true);
+    assert_eq!(
+        fixture.read()["result"]["content"][0]["text"],
+        "Exact external reply"
+    );
+    while hub.active() {
+        hub.handle(fixture.next().await, crate::ISLAND, false, true);
+    }
+    assert!(action.await.unwrap().is_ok());
+    assert_eq!(hub.view.phase, "sent");
+    let token = fixture.open(&mut hub, 83).await;
+    hub.allow_external(false, Some(Instant::now()));
+    assert_eq!(fixture.read()["result"]["isError"], true);
+    let (_, late) = Fixture::action(&mut hub, &token, "send", "Late reply");
+    assert!(late.await.unwrap().is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn saving_revocation_cannot_race_between_the_consent_read_and_reply_handoff() {
+    use std::sync::{Arc, Mutex, mpsc as channel};
+    let mut fixture = Fixture::with_external(true).await;
+    let mut hub = Questions::default();
+    hub.allow_external(true, None);
+    let token = fixture.open(&mut hub, 90).await;
+    let (work, action) = Fixture::action(&mut hub, &token, "send", "Already confirmed text");
+    let (connection, records) = work.unwrap();
+    assert!(persist_at(fixture.dir.clone(), records).await);
+    let settings = Arc::new(Mutex::new(crate::settings::Settings {
+        question_agents: true,
+        ..Default::default()
+    }));
+    let changed = Arc::new(Mutex::new(None));
+    let (go, started) = channel::channel();
+    let (checked, check) = channel::channel();
+    let setter_settings = settings.clone();
+    let setter_changed = changed.clone();
+    let setter = std::thread::spawn(move || {
+        started.recv().unwrap();
+        checked.send(setter_settings.try_lock().is_err()).unwrap();
+        let mut saved = setter_settings.lock().unwrap();
+        let mut epoch = setter_changed.lock().unwrap();
+        saved.question_agents = false;
+        *epoch = Some(Instant::now());
+    });
+    with_consent(&settings, &changed, |enabled, epoch| {
+        go.send(()).unwrap();
+        assert!(
+            check.recv_timeout(Duration::from_secs(2)).unwrap(),
+            "Revocation cannot cross the admitted handoff"
+        );
+        hub.allow_external(enabled, epoch);
+        hub.handle(Command::Audited(connection, true), crate::ISLAND, false, true);
+    });
+    setter.join().unwrap();
+    with_consent(&settings, &changed, |enabled, epoch| {
+        hub.allow_external(enabled, epoch);
+    });
+    // The handoff won the ordering: later revocation must report consumed/uncertain, never recall.
+    assert!(action.await.unwrap().is_err());
+    assert_eq!(hub.view.phase, "failed");
+    assert_eq!(
+        fixture.read()["result"]["content"][0]["text"],
+        "Already confirmed text"
+    );
 }

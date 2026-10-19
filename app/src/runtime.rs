@@ -236,6 +236,8 @@ pub fn start(app: AppHandle) {
     app.manage(LastView::default());
     #[cfg(target_os = "linux")]
     app.manage(crate::questions::Active::default());
+    #[cfg(target_os = "linux")]
+    app.manage(crate::questions::install::Plans::default());
     crate::memory::refresh_attention(&app);
 
     let (hooks_tx, mut hooks_rx) = mpsc::channel(64);
@@ -409,13 +411,15 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 crate::question_surface(&app)
             };
             let visible = crate::question_visible(&app, questions.surface());
+            let locked = crate::lock::locked(&app) || state.locked;
+            let transition = |questions: &mut crate::questions::Questions, command| {
+                crate::questions::with_access(&app, |enabled, changed| {
+                    questions.allow_external(enabled, changed);
+                    questions.handle(command, surface, locked, visible)
+                })
+            };
             let work = if let Msg::Question(command) = msg {
-                let work = questions.handle(
-                    command,
-                    surface,
-                    crate::lock::locked(&app) || state.locked,
-                    visible,
-                );
+                let work = transition(&mut questions, command);
                 crate::questions::publish(&app, &mut questions);
                 if let Some((connection, records)) = work {
                     let app = app.clone();
@@ -426,12 +430,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 continue;
             } else {
-                questions.handle(
-                    crate::questions::Command::Tick,
-                    surface,
-                    crate::lock::locked(&app) || state.locked,
-                    visible,
-                )
+                transition(&mut questions, crate::questions::Command::Tick)
             };
             let _ = work;
             crate::questions::publish(&app, &mut questions);
