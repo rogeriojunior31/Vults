@@ -1,3 +1,4 @@
+import { connectQuestions } from "../../question-bridge";
 import { dictationStatus } from "../../island/dictation";
 import { applyTheme } from "../../theme";
 // The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
@@ -128,7 +129,7 @@ const nest = createNest(
       onMerged: (cb) => Bridge.onRowMerged(cb),
     },
     settings: (section) => void Bridge.openSettings(section),
-    savePlace: Bridge.nestTabSet,
+    savePlace: async tab => { questions.depart(); await Bridge.nestTabSet(tab); },
     openDictation: () => void Bridge.openNest("dictation"),
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
@@ -141,6 +142,12 @@ const nest = createNest(
   },
   false,
 );
+const questions = connectQuestions("nest", card => {
+  if (card && card.parentElement !== document.getElementById("nest")) {
+    nest.chat.cancelVoice();
+    document.getElementById("nest")!.append(card);
+  }
+}, () => {});
 const closeError = el("p", { class: "nest-close-error" });
 closeError.hidden = true;
 closeError.setAttribute("role", "alert");
@@ -214,6 +221,7 @@ void Bridge.appSettings().then((s) => {
   dictation.captions(s.dictationCaption, true);
   applyTheme(s.theme ?? "black", true);
   setLang(s.lang);
+  questions.relabel();
   dictation.relabel();
   nest.setZeca(s.zeca);
   nest.setSound(s.sounds);
@@ -232,6 +240,7 @@ Bridge.onSettings((s) => {
   applyTheme(s.theme);
   if (s.lang !== undefined) {
     setLang(s.lang);
+  questions.relabel();
     dictation.relabel();
     nest.relabel();
   }

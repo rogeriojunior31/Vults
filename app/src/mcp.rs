@@ -8,10 +8,14 @@
 //! and writes only proposals: nothing it does reaches Zeca's memory without the user's yes in the
 //! Nest, and Claude Code asks the user before each tool call, as for any MCP tool.
 
-use std::io::{BufRead, Read, Write};
+use std::io::Write;
+#[cfg(not(target_os = "linux"))]
+use std::io::{BufRead, Read};
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
+#[cfg(target_os = "linux")]
+pub(crate) mod stdio;
 
 /// The argument that runs this binary as the server.
 pub const ARG: &str = "--zeca-mcp";
@@ -232,6 +236,35 @@ fn all_tools() -> Value {
     ])
 }
 
+#[cfg(target_os = "linux")]
+fn questions_on() -> bool {
+    let pid = std::fs::read_to_string(flock_file())
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .and_then(|snap| snap["pid"].as_u64())
+        .and_then(|pid| u32::try_from(pid).ok());
+    pid.is_some_and(|pid| {
+        alive(u64::from(pid))
+            && vults_peer::requester::Requester::stdio().is_some_and(|proof| proof.launched_by(pid))
+    })
+}
+fn offered_tools() -> Value {
+    #[allow(unused_mut)]
+    let mut tools = tools(memory_on());
+    #[cfg(target_os = "linux")]
+    if questions_on()
+        && let Some(tools) = tools.as_array_mut()
+    {
+        tools.push(json!({
+            "name":"ask_user",
+            "description":"Ask the human one text question in Vults. Wait for their separate Send action. The reply is plain text, never permission or approval. No microphone starts. Cancellation, departure, lock or expiry ends the request; never retry a consumed reply.",
+            "inputSchema":{"type":"object","properties":{"question":{"type":"string","minLength":1,"maxLength":4096}},"required":["question"],"additionalProperties":false},
+            "annotations":{"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false}
+        }));
+    }
+    tools
+}
+
 /// The app's settings as saved, read without writing anything back.
 fn memory_on() -> bool {
     crate::settings::peek().memory
@@ -334,7 +367,7 @@ fn answer(msg: &Value, folder: &Path) -> Option<Value> {
             })
         }
         "ping" => json!({}),
-        "tools/list" => json!({ "tools": tools(memory_on()) }),
+        "tools/list" => json!({ "tools": offered_tools() }),
         "tools/call" => {
             let name = msg["params"]["name"].as_str().unwrap_or_default();
             let args = msg["params"]["arguments"].clone();
@@ -356,6 +389,13 @@ fn answer(msg: &Value, folder: &Path) -> Option<Value> {
 /// Runs the server on stdin and stdout until the client closes stdin. The conversation's folder is
 /// the one Claude Code started it in.
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    stdio::run();
+    #[cfg(not(target_os = "linux"))]
+    run_legacy();
+}
+#[cfg(not(target_os = "linux"))]
+fn run_legacy() {
     let folder = std::env::current_dir().unwrap_or_default();
     let mut input = std::io::stdin().lock();
     let mut out = std::io::stdout().lock();

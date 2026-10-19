@@ -41,6 +41,9 @@ pub fn start(app: &AppHandle) {
 }
 
 pub fn key(app: &AppHandle, id: &str, down: bool) {
+    if crate::questions::active(app) && matches!(id, "talk" | "talk-again" | "talk-command") {
+        return;
+    }
     if matches!(id, "talk" | "talk-command") && down {
         crate::doctor::dictation::stop_mic(app);
     }

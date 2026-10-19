@@ -128,6 +128,11 @@ impl Requester {
         self.chain[self.chain.len() - 1].process
     }
 
+    /// The caller is a direct child of the app, after verified shell wrappers.
+    pub fn launched_by(&self, app_pid: u32) -> bool {
+        self.chain.last().is_some_and(|client| client.parent == app_pid) && self.is_current()
+    }
+
     /// Recheck before publishing: PID reuse, executable changes and reparenting revoke it.
     pub fn is_current(&self) -> bool {
         self.chain

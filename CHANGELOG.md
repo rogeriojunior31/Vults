@@ -4,7 +4,9 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
-- Clarify the planned agent-question dictation contract: local text entry into a typed question draft, a separate human click/Enter to send, verified requester ownership and cancellation. Permission authority is unchanged; the M7 question tools and their default-off agent offering are not implemented yet.
+- Add Linux `ask_user` text questions for verified Claude Code processes started by Vults, in Quick and Nest. Keep drafts editable, require a separate Send/Enter, audit confirmation before delivery and never resend a consumed reply after failure. Cancel on departure/lock/expiry/disconnect and give permission cards priority. Question dictation and external-agent setup remain separate steps.
+
+- Clarify the planned agent-question dictation contract: local text entry into a typed question draft, a separate human click/Enter to send, verified requester ownership and cancellation. Permission authority is unchanged; question dictation and its default-off external-agent offering are not implemented yet.
 - Add separately enabled, tool-free meeting summaries with provider/model disclosure, durable rolling attempt limits, cancellation and original-transcript fallback. Show Transcript/Summary/To-dos and keep generated notes inert.
 - Add explicit text-only meeting saves and a searchable Saved meetings workspace with Transcript/Summary/To-dos, source-local voice names, confirmed deletion and native Markdown/SRT/VTT export. Freeze the first saved snapshot, keep audio temporary and include saved meetings in global history erasure. Subtitle export requires one source clock; exported files remain independent copies.
 - Keep automatic meeting speaker identification off by default behind an explicit development preview while independent speech-quality qualification remains pending. Add checked optional model installation and offline evaluation tooling.

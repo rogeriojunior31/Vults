@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 69071b2cb77f -->
+<!-- source: 066456c80c78 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -965,11 +965,23 @@ renomear, excluir e exportar não usam modelo nem requisição à rede.
 <a id="agent-question-dictation-planned"></a>
 ## Ditado em perguntas de agentes (planejado)
 
+No Linux, o processo do Claude Code iniciado pelo Vults pode usar o `ask_user` da M7 para exibir uma
+pergunta de texto no Quick ou no Nest visível. Digite sua resposta e escolha **Enviar resposta** ou
+pressione Enter sem modificadores no editor. Shift+Enter adiciona uma linha; compor texto com IME
+nunca envia. A pergunta identifica o processo solicitante e tem um prazo fixo de dois minutos. Sua
+resposta é texto simples, nunca uma aprovação de ferramenta. Esta interface aceita apenas respostas
+digitadas por enquanto; seus atalhos não iniciam captura.
+
+**Cancelar**, navegar, ocultar/fechar, bloquear a tela, expirar ou perder o solicitante limpa o
+rascunho não enviado. Enviar consome a resposta uma vez, salva uma linha de auditoria sem conteúdo e
+aguarda a confirmação do relay de que descarregou a resposta MCP no fluxo. Uma entrega incerta é
+informada: peça uma nova pergunta em vez de reenviar a resposta consumida. Perguntas/respostas não
+são copiadas para essa auditoria. Uma permissão já existente ou recém-chegada tem prioridade.
+
 A [decisão de voz](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
-define um futuro fluxo `vults_dictate(question)` sobre o `ask_user` da M7. Nenhuma dessas ferramentas,
-seu compositor de perguntas ou uma configuração de Agentes no ditado está disponível ainda. O servidor
-MCP existente de leituras/propostas não oferece esse fluxo, e adicioná-lo à configuração de um agente
-não pode habilitar acesso à voz.
+define a futura extensão `vults_dictate(question)`. O ditado nesse editor e a oferta de Agentes,
+desligada por padrão, ainda não estão disponíveis. Agentes externos são recusados mesmo quando
+configurados manualmente; adicionar uma configuração MCP não habilita acesso ao microfone.
 
 No fluxo planejado, você usa a tecla de ditado em uma pergunta de texto exibida, revisa/edita a
 transcrição final e depois a envia com um clique separado ou Enter. Um agente não pode abrir o

@@ -48,6 +48,7 @@ import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, me
 import { currentLang, t } from "../i18n";
 
 export interface Actions {
+  textQuestionDepart?(): void;
   chat: ChatBackend;
   decide(request: string, decision: "allow" | "deny"): void;
   decideAlways(request: string): void;
@@ -227,6 +228,7 @@ export interface Island {
   render(v: ViewModel): void;
   /** Transient feedback reserves its own row; cards keep their usual layout. */
   setDictation(line: HTMLElement | null): void;
+  setQuestion(card: HTMLElement | null): void;
   onDictationLayout(layout: (rect: DOMRect, visible: boolean) => void): void;
   openNow(): void;
   /** The view on screen, to re-render after a setting changes. */
@@ -325,6 +327,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const habitat = el("div", { class: "habitat" }, habitatScene.canvas, habitatBadges);
   const overview = el("div", { class: "overview" }, habitat, needStrip, sessionBar, focusHost);
   const main = el("div", { class: "main" });
+  let textQuestion: HTMLElement | null = null;
   const alertsSlot = el("div", { class: "alerts-slot" });
   // Over the other tabs, the same chips under the tabs: who needs you stays in sight.
   const topNeeds = el("div", { class: "need-strip top" });
@@ -719,6 +722,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (to === "open" && from !== "open" && chatWhenOpened && !chat.isOpen())
       chat.toggle(true);
     if (from === "open" && to !== "open") {
+      if (textQuestion) actions.textQuestionDepart?.();
       closePalette();
       keysOff();
       diffOpen = null;
@@ -1176,6 +1180,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // Only the first permission in line has a card; it shows once its session's state settled.
     const pending = (approval && shown.find((s) => s.card)) || null;
     cardWaits = pending !== null;
+    if (pending && textQuestion) actions.textQuestionDepart?.();
     // A card took the island: the palette closes, rather than come back later with old choices.
     if (pending && paletteOpen) closePalette();
     // The card still waits: each reminder core counts sounds its cue again (C4), except under do
@@ -1213,7 +1218,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
     // A settled permission opens the island and keeps it open until it is answered, unless the
     // user is in the Nest, which answers it there (ADR 0021). Going there folds the island.
-    const here = pending && v.approval && !nestHoldsCards();
+    const here = (pending && v.approval && !nestHoldsCards()) || !!textQuestion;
     if (here && !fsm.pinned) fsm.openPinned();
     else if (!here && fsm.pinned && !held) {
       fsm.unpin(now);
@@ -1237,7 +1242,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       recapSeen = v.recap.seq;
     }
     if (chat.isOpen() && fsm.mode !== "open") fsm.open(now);
-    fsm.setEngaged(chat.isOpen(), now);
+    fsm.setEngaged(chat.isOpen() || !!textQuestion, now);
     const mode: Mode = fsm.mode;
 
     chat.setSessions(v.sessions);
@@ -1318,7 +1323,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         headerSlot.replaceChildren(header());
       }
       paintNeeds(quick !== "now" && (chatShown || board || quick) ? shown : [], topNeeds);
-      if (chatShown) {
+      if (textQuestion && !pending) {
+        show(textQuestion);
+        alertsSlot.replaceChildren();
+      } else if (chatShown) {
         perch.className = "perch chatting";
         if (perch.parentElement !== chat.perchSlot) chat.perchSlot.append(perch);
         show(chat.element);
@@ -1455,7 +1463,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         paintSessionBar(atRest ? [] : shown, front, pending !== null || settledSession !== null || Clock.now() < greetUntil);
       }
       // The looks fill the island: news waits under the overview, so it never grows past its surface.
-      const news = !chat.isOpen() && !picking;
+      const news = !textQuestion && !chat.isOpen() && !picking;
       alertsSlot.replaceChildren(
         ...(keysMode && !chat.isOpen() ? [keysHint()] : []),
         ...(news && v.recap ? [recapBox(v.recap)] : []),
@@ -1717,7 +1725,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   });
 
   /** A click on Zeca startles him; the third in a row annoys him. */
-  root.addEventListener("click", () => {
+  root.addEventListener("click", (event) => {
+    if (textQuestion && !textQuestion.contains(event.target as Node)) actions.textQuestionDepart?.();
     if (fsm.mode !== "open" || !overZeca) return;
     const now = Clock.now();
     clicks = [...clicks.filter((t) => now - t < CLICKS_MS), now];
@@ -2269,6 +2278,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       dictationLine = line;
       if (line) root.append(line);
       reshape(fsm.mode);
+    },
+    setQuestion: (card) => {
+      if (card && !textQuestion) chat.cancelVoice();
+      textQuestion = card;
+      render(raw);
     },
     render, openNow: () => { fsm.open(Clock.now()); openQuick("now"); }, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, settingsChanged: quickSettingsChanged, greet, chat, pointer, away, setMedia, setUsage,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),

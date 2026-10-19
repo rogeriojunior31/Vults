@@ -42,7 +42,7 @@ pub use view::{
 pub use vults_protocol::{AgentKind, Answer, Decision, Terminal};
 
 /// Longest reply the user may type to a question.
-const MAX_ANSWER_LEN: usize = 2_000;
+pub const MAX_ANSWER_LEN: usize = 2_000;
 /// Steps kept per session for the overview.
 const MAX_STEPS: usize = 8;
 /// Finished edits whose diff a session keeps: more than its steps, so an edit stays readable after

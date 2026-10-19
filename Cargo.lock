@@ -7046,6 +7046,7 @@ dependencies = [
  "vults-ipc",
  "vults-link",
  "vults-media",
+ "vults-peer",
  "vults-platform",
  "vults-protocol",
  "vults-relay",

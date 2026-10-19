@@ -33,6 +33,8 @@ mod panel;
 mod paths;
 mod phone;
 mod policies;
+#[cfg(target_os = "linux")]
+mod questions;
 mod recall;
 mod records;
 mod roosts;
@@ -133,6 +135,12 @@ pub fn run() {
         ))
         .invoke_handler(tauri::generate_handler![
             runtime::current_view,
+            #[cfg(target_os = "linux")]
+            questions::text_question_status,
+            #[cfg(target_os = "linux")]
+            questions::text_question_action,
+            #[cfg(target_os = "linux")]
+            questions::text_question_depart,
             runtime::step_diff,
             runtime::decide,
             runtime::layout,
@@ -967,6 +975,9 @@ fn listen_shortcuts(app: &AppHandle) {
                     }
                     return;
                 }
+                if matches!(id, "talk" | "talk-again" | "talk-command") && questions::active(&emit) {
+                    return;
+                }
                 if matches!(id, "talk" | "talk-again" | "talk-command") {
                     dictation::key(&emit, id, down);
                     return;
@@ -1269,6 +1280,8 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
     if window.label() != NEST || !valid_nest_tab(&tab) {
         return Err("Invalid Nest navigation state.".into());
     }
+    #[cfg(target_os = "linux")]
+    questions::depart(window.app_handle(), NEST);
     *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
     Ok(())
 }
@@ -1277,6 +1290,11 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
 /// webviews: the Nest's (`nest`: Some, its tab or "" for where it was) or Settings' (`nest`: None,
 /// at `section` when given). Only the shown one is in sight and takes the keys.
 fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
+    #[cfg(target_os = "linux")]
+    {
+        questions::depart(app, ISLAND);
+        questions::depart(app, NEST);
+    }
     use tauri::{LogicalPosition, WebviewBuilder, window::WindowBuilder};
     // Reopening after a failed saved close cancels its earlier return request.
     if let Ok(mut pending) = NEST_RETURN.lock() {
@@ -1375,6 +1393,8 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0021).
                             if minimized {
+                                #[cfg(target_os = "linux")]
+                                questions::depart(&app2, NEST);
                                 meetings::cancel(&app2);
                             }
                             let _ = app2.emit_to(ISLAND, "nest-open", !minimized);
@@ -1382,6 +1402,8 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                     }
                     tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
                     tauri::WindowEvent::Destroyed => {
+                        #[cfg(target_os = "linux")]
+                        questions::depart(&app2, NEST);
                         meetings::cancel(&app2);
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
                         nest_holds(&app2, Some(false), Some(false));
@@ -1703,5 +1725,39 @@ fn dictation_status(app: AppHandle) -> Option<serde_json::Value> {
     {
         let _ = app;
         None
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn question_surface(app: &AppHandle) -> &'static str {
+    let nest = NEST_IN.lock().is_ok_and(|state| state.1);
+    if nest && question_visible(app, NEST) {
+        NEST
+    } else if question_visible(app, ISLAND) {
+        ISLAND
+    } else {
+        ""
+    }
+}
+#[cfg(target_os = "linux")]
+fn question_visible(app: &AppHandle, surface: &str) -> bool {
+    match surface {
+        NEST => {
+            NEST_IN.lock().is_ok_and(|state| state.1)
+                && app.get_window(NEST_WINDOW).is_some_and(|window| {
+                    window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(true)
+                })
+        }
+        ISLAND => {
+            !app.get_window(NEST_WINDOW).is_some_and(|window| {
+                window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(true)
+            }) && app.get_webview(ISLAND).is_some()
+                && app
+                    .state::<settings::SettingsState>()
+                    .0
+                    .lock()
+                    .is_ok_and(|s| s.presence != vults_core::Presence::Paused)
+        }
+        _ => false,
     }
 }

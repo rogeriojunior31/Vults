@@ -2,7 +2,8 @@
 
 **Status:** Accepted, 2026-10-12. Consolidated on 2026-10-12 from 0013.
 Amended on 2026-10-17 for dictation, bounded follow-up listening and temporary meeting audio.
-Amended on 2026-10-19 for human-confirmed question drafts (V7.1); that interface is not implemented yet.
+Amended on 2026-10-19 for human-confirmed question drafts (V7.1). V7.2.2 delivers typed M7 questions;
+local dictation into their editor and external-agent offering remain separate steps.
 The maintainer accepted V0.1; N3 implementation still lands in separate steps.
 
 ## Context
@@ -79,8 +80,9 @@ listening and storage rules. Dictation into other apps follows
 ## Human-confirmed question drafts
 
 V7.1 defines this contract for M7's future `ask_user` question composer and
-`vults_dictate(question)`. M7's shipped read/proposal MCP server does not provide that interface.
-This decision adds no tool, microphone control, setting or agent installation by itself.
+`vults_dictate(question)`. V7.2.2 implements M7's typed `ask_user` for verified app-owned clients on
+Linux. It does not connect question dictation or offer external-agent setup. This decision adds no
+microphone control, setting or agent installation by itself.
 
 - **A text question is a distinct request kind.** Only the app's typed, non-permission question
   composer is eligible. A caller's label, question text or transcript cannot turn a permission into

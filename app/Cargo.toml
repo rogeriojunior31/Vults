@@ -17,6 +17,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 vults-brand.workspace = true
 vults-protocol.workspace = true
+vults-peer.workspace = true
 vults-ipc.workspace = true
 vults-core.workspace = true
 vults-agents.workspace = true

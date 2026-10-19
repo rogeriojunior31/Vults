@@ -861,10 +861,22 @@ when reopened. Saving, viewing, renaming, deleting and exporting use no model or
 
 ## Agent question dictation (planned)
 
+On Linux, the Claude Code process started by Vults can use M7's `ask_user` to display a text
+question in Quick or the visible Nest. Type your reply, then choose **Send reply** or press plain
+Enter in its editor. Shift+Enter adds a line; IME composition never sends. The question identifies
+the requesting process and has a fixed two-minute lifetime. Your reply is plain text, never a tool
+approval. This interface currently accepts typed replies only; its shortcuts do not start capture.
+
+**Cancel**, navigation, hide/close, screen lock, expiry or requester disconnection clears the unsent
+draft. Sending consumes the reply once, saves a content-free audit row and waits for the relay's
+confirmation that it flushed the MCP response. An uncertain delivery is explicit: ask for a new
+question instead of resending the consumed reply. Prompts/replies are not copied into this audit.
+An existing or newly arriving permission takes priority over a text question.
+
 The [voice decision](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
-defines a future `vults_dictate(question)` flow over M7's `ask_user`. Neither tool, its question
-composer nor an Agents dictation setting is available yet. The existing MCP read/proposal server
-does not provide this flow, and adding it to an agent's configuration cannot enable voice access.
+defines the future `vults_dictate(question)` extension. Dictation into this editor and the default-off
+Agents offering are not available yet. External agents are refused, even when configured manually;
+adding an MCP configuration cannot enable microphone access.
 
 In the planned flow, you use the dictation key on a displayed text question, review/edit the final
 transcript, then send it with a separate click or Enter. An agent cannot open the microphone, and

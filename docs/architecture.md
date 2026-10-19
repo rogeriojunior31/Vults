@@ -358,11 +358,18 @@ it exactly: the same agent, folder, tool and target ([ADR 0004](adr/0004-a-human
 into an `AnswerQuestion` effect. A test feeds
 every other input in every order and checks none of them answers.
 
-M7's future `ask_user`/`vults_dictate` question interface is separate from this hook reply path and
-is not implemented. [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
-permits local dictation into its typed text draft only, with a separate human click/Enter to send.
-The verified client/question lifetime, once-only reply and audit must land before voice wiring;
-no transcript becomes a permission intent, a rule or a policy.
+M7's Linux `ask_user` text-question interface is separate from this hook reply path. A private
+same-user socket connects the stdio relay to the app's runtime. Kernel peer PID, executable identity,
+process start times and retained ancestry bind it to a live client directly started by the app;
+self-supplied headers cannot establish ownership. The runtime owns `core::questions::Slot`, its fresh
+connection nonce, absolute deadline, surface lease and once-only draft confirmation. It defers delivery
+until the content-free audit is durable, while continuing to process revocation messages. The relay
+acknowledges after flushing the MCP response; failure/lost acknowledgement never reuses consumed text.
+Permission cards take priority. Only the owning island/Nest webview can edit or confirm; lock,
+navigation, departure, expiry and disconnect invalidate pending work and late completions.
+[ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts) also
+permits future local dictation into this editor, but capture and `vults_dictate` are not connected yet.
+No question text becomes a permission intent, rule or policy; external-agent setup remains V7.3.
 
 ## The island on Wayland
 

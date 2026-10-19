@@ -717,8 +717,8 @@ K8's voice work; the other K rows remain N4. Tasks stays removed.
 M7's existing MCP server is not the question-card follow-up required by V7. V7.1 aligned ADR 0028
 on 2026-10-19: dictation may edit a typed text question, with a separate human click/Enter to send;
 voice cannot answer a permission. V7.2.1 provides the backend lifecycle and Linux requester proof;
-the app/MCP round trip, composer, dictation and V7.3 enforcement must land before that flow is
-available. Z6 and M7 retain their existing Done entries and outstanding follow-ups; this integration
+V7.2.2 connects typed `ask_user` for app-owned clients in Quick/Nest. Local draft dictation and V7.3
+external-agent enforcement must land before the voice flow is available. Z6 and M7 retain their existing Done entries and outstanding follow-ups; this integration
 does not claim those follow-ups are implemented.
 
 ### Mobile (wave 6)
@@ -747,8 +747,9 @@ recorded Cursor session (C1), C5 (Amp, Pi, Hermes), C6 (Crush, Goose, Grok Build
 - **W9b**: cost from the OTLP telemetry Claude Code and Codex export, received on loopback only, for
   the sessions Vults only watches; the agents' telemetry settings go through the installer's diff,
   backup and click. Done when a watched Codex session's tokens count in the day.
-- **M7**: `ask_user`, a card answered with text; the `vults-zeca` MCP for Codex (it reads MCP only
-  from its own config, so rule 3 applies).
+- **M7**: V7.2.2 delivers typed `ask_user` for app-owned Linux clients. The `vults-zeca` MCP for
+  Codex remains a follow-up (it reads MCP only from its own config, so rule 3 applies); external
+  offering and its default-off switch belong to V7.3.
 - **W2**: other agents' shells carry a working folder (`workdir`, `directory`) and searches may name
   a folder the card does not show; show them on the card, for humans too. Policies allow only for
   Claude Code until then.
@@ -1468,3 +1469,18 @@ All 1,246 workspace tests (10 documented ignores), 10 evals, workspace Clippy, r
 18 renderer checks and guards pass. Independent review's shell-name attribution finding is fixed
 with executable identity checks and a regression, including resolved multicall aliases. Final
 review has no remaining blocker. No renderer or native app behavior changes in this backend step.
+
+
+**2026-10-19 V7.2.2 typed MCP round trip.** App-owned Linux MCP clients can ask one text question,
+edit it in Quick/Nest and receive only a separately confirmed reply. The private transport verifies
+kernel peer/process/executable ancestry; external clients are refused. The runtime owns cancellation,
+absolute expiry, surface leases and permission priority, with durable content-free audit before
+delivery and stdout acknowledgement before success. Once consumed, uncertain replies cannot be
+resent. Review fixes cover stale renderer departure/replacement reads, deadline enforcement during
+audit, all capture admission and the wire envelope. Native long-prompt QA tightened Quick/Nest scroll
+bounds so the editor/actions remain visible. No microphone, external-agent config or provider call
+was added. Six real-process/MCP regressions, 1,252 workspace tests (10 documented ignores), 10 evals,
+Clippy and cargo-deny pass. Renderer build, all 19 renderer checks and guards pass; final review has
+no remaining blocker. Black/Light native Quick/Nest checks include long text, a visible editor and
+all actions at 480 x 360. QA app/server and isolated caches are cleaned. Next is V7.2.3, local
+dictation into this editor; V7.3 retains opt-in setup.

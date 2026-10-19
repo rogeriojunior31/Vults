@@ -48,6 +48,8 @@ pub struct Inbox(mpsc::Sender<Msg>);
 #[derive(Debug)]
 enum Msg {
     #[cfg(target_os = "linux")]
+    Question(crate::questions::Command),
+    #[cfg(target_os = "linux")]
     VoiceCommand {
         text: String,
         ticket: crate::dictation::worker::Ticket,
@@ -232,6 +234,8 @@ pub fn start(app: AppHandle) {
     let (tx, rx) = mpsc::channel(64);
     app.manage(Inbox(tx.clone()));
     app.manage(LastView::default());
+    #[cfg(target_os = "linux")]
+    app.manage(crate::questions::Active::default());
     crate::memory::refresh_attention(&app);
 
     let (hooks_tx, mut hooks_rx) = mpsc::channel(64);
@@ -287,11 +291,32 @@ pub fn start(app: AppHandle) {
             }
         }
     });
+    #[cfg(target_os = "linux")]
+    {
+        let (questions_tx, mut questions_rx) = mpsc::channel(32);
+        tauri::async_runtime::spawn(async move {
+            if let Ok(path) = crate::questions::transport::path()
+                && let Err(error) = crate::questions::transport::serve(path, questions_tx).await
+            {
+                tracing::warn!(%error, "question transport stopped");
+            }
+        });
+        let forward = tx.clone();
+        tauri::async_runtime::spawn(async move {
+            while let Some(command) = questions_rx.recv().await {
+                if forward.send(Msg::Question(command)).await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
     tauri::async_runtime::spawn(run(app, rx, tx));
 }
 
 async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>) {
     let mut state = State::default();
+    #[cfg(target_os = "linux")]
+    let mut questions = crate::questions::Questions::default();
     #[cfg(target_os = "linux")]
     let mut voice_commands = crate::voice_commands::Commands::new(Instant::now());
     if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
@@ -348,17 +373,72 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     // The turns whose folder is being looked at.
     let mut folders = Folders::default();
 
-    while let Some(msg) = match state.next_rest() {
-        Some(at) => tokio::select! {
-            msg = rx.recv() => msg,
-            _ = tokio::time::sleep_until(at.into()) => Some(Msg::Tick),
-        },
-        None => rx.recv().await,
+    while let Some(msg) = {
+        #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
+        let mut wake = state.next_rest().map(|at| (at, false));
+        #[cfg(target_os = "linux")]
+        if questions.active() {
+            let at = Instant::now() + Duration::from_millis(250);
+            if wake.is_none_or(|(next, _)| at < next) {
+                wake = Some((at, true));
+            }
+        }
+        match wake {
+            Some((at, question)) => tokio::select! {
+                msg = rx.recv() => msg,
+                _ = tokio::time::sleep_until(at.into()) => {
+                    #[cfg(target_os = "linux")]
+                    if question { Some(Msg::Question(crate::questions::Command::Tick)) } else { Some(Msg::Tick) }
+                    #[cfg(not(target_os = "linux"))]
+                    { let _ = question; Some(Msg::Tick) }
+                },
+            },
+            None => rx.recv().await,
+        }
     } {
         let now = Instant::now();
         #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
         let mut command_effects: Option<Vec<Effect>> = None;
+        #[cfg(target_os = "linux")]
+        if questions.active() || matches!(msg, Msg::Question(_)) {
+            let surface = if state.view().approval.is_some()
+                && matches!(msg, Msg::Question(crate::questions::Command::Open { .. }))
+            {
+                ""
+            } else {
+                crate::question_surface(&app)
+            };
+            let visible = crate::question_visible(&app, questions.surface());
+            let work = if let Msg::Question(command) = msg {
+                let work = questions.handle(
+                    command,
+                    surface,
+                    crate::lock::locked(&app) || state.locked,
+                    visible,
+                );
+                crate::questions::publish(&app, &mut questions);
+                if let Some((connection, records)) = work {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let kept = crate::questions::persist(records).await;
+                        let _ = question(&app, crate::questions::Command::Audited(connection, kept)).await;
+                    });
+                }
+                continue;
+            } else {
+                questions.handle(
+                    crate::questions::Command::Tick,
+                    surface,
+                    crate::lock::locked(&app) || state.locked,
+                    visible,
+                )
+            };
+            let _ = work;
+            crate::questions::publish(&app, &mut questions);
+        }
         let input = match msg {
+            #[cfg(target_os = "linux")]
+            Msg::Question(_) => unreachable!("handled before domain input"),
             #[cfg(target_os = "linux")]
             Msg::CancelVoiceCommands => {
                 voice_commands.cancel();
@@ -611,6 +691,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         } else {
             continue;
         };
+        #[cfg(target_os = "linux")]
+        if questions.active() && state.view().approval.is_some() {
+            let surface = questions.surface().to_owned();
+            questions.handle(crate::questions::Command::Depart(surface), "", false, true);
+            crate::questions::publish(&app, &mut questions);
+        }
         for effect in effects {
             match effect {
                 Effect::AckPermission(id) => {
@@ -1665,6 +1751,21 @@ pub(crate) fn voice_command(
 pub(crate) fn cancel_voice_commands<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     if let Some(inbox) = app.try_state::<Inbox>() {
         let _ = inbox.0.try_send(Msg::CancelVoiceCommands);
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) async fn question(app: &AppHandle, command: crate::questions::Command) -> Result<(), String> {
+    app.state::<Inbox>()
+        .0
+        .send(Msg::Question(command))
+        .await
+        .map_err(|_| "The app is busy.".into())
+}
+#[cfg(target_os = "linux")]
+pub(crate) fn question_try(app: &AppHandle, command: crate::questions::Command) {
+    if let Some(inbox) = app.try_state::<Inbox>() {
+        let _ = inbox.0.try_send(Msg::Question(command));
     }
 }
 

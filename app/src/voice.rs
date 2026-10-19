@@ -235,6 +235,11 @@ fn announce(app: &AppHandle) {
 /// tells the recording's webview, which stops it as a click would). Held down: only the key ends it.
 #[tauri::command]
 pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    if crate::questions::active(&app) {
+        return Err("Text questions currently accept typed replies only.".into());
+    }
+
     crate::doctor::dictation::stop_mic(&app);
     // The mic serves Zeca's chat only (ADR 0018).
     if !crate::settings::zeca(&app) {

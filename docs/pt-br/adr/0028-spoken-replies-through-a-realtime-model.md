@@ -1,9 +1,10 @@
 # 0028. Voz: escuta local, respostas faladas opcionais
-<!-- source: 70698222472b -->
+<!-- source: ea5821c402c1 -->
 
 **Status:** Aceita, 2026-10-12. Consolidada em 2026-10-12 a partir da 0013.
 Alterada em 2026-10-17 para ditado, escuta limitada de respostas e áudio temporário de reuniões.
-Alterada em 2026-10-19 para rascunhos de perguntas com confirmação humana (V7.1); essa interface ainda não foi implementada.
+Alterada em 2026-10-19 para rascunhos de perguntas com confirmação humana (V7.1). A V7.2.2 entrega
+perguntas digitadas da M7; ditado local no editor delas e oferta a agentes externos continuam em etapas separadas.
 A V0.1 foi aceita pelo mantenedor; a implementação da N3 continua em etapas.
 
 <a id="context"></a>
@@ -93,10 +94,10 @@ A resposta de oito segundos e os arquivos temporários de reunião são as exce�
 <a id="human-confirmed-question-drafts"></a>
 ## Rascunhos de perguntas com confirmação humana
 
-A V7.1 define este contrato para o futuro compositor de perguntas `ask_user` da M7 e
-`vults_dictate(question)`. O servidor MCP de leituras/propostas já entregue na M7 não oferece essa
-interface. Esta decisão, por si só, não adiciona ferramenta, controle de microfone, configuração
-nem instalação em um agente.
+A V7.1 define este contrato para o compositor de perguntas `ask_user` da M7 e
+`vults_dictate(question)`. A V7.2.2 implementa o `ask_user` digitado da M7 para clientes verificados
+iniciados pelo app no Linux. Ela não conecta ditado em perguntas nem oferece configuração de agentes
+externos. Esta decisão por si só não adiciona controle de microfone, configuração nem instalação de agente.
 
 - **Uma pergunta de texto é um tipo de pedido distinto.** Somente o compositor de perguntas
   tipado e sem autoridade de permissão do app é elegível. Um rótulo do cliente, o texto da pergunta

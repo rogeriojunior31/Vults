@@ -2452,10 +2452,10 @@ exact question, generation and lifetime own capture and reply. Lock/departure, r
 and disconnect revoke pending work; replies are consumed at most once and audited without a second
 transcript. IME/Shift+Enter and literal approval-like text cannot trigger permission authority.
 
-This is the next module after V5 in the authoritative delivery order; V6 has not started. The shipped
-M7 read/proposal server still has no `ask_user` or `vults_dictate`. V7.2 must implement the typed M7
-question lifecycle/client verification/audit round trip before capture/composer wiring. V7.3 owns
-external agent setup and its default-off switch. No runtime or config change is claimed here.
+This is the next module after V5 in the authoritative delivery order; V6 has not started. At the
+V7.1 decision checkpoint, M7's read/proposal server had no question tools. V7.2.1/V7.2.2 below deliver
+the typed lifecycle, verification, audit round trip and composer; local capture remains V7.2.3.
+V7.3 owns external-agent setup and its default-off switch. V7.1 itself changed no runtime or config.
 
 Validation: the independent authority/EN-PT review found no permission expansion or false shipped
 claim. Its wording fixes distinguish local Whisper inference from remote audio and explicitly
@@ -2489,7 +2489,7 @@ to match V5.8's explicit text saves and independent exported copies. The app sta
    It refuses unavailable, dead or changed processes. Content-free receipts convert to the existing
    audit format; a store regression verifies persistence without prompt, draft or raw RPC id.
    These are library APIs: the app does not invoke them or advertise a question tool yet.
-2. **V7.2.2 Text question round trip** — next. Connect the verified relay and typed lifecycle to
+2. **V7.2.2 Text question round trip** — implemented 2026-10-19; typed replies only. Connect the verified relay and typed lifecycle to
    `app/src/mcp.rs`, the runtime-owned composer and the durable audit. Revalidate proof before
    publishing and confirming, generate the connection nonce in the app, revoke on every departure
    event and process exit, and handle cancellation, delivery failure and lost acknowledgement
@@ -2504,8 +2504,8 @@ to match V5.8's explicit text saves and independent exported copies. The app sta
 V7.2.1 validation covers draft-only input, once-only confirmation, every revocation, exact deadline
 boundaries, connection/process/question binding, replay limits, live Linux credentials/ancestry,
 process exit and metadata-only audit storage. This backend slice starts no microphone, UI,
-network request or MCP listener, and leaves the app closed. V7.2's tool/round-trip acceptance is
-still pending with V7.2.2/V7.2.3.
+network request or MCP listener, and left the app closed. At that checkpoint, tool/round-trip
+acceptance remained pending with V7.2.2/V7.2.3; see the subsequent implementation record below.
 
 Validation: all 1,246 workspace tests pass (10 documented ignores), along with 10 evals, workspace
 Clippy, the renderer build, 18 renderer checks and repository guards. Independent code review
@@ -2513,6 +2513,43 @@ caught mutable process names being used to skip shell wrappers; the fix checks t
 root-owned system executable identity and rejects multicall aliases. The spoofed-name regression
 passes and the final review has no remaining blocker. Native UI validation does not apply to this
 library-only change; no audio/model request was made.
+
+### V7.2.2 implementation record
+
+The Linux stdio server now offers `ask_user` only to a live client started directly by Vults,
+including past verified system-shell wrappers. A separate private socket authenticates the relay
+with kernel credentials and exact executable identity; the runtime rechecks the entire proof.
+External clients remain refused even with a manual MCP config. The async reader keeps cancellation
+and ping responsive while a human edits, binds cancellation to the exact typed RPC id, rejects replay
+and bounds both wire messages and the per-connection request history. Lifetimes start when transport
+receives the request, so queueing cannot renew the deadline. No agent configuration was changed.
+
+Quick and Nest share one retained text editor, four-language labels, UTF-8 byte limits and a separate
+Send/plain Enter action. IME, modifiers and repeat cannot confirm. Permission cards take priority.
+Capture admission is blocked on this typed-only path; there is no microphone button or `vults_dictate`.
+The runtime owns draft/connection/surface leases and consumes confirmation before an off-loop durable
+audit write. It can revoke while that write is pending, and checks the original deadline again before
+delivery. The relay acknowledges only after flushing the MCP result; failure, lock/departure or a
+missing acknowledgement after consumption reports uncertain delivery without offering resend.
+
+Code review found and fixed stale departure/replacement reads, expiry during audit, capture through
+the separate command key, permission priority in Nest and an escaped-envelope size mismatch. A
+runtime-ordered Leave acknowledgement now fences queued renderer events; an older in-flight Status
+cannot suppress its follow-up refresh. Prompt/draft text clears locally on departure. Native QA found
+long Quick prompts growing past the mapped surface; a bounded card now scrolls the prompt while
+retaining the editor and actions, including the minimum Nest.
+
+Evidence: six Rust tests use a real parent/agent/relay process chain and MCP/Unix transport, including
+responsive ping, exact-id cancellation, once-only human confirmation, durable content-free audit,
+failed audit, stale/wrong-surface input, owner refusal, lost stdout acknowledgement, lock/departure,
+expiry and page lease. All 1,252 workspace tests pass (10 documented ignores), plus 10 evals, workspace
+Clippy and cargo-deny. The dedicated renderer check exercises manual edits, stale acknowledgements,
+IME/modifiers, byte limits, ordered departure and delayed replacement/status. Native production UI
+checks cover Black/Light, Quick, Nest at 1180 x 820 and 480 x 360, long prompts and all four languages,
+using controlled question responses without audio/model calls. Renderer build, all 19 renderer
+checks, formatting and repository guards pass. The final review has no remaining blocker; the app,
+Vite and isolated QA config/data/cache/runtime are stopped/removed. Maintainer visual acceptance
+remains separate. V7.2.3's local draft dictation is next; V7.3 owns the default-off external-agent offering.
 
 **V7.3 Offer it to agents** (M)
 - Build: add the tool to agents' MCP configs only through `agent-config` (rule 3: backup, diff, click); the

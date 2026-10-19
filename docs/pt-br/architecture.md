@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 7865956856d9 -->
+<!-- source: e2e1d2c37bc7 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -398,11 +398,19 @@ ela exatamente: o mesmo agente, pasta, ferramenta e alvo ([ADR 0004](adr/0004-a-
 num effect `AnswerQuestion`. Um teste alimenta
 todas as outras entradas em todas as ordens e verifica que nenhuma delas responde.
 
-A futura interface de perguntas `ask_user`/`vults_dictate` da M7 é separada desse caminho de
-respostas do hook e não foi implementada. A [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
-permite ditado local apenas em seu rascunho de texto tipado, com clique/Enter humano separado para
-enviar. O vínculo verificado com o cliente e o prazo da pergunta, resposta de uso único e auditoria
-precisam chegar antes da integração de voz; nenhuma transcrição vira intent de permissão, regra ou política.
+A interface Linux de perguntas de texto `ask_user` da M7 é separada desse caminho de respostas do
+hook. Um socket privado do mesmo usuário conecta o relay stdio ao runtime do app. O PID do par obtido
+do kernel, a identidade do executável, o início dos processos e a ancestralidade retida vinculam o
+pedido a um cliente ativo iniciado diretamente pelo app; cabeçalhos fornecidos pelo cliente não
+comprovam a identidade. O runtime possui o `core::questions::Slot`, seu nonce novo por conexão, prazo
+absoluto, concessão da superfície e confirmação única do rascunho. Ele adia a entrega até a auditoria
+sem conteúdo ser persistida, enquanto continua processando invalidações. O relay confirma após
+descarregar a resposta MCP no fluxo; falha/perda de confirmação nunca reutiliza o texto consumido.
+Cards de permissão têm prioridade. Só o webview dono da ilha/Nest pode editar ou confirmar; bloquear,
+navegar, sair, expirar e desconectar invalidam o trabalho pendente e conclusões tardias.
+A [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts) também
+permite ditado local futuro nesse editor, mas captura e `vults_dictate` ainda não estão conectados.
+Nenhum texto de pergunta vira intent de permissão, regra ou política; a configuração de agentes externos continua na V7.3.
 
 <a id="the-island-on-wayland"></a>
 
