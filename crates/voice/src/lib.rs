@@ -7,6 +7,7 @@ mod models;
 mod preview;
 mod record;
 mod scheduler;
+pub mod turn;
 mod vad;
 pub mod vocabulary;
 

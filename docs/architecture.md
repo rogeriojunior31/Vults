@@ -66,6 +66,24 @@ exceptions are the chat panel (`src/island/chat.ts`, with its Markdown and icons
 card (`src/island/board.ts`), which the Nest draws too, and the settings pages' look
 (`surfaces/settings/pages.css`), which the Nest's Week uses inside a shadow root.
 
+## Voice conversation turns
+
+V6.1 adds the pure `voice::turn` machine, not yet called by the app. Injected monotonic time and
+opaque turn/probe tokens bind every asynchronous result. First consumed output starts a 500 ms
+headphone lock or 1 s echo-cancelled lock; speaker interruption defaults off. A still-live suppressed
+speech onset can request a separate 260 ms pre-roll probe after the lock. Only the matching confirmed
+probe cancels output and advances the turn; rejection or a 1.5 s timeout leaves the response running.
+
+Production completion requests playback drain; an earlier transient empty queue is not completion.
+The requested drain acknowledgement enters a 450 ms desktop tail grace. Speech there is a new turn
+without replaying the old output tail; expiry finishes without opening capture. A pending onset at
+drain becomes a new turn with its pre-roll, rather than cancelling an already silent response.
+Cancellation/failure clears output and rejects late callbacks. Adapters must retain the tokens from
+each action, acknowledge actual output consumption/drain and own the memory-only microphone ring;
+relabeling old results with current tokens violates the contract. The machine itself has no audio,
+provider, permission or network IO, and its effects grant no microphone consent. V6.2-V6.7 retain
+end-of-turn policy, runtime capture/replay, realtime budget/gate, playback and UI integration.
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/

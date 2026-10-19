@@ -2369,7 +2369,7 @@ automatic labels or qualify full-length capture.
 - there is no wake word;
 - voice never answers a card.
 
-**V6.1 Turn machine** (M)
+**V6.1 Turn machine** (M) — implemented 2026-10-19; pure backend, runtime adapters remain V6.2-V6.7
 - Build: `voice::turn` (pure), with states Listening → Thinking → Speaking(locked) → Armed → interrupt
   pending → draining → tail grace, plus a generation counter.
   - The lock runs 0.5 s (1.0 s with AEC), **counted from the first audio played**.
@@ -2378,6 +2378,32 @@ automatic labels or qualify full-length capture.
   - The two-phase speaking end.
 - Port: the design, not the code: [PT] 77-138, 325 (`stream_handler.py` ranges cited there).
 - Tests: an eval session with fake STT/LLM/TTS driving the real machine ([PT] 283-294); the race cases.
+
+V6.1 implements `voice::turn` with injected monotonic time, opaque non-wrapping generation/probe
+tokens and bounded deadlines. A first-consumed-audio event anchors the 500 ms/1 s lock; live suppressed
+speech is probed once the lock ends. Each deferred probe has 1.5 s to confirm, and old probe results
+cannot confirm a newer attempt in the same response. Only confirmation cancels/clears the old output,
+advances the generation and requests 260 ms of memory pre-roll for the new listening turn.
+
+Producer completion and requested playback drain are separate acknowledgements. Drain remains
+interruptible, then enters a 450 ms desktop tail grace; speech there starts the next turn without
+replaying the old tail. Empty output and tail expiry finish without opening a microphone. Speaker
+barge-in defaults disabled. Cancellation/failure clears output, and old generations cannot affect
+a restarted turn. Adapters must keep the original action tokens and acknowledge the requested drain;
+the pure module grants no microphone, network or permission authority. Actual capture/ring replay,
+provider, playback and user-facing integration remain the later V6 steps.
+
+Ten deterministic regressions drive the actual machine with fake STT/model/output events: delayed
+first playback/acknowledgement and retained live onsets, both lock durations, suppressed/ended speech,
+pending timeout/rejection, stale probes,
+generation replacement, output before/after producer completion, duplicate/early drain, tail/new-turn
+races, empty output, cancellation/failure and counter exhaustion. Independent review found the
+same-generation stale-probe race and a lost onset before delayed playback acknowledgement; both
+are fixed with regressions. No audio hardware, provider request, download, settings or renderer behavior changes in this step.
+
+All 1,273 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
+formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
+No renderer/native behavior changes require a new GUI run; the app remains closed.
 
 **V6.2 End of turn** (M)
 - Build:

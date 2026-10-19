@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 63f0c40a3233 -->
+<!-- source: a1ac7579dc16 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -68,6 +68,27 @@ entrada `main.ts` e a sua folha de estilo. O código usado por mais de uma super
 as exceções são o painel do chat (`src/island/chat.ts`, com o Markdown e os ícones dele) e o card do
 GitHub (`src/island/board.ts`), que o Nest também desenha, e o visual das páginas das configurações
 (`surfaces/settings/pages.css`), que a Week do Nest usa dentro de uma shadow root.
+
+<a id="voice-conversation-turns"></a>
+## Turnos da conversa por voz
+
+A V6.1 acrescenta a máquina pura `voice::turn`, ainda sem chamadas pelo app. Tempo monotônico
+injetado e tokens opacos de turno/tentativa vinculam cada resultado assíncrono. A primeira saída
+consumida inicia um bloqueio de 500 ms com fones ou 1 s com cancelamento de eco; a interrupção com
+alto-falantes vem desligada. Um início de fala suprimido que continua ativo pode pedir uma análise
+separada com 260 ms de áudio anterior após o bloqueio. Só a confirmação da tentativa correspondente
+cancela a saída e avança o turno; rejeitar ou atingir o prazo de 1,5 s mantém a resposta em andamento.
+
+O fim da produção pede o escoamento da reprodução; uma fila vazia transitória anterior não significa
+conclusão. A confirmação desse escoamento inicia uma tolerância de cauda de 450 ms no desktop. Fala
+nesse intervalo é um novo turno, sem reaproveitar a cauda da saída anterior; expirar termina sem
+abrir captura. Um início pendente no escoamento vira um novo turno com seu áudio anterior, em vez
+de cancelar uma resposta já silenciosa. Cancelamento/falha limpa a saída e recusa callbacks
+atrasados. Adaptadores devem manter os tokens de cada ação, confirmar o consumo/escoamento real da
+saída e ser donos do buffer circular do microfone em memória; trocar o token de um resultado antigo
+pelo atual viola o contrato. A máquina não faz IO de áudio, provedor, permissão ou rede, e seus
+efeitos não concedem consentimento para o microfone. V6.2-V6.7 mantêm a política de fim de turno,
+captura/reaproveitamento no runtime, orçamento/gate realtime, reprodução e integração da interface.
 
 <a id="local-dictation"></a>
 

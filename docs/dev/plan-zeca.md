@@ -1519,3 +1519,17 @@ Full agent sessions and real-human speech remain acceptance gates. See Plan Dict
 the next engineering phase is V6, following the recorded V7-before-V6 delivery order.
 All 1,263 workspace tests (10 documented ignores), 10 evals, workspace Clippy, renderer build,
 18 renderer checks, formatting and repository guards pass. No dependencies changed.
+
+
+**2026-10-19 V6.1 pure voice turn machine.** `voice::turn` binds callbacks to opaque turn/probe tokens,
+locks barge-in from actual first playback, preserves live suppressed onsets and waits for matching
+confirmation before cancellation. Production completion requests drain; actual drain starts 450 ms
+of desktop tail grace, where speech is a new turn without old-tail replay. Cancellation/failure and
+new generations reject old work. Ten deterministic scripted STT/model/output regressions cover the
+lifecycle and races; review's stale-probe and delayed-playback onset findings are fixed with tokens
+and retained live speech. The module has no callers in the app yet and opens no microphone, provider or network connection.
+Runtime ring replay, end-of-turn policy, realtime budgeting, playback and UI remain V6.2-V6.7.
+Next: V6.2's end-of-turn policy, with semantic-model licensing/parity gates kept separate.
+All 1,273 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
+formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
+No renderer/native behavior changes require a new GUI run; the app remains closed.
