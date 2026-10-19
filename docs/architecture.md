@@ -81,8 +81,24 @@ drain becomes a new turn with its pre-roll, rather than cancelling an already si
 Cancellation/failure clears output and rejects late callbacks. Adapters must retain the tokens from
 each action, acknowledge actual output consumption/drain and own the memory-only microphone ring;
 relabeling old results with current tokens violates the contract. The machine itself has no audio,
-provider, permission or network IO, and its effects grant no microphone consent. V6.2-V6.7 retain
-end-of-turn policy, runtime capture/replay, realtime budget/gate, playback and UI integration.
+provider, permission or network IO, and its effects grant no microphone consent. Runtime capture/replay,
+realtime budget/gate, playback and UI integration remain later V6 work.
+
+V6.2.1 adds the pure `voice::turn::end` conversation policy: 1.6 s of silence, or 2.6 s after an
+English/Portuguese continuation word. It needs both a VAD speech end and nonempty words; silence
+before speech or an ongoing voice never commits. Only growth beyond the partial transcript's prior
+word-count maximum restarts its text timer. Rewrites and duplicate VAD end events cannot keep
+resetting the pause. Other languages use the base delay.
+
+The optional audio-only semantic scheduler emits at most one outstanding, generation/ticket-bound
+request every 200 ms. A probability at least 0.5 may finish only after the current silence policy;
+nonfinite/out-of-range scores or one inference failure disable it for the rest of that conversation.
+The absolute extra wait is 1.2 s from nominal silence eligibility, not from a delayed poll; a hung
+request cannot extend it. Renewed speech cancels the pending ticket and hold; cancellation/new turns
+reject old callbacks. Completion is emitted once. This module has no app caller or model inference:
+V6.2.2 still owns the eight-second audio window, log-mel parity, weight/code license verification,
+checked artifacts and optional ONNX integration. Capture duration/empty-input limits remain with the
+adapter. Existing Chat/dictation recorders keep their own stop rules.
 
 ## Local dictation
 

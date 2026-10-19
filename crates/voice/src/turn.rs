@@ -3,6 +3,8 @@
 
 use std::time::Duration;
 
+pub mod end;
+
 pub const REPLAY: Duration = Duration::from_millis(260);
 pub const TAIL_GRACE: Duration = Duration::from_millis(450);
 const CONFIRM: Duration = Duration::from_millis(1500);
@@ -14,7 +16,7 @@ pub enum BargeIn {
     Headphones,
     EchoCancelled,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Generation(u64);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Probe(u64);

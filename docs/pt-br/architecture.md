@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: a1ac7579dc16 -->
+<!-- source: e994138caeac -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -87,8 +87,25 @@ de cancelar uma resposta já silenciosa. Cancelamento/falha limpa a saída e rec
 atrasados. Adaptadores devem manter os tokens de cada ação, confirmar o consumo/escoamento real da
 saída e ser donos do buffer circular do microfone em memória; trocar o token de um resultado antigo
 pelo atual viola o contrato. A máquina não faz IO de áudio, provedor, permissão ou rede, e seus
-efeitos não concedem consentimento para o microfone. V6.2-V6.7 mantêm a política de fim de turno,
-captura/reaproveitamento no runtime, orçamento/gate realtime, reprodução e integração da interface.
+efeitos não concedem consentimento para o microfone. Captura/reaproveitamento no runtime,
+orçamento/gate realtime, reprodução e integração da interface continuam nas próximas etapas da V6.
+
+A V6.2.1 acrescenta a política pura de conversa `voice::turn::end`: 1,6 s de silêncio, ou 2,6 s após
+uma palavra de continuação em inglês/português. Exige fim de fala do VAD e palavras não vazias;
+silêncio antes da fala ou voz em andamento nunca concluem o turno. Só crescer além do maior número
+de palavras anterior da transcrição parcial reinicia seu timer de texto. Reescritas e eventos
+repetidos de fim do VAD não ficam reiniciando a pausa. Outros idiomas usam o prazo base.
+
+O agendador semântico opcional, só de áudio, emite no máximo um pedido pendente, vinculado a
+geração/token, a cada 200 ms. Uma probabilidade de pelo menos 0,5 só pode concluir após a política
+atual de silêncio; valores não finitos/fora do intervalo ou uma falha de inferência o desativam
+pelo resto da conversa. A espera adicional absoluta é de 1,2 s desde quando o silêncio seria
+elegível, não desde uma consulta atrasada; um pedido travado não a estende. Retomar a fala cancela
+o token e a espera pendentes; cancelamento/novos turnos recusam callbacks antigos. A conclusão é
+emitida uma vez. Este módulo não tem chamadas no app nem inferência de modelo: a V6.2.2 ainda cobre
+a janela de áudio de oito segundos, paridade log-mel, verificação das licenças de código/pesos,
+artefatos conferidos e integração ONNX opcional. Limites de duração da captura e entrada vazia ficam
+com o adaptador. Os gravadores existentes do Chat/ditado mantêm suas próprias regras de parada.
 
 <a id="local-dictation"></a>
 

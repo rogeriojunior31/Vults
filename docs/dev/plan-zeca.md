@@ -1533,3 +1533,18 @@ Next: V6.2's end-of-turn policy, with semantic-model licensing/parity gates kept
 All 1,273 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
 formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
 No renderer/native behavior changes require a new GUI run; the app remains closed.
+
+
+**2026-10-19 V6.2.1 conversation end policy.** The pure `voice::turn::end` policy waits for VAD
+silence and settled text, with 1.6 s base/2.6 s continuation-word pauses in English/Portuguese.
+Partial rewrites and duplicate edges do not keep restarting the clock. Optional audio-score requests
+are bound to their turn/ticket, paced at 200 ms and limited by an absolute 1.2 s hold; an inference
+failure or invalid probability disables semantics for the conversation. New speech, cancellation
+and generations revoke old results. Eleven new tests include a scripted detector driving the real
+turn machine. Independent review has no remaining blocker after tightening delayed-poll deadlines.
+There is no app caller or model/capture/UI/network change. V6.2 remains in progress: V6.2.2 retains
+model/weight license checks, checked artifacts, the eight-second window, log-mel reference parity
+and optional ONNX inference, followed by V6.3-V6.7 integration. Speech/pt-BR quality remains open.
+All 1,284 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
+formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
+No renderer/native behavior changes require another GUI run; the app remains closed.

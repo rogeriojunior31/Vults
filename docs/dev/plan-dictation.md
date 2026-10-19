@@ -2405,7 +2405,7 @@ All 1,273 workspace tests pass (10 documented ignores), plus 10 evals, workspace
 formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
 No renderer/native behavior changes require a new GUI run; the app remains closed.
 
-**V6.2 End of turn** (M)
+**V6.2 End of turn** (M) — in progress; V6.2.1 delivered 2026-10-19
 - Build:
   - a silence policy of 1.6 s, or 2.6 s when the last word extends (pt/en lists: conjunctions, fillers,
     articles);
@@ -2415,6 +2415,33 @@ No renderer/native behavior changes require a new GUI run; the app remains close
 - Tests: log-mel parity against stored reference arrays; policy table.
 - Licence check of smart-turn's weights (the spec says Apache-2.0; confirm on the model card).
 - Q8: how well smart-turn handles pt-BR is unknown.
+
+V6.2 delivery sequence:
+1. **V6.2.1 Policy and bounded semantic coordination** — implemented 2026-10-19. Pure
+   `voice::turn::end` waits 1.6 s, or 2.6 s for an English/Portuguese continuation word. Current
+   VAD silence and word-count high-water growth both gate completion; empty input/active speech
+   cannot commit. Rewrites and repeated end edges cannot keep restarting timers. Optional audio-only
+   scores are generation/ticket-bound, paced at 200 ms, with threshold 0.5 and a 1200 ms absolute
+   hold from nominal silence eligibility. One invalid score/inference failure disables semantics
+   for the rest of the conversation. Speech restarts, new generations and cancellation invalidate
+   pending work; completion is once-only. Speaker capture/permission authority is unchanged.
+2. **V6.2.2 Semantic model and parity** — pending. Verify code/weight licenses and checked artifact
+   identities, implement the last-eight-second window and Whisper log-mel preprocessing, prove parity
+   against stored primary reference arrays, then add optional `ort` inference. No download or model
+   is approved/enabled by the pure scheduler. Capture/runtime integration follows with V6.3-V6.7.
+
+Eleven policy regressions plus V6.1's ten turn cases cover language/word boundaries, silence before
+words, continuing voice, partial rewrites/growth, duplicate VAD ends, score pacing/threshold, hung
+inference/hold expiry, stale tickets/turns, new speech, invalid scores/failure latch, cancellation,
+clock/counter bounds and a fake detector driving the actual turn machine once. Independent review
+clarified the audio-only score contract and tightened the hold anchor so delayed polling cannot add
+another wait; current readiness is rechecked before accepting a score. Final review has no blocker.
+No renderer, native capture, provider, settings or dependency changes occur in V6.2.1; it has no app
+caller yet. Actual speech, semantic-model quality and pt-BR qualification remain open.
+
+All 1,284 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
+formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
+No renderer/native behavior changes require another GUI run; the app remains closed.
 
 **V6.3 Realtime client** (L)
 - Build:
