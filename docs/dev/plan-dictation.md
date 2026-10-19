@@ -2955,3 +2955,9 @@ remains recorded in the feature entries above.
 This closes implementation through V5.7, not its remaining acceptance gates: V5.5 independent
 PT/EN speech qualification is still open with automatic labels off by default, and V5.8 still owns
 the explicit save/archive/export interface. No live-provider accuracy claim is made.
+
+The first PR run additionally exposed non-Unix installer warnings and a Windows-drive issue in the
+summary regression's virtual module path. Imports and the unsupported-platform enum are scoped
+explicitly, the virtual entry now uses the normalized absolute UI path, and the multi-command UI
+step runs in Bash so an intermediate failure cannot be hidden by PowerShell. A follow-up portability
+review covers the non-Linux app modules and test imports; local suites were rerun before resubmission.

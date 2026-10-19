@@ -1,6 +1,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
+#[cfg(unix)]
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::{
@@ -10,6 +11,8 @@ use super::{
 };
 use sha2::{Digest, Sha256};
 
+// The secure installer cannot construct either state on unsupported platforms.
+#[cfg_attr(not(unix), allow(dead_code))]
 pub(super) enum Prepared {
     Ready(Bundle),
     Stage(Stage),

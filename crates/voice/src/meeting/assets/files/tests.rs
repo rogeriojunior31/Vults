@@ -1,5 +1,6 @@
 use super::*;
 use std::io::Cursor;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 struct Temp(PathBuf);
 impl Temp {

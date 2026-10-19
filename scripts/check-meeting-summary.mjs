@@ -1,7 +1,7 @@
 // Meeting settings and notes use the production renderers with deferred local responses.
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { build } from "vite";
+import { build, normalizePath } from "vite";
 const nodes = node => [node, ...node.children.flatMap(nodes)];
 class Element {
   children = []; listeners = {}; attributes = {}; dataset = {}; style = { setProperty() {} };
@@ -52,8 +52,8 @@ const timers = new Map(); let timer = 0;
 globalThis.document = { body: new Element('body'), documentElement: new Element('html'), hidden: false,
   createElement: tag => new Element(tag), createTextNode: text => { const n=new Element('text'); n.textContent=text; return n; }, addEventListener() {} };
 globalThis.window = { setInterval: fn => { timers.set(++timer,fn); return timer; }, clearInterval: id => timers.delete(id), addEventListener() {} };
-const ui=fileURLToPath(new URL('../ui/',import.meta.url));
-const entry='/meeting-summary-check.ts';
+const ui=normalizePath(fileURLToPath(new URL('../ui/',import.meta.url)));
+const entry=ui+'meeting-summary-check.ts';
 const bundles=await build({configFile:false,root:ui,logLevel:'silent',plugins:[{name:'meeting-summary-check',resolveId:id=>id===entry?id:null,load:id=>id===entry?`
 export { createMeetingSettings } from ${JSON.stringify(ui+'src/surfaces/settings/meeting-summary.ts')};
 export { createMeetingSummary } from ${JSON.stringify(ui+'src/surfaces/nest/dictation/summary.ts')};

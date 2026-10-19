@@ -32,6 +32,7 @@ jobs:
           cache: npm
       # The app embeds ui/dist at compile time.
       - name: ui
+        shell: bash
         run: |
           npm ci
           npm run build
