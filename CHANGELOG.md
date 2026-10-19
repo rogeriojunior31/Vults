@@ -4,12 +4,12 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
-- Add separately enabled, tool-free meeting summaries with provider/model disclosure, durable rolling attempt limits, cancellation and original-transcript fallback. Show Transcript/Summary/To-dos in the recording check and keep generated notes inert and temporary.
-- Prepare explicit text-only meeting storage, source-local speaker renaming and Markdown/SRT/VTT exporters. The recording check remains temporary; save/archive/export controls belong to the upcoming full Meetings page.
+- Add separately enabled, tool-free meeting summaries with provider/model disclosure, durable rolling attempt limits, cancellation and original-transcript fallback. Show Transcript/Summary/To-dos and keep generated notes inert.
+- Add explicit text-only meeting saves and a searchable Saved meetings workspace with Transcript/Summary/To-dos, source-local voice names, confirmed deletion and native Markdown/SRT/VTT export. Freeze the first saved snapshot, keep audio temporary and include saved meetings in global history erasure. Subtitle export requires one source clock; exported files remain independent copies.
 - Keep automatic meeting speaker identification off by default behind an explicit development preview while independent speech-quality qualification remains pending. Add checked optional model installation and offline evaluation tooling.
 - Keep Ctrl+Alt+V dedicated to independent dictation and show its passive status capsule at the bottom of the selected screen, with inline fallback when unavailable.
 
-- Add Linux Dictation > Meetings with explicit source/model/language review and consent for a one-minute recording/transcription check. Show local microphone/system transcripts with estimated segment times, source selection, progress, cancellation and explicit discard. Keep text in the current page only; no history, clipboard insertion, saved meetings or export. Summaries require their own explicit consent and generation action.
+- Add Linux Dictation > Meetings with explicit source/model/language review and consent for a one-minute recording/transcription check. Show local microphone/system transcripts with estimated segment times, source selection, progress, cancellation and explicit discard. Keep unsaved text in the current page only, without clipboard insertion or dictation History. Summaries require their own explicit consent and generation action.
 
 - Bound meeting audio transport waits, retain private WAVs under one cleanup lock through local transcription, recover interrupted audio at startup and publish results only after cleanup. Cancel on page disconnect/navigation, window close/minimize, screen lock or voice preference change. Decode bounded WAV chunks off the dictation path and give interactive Whisper work priority over meeting processing.
 

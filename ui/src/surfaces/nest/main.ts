@@ -69,6 +69,8 @@ const nest = createNest(
     },
     dictation: {
       meetings: {
+        archive: { save: Bridge.meetingSave, list: Bridge.meetingArchiveList, read: Bridge.meetingArchiveRead,
+          remove: Bridge.meetingArchiveDelete, rename: Bridge.meetingArchiveRename, export: Bridge.meetingArchiveExport },
         status: Bridge.meetingStatus, transcript: Bridge.meetingTranscript, prepare: Bridge.meetingPrepare, begin: Bridge.meetingBegin,
         end: Bridge.meetingEnd, recover: Bridge.meetingRecover,
         summary: { settings: Bridge.appSettings, providers: Bridge.apiProviders, status: Bridge.meetingSummaryStatus,
@@ -173,6 +175,7 @@ Bridge.onNestTab((tab) => {
 });
 Bridge.onMemory(() => nest.memoryChanged());
 Bridge.onDictationHistory(erased => nest.dictationChanged(erased));
+Bridge.onMeetingArchiveErased(() => nest.meetingsErased());
 Bridge.onUsage((windows) => { nest.chat.setUsage(windows); nest.usageChanged(); });
 Bridge.onSpend(() => nest.spendChanged());
 

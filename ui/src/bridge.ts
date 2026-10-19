@@ -541,6 +541,13 @@ export const Bridge = {
   meetingSummaryCancel: (id: number) => invoke<void>("meeting_summary_cancel", { id }),
   setMeetingSummary: (on: boolean) => invoke<void>("set_meeting_summary", { on }),
   meetingTranscript: (id: number) => invoke<MeetingTranscript | null>("meeting_transcript", { id }),
+  meetingSave: (id: number, title: string) => invoke<string>("meeting_save", { id, title }),
+  meetingArchiveList: () => invoke<{ epoch: number; rows: MeetingEntry[] }>("meeting_archive_list", { limit: 500 }),
+  meetingArchiveRead: (id: string) => invoke<{ epoch: number; meeting: SavedMeeting | null }>("meeting_archive_read", { id }),
+  meetingArchiveDelete: (id: string) => invoke<boolean>("meeting_archive_delete", { id }),
+  meetingArchiveRename: (id: string, source: MeetingSource, speaker: number, name: string | null) => invoke<boolean>("meeting_archive_rename", { id, source, speaker, name }),
+  meetingArchiveExport: (id: string, format: "markdown" | "srt" | "vtt", source: MeetingSource | null, title: string) => invoke<boolean>("meeting_archive_export", { id, format, source, title }),
+  onMeetingArchiveErased(cb: () => void): void { void listen("meeting-archive-erased", cb); },
   meetingStatus: (id: number | null) => invoke<MeetingStatus>("meeting_status", { id }),
   meetingAssetsStatus: () => invoke<MeetingAssetsStatus>("meeting_assets_status"),
   meetingAssetsReview: () => invoke<MeetingAssetsStatus>("meeting_assets_review"),
@@ -921,6 +928,14 @@ export interface MeetingNotes {
   summary: string;
   key_points: string[];
   todos: { text: string; owner: string | null; due: string | null }[];
+}
+export type MeetingSource = "microphone" | "system";
+export interface MeetingEntry { id: string; recorded_ms: number; title: string }
+export interface SavedMeeting extends MeetingEntry {
+  microphone: { duration_ms: number; segments: { start_ms: number; end_ms: number; text: string; speaker: number | null }[] };
+  system: SavedMeeting["microphone"];
+  speakers: { source: MeetingSource; id: number; name: string | null }[];
+  notes: MeetingNotes | null;
 }
 export interface MeetingSummaryStatus {
   id: number;

@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: b2d0474d0bfa -->
+<!-- source: 88aea44d8ca8 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -345,7 +345,7 @@ que alterou para o teste.
 
 **Ditado > Voz > Música enquanto você fala** oferece **Baixar para 25%** (o padrão),
 **Pausar** e **Não alterar**. A próxima gravação independente mantém essa escolha até parar,
-inclusive no cancelamento. A voz do Chat e a futura captura de reuniões não usam esse controle.
+inclusive no cancelamento. A voz do Chat e a captura de reuniões não usam esse controle.
 
 No Linux, o Vults controla temporariamente apenas players MPRIS que já estão tocando. A redução
 limita o volume do próprio player a 25%; players mudos ou mais baixos ficam como estão. Ao parar
@@ -653,7 +653,7 @@ histórico de ditado** oferece a escolha de prazo. Escolha **Não guardar**, **7
 (o padrão), **1 ano** ou **Sempre**. Reduzir o prazo apaga os textos antigos imediatamente;
 abrir o histórico e gravar também aplica o prazo. **Não guardar** não escreve transcrição nem
 sessão no histórico, mas os totais medidos por dia/aplicativo continuam atualizados. Dicionário/
-Trechos são páginas funcionais, assim como Comandos de voz. **Estatísticas** abre Atividade > Ditado; reuniões continuam como etapa futura.
+Trechos são páginas funcionais, assim como Comandos de voz e Reuniões. **Estatísticas** abre Atividade > Ditado.
 **Privacidade > Apagar histórico de ditado…** usa a mesma exclusão confirmada da página de trabalho,
 com falha e nova tentativa explícitas. Modo de gravação, microfone, remoção de repetições, nova
 tentativa com Base, código falado, cancelamento por voz, música e vocabulário são controles funcionais.
@@ -844,7 +844,8 @@ e o limite persistente de requisições.
 No Linux, **Ditado > Reuniões** oferece gravação e transcrição local para uma verificação de até
 um minuto. Primeiro escolha um modelo local instalado em **Ditado > Voz**. Funciona com o Zeca
 desligado. Gravar/transcrever sozinho não faz requisições à rede nem baixa modelos automaticamente.
-Reuniões completas, reuniões salvas e exportação ainda não estão disponíveis.
+A captura de reuniões completas continua como etapa futura. **Nova gravação** controla a verificação
+temporária; **Reuniões salvas** abre textos salvos explicitamente sem gravar nem consultar um modelo.
 
 Escolha **Conferir fontes de áudio** para ler o microfone e o monitor da saída do sistema sem abrir
 um stream nem carregar um modelo. Confira os dois identificadores, qualquer aviso de fonte
@@ -871,11 +872,15 @@ trabalho automaticamente.
 Após concluir as duas fontes e limpar o áudio temporário, **Transcrição** oferece visualizações
 separadas de **Microfone** e **Áudio do sistema**. A ausência de fala é informada. Os horários dos
 segmentos são estimativas do modelo no tempo de gravação de cada fonte, sem inferir sincronização
-entre as fontes. As compilações normais não identificam falantes. O texto fica só na memória desta página: **Descartar
-transcrição**, sair, fechar, bloquear ou conferir uma nova gravação o remove. Ele nunca é inserido
-em outro aplicativo, copiado automaticamente, adicionado ao Histórico do ditado nem gravado no banco.
+entre as fontes. As compilações normais não identificam falantes. O texto não salvo fica só na memória
+desta página: **Descartar transcrição**, sair, fechar, bloquear ou conferir uma nova gravação o remove.
+Ele nunca é inserido em outro aplicativo, copiado automaticamente nem adicionado ao Histórico do ditado.
+Somente a ação explícita **Salvar reunião** grava uma cópia do texto no banco local.
 Falha ou cancelamento não publica transcrição parcial; outra tentativa exige uma nova gravação
 conferida.
+
+Após a conclusão, **Ações da gravação** mantém disponíveis descartar, conferir as fontes e abrir
+as configurações de Voz; **Detalhes do salvamento** explica a cópia salva sem ocupar o espaço da transcrição.
 
 Uma compilação de desenvolvimento com `--features meeting-speakers` também oferece **Também
 identificar vozes nesta gravação (experimental)** durante a revisão das fontes. A opção vem
@@ -920,13 +925,39 @@ uma identidade ou linha do tempo compartilhada.
 
 As abas aceitam Esquerda/Direita, Home e End. Gerar/Cancelar fica fora da rolagem das notas, também
 na janela mínima; **Detalhes do resumo** mantém o provedor e os termos das requisições disponíveis.
+Com resumos desligados ou falha de leitura, a mesma seção mantém Configurações de reuniões e
+Recarregar; uma falha a abre automaticamente.
 Enquanto os resumos estão desligados, a aba explica o motivo e leva a **Configurações de reuniões**.
 Abrir essa configuração sai de Reuniões e descarta a transcrição temporária, portanto ative os resumos
 antes de gravar. Sair, ocultar/fechar a janela, bloquear ou conferir outra gravação descarta transcrição
-e notas; esta etapa não oferece arquivo de resumos salvos nem exportação.
+e notas não salvas. Uma cópia salva anteriormente permanece em **Reuniões salvas**.
 
-A base de armazenamento e exportação está preparada para cópias explícitas somente de texto,
-renomeação de vozes por fonte e arquivos Markdown/SRT/VTT. Ela ainda não está conectada à gravação
-de teste: nada é salvo automaticamente, e os controles de arquivo e exportação chegam com a página
-completa de Reuniões. A exportação de legendas usa uma fonte selecionada, pois os relógios do microfone
-e do sistema não podem ser combinados com segurança.
+<a id="saved-meetings-and-export"></a>
+### Reuniões salvas e exportação
+
+Quando uma transcrição estiver pronta, preencha o **Título da reunião** e escolha **Salvar reunião**.
+Conclua um resumo primeiro se quiser incluir suas notas. Salvar fixa a transcrição atual e as notas
+concluídas; gerar novamente ou editar o título depois não altera aquela cópia salva. Uma nova tentativa
+preserva a primeira cópia e os nomes de vozes editados depois. O arquivo nunca retém áudio. Escolha
+**Ver reunião salva** ou abra **Reuniões salvas** para buscar títulos nas 500 entradas mais recentes.
+
+Abra uma entrada salva para ver **Transcrição**, **Resumo** e **Pendências**. A ausência de notas é
+informada; ler uma entrada salva nunca as gera. Microfone e Áudio do sistema mantêm relógios
+independentes. Em **Nomes das vozes**, digite um nome e escolha **Salvar nome**; um nome em branco
+restaura o rótulo anônimo. Os nomes pertencem apenas àquela voz naquela fonte e reunião. Não
+estabelecem identidade entre fontes nem gravações futuras. Uma fala desconhecida não tem identidade
+editável.
+
+Escolha **Formato de exportação** e **Exportar…** para selecionar um destino no diálogo de salvar do
+desktop. Markdown inclui as duas seções de fontes separadas e as notas salvas. SRT/VTT exigem uma
+**Fonte das legendas** explícita, pois os relógios das fontes não podem ser combinados com segurança.
+Texto e nomes são escapados para o formato escolhido. Cancelar o diálogo não grava nada; uma falha
+de exportação é informada e permite nova tentativa. Novos arquivos usam permissões privadas no Linux.
+Os arquivos exportados são cópias independentes: excluir uma reunião ou apagar o histórico não os remove.
+
+**Excluir…** pede confirmação antes de remover a transcrição, as notas e os nomes salvos selecionados.
+**Manter reunião** cancela a exclusão. **Apagar todo o histórico** nas configurações de Atividade também
+remove todas as reuniões salvas e invalida leituras/gravações pendentes do arquivo, mesmo com a
+retenção do ditado desligada. A exclusão exclusiva do ditado e seu prazo de retenção não removem
+reuniões. A lista e os detalhes são limpos ao bloquear ou sair e recarregam ao reabrir. Salvar, ver,
+renomear, excluir e exportar não usam modelo nem requisição à rede.

@@ -1420,3 +1420,20 @@ The V5.8.1 backend step passes all 1,233 workspace tests (including 252 app and 
 checks. An independent review found no blocker. No new archive controls are visible yet;
 V5.8.2 owns the full Meetings workspace and its native validation. No user transcript was retained
 by this implementation check, and the app stays closed.
+
+**2026-10-19 V5.8.2 full Meetings workspace.** Explicit Save connects the current text/notes to the
+archive. Saved meetings has title search, Transcript/Summary/To-dos, source-local voice names,
+confirmed deletion and parented native Markdown/SRT/VTT export with an explicit subtitle source.
+Global erase, lock and departure invalidate cached content and pending reads without coupling
+meeting retention to dictation retention. Review fixes clear private search text and keep initial
+summary retry/settings reachable. Secondary recording/summary actions use disclosures so Save and
+Generate remain visible with at least 69 CSS pixels of reading space at 480 x 360.
+
+All 1,234 workspace tests (10 documented ignores), 10 evals, workspace Clippy, renderer build,
+18 renderer checks and repository guards pass. Isolated native WebKit/KWin Black/Light checks cover
+wide/narrow/short layouts, real archive CRUD, inert notes, native chooser cancel and all three export
+formats, plus global erase and Nest ownership. Controlled production recording UI covers explicit
+save and all four languages without audio/model requests. EN/PT guide and catalogs are reconciled;
+maintainer acceptance remains separate. The app/server and synthetic profile are cleaned after QA.
+Independent V5.5 speech qualification, full-length capture and default-on speaker labels remain
+unqualified; this step does not change those gates. See the V5.8 record in Plan Dictation.

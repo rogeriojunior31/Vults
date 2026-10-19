@@ -2,11 +2,11 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Runtime, Webview};
 use vults_store::{
     Store,
-    meetings::{Entry, Meeting},
+    meetings::{Entry, Meeting, Source},
 };
 
 use super::State;
@@ -123,6 +123,162 @@ fn delete_at(dir: &Path, slot: &mut super::Slot, id: &str) -> Result<bool, Strin
     Store::open(dir)
         .and_then(|mut s| s.delete_meeting(id))
         .map_err(|_| "Could not delete this meeting.".into())
+}
+
+#[tauri::command]
+pub async fn meeting_archive_rename<R: Runtime>(
+    app: AppHandle<R>,
+    window: Webview<R>,
+    id: String,
+    source: Source,
+    speaker: u32,
+    name: Option<String>,
+) -> Result<bool, String> {
+    access(&app, &window)?;
+    let epoch = crate::dictation_history::archive_epoch();
+    let dir = crate::history::dir();
+    let worker = app.clone();
+    let renamed = tauri::async_runtime::spawn_blocking(move || {
+        crate::dictation_history::retaining_archive(epoch, || {
+            if crate::lock::locked(&worker) {
+                return Err(UNAVAILABLE.into());
+            }
+            Store::open(&dir)
+                .and_then(|s| s.rename_meeting_speaker(&id, source, speaker, name.as_deref()))
+                .map_err(|_| "Could not rename this voice. Use a name of at most 120 bytes.".into())
+        })
+    })
+    .await
+    .map_err(|_| UNAVAILABLE.to_owned())??;
+    unchanged(&app, epoch)?;
+    Ok(renamed)
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Format {
+    Markdown,
+    Srt,
+    Vtt,
+}
+impl Format {
+    fn extension(self) -> &'static str {
+        match self {
+            Self::Markdown => "md",
+            Self::Srt => "srt",
+            Self::Vtt => "vtt",
+        }
+    }
+}
+
+// One native chooser at a time, including calls from a recreated page.
+static EXPORTING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+struct Exporting;
+impl Drop for Exporting {
+    fn drop(&mut self) {
+        EXPORTING.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+#[tauri::command]
+pub async fn meeting_archive_export<R: Runtime>(
+    app: AppHandle<R>,
+    window: Webview<R>,
+    id: String,
+    format: Format,
+    source: Option<Source>,
+    title: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+    access(&app, &window)?;
+    if !matches!(format, Format::Markdown) && source.is_none() {
+        return Err("Choose one audio source for subtitle export.".into());
+    }
+    if EXPORTING.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return Err("A meeting export dialog is already open.".into());
+    }
+    let guard = Exporting;
+    let epoch = crate::dictation_history::archive_epoch();
+    let dir = crate::history::dir();
+    let language = app
+        .state::<crate::settings::SettingsState>()
+        .0
+        .lock()
+        .map_err(|_| UNAVAILABLE.to_owned())?
+        .language
+        .clone();
+    let lang = crate::settings::resolve(language.as_deref());
+    let title: String = title.chars().filter(|c| !c.is_control()).take(80).collect();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        let path = app
+            .dialog()
+            .file()
+            .set_parent(&window.window())
+            .set_title(title)
+            .set_file_name(format!("vults-meeting.{}", format.extension()))
+            .add_filter(format.extension().to_uppercase(), &[format.extension()])
+            .blocking_save_file();
+        let Some(path) = path else {
+            return Ok(false);
+        };
+        let path = path
+            .into_path()
+            .map_err(|_| "Choose a local export file.".to_owned())?;
+        crate::dictation_history::retaining_archive(epoch, || {
+            access(&app, &window)?;
+            if !window.window().is_visible().unwrap_or(false)
+                || window.window().is_minimized().unwrap_or(true)
+            {
+                return Err(UNAVAILABLE.into());
+            }
+            export_to(&dir, &path, &id, format, source, lang)?;
+            Ok(true)
+        })
+    })
+    .await
+    .map_err(|_| "Could not export this meeting.".to_owned())?
+}
+
+fn export_to(
+    dir: &Path,
+    path: &Path,
+    id: &str,
+    format: Format,
+    source: Option<Source>,
+    lang: vults_core::i18n::Lang,
+) -> Result<(), String> {
+    use vults_store::meetings::export::{self, Subtitle};
+    let meeting = Store::open(dir)
+        .and_then(|mut s| s.meeting(id))
+        .map_err(|_| UNAVAILABLE.to_owned())?
+        .ok_or(UNAVAILABLE)?;
+    let text = match format {
+        Format::Markdown => export::markdown(&meeting, lang),
+        Format::Srt | Format::Vtt => export::subtitles(
+            &meeting,
+            source.ok_or("Choose one audio source for subtitle export.")?,
+            if matches!(format, Format::Srt) {
+                Subtitle::Srt
+            } else {
+                Subtitle::Vtt
+            },
+            lang,
+        ),
+    }
+    .map_err(|_| "Could not prepare this meeting export.".to_owned())?;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    use std::io::Write;
+    options
+        .open(path)
+        .and_then(|mut file| file.write_all(text.as_bytes()))
+        .map_err(|_| "Could not write this meeting export.".to_owned())
 }
 
 #[tauri::command]

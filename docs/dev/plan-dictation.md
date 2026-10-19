@@ -2307,7 +2307,7 @@ Delivery sequence:
    shares the existing history mutex and advances a separate meeting epoch; dictation-only erase
    and retention changes do not revoke a meeting. Deletion revokes the active cached copy before
    IO, including compaction failures, so queued saves cannot restore deleted text.
-2. **V5.8.2 Full Meetings workspace.** Connect saved list/detail and Save/Delete, reuse Transcript/
+2. **V5.8.2 Full Meetings workspace (implemented; maintainer sign-off pending).** Connect saved list/detail and Save/Delete, reuse Transcript/
    Summary/To-dos, add source-local renaming and native Markdown/SRT/VTT export, update EN/PT guides
    and all UI catalogs, and validate the running app before sign-off. Invalidate pending list/detail
    reads after deletion as well as global erase; a per-delete action does not advance the global
@@ -2315,16 +2315,47 @@ Delivery sequence:
    erase removes the saved archive too. The existing one-minute capture qualification limit and
    default-off automatic identification remain; this step does not qualify full-length capture.
 
-The first step changes no renderer/Bridge code or visible work page. Until the second step lands,
-recordings still have no save/archive controls. No personal recording or live model request is
-needed to validate the archive ownership contract.
+The first step changed no renderer/Bridge code or visible work page. At that checkpoint recordings
+had no save/archive controls. No personal recording or live model request was needed to validate
+the archive ownership contract.
 
-Validation: all 1,233 workspace tests pass on Linux (10 documented ignores), including 252 app tests,
+V5.8.1 validation: all 1,233 workspace tests pass on Linux (10 documented ignores), including 252 app tests,
 85 store tests and eight new archive/retention/notes/timing checks. All 10 eval tests, workspace/eval
 Clippy, renderer build, all 18 existing renderer scripts, formatting and repository guards pass.
 Independent read-only review found no blocker. No archive write was
 made to the user's database, and no recording/model request or renderer change was needed. New
 API portability was inspected; Windows execution of this step belongs to its eventual PR checks.
+
+**2026-10-19 V5.8.2 implemented.** The existing Nest work page separates New recording from Saved
+meetings. Completed recordings expose an explicit title/save action and immutable-snapshot terms;
+the saved list searches titles among the newest 500 entries. Detail reuses Transcript/Summary/To-dos
+with independent source clocks, unknown metadata and inert text. Voice names update only one
+source-local identity. Delete requires confirmation; pending list/detail/save replies cannot restore
+erased content. Global erasure has a separate archive event; lock/departure clears content, name
+drafts and private search text. Recording maintenance and summary settings/retry use labeled
+disclosures; the shared Save/Generate footer leaves at least 69 CSS pixels to read in 480 x 360.
+
+Export opens one parented native save dialog, requires one source for SRT/VTT, then rechecks lock,
+window visibility, erase epoch and the saved row before writing. Cancellation writes nothing. The
+existing pure exporters escape text; newly created Linux files use 0600. Deliberate exported copies
+remain independent of archive/global erasure. No path or transcript is supplied by the renderer.
+
+Validation: 1,234 workspace tests (10 documented ignores), all 10 evals, workspace Clippy, renderer
+build, all 18 renderer scripts and repository guards pass. Added archive/recovery checks cover
+single mutations, source-local names, literal text, failed drafts/retry, explicit subtitle source,
+confirmed deletion, stale reads and erase/departure cleanup. Independent review found search-text
+cleanup and an inaccessible initial-summary retry; both are fixed with regressions.
+
+Native Tauri/WebKit checks used an isolated XDG profile and synthetic database: Black/Light at
+1180 x 820, 760 x 560 and 480 x 360, long/missing content, source switching, notes, rename, keep/delete,
+Nest-only reads, native chooser cancellation and actual Markdown/system-SRT/microphone-VTT files.
+Global erase cleared detail/list while leaving exported copies. The production current-recording
+renderer also ran with a controlled backend, including explicit save and all four UI languages in
+the minimum window; no microphone, audio model or provider request was used. The native profile,
+generated files and app/server processes are removed afterward; user data/models are unchanged.
+EN/PT guide and all three UI catalogs are updated. Maintainer/live speech acceptance and Windows
+execution remain for their own checks; this does not close the V5.5 speech-quality gate, enable
+automatic labels or qualify full-length capture.
 
 ---
 

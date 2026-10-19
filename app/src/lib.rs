@@ -309,6 +309,8 @@ pub fn run() {
             meetings::archive::meeting_archive_list,
             meetings::archive::meeting_archive_read,
             meetings::archive::meeting_archive_delete,
+            meetings::archive::meeting_archive_rename,
+            meetings::archive::meeting_archive_export,
             meetings::summary::meeting_summary_status,
             meetings::summary::meeting_summary_begin,
             meetings::summary::meeting_summary_cancel,

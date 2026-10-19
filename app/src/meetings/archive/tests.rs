@@ -134,3 +134,83 @@ fn navigation_or_new_review_revokes_the_old_page_owned_capture() {
     assert!(save_at(&dir.0, &mut slot, 3, "Discarded", 7, false).is_err());
     assert!(Store::open(&dir.0).unwrap().meetings(500).unwrap().is_empty());
 }
+
+#[test]
+fn native_export_writes_only_valid_saved_text_with_one_selected_subtitle_clock() {
+    use vults_core::i18n::Lang;
+    use vults_store::meetings::Speaker;
+    let dir = Temp::new();
+    let mut slot = ready();
+    let id = save_at(&dir.0, &mut slot, 3, "Exported text", 7, false).unwrap();
+    let mut store = Store::open(&dir.0).unwrap();
+    let mut meeting = store.meeting(&id).unwrap().unwrap();
+    meeting.id = "export-check".into();
+    meeting.microphone.segments[0].speaker = Some(0);
+    meeting.system.segments[0].speaker = Some(0);
+    meeting.speakers = vec![
+        Speaker {
+            source: Source::Microphone,
+            id: 0,
+            name: None,
+        },
+        Speaker {
+            source: Source::System,
+            id: 0,
+            name: None,
+        },
+    ];
+    store.save_meeting(&meeting).unwrap();
+    assert!(
+        store
+            .rename_meeting_speaker(&meeting.id, Source::Microphone, 0, Some("Microphone person"))
+            .unwrap()
+    );
+    assert!(
+        store
+            .rename_meeting_speaker(&meeting.id, Source::System, 0, Some("System person"))
+            .unwrap()
+    );
+    let out = dir.0.join("selected.srt");
+    std::fs::write(&out, "Keep this file").unwrap();
+    assert!(export_to(&dir.0, &out, "missing", Format::Markdown, None, Lang::En).is_err());
+    assert!(export_to(&dir.0, &out, &meeting.id, Format::Srt, None, Lang::En).is_err());
+    assert_eq!(std::fs::read_to_string(&out).unwrap(), "Keep this file");
+    export_to(
+        &dir.0,
+        &out,
+        &meeting.id,
+        Format::Srt,
+        Some(Source::System),
+        Lang::En,
+    )
+    .unwrap();
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(text.contains("00:00:02,000 --> 00:00:02,500"));
+    assert!(text.contains("System person: System words."));
+    assert!(!text.contains("Microphone person"));
+    let new_file = dir.0.join("new.md");
+    export_to(&dir.0, &new_file, &meeting.id, Format::Markdown, None, Lang::En).unwrap();
+    assert!(
+        std::fs::read_to_string(&new_file)
+            .unwrap()
+            .contains("Microphone person")
+    );
+    use std::os::unix::fs::PermissionsExt;
+    assert_eq!(
+        std::fs::metadata(&new_file).unwrap().permissions().mode() & 0o777,
+        0o600
+    );
+    store.delete_meeting(&meeting.id).unwrap();
+    assert!(
+        export_to(
+            &dir.0,
+            &out,
+            &meeting.id,
+            Format::Vtt,
+            Some(Source::Microphone),
+            Lang::En
+        )
+        .is_err()
+    );
+    assert_eq!(std::fs::read_to_string(&out).unwrap(), text);
+}

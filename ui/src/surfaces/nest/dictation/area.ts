@@ -38,5 +38,6 @@ export function createDictationArea(backend: DictationAreaBackend, settings: (se
     words.snippets.hidden = selected !== "snippets";
   };
   relabel();
-  return { element, refresh, relabel, select, setActive(on: boolean) { active = on; meetings.setActive(on && selected === "meetings"); }, invalidate: () => { history.invalidate(); commands.invalidate(); } };
+  return { element, refresh, relabel, select, setActive(on: boolean) { active = on; meetings.setActive(on && selected === "meetings"); },
+    meetingsErased: meetings.invalidate, invalidate: () => { history.invalidate(); commands.invalidate(); } };
 }

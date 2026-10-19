@@ -1216,6 +1216,7 @@ pub async fn clear_history(app: AppHandle) -> Result<(), String> {
     let cleared =
         tauri::async_runtime::spawn_blocking(|| crate::history::clear(&crate::history::dir())).await;
     let _ = app.emit("dictation-history", true);
+    let _ = app.emit("meeting-archive-erased", ());
     cleared
         .map_err(|e| e.to_string())?
         .map_err(|e| format!("can't clear the history: {e}"))?;
