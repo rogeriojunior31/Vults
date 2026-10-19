@@ -1,5 +1,15 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Could not stop dictation. Try again.": "无法停止听写。请重试。",
+  "The transcription does not fit. Your draft was kept; cancel dictation and shorten it.": "转写内容超出限制。草稿已保留；请取消听写并缩短内容。",
+  "Could not apply the transcription. Your draft was kept; cancel dictation to continue.": "无法应用转写内容。草稿已保留；请取消听写后继续。",
+  "Listening… Release the dictation key to review your words.": "正在聆听… 松开听写快捷键以检查文字。",
+  "Transcribing locally… Your reply will not be sent.": "正在本地转写… 不会发送你的回复。",
+  "Adding your words to the draft…": "正在将文字添加到草稿…",
+  "Dictation could not produce a reply. Check your local model and microphone, or type your reply.": "听写未能生成回复。请检查本地模型和麦克风，或键入回复。",
+  "Hold {key} to dictate here, then review and send separately.": "按住 {key} 在此听写，然后检查并单独发送。",
+  "Cancel dictation": "取消听写",
+
   "Could not save this draft. Keep it within 2000 bytes and try again.": "无法保存草稿。请将内容控制在 2000 字节以内后重试。",
   "The reply could not be delivered. Check the question status before doing anything else.": "无法发送回复。请先检查问题状态，再进行其他操作。",
   "Could not cancel the question. Try again.": "无法取消问题。请重试。",

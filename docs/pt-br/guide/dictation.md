@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 066456c80c78 -->
+<!-- source: ba34d8905172 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -962,32 +962,42 @@ retenção do ditado desligada. A exclusão exclusiva do ditado e seu prazo de r
 reuniões. A lista e os detalhes são limpos ao bloquear ou sair e recarregam ao reabrir. Salvar, ver,
 renomear, excluir e exportar não usam modelo nem requisição à rede.
 
-<a id="agent-question-dictation-planned"></a>
-## Ditado em perguntas de agentes (planejado)
+<a id="agent-question-dictation"></a>
+## Ditado em perguntas de agentes
 
-No Linux, o processo do Claude Code iniciado pelo Vults pode usar o `ask_user` da M7 para exibir uma
-pergunta de texto no Quick ou no Nest visível. Digite sua resposta e escolha **Enviar resposta** ou
-pressione Enter sem modificadores no editor. Shift+Enter adiciona uma linha; compor texto com IME
-nunca envia. A pergunta identifica o processo solicitante e tem um prazo fixo de dois minutos. Sua
-resposta é texto simples, nunca uma aprovação de ferramenta. Esta interface aceita apenas respostas
-digitadas por enquanto; seus atalhos não iniciam captura.
+No Linux, o processo do Claude Code iniciado pelo Vults pode usar o `ask_user` da M7 ou seu alias
+`vults_dictate` para exibir uma pergunta de texto no Quick ou no Nest visível. Digite sua resposta e
+escolha **Enviar resposta** ou pressione Enter sem modificadores no editor. Shift+Enter adiciona uma
+linha; compor texto com IME nunca envia. A pergunta identifica o processo solicitante e tem um prazo
+fixo de dois minutos. Sua resposta é texto simples, nunca uma aprovação de ferramenta.
+
+Com um modelo local de voz instalado, segure o atalho de ditado mostrado na pergunta. Fale, solte a
+tecla e revise/edite as palavras acrescentadas ao rascunho atual. A gravação dura até 60 segundos ou o
+prazo restante da pergunta, o que terminar primeiro. O editor continua editável durante a gravação e
+transcrição; Enviar fica desabilitado até o resultado local ser aplicado. A pergunta usa o gesto de
+segurar a tecla mesmo quando o ditado comum usa outro gesto. Botão de microfone, pedido do agente,
+mudança de foco, repetição da tecla, soltar a tecla, silêncio ou dizer "enviar" não enviam a resposta.
+
+**Cancelar ditado** para a gravação/transcrição e mantém o rascunho manual. Resultados com falha,
+vazios ou grandes demais nunca o substituem. Se o texto combinado exceder 2000 bytes UTF-8, cancele
+o ditado e encurte o rascunho. Alterar modelo, idioma ou microfone descarta a captura pendente. Um
+carregamento nativo de modelo já em andamento pode terminar de liberar seus recursos antes que uma
+nova gravação de pergunta possa começar.
 
 **Cancelar**, navegar, ocultar/fechar, bloquear a tela, expirar ou perder o solicitante limpa o
-rascunho não enviado. Enviar consome a resposta uma vez, salva uma linha de auditoria sem conteúdo e
-aguarda a confirmação do relay de que descarregou a resposta MCP no fluxo. Uma entrega incerta é
-informada: peça uma nova pergunta em vez de reenviar a resposta consumida. Perguntas/respostas não
-são copiadas para essa auditoria. Uma permissão já existente ou recém-chegada tem prioridade.
+rascunho da pergunta não enviado e cancela a gravação. Resultados tardios não entram em outra
+pergunta. Enviar consome a resposta uma vez, salva uma linha de auditoria sem conteúdo e aguarda a
+confirmação do relay de que descarregou a resposta MCP no fluxo. Uma entrega incerta é informada:
+peça uma nova pergunta em vez de reenviar a resposta consumida. Perguntas/respostas não são copiadas
+para essa auditoria. Uma permissão já existente ou recém-chegada tem prioridade.
 
-A [decisão de voz](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
-define a futura extensão `vults_dictate(question)`. O ditado nesse editor e a oferta de Agentes,
-desligada por padrão, ainda não estão disponíveis. Agentes externos são recusados mesmo quando
-configurados manualmente; adicionar uma configuração MCP não habilita acesso ao microfone.
+Esse caminho implementa a [decisão de voz](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+com transcrição local, somente na memória. Ele não baixa modelo, usa limpeza por provedor,
+interpreta comandos de voz, copia/insere texto em outro lugar nem salva histórico de ditado. Um
+card de permissão nunca aceita ditado nem aprovação/negação falada. O ditado comum continua sem
+inserir texto em uma sessão de agente esperando resposta. Os dois nomes da ferramenta usam o mesmo
+pedido tipado e a auditoria `ask_user` sem conteúdo.
 
-No fluxo planejado, você usa a tecla de ditado em uma pergunta de texto exibida, revisa/edita a
-transcrição final e depois a envia com um clique separado ou Enter. Um agente não pode abrir o
-microfone, e fala, silêncio ou soltar a tecla não podem enviar o rascunho. Um card de permissão nunca
-aceita ditado nem aprovação/negação falada. O ditado comum continua sem inserir texto em uma sessão
-de agente esperando resposta. Cancelar, sair, bloquear, expirar ou perder o cliente solicitante
-descarta o rascunho da pergunta não enviado. Esse caminho usa transcrição local, sem limpeza por
-modelo nem requisição a provedor. A implementação e sua oferta aos agentes, desligada
-por padrão, seguem esta decisão em etapas separadas.
+A oferta de Agentes, desligada por padrão, e a configuração de agentes externos continuam na V7.3.
+Clientes externos são recusados mesmo quando configurados manualmente; adicionar uma configuração
+MCP não habilita acesso ao microfone.

@@ -368,7 +368,14 @@ acknowledges after flushing the MCP response; failure/lost acknowledgement never
 Permission cards take priority. Only the owning island/Nest webview can edit or confirm; lock,
 navigation, departure, expiry and disconnect invalidate pending work and late completions.
 [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts) also
-permits future local dictation into this editor, but capture and `vults_dictate` are not connected yet.
+is implemented by a physical-key-only local recording bound to the live question token and recording
+id. `vults_dictate` aliases the same typed `ask_user` exchange. Capture uses the existing microphone
+and cached local transcriber, with admission/lifetime guards and no provider, download, clipboard or
+history pipeline. Results append to the current editor; a matching apply acknowledgement precedes
+separate human Send. Cancellation and every dictation transition advance the view revision, so late
+snapshots cannot restore cancelled words. Native capture/decode never blocks the runtime loop. Ordinary worker admission and Chat recorder
+registration share the routing fence; revocable microphone grants cannot revive after a question
+closes. A matching renderer Status must acknowledge displaying a question before capture can select it.
 No question text becomes a permission intent, rule or policy; external-agent setup remains V7.3.
 
 ## The island on Wayland

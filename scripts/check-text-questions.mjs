@@ -62,6 +62,7 @@ globalThis.questionBridge = {
  textQuestionStatus: token => { const call = { ...deferred(), token }; reads.push(call); return call.promise; },
  textQuestionAction: async () => {}, textQuestionDepart: () => { const call = deferred(); leaves.push(call); return call.promise; },
  onTextQuestion: cb => { event = cb; },
+ shortcutKeys: async () => ({talk:"Ctrl+Alt+V"}), onShortcutKeys() {},
 };
 const ui = normalizePath(fileURLToPath(new URL('../ui/', import.meta.url)));
 const entry = 'text-question-check';
@@ -101,6 +102,67 @@ input.value='字'.repeat(700); input.fire('input'); assert.equal(named(card.elem
 card.clear(); assert.equal(input.value,''); assert.ok(!card.element.textContent.includes('Which branch?'));
 assert.equal(card.element.hidden,true);
 
+const spoken = (seq, phase, text = null, id = 1, token = 'spoken') => ({...view(seq, token), offer:{...view(seq, token).offer, dictation:{id,phase,text}}});
+card.update(spoken(3,'listening'));
+input.value='Manual'; input.fire('input');
+assert.equal(named(card.element,'Send reply').disabled,true);
+input.fire('keydown',{key:'Enter',preventDefault(){},stopPropagation(){}});
+assert.equal(calls.length,1,'Enter during recording cannot confirm');
+assert.equal(input.disabled,false,'Manual editing remains available while recording');
+card.update(spoken(3,'transcribing'));
+input.value='Manual edit'; input.fire('input');
+input.fire('compositionstart');
+card.update(spoken(3,'ready','spoken send'));
+await tick(); assert.equal(input.value,'Manual edit','Final dictation waits for IME composition');
+input.value='Manual edit composed'; input.fire('compositionend');
+assert.equal(input.value,'Manual edit composed spoken send');
+await tick();
+assert.deepEqual(calls.at(-1).args,['spoken','apply-dictation','Manual edit composed spoken send',1]);
+const applying = calls.at(-1);
+card.update(spoken(3,'ready','spoken send'));
+assert.equal(input.value,'Manual edit composed spoken send','Duplicate final snapshots cannot append twice');
+assert.equal(named(card.element,'Send reply').disabled,true,'Apply acknowledgement cannot send a reply');
+applying.resolve(); await tick();
+card.update(view(3,'spoken'));
+assert.equal(named(card.element,'Send reply').disabled,false);
+assert.equal(input.value,'Manual edit composed spoken send');
+card.update(spoken(4,'ready','new words',2,'overflow'));
+await tick(); calls.at(-1).resolve(); await tick();
+card.update(view(5,'long')); input.value='x'.repeat(1999);
+card.update(spoken(5,'ready','too long',3,'long'));
+assert.equal(input.value,'x'.repeat(1999),'Oversized append preserves every manual byte');
+assert.equal(named(card.element,'Send reply').disabled,true);
+assert.ok(card.element.textContent.includes('transcription does not fit'));
+card.update(spoken(6,'listening',null,4,'cancel-capture'));
+named(card.element,'Cancel dictation').fire('click'); await tick();
+assert.deepEqual(calls.at(-1).args,['cancel-capture','stop-dictation','']); calls.at(-1).resolve(); await tick();
+card.update(spoken(7,'ready','old private words',5,'old-capture')); await tick();
+const oldApply = calls.at(-1);
+card.update(view(8,'replacement')); input.value='Replacement draft';
+oldApply.resolve(); await tick();
+assert.equal(input.value,'Replacement draft','A late apply ack cannot replace or clear a replacement draft');
+card.clear();
+card.update(spoken(30,'ready','Cancelled IME words',6,'ime-cancel'));
+await tick(); calls.at(-1).resolve(); await tick();
+card.update(view(31,'ime-cancel-next')); input.value='Keep manual'; input.fire('compositionstart');
+card.update(spoken(32,'ready','cancelled words',7,'ime-cancel-next'));
+card.update(view(33,'ime-cancel-next'));
+card.update(spoken(32,'ready','cancelled words',7,'ime-cancel-next'));
+input.fire('compositionend');
+assert.equal(input.value,'Keep manual','A stale Ready snapshot after cancellation cannot append deferred IME text');
+card.clear();
+
+card.update(spoken(40,'ready','spoken',8,'failed-apply')); await tick();
+calls.at(-1).reject(new Error('lost apply acknowledgement')); await tick();
+assert.equal(input.value,'spoken');
+assert.equal(named(card.element,'Send reply').disabled,true);
+assert.ok(card.element.textContent.includes('Could not apply'));
+named(card.element,'Cancel dictation').fire('click'); await tick(); calls.at(-1).resolve(); await tick();
+card.update(view(41,'failed-apply'));
+assert.equal(input.value,'spoken','Cancelling dictation keeps the local draft after a lost apply acknowledgement');
+assert.equal(named(card.element,'Send reply').disabled,false);
+card.clear();
+
 let mounted = null;
 const connection = connectQuestions('island', card => { mounted = card; if (card && !card.parentElement) document.body.append(card); }, () => {});
 assert.equal(reads.length,1);
@@ -128,4 +190,4 @@ assert.equal(reads.length,before+2,'A stale in-flight status cannot swallow the 
 reads.at(-1).resolve(view(22,'after-ordered-leave')); await tick();
 assert.ok(mounted,'The fresh status discovers a new post-barrier question');
 another.depart(); leaves.at(-1).resolve({seq:23,surface:'',phase:'',offer:null}); await tick();
-console.log('check-text-questions: ok (confirmation, IME/modifiers, UTF-8 limits, retained edits, stale ack/status, ordered departure, queued replacement, visibility, four languages)');
+console.log('check-text-questions: ok (confirmation, IME/modifiers, UTF-8 limits, retained edits, stale ack/status, ordered departure, queued replacement, visibility, local dictation append/IME/cancel/failure, four languages)');

@@ -930,6 +930,7 @@ fn listen_shortcuts(app: &AppHandle) {
             vults_brand::BUNDLE_ID,
             move |id| vults_core::i18n::dictation_shortcut(settings::lang(&words), id).map(str::to_owned),
             move |bound| {
+                questions::cancel_capture(&keys);
                 // Rebinding may not deliver the old key's release.
                 if let Some(state) = keys.try_state::<dictation::State>() {
                     state.shortcuts_changed();
@@ -973,9 +974,6 @@ fn listen_shortcuts(app: &AppHandle) {
                             let _ = emit.emit_to(surface, "shortcut", "talk-cancel");
                         }
                     }
-                    return;
-                }
-                if matches!(id, "talk" | "talk-again" | "talk-command") && questions::active(&emit) {
                     return;
                 }
                 if matches!(id, "talk" | "talk-again" | "talk-command") {

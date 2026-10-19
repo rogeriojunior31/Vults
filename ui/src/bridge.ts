@@ -9,11 +9,12 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
+export type QuestionAction = "edit" | "send" | "cancel" | "stop-dictation" | "apply-dictation";
 export interface TextQuestionView {
   seq: number;
   surface: string;
   phase: string;
-  offer: { token: string; question: string; draft: string; clientPid: number; seconds: number } | null;
+  offer: { token: string; question: string; draft: string; clientPid: number; seconds: number; dictation?: { id: number; phase: string; text: string | null } | null } | null;
 }
 export interface FlockPlace {
   query: string;
@@ -461,7 +462,7 @@ export const Bridge = {
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
   textQuestionStatus: (token: string | null) => invoke<TextQuestionView>("text_question_status", { token }),
-  textQuestionAction: (token: string, action: "edit" | "send" | "cancel", text: string) => invoke<void>("text_question_action", { token, action, text }),
+  textQuestionAction: (token: string, action: QuestionAction, text: string, capture: number | null = null) => invoke<void>("text_question_action", { token, action, text, capture }),
   textQuestionDepart: () => invoke<TextQuestionView>("text_question_depart"),
   onTextQuestion(cb: (view: TextQuestionView) => void): void { void listen<TextQuestionView>("text-question", e => cb(e.payload)); },
   questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),

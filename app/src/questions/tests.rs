@@ -104,7 +104,10 @@ impl Fixture {
             .unwrap()
     }
     async fn open(&mut self, hub: &mut Questions, id: u32) -> String {
-        self.send(json!({"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":"ask_user","arguments":{"question":"Which branch?"}}}));
+        self.open_named(hub, id, "ask_user").await
+    }
+    async fn open_named(&mut self, hub: &mut Questions, id: u32, name: &str) -> String {
+        self.send(json!({"jsonrpc":"2.0","id":id,"method":"tools/call","params":{"name":name,"arguments":{"question":"Which branch?"}}}));
         loop {
             let command = self.next().await;
             let open = matches!(command, super::Command::Open { .. });
@@ -125,6 +128,7 @@ impl Fixture {
         let (reply, rx) = oneshot::channel();
         let work = hub.handle(
             super::Command::Act {
+                capture: None,
                 surface: crate::ISLAND.into(),
                 token: token.into(),
                 action: action.into(),
@@ -330,6 +334,7 @@ async fn ownership_surface_and_page_lease_are_checked_before_any_draft_mutation(
     let (reply, rx) = oneshot::channel();
     hub.handle(
         super::Command::Act {
+            capture: None,
             surface: crate::NEST.into(),
             token: token.clone(),
             action: "send".into(),
@@ -360,4 +365,197 @@ async fn ownership_surface_and_page_lease_are_checked_before_any_draft_mutation(
     );
     assert!(!hub.active());
     assert_eq!(fixture.read()["result"]["isError"], true);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn dictation_stays_a_draft_until_matching_apply_and_separate_confirmation() {
+    let mut fixture = Fixture::new().await;
+    let mut hub = Questions::default();
+    let token = fixture.open_named(&mut hub, 50, "vults_dictate").await;
+    let (_, edited) = Fixture::action(&mut hub, &token, "edit", "Manual");
+    assert!(edited.await.unwrap().is_ok());
+    let early = capture::Press::new(token.clone());
+    hub.handle(Command::VoiceStart(early.clone()), crate::ISLAND, false, true);
+    assert!(early.cancelled.load(std::sync::atomic::Ordering::Acquire));
+    assert!(
+        hub.recording.is_none(),
+        "A question must be displayed before a key can select it"
+    );
+    let (reply, displayed) = oneshot::channel();
+    hub.handle(
+        Command::Status {
+            surface: crate::ISLAND.into(),
+            token: Some(token.clone()),
+            reply,
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    assert!(displayed.await.unwrap().offer.is_some());
+    let press = capture::Press::new(token.clone());
+    hub.handle(Command::VoiceStart(press), crate::ISLAND, false, true);
+    let id = hub.recording.as_ref().unwrap().id;
+    assert_eq!(
+        hub.view.offer.as_ref().unwrap().dictation.as_ref().unwrap().phase,
+        "listening"
+    );
+    let (_, premature) = Fixture::action(&mut hub, &token, "send", "Do not deliver");
+    assert!(premature.await.unwrap().is_err());
+    assert_eq!(hub.view.offer.as_ref().unwrap().draft, "Manual");
+    hub.handle(
+        Command::VoiceResult {
+            token: token.clone(),
+            id,
+            result: None,
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    let (_, edited) = Fixture::action(&mut hub, &token, "edit", "Manual edit during decode");
+    assert!(edited.await.unwrap().is_ok());
+    hub.handle(
+        Command::VoiceResult {
+            token: token.clone(),
+            id,
+            result: Some(Ok("spoken send".into())),
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    hub.handle(
+        Command::VoiceResult {
+            token: token.clone(),
+            id,
+            result: None,
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    assert_eq!(
+        hub.view.offer.as_ref().unwrap().dictation.as_ref().unwrap().phase,
+        "ready"
+    );
+    assert_eq!(
+        hub.view.offer.as_ref().unwrap().draft,
+        "Manual edit during decode"
+    );
+    let (_, premature) = Fixture::action(&mut hub, &token, "send", "Do not deliver");
+    assert!(premature.await.unwrap().is_err());
+    for capture in [Some(id + 1), Some(id)] {
+        let (reply, rx) = oneshot::channel();
+        hub.handle(
+            Command::Act {
+                surface: crate::ISLAND.into(),
+                token: token.clone(),
+                action: "apply-dictation".into(),
+                text: "Manual edit during decode spoken send".into(),
+                capture,
+                reply,
+            },
+            crate::ISLAND,
+            false,
+            true,
+        );
+        assert_eq!(rx.await.unwrap().is_ok(), capture == Some(id));
+    }
+    assert!(hub.recording.is_none());
+    let (work, action) = Fixture::action(&mut hub, &token, "send", "Manual edit during decode spoken send");
+    let (connection, records) = work.unwrap();
+    assert!(persist_at(fixture.dir.clone(), records).await);
+    hub.handle(Command::Audited(connection, true), crate::ISLAND, false, true);
+    let answer = fixture.read();
+    assert_eq!(
+        answer["result"]["content"][0]["text"],
+        "Manual edit during decode spoken send"
+    );
+    while hub.active() {
+        hub.handle(fixture.next().await, crate::ISLAND, false, true);
+    }
+    assert!(action.await.unwrap().is_ok());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cancelled_and_replaced_captures_cannot_mutate_or_send_another_question() {
+    let mut fixture = Fixture::new().await;
+    let mut hub = Questions::default();
+    let old = fixture.open(&mut hub, 60).await;
+    let (reply, displayed) = oneshot::channel();
+    hub.handle(
+        Command::Status {
+            surface: crate::ISLAND.into(),
+            token: Some(old.clone()),
+            reply,
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    assert!(displayed.await.unwrap().offer.is_some());
+    let press = capture::Press::new(old.clone());
+    hub.handle(Command::VoiceStart(press.clone()), crate::ISLAND, false, true);
+    let id = hub.recording.as_ref().unwrap().id;
+    hub.handle(Command::VoiceStop(old.clone()), crate::ISLAND, false, true);
+    assert!(press.cancelled.load(std::sync::atomic::Ordering::Acquire));
+    hub.handle(
+        Command::VoiceResult {
+            token: old.clone(),
+            id,
+            result: Some(Ok("late".into())),
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    assert!(hub.view.offer.as_ref().unwrap().dictation.is_none());
+    let next_press = capture::Press::new(old.clone());
+    hub.handle(
+        Command::VoiceStart(next_press.clone()),
+        crate::ISLAND,
+        false,
+        true,
+    );
+    let next_id = hub.recording.as_ref().unwrap().id;
+    hub.finish(Revocation::Cancelled, "cancelled");
+    assert_eq!(fixture.read()["result"]["isError"], true);
+    let new = fixture.open(&mut hub, 61).await;
+    assert_ne!(new, old);
+    hub.handle(
+        Command::VoiceResult {
+            token: old,
+            id: next_id,
+            result: Some(Ok("late private words".into())),
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    assert!(next_press.cancelled.load(std::sync::atomic::Ordering::Acquire));
+    assert_eq!(hub.view.offer.as_ref().unwrap().draft, "");
+    assert!(hub.view.offer.as_ref().unwrap().dictation.is_none());
+    let (reply, displayed) = oneshot::channel();
+    hub.handle(
+        Command::Status {
+            surface: crate::ISLAND.into(),
+            token: Some(new.clone()),
+            reply,
+        },
+        crate::ISLAND,
+        false,
+        true,
+    );
+    assert!(displayed.await.unwrap().offer.is_some());
+    hub.handle(
+        Command::VoiceStart(capture::Press::new(new)),
+        crate::ISLAND,
+        false,
+        true,
+    );
+    let active = hub.recording.as_ref().unwrap().press.clone();
+    hub.handle(Command::Tick, crate::ISLAND, true, true);
+    assert!(active.cancelled.load(std::sync::atomic::Ordering::Acquire));
+    assert!(!hub.active());
 }

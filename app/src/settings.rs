@@ -1005,6 +1005,8 @@ pub fn set_dictation_microphone<R: tauri::Runtime>(
     save(&next).map_err(|_| "Could not save the dictation microphone.")?;
     *saved = next;
     drop(saved);
+    #[cfg(target_os = "linux")]
+    crate::questions::invalidate_capture(&app);
     let _ = app.emit("settings", serde_json::json!({ "dictationMicrophone": device }));
     Ok(())
 }
@@ -1505,8 +1507,27 @@ pub fn monitor(app: &AppHandle) -> Option<String> {
 pub fn edit(app: &AppHandle, change: impl FnOnce(&mut Settings)) -> Result<(), String> {
     let state = app.state::<SettingsState>();
     let mut s = state.0.lock().map_err(|_| "settings are busy")?;
+    #[cfg(target_os = "linux")]
+    let before = (
+        s.voice_model.clone(),
+        s.voice_language.clone(),
+        s.dictation_microphone.clone(),
+    );
     change(&mut s);
-    save(&s).map_err(|e| format!("can't save the settings: {e}"))
+    #[cfg(target_os = "linux")]
+    let changed = before
+        != (
+            s.voice_model.clone(),
+            s.voice_language.clone(),
+            s.dictation_microphone.clone(),
+        );
+    let result = save(&s).map_err(|e| format!("can't save the settings: {e}"));
+    drop(s);
+    #[cfg(target_os = "linux")]
+    if changed {
+        crate::questions::invalidate_capture(app);
+    }
+    result
 }
 
 fn path() -> PathBuf {

@@ -1,5 +1,5 @@
 # 0028. Voz: escuta local, respostas faladas opcionais
-<!-- source: ea5821c402c1 -->
+<!-- source: af658d8f832a -->
 
 **Status:** Aceita, 2026-10-12. Consolidada em 2026-10-12 a partir da 0013.
 Alterada em 2026-10-17 para ditado, escuta limitada de respostas e áudio temporário de reuniões.
@@ -96,8 +96,9 @@ A resposta de oito segundos e os arquivos temporários de reunião são as exce�
 
 A V7.1 define este contrato para o compositor de perguntas `ask_user` da M7 e
 `vults_dictate(question)`. A V7.2.2 implementa o `ask_user` digitado da M7 para clientes verificados
-iniciados pelo app no Linux. Ela não conecta ditado em perguntas nem oferece configuração de agentes
-externos. Esta decisão por si só não adiciona controle de microfone, configuração nem instalação de agente.
+iniciados pelo app no Linux. A V7.2.3 conecta ditado local no rascunho pela tecla física e o alias
+`vults_dictate` para esses clientes; a configuração de agentes externos continua na V7.3.
+Esta decisão por si só não adiciona controle de microfone, configuração nem instalação de agente.
 
 - **Uma pergunta de texto é um tipo de pedido distinto.** Somente o compositor de perguntas
   tipado e sem autoridade de permissão do app é elegível. Um rótulo do cliente, o texto da pergunta
@@ -144,6 +145,10 @@ Até essas etapas chegarem, o comportamento atual de cards e microfone permanece
 <a id="history"></a>
 
 ## Histórico
+
+- 2026-10-19: a V7.2.3 implementa ditado local em perguntas pela tecla física com aplicação/envio
+  separados e verificações de cancelamento. A configuração externa continua na V7.3; a autoridade
+  sobre permissões não muda.
 
 - 2026-10-19: a N3 V7.1 distingue o rascunho de pergunta ditado da autoridade sobre permissões.
   Somente uma confirmação humana separada pode enviá-lo; o ciclo de perguntas da M7 e as restrições

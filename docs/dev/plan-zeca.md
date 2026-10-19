@@ -717,8 +717,9 @@ K8's voice work; the other K rows remain N4. Tasks stays removed.
 M7's existing MCP server is not the question-card follow-up required by V7. V7.1 aligned ADR 0028
 on 2026-10-19: dictation may edit a typed text question, with a separate human click/Enter to send;
 voice cannot answer a permission. V7.2.1 provides the backend lifecycle and Linux requester proof;
-V7.2.2 connects typed `ask_user` for app-owned clients in Quick/Nest. Local draft dictation and V7.3
-external-agent enforcement must land before the voice flow is available. Z6 and M7 retain their existing Done entries and outstanding follow-ups; this integration
+V7.2.2 connects typed `ask_user` for app-owned clients in Quick/Nest; V7.2.3 adds physical-key local
+draft dictation for those verified app-owned clients. V7.3 still owns the default-off external-agent
+offering and config enforcement. Z6 and M7 retain their existing Done entries and outstanding follow-ups; this integration
 does not claim those follow-ups are implemented.
 
 ### Mobile (wave 6)
@@ -1484,3 +1485,19 @@ Clippy and cargo-deny pass. Renderer build, all 19 renderer checks and guards pa
 no remaining blocker. Black/Light native Quick/Nest checks include long text, a visible editor and
 all actions at 480 x 360. QA app/server and isolated caches are cleaned. Next is V7.2.3, local
 dictation into this editor; V7.3 retains opt-in setup.
+
+
+**2026-10-19 V7.2.3 local question dictation.** The physical dictation key now holds one bounded,
+memory-only recording for the selected live Quick/Nest text question. It uses the installed local
+model and saved microphone/language without provider clean-up, downloads, commands, clipboard or
+history. The result appends to the current manual draft after IME composition; a matching apply
+acknowledgement unblocks a separate human Send. Both MCP names (`ask_user`/`vults_dictate`) share the
+typed question and content-free audit, and remain restricted to verified app-owned clients.
+Cancellation, replacement, lock, lease/expiry, disconnect, settings changes and shortcut rebinding
+invalidate capture and late results. One worker bounds native model loads that cannot stop mid-load.
+Review fixed cancelled Ready snapshots, shortcut routing during Sending, in-flight ordinary capture
+admission and stale binding hints. A matching renderer acknowledgement precedes capture selection.
+All 1,256 workspace tests (10 documented ignores), 10 evals, Clippy, build, 18 renderer checks and
+guards pass. Native controlled-response QA covers Black/Light Quick/Nest, the 480 x 360 minimum,
+four languages and retained manual text after final dictation; no synthetic event opened a microphone.
+Real-human microphone/speech acceptance remains separate. Next: V7.3 external-agent opt-in/config.

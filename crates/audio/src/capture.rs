@@ -63,6 +63,20 @@ impl Capture {
     /// Opens the requested microphone, or the default if it is not listed. Returns only once
     /// the stream is playing; metering runs on the capture thread, about 30 times a second.
     pub fn start(options: CaptureOptions, meter: impl Fn(Meter) + Send + 'static) -> Result<Self, String> {
+        Self::start_guarded(options, meter, || true, || true)
+    }
+
+    /// Admission is checked before opening/playing; lifetime revocation also discards audio.
+    /// Keeping these separate lets key release finish a granted recording.
+    pub fn start_guarded(
+        options: CaptureOptions,
+        meter: impl Fn(Meter) + Send + 'static,
+        live: impl Fn() -> bool + Send + 'static,
+        admit: impl Fn() -> bool + Send + 'static,
+    ) -> Result<Self, String> {
+        if !live() || !admit() {
+            return Err("microphone capture was cancelled".into());
+        }
         if !(1..=600).contains(&options.max_seconds) {
             return Err("microphone capture must be limited to 1-600 seconds".into());
         }
@@ -74,7 +88,7 @@ impl Capture {
         let (ready, started) = mpsc::channel();
         let thread = std::thread::Builder::new()
             .name("audio-capture".into())
-            .spawn(move || capture(options, shared, meter, stopped, ready))
+            .spawn(move || capture(options, shared, meter, stopped, ready, live, admit))
             .map_err(|e| e.to_string())?;
         match started.recv() {
             Ok(Ok(())) => Ok(Self {
@@ -182,7 +196,12 @@ type Chunks = mpsc::Receiver<Vec<f32>>;
 fn open(
     preferred: Option<&str>,
     failed: Arc<Mutex<Option<String>>>,
+    live: &impl Fn() -> bool,
+    admit: &impl Fn() -> bool,
 ) -> Result<(cpal::Stream, Converter, Chunks), String> {
+    if !live() || !admit() {
+        return Err("microphone capture was cancelled".into());
+    }
     let device = input(preferred)?;
     let config = device
         .default_input_config()
@@ -202,6 +221,9 @@ fn open(
         other => return Err(format!("the microphone's format ({other}) is not supported")),
     }?;
     let converter = Converter::new(rate)?;
+    if !live() || !admit() {
+        return Err("microphone capture was cancelled".into());
+    }
     stream
         .play()
         .map_err(|e| format!("can't start the microphone: {e}"))?;
@@ -263,9 +285,11 @@ fn capture(
     notify: impl Fn(Meter),
     stop: mpsc::Receiver<()>,
     ready: mpsc::Sender<Result<(), String>>,
+    live: impl Fn() -> bool,
+    admit: impl Fn() -> bool,
 ) -> Result<Vec<f32>, String> {
     let failed = Arc::new(Mutex::new(None));
-    let opened = open(options.device.as_deref(), failed.clone());
+    let opened = open(options.device.as_deref(), failed.clone(), &live, &admit);
     let (stream, mut converter, chunks) = match opened {
         Ok(opened) => opened,
         Err(error) => {
@@ -289,6 +313,10 @@ fn capture(
         }
     };
     loop {
+        if !live() {
+            audio.0.lock().unwrap_or_else(|e| e.into_inner()).clear();
+            return Err("microphone capture was cancelled".into());
+        }
         if Instant::now() >= deadline
             || audio.len() >= cap
             || stop.try_recv() != Err(mpsc::TryRecvError::Empty)
@@ -312,6 +340,10 @@ fn capture(
         append(&converter.push(&chunk)?, &mut meter);
     }
     append(&converter.finish()?, &mut meter);
+    if !live() {
+        audio.0.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        return Err("microphone capture was cancelled".into());
+    }
     Ok(std::mem::take(
         &mut *audio.0.lock().unwrap_or_else(|e| e.into_inner()),
     ))
@@ -341,6 +373,8 @@ mod tests {
 
     #[test]
     fn invalid_limits_never_open_a_microphone() {
+        assert!(Capture::start_guarded(CaptureOptions::default(), |_| {}, || false, || true).is_err());
+        assert!(Capture::start_guarded(CaptureOptions::default(), |_| {}, || true, || false).is_err());
         for max_seconds in [0, 601, u32::MAX] {
             assert!(
                 Capture::start(

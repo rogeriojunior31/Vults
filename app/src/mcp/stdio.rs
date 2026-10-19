@@ -157,7 +157,8 @@ pub(crate) fn serve(
         if msg["method"] == "notifications/initialized" && msg.get("id").is_none() && initialized {
             ready = true;
         }
-        let ask = msg["method"] == "tools/call" && msg["params"]["name"] == "ask_user";
+        let ask = msg["method"] == "tools/call"
+            && matches!(msg["params"]["name"].as_str(), Some("ask_user" | "vults_dictate"));
         if ask {
             let Some(id) = msg.get("id").filter(|id| id.is_string() || id.is_i64()).cloned() else {
                 continue;

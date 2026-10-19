@@ -237,7 +237,7 @@ fn announce(app: &AppHandle) {
 pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     if crate::questions::active(&app) {
-        return Err("Text questions currently accept typed replies only.".into());
+        return Err("Use the physical dictation key to edit the question before sending.".into());
     }
 
     crate::doctor::dictation::stop_mic(&app);
@@ -268,28 +268,52 @@ pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) ->
     cancel(&app);
     let levels = app.clone();
     let levels_target = target.clone();
-    let mut recorder = Recorder::start(
+    #[cfg(target_os = "linux")]
+    let grant = crate::questions::admit_ordinary(&app, |stop| stop)
+        .ok_or("Use the physical dictation key to edit the question before sending.")?;
+    #[cfg(not(target_os = "linux"))]
+    let grant = Arc::new(AtomicBool::new(false));
+    let live = grant.clone();
+    let mut recorder = Recorder::start_guarded(
         move |level| {
             let _ = levels.emit_to(levels_target.as_str(), "voice-level", level);
         },
         auto,
+        move || !live.load(Ordering::Acquire),
     )?;
-    // The text so far, dimmed, while the user speaks (on a GPU only); the final text replaces it.
-    if let Some(id) = settings::voice_model(&app) {
-        let (loader, events) = (app.clone(), app.clone());
-        recorder.preview(
-            move || transcriber(&loader, &id),
-            language(&app),
-            move |text| {
-                let _ = events.emit_to(target.as_str(), "voice-partial", text);
-            },
-        );
+    let preview_model = settings::voice_model(&app);
+    let preview_language = language(&app);
+    let register = || {
+        if grant.load(Ordering::Acquire) {
+            return Err("The recording was cancelled.".into());
+        }
+
+        // The text so far, dimmed, while the user speaks (on a GPU only); the final text replaces it.
+        if let Some(id) = preview_model {
+            let (loader, events) = (app.clone(), app.clone());
+            recorder.preview(
+                move || transcriber(&loader, &id),
+                preview_language,
+                move |text| {
+                    let _ = events.emit_to(target.as_str(), "voice-partial", text);
+                },
+            );
+        }
+        *app.state::<VoiceState>()
+            .recording
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some((window.label().to_owned(), recorder));
+        Ok(())
+    };
+    #[cfg(target_os = "linux")]
+    {
+        crate::questions::admit_ordinary(&app, |_| register())
+            .unwrap_or_else(|| Err("The recording was cancelled.".into()))
     }
-    *app.state::<VoiceState>()
-        .recording
-        .lock()
-        .unwrap_or_else(|e| e.into_inner()) = Some((window.label().to_owned(), recorder));
-    Ok(())
+    #[cfg(not(target_os = "linux"))]
+    {
+        register()
+    }
 }
 
 /// Stops recording and returns what was said.

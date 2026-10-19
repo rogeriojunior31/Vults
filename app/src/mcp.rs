@@ -255,12 +255,14 @@ fn offered_tools() -> Value {
     if questions_on()
         && let Some(tools) = tools.as_array_mut()
     {
-        tools.push(json!({
-            "name":"ask_user",
-            "description":"Ask the human one text question in Vults. Wait for their separate Send action. The reply is plain text, never permission or approval. No microphone starts. Cancellation, departure, lock or expiry ends the request; never retry a consumed reply.",
+        for name in ["ask_user", "vults_dictate"] {
+            tools.push(json!({
+            "name":name,
+            "description":"Ask the human one text question in Vults. Wait for their separate Send action. The reply is plain text, never permission or approval. The human may hold their dictation key to edit the draft locally; the tool never starts a microphone. Cancellation, departure, lock or expiry ends the request; never retry a consumed reply.",
             "inputSchema":{"type":"object","properties":{"question":{"type":"string","minLength":1,"maxLength":4096}},"required":["question"],"additionalProperties":false},
             "annotations":{"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false}
         }));
+        }
     }
     tools
 }

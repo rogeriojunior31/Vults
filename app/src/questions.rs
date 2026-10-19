@@ -6,12 +6,17 @@ use tokio::sync::oneshot;
 use vults_core::questions::{Owner, Revocation, Slot, Ticket};
 use vults_peer::requester::Requester;
 
+mod capture;
 pub(crate) mod transport;
+pub(crate) use capture::{admit_ordinary, cancel as cancel_capture, invalidate as invalidate_capture, key};
 #[derive(Debug, Default)]
-pub(crate) struct Active(std::sync::atomic::AtomicBool);
+pub(crate) struct Active {
+    live: std::sync::atomic::AtomicBool,
+    route: std::sync::Mutex<capture::Routing>,
+}
 pub(crate) fn active(app: &AppHandle) -> bool {
     app.try_state::<Active>()
-        .is_some_and(|state| state.0.load(std::sync::atomic::Ordering::Acquire))
+        .is_some_and(|state| state.live.load(std::sync::atomic::Ordering::Acquire))
 }
 const LEASE: Duration = Duration::from_secs(3);
 const UNAVAILABLE: &str = "The question is no longer available. Ask a new question; do not retry this reply.";
@@ -38,12 +43,20 @@ pub(crate) enum Command {
         token: String,
         action: String,
         text: String,
+        capture: Option<u64>,
         reply: oneshot::Sender<Result<(), String>>,
     },
     Depart(String),
     Leave {
         surface: String,
         reply: oneshot::Sender<View>,
+    },
+    VoiceStart(capture::Press),
+    VoiceStop(String),
+    VoiceResult {
+        token: String,
+        id: u64,
+        result: Option<Result<String, String>>,
     },
     Tick,
     Audited(u64, bool),
@@ -66,6 +79,23 @@ struct Offer {
     draft: String,
     client_pid: u32,
     seconds: u64,
+    dictation: Option<Dictation>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct Dictation {
+    id: u64,
+    phase: String,
+    text: Option<String>,
+}
+struct Recording {
+    press: capture::Press,
+    id: u64,
+    expires: Instant,
+}
+impl Drop for Recording {
+    fn drop(&mut self) {
+        self.press.cancel();
+    }
 }
 struct Pending {
     connection: u64,
@@ -75,6 +105,7 @@ struct Pending {
     reply: Option<oneshot::Sender<Answer>>,
     expires: Instant,
     touched: Instant,
+    presented: bool,
 }
 struct Delivery {
     pending: Pending,
@@ -90,9 +121,13 @@ pub(crate) struct Questions {
     view: View,
     published: Option<View>,
     records: Vec<vults_core::audit::Audit>,
+    recording: Option<Recording>,
+    start_recording: bool,
+    next_recording: u64,
 }
 impl Questions {
     fn finish(&mut self, reason: Revocation, phase: &str) {
+        self.stop_recording();
         let consumed = self.delivery.is_some();
         if let Some(delivery) = self.delivery.take() {
             self.records.push(
@@ -124,7 +159,23 @@ impl Questions {
             self.view.seq += 1;
         }
     }
+    fn stop_recording(&mut self) {
+        self.recording = None;
+        self.start_recording = false;
+        if let Some(offer) = &mut self.view.offer
+            && offer.dictation.take().is_some()
+        {
+            self.view.seq += 1;
+        }
+    }
     fn check(&mut self, locked: bool, visible: bool, now: Instant) {
+        if self
+            .recording
+            .as_ref()
+            .is_some_and(|r| r.press.cancelled.load(std::sync::atomic::Ordering::Acquire))
+        {
+            self.stop_recording();
+        }
         let pending = self
             .pending
             .as_mut()
@@ -215,6 +266,7 @@ impl Questions {
                         draft: offer.draft,
                         client_pid: owner.client_pid,
                         seconds: offer.expires.saturating_duration_since(now).as_secs(),
+                        dictation: None,
                     }),
                 };
                 self.pending = Some(Pending {
@@ -225,6 +277,7 @@ impl Questions {
                     reply: Some(reply),
                     expires: offer.expires,
                     touched: now,
+                    presented: false,
                 });
             }
             Command::Disconnect(connection) => {
@@ -263,6 +316,7 @@ impl Questions {
                     if let Some(pending) = &mut self.pending {
                         if token.as_deref() == self.view.offer.as_ref().map(|o| o.token.as_str()) {
                             pending.touched = now;
+                            pending.presented = true;
                         }
                         if let (Some(offer), Some(current)) = (&mut self.view.offer, pending.slot.view(now)) {
                             offer.seconds = current.expires.saturating_duration_since(now).as_secs();
@@ -281,6 +335,7 @@ impl Questions {
                 token,
                 action,
                 text,
+                capture,
                 reply,
             } => {
                 let valid = surface == self.view.surface
@@ -297,7 +352,29 @@ impl Questions {
                     let _ = reply.send(Ok(()));
                     return None;
                 }
-                if !matches!(action.as_str(), "edit" | "send") {
+                if action == "stop-dictation" {
+                    self.stop_recording();
+                    let _ = reply.send(Ok(()));
+                    return None;
+                }
+                if action == "send" && self.recording.is_some() {
+                    let _ = reply.send(Err("Review the transcription before sending.".into()));
+                    return None;
+                }
+                let apply = action == "apply-dictation";
+                if apply && !self.recording.as_ref().is_some_and(|r| Some(r.id) == capture)
+                    || apply
+                        && !self
+                            .view
+                            .offer
+                            .as_ref()
+                            .and_then(|o| o.dictation.as_ref())
+                            .is_some_and(|d| d.phase == "ready")
+                {
+                    let _ = reply.send(Err(UNAVAILABLE.into()));
+                    return None;
+                }
+                if !matches!(action.as_str(), "edit" | "send" | "apply-dictation") {
                     let _ = reply.send(Err(UNAVAILABLE.into()));
                     return None;
                 }
@@ -308,11 +385,14 @@ impl Questions {
                     ));
                     return None;
                 }
-                if action == "edit" {
+                if action == "edit" || apply {
                     if let Some(offer) = &mut self.view.offer {
                         offer.draft = text;
                     }
                     pending.touched = now;
+                    if apply {
+                        self.stop_recording();
+                    }
                     let _ = reply.send(Ok(()));
                     return None;
                 }
@@ -385,6 +465,80 @@ impl Questions {
                     .action
                     .send(if sent { Ok(()) } else { Err(UNAVAILABLE.into()) });
             }
+            Command::VoiceStart(press) => {
+                let valid = self.recording.is_none()
+                    && !press.cancelled.load(std::sync::atomic::Ordering::Acquire)
+                    && self.view.offer.as_ref().is_some_and(|o| o.token == press.token)
+                    && self.pending.as_ref().is_some_and(|p| p.presented);
+                if valid {
+                    self.next_recording += 1;
+                    let id = self.next_recording;
+                    self.recording = Some(Recording {
+                        press,
+                        id,
+                        expires: self.pending.as_ref().expect("validated pending question").expires,
+                    });
+                    self.start_recording = true;
+                    self.view.seq += 1;
+                    if let Some(offer) = &mut self.view.offer {
+                        offer.dictation = Some(Dictation {
+                            id,
+                            phase: "listening".into(),
+                            text: None,
+                        });
+                    }
+                } else {
+                    press.cancel();
+                }
+            }
+            Command::VoiceStop(token) => {
+                if self.view.offer.as_ref().is_some_and(|o| o.token == token) {
+                    self.stop_recording();
+                }
+            }
+            Command::VoiceResult { token, id, result } => {
+                if self
+                    .recording
+                    .as_ref()
+                    .is_some_and(|r| r.id == id && r.press.token == token)
+                    && let Some(offer) = &mut self.view.offer
+                {
+                    if offer.dictation.as_ref().is_some_and(|d| d.phase == "ready") {
+                        return None;
+                    }
+                    self.view.seq += 1;
+                    match result {
+                        None => {
+                            offer.dictation = Some(Dictation {
+                                id,
+                                phase: "transcribing".into(),
+                                text: None,
+                            })
+                        }
+                        Some(Ok(text))
+                            if !text.trim().is_empty()
+                                && text.len() <= vults_core::MAX_ANSWER_LEN
+                                && !text.chars().any(|c| c.is_control() && c != '\n' && c != '\t') =>
+                        {
+                            offer.dictation = Some(Dictation {
+                                id,
+                                phase: "ready".into(),
+                                text: Some(text),
+                            });
+                        }
+                        Some(_) => {
+                            self.stop_recording();
+                            if let Some(offer) = &mut self.view.offer {
+                                offer.dictation = Some(Dictation {
+                                    id,
+                                    phase: "failed".into(),
+                                    text: None,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
             Command::Tick => {}
         }
         None
@@ -416,10 +570,40 @@ pub(crate) fn publish(app: &AppHandle, questions: &mut Questions) {
     }
     let live = questions.active();
     if let Some(state) = app.try_state::<Active>() {
-        let was = state.0.swap(live, std::sync::atomic::Ordering::AcqRel);
+        // Fence native shortcuts before cancelling the ordinary capture they might race with.
+        if let Ok(mut route) = state.route.lock() {
+            if live {
+                route
+                    .ordinary_stop
+                    .store(true, std::sync::atomic::Ordering::Release);
+            } else if route.blocking {
+                route.ordinary_stop = std::sync::Arc::default();
+            }
+            route.blocking = live;
+            // A native key cannot select a question before its renderer acknowledges displaying it.
+            route.token = questions
+                .pending
+                .as_ref()
+                .filter(|p| p.presented)
+                .and(questions.view.offer.as_ref())
+                .map(|o| o.token.clone());
+            route.current = questions.recording.as_ref().map(|r| r.press.clone());
+        }
+        let was = state.live.swap(live, std::sync::atomic::Ordering::AcqRel);
         if live && !was {
             crate::voice::cancel(app);
             crate::dictation::cancel(app, false);
+        }
+    }
+    if questions.start_recording {
+        questions.start_recording = false;
+        if let Some(recording) = &questions.recording {
+            capture::start(
+                app.clone(),
+                recording.press.clone(),
+                recording.id,
+                recording.expires,
+            );
         }
     }
     if questions.published.as_ref() != Some(&questions.view) {
@@ -428,6 +612,7 @@ pub(crate) fn publish(app: &AppHandle, questions: &mut Questions) {
     }
 }
 pub(crate) fn depart(app: &AppHandle, surface: &str) {
+    invalidate_capture(app);
     crate::runtime::question_try(app, Command::Depart(surface.into()));
 }
 fn page(window: &tauri::Webview) -> Result<String, String> {
@@ -460,6 +645,7 @@ pub(crate) async fn text_question_action(
     token: String,
     action: String,
     text: String,
+    capture: Option<u64>,
 ) -> Result<(), String> {
     let surface = page(&window)?;
     if token.len() != 64 || text.len() > vults_core::MAX_ANSWER_LEN {
@@ -473,6 +659,7 @@ pub(crate) async fn text_question_action(
             token,
             action,
             text,
+            capture,
             reply,
         },
     )

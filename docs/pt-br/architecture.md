@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: e2e1d2c37bc7 -->
+<!-- source: 2243400ef603 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -409,7 +409,16 @@ descarregar a resposta MCP no fluxo; falha/perda de confirmação nunca reutiliz
 Cards de permissão têm prioridade. Só o webview dono da ilha/Nest pode editar ou confirmar; bloquear,
 navegar, sair, expirar e desconectar invalidam o trabalho pendente e conclusões tardias.
 A [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts) também
-permite ditado local futuro nesse editor, mas captura e `vults_dictate` ainda não estão conectados.
+é implementada por uma gravação local iniciada somente pela tecla física, vinculada ao token da
+pergunta ativa e ao identificador da gravação. `vults_dictate` é um alias da mesma troca tipada de
+`ask_user`. A captura usa o microfone e o transcritor local em cache existentes, com verificações de
+admissão e duração e sem passar por provedor, download, área de transferência ou histórico. O resultado
+é acrescentado ao editor atual; uma confirmação de aplicação correspondente precede o Enviar humano
+separado. Cancelar e cada transição do ditado avançam a revisão da tela, impedindo que snapshots
+tardios restaurem palavras canceladas. Captura/transcrição nativas nunca bloqueiam o loop do runtime. A admissão do worker comum e o registro
+do gravador do Chat compartilham a trava de roteamento; concessões de microfone revogadas não voltam
+a valer após fechar uma pergunta. Um Status correspondente do renderer precisa confirmar a exibição
+da pergunta antes que a captura possa selecioná-la.
 Nenhum texto de pergunta vira intent de permissão, regra ou política; a configuração de agentes externos continua na V7.3.
 
 <a id="the-island-on-wayland"></a>

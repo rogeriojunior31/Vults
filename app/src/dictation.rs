@@ -41,7 +41,7 @@ pub fn start(app: &AppHandle) {
 }
 
 pub fn key(app: &AppHandle, id: &str, down: bool) {
-    if crate::questions::active(app) && matches!(id, "talk" | "talk-again" | "talk-command") {
+    if crate::questions::key(app, id, down) {
         return;
     }
     if matches!(id, "talk" | "talk-command") && down {
@@ -74,7 +74,7 @@ pub fn key(app: &AppHandle, id: &str, down: bool) {
         let style_session = (saved.dictation_cleanup && id == "talk" && down)
             .then(|| target.as_ref().and_then(|target| capture_session(app, target)))
             .flatten();
-        let ticket = state.key_at(id, down, observed);
+        let ticket = crate::questions::admit_ordinary(app, |_| state.key_at(id, down, observed)).flatten();
         if let Some(ticket) = &ticket {
             ticket.pin_cleanup(
                 (id == "talk" && down)
@@ -112,6 +112,7 @@ pub fn key(app: &AppHandle, id: &str, down: bool) {
 
 pub fn cancel(app: &AppHandle, forget: bool) {
     if forget {
+        crate::questions::cancel_capture(app);
         crate::runtime::cancel_voice_commands(app);
     }
     if let Some(state) = app.try_state::<State>() {
@@ -391,11 +392,17 @@ impl Backend for Native {
                 .map_err(|_| "Could not read dictation words.")?,
         };
         let (levels, meter) = (self.app.clone(), ticket.clone());
-        let capture = Capture::start(options, move |level| {
-            if let Some(status) = meter.feedback(Some(level.bands), None) {
-                let _ = levels.emit("dictation", status);
-            }
-        })?;
+        let live = ticket.clone();
+        let capture = Capture::start_guarded(
+            options,
+            move |level| {
+                if let Some(status) = meter.feedback(Some(level.bands), None) {
+                    let _ = levels.emit("dictation", status);
+                }
+            },
+            move || !live.stop().load(std::sync::atomic::Ordering::Acquire),
+            || true,
+        )?;
         let (loader, events, partial) = (self.app.clone(), self.app.clone(), ticket.clone());
         let model = config.model.clone();
         let qualified = vults_voice::vocabulary::enabled(&model, config.language.as_deref());

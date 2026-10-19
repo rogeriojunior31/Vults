@@ -10,8 +10,8 @@ export function connectQuestions(surface: "island" | "nest", mount: (card: HTMLE
   let barrier = -1;
   let leaving = false;
   const card = questionCard({
-    act: async (token, action, text) => {
-      try { await Bridge.textQuestionAction(token, action, text); }
+    act: async (token, action, text, capture) => {
+      try { await Bridge.textQuestionAction(token, action, text, capture); }
       finally { void refresh(); }
     }, keyboard,
     changed: () => mount(card.element.hidden ? null : card.element),
@@ -47,6 +47,9 @@ export function connectQuestions(surface: "island" | "nest", mount: (card: HTMLE
     }, () => { /* No ordered acknowledgement: remain closed rather than restore private text. */ });
   }
   Bridge.onTextQuestion(receive);
+  let rebound = false;
+  void Bridge.shortcutKeys().then(keys => { if (!rebound) card.shortcut(keys.talk ?? ""); }, () => {});
+  Bridge.onShortcutKeys(keys => { rebound = true; card.shortcut(keys.talk ?? ""); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) depart(); else void refresh(); });
   window.addEventListener("pagehide", depart);
   // A missing/destroyed renderer cannot keep a question alive through a stale event listener.

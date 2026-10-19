@@ -859,29 +859,38 @@ pending archive reads/saves, even when dictation retention is off. Dictation-onl
 retention setting do not remove meetings. The list and details clear on lock or departure and reload
 when reopened. Saving, viewing, renaming, deleting and exporting use no model or network request.
 
-## Agent question dictation (planned)
+## Agent question dictation
 
-On Linux, the Claude Code process started by Vults can use M7's `ask_user` to display a text
-question in Quick or the visible Nest. Type your reply, then choose **Send reply** or press plain
-Enter in its editor. Shift+Enter adds a line; IME composition never sends. The question identifies
-the requesting process and has a fixed two-minute lifetime. Your reply is plain text, never a tool
-approval. This interface currently accepts typed replies only; its shortcuts do not start capture.
+On Linux, the Claude Code process started by Vults can use M7's `ask_user` or its `vults_dictate`
+alias to display a text question in Quick or the visible Nest. Type your reply, then choose
+**Send reply** or press plain Enter in its editor. Shift+Enter adds a line; IME composition never
+sends. The question identifies the requesting process and has a fixed two-minute lifetime. Your
+reply is plain text, never a tool approval.
+
+With an installed local voice model, hold the dictation shortcut shown on the question. Speak,
+release the key, then review/edit the words appended to your current draft. Recording is limited
+to 60 seconds or the remaining question lifetime, whichever ends first. The editor stays editable
+while recording/transcribing; Send stays disabled until the local result has been applied. The
+question uses hold-to-talk even when ordinary dictation uses another gesture. No microphone button,
+agent request, focus change, key repeat, key release, silence or spoken "send" submits a reply.
+
+**Cancel dictation** stops recording/decoding and keeps the manual draft. Failed, empty or oversized
+results never replace it. If the combined text exceeds 2000 UTF-8 bytes, cancel dictation and shorten
+the draft. Model/language/microphone changes discard pending capture. An already-running native
+model load may finish releasing its resources before another question recording can start.
 
 **Cancel**, navigation, hide/close, screen lock, expiry or requester disconnection clears the unsent
-draft. Sending consumes the reply once, saves a content-free audit row and waits for the relay's
-confirmation that it flushed the MCP response. An uncertain delivery is explicit: ask for a new
-question instead of resending the consumed reply. Prompts/replies are not copied into this audit.
-An existing or newly arriving permission takes priority over a text question.
+question draft and cancels its recording. Late results cannot enter another question. Sending
+consumes the reply once, saves a content-free audit row and waits for the relay's confirmation that
+it flushed the MCP response. An uncertain delivery is explicit: ask for a new question instead of
+resending the consumed reply. Prompts/replies are not copied into this audit. An existing or newly
+arriving permission takes priority over a text question.
 
-The [voice decision](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
-defines the future `vults_dictate(question)` extension. Dictation into this editor and the default-off
-Agents offering are not available yet. External agents are refused, even when configured manually;
-adding an MCP configuration cannot enable microphone access.
+This path implements the [voice decision](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+using local, memory-only transcription. It does not download a model, use provider clean-up, interpret
+voice commands, copy/insert text elsewhere or save dictation history. A permission card never accepts
+dictation or a spoken approval/denial. Ordinary dictation still cannot insert text into a waiting
+agent session. Both question tool names use the same typed request and content-free `ask_user` audit.
 
-In the planned flow, you use the dictation key on a displayed text question, review/edit the final
-transcript, then send it with a separate click or Enter. An agent cannot open the microphone, and
-speech, silence or key release cannot submit the draft. A permission card never accepts dictation
-or a spoken approval/denial. Ordinary dictation still cannot insert text into a waiting agent session.
-Cancelling, leaving, locking, expiry or losing the requesting client discards the unsent question
-draft. This path uses local transcription, without model clean-up or a provider request.
-Implementation and its default-off agent offering follow this decision in separate steps.
+The default-off Agents offering and external-agent setup remain V7.3 work. External clients are
+refused even when configured manually; adding an MCP configuration cannot enable microphone access.

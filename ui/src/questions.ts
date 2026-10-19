@@ -1,10 +1,10 @@
 import { el } from "./dom";
 import { t } from "./i18n";
-import type { TextQuestionView } from "./bridge";
+import type { QuestionAction, TextQuestionView } from "./bridge";
 import "./questions.css";
 
 export interface QuestionBackend {
-  act(token: string, action: "edit" | "send" | "cancel", text: string): Promise<void>;
+  act(token: string, action: QuestionAction, text: string, capture?: number): Promise<void>;
   keyboard(on: boolean): void;
   changed(): void;
 }
@@ -21,6 +21,9 @@ export function questionCard(backend: QuestionBackend) {
   input.rows = 3;
   input.maxLength = 2000;
   const note = el("p", { class: "text-question-note" });
+  const voice = el("p", { class: "text-question-note" });
+  voice.setAttribute("role", "status");
+  const stop = el("button", { onclick: () => void stopDictation() });
   const error = el("p", { class: "text-question-error" });
   error.setAttribute("role", "alert");
   const cancel = el("button", { onclick: () => void act("cancel") });
@@ -28,12 +31,15 @@ export function questionCard(backend: QuestionBackend) {
   const close = el("button", { onclick: () => { hiddenSeq = view?.seq ?? 0; hide(); } });
   const labelText = el("span");
   label.append(labelText, input);
-  root.append(title, owner, el("div", { class: "text-question-body" }, prompt, label, note, error), el("div", { class: "text-question-actions" }, cancel, close, send));
+  root.append(title, owner, el("div", { class: "text-question-body" }, prompt, label, note, voice, error), el("div", { class: "text-question-actions" }, stop, cancel, close, send));
   let view: TextQuestionView | null = null;
   let token: string | null = null;
   let hiddenSeq = -1;
   let busy = false;
   let composing = false;
+  let key = "";
+  let applied = -1;
+  const recording = () => !!view?.offer?.dictation && view.offer.dictation.phase !== "failed";
   let writes: Promise<void> = Promise.resolve();
   let timer: ReturnType<typeof setTimeout> | undefined;
   function hide() {
@@ -46,7 +52,7 @@ export function questionCard(backend: QuestionBackend) {
   }
   const valid = () => !!input.value.trim() && new TextEncoder().encode(input.value).length <= 2000;
   const controls = () => {
-    send.disabled = busy || composing || !valid();
+    send.disabled = busy || composing || recording() || !valid();
     cancel.disabled = busy;
     input.disabled = busy;
   };
@@ -59,8 +65,33 @@ export function questionCard(backend: QuestionBackend) {
       if (token === asked) error.textContent = t("Could not save this draft. Keep it within 2000 bytes and try again.");
     });
   }
+  async function stopDictation() {
+    if (!token) return;
+    const asked = token;
+    try { await backend.act(asked, "stop-dictation", ""); }
+    catch { if (token === asked) error.textContent = t("Could not stop dictation. Try again."); }
+  }
+  function applyDictation() {
+    const result = view?.offer?.dictation;
+    if (!token || composing || result?.phase !== "ready" || result.id === applied || !result.text) return;
+    const asked = token;
+    applied = result.id;
+    const text = input.value + (input.value && !/\s$/.test(input.value) ? " " : "") + result.text;
+    if (new TextEncoder().encode(text).length > 2000) {
+      error.textContent = t("The transcription does not fit. Your draft was kept; cancel dictation and shorten it.");
+      return;
+    }
+    input.value = text;
+    clearTimeout(timer);
+    writes = writes.catch(() => {}).then(() => {
+      if (token === asked) return backend.act(asked, "apply-dictation", text, result.id);
+    });
+    void writes.catch(() => {
+      if (token === asked) error.textContent = t("Could not apply the transcription. Your draft was kept; cancel dictation to continue.");
+    });
+  }
   async function act(action: "send" | "cancel") {
-    if (!token || busy || composing || (action === "send" && !valid())) return;
+    if (!token || busy || composing || (action === "send" && (!valid() || recording()))) return;
     clearTimeout(timer);
     const asked = token;
     const text = input.value;
@@ -86,7 +117,7 @@ export function questionCard(backend: QuestionBackend) {
   input.addEventListener("focus", () => backend.keyboard(true));
   input.addEventListener("blur", () => { backend.keyboard(false); save(); });
   input.addEventListener("compositionstart", () => { composing = true; controls(); });
-  input.addEventListener("compositionend", () => { composing = false; controls(); });
+  input.addEventListener("compositionend", () => { composing = false; applyDictation(); controls(); });
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
       && !event.isComposing && !composing && event.keyCode !== 229 && !event.repeat) {
@@ -105,7 +136,7 @@ export function questionCard(backend: QuestionBackend) {
     title.textContent = t("Text question");
     const pending = next.phase === "pending" && !!offer;
     if (pending && offer.token !== token) {
-      token = offer.token; input.value = offer.draft; error.textContent = ""; busy = false; composing = false;
+      token = offer.token; input.value = offer.draft; error.textContent = ""; busy = false; composing = false; applied = -1;
     } else if (!pending) { token = null; input.value = ""; busy = next.phase === "sending"; composing = false; }
     owner.textContent = offer ? t("Requested by process {pid} · {seconds}s remaining", { pid: offer.clientPid, seconds: offer.seconds }) : "";
     owner.hidden = !pending;
@@ -118,7 +149,17 @@ export function questionCard(backend: QuestionBackend) {
     labelText.textContent = t("Your reply");
     input.setAttribute("aria-label", t("Your reply"));
     note.textContent = t("Your reply is text. It does not approve a tool.");
-    note.hidden = !pending;
+    const dictation = offer?.dictation;
+    voice.textContent = dictation?.phase === "listening" ? t("Listening… Release the dictation key to review your words.")
+      : dictation?.phase === "transcribing" ? t("Transcribing locally… Your reply will not be sent.")
+      : dictation?.phase === "ready" ? t("Adding your words to the draft…")
+      : dictation?.phase === "failed" ? t("Dictation could not produce a reply. Check your local model and microphone, or type your reply.")
+      : key ? t("Hold {key} to dictate here, then review and send separately.", { key }) : "";
+    voice.hidden = !pending || !voice.textContent;
+    stop.textContent = t("Cancel dictation");
+    stop.hidden = !pending || !recording();
+    applyDictation();
+    note.hidden = !pending || !!dictation;
     label.hidden = !pending;
     error.hidden = !pending;
     cancel.textContent = t("Cancel"); send.textContent = t("Send reply"); close.textContent = t("Close");
@@ -128,5 +169,5 @@ export function questionCard(backend: QuestionBackend) {
     controls();
     backend.changed();
   }
-  return { element: root, update, token: () => token, clear: () => { token = null; view = null; clearTimeout(timer); hide(); } };
+  return { element: root, update, shortcut: (value: string) => { key = value; if (view) update(view); }, token: () => token, clear: () => { token = null; view = null; clearTimeout(timer); hide(); } };
 }

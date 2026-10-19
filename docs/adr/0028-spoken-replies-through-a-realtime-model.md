@@ -81,7 +81,8 @@ listening and storage rules. Dictation into other apps follows
 
 V7.1 defines this contract for M7's future `ask_user` question composer and
 `vults_dictate(question)`. V7.2.2 implements M7's typed `ask_user` for verified app-owned clients on
-Linux. It does not connect question dictation or offer external-agent setup. This decision adds no
+Linux. V7.2.3 connects physical-key local draft dictation and the `vults_dictate` alias for those
+clients; external-agent setup remains V7.3. This decision adds no
 microphone control, setting or agent installation by itself.
 
 - **A text question is a distinct request kind.** Only the app's typed, non-permission question
@@ -121,6 +122,9 @@ V7.3 separately offers the feature to agents with the off-by-default setting and
 Until those steps land, existing card and microphone behavior stays as shipped.
 
 ## History
+
+- 2026-10-19: V7.2.3 implements physical-key local question dictation with a separate apply/send
+  barrier and cancellation guards. External-agent setup remains V7.3; permission authority is unchanged.
 
 - 2026-10-19: N3 V7.1 distinguishes a dictated question draft from permission authority. Only a
   separate human confirmation may send it; M7's question lifecycle and V7.2/V7.3 enforcement remain

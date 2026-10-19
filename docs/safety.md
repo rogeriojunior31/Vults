@@ -51,8 +51,9 @@ What Vults promises:
   verified live requester started by Vults. The reply is consumed once and audited without a second
   copy of its text, before delivery. Leaving, lock, expiry and disconnection revoke pending drafts;
   a consumed reply is never retried after an uncertain delivery. It never answers a permission.
-  [Agent-question dictation](guide/dictation.md#agent-question-dictation-planned) and its default-off
-  external-agent offering remain planned; an agent cannot open the mic or enable voice via MCP config.
+  [Agent-question dictation](guide/dictation.md#agent-question-dictation) starts only on a physical
+  key and edits the draft through local, memory-only transcription. Its default-off external-agent
+  offering remains planned; an agent cannot open the mic or enable voice via MCP config.
 - **Meeting recording checks require explicit consent.** On Linux, Dictation > Meetings captures
   a reviewed microphone and system-output monitor for up to one minute into private temporary WAVs.
   Local transcription retains the cleanup lock; completion/cancel removes audio and startup cleans

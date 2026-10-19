@@ -1,5 +1,15 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Could not stop dictation. Try again.": "No se pudo detener el dictado. Inténtalo de nuevo.",
+  "The transcription does not fit. Your draft was kept; cancel dictation and shorten it.": "La transcripción supera el límite. Se conservó tu borrador; cancela el dictado y acórtalo.",
+  "Could not apply the transcription. Your draft was kept; cancel dictation to continue.": "No se pudo aplicar la transcripción. Se conservó tu borrador; cancela el dictado para continuar.",
+  "Listening… Release the dictation key to review your words.": "Escuchando… Suelta la tecla de dictado para revisar el texto.",
+  "Transcribing locally… Your reply will not be sent.": "Transcribiendo localmente… Tu respuesta no se enviará.",
+  "Adding your words to the draft…": "Añadiendo el texto al borrador…",
+  "Dictation could not produce a reply. Check your local model and microphone, or type your reply.": "El dictado no produjo una respuesta. Comprueba el modelo local y el micrófono o escribe la respuesta.",
+  "Hold {key} to dictate here, then review and send separately.": "Mantén {key} para dictar aquí, luego revisa y envía por separado.",
+  "Cancel dictation": "Cancelar dictado",
+
   "Could not save this draft. Keep it within 2000 bytes and try again.": "No se pudo guardar el borrador. Usa hasta 2000 bytes e inténtalo de nuevo.",
   "The reply could not be delivered. Check the question status before doing anything else.": "No se pudo entregar la respuesta. Comprueba el estado de la pregunta antes de hacer otra cosa.",
   "Could not cancel the question. Try again.": "No se pudo cancelar la pregunta. Inténtalo de nuevo.",

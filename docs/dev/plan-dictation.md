@@ -2454,7 +2454,7 @@ transcript. IME/Shift+Enter and literal approval-like text cannot trigger permis
 
 This is the next module after V5 in the authoritative delivery order; V6 has not started. At the
 V7.1 decision checkpoint, M7's read/proposal server had no question tools. V7.2.1/V7.2.2 below deliver
-the typed lifecycle, verification, audit round trip and composer; local capture remains V7.2.3.
+the typed lifecycle, verification, audit round trip and composer; V7.2.3 below connects local capture.
 V7.3 owns external-agent setup and its default-off switch. V7.1 itself changed no runtime or config.
 
 Validation: the independent authority/EN-PT review found no permission expansion or false shipped
@@ -2495,7 +2495,7 @@ to match V5.8's explicit text saves and independent exported copies. The app sta
    event and process exit, and handle cancellation, delivery failure and lost acknowledgement
    without retrying a consumed reply. Test a real MCP round trip with a fake agent, including
    stale clients and duplicate/late input. Preserve existing permission and hook-question paths.
-3. **V7.2.3 Local dictation into the draft** — after the text round trip. Route only the physical
+3. **V7.2.3 Local dictation into the draft** — implemented 2026-10-19 after the text round trip. Route only the physical
    dictation key to the selected question; keep capture and confirmation separate, preserve manual
    edits, IME/Shift+Enter behavior and all cancellation gates, and validate the native island/composer.
    No provider clean-up, chat fallback or spoken permission answers. The default-off external-agent
@@ -2550,6 +2550,45 @@ using controlled question responses without audio/model calls. Renderer build, a
 checks, formatting and repository guards pass. The final review has no remaining blocker; the app,
 Vite and isolated QA config/data/cache/runtime are stopped/removed. Maintainer visual acceptance
 remains separate. V7.2.3's local draft dictation is next; V7.3 owns the default-off external-agent offering.
+
+### V7.2.3 implementation record
+
+Implemented 2026-10-19. `vults_dictate(question)` aliases `ask_user` for verified app-owned Linux
+clients; neither tool starts a microphone. Only a new physical dictation-key press grants a capture
+bound to the selected question token, recording generation and original deadline. Existing holds,
+repeats, the command key and gestures from another recording cannot grant it. Sending retains key
+ownership until its terminal acknowledgement; a fresh later ordinary press resumes ordinary dictation.
+
+Capture uses the saved input and installed local Whisper model, with 60-second/remaining-lifetime
+bounds, checks before opening/playing and lifetime cancellation in the audio thread. Audio stays in
+memory; the ordinary provider/cleanup, command, clipboard, insertion and history pipelines are bypassed.
+A single busy guard survives cancellation while an uncancellable native model load drains. The runtime
+never waits for audio/model work. Lock, replacement, expiry, departure, client loss, lease failure,
+settings changes and rebinding cancel outstanding capabilities and discard late results.
+
+The production retained editor stays editable during recording and transcription. Final words append
+to its current manual draft, wait for IME composition to end and must fit the combined UTF-8 limit.
+A matching apply acknowledgement clears the recording barrier; neither release, silence, a completion
+nor spoken "send" submits text. Cancel dictation keeps manual edits. Send still needs its separate
+click/plain Enter and durable content-free audit/relay acknowledgement. Failed/oversized results do
+not replace the draft, and no consumed reply can be retried.
+
+Evidence: ten question/key tests include real MCP/process delivery through the alias, blocked early
+Send, edits during decode, wrong apply generations, cancellation, replacement and lock. The audio
+check verifies revoked admission without accessing hardware. Renderer regressions cover IME-deferred
+append, duplicate/stale Ready, failed/oversized apply, separate Send and replacement acknowledgements.
+Independent review fixed missing dictation view revisions, Sending shortcut ownership, a late shortcut
+binding bootstrap and a non-Linux cfg warning. Final ordinary worker admission and Chat registration
+share the question fence; revoked microphone epochs cannot revive. A matching renderer Status must
+acknowledge the displayed question before it becomes a dictation target. Final review reports no
+remaining blocker.
+
+All 1,256 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy, renderer
+build, all 18 renderer checks, formatting and repository guards. Native controlled-response checks
+exercise Black/Light Quick/Nest, 480 x 360 actions/editor, recording/transcribing states, all four
+languages and manual text preserved through final append. No automated event starts hardware capture;
+real-human speech/model/device acceptance remains open. QA uses an isolated profile and is stopped/
+removed after validation. External-agent opt-in/config installation remains V7.3.
 
 **V7.3 Offer it to agents** (M)
 - Build: add the tool to agents' MCP configs only through `agent-config` (rule 3: backup, diff, click); the
