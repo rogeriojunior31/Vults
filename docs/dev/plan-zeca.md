@@ -1407,3 +1407,16 @@ independent diarization quality gate remain separate from this delivered impleme
 source-local speaker renames and Markdown/SRT/VTT exporters with golden files. History erasure removes
 these rows too. This backend is not yet called by the recording check; explicit save/archive/export
 controls are V5.8. Independent V5.5 speech qualification remains open and production labels stay off.
+
+**2026-10-19 V5.8.1 archive API after consolidation.** PR #372 merged as `10731101` after Linux/Windows,
+security, docs and five fuzz checks passed. Old N3 worktrees/branches and generated build caches
+were removed, preserving local models/data and ignored prototypes; the cleanup freed 44.8 GiB.
+A fresh `feat/v5.8-meetings` worktree starts with Nest-owned archive actions, explicit immutable
+snapshots, and separate global-erase invalidation. The next step connects the full workspace,
+renaming/export and user docs, as specified in the V5.8 delivery sequence.
+
+The V5.8.1 backend step passes all 1,233 workspace tests (including 252 app and 85 store tests;
+10 documented ignores), all 10 eval tests, workspace/eval Clippy and existing renderer/repository
+checks. An independent review found no blocker. No new archive controls are visible yet;
+V5.8.2 owns the full Meetings workspace and its native validation. No user transcript was retained
+by this implementation check, and the app stays closed.

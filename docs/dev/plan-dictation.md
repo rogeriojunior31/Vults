@@ -2300,6 +2300,32 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 **V5.8 Meetings page** (M)
 - Build: the prototype's page (list, Transcript/Summary/To-dos, renamed speakers, export), docs and sign-off.
 
+Delivery sequence:
+1. **V5.8.1 Archive ownership/API (delivered, backend only).** Nest-only explicit save/list/read/delete commands;
+   typed conversion of the completed source transcripts and notes; immutable first snapshot and
+   idempotent retry. No automatic save on recording or summary completion. Global history erasure
+   shares the existing history mutex and advances a separate meeting epoch; dictation-only erase
+   and retention changes do not revoke a meeting. Deletion revokes the active cached copy before
+   IO, including compaction failures, so queued saves cannot restore deleted text.
+2. **V5.8.2 Full Meetings workspace.** Connect saved list/detail and Save/Delete, reuse Transcript/
+   Summary/To-dos, add source-local renaming and native Markdown/SRT/VTT export, update EN/PT guides
+   and all UI catalogs, and validate the running app before sign-off. Invalidate pending list/detail
+   reads after deletion as well as global erase; a per-delete action does not advance the global
+   archive epoch. Explain that saving freezes the current transcript/notes, and that global history
+   erase removes the saved archive too. The existing one-minute capture qualification limit and
+   default-off automatic identification remain; this step does not qualify full-length capture.
+
+The first step changes no renderer/Bridge code or visible work page. Until the second step lands,
+recordings still have no save/archive controls. No personal recording or live model request is
+needed to validate the archive ownership contract.
+
+Validation: all 1,233 workspace tests pass on Linux (10 documented ignores), including 252 app tests,
+85 store tests and eight new archive/retention/notes/timing checks. All 10 eval tests, workspace/eval
+Clippy, renderer build, all 18 existing renderer scripts, formatting and repository guards pass.
+Independent read-only review found no blocker. No archive write was
+made to the user's database, and no recording/model request or renderer change was needed. New
+API portability was inspected; Windows execution of this step belongs to its eventual PR checks.
+
 ---
 
 ## V6 Talk with Zeca (K8)

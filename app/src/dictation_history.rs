@@ -11,6 +11,8 @@ use vults_store::{Store, dictations::Retention};
 
 static HISTORY: Mutex<()> = Mutex::new(());
 static EPOCH: AtomicU64 = AtomicU64::new(0);
+// Explicit meeting saves are independent of dictation retention changes and dictation-only erase.
+static ARCHIVE_EPOCH: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(any(target_os = "linux", test))]
 pub fn epoch() -> u64 {
@@ -41,7 +43,24 @@ pub fn clearing<T>(clear: impl FnOnce() -> std::io::Result<T>) -> std::io::Resul
         .lock()
         .map_err(|_| std::io::Error::other("Dictation history is unavailable."))?;
     EPOCH.fetch_add(1, Ordering::SeqCst);
+    ARCHIVE_EPOCH.fetch_add(1, Ordering::SeqCst);
     clear()
+}
+
+pub(crate) fn archive_epoch() -> u64 {
+    ARCHIVE_EPOCH.load(Ordering::SeqCst)
+}
+
+/// A pending save cannot race global history erasure and restore its old text.
+pub(crate) fn retaining_archive<T>(
+    expected: u64,
+    write: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    let _guard = HISTORY.lock().map_err(|_| "History is unavailable.")?;
+    if archive_epoch() != expected {
+        return Err("History changed. Review a new recording before saving.".into());
+    }
+    write()
 }
 
 #[cfg(target_os = "linux")]
@@ -335,5 +354,21 @@ mod tests {
         assert_eq!(private["today"]["words"], 4);
         assert!(retention("bad").is_none());
         std::fs::remove_dir_all(dir).expect("test cleanup");
+    }
+}
+
+#[cfg(test)]
+mod archive_tests {
+    #[test]
+    fn global_erase_rejects_old_archive_writes_before_they_touch_storage() {
+        let before = super::archive_epoch();
+        super::clearing(|| Ok(())).unwrap();
+        let mut called = false;
+        let result = super::retaining_archive(before, || {
+            called = true;
+            Ok(())
+        });
+        assert!(result.is_err());
+        assert!(!called);
     }
 }

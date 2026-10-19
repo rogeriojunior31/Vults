@@ -44,6 +44,14 @@ impl Default for Slot {
     }
 }
 impl Slot {
+    #[cfg(target_os = "linux")]
+    pub(super) fn archive_notes(&self) -> Result<Option<Summary>, String> {
+        if self.phase == "generating" {
+            return Err("Finish or cancel summary generation before saving this meeting.".into());
+        }
+        Ok(self.notes.clone())
+    }
+
     fn snapshot(&self, id: u64) -> Snapshot {
         Snapshot {
             id,

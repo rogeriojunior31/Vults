@@ -386,3 +386,14 @@ fn summary_reads_and_cancellation_reject_every_other_webview() {
         assert!(meeting_summary_cancel(app.handle().clone(), view.as_ref().clone(), 1).is_err());
     }
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn archive_capture_refuses_partial_generated_notes() {
+    let mut slot = Slot::default();
+    assert!(slot.archive_notes().unwrap().is_none());
+    let (attempt, _) = slot.begin().unwrap();
+    assert!(slot.archive_notes().is_err());
+    slot.complete(attempt, Err("cancelled"));
+    assert!(slot.archive_notes().unwrap().is_none());
+}
