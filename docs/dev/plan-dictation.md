@@ -2958,6 +2958,7 @@ the explicit save/archive/export interface. No live-provider accuracy claim is m
 
 The first PR run additionally exposed non-Unix installer warnings and a Windows-drive issue in the
 summary regression's virtual module path. Imports and the unsupported-platform enum are scoped
-explicitly, the virtual entry now uses the normalized absolute UI path, and the multi-command UI
+explicitly, the virtual entry reuses the existing cross-platform virtual-module resolver and normalized imports,
+and the multi-command UI
 step runs in Bash so an intermediate failure cannot be hidden by PowerShell. A follow-up portability
 review covers the non-Linux app modules and test imports; local suites were rerun before resubmission.

@@ -53,8 +53,8 @@ globalThis.document = { body: new Element('body'), documentElement: new Element(
   createElement: tag => new Element(tag), createTextNode: text => { const n=new Element('text'); n.textContent=text; return n; }, addEventListener() {} };
 globalThis.window = { setInterval: fn => { timers.set(++timer,fn); return timer; }, clearInterval: id => timers.delete(id), addEventListener() {} };
 const ui=normalizePath(fileURLToPath(new URL('../ui/',import.meta.url)));
-const entry=ui+'meeting-summary-check.ts';
-const bundles=await build({configFile:false,root:ui,logLevel:'silent',plugins:[{name:'meeting-summary-check',resolveId:id=>id===entry?id:null,load:id=>id===entry?`
+const entry='meeting-summary-check';
+const bundles=await build({configFile:false,root:ui,logLevel:'silent',plugins:[{name:'meeting-summary-check',resolveId:id=>id.endsWith(entry)?'\0'+entry:null,load:id=>id==='\0'+entry?`
 export { createMeetingSettings } from ${JSON.stringify(ui+'src/surfaces/settings/meeting-summary.ts')};
 export { createMeetingSummary } from ${JSON.stringify(ui+'src/surfaces/nest/dictation/summary.ts')};
 export { createMeetings } from ${JSON.stringify(ui+'src/surfaces/nest/dictation/meetings.ts')};
