@@ -1,8 +1,9 @@
-//! Shared microphone capture, held in memory; no transcription or network access.
+//! Shared memory-only capture and bounded output; no transcription or network access.
 //! The optional Linux meeting recording check alone uses private, temporary WAVs.
 
 mod capture;
 mod meter;
+pub mod playback;
 mod resample;
 
 #[cfg(all(target_os = "linux", feature = "meeting-capture"))]

@@ -103,8 +103,9 @@ V6.3.4 adds Linux-only recovery before a new native owner can reserve. The gate 
 nonblocking exclusive kernel lock on the data directory itself, so there is no removable lock file.
 It keeps that lock throughout the borrowed transport future and every detached admission, keyring
 and settlement worker. A second owner/process receives `Busy` before touching orphan accounting;
-task cancellation cannot release a worker's remaining lock reference. The standard library uses
-Linux `flock`; see [File::try_lock](https://doc.rust-lang.org/std/fs/struct.File.html#method.try_lock)
+task cancellation cannot release a worker's remaining lock reference. The last intentional owner
+explicitly unlocks, so an unrelated fork/exec child's inherited descriptor cannot prolong ownership.
+The standard library uses Linux `flock`; see [File::try_lock](https://doc.rust-lang.org/std/fs/struct.File.html#method.try_lock)
 and the [Linux lock lifetime](https://man7.org/linux/man-pages/man2/flock.2.html).
 
 Only after acquiring ownership does one ledger-identity-bound transaction close unfinished
@@ -160,3 +161,55 @@ connection. No paid request, real microphone/playback or live speech acceptance 
 native driver/decoder tests use synthetic PCM and local work doubles; real model/speech quality
 and capture/playback acceptance remain separate. Backend failures provide structured reasons and
 never silently send to a different provider.
+
+
+## Playback and heard text
+
+V6.4.1 adds an independent `audio::playback::Playback` primitive. It opens only the default output,
+with one native worker per process, and accepts mono 24 kHz PCM16 chunks of at most one second,
+up to 120 seconds per response. Setup has a three-second deadline; an owner lasts at most 150
+seconds. Installed CPAL and the existing stateful resampler support 8/16/24/44.1/48/96 kHz output,
+F32/I16/U16 and one to eight channels. Supported devices use a preferred 10 ms callback period.
+There is no dependency, microphone, file, network, Settings or renderer addition.
+
+The cursor separates accepted source frames, frames submitted to the device and estimated frames
+consumed. The estimate maps CPAL's predicted playback timestamp into the monotonic clock and advances
+only submitted audio, excluding inserted underrun silence. It is not acoustic proof: device mute,
+hardware buffering and speaker audibility still need desktop acceptance. Invalid clocks, excessive
+latency, device errors and bounded-queue failures stop playback. The callback uses a nonblocking
+queue lock; contention emits silence without advancing submitted content. Conversion runs on the
+producer, outside the callback.
+
+Producer `finish()` flushes conversion and enters Draining. Only an empty PCM queue plus elapsed
+scheduled audio enters Finished; a temporary empty queue is not completion. `stop()`, revocation
+and Drop freeze consumption and clear pending output. Samples already submitted to the driver may
+still be audible after stop; the frozen cursor intentionally excludes that uncertain tail. Device
+teardown stays on the worker, with exclusive ownership held until it exits, including a blocked
+native setup call. The deadline cannot abort an uncooperative driver call or permit a second worker.
+
+`voice::turn::heard::split` accepts finalized, ordered text segments with 24 kHz frame extents and
+the frozen source cursor. Whole played segments are retained; an in-flight segment keeps only the
+floor of its proportional word count, on UTF-8 word boundaries. This is an estimate, not exact
+word/audio alignment. The API itself does not provide precise transcript alignment after a client
+interrupts playback; WebSocket clients own playback and server-item truncation.
+[Realtime conversation guide](https://developers.openai.com/api/docs/guides/realtime-conversations).
+
+The pure result preserves the original prefix and unheard complement, computes the model-context
+replacement `heard prefix [interrupted]` and exposes the unheard tail once when at least three
+whitespace-separated words remain. Explicit interruption still marks a producer stopped after its
+received audio drained. Empty/no-played text never becomes a full heard response. The hint makes no
+request, repeats no tool and grants no permission. It is not a localized UI label.
+
+There is no app caller yet. V6.4.2 must bind provider response/item identities, transcript extents,
+playback and turn tokens, acknowledge server truncation and apply the replacement to the matching
+native history. Live production must not use this primitive without its consent/revocation owner.
+V6.5-V6.7 retain echo cancellation, tools, capture and visible conversation work. Current app history
+is not rewritten by V6.4.1 and the conversation microphone remains unavailable.
+
+Offline tests cover consumption/latency, underrun, drain, stop, invalid clocks, cancellation,
+resampling and word/history math. An explicit child-process ALSA null test exercises actual CPAL
+setup, conversion, callback, drain and destruction without using desktop speakers. It establishes
+native plumbing only; real speaker/headphone timing, interruption, speech quality and live-provider
+acceptance remain open. Run the null test only with a private ALSA configuration containing
+`pcm.!default { type null }`, `ALSA_CONFIG_PATH` pointing to it and `VULTS_PLAYBACK_NULL_TEST=1`:
+`cargo test -p vults-audio native_null_output -- --ignored`.

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 2674e20e05cc -->
+<!-- source: 443609e9845d -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -163,6 +163,17 @@ mudanças compartilhadas revogam gerações sob a trava das Configurações e wo
 mantêm a concessão nativa após o prazo. A espera local é limitada, mas a carga fria nativa continua
 cooperativa. Captura/reprodução e continuação visual ficam na V6.4-V6.7. Veja
 [Contabilidade realtime](reference/realtime-accounting.md#native-turn-retention-and-local-text).
+
+A V6.4.1 acrescenta a saída independente `audio::playback` e a contabilidade pura
+`voice::turn::heard`. Um worker CPAL limitado reamostra PCM16 a 24 kHz, distingue frames na fila,
+entregues e estimados como consumidos, e separa a conclusão do produtor da drenagem do dispositivo.
+Parada/revogação congela o cursor e limpa a fila; a destruição nativa mantém a propriedade exclusiva.
+O separador puro estima palavras inteiras ouvidas e calcula contexto interrompido do modelo mais
+uma dica única de texto não ouvido. Ele não escreve histórico nem envia nada. Não há chamador no
+app nem entrada de microfone; a V6.4.2 ainda cuida das identidades de provedor/item, tempo da
+transcrição, truncamento no servidor e integração nativa de histórico/saída. Veja
+[Reprodução e texto ouvido](reference/realtime-accounting.md#playback-and-heard-text) para limites,
+premissas de relógio e o teste ALSA nulo isolado; aceitação com dispositivo/provedor real segue aberta.
 
 <a id="local-dictation"></a>
 

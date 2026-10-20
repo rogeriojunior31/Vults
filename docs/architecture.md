@@ -151,6 +151,16 @@ invalidate epochs under the Settings lock and decoder workers retain the native 
 The local wait is bounded but cold native loading remains cooperative. Capture/playback and UI
 continuation remain V6.4-V6.7 work. See [Realtime accounting](reference/realtime-accounting.md#native-turn-retention-and-local-text).
 
+V6.4.1 adds independent `audio::playback` output and pure `voice::turn::heard` accounting. A bounded
+CPAL worker resamples 24 kHz PCM16, distinguishes queued/submitted/estimated consumed frames and
+separates producer completion from device drain. Stop/revocation freezes the cursor and clears the
+queue; native teardown retains exclusive ownership. The pure splitter estimates whole heard words
+and computes interrupted model context plus a one-shot unheard-text hint. It writes no history and
+sends nothing. No app caller or microphone entry is added; V6.4.2 still owns provider/item identities,
+transcript timing, server truncation and native history/output integration. See
+[Playback and heard text](reference/realtime-accounting.md#playback-and-heard-text) for limits,
+clock assumptions and the isolated ALSA null check; physical-device/live acceptance remains open.
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/

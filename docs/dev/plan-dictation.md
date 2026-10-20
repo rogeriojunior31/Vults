@@ -40,8 +40,10 @@ remain separate; N3 is not complete.
 
 V7 now implements typed MCP questions, explicit local dictation into drafts and reviewed external-agent
 setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the turn/end policy, gated
-realtime transport/accounting and native turn retention/local recovery. No conversation microphone,
-playback or user-facing realtime continuation is exposed yet. Next: V6.4 playback, then V6.5-V6.7.
+realtime transport/accounting and native turn retention/local recovery. V6.4.1 adds a bounded CPAL
+output primitive and pure heard-text/history-replacement math, without an app caller. No conversation
+microphone, playback or user-facing realtime continuation is exposed yet. Next: V6.4.2 native
+provider/output/history integration, then V6.5-V6.7.
 
 ## References
 
@@ -2543,6 +2545,27 @@ Delivery sequence:
   - a re-delivery nudge when ≥ 3 words went unheard.
 - Port: [PT] 122-129, 312.
 - Tests: split math; the history rewrite.
+
+### V6.4 delivery sequence
+
+1. **V6.4.1 bounded output and heard-text contract** (delivered 2026-10-19).
+   `audio::playback` owns one CPAL output worker, bounded source PCM, conversion, a predicted
+   device-consumption cursor, stop and producer-end versus drain. Cancellation and errors freeze
+   output; blocked native teardown retains exclusivity. `voice::turn::heard` preserves UTF-8 words,
+   estimates partial-segment text, computes interrupted context and yields one hint for at least
+   three unheard words. Explicit producer interruption remains distinct from received-audio drain.
+   Pure clock/split regressions and an isolated ALSA null check cover the backend; physical acoustic
+   timing is not claimed. There is no app caller, history mutation, microphone or provider call.
+   See [Playback and heard text](../reference/realtime-accounting.md#playback-and-heard-text).
+2. **V6.4.2 native provider/output/history integration** (next).
+   Bind response/item/content identities and finalized transcript/audio extents to the native owner;
+   connect output consumption/drain to the existing turn tokens and lock/barge-in timing. On
+   interruption, freeze once, cancel the producer, truncate the exact server item to played source
+   milliseconds and verify acknowledgement. Replace only the matching native assistant history,
+   retaining a bounded one-shot hint for the next authorized turn; never replay a tool. Test stale
+   events, server rejection, cancellation, provider-finished audio still draining and response
+   identity changes with synthetic native/socket cases. Capture/UI remain V6.7; real device/provider
+   acceptance stays an activation gate. Full V6.4 is open until integration and acceptance pass.
 
 **V6.5 Echo cancellation** (M, spike first)
 - Build:

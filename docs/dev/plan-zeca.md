@@ -1581,3 +1581,20 @@ The native retention API accepts already captured PCM and starts no microphone, 
 Live-provider/speech acceptance and visible text continuation remain open. The next engineering
 step is V6.4 playback, followed by V6.5-V6.7 integration; the full V6.3 activation gate stays open
 until these owners and acceptance checks land. See the current V6.3 sequence in Plan Dictation.
+
+
+**2026-10-19 V6.4.1 playback foundation.** One bounded CPAL output worker converts 24 kHz PCM16,
+keeps accepted/submitted/predicted-consumed frames separate and distinguishes producer end from
+device drain. Stop/revocation freezes accounting before clearing queued samples; native teardown
+retains exclusivity. Pure heard-text accounting estimates partial words, computes interrupted
+context and offers a one-shot hint after at least three unheard words. It performs no history write
+or model/tool call. Offline clock/resampling/history regressions and an isolated ALSA null check
+cover the primitive; real acoustic timing and provider/speech acceptance remain open. No app caller,
+conversation microphone or UI is added. Next: V6.4.2 provider/item/transcript identities, server
+truncation and native output/history integration, before V6.5-V6.7. See Plan Dictation's finite
+V6.4 sequence; full V6.4 remains open.
+
+Validation also exposed a transient prior gate-lock failure during parallel process tests. The
+last intentional gate owner now explicitly unlocks its shared file description; unrelated inherited
+descriptors cannot prolong ownership. Every intentional worker/admission still retains the lock.
+A duplicated-descriptor regression verifies release and continued exclusion without timing retries.

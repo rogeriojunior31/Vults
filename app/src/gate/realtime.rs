@@ -8,7 +8,7 @@ pub(crate) struct RealtimeGate {
     consent: crate::realtime::Consent,
     authorized: Arc<dyn Fn() -> bool + Send + Sync>,
     // All blocking workers and unclaimed admissions retain the same kernel lock.
-    owner: Arc<std::fs::File>,
+    owner: Arc<Owner>,
 }
 
 impl RealtimeGate {
@@ -46,7 +46,15 @@ impl RealtimeGate {
     }
 }
 
-fn exclusive(directory: &std::path::Path) -> Result<Arc<std::fs::File>, Failure> {
+struct Owner(std::fs::File);
+impl Drop for Owner {
+    fn drop(&mut self) {
+        // Unrelated fork/exec children may still hold a duplicate of this file description.
+        let _ = self.0.unlock();
+    }
+}
+
+fn exclusive(directory: &std::path::Path) -> Result<Arc<Owner>, Failure> {
     // Linux flock supports directories: no removable lock file can split ownership.
     #[cfg(target_os = "linux")]
     {
@@ -58,7 +66,7 @@ fn exclusive(directory: &std::path::Path) -> Result<Arc<std::fs::File>, Failure>
             std::fs::TryLockError::WouldBlock => Failure::Busy,
             _ => Failure::Ledger,
         })?;
-        Ok(Arc::new(file))
+        Ok(Arc::new(Owner(file)))
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -215,6 +223,22 @@ mod tests {
     }
     async fn open(path: &Path, consent: &crate::realtime::Consent) -> Result<RealtimeGate, Failure> {
         RealtimeGate::open(path.into(), consent.clone(), Arc::new(|| true)).await
+    }
+
+    #[test]
+    fn only_the_last_intentional_owner_unlocks_despite_an_inherited_descriptor() {
+        let directory = Directory::new("inherited");
+        let owner = exclusive(&directory.0).unwrap();
+        let inherited = owner.0.try_clone().unwrap();
+        let worker = owner.clone();
+        drop(owner);
+        assert!(matches!(exclusive(&directory.0), Err(Failure::Busy)));
+        drop(worker);
+        let next = exclusive(&directory.0).expect("inherited descriptor must not prolong ownership");
+        drop(inherited);
+        assert!(matches!(exclusive(&directory.0), Err(Failure::Busy)));
+        drop(next);
+        assert!(exclusive(&directory.0).is_ok());
     }
 
     #[tokio::test]

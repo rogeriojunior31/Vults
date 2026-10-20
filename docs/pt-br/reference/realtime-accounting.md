@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: c7d7bb1a7c53 -->
+<!-- source: e47d54892262 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -117,7 +117,9 @@ reservar. O gate adquire uma trava exclusiva não bloqueante do kernel no própr
 dados, sem arquivo de trava removível. Ele mantém a trava durante o futuro emprestado do transporte
 e cada worker desacoplado de admissão, chaveiro e conciliação. Outro responsável/processo recebe
 `Busy` antes de alterar a contabilidade de reservas órfãs; cancelar a tarefa não libera a referência
-restante do worker à trava. A biblioteca padrão usa `flock` no Linux; veja
+restante do worker à trava. O último proprietário intencional libera a trava explicitamente, para
+que um descritor herdado por um filho fork/exec não relacionado não prolongue a propriedade.
+A biblioteca padrão usa `flock` no Linux; veja
 [File::try_lock](https://doc.rust-lang.org/std/fs/struct.File.html#method.try_lock) e o
 [tempo de vida da trava no Linux](https://man7.org/linux/man-pages/man2/flock.2.html).
 
@@ -183,3 +185,62 @@ real é declarada. Os testes do controlador/decodificador nativos usam PCM sint�
 de trabalho local; qualidade real de modelo/fala e validação de captura/reprodução continuam
 separadas. Falhas do backend fornecem motivos estruturados e nunca enviam silenciosamente a outro
 provedor.
+
+
+<a id="playback-and-heard-text"></a>
+## Reprodução e texto ouvido
+
+A V6.4.1 acrescenta a primitiva independente `audio::playback::Playback`. Ela abre somente a saída
+padrão, com um worker nativo por processo, e aceita blocos de PCM16 mono a 24 kHz de no máximo um
+segundo, até 120 segundos por resposta. A preparação tem prazo de três segundos; um proprietário
+vive no máximo 150 segundos. O CPAL instalado e o reamostrador com estado existente suportam saída
+a 8/16/24/44,1/48/96 kHz, F32/I16/U16 e um a oito canais. Dispositivos compatíveis usam, de
+preferência, períodos de callback de 10 ms. Não há adição de dependência, microfone, arquivo, rede,
+Settings nem renderer.
+
+O cursor separa frames de origem aceitos, frames entregues ao dispositivo e frames estimados como
+consumidos. A estimativa mapeia o instante de reprodução previsto pelo CPAL para o relógio monotônico
+e avança somente pelo áudio entregue, excluindo silêncio inserido por falta de dados. Isso não prova
+a reprodução acústica: dispositivo mudo, buffers de hardware e audibilidade ainda exigem aceitação
+no desktop. Relógios inválidos, latência excessiva, erros de dispositivo e falhas nos limites de fila
+interrompem a reprodução. O callback usa um bloqueio de fila sem espera; contenção emite silêncio
+sem avançar o conteúdo entregue. A conversão roda no produtor, fora do callback.
+
+O `finish()` do produtor termina a conversão e entra em Draining. Somente uma fila PCM vazia junto
+com o fim do áudio agendado entra em Finished; uma fila temporariamente vazia não é conclusão.
+`stop()`, revogação e Drop congelam o consumo e limpam a saída pendente. Amostras já entregues ao
+driver ainda podem ser audíveis depois da parada; o cursor congelado exclui deliberadamente essa
+cauda incerta. A destruição do dispositivo fica no worker, que mantém a propriedade exclusiva até
+sair, inclusive numa chamada nativa de preparação bloqueada. O prazo não pode abortar uma chamada
+de driver que não coopera nem permitir um segundo worker.
+
+`voice::turn::heard::split` aceita segmentos de texto finalizados, ordenados e delimitados em frames
+a 24 kHz, junto com o cursor de origem congelado. Segmentos inteiros reproduzidos são mantidos; um
+segmento em andamento mantém somente o piso da contagem proporcional de palavras, em limites de
+palavras UTF-8. É uma estimativa, sem alinhamento exato de palavras e áudio. A própria API não
+fornece alinhamento preciso da transcrição depois de uma interrupção da reprodução pelo cliente;
+clientes WebSocket controlam a reprodução e o truncamento do item no servidor.
+[Guia de conversa Realtime](https://developers.openai.com/api/docs/guides/realtime-conversations).
+
+O resultado puro preserva o prefixo original e o complemento não ouvido, calcula a substituição do
+contexto do modelo `heard prefix [interrupted]` e fornece a cauda não ouvida uma única vez quando
+restam pelo menos três palavras separadas por espaços. Uma interrupção explícita ainda marca um
+produtor parado depois da drenagem do áudio recebido. Texto vazio ou sem reprodução nunca vira uma
+resposta inteira ouvida. A dica não faz requisição, não repete ferramenta nem concede permissão.
+Ela não é um rótulo traduzido de interface.
+
+Ainda não existe chamador no app. A V6.4.2 deve vincular identidades de resposta/item do provedor,
+delimitação da transcrição, reprodução e tokens de turno, confirmar o truncamento no servidor e
+aplicar a substituição ao histórico nativo correspondente. A produção não deve usar essa primitiva
+sem seu proprietário de consentimento/revogação. V6.5-V6.7 mantêm cancelamento de eco, ferramentas,
+captura e conversa visível. O histórico atual do app não é reescrito pela V6.4.1 e o microfone da
+conversa continua indisponível.
+
+Testes offline cobrem consumo/latência, falta de dados, drenagem, parada, relógios inválidos,
+cancelamento, reamostragem e cálculo de palavras/histórico. Um teste ALSA nulo explícito em processo
+filho exercita preparação, conversão, callback, drenagem e destruição reais do CPAL sem usar os
+alto-falantes do desktop. Ele comprova somente a integração nativa; tempo de alto-falante/fone real,
+interrupção, qualidade da fala e aceitação com provedor real continuam em aberto. Execute o teste
+nulo somente com uma configuração ALSA privada contendo `pcm.!default { type null }`,
+`ALSA_CONFIG_PATH` apontando para ela e `VULTS_PLAYBACK_NULL_TEST=1`:
+`cargo test -p vults-audio native_null_output -- --ignored`.
