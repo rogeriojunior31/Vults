@@ -699,9 +699,8 @@ export const Bridge = {
   /** Percent, 0 to 100. */
   setVolume: (percent: number) => invoke<void>("set_volume", { percent }),
   /** `open_nest` asked the open Nest for a tab. */
-  onNestTab(cb: (tab: string) => void): void {
-    void listen<string>("nest-tab", (e) => cb(e.payload));
-  },
+  onNestTab: (cb: (tab: string) => void) => listen<string>("nest-tab", (e) => cb(e.payload)),
+  nestTabReady: () => invoke<string | null>("nest_tab_ready"),
   /** A setting changed somewhere; only the fields that changed are present. */
   onSettings(cb: (s: SettingsChange) => void): void {
     void listen<SettingsChange>("settings", (e) => cb(e.payload));

@@ -182,6 +182,7 @@ pub fn run() {
             nest_connections_place,
             nest_connections_place_set,
             nest_tab_set,
+            nest_tab_ready,
             dictation_section_set,
             nest_record_query,
             nest_flock_place,
@@ -789,6 +790,44 @@ mod tests {
     }
 
     #[test]
+    fn only_ready_nest_consumes_the_latest_request_without_acknowledging_a_tab() {
+        let app = tauri::test::mock_builder()
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap();
+        let window = tauri::WindowBuilder::new(&app, "navigation-test")
+            .build()
+            .unwrap();
+        let nest = window
+            .add_child(
+                tauri::WebviewBuilder::new(super::NEST, tauri::WebviewUrl::App("nest.html".into())),
+                tauri::LogicalPosition::new(0., 0.),
+                tauri::LogicalSize::new(480., 360.),
+            )
+            .unwrap();
+        let settings = window
+            .add_child(
+                tauri::WebviewBuilder::new(super::SETTINGS, tauri::WebviewUrl::App("settings.html".into())),
+                tauri::LogicalPosition::new(0., 0.),
+                tauri::LogicalSize::new(480., 360.),
+            )
+            .unwrap();
+        let acknowledged = super::NEST_TAB.lock().unwrap().clone();
+        *super::NEST_REQUEST.lock().unwrap() = Some("chat".into());
+        *super::NEST_REQUEST.lock().unwrap() = Some("dictation-conversation".into());
+        assert!(super::nest_tab_ready(settings.clone()).is_err());
+        assert_eq!(
+            super::nest_tab_ready(nest.clone()).unwrap().as_deref(),
+            Some("dictation-conversation")
+        );
+        assert!(super::nest_tab_ready(nest.clone()).unwrap().is_none());
+        assert_eq!(
+            *super::NEST_TAB.lock().unwrap(),
+            acknowledged,
+            "A request does not grant voice-page authority"
+        );
+    }
+
+    #[test]
     fn dictation_restores_only_a_known_configuration_for_its_own_tab() {
         for section in [
             "dictationvoice",
@@ -1123,6 +1162,9 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
     }
     let last = NEST_TAB.lock().ok().and_then(|t| t.clone());
     let tab = restored_tab(tab, last.as_deref(), settings::zeca(app));
+    if let Ok(mut pending) = NEST_REQUEST.lock() {
+        *pending = Some(tab.to_owned());
+    }
     if app.get_webview(NEST).is_some() {
         let _ = app.emit_to(NEST, "nest-tab", tab);
     }
@@ -1130,6 +1172,8 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
 }
 
 static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+// Requested presentation is separate from the renderer's acknowledged tab and capture authority.
+static NEST_REQUEST: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 // Only presentation survives tab changes; configuration stays in its own webview.
 static DICTATION_SECTION: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 
@@ -1328,6 +1372,14 @@ fn restored_tab<'a>(asked: Option<&'a str>, last: Option<&'a str>, zeca: bool) -
 }
 
 #[tauri::command]
+fn nest_tab_ready<R: tauri::Runtime>(window: tauri::Webview<R>) -> Result<Option<String>, String> {
+    if window.label() != NEST {
+        return Err("Only the Nest may receive its pending navigation.".into());
+    }
+    Ok(NEST_REQUEST.lock().map_err(|e| e.to_string())?.take())
+}
+
+#[tauri::command]
 fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
     if window.label() != NEST || !valid_nest_tab(&tab) {
         return Err("Invalid Nest navigation state.".into());
@@ -1358,6 +1410,11 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
     let window = match app.get_window(NEST_WINDOW) {
         Some(w) => w,
         None => {
+            if nest.is_none()
+                && let Ok(mut pending) = NEST_REQUEST.lock()
+            {
+                *pending = None;
+            }
             // The island grown larger (ADR 0021): no system title bar, the page's own frame with
             // the prototype's rounded corners; its header moves the window, its edges resize it.
             let first = nest_first_size(app);

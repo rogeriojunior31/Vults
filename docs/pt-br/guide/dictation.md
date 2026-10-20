@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 78ecb0dfb06e -->
+<!-- source: e48c2d7782cb -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -66,6 +66,8 @@ microfone fica desligado. **Gravar outra fala** continua a mesma conversa e o co
 gravação exige seu clique. Um erro ou tempo limite do provedor encerra a sessão. Essa entrada manual
 não usa o atalho global do ditado nem interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
 sem envio automático. A espera local combinada de captura/transcrição é limitada a 60 segundos.
+Abrir essa página de trabalho pelas Configurações preserva o destino solicitado enquanto o Ninho
+carrega. Uma escolha de navegação posterior tem prioridade. Abrir a página nunca inicia uma gravação.
 
 Quando o áudio do Zeca começa a tocar, **Interromper resposta** substitui Finalizar gravação. Ele
 interrompe a resposta falada sem encerrar a conversa nem abrir o microfone. A página aguarda o

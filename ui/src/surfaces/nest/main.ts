@@ -10,10 +10,14 @@ import { setLang, t } from "../../i18n";
 import { el } from "../../dom";
 import { savedClose, savedTransition } from "./close";
 import { createNest } from "./render";
+import { restoreNavigation } from "./navigation";
 import { shownKeys } from "../../island/views";
 import { moltSeason, setMolt } from "../../character/director";
 import { followClock, onDayPart } from "../../island/daypart";
 
+let asked = location.hash.slice(1);
+let navigationRevision = 0;
+let navigationReady = false;
 const dictation = dictationStatus(true);
 Bridge.onDictationOverlayReady(dictation.relocated);
 const nest = createNest(
@@ -130,7 +134,7 @@ const nest = createNest(
       onMerged: (cb) => Bridge.onRowMerged(cb),
     },
     settings: (section) => void Bridge.openSettings(section),
-    savePlace: async tab => { questions.depart(); await Bridge.nestTabSet(tab); },
+    savePlace: async tab => { ++navigationRevision; questions.depart(); await Bridge.nestTabSet(tab); },
     openDictation: () => void Bridge.openNest("dictation"),
     setZeca: (on) => void Bridge.setZeca(on),
     // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
@@ -174,13 +178,12 @@ void Bridge.onNestClose(savedClose(
 )).catch(closingFailed);
 Bridge.onNestFull((full) => nest.setFull(full));
 void Bridge.nestIsFull().then((full) => nest.setFull(full), () => {});
-// `open_nest` names the tab in the address when it builds the window, and by an event after.
-let asked = location.hash.slice(1);
-nest.open(asked);
-Bridge.onNestTab((tab) => {
+void restoreNavigation(Bridge.onNestTab, Bridge.nestTabReady, tab => {
+  navigationReady = true;
+  ++navigationRevision;
   asked = tab;
   nest.open(tab);
-});
+}, () => navigationRevision, asked);
 Bridge.onMemory(() => nest.memoryChanged());
 Bridge.onDictationHistory(erased => nest.dictationChanged(erased));
 Bridge.onMeetingArchiveErased(() => nest.meetingsErased());
@@ -231,7 +234,7 @@ void Bridge.appSettings().then((s) => {
   nest.chat.setAccess(s.chatAccess);
   // Asked for the Chat before Zeca was known to be on.
   // Not if the user went elsewhere meanwhile.
-  if (s.zeca && ["chat", "memory"].includes(asked) && nest.current() === "flock") nest.open(asked);
+  if (navigationReady && s.zeca && ["chat", "memory"].includes(asked) && nest.current() === "flock") nest.open(asked);
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {

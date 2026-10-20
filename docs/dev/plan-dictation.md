@@ -2888,9 +2888,17 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    the short view hides/stops the canvas. This validates rendering, not physical audio/provider
    behavior. The isolated app was closed and its temporary profile removed. Next: exercise physical
    microphone/provider/interruption acceptance before
-   declaring K8 Done. Cold Settings-to-Nest navigation readiness still needs its own acceptance;
-   controlled UI runs wait for loaded navigation before selecting the work page. Codex activation
-   keeps its independent qualification gates.
+   declaring K8 Done. Cold Settings-to-Nest navigation now retains the latest requested work page
+   separately from the acknowledged tab. The Nest registers its event listener before consuming
+   the pending destination; delayed snapshots/failures cannot replace a newer event or local user
+   navigation. Receiving a request does not acknowledge a tab or grant capture authority; only
+   Nest can consume it. Renderer races and the native surface boundary have regressions. Native
+   cold/warm open acceptance passed 12 real window recreations through direct, immediate Settings
+   and latest-request routes, with no manual tab correction. Twelve warm route changes and later
+   local selections also passed in Black/Light at wide/minimum sizes. Native Start reached the
+   acknowledged page's default-off guard without opening audio or a provider. The isolated app
+   was closed and its temporary profile removed. This closes navigation readiness, not physical
+   voice acceptance. Codex activation keeps its independent qualification gates.
 
 ---
 

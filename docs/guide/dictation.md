@@ -58,6 +58,8 @@ recording requires your click. A provider error or timeout ends the session. Thi
 does not use the global dictation shortcut or barge-in.
 Recording is capped at 30 seconds; reaching the cap discards it rather than sending automatically.
 The combined local capture/transcription wait is limited to 60 seconds.
+Opening this work page from Settings retains the requested destination while the Nest loads.
+A later navigation choice takes priority. Opening the page never starts a recording.
 
 Once Zeca's audio starts playing, **Stop response** replaces Finish recording. It stops the spoken
 reply without ending the conversation or opening the microphone. The page waits for the interrupted
