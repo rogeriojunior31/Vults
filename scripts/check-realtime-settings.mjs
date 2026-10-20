@@ -166,7 +166,7 @@ try {
   const work = createVoiceConversation({
     start: automatic => { automaticChoices.push(automatic); const d = pending(); starts.push(d); return d.promise; },
     status: id => { const d = pending(); polls.push({ ...d, id }); return d.promise; },
-    control: async (id, action) => { controls.push({ id, action }); },
+    control: async (id, action, response) => { controls.push({ id, action, ...(response ? { response } : {}) }); },
     copy: async text => { copies.push(text); },
   }, () => configured++);
   document.body.append(work.element);
@@ -226,6 +226,15 @@ try {
   polls.at(-1).resolve(state("6", "starting", { reply: "The first heard reply" })); await following;
   assert.ok(work.element.textContent.includes("The first heard reply"));
   await refresh(); polls.at(-1).resolve(state("6", "waiting", { reply: "The second heard reply" })); await tick();
+  await refresh(); polls.at(-1).resolve(state("6", "speaking", { response: "reply-1" })); await tick();
+  assert.equal(button("Stop response").disabled, false);
+  await click("Stop response");
+  assert.deepEqual(controls.at(-1), { id: "6", action: "interrupt", response: "reply-1" });
+  assert.equal(button("Stop response").disabled, true);
+  assert.ok(work.element.textContent.includes("Stopping the response"));
+  await refresh(); polls.at(-1).resolve(state("6", "waiting", { reply: "Only the heard prefix [interrupted]" })); await tick();
+  assert.equal(button("Record another turn").disabled, false);
+  assert.equal(starts.length, 6, "Stopping output cannot open another microphone/session");
   await click("End conversation");
   assert.deepEqual(controls.at(-1), { id: "6", action: "cancel" });
   assert.equal(timers.size, 0);

@@ -253,10 +253,16 @@ pub(super) async fn record(
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug)]
+pub(super) enum Request {
+    Capture(vults_voice::turn::Generation),
+    Interrupt(vults_voice::turn::Generation),
+}
+
 /// Keep the retained provider driver polled while a following explicitly requested turn records.
 pub(super) async fn continue_turns<F, Q>(
     driver: F,
-    mut next: mpsc::Receiver<vults_voice::turn::Generation>,
+    mut next: mpsc::Receiver<Request>,
     send: mpsc::Sender<super::Command>,
     mut record: impl FnMut(vults_voice::turn::Generation) -> Q,
 ) -> F::Output
@@ -276,7 +282,10 @@ where
                 recording = None;
             },
             request = next.recv(), if recording.is_none() => match request {
-                Some(value) => { generation = Some(value); recording = Some(Box::pin(record(value))); },
+                Some(Request::Capture(value)) => { generation = Some(value); recording = Some(Box::pin(record(value))); },
+                Some(Request::Interrupt(generation)) => {
+                    send.try_send(super::Command::Signal { generation, signal: super::Signal::StopResponse }).map_err(|_| Failure::Output)?;
+                },
                 None => return Err(Failure::Cancelled),
             },
         }

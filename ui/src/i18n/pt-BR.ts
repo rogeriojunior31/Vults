@@ -1,5 +1,9 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Stop response": "Interromper resposta",
+  "Zeca is speaking\u2026": "O Zeca está falando…",
+  "Stopping the response\u2026": "Interrompendo a resposta…",
+
   "Finish automatically after a pause": "Finalizar automaticamente após uma pausa",
   "Off by default for each app run. Uses local GPU preview and the installed speech detector. If unavailable, use Finish recording. Each new turn still needs your click.": "Desligado por padrão ao abrir o app. Usa prévia local na GPU e o detector de fala instalado. Se indisponível, use Finalizar gravação. Cada nova fala ainda exige seu clique.",
   "Automatic finish is unavailable. Use Finish recording.": "O encerramento automático está indisponível. Use Finalizar gravação.",

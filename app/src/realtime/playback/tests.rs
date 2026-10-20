@@ -638,7 +638,7 @@ async fn failed_receipts_and_output_saturation_retain_the_original() {
 
 #[tokio::test]
 async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_authorized_turn() {
-    for finished in [false, true] {
+    for (finished, manual) in [(false, false), (true, false), (false, true), (true, true)] {
         let (io, send, mut receive, _stop) = channels(128);
         let capture = Turn::new(vec![123; 4800]).unwrap();
         send.send(Command::Turn {
@@ -654,7 +654,11 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
             without_commands(
                 io,
                 &|| true,
-                turn::BargeIn::Headphones,
+                if manual {
+                    turn::BargeIn::Disabled
+                } else {
+                    turn::BargeIn::Headphones
+                },
                 move |_| {
                     let fresh = device(false).lock().unwrap().cursor;
                     output.lock().unwrap().cursor = fresh;
@@ -708,28 +712,44 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
         .await
         .unwrap();
         state.lock().unwrap().cursor.played_frames = 1680;
-        tokio::time::sleep(Duration::from_millis(520)).await;
-        send.send(Command::Signal {
-            generation: generation(),
-            signal: Signal::SpeechStarted,
-        })
-        .await
-        .unwrap();
-        let probe = loop {
-            if let Event::Action(Action {
-                effect: Effect::ProbeInterruption { probe, .. },
-                ..
-            }) = next(&mut receive).await
-            {
-                break probe;
+        let probe = if manual {
+            loop {
+                if matches!(next(&mut receive).await, Event::Speaking(_)) {
+                    break;
+                }
             }
+            send.send(Command::Signal {
+                generation: generation(),
+                signal: Signal::StopResponse,
+            })
+            .await
+            .unwrap();
+            None
+        } else {
+            tokio::time::sleep(Duration::from_millis(520)).await;
+            send.send(Command::Signal {
+                generation: generation(),
+                signal: Signal::SpeechStarted,
+            })
+            .await
+            .unwrap();
+            let probe = loop {
+                if let Event::Action(Action {
+                    effect: Effect::ProbeInterruption { probe, .. },
+                    ..
+                }) = next(&mut receive).await
+                {
+                    break probe;
+                }
+            };
+            send.send(Command::Signal {
+                generation: generation(),
+                signal: Signal::Confirm(probe),
+            })
+            .await
+            .unwrap();
+            Some(probe)
         };
-        send.send(Command::Signal {
-            generation: generation(),
-            signal: Signal::Confirm(probe),
-        })
-        .await
-        .unwrap();
         let next_generation = loop {
             if let Event::Action(Action {
                 generation,
@@ -753,7 +773,7 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
         send.send(input(next_generation, 456)).await.unwrap();
         send.send(Command::Signal {
             generation: generation(),
-            signal: Signal::Confirm(probe),
+            signal: probe.map_or(Signal::StopResponse, Signal::Confirm),
         })
         .await
         .unwrap();
@@ -1285,7 +1305,10 @@ async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit
         {
             assert_eq!(recorded.load(Ordering::SeqCst), listens);
             if listens < 2 {
-                next_capture.send(action.generation).await.unwrap();
+                next_capture
+                    .send(crate::realtime::capture::Request::Capture(action.generation))
+                    .await
+                    .unwrap();
                 listens += 1;
             } else {
                 break;

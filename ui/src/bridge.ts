@@ -11,7 +11,8 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 export type Size = "mini" | "quick" | "room" | "full";
 export interface VoiceConversation {
   id: string;
-  phase: "starting" | "recording" | "transcribing" | "responding" | "waiting" | "finished" | "cancelled" | "failed" | "recovery";
+  response: string | null;
+  phase: "starting" | "recording" | "transcribing" | "responding" | "speaking" | "interrupting" | "waiting" | "finished" | "cancelled" | "failed" | "recovery";
   reason: string | null;
   draft: string | null;
   reply: string | null;
@@ -541,7 +542,7 @@ export const Bridge = {
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   voiceConversationStart: (autoFinish = false) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish }),
   voiceConversationStatus: (id: string) => invoke<VoiceConversation>("voice_conversation_status", { id }),
-  voiceConversationControl: (id: string, action: "finish" | "cancel" | "next") => invoke<void>("voice_conversation_control", { id, action }),
+  voiceConversationControl: (id: string, action: "finish" | "cancel" | "next" | "interrupt", response?: string) => invoke<void>("voice_conversation_control", { id, action, response }),
   voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),
   setVoiceRealtime: (on: boolean, limitMicrousd: string, model: string) =>
     typeof limitMicrousd === "string" && /^(0|[1-9]\d{0,18})$/.test(limitMicrousd) && BigInt(limitMicrousd) <= 9223372036854775807n

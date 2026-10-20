@@ -2035,3 +2035,33 @@ through the named content scroller. No physical audio, model, provider, original
 configuration is used. Private processes/profile/cache are removed after QA. The local AGENTS
 task-actions script remains absent, not passed. Physical PT/EN speech timing and live-provider
 quality remain unqualified; semantic/duplex integration and K8 sign-off stay open.
+
+
+**2026-10-20 V6.7.3 explicit response interruption.** Once native playback actually starts, the
+Nest replaces Finish recording with Stop response. The explicit click bypasses voice-detection
+locks without granting microphone authority or replay. It uses the retained driver's existing
+played-frame freeze, response cancellation, acknowledged truncation and heard-prefix/next-turn
+repair. The same provider/context survives; the page waits for interrupted heard text before
+allowing another explicit capture. Producer completion does not prevent stopping buffered audio.
+No audio route is opened or inferred. Automatic voice barge-in still requires the separate explicit
+headphones/AEC adapter; semantic integration, island feedback and physical/live K8 sign-off remain
+open. A response that finishes before the click is harmless; duplicate clicks cannot enqueue another
+stop or a recording. Cancel remains available before audio and while interruption settles.
+
+Validation: 1,436 workspace tests pass (17 documented ignores), 10 evals, all 19 renderer/bridge
+checks, build, workspace Clippy with warnings denied, formatting and repository guards pass. Pure
+turn checks cover explicit stop during the voice lock with barge-in disabled/headphones/AEC, no
+microphone replay, generation replacement and stale/duplicate or inaudible requests. The retained
+playback regression now also exercises the explicit stop before/after producer completion, exact
+played-frame freeze, held truncation acknowledgement, heard-only history and repair of only the
+next admitted turn. Each displayed audible reply gets an opaque binding checked by the native
+controller; a late request cannot target the next reply. Renderer checks cover the same session,
+matching reply binding, disabled duplicate stop, interrupted feedback and no new capture.
+
+Native Tauri/WebKit inspection uses controlled owners at wide/minimum sizes in Black/Light and
+four languages for speaking, interrupting and waiting. It retains visible named actions and an
+accessible content scroller, exercises explicit stop without a new session/microphone and rejects
+actual foreign-surface/default-off entry. No physical audio, model, provider, original keyring or
+agent configuration is used. Private processes/profile/cache are removed afterward. The local
+AGENTS task-actions script remains absent, not passed. Physical/live interruption quality and
+explicit duplex/voice barge-in integration remain open; K8 and Codex activation are unchanged.

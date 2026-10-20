@@ -1,5 +1,9 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Stop response": "停止回复",
+  "Zeca is speaking\u2026": "Zeca 正在说话…",
+  "Stopping the response\u2026": "正在停止回复…",
+
   "Finish automatically after a pause": "停顿后自动完成",
   "Off by default for each app run. Uses local GPU preview and the installed speech detector. If unavailable, use Finish recording. Each new turn still needs your click.": "每次打开应用时默认关闭。使用本地 GPU 预览和已安装的语音检测器。如不可用，请点击完成录音。每一轮仍需您点击开始。",
   "Automatic finish is unavailable. Use Finish recording.": "自动完成不可用。请点击完成录音。",

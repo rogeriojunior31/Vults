@@ -5,10 +5,10 @@ import { t } from "../../../i18n";
 export interface ConversationBackend {
   start(autoFinish: boolean): Promise<VoiceConversation>;
   status(id: string): Promise<VoiceConversation>;
-  control(id: string, action: "finish" | "cancel" | "next"): Promise<void>;
+  control(id: string, action: "finish" | "cancel" | "next" | "interrupt", response?: string): Promise<void>;
   copy(text: string): Promise<void>;
 }
-const running = (view: VoiceConversation | null) => !!view && ["starting", "recording", "transcribing", "responding", "waiting"].includes(view.phase);
+const running = (view: VoiceConversation | null) => !!view && ["starting", "recording", "transcribing", "responding", "speaking", "interrupting", "waiting"].includes(view.phase);
 export function createVoiceConversation(api: ConversationBackend | undefined, configure: () => void) {
   const title = el("h2"), about = el("p"), privacy = el("p", { class: "dictation-note" });
   const status = el("p"), error = el("p", { class: "meeting-feedback" });
@@ -34,9 +34,9 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     content.setAttribute("aria-label", t("Voice conversation"));
     about.textContent = t("Finish each recording to hear Zeca. Record another turn to continue the same conversation.");
     privacy.textContent = t("Microphone audio and cached flock context may go to OpenAI. API charges apply. Voice never answers permission cards.");
-    start.textContent = view?.phase === "waiting" ? t("Record another turn") : t("Start recording"); finish.textContent = t("Finish recording"); cancel.textContent = view?.phase === "waiting" ? t("End conversation") : t("Cancel"); settings.textContent = t("Voice conversation settings");
+    start.textContent = view?.phase === "waiting" ? t("Record another turn") : t("Start recording"); finish.textContent = view?.phase === "speaking" || view?.phase === "interrupting" ? t("Stop response") : t("Finish recording"); cancel.textContent = view?.phase === "waiting" ? t("End conversation") : t("Cancel"); settings.textContent = t("Voice conversation settings");
     start.disabled = !api || !active || pending || (running(view) && view?.phase !== "waiting");
-    finish.disabled = !active || pending || view?.phase !== "recording";
+    finish.disabled = !active || pending || (view?.phase !== "recording" && view?.phase !== "speaking");
     cancel.disabled = !active || !running(view);
     settings.disabled = pending || running(view);
     automatic.disabled = !active || pending || running(view);
@@ -48,6 +48,8 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       : view?.phase === "recording" && automatic.checked ? t("Recording… Pause to finish automatically, or press Finish recording.")
       : view?.phase === "recording" ? t("Recording… Finish when you are done.")
       : view?.phase === "transcribing" ? t("Transcribing…")
+      : view?.phase === "speaking" ? t("Zeca is speaking…")
+      : view?.phase === "interrupting" ? t("Stopping the response…")
       : view?.phase === "responding" ? t("Zeca is responding…")
       : view?.phase === "waiting" ? t("Microphone off. Record another turn to continue, or end the conversation.")
       : view?.phase === "recovery" ? t("Voice could not finish. Review your local transcript below.")
@@ -99,7 +101,11 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   finish.onclick = async () => {
     if (!api || finish.disabled || !view) return;
     const mine = epoch, id = view.id; pending = true; draw();
-    try { await api.control(id, "finish"); }
+    const action = view.phase === "speaking" ? "interrupt" : "finish";
+    try {
+      await api.control(id, action, action === "interrupt" ? view.response ?? undefined : undefined);
+      if (mine === epoch && action === "interrupt" && view?.phase === "speaking") view = { ...view, phase: "interrupting" };
+    }
     catch { if (mine === epoch) { stop(id); view = null; failed = "status"; } }
     finally { if (mine === epoch) { pending = false; draw(); } }
   };

@@ -18,6 +18,7 @@ pub struct Snapshot {
     reason: Option<&'static str>,
     draft: Option<String>,
     reply: Option<String>,
+    response: Option<String>,
 }
 struct Session {
     view: Snapshot,
@@ -26,7 +27,7 @@ struct Session {
     #[cfg(target_os = "linux")]
     touched: Instant,
     #[cfg(target_os = "linux")]
-    next: Option<mpsc::Sender<vults_voice::turn::Generation>>,
+    next: Option<mpsc::Sender<capture::Request>>,
     #[cfg(target_os = "linux")]
     generation: Option<vults_voice::turn::Generation>,
 }
@@ -115,6 +116,7 @@ pub fn voice_conversation_start(
             reason: None,
             draft: None,
             reply: None,
+            response: None,
         };
         slot.1 = Some(Session {
             view: view.clone(),
@@ -159,9 +161,10 @@ pub fn voice_conversation_control(
     window: tauri::Webview,
     id: String,
     action: String,
+    response: Option<String>,
 ) -> Result<(), String> {
     page(&window)?;
-    if !matches!(action.as_str(), "finish" | "cancel" | "next") {
+    if !matches!(action.as_str(), "finish" | "cancel" | "next" | "interrupt") {
         return Err("Invalid voice conversation action.".into());
     }
     let controls = app.state::<Controls>();
@@ -175,7 +178,9 @@ pub fn voice_conversation_control(
             slot.1 = None;
             return Err("Voice conversation is no longer visible.".into());
         }
-        if action == "next" {
+        if action == "interrupt" {
+            interrupt(session, response.as_deref())?;
+        } else if action == "next" {
             advance(session)?;
         } else if session.view.phase == "recording"
             && let Some(control) = &session.control
@@ -187,7 +192,7 @@ pub fn voice_conversation_control(
     }
     #[cfg(not(target_os = "linux"))]
     {
-        let _ = session;
+        let _ = (session, response);
         slot.1 = None;
     }
     Ok(())
@@ -215,6 +220,23 @@ fn capture_phase(session: &mut Session, phase: CapturePhase) {
 }
 
 #[cfg(target_os = "linux")]
+fn interrupt(session: &mut Session, response: Option<&str>) -> Result<(), String> {
+    if session.view.phase != "speaking" || response.is_none() || response != session.view.response.as_deref()
+    {
+        return Ok(());
+    }
+    let generation = session.generation.ok_or("Voice conversation is not ready.")?;
+    session
+        .next
+        .as_ref()
+        .ok_or("Voice conversation has ended.")?
+        .try_send(capture::Request::Interrupt(generation))
+        .map_err(|_| "Voice conversation is busy.")?;
+    session.view.phase = "interrupting";
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
 fn advance(session: &mut Session) -> Result<(), String> {
     if session.view.phase != "waiting" {
         return Err("Wait for Zeca before recording another turn.".into());
@@ -230,7 +252,7 @@ fn advance(session: &mut Session) -> Result<(), String> {
     if session
         .next
         .as_ref()
-        .is_none_or(|send| send.try_send(generation).is_err())
+        .is_none_or(|send| send.try_send(capture::Request::Capture(generation)).is_err())
     {
         control.cancel();
         return Err("Voice conversation has ended.".into());
@@ -273,12 +295,7 @@ fn bounded(text: String) -> String {
 }
 
 #[cfg(target_os = "linux")]
-async fn drive(
-    app: AppHandle,
-    id: String,
-    request: CaptureRequest,
-    next: mpsc::Receiver<vults_voice::turn::Generation>,
-) {
+async fn drive(app: AppHandle, id: String, request: CaptureRequest, next: mpsc::Receiver<capture::Request>) {
     let (send, input) = mpsc::channel(1);
     // Subsequent native turns enter through the retained, generation-bound capture adapter.
     drop(send);
@@ -315,13 +332,18 @@ async fn drive(
                         Event::Action(action) if matches!(action.effect, Effect::Listen { .. }) => {
                             if first_listen {
                                 first_listen = false;
-                                if session.next.as_ref().is_none_or(|next| next.try_send(action.generation).is_err())
+                                if session.next.as_ref().is_none_or(|next| next.try_send(capture::Request::Capture(action.generation)).is_err())
                                     && let Some(control) = &session.control { control.cancel(); }
                             }
-                            else { session.generation = Some(action.generation); session.view.phase = "waiting"; }
+                            else { session.generation = Some(action.generation); if session.view.phase != "interrupting" { session.view.phase = "waiting"; } }
                         },
                         Event::Action(action) if matches!(action.effect, Effect::Generate) => session.view.phase = "responding",
-                        Event::History(record) => session.view.reply = Some(bounded(record.text)),
+                        Event::Speaking(generation) => { session.generation = Some(generation); session.view.response = Some(crate::traces::new_id()); session.view.phase = "speaking"; },
+                        Event::History(record) => {
+                            session.view.reply = Some(bounded(record.text));
+                            if record.interrupted && session.view.phase == "interrupting" { session.view.phase = "waiting"; }
+                            else if !record.interrupted { session.view.phase = "responding"; }
+                        },
                         Event::Local { reply, .. } => session.view.reply = Some(bounded(reply.text)),
                         _ => {},
                     });
@@ -375,6 +397,7 @@ mod tests {
                 reason: None,
                 draft: None,
                 reply: Some("Heard reply".into()),
+                response: None,
             },
             control: Some(control),
             touched: Instant::now(),
@@ -383,6 +406,28 @@ mod tests {
         };
         assert!(advance(&mut session).is_err());
         assert!(receive.try_recv().is_err());
+        interrupt(&mut session, Some("reply-1")).unwrap();
+        assert!(
+            receive.try_recv().is_err(),
+            "An inaudible/stale click cannot enqueue interruption"
+        );
+        session.view.phase = "speaking";
+        session.view.response = Some("reply-1".into());
+        interrupt(&mut session, Some("old-reply")).unwrap();
+        assert!(
+            receive.try_recv().is_err(),
+            "A stale reply cannot interrupt current output"
+        );
+        interrupt(&mut session, Some("reply-1")).unwrap();
+        assert!(
+            matches!(receive.try_recv().unwrap(), capture::Request::Interrupt(value) if value == generation)
+        );
+        assert_eq!(session.view.phase, "interrupting");
+        interrupt(&mut session, Some("reply-1")).unwrap();
+        assert!(
+            receive.try_recv().is_err(),
+            "A duplicate cannot interrupt twice or start capture"
+        );
         capture_phase(&mut session, CapturePhase::Manual);
         assert_eq!(session.view.reason, Some("auto-unavailable"));
         capture_phase(&mut session, CapturePhase::Starting);
@@ -391,7 +436,9 @@ mod tests {
         assert_eq!(session.view.phase, "transcribing");
         session.view.phase = "waiting";
         assert!(advance(&mut session).is_ok());
-        assert_eq!(receive.try_recv().unwrap(), generation);
+        assert!(
+            matches!(receive.try_recv().unwrap(), capture::Request::Capture(value) if value == generation)
+        );
         assert_eq!(session.view.phase, "starting");
         assert_eq!(session.view.reply.as_deref(), Some("Heard reply"));
         assert!(advance(&mut session).is_err(), "A duplicate cannot admit capture");
@@ -425,6 +472,7 @@ mod tests {
                 reason: None,
                 draft: None,
                 reply: None,
+                response: None,
             },
             control: Some(control),
             touched: Instant::now(),
@@ -453,6 +501,7 @@ mod tests {
                 reason: None,
                 draft: None,
                 reply: None,
+                response: None,
             },
             control: Some(control),
             touched: Instant::now(),

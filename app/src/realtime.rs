@@ -134,7 +134,7 @@ async fn run_conversation(
     app: AppHandle,
     channels: Channels,
     request: CaptureRequest,
-    next: tokio::sync::mpsc::Receiver<vults_voice::turn::Generation>,
+    next: tokio::sync::mpsc::Receiver<capture::Request>,
 ) -> Result<Option<Recovery>, Failure> {
     run_with_audio(app, channels, devices::Choice::Default, Some(request), Some(next)).await
 }
@@ -155,7 +155,7 @@ async fn run_with_audio(
     choice: devices::Choice,
     #[cfg(target_os = "linux")] capture: Option<CaptureRequest>,
     #[cfg(not(target_os = "linux"))] _capture: Option<()>,
-    #[cfg(target_os = "linux")] next: Option<tokio::sync::mpsc::Receiver<vults_voice::turn::Generation>>,
+    #[cfg(target_os = "linux")] next: Option<tokio::sync::mpsc::Receiver<capture::Request>>,
     #[cfg(not(target_os = "linux"))] _next: Option<()>,
 ) -> Result<Option<Recovery>, Failure> {
     #[allow(unused_mut)]

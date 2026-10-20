@@ -22,12 +22,14 @@ pub enum Command {
 pub enum Signal {
     SpeechStarted,
     SpeechEnded,
+    StopResponse,
     Confirm(Probe),
     Reject(Probe),
 }
 impl Signal {
     fn event(self) -> turn::Event {
         match self {
+            Self::StopResponse => turn::Event::InterruptRequested,
             Self::SpeechStarted => turn::Event::SpeechStarted,
             Self::SpeechEnded => turn::Event::SpeechEnded,
             Self::Confirm(probe) => turn::Event::InterruptConfirmed(probe),
@@ -74,6 +76,7 @@ pub enum Event {
     Capture(super::CapturePhase),
     Action(Action),
     Ready(Generation),
+    Speaking(Generation),
     History(Record),
     Settled(Settlement),
     Input(Input),
@@ -283,6 +286,7 @@ pub(super) async fn drive<
             }
             if !current.first_played && let Some(at) = cursor.first_played {
                 current.first_played = true;
+                emit(&channels.output, Event::Speaking(current.generation))?;
                 let event = turn::Event::FirstAudioPlayed { at:at.saturating_duration_since(start) };
                 let out = machine.handle(current.generation, event, now);
                 if let Err(error) = actions(&channels.output, out) { break Err(error); }
@@ -414,7 +418,7 @@ pub(super) async fn drive<
                         if let Err(error) = actions(&channels.output, out) { break Err(error); }
                     },
                     Some(Command::Signal { generation, signal }) => {
-                        if response.as_ref().is_none_or(|r| !r.output.route_verified()) {
+                        if !matches!(signal, Signal::StopResponse) && response.as_ref().is_none_or(|r| !r.output.route_verified()) {
                             let invalid = machine.handle(machine.generation(), turn::Event::InputUnavailable, now);
                             if let Err(error) = actions(&channels.output, invalid) { break Err(error); }
                             continue;

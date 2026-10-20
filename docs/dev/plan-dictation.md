@@ -2830,7 +2830,11 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    policy; final decoding/upload still follow microphone closure. Missing/failed detection or
    preview visibly falls back to manual Finish. Cancellation, the cap and next-turn click still
    hold. The semantic model remains off. V6.7.3 remains open for semantic and duplex/barge-in
-   integration. Next: explicit duplex/interruption integration, then V6.7.4
+   integration. An explicit Stop response click now stops audible output through the existing
+   acknowledged truncation/heard-prefix repair path, even with voice barge-in disabled. It opens
+   no microphone and waits for heard-text completion before the next-turn action. Duplicate/stale
+   clicks cannot interrupt a different generation. Next: explicit duplex/voice interruption
+   integration, then V6.7.4
    island feedback and physical/live conversation sign-off.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before

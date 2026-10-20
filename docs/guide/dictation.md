@@ -59,6 +59,14 @@ does not use the global dictation shortcut or barge-in.
 Recording is capped at 30 seconds; reaching the cap discards it rather than sending automatically.
 The combined local capture/transcription wait is limited to 60 seconds.
 
+Once Zeca's audio starts playing, **Stop response** replaces Finish recording. It stops the spoken
+reply without ending the conversation or opening the microphone. The page waits for the interrupted
+reply's heard-text result before offering **Record another turn**; remote truncation and the next
+upload use the existing acknowledgement/repair path. Unheard words are excluded from the displayed
+reply. Duplicate/late clicks cannot stop a new generation or start capture. During generation before
+audible output, **Cancel** still ends the whole session. This is a click control; interruption by
+speaking over Zeca still needs the separate headphones/echo-cancelled route integration.
+
 Optionally select **Finish automatically after a pause** before Start. It starts off when the app
 opens and is frozen for that conversation. It uses the installed local speech detector and GPU
 transcription preview; it downloads nothing. Confirmed speech, local partial words and fresh audio
