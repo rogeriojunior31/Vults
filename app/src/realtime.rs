@@ -114,10 +114,10 @@ pub async fn run(app: AppHandle, channels: Channels) -> Result<(), Failure> {
     let expected = consent.clone();
     let cancel = channels.cancel.clone();
     let check_app = app.clone();
-    let gate = crate::gate::realtime::RealtimeGate {
-        directory: crate::history::dir(),
+    let gate = crate::gate::realtime::RealtimeGate::open(
+        crate::history::dir(),
         consent,
-        authorized: Arc::new(move || {
+        Arc::new(move || {
             state.current(epoch)
                 && !*cancel.borrow()
                 && cancel.has_changed().is_ok()
@@ -128,13 +128,15 @@ pub async fn run(app: AppHandle, channels: Channels) -> Result<(), Failure> {
                     .lock()
                     .is_ok_and(|s| s.voice_realtime == expected)
         }),
-    };
+    )
+    .await?;
     OpenAi.run(plan, &gate, channels).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "linux")]
     use vults_chat::realtime::transport::Gate;
     #[test]
     fn revocation_between_entry_and_snapshot_and_shutdown_cannot_be_undone() {
@@ -189,22 +191,25 @@ mod tests {
         assert!(!state.current(epoch));
     }
 
+    #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn durable_admission_survives_erasure_and_abandoned_handoff_never_leaks_allowance() {
         let dir = std::env::temp_dir().join(format!("vults-realtime-admission-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let mut db = vults_store::Store::open(&dir).unwrap();
         let identity = db.request_budget_id().unwrap();
-        let gate = crate::gate::realtime::RealtimeGate {
-            directory: dir.clone(),
-            consent: Consent {
+        let gate = crate::gate::realtime::RealtimeGate::open(
+            dir.clone(),
+            Consent {
                 on: true,
                 ledger: Some(identity.clone()),
                 limit_microusd: 179200,
                 ..Consent::default()
             },
-            authorized: Arc::new(|| true),
-        };
+            Arc::new(|| true),
+        )
+        .await
+        .unwrap();
         drop(gate.reserve(179200).await.unwrap());
         assert!(!db.has_open_cost(&identity, crate::gate::VOICE_REALTIME).unwrap());
         let attempt = gate.reserve(179200).await.unwrap().claim();
@@ -229,6 +234,7 @@ mod tests {
         std::fs::remove_dir_all(dir).unwrap();
     }
 
+    #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn detached_unclaimed_admission_is_refunded_even_when_authority_stays_valid() {
         let dir = std::env::temp_dir().join(format!("vults-realtime-handoff-{}", std::process::id()));
@@ -241,21 +247,25 @@ mod tests {
         let unblock = release.clone();
         let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
         let signal = std::sync::Mutex::new(Some(entered_tx));
-        let gate = Arc::new(crate::gate::realtime::RealtimeGate {
-            directory: dir.clone(),
-            consent: Consent {
-                on: true,
-                ledger: Some(identity.clone()),
-                ..Consent::default()
-            },
-            authorized: Arc::new(move || {
-                if checks.fetch_add(1, Ordering::SeqCst) == 2 {
-                    let _ = signal.lock().unwrap().take().unwrap().send(());
-                    unblock.wait();
-                }
-                true
-            }),
-        });
+        let gate = Arc::new(
+            crate::gate::realtime::RealtimeGate::open(
+                dir.clone(),
+                Consent {
+                    on: true,
+                    ledger: Some(identity.clone()),
+                    ..Consent::default()
+                },
+                Arc::new(move || {
+                    if checks.fetch_add(1, Ordering::SeqCst) == 4 {
+                        let _ = signal.lock().unwrap().take().unwrap().send(());
+                        unblock.wait();
+                    }
+                    true
+                }),
+            )
+            .await
+            .unwrap(),
+        );
         let pending = gate.clone();
         let task = tokio::spawn(async move { pending.reserve(179200).await });
         tokio::time::timeout(std::time::Duration::from_secs(2), entered_rx)
@@ -265,6 +275,16 @@ mod tests {
         assert!(db.has_open_cost(&identity, crate::gate::VOICE_REALTIME).unwrap());
         task.abort();
         let _ = task.await;
+        let consent = Consent {
+            on: true,
+            ledger: Some(identity.clone()),
+            ..Consent::default()
+        };
+        drop(gate);
+        assert!(matches!(
+            crate::gate::realtime::RealtimeGate::open(dir.clone(), consent.clone(), Arc::new(|| true)).await,
+            Err(Failure::Busy)
+        ));
         release.wait();
         tokio::time::timeout(std::time::Duration::from_secs(2), async {
             while db.has_open_cost(&identity, crate::gate::VOICE_REALTIME).unwrap() {
@@ -274,6 +294,24 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(db.spans(10).unwrap()[0].attrs["vults.cost.actual_microusd"], 0);
+        let next = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            loop {
+                match crate::gate::realtime::RealtimeGate::open(
+                    dir.clone(),
+                    consent.clone(),
+                    Arc::new(|| true),
+                )
+                .await
+                {
+                    Err(Failure::Busy) => tokio::task::yield_now().await,
+                    result => break result.unwrap(),
+                }
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(db.spans(10).unwrap()[0].attrs["vults.cost.actual_microusd"], 0);
+        drop(next);
         drop(db);
         std::fs::remove_dir_all(dir).unwrap();
     }

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 3c80864a881c -->
+<!-- source: 797ee7f53c67 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -127,10 +127,8 @@ Apagar o histórico preserva reservas/débitos e uma conciliação tardia não r
 Excessos cobrados pelo provedor são debitados integralmente, sem truncamento.
 O sucesso/falha da requisição fica no trace independentemente da disponibilidade dos dados finais de cobrança.
 O app recusa explicitamente `voice-realtime` pelas configurações de conectores e pelo gate de
-contagem. Esta é a base de persistência, sem chamador de rede: contabilidade monotônica em execução,
-corte de streaming, integração de chaveiro/consentimento
-e recuperação de reservas abandonadas continuam obrigatórios antes de ativar voz remota. Nenhum
-reembolso ou recuperação automática libera um orçamento novo.
+contagem. As seções posteriores acrescentam admissão, transporte e recuperação sobre esta base de
+persistência. Nenhum reembolso ou recuperação automática libera um orçamento novo.
 
 A V6.3.2 acrescenta o responsável offline `chat::realtime`: tarifas inteiras revisadas, tetos
 conservadores por resposta, limites finitos explícitos de sessão e confirmação da configuração
@@ -146,9 +144,13 @@ monetário controlado pelo app. Configurações 41 mantém consentimento indepen
 padrão, limite/modelo e vínculo com o registro. Uma concessão revogável de voz verifica escolha/
 bloqueio/cancelamento durante configuração, IO e publicação; encerrar o app fecha permanentemente
 a admissão. Reservas antecedem chaveiro/conexão/áudio; a conciliação dos recibos continua após
-revogação. Guardiões de entrega não reclamada restituem apenas trabalho comprovadamente não enviado,
-e reservas pendentes bloqueiam um novo responsável. Não há recuperação automática de reservas órfãs
-nem entrada nativa de captura/reprodução. Os testes duplex são offline; validação com provedor/
+revogação. Guardiões de entrega não reclamada restituem apenas trabalho comprovadamente não enviado;
+reservas pendentes bloqueiam novas reservas dentro desse responsável. A V6.3.4 acrescenta trava do
+kernel no diretório de dados Linux, mantida pelo transporte e cada worker desacoplado. Só um novo
+responsável exclusivo concilia reservas órfãs, mantendo atomicamente o custo desconhecido integral
+por 24 horas desde a conciliação. Reiniciar não restitui nem adia um débito já conciliado, e traces
+apagados continuam apagados. Outras plataformas recusam a entrada. Não há entrada nativa de
+captura/reprodução. Testes duplex e de processos/falhas são offline; validação com provedor/
 dispositivos reais e orquestração da alternativa em texto continuam pendentes antes da ativação.
 O inventário de rede lista o transporte concreto e seus testes.
 

@@ -118,9 +118,8 @@ remain charged after a clock rollback. History erasure preserves holds/debits an
 does not recreate erased traces. Provider overruns are charged in full rather than clipped.
 Request success/failure is traced independently of whether final billing data is available.
 The app explicitly rejects `voice-realtime` through connector settings and the count-only gate.
-This is the persistence foundation, with no network caller: monotonic runtime accounting,
-stream cutoff, keyring/consent wiring and abandoned-hold recovery
-remain required before enabling remote voice. No automatic refund or recovery grants a fresh budget.
+The later runtime sections add admission, transport and recovery on this persistence foundation.
+No automatic refund or recovery grants a fresh budget.
 
 V6.3.2 adds the offline `chat::realtime` owner: reviewed integer rates, conservative per-response
 ceilings, explicit finite session caps and effective-configuration confirmation, one attempt bound
@@ -134,10 +133,14 @@ V6.3.3 adds a fixed-origin TLS WebSocket provider, bounded streaming PCM channel
 monetary gate. Settings 41 keeps independent default-off consent, limit/model and ledger binding.
 One revocable voice lease checks consent/lock/cancel throughout setup, IO and publication; shutdown
 permanently closes admission. Reservations precede keyring access/connect/audio; receipt settlement
-continues after revocation. Unclaimed handoff guards refund only proven-unsent work, and unresolved
-holds block a new voice owner. No automatic orphan recovery or native capture/playback entry is
-added. Duplex socket tests are offline; live-provider/native acceptance and text fallback orchestration
-remain open before activation. The network inventory lists the concrete transport and its tests.
+continues after revocation. Unclaimed handoff guards refund only proven-unsent work; unresolved
+holds block further reservations within that owner. V6.3.4 adds a Linux data-directory kernel lock
+retained by the transport and every detached worker. Only a new exclusive owner reconciles orphaned
+holds, atomically keeping their full unknown cost for 24 hours from reconciliation. Restart cannot
+refund or slide an already settled debit, and trace erasure is preserved. Other platforms fail closed.
+No native capture/playback entry is added. Duplex socket and process/crash tests are offline;
+live-provider/native acceptance and text fallback orchestration remain open before activation.
+The network inventory lists the concrete transport and its tests.
 
 ## Local dictation
 

@@ -513,3 +513,22 @@ fn abandoned_handoff_refunds_only_before_ownership_is_claimed_and_debug_redacts_
         .contains("31415")
     );
 }
+
+#[tokio::test]
+async fn abort_drops_the_transport_without_inventing_a_settlement() {
+    let gate = Arc::new(Mock::default());
+    let worker_gate = gate.clone();
+    let (client, mut server) = socket_pair().await;
+    let (io, tx, mut rx, _cancel) = channels(8);
+    let worker =
+        tokio::spawn(async move { start(plan(), &*worker_gate, io, |_, _| async { Ok(client) }).await });
+    config(&mut server).await;
+    assert!(matches!(next(&mut rx).await, Event::Ready));
+    turn(&tx).await;
+    request(&mut server, "resp_0").await;
+    worker.abort();
+    assert!(worker.await.unwrap_err().is_cancelled());
+    let closed = timeout(Duration::from_secs(2), server.next()).await.unwrap();
+    assert!(closed.is_none() || closed.is_some_and(|m| m.is_err()));
+    assert!(gate.settled.lock().unwrap().is_empty());
+}

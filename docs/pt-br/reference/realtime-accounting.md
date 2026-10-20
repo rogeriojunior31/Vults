@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: a8082ffb45b9 -->
+<!-- source: bf2ab127083e -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -106,10 +106,37 @@ concorrente com custo desconhecido. Antes de qualquer inferência poder começar
 interrompida libera sua reserva com custo comprovadamente zero. Depois que a inferência pode ter começado,
 uso ausente mantém o teto inteiro. Uma admissão desacoplada nunca entregue ao transporte concilia
 custo zero e libera sua reserva por seu guardião de posse. Aborto da tarefa/falha do processo após a entrega mantém a reserva
-pendente; um novo responsável recusa qualquer reserva ainda não conciliada. Não há restituição nem
-recuperação automática de reservas órfãs. A conciliação com comprovação de transporte encerrado
-continua obrigatória antes de oferecer esse caminho ao usuário. Apagar o histórico nunca zera essa
-contabilidade.
+pendente. Dentro do mesmo responsável, trabalho não conciliado continua bloqueando outra
+reserva. Apagar o histórico nunca zera essa contabilidade.
+
+<a id="orphan-recovery"></a>
+## Recuperação de reservas órfãs
+
+A V6.3.4 acrescenta recuperação somente no Linux, antes que um novo responsável nativo possa
+reservar. O gate adquire uma trava exclusiva não bloqueante do kernel no próprio diretório de
+dados, sem arquivo de trava removível. Ele mantém a trava durante o futuro emprestado do transporte
+e cada worker desacoplado de admissão, chaveiro e conciliação. Outro responsável/processo recebe
+`Busy` antes de alterar a contabilidade de reservas órfãs; cancelar a tarefa não libera a referência
+restante do worker à trava. A biblioteca padrão usa `flock` no Linux; veja
+[File::try_lock](https://doc.rust-lang.org/std/fs/struct.File.html#method.try_lock) e o
+[tempo de vida da trava no Linux](https://man7.org/linux/man-pages/man2/flock.2.html).
+
+Só depois de adquirir a posse, uma transação vinculada à identidade do registro encerra as
+reservas pendentes de `voice-realtime`. O custo efetivo desconhecido continua nulo e o teto
+reservado integral permanece debitado. Sua janela móvel de 24 horas começa na conciliação, nunca
+antes do início original. Reinícios repetidos não alteram a expiração de uma reserva encerrada.
+Traces existentes recebem resultado de erro e marcador de conciliação sem conteúdo; traces
+apagados não reaparecem. Outros recursos e recibos já conciliados não mudam. Falhas de identidade,
+schema, trava ou gravação recusam a entrada; uma transação malsucedida não altera reservas nem
+traces. A espera inicial é limitada a 10 segundos; qualquer worker desacoplado ainda mantém a
+posse até terminar.
+
+Isso comprova que o transporte local anterior não pode mais enviar; não declara que o provedor
+terminou ao desconectar nem restitui trabalho incerto. Um processo encerrado libera sua trava no
+kernel; transportes abortados descartam o socket. A recuperação não está habilitada em outras
+plataformas. O backend existente não tem entrada de captura oferecida ao usuário; retenção nativa
+do turno local/alternativa em texto e validação com provedor real continuam obrigatórias antes da
+ativação.
 
 Execute `cargo test -p vults-chat realtime::transport::` e `cargo test -p vults-app realtime` offline.
 Testes de WebSocket duplex exercitam quadros reais com PCM/chaves sintéticos, dois turnos,

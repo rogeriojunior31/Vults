@@ -94,9 +94,33 @@ Known final receipts are settled once, even after revocation, without a competin
 retry. Before any inference could have started, an interrupted connection releases its hold at proven zero
 cost. Once inference may have started, missing usage retains the whole ceiling. A detached admission
 that was never handed to transport settles at zero and releases its hold through its ownership guard. Task abort/crash after
-handoff keeps the hold unresolved; a new voice owner refuses any unresolved hold. There is no
-automatic orphan refund or recovery. Reconciliation with proof of stopped transport remains required
-before making this path user-facing. History clearing never resets this accounting.
+handoff keeps the hold unresolved. Within the same owner, unresolved work still blocks another
+reservation. History clearing never resets this accounting.
+
+## Orphan recovery
+
+V6.3.4 adds Linux-only recovery before a new native owner can reserve. The gate acquires a
+nonblocking exclusive kernel lock on the data directory itself, so there is no removable lock file.
+It keeps that lock throughout the borrowed transport future and every detached admission, keyring
+and settlement worker. A second owner/process receives `Busy` before touching orphan accounting;
+task cancellation cannot release a worker's remaining lock reference. The standard library uses
+Linux `flock`; see [File::try_lock](https://doc.rust-lang.org/std/fs/struct.File.html#method.try_lock)
+and the [Linux lock lifetime](https://man7.org/linux/man-pages/man2/flock.2.html).
+
+Only after acquiring ownership does one ledger-identity-bound transaction close unfinished
+`voice-realtime` holds. Unknown actual cost stays null and the full reserved ceiling remains
+charged. Its rolling 24-hour window starts at reconciliation, never before the original start time.
+Repeated restarts do not move a completed hold's expiry. Existing traces gain an error outcome and
+content-free reconciliation marker; erased traces stay erased. Other features and already settled
+receipts are untouched. Identity/schema/lock/write failures deny entry; a failed transaction changes
+neither holds nor traces. The setup wait is bounded to 10 seconds; any detached worker still retains
+ownership until it finishes.
+
+This proves that the former local transport can no longer send; it does not claim the provider
+completed at disconnect or refund uncertain work. A crashed process releases its kernel lock;
+aborted transports drop their socket. Recovery is not enabled on other platforms. The existing
+backend has no user-facing capture entry, and native local-turn retention/text fallback and
+live-provider acceptance remain required before activation.
 
 Run `cargo test -p vults-chat realtime::transport::` and `cargo test -p vults-app realtime` offline.
 Duplex WebSocket tests exercise actual frames with synthetic PCM/keys, two turns, cancellation,

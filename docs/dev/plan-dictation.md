@@ -2508,10 +2508,17 @@ Delivery sequence:
    frame tests cover two turns, off/spent/key refusal, mid-flight revocation/cancellation, malformed
    audio, backpressure, delayed final settlement and unknown cost; real ledger tests cover detached
    admission and exact remaining allowance. No renderer/capture entry is offered yet. Unresolved
-   holds block a new owner; no automatic recovery/refund is allowed. Remaining activation gates:
-   prove stopped transport before orphan reconciliation, retain the native turn for text fallback,
-   wire capture/playback in V6.4-V6.7 and pass live-provider/native acceptance. Full V6.3 remains open
-   until these gates pass; offline socket tests do not claim real speech/provider acceptance.
+   holds block another reservation; recovery is delivered in V6.3.4.
+4. **V6.3.4 Exclusive ownership and orphan reconciliation** — implemented 2026-10-19. A Linux
+   kernel lock on the data directory outlives the borrowed socket future, detached blocking workers
+   and unclaimed admission guards. A new exclusive owner atomically closes abandoned holds at their
+   full ceiling with unknown actual cost, starting a conservative 24-hour window once. Active owners
+   refuse entry; identity/schema/write failure changes no accounting. Tests cover live process
+   exclusion, forced process death, socket abort, detached handoff, rollback, erased traces, exact
+   remaining allowance and no expiry extension on restart. No dependencies or schema changes.
+   Remaining activation gates: retain the native turn for text fallback, wire capture/playback in
+   V6.4-V6.7 and pass live-provider/native acceptance. Full V6.3 remains open until these gates pass;
+   offline tests do not claim real speech/provider acceptance.
 
 **V6.4 Playback and what the user heard** (M)
 - Build:

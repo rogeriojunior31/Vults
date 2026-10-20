@@ -27,6 +27,43 @@ fn charged(conn: &rusqlite::Connection, feature: &str, now_ms: i64) -> Result<i6
 }
 
 impl Store {
+    /// The caller must exclusively own the transport across processes and all detached workers.
+    /// Close only orphaned holds, at their full ceiling; unknown usage is never a refund.
+    pub fn reconcile_costs(
+        &mut self,
+        expected: &str,
+        feature: &str,
+        finished_ms: i64,
+    ) -> Result<usize, Error> {
+        if feature.is_empty() || finished_ms < 0 {
+            return Err(Error::Invalid("Invalid monetary reconciliation"));
+        }
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let identity: String =
+            tx.query_row("SELECT identity FROM request_budget WHERE singleton=1", [], |r| {
+                r.get(0)
+            })?;
+        if identity != expected {
+            return Err(Error::Invalid("The monetary ledger identity changed"));
+        }
+        // Update existing traces before closing the matching holds, in the same transaction.
+        tx.execute(
+            "UPDATE traces SET end_ms=max(?1,(SELECT start_ms FROM request_costs WHERE attempt=traces.span)),
+             status='error', attrs=json_set(attrs,'$.\"vults.cost.actual_microusd\"',NULL,'$.\"vults.cost.reconciled\"',json('true'))
+             WHERE kind='request' AND EXISTS(SELECT 1 FROM request_costs
+                WHERE attempt=traces.span AND trace=traces.trace AND feature=?2 AND end_ms IS NULL)",
+            params![finished_ms, feature],
+        )?;
+        let count = tx.execute(
+            "UPDATE request_costs SET end_ms=max(start_ms,?1) WHERE feature=?2 AND end_ms IS NULL",
+            params![finished_ms, feature],
+        )?;
+        tx.commit()?;
+        Ok(count)
+    }
+
     /// A new voice owner cannot establish remaining spend while a previous owner is unresolved.
     pub fn has_open_cost(&self, expected: &str, feature: &str) -> Result<bool, Error> {
         if self.request_budget_id()? != expected {
@@ -179,6 +216,71 @@ mod tests {
     }
     const FEATURE: &str = "voice-realtime";
     const LIMIT: u64 = 1_000_000;
+
+    #[test]
+    fn orphan_reconciliation_keeps_full_cost_once_and_only_for_the_bound_feature() {
+        let mut db = Store::open(&crate::temp("money-reconcile")).unwrap();
+        let id = db.request_budget_id().unwrap();
+        for (feature, at, attempt, ceiling) in [
+            (FEATURE, 100, "a", 60),
+            (FEATURE, 200, "b", 40),
+            ("other", 100, "c", 10),
+        ] {
+            assert!(
+                db.reserve_cost(&id, feature, LIMIT, Some(ceiling), &span(at, attempt))
+                    .unwrap()
+            );
+        }
+        assert!(db.settle_cost(&id, "a", Some(20), 150, true).unwrap());
+        assert!(db.reconcile_costs("replaced", FEATURE, 300).is_err());
+        assert!(db.reconcile_costs(&id, FEATURE, -1).is_err());
+        assert!(db.reconcile_costs(&id, "", 300).is_err());
+        assert_eq!(db.reconcile_costs(&id, FEATURE, 180).unwrap(), 1);
+        assert!(!db.has_open_cost(&id, FEATURE).unwrap());
+        assert!(db.has_open_cost(&id, "other").unwrap());
+        let spans = db.spans(10).unwrap();
+        let b = spans.iter().find(|s| s.span == "b").unwrap();
+        assert_eq!(b.end_ms, 200);
+        assert_eq!(b.status, "error");
+        assert_eq!(b.attrs["vults.cost.reconciled"], true);
+        assert!(b.attrs["vults.cost.actual_microusd"].is_null());
+        let a = spans.iter().find(|s| s.span == "a").unwrap();
+        assert_eq!(a.end_ms, 150);
+        assert_eq!(a.attrs["vults.cost.actual_microusd"], 20);
+        assert_eq!(charged(&db.conn, FEATURE, 200).unwrap(), 60);
+        assert!(!db.settle_cost(&id, "b", Some(0), 300, true).unwrap());
+        assert_eq!(db.reconcile_costs(&id, FEATURE, DAY_MS * 2).unwrap(), 0);
+        assert_eq!(charged(&db.conn, FEATURE, DAY_MS + 199).unwrap(), 40);
+        assert_eq!(charged(&db.conn, FEATURE, DAY_MS + 200).unwrap(), 0);
+    }
+
+    #[test]
+    fn reconciliation_rolls_back_with_trace_or_cost_failure_and_never_recreates_erased_traces() {
+        let dir = crate::temp("money-reconcile-failure");
+        let mut db = Store::open(&dir).unwrap();
+        let id = db.request_budget_id().unwrap();
+        assert!(
+            db.reserve_cost(&id, FEATURE, LIMIT, Some(LIMIT), &span(0, "a"))
+                .unwrap()
+        );
+        for table in ["traces", "request_costs"] {
+            db.conn.execute_batch(&format!("CREATE TRIGGER refuse_reconciliation BEFORE UPDATE ON {table} BEGIN SELECT RAISE(ABORT,'test'); END;")).unwrap();
+            assert!(db.reconcile_costs(&id, FEATURE, DAY_MS).is_err());
+            assert!(db.has_open_cost(&id, FEATURE).unwrap());
+            let span = &db.spans(10).unwrap()[0];
+            assert_eq!(span.end_ms, 0);
+            assert_eq!(span.status, "started");
+            assert!(span.attrs.get("vults.cost.reconciled").is_none());
+            db.conn
+                .execute_batch("DROP TRIGGER refuse_reconciliation;")
+                .unwrap();
+        }
+        db.clear_all(&dir).unwrap();
+        assert_eq!(db.reconcile_costs(&id, FEATURE, DAY_MS).unwrap(), 1);
+        assert_eq!(charged(&db.conn, FEATURE, DAY_MS * 2 - 1).unwrap(), LIMIT as i64);
+        assert_eq!(charged(&db.conn, FEATURE, DAY_MS * 2).unwrap(), 0);
+        assert!(db.spans(10).unwrap().is_empty());
+    }
 
     #[test]
     fn holds_share_the_limit_and_only_final_usage_releases_unused_money() {
