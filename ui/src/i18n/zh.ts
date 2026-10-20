@@ -1,5 +1,8 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Response stopped. Your microphone remains open. Record another turn, or end the conversation to close it.": "回复已停止。麦克风仍然开启。录制下一轮，或结束对话以关闭麦克风。",
+  "Response stopped. Microphone off. Record another turn to continue, or end the conversation.": "回复已停止。麦克风已关闭。录制下一轮以继续，或结束对话。",
+
   "Stop response": "停止回复",
   "Zeca is speaking\u2026": "Zeca 正在说话…",
   "Stopping the response\u2026": "正在停止回复…",

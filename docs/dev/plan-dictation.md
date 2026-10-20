@@ -2863,8 +2863,18 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    UI paths accepted; checked files must be provisioned explicitly for preview. Ordinary builds
    reject semantic activation. Next: V6.7.4 island feedback, artifact/endpoint/pt-BR qualification
    and physical/live conversation sign-off. Answer without the key remains off/unimplemented.
-4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
-   layouts and accessibility, then exercise microphone/provider/interruption acceptance before
+4. **V6.7.4 Island states and acceptance** — in progress. The native page now consumes confirmed
+   ClearPlayback feedback, retires the stopped response token and distinguishes stopped output with
+   microphone off from a continuous route's open microphone. Only current-generation response
+   generation can admit speaking feedback; duplicate events retain the exact Stop token. Delayed
+   speaking cannot overwrite interruption or replay capture. Heard-text settlement still owns the
+   manual next-turn action; feedback never starts a microphone. Deterministic native and renderer
+   regressions cover these transitions. Native production-renderer fixtures passed 64 combinations
+   of four states, Black/Light, wide/minimum windows and all four languages, including keyboard
+   actions and polite status feedback; no microphone/model/provider was opened. The private test
+   profile was removed and the ordinary default binary restored. This is UI evidence, not physical
+   interruption acceptance. Next: connect the visible shared character's speaking/
+   interrupted feedback, review native layouts and accessibility, then exercise microphone/provider/interruption acceptance before
    declaring K8 Done. Cold Settings-to-Nest navigation readiness still needs its own acceptance;
    controlled UI runs wait for loaded navigation before selecting the work page. Codex activation
    keeps its independent qualification gates.

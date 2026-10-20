@@ -422,6 +422,51 @@ fn bounded(text: String) -> String {
 }
 
 #[cfg(target_os = "linux")]
+fn event_phase(session: &mut Session, event: Event, first_listen: &mut bool) {
+    match event {
+        Event::Capture(phase) => capture_phase(session, phase),
+        Event::Action(action) if matches!(action.effect, Effect::Listen { .. }) => {
+            listen(session, action, *first_listen);
+            *first_listen = false;
+        }
+        Event::Action(action)
+            if action.effect == Effect::Generate && session.generation == Some(action.generation) =>
+        {
+            session.view.reason = None;
+            session.view.response = None;
+            session.view.phase = "responding";
+        }
+        Event::Action(action)
+            if action.effect == Effect::ClearPlayback
+                && session.generation == Some(action.generation)
+                && matches!(session.view.phase, "speaking" | "interrupting") =>
+        {
+            session.view.response = None;
+            session.view.reason = Some("interrupted");
+            session.view.phase = "interrupting";
+        }
+        Event::Speaking(generation)
+            if session.generation == Some(generation)
+                && session.view.reason != Some("interrupted")
+                && session.view.phase == "responding" =>
+        {
+            session.view.response = Some(crate::traces::new_id());
+            session.view.phase = "speaking";
+        }
+        Event::History(record) => {
+            session.view.reply = Some(bounded(record.text));
+            if record.interrupted && session.view.phase == "interrupting" {
+                session.view.phase = "waiting";
+            } else if !record.interrupted {
+                session.view.phase = "responding";
+            }
+        }
+        Event::Local { reply, .. } => session.view.reply = Some(bounded(reply.text)),
+        _ => {}
+    }
+}
+
+#[cfg(target_os = "linux")]
 async fn drive(
     app: AppHandle,
     id: String,
@@ -460,22 +505,7 @@ async fn drive(
             },
             event = events.recv(), if receiving => {
                 if let Some(event) = event {
-                    update(&app, &id, |session| match event {
-                        Event::Capture(phase) => capture_phase(session, phase),
-                        Event::Action(action) if matches!(action.effect, Effect::Listen { .. }) => {
-                            listen(session, action, first_listen);
-                            first_listen = false;
-                        },
-                        Event::Action(action) if matches!(action.effect, Effect::Generate) => session.view.phase = "responding",
-                        Event::Speaking(generation) => { session.generation = Some(generation); session.view.response = Some(crate::traces::new_id()); session.view.phase = "speaking"; },
-                        Event::History(record) => {
-                            session.view.reply = Some(bounded(record.text));
-                            if record.interrupted && session.view.phase == "interrupting" { session.view.phase = "waiting"; }
-                            else if !record.interrupted { session.view.phase = "responding"; }
-                        },
-                        Event::Local { reply, .. } => session.view.reply = Some(bounded(reply.text)),
-                        _ => {},
-                    });
+                    update(&app, &id, |session| event_phase(session, event, &mut first_listen));
                 } else { receiving = false; }
             },
             result = &mut run => break result,
@@ -558,6 +588,60 @@ mod tests {
             matches!(receive.try_recv().unwrap(), capture::Request::Interrupt(value) if value == generation)
         );
         assert_eq!(session.view.phase, "interrupting");
+        assert_eq!(
+            session.view.reason, None,
+            "The click alone is not native confirmation"
+        );
+        let mut first_listen = false;
+        event_phase(
+            &mut session,
+            Event::Action(vults_voice::turn::Action {
+                generation,
+                effect: Effect::ClearPlayback,
+            }),
+            &mut first_listen,
+        );
+        assert_eq!(session.view.reason, Some("interrupted"));
+        assert!(session.view.response.is_none());
+        event_phase(&mut session, Event::Speaking(generation), &mut first_listen);
+        assert_eq!(
+            session.view.phase, "interrupting",
+            "Delayed audible feedback cannot revive stopped output"
+        );
+        event_phase(
+            &mut session,
+            Event::History(Record {
+                identity: vults_chat::realtime::Identity {
+                    attempt: "attempt".into(),
+                    response: "reply".into(),
+                    item: "item".into(),
+                },
+                text: "Heard prefix [interrupted]".into(),
+                interrupted: true,
+                played_frames: 24,
+                total_frames: 48,
+                server_synchronized: true,
+            }),
+            &mut first_listen,
+        );
+        assert_eq!(session.view.phase, "waiting");
+        assert_eq!(session.view.reason, Some("interrupted"));
+        event_phase(
+            &mut session,
+            Event::Action(vults_voice::turn::Action {
+                generation,
+                effect: Effect::ClearPlayback,
+            }),
+            &mut first_listen,
+        );
+        assert_eq!(
+            session.view.phase, "waiting",
+            "Duplicate confirmation cannot restart the stopping state"
+        );
+        assert!(
+            receive.try_recv().is_err(),
+            "Feedback cannot reopen the microphone"
+        );
         interrupt(&mut session, Some("reply-1")).unwrap();
         assert!(
             receive.try_recv().is_err(),
@@ -580,7 +664,7 @@ mod tests {
             matches!(receive.try_recv().unwrap(), capture::Request::Capture(value) if value == generation)
         );
         assert_eq!(session.view.phase, "starting");
-        assert_eq!(session.view.reply.as_deref(), Some("Heard reply"));
+        assert_eq!(session.view.reply.as_deref(), Some("Heard prefix [interrupted]"));
         assert!(advance(&mut session).is_err(), "A duplicate cannot admit capture");
         session.control.as_ref().unwrap().finish();
         session.view.phase = "waiting";
@@ -668,16 +752,57 @@ mod tests {
             vults_voice::turn::Event::InterruptConfirmed(probe),
             Duration::from_millis(1100),
         );
-        let next = actions
-            .into_iter()
+        session.view.phase = "speaking";
+        session.view.response = Some("audible".into());
+        let mut first_listen = false;
+        let next = *actions
+            .iter()
             .find(|a| matches!(a.effect, Effect::Listen { .. }))
             .unwrap();
-        listen(&mut session, next, false);
+        for action in actions {
+            event_phase(&mut session, Event::Action(action), &mut first_listen);
+        }
+        assert_eq!(session.view.phase, "starting");
+        assert!(session.view.response.is_none());
+        event_phase(&mut session, Event::Speaking(first.generation), &mut first_listen);
+        event_phase(
+            &mut session,
+            Event::Action(vults_voice::turn::Action {
+                generation: first.generation,
+                effect: Effect::ClearPlayback,
+            }),
+            &mut first_listen,
+        );
+        assert_eq!(
+            session.view.phase, "starting",
+            "Retired output cannot overwrite the replay capture"
+        );
         assert!(
             matches!(receive.try_recv().unwrap(), Command::Capture { generation, operation: RoutedCapture::Begin } if generation == next.generation)
         );
         capture_phase(&mut session, CapturePhase::Recording);
         assert_ne!(session.view.capture.as_deref(), Some(recording.as_str()));
+        event_phase(&mut session, Event::Speaking(next.generation), &mut first_listen);
+        assert_eq!(
+            session.view.phase, "recording",
+            "Audible feedback requires response generation first"
+        );
+        event_phase(
+            &mut session,
+            Event::Action(vults_voice::turn::Action {
+                generation: next.generation,
+                effect: Effect::Generate,
+            }),
+            &mut first_listen,
+        );
+        event_phase(&mut session, Event::Speaking(next.generation), &mut first_listen);
+        assert_eq!(session.view.phase, "speaking");
+        let response = session.view.response.clone();
+        event_phase(&mut session, Event::Speaking(next.generation), &mut first_listen);
+        assert_eq!(
+            session.view.response, response,
+            "Duplicate feedback retains the Stop response token"
+        );
         finish(&mut session, Some(&recording)).unwrap();
         assert!(
             receive.try_recv().is_err(),

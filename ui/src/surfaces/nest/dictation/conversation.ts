@@ -72,6 +72,8 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       : view?.phase === "interrupting" ? t("Stopping the response…")
       : view?.phase === "responding" && view.routed ? t("Zeca is responding. Your microphone remains open.")
       : view?.phase === "responding" ? t("Zeca is responding…")
+      : view?.phase === "waiting" && view.reason === "interrupted" && view.routed ? t("Response stopped. Your microphone remains open. Record another turn, or end the conversation to close it.")
+      : view?.phase === "waiting" && view.reason === "interrupted" ? t("Response stopped. Microphone off. Record another turn to continue, or end the conversation.")
       : view?.phase === "waiting" && view.routed ? t("Microphone remains open for this conversation. Record another turn, or end the conversation to close it.")
       : view?.phase === "waiting" ? t("Microphone off. Record another turn to continue, or end the conversation.")
       : view?.phase === "recovery" ? t("Voice could not finish. Review your local transcript below.")

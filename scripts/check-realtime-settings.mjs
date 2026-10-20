@@ -232,8 +232,12 @@ try {
   assert.deepEqual(controls.at(-1), { id: "6", action: "interrupt", response: "reply-1" });
   assert.equal(button("Stop response").disabled, true);
   assert.ok(work.element.textContent.includes("Stopping the response"));
-  await refresh(); polls.at(-1).resolve(state("6", "waiting", { reply: "Only the heard prefix [interrupted]" })); await tick();
+  await refresh(); polls.at(-1).resolve(state("6", "waiting", { reason: "interrupted", reply: "Only the heard prefix [interrupted]" })); await tick();
   assert.equal(button("Record another turn").disabled, false);
+  assert.ok(work.element.textContent.includes("Response stopped. Microphone off."));
+  await refresh(); polls.at(-1).resolve(state("6", "waiting", { routed: true, reason: "interrupted" })); await tick();
+  assert.ok(work.element.textContent.includes("Response stopped. Your microphone remains open."));
+  assert.ok(!work.element.textContent.includes("Response stopped. Microphone off."));
   assert.equal(starts.length, 6, "Stopping output cannot open another microphone/session");
   await click("End conversation");
   assert.deepEqual(controls.at(-1), { id: "6", action: "cancel" });

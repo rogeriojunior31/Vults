@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: cc3188a22e3c -->
+<!-- source: 958798ad0cae -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -71,8 +71,11 @@ Quando o áudio do Zeca começa a tocar, **Interromper resposta** substitui Fina
 interrompe a resposta falada sem encerrar a conversa nem abrir o microfone. A página aguarda o
 resultado do texto ouvido da resposta interrompida antes de oferecer **Gravar outra fala**; o
 truncamento remoto e o próximo envio usam o fluxo existente de confirmação/correção do contexto.
-Palavras não ouvidas ficam fora da resposta exibida. Cliques duplicados/atrasados não interrompem
-uma nova geração nem iniciam captura. Durante a geração, antes de haver áudio audível, **Cancelar**
+Palavras não ouvidas ficam fora da resposta exibida. Após a confirmação, a página mostra **Resposta
+interrompida** e informa se o microfone está desligado ou continua aberto em uma rota contínua. O
+feedback nativo da interrupção invalida o token de controle da resposta parada; eventos de fala
+atrasados ou duplicados não a reativam nem substituem o token atual. Cliques duplicados/atrasados não
+interrompem uma nova geração nem iniciam captura. Durante a geração, antes de haver áudio audível, **Cancelar**
 ainda encerra toda a sessão. Esse controle exige um clique; interromper falando por cima do Zeca
 usa as rotas contínuas opcionais descritas abaixo.
 

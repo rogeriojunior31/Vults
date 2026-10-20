@@ -1,5 +1,8 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Response stopped. Your microphone remains open. Record another turn, or end the conversation to close it.": "Resposta interrompida. Seu microfone continua aberto. Grave outra fala ou encerre a conversa para fechá-lo.",
+  "Response stopped. Microphone off. Record another turn to continue, or end the conversation.": "Resposta interrompida. Microfone desligado. Grave outra fala para continuar ou encerre a conversa.",
+
   "Stop response": "Interromper resposta",
   "Zeca is speaking\u2026": "O Zeca está falando…",
   "Stopping the response\u2026": "Interrompendo a resposta…",

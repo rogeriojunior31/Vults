@@ -63,7 +63,10 @@ Once Zeca's audio starts playing, **Stop response** replaces Finish recording. I
 reply without ending the conversation or opening the microphone. The page waits for the interrupted
 reply's heard-text result before offering **Record another turn**; remote truncation and the next
 upload use the existing acknowledgement/repair path. Unheard words are excluded from the displayed
-reply. Duplicate/late clicks cannot stop a new generation or start capture. During generation before
+reply. After confirmation, the page shows **Response stopped** and whether the microphone is off
+or remains open for a continuous route. Native interruption feedback retires the stopped response's
+control token; delayed or duplicate speaking events cannot revive it or replace a current token.
+Duplicate/late clicks cannot stop a new generation or start capture. During generation before
 audible output, **Cancel** still ends the whole session. This is a click control; interruption by
 speaking over Zeca uses the separate opt-in continuous routes below.
 

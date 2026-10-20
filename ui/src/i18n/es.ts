@@ -1,5 +1,8 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Response stopped. Your microphone remains open. Record another turn, or end the conversation to close it.": "Respuesta detenida. Tu micrófono sigue abierto. Graba otro turno o termina la conversación para cerrarlo.",
+  "Response stopped. Microphone off. Record another turn to continue, or end the conversation.": "Respuesta detenida. Micrófono apagado. Graba otro turno para continuar o termina la conversación.",
+
   "Stop response": "Detener respuesta",
   "Zeca is speaking\u2026": "Zeca está hablando…",
   "Stopping the response\u2026": "Deteniendo la respuesta…",
