@@ -89,11 +89,15 @@ fn supported(version: &str) -> bool {
     matches!(parts.as_slice(), [Ok(2), Ok(1), Ok(patch)] if *patch >= 299)
 }
 
-async fn run(mut cmd: Command, text: &str, cancel: &mut watch::Receiver<bool>) -> Result<String, String> {
+pub(crate) async fn run(
+    mut cmd: Command,
+    text: &str,
+    cancel: &mut watch::Receiver<bool>,
+) -> Result<String, String> {
     if *cancel.borrow() || cancel.has_changed().is_err() {
-        return Err("Claude Code question cancelled.".into());
+        return Err("Text consultation cancelled.".into());
     }
-    let child = cmd.spawn().map_err(|e| format!("Can't start Claude Code: {e}"))?;
+    let child = cmd.spawn().map_err(|e| format!("Can't start text client: {e}"))?;
     run_child(child, text, cancel).await
 }
 async fn run_child(
@@ -119,18 +123,18 @@ async fn run_child(
             .map_err(|e| e.to_string())?;
         // Past the cap the rest is never read: end it rather than wait on a full pipe.
         if out.len() as u64 >= MAX_REPLY {
-            return Err("Claude Code's answer was too long.".into());
+            return Err("The text client's answer was too long.".into());
         }
         let status = child.wait().await.map_err(|e| e.to_string())?;
         if !status.success() {
-            return Err(format!("Claude Code ended with {status}"));
+            return Err(format!("The text client ended with {status}"));
         }
         // A cut inside a character never fails the call.
         Ok(String::from_utf8_lossy(&out).trim().to_string())
     };
     let result = tokio::select! { biased;
-        _ = cancel.changed() => Err("Claude Code question cancelled.".into()),
-        result = tokio::time::timeout(TIMEOUT, run) => result.unwrap_or_else(|_| Err("Claude Code took too long to answer.".into())),
+        _ = cancel.changed() => Err("Text consultation cancelled.".into()),
+        result = tokio::time::timeout(TIMEOUT, run) => result.unwrap_or_else(|_| Err("The text client took too long to answer.".into())),
     };
     // The caller retains native ownership until the child has actually exited.
     if result.is_err() {

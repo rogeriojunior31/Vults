@@ -1725,3 +1725,21 @@ registry representations. No production driver, Settings choice or voice offerin
 This candidate is rejected; V6.6.3 remains open for supported tool/context isolation and its
 consent/cancellation integration, before V6.7. This does not establish that every Codex route is
 unsuitable and does not claim live-provider, microphone or desktop acceptance.
+
+
+**2026-10-20 V6.6.3 Codex tool/context isolation helper.** Local request capture explains the
+rejected candidate: packaged model metadata independently enables code mode, search and
+collaboration, while hiding a skills catalog does not disable explicit skill expansion. A new
+CLI-only helper pins qualified client 0.163.0 and supplies minimal fixed model metadata without
+reading mutable model-cache instructions. It disables offered capabilities and injected context,
+quotes the question as JSON with escaped dollar/at-sign markers, retains original CLI authentication
+and accepts only a complete bounded text reply. It shares the acknowledged-child cancellation
+runner with Claude. An isolated installed-client probe now checks the exact helper, adversarial
+project/file/explicit-skill canaries and a fixed synthetic model response; both earlier candidate
+paths stay as negative controls. There is no paid API adapter, app offering, renderer activation or
+live provider use. The helper removes inherited API-key/base-URL/session environment overrides and requires a
+ChatGPT-only status preflight. A separate synthetic-auth filesystem/network test proves that
+preflight refuses API mode without changing stored auth, while retaining original HOME/CODEX_HOME
+values. It does not yet prove a stable binding against concurrent external account changes. Do not force a login method: this client can
+log out an existing mismatched account. Next is that binding plus independent native Codex
+consent/budget/trace and ownership integration. V6.6.3 remains open before V6.7.

@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 44f381c95758 -->
+<!-- source: 605a6aacd4c4 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -524,11 +524,41 @@ e [controles de configuração](https://learn.chatgpt.com/docs/config-file/confi
 documentados não comprovam, por si só, o contrato de receber somente o texto fornecido.
 Nenhum `consult_codex` é ativado.
 
-O teste explícito para desenvolvedores roda apenas em um namespace de rede contendo somente
-loopback, fornece credencial e pergunta sintéticas a um servidor local falso, não envia resposta
-de modelo e registra somente nomes de capacidades e um booleano de presença de skills. Ele não
-salva instruções capturadas nem acessa provedor externo. Uma regressão offline normal verifica as
-duas representações do registro de ferramentas. Veja o
+O novo helper de CLI, ainda sem ativação, qualifica um contrato mais restrito no cliente exato
+0.163.0. Ele fornece um catálogo mínimo de modelo controlado pelo app, em vez de herdar metadados
+mutáveis: capacidades de shell, edição, busca, modo de código e colaboração são desativadas.
+Instruções fixas do chamador substituem as instruções do fornecedor; documentos do projeto,
+catálogos de skills e injeção de contexto de ambiente/apps/permissões são desativados. Esses
+controles foram verificados no cliente instalado; alguns são internos, por isso versões
+atualizadas/desconhecidas são recusadas em vez de presumidas seguras. O helper não usa outro
+provedor de API, lê credenciais nem altera a configuração do usuário.
+
+A entrada é uma pergunta entre aspas JSON, cujos caracteres de cifrão e arroba usam escapes Unicode
+de JSON. O modelo recebe instruções para responder ao valor decodificado. Isso preserva a pergunta
+e impede o pré-processamento de referências explícitas a skills/arquivos pela CLI: desativar apenas
+o catálogo não impede essa expansão. Perguntas ficam em stdin, nunca no catálogo nem nos argumentos
+do processo. A saída reutiliza o executor limitado de processos filhos; o cancelamento espera a
+saída do filho. Respostas malformadas, com falha, ferramentas ou sem conclusão não viram uma resposta.
+
+Os testes explícitos para desenvolvedores rodam em namespace de rede contendo somente loopback,
+com credenciais e perguntas sintéticas. Candidatos rejeitados não recebem resposta de modelo.
+O helper isolado precisa oferecer zero ferramentas, excluir marcadores privados de projeto/arquivo/
+skill nomeada e processar uma resposta textual fixa do servidor falso pela CLI real e pelo parser.
+Instruções capturadas e credenciais não são salvas nem registradas, e nenhum provedor externo é
+acessado. Regressões offline normais verificam os dois registros de ferramentas, a ida e volta da
+entrada, restrições de versão e rejeição de respostas. Um teste de autenticação sintética, isolado
+no sistema de arquivos e na rede, também comprova que a verificação de status exclusiva de ChatGPT
+recusa autenticação de API sem alterá-la; a pasta pessoal/autenticação/keyring originais ficam
+ocultos, e os valores de HOME/CODEX_HOME nunca são reatribuídos. Veja o
 [comando de reprodução no roadmap](../../dev/plan-dictation.md#v6-talk-with-zeca-k8).
-Isolamento suportado, consentimento independente por provedor e qualificação do cancelamento
-continuam pendentes; a V6.6.3 permanece aberta antes da V6.7.
+
+Isso é um helper reutilizável, não uma ferramenta `consult_codex` ativada. Ele preserva a autenticação
+da CLI instalada, remove sobrescritas de chave de API/URL base/sessão herdadas do ambiente e exige
+sucesso em uma verificação não mutante `login status` exclusiva de ChatGPT antes de iniciar exec.
+Isso é uma verificação prévia, não um vínculo atômico contra uma troca externa de login concorrente.
+O Vults nunca força esse método de login em exec, cujo tratamento de incompatibilidade poderia
+deslogar uma conta existente. O vínculo nativo com a conta ainda precisa de qualificação antes de
+expor a admissão. Consentimento
+separado do Codex, cota/traces persistentes, integração de posse nativa e compatibilidade com
+cliente real/gerenciado continuam pendentes; o consentimento do Claude nunca autoriza esse helper.
+A V6.6.3 permanece aberta antes da V6.7.

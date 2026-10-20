@@ -2680,27 +2680,36 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
      Code 2.1.299+ in the 2.1 series); organizational managed policy still applies. Native notice
      display and the opt-in UI stay in V6.7; no live model/microphone acceptance is claimed. See
      [Text consultation](../reference/realtime-accounting.md#text-consultation).
-   - **Codex consultation qualification** (candidate rejected 2026-10-20). An installed-client
-     probe of Codex CLI 0.163.0 with `gpt-6.1-sol` captures the first request inside a loopback-only
-     network namespace. Even with ignored user config/rules, ephemeral read-only execution,
-     zero project-document bytes, empty MCP configuration and disabled tool/integration features,
-     this environment still offers inline `additional_tools` (including `exec` and collaboration)
-     and an ambient skills catalog. Missing top-level `tools` is not proof of an empty registry.
-     No external provider or real credential is used, and the stand-in sends no model response.
-     The ordinary Chat driver remains unsuitable; no `consult_codex` is offered. This rejects this
-     candidate, not every possible Codex integration. Next: establish a supported tool/context
-     isolation contract, qualify it with the same probe, then connect independent consent and
-     cancellation before V6.7. Whole V6.6.3 stays open. Live-provider/human-speech acceptance is separate.
+   - **Codex tool/context isolation** (qualified helper implemented 2026-10-20; not offered).
+     Keep the user's installed CLI authentication; do not introduce an API-key route. The original
+     restrictive exec candidate and App Server with empty environments both fail the local probe.
+     Feature switches alone do not override model metadata. The new helper supplies a minimal
+     app-owned catalog with disabled shell, patch, search and collaboration capabilities, fixed
+     instructions, disabled skills/context injection, ignored user config/rules and no saved session.
+     Only exact CLI 0.163.0 may run it; unknown/upgraded clients fail closed. JSON-quoted input
+     escapes dollar/at-sign markers before the CLI preprocessor and preserves the decoded question:
+     hiding the skills catalog alone does not stop explicit skill expansion. A canary test covers
+     project instructions, files and named skills; the actual model request offers zero tools and
+     no canary context. A fixed stand-in response passes through the real CLI and strict text-only
+     reply parser. No external provider, real credential, microphone or desktop action is used.
+     Cancellation/output bounds reuse the acknowledged-child runner. No `consult_codex` is offered.
+     A separate synthetic-auth mount test proves the ChatGPT-only status preflight refuses API
+     login without modifying its auth; HOME/CODEX_HOME values are never reassigned. This preflight
+     is not an atomic binding against concurrent external login changes.
+     **Next:** bind the subscription account to native ownership, then add independent Codex consent,
+     durable budget/traces and native ownership tests. Do not reuse Claude's consent, force a login
+     mode that may log out an existing account, or claim live/managed-client acceptance. Whole
+     V6.6.3 remains open before V6.7.
 
-     Reproduce the explicit installed-client check on Linux (requires user/network namespaces
-     and `ip`; ordinary workspace tests skip it):
+     Reproduce the explicit installed-client checks on Linux (requires user/network namespaces
+     and `ip`/`bwrap`; ordinary workspace tests skip these four client probes):
 
      ```sh
-     unshare --user --map-root-user --net sh -c 'ip link set lo up && cargo test -p vults-chat --test codex_consultation -- --include-ignored --nocapture'
+     unshare --user --map-root-user --net sh -c 'ip link set lo up && cargo test -p vults-chat consult_codex -- --include-ignored --nocapture'
      ```
 
-     The check asserts that this candidate is rejected. If the client changes, review the complete
-     captured context and capabilities; a passing test is not permission to activate Codex.
+     Baseline candidates must remain rejected; the exact helper must offer no tools, exclude
+     canaries and accept only the fixed text reply. Passing does not authorize runtime activation.
 
 **V6.7 Talk with Zeca page and island speaking states** (M)
 - Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio

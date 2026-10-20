@@ -24,6 +24,7 @@ mod api;
 mod claude;
 mod codex;
 mod codex_server;
+pub mod consult_codex;
 pub mod drivers;
 pub mod embed;
 pub mod filter;

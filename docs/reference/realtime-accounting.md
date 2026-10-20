@@ -459,10 +459,36 @@ evidence against this candidate, not a claim about every Codex integration. The 
 [configuration controls](https://learn.chatgpt.com/docs/config-file/config-reference) do not by
 themselves establish the supplied-text-only contract. No `consult_codex` is enabled.
 
-The explicit developer probe runs only in a loopback-only network namespace, supplies a synthetic
-credential and question to a local stand-in, sends no model response and logs only capability
-names and a skills-presence boolean. It does not save captured instructions or contact an external
-provider. A normal offline regression checks both tool-registry representations. See the
+The new staged CLI helper qualifies a narrower contract on exact client 0.163.0. It supplies a
+minimal app-owned model catalog instead of inheriting mutable model metadata: shell, patch,
+search, code mode and collaboration capabilities are disabled. Fixed caller-owned instructions
+replace vendor instructions; project documents, skill catalogs and environment/app/permission
+context injection are disabled. These controls were verified against the installed client; some
+are internal controls, so unknown/upgraded client versions are refused rather than assumed safe.
+The helper does not use another API provider, read credentials or change the user's configuration.
+
+The input is a JSON-quoted question whose dollar and at-sign characters use JSON Unicode escapes.
+The model receives instructions to answer the decoded value. This preserves the question while
+preventing CLI preprocessing of explicit skill/file references: disabling the catalog alone does
+not prevent that expansion. Questions stay on stdin and never enter the catalog or process
+arguments. Output uses the existing bounded child runner; cancellation waits for child exit.
+Malformed, failed, tool-bearing or incomplete replies cannot become an answer.
+
+The explicit developer probes run in a loopback-only network namespace with synthetic credentials
+and questions. Rejected candidates get no model response. The isolated helper must offer zero
+tools, exclude private project/file/named-skill canaries and process one fixed text-only stand-in
+response through the actual CLI and reply parser. Captured instructions and credentials are not
+saved or logged, and no external provider is contacted. Ordinary offline regressions check both
+tool registries, input round trips, version restrictions and reply rejection. A filesystem/network-isolated
+synthetic-auth test also proves the ChatGPT-only status check refuses API auth without altering it; the original
+home/auth/keyring are hidden, and HOME/CODEX_HOME values are never reassigned. See the
 [roadmap reproduction command](../dev/plan-dictation.md#v6-talk-with-zeca-k8).
-Supported isolation, independent provider consent and cancellation qualification remain pending;
-V6.6.3 stays open before V6.7.
+
+This is a reusable helper, not an activated `consult_codex` tool. It preserves the installed CLI's
+authentication, removes inherited API-key/base-URL/session environment overrides and requires a
+successful nonmutating ChatGPT-only `login status` check before starting exec. This is a preflight,
+not an atomic binding against a concurrent external login change. Vults never forces that login
+method on exec, whose mismatch handling could log out an existing account. Native account binding
+still needs qualification before admission is exposed. Separate Codex consent, durable quota/traces,
+native ownership integration and live/managed-client compatibility remain pending; Claude consent
+never authorizes this helper. V6.6.3 stays open before V6.7.
