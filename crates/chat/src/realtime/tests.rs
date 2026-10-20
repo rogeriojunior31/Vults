@@ -310,8 +310,11 @@ fn attempts_are_consumed_once_and_replay_history_is_bounded() {
         session.prepare(&attempt, REVIEWED_MS).unwrap();
         let mut event = created.clone();
         event["response"]["metadata"]["vults_attempt"] = json!(attempt);
+        event["response"]["id"] = json!(format!("response_{n}"));
         send(&mut session, &event).unwrap();
-        assert!(send(&mut session, &done()).unwrap().is_some());
+        let mut final_event = done();
+        final_event["response"]["id"] = event["response"]["id"].clone();
+        assert!(send(&mut session, &final_event).unwrap().is_some());
         assert_eq!(
             session.prepare(&attempt, REVIEWED_MS).err(),
             Some(Rejection::State)
@@ -350,4 +353,41 @@ fn rounding_and_all_modalities_remain_below_the_conservative_ceiling() {
         send(&mut responding(), &event).unwrap().unwrap().actual_microusd,
         Some(1)
     );
+}
+
+#[test]
+fn reused_response_ids_and_oversized_repair_cannot_prepare_or_relabel_a_new_turn() {
+    let mut session = responding();
+    send(&mut session, &done()).unwrap();
+    session.prepare("fixture_b", REVIEWED_MS).unwrap();
+    let mut created: Value = serde_json::from_str(
+        include_str!("../../tests/fixtures/realtime-session.jsonl")
+            .lines()
+            .nth(1)
+            .unwrap(),
+    )
+    .unwrap();
+    created["response"]["metadata"]["vults_attempt"] = json!("fixture_b");
+    assert_eq!(send(&mut session, &created), Err(Rejection::Event));
+    let mut session = configured();
+    let repair = Repair {
+        heard: "x".repeat(65568),
+        unheard: "one two three".into(),
+    };
+    assert!(
+        session
+            .prepare_repair("fixture_a", REVIEWED_MS, Some(repair))
+            .is_err()
+    );
+    let prepared = session
+        .prepare_repair(
+            "fixture_a",
+            REVIEWED_MS,
+            Some(Repair {
+                heard: "private heard words".into(),
+                unheard: "private unheard words".into(),
+            }),
+        )
+        .unwrap();
+    assert!(!format!("{prepared:?}").contains("private"));
 }

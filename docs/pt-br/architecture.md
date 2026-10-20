@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 443609e9845d -->
+<!-- source: 57cbdd97e433 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -169,11 +169,17 @@ A V6.4.1 acrescenta a saída independente `audio::playback` e a contabilidade pu
 entregues e estimados como consumidos, e separa a conclusão do produtor da drenagem do dispositivo.
 Parada/revogação congela o cursor e limpa a fila; a destruição nativa mantém a propriedade exclusiva.
 O separador puro estima palavras inteiras ouvidas e calcula contexto interrompido do modelo mais
-uma dica única de texto não ouvido. Ele não escreve histórico nem envia nada. Não há chamador no
-app nem entrada de microfone; a V6.4.2 ainda cuida das identidades de provedor/item, tempo da
-transcrição, truncamento no servidor e integração nativa de histórico/saída. Veja
-[Reprodução e texto ouvido](reference/realtime-accounting.md#playback-and-heard-text) para limites,
-premissas de relógio e o teste ALSA nulo isolado; aceitação com dispositivo/provedor real segue aberta.
+uma dica única de texto não ouvido. Ele não escreve histórico nem envia nada. A V6.4.2 acrescenta o
+proprietário do serviço nativo: turnos completos/sinais vinculados à geração, identidades de
+provedor/item/transcrição pelo gate, consumo/drenagem CPAL e truncamento exato confirmado no servidor.
+Ele emite registros correspondentes de histórico ouvido em memória e admite uma dica de reparo
+citada uma vez na próxima resposta autorizada. Reprodução terminal ainda pode terminar ou ser
+interrompida; histórico sem confirmação do servidor é explicitamente não sincronizado e não pode
+retomar o proprietário. A saída nativa desacoplada mantém a concessão da sessão. Não há microfone,
+entrada do renderer nem gravação persistente de histórico do Chat; interrupção por fala continua
+desligada na entrada do app até a V6.5. Veja
+[Reprodução nativa e reparo de contexto](reference/realtime-accounting.md#native-playback-and-context-repair)
+para limites, premissas de relógio, testes ALSA nulos isolados e a aceitação física/real pendente.
 
 <a id="local-dictation"></a>
 

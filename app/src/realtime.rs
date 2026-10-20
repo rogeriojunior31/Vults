@@ -11,7 +11,9 @@ use vults_chat::realtime::{
 };
 
 mod local;
-pub use local::{Channels, LocalFailure, Recovery, Turn};
+mod playback;
+pub use local::{LocalFailure, Recovery, Turn};
+pub use playback::{Channels, Command, Event, Record, Signal};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -142,7 +144,22 @@ pub async fn run(app: AppHandle, channels: Channels) -> Result<Option<Recovery>,
                 })
     });
     let remote_active = active.clone();
-    let outcome = local::drive(channels, &*active, move |io| connect(consent, remote_active, io)).await?;
+    let output_lease = lease.clone();
+    let outcome = playback::drive(
+        channels,
+        &*active,
+        vults_voice::turn::BargeIn::Disabled,
+        move |cancel| {
+            vults_audio::playback::Playback::start_with_owner(cancel, output_lease.clone()).map_err(
+                |failure| match failure {
+                    vults_audio::playback::Failure::Busy => Failure::Busy,
+                    _ => Failure::Output,
+                },
+            )
+        },
+        move |io| connect(consent, remote_active, io),
+    )
+    .await?;
     let Some((turn, reason)) = outcome else {
         return Ok(None);
     };

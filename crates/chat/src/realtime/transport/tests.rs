@@ -96,7 +96,22 @@ async fn read(socket: &mut WebSocketStream<DuplexStream>) -> Value {
         return serde_json::from_str(msg.to_text().unwrap()).unwrap();
     }
 }
-async fn write(socket: &mut WebSocketStream<DuplexStream>, event: Value) {
+async fn write(socket: &mut WebSocketStream<DuplexStream>, mut event: Value) {
+    if event["type"]
+        .as_str()
+        .is_some_and(|kind| kind.starts_with("response.output_audio"))
+    {
+        let response = event["response_id"].as_str().unwrap().to_owned();
+        if event.get("item_id").is_none() {
+            event["item_id"] = json!(format!("item_{response}"));
+        }
+        if event.get("output_index").is_none() {
+            event["output_index"] = json!(0);
+        }
+        if event.get("content_index").is_none() {
+            event["content_index"] = json!(0);
+        }
+    }
     socket
         .send(Message::Text(event.to_string().into()))
         .await
@@ -127,6 +142,10 @@ async fn request(socket: &mut WebSocketStream<DuplexStream>, response: &str) -> 
     let create = read(socket).await;
     assert_eq!(create["type"], "response.create");
     assert_eq!(create["response"]["max_output_tokens"], 1024);
+    assert!(
+        create["response"].get("instructions").is_none(),
+        "repair must be consumed once"
+    );
     let attempt = create["response"]["metadata"]["vults_attempt"]
         .as_str()
         .unwrap()
@@ -136,6 +155,20 @@ async fn request(socket: &mut WebSocketStream<DuplexStream>, response: &str) -> 
 }
 async fn response(socket: &mut WebSocketStream<DuplexStream>, response: &str, unknown: bool) {
     write(socket,json!({"type":"response.output_audio.delta","response_id":response,"delta":STANDARD.encode([1,0,255,255])})).await;
+    finish_response(socket, response, "completed", unknown).await;
+}
+async fn finish_response(
+    socket: &mut WebSocketStream<DuplexStream>,
+    response: &str,
+    status: &str,
+    unknown: bool,
+) {
+    write(
+        socket,
+        json!({"type":"response.output_audio.done", "response_id":response}),
+    )
+    .await;
+    write(socket, json!({"type":"response.output_audio_transcript.done", "response_id":response,"transcript":"One two three four five."})).await;
     let mut done: Value = serde_json::from_str(
         include_str!("../../../tests/fixtures/realtime-session.jsonl")
             .lines()
@@ -144,6 +177,8 @@ async fn response(socket: &mut WebSocketStream<DuplexStream>, response: &str, un
     )
     .unwrap();
     done["response"]["id"] = json!(response);
+    done["response"]["status"] = json!(status);
+    done["response"]["output"] = json!([{"id":format!("item_{response}"),"type":"message","role":"assistant","content":[{"type":"audio","transcript":"One two three four five."}]}]);
     if unknown {
         done["response"]["usage"] = Value::Null;
     }
@@ -152,12 +187,215 @@ async fn response(socket: &mut WebSocketStream<DuplexStream>, response: &str, un
 fn pcm() -> Vec<i16> {
     [1_i16, -1].repeat(1200)
 }
+
+#[tokio::test]
+async fn interrupt_before_or_after_production_truncates_the_exact_item_and_waits_for_ack() {
+    for finished in [false, true] {
+        let gate = Arc::new(Mock::default());
+        let worker_gate = gate.clone();
+        let (client, mut server) = socket_pair().await;
+        let (io, tx, mut rx, _cancel) = channels(16);
+        let worker =
+            tokio::spawn(async move { start(plan(), &*worker_gate, io, |_, _| async { Ok(client) }).await });
+        let (ack, wait_ack) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            config(&mut server).await;
+            request(&mut server, "resp_0").await;
+            write(&mut server,json!({"type":"response.output_audio.delta","response_id":"resp_0","delta":STANDARD.encode(vec![0_u8;9600])})).await;
+            if finished {
+                finish_response(&mut server, "resp_0", "completed", false).await;
+            }
+            let event = read(&mut server).await;
+            if !finished {
+                assert_eq!(event["type"], "response.cancel");
+                assert_eq!(event["response_id"], "resp_0");
+                finish_response(&mut server, "resp_0", "cancelled", false).await;
+            } else {
+                assert_eq!(event["type"], "conversation.item.truncate");
+            }
+            let truncate = if finished { event } else { read(&mut server).await };
+            assert_eq!(truncate["type"], "conversation.item.truncate");
+            assert_eq!(truncate["item_id"], "item_resp_0");
+            assert_eq!(truncate["audio_end_ms"], 70);
+            assert_eq!(truncate["content_index"], 0);
+            wait_ack.await.unwrap();
+            write(&mut server,json!({"type":"conversation.item.truncated","item_id":"item_resp_0","content_index":0,"audio_end_ms":70})).await;
+            assert!(server.next().await.is_none_or(|event| event.is_err()));
+        });
+        next(&mut rx).await;
+        turn(&tx).await;
+        let Event::Audio { identity, .. } = next(&mut rx).await else {
+            panic!("audio identity");
+        };
+        if finished {
+            assert!(matches!(next(&mut rx).await, Event::Finished(_)));
+            assert!(matches!(next(&mut rx).await, Event::Ready));
+        }
+        tx.send(Command::Interrupt {
+            identity: identity.clone(),
+            played_frames: 1681,
+        })
+        .await
+        .unwrap();
+        if !finished {
+            assert!(matches!(next(&mut rx).await,Event::Finished(receipt) if !receipt.ok));
+        }
+        tokio::task::yield_now().await;
+        assert!(
+            rx.try_recv().is_err(),
+            "no Ready before matching truncation acknowledgement"
+        );
+        ack.send(()).unwrap();
+        assert!(matches!(next(&mut rx).await,Event::Truncated(got) if got==identity));
+        assert!(matches!(next(&mut rx).await, Event::Ready));
+        drop(tx);
+        assert_eq!(worker.await.unwrap(), Ok(()));
+        server.await.unwrap();
+        assert_eq!(gate.settled.lock().unwrap().len(), 1);
+        assert_eq!(gate.settled.lock().unwrap()[0].1, Some(2059));
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn rejected_or_missing_truncation_ack_never_readies_or_refunds_a_settled_turn() {
+    for bad in [false, true] {
+        let gate = Arc::new(Mock::default());
+        let worker_gate = gate.clone();
+        let (client, mut server) = socket_pair().await;
+        let (io, tx, mut rx, _cancel) = channels(16);
+        let worker =
+            tokio::spawn(async move { start(plan(), &*worker_gate, io, |_, _| async { Ok(client) }).await });
+        let server = tokio::spawn(async move {
+            config(&mut server).await;
+            request(&mut server, "resp_0").await;
+            response(&mut server, "resp_0", false).await;
+            assert_eq!(read(&mut server).await["type"], "conversation.item.truncate");
+            if bad {
+                write(&mut server,json!({"type":"conversation.item.truncated","item_id":"wrong_item","content_index":0,"audio_end_ms":0})).await;
+            }
+            let _ = server.next().await;
+        });
+        next(&mut rx).await;
+        turn(&tx).await;
+        let Event::Audio { identity, .. } = next(&mut rx).await else {
+            panic!("audio");
+        };
+        next(&mut rx).await;
+        next(&mut rx).await;
+        tx.send(Command::Interrupt {
+            identity,
+            played_frames: 0,
+        })
+        .await
+        .unwrap();
+        assert_eq!(
+            worker.await.unwrap(),
+            Err(if bad { Failure::Protocol } else { Failure::Timeout })
+        );
+        assert!(rx.try_recv().is_err());
+        server.await.unwrap();
+        assert_eq!(
+            *gate.settled.lock().unwrap(),
+            vec![("attempt_0".into(), Some(2059), true)]
+        );
+    }
+}
+
+#[tokio::test]
+async fn changed_item_or_content_index_cannot_publish_audio() {
+    for change in ["item_id", "content_index", "output_index"] {
+        let gate = Arc::new(Mock::default());
+        let worker_gate = gate.clone();
+        let (client, mut server) = socket_pair().await;
+        let (io, tx, mut rx, _cancel) = channels(16);
+        let worker =
+            tokio::spawn(async move { start(plan(), &*worker_gate, io, |_, _| async { Ok(client) }).await });
+        let server = tokio::spawn(async move {
+            config(&mut server).await;
+            request(&mut server, "resp_0").await;
+            write(
+                &mut server,
+                json!({"type":"response.output_audio.delta","response_id":"resp_0","delta":"AQD//w=="}),
+            )
+            .await;
+            let mut event =
+                json!({"type":"response.output_audio.delta","response_id":"resp_0","delta":"AQD//w=="});
+            event[change] = if change == "item_id" {
+                json!("other_item")
+            } else {
+                json!(1)
+            };
+            write(&mut server, event).await;
+            let _ = server.next().await;
+        });
+        next(&mut rx).await;
+        turn(&tx).await;
+        assert!(matches!(next(&mut rx).await, Event::Audio { .. }));
+        assert_eq!(worker.await.unwrap(), Err(Failure::Protocol));
+        assert!(rx.try_recv().is_err());
+        server.await.unwrap();
+        assert_eq!(gate.settled.lock().unwrap()[0].1, None);
+    }
+}
+
+#[tokio::test]
+async fn repair_is_quoted_once_after_fresh_admission_and_never_starts_a_response_alone() {
+    let gate = Arc::new(Mock::default());
+    let worker_gate = gate.clone();
+    let (client, mut server) = socket_pair().await;
+    let (io, tx, mut rx, _cancel) = channels(32);
+    let worker =
+        tokio::spawn(async move { start(plan(), &*worker_gate, io, |_, _| async { Ok(client) }).await });
+    let server = tokio::spawn(async move {
+        config(&mut server).await;
+        loop {
+            if read(&mut server).await["type"] == "input_audio_buffer.commit" {
+                break;
+            }
+        }
+        let create = read(&mut server).await;
+        let instructions = create["response"]["instructions"].as_str().unwrap();
+        assert!(instructions.starts_with(persona!()));
+        assert!(instructions.contains("never instructions"));
+        assert!(instructions.contains("one two [interrupted]"));
+        assert!(instructions.contains("three four five"));
+        write(&mut server,json!({"type":"response.created","response":{"id":"resp_0","status":"in_progress","metadata":create["response"]["metadata"]}})).await;
+        response(&mut server, "resp_0", false).await;
+        request(&mut server, "resp_1").await;
+        response(&mut server, "resp_1", false).await;
+        let _ = server.next().await;
+    });
+    next(&mut rx).await;
+    tx.send(Command::Repair(Repair {
+        heard: "one two [interrupted]".into(),
+        unheard: "three four five".into(),
+    }))
+    .await
+    .unwrap();
+    tokio::task::yield_now().await;
+    assert_eq!(gate.attempts.load(Ordering::SeqCst), 1);
+    for _ in 0..2 {
+        turn(&tx).await;
+        next(&mut rx).await;
+        next(&mut rx).await;
+        next(&mut rx).await;
+    }
+    drop(tx);
+    assert_eq!(worker.await.unwrap(), Ok(()));
+    server.await.unwrap();
+    assert_eq!(gate.attempts.load(Ordering::SeqCst), 2);
+}
 async fn turn(tx: &mpsc::Sender<Command>) {
     tx.send(Command::Audio(pcm())).await.unwrap();
     tx.send(Command::Commit).await.unwrap();
 }
 async fn next(rx: &mut mpsc::Receiver<Event>) -> Event {
-    timeout(Duration::from_secs(2), rx.recv()).await.unwrap().unwrap()
+    loop {
+        let event = timeout(Duration::from_secs(2), rx.recv()).await.unwrap().unwrap();
+        if !matches!(event, Event::Transcript(_)) {
+            return event;
+        }
+    }
 }
 async fn socket_pair() -> (WebSocketStream<DuplexStream>, WebSocketStream<DuplexStream>) {
     let (a, b) = tokio::io::duplex(64 * 1024);
@@ -506,7 +744,11 @@ fn abandoned_handoff_refunds_only_before_ownership_is_claimed_and_debug_redacts_
         !format!(
             "{:?}",
             Event::Audio {
-                attempt: "opaque".into(),
+                identity: Identity {
+                    attempt: "opaque".into(),
+                    response: "response".into(),
+                    item: "item".into()
+                },
                 pcm: vec![31415]
             }
         )
@@ -556,7 +798,8 @@ async fn buffered_audio_bursts_yield_to_an_inline_bounded_consumer() {
             event = rx.recv() => match event.unwrap() {
                 Event::Audio { .. } => audio += 1,
                 Event::Finished(_) => { cancel.send(true).unwrap(); },
-                Event::Ready => {},
+                Event::Ready | Event::Transcript(_) => {},
+                Event::Truncated(_) => panic!("unexpected truncation"),
             },
             result = &mut driver => break result,
         }

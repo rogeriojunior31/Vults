@@ -189,6 +189,13 @@ impl std::fmt::Debug for Playback {
 impl Playback {
     /// Device setup runs on its own worker. Poll cursor until Playing before pushing samples.
     pub fn start(cancel: Arc<AtomicBool>) -> Result<Self, Failure> {
+        Self::start_with_owner(cancel, Arc::new(()))
+    }
+    /// Retain the caller's native lease through blocked setup and device destruction.
+    pub fn start_with_owner<T: Send + Sync + 'static>(
+        cancel: Arc<AtomicBool>,
+        lease: Arc<T>,
+    ) -> Result<Self, Failure> {
         if cancel.load(Ordering::Acquire) {
             return Err(Failure::Cancelled);
         }
@@ -208,6 +215,7 @@ impl Playback {
             .name("voice-playback".into())
             .spawn(move || {
                 let _owner = owner;
+                let _lease = lease;
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(&worker)))
                     .unwrap_or(Err(Failure::Device));
                 if let Err(failure) = result {

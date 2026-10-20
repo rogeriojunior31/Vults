@@ -88,7 +88,7 @@ settlement deadlines. Server frames/messages are capped at 256 KiB. Output queue
 PCM, expired rates or exhausted allowance closes the transport. Cancellation/revocation interrupts
 pending IO; interruption requests response cancellation and waits for final usage within a bounded
 deadline. No more audio is sent after admission fails. Ready/audio publication rechecks ownership
-after awaited work. Playback/device consumption and transcript routing remain V6.4/V6.7 work.
+after awaited work. V6.4.2 binds native playback and transcript routing below; capture/UI remain V6.7 work.
 
 Known final receipts are settled once, even after revocation, without a competing unknown-cost
 retry. Before any inference could have started, an interrupted connection releases its hold at proven zero
@@ -200,11 +200,9 @@ whitespace-separated words remain. Explicit interruption still marks a producer 
 received audio drained. Empty/no-played text never becomes a full heard response. The hint makes no
 request, repeats no tool and grants no permission. It is not a localized UI label.
 
-There is no app caller yet. V6.4.2 must bind provider response/item identities, transcript extents,
-playback and turn tokens, acknowledge server truncation and apply the replacement to the matching
-native history. Live production must not use this primitive without its consent/revocation owner.
-V6.5-V6.7 retain echo cancellation, tools, capture and visible conversation work. Current app history
-is not rewritten by V6.4.1 and the conversation microphone remains unavailable.
+V6.4.1 supplies the independent primitive; V6.4.2 adds its native app owner below. The primitive
+must remain bound to that consent/revocation owner. V6.5-V6.7 retain echo cancellation, tools,
+capture and visible conversation work; the conversation microphone remains unavailable.
 
 Offline tests cover consumption/latency, underrun, drain, stop, invalid clocks, cancellation,
 resampling and word/history math. An explicit child-process ALSA null test exercises actual CPAL
@@ -213,3 +211,61 @@ native plumbing only; real speaker/headphone timing, interruption, speech qualit
 acceptance remain open. Run the null test only with a private ALSA configuration containing
 `pcm.!default { type null }`, `ALSA_CONFIG_PATH` pointing to it and `VULTS_PLAYBACK_NULL_TEST=1`:
 `cargo test -p vults-audio native_null_output -- --ignored`.
+
+
+## Native playback and context repair
+
+V6.4.2 connects the existing native complete-turn service to CPAL. The first authorized complete
+turn starts the gated connection; only confirmed remote Ready opens a quiet output worker, and
+input is uploaded only after the output reports Playing. Device failure retains the pending input
+for the existing local text recovery. A transient teardown Busy waits at most three seconds. Every
+output worker retains the native session lease through device destruction, including detached or
+blocked setup, so abort/revocation cannot overlap a new session with old native work.
+
+Native commands and speech/probe signals carry the exact turn generation. Stale commands are
+discarded; only a matching confirmed probe freezes playback. Notifications of Listen/Probe actions
+grant no microphone authority and do not start capture. First consumed output drives the lock;
+producer completion requests drain, and confirmed drain drives tail grace. App entry keeps barge-in
+disabled until the V6.5 device/AEC policy lands. Scripted headphone cases exercise the available
+owner path without asserting that speaker interruption is safe.
+
+The tool-free protocol accepts one assistant audio item/content part at index zero per response.
+Attempt, response and item IDs are bound across PCM, transcript, final output and history; response
+and item IDs cannot be reused in the bounded session. Changed IDs, another content part, tools,
+text-only output, duplicate audio/transcript endings, malformed text and missing/mismatched final transcripts close
+the owner. Text is bounded to 64 KiB and audio to 120 seconds. A finalized transcript covers the
+whole received audio extent as one estimated segment; the provider supplies no precise word clocks.
+Billing settlement still uses the exact final receipt even if later output validation fails.
+
+On confirmed interruption, the cursor freezes once and is floored to integer source milliseconds.
+Further matching PCM can be accounted for but is not played. An active producer receives a targeted
+`response.cancel`; after final receipt/settlement the exact item receives
+`conversation.item.truncate`. An already completed producer is not cancelled again. Only a matching
+item/content index/audio-end acknowledgement readies the connection. Wrong, duplicate or missing
+acknowledgement closes it without refunding settled usage or admitting another response.
+[Client-event reference](https://developers.openai.com/api/reference/resources/realtime/client-events).
+
+The native owner replaces only its matching in-memory assistant record with the estimated heard
+prefix plus `[interrupted]`. It emits an identity-bound History record after drain or acknowledged
+interruption; it does not write the Chat database or persist audio/transcripts. A tail of at least
+three words becomes a bounded, quoted repair hint, consumed only in the next independently admitted
+`response.create`. It never generates a turn alone, retries an action or enables tools. Existing
+persona instructions remain present; the hint is conversation data, not authority.
+
+If the socket fails after a successful settled response, valid buffered output can still drain.
+Speech/probe signals remain active during that drain. If interrupted then, or if a truncation
+acknowledgement fails after settlement, matching heard history is emitted with
+`server_synchronized=false`, then the terminal error ends the owner. Such a record cannot authorize
+continuation. Cancellation, lock, changed choices and closed output suppress stale publication and
+recovery; they stop output before bounded transport cleanup. A completed input is never recovered
+or replayed as a new user turn. Callers retain any unaccepted capture until its Generate notification.
+
+The native entry still has no microphone, renderer command or visible voice conversation. V6.4
+backend integration is delivered; physical-device/acoustic timing and live-provider acceptance stay
+open before activation. Next is V6.5's echo-cancellation spike, then V6.6 tools and V6.7 capture/UI.
+Offline socket/native-owner tests cover interruption before/after producer completion, exact
+acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.
+The isolated ALSA null setup above also runs the complete native driver with a synthetic provider:
+`cargo test -p vults-app native_null_conversation -- --ignored`.
+This check exercises actual CPAL into memory history without a microphone, desktop speaker, key or
+provider connection. It is not real speech or live-provider acceptance.

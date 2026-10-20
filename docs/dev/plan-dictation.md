@@ -41,9 +41,10 @@ remain separate; N3 is not complete.
 V7 now implements typed MCP questions, explicit local dictation into drafts and reviewed external-agent
 setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the turn/end policy, gated
 realtime transport/accounting and native turn retention/local recovery. V6.4.1 adds a bounded CPAL
-output primitive and pure heard-text/history-replacement math, without an app caller. No conversation
-microphone, playback or user-facing realtime continuation is exposed yet. Next: V6.4.2 native
-provider/output/history integration, then V6.5-V6.7.
+output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
+provider identities, acknowledged server truncation and in-memory history/one-shot repair. No
+conversation microphone or user-facing realtime continuation is exposed yet. Backend V6.4 is
+delivered; physical/live acceptance stays open. Next: V6.5 echo cancellation, then V6.6-V6.7.
 
 ## References
 
@@ -2557,15 +2558,21 @@ Delivery sequence:
    Pure clock/split regressions and an isolated ALSA null check cover the backend; physical acoustic
    timing is not claimed. There is no app caller, history mutation, microphone or provider call.
    See [Playback and heard text](../reference/realtime-accounting.md#playback-and-heard-text).
-2. **V6.4.2 native provider/output/history integration** (next).
-   Bind response/item/content identities and finalized transcript/audio extents to the native owner;
-   connect output consumption/drain to the existing turn tokens and lock/barge-in timing. On
-   interruption, freeze once, cancel the producer, truncate the exact server item to played source
-   milliseconds and verify acknowledgement. Replace only the matching native assistant history,
-   retaining a bounded one-shot hint for the next authorized turn; never replay a tool. Test stale
-   events, server rejection, cancellation, provider-finished audio still draining and response
-   identity changes with synthetic native/socket cases. Capture/UI remain V6.7; real device/provider
-   acceptance stays an activation gate. Full V6.4 is open until integration and acceptance pass.
+2. **V6.4.2 native provider/output/history integration** (delivered 2026-10-19).
+   The native owner now binds response/item/content identities and finalized transcript/audio extents
+   to generation-bound turn controls and CPAL consumption/drain. Confirmed interruption freezes once,
+   cancels an active producer, settles usage and truncates the exact item at floored played
+   milliseconds; a matching server acknowledgement precedes continuation. In-memory history keeps
+   only estimated heard words, with a quoted one-shot repair hint for the next admitted response.
+   No tool is enabled/replayed. Terminal output may drain or be interrupted; failed acknowledgement
+   yields explicitly unsynchronized local history and closes the owner. Native workers retain the
+   session lease. Offline socket/owner regressions and an actual CPAL null-driver check cover stale
+   events, cancellation, ack failure, completed-production drain, identity changes and recovery.
+   The app entry retains disabled barge-in pending V6.5. Capture/UI remain V6.7; physical/live
+   acceptance stays an activation gate. Backend V6.4 is delivered; full acceptance remains open.
+   See [Native playback and context repair](../reference/realtime-accounting.md#native-playback-and-context-repair).
+
+Next engineering task: **V6.5 echo-cancellation spike**, before V6.6 tools and V6.7 capture/UI.
 
 **V6.5 Echo cancellation** (M, spike first)
 - Build:

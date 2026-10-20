@@ -156,10 +156,15 @@ CPAL worker resamples 24 kHz PCM16, distinguishes queued/submitted/estimated con
 separates producer completion from device drain. Stop/revocation freezes the cursor and clears the
 queue; native teardown retains exclusive ownership. The pure splitter estimates whole heard words
 and computes interrupted model context plus a one-shot unheard-text hint. It writes no history and
-sends nothing. No app caller or microphone entry is added; V6.4.2 still owns provider/item identities,
-transcript timing, server truncation and native history/output integration. See
-[Playback and heard text](reference/realtime-accounting.md#playback-and-heard-text) for limits,
-clock assumptions and the isolated ALSA null check; physical-device/live acceptance remains open.
+sends nothing. V6.4.2 adds the native service owner: generation-bound complete turns/signals, gated
+provider/item/transcript identities, CPAL consumption/drain and exact acknowledged server truncation.
+It emits matching in-memory heard-history records and admits a quoted repair hint once in the next
+authorized response. Terminal playback can still drain or be interrupted; history without a server
+acknowledgement is explicitly unsynchronized and cannot resume the owner. Detached output retains
+the native session lease. No microphone, renderer entry or persistent Chat history write is added;
+barge-in stays disabled at app entry pending V6.5. See
+[Native playback and context repair](reference/realtime-accounting.md#native-playback-and-context-repair)
+for limits, clock assumptions, isolated ALSA null checks and the remaining physical/live acceptance.
 
 ## Local dictation
 

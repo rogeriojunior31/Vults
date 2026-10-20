@@ -1598,3 +1598,16 @@ Validation also exposed a transient prior gate-lock failure during parallel proc
 last intentional gate owner now explicitly unlocks its shared file description; unrelated inherited
 descriptors cannot prolong ownership. Every intentional worker/admission still retains the lock.
 A duplicated-descriptor regression verifies release and continued exclusion without timing retries.
+
+
+**2026-10-19 V6.4.2 native playback and history.** The complete-turn service binds gated provider
+attempt/response/item identities, finalized transcripts, turn generations and CPAL consumption/drain.
+Confirmed interruption freezes once, cancels active production and awaits exact server truncation
+acknowledgement after billing settlement. Matching in-memory history retains estimated heard words;
+a quoted repair hint is consumed only in the next admitted response. No tool or automatic retry is
+enabled. Settled output survives terminal socket failure for drain/interruption; a failed/missing
+ack yields unsynchronized local history and ends the owner. Closed consumers/revocation suppress
+recovery and detached native output retains the session lease. No microphone, renderer entry or
+persistent Chat history write is added. App barge-in stays disabled pending V6.5. Offline duplex
+and scripted native checks, plus an isolated CPAL null-driver run, validate the backend contract;
+physical/live speech acceptance remains open. Next: V6.5 echo-cancellation spike, then V6.6-V6.7.

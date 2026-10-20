@@ -213,7 +213,8 @@ fn native_null_output() {
     assert_eq!(std::env::var("VULTS_PLAYBACK_NULL_TEST").as_deref(), Ok("1"));
     let config = std::env::var_os("ALSA_CONFIG_PATH").expect("isolated ALSA configuration");
     assert!(std::fs::read_to_string(config).unwrap().contains("type null"));
-    let output = Playback::start(Arc::default()).unwrap();
+    let lease = Arc::new(());
+    let output = Playback::start_with_owner(Arc::default(), lease.clone()).unwrap();
     let deadline = Instant::now() + Duration::from_secs(5);
     while output.cursor().phase == Phase::Starting && Instant::now() < deadline {
         std::thread::sleep(Duration::from_millis(5));
@@ -235,5 +236,10 @@ fn native_null_output() {
     assert!(
         !BUSY.load(Ordering::Acquire),
         "native teardown retained ownership"
+    );
+    assert_eq!(
+        Arc::strong_count(&lease),
+        1,
+        "native worker must release its caller lease"
     );
 }

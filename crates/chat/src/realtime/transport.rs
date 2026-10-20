@@ -1,5 +1,7 @@
 //! Fixed-origin, bounded PCM transport. Every connection and turn first needs app-owned admission.
-use super::{MAX_EVENT_BYTES, Plan, Session, Settlement, State};
+use super::{
+    Identity, MAX_EVENT_BYTES, Plan, Repair, Session, Settlement, State, Transcript, output::Output,
+};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
@@ -81,33 +83,46 @@ pub enum Failure {
 pub enum Command {
     Audio(Vec<i16>),
     Commit,
-    Interrupt,
+    Interrupt { identity: Identity, played_frames: u64 },
+    Repair(Repair),
 }
 impl std::fmt::Debug for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Audio(pcm) => f.debug_tuple("AudioFrames").field(&pcm.len()).finish(),
             Self::Commit => f.write_str("Commit"),
-            Self::Interrupt => f.write_str("Interrupt"),
+            Self::Interrupt {
+                identity,
+                played_frames,
+            } => f
+                .debug_struct("Interrupt")
+                .field("identity", identity)
+                .field("played_frames", played_frames)
+                .finish(),
+            Self::Repair(_) => f.write_str("Repair"),
         }
     }
 }
 
 pub enum Event {
     Ready,
-    Audio { attempt: String, pcm: Vec<i16> },
+    Audio { identity: Identity, pcm: Vec<i16> },
+    Transcript(Transcript),
+    Truncated(Identity),
     Finished(Settlement),
 }
 impl std::fmt::Debug for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Ready => f.write_str("Ready"),
-            Self::Audio { attempt, pcm } => f
+            Self::Audio { identity, pcm } => f
                 .debug_struct("Audio")
-                .field("attempt", attempt)
+                .field("identity", identity)
                 .field("frames", &pcm.len())
                 .finish(),
             Self::Finished(receipt) => f.debug_tuple("Finished").field(receipt).finish(),
+            Self::Transcript(transcript) => f.debug_tuple("Transcript").field(transcript).finish(),
+            Self::Truncated(identity) => f.debug_tuple("Truncated").field(identity).finish(),
         }
     }
 }
@@ -339,6 +354,8 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
     let (mut input_frames, mut output_frames, mut committed) = (0_usize, 0_usize, false);
     deadline = Instant::now() + TURN_TIMEOUT;
     let mut prepared = None;
+    let mut output = Output::default();
+    let mut repair = None;
     let mut poll = tokio::time::interval(Duration::from_millis(25));
     loop {
         alive(gate, &channels.cancel)?;
@@ -349,19 +366,31 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
             command = channels.input.recv() => {
                 match command {
                     None => return Ok(()),
-                    Some(Command::Interrupt) => {
-                        if !committed { return Err(Failure::Cancelled); }
-                        send(socket, gate, &mut channels.cancel, json!({"type":"response.cancel"}), deadline).await?;
+                    Some(Command::Interrupt { identity, played_frames }) => {
+                        if prepared.is_some() || (input_frames > 0 && !committed) { return Err(Failure::Protocol); }
+                        output.interrupt(&identity, played_frames).map_err(|_| Failure::Protocol)?;
+                        if output.completed {
+                            let event = output.truncate().map_err(|_| Failure::Protocol)?;
+                            send(socket, gate, &mut channels.cancel, event, deadline).await?;
+                        } else {
+                            send(socket, gate, &mut channels.cancel, json!({"type":"response.cancel","response_id":identity.response}), deadline).await?;
+                        }
                         deadline = deadline.min(Instant::now()+IO_TIMEOUT);
                     }
+                    Some(Command::Repair(hint)) => {
+                        if committed || input_frames > 0 || output.truncating || repair.is_some() { return Err(Failure::Protocol); }
+                        hint.instructions().map_err(|_| Failure::Protocol)?;
+                        repair = Some(hint);
+                    }
                     Some(Command::Audio(pcm)) => {
-                        if committed || pcm.is_empty() || pcm.len() > 24_000 || input_frames.saturating_add(pcm.len()) > INPUT_FRAMES { return Err(Failure::Input); }
+                        if committed || output.truncating || pcm.is_empty() || pcm.len() > 24_000 || input_frames.saturating_add(pcm.len()) > INPUT_FRAMES { return Err(Failure::Input); }
                         if prepared.is_none() {
                             if pending.is_none() {
                                 let ceiling = session.plan.ceiling_microusd(gate.now_ms()).ok_or(Failure::Budget)?;
                                 *pending = Some(guarded(gate, &mut channels.cancel, gate.reserve(ceiling), Instant::now()+IO_TIMEOUT).await?.ok_or(Failure::Budget)?.claim());
                             }
-                            prepared = Some(session.prepare(pending.as_deref().ok_or(Failure::Ledger)?, gate.now_ms()).map_err(|_| Failure::Protocol)?);
+                            prepared = Some(session.prepare_repair(pending.as_deref().ok_or(Failure::Ledger)?, gate.now_ms(), repair.take()).map_err(|_| Failure::Protocol)?);
+                            output.reset();
                         }
                         input_frames += pcm.len();
                         for chunk in pcm.chunks(CHUNK_FRAMES) {
@@ -393,11 +422,25 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                             let bytes = STANDARD.decode(encoded).map_err(|_| Failure::Protocol)?;
                             if bytes.is_empty() || bytes.len()%2 != 0 || output_frames.saturating_add(bytes.len()/2)>OUTPUT_FRAMES { return Err(Failure::Output); }
                             output_frames += bytes.len()/2;
-                            let pcm = bytes.as_chunks::<2>().0.iter().copied().map(i16::from_le_bytes).collect();
-                            alive(gate,&channels.cancel)?;
-                            emit(&channels.output, Event::Audio { attempt: pending.clone().ok_or(Failure::Ledger)?, pcm })?;
+                            let identity = output.bind(&event, pending.as_deref().ok_or(Failure::Ledger)?).map_err(|_| Failure::Protocol)?;
+                            output.audio(bytes.len()/2).map_err(|_| Failure::Protocol)?;
+                            if output.frozen.is_none() {
+                                let pcm = bytes.as_chunks::<2>().0.iter().copied().map(i16::from_le_bytes).collect();
+                                alive(gate,&channels.cancel)?;
+                                emit(&channels.output, Event::Audio { identity, pcm })?;
+                            }
                             // Let an inline bounded consumer drain even when socket reads stay ready.
                             tokio::task::yield_now().await;
+                        }
+                        if event["type"] == "conversation.item.truncated" {
+                            let identity = output.acknowledge(&event).map_err(|_| Failure::Protocol)?;
+                            alive(gate,&channels.cancel)?;
+                            emit(&channels.output, Event::Truncated(identity))?;
+                            deadline = Instant::now()+TURN_TIMEOUT;
+                            emit(&channels.output, Event::Ready)?;
+                        } else if event["type"].as_str().is_some_and(|kind| kind.starts_with("response."))
+                            && event["type"] != "response.done" {
+                            output.event(&event, pending.as_deref().ok_or(Failure::Ledger)?).map_err(|_| Failure::Protocol)?;
                         }
                         if let Some(receipt) = receipt {
                             if pending.as_deref() != Some(receipt.attempt.as_str()) { return Err(Failure::Ledger); }
@@ -408,11 +451,19 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                             *billable = false;
                             let valid = receipt.within_bounds;
                             alive(gate,&channels.cancel)?;
+                            let transcript = output.transcript(&event).map_err(|_| Failure::Protocol)?;
+                            emit(&channels.output, Event::Transcript(transcript))?;
                             emit(&channels.output, Event::Finished(receipt))?;
                             if !valid { return Err(Failure::Protocol); }
                             input_frames=0; output_frames=0; committed=false;
-                            deadline = Instant::now()+TURN_TIMEOUT;
-                            emit(&channels.output, Event::Ready)?;
+                            if output.frozen.is_some() {
+                                let event = output.truncate().map_err(|_| Failure::Protocol)?;
+                                deadline = Instant::now()+IO_TIMEOUT;
+                                send(socket, gate, &mut channels.cancel, event, deadline).await?;
+                            } else {
+                                deadline = Instant::now()+TURN_TIMEOUT;
+                                emit(&channels.output, Event::Ready)?;
+                            }
                         }
                     }
                     _ => return Err(Failure::Protocol),

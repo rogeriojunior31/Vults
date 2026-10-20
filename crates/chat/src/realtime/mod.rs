@@ -1,6 +1,8 @@
 //! Offline Realtime protocol/cost contract. No sockets, keys, microphone or admission authority.
 //! The app must reserve the quoted ceiling through its monetary gate BEFORE sending a prepared event.
+mod output;
 mod pricing;
+pub use output::{Identity, Repair, Transcript};
 pub mod transport;
 
 use pricing::{CONTEXT, Rates, Usage};
@@ -104,10 +106,10 @@ pub struct Session {
     state: State,
     session_id: Option<String>,
     used_attempts: BTreeSet<String>,
+    used_responses: BTreeSet<String>,
 }
 
 /// Prepared wire data is not permission to send. Reserve ceiling_microusd with this exact attempt.
-#[derive(Debug)]
 pub struct Prepared {
     pub ceiling_microusd: u64,
     pub event: Value,
@@ -119,6 +121,14 @@ pub struct Settlement {
     pub actual_microusd: Option<u64>,
     pub ok: bool,
     pub within_bounds: bool,
+}
+
+impl std::fmt::Debug for Prepared {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Prepared")
+            .field("ceiling_microusd", &self.ceiling_microusd)
+            .finish_non_exhaustive()
+    }
 }
 
 fn id(value: &Value) -> Option<&str> {
@@ -139,10 +149,21 @@ impl Session {
             state: State::Configuring,
             session_id: None,
             used_attempts: BTreeSet::new(),
+            used_responses: BTreeSet::new(),
         }
     }
 
     pub fn prepare(&mut self, attempt: &str, now_ms: i64) -> Result<Prepared, Rejection> {
+        self.prepare_repair(attempt, now_ms, None)
+    }
+
+    fn prepare_repair(
+        &mut self,
+        attempt: &str,
+        now_ms: i64,
+        repair: Option<Repair>,
+    ) -> Result<Prepared, Rejection> {
+        let instructions = repair.map(|repair| repair.instructions()).transpose()?;
         if !matches!(self.state, State::Ready)
             || !valid_id(attempt)
             || self.used_attempts.contains(attempt)
@@ -155,12 +176,16 @@ impl Session {
         self.state = State::Creating {
             attempt: attempt.into(),
         };
+        let mut event = json!({"type":"response.create", "response": {
+            "max_output_tokens":self.plan.output, "tools":[], "tool_choice":"none",
+            "metadata":{"vults_attempt":attempt}
+        }});
+        if let Some(instructions) = instructions {
+            event["response"]["instructions"] = json!(instructions);
+        }
         Ok(Prepared {
             ceiling_microusd,
-            event: json!({"type":"response.create", "response": {
-                "max_output_tokens":self.plan.output, "tools":[], "tool_choice":"none",
-                "metadata":{"vults_attempt":attempt}
-            }}),
+            event,
         })
     }
 
@@ -215,9 +240,13 @@ impl Session {
                 if response["metadata"]["vults_attempt"] != *attempt || response["status"] != "in_progress" {
                     return Err(Rejection::Event);
                 }
+                let response_id = id(&response["id"]).ok_or(Rejection::Event)?.to_owned();
+                if !self.used_responses.insert(response_id.clone()) {
+                    return Err(Rejection::Event);
+                }
                 self.state = State::Responding {
                     attempt: attempt.clone(),
-                    response: id(&response["id"]).ok_or(Rejection::Event)?.into(),
+                    response: response_id,
                 };
             }
             "response.done" => {

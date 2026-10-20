@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: e47d54892262 -->
+<!-- source: 969df6294df8 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -98,8 +98,8 @@ de 10 segundos para IO/configuração/conciliação. Quadros/mensagens do servid
 Fila de saída cheia, PCM inválido, tarifas vencidas ou saldo esgotado encerram o transporte.
 Cancelamento/revogação interrompe IO pendente; interrupção solicita cancelamento da resposta e
 aguarda uso final dentro de um prazo limitado. Nenhum áudio adicional é enviado após falha de
-admissão. A publicação de prontidão/áudio revalida o responsável após esperas assíncronas. Consumo
-pelo dispositivo/reprodução e roteamento da transcrição continuam na V6.4/V6.7.
+admissão. A publicação de prontidão/áudio revalida o responsável após esperas assíncronas. A V6.4.2
+vincula reprodução nativa e encaminhamento da transcrição abaixo; captura/interface ficam na V6.7.
 
 Recibos finais conhecidos são conciliados uma única vez, mesmo após revogação, sem uma tentativa
 concorrente com custo desconhecido. Antes de qualquer inferência poder começar, uma conexão
@@ -229,11 +229,9 @@ produtor parado depois da drenagem do áudio recebido. Texto vazio ou sem reprod
 resposta inteira ouvida. A dica não faz requisição, não repete ferramenta nem concede permissão.
 Ela não é um rótulo traduzido de interface.
 
-Ainda não existe chamador no app. A V6.4.2 deve vincular identidades de resposta/item do provedor,
-delimitação da transcrição, reprodução e tokens de turno, confirmar o truncamento no servidor e
-aplicar a substituição ao histórico nativo correspondente. A produção não deve usar essa primitiva
-sem seu proprietário de consentimento/revogação. V6.5-V6.7 mantêm cancelamento de eco, ferramentas,
-captura e conversa visível. O histórico atual do app não é reescrito pela V6.4.1 e o microfone da
+A V6.4.1 fornece a primitiva independente; a V6.4.2 acrescenta seu proprietário nativo no app,
+descrito abaixo. A primitiva deve continuar vinculada a esse proprietário de consentimento/revogação.
+V6.5-V6.7 mantêm cancelamento de eco, ferramentas, captura e conversa visível; o microfone da
 conversa continua indisponível.
 
 Testes offline cobrem consumo/latência, falta de dados, drenagem, parada, relógios inválidos,
@@ -244,3 +242,69 @@ interrupção, qualidade da fala e aceitação com provedor real continuam em ab
 nulo somente com uma configuração ALSA privada contendo `pcm.!default { type null }`,
 `ALSA_CONFIG_PATH` apontando para ela e `VULTS_PLAYBACK_NULL_TEST=1`:
 `cargo test -p vults-audio native_null_output -- --ignored`.
+
+
+<a id="native-playback-and-context-repair"></a>
+## Reprodução nativa e reparo de contexto
+
+A V6.4.2 conecta ao CPAL o serviço nativo existente de turnos completos. O primeiro turno completo
+autorizado inicia a conexão pelo gate; somente Ready remoto confirmado abre um worker de saída
+silencioso, e a entrada só é enviada depois que a saída informa Playing. Falha de dispositivo mantém
+a entrada pendente para a recuperação local de texto existente. Um Busy transitório de destruição
+aguarda no máximo três segundos. Cada worker de saída mantém a concessão da sessão nativa até a
+destruição do dispositivo, inclusive em preparação desacoplada ou bloqueada, para que aborto/revogação
+não sobreponha uma nova sessão ao trabalho nativo antigo.
+
+Comandos nativos e sinais de fala/prova carregam a geração exata do turno. Comandos antigos são
+descartados; somente uma prova confirmada correspondente congela a reprodução. Notificações das
+ações Listen/Probe não concedem acesso ao microfone nem iniciam captura. A primeira saída consumida
+controla a trava inicial; conclusão do produtor pede drenagem, e drenagem confirmada controla a
+margem final. A entrada do app mantém interrupção por fala desligada até chegar a política de
+dispositivo/AEC da V6.5. Casos com fones simulados exercitam o caminho disponível no proprietário
+sem afirmar que interrupção por alto-falantes é segura.
+
+O protocolo sem ferramentas aceita um item de áudio de assistente, com parte de conteúdo no índice
+zero, por resposta. IDs de tentativa, resposta e item são vinculados entre PCM, transcrição, saída
+final e histórico; IDs de resposta e item não podem ser reutilizados na sessão limitada. IDs
+alterados, outra parte de conteúdo, ferramentas, saída somente em texto, términos duplicados de
+áudio/transcrição, texto malformado e transcrições finais ausentes/divergentes encerram o proprietário.
+O texto é limitado a 64 KiB e o áudio a 120 segundos. Uma transcrição finalizada cobre todo o áudio
+recebido como um único segmento estimado; o provedor não fornece tempos precisos de palavras.
+A conciliação de cobrança ainda usa o recibo final exato mesmo que a validação posterior da saída falhe.
+
+Na interrupção confirmada, o cursor congela uma vez e é arredondado para baixo em milissegundos
+inteiros de origem. Mais PCM correspondente pode ser contabilizado, mas não é reproduzido. Um
+produtor ativo recebe `response.cancel` direcionado; depois do recibo final e da conciliação, o item
+exato recebe `conversation.item.truncate`. Um produtor já concluído não é cancelado novamente.
+Somente confirmação correspondente de item/índice de conteúdo/fim do áudio deixa a conexão pronta.
+Confirmação errada, duplicada ou ausente encerra a conexão sem restituir uso conciliado nem admitir
+outra resposta.
+[Referência de eventos do cliente](https://developers.openai.com/api/reference/resources/realtime/client-events).
+
+O proprietário nativo substitui somente seu registro de assistente correspondente em memória pelo
+prefixo estimado como ouvido mais `[interrupted]`. Ele emite um registro History vinculado à
+identidade após drenagem ou interrupção confirmada; não grava o banco do Chat nem persiste
+áudio/transcrições. Uma cauda de pelo menos três palavras vira uma dica de reparo limitada e citada,
+consumida somente no próximo `response.create` admitido de forma independente. Ela nunca gera um
+turno sozinha, repete ação nem habilita ferramentas. As instruções existentes da persona continuam
+presentes; a dica é dado de conversa, sem autoridade.
+
+Se o socket falhar depois de uma resposta bem-sucedida conciliada, a saída válida em buffer ainda
+pode terminar de tocar. Sinais de fala/prova continuam ativos durante essa drenagem. Se houver
+interrupção nesse momento, ou se a confirmação do truncamento falhar após a conciliação, o histórico
+ouvido correspondente é emitido com `server_synchronized=false`; depois, o erro terminal encerra o
+proprietário. Esse registro não autoriza continuação. Cancelamento, bloqueio, escolhas alteradas e
+saída fechada suprimem publicação e recuperação antigas; param a saída antes da limpeza limitada do
+transporte. Uma entrada concluída nunca é recuperada nem repetida como novo turno do usuário.
+Chamadores retêm qualquer captura ainda não aceita até sua notificação Generate.
+
+A entrada nativa ainda não tem microfone, comando do renderer nem conversa de voz visível. A
+integração backend da V6.4 está entregue; tempo de dispositivo/acústica e aceitação com provedor
+real continuam em aberto antes da ativação. A próxima etapa é o spike de cancelamento de eco da
+V6.5, depois ferramentas na V6.6 e captura/interface na V6.7. Testes offline de socket e proprietário
+nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,
+admissão do reparo, falha, revogação, aborto e recuperação. A configuração ALSA nula isolada acima
+também executa o driver nativo completo com um provedor sintético:
+`cargo test -p vults-app native_null_conversation -- --ignored`.
+Esse teste exercita CPAL real até o histórico em memória sem microfone, alto-falante do desktop,
+chave nem conexão com provedor. Ele não representa aceitação de fala ou provedor real.
