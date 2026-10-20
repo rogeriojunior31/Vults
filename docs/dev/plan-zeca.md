@@ -1690,3 +1690,25 @@ language/brand/layer/network/version guards. Reviewed EN/PT marks, anchors and l
 Independent review found and resolved mixed-batch receipt loss, competing timeout deadlines,
 launcher submission mistaken for completion and interruption clone replay; the final code review
 has no confirmed blocker. The app stays closed; no physical/live acceptance is claimed.
+
+
+**2026-10-20 V6.6.3 Claude text consultation.** The native realtime registry can add
+`consult_claude` only after its own default-off Settings consent. The existing text client keeps
+built-in/MCP tools unavailable, ignores user/project settings, disables skills, file expansion and
+memory loading, and requires Claude Code 2.1.299+ in its current 2.1 series. The short supplied
+question is the complete context; no live agent/Chat session is resumed. The separate durable gate
+limits this feature to 20 attempts per rolling day with content-free traces, surviving toggles,
+restart and history erasure. One worker owns admission and CLI teardown. Its original call time
+anchors the 60-second cancellation deadline and translated 1.5-second native reassurance; blocked
+preparation and child exit retain the busy slot and exclusive voice lease. Replies remain inert
+outside data under the existing 16 KiB envelope and original 120-second realtime chain deadline.
+This is native plumbing without visible capture/UI or live-provider acceptance. Organizational
+managed policy remains in effect. Codex is deliberately unoffered until equivalent text-only
+isolation is qualified; this is the next V6.6.3 task, before V6.7.
+
+Validation: 1,405 workspace tests pass (12 documented ignores), plus 10 feature evals, workspace
+Clippy with warnings denied, the renderer build and all 18 existing renderer checks. Independent
+review resolved implicit file/memory context, admission/busy ownership, original timing and stale
+notice checks; final code review has no remaining blocker. Source/docs clarify enforced managed
+policy and do not claim an OS sandbox, visible activation or live compatibility. The app stays
+closed; Codex text-only qualification remains the next roadmap item.

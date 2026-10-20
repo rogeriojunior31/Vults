@@ -470,7 +470,7 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                                 let ceiling = session.plan.ceiling_microusd(gate.now_ms()).ok_or(Failure::Budget)?;
                                 *pending = Some(guarded(gate, &mut channels.cancel, gate.reserve(ceiling), deadline.min(Instant::now()+IO_TIMEOUT)).await?.ok_or(Failure::Budget)?.claim());
                                 let next = session.prepare(pending.as_deref().ok_or(Failure::Ledger)?,gate.now_ms()).map_err(|_|Failure::Protocol)?;
-                                let result = guarded(gate,&mut channels.cancel,session.plan.tools.execute(&call),deadline.min(Instant::now()+IO_TIMEOUT)).await?;
+                                let result = guarded(gate,&mut channels.cancel,session.plan.tools.execute(&call),deadline.min(Instant::now()+session.plan.tools.timeout(&call))).await?;
                                 alive(gate,&channels.cancel)?;
                                 send(socket,gate,&mut channels.cancel,json!({"type":"conversation.item.create","item":{"type":"function_call_output","call_id":call.call,"output":result}}),deadline).await?;
                                 output.reset();

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: aba186ab572f -->
+<!-- source: 4472c4072a2e -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -219,6 +219,16 @@ Recibos de ferramentas liberam a entrada original sem concluir a reprodução; a
 sua própria identidade/histórico. Chamadas consumidas não viram recuperação nem repetição automática.
 Não há ferramenta de ação/permissão nem ativação visível. Veja
 [Ferramentas realtime somente de leitura](reference/realtime-accounting.md#read-only-tools-in-realtime).
+
+A V6.6.3 pode acrescentar uma pergunta textual `consult_claude` com consentimento separado a esse
+registro nativo. Sua opção desligada por padrão, orçamento persistente de 20 tentativas diárias e
+trace local de metadados são independentes dos custos realtime e do Chat. O cliente existente sem
+ferramentas desativa expansão de arquivos e carregamento de memória e exige controles suportados
+pela CLI; não herda sessão ativa de agente nem permissões do Chat. Um prazo original cobre
+preparação e saída do processo, com aviso nativo traduzido após 1,5 segundo; a posse da vaga/voz
+sobrevive a trabalho que não pode ser interrompido. Respostas são dados externos inertes. Políticas
+gerenciadas da CLI continuam valendo. Qualificação do Codex e controles visíveis seguem em aberto.
+Veja [Consulta textual](reference/realtime-accounting.md#text-consultation).
 
 <a id="local-dictation"></a>
 

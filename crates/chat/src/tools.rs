@@ -27,6 +27,10 @@ pub trait Tool: Send + Sync + std::fmt::Debug {
     /// The input's JSON Schema.
     fn schema(&self) -> Value;
     fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>>;
+    /// Realtime reads are short; a bounded text consultation may explicitly need longer.
+    fn realtime_timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(10)
+    }
     /// What it returns comes from outside this machine (a web page, a search): it taints the
     /// conversation, so a later card says so (Z8).
     fn reads_outside(&self) -> bool {

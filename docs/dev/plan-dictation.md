@@ -2669,11 +2669,21 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
      Offline regressions and the exhaustive H1 boundary cover this slice without desktop actions,
      microphone, provider or renderer activation. See
      [Native command receipts](../reference/realtime-accounting.md#native-command-receipts).
-   - **Agent consultation** (next). Reuse the existing Claude Code/Codex question path with
-     bounded consultation ownership, cancellation and the 1.5-second reassurance. Keep separate
-     consent, budget and local traces through the network gate; do not inherit ordinary Chat's
-     tools or permissions. Reconcile evidence and review before V6.7. Whole V6.6.3 remains open
-     until this consultation slice is delivered. Live-provider/human-speech acceptance is separate.
+   - **Claude Code text consultation** (implemented 2026-10-20; native backend only).
+     Optional `consult_claude` reuses the existing tool-free text client with an independent
+     default-off Settings consent, durable 20-attempt rolling quota and content-free local traces.
+     Only its bounded question is supplied; user/project settings, skills, file mentions and memory
+     discovery are disabled. No active agent session, Chat history or permission owner is inherited.
+     Cancellation and the translated 1.5-second native notice cover admission and the CLI from the
+     original call time. The busy slot and voice lease survive preparation and child teardown;
+     late replies cannot publish. Current clients must support the isolation controls (Claude
+     Code 2.1.299+ in the 2.1 series); organizational managed policy still applies. Native notice
+     display and the opt-in UI stay in V6.7; no live model/microphone acceptance is claimed. See
+     [Text consultation](../reference/realtime-accounting.md#text-consultation).
+   - **Codex consultation qualification** (next). Provide equivalent supplied-text-only isolation
+     before offering a Codex tool. The ordinary read-only Chat driver is not that contract; do not
+     inherit its tools, settings or permission flow. Review evidence before V6.7. Whole V6.6.3 stays
+     open until this qualification is delivered. Live-provider/human-speech acceptance is separate.
 
 **V6.7 Talk with Zeca page and island speaking states** (M)
 - Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio

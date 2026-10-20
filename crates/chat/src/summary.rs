@@ -1,7 +1,6 @@
-//! A short text from a small model with no tools (plan-zeca M4: each past day of the journal):
-//! through the user's Claude Code, on their subscription, with none of their settings, hooks or
-//! MCP servers, and no tool at all, so the text it reads (agents' commands, chat lines) can only
-//! ever become words. The app asks the network gate before each call (ADR 0019).
+//! The shared tool-free text client for journal, memory, sleep and voice questions.
+//! User/project settings and implicit file/memory context are excluded; managed policy remains
+//! enforced. Each app caller admits requests through its own network gate (ADR 0019).
 
 use std::path::Path;
 use std::process::Stdio;
@@ -9,6 +8,7 @@ use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
+use tokio::sync::watch;
 
 /// Claude Code's name for its smallest model.
 pub const MODEL: &str = "haiku";
@@ -31,13 +31,19 @@ fn command(system: &str, dir: &Path) -> Command {
     let mut cmd = Command::new("claude");
     cmd.envs(vults_agents::shell_env());
     cmd.args(["-p", "--output-format", "text", "--model", MODEL])
-        // No tools, no settings (no hooks, no allow rules), no MCP servers, nothing kept.
+        // No offered built-in/MCP tools or saved session; managed policy remains enforced.
         .args(["--tools", ""])
         .args(["--setting-sources", ""])
+        .arg("--disable-slash-commands")
+        .args(["--disallowedTools", "mcp__*"])
         .arg("--strict-mcp-config")
         .arg("--no-session-persistence")
         .args(["--system-prompt", system])
         .env(vults_protocol::ZECA_ENV, "1")
+        .env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
+        .env("CLAUDE_CODE_DISABLE_FILE_MENTIONS", "1")
+        .env("CLAUDE_CODE_DISABLE_CLAUDE_MDS", "1")
+        .env("CLAUDE_CODE_DISABLE_AUTO_MEMORY", "1")
         .current_dir(dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -48,10 +54,54 @@ fn command(system: &str, dir: &Path) -> Command {
 
 /// The model's answer to `text` under `system`, run in `dir` (an empty folder of the app's).
 pub async fn summarize(system: &str, text: &str, dir: &Path) -> Result<String, String> {
+    let (_stop, mut cancel) = watch::channel(false);
+    question(system, text, dir, &mut cancel).await
+}
+
+/// The same tool-free client, with explicit child-exit acknowledgement on cancellation.
+pub async fn question(
+    system: &str,
+    text: &str,
+    dir: &Path,
+    cancel: &mut watch::Receiver<bool>,
+) -> Result<String, String> {
+    // Older clients silently ignore the switches that stop @file expansion and memory loading.
+    let mut version = Command::new("claude");
+    version
+        .envs(vults_agents::shell_env())
+        .arg("--version")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    crate::dies_with_app(&mut version);
+    if !supported(&run(version, "", cancel).await?) {
+        return Err(
+            "Tool-free text questions require Claude Code 2.1.299 or later in the 2.1 series.".into(),
+        );
+    }
+    run(command(system, dir), text, cancel).await
+}
+fn supported(version: &str) -> bool {
+    let Some(version) = version.split_whitespace().next() else {
+        return false;
+    };
+    let parts: Vec<_> = version.split('.').map(str::parse::<u32>).collect();
+    matches!(parts.as_slice(), [Ok(2), Ok(1), Ok(patch)] if *patch >= 299)
+}
+
+async fn run(mut cmd: Command, text: &str, cancel: &mut watch::Receiver<bool>) -> Result<String, String> {
+    if *cancel.borrow() || cancel.has_changed().is_err() {
+        return Err("Claude Code question cancelled.".into());
+    }
+    let child = cmd.spawn().map_err(|e| format!("Can't start Claude Code: {e}"))?;
+    run_child(child, text, cancel).await
+}
+async fn run_child(
+    mut child: tokio::process::Child,
+    text: &str,
+    cancel: &mut watch::Receiver<bool>,
+) -> Result<String, String> {
     let run = async {
-        let mut child = command(system, dir)
-            .spawn()
-            .map_err(|e| format!("Can't start Claude Code: {e}"))?;
         let mut stdin = child.stdin.take().ok_or("no stdin")?;
         stdin
             .write_all(text.as_bytes())
@@ -69,7 +119,6 @@ pub async fn summarize(system: &str, text: &str, dir: &Path) -> Result<String, S
             .map_err(|e| e.to_string())?;
         // Past the cap the rest is never read: end it rather than wait on a full pipe.
         if out.len() as u64 >= MAX_REPLY {
-            let _ = child.kill().await;
             return Err("Claude Code's answer was too long.".into());
         }
         let status = child.wait().await.map_err(|e| e.to_string())?;
@@ -79,9 +128,15 @@ pub async fn summarize(system: &str, text: &str, dir: &Path) -> Result<String, S
         // A cut inside a character never fails the call.
         Ok(String::from_utf8_lossy(&out).trim().to_string())
     };
-    tokio::time::timeout(TIMEOUT, run)
-        .await
-        .map_err(|_| "Claude Code took too long to answer.".to_string())?
+    let result = tokio::select! { biased;
+        _ = cancel.changed() => Err("Claude Code question cancelled.".into()),
+        result = tokio::time::timeout(TIMEOUT, run) => result.unwrap_or_else(|_| Err("Claude Code took too long to answer.".into())),
+    };
+    // The caller retains native ownership until the child has actually exited.
+    if result.is_err() {
+        let _ = child.kill().await;
+    }
+    result
 }
 
 #[cfg(test)]
@@ -106,6 +161,67 @@ mod tests {
         }
         assert!(args.contains(&"--strict-mcp-config".to_string()));
         assert!(args.contains(&"--no-session-persistence".to_string()));
+        assert!(args.contains(&"--disable-slash-commands".to_string()));
+        assert!(args.windows(2).any(|w| w == ["--disallowedTools", "mcp__*"]));
+        for name in [
+            "CLAUDE_CODE_DISABLE_FILE_MENTIONS",
+            "CLAUDE_CODE_DISABLE_CLAUDE_MDS",
+            "CLAUDE_CODE_DISABLE_AUTO_MEMORY",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+        ] {
+            assert!(
+                cmd.as_std()
+                    .get_envs()
+                    .any(|(k, v)| k == name && v == Some(std::ffi::OsStr::new("1")))
+            );
+        }
         assert!(!args.iter().any(|a| a.contains("permission")));
+        for version in ["2.1.299 (Claude Code)", "2.1.304 (Claude Code)"] {
+            assert!(supported(version));
+        }
+        for version in ["", "2.1.298", "2.1.299-dev", "3.0.0", "2.2.0", "other"] {
+            assert!(!supported(version));
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn cancellation_and_timeout_reap_the_tool_free_child_before_returning() {
+        for timed_out in [false, true] {
+            let mut cmd = Command::new("/bin/sleep");
+            cmd.arg("600")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null());
+            let child = crate::dies_with_app(&mut cmd).spawn().unwrap();
+            let pid = child.id().unwrap();
+            let (stop, mut cancel) = watch::channel(false);
+            let worker = tokio::spawn(async move { run_child(child, "", &mut cancel).await });
+            tokio::task::yield_now().await;
+            if timed_out {
+                tokio::time::pause();
+                tokio::time::advance(TIMEOUT + Duration::from_secs(1)).await;
+                tokio::time::resume();
+            } else {
+                stop.send(true).unwrap();
+            }
+            assert!(worker.await.unwrap().is_err());
+            assert!(
+                !Path::new(&format!("/proc/{pid}")).exists(),
+                "return requires child exit, not just a kill request"
+            );
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn a_runaway_answer_is_bounded_and_never_accepted() {
+        let mut cmd = Command::new("/usr/bin/head");
+        cmd.args(["-c", "65536", "/dev/zero"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        let (_stop, mut cancel) = watch::channel(false);
+        assert!(run(cmd, "", &mut cancel).await.unwrap_err().contains("too long"));
     }
 }

@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 3e4f682f771b -->
+<!-- source: aa326f6fb583 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -394,8 +394,8 @@ igual: voz não decide cards.
 Testes offline cobrem recibos concluídos/encaminhados/com falha/ausentes, lotes mistos, publicação de
 prazo vencido pelo proprietário nativo, revogação/prazo/perda do chamador na fila, concessões retidas
 e repetição de cópias antes/depois da construção do provedor e de interrupção. Não há ação do
-desktop, microfone nem provedor real. Consulta continua sendo a próxima etapa da V6.6.3; montagem
-de captura e interface visível continuam na V6.7.
+desktop, microfone nem provedor real. O backend de consulta ao Claude está descrito abaixo;
+a qualificação do Codex continua na V6.6.3. Montagem de captura e interface visível ficam na V6.7.
 
 
 <a id="read-only-tools-in-realtime"></a>
@@ -446,5 +446,65 @@ Testes offline de duplex/proprietário nativo cobrem continuações com sucesso/
 separadas, recibos conhecidos/desconhecidos, orçamento insuficiente, chamadas inválidas/duplicadas/
 canceladas, revogação durante a leitura, limite com escapes, especificações exatas e áudio/histórico
 finais após liberar a entrada. Usam credenciais/PCM sintéticos, sem provedor externo, microfone nem
-ação do desktop. Próxima etapa: consulta/semântica de conclusão da V6.6.3, depois captura/interface
-na V6.7. Fala física, compatibilidade com provedor e aceitação acústica continuam pendentes.
+ação do desktop. O backend de consulta ao Claude abaixo estende esse registro somente com
+consentimento separado. A qualificação do Codex continua na V6.6.3, seguida da captura/interface na
+V6.7. Fala física, compatibilidade com provedor e aceitação acústica continuam pendentes.
+
+
+<a id="text-consultation"></a>
+## Consulta textual
+
+No Linux, o proprietário nativo da V6.6.3 acrescenta `consult_claude` somente com a opção separada
+`voice_consultation`, desligada por padrão, e a identidade original do orçamento persistente.
+Somente Configurações pode alterá-la; a alteração revoga a geração da voz mesmo se a escolha anterior
+for restaurada antes da próxima verificação. O renderer ainda não tem entrada de conversa nem
+controle de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O Codex não
+é oferecido até qualificar isolamento equivalente somente de texto.
+
+Cada consulta fornece uma pergunta não vazia de até 256 bytes, sem caracteres de controle. Ela
+reutiliza o cliente textual do Claude Code com Haiku, uma nova pasta de trabalho privada e vazia,
+seleção vazia de ferramentas integradas, exclusão de ferramentas MCP, configuração MCP estrita,
+sem configurações de usuário/projeto, skills desativadas e sem sessão salva. Expansão de referências
+a arquivos, descoberta de CLAUDE.md, memória automática e tráfego não essencial da CLI são
+desativados explicitamente. Clientes anteriores à 2.1.299, versões desconhecidas e outras séries
+major/minor são recusados antes de iniciar uma pergunta: clientes antigos podem ignorar esses
+controles silenciosamente. O helper compartilhado também aplica essa verificação de versão aos
+chamadores existentes de diário/memória/sono. Os [controles da CLI Claude](https://code.claude.com/docs/en/cli-reference)
+e [controles de ambiente](https://code.claude.com/docs/en/env-vars) definem essas opções. O Vults não
+usa o modo bare, que ignora a autenticação da assinatura, nem enfraquece políticas organizacionais
+gerenciadas. Esse adaptador não é um sandbox do sistema operacional; políticas gerenciadas
+obrigatórias ainda podem carregar hooks ou acessar seus próprios serviços. O comportamento de
+clientes gerenciados precisa de qualificação separada antes da ativação.
+
+O Vults fornece somente a pergunta, sem contexto de projeto/sessão nem ferramenta de leitura do
+projeto. Ele não retoma agente ativo, delega trabalho nem herda histórico, ferramentas, políticas ou
+acesso total do Chat. O gate
+separado `voice-consultation` reserva de forma durável até 20 tentativas por 24 horas móveis,
+incluindo falhas; reservas monetárias do realtime não pagam nem autorizam essas tentativas da CLI.
+Reinício, alternância do consentimento, limpeza do histórico ou troca do ledger não renovam a
+cota silenciosamente. Traces contêm recurso/provedor/modelo, tempos e resultado, nunca pergunta ou
+resposta. O Vults não repete consultas com falha nem troca de provedor; a CLI instalada mantém seu
+próprio comportamento de conexão e autenticação.
+
+Um trabalhador em segundo plano mantém a vaga ocupada e a concessão exclusiva da voz durante a
+preparação e até confirmar a saída do processo. O horário original da chamada ancora o prazo de
+cancelamento de 60 segundos, incluindo preparação e verificação da versão. Aos 1,5 segundo ele pode
+emitir um aviso Consulting traduzido, identificado pelo pedido, no canal de saída nativo atual.
+Respostas rápidas não emitem esse aviso; ele é dado de estado, não fala gerada nem histórico ouvido.
+Cancelamento, perda do chamador, bloqueio, geração ou saída revogada suprimem respostas/avisos
+antigos e solicitam encerramento do processo. O trabalhador espera a saída em vez de liberar a
+posse após apenas solicitar o encerramento. IO local ou destruição que não possam ser interrompidos
+podem mantê-lo ocupado além do prazo; outra consulta/sessão não sobrepõe esse trabalho retido.
+
+O prazo da ferramenta realtime pode chegar explicitamente a 60 segundos; leituras em cache mantêm
+seu limite de dez segundos, e o prazo original de 120 segundos da cadeia nunca é estendido.
+Sucesso/erro textual usa o envelope inerte limitado existente com `outside=true`; não tem autoridade
+sobre permissões. Um recibo consumido impede recuperação ou repetição da entrada mesmo se a
+consulta ou continuação falhar. O aviso de 1,5 segundo ainda não tem consumidor no renderer; sua
+exibição e controles de adesão ficam na V6.7.
+
+Testes offline exercitam o tempo do aviso, prazos originais durante admissão lenta, posse durante
+cancelamento e destruição, saída confirmada do processo, limite da resposta, argumentos, controles/
+versão do cliente, admissão persistente independente e atualização do consentimento. Eles usam
+processos filhos locais sintéticos, sem modelo, microfone nem ação do desktop. Consulta ao Codex e
+compatibilidade real com Claude/provedor continuam em aberto; a V6.6.3 não está concluída.

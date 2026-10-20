@@ -4,6 +4,45 @@ use std::sync::Arc;
 fn registry() -> Registry {
     Registry::new(vec![Arc::new(Echo)]).unwrap()
 }
+
+#[test]
+fn tool_deadlines_are_bounded_without_extending_the_turn() {
+    use crate::tools::Tool;
+    use std::time::Duration;
+    #[derive(Debug)]
+    struct Slow(Duration);
+    impl Tool for Slow {
+        fn name(&self) -> &str {
+            "slow"
+        }
+        fn description(&self) -> &str {
+            "A bounded consultation."
+        }
+        fn schema(&self) -> Value {
+            json!({"type":"object","properties":{}})
+        }
+        fn realtime_timeout(&self) -> Duration {
+            self.0
+        }
+        fn call<'a>(&'a self, _: &'a Value) -> vults_agents::driver::BoxFuture<'a, Result<String, String>> {
+            Box::pin(async { Ok("answer".into()) })
+        }
+    }
+    for (seconds, expected) in [(10, 10), (60, 60), (600, 60)] {
+        let registry = Registry::new(vec![Arc::new(Slow(Duration::from_secs(seconds)))]).unwrap();
+        let call = Call {
+            identity: Identity {
+                attempt: "a".into(),
+                response: "r".into(),
+                item: "i".into(),
+            },
+            call: "c".into(),
+            name: "slow".into(),
+            arguments: json!({}),
+        };
+        assert_eq!(registry.timeout(&call), Duration::from_secs(expected));
+    }
+}
 fn events(call: &str, args: &str) -> Vec<Value> {
     let item = json!({"id":format!("item_{call}"),"type":"function_call","name":"echo","call_id":call,"arguments":args,"status":"completed"});
     let mut added = item.clone();

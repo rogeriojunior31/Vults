@@ -2,7 +2,8 @@
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
 //! polls, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
-//! summary, the memory's suggestions, Zeca's sleep, opted-in dictation clean-up and meeting summaries.
+//! summary, the memory's suggestions, Zeca's sleep, opted-in dictation clean-up, meeting summaries
+//! and tool-free voice consultations.
 //! Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
 //! way out from appearing unlisted. Explicit meeting installation uses its own one-use review
 //! adapter below, with durable admission for every HTTP attempt.
@@ -49,6 +50,8 @@ pub const CLEANUP_BUDGET: usize = 2000;
 pub const MEETING_SUMMARY: &str = "meeting-summary";
 pub const MEETING_SUMMARY_BUDGET: usize = 20;
 pub const VOICE_REALTIME: &str = "voice-realtime";
+pub const VOICE_CONSULTATION: &str = "voice-consultation";
+pub const VOICE_CONSULTATION_BUDGET: usize = 20;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -97,6 +100,7 @@ pub fn budget(feature: &str) -> usize {
         SLEEP => SLEEP_BUDGET,
         CLEANUP => CLEANUP_BUDGET,
         MEETING_SUMMARY => MEETING_SUMMARY_BUDGET,
+        VOICE_CONSULTATION => VOICE_CONSULTATION_BUDGET,
         meeting_assets::FEATURE => meeting_assets::BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
@@ -105,7 +109,9 @@ pub fn budget(feature: &str) -> usize {
 
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
-    if feature == VOICE_REALTIME {
+    if feature == VOICE_CONSULTATION {
+        s.voice_consultation && s.voice_consultation_budget.is_some()
+    } else if feature == VOICE_REALTIME {
         s.voice_realtime.enabled()
     } else if feature == meeting_assets::FEATURE {
         false
@@ -188,6 +194,7 @@ impl vults_connectors::Gate for NetGate {
         connector != CLEANUP
             && connector != MEETING_SUMMARY
             && connector != VOICE_REALTIME
+            && connector != VOICE_CONSULTATION
             && connector != meeting_assets::FEATURE
             && self.allow_at(connector, Instant::now())
     }
@@ -222,6 +229,16 @@ impl NetGate {
         local: bool,
     ) -> Option<Span> {
         self.reserve_text(store, identity, MEETING_SUMMARY, provider, model, local)
+    }
+    pub fn reserve_voice_consultation(&self, store: &mut vults_store::Store, identity: &str) -> Option<Span> {
+        self.reserve_text(
+            store,
+            identity,
+            VOICE_CONSULTATION,
+            "claude",
+            vults_chat::summary::MODEL,
+            false,
+        )
     }
 
     fn reserve_text(
@@ -263,6 +280,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(SLEEP);
         features.push(CLEANUP);
         features.push(MEETING_SUMMARY);
+        features.push(VOICE_CONSULTATION);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -310,6 +328,7 @@ fn feature(key: &str) -> &'static str {
         SLEEP => "sleep",
         CLEANUP => "dictation-cleanup",
         MEETING_SUMMARY => "meeting-summary",
+        VOICE_CONSULTATION => "voice-consultation",
         meeting_assets::FEATURE => "meeting-assets",
         _ => "connectors",
     }
@@ -323,7 +342,7 @@ pub fn seed(features: &[&str]) -> BTreeMap<String, Vec<i64>> {
     features
         .iter()
         .map(|c| {
-            let times = if matches!(*c, CLEANUP | MEETING_SUMMARY) {
+            let times = if matches!(*c, CLEANUP | MEETING_SUMMARY | VOICE_CONSULTATION) {
                 store
                     .as_ref()
                     .ok()
@@ -745,6 +764,47 @@ mod tests {
         assert_eq!(budget(USAGE), USAGE_BUDGET);
         assert_eq!(budget(PHONE), PHONE_BUDGET);
         assert_eq!(budget("unknown"), 0);
+    }
+
+    #[test]
+    fn voice_consultation_has_independent_durable_admission_and_content_free_traces() {
+        use vults_connectors::Gate;
+        let mut settings = crate::settings::Settings::default();
+        settings.voice_realtime.on = true;
+        settings.voice_realtime.ledger = Some("voice".into());
+        settings.connectors.insert(VOICE_CONSULTATION.into(), true);
+        assert!(!switched_on(&settings, VOICE_CONSULTATION));
+        settings.voice_consultation = true;
+        assert!(!switched_on(&settings, VOICE_CONSULTATION));
+        settings.voice_consultation_budget = Some("consultation".into());
+        assert!(switched_on(&settings, VOICE_CONSULTATION));
+        let directory = std::env::temp_dir().join(format!("vults-consult-gate-{}", crate::traces::new_id()));
+        let mut store = vults_store::Store::open(&directory).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let off = NetGate::new(|_| false, budget, BTreeMap::new(), |_| {});
+        assert!(off.reserve_voice_consultation(&mut store, &identity).is_none());
+        for _ in 0..VOICE_CONSULTATION_BUDGET {
+            let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+            assert!(!gate.allow(VOICE_CONSULTATION));
+            let span = gate.reserve_voice_consultation(&mut store, &identity).unwrap();
+            assert_eq!(
+                span.attrs,
+                json!({"vults.feature":"voice-consultation","vults.target":"voice-consultation","vults.provider":"claude","gen_ai.request.model":vults_chat::summary::MODEL,"vults.local":false})
+            );
+        }
+        store.clear_all(&directory).unwrap();
+        drop(store);
+        let mut store = vults_store::Store::open_current(&directory).unwrap();
+        let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+        assert!(gate.reserve_voice_consultation(&mut store, &identity).is_none());
+        assert!(
+            gate.reserve_meeting_summary(&mut store, &identity, "fixture", "fixture", true)
+                .is_some()
+        );
+        let starts = store.request_attempt_starts(VOICE_CONSULTATION, 0).unwrap();
+        assert_eq!(starts.len(), VOICE_CONSULTATION_BUDGET);
+        drop(store);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

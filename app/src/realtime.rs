@@ -14,6 +14,8 @@ mod local;
 mod playback;
 pub use local::{LocalFailure, Recovery, Turn};
 pub use playback::{Channels, Command, Event, Input, LocalReply, Record, Signal};
+#[cfg(target_os = "linux")]
+mod consultation;
 mod devices;
 #[cfg(target_os = "linux")]
 pub(crate) mod routing;
@@ -169,6 +171,17 @@ async fn run_with_audio(
             .lock()
             .is_ok_and(|s| authority(&s))
     });
+    let source: Arc<dyn crate::flock_tools::Source> = Arc::new(app.clone());
+    #[allow(unused_mut)]
+    let mut tools = crate::flock_tools::all(source);
+    #[cfg(target_os = "linux")]
+    consultation::offer(
+        app.clone(),
+        lease.clone(),
+        valid.clone(),
+        channels.output.clone(),
+        &mut tools,
+    );
     #[cfg(target_os = "linux")]
     let router = routing::Router::new(lease.clone(), valid);
     let remote_active = active.clone();
@@ -190,10 +203,7 @@ async fn run_with_audio(
             &*active,
             devices.interruption(),
             move |cancel| factory.output(cancel),
-            {
-                let source: Arc<dyn crate::flock_tools::Source> = Arc::new(app.clone());
-                move |io| connect(consent, remote_active, io, crate::flock_tools::all(source))
-            },
+            move |io| connect(consent, remote_active, io, tools),
             {
                 let app = app.clone();
                 move |turn, deadline| {

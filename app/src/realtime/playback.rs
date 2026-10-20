@@ -79,6 +79,10 @@ pub enum Event {
         generation: Generation,
         reply: LocalReply,
     },
+    Consulting {
+        id: String,
+        reply: LocalReply,
+    },
 }
 pub struct Input {
     pub samples: Vec<i16>,

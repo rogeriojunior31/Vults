@@ -343,7 +343,8 @@ repeat/undo commands. H1's exhaustive voice Intent boundary is unchanged: voice 
 Offline tests cover completed/submitted/failed/missing receipts, mixed batches, timeout publication
 through the native owner, queued revocation/expiry/waiter loss, retained leases and clone replay
 before/after provider construction and interruption. No desktop action, microphone or live provider
-is used. Consultation remains the next V6.6.3 slice; V6.7 still owns capture assembly and visible UI.
+is used. The Claude consultation backend is described below; Codex qualification remains within
+V6.6.3. V6.7 still owns capture assembly and visible UI.
 
 
 ## Read-only tools in realtime
@@ -389,5 +390,58 @@ Offline duplex/native-owner checks cover successful/error continuations, separat
 known/unknown receipts, unaffordable reads, invalid/duplicate/cancelled calls, revocation during a
 read, escaped result bounds, exact offered specs and final audio/history after input release.
 They use synthetic credentials/PCM and no external provider, microphone or desktop action.
-Next: V6.6.3 consultation/completion semantics, then V6.7 capture/UI. Physical speech, provider
-compatibility and acoustic acceptance remain open before activation.
+The Claude consultation backend below extends this registry only after separate consent. Codex
+qualification remains V6.6.3, followed by V6.7 capture/UI. Physical speech, provider compatibility
+and acoustic acceptance remain open before activation.
+
+
+## Text consultation
+
+On Linux, the V6.6.3 native owner adds `consult_claude` only with the separate default-off
+`voice_consultation` choice and its original durable budget identity. Only Settings may change it;
+changing it revokes the voice epoch even if the old choice is restored before the next poll. The
+renderer has no conversation entry or consultation control yet. Default offerings remain the five
+cached flock reads. Codex is not offered until equivalent text-only isolation is qualified.
+
+Each consultation supplies one nonempty question of at most 256 bytes, without control characters.
+It uses the existing Claude Code text helper with Haiku, a new private empty working directory,
+empty built-in tool selection, MCP-tool exclusion, strict MCP configuration, no user/project
+settings, disabled skills and no saved session. File-mention expansion, CLAUDE.md discovery, auto
+memory and nonessential CLI traffic are explicitly disabled. Clients older than 2.1.299, unknown
+versions and other major/minor series are refused before a question starts: older clients may
+silently ignore these controls. The shared helper applies this version check to its existing
+journal/memory/sleep callers too. [Claude CLI controls](https://code.claude.com/docs/en/cli-reference)
+and [environment controls](https://code.claude.com/docs/en/env-vars) define these switches. Vults does
+not use bare mode, which bypasses subscription authentication, or weaken managed organizational
+policy. This adapter is not an OS sandbox; enforced managed policy may still load hooks or contact
+its own services. Managed-client behavior needs separate qualification before activation.
+
+Vults supplies only the question, with no project/session context or project-reading tool. It does
+not resume a live agent, delegate work or borrow Chat's history, tools, policies or full access. The separate
+`voice-consultation` gate durably reserves at most 20 attempts per rolling 24 hours, including
+failures; realtime monetary reservations do not pay for or authorize these CLI attempts. Restart,
+consent toggles, history erasure or ledger replacement cannot silently renew the allowance. Traces
+contain feature/provider/model, timing and outcome, never question or reply. Vults does not retry a
+failed consultation or switch to another provider; the installed CLI retains its own connection
+and authentication behavior.
+
+One background worker retains the busy slot and exclusive native voice lease through preparation
+and acknowledged child exit. The original call time anchors a 60-second cancellation deadline,
+including preparation and CLI version checking. At 1.5 seconds it may emit one translated,
+request-identified Consulting notice into the current native output channel. Fast replies skip it;
+it is status data, not generated speech or heard history. Cancellation, lost waiter, lock, epoch or
+output revocation suppress stale results/notices and request child termination. The worker awaits
+exit instead of releasing ownership after a kill request. Uninterruptible local IO or teardown can
+keep it busy beyond the deadline; another consultation/session cannot overlap that retained work.
+
+The realtime tool timeout may explicitly reach 60 seconds; cached reads retain their ten-second
+limit and the original input's 120-second chain deadline is never extended. Successful/error text
+uses the existing bounded inert result envelope with `outside=true`; it has no permission authority.
+A consumed receipt prevents input recovery or replay even if consultation or its continuation fails.
+The 1.5-second notice has no renderer consumer yet; V6.7 owns its display and opt-in controls.
+
+Offline tests exercise notice timing, original deadlines across slow admission, cancellation and
+teardown ownership, child reaping, bounded output, arguments, the client controls/version check,
+durable independent admission and consent upgrades. They run synthetic local child processes and
+no model, microphone or desktop action. Codex consultation and live Claude/provider compatibility
+remain open; V6.6.3 is not complete.
