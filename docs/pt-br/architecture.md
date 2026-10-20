@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: e994138caeac -->
+<!-- source: 49cdaf24da33 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -102,10 +102,19 @@ atual de silêncio; valores não finitos/fora do intervalo ou uma falha de infer
 pelo resto da conversa. A espera adicional absoluta é de 1,2 s desde quando o silêncio seria
 elegível, não desde uma consulta atrasada; um pedido travado não a estende. Retomar a fala cancela
 o token e a espera pendentes; cancelamento/novos turnos recusam callbacks antigos. A conclusão é
-emitida uma vez. Este módulo não tem chamadas no app nem inferência de modelo: a V6.2.2 ainda cobre
-a janela de áudio de oito segundos, paridade log-mel, verificação das licenças de código/pesos,
-artefatos conferidos e integração ONNX opcional. Limites de duração da captura e entrada vazia ficam
-com o adaptador. Os gravadores existentes do Chat/ditado mantêm suas próprias regras de parada.
+emitida uma vez. Limites de duração da captura e entrada vazia ficam com o adaptador. Os gravadores
+existentes do Chat/ditado mantêm suas próprias regras de parada.
+
+A V6.2.2 acrescenta o backend opcional `semantic-turn`, com grafo smart-turn v3.0 fixado e runtime
+CPU Linux x64 qualificado de forma independente. Corte/preenchimento à esquerda de oito segundos,
+normalização e features Whisper/Slaney correspondem às matrizes NumPy da implementação de referência;
+uma execução nativa explícita com artefatos conferidos corresponde às probabilidades de referência.
+A admissão compartilhada `model_file` mantém os bytes exatos, e `onnx::Runtime` passa a ser o único
+responsável nativo por diarização e turnos semânticos. Admissão interativa cancelável, prazos por
+quadro no pré-processamento e encerramento via RunOptions respeitam o orçamento restante do token
+da política. A construção do modelo/sessão nativa não promete aborto imediato. Não há chamada no app,
+download, opção em Configurações ou captura nova. Veja [Modelo semântico de fim de turno](reference/semantic-turn-model.md)
+para origem BSD-2-Clause, pins exatos, comandos de qualificação e critérios pendentes de fala/latência/plataforma.
 
 <a id="local-dictation"></a>
 

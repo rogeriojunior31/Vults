@@ -123,6 +123,12 @@ impl EndOfTurn {
     pub fn semantic_enabled(&self) -> bool {
         self.semantic && !self.failed
     }
+    /// Map this injected-clock deadline to the worker's remaining native budget before dispatch.
+    pub fn semantic_deadline(&self, ticket: Ticket) -> Option<Duration> {
+        (self.pending == Some(ticket) && !self.complete)
+            .then(|| self.hold.map(|at| at.saturating_add(SEMANTIC_HOLD)))
+            .flatten()
+    }
     fn ready_at(&self) -> Option<Duration> {
         self.quiet
             .filter(|_| !self.speaking && self.words > 0)

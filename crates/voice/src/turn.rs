@@ -4,6 +4,8 @@
 use std::time::Duration;
 
 pub mod end;
+#[cfg(feature = "semantic-turn")]
+pub mod semantic;
 
 pub const REPLAY: Duration = Duration::from_millis(260);
 pub const TAIL_GRACE: Duration = Duration::from_millis(450);

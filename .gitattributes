@@ -1,2 +1,5 @@
 # LF everywhere: generated files are compared byte for byte, and rustfmt expects LF.
 * text=auto eol=lf
+
+# Numeric fixtures retain exact bytes on every platform.
+*.f32le binary

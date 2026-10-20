@@ -43,7 +43,7 @@ remain separate; N3 is not complete.
 |---|---|---|---|
 | The reference app credited in `NOTICE` | MIT | Key state machine, text pipeline (snippets, replacements, dictionary), X11/Wayland paste, clipboard lease, history and statistics, meeting notes, end-of-turn policy | Ported, credited only in `NOTICE` (`check-brand.sh`) |
 | [voicebox](https://github.com/jamiepine/voicebox) | MIT | Clean-up prompts ("a text filter, not an assistant", three rules), whisper loop remover, key chords (Space locks mid-hold), focus-safe overlay, conditional clipboard restore, MCP with an identified client | Rust copied; Python rewritten in Rust; `NOTICE` line when code is translated |
-| [Patter](https://github.com/PatterAI/Patter) | MIT | Turn and barge-in state machine, VAD hysteresis, semantic end of turn (smart-turn v3, Apache-2.0 weights), sentence chunker with Portuguese rules, per-stage metrics | Design and constants; code rewritten |
+| [Patter](https://github.com/PatterAI/Patter) | MIT | Turn and barge-in state machine, VAD hysteresis, semantic end of turn (smart-turn v3, BSD-2-Clause code/weights verified in V6.2.2), sentence chunker with Portuguese rules, per-stage metrics | Design and constants; code rewritten |
 | VoiceStudio | AGPL-3.0 | Ideas only: spoken code in terminals, a fallback model, an honest "Pasted" vs "Copied", pause | No code |
 
 The research notes behind this plan (per-project specs with file:line citations) are kept outside the
@@ -2405,7 +2405,7 @@ All 1,273 workspace tests pass (10 documented ignores), plus 10 evals, workspace
 formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
 No renderer/native behavior changes require a new GUI run; the app remains closed.
 
-**V6.2 End of turn** (M) — in progress; V6.2.1 delivered 2026-10-19
+**V6.2 End of turn** (M) — backend engineering delivered 2026-10-19; runtime/speech acceptance remains open
 - Build:
   - a silence policy of 1.6 s, or 2.6 s when the last word extends (pt/en lists: conjunctions, fillers,
     articles);
@@ -2413,7 +2413,7 @@ No renderer/native behavior changes require a new GUI run; the app remains close
     200 ms, hold at most 1200 ms, off after one failure.
 - Port: [VA] 194-198 (`TurnEndPolicy.swift:18-55`); [PT] 64-73, 309-310 (`smart_turn.py:86-250`).
 - Tests: log-mel parity against stored reference arrays; policy table.
-- Licence check of smart-turn's weights (the spec says Apache-2.0; confirm on the model card).
+- Licence verified in V6.2.2: the pinned official code/model card declare BSD-2-Clause, correcting the earlier Apache-2.0 assumption.
 - Q8: how well smart-turn handles pt-BR is unknown.
 
 V6.2 delivery sequence:
@@ -2425,10 +2425,12 @@ V6.2 delivery sequence:
    hold from nominal silence eligibility. One invalid score/inference failure disables semantics
    for the rest of the conversation. Speech restarts, new generations and cancellation invalidate
    pending work; completion is once-only. Speaker capture/permission authority is unchanged.
-2. **V6.2.2 Semantic model and parity** — pending. Verify code/weight licenses and checked artifact
-   identities, implement the last-eight-second window and Whisper log-mel preprocessing, prove parity
-   against stored primary reference arrays, then add optional `ort` inference. No download or model
-   is approved/enabled by the pure scheduler. Capture/runtime integration follows with V6.3-V6.7.
+2. **V6.2.2 Semantic model and parity** — implemented 2026-10-19. The optional `semantic-turn`
+   backend verifies an exact int8 v3.0 graph and qualified ONNX Runtime 1.31.0 Linux x64 CPU library.
+   Code/model licenses are BSD-2-Clause; retained notices also cover the Apache-2.0 Transformers
+   reference. Eight-second left-pad/crop and Whisper log-mel preprocessing match full primary NumPy
+   arrays, and a real checked-model/runtime run matches reference probabilities. There is no app
+   download offer, configuration or capture; conversation/runtime integration follows in V6.3-V6.7.
 
 Eleven policy regressions plus V6.1's ten turn cases cover language/word boundaries, silence before
 words, continuing voice, partial rewrites/growth, duplicate VAD ends, score pacing/threshold, hung
@@ -2442,6 +2444,34 @@ caller yet. Actual speech, semantic-model quality and pt-BR qualification remain
 All 1,284 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
 formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
 No renderer/native behavior changes require another GUI run; the app remains closed.
+
+V6.2.2 evidence: three full `[1,80,800]` reference arrays cover short padding, over-window noise and
+the existing speech fixture, plus an exact silence oracle. Maximum feature difference is below
+`1e-4` (observed `1.1920929e-7`); four native probabilities match the pinned Python/runtime reference
+within `2e-4` (observed identical f32 values). An initial older-runtime probability mismatch was
+isolated with the exact reference tensor; qualification now pins both the native library and graph
+optimization/thread settings. Other CPU targets still need qualification; these are numerical
+oracles, not real-conversation endpoint labels or pt-BR quality acceptance.
+
+Shared exact-file admission and native runtime/session ownership preserve the diarization API.
+Review fixed uncancellable foreground queue waits and preprocessing without a deadline; held-slot,
+expired-feature, hung-native-work and unwind regressions cover those paths. The policy exposes each
+ticket's original absolute deadline, so dispatch delay cannot grant extra inference time. New speech,
+turn replacement and cancellation retain their existing revocation authority. Runtime/session construction
+cannot abort; running inference receives cooperative termination.
+CI's offline speech job now includes semantic-turn in both Clippy and the voice tests, while native
+artifact qualification stays ignored by default. Final independent review has no remaining blocker.
+The app stays closed and no user audio/model,
+profile, setting or agent configuration is changed. See the [artifact reference](../reference/semantic-turn-model.md).
+Next: V6.3's gated realtime client and monetary reservations; real speech/latency acceptance remains open.
+
+All 1,285 workspace tests pass (10 documented ignores), plus 10 evals and 147 tests in the exact
+amended offline CI feature combination (8 explicit native/hardware ignores). The checked-artifact
+native parity test also passes explicitly. Workspace/preview/optional-feature Clippy, renderer build,
+all 18 renderer checks, formatting, repository guards and cargo-deny pass. No new dependency version
+is introduced; `rustfft` is an existing dependency made directly available to this optional backend.
+The QA environment/artifact copies are removed after archiving evidence; no GUI run is needed for
+this backend-only step.
 
 **V6.3 Realtime client** (L)
 - Build:
@@ -2956,7 +2986,7 @@ measurements here rather than maintaining a second phase table.
    raw-text fallback.
 8. **Licences.**
    - Diarization weights are gated on Hugging Face.
-   - smart-turn's licence needs confirming.
+   - smart-turn's BSD-2-Clause code/weights were verified in V6.2.2; new artifacts still need their own review.
    - Each audio host crate needs `cargo deny`.
    - No `sherpa-onnx` crate (espeak-ng).
 9. **Brand.** Ported code must not carry the source's name; reviews grep for it (`check-brand.sh` catches

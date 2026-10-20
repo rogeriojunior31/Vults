@@ -1548,3 +1548,24 @@ and optional ONNX inference, followed by V6.3-V6.7 integration. Speech/pt-BR qua
 All 1,284 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
 formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
 No renderer/native behavior changes require another GUI run; the app remains closed.
+
+
+**2026-10-19 V6.2.2 qualified semantic backend.** Optional `semantic-turn` verifies the pinned v3.0
+graph and independently qualified Linux x64 CPU runtime, computes eight-second Whisper/Slaney
+features and scores through `ort`. Full primary NumPy arrays match within `1e-4`; all four native
+probabilities match the reference within `2e-4`. An older-runtime mismatch was diagnosed rather than
+loosening tests; the graph, runtime fingerprint, optimization and thread options are now fixed.
+BSD-2-Clause code/weight provenance corrects the earlier Apache-2.0 assumption. EN/PT reference and
+retained licenses record hashes, reproduction parameters and qualification limits. Shared model-file
+admission/runtime/session ownership preserve diarization callers. Review's queue/preprocessing deadline
+findings are fixed with cancellation, absolute budgets and regressions; final review has no blocker.
+V6.2 backend engineering is delivered; app activation, real speech/pt-BR quality, latency and other
+platform/CPU acceptance stay open. Next is V6.3's gated realtime client and cost reservation work.
+No app/UI/capture/download/settings/agent-config behavior changes in this step.
+All 1,285 workspace tests pass (10 documented ignores), plus 10 evals and 147 tests in the exact
+amended offline CI feature combination (8 explicit native/hardware ignores). The checked-artifact
+native parity test also passes explicitly. Workspace/preview/optional-feature Clippy, renderer build,
+all 18 renderer checks, formatting, repository guards and cargo-deny pass. No new dependency version
+is introduced; `rustfft` is an existing dependency made directly available to this optional backend.
+The QA environment/artifact copies are removed after archiving evidence; no GUI run is needed for
+this backend-only step.

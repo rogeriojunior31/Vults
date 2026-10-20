@@ -95,10 +95,18 @@ request every 200 ms. A probability at least 0.5 may finish only after the curre
 nonfinite/out-of-range scores or one inference failure disable it for the rest of that conversation.
 The absolute extra wait is 1.2 s from nominal silence eligibility, not from a delayed poll; a hung
 request cannot extend it. Renewed speech cancels the pending ticket and hold; cancellation/new turns
-reject old callbacks. Completion is emitted once. This module has no app caller or model inference:
-V6.2.2 still owns the eight-second audio window, log-mel parity, weight/code license verification,
-checked artifacts and optional ONNX integration. Capture duration/empty-input limits remain with the
+reject old callbacks. Completion is emitted once. Capture duration/empty-input limits remain with the
 adapter. Existing Chat/dictation recorders keep their own stop rules.
+
+V6.2.2 adds the optional `semantic-turn` backend with a pinned smart-turn v3.0 graph and independently
+qualified Linux x64 CPU runtime. Eight-second crop/left-pad, normalization and Whisper/Slaney features
+match stored primary NumPy arrays; an explicit checked-artifact native run matches the reference
+probabilities. Shared `model_file` admission retains exact bytes, and `onnx::Runtime` is now the single
+native owner for both diarization and semantic turns. Cancellable foreground admission, per-frame
+preprocessing deadlines and native RunOptions termination respect the policy ticket's remaining
+budget. Model/native session construction cannot promise immediate abort. No app caller, download,
+Settings switch or capture is added. See [Semantic turn model](reference/semantic-turn-model.md) for
+BSD-2-Clause provenance, exact pins, qualification commands and open speech/latency/platform gates.
 
 ## Local dictation
 

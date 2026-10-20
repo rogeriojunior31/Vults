@@ -64,11 +64,11 @@ jobs:
         run: |
           cargo clippy -p vults-audio --features meeting-capture --all-targets -- -D warnings
           cargo test -p vults-audio --features meeting-capture
-      - name: offline meeting backends (no models, runtime or audio downloads)
+      - name: offline speech backends (no models, runtime or audio downloads)
         if: runner.os == 'Linux'
         run: |
-          cargo clippy -p vults-voice -p vults-spike --features vults-spike/diarization,vults-spike/meeting-assets --all-targets -- -D warnings
-          cargo test -p vults-voice --features diarization,meeting-assets
+          cargo clippy -p vults-voice -p vults-spike --features vults-voice/semantic-turn,vults-spike/diarization,vults-spike/meeting-assets --all-targets -- -D warnings
+          cargo test -p vults-voice --features diarization,meeting-assets,semantic-turn
           cargo test -p vults-spike --features diarization --bin vults-diarization-spike
           cargo clippy -p vults-app --features meeting-speakers --all-targets -- -D warnings
           cargo test -p vults-app --features meeting-speakers

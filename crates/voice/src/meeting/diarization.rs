@@ -3,15 +3,14 @@
 mod cluster;
 mod control;
 mod inference;
-mod runtime;
 
 use std::io::{Read, Seek};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, TryLockError};
 
 use super::{speaker_models::VerifiedModels, speakers::Timeline, wav};
+pub use crate::onnx::Runtime;
 pub use crate::vad::SpeechProfile;
-pub use runtime::Runtime;
 
 const RATE: usize = crate::SAMPLE_RATE as usize;
 const MAX_SAMPLES: usize = RATE * 30 * 60;

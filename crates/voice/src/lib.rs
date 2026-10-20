@@ -3,7 +3,10 @@
 
 mod gate;
 pub mod meeting;
+mod model_file;
 mod models;
+#[cfg(any(feature = "diarization", feature = "semantic-turn"))]
+pub mod onnx;
 mod preview;
 mod record;
 mod scheduler;

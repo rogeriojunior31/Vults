@@ -251,3 +251,12 @@ fn delayed_scheduler_and_revised_text_cannot_bypass_silence_or_extend_semantic_h
         Decision::End(Reason::Semantic)
     );
 }
+
+#[test]
+fn worker_deadline_keeps_nominal_hold_and_disappears_when_ticket_is_revoked() {
+    let mut end = paused(true);
+    let pending = ticket(send(&mut end, Event::Tick, 2700));
+    assert_eq!(end.semantic_deadline(pending), Some(ms(3800)));
+    send(&mut end, Event::SpeechStarted, 2800);
+    assert_eq!(end.semantic_deadline(pending), None);
+}
