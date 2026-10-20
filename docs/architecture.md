@@ -130,6 +130,15 @@ known overruns remain visible in full. The synthetic session cassette is offline
 microphone or permission authority is added. See [Realtime accounting](reference/realtime-accounting.md)
 for source rates, the ceiling proof, qualification expiry and runtime acceptance still required.
 
+V6.3.3 adds a fixed-origin TLS WebSocket provider, bounded streaming PCM channels and an app-owned
+monetary gate. Settings 41 keeps independent default-off consent, limit/model and ledger binding.
+One revocable voice lease checks consent/lock/cancel throughout setup, IO and publication; shutdown
+permanently closes admission. Reservations precede keyring access/connect/audio; receipt settlement
+continues after revocation. Unclaimed handoff guards refund only proven-unsent work, and unresolved
+holds block a new voice owner. No automatic orphan recovery or native capture/playback entry is
+added. Duplex socket tests are offline; live-provider/native acceptance and text fallback orchestration
+remain open before activation. The network inventory lists the concrete transport and its tests.
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/

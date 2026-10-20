@@ -27,6 +27,18 @@ fn charged(conn: &rusqlite::Connection, feature: &str, now_ms: i64) -> Result<i6
 }
 
 impl Store {
+    /// A new voice owner cannot establish remaining spend while a previous owner is unresolved.
+    pub fn has_open_cost(&self, expected: &str, feature: &str) -> Result<bool, Error> {
+        if self.request_budget_id()? != expected {
+            return Err(Error::Invalid("The monetary ledger identity changed"));
+        }
+        Ok(self.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM request_costs WHERE feature=?1 AND end_ms IS NULL)",
+            [feature],
+            |r| r.get(0),
+        )?)
+    }
+
     /// Atomically hold a known upper cost and its starting trace against a shared rolling limit.
     /// One USD is 1,000,000 micro-USD. None means no safe quote, never unlimited admission.
     /// The caller must bound all billable work before sending; this ledger does not quote prices.

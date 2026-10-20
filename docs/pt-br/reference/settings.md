@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 59bbb30c9118 -->
+<!-- source: 951bb434b308 -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -118,7 +118,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 
 | Chave | Padrão | Significado |
 |---|---|---|
-| `version` | `39` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
+| `version` | `41` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
@@ -130,6 +130,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 | `dictation_cleanup_budget` | ausente | Identidade interna do registro local salva na primeira ativação explícita da limpeza; preservada enquanto desligada e após Clear history. Estado de orçamento ausente, divergente ou ilegível impede requisições de limpeza; nunca enviada ao provedor (a partir da versão 37) |
 | `meeting_summary` | `false` | Consentimento separado para o backend de resumos de reuniões por meio do provedor/modelo escolhido do chat por API; não herdado da limpeza do ditado. Configurado em **Ditado > Configurações de reuniões**; as abas Resumo/Pendências ficam no Ninho. Um pedido explícito do Ninho exige transcrição concluída e reserva durável de uma das 20 tentativas por 24 horas móveis (chamadas locais e falhas incluídas), com prazo total de 120 segundos. Desligar ou mudar provedor/modelo/chave cancela o trabalho; falhas preservam o texto local (a partir da versão 39) |
 | `meeting_summary_budget` | ausente | Identidade do registro local vinculada na primeira ativação explícita dos resumos; preservada ao desligar e após Clear history. Uma identidade ausente/divergente ou um registro ilegível impede chamadas; substituir o banco nunca renova silenciosamente o consentimento (a partir da versão 39) |
+| `voice_realtime` | `{on:false, ledger:null, limit_microusd:1000000, model:"gpt-realtime-2.1-mini"}` | Consentimento independente de voz só no backend (versão 41). Apenas a webview de Configurações salva a escolha; ainda sem controle visual/captura. Zero desativa voz remota. A identidade do registro permanece ao desligar/apagar histórico e precisa coincidir antes da admissão monetária; reservas pendentes recusam novos responsáveis. Veja [Contabilidade realtime](realtime-accounting.md) |
 | `dictation_style` | `"natural"` | Padrão global para aplicativos identificados sem categoria/escolha explícita: `"verbatim"`, `"natural"`, `"polished"`, `"prompt"`. Escolhas por aplicativo ficam em `dictation_styles`; sessões mantêm Prompt. Foco ausente mantém texto local; estilos nunca ativam a limpeza (a partir da versão 38; controles em **Ditado > Estilos**) |
 | `dictation_write_in` | ausente | Idioma de saída opcional: `"en"`, `"pt-BR"`, `"es"`, `"zh"`; ausente mantém o idioma falado. Como falado não faz requisição nem traduz. Capturado ao pressionar a tecla, com idioma de saída aplicado guardado separado do idioma ouvido (a partir da versão 38) |
 | `dictation_sessions_english` | `false` | Usa inglês na saída apenas em sessões reconhecidas do bando, com Prompt. Outros aplicativos mantêm Escrever em; contexto ambíguo de sessão nunca ativa inglês. Requer o consentimento separado da limpeza (a partir da versão 38) |

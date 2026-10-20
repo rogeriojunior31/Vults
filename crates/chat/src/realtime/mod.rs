@@ -1,6 +1,7 @@
 //! Offline Realtime protocol/cost contract. No sockets, keys, microphone or admission authority.
 //! The app must reserve the quoted ceiling through its monetary gate BEFORE sending a prepared event.
 mod pricing;
+pub mod transport;
 
 use pricing::{CONTEXT, Rates, Usage};
 use serde_json::{Value, json};

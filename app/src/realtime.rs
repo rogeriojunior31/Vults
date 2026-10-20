@@ -1,0 +1,280 @@
+//! Backend service for V6. No renderer or microphone entry point is exposed before V6.7.
+use serde::{Deserialize, Serialize};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, AtomicU64, Ordering},
+};
+use tauri::{AppHandle, Manager};
+use vults_chat::realtime::{
+    Plan,
+    transport::{Channels, Failure, OpenAi, Provider},
+};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Consent {
+    pub on: bool,
+    pub ledger: Option<String>,
+    pub limit_microusd: u64,
+    pub model: String,
+}
+impl Default for Consent {
+    fn default() -> Self {
+        Self {
+            on: false,
+            ledger: None,
+            limit_microusd: 1_000_000,
+            model: "gpt-realtime-2.1-mini".into(),
+        }
+    }
+}
+impl Consent {
+    pub(crate) fn enabled(&self) -> bool {
+        self.on
+            && self.ledger.as_ref().is_some_and(|s| !s.is_empty())
+            && self.limit_microusd > 0
+            && self.limit_microusd <= i64::MAX as u64
+            && Plan::new(&self.model, 8192, 1024).is_ok()
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct State {
+    closed: AtomicBool,
+    epoch: AtomicU64,
+    running: AtomicBool,
+}
+impl State {
+    fn begin(self: &Arc<Self>) -> Result<(Lease, u64), Failure> {
+        let epoch = self.epoch.load(Ordering::SeqCst);
+        if self.closed.load(Ordering::SeqCst) {
+            return Err(Failure::Off);
+        }
+        if self.running.swap(true, Ordering::SeqCst) {
+            return Err(Failure::Busy);
+        }
+        Ok((Lease(self.clone()), epoch))
+    }
+    fn current(&self, epoch: u64) -> bool {
+        !self.closed.load(Ordering::SeqCst)
+            && self.running.load(Ordering::SeqCst)
+            && self.epoch.load(Ordering::SeqCst) == epoch
+    }
+    fn key_changed(&self, provider: &str) {
+        if provider == "openai" {
+            self.epoch.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+    fn close(&self) {
+        self.closed.store(true, Ordering::SeqCst);
+        self.epoch.fetch_add(1, Ordering::SeqCst);
+    }
+}
+pub(crate) fn invalidate<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(state) = app.try_state::<Arc<State>>() {
+        state.epoch.fetch_add(1, Ordering::SeqCst);
+    }
+}
+pub(crate) fn shutdown<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(state) = app.try_state::<Arc<State>>() {
+        state.close();
+    }
+}
+pub(crate) fn key_changed<R: tauri::Runtime>(app: &tauri::AppHandle<R>, provider: &str) {
+    if let Some(state) = app.try_state::<Arc<State>>() {
+        state.key_changed(provider);
+    }
+}
+struct Lease(Arc<State>);
+impl Drop for Lease {
+    fn drop(&mut self) {
+        self.0.epoch.fetch_add(1, Ordering::SeqCst);
+        self.0.running.store(false, Ordering::SeqCst);
+    }
+}
+
+/// Only a future native voice owner supplies channels. This does not authorize microphone capture.
+pub async fn run(app: AppHandle, channels: Channels) -> Result<(), Failure> {
+    let state = app.state::<Arc<State>>().inner().clone();
+    let (_lease, epoch) = state.begin()?;
+    if crate::lock::locked(&app) {
+        return Err(Failure::Off);
+    }
+    let consent = app
+        .state::<crate::settings::SettingsState>()
+        .0
+        .lock()
+        .map_err(|_| Failure::Off)?
+        .voice_realtime
+        .clone();
+    if !consent.enabled() {
+        return Err(Failure::Off);
+    }
+    let plan = Plan::new(&consent.model, 8192, 1024).map_err(|_| Failure::Budget)?;
+    let expected = consent.clone();
+    let cancel = channels.cancel.clone();
+    let check_app = app.clone();
+    let gate = crate::gate::realtime::RealtimeGate {
+        directory: crate::history::dir(),
+        consent,
+        authorized: Arc::new(move || {
+            state.current(epoch)
+                && !*cancel.borrow()
+                && cancel.has_changed().is_ok()
+                && !crate::lock::locked(&check_app)
+                && check_app
+                    .state::<crate::settings::SettingsState>()
+                    .0
+                    .lock()
+                    .is_ok_and(|s| s.voice_realtime == expected)
+        }),
+    };
+    OpenAi.run(plan, &gate, channels).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vults_chat::realtime::transport::Gate;
+    #[test]
+    fn revocation_between_entry_and_snapshot_and_shutdown_cannot_be_undone() {
+        let state = Arc::new(State::default());
+        let (lease, epoch) = state.begin().unwrap();
+        assert!(state.current(epoch));
+        assert_eq!(state.begin().err(), Some(Failure::Busy));
+        state.epoch.fetch_add(1, Ordering::SeqCst);
+        assert!(!state.current(epoch));
+        drop(lease);
+        let (next, new_epoch) = state.begin().unwrap();
+        assert!(state.current(new_epoch));
+        assert!(!state.current(epoch));
+        state.close();
+        assert!(!state.current(new_epoch));
+        drop(next);
+        assert_eq!(state.begin().err(), Some(Failure::Off));
+    }
+
+    #[test]
+    fn old_settings_and_zero_or_unbound_consent_never_enable_remote_voice() {
+        let mut value = serde_json::to_value(crate::settings::Settings::default()).unwrap();
+        value.as_object_mut().unwrap().remove("voice_realtime");
+        let old: crate::settings::Settings = serde_json::from_value(value).unwrap();
+        assert_eq!(old.voice_realtime, Consent::default());
+        assert!(!old.voice_realtime.enabled());
+        let mut consent = Consent {
+            on: true,
+            ..Consent::default()
+        };
+        assert!(!consent.enabled());
+        consent.ledger = Some("identity".into());
+        assert!(consent.enabled());
+        consent.limit_microusd = 0;
+        assert!(!consent.enabled());
+        consent.limit_microusd = 1_000_000;
+        consent.model = "unknown".into();
+        assert!(!consent.enabled());
+    }
+
+    #[test]
+    fn openai_key_changes_revoke_existing_connections_without_coupling_other_providers() {
+        let state = Arc::new(State::default());
+        let (lease, epoch) = state.begin().unwrap();
+        state.key_changed("anthropic");
+        assert!(state.current(epoch));
+        state.key_changed("openai");
+        assert!(!state.current(epoch));
+        drop(lease);
+        let (_lease, epoch) = state.begin().unwrap();
+        state.key_changed("openai");
+        assert!(!state.current(epoch));
+    }
+
+    #[tokio::test]
+    async fn durable_admission_survives_erasure_and_abandoned_handoff_never_leaks_allowance() {
+        let dir = std::env::temp_dir().join(format!("vults-realtime-admission-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut db = vults_store::Store::open(&dir).unwrap();
+        let identity = db.request_budget_id().unwrap();
+        let gate = crate::gate::realtime::RealtimeGate {
+            directory: dir.clone(),
+            consent: Consent {
+                on: true,
+                ledger: Some(identity.clone()),
+                limit_microusd: 179200,
+                ..Consent::default()
+            },
+            authorized: Arc::new(|| true),
+        };
+        drop(gate.reserve(179200).await.unwrap());
+        assert!(!db.has_open_cost(&identity, crate::gate::VOICE_REALTIME).unwrap());
+        let attempt = gate.reserve(179200).await.unwrap().claim();
+        assert!(gate.reserve(1).await.is_none());
+        db.clear_all(&dir).unwrap();
+        assert!(gate.reserve(1).await.is_none());
+        assert!(gate.finish(&attempt, Some(2059), false).await);
+        assert!(!gate.finish(&attempt, Some(0), true).await);
+        let next = gate.reserve(177141).await.unwrap().claim();
+        assert!(gate.finish(&next, None, false).await);
+        assert!(gate.reserve(1).await.is_none());
+        assert!(
+            db.spans(20)
+                .unwrap()
+                .iter()
+                .all(|s| !s.attrs.to_string().contains("audio"))
+        );
+        drop(db);
+        std::fs::remove_dir_all(&dir).unwrap();
+        vults_store::Store::open(&dir).unwrap();
+        assert!(gate.reserve(1).await.is_none());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn detached_unclaimed_admission_is_refunded_even_when_authority_stays_valid() {
+        let dir = std::env::temp_dir().join(format!("vults-realtime-handoff-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let db = vults_store::Store::open(&dir).unwrap();
+        let identity = db.request_budget_id().unwrap();
+        let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let checks = calls.clone();
+        let release = Arc::new(std::sync::Barrier::new(2));
+        let unblock = release.clone();
+        let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
+        let signal = std::sync::Mutex::new(Some(entered_tx));
+        let gate = Arc::new(crate::gate::realtime::RealtimeGate {
+            directory: dir.clone(),
+            consent: Consent {
+                on: true,
+                ledger: Some(identity.clone()),
+                ..Consent::default()
+            },
+            authorized: Arc::new(move || {
+                if checks.fetch_add(1, Ordering::SeqCst) == 2 {
+                    let _ = signal.lock().unwrap().take().unwrap().send(());
+                    unblock.wait();
+                }
+                true
+            }),
+        });
+        let pending = gate.clone();
+        let task = tokio::spawn(async move { pending.reserve(179200).await });
+        tokio::time::timeout(std::time::Duration::from_secs(2), entered_rx)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(db.has_open_cost(&identity, crate::gate::VOICE_REALTIME).unwrap());
+        task.abort();
+        let _ = task.await;
+        release.wait();
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            while db.has_open_cost(&identity, crate::gate::VOICE_REALTIME).unwrap() {
+                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(db.spans(10).unwrap()[0].attrs["vults.cost.actual_microusd"], 0);
+        drop(db);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+}

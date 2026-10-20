@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: c6616b0753e0 -->
+<!-- source: 3c80864a881c -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -140,6 +140,17 @@ reembolsam sua reserva. Texto/áudio em cache têm preços separados; excessos c
 integralmente. A cassette sintética é offline; não adiciona chamada ao provedor, microfone nem
 autoridade de permissão. Veja [Contabilidade realtime](reference/realtime-accounting.md) para fontes
 das tarifas, demonstração do teto, expiração da qualificação e validação em execução ainda obrigatória.
+
+A V6.3.3 acrescenta provedor WebSocket TLS de origem fixa, canais limitados de PCM em streaming e gate
+monetário controlado pelo app. Configurações 41 mantém consentimento independente desligado por
+padrão, limite/modelo e vínculo com o registro. Uma concessão revogável de voz verifica escolha/
+bloqueio/cancelamento durante configuração, IO e publicação; encerrar o app fecha permanentemente
+a admissão. Reservas antecedem chaveiro/conexão/áudio; a conciliação dos recibos continua após
+revogação. Guardiões de entrega não reclamada restituem apenas trabalho comprovadamente não enviado,
+e reservas pendentes bloqueiam um novo responsável. Não há recuperação automática de reservas órfãs
+nem entrada nativa de captura/reprodução. Os testes duplex são offline; validação com provedor/
+dispositivos reais e orquestração da alternativa em texto continuam pendentes antes da ativação.
+O inventário de rede lista o transporte concreto e seus testes.
 
 <a id="local-dictation"></a>
 

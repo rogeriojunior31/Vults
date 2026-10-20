@@ -1672,9 +1672,14 @@ pub async fn api_key_set(
             )
         });
     }
-    tauri::async_runtime::spawn_blocking(move || secrets::set(p.secret(), &key))
-        .await
-        .map_err(|_| "Can't save the key.".to_string())??;
+    let changed = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = secrets::set(p.secret(), &key);
+        crate::realtime::key_changed(&changed, p.id);
+        result
+    })
+    .await
+    .map_err(|_| "Can't save the key.".to_string())??;
     #[cfg(target_os = "linux")]
     crate::dictation::cleanup::invalidate(&app);
     crate::meetings::summary::invalidate(&app);
@@ -1687,9 +1692,14 @@ pub async fn api_key_set(
 pub async fn api_key_clear(window: tauri::Webview, app: AppHandle, provider: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let p = self::provider(&provider)?;
-    tauri::async_runtime::spawn_blocking(move || secrets::delete(p.secret()))
-        .await
-        .map_err(|_| "Can't remove the key.".to_string())??;
+    let changed = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = secrets::delete(p.secret());
+        crate::realtime::key_changed(&changed, p.id);
+        result
+    })
+    .await
+    .map_err(|_| "Can't remove the key.".to_string())??;
     #[cfg(target_os = "linux")]
     crate::dictation::cleanup::invalidate(&app);
     crate::meetings::summary::invalidate(&app);

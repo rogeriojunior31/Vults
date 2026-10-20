@@ -2,7 +2,7 @@
 # ADR 0019). One line each: a path or crate:<name>, then the reason. docs/safety.md, "Every request
 # Vults makes", lists the same requests for users; change both together.
 
-crate:vults-chat   the chat's HTTP client (providers.rs client()) and filter.rs's independently gated dictation clean-up and meeting-summary client; api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens; embed.rs asks a local Ollama on 127.0.0.1 only for recall's embeddings (M5)
+crate:vults-chat   the chat's HTTP client (providers.rs client()) and filter.rs's independently gated dictation clean-up and meeting-summary client; api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens; embed.rs asks a local Ollama on 127.0.0.1 only for recall's embeddings (M5); realtime/transport.rs uses a fixed-origin TLS WebSocket through app-owned monetary admission
 crate:vults-voice  user-clicked voice downloads (models.rs), plus the reviewed meeting installer (meeting/assets/download.rs), with app-owned explicit consent and durable gate
 crate:vults-relay  the phone's relay: its server (it listens, it never calls out) and the client both ends use, whose every request asks the app's network gate first (client.rs)
 
@@ -10,6 +10,8 @@ crates/chat/src/providers.rs     builds the chat's HTTP client, and lists a prov
 crates/chat/src/web.rs           Zeca's web tools: a search and a page read the model asked for, each let out first by the app's network gate (app/src/web_tools.rs), only to public addresses; and the page's reading by the user's API provider
 crates/chat/src/claude.rs        the claude CLI the user logged into: each run is a chat turn the user sent
 crates/chat/src/filter.rs        one tool-free API or literal-loopback text attempt for dictation clean-up or meeting summaries, admitted durably by app/src/gate.rs; independent default-off switches and rolling quotas, no proxy, redirects or automatic retries
+crates/chat/src/realtime/transport.rs  fixed api.openai.com TLS WebSocket: independent default-off voice consent, durable per-turn monetary reservation before audio, keyring-only key, cancellation/deadlines/bounded PCM; no renderer or capture entry yet
+crates/chat/src/realtime/transport/tests.rs  in-memory duplex WebSocket pairs with synthetic PCM/credentials; no listener or external requests
 crates/chat/src/embed.rs         its own client, no proxy, to a local Ollama on 127.0.0.1 only: recall's embeddings, behind their switch (M5); nothing leaves the computer
 crates/chat/src/summary.rs       the claude CLI, with no tools: a past day of Zeca's journal summed up (app/src/journal.rs), memory suggestions from a finished conversation (app/src/memory.rs) and Zeca's sleep (app/src/sleep.rs), each only through the app's network gate
 crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent

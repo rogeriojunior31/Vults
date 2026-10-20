@@ -35,6 +35,7 @@ mod phone;
 mod policies;
 #[cfg(target_os = "linux")]
 mod questions;
+pub mod realtime;
 mod recall;
 mod records;
 mod roosts;
@@ -262,6 +263,7 @@ pub fn run() {
             settings::set_dictation_commands,
             settings::set_dictation_cleanup,
             settings::set_meeting_summary,
+            settings::set_voice_realtime,
             settings::set_dictation_style_options,
             settings::dictation_styles,
             settings::set_dictation_app_style,
@@ -405,6 +407,7 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
+            handle.manage(std::sync::Arc::new(realtime::State::default()));
             handle.manage(media::MediaState::default());
             handle.manage(dictation_overlay::Ready::default());
             handle.manage(voice::VoiceState::default());
@@ -463,6 +466,7 @@ pub fn run() {
             app.run(|app, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
+                    realtime::shutdown(app);
                     meetings::shutdown(app);
                     meeting_assets::shutdown(app);
                     #[cfg(target_os = "linux")]
@@ -561,6 +565,16 @@ mod label_tests {
         assert!(open_shortcut_settings(island.as_ref().clone()).is_err());
         for view in [nest.as_ref(), island.as_ref()] {
             assert!(settings::set_meeting_summary(app.handle().clone(), view.clone(), true).is_err());
+            assert!(
+                settings::set_voice_realtime(
+                    app.handle().clone(),
+                    view.clone(),
+                    true,
+                    1_000_000,
+                    "gpt-realtime-2.1-mini".into()
+                )
+                .is_err()
+            );
             assert!(settings::set_dictation_cleanup(app.handle().clone(), view.clone(), true).is_err());
             assert!(
                 settings::set_dictation_style_options(

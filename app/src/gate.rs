@@ -8,6 +8,7 @@
 //! adapter below, with durable admission for every HTTP attempt.
 
 mod meeting_assets;
+pub(crate) mod realtime;
 pub use meeting_assets::MeetingAssetsGate;
 
 use std::collections::{BTreeMap, VecDeque};
@@ -104,7 +105,9 @@ pub fn budget(feature: &str) -> usize {
 
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
-    if matches!(feature, meeting_assets::FEATURE | VOICE_REALTIME) {
+    if feature == VOICE_REALTIME {
+        s.voice_realtime.enabled()
+    } else if feature == meeting_assets::FEATURE {
         false
     } else if feature == MEETING_SUMMARY {
         s.meeting_summary && s.meeting_summary_budget.is_some()

@@ -2501,11 +2501,17 @@ Delivery sequence:
    A synthetic two-response cassette covers cached context and billable cancellation. Rate review
    expires after 30 days; no live API call or provider acceptance is claimed. See
    [Realtime accounting](../reference/realtime-accounting.md) for source contracts and the ceiling proof.
-3. **V6.3.3 Runtime admission and transport** — pending. Wire independent consent, the keyring,
-   default US$1 rolling limit (zero disables), a monotonic session clock, durable monetary gate,
-   cancellation/cutoff and text fallback. Recover abandoned holds only after proving the prior
-   transport stopped; never silently release unknown spend. The full V6.3 remains open until the
-   off/spent/disablement/unknown-cost cassette and runtime acceptance pass.
+3. **V6.3.3 Runtime admission and transport** — backend implemented 2026-10-19. Fixed-origin
+   native-TLS WebSocket provider, bounded 24 kHz PCM channels, independent Settings-only consent
+   (schema 41), keyring lookup after durable admission, default US$1 rolling limit (zero disables),
+   process-monotonic gate clock, cancellation/deadlines and once-only receipt settlement. Duplex
+   frame tests cover two turns, off/spent/key refusal, mid-flight revocation/cancellation, malformed
+   audio, backpressure, delayed final settlement and unknown cost; real ledger tests cover detached
+   admission and exact remaining allowance. No renderer/capture entry is offered yet. Unresolved
+   holds block a new owner; no automatic recovery/refund is allowed. Remaining activation gates:
+   prove stopped transport before orphan reconciliation, retain the native turn for text fallback,
+   wire capture/playback in V6.4-V6.7 and pass live-provider/native acceptance. Full V6.3 remains open
+   until these gates pass; offline socket tests do not claim real speech/provider acceptance.
 
 **V6.4 Playback and what the user heard** (M)
 - Build:

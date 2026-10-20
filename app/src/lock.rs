@@ -32,6 +32,9 @@ async fn changed(app: &AppHandle, now: bool) {
     if state.0.swap(now, Ordering::Relaxed) == now {
         return;
     }
+    if now {
+        crate::realtime::invalidate(app);
+    }
     tracing::info!(locked = now, "screen lock");
     if now {
         crate::doctor::dictation::stop_mic(app);

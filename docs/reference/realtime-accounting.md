@@ -1,7 +1,8 @@
 # Realtime accounting
 
 V6.3.2 supplies an offline protocol contract in `chat::realtime`. It opens no connection, reads no
-key and captures no audio. `voice-realtime` remains disabled in the app. A prepared message grants
+key and captures no audio. V6.3.3 adds the gated backend described below; voice remains off by default.
+A prepared message grants
 no network authority: the app must first reserve its ceiling through the monetary gate.
 
 ## Reviewed rates
@@ -64,7 +65,42 @@ response can still cost money. [Server-event reference](https://developers.opena
 The synthetic two-response cassette covers cached context and billable cancellation; it is not a
 live provider recording. Run `cargo test -p vults-chat realtime::` offline.
 
-V6.3.3 still owns keyring access, independent consent, the durable monetary gate, monotonic clocks,
-bounded PCM transport/playback routing, stream cancellation, unknown-hold recovery and text fallback.
-Only the runtime may prove that billable work stopped before settling the durable ledger. No paid
-request or live speech acceptance is claimed here.
+## Runtime transport
+
+V6.3.3 adds an OpenAI implementation of the provider boundary, with a fixed
+`wss://api.openai.com/v1/realtime` origin, native TLS, no proxy, redirects or automatic retries.
+Monetary admission precedes keyring lookup and connection; every later turn reserves again before
+sending PCM. The key stays in Rust and the Authorization header is sensitive; transport failures
+return content-free codes. See the [official WebSocket guide](https://developers.openai.com/api/docs/guides/voice-websockets).
+
+Settings version 41 adds independent `voice_realtime` consent, a retained ledger identity, a default
+US$1 rolling limit and an explicit reviewed model. Zero disables remote voice. Only the Settings
+webview can save this choice; there is no renderer control, bridge call or microphone entry yet.
+The native backend accepts bounded command/output channels and never starts capture by itself.
+One desktop voice lease owns the connection. Epoch revocation covers choice changes, lock, release
+and permanent shutdown; clearing/rotating the shared OpenAI key also revokes existing connections.
+OFF/ON or lock/unlock cannot renew an old owner. Gate time uses one process
+monotonic anchor, and a missing/replaced ledger cannot renew consent.
+
+The persistent socket accepts 24 kHz mono PCM16 in 100 ms chunks. Input is at most 30 seconds per
+turn, output at most 120 seconds, with a 120-second absolute turn deadline and 10-second IO/setup/
+settlement deadlines. Server frames/messages are capped at 256 KiB. Output queue saturation, malformed
+PCM, expired rates or exhausted allowance closes the transport. Cancellation/revocation interrupts
+pending IO; interruption requests response cancellation and waits for final usage within a bounded
+deadline. No more audio is sent after admission fails. Ready/audio publication rechecks ownership
+after awaited work. Playback/device consumption and transcript routing remain V6.4/V6.7 work.
+
+Known final receipts are settled once, even after revocation, without a competing unknown-cost
+retry. Before any inference could have started, an interrupted connection releases its hold at proven zero
+cost. Once inference may have started, missing usage retains the whole ceiling. A detached admission
+that was never handed to transport settles at zero and releases its hold through its ownership guard. Task abort/crash after
+handoff keeps the hold unresolved; a new voice owner refuses any unresolved hold. There is no
+automatic orphan refund or recovery. Reconciliation with proof of stopped transport remains required
+before making this path user-facing. History clearing never resets this accounting.
+
+Run `cargo test -p vults-chat realtime::transport::` and `cargo test -p vults-app realtime` offline.
+Duplex WebSocket tests exercise actual frames with synthetic PCM/keys, two turns, cancellation,
+revocation, failed settlement, backpressure and unknown usage. They open no listener or provider
+connection. No paid request, real microphone/playback or live speech acceptance is claimed. The
+future native caller must retain its local turn until completion for text fallback; backend failures
+provide structured reasons and never silently send to a different provider.
