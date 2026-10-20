@@ -2680,10 +2680,27 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
      Code 2.1.299+ in the 2.1 series); organizational managed policy still applies. Native notice
      display and the opt-in UI stay in V6.7; no live model/microphone acceptance is claimed. See
      [Text consultation](../reference/realtime-accounting.md#text-consultation).
-   - **Codex consultation qualification** (next). Provide equivalent supplied-text-only isolation
-     before offering a Codex tool. The ordinary read-only Chat driver is not that contract; do not
-     inherit its tools, settings or permission flow. Review evidence before V6.7. Whole V6.6.3 stays
-     open until this qualification is delivered. Live-provider/human-speech acceptance is separate.
+   - **Codex consultation qualification** (candidate rejected 2026-10-20). An installed-client
+     probe of Codex CLI 0.163.0 with `gpt-6.1-sol` captures the first request inside a loopback-only
+     network namespace. Even with ignored user config/rules, ephemeral read-only execution,
+     zero project-document bytes, empty MCP configuration and disabled tool/integration features,
+     this environment still offers inline `additional_tools` (including `exec` and collaboration)
+     and an ambient skills catalog. Missing top-level `tools` is not proof of an empty registry.
+     No external provider or real credential is used, and the stand-in sends no model response.
+     The ordinary Chat driver remains unsuitable; no `consult_codex` is offered. This rejects this
+     candidate, not every possible Codex integration. Next: establish a supported tool/context
+     isolation contract, qualify it with the same probe, then connect independent consent and
+     cancellation before V6.7. Whole V6.6.3 stays open. Live-provider/human-speech acceptance is separate.
+
+     Reproduce the explicit installed-client check on Linux (requires user/network namespaces
+     and `ip`; ordinary workspace tests skip it):
+
+     ```sh
+     unshare --user --map-root-user --net sh -c 'ip link set lo up && cargo test -p vults-chat --test codex_consultation -- --include-ignored --nocapture'
+     ```
+
+     The check asserts that this candidate is rejected. If the client changes, review the complete
+     captured context and capabilities; a passing test is not permission to activate Codex.
 
 **V6.7 Talk with Zeca page and island speaking states** (M)
 - Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio

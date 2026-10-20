@@ -445,3 +445,24 @@ teardown ownership, child reaping, bounded output, arguments, the client control
 durable independent admission and consent upgrades. They run synthetic local child processes and
 no model, microphone or desktop action. Codex consultation and live Claude/provider compatibility
 remain open; V6.6.3 is not complete.
+
+
+### Codex qualification
+
+The installed Codex CLI 0.163.0 candidate for `gpt-6.1-sol` does not meet this contract in the
+qualified environment. Ignoring user config/rules, selecting ephemeral read-only execution,
+excluding project documents and disabling integration/tool features still leaves inline
+`additional_tools` and an ambient skills catalog in the first model request. An absent top-level
+`tools` field is insufficient: code-mode tool definitions may live in `input` instead. This is
+evidence against this candidate, not a claim about every Codex integration. The documented
+[CLI controls](https://learn.chatgpt.com/docs/developer-commands?surface=cli) and
+[configuration controls](https://learn.chatgpt.com/docs/config-file/config-reference) do not by
+themselves establish the supplied-text-only contract. No `consult_codex` is enabled.
+
+The explicit developer probe runs only in a loopback-only network namespace, supplies a synthetic
+credential and question to a local stand-in, sends no model response and logs only capability
+names and a skills-presence boolean. It does not save captured instructions or contact an external
+provider. A normal offline regression checks both tool-registry representations. See the
+[roadmap reproduction command](../dev/plan-dictation.md#v6-talk-with-zeca-k8).
+Supported isolation, independent provider consent and cancellation qualification remain pending;
+V6.6.3 stays open before V6.7.

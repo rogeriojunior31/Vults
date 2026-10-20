@@ -1712,3 +1712,16 @@ review resolved implicit file/memory context, admission/busy ownership, original
 notice checks; final code review has no remaining blocker. Source/docs clarify enforced managed
 policy and do not claim an OS sandbox, visible activation or live compatibility. The app stays
 closed; Codex text-only qualification remains the next roadmap item.
+
+
+**2026-10-20 V6.6.3 Codex candidate qualification.** A reproducible installed-client probe
+captures the first Codex CLI 0.163.0 request for `gpt-6.1-sol` in a loopback-only network
+namespace, using a synthetic token/question and no model response. The restrictive exec candidate
+still includes inline `additional_tools` (`exec` and collaboration) and an ambient skills catalog.
+A missing top-level `tools` field does not establish a tool-free request. The probe logs only
+capability names and a skills-presence boolean, never captured instructions or credentials, and
+reaps the child before cleaning its private directory. A normal offline regression checks both
+registry representations. No production driver, Settings choice or voice offering changes.
+This candidate is rejected; V6.6.3 remains open for supported tool/context isolation and its
+consent/cancellation integration, before V6.7. This does not establish that every Codex route is
+unsuitable and does not claim live-provider, microphone or desktop acceptance.

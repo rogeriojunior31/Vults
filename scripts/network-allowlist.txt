@@ -14,6 +14,7 @@ crates/chat/src/realtime/transport.rs  fixed api.openai.com TLS WebSocket: indep
 crates/chat/src/realtime/transport/tests.rs  in-memory duplex WebSocket pairs with synthetic PCM/credentials; no listener or external requests
 crates/chat/src/embed.rs         its own client, no proxy, to a local Ollama on 127.0.0.1 only: recall's embeddings, behind their switch (M5); nothing leaves the computer
 crates/chat/src/summary.rs       the claude CLI, with no tools: a past day of Zeca's journal summed up (app/src/journal.rs), memory suggestions from a finished conversation (app/src/memory.rs), Zeca's sleep (app/src/sleep.rs) and independently consented voice consultations (app/src/realtime/consultation.rs), each only through the app's network gate
+crates/chat/tests/codex_consultation.rs  ignored installed-client qualification only: synthetic token/question to a loopback stand-in inside a loopback-only network namespace, no model response or production app path
 crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent
 crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, the model list the user opened, or the usage read, which app/src/usage.rs makes only through the network gate
 app/src/folder.rs                git diff-files, ls-files and rev-parse in a session's repository at each turn's start and end, reading only (no content, no fsmonitor, no hooks), and a test's git init: local only

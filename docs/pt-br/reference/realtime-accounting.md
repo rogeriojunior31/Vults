@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: aa326f6fb583 -->
+<!-- source: 44f381c95758 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -508,3 +508,27 @@ cancelamento e destruição, saída confirmada do processo, limite da resposta, 
 versão do cliente, admissão persistente independente e atualização do consentimento. Eles usam
 processos filhos locais sintéticos, sem modelo, microfone nem ação do desktop. Consulta ao Codex e
 compatibilidade real com Claude/provedor continuam em aberto; a V6.6.3 não está concluída.
+
+
+<a id="codex-qualification"></a>
+### Qualificação do Codex
+
+O candidato com Codex CLI 0.163.0 instalado e `gpt-6.1-sol` não cumpre esse contrato no ambiente
+qualificado. Ignorar configurações/regras do usuário, escolher execução efêmera somente de leitura,
+excluir documentos do projeto e desativar recursos de integração/ferramentas ainda deixa
+`additional_tools` inline e um catálogo de skills do ambiente na primeira requisição ao modelo.
+A ausência do campo `tools` no nível superior é insuficiente: definições de ferramentas do modo de
+código podem estar em `input`. Isso é evidência contra esse candidato, não uma afirmação sobre toda
+integração com o Codex. Os [controles da CLI](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
+e [controles de configuração](https://learn.chatgpt.com/docs/config-file/config-reference)
+documentados não comprovam, por si só, o contrato de receber somente o texto fornecido.
+Nenhum `consult_codex` é ativado.
+
+O teste explícito para desenvolvedores roda apenas em um namespace de rede contendo somente
+loopback, fornece credencial e pergunta sintéticas a um servidor local falso, não envia resposta
+de modelo e registra somente nomes de capacidades e um booleano de presença de skills. Ele não
+salva instruções capturadas nem acessa provedor externo. Uma regressão offline normal verifica as
+duas representações do registro de ferramentas. Veja o
+[comando de reprodução no roadmap](../../dev/plan-dictation.md#v6-talk-with-zeca-k8).
+Isolamento suportado, consentimento independente por provedor e qualificação do cancelamento
+continuam pendentes; a V6.6.3 permanece aberta antes da V6.7.
