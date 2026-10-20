@@ -75,7 +75,13 @@ return content-free codes. See the [official WebSocket guide](https://developers
 
 Settings version 41 adds independent `voice_realtime` consent, a retained ledger identity, a default
 US$1 rolling limit and an explicit reviewed model. Zero disables remote voice. Only the Settings
-webview can save this choice; there is no renderer control, bridge call or microphone entry yet.
+webview can save this choice. V6.7.1 adds typed bridge calls for that explicit save and Settings-only
+readback (`voice_realtime_settings`); it does not add a visual control or microphone entry yet.
+The returned `on` is the saved choice, not a live-session or readiness indicator.
+Readback returns only `on`, `model` and `limitMicrousd`, with the amount encoded as a decimal string
+so large persisted limits survive JavaScript exactly. It omits the private ledger identity and
+performs no keyring, device, store or network IO. The write bridge refuses fractional, negative or
+unsafe JavaScript integers before invocation; native authority, model and budget checks still apply.
 The native backend accepts bounded command/output channels and never starts capture by itself.
 One desktop voice lease owns the connection. Epoch revocation covers choice changes, lock, release
 and permanent shutdown; clearing/rotating the shared OpenAI key also revokes existing connections.

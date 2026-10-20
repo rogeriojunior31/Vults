@@ -9,6 +9,13 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
+export interface VoiceRealtimeSettings {
+  /** Saved opt-in, not a live-session or readiness indicator. */
+  on: boolean;
+  model: string;
+  /** Exact persisted microdollars, including values beyond JavaScript's safe integer range. */
+  limitMicrousd: string;
+}
 export type QuestionAction = "edit" | "send" | "cancel" | "stop-dictation" | "apply-dictation";
 export interface TextQuestionView {
   seq: number;
@@ -525,6 +532,11 @@ export const Bridge = {
   },
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
+  voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),
+  setVoiceRealtime: (on: boolean, limitMicrousd: number, model: string) =>
+    Number.isSafeInteger(limitMicrousd) && limitMicrousd >= 0
+      ? invoke<void>("set_voice_realtime", { on, limitMicrousd, model })
+      : Promise.reject(new Error("Invalid realtime voice budget.")),
   appSettings: () =>
     invoke<{ questionAgents: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */

@@ -263,6 +263,7 @@ pub fn run() {
             settings::set_dictation_commands,
             settings::set_dictation_cleanup,
             settings::set_meeting_summary,
+            settings::voice_realtime_settings,
             settings::set_voice_realtime,
             settings::set_voice_consultation,
             settings::set_voice_codex_consultation,
@@ -571,6 +572,7 @@ mod label_tests {
         assert!(open_shortcut_settings(nest.as_ref().clone()).is_err());
         assert!(open_shortcut_settings(island.as_ref().clone()).is_err());
         for view in [nest.as_ref(), island.as_ref()] {
+            assert!(settings::voice_realtime_settings(app.handle().clone(), view.clone()).is_err());
             assert!(settings::set_voice_consultation(app.handle().clone(), view.clone(), true).is_err());
             assert!(
                 settings::set_voice_codex_consultation(app.handle().clone(), view.clone(), true).is_err()

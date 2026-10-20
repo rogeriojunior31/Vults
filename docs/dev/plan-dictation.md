@@ -2773,6 +2773,23 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
   goes; on, the model, budget, end of turn, interrupting and *Answer without the key*, off by default; "never
   answers a card" always shown) and the island `speaking`/`interrupted` lines; docs; sign-off; K8 moves to Done.
 
+### V6.7 delivery sequence
+
+1. **V6.7.1 Settings bridge contract** — implemented 2026-10-20. The Settings-only
+   `voice_realtime_settings` command reads the saved switch, model and exact microdollar limit
+   without opening a device, keyring, ledger or network connection. Its response omits the private
+   budget identity. The renderer bridge exposes this read and the existing explicit Settings write;
+   unsafe/fractional JavaScript amounts are rejected before invocation. Native model, budget and
+   webview authority checks remain decisive. This is configuration plumbing, not a live voice UI.
+2. **V6.7.2 Configuration page** — next. Render the opt-in, destination, model and budget under Voice,
+   preserving drafts and errors; keep configuration in the Settings webview. Explain that voice
+   never answers a permission card and keep unavailable Codex consultation explicit.
+3. **V6.7.3 Capture and conversation controls** — connect explicit native capture, local turn
+   assembly, listening/finish/cancel states and reviewable text recovery to the existing backend.
+4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
+   layouts and accessibility, then exercise microphone/provider/interruption acceptance before
+   declaring K8 Done. Codex activation keeps its independent qualification gates.
+
 ---
 
 ## V7 MCP `vults_dictate`

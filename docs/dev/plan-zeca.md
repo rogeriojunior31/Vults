@@ -1828,3 +1828,22 @@ Nine changed public EN/PT source marks are current; the latest checkpoint's head
 local documentation links are checked. Independent review confirms all three findings resolved
 and permits publication with Codex disabled; no successful credential renewal or live UI/audio
 acceptance is claimed. Local Rust is 1.99.1; PR CI also validates the pinned 1.98 toolchain.
+
+
+**2026-10-20 V6.7.1 realtime Settings bridge.** The Settings-only read command returns the saved
+switch, model and exact microdollar limit without device/keyring/store/network IO or a private
+ledger identity. The typed bridge exposes this read and the existing Settings write, refusing
+fractional, negative and unsafe JavaScript amounts before invocation. Native authority and
+validation remain decisive. This adds no capture or visual control; the next finite task is
+V6.7.2 configuration UI, followed by capture/controls and island/native acceptance. Codex activation
+remains unavailable and K8 stays open. See Plan Dictation
+[V6.7 delivery sequence](plan-dictation.md#v67-delivery-sequence).
+
+Validation: 1,413 workspace tests pass (16 documented ignores), 10 feature evals, workspace Clippy
+with warnings denied, formatting, renderer build, all 19 bridge/renderer checks and repository
+guards pass. Native readback covers default-off, exact large limits, private-identity omission and
+unchanged independent consent; Nest/island callers are refused. The new bridge check runs in CI
+and covers explicit invocation and unsafe-number refusal without capture or provider access.
+The local AGENTS instruction also names `check-task-actions.mjs`, which is absent from this
+checkout; that unavailable check is not reported as passed. No visual renderer changes or app
+launch are part of this contract; native UI validation begins with V6.7.2.
