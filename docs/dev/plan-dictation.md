@@ -2707,6 +2707,18 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
      deletion, without exposing original credentials or contacting a provider. This is containment,
      not a subscription-binding solution. Ephemeral credential storage does not import the existing
      login; URL overrides are not authentication-mode guarantees. Do not substitute either.
+     **Managed-policy candidate probed 2026-10-20:** system-only
+     `allowed_login_methods=["chatgpt"]` constrains credential loading without forced-exec logout.
+     Nine synthetic scenarios isolate both home and system policy: the negative control sends its
+     API bearer, managed API attempts omit it and preserve auth, ChatGPT status succeeds, and API
+     replacements before fresh exec or after a first-request 401 never send the replacement key.
+     The 401 scenario observes a retry with the original synthetic ChatGPT bearer, then a fixed 400;
+     no model/provider or real auth is used. A handshake retry/fallback is not proof of auth reload.
+     This is file-store candidate evidence, not activation.
+     Runtime effective-policy/protected-provenance checks, keyring, broader refresh/failure cases
+     and live compatibility are still required. Never install system requirements automatically;
+     unmanaged machines remain blocked. See
+     [Managed-policy candidate](../reference/realtime-accounting.md#managed-policy-candidate).
      **Next:** qualify subscription-only behavior during concurrent external login changes before
      visible activation. App Server account/read has no stable identity for binding a separate exec.
      A synthetic-auth review probe confirms forced login on exec deletes mismatched API auth. Do not reuse Claude's consent, force a login

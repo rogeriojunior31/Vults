@@ -32,3 +32,4 @@ crates/peer/src/unix.rs          a test runs sh -c 'sleep 2; true' to find the a
 crates/platform/src/raw_keys.rs  names the Hyper keyboard modifier while matching shortcut chords: local key observation only, no network
 
 crates/voice/src/meeting/assets/download.rs  optional meeting installer: fixed reviewed HTTPS artifacts, Settings-owned review/consent, app gate with durable rolling quota and content-free traces including redirects, pinned sizes/SHA-256, no proxy or automatic retry
+crates/chat/src/consult_codex/auth_qualification.rs  ignored installed-client auth qualification only: disposable home and system-policy mounts in an isolated loopback namespace, synthetic credentials, bounded local GET/POST stand-in; no host auth/config or external provider

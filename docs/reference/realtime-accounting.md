@@ -504,3 +504,28 @@ The documented [App Server account read](https://learn.chatgpt.com/docs/app-serv
 account/workspace identity to bind a separate exec. Subscription-only behavior during an external
 login switch remains an activation blocker. Live/managed-client compatibility is also pending;
 V6.6.3 stays open before V6.7.
+
+
+### Managed-policy candidate
+
+A separate candidate uses local system `allowed_login_methods = ["chatgpt"]` requirements instead
+of forcing the exec login method. [Managed configuration](https://learn.chatgpt.com/docs/enterprise/managed-configuration)
+applies these constraints before credential loading. The [security cookbook](https://learn.chatgpt.com/docs/enterprise/security-cookbook)
+requires protecting the policy file and its parent from the Codex user; existing sessions do not
+automatically inherit a newly deployed policy. Vults does not install or change this system policy.
+
+The installed-client auth regression now isolates both home and `/etc`, using an empty system
+mount for controls and a synthetic policy mount for managed cases. Nine scenarios cover ordinary
+and restricted status, destructive forced exec, unmanaged API bearer transmission, managed API
+refusal without deleting auth, synthetic ChatGPT status, an API replacement between status and
+fresh exec, and a replacement after the first ChatGPT-authenticated request receives a synthetic
+401. The last case must observe a retry; only the original synthetic ChatGPT bearer may appear,
+never the replacement API key. A WebSocket handshake retry or HTTP fallback can satisfy this count;
+it does not qualify credential reload. The local server ends requests with a fixed 400; there is no model
+response, external provider, real credential or log of headers/auth content. Every child is reaped
+and the bounded stand-in is stopped before its private mounts are removed.
+
+These are synthetic file-store observations on CLI 0.163.0, not production eligibility or specific
+account binding. Runtime verification of effective policy and protected provenance, keyring
+behavior, broader refresh/failure cases and live compatibility remain pending. The activation
+capability stays false, including on unmanaged machines; no native or visible feature is enabled.

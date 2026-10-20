@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 9e0357a2ff8e -->
+<!-- source: 036089709eec -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -573,3 +573,33 @@ documentada não fornece identidade estável de conta/workspace para vincular um
 Garantir uso exclusivo da assinatura durante uma troca externa de login continua bloqueando a
 ativação. Compatibilidade com cliente real/gerenciado também segue pendente; a V6.6.3 permanece
 aberta antes da V6.7.
+
+
+<a id="managed-policy-candidate"></a>
+### Candidato com política administrada
+
+Um candidato separado usa requisitos locais do sistema `allowed_login_methods = ["chatgpt"]`, em
+vez de forçar o método de login do exec. A [configuração administrada](https://learn.chatgpt.com/docs/enterprise/managed-configuration)
+aplica essas restrições antes de carregar credenciais. O [guia de segurança](https://learn.chatgpt.com/docs/enterprise/security-cookbook)
+exige proteger o arquivo de política e sua pasta contra alterações pelo usuário do Codex; sessões
+existentes não herdam automaticamente uma política recém-instalada. O Vults não instala nem altera
+essa política do sistema.
+
+A regressão com o cliente instalado agora isola tanto a pasta pessoal quanto `/etc`, usando uma
+montagem de sistema vazia nos controles e uma política sintética nos casos administrados. Nove
+cenários cobrem status comum e restrito, exec forçado destrutivo, transmissão de bearer de API sem
+política, recusa de API com política sem apagar autenticação, status ChatGPT sintético, substituição
+por API entre status e um exec novo, e substituição após o primeiro pedido autenticado com ChatGPT
+receber um 401 sintético. O último caso precisa observar uma nova tentativa; somente o bearer
+ChatGPT sintético original pode aparecer, nunca a chave de API substituta. Uma nova tentativa de
+handshake WebSocket ou fallback HTTP pode satisfazer essa contagem; ela não qualifica a recarga de
+credenciais. O servidor local encerra
+pedidos com um 400 fixo; não há resposta de modelo, provedor externo, credencial real nem registro
+de cabeçalhos/conteúdo de autenticação. Cada processo tem saída confirmada, e o servidor limitado
+é encerrado antes de remover suas montagens privadas.
+
+Essas são observações sintéticas com armazenamento em arquivo na CLI 0.163.0, não elegibilidade de
+produção nem vínculo com uma conta específica. Verificação em execução da política efetiva e sua
+origem protegida, comportamento do keyring, casos mais amplos de renovação/falha e compatibilidade
+real continuam pendentes. A capacidade de ativação permanece falsa, inclusive em máquinas sem
+política administrada; nenhum recurso nativo ou visível é habilitado.

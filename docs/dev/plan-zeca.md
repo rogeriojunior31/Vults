@@ -1781,3 +1781,26 @@ Codex checks pass, including the disposable forced-exec mismatch characterizatio
 The independent review found and resolved status-stdin race/child cleanup in the test harness;
 production guards have no confirmed blocker. Translation source marks, English anchors and
 173 local documentation links/anchors are verified. The app remains closed.
+
+
+**2026-10-20 V6.6.3 managed subscription-policy candidate.** Unlike forced login on exec, local
+system allowed_login_methods requirements apply before credential loading. Expanded the installed
+client's isolated auth regression to nine named controls/scenarios, with synthetic home and empty
+or policy-bearing system mounts. Without policy the local stand-in sees the synthetic API bearer;
+with ChatGPT-only policy, stored API auth is not transmitted or deleted. A synthetic ChatGPT status
+succeeds; replacing stored auth before a fresh exec or after its first authenticated request gets
+401 never sends the replacement API key. The latter observes a retry using the original synthetic
+ChatGPT bearer, before a fixed 400 terminates the request. No raw auth/header logging, model reply,
+external provider or original config/auth access. Capture/child lifetimes and resources are bounded.
+This is an evidence-backed candidate for already admin-protected installs, not specific-account
+binding or production sign-off. Runtime effective-policy and protected-provenance checks, keyring,
+broader refresh/failure cases and live compatibility remain open. No system policy is installed,
+no user account/config is changed, and the activation capability remains false. V6.6.3 stays open.
+
+Validation: all seven explicit Codex checks pass, including nine auth scenarios; 1,411 workspace
+tests pass (16 documented ignores), 10 feature evals, build and all 18 renderer checks pass.
+Workspace Clippy with warnings denied, formatting and repository guards pass. Independent review
+resolved inherited host policy in controls and auth-content assertion logging. The review also
+clarifies that a GET/POST retry after 401 may be handshake/fallback, not credential reload; that
+qualification remains open. The PT source mark, English heading anchors and 106 local documentation
+links/anchors are checked. The app stays closed and the production activation guard stays false.
