@@ -410,18 +410,14 @@ fn advance_recording(session: &mut Session, until: Option<Instant>) -> Result<()
     if until.is_some_and(|at| Instant::now() >= at) {
         return Ok(());
     }
-    session.view.follow_up = false;
-    let generation = session
-        .generation
-        .take()
-        .ok_or("Voice conversation is not ready.")?;
+    let generation = session.generation.ok_or("Voice conversation is not ready.")?;
     if let Some(send) = &session.routed {
         send.try_send(Command::Capture {
             generation,
             operation: RoutedCapture::Begin,
         })
         .map_err(|_| "Voice conversation is busy.")?;
-        session.generation = Some(generation);
+        session.view.follow_up = false;
         session.view.capture = None;
         session.view.phase = "starting";
         return Ok(());
@@ -440,7 +436,6 @@ fn advance_recording(session: &mut Session, until: Option<Instant>) -> Result<()
         control.cancel();
         return Err("Voice conversation has ended.".into());
     }
-    session.generation = Some(generation);
     session.view.phase = "starting";
     session.view.follow_up = until.is_some();
     Ok(())
@@ -637,6 +632,16 @@ mod tests {
         };
         assert!(advance(&mut session).is_err());
         assert!(receive.try_recv().is_err());
+        session.view.phase = "waiting";
+        let before = serde_json::to_value(&session.view).unwrap();
+        assert_eq!(
+            advance(&mut session).unwrap_err(),
+            "Voice recording is not ready."
+        );
+        assert_eq!(session.generation, Some(generation));
+        assert_eq!(serde_json::to_value(&session.view).unwrap(), before);
+        assert!(receive.try_recv().is_err());
+        session.view.phase = "recording";
         interrupt(&mut session, Some("reply-1")).unwrap();
         assert!(
             receive.try_recv().is_err(),
@@ -921,6 +926,21 @@ mod tests {
         );
         assert!(receive.try_recv().is_err(), "Manual Stop never admits capture");
         session.view.phase = "waiting";
+        let send = session.routed.as_ref().unwrap();
+        for _ in 0..4 {
+            send.try_send(Command::Signal {
+                generation: next.generation,
+                signal: Signal::SpeechEnded,
+            })
+            .unwrap();
+        }
+        let before = serde_json::to_value(&session.view).unwrap();
+        assert_eq!(advance(&mut session).unwrap_err(), "Voice conversation is busy.");
+        assert_eq!(session.generation, Some(next.generation));
+        assert_eq!(serde_json::to_value(&session.view).unwrap(), before);
+        for _ in 0..4 {
+            assert!(matches!(receive.try_recv().unwrap(), Command::Signal { .. }));
+        }
         advance(&mut session).unwrap();
         assert!(
             matches!(receive.try_recv().unwrap(), Command::Capture { generation, operation: RoutedCapture::Begin } if generation == next.generation)

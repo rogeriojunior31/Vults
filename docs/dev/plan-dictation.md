@@ -2930,7 +2930,13 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    A regression reproduced a rewind from generation 2 to 1; coverage now spans all seven active/
    waiting phases in manual and routed modes, retaining recording tokens and admitting no duplicate
    capture. Explicit next-turn actions and fresh confirmed-interruption generations remain valid.
-   This closes event replay admission, not the physical/live acceptance gate.
+   This closes event replay admission, not the physical/live acceptance gate. Continuation admission
+   also retains the current generation on failure: manual not-ready and routed full-queue regressions
+   reproduced its accidental removal. Both now preserve waiting state and permit a valid retry;
+   queued capture alone changes visible state. A user-operated local six-second microphone diagnostic
+   returned usable input. That accepts input level only; transcription, semantic endpoints,
+   interruption and live-provider acceptance remain open. Remote voice stayed disabled, no transcript
+   was retained and the isolated validation app/profile were stopped/removed before further work.
 
 ---
 

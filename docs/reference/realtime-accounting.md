@@ -239,6 +239,10 @@ ignored before changing the recording token, phase, follow-up deadline or captur
 manual and continuous modes. Explicit next-turn actions still require waiting and a live controller;
 they do not replay Listen. Regression checks cover stale/repeated events across starting, recording,
 transcribing, responding, speaking, interrupting and waiting, without devices or a provider.
+Failed continuation admission preserves that generation and the visible waiting state. A busy route
+queue or a manual controller not yet ready cannot erase the replay guard or prevent a later valid
+retry. Capture state changes only after the request is queued; a disconnected manual driver still
+cancels its controller.
 
 The UI distinguishes responding from confirmed audible playback. Only heard-history text or the
 local-command reply is shown, bounded in memory. Recovery text is editable and copied explicitly;

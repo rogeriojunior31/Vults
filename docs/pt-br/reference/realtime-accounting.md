@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 3c086c34d622 -->
+<!-- source: 2401bf42fd05 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -271,6 +271,10 @@ tanto no modo manual quanto no contínuo. Ações explícitas para a próxima fa
 um controlador ativo; não repetem Listen. Testes de regressão cobrem eventos antigos/repetidos nas
 fases de início, gravação, transcrição, resposta, reprodução, interrupção e espera, sem dispositivos
 nem provedor.
+Uma falha na admissão da próxima fala preserva essa geração e o estado visível de espera. Uma fila
+de rota ocupada ou um controlador manual ainda não pronto não pode apagar a proteção contra
+repetição nem impedir uma nova tentativa válida. O estado de captura só muda após enfileirar a
+solicitação; um driver manual desconectado ainda cancela seu controlador.
 
 A interface distingue resposta de reprodução audível confirmada. Só são exibidos o texto do
 histórico ouvido ou a resposta do comando local, limitados em memória. O texto recuperado é editável
