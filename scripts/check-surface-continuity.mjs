@@ -162,8 +162,14 @@ for (const width of [480, 760, 900, 1180]) {
     const settingsRoutes = [];
     let dictationReturns = 0;
     let dictationReads = 0;
+    let realtimePhase = "recording", realtimeStarts = 0;
+    const realtimeControls = [];
     const backend = {
-      dictation: { statistics: async period => ({ period, usage: { count: 0, words: 0, secs: 0, saved_minutes: null, wpm: null }, days: [], apps: [], apps_complete: true }), words: async () => ({ words: [], replacements: [], snippets: [] }), change: async () => {}, trySentence: async () => ({ text: "", cancelled: false, segments: [] }), load: async () => { dictationReads++; return { retention: "30", rows: [], today: null }; },
+      dictation: { conversation: {
+        start: async () => { realtimeStarts++; return { id: "voice-fixture", phase: realtimePhase, response: "reply-token", capture: "capture-token", reason: null, draft: null, reply: null }; },
+        status: async () => { throw Error("Unexpected heartbeat in synchronous scene checks"); },
+        control: async (...args) => { realtimeControls.push(args); }, copy: async () => {},
+      }, statistics: async period => ({ period, usage: { count: 0, words: 0, secs: 0, saved_minutes: null, wpm: null }, days: [], apps: [], apps_complete: true }), words: async () => ({ words: [], replacements: [], snippets: [] }), change: async () => {}, trySentence: async () => ({ text: "", cancelled: false, segments: [] }), load: async () => { dictationReads++; return { retention: "30", rows: [], today: null }; },
         remove: async () => actions.push("dictation:remove"), clear: async () => actions.push("dictation:clear"), again: async () => actions.push("dictation:again") },
       chat: chat("nest"), savePlace: async value => { place = value; },
       flock: { loadPlace: async () => structuredClone(flockPlace), savePlace: async value => { flockPlace = structuredClone(value); },
@@ -294,6 +300,57 @@ for (const width of [480, 760, 900, 1180]) {
     window.innerHeight = 640;
     for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
     assert.equal(active.get(canvas), true);
+    const startRealtime = async phase => {
+      realtimePhase = phase; nest.open("dictation-conversation");
+      const work = page.querySelector(".voice-conversation");
+      await nodes(work).find(n => n.tag === "button" && n.textContent === "Start recording").onclick();
+      return work;
+    };
+    const stopRealtime = work => nodes(work).find(n => n.tag === "button" && ["Cancel", "End conversation"].includes(n.textContent)).onclick();
+    for (const [phase, clip] of [["preparing", "think"], ["recording", "listen"], ["responding", "think"], ["waiting", "idle"], ["speaking", "speak"]]) {
+      const work = await startRealtime(phase);
+      assert.equal(work.querySelector("canvas"), canvas, "Voice reuses the Chat canvas instead of creating a second character");
+      assert.equal(portrait.playing("zeca"), clip, phase);
+      assert.equal(active.get(canvas), true);
+      const starts = realtimeStarts, since = portrait.zeca.bird.since;
+      Clock.freeze(Clock.now() + 123);
+      nest.setFull(true); nest.setFull(false);
+      assert.equal(portrait.zeca.bird.since, since, "Redraws preserve the current sprite phase");
+      Clock.freeze(null);
+      assert.equal(work.querySelector("canvas"), canvas);
+      assert.equal(realtimeStarts, starts, "Layout changes never start another capture");
+      if (phase === "speaking") {
+        const now = Clock.now(); Clock.freeze(now);
+        await nodes(work).find(n => n.tag === "button" && n.textContent === "Stop response").onclick();
+        assert.equal(portrait.playing("zeca"), "idle", "Interruption cuts speaking immediately without waiting for the cosmetic minimum");
+        assert.deepEqual(realtimeControls.at(-1), ["voice-fixture", "interrupt", "reply-token", undefined]);
+        Clock.freeze(null);
+      }
+      stopRealtime(work);
+      assert.equal(active.get(canvas), false);
+      assert.equal(nest.chat.perchSlot.querySelector("canvas"), canvas);
+    }
+    let voiceWork = await startRealtime("speaking");
+    nest.setZeca(false);
+    assert.equal(active.get(canvas), false); assert.equal(voiceWork.querySelector(".voice-conversation-character").hidden, true);
+    nest.setZeca(true); assert.equal(active.get(canvas), true);
+    window.innerHeight = 360;
+    for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
+    assert.equal(active.get(canvas), false);
+    window.innerHeight = 640;
+    for (const media of mediaChanges.filter(media => media.query.includes("height"))) media.fn();
+    assert.equal(active.get(canvas), true);
+    visibility(true); assert.equal(active.get(canvas), false);
+    assert.equal(realtimeControls.at(-1)[1], "cancel", "Hiding revokes the conversation and its animated feedback");
+    visibility(false); assert.equal(active.get(canvas), false, "Showing again cannot replay stale speaking");
+    voiceWork = await startRealtime("recording");
+    nest.view({ ...view, locked: true }); assert.equal(active.get(canvas), false);
+    nest.view(view); assert.equal(active.get(canvas), false, "Unlocking cannot replay cancelled recording");
+    voiceWork = await startRealtime("speaking");
+    nest.open("chat");
+    assert.equal(nest.chat.perchSlot.querySelector("canvas"), canvas);
+    assert.equal(voiceWork.querySelector(".voice-conversation-character").hidden, true);
+    assert.equal(realtimeControls.at(-1)[1], "cancel");
     const beforeHistory = structuredClone(draft);
     page.querySelector(".recent-toggle").fire("click");
     if (width < 900) {

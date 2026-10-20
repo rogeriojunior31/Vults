@@ -9,7 +9,7 @@ import { createYourWords, type WordsBackend } from "./words";
 import type { DictationPeriod, DictationStatistics } from "../../../bridge";
 
 export type DictationAreaBackend = DictationBackend & WordsBackend & { statistics(period: DictationPeriod): Promise<DictationStatistics>; conversation?: ConversationBackend; meetings?: MeetingBackend };
-export function createDictationArea(backend: DictationAreaBackend, settings: (section?: string) => void, statistics: () => void) {
+export function createDictationArea(backend: DictationAreaBackend, settings: (section?: string) => void, statistics: () => void, characterChanged: () => void = () => {}) {
   const configure = () => settings();
   const history = createDictationHistory(backend, configure);
   const commands = createDictationHistory(backend, () => settings("dictationcommands"), true);
@@ -19,13 +19,13 @@ export function createDictationArea(backend: DictationAreaBackend, settings: (se
   commands.element.querySelector("header")!.after(guidance);
   const words = createYourWords(backend, configure);
   const meetings = createMeetings(backend.meetings, () => settings("dictationvoice"), () => settings("dictationmeetings"));
-  const conversation = createVoiceConversation(backend.conversation, () => settings("dictationconversation"));
-  let active = false;
+  const conversation = createVoiceConversation(backend.conversation, () => settings("dictationconversation"), characterChanged);
+  let active = false, visible = !document.hidden;
   let selected: DictationWorkPage = "history";
   const navigation = createDictationNavigation(selected, id => select(id), id => settings(`dictation${id}`), statistics);
   const nav = navigation.element;
   const element = el("div", { class: "dictation-area" }, nav, history.element, commands.element, words.dictionary, words.snippets, meetings.element, conversation.element);
-  const refresh = () => { conversation.setActive(active && selected === "conversation"); if (selected === "conversation") { meetings.setActive(false); return; } meetings.setActive(active && selected === "meetings"); if (selected === "meetings") { meetings.refresh(); return; } if (selected === "history") history.refresh(); else if (selected === "commands") commands.refresh(); else words.refresh(); };
+  const refresh = () => { conversation.setActive(active && visible && selected === "conversation"); if (selected === "conversation") { meetings.setActive(false); return; } meetings.setActive(active && selected === "meetings"); if (selected === "meetings") { meetings.refresh(); return; } if (selected === "history") history.refresh(); else if (selected === "commands") commands.refresh(); else words.refresh(); };
   const select = (id: DictationWorkPage) => { selected = id; relabel(); refresh(); };
   const relabel = () => {
     navigation.select(selected); history.relabel(); commands.relabel(); words.relabel(); meetings.relabel(); conversation.relabel();
@@ -41,6 +41,8 @@ export function createDictationArea(backend: DictationAreaBackend, settings: (se
     words.snippets.hidden = selected !== "snippets";
   };
   relabel();
-  return { element, refresh, relabel, select, setActive(on: boolean) { active = on; conversation.setActive(on && selected === "conversation"); meetings.setActive(on && selected === "meetings"); },
+  return { element, refresh, relabel, select, character: conversation.character, perch: conversation.perch,
+    visible(on: boolean) { visible = on; conversation.setActive(active && visible && selected === "conversation"); },
+    setActive(on: boolean) { active = on; conversation.setActive(on && visible && selected === "conversation"); meetings.setActive(on && selected === "meetings"); },
     meetingsErased: meetings.invalidate, invalidate: () => { history.invalidate(); commands.invalidate(); } };
 }

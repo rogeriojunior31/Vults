@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 958798ad0cae -->
+<!-- source: 78ecb0dfb06e -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -78,6 +78,14 @@ atrasados ou duplicados não a reativam nem substituem o token atual. Cliques du
 interrompem uma nova geração nem iniciam captura. Durante a geração, antes de haver áudio audível, **Cancelar**
 ainda encerra toda a sessão. Esse controle exige um clique; interromper falando por cima do Zeca
 usa as rotas contínuas opcionais descritas abaixo.
+
+Durante a conversa, a página reutiliza o personagem Zeca do Chat: escutando ao gravar, pensando
+ao preparar/processar, falando durante a reprodução audível e descansando enquanto espera ou
+interrompe uma resposta. O estado em texto continua informando o acesso ao microfone. Janelas
+baixas ocultam o personagem para manter as ações visíveis. Movimento reduzido mantém uma pose
+estática; telas ocultas, bloqueadas ou inativas param de desenhar. Ocultar ou sair da página de voz
+cancela a conversa; voltar não repete um estado antigo de fala. Esse feedback nunca abre outra
+superfície nem inicia uma gravação.
 
 Opcionalmente, marque **Finalizar automaticamente após uma pausa** antes de iniciar. A opção começa
 desligada ao abrir o app e fica fixa durante aquela conversa. Ela usa o detector de fala local

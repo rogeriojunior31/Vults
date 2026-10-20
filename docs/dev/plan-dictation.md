@@ -2873,8 +2873,21 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    of four states, Black/Light, wide/minimum windows and all four languages, including keyboard
    actions and polite status feedback; no microphone/model/provider was opened. The private test
    profile was removed and the ordinary default binary restored. This is UI evidence, not physical
-   interruption acceptance. Next: connect the visible shared character's speaking/
-   interrupted feedback, review native layouts and accessibility, then exercise microphone/provider/interruption acceptance before
+   interruption acceptance. The visible voice page now reuses Chat's exact Scene/canvas and sprite
+   director. Recording listens, preparation/transcription/generation thinks, audible output speaks,
+   and waiting/interruption rests. Voice transitions bypass cosmetic clip holds, including immediate
+   return to idle, while unchanged redraws preserve sprite phase. One owner moves the canvas back
+   to Chat on departure; no second scene, overlay or recording is created. Low-height views hide
+   the character before shrinking controls. Zeca off, lock, hidden/inactive views and reduced motion
+   retain the existing rendering guards. Renderer visibility now revokes voice immediately and
+   cannot replay the cancelled speaking state on return. Deterministic production-Nest checks cover
+   ownership, every clip, interruption, resize phase continuity, Zeca off, short/hidden/locked views
+   and cancellation without microphone/provider access. Controlled production-Nest native fixtures
+   passed 80 state/theme/language/window cases, shared-canvas return to Chat, immediate Stop,
+   keyboard access, Zeca off and a static paused pose. Both themes and 480 x 360 preserve actions;
+   the short view hides/stops the canvas. This validates rendering, not physical audio/provider
+   behavior. The isolated app was closed and its temporary profile removed. Next: exercise physical
+   microphone/provider/interruption acceptance before
    declaring K8 Done. Cold Settings-to-Nest navigation readiness still needs its own acceptance;
    controlled UI runs wait for loaded navigation before selecting the work page. Codex activation
    keeps its independent qualification gates.

@@ -12,7 +12,7 @@ export interface ConversationBackend {
   copy(text: string): Promise<void>;
 }
 const running = (view: VoiceConversation | null) => !!view && ["preparing", "starting", "recording", "transcribing", "responding", "speaking", "interrupting", "waiting"].includes(view.phase);
-export function createVoiceConversation(api: ConversationBackend | undefined, configure: () => void) {
+export function createVoiceConversation(api: ConversationBackend | undefined, configure: () => void, changed: () => void = () => {}) {
   const title = el("h2"), about = el("p"), privacy = el("p", { class: "dictation-note" });
   const status = el("p"), error = el("p", { class: "meeting-feedback" });
   status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); error.setAttribute("role", "alert");
@@ -32,7 +32,9 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   const route = createVoiceRoute(api?.routes, () => { if (!route.manual()) { automatic.checked = false; semantic.checked = false; } draw(); });
   const content = el("div", { class: "voice-conversation-content" }, privacy, semanticFeedback, reply, review, route.element, automaticChoice, automaticNote, semanticChoice, semanticNote);
   content.tabIndex = 0; content.setAttribute("role", "region");
-  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, title, about)), status, error, actions, content);
+  const perch = el("span", { class: "voice-conversation-character" });
+  perch.setAttribute("aria-hidden", "true"); perch.hidden = true;
+  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, title, about), perch), status, error, actions, content);
   let view: VoiceConversation | null = null, active = false, pending = false, epoch = 0;
   let semanticAvailable = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -88,6 +90,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     draftTitle.textContent = t("Review recovered text");
     copy.textContent = t("Copy text"); copy.disabled = !draft.value.trim();
     copied.textContent = copyState === "done" ? t("Copied") : copyState === "failed" ? t("Could not copy the text. Select and copy it manually.") : "";
+    changed();
   }
   function stop(id: string) { void api?.control(id, "cancel").catch(() => {}); }
   function schedule() {
@@ -163,5 +166,10 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     draw();
   }
   draw();
-  return { element, relabel: draw, setActive };
+  return { element, relabel: draw, setActive, perch, character: () => {
+    if (!active || !running(view)) return null;
+    return { element: perch, clip: view?.phase === "speaking" ? "speak"
+      : view?.phase === "recording" ? "listen"
+      : view?.phase === "waiting" || view?.phase === "interrupting" ? "idle" : "think" };
+  } };
 }

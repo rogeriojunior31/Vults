@@ -2555,6 +2555,10 @@ button.touched-row:hover,
 
 .voice-conversation { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding: 16px 20px; gap: 8px; }
 .voice-conversation[hidden] { display: none; }
+.voice-conversation-character { position: relative; display: block; flex: none; width: 76px; height: 72px; pointer-events: none; }
+.voice-conversation-character[hidden] { display: none; }
+.voice-conversation-character .scene { position: absolute; left: 0; top: 0; transform: scale(calc(2 / 3)); transform-origin: top left; }
+@media (max-height: 560px) { .voice-conversation-character { display: none; } }
 .voice-conversation > p { margin: 0; flex: none; font-size: var(--text-m); overflow-wrap: anywhere; }
 .voice-conversation-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
 .voice-conversation-content { min-width: 0; min-height: 0; overflow-y: auto; }

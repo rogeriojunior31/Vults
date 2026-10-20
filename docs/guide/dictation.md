@@ -70,6 +70,13 @@ Duplicate/late clicks cannot stop a new generation or start capture. During gene
 audible output, **Cancel** still ends the whole session. This is a click control; interruption by
 speaking over Zeca uses the separate opt-in continuous routes below.
 
+During a conversation, the page reuses Chat's Zeca character: listening while recording, thinking
+while preparing/processing, speaking during audible output, and resting while waiting or stopping a
+response. The text status remains authoritative about microphone access. Short windows hide the
+character to keep actions visible. Reduced motion keeps a static pose; hidden, locked and inactive
+views stop drawing. Hiding or leaving the voice page cancels its conversation; returning does not
+replay an old speaking state. This feedback never opens another surface or starts a recording.
+
 Optionally select **Finish automatically after a pause** before Start. It starts off when the app
 opens and is frozen for that conversation. It uses the installed local speech detector and GPU
 transcription preview; it downloads nothing. Confirmed speech, local partial words and fresh audio
