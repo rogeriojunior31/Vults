@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: ac6b3074fc39 -->
+<!-- source: aba186ab572f -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -201,7 +201,11 @@ A V6.6.1 encaminha transcrições locais finalizadas ao dispatcher de comandos d
 realtime. O proprietário do estado verifica Configurações/gerações e admissão cancelável de uso
 único, reutiliza leituras locais com remoção de segredos e separa o contexto do ditado independente.
 Comandos tratados/recusados/esclarecidos aposentam a geração sem Generate nem fallback de modelo.
-Efeitos externos informam Solicitado após encaminhamento ao executor, sem alegar conclusão. O Linux
+A V6.6.3 distingue recibos de efeitos concluídos, encaminhados e com falha; lotes que misturam
+leitura e ação também esperam. Salvar projetos com sucesso pode concluir, enquanto encaminhar
+aberturas continua como Solicitado. O consumo compartilhado da captura bloqueia recuperação e
+repetição de cópias com nova geração após confirmação, conciliação ou interrupção. Trabalho nativo
+enfileirado verifica novamente chamador/autoridade/prazo e mantém a concessão exclusiva até sair. O Linux
 exige transcrição limitada da mesma captura; texto ausente falha antes de construir o provedor e
 oferece apenas recuperação revisável. Não há ativação de renderer/montagem de captura, ferramenta
 do modelo nem consulta. Veja

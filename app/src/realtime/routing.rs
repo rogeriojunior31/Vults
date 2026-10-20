@@ -4,12 +4,16 @@ use crate::{
     settings::Settings,
     voice_commands::{Commands, Feedback, Report},
 };
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::{AppHandle, Manager};
 use tokio::sync::oneshot;
 use vults_chat::realtime::transport::Failure;
 use vults_dictation::command::{self, Parsed};
+mod completion;
+pub(crate) use completion::Completion;
+pub(crate) use completion::Receipt;
 
 pub(super) struct Router {
     commands: Mutex<Commands>,
@@ -24,17 +28,28 @@ impl Router {
             _lease: lease,
         })
     }
-    pub async fn prepare(self: Arc<Self>, app: AppHandle, turn: Turn) -> Result<Option<LocalReply>, Failure> {
+    pub async fn prepare(
+        self: Arc<Self>,
+        app: AppHandle,
+        turn: Turn,
+        deadline: Instant,
+    ) -> Result<Option<LocalReply>, Failure> {
+        if turn.handled() {
+            return Err(Failure::Input);
+        }
         let text = turn.transcript().ok_or(Failure::Input)?.to_owned();
         let (reply, receive) = oneshot::channel();
-        let pending = Pending(Arc::new(Mutex::new(true)));
+        let pending = Pending::new();
         crate::runtime::realtime_command(
             &app,
             Request {
                 router: self,
                 text,
+                turn,
                 pending: pending.0.clone(),
-                deadline: Instant::now() + super::playback::LOCAL_TIMEOUT,
+                waiting: pending.1.clone(),
+                // Leave time to publish an unknown receipt before the owner's outer timeout.
+                deadline: deadline - std::time::Duration::from_millis(50),
                 reply,
             },
         )?;
@@ -47,10 +62,16 @@ impl Router {
         }))
     }
 }
-// Dropping a timed-out/aborted native waiter revokes an unconsumed runtime message.
-struct Pending(Arc<Mutex<bool>>);
+// Revoke queued work, then wait for any in-flight commit to mark its capture consumed.
+struct Pending(Arc<Mutex<bool>>, Arc<AtomicBool>);
+impl Pending {
+    fn new() -> Self {
+        Self(Arc::new(Mutex::new(true)), Arc::new(AtomicBool::new(true)))
+    }
+}
 impl Drop for Pending {
     fn drop(&mut self) {
+        self.1.store(false, Ordering::SeqCst);
         *self.0.lock().unwrap_or_else(|e| e.into_inner()) = false;
     }
 }
@@ -58,7 +79,9 @@ type Reply = oneshot::Sender<Result<Option<Report>, Failure>>;
 pub(crate) struct Request {
     router: Arc<Router>,
     text: String,
+    turn: Turn,
     pending: Arc<Mutex<bool>>,
+    waiting: Arc<AtomicBool>,
     deadline: Instant,
     reply: Reply,
 }
@@ -71,7 +94,7 @@ impl std::fmt::Debug for Request {
 }
 impl Request {
     /// Settings and admission stay locked until the shadow-state batch commits.
-    pub fn dispatch(self, app: &AppHandle, state: &mut vults_core::State) -> Option<(Reply, Report)> {
+    pub fn dispatch(self, app: &AppHandle, state: &mut vults_core::State) -> Option<Completion> {
         let settings = app.state::<crate::settings::SettingsState>();
         let saved = settings.0.lock().ok()?;
         let mut commands = self.router.commands.lock().ok()?;
@@ -79,20 +102,36 @@ impl Request {
         let report = consume(
             &self.pending,
             self.deadline,
-            || !self.reply.is_closed() && (self.router.valid)(&saved) && saved.voice_realtime.enabled(),
             || {
-                route(
+                !self.reply.is_closed()
+                    && !self.turn.handled()
+                    && (self.router.valid)(&saved)
+                    && saved.voice_realtime.enabled()
+            },
+            || {
+                let report = route(
                     &mut commands,
                     state,
                     &self.text,
                     saved.dictation_commands,
                     Instant::now(),
                     usage,
-                )
+                );
+                // Commit this before dropping pending admission, including on waiter timeout.
+                if report.is_some() {
+                    self.turn.consume();
+                }
+                report
             },
         )?;
         match report {
-            Some(report) => Some((self.reply, report)),
+            Some(report) => Some(Completion::new(
+                self.reply,
+                report,
+                self.router.clone(),
+                self.deadline,
+                self.waiting,
+            )),
             None => {
                 let _ = self.reply.send(Ok(None));
                 None

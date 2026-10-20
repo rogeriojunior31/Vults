@@ -148,11 +148,12 @@ fn actions(output: &mpsc::Sender<Event>, actions: Vec<Action>) -> Result<bool, F
 pub(super) const LOCAL_TIMEOUT: Duration = Duration::from_secs(3);
 async fn prepare_turn(
     future: impl Future<Output = Result<Option<LocalReply>, Failure>>,
+    deadline: std::time::Instant,
     active: &(dyn Fn() -> bool + Send + Sync),
     channels: &Channels,
 ) -> Result<Option<LocalReply>, Failure> {
     tokio::pin!(future);
-    let deadline = tokio::time::sleep(LOCAL_TIMEOUT);
+    let deadline = tokio::time::sleep_until(deadline.into());
     tokio::pin!(deadline);
     let mut poll = tokio::time::interval(Duration::from_millis(5));
     loop {
@@ -179,7 +180,7 @@ pub(super) async fn drive<
     mode: turn::BargeIn,
     mut open: impl FnMut(Arc<AtomicBool>) -> Result<P, Failure>,
     remote: impl FnOnce(transport::Channels) -> F,
-    mut prepare: impl FnMut(Turn) -> Q,
+    mut prepare: impl FnMut(Turn, std::time::Instant) -> Q,
 ) -> Result<Option<(Turn, Failure)>, Failure> {
     let start = std::time::Instant::now();
     let mut machine = turn::Turn::new(mode);
@@ -194,17 +195,22 @@ pub(super) async fn drive<
             _ = poll.tick() => {},
             command = channels.input.recv() => match command {
                 Some(Command::Turn { generation, turn }) if generation == machine.generation() => {
-                    let prepared = prepare_turn(prepare(turn.clone()), active, &channels).await;
+                    if turn.handled() { continue; }
+                    let deadline = std::time::Instant::now() + LOCAL_TIMEOUT;
+                    let prepared = prepare_turn(prepare(turn.clone(), deadline), deadline, active, &channels).await;
                     local::check(active, &channels.cancel)?;
                     if channels.output.is_closed() { return Err(Failure::Output); }
                     match prepared {
                         Ok(Some(reply)) => {
+                            turn.consume();
                             emit(&channels.output, Event::Local { generation, reply })?;
                             actions(&channels.output, machine.handle(generation, turn::Event::LocalCompleted, start.elapsed()))?;
                             let listen = machine.start(start.elapsed()).ok_or(Failure::Input)?;
                             emit(&channels.output, Event::Action(listen))?;
                         },
-                        Ok(None) => break Some(turn),
+                        Ok(None) if !turn.handled() => break Some(turn),
+                        Ok(None) => return Err(Failure::Input),
+                        Err(reason) if turn.handled() => return Err(reason),
                         Err(reason) => return Ok(Some((turn, reason))),
                     }
                 },
@@ -343,7 +349,7 @@ pub(super) async fn drive<
                             break Err(Failure::Protocol);
                         }
                         // A consumed tool turn cannot return as local recovery or execute again after failure.
-                        pending = None;
+                        if let Some(turn) = pending.take() { turn.consume(); }
                         emit(&channels.output, Event::Settled(receipt))?;
                     },
                     Some(transport::Event::Finished(receipt)) => {
@@ -354,7 +360,7 @@ pub(super) async fn drive<
                         current.settled = true;
                         if current.frozen.is_none() {
                             if offset.is_some() { break Err(Failure::Protocol); }
-                            pending = None;
+                            if let Some(turn) = pending.take() { turn.consume(); }
                             if let Err(error) = current.output.finish() { break Err(error); }
                             let out = machine.handle(current.generation, turn::Event::ResponseFinished, now);
                             if let Err(error) = actions(&channels.output, out) { break Err(error); }
@@ -375,18 +381,22 @@ pub(super) async fn drive<
                     Some(Command::Turn { generation, turn }) => {
                         if stopped { continue; }
                         if generation != machine.generation() { continue; }
+                        if turn.handled() { continue; }
                         if pending.is_some() || machine.phase() != turn::Phase::Listening { break Err(Failure::Input); }
-                        let prepared = prepare_turn(prepare(turn.clone()), active, &channels).await;
+                        let deadline = std::time::Instant::now() + LOCAL_TIMEOUT;
+                        let prepared = prepare_turn(prepare(turn.clone(), deadline), deadline, active, &channels).await;
                         local::check(active, &channels.cancel)?;
                         match prepared {
                             Ok(Some(reply)) => {
+                                turn.consume();
                                 emit(&channels.output, Event::Local { generation, reply })?;
                                 let out = machine.handle(generation, turn::Event::LocalCompleted, start.elapsed());
                                 actions(&channels.output, out)?;
                                 continue;
                             },
-                            Ok(None) => {},
-                            Err(reason) => { pending = Some(turn); break Err(reason); },
+                            Ok(None) if !turn.handled() => {},
+                            Ok(None) => break Err(Failure::Input),
+                            Err(reason) => { if !turn.handled() { pending = Some(turn); } break Err(reason); },
                         }
                         pending = Some(turn); offset = Some(0);
                         let out = machine.handle(generation, turn::Event::InputCommitted, start.elapsed());
@@ -408,7 +418,7 @@ pub(super) async fn drive<
                             cursor.played_frames = cursor.played_frames / 24 * 24;
                             current.frozen = Some(cursor);
                             ready = false;
-                            pending = None; offset = None;
+                            if let Some(turn) = pending.take() { turn.consume(); } offset = None;
                             if stopped {
                                 current.local_only = true;
                                 current.truncated = true;

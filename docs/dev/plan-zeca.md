@@ -1669,3 +1669,24 @@ Offline duplex/native-owner checks cover these paths without a provider, key or 
 fixed escaped-envelope bounding and early stale-attempt rejection. No action/permission tool or
 renderer activation is added. Next: V6.6.3 consultation/completion, then V6.7 capture/UI. Whole
 V6.6 and physical/live acceptance remain open.
+
+
+**2026-10-20 V6.6.3 native completion receipts.** Native command effects now carry distinct
+completed/submitted/failed receipts through the existing runtime executor. Successful project saves
+can complete; starting an editor or requesting window activation remains Requested because launch
+submission cannot prove visible completion. Failed or missing receipts never invent Done; mixed
+read/action batches wait for every receipt before preserving their cached answer. The bounded
+receipt wait ends inside the native owner's original deadline. Queued workers recheck consent,
+waiter, epoch and expiry and retain the exclusive session lease until exit. Capture clones share
+consumption before admission unlocks; timeout, lost acknowledgement, tool settlement and confirmed
+interruption cannot return that input to recovery or replay it under another generation. Offline
+native-owner regressions and H1 cover this backend slice without desktop actions, microphone,
+provider calls or renderer changes. Agent consultation, including its separate consent/budget/trace
+and 1.5-second reassurance, remains next within V6.6.3; V6.7 and physical/live acceptance stay open.
+
+Validation: 1,396 workspace tests pass (12 documented ignores), plus 10 feature evals, workspace
+Clippy with warnings denied, the renderer build, all 18 existing renderer checks and repository
+language/brand/layer/network/version guards. Reviewed EN/PT marks, anchors and local links pass.
+Independent review found and resolved mixed-batch receipt loss, competing timeout deadlines,
+launcher submission mistaken for completion and interruption clone replay; the final code review
+has no confirmed blocker. The app stays closed; no physical/live acceptance is claimed.

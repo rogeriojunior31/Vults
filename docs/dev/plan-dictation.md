@@ -2656,11 +2656,24 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
    audio. Offline protocol/duplex/native-owner regressions cover these paths and exact offerings.
    No action/permission tool, renderer entry, microphone or live provider is activated. Next is
    V6.6.3. See [Read-only tools](../reference/realtime-accounting.md#read-only-tools-in-realtime).
-3. **V6.6.3 agent consultation and completion semantics** (remaining).
-   Reuse the app's existing Claude Code/Codex question path with bounded consultation ownership,
-   cancellation and the 1.5-second reassurance. Track actual execution before reporting Done and
-   prevent model failure from replaying an already performed action. Reconcile docs/evidence and
-   the exhaustive H1 voice boundary before V6.7. Live-provider/human-speech acceptance remains separate.
+3. **V6.6.3 agent consultation and completion semantics** (in progress).
+   - **Completion receipts** (implemented 2026-10-20). Core-only changes complete at commit;
+     project persistence completes only after a successful save. Native launches distinguish
+     submission from completion: starting an editor or submitting a window-activation request
+     reports Requested, not Done. Known failure reports that some changes may already have happened.
+     Every effect receipt is checked, including mixed cached-read/action batches. Receipt waiting
+     is bounded to two seconds within the original three-second owner deadline; queued work
+     rechecks the exact authority, waiter and expiry and retains the exclusive lease through exit.
+     A consumed capture is shared across clones before admission unlocks. Lost acknowledgements,
+     timeout, tool settlement and confirmed interruption cannot recover, relabel or replay it.
+     Offline regressions and the exhaustive H1 boundary cover this slice without desktop actions,
+     microphone, provider or renderer activation. See
+     [Native command receipts](../reference/realtime-accounting.md#native-command-receipts).
+   - **Agent consultation** (next). Reuse the existing Claude Code/Codex question path with
+     bounded consultation ownership, cancellation and the 1.5-second reassurance. Keep separate
+     consent, budget and local traces through the network gate; do not inherit ordinary Chat's
+     tools or permissions. Reconcile evidence and review before V6.7. Whole V6.6.3 remains open
+     until this consultation slice is delivered. Live-provider/human-speech acceptance is separate.
 
 **V6.7 Talk with Zeca page and island speaking states** (M)
 - Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio

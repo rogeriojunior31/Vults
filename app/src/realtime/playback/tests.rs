@@ -11,7 +11,7 @@ async fn without_commands<P: Output, F: Future<Output = Result<(), Failure>>>(
     open: impl FnMut(Arc<AtomicBool>) -> Result<P, Failure>,
     remote: impl FnOnce(transport::Channels) -> F,
 ) -> Result<Option<(Turn, Failure)>, Failure> {
-    super::drive(channels, active, mode, open, remote, |_| {
+    super::drive(channels, active, mode, open, remote, |_, _| {
         std::future::ready(Ok(None))
     })
     .await
@@ -578,7 +578,13 @@ async fn failed_receipts_and_output_saturation_retain_the_original() {
 async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_authorized_turn() {
     for finished in [false, true] {
         let (io, send, mut receive, _stop) = channels(128);
-        send.send(input(generation(), 123)).await.unwrap();
+        let capture = Turn::new(vec![123; 4800]).unwrap();
+        send.send(Command::Turn {
+            generation: generation(),
+            turn: capture.clone(),
+        })
+        .await
+        .unwrap();
         let state = device(false);
         let output = state.clone();
         let (ack, wait_ack) = tokio::sync::oneshot::channel();
@@ -672,6 +678,16 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
                 break generation;
             }
         };
+        assert!(
+            capture.handled(),
+            "confirmed interruption consumes retained clones before producer completion"
+        );
+        send.send(Command::Turn {
+            generation: next_generation,
+            turn: capture,
+        })
+        .await
+        .unwrap();
         send.send(input(next_generation, 456)).await.unwrap();
         send.send(Command::Signal {
             generation: generation(),
@@ -719,7 +735,7 @@ async fn local_commands_retire_generations_before_lazy_provider_admission() {
                     Err(Failure::Transport)
                 }
             },
-            move |turn| {
+            move |turn, _| {
                 count.fetch_add(1, Ordering::SeqCst);
                 std::future::ready(Ok(if turn.samples()[0] == 77 {
                     None
@@ -738,7 +754,13 @@ async fn local_commands_retire_generations_before_lazy_provider_admission() {
         Event::Action(a) if matches!(a.effect, Effect::Listen { .. }) => a.generation,
         other => panic!("{other:?}"),
     };
-    send.send(input(first, 11)).await.unwrap();
+    let capture = Turn::new(vec![11; 4800]).unwrap();
+    send.send(Command::Turn {
+        generation: first,
+        turn: capture.clone(),
+    })
+    .await
+    .unwrap();
     // A queued duplicate may never execute, upload or masquerade as the next input.
     send.send(input(first, 22)).await.unwrap();
     let mut local = 0;
@@ -757,6 +779,14 @@ async fn local_commands_retire_generations_before_lazy_provider_admission() {
     assert_eq!(local, 1);
     assert_ne!(first, second);
     assert!(!opened.load(Ordering::SeqCst));
+    assert!(capture.handled());
+    // Relabelling the exact same capture with a fresh generation cannot replay it either.
+    send.send(Command::Turn {
+        generation: second,
+        turn: capture,
+    })
+    .await
+    .unwrap();
     send.send(input(second, 77)).await.unwrap();
     let (turn, reason) = worker.await.unwrap().unwrap().unwrap();
     assert_eq!(reason, Failure::Transport);
@@ -789,7 +819,7 @@ async fn an_established_connection_never_receives_a_locally_consumed_followup() 
                 );
                 Ok(())
             },
-            move |turn| {
+            move |turn, _| {
                 count.fetch_add(1, Ordering::SeqCst);
                 std::future::ready(Ok(if turn.samples()[0] == 77 {
                     None
@@ -847,7 +877,7 @@ async fn pending_command_admission_is_cancellable_and_never_constructs_a_provide
                 remote_called.store(true, Ordering::SeqCst);
                 std::future::ready(Ok(()))
             },
-            move |_| {
+            move |_, _| {
                 let entered = entered.take();
                 async move {
                     let _ = entered.unwrap().send(());
@@ -877,6 +907,138 @@ async fn pending_command_admission_is_cancellable_and_never_constructs_a_provide
         Err(Failure::Cancelled)
     ));
     assert!(!called.load(Ordering::SeqCst));
+}
+
+#[tokio::test]
+async fn a_committed_local_action_never_recovers_after_failure_before_or_after_connection() {
+    for connected in [false, true] {
+        let (io, send, mut receive, _stop) = channels(128);
+        let capture = Turn::new(vec![11; 4800]).unwrap();
+        let original = capture.clone();
+        let worker = tokio::spawn(async move {
+            super::drive(
+                io,
+                &|| true,
+                turn::BargeIn::Disabled,
+                |_| Ok(Fake(device(true))),
+                move |mut remote| async move {
+                    assert!(connected, "consumed input cannot open the provider");
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    upload(&mut remote).await;
+                    audio(&remote, 0).await;
+                    done(&remote, 0, true).await;
+                    assert!(remote.input.recv().await.is_none());
+                    Ok(())
+                },
+                |turn, _| {
+                    std::future::ready(if turn.samples()[0] == 77 {
+                        Ok(None)
+                    } else {
+                        // The state owner committed; its execution acknowledgement was then lost.
+                        turn.consume();
+                        Err(Failure::Timeout)
+                    })
+                },
+            )
+            .await
+        });
+        let first = match next(&mut receive).await {
+            Event::Action(a) => a.generation,
+            other => panic!("{other:?}"),
+        };
+        let selected = if connected {
+            send.send(input(first, 77)).await.unwrap();
+            loop {
+                if let Event::Action(a) = next(&mut receive).await
+                    && a.generation != first
+                    && matches!(a.effect, Effect::Listen { .. })
+                {
+                    break a.generation;
+                }
+            }
+        } else {
+            first
+        };
+        send.send(Command::Turn {
+            generation: selected,
+            turn: capture,
+        })
+        .await
+        .unwrap();
+        assert!(matches!(worker.await.unwrap(), Err(Failure::Timeout)));
+        assert!(original.handled());
+        while let Ok(event) = receive.try_recv() {
+            assert!(
+                !matches!(event, Event::Local { .. }),
+                "no invented Done after lost receipt"
+            );
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn unresolved_effect_receipt_publishes_requested_before_the_native_waiter_expires() {
+    use crate::realtime::routing::{Completion, Router};
+    use crate::voice_commands::{Feedback, Report};
+    let owner = Arc::new(crate::realtime::State::default());
+    let (lease, _) = owner.begin().unwrap();
+    let router = Router::new(Arc::new(lease), Arc::new(|_| true));
+    let (io, send, mut receive, _stop) = channels(64);
+    send.send(input(generation(), 11)).await.unwrap();
+    let worker = tokio::spawn(async move {
+        super::drive(
+            io,
+            &|| true,
+            turn::BargeIn::Disabled,
+            |_| Ok(Fake(device(true))),
+            |_| async { panic!("a consumed native action must never construct the provider") },
+            move |turn, deadline| {
+                let router = router.clone();
+                async move {
+                    turn.consume();
+                    let (reply, receive) = tokio::sync::oneshot::channel();
+                    let report = Report {
+                        feedback: Feedback::Requested,
+                        text: String::new(),
+                        choices: vec![],
+                        effects: vec![],
+                    };
+                    let mut completion = Completion::new(
+                        reply,
+                        report,
+                        router,
+                        deadline - Duration::from_millis(50),
+                        Arc::new(AtomicBool::new(true)),
+                    );
+                    let held = completion.work();
+                    completion.finish(vults_core::i18n::Lang::En);
+                    let report = receive.await.unwrap().unwrap().unwrap();
+                    drop(held);
+                    Ok(Some(LocalReply {
+                        feedback: report.feedback,
+                        text: report.text,
+                        choices: report.choices,
+                    }))
+                }
+            },
+        )
+        .await
+    });
+    let result = tokio::time::timeout(LOCAL_TIMEOUT, async {
+        loop {
+            match receive.recv().await.unwrap() {
+                Event::Local { reply, .. } => break reply,
+                Event::Action(a) => assert_ne!(a.effect, Effect::Generate),
+                other => panic!("{other:?}"),
+            }
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(result.feedback, Feedback::Requested);
+    drop(send);
+    assert!(worker.await.unwrap().unwrap().is_none());
 }
 
 #[tokio::test]

@@ -683,6 +683,7 @@ pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
 pub enum VoiceFeedback {
     Done,
     Requested,
+    ExecutionFailed,
     SentToChat,
     ChatUnavailable,
     Answer,
@@ -720,6 +721,16 @@ pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
         (Lang::PtBr, Requested) => "Comando solicitado.",
         (Lang::Es, Requested) => "Comando solicitado.",
         (Lang::Zh, Requested) => "命令已请求。",
+        (Lang::En, ExecutionFailed) => {
+            "Could not complete every action. Some changes may already have happened."
+        }
+        (Lang::PtBr, ExecutionFailed) => {
+            "Não foi possível concluir todas as ações. Algumas alterações podem já ter ocorrido."
+        }
+        (Lang::Es, ExecutionFailed) => {
+            "No se pudieron completar todas las acciones. Es posible que algunos cambios ya se hayan realizado."
+        }
+        (Lang::Zh, ExecutionFailed) => "无法完成所有操作。部分更改可能已经发生。",
         (Lang::En, Done) => "Command completed.",
         (Lang::PtBr, Done) => "Comando concluído.",
         (Lang::Es, Done) => "Comando completado.",

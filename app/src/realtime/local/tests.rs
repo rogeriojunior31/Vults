@@ -143,3 +143,22 @@ async fn successful_recovery_preserves_the_whole_text_without_sending_it() {
     assert!(matches!(&recovery, Recovery::Text { text, .. } if text == full));
     assert!(!format!("{recovery:?}").contains("sentence"));
 }
+
+#[tokio::test]
+async fn handled_capture_clones_cannot_decode_or_return_as_reviewable_recovery() {
+    let capture = turn(99);
+    let original = capture.clone();
+    capture.consume();
+    assert!(original.handled());
+    let (_send, cancel) = watch::channel(false);
+    let result = recover(
+        original,
+        Failure::Timeout,
+        Arc::new(|| true),
+        cancel,
+        lease(),
+        |_, _| panic!("an accepted command must never reach recovery transcription"),
+    )
+    .await;
+    assert!(matches!(result, Err(Failure::Input)));
+}

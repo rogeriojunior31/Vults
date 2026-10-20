@@ -1,5 +1,11 @@
 //! A native complete turn survives remote admission and transport failure in bounded memory.
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 use tokio::sync::watch;
 use vults_chat::realtime::transport::Failure;
 
@@ -11,6 +17,7 @@ const CHUNK: usize = RATE / 10;
 pub struct Turn {
     samples: Arc<[i16]>,
     transcript: Option<Arc<str>>,
+    handled: Arc<AtomicBool>,
 }
 impl Turn {
     /// Already captured, mono PCM16 at 24 kHz. This grants no microphone authority.
@@ -21,6 +28,7 @@ impl Turn {
         Ok(Self {
             samples: pcm.into(),
             transcript: None,
+            handled: Arc::default(),
         })
     }
     /// A finalized local transcript of this same capture, supplied by its native capture owner.
@@ -39,6 +47,12 @@ impl Turn {
     }
     pub(super) fn samples(&self) -> Arc<[i16]> {
         self.samples.clone()
+    }
+    pub(super) fn handled(&self) -> bool {
+        self.handled.load(Ordering::SeqCst)
+    }
+    pub(super) fn consume(&self) {
+        self.handled.store(true, Ordering::SeqCst);
     }
 }
 impl std::fmt::Debug for Turn {
@@ -122,6 +136,9 @@ pub(super) async fn recover(
     + 'static,
 ) -> Result<Recovery, Failure> {
     check(&*active, &cancel)?;
+    if turn.handled() {
+        return Err(Failure::Input);
+    }
     let stop = Stop(Arc::default());
     let (pcm, flag) = (turn.samples(), stop.0.clone());
     let worker_lease = lease.clone();

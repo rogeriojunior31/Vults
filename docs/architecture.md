@@ -183,8 +183,11 @@ for the private native routing check and remaining physical/live acceptance limi
 V6.6.1 routes finalized local transcripts through V8's command dispatcher before realtime upload.
 The state owner checks Settings/epochs and cancellable once-only admission, reuses redacted cached
 reads, and keeps context separate from independent dictation. Consumed/refused/clarified commands
-retire their input generation without Generate or model fallback. External effects report Requested
-after executor submission rather than claiming completion. Linux requires a bounded same-capture
+retire their input generation without Generate or model fallback. V6.6.3 distinguishes completed,
+submitted and failed effect receipts; mixed read/action batches wait too. Successful project saves
+can complete, while launch handoffs remain Requested. Shared capture consumption blocks recovery
+and relabelled-clone replay after commit, settlement or interruption. Queued native work rechecks
+its waiter/authority/deadline and keeps the exclusive lease through exit. Linux requires a bounded same-capture
 transcript; missing text fails before provider construction and only offers reviewable recovery.
 No renderer/capture assembly, model tool or consultation is enabled. See
 [Local command admission](reference/realtime-accounting.md#local-commands-before-realtime-upload).

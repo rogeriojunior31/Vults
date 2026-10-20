@@ -7,7 +7,7 @@ fn key(id: &str) -> SessionKey {
         session_id: id.into(),
     }
 }
-fn fixture(now: Instant) -> State {
+pub(super) fn fixture(now: Instant) -> State {
     let mut state = State::default();
     for (id, path) in [("a", "/work/api"), ("b", "/work/web")] {
         core::reduce(
@@ -107,7 +107,7 @@ fn a_dropped_waiter_revokes_a_queued_request_and_debug_never_contains_text() {
         .with_transcript("private capture words".into())
         .unwrap();
     assert!(!format!("{turn:?}").contains("private capture"));
-    let pending = Pending(Arc::new(Mutex::new(true)));
+    let pending = Pending::new();
     let queued = pending.0.clone();
     drop(pending);
     assert!(!*queued.lock().unwrap());
@@ -130,7 +130,7 @@ fn revoked_or_consumed_admission_cannot_mutate_the_flock() {
     let now = Instant::now();
     let mut state = fixture(now);
     let mut commands = Commands::new(now);
-    let pending = Pending(Arc::new(Mutex::new(true)));
+    let pending = Pending::new();
     let queued = pending.0.clone();
     assert!(
         consume(
@@ -162,7 +162,7 @@ fn revoked_or_consumed_admission_cannot_mutate_the_flock() {
         .is_none()
     );
     assert_eq!(state.focus, focus);
-    let pending = Pending(Arc::new(Mutex::new(true)));
+    let pending = Pending::new();
     let queued = pending.0.clone();
     drop(pending);
     assert!(

@@ -449,11 +449,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
             #[cfg(target_os = "linux")]
             Msg::RealtimeCommand(request) => {
-                let Some((reply, mut report)) = request.dispatch(&app, &mut state) else {
+                let Some(mut completion) = request.dispatch(&app, &mut state) else {
                     continue;
                 };
-                command_effects = Some(std::mem::take(&mut report.effects));
-                command_reply = Some((reply, report));
+                command_effects = Some(std::mem::take(&mut completion.report.effects));
+                command_reply = Some(completion);
                 None
             }
             #[cfg(target_os = "linux")]
@@ -765,10 +765,24 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 Effect::SaveProjects(projects) => {
                     let count = projects.len();
-                    match crate::settings::edit(&app, |s| s.projects = projects.clone()) {
-                        Ok(()) => tracing::info!(count, "project choices saved"),
-                        Err(e) => tracing::warn!(count, error = %e, "project choices not saved"),
+                    let save = || match crate::settings::edit(&app, |s| s.projects = projects.clone()) {
+                        Ok(()) => {
+                            tracing::info!(count, "project choices saved");
+                            true
+                        }
+                        Err(e) => {
+                            tracing::warn!(count, error = %e, "project choices not saved");
+                            false
+                        }
+                    };
+                    #[cfg(target_os = "linux")]
+                    if let Some(completion) = &mut command_reply {
+                        completion.work().run(&app, || save().into());
+                    } else {
+                        save();
                     }
+                    #[cfg(not(target_os = "linux"))]
+                    save();
                     // An open Settings lists them.
                     let _ = app.emit("settings", serde_json::json!({ "projects": projects }));
                 }
@@ -796,24 +810,49 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
                     // there was nothing to try.
                     let app = app.clone();
+                    #[cfg(target_os = "linux")]
+                    let work = command_reply.as_mut().map(|completion| completion.work());
                     tauri::async_runtime::spawn_blocking(move || {
-                        #[cfg(target_os = "linux")]
-                        let found = vults_platform::jump::jump(&terminal);
-                        #[cfg(not(target_os = "linux"))]
-                        let found = {
-                            let _ = terminal;
-                            false
+                        let jump = || {
+                            #[cfg(target_os = "linux")]
+                            let found = vults_platform::jump::jump(&terminal);
+                            #[cfg(not(target_os = "linux"))]
+                            let found = {
+                                let _ = terminal;
+                                false
+                            };
+                            if !found {
+                                tracing::info!("no terminal to bring forward");
+                                let _ = app.emit_to(ISLAND, "jump-failed", ());
+                            }
+                            found
                         };
-                        if !found {
-                            tracing::info!("no terminal to bring forward");
-                            let _ = app.emit_to(ISLAND, "jump-failed", ());
+                        #[cfg(target_os = "linux")]
+                        if let Some(work) = work {
+                            work.run(&app, || crate::realtime::routing::Receipt::submitted(jump()));
+                        } else {
+                            jump();
                         }
+                        #[cfg(not(target_os = "linux"))]
+                        jump();
                     });
                 }
                 // Checks the disk and may start the editor: off the loop.
                 Effect::OpenFolder(path) => {
                     let app = app.clone();
-                    tauri::async_runtime::spawn_blocking(move || crate::open::folder(&app, &path));
+                    #[cfg(target_os = "linux")]
+                    let work = command_reply.as_mut().map(|completion| completion.work());
+                    tauri::async_runtime::spawn_blocking(move || {
+                        let open = || crate::open::folder(&app, &path);
+                        #[cfg(target_os = "linux")]
+                        if let Some(work) = work {
+                            work.run(&app, || crate::realtime::routing::Receipt::submitted(open()));
+                        } else {
+                            open();
+                        }
+                        #[cfg(not(target_os = "linux"))]
+                        open();
+                    });
                 }
                 Effect::OpenFile { path, line } => {
                     let app = app.clone();
@@ -834,8 +873,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
 
         #[cfg(target_os = "linux")]
-        if let Some((reply, report)) = command_reply {
-            let _ = reply.send(Ok(Some(report)));
+        if let Some(completion) = command_reply {
+            completion.finish(state.lang);
         }
         crate::phone::sync(&app, &state, now);
         let mut view = state.view();

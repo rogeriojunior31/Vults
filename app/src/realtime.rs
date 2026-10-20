@@ -147,9 +147,11 @@ async fn run_with_audio(
     let decode_language = crate::voice::language(&app);
     let cancel = channels.cancel.clone();
     let check_app = app.clone();
+    let publication = channels.output.clone();
     let (selected, spoken, cancellation) = (model.clone(), language.clone(), cancel.clone());
     let valid: Arc<dyn Fn(&crate::settings::Settings) -> bool + Send + Sync> = Arc::new(move |s| {
         state.current(epoch)
+            && !publication.is_closed()
             && !*cancellation.borrow()
             && cancellation.has_changed().is_ok()
             && !crate::lock::locked(&check_app)
@@ -194,14 +196,14 @@ async fn run_with_audio(
             },
             {
                 let app = app.clone();
-                move |turn| {
+                move |turn, deadline| {
                     #[cfg(target_os = "linux")]
                     {
-                        router.clone().prepare(app.clone(), turn)
+                        router.clone().prepare(app.clone(), turn, deadline)
                     }
                     #[cfg(not(target_os = "linux"))]
                     {
-                        let _ = (&app, turn);
+                        let _ = (&app, turn, deadline);
                         std::future::ready(Ok(None))
                     }
                 }

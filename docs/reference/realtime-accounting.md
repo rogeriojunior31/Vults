@@ -298,9 +298,9 @@ is polled for cancellation/output closure and drops pending admission on timeout
 Only an unrecognized NotCommand result may proceed to the realtime transport. Recognized commands,
 refused card answers, disabled/unavailable actions and clarification questions all stay local.
 Reads reuse the existing redacted cached flock formatter; no connector fetch is triggered. Effects
-use the existing runtime executor and the exhaustive voice-only Intent allowlist. External launches
-or persistence say Command requested after submission, since submission is not completion proof;
-finished core-only changes may say Command completed. A local result emits an identity-bound Local
+use the existing runtime executor and the exhaustive voice-only Intent allowlist. V6.6.3 adds the
+native receipts below: only acknowledged completion may say Command completed; launch submission
+remains Command requested. A local result emits an identity-bound Local
 event, finishes without Generate and retires that input generation. A queued duplicate cannot run
 again or upload. A handled input never becomes automatic model/Chat fallback after an error.
 
@@ -310,6 +310,40 @@ checks cover permission refusal, command disablement, ambiguity, separate contex
 reads, expired admission and once-only mutation. These tests use no microphone, desktop action,
 key or provider. V6.6.2 adds the model-side flock tools below; consultation remains V6.6.3. Full
 V6.6, renderer activation and real speech/provider acceptance are still open.
+
+
+## Native command receipts
+
+The completion slice of V6.6.3 uses the existing executor with one receipt per effect. A core-only
+change completes at the state commit; project persistence completes only after the Settings save
+succeeds. Editor process creation, file-manager handoff and window-activation submission remain
+Requested: these APIs cannot prove the requested window became visible or that its launcher later
+succeeded. A known failure reports that some changes may already have happened, rather than claiming
+an all-or-nothing rollback. Mixed cached-read/action batches wait for every effect and preserve the
+cached answer only after all receipts report completed; submission, failure or timeout replaces it
+with the corresponding status. No model response can upgrade a submitted or unknown action to Done.
+
+The native owner supplies one absolute three-second deadline. Admission/receipts leave a 50 ms
+publication margin; receipt waiting is additionally capped at two seconds after admission. Unknown
+completion reports Requested if the waiter is still active. Cancellation, lock, revoked choices,
+closed output or owner timeout suppress late publication. Every queued worker rechecks the exact
+Settings/epoch authority, command switch, live waiter, receipt receiver and deadline before starting.
+Started external work cannot be undone by cancellation. The native worker retains the exclusive
+conversation lease through its launcher API call, including a blocked call. After submission that
+worker may exit while the launched editor continues independently. These APIs have no cancellation
+acknowledgement; timeout never admits overlapping native workers.
+
+The original capture and all its clones share consumption. The state owner marks it before
+releasing admission, even when an acknowledgement is lost. Local results, consumed tool receipts,
+finished responses and confirmed interruptions also consume it. Neither a fresh generation label
+nor an error may send a consumed capture to local recovery, parser execution or remote upload.
+Explicitly capturing a new command remains possible; this guard does not change V8's deliberate
+repeat/undo commands. H1's exhaustive voice Intent boundary is unchanged: voice cannot decide cards.
+
+Offline tests cover completed/submitted/failed/missing receipts, mixed batches, timeout publication
+through the native owner, queued revocation/expiry/waiter loss, retained leases and clone replay
+before/after provider construction and interruption. No desktop action, microphone or live provider
+is used. Consultation remains the next V6.6.3 slice; V6.7 still owns capture assembly and visible UI.
 
 
 ## Read-only tools in realtime

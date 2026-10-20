@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: d2e9d0e15b76 -->
+<!-- source: 3e4f682f771b -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -342,9 +342,9 @@ Somente um resultado NotCommand não reconhecido pode seguir ao transporte realt
 reconhecidos, respostas a cards recusadas, ações desativadas/indisponíveis e perguntas de
 esclarecimento ficam locais. Leituras reutilizam o formatador existente do bando com cache e
 remoção de segredos; não iniciam busca em conectores. Efeitos usam o executor existente e a lista
-exaustiva de Intents permitidos por voz. Aberturas externas ou persistência informam Comando
-solicitado após o encaminhamento, pois isso não comprova conclusão; mudanças já concluídas somente
-no core podem informar Comando concluído. Um resultado local emite um evento Local vinculado à
+exaustiva de Intents permitidos por voz. A V6.6.3 acrescenta os recibos nativos abaixo: somente
+conclusão confirmada pode informar Comando concluído; encaminhar uma abertura continua sendo
+Comando solicitado. Um resultado local emite um evento Local vinculado à
 identidade, termina sem Generate e aposenta a geração da entrada. Uma duplicata enfileirada não
 executa novamente nem é enviada. Uma entrada tratada nunca vira fallback automático de modelo/Chat
 após um erro.
@@ -355,6 +355,47 @@ do dispatcher cobrem recusa de permissões, desativação, ambiguidade, contexto
 locais traduzidas, prazo vencido e mutação única. Esses testes não usam microfone, ação do desktop,
 chave nem provedor. A V6.6.2 acrescenta as ferramentas do bando pelo modelo abaixo; consulta fica
 na V6.6.3. A V6.6 completa, ativação do renderer e aceitação de fala/provedor real continuam em aberto.
+
+
+<a id="native-command-receipts"></a>
+## Recibos de comandos nativos
+
+A etapa de conclusão da V6.6.3 usa o executor existente com um recibo por efeito. Uma mudança somente
+no core termina na confirmação do estado; a persistência de projetos termina somente depois de
+salvar as Configurações com sucesso. Criar o processo do editor, encaminhar ao gerenciador de
+arquivos e solicitar ativação de janela continuam como Solicitado: essas APIs não comprovam que a
+janela solicitada ficou visível nem que seu inicializador teve sucesso depois. Uma falha conhecida
+informa que algumas alterações podem já ter ocorrido, sem alegar reversão de tudo. Lotes que misturam
+leitura em cache e ação esperam todos os efeitos e preservam a resposta em cache somente quando
+todos os recibos confirmam conclusão; encaminhamento, falha ou prazo vencido a substituem pelo
+estado correspondente. Nenhuma resposta do modelo transforma uma ação encaminhada ou desconhecida
+em Concluído.
+
+O proprietário nativo fornece um único prazo absoluto de três segundos. Admissão/recibos reservam
+uma margem de 50 ms para publicação; a espera por recibos também tem limite de dois segundos após
+a admissão. Conclusão desconhecida informa Solicitado se o chamador ainda estiver ativo.
+Cancelamento, bloqueio, escolhas revogadas, saída fechada ou prazo do proprietário suprimem
+publicação tardia. Cada trabalhador enfileirado verifica novamente a autoridade exata de
+Configurações/geração, opção de comandos, chamador ativo, destinatário do recibo e prazo antes de
+iniciar. Cancelamento não desfaz trabalho externo já iniciado. O trabalhador nativo mantém a
+concessão exclusiva da conversa durante a chamada à API de abertura, inclusive se ela bloquear.
+Após o encaminhamento, esse trabalhador pode sair enquanto o editor aberto continua de forma
+independente. Essas APIs não confirmam cancelamento; vencer o prazo nunca admite trabalhadores
+nativos sobrepostos.
+
+A captura original e todas as cópias compartilham o consumo. O proprietário do estado a marca antes
+de liberar a admissão, mesmo se uma confirmação for perdida. Resultados locais, recibos consumidos
+de ferramentas, respostas finalizadas e interrupções confirmadas também a consomem. Nem uma nova
+geração nem um erro enviam uma captura consumida para recuperação local, execução do parser ou
+envio remoto. Capturar explicitamente outro comando continua possível; essa proteção não altera os
+comandos deliberados de repetir/desfazer da V8. O limite exaustivo de Intents por voz da H1 continua
+igual: voz não decide cards.
+
+Testes offline cobrem recibos concluídos/encaminhados/com falha/ausentes, lotes mistos, publicação de
+prazo vencido pelo proprietário nativo, revogação/prazo/perda do chamador na fila, concessões retidas
+e repetição de cópias antes/depois da construção do provedor e de interrupção. Não há ação do
+desktop, microfone nem provedor real. Consulta continua sendo a próxima etapa da V6.6.3; montagem
+de captura e interface visível continuam na V6.7.
 
 
 <a id="read-only-tools-in-realtime"></a>
