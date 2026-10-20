@@ -227,15 +227,25 @@ shutdown and relevant settings/key changes discard the slot and revoke its nativ
 forwarded through the existing owner to retain native/provider teardown and settlement. It cannot
 retract a request already sent. No permission-answer path is added.
 
-One Start admits one completed capture. The input channel is closed after that seed, so local
-completion or settled playback finishes the owner instead of silently opening another microphone.
-The UI shows starting, recording, transcribing, responding and terminal status; responding is not
-proof of audible playback. Only heard-history text or the local-command reply is shown, bounded in
-memory. Recovery text is editable and copied explicitly; edits survive page navigation locally.
-A newly acknowledged Start replaces the previous draft. There is no automatic Chat send, replay,
-persistent conversation history, automatic end-of-turn detector or barge-in in this entry.
-Native layout validation uses controlled owners without microphones, model loads or paid requests;
-physical speech and live-provider acceptance, V6.7.4 island feedback and K8 completion remain open.
+Start explicitly admits the first capture. Local completion or settled playback retains the same
+driver and context, waiting for **Record another turn** with the manual microphone off. Optional
+automatic finish closes an already authorized recording; it does not authorize the next one.
+Only the separately selected [bounded answer choice](#bounded-follow-up-proposals) can reopen it
+after a fully played question. Continuous capture and voice interruptions require their own route
+confirmation, described under [native playback](#native-playback-and-context-repair).
+
+Each native Listen generation is admitted at most once. Older or duplicate Listen events are
+ignored before changing the recording token, phase, follow-up deadline or capture queue, in both
+manual and continuous modes. Explicit next-turn actions still require waiting and a live controller;
+they do not replay Listen. Regression checks cover stale/repeated events across starting, recording,
+transcribing, responding, speaking, interrupting and waiting, without devices or a provider.
+
+The UI distinguishes responding from confirmed audible playback. Only heard-history text or the
+local-command reply is shown, bounded in memory. Recovery text is editable and copied explicitly;
+edits survive page navigation locally. A newly acknowledged Start replaces the previous draft.
+There is no automatic Chat send or persistent conversation history. Native layout validation uses
+controlled owners without microphones, model loads or paid requests; physical speech and
+live-provider acceptance and K8 completion remain open.
 
 
 ## Playback and heard text

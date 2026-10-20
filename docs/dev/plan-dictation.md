@@ -2925,7 +2925,12 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    local selections also passed in Black/Light at wide/minimum sizes. Native Start reached the
    acknowledged page's default-off guard without opening audio or a provider. The isolated app
    was closed and its temporary profile removed. This closes navigation readiness, not physical
-   voice acceptance. Codex activation keeps its independent qualification gates.
+   voice acceptance. Codex activation keeps its independent qualification gates. Native Listen
+   admission now rejects every older or repeated generation before touching capture/UI state.
+   A regression reproduced a rewind from generation 2 to 1; coverage now spans all seven active/
+   waiting phases in manual and routed modes, retaining recording tokens and admitting no duplicate
+   capture. Explicit next-turn actions and fresh confirmed-interruption generations remain valid.
+   This closes event replay admission, not the physical/live acceptance gate.
 
 ---
 

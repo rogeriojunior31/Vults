@@ -345,7 +345,10 @@ fn finish(session: &mut Session, capture: Option<&str>) -> Result<(), String> {
 }
 #[cfg(target_os = "linux")]
 fn listen(session: &mut Session, action: vults_voice::turn::Action, first: bool) {
-    if session.generation == Some(action.generation) && matches!(session.view.phase, "starting" | "recording")
+    // Each native Listen advances once; replaying it must never rewind ownership or rearm capture.
+    if session
+        .generation
+        .is_some_and(|current| action.generation <= current)
     {
         return;
     }
@@ -848,6 +851,28 @@ mod tests {
         assert!(
             matches!(receive.try_recv().unwrap(), Command::Capture { generation, operation: RoutedCapture::Begin } if generation == next.generation)
         );
+        for phase in [
+            "starting",
+            "recording",
+            "transcribing",
+            "responding",
+            "speaking",
+            "interrupting",
+            "waiting",
+        ] {
+            session.view.phase = phase;
+            let before = serde_json::to_value(&session.view).unwrap();
+            for action in [first, next] {
+                event_phase(&mut session, Event::Action(action), &mut first_listen);
+                assert_eq!(session.generation, Some(next.generation));
+                assert_eq!(serde_json::to_value(&session.view).unwrap(), before);
+                assert!(
+                    receive.try_recv().is_err(),
+                    "Retired/repeated Listen cannot admit capture"
+                );
+            }
+        }
+        session.view.phase = "starting";
         capture_phase(&mut session, CapturePhase::Recording);
         assert_ne!(session.view.capture.as_deref(), Some(recording.as_str()));
         event_phase(&mut session, Event::Speaking(next.generation), &mut first_listen);
@@ -1010,6 +1035,33 @@ mod tests {
             );
             event_phase(&mut session, Event::Speaking(generation), &mut first_listen);
             assert_eq!(session.view.phase, "speaking");
+            for phase in [
+                "starting",
+                "recording",
+                "transcribing",
+                "responding",
+                "speaking",
+                "interrupting",
+                "waiting",
+            ] {
+                session.view.phase = phase;
+                let before = serde_json::to_value(&session.view).unwrap();
+                for old in [first, generation] {
+                    event_phase(
+                        &mut session,
+                        Event::Action(vults_voice::turn::Action {
+                            generation: old,
+                            effect: Effect::Listen {
+                                replay: Duration::ZERO,
+                            },
+                        }),
+                        &mut first_listen,
+                    );
+                    assert_eq!(session.generation, Some(generation));
+                    assert_eq!(serde_json::to_value(&session.view).unwrap(), before);
+                    assert!(requests.try_recv().is_err());
+                }
+            }
             drop(session);
             assert!(!request.active()());
         }

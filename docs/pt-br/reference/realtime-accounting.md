@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: e19d5c35931a -->
+<!-- source: 3c086c34d622 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -258,17 +258,27 @@ posição e revogam o trabalho nativo. A parada passa pelo responsável existent
 encerramento e a conciliação nativos/do provedor. Ela não retira uma solicitação já enviada.
 Nenhum caminho para responder permissões é acrescentado.
 
-Cada Iniciar admite uma captura concluída. O canal de entrada é fechado após essa fala inicial,
-portanto a conclusão local ou a reprodução conciliada encerra o responsável em vez de abrir outro
-microfone silenciosamente. A interface mostra início, gravação, transcrição, resposta e estado
-terminal; responder não comprova reprodução audível. Só são exibidos o texto do histórico ouvido
-ou a resposta do comando local, limitados em memória. O texto recuperado é editável e copiado
-explicitamente; as edições sobrevivem à navegação local da página. Um novo Iniciar confirmado
-substitui o rascunho anterior. Essa entrada não envia automaticamente ao Chat, não repete falas,
-não salva histórico de conversa e não usa detector automático de fim de fala nem interrupção por voz.
-A validação do layout nativo usa responsáveis controlados, sem microfone, carga de modelo ou
-requisições pagas; a validação física e com provedor real, o feedback da ilha V6.7.4 e a conclusão
-de K8 continuam em aberto.
+Iniciar admite explicitamente a primeira captura. A conclusão local ou a reprodução conciliada
+mantém o mesmo driver e contexto, aguardando **Gravar outra fala** com o microfone manual desligado.
+A finalização automática opcional encerra uma gravação já autorizada; não autoriza a próxima.
+Somente a [opção separada de resposta limitada](#bounded-follow-up-proposals) pode reabri-lo após
+uma pergunta inteiramente reproduzida. Captura contínua e interrupções por voz exigem sua própria
+confirmação de rota, descrita em [reprodução nativa](#native-playback-and-context-repair).
+
+Cada geração Listen nativa é admitida no máximo uma vez. Eventos Listen antigos ou repetidos são
+ignorados antes de alterar o token de gravação, a fase, o prazo da resposta ou a fila de captura,
+tanto no modo manual quanto no contínuo. Ações explícitas para a próxima fala ainda exigem espera e
+um controlador ativo; não repetem Listen. Testes de regressão cobrem eventos antigos/repetidos nas
+fases de início, gravação, transcrição, resposta, reprodução, interrupção e espera, sem dispositivos
+nem provedor.
+
+A interface distingue resposta de reprodução audível confirmada. Só são exibidos o texto do
+histórico ouvido ou a resposta do comando local, limitados em memória. O texto recuperado é editável
+e copiado explicitamente; as edições sobrevivem à navegação local da página. Um novo Iniciar
+confirmado substitui o rascunho anterior. Não há envio automático ao Chat nem histórico persistente
+de conversa. A validação do layout nativo usa responsáveis controlados, sem microfone, carga de
+modelo ou requisições pagas; a validação física e com provedor real e a conclusão de K8 continuam
+em aberto.
 
 
 <a id="playback-and-heard-text"></a>
