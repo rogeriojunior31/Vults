@@ -1,4 +1,4 @@
-//! Backend service for V6. No renderer or microphone entry point is exposed before V6.7.
+//! Native voice backend. First-turn capture remains Rust-only until work-surface controls land.
 use serde::{Deserialize, Serialize};
 use std::sync::{
     Arc,
@@ -15,8 +15,12 @@ mod playback;
 pub use local::{LocalFailure, Recovery, Turn};
 pub use playback::{Channels, Command, Event, Input, LocalReply, Record, Signal};
 #[cfg(target_os = "linux")]
+mod capture;
+#[cfg(target_os = "linux")]
 mod consultation;
 mod devices;
+#[cfg(target_os = "linux")]
+pub use capture::{CaptureControl, CapturePhase, CaptureRequest, capture_control};
 #[cfg(target_os = "linux")]
 pub(crate) mod routing;
 
@@ -105,7 +109,17 @@ impl Drop for Lease {
 
 /// Complete native turns only. Recovery is a reviewable draft, never an automatic Chat send.
 pub async fn run(app: AppHandle, channels: Channels) -> Result<Option<Recovery>, Failure> {
-    run_with_audio(app, channels, devices::Choice::Default).await
+    run_with_audio(app, channels, devices::Choice::Default, None).await
+}
+
+/// One explicit native recording, retained under the same owner through response and recovery.
+#[cfg(target_os = "linux")]
+pub async fn run_captured(
+    app: AppHandle,
+    channels: Channels,
+    request: CaptureRequest,
+) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Default, Some(request)).await
 }
 
 /// Explicit native duplex admission; no renderer entry or automatic device choice.
@@ -115,13 +129,15 @@ pub async fn run_routed(
     channels: Channels,
     route: vults_audio::echo::duplex::Route,
 ) -> Result<Option<Recovery>, Failure> {
-    run_with_audio(app, channels, devices::Choice::Routed(route)).await
+    run_with_audio(app, channels, devices::Choice::Routed(route), None).await
 }
 
 async fn run_with_audio(
     app: AppHandle,
     channels: Channels,
     choice: devices::Choice,
+    #[cfg(target_os = "linux")] capture: Option<CaptureRequest>,
+    #[cfg(not(target_os = "linux"))] _capture: Option<()>,
 ) -> Result<Option<Recovery>, Failure> {
     let state = app.state::<Arc<State>>().inner().clone();
     let (lease, epoch) = state.begin()?;
@@ -129,7 +145,7 @@ async fn run_with_audio(
     if crate::lock::locked(&app) {
         return Err(Failure::Off);
     }
-    let (consent, model, language, zeca) = app
+    let (consent, model, language, zeca, capture_options) = app
         .state::<crate::settings::SettingsState>()
         .0
         .lock()
@@ -139,6 +155,7 @@ async fn run_with_audio(
                 s.voice_model.clone(),
                 s.voice_language.clone(),
                 s.zeca,
+                s.dictation_capture_options(),
             )
         })
         .map_err(|_| Failure::Off)?;
@@ -151,7 +168,13 @@ async fn run_with_audio(
     let check_app = app.clone();
     let publication = channels.output.clone();
     let (selected, spoken, cancellation) = (model.clone(), language.clone(), cancel.clone());
+    #[cfg(target_os = "linux")]
+    let capture_active = capture.as_ref().map(CaptureRequest::active);
     let valid: Arc<dyn Fn(&crate::settings::Settings) -> bool + Send + Sync> = Arc::new(move |s| {
+        #[cfg(target_os = "linux")]
+        if capture_active.as_ref().is_some_and(|active| !active()) {
+            return false;
+        }
         state.current(epoch)
             && !publication.is_closed()
             && !*cancellation.borrow()
@@ -171,6 +194,34 @@ async fn run_with_audio(
             .lock()
             .is_ok_and(|s| authority(&s))
     });
+    #[cfg(target_os = "linux")]
+    let initial = if let Some(request) = capture {
+        if !consent.enabled() {
+            return Err(Failure::Off);
+        }
+        let microphone = capture::record(
+            app.clone(),
+            request,
+            capture::Owner {
+                lease: lease.clone(),
+                active: active.clone(),
+                cancel: cancel.clone(),
+                output: channels.output.clone(),
+            },
+            capture_options,
+            model.clone().ok_or(Failure::Input)?,
+            decode_language.clone(),
+        )
+        .await?;
+        Some(microphone)
+    } else {
+        None
+    };
+    #[cfg(not(target_os = "linux"))]
+    let initial = {
+        let _ = capture_options;
+        None
+    };
     let source: Arc<dyn crate::flock_tools::Source> = Arc::new(app.clone());
     #[allow(unused_mut)]
     let mut tools = crate::flock_tools::all(source);
@@ -199,6 +250,7 @@ async fn run_with_audio(
     let factory = devices.clone();
     let outcome = {
         let driver = playback::drive(
+            initial,
             channels,
             &*active,
             devices.interruption(),

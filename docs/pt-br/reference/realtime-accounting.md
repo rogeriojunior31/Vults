@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: b3488c72dcd8 -->
+<!-- source: 110db75a0f9d -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -170,9 +170,8 @@ exata de duração. A entrada é limitada a 100 ms-30 segundos antes da convers�
 transcrições inválidas são recusados, e picos finitos do filtro saturam em PCM16 sem transbordar.
 O áudio original não é alterado. O texto preserva os espaços originais, com o limite existente de
 4.096 bytes dos comandos nativos. Esse adaptador não abre microfone, não carrega modelo e não
-concede autoridade de captura/envio. Conectar o responsável pela captura explícita e os controles
-da conversa continua sendo a próxima tarefa da V6.7.3; a etapa completa e a aceitação física/ao vivo
-permanecem abertas.
+concede autoridade de captura/envio. O responsável nativo pela captura explícita é descrito abaixo;
+os controles da conversa, o marco completo e a validação física/real continuam em aberto.
 
 Admissão desligada/esgotada, chave ausente, falhas de transporte/protocolo/resposta ou saída cheia
 preservam o turno que falhou para recuperação local. O transporte recebe até 11 segundos para
@@ -198,8 +197,8 @@ anterior não revive um turno antigo. O decodificador mantém a concessão nativ
 final de publicação; um worker desacoplado mantém sua própria concessão até o trabalho nativo
 terminar. A espera pode expirar antes de uma carga fria não abortável do modelo terminar; o sinal
 de parada suprime saída tardia e novos responsáveis de voz recebem Busy até o worker liberar sua
-concessão. Não há microfone, reprodução, comando de renderer ou caminho de permissões novo. Esses
-responsáveis continuam na V6.4-V6.7.
+concessão. Esse adaptador de retenção não acrescenta microfone, reprodução, comando do renderer
+ou autoridade de permissão.
 
 Execute `cargo test -p vults-chat realtime::transport::` e `cargo test -p vults-app realtime` offline.
 Testes de WebSocket duplex exercitam quadros reais com PCM/chaves sintéticos, dois turnos,
@@ -209,6 +208,36 @@ real é declarada. Os testes do controlador/decodificador nativos usam PCM sint�
 de trabalho local; qualidade real de modelo/fala e validação de captura/reprodução continuam
 separadas. Falhas do backend fornecem motivos estruturados e nunca enviam silenciosamente a outro
 provedor.
+
+
+<a id="native-first-turn-capture"></a>
+## Captura nativa do primeiro turno
+
+A V6.7.3 acrescenta a entrada `run_captured`, exclusiva do Linux, com um par nativo
+`CaptureControl`/`CaptureRequest`. Criar os controles não abre nada; a chamada nativa explícita
+adquire a posse existente do desktop antes da captura. Ainda não há comando do renderer, atalho
+ou botão de gravação conectado. O consentimento configurado precisa estar habilitado e o modelo
+Whisper local selecionado já deve estar instalado. São reutilizadas a preferência compartilhada
+de microfone e a barreira existente das perguntas para capturas comuns.
+
+Finalizar fecha o microfone e aguarda seu encerramento antes da transcrição local e montagem
+limitada do turno. A gravação dura no máximo 30 segundos; atingir o limite descarta a captura,
+sem decodificar ou enviar automaticamente. A espera total pela captura/decodificação nativa é de
+60 segundos. Um carregamento inicial de modelo pode ultrapassar essa espera, mas mantém a mesma
+posse do desktop até realmente terminar e não pode publicar resultados atrasados. Cancelar ou
+perder o controlador revoga toda a sessão, inclusive depois de finalizar; o controlador precisa
+continuar vivo durante a resposta. Trava, desligamento, mudanças nas configurações/chave e perda
+do consumidor também interrompem a admissão. Eventos nativos de fase contêm apenas Starting,
+Recording ou Transcribing, nunca amostras ou palavras. Mantenha o controlador até a sessão terminar
+e só então descarte-o.
+
+O turno preparado entra na geração atual do controlador existente, na barreira de comandos locais
+e no caminho protegido do provedor sem passar áudio pelo renderer. Comandos locais consumidos ali
+nunca abrem um provedor; a recuperação reutiliza a transcrição local exata. Essa entrada desabilita
+a interrupção por fala e não acrescenta captura automática, download de modelo, envio ao Chat ou
+autoridade para responder permissões. Os controles da conversa e a recuperação revisável na
+superfície de trabalho são a próxima tarefa; a V6.7.3 continua em aberto. Os testes usam microfones
+e decodificadores simulados e PCM sintético, sem captura física ou requisições pagas.
 
 
 <a id="playback-and-heard-text"></a>

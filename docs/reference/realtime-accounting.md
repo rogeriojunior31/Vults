@@ -149,8 +149,8 @@ sample clock with the exact integer duration ratio. Input is bounded to 100 ms-3
 conversion; non-finite audio and invalid transcripts are rejected, and finite filter peaks saturate
 to PCM16 without wrapping. The source audio is not modified. Text keeps its original whitespace,
 with the existing 4,096-byte native-command bound. This adapter opens no microphone, loads no
-model and grants no capture/upload authority. Wiring the explicit capture owner and conversation
-controls remains the next V6.7.3 task; the whole milestone and physical/live acceptance remain open.
+model and grants no capture/upload authority. The explicit native capture owner is described below;
+conversation controls, the whole milestone and physical/live acceptance remain open.
 
 Off/spent admission, missing keys, transport/protocol/response failures or saturated output retain
 the failed turn for local recovery. The transport gets up to 11 seconds to finish its existing
@@ -175,7 +175,7 @@ epoch under its lock, so restoring a previous choice cannot revive an old turn. 
 the native lease through the final publication check; a detached worker also retains its own lease
 until native work exits. The wait can expire before an unabortable cold model load finishes; the
 stop flag suppresses late output and new voice owners stay Busy until that worker releases its lease.
-No microphone, playback, renderer command or permissions path is added. Those owners remain V6.4-V6.7.
+This retention adapter adds no microphone, playback, renderer command or permission authority.
 
 Run `cargo test -p vults-chat realtime::transport::` and `cargo test -p vults-app realtime` offline.
 Duplex WebSocket tests exercise actual frames with synthetic PCM/keys, two turns, cancellation,
@@ -184,6 +184,31 @@ connection. No paid request, real microphone/playback or live speech acceptance 
 native driver/decoder tests use synthetic PCM and local work doubles; real model/speech quality
 and capture/playback acceptance remain separate. Backend failures provide structured reasons and
 never silently send to a different provider.
+
+
+## Native first-turn capture
+
+V6.7.3 adds a Linux-only `run_captured` entry with one native `CaptureControl`/`CaptureRequest`
+pair. Creating controls opens nothing; the explicit native call acquires the existing desktop
+lease before capture. No renderer command, shortcut or user-facing recording button is wired yet.
+The configured consent must be enabled and the selected local Whisper model must already be installed.
+The shared microphone preference and existing ordinary-capture question fence are reused.
+
+Finish closes and joins the microphone before local transcription and bounded turn assembly.
+Recording lasts at most 30 seconds; reaching the cap discards it instead of automatically decoding
+or uploading. The total native capture/decode wait is 60 seconds. A cold model load can outlive
+that wait, but retains the same desktop lease until actual exit and cannot publish late output.
+Cancel or losing the controller revokes the whole session, including after Finish; the controller
+must remain alive through the response. Lock, shutdown, settings/key changes and consumer loss also
+stop admission. Native phase events contain only Starting, Recording or Transcribing, never samples
+or words. Keep the controller until the session ends, then drop it.
+
+The prepared turn enters the existing driver's current generation, local-command gate and guarded
+provider path without a renderer audio round trip. Local commands consumed there never open a
+provider; recovery reuses the exact local transcript. This entry disables barge-in and adds no
+automatic capture, model download, Chat send or permission-answer authority. Conversation controls
+and reviewable recovery in the work surface are the next task; V6.7.3 remains open. Tests use fake
+microphones/decoders and synthetic PCM, without physical capture or paid requests.
 
 
 ## Playback and heard text

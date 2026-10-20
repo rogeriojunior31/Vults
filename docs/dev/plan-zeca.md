@@ -1891,3 +1891,24 @@ Cancelled, revoked and consumed turns are refused. The final portable sample-cou
 rerun with targeted tests and Clippy. The local task-actions script remains absent, not passed.
 Reviewed EN/PT source marks match. No renderer changed; the app stays closed and no physical
 microphone/model/provider or live conversation acceptance is claimed.
+
+
+**2026-10-20 V6.7.3 explicit native capture owner.** The Linux native entry now starts one
+recording under the existing desktop lease, using the shared microphone preference, installed local
+model and ordinary-capture question fence. Explicit Finish joins the microphone before local decode;
+Cancel or losing the controller revokes the whole session, including response/recovery after Finish.
+A 30-second cap discards unfinished input; the total capture/decode wait is 60 seconds. Delayed
+native workers retain the same lease until actual exit and suppress late output. Prepared turns use
+the existing current generation, local-command gate, provider admission and exact local-text recovery.
+No renderer entry, automatic capture, model download, barge-in or permission authority is added.
+
+Validation: 1,422 workspace tests pass (16 documented ignores), 10 feature evals, renderer build,
+all 19 renderer/bridge checks, workspace Clippy with warnings denied, formatting and repository
+guards pass. Native tests cover explicit finish, consumer/controller loss, sticky cancellation,
+late Finish after the cap, revoked keys, blocked worker abort/timeout and lease retention. The
+prepared-turn driver test covers upload of the original PCM, recovery and a local command that never
+constructs a provider. Tests use fake devices/decoders and synthetic PCM; no physical microphone,
+model, provider or user configuration is used. The local task-actions script remains absent, not
+passed. Next is the native bridge and listening/finish/cancel controls with reviewable recovery in
+the existing work surface. V6.7.3, live/physical acceptance and K8 completion remain open. The app
+stays closed.

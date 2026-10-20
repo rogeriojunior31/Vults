@@ -2790,8 +2790,11 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    2026-10-20: completed 16 kHz capture plus finalized local words becomes bounded 24 kHz PCM16
    through the shared resampler, with exact duration and finite/saturating sample checks. Recovery
    reuses those same words without another model load/decode. No microphone or renderer entry is
-   exposed by this adapter. Next: bind the explicit capture owner, then listening/finish/cancel
-   controls and reviewable recovery in the existing work surface. Whole V6.7.3 remains open.
+   exposed by this adapter. The explicit native capture owner is also implemented: start is
+   opt-in, Finish closes the microphone before local decoding, and Cancel/controller loss revokes
+   the whole session. The same desktop lease survives delayed native teardown. Next: wire the native
+   bridge and listening/finish/cancel controls with reviewable recovery in the existing work surface.
+   Whole V6.7.3 remains open.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before
    declaring K8 Done. Codex activation keeps its independent qualification gates.

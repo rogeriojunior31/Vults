@@ -70,6 +70,8 @@ impl std::fmt::Debug for LocalReply {
 }
 #[derive(Debug)]
 pub enum Event {
+    #[cfg(target_os = "linux")]
+    Capture(super::CapturePhase),
     Action(Action),
     Ready(Generation),
     History(Record),
@@ -179,6 +181,7 @@ pub(super) async fn drive<
     F: Future<Output = Result<(), Failure>>,
     Q: Future<Output = Result<Option<LocalReply>, Failure>>,
 >(
+    initial_turn: Option<Turn>,
     mut channels: Channels,
     active: &(dyn Fn() -> bool + Send + Sync),
     mode: turn::BargeIn,
@@ -192,12 +195,16 @@ pub(super) async fn drive<
     local::check(active, &channels.cancel)?;
     emit(&channels.output, Event::Action(listen))?;
     let mut poll = tokio::time::interval(Duration::from_millis(5));
+    let mut initial = initial_turn.map(|turn| Command::Turn {
+        generation: machine.generation(),
+        turn,
+    });
     let first = loop {
         local::check(active, &channels.cancel)?;
         tokio::select! { biased;
             _ = channels.cancel.changed() => {},
             _ = poll.tick() => {},
-            command = channels.input.recv() => match command {
+            command = async { if let Some(first) = initial.take() { Some(first) } else { channels.input.recv().await } } => match command {
                 Some(Command::Turn { generation, turn }) if generation == machine.generation() => {
                     if turn.handled() { continue; }
                     let deadline = std::time::Instant::now() + LOCAL_TIMEOUT;

@@ -11,7 +11,7 @@ async fn without_commands<P: Output, F: Future<Output = Result<(), Failure>>>(
     open: impl FnMut(Arc<AtomicBool>) -> Result<P, Failure>,
     remote: impl FnOnce(transport::Channels) -> F,
 ) -> Result<Option<(Turn, Failure)>, Failure> {
-    super::drive(channels, active, mode, open, remote, |_, _| {
+    super::drive(None, channels, active, mode, open, remote, |_, _| {
         std::future::ready(Ok(None))
     })
     .await
@@ -115,6 +115,68 @@ fn identity(n: usize) -> Identity {
         attempt: format!("attempt_{n}"),
         response: format!("response_{n}"),
         item: format!("item_{n}"),
+    }
+}
+
+#[tokio::test]
+async fn prepared_native_capture_uses_the_current_generation_and_existing_local_command_gate() {
+    for local in [false, true] {
+        let (io, send, mut receive, _stop) = channels(64);
+        let captured = Turn::from_capture(&vec![0.1; 3200], "A finalized native capture.".into()).unwrap();
+        let expected = captured.samples();
+        let uploaded = expected.clone();
+        let worker = tokio::spawn(async move {
+            super::drive(
+                Some(captured),
+                io,
+                &|| true,
+                turn::BargeIn::Disabled,
+                |_| Ok(Fake(device(true))),
+                move |mut remote| async move {
+                    assert!(!local, "A consumed local capture cannot open a provider");
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    let (pcm, _) = upload(&mut remote).await;
+                    assert_eq!(
+                        pcm.as_slice(),
+                        uploaded.as_ref(),
+                        "The native capture reaches the existing upload path unchanged"
+                    );
+                    Err(Failure::Transport)
+                },
+                move |_, _| {
+                    std::future::ready(Ok(local.then(|| LocalReply {
+                        feedback: crate::voice_commands::Feedback::Done,
+                        text: "Local command completed.".into(),
+                        choices: Vec::new(),
+                    })))
+                },
+            )
+            .await
+        });
+        if local {
+            let mut listening = 0;
+            let mut completed = 0;
+            loop {
+                match next(&mut receive).await {
+                    Event::Local { .. } => completed += 1,
+                    Event::Action(action) if matches!(action.effect, Effect::Listen { .. }) => {
+                        listening += 1;
+                        if listening == 2 {
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            assert_eq!(completed, 1);
+            drop(send);
+            assert!(worker.await.unwrap().unwrap().is_none());
+        } else {
+            drop(send);
+            let (original, reason) = worker.await.unwrap().unwrap().unwrap();
+            assert_eq!(reason, Failure::Transport);
+            assert!(Arc::ptr_eq(&original.samples(), &expected));
+        }
     }
 }
 
@@ -722,6 +784,7 @@ async fn local_commands_retire_generations_before_lazy_provider_admission() {
     let remote_opened = opened.clone();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -803,6 +866,7 @@ async fn an_established_connection_never_receives_a_locally_consumed_followup() 
     let count = prepared.clone();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -869,6 +933,7 @@ async fn pending_command_admission_is_cancellable_and_never_constructs_a_provide
     let remote_called = called.clone();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -917,6 +982,7 @@ async fn a_committed_local_action_never_recovers_after_failure_before_or_after_c
         let original = capture.clone();
         let worker = tokio::spawn(async move {
             super::drive(
+                None,
                 io,
                 &|| true,
                 turn::BargeIn::Disabled,
@@ -988,6 +1054,7 @@ async fn unresolved_effect_receipt_publishes_requested_before_the_native_waiter_
     send.send(input(generation(), 11)).await.unwrap();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
