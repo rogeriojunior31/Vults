@@ -3,7 +3,7 @@ import { el } from "../../../dom";
 import { t } from "../../../i18n";
 
 export interface ConversationBackend {
-  start(): Promise<VoiceConversation>;
+  start(autoFinish: boolean): Promise<VoiceConversation>;
   status(id: string): Promise<VoiceConversation>;
   control(id: string, action: "finish" | "cancel" | "next"): Promise<void>;
   copy(text: string): Promise<void>;
@@ -19,7 +19,10 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   const draftTitle = el("span"), draft = el("textarea"), copy = el("button"), copied = el("p");
   draft.maxLength = 4096; draft.rows = 5;
   const review = el("section", { class: "voice-conversation-review" }, el("label", {}, draftTitle, draft), copy, copied);
-  const content = el("div", { class: "voice-conversation-content" }, privacy, reply, review);
+  const automatic = el("input"), automaticTitle = el("span"), automaticNote = el("p", { class: "dictation-note" });
+  automatic.type = "checkbox"; automatic.checked = false;
+  const automaticChoice = el("label", { class: "voice-conversation-automatic" }, automatic, automaticTitle);
+  const content = el("div", { class: "voice-conversation-content" }, privacy, automaticChoice, automaticNote, reply, review);
   content.tabIndex = 0; content.setAttribute("role", "region");
   const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, title, about)), status, error, actions, content);
   let view: VoiceConversation | null = null, active = false, pending = false, epoch = 0;
@@ -36,8 +39,13 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     finish.disabled = !active || pending || view?.phase !== "recording";
     cancel.disabled = !active || !running(view);
     settings.disabled = pending || running(view);
+    automatic.disabled = !active || pending || running(view);
+    automaticTitle.textContent = t("Finish automatically after a pause");
+    automaticNote.textContent = t("Off by default for each app run. Uses local GPU preview and the installed speech detector. If unavailable, use Finish recording. Each new turn still needs your click.");
     status.textContent = !api ? t("Voice conversation is unavailable.")
       : view?.phase === "starting" ? t("Starting microphone…")
+      : view?.phase === "recording" && view.reason === "auto-unavailable" ? t("Automatic finish is unavailable. Use Finish recording.")
+      : view?.phase === "recording" && automatic.checked ? t("Recording… Pause to finish automatically, or press Finish recording.")
       : view?.phase === "recording" ? t("Recording… Finish when you are done.")
       : view?.phase === "transcribing" ? t("Transcribing…")
       : view?.phase === "responding" ? t("Zeca is responding…")
@@ -82,7 +90,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     const mine = ++epoch; pending = true; failed = null; copyState = "idle"; draw();
     try {
       const id = view?.phase === "waiting" ? view.id : null;
-      const value = id ? await api.control(id, "next").then(() => api.status(id)) : await api.start();
+      const value = id ? await api.control(id, "next").then(() => api.status(id)) : await api.start(automatic.checked);
       if (!active || mine !== epoch) { stop(value.id); return; }
       draft.value = ""; accept(value);
     } catch { if (mine === epoch) { if (view && running(view)) stop(view.id); view = null; failed = "start"; } }
@@ -106,6 +114,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     try { await api.copy(text); outcome = "done"; } catch { outcome = "failed"; }
     if (mine === epoch && text === draft.value) { copyState = outcome; draw(); }
   };
+  automatic.addEventListener("change", draw);
   draft.addEventListener("input", () => { copyState = "idle"; draw(); });
   function setActive(on: boolean) {
     if (active === on) return;

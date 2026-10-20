@@ -1999,3 +1999,39 @@ consent before device/network access. No physical audio, model, provider, origin
 config is used. The private app/server/profile/cache are removed afterward. The local AGENTS
 check-task-actions.mjs script remains absent, not passed. Live multi-turn speech/provider acceptance
 and automatic turn-end/duplex integration remain open.
+
+
+**2026-10-20 V6.7.3 opt-in local silence completion.** The Voice conversation page now offers
+Finish automatically after a pause. It starts off in each app run and is frozen for the live
+conversation; no saved consent, automatic microphone reopening or shortcut changes are added.
+The same native capture owner polls the retained local VAD and GPU preview against V6.2's existing
+1.6/2.6-second English/Portuguese policy. Fresh audio, confirmed speech and local partial words are
+required. Partial text stays native and bounded to one 4,096-character snapshot. Final decoding
+and provider upload still follow microphone closure. Missing/failed detector or preview falls back
+to manual Finish with an explicit status. Cancel, page ownership, settings/key revocation, the
+30-second discard cap and the desktop lease remain in force. Preview callbacks retain the lease
+until their actual worker exits. No semantic model is enabled or downloaded.
+
+The first capture now also follows an actual Listen generation from the retained turn machine;
+subsequent captures keep the same provider context and explicit next-turn click. Automatic
+completion marks the controller finished before waiting, so the next user click can rearm it.
+Semantic-model integration, explicit duplex/barge-in, island feedback and physical/live acceptance
+remain open; K8 is not complete. Codex consultation remains unavailable.
+
+Validation: 1,435 workspace tests pass (17 documented ignores), 10 evals, all 19 renderer/bridge
+checks, build, workspace Clippy with warnings denied, formatting and repository guards pass. The
+actual policy adapter covers quiet without speech, missing words, once-only completion, both
+language delays, partial growth and resumed speech. Capture-owner checks prove automatic completion
+closes before final decoding and never beats cancellation or expiry. A blocked-detector regression
+proves Finish/departure need not wait for inference, its late result is suppressed and its real
+worker retains the lease until exit. Detector inference runs outside the capture-stop worker;
+old audio windows behind a busy decoder cannot end newly captured speech. The retained-driver
+regression now captures both initial and following Listen generations with one fake provider.
+
+Native Tauri/WebKit inspection uses controlled owners, default-off/frozen selection, explicit
+following turns, the visible manual fallback, actual foreign-surface/default-off refusal, four
+languages and wide/minimum Black/Light layouts. Actions remain visible and the checkbox is reachable
+through the named content scroller. No physical audio, model, provider, original keyring or agent
+configuration is used. Private processes/profile/cache are removed after QA. The local AGENTS
+task-actions script remains absent, not passed. Physical PT/EN speech timing and live-provider
+quality remain unqualified; semantic/duplex integration and K8 sign-off stay open.

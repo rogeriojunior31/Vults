@@ -216,10 +216,13 @@ async fn run_with_audio(
             .is_ok_and(|s| authority(&s))
     });
     #[cfg(target_os = "linux")]
-    let initial = if let Some(request) = capture.clone() {
-        if !consent.enabled() {
-            return Err(Failure::Off);
-        }
+    if capture.is_some() && !consent.enabled() {
+        return Err(Failure::Off);
+    }
+    #[cfg(target_os = "linux")]
+    let initial = if next.is_none()
+        && let Some(request) = capture.clone()
+    {
         let microphone = capture::record(
             app.clone(),
             request,
@@ -232,6 +235,7 @@ async fn run_with_audio(
             capture_options.clone(),
             model.clone().ok_or(Failure::Input)?,
             decode_language.clone(),
+            None,
         )
         .await?;
         Some(microphone)
@@ -302,7 +306,7 @@ async fn run_with_audio(
         let driver = async {
             if let Some((next, send)) = continuation {
                 let request = capture.ok_or(Failure::Input)?;
-                capture::continue_turns(driver, next, send, || {
+                capture::continue_turns(driver, next, send, |generation| {
                     capture::record(
                         app.clone(),
                         request.clone(),
@@ -315,6 +319,7 @@ async fn run_with_audio(
                         capture_options.clone(),
                         model.clone().unwrap_or_default(),
                         decode_language.clone(),
+                        Some(generation),
                     )
                 })
                 .await

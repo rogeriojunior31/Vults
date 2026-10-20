@@ -161,10 +161,10 @@ const timers = new Map(); let nextTimer = 0;
 globalThis.setTimeout = callback => { const id = ++nextTimer; timers.set(id, callback); return id; };
 globalThis.clearTimeout = id => timers.delete(id);
 try {
-  const starts = [], polls = [], controls = [], copies = [];
+  const starts = [], polls = [], controls = [], copies = [], automaticChoices = [];
   let configured = 0;
   const work = createVoiceConversation({
-    start: () => { const d = pending(); starts.push(d); return d.promise; },
+    start: automatic => { automaticChoices.push(automatic); const d = pending(); starts.push(d); return d.promise; },
     status: id => { const d = pending(); polls.push({ ...d, id }); return d.promise; },
     control: async (id, action) => { controls.push({ id, action }); },
     copy: async text => { copies.push(text); },
@@ -176,7 +176,12 @@ try {
   const refresh = async () => { const entry = timers.entries().next().value; assert.ok(entry, "An active session needs a heartbeat"); timers.delete(entry[0]); entry[1](); await tick(); };
   assert.equal(starts.length, 0);
   work.setActive(true); await click("Voice conversation settings"); assert.equal(configured, 1);
+  const automatic = nodes(work.element).find(n => n.tagName === "INPUT" && n.type === "checkbox");
+  assert.ok(!automatic.checked, "Automatic completion must start off");
+  automatic.checked = true; automatic.fire("change");
   const first = click("Start recording"); await tick();
+  assert.deepEqual(automaticChoices, [true]);
+  assert.equal(automatic.disabled, true, "Freeze the mode while Start is pending");
   assert.equal(starts.length, 1); await click("Start recording"); assert.equal(starts.length, 1);
   work.setActive(false); starts[0].resolve(state("1", "starting")); await first;
   assert.deepEqual(controls.pop(), { id: "1", action: "cancel" }, "A departed start acknowledgement must cancel its new native owner");
@@ -185,9 +190,12 @@ try {
   const second = click("Start recording"); starts[1].resolve(state("2", "recording")); await second;
   assert.equal(button("Start recording").disabled, true);
   assert.equal(button("Finish recording").disabled, false);
+  assert.equal(automatic.disabled, true);
+  assert.ok(work.element.textContent.includes("Pause to finish automatically"));
   await click("Finish recording"); assert.deepEqual(controls.pop(), { id: "2", action: "finish" });
-  await refresh(); polls[0].resolve(state("2", "transcribing")); await tick();
-  assert.equal(button("Finish recording").disabled, true);
+  await refresh(); polls[0].resolve(state("2", "recording", { reason: "auto-unavailable" })); await tick();
+  assert.equal(button("Finish recording").disabled, false);
+  assert.ok(work.element.textContent.includes("Automatic finish is unavailable"));
   await refresh(); polls[1].resolve(state("2", "recovery", { draft: '<script>kept as text</script>', reason: 'key' })); await tick();
   const draft = nodes(work.element).find(n => n.tagName === "TEXTAREA");
   assert.equal(draft.value, '<script>kept as text</script>'); assert.equal(timers.size, 0);

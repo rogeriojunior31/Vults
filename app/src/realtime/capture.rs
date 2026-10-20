@@ -11,6 +11,8 @@ use tauri::AppHandle;
 use tokio::sync::{mpsc, watch};
 use vults_chat::realtime::transport::Failure;
 
+mod automatic;
+
 type Active = Arc<dyn Fn() -> bool + Send + Sync>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,18 +25,19 @@ enum End {
 #[derive(Debug)]
 pub struct CaptureControl(watch::Sender<End>);
 #[derive(Debug, Clone)]
-pub struct CaptureRequest(watch::Receiver<End>);
+pub struct CaptureRequest(watch::Receiver<End>, pub(super) bool);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CapturePhase {
     Starting,
     Recording,
     Transcribing,
+    Manual,
 }
 
 /// Creating controls opens nothing. Dropping the only control cancels its one request.
 pub fn capture_control() -> (CaptureControl, CaptureRequest) {
     let (send, receive) = watch::channel(End::Recording);
-    (CaptureControl(send), CaptureRequest(receive))
+    (CaptureControl(send), CaptureRequest(receive, false))
 }
 impl CaptureControl {
     pub fn finish(&self) {
@@ -108,11 +111,21 @@ impl Worker {
             .try_send(Event::Capture(phase))
             .map_err(|_| Failure::Output)
     }
+    #[cfg(test)]
     fn record<C>(
         &self,
         start: impl FnOnce(Active, Active) -> Result<C, Failure>,
         finish: impl FnOnce(C) -> Result<Vec<f32>, Failure>,
         decode: impl FnOnce(&[f32], &AtomicBool) -> Result<String, Failure>,
+    ) -> Result<Turn, Failure> {
+        self.record_watched(start, finish, decode, |_, _| false)
+    }
+    fn record_watched<C>(
+        &self,
+        start: impl FnOnce(Active, Active) -> Result<C, Failure>,
+        finish: impl FnOnce(C) -> Result<Vec<f32>, Failure>,
+        decode: impl FnOnce(&[f32], &AtomicBool) -> Result<String, Failure>,
+        mut ended: impl FnMut(&mut C, Duration) -> bool,
     ) -> Result<Turn, Failure> {
         self.live()?;
         if *self.end.borrow() != End::Recording {
@@ -120,18 +133,24 @@ impl Worker {
         }
         self.notify(CapturePhase::Starting)?;
         let (live, admit) = (self.clone(), self.clone());
-        let until = Instant::now() + self.record_for;
-        let microphone = start(
+        let started = Instant::now();
+        let until = started + self.record_for;
+        let mut microphone = start(
             Arc::new(move || live.live().is_ok()),
             Arc::new(move || {
                 admit.live().is_ok() && *admit.end.borrow() == End::Recording && Instant::now() < until
             }),
         )?;
         self.notify(CapturePhase::Recording)?;
+        let mut automatic = false;
         while self.live().is_ok() && *self.end.borrow() == End::Recording && Instant::now() < until {
+            if ended(&mut microphone, started.elapsed()) {
+                automatic = true;
+                break;
+            }
             std::thread::sleep(Duration::from_millis(10));
         }
-        let finished = *self.end.borrow() == End::Finished && Instant::now() < until;
+        let finished = (automatic || *self.end.borrow() == End::Finished) && Instant::now() < until;
         let pcm = finish(microphone)?;
         self.live()?;
         if !finished {
@@ -178,6 +197,7 @@ pub(super) async fn record(
     mut options: vults_audio::CaptureOptions,
     model: String,
     language: Option<String>,
+    generation: Option<vults_voice::turn::Generation>,
 ) -> Result<Turn, Failure> {
     if !vults_voice::installed(&crate::voice::models_dir()).contains(&model.as_str()) {
         return Err(Failure::Input);
@@ -186,6 +206,7 @@ pub(super) async fn record(
     let active = owner.active.clone();
     owner.active = Arc::new(move || active() && !grant.load(Ordering::Acquire));
     options.max_seconds = 30;
+    let automatic = request.1.then_some(generation).flatten();
     let worker = Worker {
         end: request.0,
         owner,
@@ -194,10 +215,19 @@ pub(super) async fn record(
     };
     worker
         .execute(move |worker| {
-            worker.record(
+            let (loader, selected, spoken) = (app.clone(), model.clone(), language.clone());
+            worker.record_watched(
                 move |live, admit| {
-                    vults_audio::Capture::start_guarded(options, |_| {}, move || live(), move || admit())
-                        .map_err(|_| Failure::Input)
+                    let microphone =
+                        vults_audio::Capture::start_guarded(options, |_| {}, move || live(), move || admit())
+                            .map_err(|_| Failure::Input)?;
+                    Ok(automatic::Recording::new(
+                        microphone,
+                        automatic,
+                        spoken,
+                        worker.clone(),
+                        move || crate::voice::transcriber(&loader, &selected),
+                    ))
                 },
                 |microphone| microphone.finish().map_err(|_| Failure::Input),
                 move |pcm, stop| {
@@ -214,6 +244,7 @@ pub(super) async fn record(
                         .map_err(|_| Failure::Input)?
                         .ok_or(Failure::Input)
                 },
+                |recording, now| recording.ended(now),
             )
         })
         .await
@@ -227,7 +258,7 @@ pub(super) async fn continue_turns<F, Q>(
     driver: F,
     mut next: mpsc::Receiver<vults_voice::turn::Generation>,
     send: mpsc::Sender<super::Command>,
-    mut record: impl FnMut() -> Q,
+    mut record: impl FnMut(vults_voice::turn::Generation) -> Q,
 ) -> F::Output
 where
     F: std::future::Future<Output = Result<Option<(Turn, Failure)>, Failure>>,
@@ -245,7 +276,7 @@ where
                 recording = None;
             },
             request = next.recv(), if recording.is_none() => match request {
-                Some(value) => { generation = Some(value); recording = Some(Box::pin(record())); },
+                Some(value) => { generation = Some(value); recording = Some(Box::pin(record(value))); },
                 None => return Err(Failure::Cancelled),
             },
         }

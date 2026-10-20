@@ -43,7 +43,7 @@ setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the t
 realtime transport/accounting and native turn retention/local recovery. V6.4.1 adds a bounded CPAL
 output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
 provider identities, acknowledged server truncation and in-memory history/one-shot repair. V6.7.3
-now retains a realtime session between explicitly recorded manual turns. Automatic turn-end and
+now retains a realtime session between explicitly recorded manual turns. Local silence completion is opt-in; semantic-model and
 duplex continuation remain open. Backend V6.4 is
 delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only PipeWire pair inventory,
 an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
@@ -53,7 +53,7 @@ local transcripts through V8 before remote admission. V6.6.2 adds bounded read-o
 tools with independent continuation admission. The V6.6.3 publication checks below are accepted
 with Codex consultation disabled. V6.7.1/V6.7.2 expose explicit Settings-owned configuration, and
 V6.7.3 adds Nest-owned manual Start/Finish/Cancel with editable text recovery and a retained
-conversation for explicitly requested following turns. Automatic turn-end/
+conversation for explicitly requested following turns. Local silence completion is opt-in. Semantic-model/
 duplex integration, island speaking states, optional Codex activation and physical/live acceptance
 remain open. The maintainer accepted the four-hour meeting capture adjustment before resuming that work.
 
@@ -2823,9 +2823,14 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    conversation. Only that explicit click rearms capture for the next native Listen generation;
    idle, stale/duplicate requests and provider events cannot reopen it. Page contact, cancellation,
    settings/key changes and the desktop lease span the whole conversation. Capture/decode for the
-   next turn runs alongside the retained provider driver. No automatic end-of-turn or duplex/
-   barge-in adapter is exposed. V6.7.3 remains open for those integrations. Next: connect the existing
-   end-of-turn/duplex adapters, then V6.7.4
+   next turn runs alongside the retained provider driver. Optional local silence completion now
+   reuses V6.2's policy with the installed VAD and GPU preview, scoped to a real Listen generation
+   from the retained machine (including the first turn). Default-off per-conversation selection is
+   frozen before Start. Fresh capture, confirmed speech and partial words gate the 1.6/2.6-second
+   policy; final decoding/upload still follow microphone closure. Missing/failed detection or
+   preview visibly falls back to manual Finish. Cancellation, the cap and next-turn click still
+   hold. The semantic model remains off. V6.7.3 remains open for semantic and duplex/barge-in
+   integration. Next: explicit duplex/interruption integration, then V6.7.4
    island feedback and physical/live conversation sign-off.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before

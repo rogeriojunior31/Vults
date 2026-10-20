@@ -539,7 +539,7 @@ export const Bridge = {
   },
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
-  voiceConversationStart: () => invoke<VoiceConversation>("voice_conversation_start"),
+  voiceConversationStart: (autoFinish = false) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish }),
   voiceConversationStatus: (id: string) => invoke<VoiceConversation>("voice_conversation_status", { id }),
   voiceConversationControl: (id: string, action: "finish" | "cancel" | "next") => invoke<void>("voice_conversation_control", { id, action }),
   voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),

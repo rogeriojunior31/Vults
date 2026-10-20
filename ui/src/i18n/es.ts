@@ -1,5 +1,10 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Finish automatically after a pause": "Finalizar automáticamente tras una pausa",
+  "Off by default for each app run. Uses local GPU preview and the installed speech detector. If unavailable, use Finish recording. Each new turn still needs your click.": "Desactivado por defecto al abrir la app. Usa la vista previa local en GPU y el detector de voz instalado. Si no está disponible, usa Finalizar grabación. Cada nuevo turno requiere tu clic.",
+  "Automatic finish is unavailable. Use Finish recording.": "La finalización automática no está disponible. Usa Finalizar grabación.",
+  "Recording\u2026 Pause to finish automatically, or press Finish recording.": "Grabando… Haz una pausa para finalizar automáticamente o pulsa Finalizar grabación.",
+
   "Finish each recording to hear Zeca. Record another turn to continue the same conversation.": "Finaliza cada grabación para escuchar a Zeca. Graba otro turno para continuar la misma conversación.",
   "Record another turn": "Grabar otro turno",
   "End conversation": "Terminar conversación",

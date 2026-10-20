@@ -72,11 +72,15 @@ fn visible(app: &AppHandle) -> bool {
 }
 
 #[tauri::command]
-pub fn voice_conversation_start(app: AppHandle, window: tauri::Webview) -> Result<Snapshot, String> {
+pub fn voice_conversation_start(
+    app: AppHandle,
+    window: tauri::Webview,
+    auto_finish: Option<bool>,
+) -> Result<Snapshot, String> {
     page(&window)?;
     #[cfg(not(target_os = "linux"))]
     {
-        let _ = app;
+        let _ = (app, auto_finish);
         Err("Voice conversation is available on Linux only.".into())
     }
     #[cfg(target_os = "linux")]
@@ -102,7 +106,8 @@ pub fn voice_conversation_start(app: AppHandle, window: tauri::Webview) -> Resul
             .checked_add(1)
             .ok_or("Restart the app before recording again.")?;
         let id = slot.0.to_string();
-        let (control, request) = capture_control();
+        let (control, mut request) = capture_control();
+        request.1 = auto_finish.unwrap_or(false);
         let (next, turns) = mpsc::channel(1);
         let view = Snapshot {
             id: id.clone(),
@@ -186,6 +191,27 @@ pub fn voice_conversation_control(
         slot.1 = None;
     }
     Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn capture_phase(session: &mut Session, phase: CapturePhase) {
+    session.view.phase = match phase {
+        CapturePhase::Starting => {
+            session.view.reason = None;
+            "starting"
+        }
+        CapturePhase::Recording => "recording",
+        CapturePhase::Transcribing => {
+            if let Some(control) = &session.control {
+                control.finish();
+            }
+            "transcribing"
+        }
+        CapturePhase::Manual => {
+            session.view.reason = Some("auto-unavailable");
+            "recording"
+        }
+    };
 }
 
 #[cfg(target_os = "linux")]
@@ -285,11 +311,13 @@ async fn drive(
             event = events.recv(), if receiving => {
                 if let Some(event) = event {
                     update(&app, &id, |session| match event {
-                        Event::Capture(phase) => session.view.phase = match phase {
-                            CapturePhase::Starting => "starting", CapturePhase::Recording => "recording", CapturePhase::Transcribing => "transcribing",
-                        },
+                        Event::Capture(phase) => capture_phase(session, phase),
                         Event::Action(action) if matches!(action.effect, Effect::Listen { .. }) => {
-                            if first_listen { first_listen = false; }
+                            if first_listen {
+                                first_listen = false;
+                                if session.next.as_ref().is_none_or(|next| next.try_send(action.generation).is_err())
+                                    && let Some(control) = &session.control { control.cancel(); }
+                            }
                             else { session.generation = Some(action.generation); session.view.phase = "waiting"; }
                         },
                         Event::Action(action) if matches!(action.effect, Effect::Generate) => session.view.phase = "responding",
@@ -355,7 +383,12 @@ mod tests {
         };
         assert!(advance(&mut session).is_err());
         assert!(receive.try_recv().is_err());
-        session.control.as_ref().unwrap().finish();
+        capture_phase(&mut session, CapturePhase::Manual);
+        assert_eq!(session.view.reason, Some("auto-unavailable"));
+        capture_phase(&mut session, CapturePhase::Starting);
+        assert_eq!(session.view.reason, None);
+        capture_phase(&mut session, CapturePhase::Transcribing);
+        assert_eq!(session.view.phase, "transcribing");
         session.view.phase = "waiting";
         assert!(advance(&mut session).is_ok());
         assert_eq!(receive.try_recv().unwrap(), generation);

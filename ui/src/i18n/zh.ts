@@ -1,5 +1,10 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Finish automatically after a pause": "停顿后自动完成",
+  "Off by default for each app run. Uses local GPU preview and the installed speech detector. If unavailable, use Finish recording. Each new turn still needs your click.": "每次打开应用时默认关闭。使用本地 GPU 预览和已安装的语音检测器。如不可用，请点击完成录音。每一轮仍需您点击开始。",
+  "Automatic finish is unavailable. Use Finish recording.": "自动完成不可用。请点击完成录音。",
+  "Recording\u2026 Pause to finish automatically, or press Finish recording.": "正在录音…停顿以自动完成，或点击完成录音。",
+
   "Finish each recording to hear Zeca. Record another turn to continue the same conversation.": "完成每次录音后听取 Zeca 的回复。录制下一轮以继续同一段对话。",
   "Record another turn": "录制下一轮",
   "End conversation": "结束对话",

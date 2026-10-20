@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 4d6988493031 -->
+<!-- source: c917fd0f752c -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -64,8 +64,21 @@ microfone, transcrever localmente e solicitar a resposta do Zeca. Após a reprod
 microfone fica desligado. **Gravar outra fala** continua a mesma conversa e o contexto do provedor;
 **Encerrar conversa** a fecha. Um comando local também retorna a esse estado de espera. Cada nova
 gravação exige seu clique. Um erro ou tempo limite do provedor encerra a sessão. Essa entrada manual
-não usa o atalho global do ditado, encerramento automático da fala nem interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
+não usa o atalho global do ditado nem interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
 sem envio automático. A espera local combinada de captura/transcrição é limitada a 60 segundos.
+
+Opcionalmente, marque **Finalizar automaticamente após uma pausa** antes de iniciar. A opção começa
+desligada ao abrir o app e fica fixa durante aquela conversa. Ela usa o detector de fala local
+instalado e a prévia de transcrição na GPU; não baixa nada. Exige fala confirmada, palavras parciais
+locais e áudio novo. A política aguarda 1,6 segundo de silêncio detectado, ou 2,6 segundos após uma
+palavra de continuação em inglês/português; a detecção e a decodificação podem acrescentar demora.
+A transcrição local final ainda ocorre depois que o microfone fecha. Essa escolha não ativa o
+modelo semântico opcional.
+
+Se o detector ou a prévia estiver indisponível/falhar, a página informa **O encerramento automático
+está indisponível. Use Finalizar gravação.** Finalizar e Cancelar continuam disponíveis. Entrada
+vazia e o limite de 30 segundos nunca causam envio automático. O encerramento automático não reabre
+o microfone: cada nova fala ainda exige **Gravar outra fala**.
 
 **Cancelar**, **Encerrar conversa**, sair da página, ocultar/fechar o Nest, bloquear ou mudar configurações cancela o
 trabalho da página. Perder contato com a página também interrompe a admissão após três segundos.

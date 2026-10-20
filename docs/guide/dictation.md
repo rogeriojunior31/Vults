@@ -55,9 +55,21 @@ microphone, transcribe locally and request Zeca's response. After playback finis
 stays off. **Record another turn** continues the same conversation and provider context; **End
 conversation** closes it. A local command also returns to this waiting state. Each following
 recording requires your click. A provider error or timeout ends the session. This manual entry
-does not use the global dictation shortcut, automatic turn-end or barge-in.
+does not use the global dictation shortcut or barge-in.
 Recording is capped at 30 seconds; reaching the cap discards it rather than sending automatically.
 The combined local capture/transcription wait is limited to 60 seconds.
+
+Optionally select **Finish automatically after a pause** before Start. It starts off when the app
+opens and is frozen for that conversation. It uses the installed local speech detector and GPU
+transcription preview; it downloads nothing. Confirmed speech, local partial words and fresh audio
+are required. The policy waits 1.6 seconds of detected silence, or 2.6 seconds after an English/
+Portuguese continuation word; detection/decoding may add latency. Final local transcription still
+runs after the microphone closes. The optional semantic model is not enabled by this choice.
+
+If the detector or preview is unavailable/fails, the page says **Automatic finish is unavailable.
+Use Finish recording.** Manual Finish and Cancel remain available. Empty input and the 30-second
+limit never trigger an automatic send. Automatic finish does not reopen the microphone: each next
+turn still requires **Record another turn**.
 
 **Cancel**, **End conversation**, leaving the page, hiding/closing the Nest, lock or changed settings cancels owned work.
 Lost page contact also stops admission after three seconds. A native worker that is still exiting

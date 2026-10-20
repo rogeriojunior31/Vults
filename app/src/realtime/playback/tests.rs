@@ -1241,7 +1241,7 @@ async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit
     let recordings = recorded.clone();
     let worker = tokio::spawn(async move {
         let driver = super::drive(
-            Some(Turn::from_capture(&vec![0.1; 3200], "First local words".into()).unwrap()),
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -1268,7 +1268,7 @@ async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit
             },
             |_, _| std::future::ready(Ok(None)),
         );
-        crate::realtime::capture::continue_turns(driver, captures, send, move || {
+        crate::realtime::capture::continue_turns(driver, captures, send, move |_| {
             recordings.fetch_add(1, Ordering::SeqCst);
             async {
                 // The provider/driver must keep being polled during the native capture wait.
@@ -1278,25 +1278,22 @@ async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit
         })
         .await
     });
-    assert!(
-        matches!(next(&mut receive).await, Event::Action(action) if matches!(action.effect, Effect::Listen { .. }))
-    );
     let mut listens = 0;
     loop {
         if let Event::Action(action) = next(&mut receive).await
             && matches!(action.effect, Effect::Listen { .. })
         {
-            listens += 1;
-            assert_eq!(recorded.load(Ordering::SeqCst), listens - 1);
-            if listens == 1 {
+            assert_eq!(recorded.load(Ordering::SeqCst), listens);
+            if listens < 2 {
                 next_capture.send(action.generation).await.unwrap();
+                listens += 1;
             } else {
                 break;
             }
         }
     }
     assert_eq!(opened.load(Ordering::SeqCst), 1);
-    assert_eq!(recorded.load(Ordering::SeqCst), 1);
+    assert_eq!(recorded.load(Ordering::SeqCst), 2);
     stop.send_replace(true);
     assert!(matches!(worker.await.unwrap(), Err(Failure::Cancelled)));
 }

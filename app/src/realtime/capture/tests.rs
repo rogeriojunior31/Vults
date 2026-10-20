@@ -1,7 +1,7 @@
 use super::super::State;
 use super::*;
 
-fn fixture() -> (
+pub(super) fn fixture() -> (
     CaptureControl,
     Worker,
     mpsc::Receiver<Event>,
@@ -212,5 +212,43 @@ async fn abandoning_or_timing_out_native_work_keeps_the_lease_until_it_really_ex
         .await
         .unwrap();
         assert!(state.begin().is_ok());
+    }
+}
+
+#[test]
+fn automatic_completion_closes_capture_before_decode_but_never_overrides_cancel_or_the_cap() {
+    for mode in 0..3 {
+        let (control, mut worker, _events, _cancel, _state) = fixture();
+        if mode == 2 {
+            worker.record_for = Duration::from_millis(1);
+        }
+        let closed = AtomicBool::new(false);
+        let result = worker.record_watched(
+            |_, _| Ok(()),
+            |_| {
+                closed.store(true, Ordering::SeqCst);
+                Ok(vec![0.1; 3200])
+            },
+            |_, _| {
+                assert!(closed.load(Ordering::SeqCst));
+                assert_eq!(mode, 0, "Cancelled/expired automatic completion cannot decode");
+                Ok("Final local words".into())
+            },
+            |_, _| {
+                if mode == 1 {
+                    control.cancel();
+                }
+                if mode == 2 {
+                    std::thread::sleep(Duration::from_millis(2));
+                }
+                true
+            },
+        );
+        match mode {
+            0 => assert!(result.is_ok()),
+            1 => assert!(matches!(result, Err(Failure::Cancelled))),
+            _ => assert!(matches!(result, Err(Failure::Timeout))),
+        }
+        assert!(closed.load(Ordering::SeqCst));
     }
 }

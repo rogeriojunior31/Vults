@@ -2558,6 +2558,8 @@ button.touched-row:hover,
 .voice-conversation > p { margin: 0; flex: none; font-size: var(--text-m); overflow-wrap: anywhere; }
 .voice-conversation-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
 .voice-conversation-content { min-width: 0; min-height: 0; overflow-y: auto; }
+.voice-conversation-automatic { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-m); }
+.voice-conversation-automatic input { flex: none; }
 .voice-conversation-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-m); }
 .voice-conversation-review label { display: flex; flex-direction: column; gap: 8px; font-size: var(--text-m); }
 .voice-conversation-review textarea { box-sizing: border-box; width: 100%; min-height: 72px; resize: vertical; background: var(--float); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-control); padding: 8px; font: var(--text-m)/1.5 var(--font); }
