@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: d17b5c1ecbdd -->
+<!-- source: c6616b0753e0 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -127,10 +127,19 @@ Apagar o histórico preserva reservas/débitos e uma conciliação tardia não r
 Excessos cobrados pelo provedor são debitados integralmente, sem truncamento.
 O sucesso/falha da requisição fica no trace independentemente da disponibilidade dos dados finais de cobrança.
 O app recusa explicitamente `voice-realtime` pelas configurações de conectores e pelo gate de
-contagem. Esta é a base de persistência, sem chamador de rede: tarifas verificadas e limites por
-requisição, contabilidade monotônica em execução, corte de streaming, integração de chaveiro/consentimento
+contagem. Esta é a base de persistência, sem chamador de rede: contabilidade monotônica em execução,
+corte de streaming, integração de chaveiro/consentimento
 e recuperação de reservas abandonadas continuam obrigatórios antes de ativar voz remota. Nenhum
 reembolso ou recuperação automática libera um orçamento novo.
+
+A V6.3.2 acrescenta o responsável offline `chat::realtime`: tarifas inteiras revisadas, tetos
+conservadores por resposta, limites finitos explícitos de sessão e confirmação da configuração
+efetiva, uma tentativa vinculada ao identificador da resposta e recibos únicos de uso. Uso
+desconhecido, eventos antigos/grandes demais e configuração alterada não reabrem um responsável nem
+reembolsam sua reserva. Texto/áudio em cache têm preços separados; excessos conhecidos ficam visíveis
+integralmente. A cassette sintética é offline; não adiciona chamada ao provedor, microfone nem
+autoridade de permissão. Veja [Contabilidade realtime](reference/realtime-accounting.md) para fontes
+das tarifas, demonstração do teto, expiração da qualificação e validação em execução ainda obrigatória.
 
 <a id="local-dictation"></a>
 

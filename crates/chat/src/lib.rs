@@ -14,7 +14,7 @@
 /// newline: the chat's notes follow it on the same line).
 macro_rules! persona {
     () => {
-        include_str!("../persona.md")
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/persona.md"))
     };
 }
 
@@ -32,6 +32,7 @@ pub mod meeting_summary;
 mod mock;
 mod openai;
 pub mod providers;
+pub mod realtime;
 pub mod summary;
 pub mod tools;
 pub mod user;

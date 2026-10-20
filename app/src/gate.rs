@@ -379,6 +379,101 @@ mod tests {
     }
 
     #[test]
+    fn realtime_receipts_settle_the_reserved_attempt_and_unknown_usage_keeps_its_ceiling() {
+        use vults_chat::realtime::{Plan, Session};
+        const NOW: i64 = 1_792_368_000_000;
+        let dir = std::env::temp_dir().join(format!("vults-realtime-budget-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = vults_store::Store::open(&dir).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let plan = Plan::new("gpt-realtime-2.1-mini", 8192, 1024).unwrap();
+        let instructions = plan.session_update()["session"]["instructions"].clone();
+        let mut session = Session::new(plan);
+        let span = |attempt: &str| {
+            let mut span = request_span(VOICE_REALTIME, false, NOW, NOW);
+            span.status = "started".into();
+            span.span = attempt.into();
+            span
+        };
+        let mut receipts = Vec::new();
+        for line in include_str!("../../crates/chat/tests/fixtures/realtime-session.jsonl").lines() {
+            let mut event: serde_json::Value = serde_json::from_str(line).unwrap();
+            if event["type"] == "session.updated" {
+                event["session"]["instructions"] = instructions.clone();
+            } else if event["type"] == "response.created" {
+                let attempt = event["response"]["metadata"]["vults_attempt"].as_str().unwrap();
+                let prepared = session.prepare(attempt, NOW).unwrap();
+                assert!(
+                    store
+                        .reserve_cost(
+                            &identity,
+                            VOICE_REALTIME,
+                            1_000_000,
+                            Some(prepared.ceiling_microusd),
+                            &span(attempt)
+                        )
+                        .unwrap()
+                );
+                assert!(
+                    !store
+                        .reserve_cost(
+                            &identity,
+                            VOICE_REALTIME,
+                            1_000_000,
+                            Some(820_801),
+                            &span("parallel")
+                        )
+                        .unwrap()
+                );
+            } else if event["type"] == "response.done" && event["response"]["id"] == "resp_b" {
+                event["response"]["usage"] = serde_json::Value::Null;
+            }
+            if let Some(receipt) = session.receive(&serde_json::to_vec(&event).unwrap()).unwrap() {
+                assert!(
+                    store
+                        .settle_cost(
+                            &identity,
+                            &receipt.attempt,
+                            receipt.actual_microusd,
+                            NOW,
+                            receipt.ok
+                        )
+                        .unwrap()
+                );
+                assert!(
+                    !store
+                        .settle_cost(&identity, &receipt.attempt, Some(0), NOW, true)
+                        .unwrap()
+                );
+                receipts.push(receipt);
+            }
+        }
+        assert_eq!(receipts[0].actual_microusd, Some(2059));
+        assert_eq!(receipts[1].actual_microusd, None);
+        assert!(!receipts[1].ok);
+        assert!(!receipts[1].within_bounds);
+        assert!(session.prepare("cannot_reopen", NOW).is_err());
+        assert!(
+            !store
+                .reserve_cost(&identity, VOICE_REALTIME, 1_000_000, Some(818_742), &span("over"))
+                .unwrap()
+        );
+        assert!(
+            store
+                .reserve_cost(
+                    &identity,
+                    VOICE_REALTIME,
+                    1_000_000,
+                    Some(818_741),
+                    &span("exact_remaining")
+                )
+                .unwrap()
+        );
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
     fn the_budget_holds_over_any_24_hours() {
         let (g, _) = gate(true, 3, BTreeMap::new());
         let s = Instant::now();

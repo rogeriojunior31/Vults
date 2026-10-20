@@ -2493,10 +2493,14 @@ Delivery sequence:
    24 hours after completion. Missing quotes, zero limits, unavailable state and overflow fail
    closed; overruns are charged in full. `voice-realtime` cannot use connector consent or count-only
    admission. Backend foundation only: there is no network call, microphone capture or new setting.
-2. **V6.3.2 Bounded protocol and pricing** — next. Implement checked provider rates, bounded
-   conversation/input/output costs, usage reconciliation and a session cassette before the gated
-   WebSocket transport. No duration-only estimate is a strict token/cost ceiling. Keep input
-   transcription off unless its separate cost is bounded too.
+2. **V6.3.2 Bounded protocol and pricing** — implemented 2026-10-19. The offline `chat::realtime`
+   owner uses exact reviewed 2.1/2.1-mini rates, conservative context/audio/output ceilings and
+   explicit server-confirmed caps. It disables auto responses, tools and input transcription.
+   Opaque attempts bind server responses; receipts separate request outcome from billing. Unknown
+   or inconsistent usage retains the hold and closes the owner; known overruns are returned in full.
+   A synthetic two-response cassette covers cached context and billable cancellation. Rate review
+   expires after 30 days; no live API call or provider acceptance is claimed. See
+   [Realtime accounting](../reference/realtime-accounting.md) for source contracts and the ceiling proof.
 3. **V6.3.3 Runtime admission and transport** — pending. Wire independent consent, the keyring,
    default US$1 rolling limit (zero disables), a monotonic session clock, durable monetary gate,
    cancellation/cutoff and text fallback. Recover abandoned holds only after proving the prior

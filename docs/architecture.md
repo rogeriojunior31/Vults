@@ -118,9 +118,17 @@ remain charged after a clock rollback. History erasure preserves holds/debits an
 does not recreate erased traces. Provider overruns are charged in full rather than clipped.
 Request success/failure is traced independently of whether final billing data is available.
 The app explicitly rejects `voice-realtime` through connector settings and the count-only gate.
-This is the persistence foundation, with no network caller: verified rates and request bounds,
-monotonic runtime accounting, stream cutoff, keyring/consent wiring and abandoned-hold recovery
+This is the persistence foundation, with no network caller: monotonic runtime accounting,
+stream cutoff, keyring/consent wiring and abandoned-hold recovery
 remain required before enabling remote voice. No automatic refund or recovery grants a fresh budget.
+
+V6.3.2 adds the offline `chat::realtime` owner: reviewed integer rates, conservative per-response
+ceilings, explicit finite session caps and effective-configuration confirmation, one attempt bound
+to its response ID, and once-only usage receipts. Unknown usage, stale/oversized events and changed
+configuration cannot reopen an owner or refund its hold. Cached text/audio are priced separately;
+known overruns remain visible in full. The synthetic session cassette is offline; no provider call,
+microphone or permission authority is added. See [Realtime accounting](reference/realtime-accounting.md)
+for source rates, the ceiling proof, qualification expiry and runtime acceptance still required.
 
 ## Local dictation
 

@@ -1,0 +1,70 @@
+# Realtime accounting
+
+V6.3.2 supplies an offline protocol contract in `chat::realtime`. It opens no connection, reads no
+key and captures no audio. `voice-realtime` remains disabled in the app. A prepared message grants
+no network authority: the app must first reserve its ceiling through the monetary gate.
+
+## Reviewed rates
+
+Qualified on **2026-10-19**, in USD per million tokens:
+
+| Model | Text input / cached / output | Audio input / cached / output |
+|---|---|---|
+| `gpt-realtime-2.1` | 4 / 0.40 / 24 | 32 / 0.40 / 64 |
+| `gpt-realtime-2.1-mini` | 0.60 / 0.06 / 2.40 | 10 / 0.30 / 20 |
+
+Both model pages list a 128,000-token context. These are the only recognized identifiers; no
+alias-prefix matching or automatic substitution is allowed. Sources: [Realtime 2.1](https://developers.openai.com/api/docs/models/gpt-realtime-2.1)
+and [Realtime 2.1 Mini](https://developers.openai.com/api/docs/models/gpt-realtime-2.1-mini).
+The local qualification expires after 30 days, at 2026-11-18 00:00 UTC; dates before qualification
+also refuse quotes. This is a local recheck requirement, not a provider price guarantee. Revalidate
+rates and model limits before runtime activation and whenever renewing the qualification.
+
+## Reservation bound
+
+The session explicitly sets a finite output cap (1-4,096 tokens) and a positive
+`truncation.token_limits.post_instructions` cap no larger than context minus output. The server must
+confirm the effective configuration before any response can be prepared. The API's truncation cap
+excludes instructions, so it cannot stand alone as a total-input estimate.
+[Client-event reference](https://developers.openai.com/api/reference/resources/realtime/client-events).
+
+The conservative reservation is:
+
+```
+context * text_input_rate
+  + post_instructions_cap * audio_input_rate
+  + output_cap * max(text_output_rate, audio_output_rate)
+```
+
+This deliberately covers every context token as text, plus the entire bounded conversation as
+audio. It includes instructions, token overhead and previous turns without guessing tokens from
+milliseconds. It assumes the provider honors the confirmed context/truncation/output limits and
+that audio exists only in the bounded conversation. All instructions are text; tools and remote
+input transcription are explicitly disabled. Server turn detection is null: response creation is
+manual, after admission. A changed effective configuration closes the owner.
+
+For an 8,192-token conversation cap and 1,024 output tokens, the ceilings are US$0.839680 and
+US$0.179200 respectively. These are held amounts, not predicted charges. Actual cost uses the
+reported text/audio/cache breakdown, checked integer nano-USD arithmetic and one final upward
+rounding to micro-USD. Realtime bills conversation context again on later responses; input
+transcription has separate billing. [Cost guide](https://developers.openai.com/api/docs/guides/voice-latency-cost).
+
+## Completion and failure
+
+The owner binds one session, one pending attempt and its server response ID. Parallel preparation,
+unexpected creation, mismatched audio deltas, stale completion, duplicate completion and malformed
+or oversized events cannot settle another attempt. Attempts cannot be reused, with a maximum of
+1,024 attempts per owner to bound replay memory. Incoming server events are limited to 256 KiB.
+
+`response.done` produces one receipt. Missing, inconsistent or newly shaped usage leaves cost
+unknown and closes the owner. Unknown cost must retain the full hold. Known overruns are returned
+in full and also close the owner. Request success is independent of billing availability; a cancelled
+response can still cost money. [Server-event reference](https://developers.openai.com/api/reference/resources/realtime/server-events).
+
+The synthetic two-response cassette covers cached context and billable cancellation; it is not a
+live provider recording. Run `cargo test -p vults-chat realtime::` offline.
+
+V6.3.3 still owns keyring access, independent consent, the durable monetary gate, monotonic clocks,
+bounded PCM transport/playback routing, stream cancellation, unknown-hold recovery and text fallback.
+Only the runtime may prove that billable work stopped before settling the durable ledger. No paid
+request or live speech acceptance is claimed here.
