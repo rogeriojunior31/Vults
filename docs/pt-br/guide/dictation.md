@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 15bd87bd74d5 -->
+<!-- source: 9710623c2d69 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -74,7 +74,7 @@ truncamento remoto e o próximo envio usam o fluxo existente de confirmação/co
 Palavras não ouvidas ficam fora da resposta exibida. Cliques duplicados/atrasados não interrompem
 uma nova geração nem iniciam captura. Durante a geração, antes de haver áudio audível, **Cancelar**
 ainda encerra toda a sessão. Esse controle exige um clique; interromper falando por cima do Zeca
-ainda depende da integração separada da rota com fones/cancelamento de eco.
+usa as rotas contínuas opcionais descritas abaixo.
 
 Opcionalmente, marque **Finalizar automaticamente após uma pausa** antes de iniciar. A opção começa
 desligada ao abrir o app e fica fixa durante aquela conversa. Ela usa o detector de fala local
@@ -104,6 +104,36 @@ A sessão ativa do provedor mantém o contexto remoto da conversa até ser encer
 
 A qualidade do microfone/fala, a validação com provedor real e a interrupção continuam como etapas
 separadas antes de concluir K8. Essa entrada não ativa consulta ao Codex nem responde permissões.
+
+<a id="continuous-microphone-routes"></a>
+## Rotas com microfone contínuo
+
+**Modo do microfone** começa em **Turnos manuais**. Para interromper por voz, escolha
+**Microfone contínuo com fones** ou **Microfone contínuo com cancelamento de eco**. Clique em
+**Atualizar dispositivos de áudio**, escolha explicitamente o microfone/saída ou o par AEC instalado
+e confirme que o microfone pode permanecer aberto até você encerrar esta conversa. Nomes de
+dispositivos nunca comprovam o uso de fones. Use fones nesse modo; o AEC exige um par compatível
+configurado fora do Vults. O app apenas lê a lista: não altera padrões nem instala módulos.
+A lista revisada expira após cinco minutos; atualize-a se não conseguir iniciar.
+
+**Iniciar gravação** abre a rota escolhida e inicia a primeira fala. Durante uma resposta audível
+do Zeca, fala confirmada localmente pode interrompê-lo e iniciar outra gravação com o início retido.
+**Finalizar gravação** continua sendo necessário para enviar cada fala; palavras da verificação de
+interrupção nunca viram comandos nem entrada do provedor. A transcrição local final usa o mesmo
+stream, sem um segundo microfone. O limite de 30 segundos continua descartando, sem envio
+automático. Finalizar após uma pausa fica indisponível nesses modos. A troca de dispositivos fica
+bloqueada durante a conversa.
+
+O microfone permanece aberto durante a transcrição local, a resposta do Zeca e a espera; a página
+informa isso. Após reprodução normal ou **Interromper resposta**, somente **Gravar outra fala**
+inicia outra gravação. **Encerrar conversa**, Cancelar, sair da página, perder contato com ela,
+bloquear, mudar configurações ou perder a autoridade da rota cancela o proprietário. Uma nova
+conversa exige outra confirmação. Interromper resposta sozinho nunca inicia captura. Aplicam-se o
+mesmo roteador de transcrição final, confirmações de truncamento remoto, histórico do trecho ouvido
+e correção do próximo turno. A voz nunca responde permissões.
+
+Os controles e proprietários nativos são cobertos com cenários controlados. A qualidade real de
+microfone/fones/AEC e um provedor real ainda exigem validação física antes de concluir K8.
 
 <a id="global-dictation-first-slice"></a>
 

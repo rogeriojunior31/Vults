@@ -2842,9 +2842,15 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    complete 100 ms to 30-second original 24 kHz turn through the existing local-command/provider gates.
    Cancellation, replacement, route/epoch loss, invalid words and the 60-second deadline suppress late
    submission; one final worker retains its lease through actual teardown. Probe words remain scratch
-   evidence only. This is native-only: the Nest keeps manual capture. Next: explicit route-selection/
-   consent UI and routed control wiring, then V6.7.4
-   island feedback and physical/live conversation sign-off.
+   evidence only. The Nest now also exposes default-manual route selection and an explicit refresh
+   of read-only device/AEC inventories. A five-minute token freezes reviewed native identities; a
+   fresh per-conversation confirmation authorizes continuous capture and voice interruptions.
+   First Start/confirmed interruption admit Begin on the same stream, Finish requires the current
+   recording token, and normal completion/manual Stop still wait for the next-turn click. Labels
+   never choose a policy; no defaults/modules change. The page shows microphone-open states and
+   locks device choices; automatic silence finish stays manual-only. Departure/heartbeat, settings,
+   lock, key and live route authority still revoke work. Next: semantic turn integration,
+   V6.7.4 island feedback and physical/live conversation sign-off.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before
    declaring K8 Done. Codex activation keeps its independent qualification gates.

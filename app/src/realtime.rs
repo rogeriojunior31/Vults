@@ -13,6 +13,7 @@ use vults_chat::realtime::{
 pub(crate) mod controls;
 mod local;
 mod playback;
+pub(crate) mod routes;
 pub use local::{LocalFailure, Recovery, Turn};
 pub use playback::{Channels, Command, Event, Input, LocalReply, Record, Signal};
 #[cfg(target_os = "linux")]
@@ -155,6 +156,16 @@ pub async fn run_routed(
     run_with_audio(app, channels, devices::Choice::Routed(route), None, None).await
 }
 
+#[cfg(target_os = "linux")]
+async fn run_routed_conversation(
+    app: AppHandle,
+    channels: Channels,
+    route: vults_audio::echo::duplex::Route,
+    request: CaptureRequest,
+) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Routed(route), Some(request), None).await
+}
+
 async fn run_with_audio(
     app: AppHandle,
     channels: Channels,
@@ -226,7 +237,8 @@ async fn run_with_audio(
         return Err(Failure::Off);
     }
     #[cfg(target_os = "linux")]
-    let initial = if next.is_none()
+    let initial = if !choice.captures()
+        && next.is_none()
         && let Some(request) = capture.clone()
     {
         let microphone = capture::record(

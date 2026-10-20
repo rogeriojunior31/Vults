@@ -2574,3 +2574,9 @@ button.touched-row:hover,
   .meeting-check .meeting-state { margin-block: 4px; }
   .meeting-before-transcript > .meeting-tabs { display: none; }
 }
+.voice-route { margin: 12px 0; font-size: var(--text-m); min-width: 0; }
+.voice-route label:not(.voice-conversation-automatic) { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; min-width: 0; }
+.voice-route select { width: 100%; min-width: 0; max-width: 100%; min-height: 32px; background: var(--input); color: var(--fg); border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 6px; font: inherit; }
+.voice-route p, .voice-route span { overflow-wrap: anywhere; }
+.voice-route-devices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 12px; }
+.voice-conversation .voice-route [hidden], .voice-conversation-automatic[hidden] { display: none; }

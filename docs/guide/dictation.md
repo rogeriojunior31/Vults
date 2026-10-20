@@ -65,7 +65,7 @@ reply's heard-text result before offering **Record another turn**; remote trunca
 upload use the existing acknowledgement/repair path. Unheard words are excluded from the displayed
 reply. Duplicate/late clicks cannot stop a new generation or start capture. During generation before
 audible output, **Cancel** still ends the whole session. This is a click control; interruption by
-speaking over Zeca still needs the separate headphones/echo-cancelled route integration.
+speaking over Zeca uses the separate opt-in continuous routes below.
 
 Optionally select **Finish automatically after a pause** before Start. It starts off when the app
 opens and is frozen for that conversation. It uses the installed local speech detector and GPU
@@ -93,6 +93,33 @@ retains remote conversation context until it ends.
 
 Microphone/speech quality, live-provider acceptance and interruption remain separate validation
 steps before K8 is complete. This entry does not activate Codex consultation or answer permissions.
+
+## Continuous microphone routes
+
+**Microphone mode** defaults to **Manual turns**. For interruptions by voice, choose
+**Continuous microphone with headphones** or **Continuous microphone with echo cancellation**.
+Click **Refresh audio devices**, explicitly choose the microphone/output or installed AEC pair,
+then confirm that the microphone may remain open until you end this conversation. Device names
+never prove headphone use. Wear headphones for that mode; AEC needs a compatible pair configured
+outside Vults. The app only reads the inventory: it changes no defaults and installs no modules.
+The reviewed inventory expires after five minutes; refresh it if starting fails.
+
+**Start recording** opens the chosen route and starts the first turn. During Zeca's audible reply,
+confirmed local speech may interrupt him and start another recording with its retained onset.
+**Finish recording** still sends each turn; scratch interruption words never become commands or
+provider input. Local final transcription uses the same stream, not a second microphone. The
+30-second recording cap still discards rather than automatically sending. Automatic pause finish
+is unavailable in these modes. Device changes are locked during the conversation.
+
+The microphone stays open during local transcription, Zeca's reply and the waiting state; the page
+says so. After normal playback or **Stop response**, only **Record another turn** starts another
+recording. **End conversation**, Cancel, departure, lost page contact, lock, changed configuration
+or lost route authority cancels the owner. A new conversation needs fresh confirmation. Stop
+response itself never starts capture. The same final-transcript router, remote truncation
+acknowledgements, heard-prefix history and next-turn repair apply. Voice never answers permissions.
+
+The controls and native owners are covered with controlled fixtures. Real microphone/headphone/AEC
+quality and a live provider still require physical acceptance before K8 is complete.
 
 ## Global dictation (first slice)
 

@@ -342,10 +342,11 @@ selected AEC pair or devices, retains its lease through teardown and emits bound
 Input events to the native caller. Complete turns still require explicit native admission; capture is
 never uploaded automatically. Explicit headphones/AEC policy stays separate from temporary route
 verification; an unverified route clears retained speech/probes before deferred playback events.
-The ordinary CPAL entry keeps voice barge-in disabled. No routed renderer command or duplex
-voice-conversation UI is exposed. Backend V6.4/V6.5 is delivered; see [Echo cancellation](echo-cancellation.md) for routing,
-clock and private-graph evidence. Next is V6.6 tools, then V6.7 capture/UI. Physical-device/acoustic
-timing, real speech and live-provider acceptance remain open before activation.
+The ordinary CPAL entry keeps voice barge-in disabled. V6.7's separately confirmed route controls now
+expose duplex capture. Backend V6.4/V6.5 is delivered; see [Echo cancellation](echo-cancellation.md)
+for routing, clock and private-graph evidence. V6.6 owns tools; V6.7 owns capture/controls and
+acceptance. Physical-device/acoustic timing, real speech and live-provider acceptance remain open
+before K8 can be complete.
 V6.7.3 adds the native routed interruption adapter: checked local model/VAD availability before
 stream creation, a bounded eight-second ring, fresh post-playback VAD evidence and generation/probe
 bound local scratch transcription. Its words only confirm/reject a probe; they cannot call tools,
@@ -358,10 +359,15 @@ alone starts final local decoding and submits the complete turn, and Cancel disc
 24 kHz audio remains bounded to 100 ms through 30 seconds; it is not resampled back from the local
 16 kHz decode. One final decode at a time, a 60-second deadline, live route/epoch checks and worker-held
 leases suppress stale results without blocking cancellation. The existing local-command router runs
-before provider admission. Replay/probe evidence never commits by itself. No routed UI switch or
-phone/card authority is added. Existing truncation acknowledgements, heard-prefix history and
-next-turn repair still own interruption and gate subsequent uploads. Physical/live validation,
-explicit route selection/consent UI and routed control wiring remain open.
+before provider admission. Replay/probe evidence never commits by itself. The Nest now adds
+default-manual route selection,
+explicit device/AEC inventory refresh and confirmation for continuous capture per conversation.
+An inventory token expires after five minutes and holds exact reviewed device identities; live
+stream verification remains decisive. First Start/confirmed interruption admit Begin, while Finish
+requires the current native recording token. Normal completion/manual Stop still wait for a click.
+Microphone-open status, page contact and cancellation span the session. No phone/card authority is
+added. Existing truncation acknowledgements, heard-prefix history and next-turn repair still own interruption and gate subsequent uploads. Physical/live validation,
+semantic turn integration and V6.7.4 island feedback/acceptance remain open.
 
 Offline socket/native-owner tests cover interruption before/after producer completion, exact
 acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.

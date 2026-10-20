@@ -1,5 +1,5 @@
 # Cancelamento de eco
-<!-- source: d60e3a8baa87 -->
+<!-- source: baa76af9489b -->
 
 A V6.5.1 qualifica um caminho nativo no Linux com inventário somente de leitura e um experimento
 sintético reproduzível. A V6.5.2 acrescenta propriedade duplex nativa explícita para essa rota e
@@ -96,11 +96,18 @@ prazo de 60 segundos impedem envio. O worker real mantém a concessão do deskto
 encerramento. Replay sozinho nunca grava/confirma um turno seguinte, e nenhum áudio é salvo ou
 enviado ao Chat.
 
-A política escolhida de fones/AEC continua separada da validade da rota ao vivo. A página de voz
-comum do Nest ainda usa captura manual e o botão Interromper resposta; isso não ativa uma rota na
-interface. Seleção/consentimento explícito na interface, conexão dos controles da rota e qualificação
-física/com provedor real continuam na V6.7. A decisão de configuração de produção da Q6 segue aberta;
-o Vults não carrega módulos do sistema silenciosamente.
+A política escolhida de fones/AEC continua separada da validade da rota ao vivo. O Nest agora começa
+com turnos manuais e também oferece rotas contínuas explícitas. Uma lista somente leitura e exclusiva
+do Nest fixa servidor/seriais dos dispositivos e pares WebRTC existentes sob um token de cinco
+minutos. Seleção e confirmação de microfone contínuo por conversa são obrigatórias; padrões ou nomes
+não escolhem rotas. Listas substituídas/expiradas não iniciam captura. Nenhum módulo é instalado e os
+padrões não mudam. Iniciar e uma interrupção confirmada admitem Begin nativo; Finalizar é vinculado
+à gravação exata. Interromper resposta manualmente e concluir normalmente aguardam outro clique
+explícito para gravar. Sair, expirar o contato da página e a autoridade existente de configurações/
+bloqueio/geração revogam o proprietário da rota. A página informa que o microfone continua aberto
+durante resposta/decodificação/espera. Finalizar após uma pausa fica indisponível na captura da rota.
+A qualificação física/com provedor real continua na V6.7. A decisão de configuração de produção da Q6
+segue aberta; o Vults não carrega módulos do sistema silenciosamente.
 
 <a id="reproduce-the-isolated-experiment"></a>
 ## Reproduzir o experimento isolado

@@ -12,11 +12,15 @@ export type Size = "mini" | "quick" | "room" | "full";
 export interface VoiceConversation {
   id: string;
   response: string | null;
+  capture: string | null;
+  routed: boolean;
   phase: "starting" | "recording" | "transcribing" | "responding" | "speaking" | "interrupting" | "waiting" | "finished" | "cancelled" | "failed" | "recovery";
   reason: string | null;
   draft: string | null;
   reply: string | null;
 }
+export interface VoiceRouteSelection { token: string; mode: "headphones" | "echo"; source: string; sink: string; confirmed: boolean }
+export interface VoiceRoutes { token: string; sources: { name: string; label: string }[]; sinks: { name: string; label: string }[]; pairs: { source: string; sink: string }[] }
 export interface VoiceRealtimeSettings {
   /** Saved opt-in, not a live-session or readiness indicator. */
   on: boolean;
@@ -540,9 +544,10 @@ export const Bridge = {
   },
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
-  voiceConversationStart: (autoFinish = false) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish }),
+  voiceConversationRoutes: () => invoke<VoiceRoutes>("voice_conversation_routes"),
+  voiceConversationStart: (autoFinish = false, route?: VoiceRouteSelection) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish, route }),
   voiceConversationStatus: (id: string) => invoke<VoiceConversation>("voice_conversation_status", { id }),
-  voiceConversationControl: (id: string, action: "finish" | "cancel" | "next" | "interrupt", response?: string) => invoke<void>("voice_conversation_control", { id, action, response }),
+  voiceConversationControl: (id: string, action: "finish" | "cancel" | "next" | "interrupt", response?: string, capture?: string) => invoke<void>("voice_conversation_control", { id, action, response, capture }),
   voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),
   setVoiceRealtime: (on: boolean, limitMicrousd: string, model: string) =>
     typeof limitMicrousd === "string" && /^(0|[1-9]\d{0,18})$/.test(limitMicrousd) && BigInt(limitMicrousd) <= 9223372036854775807n

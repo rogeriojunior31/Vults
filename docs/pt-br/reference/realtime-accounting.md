@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: b592dbe411cc -->
+<!-- source: b96b1fea5191 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -389,11 +389,11 @@ o fim da destruição e emite eventos Input limitados somente em memória ao cha
 envio de turnos completos ainda exige admissão nativa explícita; a captura nunca é enviada automaticamente.
 A política explícita de fones/AEC fica separada da verificação temporária da rota; uma rota não
 verificada limpa fala/provas retidas antes de eventos adiados da reprodução. A entrada CPAL comum
-mantém a interrupção por voz desativada. Não há comando roteado do renderer nem interface de conversa
-de voz duplex. O backend da V6.4/V6.5 está entregue; veja [Cancelamento de eco](echo-cancellation.md) para evidências de
-roteamento, relógio e grafo privado. A próxima etapa é ferramentas na V6.6, depois captura/interface
-na V6.7. Tempo de dispositivo/acústica, fala real e aceitação com provedor real continuam em aberto
-antes da ativação.
+mantém a interrupção por voz desativada. Os controles de rota da V6.7, com confirmação separada,
+agora expõem a captura duplex. O backend da V6.4/V6.5 está entregue; veja [Cancelamento de eco](echo-cancellation.md) para evidências de
+roteamento, relógio e grafo privado. A V6.6 controla ferramentas; a V6.7 controla captura/controles e
+validação. Tempo de dispositivo/acústica, fala real e aceitação com provedor real continuam em aberto
+antes de concluir K8.
 
 A V6.7.3 acrescenta o adaptador nativo de interrupção da rota: disponibilidade verificada dos modelos
 locais/VAD antes de criar streams, buffer circular de oito segundos, evidência recente de VAD após
@@ -409,11 +409,16 @@ O áudio original de 24 kHz fica limitado entre 100 ms e 30 segundos; ele não �
 a partir da decodificação local de 16 kHz. Uma decodificação final por vez, prazo de 60 segundos,
 verificações de rota/geração ao vivo e concessões mantidas pelos workers suprimem resultados antigos
 sem bloquear o cancelamento. O roteador de comandos locais existente atua antes da admissão pelo
-provedor. Replay/evidência de verificação nunca confirma por conta própria. Não há controle de rota
-na interface nem autoridade sobre celular/cartões. Confirmações de truncamento, histórico do trecho
-ouvido e correção do próximo turno continuam responsáveis pela interrupção e bloqueiam envios
-posteriores até estarem prontos. Validação física/com provedor real, seleção/consentimento explícito
-na interface e conexão dos controles da rota continuam abertos.
+provedor. Replay/evidência de verificação nunca confirma por conta própria. O Nest agora acrescenta seleção
+de rota com padrão manual, atualização explícita da lista de dispositivos/AEC e confirmação de
+captura contínua por conversa. Um token da lista expira após cinco minutos e mantém identidades
+exatas dos dispositivos revisados; a verificação do stream ao vivo continua decisiva. Iniciar e uma
+interrupção confirmada admitem Begin; Finalizar exige o token da gravação nativa atual. Conclusão
+normal/Interromper resposta manualmente ainda aguardam um clique. Estado de microfone aberto,
+contato da página e cancelamento abrangem a sessão. Não há autoridade sobre celular/cartões.
+Confirmações de truncamento, histórico do trecho ouvido e correção do próximo turno continuam responsáveis pela interrupção e bloqueiam envios
+posteriores até estarem prontos. Validação física/com provedor real,
+integração semântica de turnos e feedback/validação da ilha na V6.7.4 continuam abertos.
 
 Testes offline de socket e proprietário
 nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,

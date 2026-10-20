@@ -264,6 +264,7 @@ pub fn run() {
             settings::set_dictation_cleanup,
             settings::set_meeting_summary,
             settings::voice_realtime_settings,
+            realtime::routes::voice_conversation_routes,
             realtime::controls::voice_conversation_start,
             realtime::controls::voice_conversation_status,
             realtime::controls::voice_conversation_control,
@@ -415,6 +416,7 @@ pub fn run() {
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             handle.manage(std::sync::Arc::new(realtime::State::default()));
             handle.manage(realtime::controls::Controls::default());
+            handle.manage(realtime::routes::Routes::default());
             handle.manage(media::MediaState::default());
             handle.manage(dictation_overlay::Ready::default());
             handle.manage(voice::VoiceState::default());

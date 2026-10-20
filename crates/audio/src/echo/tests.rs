@@ -121,3 +121,37 @@ fn restart_and_inventory_limits_invalidate_snapshots() {
         Err(Failure::Inventory)
     );
 }
+
+#[test]
+fn inventory_keeps_exact_identities_excludes_monitors_and_never_infers_headphones() {
+    let (server, modules, mut sources, sinks) = fixture();
+    sources[0].props.set_bytes(
+        c"device.description",
+        c"Named like headphones".to_bytes_with_nul(),
+    );
+    let inventory = inventory_from(&server, &modules, &sources, &sinks).unwrap();
+    assert_eq!(
+        inventory.sources().collect::<Vec<_>>(),
+        vec![("clean-input", "Named like headphones")]
+    );
+    assert_eq!(
+        inventory.sinks().collect::<Vec<_>>(),
+        vec![("reference-output", "reference-output")]
+    );
+    assert_eq!(inventory.pairs().len(), 1);
+    assert!(!format!("{inventory:?}").contains("clean-input"));
+    let route = duplex::Route::headphones_from(&inventory, "clean-input", "reference-output").unwrap();
+    assert_eq!(route.chosen_policy(), duplex::Interruption::Headphones);
+    assert!(duplex::Route::headphones_from(&inventory, "unknown", "reference-output").is_err());
+    sources[0].monitor_of_sink_name = Some(c"reference-output".into());
+    let monitors = inventory_from(&server, &modules, &sources, &sinks).unwrap();
+    assert_eq!(monitors.sources().count(), 0);
+    assert!(monitors.pairs().is_empty());
+    assert!(duplex::Route::headphones_from(&monitors, "clean-input", "reference-output").is_err());
+    sources[0].monitor_of_sink_name = None;
+    sources.push(sources[0].clone());
+    assert!(matches!(
+        inventory_from(&server, &modules, &sources, &sinks),
+        Err(Failure::Inventory)
+    ));
+}

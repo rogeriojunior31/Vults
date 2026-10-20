@@ -28,6 +28,7 @@ class Element {
   replaceChildren(...children) { this.text = ""; for (const node of this.children) node.parentElement = null; this.children = []; this.append(...children); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(node => node !== this); this.parentElement = null; }
   contains(node) { return nodes(this).includes(node); }
+  get options() { return this.children.filter(node => node.tagName === "OPTION"); }
   get firstElementChild() { return this.children[0] ?? null; }
   get lastElementChild() { return this.children.at(-1) ?? null; }
   get isConnected() { return this === document.body || !!this.parentElement?.isConnected; }

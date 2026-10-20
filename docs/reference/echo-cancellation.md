@@ -78,17 +78,25 @@ Cancellation, route loss, replaced generations and closed owners suppress late p
 confirmed interruption, `Replay` follows the new `Listen` action and carries the retained onset and
 pre-roll under that exact generation. Native `Command::Capture` now accepts generation-bound
 `Begin`, `Finish` and `Cancel` operations on this same stream. Begin seeds capture with that replay
-and appends packets received after Begin, keeping up to 30 seconds of 24 kHz PCM16; it does not open a second microphone. Only Finish starts a separate,
+and appends packets received after Begin, keeping up to 30 seconds of 24 kHz PCM16; it does not open
+a second microphone. Only Finish starts a separate,
 cancellable local final transcription. Valid final words accompany the original PCM into the existing
 complete-turn router; scratch probe words are never reused. Empty/failed decoding, cancellation,
 replacement, route loss and the 60-second decode deadline prevent submission. The actual worker keeps
 the desktop lease through teardown. Replay alone never records/commits a following turn, and no audio
 is saved or sent to Chat.
 
-Chosen headphones/AEC policy remains distinct from live route validity. The ordinary Nest voice
-page still uses manual capture and the Stop response button; this adds no routed UI activation.
-Explicit route selection/consent UI, routed control wiring and physical/live qualification remain
-V6.7 work. Q6's production setup choice is open; Vults loads no system modules silently.
+Chosen headphones/AEC policy remains distinct from live route validity. The Nest now defaults to
+manual turns and additionally exposes explicit continuous routes. A Nest-only read-only inventory
+freezes server/device serials and existing WebRTC pairs under a five-minute token. Selection and
+per-conversation continuous-microphone confirmation are mandatory; no default or label chooses a
+route. Superseded/expired inventories cannot start capture. No module is installed and defaults stay
+unchanged. The initial Start and a confirmed interruption admit a native Begin; Finish is bound to
+an exact recording token. Manual Stop and normal completion wait for another explicit turn click.
+Departure, heartbeat expiry and the existing settings/lock/epoch authority revoke the routed owner.
+The page shows that the microphone remains open during reply/decoding/waiting. Automatic pause finish
+is unavailable on routed capture. Physical/live qualification remains V6.7 work. Q6's production
+setup choice is open; Vults loads no system modules silently.
 
 ## Reproduce the isolated experiment
 

@@ -69,7 +69,7 @@ const nest = createNest(
       undo: (id) => Bridge.memoryUndo(id),
     },
     dictation: {
-      conversation: { start: Bridge.voiceConversationStart, status: Bridge.voiceConversationStatus, control: Bridge.voiceConversationControl, copy: text => navigator.clipboard.writeText(text) },
+      conversation: { routes: Bridge.voiceConversationRoutes, start: Bridge.voiceConversationStart, status: Bridge.voiceConversationStatus, control: Bridge.voiceConversationControl, copy: text => navigator.clipboard.writeText(text) },
       meetings: {
         archive: { save: Bridge.meetingSave, list: Bridge.meetingArchiveList, read: Bridge.meetingArchiveRead,
           remove: Bridge.meetingArchiveDelete, rename: Bridge.meetingArchiveRename, export: Bridge.meetingArchiveExport },

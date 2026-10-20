@@ -176,7 +176,7 @@ try {
   const refresh = async () => { const entry = timers.entries().next().value; assert.ok(entry, "An active session needs a heartbeat"); timers.delete(entry[0]); entry[1](); await tick(); };
   assert.equal(starts.length, 0);
   work.setActive(true); await click("Voice conversation settings"); assert.equal(configured, 1);
-  const automatic = nodes(work.element).find(n => n.tagName === "INPUT" && n.type === "checkbox");
+  const automatic = nodes(work.element).find(n => n.tagName === "INPUT" && "voiceAutomatic" in n.dataset);
   assert.ok(!automatic.checked, "Automatic completion must start off");
   automatic.checked = true; automatic.fire("change");
   const first = click("Start recording"); await tick();
@@ -244,3 +244,51 @@ try {
   globalThis.setTimeout = originalTimeout; globalThis.clearTimeout = originalClear;
 }
 console.log("check-realtime-settings: explicit work-page controls, duplicate start, late acknowledgement, heartbeat, recovery draft, inert text, copy, cancellation and departure pass");
+
+{
+  const controls = [], starts = []; let lists = 0, listing = pending();
+  const inventory = { token: "reviewed", sources: [{ name: "mic", label: "Microphone" }], sinks: [{ name: "out", label: "Headphones" }], pairs: [{ source: "clean", sink: "reference" }] };
+  const work = createVoiceConversation({
+    routes: () => { lists++; return listing.promise; },
+    start: async (automatic, route) => { starts.push({ automatic, route }); return { id: "r", phase: "recording", capture: "capture-1", routed: true, reason: null, draft: null, reply: null }; },
+    status: async () => ({ id: "r", phase: "waiting", capture: null, routed: true, reason: null, draft: null, reply: null }),
+    control: async (id, action, response, capture) => { controls.push({ id, action, response, capture }); },
+    copy: async () => {},
+  }, () => {});
+  document.body.append(work.element); work.setActive(true);
+  const button = text => nodes(work.element).find(n => n.tagName === "BUTTON" && n.textContent === text);
+  const choose = (field, value) => { const e = nodes(work.element).find(n => n.dataset.voiceRoute === field); if (e.type === "checkbox") e.checked = value; else e.value = value; e.fire("change"); return e; };
+  const click = async text => { const b = button(text); assert.ok(b, text); if (!b.disabled) await b.onclick?.(); };
+  choose("mode", "headphones");
+  assert.equal(lists, 0, "Changing mode cannot inspect devices or open audio");
+  assert.equal(button("Start recording").disabled, true);
+  const loading = click("Refresh audio devices"); listing.resolve(inventory); await loading;
+  choose("consent", true); assert.equal(button("Start recording").disabled, true, "Device selection is explicit too");
+  choose("source", "mic"); choose("sink", "out");
+  assert.equal(button("Start recording").disabled, true, "Changing devices revokes previous consent");
+  choose("consent", true); assert.equal(button("Start recording").disabled, false);
+  await click("Start recording");
+  assert.deepEqual(starts, [{ automatic: false, route: { token: "reviewed", mode: "headphones", source: "mic", sink: "out", confirmed: true } }]);
+  assert.equal(nodes(work.element).find(n => n.dataset.voiceRoute === "mode").disabled, true);
+  await click("Finish recording");
+  assert.equal(controls.at(-1).capture, "capture-1", "Finish is bound to the exact native recording");
+  assert.equal(button("Finish recording").disabled, true, "Finish cannot be double-clicked while decoding");
+  await click("Cancel");
+  assert.equal(button("Start recording").disabled, true, "A new conversation needs fresh confirmation");
+  choose("mode", "echo"); choose("pair", "0"); choose("consent", true);
+  assert.equal(button("Start recording").disabled, false);
+  const refresh = click("Refresh audio devices"); // Replaced inventory invalidates an otherwise valid draft.
+  await refresh;
+  assert.equal(button("Start recording").disabled, true);
+  listing = pending();
+  const failing = click("Refresh audio devices"); listing.reject(Error("private server details")); await failing;
+  assert.equal(button("Start recording").disabled, true);
+  assert.ok(work.element.textContent.includes("Could not list audio devices"));
+  assert.ok(!work.element.textContent.includes("private server details"));
+  listing = pending();
+  const late = click("Refresh audio devices"); work.setActive(false); listing.resolve(inventory); await late;
+  assert.equal(nodes(work.element).find(n => n.dataset.voiceRoute === "consent").checked, false);
+  assert.equal(starts.length, 1, "Late inventory or departure cannot start recording");
+  work.element.remove();
+}
+console.log("check-realtime-settings: explicit route/device/consent, frozen start, recording-bound Finish, refresh failure and late inventory pass");
