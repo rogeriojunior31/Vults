@@ -611,6 +611,8 @@ mod tests {
         event_phase(
             &mut session,
             Event::History(Record {
+                generation,
+                completed_at: Instant::now(),
                 identity: vults_chat::realtime::Identity {
                     attempt: "attempt".into(),
                     response: "reply".into(),

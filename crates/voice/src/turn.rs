@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 pub mod end;
+pub mod follow_up;
 pub mod heard;
 #[cfg(feature = "semantic-turn")]
 pub mod semantic;

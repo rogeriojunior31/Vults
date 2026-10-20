@@ -50,11 +50,42 @@ impl Signal {
 }
 pub struct Record {
     pub identity: Identity,
+    pub generation: Generation,
+    pub completed_at: std::time::Instant,
     pub text: String,
     pub interrupted: bool,
     pub played_frames: u64,
     pub total_frames: u64,
     pub server_synchronized: bool,
+}
+impl Record {
+    /// One retained conversation clock binds actual drain time; this proposes, never opens a mic.
+    pub fn observe_follow_up(
+        &self,
+        policy: &mut turn::follow_up::FollowUp,
+        origin: std::time::Instant,
+        now: std::time::Instant,
+    ) -> bool {
+        let Some(drained_at) = self.completed_at.checked_duration_since(origin) else {
+            return false;
+        };
+        let Some(now) = now.checked_duration_since(origin) else {
+            return false;
+        };
+        policy.completed(
+            turn::follow_up::Reply {
+                generation: self.generation,
+                source: turn::follow_up::Source::SpokenResponse,
+                text: &self.text,
+                played_frames: self.played_frames,
+                total_frames: self.total_frames,
+                interrupted: self.interrupted,
+                synchronized: self.server_synchronized,
+            },
+            drained_at,
+            now,
+        )
+    }
 }
 impl std::fmt::Debug for Record {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -308,6 +339,7 @@ pub(super) async fn drive<
             }
             let done = current.settled && (if current.frozen.is_some() { current.truncated } else { cursor.phase == OutputPhase::Finished });
             if done {
+                let completed_at = std::time::Instant::now();
                 let Some(text) = current.transcript.take() else { break Err(Failure::Protocol); };
                 let interrupted = current.frozen.is_some();
                 let segments = [heard::Segment { text:&text.text, start_frame:0, end_frame:text.frames }];
@@ -318,7 +350,7 @@ pub(super) async fn drive<
                 let history = heard.history_text();
                 repair = heard.take_nudge().map(|unheard| Repair { heard:history.clone(), unheard });
                 if let Err(error) = emit(&channels.output, Event::History(Record {
-                    identity:text.identity, text:history, interrupted:heard.interrupted, played_frames:cursor.played_frames,
+                    identity:text.identity, generation:current.generation, completed_at, text:history, interrupted:heard.interrupted, played_frames:cursor.played_frames,
                     total_frames:text.frames, server_synchronized: !current.local_only,
                 })) { break Err(error); }
                 if !interrupted {

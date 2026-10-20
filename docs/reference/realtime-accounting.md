@@ -382,6 +382,31 @@ This check exercises actual CPAL into memory history without a microphone, deskt
 provider connection. It is not real speech or live-provider acceptance.
 
 
+## Bounded follow-up proposals
+
+The V6.7 backend now has an offline, default-off policy for **Answer without the key**. It is
+not connected to Settings or microphone admission yet; the option remains unavailable. Creating
+or consuming a proposal opens no microphone, executes no command and makes no provider request.
+
+Only a completed spoken model response can propose the exact following Listen generation. The
+native history receipt now carries its original generation and monotonic completed-playback time;
+it never exposes them to the renderer. All audio frames must have played, the record must be
+synchronized and uninterrupted, and its final non-whitespace character must be `?` or `？`, with
+at least one letter. This is a conservative punctuation check, not semantic question recognition.
+Quoted endings and unfinished/interrupted text are refused. Tool results, notifications and
+permission cards cannot propose or extend a window.
+
+The eight-second deadline starts at completed playback, not receipt processing, a new Listen,
+model loading or microphone opening. A delayed claim gets only the original remaining budget.
+Exact expiry, an unexpected newer generation, cancellation or a newer non-question discards the
+proposal. Replayed/stale receipts do not recreate it. Backward/future clock evidence and integer/
+time overflow are refused. Debug output contains metadata, never the spoken question.
+
+This is timing/evidence infrastructure, not a hands-free feature sign-off. The remaining adapter
+must bind independent explicit consent, visibility/lock/permission priority, the actual microphone
+lifetime and expiry discard, visible open-microphone feedback, Finish/Cancel and a bounded final
+turn. Real speech/provider acceptance is still required. Ordinary conversation behavior is unchanged.
+
 ## Local commands before realtime upload
 
 V6.6.1 adds Linux command admission to the native owner. `Turn::with_transcript` binds a finalized

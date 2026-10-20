@@ -2862,7 +2862,20 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    teardown. Actual worker/model/panic destruction retain the lease. No artifacts are downloaded or
    UI paths accepted; checked files must be provisioned explicitly for preview. Ordinary builds
    reject semantic activation. Next: V6.7.4 island feedback, artifact/endpoint/pt-BR qualification
-   and physical/live conversation sign-off. Answer without the key remains off/unimplemented.
+   and physical/live conversation sign-off. Answer without the key remains unavailable: its timing/
+   evidence foundation is now implemented, but consent, capture and UI activation are not. The pure
+   default-off FollowUp policy accepts only complete, synchronized, uninterrupted spoken response
+   evidence ending in a conservative question mark plus letters. It proposes one exact following
+   Listen generation with an eight-second absolute deadline from native playback completion.
+   Delayed admission keeps only the original remaining time; stale/repeated receipts, wrong newer
+   generations, expiry, cancellation and invalid clocks cannot create/extend a proposal. Tools,
+   notifications and permission cards are refused. Native history binds the original generation and
+   completion clock before later UI handling, with metadata-only Debug. A controlled native playback
+   regression covers actual drain, receipt age, default-off behavior, exact next generation and no
+   capture/upload from proposal consumption. No microphone or real provider is used. Next: bind
+   independently reviewed consent and bounded capture/expiry, then expose the full control with
+   visible microphone feedback and physical/live acceptance. See
+   [Bounded follow-up proposals](../reference/realtime-accounting.md#bounded-follow-up-proposals).
 4. **V6.7.4 Island states and acceptance** — in progress. The native page now consumes confirmed
    ClearPlayback feedback, retires the stopped response token and distinguishes stopped output with
    microphone off from a continuous route's open microphone. Only current-generation response

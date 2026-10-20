@@ -365,10 +365,13 @@ async fn audio(io: &transport::Channels, n: usize) {
         .unwrap();
 }
 async fn done(io: &transport::Channels, n: usize, ok: bool) {
+    done_text(io, n, ok, "one two three four five six").await;
+}
+async fn done_text(io: &transport::Channels, n: usize, ok: bool, text: &str) {
     io.output
         .send(transport::Event::Transcript(Transcript {
             identity: identity(n),
-            text: "one two three four five six".into(),
+            text: text.into(),
             frames: 4800,
         }))
         .await
@@ -1319,4 +1322,103 @@ async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit
     assert_eq!(recorded.load(Ordering::SeqCst), 2);
     stop.send_replace(true);
     assert!(matches!(worker.await.unwrap(), Err(Failure::Cancelled)));
+}
+
+#[tokio::test]
+async fn follow_up_proposals_use_actual_completed_audio_and_never_capture_or_upload() {
+    use vults_voice::turn::follow_up::FollowUp;
+    for (text, eligible) in [
+        ("Continue?", true),
+        ("Done.", false),
+        ("\u{7ee7}\u{7eed}\u{5417}\u{ff1f}", true),
+    ] {
+        let origin = std::time::Instant::now();
+        let (io, send, mut receive, stop) = channels(128);
+        send.send(input(generation(), 123)).await.unwrap();
+        let state = device(false);
+        let output = state.clone();
+        let uploads = Arc::new(AtomicUsize::new(0));
+        let count = uploads.clone();
+        let worker = tokio::spawn(async move {
+            without_commands(
+                io,
+                &|| true,
+                turn::BargeIn::Disabled,
+                move |_| Ok(Fake(output.clone())),
+                move |mut remote| async move {
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    upload(&mut remote).await;
+                    count.fetch_add(1, Ordering::SeqCst);
+                    audio(&remote, 0).await;
+                    done_text(&remote, 0, true, text).await;
+                    remote.cancel.changed().await.unwrap();
+                    assert!(
+                        remote.input.try_recv().is_err(),
+                        "A proposal is not an upload or a new turn"
+                    );
+                    Err(Failure::Cancelled)
+                },
+            )
+            .await
+        });
+        tokio::time::timeout(Duration::from_secs(3), async {
+            while state.lock().unwrap().cursor.phase != OutputPhase::Draining {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
+        while let Ok(event) = receive.try_recv() {
+            assert!(
+                !matches!(event, Event::History(_)),
+                "Model completion is not actual playback completion"
+            );
+        }
+        let drained = std::time::Instant::now();
+        {
+            let mut output = state.lock().unwrap();
+            output.cursor.played_frames = output.cursor.total_frames;
+            output.cursor.phase = OutputPhase::Finished;
+        }
+        let record = history(&mut receive).await;
+        assert_eq!(record.generation, generation());
+        assert!(record.completed_at >= drained);
+        assert_eq!(record.text, text);
+        let mut policy = FollowUp::new(true);
+        let observed = record.completed_at + Duration::from_secs(2);
+        assert_eq!(record.observe_follow_up(&mut policy, origin, observed), eligible);
+        assert!(!record.observe_follow_up(&mut FollowUp::default(), origin, observed));
+        assert!(!record.observe_follow_up(
+            &mut FollowUp::new(true),
+            origin,
+            record.completed_at + Duration::from_secs(8)
+        ));
+        assert!(!record.observe_follow_up(
+            &mut FollowUp::new(true),
+            record.completed_at + Duration::from_secs(1),
+            observed
+        ));
+        let following = loop {
+            if let Event::Action(Action {
+                generation,
+                effect: Effect::Listen { .. },
+            }) = next(&mut receive).await
+            {
+                break generation;
+            }
+        };
+        let claimed = observed + Duration::from_secs(1);
+        let proposal = policy.take(following, claimed.duration_since(origin));
+        assert_eq!(proposal.is_some(), eligible);
+        if let Some(window) = proposal {
+            assert_eq!(
+                window.remaining(claimed.duration_since(origin)),
+                Some(Duration::from_secs(5))
+            );
+            assert!(policy.take(following, claimed.duration_since(origin)).is_none());
+        }
+        assert_eq!(uploads.load(Ordering::SeqCst), 1);
+        stop.send_replace(true);
+        assert!(matches!(worker.await.unwrap(), Err(Failure::Cancelled)));
+    }
 }

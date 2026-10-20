@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 45591014dea0 -->
+<!-- source: f995f3076d59 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -434,6 +434,36 @@ também executa o driver nativo completo com um provedor sintético:
 Esse teste exercita CPAL real até o histórico em memória sem microfone, alto-falante do desktop,
 chave nem conexão com provedor. Ele não representa aceitação de fala ou provedor real.
 
+
+<a id="bounded-follow-up-proposals"></a>
+## Propostas limitadas de escuta de resposta
+
+O backend da V6.7 agora tem uma política local, desligada por padrão, para **Responder sem apertar
+a tecla**. Ela ainda não está ligada às Configurações nem à admissão do microfone; a opção continua
+indisponível. Criar ou consumir uma proposta não abre o microfone, não executa comandos e não faz
+pedidos ao provedor.
+
+Somente uma resposta falada completa do modelo pode propor a geração Listen imediatamente seguinte.
+O recibo nativo do histórico agora carrega sua geração original e o instante monotônico de término
+da reprodução; eles nunca são expostos ao renderer. Todos os quadros de áudio devem ter tocado, o
+registro deve estar sincronizado e sem interrupção, e o último caractere que não seja espaço deve
+ser `?` ou `？`, com pelo menos uma letra. É uma verificação conservadora de pontuação, não um
+reconhecimento semântico de perguntas. Finais entre aspas e texto incompleto/interrompido são
+recusados. Resultados de ferramentas, notificações e cartões de permissão não podem propor nem
+prolongar uma janela.
+
+O prazo de oito segundos começa no fim da reprodução, não no processamento do recibo, em um novo
+Listen, no carregamento do modelo ou na abertura do microfone. Uma proposta consumida com atraso
+recebe apenas o tempo restante original. Expiração exata, uma geração posterior inesperada,
+cancelamento ou uma resposta mais recente sem pergunta descartam a proposta. Recibos repetidos ou
+antigos não a recriam. Relógios regressivos/futuros e estouro de inteiros/tempo são recusados.
+O diagnóstico contém metadados, nunca o texto da pergunta falada.
+
+Isso é infraestrutura de tempo/evidências, não validação da função sem usar as mãos. O adaptador
+restante deve vincular consentimento explícito independente, visibilidade/bloqueio/prioridade de
+permissões, tempo real de abertura do microfone e descarte ao expirar, indicação visível de
+microfone aberto, Finalizar/Cancelar e uma fala final limitada. A aceitação com fala real e provedor
+continua necessária. O comportamento normal da conversa não mudou.
 
 <a id="local-commands-before-realtime-upload"></a>
 ## Comandos locais antes do envio realtime
