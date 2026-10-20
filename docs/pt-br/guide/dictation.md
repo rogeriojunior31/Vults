@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 08560573932b -->
+<!-- source: 1053e9d000a1 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -40,8 +40,8 @@ rascunho antes de enviar. Esse filtro não usa modelo nem faz requisições de r
 
 Abra **Ditado > Conversar com o Zeca** para preparar a voz em tempo real. O modelo e o orçamento
 são separados do Chat e da assinatura da CLI. **Configurar chave da OpenAI** abre as configurações
-compartilhadas da chave; as chaves permanecem no chaveiro do sistema. Esta página não grava nem
-envia áudio, e os controles da conversa ao vivo ainda não estão disponíveis.
+compartilhadas da chave; as chaves permanecem no chaveiro do sistema. Esta página de configuração
+não grava nem envia áudio.
 
 A voz vem desligada por padrão. Revise o destino do áudio/contexto na OpenAI, escolha um modelo
 compatível e defina o limite móvel de 24 horas em USD antes de ativá-la. Use ponto ou vírgula decimal,
@@ -54,6 +54,31 @@ configurações salvas. Mudanças feitas em outro lugar bloqueiam a gravação d
 você recarregar. Sair da página preserva edições não enviadas. A voz nunca responde a um cartão de
 permissão, e a consulta ao Codex continua indisponível. Veja
 [Contabilidade em tempo real](../reference/realtime-accounting.md#runtime-transport).
+
+<a id="manual-voice-turns"></a>
+## Falas manuais por voz
+
+No Linux, abra **Ditado > Trabalho > Conversa por voz** depois de ativar a voz e instalar um modelo
+local em **Voz**. Use **Iniciar gravação**, fale e clique em **Finalizar gravação** para parar o
+microfone, transcrever localmente e solicitar a resposta do Zeca. Essa entrada manual grava uma
+fala por vez; clique em Iniciar novamente para outra. Ela não usa o atalho global do ditado nem
+interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
+sem envio automático. A espera local combinada de captura/transcrição é limitada a 60 segundos.
+
+**Cancelar**, sair da página, ocultar/fechar o Nest, bloquear ou mudar configurações cancela o
+trabalho da página. Perder contato com a página também interrompe a admissão após três segundos.
+Um worker nativo ainda encerrando pode manter a voz temporariamente ocupada. Cancelar não desfaz
+uma solicitação remota já enviada nem sua cobrança. A voz usa o modelo da API e o orçamento
+independente configurados, não uma assinatura de CLI.
+
+Se a voz remota falhar e houver palavras locais disponíveis, **Revisar texto recuperado** oferece
+um rascunho editável e não enviado. **Copiar texto** só copia após seu clique. Nada desse rascunho
+é enviado ao Chat ou executado. Suas edições sobrevivem à saída e ao retorno à página. Iniciar
+uma nova gravação substitui o rascunho recuperado anterior após a confirmação de Iniciar. A página
+mantém apenas a resposta/recuperação da fala atual em memória, não um histórico salvo da conversa.
+
+A qualidade do microfone/fala, a validação com provedor real e a interrupção continuam como etapas
+separadas antes de concluir K8. Essa entrada não ativa consulta ao Codex nem responde permissões.
 
 <a id="global-dictation-first-slice"></a>
 

@@ -77,7 +77,7 @@ Settings version 41 adds independent `voice_realtime` consent, a retained ledger
 US$1 rolling limit and an explicit reviewed model. Zero disables remote voice. Only the Settings
 webview can save this choice. V6.7.1 adds typed bridge calls for that explicit save and Settings-only
 readback (`voice_realtime_settings`). V6.7.2 exposes these choices under **Dictation > Talk with
-Zeca**; recording and live conversation controls are not available yet.
+Zeca**. V6.7.3 adds the separate Nest-owned manual controls described below.
 The returned `on` is the saved choice, not a live-session or readiness indicator.
 Readback returns only `on`, `model` and `limitMicrousd`, with the amount encoded as a decimal string
 so large persisted limits survive JavaScript exactly. It omits the private ledger identity and
@@ -131,8 +131,8 @@ ownership until it finishes.
 This proves that the former local transport can no longer send; it does not claim the provider
 completed at disconnect or refund uncertain work. A crashed process releases its kernel lock;
 aborted transports drop their socket. Recovery is not enabled on other platforms. The existing
-backend has no user-facing capture entry. V6.3.5 adds native retention/recovery below; capture,
-playback, visible continuation and live-provider acceptance remain required before activation.
+V6.3.5 backend initially had no user-facing capture entry. Native retention/recovery is described
+below; V6.7.3 adds manual controls, while live-provider and physical acceptance remain open.
 
 ## Native turn retention and local text
 
@@ -161,7 +161,7 @@ the selected installed Whisper model and language are snapshotted; the existing 
 the retained audio to 16 kHz. No download, model clean-up, other provider or automatic Chat send is
 started. A successful local decode returns the whole text, preserving whitespace, for the native
 caller to offer as a
-reviewable draft. This is not a claim that Zeca already answered in text or that a fallback UI exists.
+reviewable draft. V6.7.3 offers those words for editing/copying, without an automatic Chat send.
 
 Missing models, decode failure, empty output, invalid/oversized text or the 30-second local wait
 deadline return the original in-memory turn with a typed reason. Very short or trimmed-to-short
@@ -190,7 +190,8 @@ never silently send to a different provider.
 
 V6.7.3 adds a Linux-only `run_captured` entry with one native `CaptureControl`/`CaptureRequest`
 pair. Creating controls opens nothing; the explicit native call acquires the existing desktop
-lease before capture. No renderer command, shortcut or user-facing recording button is wired yet.
+lease before capture. The Nest work page now exposes the explicit controls below; no shortcut
+is assigned to this entry.
 The configured consent must be enabled and the selected local Whisper model must already be installed.
 The shared microphone preference and existing ordinary-capture question fence are reused.
 
@@ -207,8 +208,34 @@ The prepared turn enters the existing driver's current generation, local-command
 provider path without a renderer audio round trip. Local commands consumed there never open a
 provider; recovery reuses the exact local transcript. This entry disables barge-in and adds no
 automatic capture, model download, Chat send or permission-answer authority. Conversation controls
-and reviewable recovery in the work surface are the next task; V6.7.3 remains open. Tests use fake
+and reviewable recovery in the work surface are described below; V6.7.3 remains open. Tests use fake
 microphones/decoders and synthetic PCM, without physical capture or paid requests.
+
+
+## Nest manual controls
+
+The **Dictation > Work > Voice conversation** page is the only renderer entry for the manual owner.
+`voice_conversation_start`, `voice_conversation_status` and `voice_conversation_control` require
+Nest authority; Settings, island and widget cannot call them. They expose neither PCM, raw errors,
+credentials nor settings writes. Start additionally requires the visible, unlocked Dictation work
+surface, Zeca and saved remote consent. A native identity binds Finish, Cancel, heartbeat and late
+results to this session. A foreign/stale identity cannot control or publish into a newer turn.
+
+The page polls every 500 ms while work is active. Three seconds without contact drops the controller;
+leaving the page, changing tabs/webviews, hiding or destroying the Nest also cancels it. Lock,
+shutdown and relevant settings/key changes discard the slot and revoke its native work. Stop is
+forwarded through the existing owner to retain native/provider teardown and settlement. It cannot
+retract a request already sent. No permission-answer path is added.
+
+One Start admits one completed capture. The input channel is closed after that seed, so local
+completion or settled playback finishes the owner instead of silently opening another microphone.
+The UI shows starting, recording, transcribing, responding and terminal status; responding is not
+proof of audible playback. Only heard-history text or the local-command reply is shown, bounded in
+memory. Recovery text is editable and copied explicitly; edits survive page navigation locally.
+A newly acknowledged Start replaces the previous draft. There is no automatic Chat send, replay,
+persistent conversation history, automatic end-of-turn detector or barge-in in this entry.
+Native layout validation uses controlled owners without microphones, model loads or paid requests;
+physical speech and live-provider acceptance, V6.7.4 island feedback and K8 completion remain open.
 
 
 ## Playback and heard text
@@ -448,14 +475,15 @@ and acoustic acceptance remain open before activation.
 On Linux, the V6.6.3 native owner adds `consult_claude` only with the separate default-off
 `voice_consultation` choice and its original durable budget identity. Only Settings may change it;
 changing it revokes the voice epoch even if the old choice is restored before the next poll. The
-renderer has no conversation entry or consultation control yet. Default offerings remain the five
+manual renderer entry has no consultation controls. Default offerings remain the five
 cached flock reads. The backend also supports `consult_codex` with its own default-off
 `voice_codex_consultation` choice and original `voice_codex_consultation_budget` identity.
 Its Settings-only command invalidates the same voice epoch when a choice changes. Codex is
 currently blocked by the shared `SUBSCRIPTION_AUTH_QUALIFIED=false` capability: enabling it is
 refused before settings/ledger access, saved consent cannot offer its tool or open the network gate,
 and the text helper refuses before CLI or scratch access. Turning a saved choice off remains allowed.
-There is no renderer control or capture entry for either provider.
+Neither provider has a dedicated consultation renderer control; Codex remains unavailable from
+the manual voice entry.
 
 Each consultation supplies one nonempty question of at most 256 bytes, without control characters.
 The Claude path uses the existing Claude Code text helper with Haiku, a new private empty working directory,

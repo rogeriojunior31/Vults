@@ -2552,3 +2552,17 @@ button.touched-row:hover,
 }
 @media (max-height: 560px) { .meeting-save label > span { display: none; } .meeting-save { padding-block: 4px; } }
 @media (max-width: 600px) { .meeting-archive .meeting-segment { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+.voice-conversation { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding: 16px 20px; gap: 8px; }
+.voice-conversation[hidden] { display: none; }
+.voice-conversation > p { margin: 0; flex: none; font-size: var(--text-m); overflow-wrap: anywhere; }
+.voice-conversation-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+.voice-conversation-content { min-width: 0; min-height: 0; overflow-y: auto; }
+.voice-conversation-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-m); }
+.voice-conversation-review label { display: flex; flex-direction: column; gap: 8px; font-size: var(--text-m); }
+.voice-conversation-review textarea { box-sizing: border-box; width: 100%; min-height: 72px; resize: vertical; background: var(--float); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-control); padding: 8px; font: var(--text-m)/1.5 var(--font); }
+.voice-conversation-review button { margin-top: 8px; }
+@media (max-height: 440px), (max-width: 600px) {
+  .voice-conversation { padding: 8px 12px; gap: 6px; }
+  .voice-conversation .dictation-heading p { display: none; }
+}

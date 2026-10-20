@@ -1,4 +1,4 @@
-//! Explicit first-turn capture. Controls are native-only; no renderer or shortcut owns them yet.
+//! Explicit first-turn capture. The Nest adapter owns its native controls; no shortcut starts it.
 use super::{Event, Lease, Turn, local};
 use std::{
     sync::{

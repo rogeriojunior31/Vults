@@ -66,7 +66,7 @@ export function createRealtimeSettings(api: RealtimeSettingsBackend, configureKe
       row(t("Model"), t("This choice is separate from your Chat model and CLI subscription."), model),
       row(t("Budget (USD / 24 hours)"), t("A rolling limit for realtime voice. Unsettled requests retain their reserved cost. Zero disables remote voice."), budget, t("Use a decimal point or comma; do not use thousands separators.")),
       el("p", { class: "hint", text: t("Voice never answers a permission card. Codex consultation is unavailable.") }),
-      el("p", { class: "hint", text: t("Saving does not start recording. Live conversation controls are not available yet.") }),
+      el("p", { class: "hint", text: t("Saving does not start recording. Open Voice conversation under Work to record a turn.") }),
       el("div", { class: "actions" }, save, reload, key), notice,
     );
     if (focused?.isConnected) focused.focus({ preventScroll: true });

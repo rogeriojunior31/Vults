@@ -264,6 +264,9 @@ pub fn run() {
             settings::set_dictation_cleanup,
             settings::set_meeting_summary,
             settings::voice_realtime_settings,
+            realtime::controls::voice_conversation_start,
+            realtime::controls::voice_conversation_status,
+            realtime::controls::voice_conversation_control,
             settings::set_voice_realtime,
             settings::set_voice_consultation,
             settings::set_voice_codex_consultation,
@@ -411,6 +414,7 @@ pub fn run() {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             handle.manage(std::sync::Arc::new(realtime::State::default()));
+            handle.manage(realtime::controls::Controls::default());
             handle.manage(media::MediaState::default());
             handle.manage(dictation_overlay::Ready::default());
             handle.manage(voice::VoiceState::default());
@@ -1103,6 +1107,7 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
                 | "dictation-dictionary"
                 | "dictation-snippets"
                 | "dictation-meetings"
+                | "dictation-conversation"
         )
     ) && let Ok(mut section) = DICTATION_SECTION.lock()
     {
@@ -1296,6 +1301,7 @@ fn valid_nest_tab(tab: &str) -> bool {
             | "dictation-dictionary"
             | "dictation-snippets"
             | "dictation-meetings"
+            | "dictation-conversation"
             | "dictation-statistics"
             | "week"
             | "projects"
@@ -1325,6 +1331,7 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
     }
     #[cfg(target_os = "linux")]
     questions::depart(window.app_handle(), NEST);
+    realtime::controls::depart(window.app_handle());
     *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
     Ok(())
 }
@@ -1338,6 +1345,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         questions::depart(app, ISLAND);
         questions::depart(app, NEST);
     }
+    realtime::controls::depart(app);
     use tauri::{LogicalPosition, WebviewBuilder, window::WindowBuilder};
     // Reopening after a failed saved close cancels its earlier return request.
     if let Ok(mut pending) = NEST_RETURN.lock() {
@@ -1439,6 +1447,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                                 #[cfg(target_os = "linux")]
                                 questions::depart(&app2, NEST);
                                 meetings::cancel(&app2);
+                                realtime::controls::depart(&app2);
                             }
                             let _ = app2.emit_to(ISLAND, "nest-open", !minimized);
                         }
@@ -1448,6 +1457,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                         #[cfg(target_os = "linux")]
                         questions::depart(&app2, NEST);
                         meetings::cancel(&app2);
+                        realtime::controls::depart(&app2);
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
                         nest_holds(&app2, Some(false), Some(false));
                         save_nest_size(&app2);

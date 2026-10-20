@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 110db75a0f9d -->
+<!-- source: cd268200c2ab -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -87,7 +87,7 @@ persistente do registro, limite móvel padrão de US$1 e um modelo explicitament
 desativa voz remota. Só a webview de Configurações salva essa escolha. A V6.7.1 acrescenta chamadas
 tipadas no bridge para essa gravação explícita e para leitura restrita às Configurações
 (`voice_realtime_settings`). A V6.7.2 apresenta essas escolhas em **Ditado > Conversar com o
-Zeca**; os controles de gravação e conversa ao vivo ainda não estão disponíveis.
+Zeca**. A V6.7.3 acrescenta os controles manuais separados do Nest descritos abaixo.
 O campo `on` retornado é a escolha salva, não um indicador de sessão ativa ou de prontidão.
 A leitura retorna apenas `on`, `model` e `limitMicrousd`, com o valor codificado como texto decimal
 para preservar exatamente limites grandes no JavaScript. Ela omite a identidade privada do registro
@@ -147,9 +147,9 @@ posse até terminar.
 Isso comprova que o transporte local anterior não pode mais enviar; não declara que o provedor
 terminou ao desconectar nem restitui trabalho incerto. Um processo encerrado libera sua trava no
 kernel; transportes abortados descartam o socket. A recuperação não está habilitada em outras
-plataformas. O backend existente não tem entrada de captura oferecida ao usuário. A V6.3.5 acrescenta
-retenção/recuperação nativas abaixo; captura, reprodução, continuação visual e validação com provedor
-real continuam obrigatórias antes da ativação.
+plataformas. O backend da V6.3.5 inicialmente não tinha entrada de captura oferecida ao usuário. A retenção e
+recuperação nativas são descritas abaixo; a V6.7.3 acrescenta controles manuais, enquanto a validação
+física e com provedor real continua em aberto.
 
 <a id="native-turn-retention-and-local-text"></a>
 ## Retenção do turno nativo e texto local
@@ -181,8 +181,8 @@ devolve essas palavras exatas sem uma segunda decodificação ou carga de modelo
 cancelamento/revogação e a marca de turno consumido. Caso contrário, o modelo Whisper instalado e
 o idioma selecionados são congelados; o reamostrador existente converte o áudio preservado para
 16 kHz. Não há download, limpeza por modelo, outro provedor nem envio automático ao Chat. A decodificação local bem-sucedida devolve o texto
-inteiro, preservando espaços, para o chamador nativo oferecer como rascunho revisável. Isso não
-declara que o Zeca já respondeu em texto nem que existe uma interface para essa alternativa.
+inteiro, preservando espaços, para o chamador nativo oferecer como rascunho revisável. A V6.7.3
+oferece essas palavras para edição/cópia, sem envio automático ao Chat.
 
 Modelo ausente, falha de decodificação, saída vazia, texto inválido/grande demais ou prazo local
 de espera de 30 segundos devolvem o turno original em memória com um motivo tipado. Turnos muito
@@ -215,8 +215,8 @@ provedor.
 
 A V6.7.3 acrescenta a entrada `run_captured`, exclusiva do Linux, com um par nativo
 `CaptureControl`/`CaptureRequest`. Criar os controles não abre nada; a chamada nativa explícita
-adquire a posse existente do desktop antes da captura. Ainda não há comando do renderer, atalho
-ou botão de gravação conectado. O consentimento configurado precisa estar habilitado e o modelo
+adquire a posse existente do desktop antes da captura. A página de trabalho do Nest agora oferece
+os controles explícitos abaixo; nenhum atalho é atribuído a essa entrada. O consentimento configurado precisa estar habilitado e o modelo
 Whisper local selecionado já deve estar instalado. São reutilizadas a preferência compartilhada
 de microfone e a barreira existente das perguntas para capturas comuns.
 
@@ -236,8 +236,39 @@ e no caminho protegido do provedor sem passar áudio pelo renderer. Comandos loc
 nunca abrem um provedor; a recuperação reutiliza a transcrição local exata. Essa entrada desabilita
 a interrupção por fala e não acrescenta captura automática, download de modelo, envio ao Chat ou
 autoridade para responder permissões. Os controles da conversa e a recuperação revisável na
-superfície de trabalho são a próxima tarefa; a V6.7.3 continua em aberto. Os testes usam microfones
+superfície de trabalho são descritos abaixo; a V6.7.3 continua em aberto. Os testes usam microfones
 e decodificadores simulados e PCM sintético, sem captura física ou requisições pagas.
+
+
+<a id="nest-manual-controls"></a>
+## Controles manuais do Nest
+
+A página **Ditado > Trabalho > Conversa por voz** é a única entrada do renderer para esse responsável
+manual. `voice_conversation_start`, `voice_conversation_status` e `voice_conversation_control`
+exigem autoridade do Nest; Configurações, ilha e widget não podem chamá-los. Não expõem PCM,
+erros brutos, credenciais nem gravações de configurações. Iniciar também exige a superfície de
+trabalho do Ditado visível e desbloqueada, Zeca e consentimento remoto salvo. Uma identidade nativa
+vincula Finalizar, Cancelar, contato da página e resultados atrasados à sessão. Uma identidade
+estrangeira/antiga não pode controlar nem publicar em uma fala mais recente.
+
+A página consulta o estado a cada 500 ms enquanto há trabalho ativo. Três segundos sem contato
+descartam o controlador; sair da página, mudar de aba/webview, ocultar ou destruir o Nest também
+cancela a sessão. Trava, desligamento e mudanças relevantes de configurações/chave descartam a
+posição e revogam o trabalho nativo. A parada passa pelo responsável existente para preservar o
+encerramento e a conciliação nativos/do provedor. Ela não retira uma solicitação já enviada.
+Nenhum caminho para responder permissões é acrescentado.
+
+Cada Iniciar admite uma captura concluída. O canal de entrada é fechado após essa fala inicial,
+portanto a conclusão local ou a reprodução conciliada encerra o responsável em vez de abrir outro
+microfone silenciosamente. A interface mostra início, gravação, transcrição, resposta e estado
+terminal; responder não comprova reprodução audível. Só são exibidos o texto do histórico ouvido
+ou a resposta do comando local, limitados em memória. O texto recuperado é editável e copiado
+explicitamente; as edições sobrevivem à navegação local da página. Um novo Iniciar confirmado
+substitui o rascunho anterior. Essa entrada não envia automaticamente ao Chat, não repete falas,
+não salva histórico de conversa e não usa detector automático de fim de fala nem interrupção por voz.
+A validação do layout nativo usa responsáveis controlados, sem microfone, carga de modelo ou
+requisições pagas; a validação física e com provedor real, o feedback da ilha V6.7.4 e a conclusão
+de K8 continuam em aberto.
 
 
 <a id="playback-and-heard-text"></a>
@@ -510,15 +541,16 @@ V6.7. Fala física, compatibilidade com provedor e aceitação acústica continu
 No Linux, o proprietário nativo da V6.6.3 acrescenta `consult_claude` somente com a opção separada
 `voice_consultation`, desligada por padrão, e a identidade original do orçamento persistente.
 Somente Configurações pode alterá-la; a alteração revoga a geração da voz mesmo se a escolha anterior
-for restaurada antes da próxima verificação. O renderer ainda não tem entrada de conversa nem
-controle de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O backend
+for restaurada antes da próxima verificação. A entrada manual do renderer não tem controles
+de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O backend
 também suporta `consult_codex` com sua própria opção `voice_codex_consultation`, desligada por
 padrão, e identidade original `voice_codex_consultation_budget`. Seu comando exclusivo de
 Configurações invalida a mesma geração da voz quando uma escolha muda. O Codex está bloqueado
 pela capacidade compartilhada `SUBSCRIPTION_AUTH_QUALIFIED=false`: ligar é recusado antes de
 acessar configurações/ledger, consentimento salvo não oferece sua ferramenta nem abre o gate de
 rede, e o helper textual recusa antes de acessar a CLI ou pasta temporária. Desligar uma escolha
-salva continua permitido. Não há controle do renderer nem entrada de captura para nenhum provedor.
+salva continua permitido. Nenhum provedor tem um controle dedicado de consulta no renderer;
+o Codex continua indisponível pela entrada manual de voz.
 
 Cada consulta fornece uma pergunta não vazia de até 256 bytes, sem caracteres de controle. O caminho
 do Claude reutiliza seu cliente textual com Haiku, uma nova pasta de trabalho privada e vazia,

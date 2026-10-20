@@ -1,4 +1,4 @@
-//! Native voice backend. First-turn capture remains Rust-only until work-surface controls land.
+//! Native voice backend. Nest controls own explicit manual capture and reviewable recovery.
 use serde::{Deserialize, Serialize};
 use std::sync::{
     Arc,
@@ -10,6 +10,7 @@ use vults_chat::realtime::{
     transport::{self, Failure, OpenAi, Provider},
 };
 
+pub(crate) mod controls;
 mod local;
 mod playback;
 pub use local::{LocalFailure, Recovery, Turn};
@@ -85,16 +86,21 @@ impl State {
     }
 }
 pub(crate) fn invalidate<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    controls::depart(app);
     if let Some(state) = app.try_state::<Arc<State>>() {
         state.epoch.fetch_add(1, Ordering::SeqCst);
     }
 }
 pub(crate) fn shutdown<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    controls::depart(app);
     if let Some(state) = app.try_state::<Arc<State>>() {
         state.close();
     }
 }
 pub(crate) fn key_changed<R: tauri::Runtime>(app: &tauri::AppHandle<R>, provider: &str) {
+    if provider == "openai" {
+        controls::depart(app);
+    }
     if let Some(state) = app.try_state::<Arc<State>>() {
         state.key_changed(provider);
     }

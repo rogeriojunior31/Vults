@@ -150,3 +150,62 @@ press("Configure OpenAI key"); assert.equal(keyOpens, 1);
 for (const lang of ["pt-BR", "es", "zh"]) { setLang(lang); page.relabel(); assert.ok(!page.element.textContent.includes("Enable voice conversation")); }
 setLang("en"); page.visible(false);
 console.log("check-realtime-settings: drafts, navigation, exact USD, single save, failures, external changes, readback, translations and explicit key navigation");
+
+// Exercise the work page with native owners replaced, keeping all lifecycle races deterministic.
+const conversationBundles = await build({ configFile: false, root, logLevel: "silent",
+  build: { write: false, minify: false, lib: { entry: `${root}src/surfaces/nest/dictation/conversation.ts`, formats: ["es"] } } });
+const conversationChunk = conversationBundles[0].output.find(part => part.type === "chunk");
+const { createVoiceConversation } = await import(`data:text/javascript;base64,${Buffer.from(conversationChunk.code).toString("base64")}`);
+const originalTimeout = globalThis.setTimeout, originalClear = globalThis.clearTimeout;
+const timers = new Map(); let nextTimer = 0;
+globalThis.setTimeout = callback => { const id = ++nextTimer; timers.set(id, callback); return id; };
+globalThis.clearTimeout = id => timers.delete(id);
+try {
+  const starts = [], polls = [], controls = [], copies = [];
+  let configured = 0;
+  const work = createVoiceConversation({
+    start: () => { const d = pending(); starts.push(d); return d.promise; },
+    status: id => { const d = pending(); polls.push({ ...d, id }); return d.promise; },
+    control: async (id, action) => { controls.push({ id, action }); },
+    copy: async text => { copies.push(text); },
+  }, () => configured++);
+  document.body.append(work.element);
+  const button = name => nodes(work.element).find(n => n.tagName === "BUTTON" && n.textContent === name);
+  const click = async name => { const b = button(name); assert.ok(b, name); if (!b.disabled) { b.fire("click"); await b.onclick?.(); } };
+  const state = (id, phase, extra = {}) => ({ id, phase, reason: null, draft: null, reply: null, ...extra });
+  const refresh = async () => { const entry = timers.entries().next().value; assert.ok(entry, "An active session needs a heartbeat"); timers.delete(entry[0]); entry[1](); await tick(); };
+  assert.equal(starts.length, 0);
+  work.setActive(true); await click("Voice conversation settings"); assert.equal(configured, 1);
+  const first = click("Start recording"); await tick();
+  assert.equal(starts.length, 1); await click("Start recording"); assert.equal(starts.length, 1);
+  work.setActive(false); starts[0].resolve(state("1", "starting")); await first;
+  assert.deepEqual(controls.pop(), { id: "1", action: "cancel" }, "A departed start acknowledgement must cancel its new native owner");
+  assert.equal(timers.size, 0);
+  work.setActive(true);
+  const second = click("Start recording"); starts[1].resolve(state("2", "recording")); await second;
+  assert.equal(button("Start recording").disabled, true);
+  assert.equal(button("Finish recording").disabled, false);
+  await click("Finish recording"); assert.deepEqual(controls.pop(), { id: "2", action: "finish" });
+  await refresh(); polls[0].resolve(state("2", "transcribing")); await tick();
+  assert.equal(button("Finish recording").disabled, true);
+  await refresh(); polls[1].resolve(state("2", "recovery", { draft: '<script>kept as text</script>', reason: 'key' })); await tick();
+  const draft = nodes(work.element).find(n => n.tagName === "TEXTAREA");
+  assert.equal(draft.value, '<script>kept as text</script>'); assert.equal(timers.size, 0);
+  draft.value = "My reviewed words"; draft.fire("input"); await click("Copy text"); assert.deepEqual(copies, ["My reviewed words"]);
+  work.setActive(false); work.setActive(true); assert.equal(draft.value, "My reviewed words", "Navigation preserves the unsent reviewed draft");
+  const third = click("Start recording"); starts[2].resolve(state("3", "recording")); await third;
+  await refresh(); await click("Cancel"); polls[2].resolve(state("3", "recovery", { draft: "stale secret" })); await tick();
+  assert.equal(draft.value, ""); assert.ok(!work.element.textContent.includes("stale secret")); assert.equal(timers.size, 0);
+  const fourth = click("Start recording"); starts[3].resolve(state("4", "recording")); await fourth;
+  await refresh(); polls[3].reject(Error("private native detail")); await tick();
+  assert.deepEqual(controls.pop(), { id: "4", action: "cancel" });
+  assert.ok(!work.element.textContent.includes("private native detail")); assert.ok(work.element.textContent.includes("Could not confirm voice status"));
+  const fifth = click("Start recording"); starts[4].reject(Error("private preflight detail")); await fifth;
+  assert.ok(work.element.textContent.includes("Could not start recording"));
+  assert.ok(!work.element.textContent.includes("private preflight detail"));
+  work.setActive(false);
+  assert.equal(timers.size, 0);
+} finally {
+  globalThis.setTimeout = originalTimeout; globalThis.clearTimeout = originalClear;
+}
+console.log("check-realtime-settings: explicit work-page controls, duplicate start, late acknowledgement, heartbeat, recovery draft, inert text, copy, cancellation and departure pass");

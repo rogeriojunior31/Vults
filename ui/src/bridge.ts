@@ -9,6 +9,13 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
+export interface VoiceConversation {
+  id: string;
+  phase: "starting" | "recording" | "transcribing" | "responding" | "finished" | "cancelled" | "failed" | "recovery";
+  reason: string | null;
+  draft: string | null;
+  reply: string | null;
+}
 export interface VoiceRealtimeSettings {
   /** Saved opt-in, not a live-session or readiness indicator. */
   on: boolean;
@@ -532,6 +539,9 @@ export const Bridge = {
   },
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
+  voiceConversationStart: () => invoke<VoiceConversation>("voice_conversation_start"),
+  voiceConversationStatus: (id: string) => invoke<VoiceConversation>("voice_conversation_status", { id }),
+  voiceConversationControl: (id: string, action: "finish" | "cancel") => invoke<void>("voice_conversation_control", { id, action }),
   voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),
   setVoiceRealtime: (on: boolean, limitMicrousd: string, model: string) =>
     typeof limitMicrousd === "string" && /^(0|[1-9]\d{0,18})$/.test(limitMicrousd) && BigInt(limitMicrousd) <= 9223372036854775807n

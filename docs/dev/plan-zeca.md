@@ -1912,3 +1912,30 @@ model, provider or user configuration is used. The local task-actions script rem
 passed. Next is the native bridge and listening/finish/cancel controls with reviewable recovery in
 the existing work surface. V6.7.3, live/physical acceptance and K8 completion remain open. The app
 stays closed.
+
+
+**2026-10-20 V6.7.3 Nest manual controls and recovery.** Dictation > Work > Voice conversation
+now owns one explicit Start/Finish/Cancel turn. Configuration remains in the privileged Settings
+webview; three Nest-only commands expose status and bounded heard/local reply or review text,
+never PCM, raw failures, keys or settings writes. A native identity rejects stale controls/results.
+The page sends 500 ms heartbeats; a three-second loss drops its sole capture controller. Departure,
+hidden/closed Nest, lock, shutdown and relevant key/settings changes cancel the same native owner.
+Existing teardown/settlement retains delayed native work; cancellation cannot undo a sent request.
+One acknowledged Start replaces the previous draft; recovered text stays editable, unsent and copied
+only on a click. Navigation preserves local reviewed edits. There is no shortcut, automatic Chat
+send, permission answer, continuous capture, automatic turn-end or duplex/barge-in in this entry.
+
+Validation: 1,424 workspace tests pass (16 documented ignores), 10 evals, build, all 19 renderer/bridge
+checks, workspace Clippy with warnings denied, formatting and repository guards pass. Native owner
+tests cover foreign surfaces, stale identities, departure and heartbeat expiry. Production renderer
+regressions cover duplicate Start, late acknowledgements/status, explicit Finish/Cancel, failed
+bootstrap/status, inert recovered text, editable/copy behavior and retained drafts. Isolated native
+Tauri/WebKit checks refuse actual island/Settings commands and disabled-consent Start before any
+microphone. Controlled owners exercise the production work page, recovery/copy and focus/caret;
+Black/Light at 1180 x 820 and 480 x 360 keep controls visible without horizontal overflow. The
+short window uses a separate named transcript/recovery scroller so actions cannot cover the editor;
+all four languages render. No microphone/model/provider, original keyring or agent config is used.
+The private profile and app/server are stopped and removed after QA. The local task-actions script
+remains absent, not passed. V6.7.3 still needs continuous-turn integration; next connect the existing
+native end-of-turn/duplex adapters, followed by V6.7.4 island feedback and physical/live acceptance.
+K8 and Codex consultation qualification remain open.

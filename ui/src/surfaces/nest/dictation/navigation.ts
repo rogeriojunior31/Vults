@@ -3,7 +3,7 @@ import { t, tk } from "../../../i18n";
 import { icon, type IconName } from "../../../island/icons";
 import { sidePanel } from "../panels";
 
-export const DICTATION_WORK_PAGES = ["history", "commands", "dictionary", "snippets", "meetings"] as const;
+export const DICTATION_WORK_PAGES = ["history", "commands", "dictionary", "snippets", "meetings", "conversation"] as const;
 export type DictationWorkPage = typeof DICTATION_WORK_PAGES[number];
 export const DICTATION_SETTINGS = [
   { id: "voice", label: tk("Voice"), icon: "mic" },
@@ -41,6 +41,7 @@ export function createDictationNavigation(selected: string, work: (page: Dictati
       { id: "dictionary", label: t("Dictionary"), glyph: "file", click: () => work("dictionary") },
       { id: "snippets", label: t("Snippets"), glyph: "tag", click: () => work("snippets") },
       { id: "meetings", label: t("Meetings"), glyph: "mic", click: () => work("meetings") },
+      { id: "conversation", label: t("Voice conversation"), glyph: "chat", click: () => work("conversation") },
       ...DICTATION_SETTINGS.map(p => ({ id: `dictation${p.id}`, label: t(p.label), glyph: p.icon as IconName, click: () => settings(p.id) })),
       { id: "statistics", label: t("Statistics"), glyph: "bars", click: statistics },
     ];

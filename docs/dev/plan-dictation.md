@@ -2792,9 +2792,14 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    reuses those same words without another model load/decode. No microphone or renderer entry is
    exposed by this adapter. The explicit native capture owner is also implemented: start is
    opt-in, Finish closes the microphone before local decoding, and Cancel/controller loss revokes
-   the whole session. The same desktop lease survives delayed native teardown. Next: wire the native
-   bridge and listening/finish/cancel controls with reviewable recovery in the existing work surface.
-   Whole V6.7.3 remains open.
+   the whole session. The same desktop lease survives delayed native teardown. The native
+   bridge and controls are now implemented in Dictation > Work > Voice conversation: one explicit
+   Start/Finish/Cancel turn, 500 ms status contact with a three-second native deadline, local reply/
+   heard text and editable recovery copied only on a click. The page uses Nest authority; Settings
+   keeps configuration ownership. Wide/narrow Black/Light native UI checks use controlled owners.
+   The manual path has no automatic end-of-turn or duplex/barge-in adapter. V6.7.3 remains open
+   for continuous-turn integration. Next: connect those existing native adapters, then V6.7.4
+   island feedback and physical/live conversation sign-off.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before
    declaring K8 Done. Codex activation keeps its independent qualification gates.
