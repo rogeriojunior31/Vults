@@ -237,6 +237,29 @@ async fn run_with_audio(
         return Err(Failure::Off);
     }
     #[cfg(target_os = "linux")]
+    let semantic = if capture.as_ref().is_some_and(|request| request.2) {
+        if model.is_none() {
+            return Err(Failure::Input);
+        }
+        Some(
+            capture::semantic::open(
+                lease.clone(),
+                active.clone(),
+                crate::voice::models_dir().join("semantic-turn"),
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
+    #[cfg(target_os = "linux")]
+    if semantic.as_ref().is_some_and(|service| service.failed()) {
+        channels
+            .output
+            .try_send(Event::Capture(CapturePhase::SemanticFallback))
+            .map_err(|_| Failure::Output)?;
+    }
+    #[cfg(target_os = "linux")]
     let initial = if !choice.captures()
         && next.is_none()
         && let Some(request) = capture.clone()
@@ -246,6 +269,7 @@ async fn run_with_audio(
             request,
             capture::Owner {
                 lease: lease.clone(),
+                semantic: semantic.clone(),
                 active: active.clone(),
                 cancel: cancel.clone(),
                 output: channels.output.clone(),
@@ -355,6 +379,7 @@ async fn run_with_audio(
                         request.clone(),
                         capture::Owner {
                             lease: lease.clone(),
+                            semantic: semantic.clone(),
                             active: active.clone(),
                             cancel: cancel.clone(),
                             output: output.clone(),

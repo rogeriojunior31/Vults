@@ -292,3 +292,41 @@ console.log("check-realtime-settings: explicit work-page controls, duplicate sta
   work.element.remove();
 }
 console.log("check-realtime-settings: explicit route/device/consent, frozen start, recording-bound Finish, refresh failure and late inventory pass");
+
+{
+  const capability = pending(), starts = [], localTimers = new Map(); let timerId = 0;
+  const state = { id: "semantic", phase: "recording", capture: "capture-1", routed: false, semanticFallback: false, reason: null, draft: null, reply: null };
+  globalThis.setTimeout = cb => { localTimers.set(++timerId, cb); return timerId; };
+  globalThis.clearTimeout = id => localTimers.delete(id);
+  try {
+    const work = createVoiceConversation({
+      options: () => capability.promise,
+      start: async (automatic, route, semantic) => { starts.push({ automatic, route, semantic }); return { ...state }; },
+      status: async () => ({ ...state }), control: async () => {}, copy: async () => {},
+    }, () => {});
+    document.body.append(work.element); work.setActive(true);
+    const semantic = nodes(work.element).find(n => "voiceSemantic" in n.dataset);
+    const automatic = nodes(work.element).find(n => "voiceAutomatic" in n.dataset);
+    assert.equal(semantic.parentElement.hidden, true, "Unsupported/unread capability cannot offer semantic inference");
+    automatic.checked = true; automatic.fire("change"); capability.resolve({ semantic: true }); await tick();
+    assert.equal(semantic.parentElement.hidden, false); assert.equal(semantic.checked, false);
+    semantic.checked = true; semantic.fire("change");
+    const button = text => nodes(work.element).find(n => n.tagName === "BUTTON" && n.textContent === text);
+    await button("Start recording").onclick();
+    assert.deepEqual(starts, [{ automatic: true, route: undefined, semantic: true }]);
+    assert.equal(semantic.disabled, true, "Freeze semantic selection for the retained conversation");
+    state.semanticFallback = true;
+    const poll = async () => { const [id, cb] = localTimers.entries().next().value; localTimers.delete(id); cb(); await tick(); };
+    await poll(); assert.ok(work.element.textContent.includes("This conversation uses local silence detection."));
+    state.phase = "waiting"; await poll(); assert.equal(semantic.disabled, true);
+    button("End conversation").onclick();
+    assert.equal(semantic.checked, false, "Another conversation needs a fresh semantic choice");
+    work.setActive(false); work.element.remove();
+    const late = pending();
+    const departed = createVoiceConversation({ options: () => late.promise, start: async () => { throw Error("Unexpected capture"); }, status: async () => ({ ...state }), control: async () => {}, copy: async () => {} }, () => {});
+    document.body.append(departed.element); departed.setActive(true); departed.setActive(false); late.resolve({ semantic: true }); await tick();
+    assert.equal(nodes(departed.element).find(n => "voiceSemantic" in n.dataset).parentElement.hidden, true);
+    departed.element.remove(); assert.equal(localTimers.size, 0);
+  } finally { globalThis.setTimeout = originalTimeout; globalThis.clearTimeout = originalClear; }
+}
+console.log("check-realtime-settings: semantic preview capability, explicit default-off choice, frozen session, visible failure fallback and late/departed capability pass");

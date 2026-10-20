@@ -75,8 +75,8 @@ jobs:
           cargo clippy -p vults-voice -p vults-spike --features vults-voice/semantic-turn,vults-spike/diarization,vults-spike/meeting-assets --all-targets -- -D warnings
           cargo test -p vults-voice --features diarization,meeting-assets,semantic-turn
           cargo test -p vults-spike --features diarization --bin vults-diarization-spike
-          cargo clippy -p vults-app --features meeting-speakers --all-targets -- -D warnings
-          cargo test -p vults-app --features meeting-speakers
+          cargo clippy -p vults-app --features meeting-speakers,voice-semantic --all-targets -- -D warnings
+          cargo test -p vults-app --features meeting-speakers,voice-semantic
       - name: release hook builds
         run: cargo build --release -p vults-hook
       # The evals (crates/evals): policy, redaction, the prompts sent to models, injection.

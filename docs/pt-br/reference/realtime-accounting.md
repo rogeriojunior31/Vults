@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: b96b1fea5191 -->
+<!-- source: 45591014dea0 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -418,7 +418,13 @@ normal/Interromper resposta manualmente ainda aguardam um clique. Estado de micr
 contato da página e cancelamento abrangem a sessão. Não há autoridade sobre celular/cartões.
 Confirmações de truncamento, histórico do trecho ouvido e correção do próximo turno continuam responsáveis pela interrupção e bloqueiam envios
 posteriores até estarem prontos. Validação física/com provedor real,
-integração semântica de turnos e feedback/validação da ilha na V6.7.4 continuam abertos.
+qualificação de artefatos/fim de turno semântico e feedback/validação da ilha na V6.7.4 continuam abertos.
+A feature opcional `voice-semantic` do app agora conecta o proprietário de finalização automática
+manual a um worker/política local por conversa. Arquivos verificados são preparados antes de admitir
+o microfone; scores usam VAD/palavras atuais e o prazo original de espera. Uma falha mantém o
+fallback de silêncio visível. Builds comuns não podem ativá-la; não há download nem finalização
+automática em rota contínua. Veja
+[Modelo semântico de fim de turno](semantic-turn-model.md#conversation-preview-integration).
 
 Testes offline de socket e proprietário
 nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,

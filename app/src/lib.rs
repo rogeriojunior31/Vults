@@ -265,6 +265,7 @@ pub fn run() {
             settings::set_meeting_summary,
             settings::voice_realtime_settings,
             realtime::routes::voice_conversation_routes,
+            realtime::controls::voice_conversation_options,
             realtime::controls::voice_conversation_start,
             realtime::controls::voice_conversation_status,
             realtime::controls::voice_conversation_control,

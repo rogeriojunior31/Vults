@@ -18,6 +18,7 @@ pub(super) fn fixture() -> (
         end: request.0,
         owner: Owner {
             lease: Arc::new(lease),
+            semantic: None,
             active: Arc::new(move || current.current(epoch)),
             cancel: cancelled,
             output,

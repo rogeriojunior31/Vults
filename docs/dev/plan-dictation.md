@@ -43,19 +43,21 @@ setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the t
 realtime transport/accounting and native turn retention/local recovery. V6.4.1 adds a bounded CPAL
 output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
 provider identities, acknowledged server truncation and in-memory history/one-shot repair. V6.7.3
-now retains a realtime session between explicitly recorded manual turns. Local silence completion is opt-in; semantic-model and
-duplex continuation remain open. Backend V6.4 is
+now retains a realtime session between explicitly recorded manual turns and explicitly confirmed
+headphone/AEC continuous routes. Local silence completion is opt-in; semantic integration is an
+optional, default-off developer preview. Backend V6.4 is
 delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only PipeWire pair inventory,
 an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
-device policy. Backend V6.5 is delivered; its continuous-turn UI adapter, Q6 production setup and
-physical/live acceptance remain open. V6.6.1 now routes native finalized
+device policy. Backend V6.5 and V6.7's continuous-turn UI adapter are delivered; Q6 production setup
+and physical/live acceptance remain open. V6.6.1 now routes native finalized
 local transcripts through V8 before remote admission. V6.6.2 adds bounded read-only realtime flock
 tools with independent continuation admission. The V6.6.3 publication checks below are accepted
 with Codex consultation disabled. V6.7.1/V6.7.2 expose explicit Settings-owned configuration, and
 V6.7.3 adds Nest-owned manual Start/Finish/Cancel with editable text recovery and a retained
-conversation for explicitly requested following turns. Local silence completion is opt-in. Semantic-model/
-duplex integration, island speaking states, optional Codex activation and physical/live acceptance
-remain open. The maintainer accepted the four-hour meeting capture adjustment before resuming that work.
+conversation for explicitly requested following turns plus explicit continuous routes. Local
+silence completion is opt-in and the semantic preview requires checked developer-provisioned files.
+Artifact distribution, endpoint/pt-BR qualification, island speaking states, optional Codex activation
+and physical/live acceptance remain open. The maintainer accepted the four-hour meeting capture adjustment before resuming that work.
 
 ## References
 
@@ -2829,8 +2831,8 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    frozen before Start. Fresh capture, confirmed speech and partial words gate the 1.6/2.6-second
    policy; final decoding/upload still follow microphone closure. Missing/failed detection or
    preview visibly falls back to manual Finish. Cancellation, the cap and next-turn click still
-   hold. The semantic model remains off. V6.7.3 remains open for semantic and duplex/barge-in
-   integration. An explicit Stop response click now stops audible output through the existing
+   hold. The semantic model remains off in ordinary builds. V6.7.3 remains open for its preview
+   qualification and remaining conversation controls. An explicit Stop response click now stops audible output through the existing
    acknowledged truncation/heard-prefix repair path, even with voice barge-in disabled. It opens
    no microphone and waits for heard-text completion before the next-turn action. Duplicate/stale
    clicks cannot interrupt a different generation. The native routed entry now connects fresh VAD
@@ -2849,11 +2851,23 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    recording token, and normal completion/manual Stop still wait for the next-turn click. Labels
    never choose a policy; no defaults/modules change. The page shows microphone-open states and
    locks device choices; automatic silence finish stays manual-only. Departure/heartbeat, settings,
-   lock, key and live route authority still revoke work. Next: semantic turn integration,
-   V6.7.4 island feedback and physical/live conversation sign-off.
+   lock, key and live route authority still revoke work. Semantic capture integration is now
+   implemented behind the app's optional Linux x64 GNU voice-semantic preview feature. A read-only
+   capability controls the default-off per-conversation choice, available only with manual automatic
+   finish. One bounded worker uses owned eight-second audio windows and exact generation/tickets;
+   current VAD/words are rechecked before scores. Explicit Start first prepares checked local
+   files/model before opening the microphone, with visible microphone-off state and a cancellable
+   60-second preparation limit. Queue/inference then share the policy's original 1.2-second deadline. One failure disables semantics across later turns, with visible silence
+   fallback; renewed speech, Finish/Cancel and departure discard work without waiting for native
+   teardown. Actual worker/model/panic destruction retain the lease. No artifacts are downloaded or
+   UI paths accepted; checked files must be provisioned explicitly for preview. Ordinary builds
+   reject semantic activation. Next: V6.7.4 island feedback, artifact/endpoint/pt-BR qualification
+   and physical/live conversation sign-off. Answer without the key remains off/unimplemented.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before
-   declaring K8 Done. Codex activation keeps its independent qualification gates.
+   declaring K8 Done. Cold Settings-to-Nest navigation readiness still needs its own acceptance;
+   controlled UI runs wait for loaded navigation before selecting the work page. Codex activation
+   keeps its independent qualification gates.
 
 ---
 

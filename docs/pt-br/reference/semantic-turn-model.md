@@ -1,9 +1,10 @@
 # Modelo semântico de fim de turno
-<!-- source: 8432a58f1af2 -->
+<!-- source: 59c6226a64d4 -->
 
 A V6.2.2 fornece um **backend offline para desenvolvedores**, pela feature `semantic-turn` de
 `vults-voice`. Builds normais do app não a ativam. Esse backend não tem download, controle de
-microfone, opção em Configurações ou requisição de rede. V6.3-V6.7 mantêm a integração da conversa/runtime.
+microfone, opção em Configurações ou requisição de rede. A V6.7 acrescenta a prévia de conversa com
+escolha explícita descrita abaixo; builds comuns continuam sem ativação semântica.
 Esta é uma qualificação numérica no runtime CPU Linux x64 conferido, não uma aceitação de qualidade
 de fim de turno, fala pt-BR, meta de latência ou plataforma.
 
@@ -74,6 +75,57 @@ da política que desativa o recurso após uma falha na conversa. O adaptador man
 e recusa resultados antigos antes da publicação. Destruir sessões compartilha a trava de trabalho
 de fala com as outras operações nativas.
 
+<a id="conversation-preview-integration"></a>
+## Integração da prévia na conversa
+
+A V6.7 conecta esse backend ao proprietário existente de gravação com finalização automática pela
+feature Cargo opcional `voice-semantic` do app, qualificada somente para Linux x64 GNU. O Nest lê
+uma capacidade do build sem abrir arquivos, dispositivos, chaveiro ou conexão. Builds comuns não
+oferecem essa escolha e Iniciar nativo a rejeita. Em um build de prévia, primeiro ative **Finalizar
+automaticamente após uma pausa** e escolha explicitamente **Usar detecção semântica local de fim de
+turno (prévia)** antes de iniciar. A opção começa desligada, fica fixa durante a conversa e é limpa
+ao sair/encerrar. Rotas contínuas com fones/AEC continuam exigindo Finalizar e não aceitam essa opção.
+
+Não há instalador nem oferta de download. Um desenvolvedor deve primeiro fornecer explicitamente
+os artefatos exatos verificados da tabela acima no diretório de dados do app:
+`voice/semantic-turn/libonnxruntime.so.1.31.0` e `voice/semantic-turn/smart-turn-v3.0.onnx`.
+A biblioteca nativa deve ser confiável e imutável, conforme exige o proprietário compartilhado do
+runtime. Nenhum caminho ou URL vem do renderer. Iniciar explícito prepara arquivos/modelo em um
+worker limitado antes de abrir o microfone. A página informa que o microfone está desligado durante
+a preparação. Essa etapa tem limite de 60 segundos; cancelamento ou expiração retorna sem abrir
+captura, enquanto o worker nativo real mantém sua concessão até o encerramento. Arquivos ausentes/
+inválidos selecionam o fallback de silêncio visível. Somente depois fala real no VAD, palavras locais
+e a regra de silêncio autorizam a análise do áudio. Outro runtime já fixado por outro backend de prévia é recusado; o processo
+nunca troca bibliotecas silenciosamente. Distribuição de artefatos e qualificação de fim de turno/
+pt-BR/dispositivos continuam como trabalho separado.
+
+Um worker/modelo pertence à conversa iniciada explicitamente. Ele aceita apenas um score por vez,
+usa no máximo os oito segundos finais do áudio de 16 kHz da captura e mantém a concessão do desktop
+durante inferência, destruição do modelo e limpeza após panic. Solicitações de score ou palavras
+parciais não viram comandos, entrada do provedor ou autoridade sobre o microfone. Encerrar a captura
+e transcrever localmente a fala final continuam precedendo o envio de um turno completo.
+
+O observador da gravação continua analisando VAD/texto recentes enquanto o score roda separadamente.
+Nova fala cancela o ticket antigo antes de considerar um score retornado; palavras novas fazem a
+regra de silêncio ser verificada novamente. Após a preparação, o prazo original da política limita
+fila de scores e inferência juntas: admissão atrasada não reinicia a espera de 1,2 segundo. A latência
+de detecção/captura continua separada. Um score baixo válido
+pode repetir a análise no ritmo existente de 200 ms. Score com falha/ausente/expirado ou arquivos
+verificados indisponíveis desativam a semântica pelo restante daquela conversa; a página informa o
+uso de detecção local de silêncio. VAD/prévia na GPU indisponíveis ainda exigem Finalizar manualmente.
+Limite, Finalizar, Cancelar e revogação por página/geração mantêm a autoridade existente e nunca
+aguardam a destruição do modelo para devolver o controle ao usuário.
+
+```sh
+cargo build -p vults-app --features voice-semantic --bin vults
+cargo test -p vults-app --features meeting-speakers,voice-semantic
+```
+
+Testes controlados do proprietário do app exercitam limites, admissão de um único trabalho,
+cancelamento, retomada de fala, crescimento das palavras, prazo, fallback persistente e encerramento
+sem modelo, microfone ou provedor. As verificações da interface nativa usam capacidades/proprietários
+controlados, sem representar validação física da fala.
+
 <a id="validation-and-remaining-gates"></a>
 ## Validação e critérios pendentes
 
@@ -102,5 +154,5 @@ cargo test -p vults-voice --features semantic-turn \
 ```
 
 Rótulos reais de fim de turno em conversa, qualidade pt-BR, aceitação de dispositivo/desempenho e
-integração nativa da interface continuam pendentes. Esta etapa não aprova oferta de download no app
+distribuição de artefatos continuam pendentes. Essa prévia não aprova oferta de download no app
 nem escuta automática.

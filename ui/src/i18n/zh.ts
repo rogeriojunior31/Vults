@@ -1717,4 +1717,8 @@ export default {
   "Zeca is speaking. Your microphone is listening for an interruption.": "Zeca 正在说话。麦克风正在监听打断语音。",
   "Zeca is responding. Your microphone remains open.": "Zeca 正在回复。麦克风仍然开启。",
   "Could not start recording. Check voice settings, refresh audio devices and confirm the route again.": "无法开始录音。请检查语音设置、刷新音频设备并重新确认路由。",
+  "Use local semantic turn detection (preview)": "使用本地语义轮次检测（预览）",
+  "Off by default. Requires the checked local model and runtime. May wait up to 1.2 seconds beyond the silence policy. One failure switches this conversation to local silence detection. No downloads or microphone reopening.": "默认关闭。需要已验证的本地模型和运行时。可在静音规则基础上最多再等待 1.2 秒。发生一次故障后，本次对话将改用本地静音检测。不会下载文件或重新开启麦克风。",
+  "Semantic finish is unavailable. This conversation uses local silence detection.": "语义结束检测不可用。本次对话使用本地静音检测。",
+  "Preparing local semantic detection. Microphone is off.": "正在准备本地语义检测。麦克风处于关闭状态。",
 } satisfies Record<string, string>;

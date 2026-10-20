@@ -1717,4 +1717,8 @@ export default {
   "Zeca is speaking. Your microphone is listening for an interruption.": "O Zeca está falando. Seu microfone está ouvindo para detectar uma interrupção.",
   "Zeca is responding. Your microphone remains open.": "O Zeca está respondendo. Seu microfone continua aberto.",
   "Could not start recording. Check voice settings, refresh audio devices and confirm the route again.": "Não foi possível iniciar a gravação. Confira as configurações de voz, atualize os dispositivos de áudio e confirme a rota novamente.",
+  "Use local semantic turn detection (preview)": "Usar detecção semântica local de fim de turno (prévia)",
+  "Off by default. Requires the checked local model and runtime. May wait up to 1.2 seconds beyond the silence policy. One failure switches this conversation to local silence detection. No downloads or microphone reopening.": "Desligado por padrão. Exige o modelo e o runtime locais verificados. Pode aguardar até 1,2 segundo além da regra de silêncio. Uma falha muda esta conversa para detecção local de silêncio. Não baixa arquivos nem reabre o microfone.",
+  "Semantic finish is unavailable. This conversation uses local silence detection.": "O encerramento semântico está indisponível. Esta conversa usa detecção local de silêncio.",
+  "Preparing local semantic detection. Microphone is off.": "Preparando a detecção semântica local. O microfone está desligado.",
 } satisfies Record<string, string>;

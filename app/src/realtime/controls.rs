@@ -21,6 +21,7 @@ pub struct Snapshot {
     response: Option<String>,
     capture: Option<String>,
     routed: bool,
+    semantic_fallback: bool,
 }
 struct Session {
     view: Snapshot,
@@ -76,17 +77,35 @@ pub(super) fn visible(app: &AppHandle) -> bool {
             .is_ok_and(|tab| tab.as_deref() == Some("dictation"))
 }
 
+#[derive(Serialize)]
+pub struct Options {
+    semantic: bool,
+}
+#[tauri::command]
+pub fn voice_conversation_options(window: tauri::Webview) -> Result<Options, String> {
+    page(&window)?;
+    Ok(Options {
+        semantic: cfg!(all(
+            feature = "voice-semantic",
+            target_os = "linux",
+            target_arch = "x86_64",
+            target_env = "gnu"
+        )),
+    })
+}
+
 #[tauri::command]
 pub fn voice_conversation_start(
     app: AppHandle,
     window: tauri::Webview,
     auto_finish: Option<bool>,
+    semantic: Option<bool>,
     route: Option<super::routes::Selection>,
 ) -> Result<Snapshot, String> {
     page(&window)?;
     #[cfg(not(target_os = "linux"))]
     {
-        let _ = (app, auto_finish, route);
+        let _ = (app, auto_finish, route, semantic);
         Err("Voice conversation is available on Linux only.".into())
     }
     #[cfg(target_os = "linux")]
@@ -104,6 +123,12 @@ pub fn voice_conversation_start(
         if route.is_some() && auto_finish.unwrap_or(false) {
             return Err("Use explicit Finish with a continuous microphone route.".into());
         }
+        let semantic = semantic.unwrap_or(false);
+        if semantic && (!auto_finish.unwrap_or(false) || route.is_some() || !capture::semantic::supported()) {
+            return Err(
+                "Semantic finish requires the preview build and manual automatic-finish mode.".into(),
+            );
+        }
         let routed = route.is_some();
         let (commands, input) = mpsc::channel(4);
         let controls = app.state::<Controls>();
@@ -120,16 +145,18 @@ pub fn voice_conversation_start(
         let id = slot.0.to_string();
         let (control, mut request) = capture_control();
         request.1 = auto_finish.unwrap_or(false);
+        request.2 = semantic;
         let (next, turns) = mpsc::channel(1);
         let view = Snapshot {
             id: id.clone(),
-            phase: "starting",
+            phase: if semantic { "preparing" } else { "starting" },
             reason: None,
             draft: None,
             reply: None,
             response: None,
             capture: None,
             routed,
+            semantic_fallback: false,
         };
         slot.1 = Some(Session {
             view: view.clone(),
@@ -232,6 +259,10 @@ fn capture_phase(session: &mut Session, phase: CapturePhase) {
             }
             session.view.capture = None;
             "transcribing"
+        }
+        CapturePhase::SemanticFallback => {
+            session.view.semantic_fallback = true;
+            return;
         }
         CapturePhase::Manual => {
             if session.view.phase != "recording" {
@@ -500,6 +531,7 @@ mod tests {
                 response: None,
                 capture: None,
                 routed: false,
+                semantic_fallback: false,
             },
             control: Some(control),
             routed: None,
@@ -536,6 +568,10 @@ mod tests {
         assert_eq!(session.view.reason, Some("auto-unavailable"));
         capture_phase(&mut session, CapturePhase::Starting);
         assert_eq!(session.view.reason, None);
+        capture_phase(&mut session, CapturePhase::SemanticFallback);
+        assert!(session.view.semantic_fallback);
+        capture_phase(&mut session, CapturePhase::Starting);
+        assert!(session.view.semantic_fallback);
         capture_phase(&mut session, CapturePhase::Transcribing);
         assert_eq!(session.view.phase, "transcribing");
         session.view.phase = "waiting";
@@ -571,6 +607,7 @@ mod tests {
                 response: None,
                 capture: None,
                 routed: true,
+                semantic_fallback: false,
             },
             control: Some(control),
             routed: Some(send),
@@ -700,6 +737,7 @@ mod tests {
                 response: None,
                 capture: None,
                 routed: false,
+                semantic_fallback: false,
             },
             control: Some(control),
             routed: None,
@@ -732,6 +770,7 @@ mod tests {
                 response: None,
                 capture: None,
                 routed: false,
+                semantic_fallback: false,
             },
             control: Some(control),
             routed: None,

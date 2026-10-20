@@ -2,7 +2,8 @@
 
 V6.2.2 provides an **offline developer backend**, behind the `vults-voice` feature
 `semantic-turn`. Normal app builds do not enable it. There is no download, microphone control,
-Settings switch or network request in this backend. V6.3-V6.7 retain conversation/runtime integration.
+Settings switch or network request in this backend. V6.7 adds the explicitly chosen conversation
+preview below; ordinary builds still expose no semantic activation.
 This is numerical qualification on the checked Linux x64 CPU runtime, not endpoint-quality,
 pt-BR speech, latency-target or platform acceptance.
 
@@ -68,6 +69,52 @@ promise instantaneous abort. Cancelled results are discarded; an error/timeout g
 policy's once-per-conversation failure fallback. The adapter retains ownership and rejects stale
 results before publication. Session destruction shares the speech-work lock with other native work.
 
+## Conversation preview integration
+
+V6.7 connects this backend to the existing automatic-finish recording owner through the app's
+optional `voice-semantic` Cargo feature, qualified only for Linux x64 GNU. The Nest reads a build
+capability without opening files, devices, a keyring or a connection. Ordinary builds do not offer
+this choice and native Start rejects it. In a preview build, first enable **Finish automatically
+after a pause**, then explicitly select **Use local semantic turn detection (preview)** before
+Start. It is off by default, frozen for the conversation and cleared on departure/end. Continuous
+headphone/AEC routes retain explicit Finish and cannot enable this option.
+
+There is no installer or download offer. An explicit developer must first provision the exact
+checked artifacts from the table above under the app's data directory:
+`voice/semantic-turn/libonnxruntime.so.1.31.0` and `voice/semantic-turn/smart-turn-v3.0.onnx`.
+The native library must be trusted and immutable as required by the shared runtime owner. No path
+or URL comes from the renderer. Explicit Start prepares files/model on a bounded worker before
+opening the microphone. The page says the microphone is off during preparation. Preparation has
+a 60-second limit; cancellation or expiry returns without opening capture, while the actual native
+worker retains its lease until teardown. Missing/invalid files select visible silence fallback.
+Only later real VAD speech, local words and the silence gate authorize audio scoring. A different runtime already
+pinned by another preview backend is refused; the process never silently switches libraries.
+Artifact distribution and endpoint/pt-BR/device qualification remain separate work.
+
+One worker/model belongs to the explicitly started conversation. It accepts only one score at a
+time, snapshots at most the last eight seconds of owned 16 kHz audio and retains the desktop lease
+through inference, model destruction and panic cleanup. Neither score requests nor partial words
+become commands, provider input or microphone authority. Existing capture closure and final local
+transcription still precede submission of a complete turn.
+
+The recording watcher continues observing fresh VAD/text while scoring runs separately. New speech
+cancels the old ticket before a returned score is considered; newer words recheck the silence gate.
+After preparation, the original policy deadline bounds score queueing and inference together: no
+late submission restarts the 1.2-second hold. Detection/capture latency remains separate. A valid low score may rescore at the existing 200 ms pace.
+A failed/missing/expired score or unavailable checked files disable semantics for the remainder of
+that conversation; the page shows that local silence detection is being used. Missing VAD/GPU
+preview still falls back to explicit Finish. Cap, Finish, Cancel and page/epoch revocation keep
+their existing authority and never wait for model teardown to return to the user.
+
+```sh
+cargo build -p vults-app --features voice-semantic --bin vults
+cargo test -p vults-app --features meeting-speakers,voice-semantic
+```
+
+Controlled app-owner tests exercise bounds, one-job admission, cancellation, renewed speech,
+word growth, deadline expiry, persistent fallback and teardown without a model, microphone or
+provider. Native GUI checks use controlled capabilities/owners, not physical speech acceptance.
+
 ## Validation and remaining gates
 
 Stored full-array oracles were generated with NumPy 2.2.6 and Transformers 4.57.1's NumPy CPU path,
@@ -94,5 +141,5 @@ cargo test -p vults-voice --features semantic-turn \
   native_probabilities_match_the_reference_on_checked_artifacts -- --ignored --nocapture
 ```
 
-Real conversational endpoint labels, pt-BR quality, device/performance acceptance and native UI
-integration remain open. This step approves no app download offer or automatic listening.
+Real conversational endpoint labels, pt-BR quality, device/performance acceptance and artifact
+distribution remain open. This preview approves no app download offer or automatic listening.

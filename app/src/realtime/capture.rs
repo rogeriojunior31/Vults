@@ -12,6 +12,7 @@ use tokio::sync::{mpsc, watch};
 use vults_chat::realtime::transport::Failure;
 
 mod automatic;
+pub(super) mod semantic;
 
 type Active = Arc<dyn Fn() -> bool + Send + Sync>;
 
@@ -25,19 +26,20 @@ enum End {
 #[derive(Debug)]
 pub struct CaptureControl(watch::Sender<End>);
 #[derive(Debug, Clone)]
-pub struct CaptureRequest(watch::Receiver<End>, pub(super) bool);
+pub struct CaptureRequest(watch::Receiver<End>, pub(super) bool, pub(super) bool);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CapturePhase {
     Starting,
     Recording,
     Transcribing,
     Manual,
+    SemanticFallback,
 }
 
 /// Creating controls opens nothing. Dropping the only control cancels its one request.
 pub fn capture_control() -> (CaptureControl, CaptureRequest) {
     let (send, receive) = watch::channel(End::Recording);
-    (CaptureControl(send), CaptureRequest(receive, false))
+    (CaptureControl(send), CaptureRequest(receive, false, false))
 }
 impl CaptureControl {
     pub fn finish(&self) {
@@ -73,6 +75,7 @@ impl CaptureRequest {
 #[derive(Clone)]
 pub(super) struct Owner {
     pub lease: Arc<Lease>,
+    pub semantic: Option<Arc<semantic::Service>>,
     pub active: Active,
     pub cancel: watch::Receiver<bool>,
     pub output: mpsc::Sender<Event>,

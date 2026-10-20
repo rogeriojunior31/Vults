@@ -367,7 +367,12 @@ stream verification remains decisive. First Start/confirmed interruption admit B
 requires the current native recording token. Normal completion/manual Stop still wait for a click.
 Microphone-open status, page contact and cancellation span the session. No phone/card authority is
 added. Existing truncation acknowledgements, heard-prefix history and next-turn repair still own interruption and gate subsequent uploads. Physical/live validation,
-semantic turn integration and V6.7.4 island feedback/acceptance remain open.
+semantic artifact/endpoint qualification and V6.7.4 island feedback/acceptance remain open.
+The optional `voice-semantic` app feature now connects the manual automatic-finish owner to a
+conversation-scoped local worker/policy. Checked files prepare before microphone admission; scores
+use current VAD/words and the original hold deadline. A failure latches visible silence fallback.
+Ordinary builds cannot activate it; no download or continuous-route automatic finish is added.
+See [Semantic turn model](semantic-turn-model.md#conversation-preview-integration).
 
 Offline socket/native-owner tests cover interruption before/after producer completion, exact
 acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.

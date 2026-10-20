@@ -72,7 +72,13 @@ opens and is frozen for that conversation. It uses the installed local speech de
 transcription preview; it downloads nothing. Confirmed speech, local partial words and fresh audio
 are required. The policy waits 1.6 seconds of detected silence, or 2.6 seconds after an English/
 Portuguese continuation word; detection/decoding may add latency. Final local transcription still
-runs after the microphone closes. The optional semantic model is not enabled by this choice.
+runs after the microphone closes. This choice alone does not enable the optional semantic model.
+A Linux x64 GNU developer build with `voice-semantic` can separately offer **Use local semantic turn
+detection (preview)**. It starts off for each conversation and needs explicitly provisioned checked
+files; the app downloads nothing. It may wait up to 1.2 seconds beyond the silence policy. A failure
+shows **Semantic finish is unavailable. This conversation uses local silence detection.** and
+keeps that fallback for following turns. Ordinary builds do not offer the preview. See
+[Semantic turn model](../reference/semantic-turn-model.md#conversation-preview-integration).
 
 If the detector or preview is unavailable/fails, the page says **Automatic finish is unavailable.
 Use Finish recording.** Manual Finish and Cancel remain available. Empty input and the 30-second

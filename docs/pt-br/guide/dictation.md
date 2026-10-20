@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 9710623c2d69 -->
+<!-- source: cc3188a22e3c -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -82,7 +82,14 @@ instalado e a prévia de transcrição na GPU; não baixa nada. Exige fala confi
 locais e áudio novo. A política aguarda 1,6 segundo de silêncio detectado, ou 2,6 segundos após uma
 palavra de continuação em inglês/português; a detecção e a decodificação podem acrescentar demora.
 A transcrição local final ainda ocorre depois que o microfone fecha. Essa escolha não ativa o
-modelo semântico opcional.
+modelo semântico opcional por si só.
+Um build para desenvolvedores Linux x64 GNU com `voice-semantic` pode oferecer separadamente **Usar
+detecção semântica local de fim de turno (prévia)**. A opção começa desligada em cada conversa e
+exige arquivos verificados fornecidos explicitamente; o app não baixa nada. Ela pode aguardar até
+1,2 segundo além da regra de silêncio. Uma falha informa **O encerramento semântico está
+indisponível. Esta conversa usa detecção local de silêncio.** e mantém esse fallback nas falas
+seguintes. Builds comuns não oferecem a prévia. Veja
+[Modelo semântico de fim de turno](../reference/semantic-turn-model.md#conversation-preview-integration).
 
 Se o detector ou a prévia estiver indisponível/falhar, a página informa **O encerramento automático
 está indisponível. Use Finalizar gravação.** Finalizar e Cancelar continuam disponíveis. Entrada
