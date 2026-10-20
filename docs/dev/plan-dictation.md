@@ -3697,3 +3697,63 @@ The complete Windows test run had one remaining failure: the pre-cancelled insta
 expected the supported-platform cancellation result instead of the unsupported-platform error.
 The test now checks each platform's contract and zero request admissions on both paths; production
 installation behavior is unchanged. All other Windows workspace targets passed that run.
+
+## 2026-10-20 autonomous voice validation checkpoint
+
+The maintainer requested all validation that can run without their participation before returning
+to manual acceptance. The [content-free checkpoint](../../crates/spike/fixtures/voice-validation-2026-10-20.json)
+records the implemented V0-V8 scope and remaining gates. No phase is relabeled Done by synthetic
+speech or controlled UI evidence. The user selected local-only testing; no paid provider, real
+credential, physical microphone recording or original configuration was used in this checkpoint.
+
+Passed: 1,474 default workspace tests, 1,527 all-feature workspace tests, 10 evals, default/all-feature
+workspace Clippy with warnings denied, formatting, build and all 19 actual CI renderer checks.
+Cargo deny and npm audit report no findings. Forty bilingual public documentation pairs have
+current source marks; local documentation files and fragments resolve. AGENTS.md still references
+the absent check-task-actions.mjs; no missing script is reported as a passed check.
+
+| Phase | Autonomous evidence | Acceptance still needed |
+| --- | --- | --- |
+| V0 | ADR/documentation consistency checks, bilingual source marks and local links | Existing human prototype acceptance is unchanged |
+| V1 | Private X11 insertion/raw chords, headless KWin clipboard/focus, tmux and Kitty guarded delivery, exact-server WezTerm navigation | Physical key/grant/focus matrix in real applications, Zeca on/off and waiting cards |
+| V2 | Installed Base/Small/Turbo on 20 synthetic PT and 20 EN sentences each, dictionary off/on, silence and cached-context checks | Natural speech and independent PT/EN quality; only the existing Turbo/fixed-English vocabulary gate passes |
+| V3 | Authored cleanup/injection/question cassettes, timeout/raw-text fallback, consent and budget regressions | Separately consented provider output and natural-speech review |
+| V4 | Statistics/timing/diagnostic regressions; fresh release hook startup below 10 ms | Real Small/Vulkan release-to-delivery p95 below two seconds; hook startup is a different measurement |
+| V5 | Private 65-second dual-source capture, independent dictation survives Stop/Cancel, PCM16 cleanup, checked native speaker pipeline and cancellation on a repeated public 30-minute fixture | Real 30-minute call/source clocks, transcript/export review and frozen independent speaker-disjoint PT/EN quality gates |
+| V6 | Native semantic oracles/VAD, playback drain/history, cancellation/preemption, synthetic AEC/duplex, accounting/tools/follow-up regressions and isolated synthetic CLI probes | Natural endpoints, real double-talk/headphones/AEC, eight-second capture/expiry, live provider/flock tool/budget acceptance |
+| V7 | Verified question lifetime, capture ownership, explicit confirmation, IME/Shift+Enter, audit and no permission authority | Real external-agent question filled by voice and confirmed by a human |
+| V8 | Parser/resolution, local dispatcher, clarification/undo, inert command UI and refusal of permission answers | Real spoken commands, target selection and desktop effect/undo acceptance |
+
+All 22 ignored voice/platform/consultation tests were explicitly exercised with isolated fixtures;
+the unrelated real OpenCode smoke remains excluded. The guarded terminal test also passed its
+Kitty variant. Native voice/meeting UI passed 444 cases across 11 suites, including Black/Light,
+the applicable four-language matrices, wide/minimum windows, keyboard actions, recovery/copy and
+12 genuinely destroyed/recreated cold windows. Both default and semantic-preview builds were
+checked. Native refusal probes have no selected ASR model and never reach capture or a provider.
+
+The local harness needed current bridge names, stable automatic-finish selectors, default versus
+preview capability expectations and a synthetic clipboard baseline. Missing hyperfine, WezTerm
+and its required font were provided from signed packages in temporary directories. A missing font
+had opened a configuration-error pane; supplying it restored the exact two-server isolation check.
+No production workaround, threshold, dependency or feature activation was added. Private app/audio
+processes, profiles, generated speech, downloaded model/runtime files and temporary tools were
+removed; the ordinary default binary was restored. Detailed logs, fixture drivers, screenshots and
+artifact/corpus fingerprints are archived locally beside the worktree's git directory.
+
+### Remaining human and external gates
+
+1. Test local transcription with natural PT/EN phrases, existing drafts and cancellation. The
+   earlier user-operated six-second diagnostic accepted input level only, not transcription.
+2. Exercise physical shortcuts, portal grants, changed focus, editor/terminal insertion and the
+   question-card confirmation path. Voice must never answer a permission card.
+3. Measure real release-to-delivery latency with Small/Vulkan and review speech/noise/pauses. Freeze
+   independent human-annotated endpoint and speaker-disjoint PT/EN material before release scoring.
+4. Review a consented 30-minute mic/system meeting, alignment, transcript and MD/SRT/VTT export,
+   deletion and absence of retained audio. Speaker identification stays an engineering preview.
+5. Only after separate provider/key/budget consent, test cleanup/summary/realtime output, spoken
+   flock reads, interruption and eight-second response capture/expiry on actual hardware.
+
+Codex consultation also retains its external engineering gate: synthetic CLI qualification does
+not prove subscription-only credential binding during concurrent external login changes. Its
+unavailable capability stays false. The user has not selected a separately billed API replacement.
+K8, V6.7 physical/live acceptance and the earlier speech/meeting release-quality gates remain open.
