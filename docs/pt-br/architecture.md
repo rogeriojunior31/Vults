@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 797ee7f53c67 -->
+<!-- source: 2674e20e05cc -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -151,8 +151,18 @@ responsável exclusivo concilia reservas órfãs, mantendo atomicamente o custo 
 por 24 horas desde a conciliação. Reiniciar não restitui nem adia um débito já conciliado, e traces
 apagados continuam apagados. Outras plataformas recusam a entrada. Não há entrada nativa de
 captura/reprodução. Testes duplex e de processos/falhas são offline; validação com provedor/
-dispositivos reais e orquestração da alternativa em texto continuam pendentes antes da ativação.
+dispositivos reais e continuação oferecida ao usuário continuam pendentes antes da ativação.
 O inventário de rede lista o transporte concreto e seus testes.
+
+A V6.3.5 altera o serviço nativo do app para controlar um turno completo limitado, independentemente
+da admissão remota. A entrada do transporte persistente continua em blocos; sucesso libera o
+original e falha encerra o transporte antes da recuperação local pelo Whisper. Um texto completo
+revisável ou o áudio original com falha local tipada volta ao chamador nativo, sem troca de provedor,
+envio automático ao Chat ou gravação de histórico. Cancelamento/revogação suprimem resultados antigos;
+mudanças compartilhadas revogam gerações sob a trava das Configurações e workers de decodificação
+mantêm a concessão nativa após o prazo. A espera local é limitada, mas a carga fria nativa continua
+cooperativa. Captura/reprodução e continuação visual ficam na V6.4-V6.7. Veja
+[Contabilidade realtime](reference/realtime-accounting.md#native-turn-retention-and-local-text).
 
 <a id="local-dictation"></a>
 

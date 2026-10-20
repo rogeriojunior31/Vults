@@ -139,8 +139,17 @@ retained by the transport and every detached worker. Only a new exclusive owner 
 holds, atomically keeping their full unknown cost for 24 hours from reconciliation. Restart cannot
 refund or slide an already settled debit, and trace erasure is preserved. Other platforms fail closed.
 No native capture/playback entry is added. Duplex socket and process/crash tests are offline;
-live-provider/native acceptance and text fallback orchestration remain open before activation.
+live-provider/native acceptance and user-facing continuation remain open before activation.
 The network inventory lists the concrete transport and its tests.
+
+V6.3.5 changes the app's native service to own a complete bounded turn independently of remote
+admission. Persistent transport input stays chunked; success releases the original and failure
+stops transport before local Whisper recovery. A complete reviewable text result or original audio
+with a typed local failure returns to the native caller, without provider substitution, automatic
+Chat send or history writes. Cancel/revocation suppresses stale results; shared settings changes
+invalidate epochs under the Settings lock and decoder workers retain the native lease after timeout.
+The local wait is bounded but cold native loading remains cooperative. Capture/playback and UI
+continuation remain V6.4-V6.7 work. See [Realtime accounting](reference/realtime-accounting.md#native-turn-retention-and-local-text).
 
 ## Local dictation
 

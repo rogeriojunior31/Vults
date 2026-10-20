@@ -532,3 +532,37 @@ async fn abort_drops_the_transport_without_inventing_a_settlement() {
     assert!(closed.is_none() || closed.is_some_and(|m| m.is_err()));
     assert!(gate.settled.lock().unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn buffered_audio_bursts_yield_to_an_inline_bounded_consumer() {
+    let gate = Mock::default();
+    let (client, mut server) = socket_pair().await;
+    let (io, tx, mut rx, cancel) = channels(4);
+    turn(&tx).await;
+    let server = tokio::spawn(async move {
+        config(&mut server).await;
+        request(&mut server, "resp_0").await;
+        for _ in 0..10 {
+            write(&mut server, json!({"type":"response.output_audio.delta","response_id":"resp_0","delta":STANDARD.encode([1,0,255,255])})).await;
+        }
+        response(&mut server, "resp_0", false).await;
+        let _ = server.next().await;
+    });
+    let driver = start(plan(), &gate, io, |_, _| async { Ok(client) });
+    tokio::pin!(driver);
+    let mut audio = 0;
+    let result = loop {
+        tokio::select! { biased;
+            event = rx.recv() => match event.unwrap() {
+                Event::Audio { .. } => audio += 1,
+                Event::Finished(_) => { cancel.send(true).unwrap(); },
+                Event::Ready => {},
+            },
+            result = &mut driver => break result,
+        }
+    };
+    assert_eq!(result, Err(Failure::Cancelled));
+    assert_eq!(audio, 11);
+    assert_eq!(gate.settled.lock().unwrap()[0].1, Some(2059));
+    server.await.unwrap();
+}

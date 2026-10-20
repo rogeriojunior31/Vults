@@ -69,6 +69,7 @@ pub enum Failure {
     Key,
     Transport,
     Protocol,
+    Response,
     Timeout,
     Cancelled,
     Input,
@@ -395,6 +396,8 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                             let pcm = bytes.as_chunks::<2>().0.iter().copied().map(i16::from_le_bytes).collect();
                             alive(gate,&channels.cancel)?;
                             emit(&channels.output, Event::Audio { attempt: pending.clone().ok_or(Failure::Ledger)?, pcm })?;
+                            // Let an inline bounded consumer drain even when socket reads stay ready.
+                            tokio::task::yield_now().await;
                         }
                         if let Some(receipt) = receipt {
                             if pending.as_deref() != Some(receipt.attempt.as_str()) { return Err(Failure::Ledger); }

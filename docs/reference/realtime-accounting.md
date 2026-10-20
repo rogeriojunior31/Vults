@@ -119,12 +119,44 @@ ownership until it finishes.
 This proves that the former local transport can no longer send; it does not claim the provider
 completed at disconnect or refund uncertain work. A crashed process releases its kernel lock;
 aborted transports drop their socket. Recovery is not enabled on other platforms. The existing
-backend has no user-facing capture entry, and native local-turn retention/text fallback and
-live-provider acceptance remain required before activation.
+backend has no user-facing capture entry. V6.3.5 adds native retention/recovery below; capture,
+playback, visible continuation and live-provider acceptance remain required before activation.
+
+## Native turn retention and local text
+
+V6.3.5 changes the native app service to accept complete `realtime::Turn` values, independently of
+remote admission. Each value owns 100 ms to 30 seconds of mono 24 kHz PCM16 in memory. One pending
+turn is fed into the persistent transport in 100 ms chunks through a two-command queue; a four-event
+queue relays output. Raw audio emission yields so buffered socket bursts cannot starve this inline
+consumer. Only a successful final receipt releases the pending original; queued receipts are drained
+before applying a simultaneous transport failure. A later idle failure cannot recover an older turn.
+
+Off/spent admission, missing keys, transport/protocol/response failures or saturated output retain
+the failed turn for local recovery. The transport gets up to 11 seconds to finish its existing
+bounded settlement path, then its future/socket is dropped before decoding. The selected installed
+Whisper model and language are snapshotted; the existing resampler converts the retained audio to
+16 kHz. No download, model clean-up, other provider or automatic Chat send is started. A successful
+local decode returns the whole text, preserving whitespace, for the native caller to offer as a
+reviewable draft. This is not a claim that Zeca already answered in text or that a fallback UI exists.
+
+Missing models, decode failure, empty output, invalid/oversized text or the 30-second local wait
+deadline return the original in-memory turn with a typed reason. Very short or trimmed-to-short
+turns may yield no local words: Whisper's existing minimum is 500 ms, even though the remote input
+minimum is 100 ms. Audio and transcript content are excluded from Debug output and new traces;
+this service writes neither audio nor text history.
+
+Cancellation, lock, shutdown, shared-key changes or changed voice/model/language/microphone/Zeca
+settings discard work instead of offering stale recovery. The shared settings mutation revokes the
+epoch under its lock, so restoring a previous choice cannot revive an old turn. The decoder retains
+the native lease through the final publication check; a detached worker also retains its own lease
+until native work exits. The wait can expire before an unabortable cold model load finishes; the
+stop flag suppresses late output and new voice owners stay Busy until that worker releases its lease.
+No microphone, playback, renderer command or permissions path is added. Those owners remain V6.4-V6.7.
 
 Run `cargo test -p vults-chat realtime::transport::` and `cargo test -p vults-app realtime` offline.
 Duplex WebSocket tests exercise actual frames with synthetic PCM/keys, two turns, cancellation,
 revocation, failed settlement, backpressure and unknown usage. They open no listener or provider
 connection. No paid request, real microphone/playback or live speech acceptance is claimed. The
-future native caller must retain its local turn until completion for text fallback; backend failures
-provide structured reasons and never silently send to a different provider.
+native driver/decoder tests use synthetic PCM and local work doubles; real model/speech quality
+and capture/playback acceptance remain separate. Backend failures provide structured reasons and
+never silently send to a different provider.

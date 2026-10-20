@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: bf2ab127083e -->
+<!-- source: c7d7bb1a7c53 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -134,14 +134,52 @@ posse até terminar.
 Isso comprova que o transporte local anterior não pode mais enviar; não declara que o provedor
 terminou ao desconectar nem restitui trabalho incerto. Um processo encerrado libera sua trava no
 kernel; transportes abortados descartam o socket. A recuperação não está habilitada em outras
-plataformas. O backend existente não tem entrada de captura oferecida ao usuário; retenção nativa
-do turno local/alternativa em texto e validação com provedor real continuam obrigatórias antes da
-ativação.
+plataformas. O backend existente não tem entrada de captura oferecida ao usuário. A V6.3.5 acrescenta
+retenção/recuperação nativas abaixo; captura, reprodução, continuação visual e validação com provedor
+real continuam obrigatórias antes da ativação.
+
+<a id="native-turn-retention-and-local-text"></a>
+## Retenção do turno nativo e texto local
+
+A V6.3.5 altera o serviço nativo do app para receber valores completos `realtime::Turn`,
+independentemente da admissão remota. Cada valor mantém em memória de 100 ms a 30 segundos de
+PCM16 mono de 24 kHz. Um turno pendente alimenta o transporte persistente em blocos de 100 ms por
+uma fila de dois comandos; uma fila de quatro eventos retransmite a saída. A emissão de áudio
+cede execução para que rajadas já recebidas do socket não impeçam esse consumidor no mesmo futuro
+de avançar. Só um recibo final de sucesso libera o original pendente; recibos enfileirados são
+processados antes de aplicar uma falha simultânea do transporte. Uma falha posterior em espera
+não recupera um turno antigo.
+
+Admissão desligada/esgotada, chave ausente, falhas de transporte/protocolo/resposta ou saída cheia
+preservam o turno que falhou para recuperação local. O transporte recebe até 11 segundos para
+terminar seu caminho existente de conciliação limitada; depois, seu futuro/socket é descartado
+antes da decodificação. O modelo Whisper instalado e o idioma selecionados são congelados; o
+reamostrador existente converte o áudio preservado para 16 kHz. Não há download, limpeza por modelo,
+outro provedor nem envio automático ao Chat. A decodificação local bem-sucedida devolve o texto
+inteiro, preservando espaços, para o chamador nativo oferecer como rascunho revisável. Isso não
+declara que o Zeca já respondeu em texto nem que existe uma interface para essa alternativa.
+
+Modelo ausente, falha de decodificação, saída vazia, texto inválido/grande demais ou prazo local
+de espera de 30 segundos devolvem o turno original em memória com um motivo tipado. Turnos muito
+curtos, inclusive após o corte de silêncio, podem não produzir palavras locais: o mínimo existente
+do Whisper é 500 ms, embora a entrada remota aceite 100 ms. Áudio e transcrição não aparecem no
+Debug nem em novos traces; este serviço não grava histórico de áudio ou texto.
+
+Cancelamento, bloqueio, encerramento, mudança da chave compartilhada ou de configurações de voz,
+modelo, idioma, microfone ou Zeca descartam o trabalho em vez de oferecer recuperação antiga. A
+mutação compartilhada das configurações revoga a geração sob sua trava; restaurar a escolha
+anterior não revive um turno antigo. O decodificador mantém a concessão nativa até a verificação
+final de publicação; um worker desacoplado mantém sua própria concessão até o trabalho nativo
+terminar. A espera pode expirar antes de uma carga fria não abortável do modelo terminar; o sinal
+de parada suprime saída tardia e novos responsáveis de voz recebem Busy até o worker liberar sua
+concessão. Não há microfone, reprodução, comando de renderer ou caminho de permissões novo. Esses
+responsáveis continuam na V6.4-V6.7.
 
 Execute `cargo test -p vults-chat realtime::transport::` e `cargo test -p vults-app realtime` offline.
 Testes de WebSocket duplex exercitam quadros reais com PCM/chaves sintéticos, dois turnos,
 cancelamento, revogação, falha de conciliação, pressão na fila e uso desconhecido. Não abrem escuta
 nem conexão ao provedor. Nenhuma requisição paga, microfone/reprodução reais ou validação com fala
-real é declarada. O futuro chamador nativo precisa manter seu turno local até a conclusão para a
-alternativa em texto; falhas do backend fornecem motivos estruturados e nunca enviam silenciosamente
-a outro provedor.
+real é declarada. Os testes do controlador/decodificador nativos usam PCM sintético e substitutos
+de trabalho local; qualidade real de modelo/fala e validação de captura/reprodução continuam
+separadas. Falhas do backend fornecem motivos estruturados e nunca enviam silenciosamente a outro
+provedor.

@@ -31,11 +31,17 @@ island/Nest feedback and non-replayable history. V8.5 adds dedicated command set
 a shared phrase guide and default-local/explicit Chat fallback. V5.4 research and V5.5 engineering now provide a default-off developer speaker preview, after
 the bounded V5.3 recording-to-transcript handoff. Independent PT/EN quality qualification remains
 open; see the [consolidated V5.5 checklist](#v55-consolidated-delivery-checklist). V5.6 now has a gated
-summary backend and its Settings/Summary/To-dos interface; V5.7 storage/export is next.
-See the [V5.6 delivery sequence](#v56-delivery-sequence). Linux now exposes an explicit one-minute check under Dictation > Meetings; it transcribes both sources locally, deletes temporary audio and keeps text only on the current page; no saved meetings are produced. Hardware/compositor acceptance remains pending. V3.5 delivers the documentation checkpoint; real-speech/provider sign-off remains separate. V3.4 now delivers the visible clean-up settings, Dictation Styles editor and applied History labels. V3.3 now freezes per-app style and output language at key-down. V3.2 now connects the pure contract to tool-free
+summary backend and its Settings/Summary/To-dos interface; V5.7/V5.8 add explicit text-only
+meeting storage/export and the saved Meetings workspace.
+See the [V5.6 delivery sequence](#v56-delivery-sequence). Linux now exposes an explicit one-minute check under Dictation > Meetings; it transcribes both sources locally, deletes temporary audio and keeps the current text in memory; saving a text-only meeting snapshot is explicit. Hardware/compositor acceptance remains pending. V3.5 delivers the documentation checkpoint; real-speech/provider sign-off remains separate. V3.4 now delivers the visible clean-up settings, Dictation Styles editor and applied History labels. V3.3 now freezes per-app style and output language at key-down. V3.2 now connects the pure contract to tool-free
 API/local providers, a default-off switch, durable quota, cancellation and complete-local-text fallback;
 Z6 is already Done (#232), with its separately recorded Responses follow-up unchanged. V1/V2/V4/V8 real microphone/desktop/provider acceptance
 remain separate; N3 is not complete.
+
+V7 now implements typed MCP questions, explicit local dictation into drafts and reviewed external-agent
+setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the turn/end policy, gated
+realtime transport/accounting and native turn retention/local recovery. No conversation microphone,
+playback or user-facing realtime continuation is exposed yet. Next: V6.4 playback, then V6.5-V6.7.
 
 ## References
 
@@ -2516,9 +2522,18 @@ Delivery sequence:
    refuse entry; identity/schema/write failure changes no accounting. Tests cover live process
    exclusion, forced process death, socket abort, detached handoff, rollback, erased traces, exact
    remaining allowance and no expiry extension on restart. No dependencies or schema changes.
-   Remaining activation gates: retain the native turn for text fallback, wire capture/playback in
-   V6.4-V6.7 and pass live-provider/native acceptance. Full V6.3 remains open until these gates pass;
-   offline tests do not claim real speech/provider acceptance.
+5. **V6.3.5 Native turn retention and local text recovery** — implemented 2026-10-19. Complete
+   bounded PCM turns survive admission/transport/response failures independently of the persistent
+   provider. Only final success releases the original; queued final receipts precede simultaneous
+   connection failures. Local Whisper/resampling returns whole reviewable text, or retained audio
+   with a typed missing-model/empty/decode/timeout reason. No automatic Chat send, download or
+   provider substitution. Cancellation/revocation discards work; shared Settings mutation fences
+   model/language/microphone/Zeca changes against restoration races. Outer/worker native leases
+   survive final publication and detached cold loads. Duplex burst and synthetic native regressions
+   cover bounded queues, exact failed-turn retention, late receipts, timeout and stale-output refusal.
+   Remaining activation gates: wire capture/playback and visible text continuation in V6.4-V6.7,
+   then pass live-provider/native acceptance. Full V6.3 remains open until these gates pass; offline
+   tests do not claim real speech/provider acceptance. Next engineering step: V6.4 playback.
 
 **V6.4 Playback and what the user heard** (M)
 - Build:

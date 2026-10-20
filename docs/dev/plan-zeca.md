@@ -1569,3 +1569,15 @@ all 18 renderer checks, formatting, repository guards and cargo-deny pass. No ne
 is introduced; `rustfft` is an existing dependency made directly available to this optional backend.
 The QA environment/artifact copies are removed after archiving evidence; no GUI run is needed for
 this backend-only step.
+
+
+**2026-10-19 V6.3 backend handoff.** V6.3.1-V6.3.5 now provide durable micro-USD holds,
+bounded reviewed pricing/protocol, opt-in gated TLS transport, Linux-exclusive orphan recovery and
+native complete-turn retention. Failed remote turns can return local Whisper text for review, or
+retain the original audio with a typed local failure; they never auto-send through Chat or another
+provider. Shared settings mutations revoke old owners before a prior choice can be restored.
+All detached accounting/decoder work retains its corresponding ownership until it exits.
+The native retention API accepts already captured PCM and starts no microphone, playback or UI.
+Live-provider/speech acceptance and visible text continuation remain open. The next engineering
+step is V6.4 playback, followed by V6.5-V6.7 integration; the full V6.3 activation gate stays open
+until these owners and acceptance checks land. See the current V6.3 sequence in Plan Dictation.

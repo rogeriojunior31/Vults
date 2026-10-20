@@ -7,8 +7,11 @@ use std::sync::{
 use tauri::{AppHandle, Manager};
 use vults_chat::realtime::{
     Plan,
-    transport::{Channels, Failure, OpenAi, Provider},
+    transport::{self, Failure, OpenAi, Provider},
 };
+
+mod local;
+pub use local::{Channels, LocalFailure, Recovery, Turn};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -93,41 +96,104 @@ impl Drop for Lease {
     }
 }
 
-/// Only a future native voice owner supplies channels. This does not authorize microphone capture.
-pub async fn run(app: AppHandle, channels: Channels) -> Result<(), Failure> {
+/// Complete native turns only. Recovery is a reviewable draft, never an automatic Chat send.
+pub async fn run(app: AppHandle, channels: Channels) -> Result<Option<Recovery>, Failure> {
     let state = app.state::<Arc<State>>().inner().clone();
-    let (_lease, epoch) = state.begin()?;
+    let (lease, epoch) = state.begin()?;
+    let lease = Arc::new(lease);
     if crate::lock::locked(&app) {
         return Err(Failure::Off);
     }
-    let consent = app
+    let (consent, model, language, zeca) = app
         .state::<crate::settings::SettingsState>()
         .0
         .lock()
-        .map_err(|_| Failure::Off)?
-        .voice_realtime
-        .clone();
-    if !consent.enabled() {
+        .map(|s| {
+            (
+                s.voice_realtime.clone(),
+                s.voice_model.clone(),
+                s.voice_language.clone(),
+                s.zeca,
+            )
+        })
+        .map_err(|_| Failure::Off)?;
+    if !zeca {
         return Err(Failure::Off);
     }
-    let plan = Plan::new(&consent.model, 8192, 1024).map_err(|_| Failure::Budget)?;
     let expected = consent.clone();
+    let decode_language = crate::voice::language(&app);
     let cancel = channels.cancel.clone();
     let check_app = app.clone();
+    let (selected, spoken, cancellation) = (model.clone(), language.clone(), cancel.clone());
+    let active: Arc<dyn Fn() -> bool + Send + Sync> = Arc::new(move || {
+        state.current(epoch)
+            && !*cancellation.borrow()
+            && cancellation.has_changed().is_ok()
+            && !crate::lock::locked(&check_app)
+            && check_app
+                .state::<crate::settings::SettingsState>()
+                .0
+                .lock()
+                .is_ok_and(|s| {
+                    s.zeca
+                        && s.voice_realtime == expected
+                        && s.voice_model == selected
+                        && s.voice_language == spoken
+                })
+    });
+    let remote_active = active.clone();
+    let outcome = local::drive(channels, &*active, move |io| connect(consent, remote_active, io)).await?;
+    let Some((turn, reason)) = outcome else {
+        return Ok(None);
+    };
+    local::recover(turn, reason, active, cancel, lease, move |pcm, stop| {
+        if stop.load(Ordering::SeqCst) {
+            return Err(LocalFailure::Decode);
+        }
+        let model = model.ok_or(LocalFailure::Unavailable)?;
+        let directory = crate::voice::models_dir();
+        if !vults_voice::installed(&directory).contains(&model.as_str()) {
+            return Err(LocalFailure::Unavailable);
+        }
+        let native = crate::voice::transcriber(&app, &model).map_err(|_| LocalFailure::Decode)?;
+        if stop.load(Ordering::SeqCst) {
+            return Err(LocalFailure::Decode);
+        }
+        let input: Vec<f32> = pcm.iter().map(|s| f32::from(*s) / 32768.0).collect();
+        let pcm = vults_audio::resample(&input, 1, 24_000).map_err(|_| LocalFailure::Decode)?;
+        native
+            .transcribe_cancellable(
+                &pcm,
+                decode_language.as_deref(),
+                vults_voice::vad_path(&directory).as_deref(),
+                &stop,
+                true,
+            )
+            .map_err(|_| LocalFailure::Decode)?
+            .ok_or(LocalFailure::Decode)
+    })
+    .await
+    .map(Some)
+}
+
+async fn connect(
+    consent: Consent,
+    active: Arc<dyn Fn() -> bool + Send + Sync>,
+    channels: transport::Channels,
+) -> Result<(), Failure> {
+    if !consent.enabled() {
+        return Err(if consent.limit_microusd == 0 {
+            Failure::Budget
+        } else {
+            Failure::Off
+        });
+    }
+    let plan = Plan::new(&consent.model, 8192, 1024).map_err(|_| Failure::Budget)?;
+    let cancel = channels.cancel.clone();
     let gate = crate::gate::realtime::RealtimeGate::open(
         crate::history::dir(),
         consent,
-        Arc::new(move || {
-            state.current(epoch)
-                && !*cancel.borrow()
-                && cancel.has_changed().is_ok()
-                && !crate::lock::locked(&check_app)
-                && check_app
-                    .state::<crate::settings::SettingsState>()
-                    .0
-                    .lock()
-                    .is_ok_and(|s| s.voice_realtime == expected)
-        }),
+        Arc::new(move || active() && !*cancel.borrow() && cancel.has_changed().is_ok()),
     )
     .await?;
     OpenAi.run(plan, &gate, channels).await
@@ -138,6 +204,43 @@ mod tests {
     use super::*;
     #[cfg(target_os = "linux")]
     use vults_chat::realtime::transport::Gate;
+
+    #[cfg(not(windows))]
+    #[test]
+    fn settings_restored_before_the_next_poll_cannot_revive_an_old_turn() {
+        let app = tauri::test::mock_builder()
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap();
+        let state = Arc::new(State::default());
+        app.manage(state.clone());
+        let mut settings = crate::settings::Settings::default();
+        type Change = fn(&mut crate::settings::Settings);
+        for (change, restore) in [
+            (
+                (|s| s.voice_model = Some("small".into())) as Change,
+                (|s| s.voice_model = None) as Change,
+            ),
+            (
+                (|s| s.voice_language = Some("pt".into())) as Change,
+                (|s| s.voice_language = None) as Change,
+            ),
+            ((|s| s.zeca = false) as Change, (|s| s.zeca = true) as Change),
+            (
+                (|s| s.dictation_microphone = Some("test".into())) as Change,
+                (|s| s.dictation_microphone = None) as Change,
+            ),
+        ] {
+            let (lease, epoch) = state.begin().unwrap();
+            crate::settings::apply_change(app.handle(), &mut settings, change);
+            crate::settings::apply_change(app.handle(), &mut settings, restore);
+            assert!(!state.current(epoch));
+            drop(lease);
+        }
+        let (_lease, epoch) = state.begin().unwrap();
+        crate::settings::apply_change(app.handle(), &mut settings, |_| {});
+        assert!(state.current(epoch));
+    }
+
     #[test]
     fn revocation_between_entry_and_snapshot_and_shutdown_cannot_be_undone() {
         let state = Arc::new(State::default());

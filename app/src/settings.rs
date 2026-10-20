@@ -1552,27 +1552,37 @@ pub fn monitor(app: &AppHandle) -> Option<String> {
 pub fn edit(app: &AppHandle, change: impl FnOnce(&mut Settings)) -> Result<(), String> {
     let state = app.state::<SettingsState>();
     let mut s = state.0.lock().map_err(|_| "settings are busy")?;
-    #[cfg(target_os = "linux")]
-    let before = (
-        s.voice_model.clone(),
-        s.voice_language.clone(),
-        s.dictation_microphone.clone(),
-    );
-    change(&mut s);
-    #[cfg(target_os = "linux")]
-    let changed = before
-        != (
-            s.voice_model.clone(),
-            s.voice_language.clone(),
-            s.dictation_microphone.clone(),
-        );
+    let changed = apply_change(app, &mut s, change);
     let result = save(&s).map_err(|e| format!("can't save the settings: {e}"));
     drop(s);
     #[cfg(target_os = "linux")]
     if changed {
         crate::questions::invalidate_capture(app);
     }
+    #[cfg(not(target_os = "linux"))]
+    let _ = changed;
     result
+}
+
+/// Called under the Settings lock, before another writer can restore an earlier choice.
+pub(crate) fn apply_change<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    s: &mut Settings,
+    change: impl FnOnce(&mut Settings),
+) -> bool {
+    let before = (
+        s.voice_model.clone(),
+        s.voice_language.clone(),
+        s.dictation_microphone.clone(),
+        s.zeca,
+    );
+    change(s);
+    let capture_changed =
+        before.0 != s.voice_model || before.1 != s.voice_language || before.2 != s.dictation_microphone;
+    if capture_changed || before.3 != s.zeca {
+        crate::realtime::invalidate(app);
+    }
+    capture_changed
 }
 
 fn path() -> PathBuf {
