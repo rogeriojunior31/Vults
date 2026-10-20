@@ -262,7 +262,9 @@ or replayed as a new user turn. Callers retain any unaccepted capture until its 
 
 The native entry still has no microphone, renderer command or visible voice conversation. V6.4
 backend integration is delivered; physical-device/acoustic timing and live-provider acceptance stay
-open before activation. Next is V6.5's echo-cancellation spike, then V6.6 tools and V6.7 capture/UI.
+open before activation. V6.5.1 now supplies read-only pair inventory and an isolated synthetic spike;
+see [Echo cancellation](echo-cancellation.md). Next is V6.5.2 pinned duplex routing before V6.6 tools
+and V6.7 capture/UI. Whole V6.5 and physical speech qualification remain open.
 Offline socket/native-owner tests cover interruption before/after producer completion, exact
 acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.
 The isolated ALSA null setup above also runs the complete native driver with a synthetic provider:

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 57cbdd97e433 -->
+<!-- source: 991a8d186103 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -180,6 +180,15 @@ entrada do renderer nem gravação persistente de histórico do Chat; interrupç
 desligada na entrada do app até a V6.5. Veja
 [Reprodução nativa e reparo de contexto](reference/realtime-accounting.md#native-playback-and-context-repair)
 para limites, premissas de relógio, testes ALSA nulos isolados e a aceitação física/real pendente.
+
+A V6.5.1 acrescenta o inventário somente de leitura `audio::echo` para pares de módulos WebRTC do
+PipeWire configurados explicitamente. Snapshots opacos vinculam módulo/grupo de fonte e destino e
+identidades de servidor/nós; verificá-los novamente não concede uma rota. Um experimento nativo
+privado qualifica apenas eco sintético/preservação de tons. A saída CPAL atual, somente padrão,
+não alimenta o destino pareado de referência; a V6.5.2 deve fixar os dois streams reais e revogar
+rotas alteradas antes da ativação. A interrupção com alto-falantes continua desligada; fones exigem
+escolha explícita. Não há carregador de módulos de produção nem novo microfone. Veja
+[Cancelamento de eco](reference/echo-cancellation.md) para evidências e limites da aceitação física.
 
 <a id="local-dictation"></a>
 

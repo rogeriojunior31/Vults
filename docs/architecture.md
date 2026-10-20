@@ -166,6 +166,14 @@ barge-in stays disabled at app entry pending V6.5. See
 [Native playback and context repair](reference/realtime-accounting.md#native-playback-and-context-repair)
 for limits, clock assumptions, isolated ALSA null checks and the remaining physical/live acceptance.
 
+V6.5.1 adds read-only `audio::echo` inventory for explicitly configured PipeWire WebRTC module pairs.
+Opaque snapshots bind the module/source/sink group and server/node identities; rechecking them does
+not grant a route lease. A private native experiment qualifies only synthetic echo/tone preservation.
+The existing default-only CPAL output does not feed the paired reference sink, so V6.5.2 must pin
+both actual streams and revoke changed routes before activation. Speaker barge-in stays disabled;
+headphones require an explicit choice. No production module loader or microphone is added. See
+[Echo cancellation](reference/echo-cancellation.md) for evidence and physical acceptance limits.
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/

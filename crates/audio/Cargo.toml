@@ -25,5 +25,10 @@ meeting-capture = ["dep:pulseaudio", "dep:socket2", "dep:hound", "dep:libc"]
 name = "meeting-capture"
 required-features = ["meeting-capture"]
 
+[[example]]
+name = "echo-cancel-spike"
+path = "examples/echo-cancel/main.rs"
+required-features = ["meeting-capture"]
+
 [lints]
 workspace = true

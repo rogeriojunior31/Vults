@@ -1611,3 +1611,15 @@ recovery and detached native output retains the session lease. No microphone, re
 persistent Chat history write is added. App barge-in stays disabled pending V6.5. Offline duplex
 and scripted native checks, plus an isolated CPAL null-driver run, validate the backend contract;
 physical/live speech acceptance remains open. Next: V6.5 echo-cancellation spike, then V6.6-V6.7.
+
+
+**2026-10-19 V6.5.1 native echo-cancellation spike.** Read-only Pulse inventory identifies explicit
+PipeWire WebRTC source/reference-sink pairs by module, group and stable node/server metadata.
+Discovery is not a route lease or acoustic qualification. An isolated private PipeWire/WirePlumber
+experiment with no hardware monitors tests seeded synthetic echo and local tones through the
+installed WebRTC engine. Three runs pass fixed synthetic limits; physical speech/double-talk,
+latency and actual app routing remain open. Configuration/script isolation and strict module
+argument parsing were corrected during independent review. No production module load, dependency,
+microphone entry or barge-in activation is added. Next: V6.5.2 pinned duplex streams and explicit
+device policy, before V6.6 tools and V6.7 capture/UI. Whole V6.5 remains open. See the finite
+V6.5 sequence in Plan Dictation and [Echo cancellation](../reference/echo-cancellation.md).

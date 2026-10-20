@@ -44,7 +44,9 @@ realtime transport/accounting and native turn retention/local recovery. V6.4.1 a
 output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
 provider identities, acknowledged server truncation and in-memory history/one-shot repair. No
 conversation microphone or user-facing realtime continuation is exposed yet. Backend V6.4 is
-delivered; physical/live acceptance stays open. Next: V6.5 echo cancellation, then V6.6-V6.7.
+delivered; physical/live acceptance stays open. V6.5.1 now delivers read-only PipeWire pair inventory
+and an isolated synthetic AEC experiment. Next: V6.5.2 pinned duplex routing, then V6.6-V6.7;
+whole V6.5 and physical speech acceptance remain open.
 
 ## References
 
@@ -2572,16 +2574,37 @@ Delivery sequence:
    acceptance stays an activation gate. Backend V6.4 is delivered; full acceptance remains open.
    See [Native playback and context repair](../reference/realtime-accounting.md#native-playback-and-context-repair).
 
-Next engineering task: **V6.5 echo-cancellation spike**, before V6.6 tools and V6.7 capture/UI.
+Next engineering task: **V6.5.2 pinned duplex routing**, before V6.6 tools and V6.7 capture/UI.
 
 **V6.5 Echo cancellation** (M, spike first)
-- Build:
-  - preferred: detect PipeWire `module-echo-cancel` (WebRTC AEC3) and use its source;
-  - Vults does not load modules silently: Settings explains and offers it with a click, or the user runs it
-    (Q6);
-  - alternative: the `webrtc-audio-processing` crate (BSD), measured.
-- Without AEC, barge-in is off on speakers and on with headphones.
+- Preferred: PipeWire's WebRTC engine with both the clean source and paired reference sink.
+- Vults does not load modules silently. Settings explains and offers setup with a click, or the
+  user runs it (Q6 remains open).
+- An embedded `webrtc-audio-processing` alternative needs evidence that the native route is inadequate.
+- Without qualified AEC, speaker barge-in is off; headphones require an explicit user choice.
 - Port: [PT] 140-172, 326.
+
+### V6.5 delivery sequence
+
+1. **V6.5.1 native inventory and isolated spike** (delivered 2026-10-19).
+   Read-only local Pulse discovery requires explicit WebRTC module ownership, matching source/sink
+   group and stable object/server identities. Rechecking is a snapshot, never route authority.
+   A private PipeWire/WirePlumber experiment feeds synthetic echo and two near-end tones through
+   the actual installed native module, with private configuration/scripts/state, no hardware
+   monitors or desktop routes and fixed acceptance thresholds. Three runs pass the synthetic gate;
+   physical speech/double-talk/latency acceptance is not claimed. Native-only modules without Pulse
+   ownership metadata are unsupported by this first inventory. No extra dependency, production
+   module loader, app capture or barge-in activation is added. See
+   [Echo cancellation](../reference/echo-cancellation.md) for the runnable experiment and evidence.
+2. **V6.5.2 pinned duplex routing and device policy** (next).
+   Bind actual input/output streams to the selected clean source/reference sink, acknowledge targets
+   and prevent silent moves. Revoke the generation on server/module/node/route changes; preserve
+   consumed-output/drain accounting and native exclusivity. The current default-only CPAL output
+   cannot establish that reference route. An explicit headphones choice may bypass AEC; speakers
+   remain non-interruptible without a qualified live route. Resolve Q6 before offering production
+   setup; no silent system module loading. Capture controls and visible activation stay in V6.7.
+   Validate stream pinning, teardown/moves and failure paths before proceeding to V6.6; physical/live
+   speech remains a separate activation gate. Whole V6.5 stays open until this integration lands.
 
 **V6.6 Zeca's voice tools and delegation** (M)
 - Build:

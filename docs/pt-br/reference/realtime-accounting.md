@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 969df6294df8 -->
+<!-- source: 1099cbbce2d7 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -300,8 +300,10 @@ Chamadores retêm qualquer captura ainda não aceita até sua notificação Gene
 
 A entrada nativa ainda não tem microfone, comando do renderer nem conversa de voz visível. A
 integração backend da V6.4 está entregue; tempo de dispositivo/acústica e aceitação com provedor
-real continuam em aberto antes da ativação. A próxima etapa é o spike de cancelamento de eco da
-V6.5, depois ferramentas na V6.6 e captura/interface na V6.7. Testes offline de socket e proprietário
+real continuam em aberto antes da ativação. A V6.5.1 agora fornece inventário de pares somente de
+leitura e um spike sintético isolado; veja [Cancelamento de eco](echo-cancellation.md). A próxima
+etapa é roteamento duplex fixo na V6.5.2, antes de ferramentas na V6.6 e captura/interface na V6.7.
+A V6.5 completa e a qualificação física de fala continuam em aberto. Testes offline de socket e proprietário
 nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,
 admissão do reparo, falha, revogação, aborto e recuperação. A configuração ALSA nula isolada acima
 também executa o driver nativo completo com um provedor sintético:

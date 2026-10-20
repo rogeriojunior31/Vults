@@ -7,6 +7,8 @@ pub mod playback;
 mod resample;
 
 #[cfg(all(target_os = "linux", feature = "meeting-capture"))]
+pub mod echo;
+#[cfg(all(target_os = "linux", feature = "meeting-capture"))]
 pub mod meeting;
 
 pub use capture::{Audio, Capture, CaptureOptions, InputInfo, input_info, microphones};
