@@ -1,5 +1,5 @@
 # Artefatos dos modelos de reuniões
-<!-- source: aea584d4f4b7 -->
+<!-- source: b0b0bb50f55c -->
 
 O instalador opcional da N3 em **Ditado > Configurações de reuniões > Modelos de falantes para reuniões (experimental)**
 prepara os artefatos de análise local de falantes para Linux x86-64 com glibc. Ele não ativa
@@ -149,8 +149,10 @@ voz separados; não são sincronizados nem combinados.
 O backend nativo pode processar em blocos até 30 minutos por fonte, com um único agrupamento
 global de vozes. Uma execução de diarização de 30 minutos de áudio público em CPU levou 61,556
 segundos e atingiu pico de 158.916 KiB de RSS. É um experimento de recursos, não uma transcrição/
-captura completa nem qualificação independente de qualidade. O app ainda grava somente a
-verificação existente de um minuto. Os testes nativos de cancelamento e prioridade passaram,
+captura completa nem qualificação independente de qualidade. O app agora aceita gravação manual
+de quatro horas com armazenamento PCM16 limitado, mas a análise de falantes continua limitada a
+30 minutos por fonte; gravações mais longas mantêm transcrição simples sem rótulos. Os testes
+nativos de cancelamento e prioridade passaram,
 inclusive o cancelamento após três minutos; operações bloqueantes de IO e construção nativa
 continuam cooperativas. A prévia por fonte também foi inspecionada em janelas nativas isoladas
 Black/Light com respostas controladas. Esses testes não cumprem os critérios independentes de

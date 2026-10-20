@@ -944,7 +944,8 @@ console.log("check-surface-continuity: explicit meeting consent, source review, 
   assert.ok(rows.textContent.includes("Voice 2 Other voice."));
   assert.equal(data.microphone.segments.length, 4, "Rendering does not alter source word timing");
   button("System audio").click();
-  assert.ok(rows.textContent.includes("Unknown voice Kept without labels."));
+  assert.ok(rows.textContent.includes("Kept without labels."));
+  assert.ok(!rows.textContent.includes("Unknown voice"), "Unavailable analysis must keep plain text without speaker labels");
   assert.ok(view.element.textContent.includes("Voice identification was unavailable. The transcript is kept without labels."));
   view.setActive(false); await tick(); view.element.remove();
 }

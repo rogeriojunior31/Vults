@@ -2566,3 +2566,9 @@ button.touched-row:hover,
   .voice-conversation { padding: 8px 12px; gap: 6px; }
   .voice-conversation .dictation-heading p { display: none; }
 }
+
+@media (max-height: 440px) {
+  .meeting-check { padding: 6px 12px; }
+  .meeting-check .meeting-state { margin-block: 4px; }
+  .meeting-before-transcript > .meeting-tabs { display: none; }
+}

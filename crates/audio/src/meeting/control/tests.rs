@@ -317,3 +317,25 @@ fn processing_never_reads_a_replaced_symlink_hardlink_or_fifo() {
         assert!(!dir.0.join("mic.wav").exists() && !dir.0.join("system.wav").exists());
     }
 }
+
+#[test]
+fn a_four_hour_owner_keeps_recording_past_one_minute_and_still_stops_explicitly() {
+    let dir = Directory::new();
+    let (ready, started) = mpsc::channel();
+    let mut recording = Recording::spawn(&dir.0, super::super::MAX_SECONDS, move |_, seconds, control| {
+        assert_eq!(seconds, 4 * 60 * 60);
+        assert!(control.started());
+        control.state.lock().unwrap().started = Some(Instant::now() - Duration::from_secs(75));
+        ready.send(()).unwrap();
+        while control.continuing() {
+            std::thread::yield_now();
+        }
+        Ok(report())
+    })
+    .unwrap();
+    started.recv_timeout(Duration::from_secs(2)).unwrap();
+    assert_eq!(recording.status().phase, Phase::Recording);
+    assert!(recording.status().elapsed >= Duration::from_secs(75));
+    recording.stop();
+    assert!(matches!(result(&mut recording).unwrap(), Outcome::Finished(_)));
+}

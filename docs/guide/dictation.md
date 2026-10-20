@@ -693,7 +693,7 @@ and a few quick samples do not establish a latency guarantee for a particular mo
 
 When reporting a problem, include the app version, desktop/session and scale, selected microphone,
 model/language, actual delivery outcome, the relevant timing sample counts and the steps that failed.
-There is no need to share the dictated text. These checks cover the V4 screens; the commands checklist below covers V8. Full-length meetings and realtime voice remain later steps.
+There is no need to share the dictated text. These checks cover the V4 screens; the commands checklist below covers V8. Physical long-meeting acceptance and continuous realtime voice remain separate checks.
 
 ## Voice commands development status
 
@@ -780,7 +780,8 @@ verify the old recording never sends. Review the work page in Black and Light, i
 Real microphone, compositor and end-to-end provider acceptance remain separate from isolated native
 UI fixtures and automated checks; continuing to the next phase does not sign them off.
 
-## Meeting recording check
+<a id="meeting-recording-check"></a>
+## Meeting recording
 
 Optional speaker-analysis files can be prepared in **Dictation > Meeting settings > Meeting speaker models
 (experimental)**. Review the package, confirm the download consent and install within one minute.
@@ -789,11 +790,10 @@ Installation continues when navigating away; an unconfirmed review is discarded.
 activates speaker labels or recording. See [Meeting model artifacts](../reference/meeting-models.md)
 for licenses, verification and the persistent request limit.
 
-On Linux, **Dictation > Meetings** offers recording and local transcription for a check of up to
-one minute. Choose an installed local model in **Dictation > Voice** first. This works with Zeca
+On Linux, **Dictation > Meetings** offers recording for up to **four hours**, followed by local
+transcription. Choose an installed local model in **Dictation > Voice** first. This works with Zeca
 off. Recording/transcribing alone makes no network request or automatic model download.
-Full-length capture remains a later step. **New recording** owns the temporary check;
-**Saved meetings** opens explicitly saved text without recording or making a model request.
+**New recording** owns the temporary recording; **Saved meetings** opens explicitly saved text without recording or making a model request.
 
 Choose **Review audio sources** to read the microphone and system-output monitor without opening
 an audio stream or loading a model. Check both identifiers, any fallback warning, the selected
@@ -805,7 +805,7 @@ requires a new review before starting, and cancels a recording or transcription 
 
 The neutral line, state, timer and actions stay outside the scroll area. **Stop recording** closes
 both streams, then transcribes the microphone and system audio locally, one after the other. At
-one minute recording stops itself and follows the same path. The page shows transcription progress;
+four hours recording stops itself and follows the same path. The page shows transcription progress;
 the microphone is closed while the local model loads and works. Ordinary dictation keeps its
 independent stream and has priority over background meeting decoding. Background chunks yield
 through Whisper's cooperative abort callback; a native cold model load already in progress cannot
@@ -833,14 +833,31 @@ installing models alone never enables it. With this choice, the local preview sh
 **Voice N** or **Unknown voice**, using model-estimated word times where available. Uncertain
 speech remains unknown; if speaker analysis fails or its files are missing, the transcript stays
 available without identification. Voices are separate for Microphone and System audio and may be
-wrong. This preview does not qualify independent PT/EN accuracy or extend the one-minute capture.
+wrong. Speaker analysis remains limited to 30 minutes per source; longer recordings keep their
+plain transcript without voice labels. This preview does not qualify independent PT/EN accuracy.
 
-Only this explicit check saves audio temporarily, under `meeting-audio/` in Vults' data folder.
+Only an explicit meeting recording saves audio temporarily, under `meeting-audio/` in Vults' data folder.
 The directory is private (0700), with 0600 WAVs and an exclusive lock retained through local
 transcription. Normal completion, cancellation and failure attempt cleanup; startup removes
 interrupted files without opening a source. A cleanup error remains visible and no new audio is
-opened until recovery succeeds. Other webviews cannot control a check or read its transcript.
+opened until recovery succeeds. Other webviews cannot control a recording or read its transcript.
 Chat/dictation audio still stays in memory, and voice never answers a permission card.
+
+Each source is downmixed/resampled incrementally to mono 16 kHz PCM16 before writing to disk.
+Stateful resampling preserves each source clock across packets; the two sources remain independent.
+Queues and processing windows are bounded, without retaining all audio in RAM. Four hours of both
+tracks uses less than 1 GiB of temporary audio (about 220 MiB per hour); allow free disk space for
+that audio and normal app work. File-write failures stop capture and attempt cleanup instead of
+publishing a complete transcript. Transcription runs after Stop, in blocks of at most 28 seconds,
+with progress and priority for interactive dictation. Hour-long recording/progress/segment clocks
+use hours:minutes:seconds.
+
+Keep Meetings open while recording or transcribing. A crash or interruption removes leftover
+audio at the next startup; it does not resume the lost recording. Save the text explicitly after
+completion. Summary input remains bounded to 256 KiB across both tracks; a longer transcript is
+refused before a model request, while saving/export remain available. Four-hour capacity is a
+resource bound, not a claim of four hours of physical-device or speech-quality acceptance.
+
 
 
 ### Summary and to-dos

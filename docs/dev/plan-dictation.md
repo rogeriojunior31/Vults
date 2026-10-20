@@ -33,7 +33,7 @@ the bounded V5.3 recording-to-transcript handoff. Independent PT/EN quality qual
 open; see the [consolidated V5.5 checklist](#v55-consolidated-delivery-checklist). V5.6 now has a gated
 summary backend and its Settings/Summary/To-dos interface; V5.7/V5.8 add explicit text-only
 meeting storage/export and the saved Meetings workspace.
-See the [V5.6 delivery sequence](#v56-delivery-sequence). Linux now exposes an explicit one-minute check under Dictation > Meetings; it transcribes both sources locally, deletes temporary audio and keeps the current text in memory; saving a text-only meeting snapshot is explicit. Hardware/compositor acceptance remains pending. V3.5 delivers the documentation checkpoint; real-speech/provider sign-off remains separate. V3.4 now delivers the visible clean-up settings, Dictation Styles editor and applied History labels. V3.3 now freezes per-app style and output language at key-down. V3.2 now connects the pure contract to tool-free
+See the [V5.6 delivery sequence](#v56-delivery-sequence). Linux now exposes explicit recording up to four hours under Dictation > Meetings, with bounded mono PCM16 temporary files, local transcription after Stop and explicit text-only saving. Hardware/compositor acceptance remains pending. V3.5 delivers the documentation checkpoint; real-speech/provider sign-off remains separate. V3.4 now delivers the visible clean-up settings, Dictation Styles editor and applied History labels. V3.3 now freezes per-app style and output language at key-down. V3.2 now connects the pure contract to tool-free
 API/local providers, a default-off switch, durable quota, cancellation and complete-local-text fallback;
 Z6 is already Done (#232), with its separately recorded Responses follow-up unchanged. V1/V2/V4/V8 real microphone/desktop/provider acceptance
 remain separate; N3 is not complete.
@@ -42,16 +42,18 @@ V7 now implements typed MCP questions, explicit local dictation into drafts and 
 setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the turn/end policy, gated
 realtime transport/accounting and native turn retention/local recovery. V6.4.1 adds a bounded CPAL
 output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
-provider identities, acknowledged server truncation and in-memory history/one-shot repair. No
-conversation microphone or user-facing realtime continuation is exposed yet. Backend V6.4 is
+provider identities, acknowledged server truncation and in-memory history/one-shot repair. V6.7.3
+now adds a manual capture entry; continuous realtime continuation remains open. Backend V6.4 is
 delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only PipeWire pair inventory,
 an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
-device policy. Backend V6.5 is delivered. Next: V6.6 tools, then V6.7 capture/UI; Q6 production
-setup and physical/live acceptance remain open before activation. V6.6.1 now routes native finalized
+device policy. Backend V6.5 is delivered; its continuous-turn UI adapter, Q6 production setup and
+physical/live acceptance remain open. V6.6.1 now routes native finalized
 local transcripts through V8 before remote admission. V6.6.2 adds bounded read-only realtime flock
 tools with independent continuation admission. The V6.6.3 publication checks below are accepted
-with Codex consultation disabled. Next engineering work is V6.7 capture/UI; optional Codex
-activation and physical/live acceptance remain explicit gates, not completed work.
+with Codex consultation disabled. V6.7.1/V6.7.2 expose explicit Settings-owned configuration, and
+V6.7.3 adds Nest-owned manual Start/Finish/Cancel with editable text recovery. Continuous turn-end/
+duplex integration, island speaking states, optional Codex activation and physical/live acceptance
+remain open. The maintainer prioritized four-hour meeting capture before resuming that work.
 
 ## References
 
@@ -1802,6 +1804,19 @@ and renderer-check caches are cleared after validation.
 ---
 
 ## V5 Meetings (R5)
+
+**2026-10-20 long-recording priority:** after the maintainer identified the one-minute cap as
+unusable for meetings, manual capture now admits up to four hours. Both sources stream through
+the shared stateful resampler into private mono 16 kHz PCM16 WAVs; the existing 28-second local
+decoder remains the processing owner after Stop. Bounded queues and normalized frame caps keep
+temporary audio below 1 GiB at four hours, independently of source channels/rate. Stop, Cancel,
+page contact, source/model review and cleanup ownership remain in place. This does not add live
+transcription or resumable audio: failures/cancellation delete audio, and startup removes leftovers.
+Speaker analysis stays experimental and limited to 30 minutes per source; longer recordings retain
+plain text without labels. Full-duration physical/speech-quality qualification remains open.
+Native synthetic capture passed 65 seconds with finalized PCM16 readers and cleanup; this is not
+a four-hour soak test. The dated one-minute checkpoints below describe the earlier delivered slice.
+
 
 **Goal.** Record a call (mic + system audio), get a diarized transcript, a summary and to-dos; the audio is
 deleted.

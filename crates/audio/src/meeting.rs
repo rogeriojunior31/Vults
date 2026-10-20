@@ -1,4 +1,4 @@
-//! Two independent, bounded meeting-check streams; no transcription or model request.
+//! Two independent disk-backed meeting streams; bounded queues and mono PCM16 storage.
 
 mod control;
 pub(crate) mod pulse;
@@ -17,6 +17,9 @@ use std::time::{Duration, Instant};
 use pulse::Connection;
 use pulseaudio::protocol::{self, SourceInfo};
 use temporary::TemporaryAudio;
+
+/// Four hours of two mono 16 kHz PCM16 tracks stays below 1 GiB, including WAV headers.
+pub const MAX_SECONDS: u32 = 4 * 60 * 60;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sources {
@@ -124,6 +127,8 @@ struct Writer {
     track: Track,
     limit: u64,
     last_chunk: Instant,
+    input_channels: u16,
+    converter: crate::resample::Converter,
 }
 
 impl Writer {
@@ -132,29 +137,53 @@ impl Writer {
             if !chunk.is_empty() {
                 self.last_chunk = Instant::now();
             }
-            let remaining = self.limit.saturating_sub(self.track.frames) as usize;
-            for frame in chunk
-                .chunks_exact(usize::from(self.track.channels))
-                .take(remaining)
-            {
-                for &sample in frame {
-                    self.wav.write_sample(sample).map_err(|e| e.to_string())?;
-                    self.track.peak = self.track.peak.max(sample.abs());
-                }
-                self.track.frames += 1;
+            if !chunk.len().is_multiple_of(usize::from(self.input_channels)) {
+                return Err("meeting audio contains an incomplete frame".into());
             }
+            let mono: Vec<f32> = chunk
+                .chunks_exact(usize::from(self.input_channels))
+                .map(|frame| {
+                    frame
+                        .iter()
+                        .map(|sample| sample / f32::from(self.input_channels))
+                        .sum()
+                })
+                .collect();
+            let samples = self.converter.push(&mono)?;
+            write_pcm(&mut self.wav, &mut self.track, self.limit, &samples)?;
         }
         Ok(())
     }
 
     fn finish(mut self) -> Result<Track, String> {
         self.drain()?;
+        let tail = self.converter.finish()?;
+        write_pcm(&mut self.wav, &mut self.track, self.limit, &tail)?;
         self.wav.finalize().map_err(|e| e.to_string())?;
         if self.track.frames == 0 {
             return Err("an audio source delivered no frames".into());
         }
         Ok(self.track)
     }
+}
+
+fn write_pcm(
+    wav: &mut hound::WavWriter<BufWriter<File>>,
+    track: &mut Track,
+    limit: u64,
+    samples: &[f32],
+) -> Result<(), String> {
+    if samples.iter().any(|sample| !sample.is_finite()) {
+        return Err("meeting audio contains a non-finite sample".into());
+    }
+    for &sample in samples.iter().take(limit.saturating_sub(track.frames) as usize) {
+        // Resampling may overshoot full scale; the integer cast saturates instead of wrapping.
+        let stored = (sample * 32768.0).round() as i16;
+        wav.write_sample(stored).map_err(|e| e.to_string())?;
+        track.peak = track.peak.max(f32::from(stored).abs() / 32768.0);
+        track.frames += 1;
+    }
+    Ok(())
 }
 
 fn open(
@@ -172,10 +201,10 @@ fn open(
     let wav = hound::WavWriter::new(
         BufWriter::new(file),
         hound::WavSpec {
-            channels: u16::from(channels),
-            sample_rate: rate,
-            bits_per_sample: 32,
-            sample_format: hound::SampleFormat::Float,
+            channels: 1,
+            sample_rate: crate::SAMPLE_RATE,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
         },
     )
     .map_err(|e| e.to_string())?;
@@ -231,18 +260,20 @@ fn open(
             wav,
             chunks,
             track: Track {
-                rate,
-                channels: u16::from(channels),
+                rate: crate::SAMPLE_RATE,
+                channels: 1,
                 frames: 0,
                 peak: 0.0,
             },
-            limit: u64::from(seconds) * u64::from(rate),
+            limit: u64::from(seconds) * u64::from(crate::SAMPLE_RATE),
             last_chunk: Instant::now(),
+            input_channels: u16::from(channels),
+            converter: crate::resample::Converter::new(rate)?,
         },
     ))
 }
 
-/// Explicit dev recording, capped at 60 seconds. WAVs are removed before returning even on failure.
+/// Explicit recording, capped at four hours. WAVs are removed before returning even on failure.
 /// SIGKILL/power loss leaves only private files, removed by the next call under the exclusive lock.
 pub fn record_for(root: &Path, seconds: u32) -> Result<Report, String> {
     let mut recording = Recording::start(root, seconds)?;

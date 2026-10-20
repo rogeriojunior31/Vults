@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 1053e9d000a1 -->
+<!-- source: e5836b64e737 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -776,7 +776,7 @@ modelo ou destino.
 
 Ao relatar um problema, inclua a versão do app, desktop/sessão e escala, microfone selecionado,
 modelo/idioma, resultado real de entrega, quantidade de amostras dos tempos relevantes e os passos
-que falharam. Não é preciso compartilhar o texto ditado. Essas verificações cobrem as telas da V4; o checklist abaixo cobre comandos da V8. Reuniões completas e voz em tempo real continuam como etapas futuras.
+que falharam. Não é preciso compartilhar o texto ditado. Essas verificações cobrem as telas da V4; o checklist abaixo cobre comandos da V8. A validação física de reuniões longas e a voz contínua em tempo real continuam como verificações separadas.
 
 <a id="voice-commands-development-status"></a>
 
@@ -877,7 +877,8 @@ de ponta a ponta continua separada dos testes nativos isolados e automatizados; 
 próxima fase não significa aceitá-los.
 
 <a id="meeting-recording-check"></a>
-## Verificação de gravação de reuniões
+<a id="meeting-recording"></a>
+## Gravação de reuniões
 
 Os arquivos opcionais de análise de falantes podem ser preparados em **Ditado > Configurações de reuniões > Modelos de
 falantes para reuniões (experimental)**. Revise o pacote, confirme o consentimento do download e
@@ -887,11 +888,10 @@ confirmada é descartada. Ela nunca ativa identificação de falantes nem grava�
 [Artefatos dos modelos de reuniões](../reference/meeting-models.md) para licenças, verificação
 e o limite persistente de requisições.
 
-No Linux, **Ditado > Reuniões** oferece gravação e transcrição local para uma verificação de até
-um minuto. Primeiro escolha um modelo local instalado em **Ditado > Voz**. Funciona com o Zeca
+No Linux, **Ditado > Reuniões** oferece gravação de até **quatro horas**, seguida de transcrição
+local. Primeiro escolha um modelo local instalado em **Ditado > Voz**. Funciona com o Zeca
 desligado. Gravar/transcrever sozinho não faz requisições à rede nem baixa modelos automaticamente.
-A captura de reuniões completas continua como etapa futura. **Nova gravação** controla a verificação
-temporária; **Reuniões salvas** abre textos salvos explicitamente sem gravar nem consultar um modelo.
+**Nova gravação** controla a gravação temporária; **Reuniões salvas** abre textos salvos explicitamente sem gravar nem consultar um modelo.
 
 Escolha **Conferir fontes de áudio** para ler o microfone e o monitor da saída do sistema sem abrir
 um stream nem carregar um modelo. Confira os dois identificadores, qualquer aviso de fonte
@@ -902,8 +902,8 @@ confira novamente. A captura fica vinculada aos nomes conferidos. Mudar o modelo
 exige uma nova conferência antes de iniciar e cancela uma gravação ou transcrição em andamento.
 
 A linha neutra, o estado, o cronômetro e as ações ficam fora da área de rolagem. **Parar gravação**
-fecha os dois streams e transcreve microfone e áudio do sistema localmente, um após o outro. Após um
-minuto, a gravação para sozinha e segue o mesmo caminho. A página mostra o progresso da transcrição;
+fecha os dois streams e transcreve microfone e áudio do sistema localmente, um após o outro. Após quatro
+horas, a gravação para sozinha e segue o mesmo caminho. A página mostra o progresso da transcrição;
 o microfone fica fechado enquanto o modelo local é carregado e trabalha. O ditado comum mantém seu
 stream independente e tem prioridade sobre a decodificação da reunião. Os blocos em segundo plano
 cedem pelo callback cooperativo de interrupção do Whisper; um carregamento nativo de modelo já
@@ -935,14 +935,32 @@ mostra **Voz N** ou **Voz desconhecida**, usando tempos de palavras estimados pe
 disponíveis. Falas incertas continuam desconhecidas; se a análise falhar ou seus arquivos
 estiverem ausentes, a transcrição continua disponível sem identificação. As vozes são separadas
 para Microfone e Áudio do sistema e podem estar erradas. Essa prévia não qualifica a precisão
-independente em PT/EN nem estende a captura de um minuto.
+independente em PT/EN. A análise de falantes continua limitada a 30 minutos por fonte; gravações
+mais longas mantêm a transcrição simples sem rótulos de voz.
 
-Somente esta verificação explícita salva áudio temporariamente, em `meeting-audio/` na pasta de dados
+Somente uma gravação explícita de reunião salva áudio temporariamente, em `meeting-audio/` na pasta de dados
 do Vults. O diretório é privado (0700), com WAVs em 0600 e trava exclusiva mantida durante a transcrição
 local. Conclusão normal, cancelamento e falha tentam limpar os arquivos; a inicialização remove sobras
 de interrupções sem abrir uma fonte. Um erro de limpeza continua visível e nenhum novo áudio é aberto
-até a recuperação funcionar. Outras webviews não conseguem controlar uma verificação nem ler sua
+até a recuperação funcionar. Outras webviews não conseguem controlar uma gravação nem ler sua
 transcrição. O áudio de Chat/ditado continua só na memória, e a voz nunca responde a um card de permissão.
+
+Cada fonte é convertida incrementalmente para PCM16 mono de 16 kHz antes da gravação em disco.
+A reamostragem com estado preserva o relógio de cada fonte entre pacotes; as duas fontes continuam
+independentes. Filas e janelas de processamento são limitadas, sem manter todo o áudio na RAM.
+Quatro horas das duas faixas usam menos de 1 GiB de áudio temporário, cerca de 220 MiB por hora;
+reserve espaço livre para esse áudio e para o funcionamento normal do app. Falhas de escrita
+interrompem a captura e tentam limpar os arquivos, em vez de publicar uma transcrição completa.
+A transcrição ocorre depois de Parar, em blocos de até 28 segundos, com progresso e prioridade para
+o ditado interativo. Relógios de gravação/progresso/segmentos acima de uma hora usam horas:minutos:segundos.
+
+Mantenha Reuniões aberto durante a gravação ou transcrição. Uma queda ou interrupção remove o áudio
+restante na próxima inicialização; não retoma a gravação perdida. Salve o texto explicitamente após
+concluir. A entrada dos resumos continua limitada a 256 KiB somando as duas faixas; uma transcrição
+maior é recusada antes de consultar um modelo, enquanto salvar/exportar continua disponível. A
+capacidade de quatro horas é um limite de recursos, não uma declaração de validação física ou de
+qualidade de fala durante quatro horas.
+
 
 
 <a id="summary-and-to-dos"></a>

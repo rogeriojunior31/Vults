@@ -181,3 +181,10 @@ fn identification_requires_an_available_preview_and_a_new_explicit_choice() {
     next.begin(7, true, false, now).expect("normal transcription");
     assert!(matches!(next.action, Some(Action::Begin(7, false))));
 }
+
+#[test]
+fn reviewed_capture_reports_the_same_four_hour_limit_as_the_native_owner() {
+    assert_eq!(Snapshot::default().max_seconds, 4 * 60 * 60);
+    #[cfg(target_os = "linux")]
+    assert_eq!(Snapshot::default().max_seconds, vults_audio::meeting::MAX_SECONDS);
+}

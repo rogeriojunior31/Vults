@@ -1939,3 +1939,35 @@ The private profile and app/server are stopped and removed after QA. The local t
 remains absent, not passed. V6.7.3 still needs continuous-turn integration; next connect the existing
 native end-of-turn/duplex adapters, followed by V6.7.4 island feedback and physical/live acceptance.
 K8 and Codex consultation qualification remain open.
+
+
+**2026-10-20 long-meeting capture prioritized.** The maintainer rejected the one-minute recording
+check as insufficient for real meetings and authorized prioritizing longer capture. Manual Meetings
+now reports/adopts the shared four-hour native cap. Independent source packets are downmixed and
+statefully resampled before disk writes to mono 16 kHz PCM16, with saturating conversion and peak
+metadata matching stored samples. Both tracks together stay below 1 GiB at the cap; bounded queues
+and resampler windows do not retain the full recording in memory. The existing local decoder
+processes finalized tracks in at most 28-second chunks after Stop, with dictation priority.
+Cancellation, reviewed sources/model/language, the page lease and private-file cleanup are retained.
+There is no live transcription, audio archive or crash resume. Startup still deletes leftover audio.
+The 256 KiB summary input bound remains separate; saving/export still accepts longer transcripts.
+
+Hour-aware clocks cover recording/progress/segments. UI copy discloses four hours, temporary storage
+and the experimental 30-minute speaker limit. Unavailable identification now shows the promised
+plain transcript without misleading Unknown labels. In the minimum window, pre-transcript tabs yield
+space to the named source/consent scroller; completed transcripts retain their tabs and actions.
+
+Validation: 1,429 workspace tests pass (17 documented ignores), 10 evals, build, all 19 renderer/
+bridge checks, workspace Clippy with warnings denied, formatting and repository guards pass. Unit
+checks cover 75-second streamed PCM, exact clocks at 8/44.1/192 kHz, clipping, failed writes/cleanup,
+the four-hour owner beyond a minute and matching app limits. An explicit isolated native PipeWire/
+Pulse test recorded 65 seconds from synthetic sources only, finalized both mono PCM16 readers and
+removed both WAVs; 1,041,280/1,040,960 frames retained their independent source clocks. It used no
+physical microphone/output, model, provider or user configuration. Native Tauri/WebKit inspection
+uses controlled owners at 1180 x 820 and 480 x 360, Black/Light, ready/recording/transcribing states,
+source-consent focus, hour clocks/progress and all four languages. The minimum keeps at least
+48 pixels for source/consent review and actions outside it. Private app/audio/server processes and
+profiles/caches are removed afterward; the user's app remains closed. The local task-actions
+script remains absent, not passed. Four-hour physical soak, speech-quality acceptance, background/
+crash-resume UX and long-input hierarchical summaries are not claimed complete. V6.7 continuous-turn
+integration and K8 remain open after this user-prioritized meeting adjustment.

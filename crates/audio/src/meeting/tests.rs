@@ -165,10 +165,10 @@ fn writer(file: File, channels: u16, rate: u32, limit: u64) -> (mpsc::SyncSender
     let wav = hound::WavWriter::new(
         BufWriter::new(file),
         hound::WavSpec {
-            channels,
-            sample_rate: rate,
-            bits_per_sample: 32,
-            sample_format: hound::SampleFormat::Float,
+            channels: 1,
+            sample_rate: crate::SAMPLE_RATE,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
         },
     )
     .expect("WAV header");
@@ -178,27 +178,27 @@ fn writer(file: File, channels: u16, rate: u32, limit: u64) -> (mpsc::SyncSender
             wav,
             chunks,
             track: Track {
-                channels,
-                rate,
+                channels: 1,
+                rate: crate::SAMPLE_RATE,
                 frames: 0,
                 peak: 0.0,
             },
             limit,
             last_chunk: Instant::now(),
+            input_channels: channels,
+            converter: crate::resample::Converter::new(rate).unwrap(),
         },
     )
 }
 
 #[test]
-fn separate_wavs_retain_native_formats_and_bound_frame_counts() {
+fn separate_wavs_normalize_to_bounded_mono_pcm16() {
     let dir = Directory::new();
     let temporary = TemporaryAudio::open(&dir.0).expect("directory");
     let (mic_tx, mut mic) = writer(temporary.file("mic.wav").expect("mic"), 1, 16_000, 3);
     let (sys_tx, mut system) = writer(temporary.file("system.wav").expect("system"), 2, 48_000, 2);
     mic_tx.send(vec![0.1, 0.2, 0.3, 0.4]).expect("mic chunk");
-    sys_tx
-        .send(vec![0.5, -0.5, 0.25, -0.25, 0.9, -0.9])
-        .expect("output chunk");
+    sys_tx.send(vec![0.5; 48]).expect("output chunk");
     mic.drain().expect("write mic");
     system.drain().expect("write output");
     assert_eq!(mic.finish().expect("finalize mic").frames, 3);
@@ -215,14 +215,17 @@ fn separate_wavs_retain_native_formats_and_bound_frame_counts() {
             system.spec().sample_rate,
             system.duration()
         ),
-        (2, 48_000, 2)
+        (1, 16_000, 2)
     );
     assert_eq!(
         system
-            .into_samples::<f32>()
+            .into_samples::<i16>()
             .collect::<Result<Vec<_>, _>>()
             .expect("samples"),
-        [0.5, -0.5, 0.25, -0.25]
+        crate::resample(&[0.5; 48], 2, 48_000).unwrap()[..2]
+            .iter()
+            .map(|sample| (sample * 32768.0).round() as i16)
+            .collect::<Vec<_>>()
     );
     temporary.finish().expect("remove both");
     assert!(!dir.0.join("mic.wav").exists() && !dir.0.join("system.wav").exists());
@@ -231,7 +234,7 @@ fn separate_wavs_retain_native_formats_and_bound_frame_counts() {
 #[test]
 fn empty_stream_and_duration_errors_leave_no_audio() {
     let dir = Directory::new();
-    for seconds in [0, 61, u32::MAX] {
+    for seconds in [0, MAX_SECONDS + 1, u32::MAX] {
         assert!(record_for(&dir.0, seconds).is_err());
         assert!(!dir.0.exists(), "reject before opening devices or touching disk");
     }
@@ -240,4 +243,87 @@ fn empty_stream_and_duration_errors_leave_no_audio() {
     assert!(mic.finish().is_err());
     drop(temporary);
     assert!(!dir.0.join("mic.wav").exists());
+}
+
+#[test]
+fn long_capture_streams_to_fixed_rate_pcm_without_retaining_the_meeting() {
+    let dir = Directory::new();
+    let temporary = TemporaryAudio::open(&dir.0).unwrap();
+    let seconds = 75_u32;
+    let frames = u64::from(seconds) * u64::from(crate::SAMPLE_RATE);
+    let (tx, mut output) = writer(temporary.file("mic.wav").unwrap(), 2, 48_000, frames);
+    for block in 0..seconds as usize * 100 {
+        let mut chunk = Vec::with_capacity(960);
+        for frame in 0..480 {
+            let tone = ((block * 480 + frame) as f32 * std::f32::consts::TAU * 1000.0 / 48_000.0).sin();
+            chunk.extend([tone * 0.5, tone * 0.25]);
+        }
+        tx.send(chunk).unwrap();
+        output.drain().unwrap();
+        assert!(output.track.frames <= frames);
+    }
+    let report = output.finish().unwrap();
+    assert_eq!((report.channels, report.rate, report.frames), (1, 16_000, frames));
+    assert!((report.peak - 0.375).abs() < 0.02);
+    let file = temporary.reader("mic.wav").unwrap();
+    let bytes = file.metadata().unwrap().len();
+    let reader = hound::WavReader::new(file).unwrap();
+    assert_eq!(reader.duration(), 75 * 16_000);
+    assert_eq!(reader.spec().sample_format, hound::SampleFormat::Int);
+    assert_eq!(reader.spec().bits_per_sample, 16);
+    assert!(
+        bytes <= frames * 2 + 128,
+        "Storage grows only with normalized PCM16"
+    );
+    assert!(2 * (u64::from(MAX_SECONDS) * 16_000 * 2 + 128) < 1024 * 1024 * 1024);
+    drop(reader);
+    temporary.finish().unwrap();
+    assert!(!dir.0.join("mic.wav").exists());
+}
+
+#[test]
+fn clipped_audio_and_failed_disk_writes_never_wrap_or_report_success() {
+    let dir = Directory::new();
+    let temporary = TemporaryAudio::open(&dir.0).unwrap();
+    let (tx, mut output) = writer(temporary.file("mic.wav").unwrap(), 1, 16_000, 2);
+    tx.send(vec![2.0, -2.0]).unwrap();
+    output.drain().unwrap();
+    assert_eq!(output.finish().unwrap().peak, 1.0);
+    let samples = hound::WavReader::new(temporary.reader("mic.wav").unwrap())
+        .unwrap()
+        .into_samples::<i16>()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(samples, [i16::MAX, i16::MIN]);
+    drop(temporary.file("system.wav").unwrap());
+    let (tx, mut output) = writer(temporary.reader("system.wav").unwrap(), 1, 16_000, 20_000);
+    tx.send(vec![0.5; 20_000]).unwrap();
+    assert!(
+        output.drain().is_err(),
+        "A write error cannot become a completed track"
+    );
+    drop(output);
+    temporary.finish().unwrap();
+    assert!(!dir.0.join("mic.wav").exists() && !dir.0.join("system.wav").exists());
+}
+
+#[test]
+fn source_clocks_survive_packet_boundaries_at_low_fractional_and_high_rates() {
+    for rate in [8_000, 44_100, 192_000] {
+        let dir = Directory::new();
+        let temporary = TemporaryAudio::open(&dir.0).unwrap();
+        let (tx, mut output) = writer(temporary.file("mic.wav").unwrap(), 2, rate, u64::MAX);
+        let frames = rate as usize + 137;
+        for start in (0..frames).step_by(137) {
+            tx.send(vec![0.1; (frames - start).min(137) * 2]).unwrap();
+            output.drain().unwrap();
+        }
+        let report = output.finish().unwrap();
+        assert_eq!(report.frames, frames as u64 * 16_000 / u64::from(rate));
+        let wav = hound::WavReader::new(temporary.reader("mic.wav").unwrap()).unwrap();
+        assert_eq!(u64::from(wav.duration()), report.frames);
+        assert_eq!((wav.spec().channels, wav.spec().sample_rate), (1, 16_000));
+        drop(wav);
+        temporary.finish().unwrap();
+    }
 }
