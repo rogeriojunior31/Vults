@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: b018306c08ce -->
+<!-- source: 74f22689a7ad -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -152,6 +152,11 @@ próxima verificação do prazo; o encerramento do dispositivo pode demorar mais
 Essa opção ainda precisa de aceitação com microfone real, fala e provedor. Voz nunca responde
 cartões de permissão. Rotas contínuas já mantêm o microfone aberto com sua própria confirmação e
 não oferecem essa escolha separada.
+
+![Conversa por voz após expirar o prazo de resposta](../../assets/voice-conversation.png)
+
+Exemplo controlado da interface: o microfone fica desligado após expirar e a conversa pode continuar.
+A captura de tela usa dados de teste, sem gravação física nem solicitação ao provedor.
 
 <a id="continuous-microphone-routes"></a>
 ## Rotas com microfone contínuo

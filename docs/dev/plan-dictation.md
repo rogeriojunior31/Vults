@@ -3757,3 +3757,11 @@ Codex consultation also retains its external engineering gate: synthetic CLI qua
 not prove subscription-only credential binding during concurrent external login changes. Its
 unavailable capability stays false. The user has not selected a separately billed API replacement.
 K8, V6.7 physical/live acceptance and the earlier speech/meeting release-quality gates remain open.
+
+### Maintainer validation before publication
+
+On 2026-10-20 the maintainer reported validation of the current default app with their personal
+configuration and authorized the PR. The existing Turbo/Portuguese selection, 30-day dictation
+retention and disabled realtime API consent were preserved. This records general local acceptance;
+no per-case quality/latency measurements or paid-provider qualification were reported. The remaining
+human and external release gates above stay explicit. The app was closed before cache cleanup.

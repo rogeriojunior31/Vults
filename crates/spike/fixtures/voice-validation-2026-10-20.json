@@ -223,7 +223,7 @@
   },
   "documentation": {
     "reviewed_pairs": 40,
-    "local_links_checked": 760,
+    "local_links_checked": 762,
     "errors": []
   },
   "privacy": {
@@ -277,5 +277,12 @@
       "owner": "engineering-qualification",
       "check": "Subscription-only credential binding under concurrent external auth changes remains unqualified. Synthetic CLI probes characterize the issue; the existing unavailable capability stays false."
     }
-  ]
+  ],
+  "maintainerAcceptance": {
+    "date": "2026-10-20",
+    "scope": "General local validation of the default app using the personal profile; PR publication authorized.",
+    "perCaseQualityOrLatencyMeasurementsReported": false,
+    "realtimeApiEnabled": false,
+    "remainingReleaseGatesUnchanged": true
+  }
 }

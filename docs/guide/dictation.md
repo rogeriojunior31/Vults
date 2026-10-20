@@ -135,6 +135,11 @@ This opt-in path still needs real microphone, speech and provider acceptance. Vo
 permission cards. Continuous routes already keep their microphone open under their own confirmation
 and do not offer this separate choice.
 
+![Voice conversation after the answer window expires](../assets/voice-conversation.png)
+
+Controlled interface example: the microphone is off after expiry and the conversation can continue.
+The screenshot uses a test fixture, with no physical capture or provider request.
+
 ## Continuous microphone routes
 
 **Microphone mode** defaults to **Manual turns**. For interruptions by voice, choose
