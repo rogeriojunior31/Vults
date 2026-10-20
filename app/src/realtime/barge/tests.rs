@@ -250,6 +250,7 @@ async fn the_native_pump_delivers_signals_and_generation_bound_replay_without_up
             cancel,
         },
         detector,
+        None,
         move || {
             if supply.load(Ordering::SeqCst) && !supplied {
                 supplied = true;
@@ -408,6 +409,7 @@ async fn closed_native_input_finishes_the_driver_without_starting_detection() {
                 cancel,
             },
             detector,
+            None,
             || Ok(None),
             |mut io| async move {
                 assert!(io.input.recv().await.is_none());
@@ -418,4 +420,76 @@ async fn closed_native_input_finishes_the_driver_without_starting_detection() {
     .await
     .unwrap();
     assert!(result.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn routed_capture_uses_the_existing_stream_and_commits_only_after_finish() {
+    let (detector, _state) = fixture(|_, _, _| panic!("no playback to probe"));
+    let owner = Arc::new(State::default());
+    let (lease, _) = owner.begin().unwrap();
+    let assembler =
+        super::super::routed_capture::Assembler::new(Arc::new(lease), detector.active.clone(), |pcm, _| {
+            assert_eq!(pcm, vec![42; RATE / 2]);
+            Ok("What is the flock doing?".into())
+        });
+    let mut turn = vults_voice::turn::Turn::new(vults_voice::turn::BargeIn::Headphones);
+    let listen = turn.start(Duration::ZERO).unwrap();
+    let (send, input) = mpsc::channel(4);
+    let (output, mut events) = mpsc::channel(32);
+    let (_cancel, cancel) = tokio::sync::watch::channel(false);
+    let supply = Arc::new(AtomicBool::new(false));
+    let supply_audio = supply.clone();
+    let worker = tokio::spawn(pump(
+        Channels {
+            input,
+            output,
+            cancel,
+        },
+        detector,
+        Some(assembler),
+        move || {
+            Ok(supply_audio
+                .swap(false, Ordering::SeqCst)
+                .then(|| vec![42; RATE / 2]))
+        },
+        move |mut io| async move {
+            io.output.send(Event::Action(listen)).await.unwrap();
+            let Command::Turn { generation, turn } = io.input.recv().await.unwrap() else {
+                panic!("expected assembled turn")
+            };
+            assert_eq!(generation, listen.generation);
+            assert_eq!(turn.transcript(), Some("What is the flock doing?"));
+            assert_eq!(&*turn.samples(), &vec![42; RATE / 2]);
+            assert!(io.input.try_recv().is_err());
+            Ok(None)
+        },
+    ));
+    assert!(matches!(events.recv().await.unwrap(), Event::Action(_)));
+    send.send(Command::Capture {
+        generation: listen.generation,
+        operation: crate::realtime::RoutedCapture::Begin,
+    })
+    .await
+    .unwrap();
+    supply.store(true, Ordering::SeqCst);
+    assert!(matches!(
+        events.recv().await.unwrap(),
+        Event::Capture(crate::realtime::CapturePhase::Recording)
+    ));
+    assert!(matches!(events.recv().await.unwrap(), Event::Input(_)));
+    assert!(!worker.is_finished());
+    send.send(Command::Capture {
+        generation: listen.generation,
+        operation: crate::realtime::RoutedCapture::Finish,
+    })
+    .await
+    .unwrap();
+    assert!(
+        tokio::time::timeout(Duration::from_secs(2), worker)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap()
+            .is_none()
+    );
 }

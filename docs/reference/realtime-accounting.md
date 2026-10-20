@@ -339,7 +339,7 @@ or replayed as a new user turn. Callers retain any unaccepted capture until its 
 V6.5.2 adds a separate Linux `run_routed` entry, guarded before native capture by the existing
 Settings consent, cancellation and epoch authority. It pins both native streams to an explicitly
 selected AEC pair or devices, retains its lease through teardown and emits bounded memory-only
-Input events to the native caller. The caller must assemble and commit complete turns; capture is
+Input events to the native caller. Complete turns still require explicit native admission; capture is
 never uploaded automatically. Explicit headphones/AEC policy stays separate from temporary route
 verification; an unverified route clears retained speech/probes before deferred playback events.
 The ordinary CPAL entry keeps voice barge-in disabled. No routed renderer command or duplex
@@ -352,10 +352,16 @@ bound local scratch transcription. Its words only confirm/reject a probe; they c
 answer permissions or create a user turn. A single worker holds the desktop lease until actual
 inference/model teardown exits. Cancellation, route loss, stale work and deadlines suppress late
 results. On confirmation, a typed memory-only Replay event follows the new Listen action, carrying
-the retained onset/pre-roll under the new generation. Complete-turn assembly/commit remain the
-native caller's responsibility; no routed UI switch, automatic upload or phone/card authority is
-added. Existing truncation acknowledgements, heard-prefix history and next-turn repair still own
-interruption. Physical/live validation and routed assembly/selection UI remain open.
+the retained onset/pre-roll under the new generation. Generation-bound native Capture operations now
+assemble a following turn from that same stream: Begin takes the replay plus subsequent PCM, Finish
+alone starts final local decoding and submits the complete turn, and Cancel discards it. The original
+24 kHz audio remains bounded to 100 ms through 30 seconds; it is not resampled back from the local
+16 kHz decode. One final decode at a time, a 60-second deadline, live route/epoch checks and worker-held
+leases suppress stale results without blocking cancellation. The existing local-command router runs
+before provider admission. Replay/probe evidence never commits by itself. No routed UI switch or
+phone/card authority is added. Existing truncation acknowledgements, heard-prefix history and
+next-turn repair still own interruption and gate subsequent uploads. Physical/live validation,
+explicit route selection/consent UI and routed control wiring remain open.
 
 Offline socket/native-owner tests cover interruption before/after producer completion, exact
 acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.

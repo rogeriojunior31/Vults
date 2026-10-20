@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 7e0f69f4565c -->
+<!-- source: b592dbe411cc -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -386,7 +386,7 @@ A V6.5.2 acrescenta a entrada Linux separada `run_routed`, protegida antes da ca
 consentimento existente das Configurações, cancelamento e autoridade da geração. Ela fixa os dois
 streams nativos em um par AEC ou dispositivos escolhidos explicitamente, mantém sua concessão até
 o fim da destruição e emite eventos Input limitados somente em memória ao chamador nativo. O
-chamador deve montar e confirmar turnos completos; a captura nunca é enviada automaticamente.
+envio de turnos completos ainda exige admissão nativa explícita; a captura nunca é enviada automaticamente.
 A política explícita de fones/AEC fica separada da verificação temporária da rota; uma rota não
 verificada limpa fala/provas retidas antes de eventos adiados da reprodução. A entrada CPAL comum
 mantém a interrupção por voz desativada. Não há comando roteado do renderer nem interface de conversa
@@ -402,11 +402,18 @@ confirmam/rejeitam uma verificação; não chamam ferramentas, respondem permiss
 do usuário. Um único worker mantém a concessão do desktop até a saída real da inferência/destruição
 dos modelos. Cancelamento, perda da rota, trabalho antigo e prazos suprimem resultados atrasados.
 Na confirmação, um evento Replay tipado e somente em memória vem depois da nova ação Listen,
-levando o início retido da fala/trecho anterior na nova geração. Montagem/confirmação de turnos
-completos ainda cabem ao chamador nativo; não há controle de rota na interface, envio automático
-nem autoridade sobre celular/cartões. Confirmações de truncamento, histórico do trecho ouvido e
-correção do próximo turno continuam responsáveis pela interrupção. Validação física/com provedor
-real e montagem/seleção da rota na interface continuam abertas.
+levando o início retido da fala/trecho anterior na nova geração. Operações Capture nativas vinculadas
+à geração agora montam o turno seguinte nesse mesmo stream: Begin recebe o replay e o PCM posterior,
+somente Finish inicia a decodificação local final e envia o turno completo, e Cancel o descarta.
+O áudio original de 24 kHz fica limitado entre 100 ms e 30 segundos; ele não é reamostrado de volta
+a partir da decodificação local de 16 kHz. Uma decodificação final por vez, prazo de 60 segundos,
+verificações de rota/geração ao vivo e concessões mantidas pelos workers suprimem resultados antigos
+sem bloquear o cancelamento. O roteador de comandos locais existente atua antes da admissão pelo
+provedor. Replay/evidência de verificação nunca confirma por conta própria. Não há controle de rota
+na interface nem autoridade sobre celular/cartões. Confirmações de truncamento, histórico do trecho
+ouvido e correção do próximo turno continuam responsáveis pela interrupção e bloqueiam envios
+posteriores até estarem prontos. Validação física/com provedor real, seleção/consentimento explícito
+na interface e conexão dos controles da rota continuam abertos.
 
 Testes offline de socket e proprietário
 nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,

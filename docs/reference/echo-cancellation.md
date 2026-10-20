@@ -76,12 +76,18 @@ Chat draft or provider input. Empty/failed/expired or revoked results cannot con
 One bounded native worker retains the desktop lease through inference and model destruction.
 Cancellation, route loss, replaced generations and closed owners suppress late publication. On a
 confirmed interruption, `Replay` follows the new `Listen` action and carries the retained onset and
-pre-roll under that exact generation. The native caller still owns complete-turn assembly and an
-explicit commit; the adapter does not automatically upload/save audio or send it to Chat.
+pre-roll under that exact generation. Native `Command::Capture` now accepts generation-bound
+`Begin`, `Finish` and `Cancel` operations on this same stream. Begin seeds capture with that replay
+and appends packets received after Begin, keeping up to 30 seconds of 24 kHz PCM16; it does not open a second microphone. Only Finish starts a separate,
+cancellable local final transcription. Valid final words accompany the original PCM into the existing
+complete-turn router; scratch probe words are never reused. Empty/failed decoding, cancellation,
+replacement, route loss and the 60-second decode deadline prevent submission. The actual worker keeps
+the desktop lease through teardown. Replay alone never records/commits a following turn, and no audio
+is saved or sent to Chat.
 
 Chosen headphones/AEC policy remains distinct from live route validity. The ordinary Nest voice
 page still uses manual capture and the Stop response button; this adds no routed UI activation.
-Routed turn assembly, explicit route selection/consent UI and physical/live qualification remain
+Explicit route selection/consent UI, routed control wiring and physical/live qualification remain
 V6.7 work. Q6's production setup choice is open; Vults loads no system modules silently.
 
 ## Reproduce the isolated experiment

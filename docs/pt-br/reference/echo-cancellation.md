@@ -1,5 +1,5 @@
 # Cancelamento de eco
-<!-- source: f6c6f9bda567 -->
+<!-- source: d60e3a8baa87 -->
 
 A V6.5.1 qualifica um caminho nativo no Linux com inventário somente de leitura e um experimento
 sintético reproduzível. A V6.5.2 acrescenta propriedade duplex nativa explícita para essa rota e
@@ -85,13 +85,20 @@ do provedor. Resultados vazios, com falha, expirados ou revogados não confirmam
 Um único worker nativo limitado mantém a concessão do desktop durante inferência e destruição dos
 modelos. Cancelamento, perda da rota, gerações substituídas e encerramento do proprietário suprimem
 publicação atrasada. Após uma interrupção confirmada, `Replay` vem depois da nova ação `Listen` e
-carrega o início retido da fala e seu trecho anterior nessa geração exata. O chamador nativo ainda
-monta turnos completos e os confirma explicitamente; o adaptador não envia/salva áudio automaticamente
-nem o manda ao Chat.
+carrega o início retido da fala e seu trecho anterior nessa geração exata. `Command::Capture` nativo
+agora aceita as operações `Begin`, `Finish` e `Cancel` vinculadas à geração nesse mesmo stream. Begin
+inicia a captura com esse replay e acrescenta pacotes recebidos após Begin, mantendo até 30 segundos
+de PCM16 de 24 kHz; não abre um segundo microfone.
+Somente Finish inicia uma transcrição local final separada e cancelável. Palavras finais válidas
+acompanham o PCM original até o roteador existente de turnos completos; palavras da verificação
+nunca são reutilizadas. Decodificação vazia/com falha, cancelamento, substituição, perda da rota e o
+prazo de 60 segundos impedem envio. O worker real mantém a concessão do desktop durante o
+encerramento. Replay sozinho nunca grava/confirma um turno seguinte, e nenhum áudio é salvo ou
+enviado ao Chat.
 
 A política escolhida de fones/AEC continua separada da validade da rota ao vivo. A página de voz
 comum do Nest ainda usa captura manual e o botão Interromper resposta; isso não ativa uma rota na
-interface. Montagem de turnos da rota, interface de seleção/consentimento explícito e qualificação
+interface. Seleção/consentimento explícito na interface, conexão dos controles da rota e qualificação
 física/com provedor real continuam na V6.7. A decisão de configuração de produção da Q6 segue aberta;
 o Vults não carrega módulos do sistema silenciosamente.
 

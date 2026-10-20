@@ -2836,10 +2836,14 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    clicks cannot interrupt a different generation. The native routed entry now connects fresh VAD
    evidence and token-bound scratch transcription to the existing interruption machine. Its
    eight-second ring emits the retained onset/pre-roll in a typed Replay event after the new Listen;
-   it does not assemble/upload a following turn. One bounded worker retains its lease through real
-   teardown; route/model preflight, cancellation, stale generations and probe deadlines fail closed.
-   This is native-only: the Nest keeps manual capture. Next: routed turn assembly and explicit
-   route-selection/consent UI, then V6.7.4
+   it does not automatically assemble/upload a following turn. Generation-bound native Capture
+   Begin/Finish/Cancel operations now assemble replay plus subsequent PCM from the same routed stream,
+   without a second microphone. Explicit Finish performs a separate final local decode and sends the
+   complete 100 ms to 30-second original 24 kHz turn through the existing local-command/provider gates.
+   Cancellation, replacement, route/epoch loss, invalid words and the 60-second deadline suppress late
+   submission; one final worker retains its lease through actual teardown. Probe words remain scratch
+   evidence only. This is native-only: the Nest keeps manual capture. Next: explicit route-selection/
+   consent UI and routed control wiring, then V6.7.4
    island feedback and physical/live conversation sign-off.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before

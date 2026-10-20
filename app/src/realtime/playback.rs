@@ -15,8 +15,19 @@ use vults_voice::turn::{self, Action, Effect, Generation, Probe, heard};
 
 #[derive(Debug)]
 pub enum Command {
-    Turn { generation: Generation, turn: Turn },
-    Signal { generation: Generation, signal: Signal },
+    Turn {
+        generation: Generation,
+        turn: Turn,
+    },
+    Signal {
+        generation: Generation,
+        signal: Signal,
+    },
+    #[cfg(target_os = "linux")]
+    Capture {
+        generation: Generation,
+        operation: super::RoutedCapture,
+    },
 }
 #[derive(Debug, Clone, Copy)]
 pub enum Signal {
@@ -444,6 +455,8 @@ pub(super) async fn drive<
                             } else if sender.as_ref().ok_or(Failure::Transport)?.try_send(transport::Command::Interrupt { identity, played_frames:cursor.played_frames }).is_err() { break Err(Failure::Output); }
                         }
                     },
+                    #[cfg(target_os = "linux")]
+                    Some(Command::Capture { .. }) => {},
                     None => closed = true,
                 }
             },

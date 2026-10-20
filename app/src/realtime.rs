@@ -18,6 +18,10 @@ pub use playback::{Channels, Command, Event, Input, LocalReply, Record, Signal};
 #[cfg(target_os = "linux")]
 mod barge;
 #[cfg(target_os = "linux")]
+mod routed_capture;
+#[cfg(target_os = "linux")]
+pub use routed_capture::Operation as RoutedCapture;
+#[cfg(target_os = "linux")]
 mod capture;
 #[cfg(target_os = "linux")]
 mod consultation;

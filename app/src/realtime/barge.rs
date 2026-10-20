@@ -1,4 +1,4 @@
-//! Native routed speech/probes only. No device selection, microphone admission, tools or uploads.
+//! Explicit routed capture and local interruption; no device selection or microphone admission.
 use super::{Channels, Command, Event, Input, Lease, Signal, Turn, local};
 use std::{
     collections::VecDeque,
@@ -343,6 +343,20 @@ pub(super) async fn drive<F: Future<Output = std::result::Result<Option<(Turn, F
                 .upgrade()
                 .is_some_and(|devices| devices.ready().is_ok_and(|ready| ready))
     });
+    let decode_app = app.clone();
+    let decode_model = model.clone();
+    let decode_language = language.clone();
+    let decode_path = path.clone();
+    let assembler =
+        super::routed_capture::Assembler::new(lease.clone(), authorized.clone(), move |pcm, stop| {
+            let input: Vec<f32> = pcm.iter().map(|s| f32::from(*s) / 32768.0).collect();
+            let pcm = vults_audio::resample(&input, 1, RATE as u32).map_err(|_| Failure::Input)?;
+            let native = crate::voice::transcriber(&decode_app, &decode_model).map_err(|_| Failure::Input)?;
+            native
+                .transcribe_cancellable(&pcm, decode_language.as_deref(), Some(&decode_path), stop, true)
+                .map_err(|_| Failure::Input)?
+                .ok_or(Failure::Input)
+        });
     let (mut vad, mut transcriber) = (None, None);
     let detector = Detector::start(lease, authorized, move |kind, pcm, stop| {
         if stop.load(Ordering::SeqCst) {
@@ -377,12 +391,13 @@ pub(super) async fn drive<F: Future<Output = std::result::Result<Option<(Turn, F
             }
         }
     })?;
-    pump(channels, detector, move || devices.input(), play).await
+    pump(channels, detector, Some(assembler), move || devices.input(), play).await
 }
 
 async fn pump<F: Future<Output = std::result::Result<Option<(Turn, Failure)>, Failure>>>(
     mut channels: Channels,
     mut detector: Detector,
+    mut assembler: Option<super::routed_capture::Assembler>,
     mut input_audio: impl FnMut() -> std::result::Result<Option<Vec<i16>>, Failure>,
     play: impl FnOnce(Channels) -> F,
 ) -> std::result::Result<Option<(Turn, Failure)>, Failure> {
@@ -408,19 +423,41 @@ async fn pump<F: Future<Output = std::result::Result<Option<(Turn, Failure)>, Fa
                     Event::Speaking(generation) => { detector.speaking(*generation); None },
                     _ => None,
                 };
+                if let Some(assembler) = &mut assembler {
+                    assembler.event(&event);
+                    if let Some(replay) = &replay { assembler.event(replay); }
+                }
                 channels.output.try_send(event).map_err(|_| Failure::Output)?;
                 if let Some(replay) = replay { channels.output.try_send(replay).map_err(|_| Failure::Output)?; }
             } else { receiving_events = false; },
             command = channels.input.recv(), if receiving => match command {
-                Some(command) => { send.as_ref().ok_or(Failure::Cancelled)?.try_send(command).map_err(|_| Failure::Output)?; },
-                None => { receiving = false; detector.reset(); detector.generation = None; send.take(); },
+                Some(Command::Capture { generation, operation }) => {
+                    if let Some(assembler) = &mut assembler && assembler.command(generation, operation)? {
+                        let phase = match operation {
+                            super::RoutedCapture::Begin => Some(super::CapturePhase::Recording),
+                            super::RoutedCapture::Finish => Some(super::CapturePhase::Transcribing),
+                            super::RoutedCapture::Cancel => None,
+                        };
+                        if let Some(phase) = phase { channels.output.try_send(Event::Capture(phase)).map_err(|_| Failure::Output)?; }
+                    }
+                },
+                Some(command) => {
+                    if let Some(assembler) = &mut assembler && let Command::Turn { generation, .. } = &command { assembler.external(*generation); }
+                    send.as_ref().ok_or(Failure::Cancelled)?.try_send(command).map_err(|_| Failure::Output)?; },
+                None => { receiving = false; if let Some(assembler) = &mut assembler { assembler.clear(); } detector.reset(); detector.generation = None; send.take(); },
             },
             _ = poll.tick() => {
                 while let Some(samples) = input_audio()? {
                     detector.input(&samples)?;
+                    if let Some(assembler) = &mut assembler { assembler.input(&samples)?; }
                     channels.output.try_send(Event::Input(Input { samples })).map_err(|_| Failure::Output)?;
                 }
-                if let Some(send) = &send { detector.tick(send)?; }
+                if let Some(send) = &send {
+                    detector.tick(send)?;
+                    if let Some(assembler) = &mut assembler && let Some(command) = assembler.poll()? {
+                        send.try_send(command).map_err(|_| Failure::Output)?;
+                    }
+                }
             },
             result = &mut driver => {
                 while let Ok(event) = events.try_recv() { channels.output.try_send(event).map_err(|_| Failure::Output)?; }
