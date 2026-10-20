@@ -201,13 +201,17 @@ or replay. No action/permission tool or visible activation is added. See
 [Read-only realtime tools](reference/realtime-accounting.md#read-only-tools-in-realtime).
 
 
-V6.6.3 can add a separately consented `consult_claude` text question to that native registry.
-Its default-off switch, durable 20-attempt daily budget and local metadata trace are independent
+V6.6.3 can add separately consented `consult_claude` and `consult_codex` text questions to that
+native registry. Each has its own default-off consent and durable 20-attempt rolling quota; the
+providers share one busy slot through acknowledged child exit. Codex uses fixed app-owned model
+metadata and a qualified-version guard. Its subscription status preflight is not atomic with exec;
+external login changes remain an activation blocker. No renderer/capture entry is present.
+Their switches, durable budgets and local metadata traces are independent
 of realtime costs and Chat. The existing tool-free client disables file expansion and memory
 loading and requires supported CLI controls; no active agent session or Chat permissions are
 inherited. One original deadline covers preparation and child teardown, with a translated native
 notice after 1.5 seconds; busy/voice ownership survives uninterruptible work. Responses are inert
-outside data. Managed CLI policy still applies. Codex qualification and visible controls remain
+outside data. Managed CLI policy still applies. Subscription binding, live/managed-client qualification and visible controls remain
 open. See [Text consultation](reference/realtime-accounting.md#text-consultation).
 
 ## Local dictation

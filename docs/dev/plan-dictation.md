@@ -2692,12 +2692,17 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
      project instructions, files and named skills; the actual model request offers zero tools and
      no canary context. A fixed stand-in response passes through the real CLI and strict text-only
      reply parser. No external provider, real credential, microphone or desktop action is used.
-     Cancellation/output bounds reuse the acknowledged-child runner. No `consult_codex` is offered.
+     Cancellation/output bounds reuse the acknowledged-child runner.
      A separate synthetic-auth mount test proves the ChatGPT-only status preflight refuses API
      login without modifying its auth; HOME/CODEX_HOME values are never reassigned. This preflight
      is not an atomic binding against concurrent external login changes.
-     **Next:** bind the subscription account to native ownership, then add independent Codex consent,
-     durable budget/traces and native ownership tests. Do not reuse Claude's consent, force a login
+     **Native backend integrated 2026-10-20:** independent default-off Codex consent, Settings-only
+     writes, durable 20-attempt rolling quota and metadata-only traces now reuse the native owner.
+     Both providers share a busy slot through acknowledged child exit; consent/quota separation and
+     cancellation ownership have offline regressions. There is no renderer/capture entry.
+     **Next:** qualify subscription-only behavior during concurrent external login changes before
+     visible activation. App Server account/read has no stable identity for binding a separate exec.
+     A synthetic-auth review probe confirms forced login on exec deletes mismatched API auth. Do not reuse Claude's consent, force a login
      mode that may log out an existing account, or claim live/managed-client acceptance. Whole
      V6.6.3 remains open before V6.7.
 

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 4472c4072a2e -->
+<!-- source: 8b29ba702e56 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -220,14 +220,18 @@ sua própria identidade/histórico. Chamadas consumidas não viram recuperação
 Não há ferramenta de ação/permissão nem ativação visível. Veja
 [Ferramentas realtime somente de leitura](reference/realtime-accounting.md#read-only-tools-in-realtime).
 
-A V6.6.3 pode acrescentar uma pergunta textual `consult_claude` com consentimento separado a esse
-registro nativo. Sua opção desligada por padrão, orçamento persistente de 20 tentativas diárias e
-trace local de metadados são independentes dos custos realtime e do Chat. O cliente existente sem
+A V6.6.3 pode acrescentar perguntas textuais `consult_claude` e `consult_codex`, com consentimentos
+separados, a esse registro nativo. Cada provedor tem opção própria desligada por padrão e cota
+persistente de 20 tentativas por 24 horas móveis; ambos compartilham uma vaga até confirmar a saída
+do processo. O Codex usa metadados fixos de modelo controlados pelo app e recusa versões não
+qualificadas. A verificação prévia de assinatura não é atômica com exec; trocas externas de login
+ainda bloqueiam a ativação. Não há entrada de renderer/captura. Suas opções, orçamentos persistentes
+e traces locais de metadados são independentes dos custos realtime e do Chat. O cliente existente sem
 ferramentas desativa expansão de arquivos e carregamento de memória e exige controles suportados
 pela CLI; não herda sessão ativa de agente nem permissões do Chat. Um prazo original cobre
 preparação e saída do processo, com aviso nativo traduzido após 1,5 segundo; a posse da vaga/voz
 sobrevive a trabalho que não pode ser interrompido. Respostas são dados externos inertes. Políticas
-gerenciadas da CLI continuam valendo. Qualificação do Codex e controles visíveis seguem em aberto.
+gerenciadas da CLI continuam valendo. Vínculo com a assinatura, qualificação de cliente real/gerenciado e controles visíveis seguem em aberto.
 Veja [Consulta textual](reference/realtime-accounting.md#text-consultation).
 
 <a id="local-dictation"></a>

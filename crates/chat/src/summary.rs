@@ -20,9 +20,15 @@ const MAX_REPLY: u64 = 64 * 1024;
 /// Is `claude` on the `PATH`? Checked before the gate: a call that can't start sends nothing and
 /// must not spend the budget.
 pub fn installed() -> bool {
+    on_path("claude")
+}
+
+pub(crate) fn on_path(program: &str) -> bool {
     std::env::var_os("PATH").is_some_and(|path| {
         std::env::split_paths(&path).any(|d| {
-            d.join("claude").is_file() || d.join("claude.exe").is_file() || d.join("claude.cmd").is_file()
+            d.join(program).is_file()
+                || d.join(format!("{program}.exe")).is_file()
+                || d.join(format!("{program}.cmd")).is_file()
         })
     })
 }

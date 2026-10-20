@@ -1743,3 +1743,21 @@ preflight refuses API mode without changing stored auth, while retaining origina
 values. It does not yet prove a stable binding against concurrent external account changes. Do not force a login method: this client can
 log out an existing mismatched account. Next is that binding plus independent native Codex
 consent/budget/trace and ownership integration. V6.6.3 remains open before V6.7.
+
+
+**2026-10-20 V6.6.3 native Codex consultation backend.** Independent default-off consent and a
+Settings-only command now feed the existing native registry; Claude consent never enables Codex.
+Each provider has its own durable 20-attempt rolling quota and metadata-only trace. Both share one
+busy slot, original deadline, translated notice and retained voice ownership through child exit.
+Upgrade, quota isolation/history erasure and cancellation ownership have offline regressions.
+There is no renderer/capture entry or live-provider acceptance. Subscription eligibility remains a
+nonmutating preflight, not atomic binding across an external login switch. A synthetic-auth review
+probe confirms that forcing ChatGPT mode on exec deletes mismatched API auth, so that workaround is
+prohibited. V6.6.3 remains open on subscription binding and managed/live-client qualification before
+V6.7 activation.
+
+Validation: 1,410 workspace tests pass (16 documented ignores), 10 feature evals, and all six
+explicit installed-Codex checks pass inside the isolated namespace. The renderer build, all
+18 existing renderer checks, workspace Clippy with warnings denied, formatting and repository
+guards pass. Independent code review found no backend blocker; subscription-switch activation
+remains explicitly outside this backend sign-off. No dependency or renderer changes.

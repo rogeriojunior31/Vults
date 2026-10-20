@@ -401,10 +401,13 @@ On Linux, the V6.6.3 native owner adds `consult_claude` only with the separate d
 `voice_consultation` choice and its original durable budget identity. Only Settings may change it;
 changing it revokes the voice epoch even if the old choice is restored before the next poll. The
 renderer has no conversation entry or consultation control yet. Default offerings remain the five
-cached flock reads. Codex is not offered until equivalent text-only isolation is qualified.
+cached flock reads. The backend also supports `consult_codex` with its own default-off
+`voice_codex_consultation` choice and original `voice_codex_consultation_budget` identity.
+Its Settings-only command invalidates the same voice epoch. There is no renderer control or
+capture entry for either provider; Codex activation remains gated on the account-switch issue below.
 
 Each consultation supplies one nonempty question of at most 256 bytes, without control characters.
-It uses the existing Claude Code text helper with Haiku, a new private empty working directory,
+The Claude path uses the existing Claude Code text helper with Haiku, a new private empty working directory,
 empty built-in tool selection, MCP-tool exclusion, strict MCP configuration, no user/project
 settings, disabled skills and no saved session. File-mention expansion, CLAUDE.md discovery, auto
 memory and nonessential CLI traffic are explicitly disabled. Clients older than 2.1.299, unknown
@@ -418,14 +421,15 @@ its own services. Managed-client behavior needs separate qualification before ac
 
 Vults supplies only the question, with no project/session context or project-reading tool. It does
 not resume a live agent, delegate work or borrow Chat's history, tools, policies or full access. The separate
-`voice-consultation` gate durably reserves at most 20 attempts per rolling 24 hours, including
+`voice-consultation` (Claude) and `voice-codex-consultation` (Codex) gates each durably reserve
+at most 20 attempts per rolling 24 hours, including
 failures; realtime monetary reservations do not pay for or authorize these CLI attempts. Restart,
 consent toggles, history erasure or ledger replacement cannot silently renew the allowance. Traces
 contain feature/provider/model, timing and outcome, never question or reply. Vults does not retry a
 failed consultation or switch to another provider; the installed CLI retains its own connection
 and authentication behavior.
 
-One background worker retains the busy slot and exclusive native voice lease through preparation
+Both providers share one busy slot. One background worker retains that slot and exclusive native voice lease through preparation
 and acknowledged child exit. The original call time anchors a 60-second cancellation deadline,
 including preparation and CLI version checking. At 1.5 seconds it may emit one translated,
 request-identified Consulting notice into the current native output channel. Fast replies skip it;
@@ -443,7 +447,7 @@ The 1.5-second notice has no renderer consumer yet; V6.7 owns its display and op
 Offline tests exercise notice timing, original deadlines across slow admission, cancellation and
 teardown ownership, child reaping, bounded output, arguments, the client controls/version check,
 durable independent admission and consent upgrades. They run synthetic local child processes and
-no model, microphone or desktop action. Codex consultation and live Claude/provider compatibility
+no model, microphone or desktop action. Atomic subscription binding and live/managed-client compatibility
 remain open; V6.6.3 is not complete.
 
 
@@ -457,7 +461,7 @@ excluding project documents and disabling integration/tool features still leaves
 evidence against this candidate, not a claim about every Codex integration. The documented
 [CLI controls](https://learn.chatgpt.com/docs/developer-commands?surface=cli) and
 [configuration controls](https://learn.chatgpt.com/docs/config-file/config-reference) do not by
-themselves establish the supplied-text-only contract. No `consult_codex` is enabled.
+themselves establish the supplied-text-only contract. This baseline is not used by the native adapter.
 
 The new staged CLI helper qualifies a narrower contract on exact client 0.163.0. It supplies a
 minimal app-owned model catalog instead of inheriting mutable model metadata: shell, patch,
@@ -484,11 +488,15 @@ synthetic-auth test also proves the ChatGPT-only status check refuses API auth w
 home/auth/keyring are hidden, and HOME/CODEX_HOME values are never reassigned. See the
 [roadmap reproduction command](../dev/plan-dictation.md#v6-talk-with-zeca-k8).
 
-This is a reusable helper, not an activated `consult_codex` tool. It preserves the installed CLI's
-authentication, removes inherited API-key/base-URL/session environment overrides and requires a
-successful nonmutating ChatGPT-only `login status` check before starting exec. This is a preflight,
-not an atomic binding against a concurrent external login change. Vults never forces that login
-method on exec, whose mismatch handling could log out an existing account. Native account binding
-still needs qualification before admission is exposed. Separate Codex consent, durable quota/traces,
-native ownership integration and live/managed-client compatibility remain pending; Claude consent
-never authorizes this helper. V6.6.3 stays open before V6.7.
+The native backend now connects this helper through its own consent, durable quota and content-free
+traces, using the shared consultation owner, deadline, cancellation and notice. Claude consent never
+authorizes Codex, and exhausting one provider's quota does not consume the other's. No visible
+activation or capture caller is present. The helper preserves the installed CLI's authentication,
+removes inherited API-key/base-URL/session environment overrides and requires a successful
+nonmutating ChatGPT-only `login status` check before starting exec. This is a preflight, not an
+atomic binding against a concurrent external login change. A synthetic-auth review probe confirmed
+that forcing the login method on exec deletes mismatched API authentication; Vults must not use it.
+The documented [App Server account read](https://learn.chatgpt.com/docs/app-server) provides no stable
+account/workspace identity to bind a separate exec. Subscription-only behavior during an external
+login switch remains an activation blocker. Live/managed-client compatibility is also pending;
+V6.6.3 stays open before V6.7.

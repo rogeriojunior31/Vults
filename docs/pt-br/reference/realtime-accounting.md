@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 605a6aacd4c4 -->
+<!-- source: ff66a212ee55 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -458,11 +458,14 @@ No Linux, o proprietário nativo da V6.6.3 acrescenta `consult_claude` somente c
 `voice_consultation`, desligada por padrão, e a identidade original do orçamento persistente.
 Somente Configurações pode alterá-la; a alteração revoga a geração da voz mesmo se a escolha anterior
 for restaurada antes da próxima verificação. O renderer ainda não tem entrada de conversa nem
-controle de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O Codex não
-é oferecido até qualificar isolamento equivalente somente de texto.
+controle de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O backend
+também suporta `consult_codex` com sua própria opção `voice_codex_consultation`, desligada por
+padrão, e identidade original `voice_codex_consultation_budget`. Seu comando exclusivo de
+Configurações invalida a mesma geração da voz. Não há controle do renderer nem entrada de captura
+para nenhum provedor; a ativação do Codex depende da questão de troca de conta descrita abaixo.
 
-Cada consulta fornece uma pergunta não vazia de até 256 bytes, sem caracteres de controle. Ela
-reutiliza o cliente textual do Claude Code com Haiku, uma nova pasta de trabalho privada e vazia,
+Cada consulta fornece uma pergunta não vazia de até 256 bytes, sem caracteres de controle. O caminho
+do Claude reutiliza seu cliente textual com Haiku, uma nova pasta de trabalho privada e vazia,
 seleção vazia de ferramentas integradas, exclusão de ferramentas MCP, configuração MCP estrita,
 sem configurações de usuário/projeto, skills desativadas e sem sessão salva. Expansão de referências
 a arquivos, descoberta de CLAUDE.md, memória automática e tráfego não essencial da CLI são
@@ -479,14 +482,15 @@ clientes gerenciados precisa de qualificação separada antes da ativação.
 O Vults fornece somente a pergunta, sem contexto de projeto/sessão nem ferramenta de leitura do
 projeto. Ele não retoma agente ativo, delega trabalho nem herda histórico, ferramentas, políticas ou
 acesso total do Chat. O gate
-separado `voice-consultation` reserva de forma durável até 20 tentativas por 24 horas móveis,
+de cada provedor, `voice-consultation` (Claude) e `voice-codex-consultation` (Codex), reserva
+de forma durável até 20 tentativas por 24 horas móveis,
 incluindo falhas; reservas monetárias do realtime não pagam nem autorizam essas tentativas da CLI.
 Reinício, alternância do consentimento, limpeza do histórico ou troca do ledger não renovam a
 cota silenciosamente. Traces contêm recurso/provedor/modelo, tempos e resultado, nunca pergunta ou
 resposta. O Vults não repete consultas com falha nem troca de provedor; a CLI instalada mantém seu
 próprio comportamento de conexão e autenticação.
 
-Um trabalhador em segundo plano mantém a vaga ocupada e a concessão exclusiva da voz durante a
+Os dois provedores compartilham uma vaga. Um trabalhador em segundo plano mantém a vaga ocupada e a concessão exclusiva da voz durante a
 preparação e até confirmar a saída do processo. O horário original da chamada ancora o prazo de
 cancelamento de 60 segundos, incluindo preparação e verificação da versão. Aos 1,5 segundo ele pode
 emitir um aviso Consulting traduzido, identificado pelo pedido, no canal de saída nativo atual.
@@ -506,8 +510,8 @@ exibição e controles de adesão ficam na V6.7.
 Testes offline exercitam o tempo do aviso, prazos originais durante admissão lenta, posse durante
 cancelamento e destruição, saída confirmada do processo, limite da resposta, argumentos, controles/
 versão do cliente, admissão persistente independente e atualização do consentimento. Eles usam
-processos filhos locais sintéticos, sem modelo, microfone nem ação do desktop. Consulta ao Codex e
-compatibilidade real com Claude/provedor continuam em aberto; a V6.6.3 não está concluída.
+processos filhos locais sintéticos, sem modelo, microfone nem ação do desktop. Vínculo atômico com
+a assinatura e compatibilidade com cliente real/gerenciado continuam em aberto; a V6.6.3 não está concluída.
 
 
 <a id="codex-qualification"></a>
@@ -522,7 +526,7 @@ código podem estar em `input`. Isso é evidência contra esse candidato, não u
 integração com o Codex. Os [controles da CLI](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
 e [controles de configuração](https://learn.chatgpt.com/docs/config-file/config-reference)
 documentados não comprovam, por si só, o contrato de receber somente o texto fornecido.
-Nenhum `consult_codex` é ativado.
+Esse candidato original não é usado pelo adaptador nativo.
 
 O novo helper de CLI, ainda sem ativação, qualifica um contrato mais restrito no cliente exato
 0.163.0. Ele fornece um catálogo mínimo de modelo controlado pelo app, em vez de herdar metadados
@@ -552,13 +556,16 @@ recusa autenticação de API sem alterá-la; a pasta pessoal/autenticação/keyr
 ocultos, e os valores de HOME/CODEX_HOME nunca são reatribuídos. Veja o
 [comando de reprodução no roadmap](../../dev/plan-dictation.md#v6-talk-with-zeca-k8).
 
-Isso é um helper reutilizável, não uma ferramenta `consult_codex` ativada. Ele preserva a autenticação
-da CLI instalada, remove sobrescritas de chave de API/URL base/sessão herdadas do ambiente e exige
-sucesso em uma verificação não mutante `login status` exclusiva de ChatGPT antes de iniciar exec.
-Isso é uma verificação prévia, não um vínculo atômico contra uma troca externa de login concorrente.
-O Vults nunca força esse método de login em exec, cujo tratamento de incompatibilidade poderia
-deslogar uma conta existente. O vínculo nativo com a conta ainda precisa de qualificação antes de
-expor a admissão. Consentimento
-separado do Codex, cota/traces persistentes, integração de posse nativa e compatibilidade com
-cliente real/gerenciado continuam pendentes; o consentimento do Claude nunca autoriza esse helper.
-A V6.6.3 permanece aberta antes da V6.7.
+O backend nativo agora conecta esse helper por consentimento próprio, cota persistente e traces
+sem conteúdo, usando a posse compartilhada da consulta, prazo, cancelamento e aviso. Consentimento
+do Claude nunca autoriza Codex, e esgotar a cota de um provedor não consome a do outro. Não há
+ativação visível nem chamador de captura. O helper preserva a autenticação da CLI instalada, remove
+sobrescritas de chave de API/URL base/sessão herdadas do ambiente e exige sucesso na verificação
+não mutante `login status` exclusiva de ChatGPT antes de iniciar exec. Isso é uma verificação prévia,
+não um vínculo atômico contra uma troca externa concorrente de login. Um teste de revisão com
+autenticação sintética confirmou que forçar o método de login em exec apaga autenticação de API
+incompatível; o Vults não deve usá-lo. A [leitura de conta do App Server](https://learn.chatgpt.com/docs/app-server)
+documentada não fornece identidade estável de conta/workspace para vincular um exec separado.
+Garantir uso exclusivo da assinatura durante uma troca externa de login continua bloqueando a
+ativação. Compatibilidade com cliente real/gerenciado também segue pendente; a V6.6.3 permanece
+aberta antes da V6.7.

@@ -56,7 +56,10 @@ async fn revocation_waiter_loss_and_deadline_retain_the_owner_until_child_acknow
         let (started, start) = oneshot::channel();
         let (seen, cancelled) = oneshot::channel();
         let (release, wait) = oneshot::channel();
+        let busy = Arc::new(AtomicBool::new(false));
+        let guard = Busy::acquire(&busy).unwrap();
         let worker = tokio::spawn(async move {
+            let _busy = guard;
             let _lease = lease;
             owned(
                 async {
@@ -90,6 +93,10 @@ async fn revocation_waiter_loss_and_deadline_retain_the_owner_until_child_acknow
         }
         cancelled.await.unwrap();
         assert!(!worker.is_finished());
+        assert!(
+            Busy::acquire(&busy).is_err(),
+            "the other provider shares this slot"
+        );
         assert_eq!(
             owner.begin().err(),
             Some(vults_chat::realtime::transport::Failure::Busy)
@@ -97,6 +104,7 @@ async fn revocation_waiter_loss_and_deadline_retain_the_owner_until_child_acknow
         release.send(()).unwrap();
         assert!(worker.await.unwrap().is_err());
         assert!(owner.begin().is_ok());
+        assert!(Busy::acquire(&busy).is_ok());
     }
 }
 
@@ -201,4 +209,31 @@ async fn slow_admission_uses_the_original_clock_and_cannot_start_a_child_after_c
     assert!(worker.await.unwrap().is_err());
     assert_eq!(calls.load(Ordering::SeqCst), 0);
     assert!(owner.begin().is_ok());
+}
+
+#[test]
+fn provider_consent_and_ledger_are_independent() {
+    let mut settings = crate::settings::Settings {
+        voice_consultation_budget: Some("claude-ledger".into()),
+        voice_codex_consultation_budget: Some("codex-ledger".into()),
+        ..Default::default()
+    };
+    for claude in [false, true] {
+        for codex in [false, true] {
+            settings.voice_consultation = claude;
+            settings.voice_codex_consultation = codex;
+            assert_eq!(
+                Provider::Claude.ledger(&settings).map(String::as_str),
+                claude.then_some("claude-ledger")
+            );
+            assert_eq!(
+                Provider::Codex.ledger(&settings).map(String::as_str),
+                codex.then_some("codex-ledger")
+            );
+        }
+    }
+    settings.voice_codex_consultation_budget = None;
+    assert!(Provider::Codex.ledger(&settings).is_none());
+    assert_eq!(Provider::Claude.name(), "consult_claude");
+    assert_eq!(Provider::Codex.name(), "consult_codex");
 }

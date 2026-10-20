@@ -1,12 +1,17 @@
 //! A fresh Codex CLI question with an app-owned, tool-free model catalog.
 //! Callers must supply private scratch space and admit the request through their own gate.
-//! No app entry offers it yet: subscription-account binding must be qualified before activation.
+//! The native backend has independent consent; subscription binding still gates visible activation.
 use std::{fs::OpenOptions, io::Write, path::Path, process::Stdio};
 
 use serde_json::{Value, json};
 use tokio::{process::Command, sync::watch};
 
 pub const MODEL: &str = "gpt-6.1-sol";
+
+/// Availability only; the exact version and ChatGPT eligibility are checked after admission.
+pub fn installed() -> bool {
+    crate::summary::on_path("codex")
+}
 
 /// Only the client whose actual request was qualified may start a question.
 fn supported(version: &str) -> bool {

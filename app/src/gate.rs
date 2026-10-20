@@ -52,6 +52,8 @@ pub const MEETING_SUMMARY_BUDGET: usize = 20;
 pub const VOICE_REALTIME: &str = "voice-realtime";
 pub const VOICE_CONSULTATION: &str = "voice-consultation";
 pub const VOICE_CONSULTATION_BUDGET: usize = 20;
+pub const VOICE_CODEX_CONSULTATION: &str = "voice-codex-consultation";
+pub const VOICE_CODEX_CONSULTATION_BUDGET: usize = 20;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -101,6 +103,7 @@ pub fn budget(feature: &str) -> usize {
         CLEANUP => CLEANUP_BUDGET,
         MEETING_SUMMARY => MEETING_SUMMARY_BUDGET,
         VOICE_CONSULTATION => VOICE_CONSULTATION_BUDGET,
+        VOICE_CODEX_CONSULTATION => VOICE_CODEX_CONSULTATION_BUDGET,
         meeting_assets::FEATURE => meeting_assets::BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
@@ -109,7 +112,9 @@ pub fn budget(feature: &str) -> usize {
 
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
-    if feature == VOICE_CONSULTATION {
+    if feature == VOICE_CODEX_CONSULTATION {
+        s.voice_codex_consultation && s.voice_codex_consultation_budget.is_some()
+    } else if feature == VOICE_CONSULTATION {
         s.voice_consultation && s.voice_consultation_budget.is_some()
     } else if feature == VOICE_REALTIME {
         s.voice_realtime.enabled()
@@ -195,6 +200,7 @@ impl vults_connectors::Gate for NetGate {
             && connector != MEETING_SUMMARY
             && connector != VOICE_REALTIME
             && connector != VOICE_CONSULTATION
+            && connector != VOICE_CODEX_CONSULTATION
             && connector != meeting_assets::FEATURE
             && self.allow_at(connector, Instant::now())
     }
@@ -241,6 +247,17 @@ impl NetGate {
         )
     }
 
+    pub fn reserve_codex_consultation(&self, store: &mut vults_store::Store, identity: &str) -> Option<Span> {
+        self.reserve_text(
+            store,
+            identity,
+            VOICE_CODEX_CONSULTATION,
+            "codex",
+            vults_chat::consult_codex::MODEL,
+            false,
+        )
+    }
+
     fn reserve_text(
         &self,
         store: &mut vults_store::Store,
@@ -281,6 +298,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(CLEANUP);
         features.push(MEETING_SUMMARY);
         features.push(VOICE_CONSULTATION);
+        features.push(VOICE_CODEX_CONSULTATION);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -329,6 +347,7 @@ fn feature(key: &str) -> &'static str {
         CLEANUP => "dictation-cleanup",
         MEETING_SUMMARY => "meeting-summary",
         VOICE_CONSULTATION => "voice-consultation",
+        VOICE_CODEX_CONSULTATION => "voice-codex-consultation",
         meeting_assets::FEATURE => "meeting-assets",
         _ => "connectors",
     }
@@ -342,7 +361,10 @@ pub fn seed(features: &[&str]) -> BTreeMap<String, Vec<i64>> {
     features
         .iter()
         .map(|c| {
-            let times = if matches!(*c, CLEANUP | MEETING_SUMMARY | VOICE_CONSULTATION) {
+            let times = if matches!(
+                *c,
+                CLEANUP | MEETING_SUMMARY | VOICE_CONSULTATION | VOICE_CODEX_CONSULTATION
+            ) {
                 store
                     .as_ref()
                     .ok()
@@ -803,6 +825,57 @@ mod tests {
         );
         let starts = store.request_attempt_starts(VOICE_CONSULTATION, 0).unwrap();
         assert_eq!(starts.len(), VOICE_CONSULTATION_BUDGET);
+        drop(store);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn codex_consultation_cannot_borrow_consent_or_reset_its_own_quota() {
+        use vults_connectors::Gate;
+        let mut settings = crate::settings::Settings {
+            voice_consultation: true,
+            voice_consultation_budget: Some("claude".into()),
+            ..Default::default()
+        };
+        settings.connectors.insert(VOICE_CODEX_CONSULTATION.into(), true);
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        settings.voice_codex_consultation = true;
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        settings.voice_codex_consultation_budget = Some("codex".into());
+        assert!(switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        settings.voice_consultation = false;
+        assert!(switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        let directory = std::env::temp_dir().join(format!("vults-codex-gate-{}", crate::traces::new_id()));
+        let mut store = vults_store::Store::open(&directory).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let off = NetGate::new(|_| false, budget, BTreeMap::new(), |_| {});
+        assert!(off.reserve_codex_consultation(&mut store, &identity).is_none());
+        for _ in 0..VOICE_CODEX_CONSULTATION_BUDGET {
+            let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+            assert!(!gate.allow(VOICE_CODEX_CONSULTATION));
+            assert!(
+                gate.reserve_codex_consultation(&mut store, "wrong-ledger")
+                    .is_none()
+            );
+            let span = gate.reserve_codex_consultation(&mut store, &identity).unwrap();
+            assert_eq!(
+                span.attrs,
+                json!({"vults.feature":"voice-codex-consultation","vults.target":"voice-codex-consultation","vults.provider":"codex","gen_ai.request.model":vults_chat::consult_codex::MODEL,"vults.local":false})
+            );
+        }
+        store.clear_all(&directory).unwrap();
+        drop(store);
+        let mut store = vults_store::Store::open_current(&directory).unwrap();
+        let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+        assert!(gate.reserve_codex_consultation(&mut store, &identity).is_none());
+        assert!(gate.reserve_voice_consultation(&mut store, &identity).is_some());
+        assert_eq!(
+            store
+                .request_attempt_starts(VOICE_CODEX_CONSULTATION, 0)
+                .unwrap()
+                .len(),
+            VOICE_CODEX_CONSULTATION_BUDGET
+        );
         drop(store);
         std::fs::remove_dir_all(directory).unwrap();
     }
