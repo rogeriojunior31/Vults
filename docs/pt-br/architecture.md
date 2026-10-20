@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 49cdaf24da33 -->
+<!-- source: d17b5c1ecbdd -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -115,6 +115,22 @@ quadro no pré-processamento e encerramento via RunOptions respeitam o orçament
 da política. A construção do modelo/sessão nativa não promete aborto imediato. Não há chamada no app,
 download, opção em Configurações ou captura nova. Veja [Modelo semântico de fim de turno](reference/semantic-turn-model.md)
 para origem BSD-2-Clause, pins exatos, comandos de qualificação e critérios pendentes de fala/latência/plataforma.
+
+A V6.3.1 acrescenta `store::money` (migração 28): reservas em micro-USD inteiros e conciliação única
+do uso final, vinculadas à identidade existente do registro de requisições. Transações imediatas
+gravam a reserva e seu trace inicial juntas, impedindo operações simultâneas de gastar o mesmo saldo.
+Cotações ausentes/nulas, limites zerados, registros indisponíveis e estouro aritmético recusam a
+admissão. Reservas abertas nunca expiram, inclusive após falha do processo; custo final desconhecido
+permanece nulo e debita a reserva inteira. Só um transporte encerrado pode conciliar o uso. Débitos
+concluídos expiram 24 horas após a conclusão; horários futuros continuam debitados se o relógio recuar.
+Apagar o histórico preserva reservas/débitos e uma conciliação tardia não recria traces apagados.
+Excessos cobrados pelo provedor são debitados integralmente, sem truncamento.
+O sucesso/falha da requisição fica no trace independentemente da disponibilidade dos dados finais de cobrança.
+O app recusa explicitamente `voice-realtime` pelas configurações de conectores e pelo gate de
+contagem. Esta é a base de persistência, sem chamador de rede: tarifas verificadas e limites por
+requisição, contabilidade monotônica em execução, corte de streaming, integração de chaveiro/consentimento
+e recuperação de reservas abandonadas continuam obrigatórios antes de ativar voz remota. Nenhum
+reembolso ou recuperação automática libera um orçamento novo.
 
 <a id="local-dictation"></a>
 

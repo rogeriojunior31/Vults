@@ -47,6 +47,7 @@ pub const CLEANUP: &str = "dictation-cleanup";
 pub const CLEANUP_BUDGET: usize = 2000;
 pub const MEETING_SUMMARY: &str = "meeting-summary";
 pub const MEETING_SUMMARY_BUDGET: usize = 20;
+pub const VOICE_REALTIME: &str = "voice-realtime";
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -103,7 +104,7 @@ pub fn budget(feature: &str) -> usize {
 
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
-    if feature == meeting_assets::FEATURE {
+    if matches!(feature, meeting_assets::FEATURE | VOICE_REALTIME) {
         false
     } else if feature == MEETING_SUMMARY {
         s.meeting_summary && s.meeting_summary_budget.is_some()
@@ -183,6 +184,7 @@ impl vults_connectors::Gate for NetGate {
     fn allow(&self, connector: &str) -> bool {
         connector != CLEANUP
             && connector != MEETING_SUMMARY
+            && connector != VOICE_REALTIME
             && connector != meeting_assets::FEATURE
             && self.allow_at(connector, Instant::now())
     }
@@ -364,6 +366,16 @@ mod tests {
             assert!(!g.allow_at("github", at(start, t)));
         }
         assert!(spans.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn realtime_cannot_borrow_a_connector_switch_or_a_count_only_allowance() {
+        let mut settings = crate::settings::Settings::default();
+        settings.connectors.insert(VOICE_REALTIME.into(), true);
+        assert!(!switched_on(&settings, VOICE_REALTIME));
+        assert_eq!(budget(VOICE_REALTIME), 0);
+        let (gate, _) = gate(true, usize::MAX, BTreeMap::new());
+        assert!(!vults_connectors::Gate::allow(&gate, VOICE_REALTIME));
     }
 
     #[test]

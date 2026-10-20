@@ -2485,6 +2485,24 @@ this backend-only step.
 - Needs: Z6, G9 (K8's needs), V0.4.
 - Tests: a cassette of a session; the gate refuses when off.
 
+Delivery sequence:
+1. **V6.3.1 Monetary ledger** — implemented 2026-10-19. Migration 28 adds atomic integer
+   micro-USD reservations and once-only settlement against the existing ledger identity. Parallel
+   work shares one allowance; history erasure/restart cannot refund it. Open holds do not expire;
+   unknown final usage debits the full ceiling while actual cost stays null. Settled cost expires
+   24 hours after completion. Missing quotes, zero limits, unavailable state and overflow fail
+   closed; overruns are charged in full. `voice-realtime` cannot use connector consent or count-only
+   admission. Backend foundation only: there is no network call, microphone capture or new setting.
+2. **V6.3.2 Bounded protocol and pricing** — next. Implement checked provider rates, bounded
+   conversation/input/output costs, usage reconciliation and a session cassette before the gated
+   WebSocket transport. No duration-only estimate is a strict token/cost ceiling. Keep input
+   transcription off unless its separate cost is bounded too.
+3. **V6.3.3 Runtime admission and transport** — pending. Wire independent consent, the keyring,
+   default US$1 rolling limit (zero disables), a monotonic session clock, durable monetary gate,
+   cancellation/cutoff and text fallback. Recover abandoned holds only after proving the prior
+   transport stopped; never silently release unknown spend. The full V6.3 remains open until the
+   off/spent/disablement/unknown-cost cassette and runtime acceptance pass.
+
 **V6.4 Playback and what the user heard** (M)
 - Build:
   - cpal output with a playback cursor from frames consumed;

@@ -108,6 +108,20 @@ budget. Model/native session construction cannot promise immediate abort. No app
 Settings switch or capture is added. See [Semantic turn model](reference/semantic-turn-model.md) for
 BSD-2-Clause provenance, exact pins, qualification commands and open speech/latency/platform gates.
 
+V6.3.1 adds `store::money` (migration 28): integer micro-USD holds and once-only final usage
+settlement, bound to the existing request-ledger identity. Immediate transactions reserve the hold
+and starting trace together, so concurrent operations cannot spend the same allowance. Missing/zero
+quotes, zero limits, unavailable ledgers and arithmetic overflow refuse admission. Open holds never
+expire, including after a crash; unknown final cost remains null and debits the full reservation.
+Only a stopped transport may settle. Settled debits expire 24 hours after completion; future timestamps
+remain charged after a clock rollback. History erasure preserves holds/debits and a late settlement
+does not recreate erased traces. Provider overruns are charged in full rather than clipped.
+Request success/failure is traced independently of whether final billing data is available.
+The app explicitly rejects `voice-realtime` through connector settings and the count-only gate.
+This is the persistence foundation, with no network caller: verified rates and request bounds,
+monotonic runtime accounting, stream cutoff, keyring/consent wiring and abandoned-hold recovery
+remain required before enabling remote voice. No automatic refund or recovery grants a fresh budget.
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/
