@@ -31,11 +31,27 @@ island/Nest feedback and non-replayable history. V8.5 adds dedicated command set
 a shared phrase guide and default-local/explicit Chat fallback. V5.4 research and V5.5 engineering now provide a default-off developer speaker preview, after
 the bounded V5.3 recording-to-transcript handoff. Independent PT/EN quality qualification remains
 open; see the [consolidated V5.5 checklist](#v55-consolidated-delivery-checklist). V5.6 now has a gated
-summary backend and its Settings/Summary/To-dos interface; V5.7 storage/export is next.
-See the [V5.6 delivery sequence](#v56-delivery-sequence). Linux now exposes an explicit one-minute check under Dictation > Meetings; it transcribes both sources locally, deletes temporary audio and keeps text only on the current page; no saved meetings are produced. Hardware/compositor acceptance remains pending. V3.5 delivers the documentation checkpoint; real-speech/provider sign-off remains separate. V3.4 now delivers the visible clean-up settings, Dictation Styles editor and applied History labels. V3.3 now freezes per-app style and output language at key-down. V3.2 now connects the pure contract to tool-free
+summary backend and its Settings/Summary/To-dos interface; V5.7/V5.8 add explicit text-only
+meeting storage/export and the saved Meetings workspace.
+See the [V5.6 delivery sequence](#v56-delivery-sequence). Linux now exposes an explicit one-minute check under Dictation > Meetings; it transcribes both sources locally, deletes temporary audio and keeps the current text in memory; saving a text-only meeting snapshot is explicit. Hardware/compositor acceptance remains pending. V3.5 delivers the documentation checkpoint; real-speech/provider sign-off remains separate. V3.4 now delivers the visible clean-up settings, Dictation Styles editor and applied History labels. V3.3 now freezes per-app style and output language at key-down. V3.2 now connects the pure contract to tool-free
 API/local providers, a default-off switch, durable quota, cancellation and complete-local-text fallback;
 Z6 is already Done (#232), with its separately recorded Responses follow-up unchanged. V1/V2/V4/V8 real microphone/desktop/provider acceptance
 remain separate; N3 is not complete.
+
+V7 now implements typed MCP questions, explicit local dictation into drafts and reviewed external-agent
+setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the turn/end policy, gated
+realtime transport/accounting and native turn retention/local recovery. V6.4.1 adds a bounded CPAL
+output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
+provider identities, acknowledged server truncation and in-memory history/one-shot repair. No
+conversation microphone or user-facing realtime continuation is exposed yet. Backend V6.4 is
+delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only PipeWire pair inventory,
+an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
+device policy. Backend V6.5 is delivered. Next: V6.6 tools, then V6.7 capture/UI; Q6 production
+setup and physical/live acceptance remain open before activation. V6.6.1 now routes native finalized
+local transcripts through V8 before remote admission. V6.6.2 adds bounded read-only realtime flock
+tools with independent continuation admission. The V6.6.3 publication checks below are accepted
+with Codex consultation disabled. Next engineering work is V6.7 capture/UI; optional Codex
+activation and physical/live acceptance remain explicit gates, not completed work.
 
 ## References
 
@@ -43,7 +59,7 @@ remain separate; N3 is not complete.
 |---|---|---|---|
 | The reference app credited in `NOTICE` | MIT | Key state machine, text pipeline (snippets, replacements, dictionary), X11/Wayland paste, clipboard lease, history and statistics, meeting notes, end-of-turn policy | Ported, credited only in `NOTICE` (`check-brand.sh`) |
 | [voicebox](https://github.com/jamiepine/voicebox) | MIT | Clean-up prompts ("a text filter, not an assistant", three rules), whisper loop remover, key chords (Space locks mid-hold), focus-safe overlay, conditional clipboard restore, MCP with an identified client | Rust copied; Python rewritten in Rust; `NOTICE` line when code is translated |
-| [Patter](https://github.com/PatterAI/Patter) | MIT | Turn and barge-in state machine, VAD hysteresis, semantic end of turn (smart-turn v3, Apache-2.0 weights), sentence chunker with Portuguese rules, per-stage metrics | Design and constants; code rewritten |
+| [Patter](https://github.com/PatterAI/Patter) | MIT | Turn and barge-in state machine, VAD hysteresis, semantic end of turn (smart-turn v3, BSD-2-Clause code/weights verified in V6.2.2), sentence chunker with Portuguese rules, per-stage metrics | Design and constants; code rewritten |
 | VoiceStudio | AGPL-3.0 | Ideas only: spoken code in terminals, a fallback model, an honest "Pasted" vs "Copied", pause | No code |
 
 The research notes behind this plan (per-project specs with file:line citations) are kept outside the
@@ -55,7 +71,8 @@ Linux port), `[DD]` (reference app, dictation and dictionary), `[VA]` (reference
 
 Rules that hold as they are: [ADR 0002](../adr/0002-rust-backend-no-sidecars.md) (Rust only, no Python
 sidecar), [ADR 0028](../adr/0028-spoken-replies-through-a-realtime-model.md) (local transcription, audio in
-memory, no GPL in the binary, voice never answers a card), [ADR 0004](../adr/0004-a-human-answers-permissions.md)
+memory, no GPL in the binary, voice never answers a permission; V7.1 question drafts require human
+confirmation), [ADR 0004](../adr/0004-a-human-answers-permissions.md)
 and [ADR 0019](../adr/0019-requests-on-the-users-behalf.md) (model clean-up is a request on the user's behalf).
 
 | # | Today | Proposal | Why |
@@ -2300,6 +2317,63 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 **V5.8 Meetings page** (M)
 - Build: the prototype's page (list, Transcript/Summary/To-dos, renamed speakers, export), docs and sign-off.
 
+Delivery sequence:
+1. **V5.8.1 Archive ownership/API (delivered, backend only).** Nest-only explicit save/list/read/delete commands;
+   typed conversion of the completed source transcripts and notes; immutable first snapshot and
+   idempotent retry. No automatic save on recording or summary completion. Global history erasure
+   shares the existing history mutex and advances a separate meeting epoch; dictation-only erase
+   and retention changes do not revoke a meeting. Deletion revokes the active cached copy before
+   IO, including compaction failures, so queued saves cannot restore deleted text.
+2. **V5.8.2 Full Meetings workspace (implemented; maintainer sign-off pending).** Connect saved list/detail and Save/Delete, reuse Transcript/
+   Summary/To-dos, add source-local renaming and native Markdown/SRT/VTT export, update EN/PT guides
+   and all UI catalogs, and validate the running app before sign-off. Invalidate pending list/detail
+   reads after deletion as well as global erase; a per-delete action does not advance the global
+   archive epoch. Explain that saving freezes the current transcript/notes, and that global history
+   erase removes the saved archive too. The existing one-minute capture qualification limit and
+   default-off automatic identification remain; this step does not qualify full-length capture.
+
+The first step changed no renderer/Bridge code or visible work page. At that checkpoint recordings
+had no save/archive controls. No personal recording or live model request was needed to validate
+the archive ownership contract.
+
+V5.8.1 validation: all 1,233 workspace tests pass on Linux (10 documented ignores), including 252 app tests,
+85 store tests and eight new archive/retention/notes/timing checks. All 10 eval tests, workspace/eval
+Clippy, renderer build, all 18 existing renderer scripts, formatting and repository guards pass.
+Independent read-only review found no blocker. No archive write was
+made to the user's database, and no recording/model request or renderer change was needed. New
+API portability was inspected; Windows execution of this step belongs to its eventual PR checks.
+
+**2026-10-19 V5.8.2 implemented.** The existing Nest work page separates New recording from Saved
+meetings. Completed recordings expose an explicit title/save action and immutable-snapshot terms;
+the saved list searches titles among the newest 500 entries. Detail reuses Transcript/Summary/To-dos
+with independent source clocks, unknown metadata and inert text. Voice names update only one
+source-local identity. Delete requires confirmation; pending list/detail/save replies cannot restore
+erased content. Global erasure has a separate archive event; lock/departure clears content, name
+drafts and private search text. Recording maintenance and summary settings/retry use labeled
+disclosures; the shared Save/Generate footer leaves at least 69 CSS pixels to read in 480 x 360.
+
+Export opens one parented native save dialog, requires one source for SRT/VTT, then rechecks lock,
+window visibility, erase epoch and the saved row before writing. Cancellation writes nothing. The
+existing pure exporters escape text; newly created Linux files use 0600. Deliberate exported copies
+remain independent of archive/global erasure. No path or transcript is supplied by the renderer.
+
+Validation: 1,234 workspace tests (10 documented ignores), all 10 evals, workspace Clippy, renderer
+build, all 18 renderer scripts and repository guards pass. Added archive/recovery checks cover
+single mutations, source-local names, literal text, failed drafts/retry, explicit subtitle source,
+confirmed deletion, stale reads and erase/departure cleanup. Independent review found search-text
+cleanup and an inaccessible initial-summary retry; both are fixed with regressions.
+
+Native Tauri/WebKit checks used an isolated XDG profile and synthetic database: Black/Light at
+1180 x 820, 760 x 560 and 480 x 360, long/missing content, source switching, notes, rename, keep/delete,
+Nest-only reads, native chooser cancellation and actual Markdown/system-SRT/microphone-VTT files.
+Global erase cleared detail/list while leaving exported copies. The production current-recording
+renderer also ran with a controlled backend, including explicit save and all four UI languages in
+the minimum window; no microphone, audio model or provider request was used. The native profile,
+generated files and app/server processes are removed afterward; user data/models are unchanged.
+EN/PT guide and all three UI catalogs are updated. Maintainer/live speech acceptance and Windows
+execution remain for their own checks; this does not close the V5.5 speech-quality gate, enable
+automatic labels or qualify full-length capture.
+
 ---
 
 ## V6 Talk with Zeca (K8)
@@ -2311,7 +2385,7 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 - there is no wake word;
 - voice never answers a card.
 
-**V6.1 Turn machine** (M)
+**V6.1 Turn machine** (M) — implemented 2026-10-19; pure backend, runtime adapters remain V6.2-V6.7
 - Build: `voice::turn` (pure), with states Listening → Thinking → Speaking(locked) → Armed → interrupt
   pending → draining → tail grace, plus a generation counter.
   - The lock runs 0.5 s (1.0 s with AEC), **counted from the first audio played**.
@@ -2321,7 +2395,33 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 - Port: the design, not the code: [PT] 77-138, 325 (`stream_handler.py` ranges cited there).
 - Tests: an eval session with fake STT/LLM/TTS driving the real machine ([PT] 283-294); the race cases.
 
-**V6.2 End of turn** (M)
+V6.1 implements `voice::turn` with injected monotonic time, opaque non-wrapping generation/probe
+tokens and bounded deadlines. A first-consumed-audio event anchors the 500 ms/1 s lock; live suppressed
+speech is probed once the lock ends. Each deferred probe has 1.5 s to confirm, and old probe results
+cannot confirm a newer attempt in the same response. Only confirmation cancels/clears the old output,
+advances the generation and requests 260 ms of memory pre-roll for the new listening turn.
+
+Producer completion and requested playback drain are separate acknowledgements. Drain remains
+interruptible, then enters a 450 ms desktop tail grace; speech there starts the next turn without
+replaying the old tail. Empty output and tail expiry finish without opening a microphone. Speaker
+barge-in defaults disabled. Cancellation/failure clears output, and old generations cannot affect
+a restarted turn. Adapters must keep the original action tokens and acknowledge the requested drain;
+the pure module grants no microphone, network or permission authority. Actual capture/ring replay,
+provider, playback and user-facing integration remain the later V6 steps.
+
+Ten deterministic regressions drive the actual machine with fake STT/model/output events: delayed
+first playback/acknowledgement and retained live onsets, both lock durations, suppressed/ended speech,
+pending timeout/rejection, stale probes,
+generation replacement, output before/after producer completion, duplicate/early drain, tail/new-turn
+races, empty output, cancellation/failure and counter exhaustion. Independent review found the
+same-generation stale-probe race and a lost onset before delayed playback acknowledgement; both
+are fixed with regressions. No audio hardware, provider request, download, settings or renderer behavior changes in this step.
+
+All 1,273 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
+formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
+No renderer/native behavior changes require a new GUI run; the app remains closed.
+
+**V6.2 End of turn** (M) — backend engineering delivered 2026-10-19; runtime/speech acceptance remains open
 - Build:
   - a silence policy of 1.6 s, or 2.6 s when the last word extends (pt/en lists: conjunctions, fillers,
     articles);
@@ -2329,8 +2429,65 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
     200 ms, hold at most 1200 ms, off after one failure.
 - Port: [VA] 194-198 (`TurnEndPolicy.swift:18-55`); [PT] 64-73, 309-310 (`smart_turn.py:86-250`).
 - Tests: log-mel parity against stored reference arrays; policy table.
-- Licence check of smart-turn's weights (the spec says Apache-2.0; confirm on the model card).
+- Licence verified in V6.2.2: the pinned official code/model card declare BSD-2-Clause, correcting the earlier Apache-2.0 assumption.
 - Q8: how well smart-turn handles pt-BR is unknown.
+
+V6.2 delivery sequence:
+1. **V6.2.1 Policy and bounded semantic coordination** — implemented 2026-10-19. Pure
+   `voice::turn::end` waits 1.6 s, or 2.6 s for an English/Portuguese continuation word. Current
+   VAD silence and word-count high-water growth both gate completion; empty input/active speech
+   cannot commit. Rewrites and repeated end edges cannot keep restarting timers. Optional audio-only
+   scores are generation/ticket-bound, paced at 200 ms, with threshold 0.5 and a 1200 ms absolute
+   hold from nominal silence eligibility. One invalid score/inference failure disables semantics
+   for the rest of the conversation. Speech restarts, new generations and cancellation invalidate
+   pending work; completion is once-only. Speaker capture/permission authority is unchanged.
+2. **V6.2.2 Semantic model and parity** — implemented 2026-10-19. The optional `semantic-turn`
+   backend verifies an exact int8 v3.0 graph and qualified ONNX Runtime 1.31.0 Linux x64 CPU library.
+   Code/model licenses are BSD-2-Clause; retained notices also cover the Apache-2.0 Transformers
+   reference. Eight-second left-pad/crop and Whisper log-mel preprocessing match full primary NumPy
+   arrays, and a real checked-model/runtime run matches reference probabilities. There is no app
+   download offer, configuration or capture; conversation/runtime integration follows in V6.3-V6.7.
+
+Eleven policy regressions plus V6.1's ten turn cases cover language/word boundaries, silence before
+words, continuing voice, partial rewrites/growth, duplicate VAD ends, score pacing/threshold, hung
+inference/hold expiry, stale tickets/turns, new speech, invalid scores/failure latch, cancellation,
+clock/counter bounds and a fake detector driving the actual turn machine once. Independent review
+clarified the audio-only score contract and tightened the hold anchor so delayed polling cannot add
+another wait; current readiness is rechecked before accepting a score. Final review has no blocker.
+No renderer, native capture, provider, settings or dependency changes occur in V6.2.1; it has no app
+caller yet. Actual speech, semantic-model quality and pt-BR qualification remain open.
+
+All 1,284 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy,
+formatting, renderer build, all 18 renderer checks and repository guards. No dependencies changed.
+No renderer/native behavior changes require another GUI run; the app remains closed.
+
+V6.2.2 evidence: three full `[1,80,800]` reference arrays cover short padding, over-window noise and
+the existing speech fixture, plus an exact silence oracle. Maximum feature difference is below
+`1e-4` (observed `1.1920929e-7`); four native probabilities match the pinned Python/runtime reference
+within `2e-4` (observed identical f32 values). An initial older-runtime probability mismatch was
+isolated with the exact reference tensor; qualification now pins both the native library and graph
+optimization/thread settings. Other CPU targets still need qualification; these are numerical
+oracles, not real-conversation endpoint labels or pt-BR quality acceptance.
+
+Shared exact-file admission and native runtime/session ownership preserve the diarization API.
+Review fixed uncancellable foreground queue waits and preprocessing without a deadline; held-slot,
+expired-feature, hung-native-work and unwind regressions cover those paths. The policy exposes each
+ticket's original absolute deadline, so dispatch delay cannot grant extra inference time. New speech,
+turn replacement and cancellation retain their existing revocation authority. Runtime/session construction
+cannot abort; running inference receives cooperative termination.
+CI's offline speech job now includes semantic-turn in both Clippy and the voice tests, while native
+artifact qualification stays ignored by default. Final independent review has no remaining blocker.
+The app stays closed and no user audio/model,
+profile, setting or agent configuration is changed. See the [artifact reference](../reference/semantic-turn-model.md).
+Next: V6.3's gated realtime client and monetary reservations; real speech/latency acceptance remains open.
+
+All 1,285 workspace tests pass (10 documented ignores), plus 10 evals and 147 tests in the exact
+amended offline CI feature combination (8 explicit native/hardware ignores). The checked-artifact
+native parity test also passes explicitly. Workspace/preview/optional-feature Clippy, renderer build,
+all 18 renderer checks, formatting, repository guards and cargo-deny pass. No new dependency version
+is introduced; `rustfft` is an existing dependency made directly available to this optional backend.
+The QA environment/artifact copies are removed after archiving evidence; no GUI run is needed for
+this backend-only step.
 
 **V6.3 Realtime client** (L)
 - Build:
@@ -2344,6 +2501,50 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 - Needs: Z6, G9 (K8's needs), V0.4.
 - Tests: a cassette of a session; the gate refuses when off.
 
+Delivery sequence:
+1. **V6.3.1 Monetary ledger** — implemented 2026-10-19. Migration 28 adds atomic integer
+   micro-USD reservations and once-only settlement against the existing ledger identity. Parallel
+   work shares one allowance; history erasure/restart cannot refund it. Open holds do not expire;
+   unknown final usage debits the full ceiling while actual cost stays null. Settled cost expires
+   24 hours after completion. Missing quotes, zero limits, unavailable state and overflow fail
+   closed; overruns are charged in full. `voice-realtime` cannot use connector consent or count-only
+   admission. Backend foundation only: there is no network call, microphone capture or new setting.
+2. **V6.3.2 Bounded protocol and pricing** — implemented 2026-10-19. The offline `chat::realtime`
+   owner uses exact reviewed 2.1/2.1-mini rates, conservative context/audio/output ceilings and
+   explicit server-confirmed caps. It disables auto responses, tools and input transcription.
+   Opaque attempts bind server responses; receipts separate request outcome from billing. Unknown
+   or inconsistent usage retains the hold and closes the owner; known overruns are returned in full.
+   A synthetic two-response cassette covers cached context and billable cancellation. Rate review
+   expires after 30 days; no live API call or provider acceptance is claimed. See
+   [Realtime accounting](../reference/realtime-accounting.md) for source contracts and the ceiling proof.
+3. **V6.3.3 Runtime admission and transport** — backend implemented 2026-10-19. Fixed-origin
+   native-TLS WebSocket provider, bounded 24 kHz PCM channels, independent Settings-only consent
+   (schema 41), keyring lookup after durable admission, default US$1 rolling limit (zero disables),
+   process-monotonic gate clock, cancellation/deadlines and once-only receipt settlement. Duplex
+   frame tests cover two turns, off/spent/key refusal, mid-flight revocation/cancellation, malformed
+   audio, backpressure, delayed final settlement and unknown cost; real ledger tests cover detached
+   admission and exact remaining allowance. No renderer/capture entry is offered yet. Unresolved
+   holds block another reservation; recovery is delivered in V6.3.4.
+4. **V6.3.4 Exclusive ownership and orphan reconciliation** — implemented 2026-10-19. A Linux
+   kernel lock on the data directory outlives the borrowed socket future, detached blocking workers
+   and unclaimed admission guards. A new exclusive owner atomically closes abandoned holds at their
+   full ceiling with unknown actual cost, starting a conservative 24-hour window once. Active owners
+   refuse entry; identity/schema/write failure changes no accounting. Tests cover live process
+   exclusion, forced process death, socket abort, detached handoff, rollback, erased traces, exact
+   remaining allowance and no expiry extension on restart. No dependencies or schema changes.
+5. **V6.3.5 Native turn retention and local text recovery** — implemented 2026-10-19. Complete
+   bounded PCM turns survive admission/transport/response failures independently of the persistent
+   provider. Only final success releases the original; queued final receipts precede simultaneous
+   connection failures. Local Whisper/resampling returns whole reviewable text, or retained audio
+   with a typed missing-model/empty/decode/timeout reason. No automatic Chat send, download or
+   provider substitution. Cancellation/revocation discards work; shared Settings mutation fences
+   model/language/microphone/Zeca changes against restoration races. Outer/worker native leases
+   survive final publication and detached cold loads. Duplex burst and synthetic native regressions
+   cover bounded queues, exact failed-turn retention, late receipts, timeout and stale-output refusal.
+   Remaining activation gates: wire capture/playback and visible text continuation in V6.4-V6.7,
+   then pass live-provider/native acceptance. Full V6.3 remains open until these gates pass; offline
+   tests do not claim real speech/provider acceptance. Next engineering step: V6.4 playback.
+
 **V6.4 Playback and what the user heard** (M)
 - Build:
   - cpal output with a playback cursor from frames consumed;
@@ -2353,14 +2554,69 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 - Port: [PT] 122-129, 312.
 - Tests: split math; the history rewrite.
 
+### V6.4 delivery sequence
+
+1. **V6.4.1 bounded output and heard-text contract** (delivered 2026-10-19).
+   `audio::playback` owns one CPAL output worker, bounded source PCM, conversion, a predicted
+   device-consumption cursor, stop and producer-end versus drain. Cancellation and errors freeze
+   output; blocked native teardown retains exclusivity. `voice::turn::heard` preserves UTF-8 words,
+   estimates partial-segment text, computes interrupted context and yields one hint for at least
+   three unheard words. Explicit producer interruption remains distinct from received-audio drain.
+   Pure clock/split regressions and an isolated ALSA null check cover the backend; physical acoustic
+   timing is not claimed. There is no app caller, history mutation, microphone or provider call.
+   See [Playback and heard text](../reference/realtime-accounting.md#playback-and-heard-text).
+2. **V6.4.2 native provider/output/history integration** (delivered 2026-10-19).
+   The native owner now binds response/item/content identities and finalized transcript/audio extents
+   to generation-bound turn controls and CPAL consumption/drain. Confirmed interruption freezes once,
+   cancels an active producer, settles usage and truncates the exact item at floored played
+   milliseconds; a matching server acknowledgement precedes continuation. In-memory history keeps
+   only estimated heard words, with a quoted one-shot repair hint for the next admitted response.
+   No tool is enabled/replayed. Terminal output may drain or be interrupted; failed acknowledgement
+   yields explicitly unsynchronized local history and closes the owner. Native workers retain the
+   session lease. Offline socket/owner regressions and an actual CPAL null-driver check cover stale
+   events, cancellation, ack failure, completed-production drain, identity changes and recovery.
+   The app entry retains disabled barge-in pending V6.5. Capture/UI remain V6.7; physical/live
+   acceptance stays an activation gate. Backend V6.4 is delivered; full acceptance remains open.
+   See [Native playback and context repair](../reference/realtime-accounting.md#native-playback-and-context-repair).
+
+Next engineering task: **V6.7 capture/UI**, after the V6.6.3 guarded-backend publication checkpoint below.
+Codex consultation remains unavailable; its activation qualification is carried separately.
+
 **V6.5 Echo cancellation** (M, spike first)
-- Build:
-  - preferred: detect PipeWire `module-echo-cancel` (WebRTC AEC3) and use its source;
-  - Vults does not load modules silently: Settings explains and offers it with a click, or the user runs it
-    (Q6);
-  - alternative: the `webrtc-audio-processing` crate (BSD), measured.
-- Without AEC, barge-in is off on speakers and on with headphones.
+- Preferred: PipeWire's WebRTC engine with both the clean source and paired reference sink.
+- Vults does not load modules silently. Settings explains and offers setup with a click, or the
+  user runs it (Q6 remains open).
+- An embedded `webrtc-audio-processing` alternative needs evidence that the native route is inadequate.
+- Without qualified AEC, speaker barge-in is off; headphones require an explicit user choice.
 - Port: [PT] 140-172, 326.
+
+### V6.5 delivery sequence
+
+1. **V6.5.1 native inventory and isolated spike** (delivered 2026-10-19).
+   Read-only local Pulse discovery requires explicit WebRTC module ownership, matching source/sink
+   group and stable object/server identities. Rechecking is a snapshot, never route authority.
+   A private PipeWire/WirePlumber experiment feeds synthetic echo and two near-end tones through
+   the actual installed native module, with private configuration/scripts/state, no hardware
+   monitors or desktop routes and fixed acceptance thresholds. Three runs pass the synthetic gate;
+   physical speech/double-talk/latency acceptance is not claimed. Native-only modules without Pulse
+   ownership metadata are unsupported by this first inventory. No extra dependency, production
+   module loader, app capture or barge-in activation is added. See
+   [Echo cancellation](../reference/echo-cancellation.md) for the runnable experiment and evidence.
+2. **V6.5.2 pinned duplex routing and device policy** (delivered 2026-10-20).
+   One native libpulse worker acknowledges exact input/output targets, forbids moves and watches
+   module-owned AEC connections plus physical endpoint identities/ports. Changed routes revoke the
+   session; default changes cannot redirect it. Content spans exclude silence, subtract reported
+   sink latency and require a separate successful drain acknowledgement. Stop freezes the cursor;
+   native teardown and callbacks retain ownership until cancellation/delete acknowledgement.
+   Explicit headphones may bypass AEC; ordinary speaker/CPAL paths remain non-interruptible.
+   The app's separate native entry checks consent/revocation before capture and forwards bounded
+   memory-only Input events, without automatic turn assembly, upload or persistence. Unverified
+   routes invalidate retained speech/probes before deferred events. Three consecutive isolated
+   native runs and clock/ownership/revocation regressions cover the backend. Backend V6.5 is
+   delivered; next is V6.6. Resolve Q6 before production setup; Vults loads no system modules
+   silently. Capture controls/turn assembly stay in V6.7. Physical/live speech, double-talk,
+   acoustic timing, hardware hotplug and long-session acceptance remain activation gates.
+   See [Routed validation](../reference/echo-cancellation.md#routed-validation).
 
 **V6.6 Zeca's voice tools and delegation** (M)
 - Build:
@@ -2373,6 +2629,145 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 - Tests: the rule-2 test over every `Intent` (H1) covers the voice path: no `Decide`/`DecideAlways`
   reachable.
 
+### V6.6 delivery sequence
+
+1. **V6.6.1 local commands before remote admission** (delivered 2026-10-20).
+   A native complete turn may bind a finalized local transcript (at most 4 KiB); Linux admission
+   requires it before remote upload. Capture/transcription assembly remains the V6.7 caller's job.
+   The one runtime state owner reuses V8's transactional dispatcher and cached flock reads, with a
+   separate conversation's repeat/undo/clarification context. Command enablement, realtime consent,
+   cancellation, Settings epochs and an absolute three-second admission expiry are rechecked under
+   Settings/admission locks. Dropped waiters revoke queued work; consumed requests cannot run twice.
+   Local results retire the input generation without Generate; duplicate/stale captures cannot
+   upload or replay. Only NotCommand may proceed remotely. Refused cards, unavailable/disabled
+   commands and clarifications are consumed locally. External effects return Requested after being
+   submitted to the existing executor, never a false completion claim. No automatic model fallback
+   follows a consumed command. Missing transcripts fail before provider construction and may use
+   only the existing reviewable local-text recovery. No renderer, capture, provider tool or agent
+   delegation is activated. Native-owner/dispatcher/turn regressions cover these paths; physical
+   speech/provider acceptance remains open. See
+   [Local commands before realtime upload](../reference/realtime-accounting.md#local-commands-before-realtime-upload).
+2. **V6.6.2 bounded realtime flock tools** (delivered 2026-10-20).
+   The native app offers only the existing five cached flock reads through frozen confirmed specs.
+   One complete successful function-only response precedes each read; identities, arguments,
+   stream/final agreement, duplicate keys and replay sets are checked before execution. Each known
+   receipt settles before the next independent reservation and local read. Up to eight reads share
+   one 120-second chain deadline; arguments/deltas/results are bounded, including JSON escaping.
+   Inert error/outside/truncation flags carry results without authority. A consumed tool receipt
+   releases original input while playback stays Thinking; final audio/history use their own identity.
+   Failure never re-uploads input or retries the consumed call, and reused tool attempts cannot queue
+   audio. Offline protocol/duplex/native-owner regressions cover these paths and exact offerings.
+   No action/permission tool, renderer entry, microphone or live provider is activated. Next is
+   V6.6.3. See [Read-only tools](../reference/realtime-accounting.md#read-only-tools-in-realtime).
+3. **V6.6.3 agent consultation and completion semantics** (backend publication checks accepted;
+   Codex activation remains unqualified).
+   - **Completion receipts** (implemented 2026-10-20). Core-only changes complete at commit;
+     project persistence completes only after a successful save. Native launches distinguish
+     submission from completion: starting an editor or submitting a window-activation request
+     reports Requested, not Done. Known failure reports that some changes may already have happened.
+     Every effect receipt is checked, including mixed cached-read/action batches. Receipt waiting
+     is bounded to two seconds within the original three-second owner deadline; queued work
+     rechecks the exact authority, waiter and expiry and retains the exclusive lease through exit.
+     A consumed capture is shared across clones before admission unlocks. Lost acknowledgements,
+     timeout, tool settlement and confirmed interruption cannot recover, relabel or replay it.
+     Offline regressions and the exhaustive H1 boundary cover this slice without desktop actions,
+     microphone, provider or renderer activation. See
+     [Native command receipts](../reference/realtime-accounting.md#native-command-receipts).
+   - **Claude Code text consultation** (implemented 2026-10-20; native backend only).
+     Optional `consult_claude` reuses the existing tool-free text client with an independent
+     default-off Settings consent, durable 20-attempt rolling quota and content-free local traces.
+     Only its bounded question is supplied; user/project settings, skills, file mentions and memory
+     discovery are disabled. No active agent session, Chat history or permission owner is inherited.
+     Cancellation and the translated 1.5-second native notice cover admission and the CLI from the
+     original call time. The busy slot and voice lease survive preparation and child teardown;
+     late replies cannot publish. Current clients must support the isolation controls (Claude
+     Code 2.1.299+ in the 2.1 series); organizational managed policy still applies. Native notice
+     display and the opt-in UI stay in V6.7; no live model/microphone acceptance is claimed. See
+     [Text consultation](../reference/realtime-accounting.md#text-consultation).
+   - **Codex tool/context isolation** (qualified helper implemented 2026-10-20; not offered).
+     Keep the user's installed CLI authentication; do not introduce an API-key route. The original
+     restrictive exec candidate and App Server with empty environments both fail the local probe.
+     Feature switches alone do not override model metadata. The new helper supplies a minimal
+     app-owned catalog with disabled shell, patch, search and collaboration capabilities, fixed
+     instructions, disabled skills/context injection, ignored user config/rules and no saved session.
+     Only exact CLI 0.163.0 may run it; unknown/upgraded clients fail closed. JSON-quoted input
+     escapes dollar/at-sign markers before the CLI preprocessor and preserves the decoded question:
+     hiding the skills catalog alone does not stop explicit skill expansion. A canary test covers
+     project instructions, files and named skills; the actual model request offers zero tools and
+     no canary context. A fixed stand-in response passes through the real CLI and strict text-only
+     reply parser. No external provider, real credential, microphone or desktop action is used.
+     Cancellation/output bounds reuse the acknowledged-child runner.
+     A separate synthetic-auth mount test proves the ChatGPT-only status preflight refuses API
+     login without modifying its auth; HOME/CODEX_HOME values are never reassigned. This preflight
+     is not an atomic binding against concurrent external login changes.
+     **Native backend integrated 2026-10-20:** independent default-off Codex consent, Settings-only
+     writes, durable 20-attempt rolling quota and metadata-only traces now reuse the native owner.
+     Both providers share a busy slot through acknowledged child exit; consent/quota separation and
+     cancellation ownership have offline regressions. There is no renderer/capture entry.
+     **Activation guard enforced 2026-10-20:** one false qualification capability now refuses
+     Codex opt-in before settings/ledger IO, omits its tool even with saved consent, closes its
+     network gate and refuses the public helper before CLI/scratch access. Turning a saved choice
+     off remains allowed. The isolated synthetic-auth regression now also reproduces forced-exec
+     deletion, without exposing original credentials or contacting a provider. This is containment,
+     not a subscription-binding solution. Ephemeral credential storage does not import the existing
+     login; URL overrides are not authentication-mode guarantees. Do not substitute either.
+     **Managed-policy candidate probed 2026-10-20:** system-only
+     `allowed_login_methods=["chatgpt"]` constrains credential loading without forced-exec logout.
+     Nine synthetic scenarios isolate both home and system policy: the negative control sends its
+     API bearer, managed API attempts omit it and preserve auth, ChatGPT status succeeds, and API
+     replacements before fresh exec or after a first-request 401 never send the replacement key.
+     The 401 scenario observes a retry with the original synthetic ChatGPT bearer, then a fixed 400;
+     no model/provider or real auth is used. A handshake retry/fallback is not proof of auth reload.
+     This is file-store candidate evidence, not activation.
+     Runtime effective-policy/protected-provenance checks, keyring, broader refresh/failure cases
+     and live compatibility are still required. Never install system requirements automatically;
+     unmanaged machines remain blocked. See
+     [Managed-policy candidate](../reference/realtime-accounting.md#managed-policy-candidate).
+     **Next:** qualify subscription-only behavior during concurrent external login changes before
+     visible activation. App Server account/read has no stable identity for binding a separate exec.
+     A synthetic-auth review probe confirms forced login on exec deletes mismatched API auth. Do not reuse Claude's consent, force a login
+     mode that may log out an existing account, or claim live/managed-client acceptance. Whole
+     Codex activation remains open. V6.7 engineering may proceed with that feature disabled.
+
+     Reproduce the explicit installed-client checks on Linux (requires user/network namespaces
+     and `ip`/`bwrap`; ordinary workspace tests skip these four client probes):
+
+     ```sh
+     unshare --user --map-root-user --net sh -c 'ip link set lo up && cargo test -p vults-chat consult_codex -- --include-ignored --nocapture'
+     ```
+
+     Baseline candidates must remain rejected; the exact helper must offer no tools, exclude
+     canaries and accept only the fixed text reply. Passing does not authorize runtime activation.
+
+### V6.6.3 publication checkpoint (2026-10-20)
+
+The user requested consolidated verification and publication before V6.7 engineering. The release
+scope is the tested native backend, saved meetings and verified question flows; it does not enable
+unqualified Codex consultation or claim physical/live voice acceptance.
+
+- The actual microphone Settings setter now revokes realtime ownership under the Settings lock
+  after successful persistence. An isolated setter-level regression covers restoration, unchanged
+  choice and failed save. The earlier helper-only test did not cover this production writer.
+- Fresh isolated `configRequirements/read`, `account/read(refreshToken=false)` and `config/read`
+  verify absent policy, ChatGPT-only policy and required file/keyring stores. The host has no
+  `/etc/codex/requirements.toml`; it is not eligible for the managed route. No policy is installed.
+- Required keyring with DBus unavailable returns no account, sends no stored API bearer and never
+  falls back to an otherwise-valid synthetic ChatGPT file; the same file is accepted with file
+  storage. Neither file is altered. Successful/locked OS-keyring behavior is not qualified here.
+- A custom OpenAI-auth-required HTTP-only stand-in exercises actual POST401 for managed and
+  unmanaged synthetic ChatGPT-to-API replacement. Both terminate after one POST without sending
+  the replacement API key. This is bounded refusal evidence, not proof of credential reload or
+  successful renewal; it cannot enable the Codex activation capability.
+- Independent full-branch review found no additional P0/P1 issue. Its microphone invalidation,
+  missing question-race CI check and stale changelog findings are resolved. All 18 renderer checks
+  now run in CI. No microphone, model, original auth/keyring or agent config is used by these probes.
+
+**Disposition:** publish Codex consultation disabled behind all four existing guards. Keep its
+policy/provenance, successful keyring, credential renewal and live compatibility qualification open.
+Proceed to V6.7 engineering with that unavailability explicit. V6.7 must wire reviewed capture and
+controls, exercise physical/live acceptance with separate consent/budget, and run native UI review
+before K8 can be marked Done. No gate is silently waived or relabeled as passed.
+
 **V6.7 Talk with Zeca page and island speaking states** (M)
 - Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio
   goes; on, the model, budget, end of turn, interrupting and *Answer without the key*, off by default; "never
@@ -2382,10 +2777,30 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
 
 ## V7 MCP `vults_dictate`
 
-**V7.1 ADR 0028 / M7 alignment** (S)
+**V7.1 ADR 0028 / M7 alignment** (S) — delivered 2026-10-19; decision only
 - Build: record that a *question* card (M7's `ask_user`, a card answered with text) may be filled by
   dictation and is sent with a click or Enter. Permission cards never take voice. ADR 0027/G1 is
   unaffected.
+
+The [living voice record](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+now distinguishes typed question drafts from permission decisions. Capture is user-started and
+local; only a separate click or unmodified Enter sends the final editable text. The verified client,
+exact question, generation and lifetime own capture and reply. Lock/departure, replacement, expiry
+and disconnect revoke pending work; replies are consumed at most once and audited without a second
+transcript. IME/Shift+Enter and literal approval-like text cannot trigger permission authority.
+
+This is the next module after V5 in the authoritative delivery order; V6 has not started. At the
+V7.1 decision checkpoint, M7's read/proposal server had no question tools. V7.2.1/V7.2.2 below deliver
+the typed lifecycle, verification, audit round trip and composer; V7.2.3 below connects local capture.
+V7.3 owns external-agent setup and its default-off switch. V7.1 itself changed no runtime or config.
+
+Validation: the independent authority/EN-PT review found no permission expansion or false shipped
+claim. Its wording fixes distinguish local Whisper inference from remote audio and explicitly
+exclude provider clean-up from question drafts. All 1,234 workspace tests (10 documented ignores),
+10 evals, workspace Clippy, renderer build, 18 renderer checks and repository guards pass; reviewed
+translation marks and changed-page links/fragments pass. There is no renderer/runtime change to
+exercise in a native app. The safety guide also corrects the old ephemeral-only meeting statement
+to match V5.8's explicit text saves and independent exported copies. The app stays closed.
 
 **V7.2 The tool** (M)
 - Build:
@@ -2396,9 +2811,154 @@ to the running app belongs to V5.8. No audio is stored by this API and no new de
     confirmation.
 - Tests: an MCP round trip with a fake agent; the audit row.
 
-**V7.3 Offer it to agents** (M)
+### V7.2 delivery sequence
+
+1. **V7.2.1 Lifecycle and requester proof** — implemented 2026-10-19; backend only.
+   `core::questions::Slot` retains one typed question and editable draft per authenticated
+   connection, with an absolute 120-second deadline, a fresh app-owned connection nonce, process
+   incarnations, request/question binding and a monotonic generation. Confirmation consumes the
+   draft once; replacement, cancellation, expiry, disconnect, departure and lock can revoke it.
+   No text is interpreted as an action or permission. Replay protection retains at most 256 request
+   ids per connection and then requires a new connection; invalid input preserves the live draft.
+   Linux `peer::requester` captures kernel socket credentials or the real stdio process ancestry,
+   skips only verified system-shell executables while retaining their wrappers, and rechecks
+   same-user PID/start time, parent and executable identity. Unrecognized wrappers stay the client.
+   It refuses unavailable, dead or changed processes. Content-free receipts convert to the existing
+   audit format; a store regression verifies persistence without prompt, draft or raw RPC id.
+   These are library APIs: the app does not invoke them or advertise a question tool yet.
+2. **V7.2.2 Text question round trip** — implemented 2026-10-19; typed replies only. Connect the verified relay and typed lifecycle to
+   `app/src/mcp.rs`, the runtime-owned composer and the durable audit. Revalidate proof before
+   publishing and confirming, generate the connection nonce in the app, revoke on every departure
+   event and process exit, and handle cancellation, delivery failure and lost acknowledgement
+   without retrying a consumed reply. Test a real MCP round trip with a fake agent, including
+   stale clients and duplicate/late input. Preserve existing permission and hook-question paths.
+3. **V7.2.3 Local dictation into the draft** — implemented 2026-10-19 after the text round trip. Route only the physical
+   dictation key to the selected question; keep capture and confirmation separate, preserve manual
+   edits, IME/Shift+Enter behavior and all cancellation gates, and validate the native island/composer.
+   No provider clean-up, chat fallback or spoken permission answers. The default-off external-agent
+   offering and config changes remain V7.3.
+
+V7.2.1 validation covers draft-only input, once-only confirmation, every revocation, exact deadline
+boundaries, connection/process/question binding, replay limits, live Linux credentials/ancestry,
+process exit and metadata-only audit storage. This backend slice starts no microphone, UI,
+network request or MCP listener, and left the app closed. At that checkpoint, tool/round-trip
+acceptance remained pending with V7.2.2/V7.2.3; see the subsequent implementation record below.
+
+Validation: all 1,246 workspace tests pass (10 documented ignores), along with 10 evals, workspace
+Clippy, the renderer build, 18 renderer checks and repository guards. Independent code review
+caught mutable process names being used to skip shell wrappers; the fix checks the resolved,
+root-owned system executable identity and rejects multicall aliases. The spoofed-name regression
+passes and the final review has no remaining blocker. Native UI validation does not apply to this
+library-only change; no audio/model request was made.
+
+### V7.2.2 implementation record
+
+The Linux stdio server now offers `ask_user` only to a live client started directly by Vults,
+including past verified system-shell wrappers. A separate private socket authenticates the relay
+with kernel credentials and exact executable identity; the runtime rechecks the entire proof.
+External clients remain refused even with a manual MCP config. The async reader keeps cancellation
+and ping responsive while a human edits, binds cancellation to the exact typed RPC id, rejects replay
+and bounds both wire messages and the per-connection request history. Lifetimes start when transport
+receives the request, so queueing cannot renew the deadline. No agent configuration was changed.
+
+Quick and Nest share one retained text editor, four-language labels, UTF-8 byte limits and a separate
+Send/plain Enter action. IME, modifiers and repeat cannot confirm. Permission cards take priority.
+Capture admission is blocked on this typed-only path; there is no microphone button or `vults_dictate`.
+The runtime owns draft/connection/surface leases and consumes confirmation before an off-loop durable
+audit write. It can revoke while that write is pending, and checks the original deadline again before
+delivery. The relay acknowledges only after flushing the MCP result; failure, lock/departure or a
+missing acknowledgement after consumption reports uncertain delivery without offering resend.
+
+Code review found and fixed stale departure/replacement reads, expiry during audit, capture through
+the separate command key, permission priority in Nest and an escaped-envelope size mismatch. A
+runtime-ordered Leave acknowledgement now fences queued renderer events; an older in-flight Status
+cannot suppress its follow-up refresh. Prompt/draft text clears locally on departure. Native QA found
+long Quick prompts growing past the mapped surface; a bounded card now scrolls the prompt while
+retaining the editor and actions, including the minimum Nest.
+
+Evidence: six Rust tests use a real parent/agent/relay process chain and MCP/Unix transport, including
+responsive ping, exact-id cancellation, once-only human confirmation, durable content-free audit,
+failed audit, stale/wrong-surface input, owner refusal, lost stdout acknowledgement, lock/departure,
+expiry and page lease. All 1,252 workspace tests pass (10 documented ignores), plus 10 evals, workspace
+Clippy and cargo-deny. The dedicated renderer check exercises manual edits, stale acknowledgements,
+IME/modifiers, byte limits, ordered departure and delayed replacement/status. Native production UI
+checks cover Black/Light, Quick, Nest at 1180 x 820 and 480 x 360, long prompts and all four languages,
+using controlled question responses without audio/model calls. Renderer build, all 19 renderer
+checks, formatting and repository guards pass. The final review has no remaining blocker; the app,
+Vite and isolated QA config/data/cache/runtime are stopped/removed. Maintainer visual acceptance
+remains separate. V7.2.3's local draft dictation is next; V7.3 owns the default-off external-agent offering.
+
+### V7.2.3 implementation record
+
+Implemented 2026-10-19. `vults_dictate(question)` aliases `ask_user` for verified app-owned Linux
+clients; neither tool starts a microphone. Only a new physical dictation-key press grants a capture
+bound to the selected question token, recording generation and original deadline. Existing holds,
+repeats, the command key and gestures from another recording cannot grant it. Sending retains key
+ownership until its terminal acknowledgement; a fresh later ordinary press resumes ordinary dictation.
+
+Capture uses the saved input and installed local Whisper model, with 60-second/remaining-lifetime
+bounds, checks before opening/playing and lifetime cancellation in the audio thread. Audio stays in
+memory; the ordinary provider/cleanup, command, clipboard, insertion and history pipelines are bypassed.
+A single busy guard survives cancellation while an uncancellable native model load drains. The runtime
+never waits for audio/model work. Lock, replacement, expiry, departure, client loss, lease failure,
+settings changes and rebinding cancel outstanding capabilities and discard late results.
+
+The production retained editor stays editable during recording and transcription. Final words append
+to its current manual draft, wait for IME composition to end and must fit the combined UTF-8 limit.
+A matching apply acknowledgement clears the recording barrier; neither release, silence, a completion
+nor spoken "send" submits text. Cancel dictation keeps manual edits. Send still needs its separate
+click/plain Enter and durable content-free audit/relay acknowledgement. Failed/oversized results do
+not replace the draft, and no consumed reply can be retried.
+
+Evidence: ten question/key tests include real MCP/process delivery through the alias, blocked early
+Send, edits during decode, wrong apply generations, cancellation, replacement and lock. The audio
+check verifies revoked admission without accessing hardware. Renderer regressions cover IME-deferred
+append, duplicate/stale Ready, failed/oversized apply, separate Send and replacement acknowledgements.
+Independent review fixed missing dictation view revisions, Sending shortcut ownership, a late shortcut
+binding bootstrap and a non-Linux cfg warning. Final ordinary worker admission and Chat registration
+share the question fence; revoked microphone epochs cannot revive. A matching renderer Status must
+acknowledge the displayed question before it becomes a dictation target. Final review reports no
+remaining blocker.
+
+All 1,256 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy, renderer
+build, all 18 renderer checks, formatting and repository guards. Native controlled-response checks
+exercise Black/Light Quick/Nest, 480 x 360 actions/editor, recording/transcribing states, all four
+languages and manual text preserved through final append. No automated event starts hardware capture;
+real-human speech/model/device acceptance remains open. QA uses an isolated profile and is stopped/
+removed after validation. External-agent opt-in/config installation remains V7.3.
+
+**V7.3 Offer it to agents** (M) — implemented 2026-10-19; real-client/speech acceptance remains open
 - Build: add the tool to agents' MCP configs only through `agent-config` (rule 3: backup, diff, click); the
   switch "Agents may ask for a spoken answer" in Settings › Dictation › Agents (off).
+
+The dedicated Linux `vults --questions-mcp` server exposes only `ask_user` and `vults_dictate`.
+External requests require the saved default-off choice and verified live requester proof, including
+when someone configures a server manually. Consent generations reject queued requests from an older
+grant; turning access off cancels pending external questions and capture. Runtime transitions and
+the actual audited reply handoff hold the same consent guard. App-owned Chat questions keep their
+existing authority; this setting grants neither permission answers nor automatic microphone access.
+
+Settings offers reviewed setup, update and removal for Claude Code and Codex. Plans bind the exact
+config, diff and fingerprint; a separate click uses `agent-config` for dated backup and atomic write.
+Other servers, hooks and Codex trust entries are preserved. An installer ownership marker allows a
+reviewed executable-path update without granting question authority. Removal remains available with
+access off. Stale reads, consent events, navigation and overlapping refreshes cannot restore an old
+diff or enable its Apply action. All user-facing strings ship in four languages; EN/PT guides and
+ADR 0028 document the current behavior.
+
+Evidence: real-process MCP regressions cover external discovery, default-off runtime refusal,
+on/off/on generations, audited cancellation, serialized consent/reply handoff and once-only confirmed
+delivery. Temporary config fixtures cover foreign entries, stale plans, preserved servers/trust,
+managed path updates and exact backups. Renderer regressions cover review-before-write, duplicate
+Apply, stale navigation/consent/refresh responses and translations. Independent review reports no
+remaining blocker. Native Black/Light checks cover 1180 x 820 and 480 x 360, reachable scrolled actions,
+all four languages and the actual privileged setting RPC in an isolated profile. Config responses
+in native UI QA are controlled fixtures; no real agent config is written. The QA app/server and
+profile are stopped/removed. Full agent sessions and real-human microphone/speech acceptance remain
+open; those release gates are not replaced by fixtures. Next engineering phase: V6.
+
+All 1,263 workspace tests pass (10 documented ignores), plus 10 evals, workspace Clippy, renderer
+build, all 18 renderer checks, formatting and repository guards. No dependencies changed.
 
 ---
 
@@ -2650,8 +3210,8 @@ measurements here rather than maintaining a second phase table.
 - The decisions table points to the pure dictation layer, platform insertion and Settings/Activity
   owners. The required guard rows name the waiting-session and temporary-audio checks; those
   tests must land with production behavior and are not claimed to exist at this documentation step.
-- M7's `ask_user` follow-up is still needed for V7. V7.1 must align ADR 0028 before a question
-  composer can accept dictation with explicit human confirmation. Permission cards remain excluded.
+- M7's `ask_user` follow-up is still needed for V7. V7.1 aligned ADR 0028 on 2026-10-19; the question
+  composer and its enforcement remain V7.2/V7.3 work. Permission cards remain excluded.
 - V0.9/P12 was accepted on 2026-10-17. That review does not replace production native smoke,
   gate implementation or model-license checks.
 
@@ -2680,7 +3240,7 @@ measurements here rather than maintaining a second phase table.
    raw-text fallback.
 8. **Licences.**
    - Diarization weights are gated on Hugging Face.
-   - smart-turn's licence needs confirming.
+   - smart-turn's BSD-2-Clause code/weights were verified in V6.2.2; new artifacts still need their own review.
    - Each audio host crate needs `cargo deny`.
    - No `sherpa-onnx` crate (espeak-ng).
 9. **Brand.** Ported code must not carry the source's name; reviews grep for it (`check-brand.sh` catches

@@ -1,4 +1,5 @@
 use crate::meeting::{speaker_models::VerifiedModels, speakers::Turn};
+use crate::onnx::NativeSession;
 use ort::session::Session;
 use ort::value::Tensor;
 use std::collections::BTreeSet;
@@ -36,15 +37,6 @@ struct Frame {
     start: usize,
     end: usize,
     observation: Option<usize>,
-}
-
-struct NativeSession(ManuallyDrop<Session>);
-impl Drop for NativeSession {
-    fn drop(&mut self) {
-        let _busy = crate::WHISPER.lock();
-        // SAFETY: this wrapper drops its only session once, under the shared native-work slot.
-        unsafe { ManuallyDrop::drop(&mut self.0) };
-    }
 }
 
 fn session(bytes: &[u8], stop: &AtomicBool) -> Result<Option<NativeSession>, String> {

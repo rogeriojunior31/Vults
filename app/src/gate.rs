@@ -2,12 +2,14 @@
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
 //! polls, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
-//! summary, the memory's suggestions, Zeca's sleep, opted-in dictation clean-up and meeting summaries.
+//! summary, the memory's suggestions, Zeca's sleep, opted-in dictation clean-up, meeting summaries
+//! and tool-free voice consultations.
 //! Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
 //! way out from appearing unlisted. Explicit meeting installation uses its own one-use review
 //! adapter below, with durable admission for every HTTP attempt.
 
 mod meeting_assets;
+pub(crate) mod realtime;
 pub use meeting_assets::MeetingAssetsGate;
 
 use std::collections::{BTreeMap, VecDeque};
@@ -47,6 +49,11 @@ pub const CLEANUP: &str = "dictation-cleanup";
 pub const CLEANUP_BUDGET: usize = 2000;
 pub const MEETING_SUMMARY: &str = "meeting-summary";
 pub const MEETING_SUMMARY_BUDGET: usize = 20;
+pub const VOICE_REALTIME: &str = "voice-realtime";
+pub const VOICE_CONSULTATION: &str = "voice-consultation";
+pub const VOICE_CONSULTATION_BUDGET: usize = 20;
+pub const VOICE_CODEX_CONSULTATION: &str = "voice-codex-consultation";
+pub const VOICE_CODEX_CONSULTATION_BUDGET: usize = 20;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -95,6 +102,8 @@ pub fn budget(feature: &str) -> usize {
         SLEEP => SLEEP_BUDGET,
         CLEANUP => CLEANUP_BUDGET,
         MEETING_SUMMARY => MEETING_SUMMARY_BUDGET,
+        VOICE_CONSULTATION => VOICE_CONSULTATION_BUDGET,
+        VOICE_CODEX_CONSULTATION => VOICE_CODEX_CONSULTATION_BUDGET,
         meeting_assets::FEATURE => meeting_assets::BUDGET,
         "github" => CONNECTOR_BUDGET,
         _ => 0,
@@ -103,7 +112,15 @@ pub fn budget(feature: &str) -> usize {
 
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
-    if feature == meeting_assets::FEATURE {
+    if feature == VOICE_CODEX_CONSULTATION {
+        vults_chat::consult_codex::SUBSCRIPTION_AUTH_QUALIFIED
+            && s.voice_codex_consultation
+            && s.voice_codex_consultation_budget.is_some()
+    } else if feature == VOICE_CONSULTATION {
+        s.voice_consultation && s.voice_consultation_budget.is_some()
+    } else if feature == VOICE_REALTIME {
+        s.voice_realtime.enabled()
+    } else if feature == meeting_assets::FEATURE {
         false
     } else if feature == MEETING_SUMMARY {
         s.meeting_summary && s.meeting_summary_budget.is_some()
@@ -183,6 +200,9 @@ impl vults_connectors::Gate for NetGate {
     fn allow(&self, connector: &str) -> bool {
         connector != CLEANUP
             && connector != MEETING_SUMMARY
+            && connector != VOICE_REALTIME
+            && connector != VOICE_CONSULTATION
+            && connector != VOICE_CODEX_CONSULTATION
             && connector != meeting_assets::FEATURE
             && self.allow_at(connector, Instant::now())
     }
@@ -217,6 +237,27 @@ impl NetGate {
         local: bool,
     ) -> Option<Span> {
         self.reserve_text(store, identity, MEETING_SUMMARY, provider, model, local)
+    }
+    pub fn reserve_voice_consultation(&self, store: &mut vults_store::Store, identity: &str) -> Option<Span> {
+        self.reserve_text(
+            store,
+            identity,
+            VOICE_CONSULTATION,
+            "claude",
+            vults_chat::summary::MODEL,
+            false,
+        )
+    }
+
+    pub fn reserve_codex_consultation(&self, store: &mut vults_store::Store, identity: &str) -> Option<Span> {
+        self.reserve_text(
+            store,
+            identity,
+            VOICE_CODEX_CONSULTATION,
+            "codex",
+            vults_chat::consult_codex::MODEL,
+            false,
+        )
     }
 
     fn reserve_text(
@@ -258,6 +299,8 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(SLEEP);
         features.push(CLEANUP);
         features.push(MEETING_SUMMARY);
+        features.push(VOICE_CONSULTATION);
+        features.push(VOICE_CODEX_CONSULTATION);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -305,6 +348,8 @@ fn feature(key: &str) -> &'static str {
         SLEEP => "sleep",
         CLEANUP => "dictation-cleanup",
         MEETING_SUMMARY => "meeting-summary",
+        VOICE_CONSULTATION => "voice-consultation",
+        VOICE_CODEX_CONSULTATION => "voice-codex-consultation",
         meeting_assets::FEATURE => "meeting-assets",
         _ => "connectors",
     }
@@ -318,7 +363,10 @@ pub fn seed(features: &[&str]) -> BTreeMap<String, Vec<i64>> {
     features
         .iter()
         .map(|c| {
-            let times = if matches!(*c, CLEANUP | MEETING_SUMMARY) {
+            let times = if matches!(
+                *c,
+                CLEANUP | MEETING_SUMMARY | VOICE_CONSULTATION | VOICE_CODEX_CONSULTATION
+            ) {
                 store
                     .as_ref()
                     .ok()
@@ -364,6 +412,111 @@ mod tests {
             assert!(!g.allow_at("github", at(start, t)));
         }
         assert!(spans.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn realtime_cannot_borrow_a_connector_switch_or_a_count_only_allowance() {
+        let mut settings = crate::settings::Settings::default();
+        settings.connectors.insert(VOICE_REALTIME.into(), true);
+        assert!(!switched_on(&settings, VOICE_REALTIME));
+        assert_eq!(budget(VOICE_REALTIME), 0);
+        let (gate, _) = gate(true, usize::MAX, BTreeMap::new());
+        assert!(!vults_connectors::Gate::allow(&gate, VOICE_REALTIME));
+    }
+
+    #[test]
+    fn realtime_receipts_settle_the_reserved_attempt_and_unknown_usage_keeps_its_ceiling() {
+        use vults_chat::realtime::{Plan, Session};
+        const NOW: i64 = 1_792_368_000_000;
+        let dir = std::env::temp_dir().join(format!("vults-realtime-budget-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = vults_store::Store::open(&dir).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let plan = Plan::new("gpt-realtime-2.1-mini", 8192, 1024).unwrap();
+        let instructions = plan.session_update()["session"]["instructions"].clone();
+        let mut session = Session::new(plan);
+        let span = |attempt: &str| {
+            let mut span = request_span(VOICE_REALTIME, false, NOW, NOW);
+            span.status = "started".into();
+            span.span = attempt.into();
+            span
+        };
+        let mut receipts = Vec::new();
+        for line in include_str!("../../crates/chat/tests/fixtures/realtime-session.jsonl").lines() {
+            let mut event: serde_json::Value = serde_json::from_str(line).unwrap();
+            if event["type"] == "session.updated" {
+                event["session"]["instructions"] = instructions.clone();
+            } else if event["type"] == "response.created" {
+                let attempt = event["response"]["metadata"]["vults_attempt"].as_str().unwrap();
+                let prepared = session.prepare(attempt, NOW).unwrap();
+                assert!(
+                    store
+                        .reserve_cost(
+                            &identity,
+                            VOICE_REALTIME,
+                            1_000_000,
+                            Some(prepared.ceiling_microusd),
+                            &span(attempt)
+                        )
+                        .unwrap()
+                );
+                assert!(
+                    !store
+                        .reserve_cost(
+                            &identity,
+                            VOICE_REALTIME,
+                            1_000_000,
+                            Some(820_801),
+                            &span("parallel")
+                        )
+                        .unwrap()
+                );
+            } else if event["type"] == "response.done" && event["response"]["id"] == "resp_b" {
+                event["response"]["usage"] = serde_json::Value::Null;
+            }
+            if let Some(receipt) = session.receive(&serde_json::to_vec(&event).unwrap()).unwrap() {
+                assert!(
+                    store
+                        .settle_cost(
+                            &identity,
+                            &receipt.attempt,
+                            receipt.actual_microusd,
+                            NOW,
+                            receipt.ok
+                        )
+                        .unwrap()
+                );
+                assert!(
+                    !store
+                        .settle_cost(&identity, &receipt.attempt, Some(0), NOW, true)
+                        .unwrap()
+                );
+                receipts.push(receipt);
+            }
+        }
+        assert_eq!(receipts[0].actual_microusd, Some(2059));
+        assert_eq!(receipts[1].actual_microusd, None);
+        assert!(!receipts[1].ok);
+        assert!(!receipts[1].within_bounds);
+        assert!(session.prepare("cannot_reopen", NOW).is_err());
+        assert!(
+            !store
+                .reserve_cost(&identity, VOICE_REALTIME, 1_000_000, Some(818_742), &span("over"))
+                .unwrap()
+        );
+        assert!(
+            store
+                .reserve_cost(
+                    &identity,
+                    VOICE_REALTIME,
+                    1_000_000,
+                    Some(818_741),
+                    &span("exact_remaining")
+                )
+                .unwrap()
+        );
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
@@ -635,6 +788,98 @@ mod tests {
         assert_eq!(budget(USAGE), USAGE_BUDGET);
         assert_eq!(budget(PHONE), PHONE_BUDGET);
         assert_eq!(budget("unknown"), 0);
+    }
+
+    #[test]
+    fn voice_consultation_has_independent_durable_admission_and_content_free_traces() {
+        use vults_connectors::Gate;
+        let mut settings = crate::settings::Settings::default();
+        settings.voice_realtime.on = true;
+        settings.voice_realtime.ledger = Some("voice".into());
+        settings.connectors.insert(VOICE_CONSULTATION.into(), true);
+        assert!(!switched_on(&settings, VOICE_CONSULTATION));
+        settings.voice_consultation = true;
+        assert!(!switched_on(&settings, VOICE_CONSULTATION));
+        settings.voice_consultation_budget = Some("consultation".into());
+        assert!(switched_on(&settings, VOICE_CONSULTATION));
+        let directory = std::env::temp_dir().join(format!("vults-consult-gate-{}", crate::traces::new_id()));
+        let mut store = vults_store::Store::open(&directory).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let off = NetGate::new(|_| false, budget, BTreeMap::new(), |_| {});
+        assert!(off.reserve_voice_consultation(&mut store, &identity).is_none());
+        for _ in 0..VOICE_CONSULTATION_BUDGET {
+            let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+            assert!(!gate.allow(VOICE_CONSULTATION));
+            let span = gate.reserve_voice_consultation(&mut store, &identity).unwrap();
+            assert_eq!(
+                span.attrs,
+                json!({"vults.feature":"voice-consultation","vults.target":"voice-consultation","vults.provider":"claude","gen_ai.request.model":vults_chat::summary::MODEL,"vults.local":false})
+            );
+        }
+        store.clear_all(&directory).unwrap();
+        drop(store);
+        let mut store = vults_store::Store::open_current(&directory).unwrap();
+        let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+        assert!(gate.reserve_voice_consultation(&mut store, &identity).is_none());
+        assert!(
+            gate.reserve_meeting_summary(&mut store, &identity, "fixture", "fixture", true)
+                .is_some()
+        );
+        let starts = store.request_attempt_starts(VOICE_CONSULTATION, 0).unwrap();
+        assert_eq!(starts.len(), VOICE_CONSULTATION_BUDGET);
+        drop(store);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn codex_consultation_cannot_borrow_consent_or_reset_its_own_quota() {
+        use vults_connectors::Gate;
+        let mut settings = crate::settings::Settings {
+            voice_consultation: true,
+            voice_consultation_budget: Some("claude".into()),
+            ..Default::default()
+        };
+        settings.connectors.insert(VOICE_CODEX_CONSULTATION.into(), true);
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        settings.voice_codex_consultation = true;
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        settings.voice_codex_consultation_budget = Some("codex".into());
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        settings.voice_consultation = false;
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        let directory = std::env::temp_dir().join(format!("vults-codex-gate-{}", crate::traces::new_id()));
+        let mut store = vults_store::Store::open(&directory).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let off = NetGate::new(|_| false, budget, BTreeMap::new(), |_| {});
+        assert!(off.reserve_codex_consultation(&mut store, &identity).is_none());
+        for _ in 0..VOICE_CODEX_CONSULTATION_BUDGET {
+            let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+            assert!(!gate.allow(VOICE_CODEX_CONSULTATION));
+            assert!(
+                gate.reserve_codex_consultation(&mut store, "wrong-ledger")
+                    .is_none()
+            );
+            let span = gate.reserve_codex_consultation(&mut store, &identity).unwrap();
+            assert_eq!(
+                span.attrs,
+                json!({"vults.feature":"voice-codex-consultation","vults.target":"voice-codex-consultation","vults.provider":"codex","gen_ai.request.model":vults_chat::consult_codex::MODEL,"vults.local":false})
+            );
+        }
+        store.clear_all(&directory).unwrap();
+        drop(store);
+        let mut store = vults_store::Store::open_current(&directory).unwrap();
+        let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+        assert!(gate.reserve_codex_consultation(&mut store, &identity).is_none());
+        assert!(gate.reserve_voice_consultation(&mut store, &identity).is_some());
+        assert_eq!(
+            store
+                .request_attempt_starts(VOICE_CODEX_CONSULTATION, 0)
+                .unwrap()
+                .len(),
+            VOICE_CODEX_CONSULTATION_BUDGET
+        );
+        drop(store);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

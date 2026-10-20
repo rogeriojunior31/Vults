@@ -1,9 +1,9 @@
 // Exercise the production status owner with a delayed snapshot, without a desktop or browser.
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { build } from "vite";
+import { build, normalizePath } from "vite";
 
-const root = fileURLToPath(new URL("../ui/", import.meta.url));
+const root = normalizePath(fileURLToPath(new URL("../ui/", import.meta.url)));
 let resolveSnapshot;
 const listeners = [];
 globalThis.dictationTestBridge = {

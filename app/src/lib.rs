@@ -33,6 +33,9 @@ mod panel;
 mod paths;
 mod phone;
 mod policies;
+#[cfg(target_os = "linux")]
+mod questions;
+pub mod realtime;
 mod recall;
 mod records;
 mod roosts;
@@ -105,7 +108,13 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
 
 /// Runs this binary as Zeca's MCP server when asked (`vults --zeca-mcp`, M7): true when it did.
 pub fn serve_mcp_if_asked() -> bool {
-    if std::env::args().nth(1).as_deref() != Some(mcp::ARG) {
+    let argument = std::env::args().nth(1);
+    #[cfg(target_os = "linux")]
+    if argument.as_deref() == Some(mcp::QUESTIONS_ARG) {
+        mcp::stdio::run(true);
+        return true;
+    }
+    if argument.as_deref() != Some(mcp::ARG) {
         return false;
     }
     mcp::run();
@@ -133,6 +142,20 @@ pub fn run() {
         ))
         .invoke_handler(tauri::generate_handler![
             runtime::current_view,
+            #[cfg(target_os = "linux")]
+            questions::text_question_status,
+            #[cfg(target_os = "linux")]
+            questions::question_agents_set,
+            #[cfg(target_os = "linux")]
+            questions::install::question_install_status,
+            #[cfg(target_os = "linux")]
+            questions::install::question_install_preview,
+            #[cfg(target_os = "linux")]
+            questions::install::question_install_apply,
+            #[cfg(target_os = "linux")]
+            questions::text_question_action,
+            #[cfg(target_os = "linux")]
+            questions::text_question_depart,
             runtime::step_diff,
             runtime::decide,
             runtime::layout,
@@ -240,6 +263,9 @@ pub fn run() {
             settings::set_dictation_commands,
             settings::set_dictation_cleanup,
             settings::set_meeting_summary,
+            settings::set_voice_realtime,
+            settings::set_voice_consultation,
+            settings::set_voice_codex_consultation,
             settings::set_dictation_style_options,
             settings::dictation_styles,
             settings::set_dictation_app_style,
@@ -305,6 +331,12 @@ pub fn run() {
             dictation_overlay::dictation_overlay_started,
             meetings::meeting_status,
             meetings::meeting_transcript,
+            meetings::archive::meeting_save,
+            meetings::archive::meeting_archive_list,
+            meetings::archive::meeting_archive_read,
+            meetings::archive::meeting_archive_delete,
+            meetings::archive::meeting_archive_rename,
+            meetings::archive::meeting_archive_export,
             meetings::summary::meeting_summary_status,
             meetings::summary::meeting_summary_begin,
             meetings::summary::meeting_summary_cancel,
@@ -377,6 +409,7 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
+            handle.manage(std::sync::Arc::new(realtime::State::default()));
             handle.manage(media::MediaState::default());
             handle.manage(dictation_overlay::Ready::default());
             handle.manage(voice::VoiceState::default());
@@ -435,6 +468,7 @@ pub fn run() {
             app.run(|app, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
+                    realtime::shutdown(app);
                     meetings::shutdown(app);
                     meeting_assets::shutdown(app);
                     #[cfg(target_os = "linux")]
@@ -527,12 +561,31 @@ mod label_tests {
         };
         let (nest, settings, island) = (build(NEST), build(SETTINGS), build(ISLAND));
         assert!(settings_page(settings.as_ref()).is_ok());
+        assert_eq!(
+            settings::set_voice_codex_consultation(app.handle().clone(), settings.as_ref().clone(), true),
+            Err(vults_chat::consult_codex::UNAVAILABLE.into()),
+            "unqualified authentication must refuse before accessing settings or the ledger"
+        );
         assert!(settings_page(nest.as_ref()).is_err());
         assert!(settings_page(island.as_ref()).is_err());
         assert!(open_shortcut_settings(nest.as_ref().clone()).is_err());
         assert!(open_shortcut_settings(island.as_ref().clone()).is_err());
         for view in [nest.as_ref(), island.as_ref()] {
+            assert!(settings::set_voice_consultation(app.handle().clone(), view.clone(), true).is_err());
+            assert!(
+                settings::set_voice_codex_consultation(app.handle().clone(), view.clone(), true).is_err()
+            );
             assert!(settings::set_meeting_summary(app.handle().clone(), view.clone(), true).is_err());
+            assert!(
+                settings::set_voice_realtime(
+                    app.handle().clone(),
+                    view.clone(),
+                    true,
+                    1_000_000,
+                    "gpt-realtime-2.1-mini".into()
+                )
+                .is_err()
+            );
             assert!(settings::set_dictation_cleanup(app.handle().clone(), view.clone(), true).is_err());
             assert!(
                 settings::set_dictation_style_options(
@@ -735,6 +788,7 @@ mod tests {
             "dictationwords",
             "dictationstyles",
             "dictationmeetings",
+            "dictationagents",
             "dictationpaste",
             "dictationprivacy",
             "dictationdiagnostics",
@@ -916,6 +970,7 @@ fn listen_shortcuts(app: &AppHandle) {
             vults_brand::BUNDLE_ID,
             move |id| vults_core::i18n::dictation_shortcut(settings::lang(&words), id).map(str::to_owned),
             move |bound| {
+                questions::cancel_capture(&keys);
                 // Rebinding may not deliver the old key's release.
                 if let Some(state) = keys.try_state::<dictation::State>() {
                     state.shortcuts_changed();
@@ -1076,6 +1131,7 @@ fn valid_dictation_section(section: &str) -> bool {
             | "dictationwords"
             | "dictationstyles"
             | "dictationmeetings"
+            | "dictationagents"
             | "dictationpaste"
             | "dictationprivacy"
             | "dictationdiagnostics"
@@ -1263,6 +1319,8 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
     if window.label() != NEST || !valid_nest_tab(&tab) {
         return Err("Invalid Nest navigation state.".into());
     }
+    #[cfg(target_os = "linux")]
+    questions::depart(window.app_handle(), NEST);
     *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
     Ok(())
 }
@@ -1271,6 +1329,11 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
 /// webviews: the Nest's (`nest`: Some, its tab or "" for where it was) or Settings' (`nest`: None,
 /// at `section` when given). Only the shown one is in sight and takes the keys.
 fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
+    #[cfg(target_os = "linux")]
+    {
+        questions::depart(app, ISLAND);
+        questions::depart(app, NEST);
+    }
     use tauri::{LogicalPosition, WebviewBuilder, window::WindowBuilder};
     // Reopening after a failed saved close cancels its earlier return request.
     if let Ok(mut pending) = NEST_RETURN.lock() {
@@ -1369,6 +1432,8 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0021).
                             if minimized {
+                                #[cfg(target_os = "linux")]
+                                questions::depart(&app2, NEST);
                                 meetings::cancel(&app2);
                             }
                             let _ = app2.emit_to(ISLAND, "nest-open", !minimized);
@@ -1376,6 +1441,8 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                     }
                     tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
                     tauri::WindowEvent::Destroyed => {
+                        #[cfg(target_os = "linux")]
+                        questions::depart(&app2, NEST);
                         meetings::cancel(&app2);
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
                         nest_holds(&app2, Some(false), Some(false));
@@ -1697,5 +1764,39 @@ fn dictation_status(app: AppHandle) -> Option<serde_json::Value> {
     {
         let _ = app;
         None
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn question_surface(app: &AppHandle) -> &'static str {
+    let nest = NEST_IN.lock().is_ok_and(|state| state.1);
+    if nest && question_visible(app, NEST) {
+        NEST
+    } else if question_visible(app, ISLAND) {
+        ISLAND
+    } else {
+        ""
+    }
+}
+#[cfg(target_os = "linux")]
+fn question_visible(app: &AppHandle, surface: &str) -> bool {
+    match surface {
+        NEST => {
+            NEST_IN.lock().is_ok_and(|state| state.1)
+                && app.get_window(NEST_WINDOW).is_some_and(|window| {
+                    window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(true)
+                })
+        }
+        ISLAND => {
+            !app.get_window(NEST_WINDOW).is_some_and(|window| {
+                window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(true)
+            }) && app.get_webview(ISLAND).is_some()
+                && app
+                    .state::<settings::SettingsState>()
+                    .0
+                    .lock()
+                    .is_ok_and(|s| s.presence != vults_core::Presence::Paused)
+        }
+        _ => false,
     }
 }

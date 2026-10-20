@@ -1,9 +1,11 @@
 import { createMeetingSummary, type MeetingSummaryBackend } from "./summary";
+import { createMeetingArchive, type MeetingArchiveBackend } from "./archive";
 import type { MeetingStatus, MeetingTranscript, MeetingTrack } from "../../../bridge";
 import { el } from "../../../dom";
 import { t, tk } from "../../../i18n";
 
 export interface MeetingBackend {
+  archive?: MeetingArchiveBackend;
   summary?: MeetingSummaryBackend;
   transcript(id: number): Promise<MeetingTranscript | null>;
   status(id: number | null): Promise<MeetingStatus>;
@@ -43,7 +45,7 @@ function readableSegments(track: MeetingTrack | undefined) {
   return rows;
 }
 
-export function createMeetings(backend?: MeetingBackend, configure: () => void = () => {}, summarySettings: () => void = configure) {
+function createRecording(backend: MeetingBackend | undefined, configure: () => void, summarySettings: () => void, openSaved: (id: string) => void) {
   const notes = createMeetingSummary(backend?.summary, summarySettings);
   let selected: "transcript" | "summary" | "todos" = "transcript";
   const heading = el("h2"), about = el("p"), disclosure = el("p");
@@ -55,7 +57,8 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
   const transcriptTitle = el("summary"), transcriptNote = el("p"), transcriptRows = el("div", { class: "meeting-transcript-rows" });
   const microphone = el("button"), system = el("button");
   const transcriptSources = el("div", { class: "meeting-transcript-sources" }, microphone, system);
-  const transcriptDetails = el("details", {}, transcriptTitle, transcriptNote);
+  const finishedNote = el("p");
+  const transcriptDetails = el("details", {}, transcriptTitle, finishedNote, transcriptNote);
   const transcriptPanel = el("section", { class: "meeting-transcript" }, transcriptSources, transcriptRows, transcriptDetails);
   const checkbox = el("input"); checkbox.type = "checkbox";
   const consentText = el("span");
@@ -68,6 +71,13 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
   const feedback = el("p", { class: "meeting-feedback" });
   const review = el("button"), begin = el("button"), stop = el("button"), cancel = el("button"), recover = el("button"), retry = el("button"), voice = el("button");
   const actions = el("div", { class: "meeting-actions" }, review, begin, stop, cancel, recover, retry, voice);
+  const saveTitle = el("input"); saveTitle.type = "text"; saveTitle.maxLength = 512;
+  const saveLabel = el("span"), save = el("button"), viewSaved = el("button"), saveNote = el("p"), saveError = el("p", { class: "meeting-feedback" });
+  const saveStatus = el("p"), saveDetailsTitle = el("summary"), saveDetails = el("details", { class: "meeting-recording-options" }, saveDetailsTitle, saveNote);
+  saveError.setAttribute("role", "alert"); saveStatus.setAttribute("role", "status");
+  const savingControls = el("div", { class: "meeting-actions meeting-save" }, el("label", {}, saveLabel, saveTitle), save, viewSaved);
+  const saveRegion = el("div", { class: "meeting-save-region" }, savingControls);
+  const recordingOptionsTitle = el("summary"), recordingOptions = el("details", { class: "meeting-recording-options" }, recordingOptionsTitle);
   const transcriptPage = el("div", {}, about, disclosure, sources, model, fallback, consent, identification, transcriptPanel);
   const summaryPage = el("div"), todosPage = el("div");
   const panels = { transcript: transcriptPage, summary: summaryPage, todos: todosPage };
@@ -87,9 +97,10 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
       select(next); tabs[next].focus();
     });
   }
-  const body = el("div", { class: "meeting-body" }, feedback, transcriptPage, summaryPage, todosPage);
+  const body = el("div", { class: "meeting-body" }, feedback, saveError, saveStatus, transcriptPage, summaryPage, todosPage, saveDetails, recordingOptions);
   const stateRegion = el("div", { class: "meeting-state" }, line, phase, timer, progress);
-  const element = el("section", { class: "meeting-check" }, el("header", {}, heading), stateRegion, tabList, body, notes.actions, actions);
+  const footer = el("div", { class: "meeting-footer" }, saveRegion, notes.actions);
+  const element = el("section", { class: "meeting-check" }, el("header", {}, heading), stateRegion, tabList, body, footer, actions);
   body.tabIndex = 0;
   phase.setAttribute("role", "status"); phase.setAttribute("aria-live", "polite");
   feedback.setAttribute("role", "alert"); timer.setAttribute("aria-live", "off"); line.setAttribute("aria-hidden", "true");
@@ -107,6 +118,7 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
   let value: MeetingStatus | null = null;
   let active = false, busy = false, reading = false, failed = false, actionFailed = false, generation = 0;
   let interval = 0;
+  let saving = false, savedId: string | null = null, saveFailed = false;
   const visible = () => active && !document.hidden;
   const draw = () => {
     heading.textContent = t("Meetings");
@@ -119,7 +131,7 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
     if (selected !== "transcript" && notes.element.parentElement !== panels[selected]) panels[selected].append(notes.element);
     body.setAttribute("role", "region"); body.setAttribute("aria-label", selected === "transcript" ? t("Recording details") : t("Meeting content"));
     about.textContent = t("Record up to one minute and transcribe both audio sources locally.");
-    disclosure.textContent = t("Tell everyone before recording. Temporary audio is deleted after transcription or cancellation. The transcript and optional notes stay only on this page and are discarded when you leave, close the window or review a new recording. Summaries require separate consent. Saved meetings and export are not available yet.");
+    disclosure.textContent = t("Tell everyone before recording. Temporary audio is deleted after transcription or cancellation. Unsaved text and notes are discarded when you leave or review another recording. Summaries require separate consent. Save meeting keeps a text-only snapshot on this computer.");
     const label = value?.phase === "transcribing" && value.progress?.stage === "speakers" ? t("Identifying voices locally; dictation has priority…") : value ? t(phases[value.phase]) : t("Reading recording status…");
     if (phase.textContent !== label) phase.textContent = label;
     timer.textContent = `${Math.floor((value?.elapsedMs ?? 0) / 60000).toString().padStart(2, "0")}:${Math.floor((value?.elapsedMs ?? 0) / 1000 % 60).toString().padStart(2, "0")}`;
@@ -157,16 +169,20 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
     recover.textContent = t("Retry audio cleanup"); retry.textContent = t("Try again");
     const running = pending(value?.phase);
     notes.actions.hidden = selected === "transcript" || running;
-    stateRegion.hidden = selected !== "transcript" && !running;
+    stateRegion.hidden = !running && (selected !== "transcript" || !!transcript);
     actions.hidden = selected !== "transcript" && !running;
+    recordingOptionsTitle.textContent = t("Recording actions");
+    recordingOptions.hidden = !transcript || selected !== "transcript";
+    if (transcript && actions.parentElement !== recordingOptions) recordingOptions.append(actions);
+    else if (!transcript && actions.parentElement !== element) element.append(actions);
     const unavailable = !backend || !value || value.phase === "unsupported";
     review.hidden = running || value?.error === "recovery" || unavailable;
-    review.disabled = busy; review.classList.toggle("meeting-primary", selected === "transcript" && value?.phase !== "ready");
+    review.disabled = busy || saving; review.classList.toggle("meeting-primary", !transcript && selected === "transcript" && value?.phase !== "ready");
     begin.hidden = value?.phase !== "ready"; begin.disabled = busy || !checkbox.checked;
     begin.classList.add("meeting-primary"); stop.classList.add("meeting-primary");
     stop.hidden = value?.phase !== "recording"; stop.disabled = busy;
     cancel.hidden = !["preparing", "starting", "recording", "stopping", "transcribing", "cancelling", "finished"].includes(value?.phase ?? "");
-    cancel.disabled = busy || value?.phase === "cancelling";
+    cancel.disabled = busy || saving || value?.phase === "cancelling";
     recover.hidden = value?.error !== "recovery" || running; recover.disabled = busy;
     voice.textContent = t("Open Voice settings"); voice.hidden = running;
     retry.hidden = !failed && !transcriptFailed; retry.disabled = busy || reading;
@@ -175,6 +191,7 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
     if (feedback.textContent !== message) feedback.textContent = message; feedback.hidden = !message;
     transcriptPanel.hidden = !transcript;
     transcriptTitle.textContent = t("About this transcript");
+    finishedNote.textContent = t(phases.finished);
     transcriptPanel.setAttribute("aria-label", t("Transcript"));
     const attributed = transcript?.[track].attribution;
     transcriptNote.textContent = attributed ? t("Times are estimated by the local models. Voice numbers belong only to this source and recording; they do not identify people.") : t("Each source has its own recording clock. These are estimated segment times, without speaker identification.");
@@ -196,7 +213,18 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
       }
     }
     body.classList.toggle("meeting-with-transcript", !!transcript || selected !== "transcript");
-    element.setAttribute("aria-busy", String(busy));
+    saveRegion.hidden = !backend?.archive || !transcript || value?.phase !== "finished";
+    saveDetails.hidden = saveRegion.hidden; saveError.hidden = saveRegion.hidden || !saveFailed;
+    saveStatus.hidden = saveRegion.hidden || !savedId; saveDetailsTitle.textContent = t("Saving details");
+    saveLabel.textContent = t("Meeting title"); saveTitle.placeholder = t("Meeting title"); saveTitle.setAttribute("aria-label", t("Meeting title")); saveTitle.disabled = saving || !!savedId;
+    save.textContent = saving ? t("Saving meeting…") : t("Save meeting"); save.classList.toggle("meeting-primary", selected === "transcript");
+    save.disabled = saving || busy || !!savedId || !saveTitle.value.trim();
+    viewSaved.textContent = t("View saved meeting"); viewSaved.hidden = !savedId;
+    saveStatus.textContent = t("Saved. Further changes on this recording do not update the saved copy.");
+    saveNote.textContent = t("Save freezes the current transcript and completed notes. Audio is never kept. Clear all history also removes saved meetings.");
+    saveError.textContent = t("Could not save this meeting. Finish any summary, check the title and try again while staying on this page.");
+    footer.hidden = saveRegion.hidden && notes.actions.hidden;
+    element.setAttribute("aria-busy", String(busy || saving));
     const focused = document.activeElement;
     if ([begin, stop, cancel].includes(focused as HTMLButtonElement) && (focused as HTMLElement).hidden) {
       const next = !cancel.hidden && !cancel.disabled ? cancel : !review.hidden ? review : retry;
@@ -207,7 +235,7 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
     if (next.phase === "failed" && next.error !== value?.error) body.scrollTop = 0;
     if (next.id !== value?.id || next.phase !== value?.phase) actionFailed = false;
     if (next.id !== value?.id || next.phase !== "ready") { checkbox.checked = false; identify.checked = false; }
-    if (next.id !== value?.id || !next.hasTranscript) { transcript = null; transcriptKey = ""; transcriptFailed = false; }
+    if (next.id !== value?.id || !next.hasTranscript) { transcript = null; transcriptKey = ""; transcriptFailed = false; savedId = null; saveTitle.value = ""; saveFailed = false; }
     value = next; failed = false; notes.meeting(next.id, !!transcript); draw();
     if (next.hasTranscript && !transcript && !transcriptFailed) void loadTranscript();
   };
@@ -231,7 +259,7 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
     finally { reading = false; }
   };
   const act = async (action: () => Promise<MeetingStatus>) => {
-    if (!visible() || busy) return;
+    if (!visible() || busy || saving) return;
     busy = true; actionFailed = false; const current = ++generation; draw();
     try {
       const next = await action();
@@ -250,9 +278,21 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
   voice.addEventListener("click", configure);
   microphone.addEventListener("click", () => { track = "microphone"; draw(); });
   system.addEventListener("click", () => { track = "system"; draw(); });
+  saveTitle.addEventListener("input", draw);
+  save.addEventListener("click", async () => {
+    if (!visible() || !backend?.archive || !transcript || !value || save.disabled) return;
+    const current = generation, id = value.id; saving = true; saveFailed = false; draw();
+    try {
+      const saved = await backend.archive.save(id, saveTitle.value.trim());
+      if (current === generation && visible() && value?.id === id) savedId = saved;
+    } catch { if (current === generation && visible()) saveFailed = true; }
+    finally { saving = false; if (current === generation && visible()) draw(); }
+  });
+  viewSaved.addEventListener("click", () => { if (savedId && !saving) openSaved(savedId); });
   const suspend = () => {
     notes.setActive(false); notes.meeting(null, false);
-    generation++; checkbox.checked = false; identify.checked = false; transcript = null; transcriptKey = ""; transcriptFailed = false; draw();
+    generation++; checkbox.checked = false; identify.checked = false; transcript = null; transcriptKey = ""; transcriptFailed = false;
+    savedId = null; saveTitle.value = ""; saveFailed = false; draw();
     if (interval) window.clearInterval(interval); interval = 0;
     if (value && (pending(value.phase) || value.hasTranscript || value.phase === "ready") && backend) void backend.end(value.id, true).catch(() => {});
   };
@@ -267,4 +307,31 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
   if (!backend) value = { id: 0, phase: "unsupported", elapsedMs: 0, maxSeconds: 60, microphone: null, monitor: null, fallback: false, error: null, modelId: null, language: null, hasTranscript: false };
   draw();
   return { element, relabel() { draw(); notes.relabel(); }, refresh() { notes.refresh(); }, setActive(on: boolean) { if (active === on) return; active = on; follow(); } };
+}
+
+export function createMeetings(backend?: MeetingBackend, configure: () => void = () => {}, summarySettings: () => void = configure) {
+  const archive = backend?.archive ? createMeetingArchive(backend.archive) : null;
+  let active = false, saved = false;
+  const recording = createRecording(backend, configure, summarySettings, id => { choose(true); archive?.open(id); });
+  if (!archive) return { ...recording, invalidate() {} };
+  const current = el("button"), retained = el("button");
+  const navigation = el("nav", { class: "meeting-workspace-navigation" }, current, retained);
+  const element = el("div", { class: "meetings-workspace" }, navigation, recording.element, archive.element);
+  function draw() {
+    navigation.setAttribute("aria-label", t("Meetings")); current.textContent = t("New recording"); retained.textContent = t("Saved meetings");
+    current.setAttribute("aria-pressed", String(!saved)); retained.setAttribute("aria-pressed", String(saved));
+    recording.element.hidden = saved; archive!.element.hidden = !saved;
+  }
+  function choose(next: boolean) {
+    saved = next; recording.setActive(active && !saved); archive!.setActive(active && saved); draw();
+  }
+  current.addEventListener("click", () => choose(false)); retained.addEventListener("click", () => choose(true));
+  document.addEventListener("visibilitychange", () => archive.setActive(active && saved && !document.hidden));
+  window.addEventListener("pagehide", () => archive.setActive(false));
+  draw();
+  return { element, relabel() { draw(); recording.relabel(); archive.relabel(); },
+    refresh() { if (saved) void archive.refresh(); else recording.refresh(); },
+    invalidate() { archive.invalidate(); recording.setActive(false); recording.setActive(active && !saved); if (active && saved) void archive.refresh(); },
+    setActive(on: boolean) { active = on; recording.setActive(on && !saved); archive.setActive(on && saved && !document.hidden); },
+  };
 }

@@ -21,6 +21,7 @@ flate2 = { version = "1", optional = true }
 bzip2 = { version = "0.6", optional = true }
 knf-rs = { version = "=0.3.2", optional = true }
 whisper-rs = { version = "0.16", features = ["tracing_backend"] }
+rustfft = { version = "6.4", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc.workspace = true
@@ -33,6 +34,8 @@ serde_json.workspace = true
 meeting-assets = ["dep:tar", "dep:flate2", "dep:bzip2"]
 # Explicitly supplied native runtime/models; not enabled by the app.
 diarization = ["dep:ort", "dep:knf-rs"]
+# Explicit offline semantic endpoint checks; no app activation or download.
+semantic-turn = ["dep:ort", "dep:rustfft"]
 # Transcribe on the GPU (AMD, Intel, NVIDIA alike). Building needs the Vulkan headers and glslc.
 vulkan = ["whisper-rs/vulkan"]
 

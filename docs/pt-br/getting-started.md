@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 83095f80a879 -->
+<!-- source: 8218a07eba21 -->
 
 <a id="install"></a>
 
@@ -32,7 +32,7 @@ npm run bundle:linux     # ou gera o .deb e o .rpm em target/release/bundle/
 ```
 
 O Linux precisa de `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`,
-`alsa-lib`, `gst-plugins-good` (o WebKitGTK toca os sons da ilha pelo GStreamer) e do loader do
+`alsa-lib`, `libpulse`, `gst-plugins-good` (o WebKitGTK toca os sons da ilha pelo GStreamer) e do loader do
 Vulkan (para compilar, também `cmake`, os headers do Vulkan e `glslc`). No KDE Plasma, Hyprland, Sway
 e outros compositores com layer-shell, a ilha fica na borda de cima como um painel; no GNOME ela é
 uma janela comum, sempre por cima. **Settings → General → Start with the desktop** abre o Vults

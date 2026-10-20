@@ -1,0 +1,30 @@
+{
+  "short": {
+    "samples": 3200,
+    "feature_sha256": "1fa8aac832d1f73dd9d17bdb310bb2a341854d78fc3d7ac99013ec1ae25c7099",
+    "probability": 0.8854718804359436,
+    "min": 0.06380903720855713,
+    "max": 2.0638089179992676
+  },
+  "noise": {
+    "samples": 128321,
+    "feature_sha256": "feb86f9c00c28f915d3f68bd043b27df473caed8307dad4aa31e85aee2605db6",
+    "probability": 0.9778784513473511,
+    "min": 0.4246528744697571,
+    "max": 1.3706209659576416
+  },
+  "speech": {
+    "samples": 54400,
+    "feature_sha256": "4eac581d8cb52df1ada62f5552ee50155e803ec02364ceafa57779b4a8bc3e56",
+    "probability": 0.9771413803100586,
+    "min": -0.058049678802490234,
+    "max": 1.9419503211975098
+  },
+  "silence": {
+    "samples": 0,
+    "feature_sha256": "c4a1d90bbbdc1c49cf89b8f73360019b1b0fe01ae48a9dfd6fc2c4a3228b8859",
+    "probability": 0.9763804078102112,
+    "min": -1.5,
+    "max": -1.5
+  }
+}

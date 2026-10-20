@@ -308,7 +308,7 @@ name or a microphone recording will improve. Restore any preferences you changed
 
 **Dictation > Voice > Music while you speak** offers **Lower to 25%** (the default),
 **Pause it** and **Leave it**. The next independent recording keeps this choice until it stops,
-including cancellation. Chat voice and future meeting capture do not use this control.
+including cancellation. Chat voice and meeting capture do not use this control.
 
 On Linux, Vults temporarily controls only MPRIS players that are already playing. Lowering caps
 the player's own volume at 25%; muted or quieter players stay unchanged. Stopping capture
@@ -585,7 +585,7 @@ the retention choice. Choose **Do not keep**, **7 days**, **30 days**
 (the default), **1 year** or **Always**. Shortening retention immediately erases older text;
 opening history and recording also prune it. **Do not keep** writes no transcript or session to
 the history, while measured daily/app totals still update. Dictionary/Snippets are working
-pages, alongside Voice commands. **Statistics** opens Activity > Dictation; meetings remain a later step.
+pages, alongside Voice commands and Meetings. **Statistics** opens Activity > Dictation.
 **Privacy > Erase dictation
 history…** uses the same confirmed erasure as the work page, with explicit failure and retry.
 Recording mode, microphone, repetition removal, Base retry, spoken code, spoken cancellation
@@ -752,7 +752,8 @@ for licenses, verification and the persistent request limit.
 On Linux, **Dictation > Meetings** offers recording and local transcription for a check of up to
 one minute. Choose an installed local model in **Dictation > Voice** first. This works with Zeca
 off. Recording/transcribing alone makes no network request or automatic model download.
-Full-length meetings, saved meetings and export are not available yet.
+Full-length capture remains a later step. **New recording** owns the temporary check;
+**Saved meetings** opens explicitly saved text without recording or making a model request.
 
 Choose **Review audio sources** to read the microphone and system-output monitor without opening
 an audio stream or loading a model. Check both identifiers, any fallback warning, the selected
@@ -778,10 +779,13 @@ page cannot continue recording or transcribing. Returning never starts work auto
 After both sources finish and temporary audio cleanup succeeds, **Transcript** offers separate
 **Microphone** and **System audio** views. Empty speech is stated explicitly. Segment times are
 model estimates on each source's own recording clock, without inferred synchronization between
-sources. Normal builds do not identify speakers. Text stays only in memory on this page: **Discard transcript**,
-leaving, closing, locking or reviewing a new recording removes it. It is never inserted into another
-app, copied automatically, added to dictation History or written to the database. Failure or
+sources. Normal builds do not identify speakers. Unsaved text stays only in memory on this page:
+**Discard transcript**, leaving, closing, locking or reviewing a new recording removes it. It is
+never inserted into another app, copied automatically or added to dictation History. Only the
+explicit **Save meeting** action writes a text snapshot to the local database. Failure or
 cancellation publishes no partial transcript; another attempt needs a new reviewed recording.
+After completion, **Recording actions** keeps discard, source review and Voice settings available;
+**Saving details** explains the saved snapshot without taking space from the transcript.
 
 A developer build with `--features meeting-speakers` additionally offers **Also identify voices
 for this recording (experimental)** during source review. It is unchecked for each recording;
@@ -820,13 +824,102 @@ executable Tasks. Models can misread commitments: compare the notes with **Trans
 sources' clocks and anonymous voice labels do not establish a shared identity or timeline.
 
 The tabs support Left/Right, Home and End. Generate/Cancel stays outside the scrolling notes, also
-in the minimum window; **Summary details** keeps provider and request terms available. While summaries
+in the minimum window; **Summary details** keeps provider and request terms available. It also retains
+Meeting settings and Reload before recording or after a read failure; failures open the disclosure.
+While summaries
 are off, the tab explains why and links to **Meeting settings**. Opening that configuration leaves
 Meetings and discards the temporary transcript, so enable summaries before recording. Leaving,
-hiding/closing the window, locking or reviewing another recording discards transcript and notes;
-there is no saved summary archive or export in this step.
+hiding/closing the window, locking or reviewing another recording discards unsaved transcript and
+notes. A previously saved copy remains in **Saved meetings**.
 
-The storage/export backend is prepared for explicit text-only snapshots, source-local speaker
-renames and Markdown/SRT/VTT files. It is not connected to the recording check yet: nothing is saved
-automatically, and archive/export controls arrive with the full Meetings page. Subtitle exports use
-one selected source because microphone and system clocks cannot be combined safely.
+### Saved meetings and export
+
+When a transcript is ready, enter a **Meeting title** and choose **Save meeting**. Finish a summary
+first if you want its notes included. Saving freezes the current transcript and completed notes;
+later generation or title edits do not change that saved copy. A retry keeps the first snapshot
+and any voice names you later edited. Audio is never retained in the archive. Choose **View saved
+meeting**, or open **Saved meetings** to search titles among the newest 500 saved entries.
+
+Open a saved entry for **Transcript**, **Summary** and **To-dos**. Missing notes stay explicitly
+absent; reading a saved entry never generates them. Microphone and System audio retain independent
+clocks. In **Voice names**, enter a name and choose **Save name**; a blank name restores the anonymous
+label. Names belong only to that voice in that source and meeting. They do not establish identity
+across sources or future recordings. Unknown speech has no editable identity.
+
+Choose **Export format** and **Export…** to pick a destination in the desktop's save dialog.
+Markdown includes both separate source sections and saved notes. SRT/VTT require an explicit
+**Subtitle source** because the source clocks cannot be combined safely. Text and names are escaped
+for the selected file format. Cancelling the dialog writes nothing; failed exports report failure
+and can be retried. New files use private permissions on Linux. Files you export are independent
+copies: deleting a meeting or clearing history cannot remove them.
+
+**Delete…** asks before removing the selected saved transcript, notes and names. **Keep meeting**
+cancels it. **Clear all history** in Activity settings also removes every saved meeting and revokes
+pending archive reads/saves, even when dictation retention is off. Dictation-only erasure and its
+retention setting do not remove meetings. The list and details clear on lock or departure and reload
+when reopened. Saving, viewing, renaming, deleting and exporting use no model or network request.
+
+## Agent question dictation
+
+On Linux, the Claude Code process started by Vults can use M7's `ask_user` or its `vults_dictate`
+alias to display a text question in Quick or the visible Nest. Type your reply, then choose
+**Send reply** or press plain Enter in its editor. Shift+Enter adds a line; IME composition never
+sends. The question identifies the requesting process and has a fixed two-minute lifetime. Your
+reply is plain text, never a tool approval.
+
+With an installed local voice model, hold the dictation shortcut shown on the question. Speak,
+release the key, then review/edit the words appended to your current draft. Recording is limited
+to 60 seconds or the remaining question lifetime, whichever ends first. The editor stays editable
+while recording/transcribing; Send stays disabled until the local result has been applied. The
+question uses hold-to-talk even when ordinary dictation uses another gesture. No microphone button,
+agent request, focus change, key repeat, key release, silence or spoken "send" submits a reply.
+
+**Cancel dictation** stops recording/decoding and keeps the manual draft. Failed, empty or oversized
+results never replace it. If the combined text exceeds 2000 UTF-8 bytes, cancel dictation and shorten
+the draft. Model/language/microphone changes discard pending capture. An already-running native
+model load may finish releasing its resources before another question recording can start.
+
+**Cancel**, navigation, hide/close, screen lock, expiry or requester disconnection clears the unsent
+question draft and cancels its recording. Late results cannot enter another question. Sending
+consumes the reply once, saves a content-free audit row and waits for the relay's confirmation that
+it flushed the MCP response. An uncertain delivery is explicit: ask for a new question instead of
+resending the consumed reply. Prompts/replies are not copied into this audit. An existing or newly
+arriving permission takes priority over a text question.
+
+This path implements the [voice decision](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+using local, memory-only transcription. It does not download a model, use provider clean-up, interpret
+voice commands, copy/insert text elsewhere or save dictation history. A permission card never accepts
+dictation or a spoken approval/denial. Ordinary dictation still cannot insert text into a waiting
+agent session. Both question tool names use the same typed request and content-free `ask_user` audit.
+
+### External agent setup
+
+On Linux, open **Dictation > Agents** and turn on **Agents may ask for a spoken answer**. It is off
+on a new install and when upgrading without a saved choice. An MCP configuration alone cannot enable
+access. Turning it off cancels external questions, including pending recording or audited delivery;
+turning it on again requires a new question. A reply already handed off cannot be recalled: uncertain
+delivery remains consumed and must not be retried.
+
+Choose **Review setup…** for Claude Code or Codex, read the configuration diff and choose **Write the
+file**. Previewing writes nothing. The installer keeps a dated backup, refuses a changed/unreadable
+file or another server using its name, and preserves other servers, hooks and Codex trust. The
+question-only server does not expose Zeca's flock, journal or memory tools. It runs locally as this
+app's executable, without a model/provider request or automatic microphone access.
+
+Restart the agent after setup. Ask it to use `ask_user` or `vults_dictate` for a text question, then
+answer in Quick/Nest. The requesting process must still be alive and verified on this computer.
+The agent may ask for its own permission before calling an MCP tool; the Vults switch does not
+change the agent's permission policy. Reconnect the agent if it cached an empty tool list while
+the option was off. Built-in installers currently cover these two clients; other clients are not
+included in the installation compatibility checks.
+
+**Review removal…** remains available when access is off. Turning access off leaves configuration
+files in place; removal needs its own diff and click. **Review setup…** on an installed entry also
+updates the managed executable path after moving the app. No hook installation or removal is
+included in this operation.
+
+The installers use Claude Code's user MCP configuration (`~/.claude.json`, or `.claude.json` in its
+explicit `CLAUDE_CONFIG_DIR`) and Codex's `config.toml` in its configured home. Codex's server entry
+sets a 150-second tool timeout to cover the question's two-minute lifetime. These formats follow the
+[Claude Code MCP documentation](https://code.claude.com/docs/en/mcp#user-scope) and
+[Codex MCP documentation](https://developers.openai.com/codex/mcp).

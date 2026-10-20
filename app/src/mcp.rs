@@ -8,15 +8,23 @@
 //! and writes only proposals: nothing it does reaches Zeca's memory without the user's yes in the
 //! Nest, and Claude Code asks the user before each tool call, as for any MCP tool.
 
-use std::io::{BufRead, Read, Write};
+use std::io::Write;
+#[cfg(not(target_os = "linux"))]
+use std::io::{BufRead, Read};
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
+#[cfg(target_os = "linux")]
+pub(crate) mod stdio;
 
 /// The argument that runs this binary as the server.
 pub const ARG: &str = "--zeca-mcp";
 /// The server's name in the MCP config: Claude Code shows its tools as `mcp__vults-zeca__<tool>`.
 pub const NAME: &str = "vults-zeca";
+#[cfg(target_os = "linux")]
+pub const QUESTIONS_ARG: &str = "--questions-mcp";
+#[cfg(target_os = "linux")]
+pub const QUESTIONS_NAME: &str = "vults-questions";
 /// The protocol versions this server speaks, newest first: a client asking for another gets the
 /// newest.
 const PROTOCOLS: &[&str] = &["2025-06-18", "2025-03-26", "2024-11-05"];
@@ -71,7 +79,7 @@ fn scoped_flock(snap: &Value, scope: &Value) -> Result<Value, String> {
 /// This program as a path that stays valid: the AppImage itself (not its mount, gone when the app
 /// quits), and the installed path even after an update replaced the file the app runs from (Linux
 /// then reads `… (deleted)`).
-fn program() -> PathBuf {
+pub(crate) fn program() -> PathBuf {
     if let Some(image) = std::env::var_os("APPIMAGE").filter(|i| !i.is_empty()) {
         return PathBuf::from(image);
     }
@@ -232,6 +240,75 @@ fn all_tools() -> Value {
     ])
 }
 
+#[cfg(target_os = "linux")]
+fn questions_on(external: bool) -> bool {
+    let pid = std::fs::read_to_string(flock_file())
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .and_then(|snap| snap["pid"].as_u64())
+        .and_then(|pid| u32::try_from(pid).ok());
+    pid.is_some_and(|pid| {
+        alive(u64::from(pid))
+            && vults_peer::requester::Requester::stdio().is_some_and(|proof| {
+                if external {
+                    crate::settings::peek().question_agents && proof.is_current()
+                } else {
+                    proof.launched_by(pid)
+                }
+            })
+    })
+}
+fn offered_tools() -> Value {
+    #[allow(unused_mut)]
+    let mut tools = tools(memory_on());
+    #[cfg(target_os = "linux")]
+    if let Some(tools) = tools.as_array_mut() {
+        tools.extend(question_tools(questions_on(false)));
+    }
+    tools
+}
+
+#[cfg(target_os = "linux")]
+fn question_tools(enabled: bool) -> Vec<Value> {
+    let mut tools = Vec::new();
+    if enabled {
+        for name in ["ask_user", "vults_dictate"] {
+            tools.push(json!({
+            "name":name,
+            "description":"Ask the human one text question in Vults. Wait for their separate Send action. The reply is plain text, never permission or approval. The human may hold their dictation key to edit the draft locally; the tool never starts a microphone. Cancellation, departure, lock or expiry ends the request; never retry a consumed reply.",
+            "inputSchema":{"type":"object","properties":{"question":{"type":"string","minLength":1,"maxLength":4096}},"required":["question"],"additionalProperties":false},
+            "annotations":{"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false}
+        }));
+        }
+    }
+    tools
+}
+/// External setup never exposes the chat's flock, journal or memory operations.
+#[cfg(target_os = "linux")]
+fn question_answer(msg: &Value, enabled: bool) -> Option<Value> {
+    if let Some(batch) = msg.as_array() {
+        let replies: Vec<_> = batch.iter().filter_map(|m| question_answer(m, enabled)).collect();
+        return (!replies.is_empty()).then(|| Value::from(replies));
+    }
+    let id = msg.get("id")?.clone();
+    match msg.get("method")?.as_str()? {
+        "initialize" => {
+            let mut reply = answer(msg, Path::new("/"))?;
+            reply["result"]["serverInfo"]["name"] = QUESTIONS_NAME.into();
+            reply["result"]["instructions"] = "Ask one text question. The human chooses whether to type or hold their dictation key, then sends separately. Never use this reply as permission.".into();
+            Some(reply)
+        }
+        "ping" => answer(msg, Path::new("/")),
+        "tools/list" => Some(json!({"jsonrpc":"2.0","id":id,"result":{"tools":question_tools(enabled)}})),
+        "tools/call" => Some(
+            json!({"jsonrpc":"2.0","id":id,"result":{"content":[{"type":"text","text":"This server only offers text questions. Call ask_user or vults_dictate individually."}],"isError":true}}),
+        ),
+        _ => Some(
+            json!({"jsonrpc":"2.0","id":id,"error":{"code":-32601,"message":"Unknown question-server method."}}),
+        ),
+    }
+}
+
 /// The app's settings as saved, read without writing anything back.
 fn memory_on() -> bool {
     crate::settings::peek().memory
@@ -334,7 +411,7 @@ fn answer(msg: &Value, folder: &Path) -> Option<Value> {
             })
         }
         "ping" => json!({}),
-        "tools/list" => json!({ "tools": tools(memory_on()) }),
+        "tools/list" => json!({ "tools": offered_tools() }),
         "tools/call" => {
             let name = msg["params"]["name"].as_str().unwrap_or_default();
             let args = msg["params"]["arguments"].clone();
@@ -356,6 +433,13 @@ fn answer(msg: &Value, folder: &Path) -> Option<Value> {
 /// Runs the server on stdin and stdout until the client closes stdin. The conversation's folder is
 /// the one Claude Code started it in.
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    stdio::run(false);
+    #[cfg(not(target_os = "linux"))]
+    run_legacy();
+}
+#[cfg(not(target_os = "linux"))]
+fn run_legacy() {
     let folder = std::env::current_dir().unwrap_or_default();
     let mut input = std::io::stdin().lock();
     let mut out = std::io::stdout().lock();
@@ -425,6 +509,37 @@ mod tests {
         assert_eq!(scoped_flock(&old, &session).unwrap()["sessions"], json!([]));
     }
 
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn external_discovery_is_empty_when_off_and_never_exposes_chat_tools() {
+        let list = json!({"jsonrpc":"2.0","id":1,"method":"tools/list"});
+        assert_eq!(
+            question_answer(&list, false).unwrap()["result"]["tools"],
+            json!([])
+        );
+        let offered = question_answer(&list, true).unwrap();
+        assert_eq!(offered["result"]["tools"].as_array().unwrap().len(), 2);
+        for name in [
+            "flock_list",
+            "recall",
+            "journal_day",
+            "roost_memory",
+            "memory_propose",
+        ] {
+            let reply = question_answer(
+                &json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":name,"arguments":{}}}),
+                true,
+            )
+            .unwrap();
+            assert_eq!(reply["result"]["isError"], true);
+        }
+        let init = question_answer(
+            &json!({"jsonrpc":"2.0","id":3,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}),
+            false,
+        )
+        .unwrap();
+        assert_eq!(init["result"]["serverInfo"]["name"], QUESTIONS_NAME);
+    }
     #[test]
     fn it_speaks_mcp() {
         let folder = std::env::temp_dir();

@@ -12,6 +12,7 @@ pub mod dictations;
 pub mod history;
 pub mod journal;
 pub mod meetings;
+pub mod money;
 pub mod proposals;
 pub mod recall;
 pub mod requests;
@@ -159,6 +160,8 @@ const MIGRATIONS: &[&str] = &[
     styles::TABLE,
     // 27: explicitly saved, text-only meetings and source-local speakers.
     meetings::TABLE,
+    // 28: monetary holds and settled usage, independent of erasable request traces.
+    money::TABLE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

@@ -78,3 +78,39 @@ fn unwind_releases_the_slot_without_poisoning_the_queue() {
     assert!(scheduler.background(&stop).is_some());
     drop(scheduler.lock());
 }
+
+#[test]
+#[cfg(feature = "semantic-turn")]
+fn foreground_cancel_and_deadline_leave_the_queue_without_releasing_running_work() {
+    let scheduler = Scheduler::new();
+    let _busy = scheduler.lock();
+    let stop = AtomicBool::new(false);
+    std::thread::scope(|scope| {
+        let (tx, rx) = mpsc::channel();
+        let scheduler = &scheduler;
+        let stop = &stop;
+        scope.spawn(move || {
+            tx.send(scheduler.interactive(stop, None).is_none()).unwrap();
+        });
+        waiting(scheduler);
+        stop.store(true, Ordering::SeqCst);
+        assert!(rx.recv_timeout(Duration::from_secs(1)).unwrap());
+    });
+    assert!(!scheduler.foreground_waiting());
+    let stop = AtomicBool::new(false);
+    std::thread::scope(|scope| {
+        let (tx, rx) = mpsc::channel();
+        let scheduler = &scheduler;
+        let stop = &stop;
+        scope.spawn(move || {
+            tx.send(
+                scheduler
+                    .interactive(stop, Some(Instant::now() + Duration::from_millis(30)))
+                    .is_none(),
+            )
+            .unwrap();
+        });
+        assert!(rx.recv_timeout(Duration::from_secs(1)).unwrap());
+    });
+    assert!(!scheduler.foreground_waiting());
+}

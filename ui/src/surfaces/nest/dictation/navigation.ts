@@ -12,6 +12,7 @@ export const DICTATION_SETTINGS = [
   { id: "words", label: tk("Vocabulary"), icon: "file" },
   { id: "styles", label: tk("Styles"), icon: "pencil" },
   { id: "meetings", label: tk("Meeting settings"), icon: "mic" },
+  { id: "agents", label: tk("Agents"), icon: "flock" },
   { id: "paste", label: tk("Paste"), icon: "sideRight" },
   { id: "privacy", label: tk("Privacy"), icon: "person" },
   { id: "diagnostics", label: tk("Diagnostics"), icon: "bars" },

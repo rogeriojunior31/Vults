@@ -28,6 +28,7 @@ pub struct Converter {
     pending: Vec<f32>,
     skip: usize,
     rate: u32,
+    target: u32,
     input: usize,
     output: usize,
 }
@@ -44,14 +45,18 @@ impl std::fmt::Debug for Converter {
 
 impl Converter {
     pub fn new(rate: u32) -> Result<Self, String> {
-        if !(8_000..=384_000).contains(&rate) {
-            return Err("the microphone sample rate is outside 8-384 kHz".into());
+        Self::at_rate(rate, SAMPLE_RATE)
+    }
+
+    pub(crate) fn at_rate(rate: u32, target: u32) -> Result<Self, String> {
+        if !(8_000..=384_000).contains(&rate) || !(8_000..=384_000).contains(&target) {
+            return Err("the audio sample rate is outside 8-384 kHz".into());
         }
-        let fft = if rate == SAMPLE_RATE {
+        let fft = if rate == target {
             None
         } else {
             Some(
-                Fft::new(rate as usize, SAMPLE_RATE as usize, 1024, 1, FixedSync::Both)
+                Fft::new(rate as usize, target as usize, 1024, 1, FixedSync::Both)
                     .map_err(|e| format!("can't prepare audio resampling: {e}"))?,
             )
         };
@@ -61,6 +66,7 @@ impl Converter {
             pending: Vec::new(),
             skip,
             rate,
+            target,
             input: 0,
             output: 0,
         })
@@ -100,7 +106,7 @@ impl Converter {
     }
 
     pub fn finish(mut self) -> Result<Vec<f32>, String> {
-        let wanted = (self.input as u64 * u64::from(SAMPLE_RATE) / u64::from(self.rate)) as usize;
+        let wanted = (self.input as u64 * u64::from(self.target) / u64::from(self.rate)) as usize;
         let mut out = Vec::new();
         while self.output < wanted {
             let frames = self

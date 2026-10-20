@@ -28,16 +28,18 @@ fn runnable(p: &Path) -> bool {
 }
 
 /// The session's folder, in the editor or the file manager.
-pub fn folder(app: &AppHandle, path: &str) {
+pub fn folder(app: &AppHandle, path: &str) -> bool {
     let Some(dir) = existing(path, Path::is_dir) else {
         tracing::info!("quick action: no such folder");
-        return;
+        return false;
     };
     if spawn(editor(), [dir.as_os_str()]) {
-        return;
+        return true;
     }
     use tauri_plugin_opener::OpenerExt;
-    let _ = app.opener().open_path(dir.to_string_lossy(), None::<&str>);
+    app.opener()
+        .open_path(dir.to_string_lossy(), None::<&str>)
+        .is_ok()
 }
 
 /// A changed file, at its line, in the editor; without one, shown in its folder. Never opened

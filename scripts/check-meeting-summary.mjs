@@ -47,6 +47,7 @@ class Element {
   focus() { document.activeElement = this; }
   setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
+  get options() { return this.children.filter(n => n.tagName === 'OPTION'); }
 }
 const timers = new Map(); let timer = 0;
 globalThis.document = { body: new Element('body'), documentElement: new Element('html'), hidden: false,
@@ -58,8 +59,9 @@ const bundles=await build({configFile:false,root:ui,logLevel:'silent',plugins:[{
 export { createMeetingSettings } from ${JSON.stringify(ui+'src/surfaces/settings/meeting-summary.ts')};
 export { createMeetingSummary } from ${JSON.stringify(ui+'src/surfaces/nest/dictation/summary.ts')};
 export { createMeetings } from ${JSON.stringify(ui+'src/surfaces/nest/dictation/meetings.ts')};
+export { createMeetingArchive } from ${JSON.stringify(ui+'src/surfaces/nest/dictation/archive.ts')};
 export { setLang } from ${JSON.stringify(ui+'src/i18n/index.ts')};`:null}],build:{write:false,minify:false,lib:{entry,formats:['es']}}});
-const {createMeetingSettings,createMeetingSummary,createMeetings,setLang}=await import(`data:text/javascript;base64,${Buffer.from(bundles[0].output.find(p=>p.type==='chunk').code).toString('base64')}`);
+const {createMeetingSettings,createMeetingSummary,createMeetings,createMeetingArchive,setLang}=await import(`data:text/javascript;base64,${Buffer.from(bundles[0].output.find(p=>p.type==='chunk').code).toString('base64')}`);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const named=(root,text)=>nodes(root).find(n=>n.tagName==='BUTTON'&&n.textContent===text);
@@ -93,6 +95,7 @@ failStatus=true;summary.refresh();await tick();
 assert.ok(summary.element.textContent.includes('Could not update summary status'));
 assert.ok(!summary.element.textContent.includes('private provider failure'));
 assert.ok(named(summary.element,'Generate summary').disabled);assert.ok(summary.element.textContent.includes(notes.title),'Read failure retains the last notes');
+assert.ok(summary.element.querySelector('details').open,'Failure opens the disclosure containing Reload');
 failStatus=false;click(summary.element,'Reload summary status');await tick();
 for(const lang of ['pt-BR','es','zh']){setLang(lang);summary.relabel();summary.select('todos');assert.ok(!summary.element.textContent.includes('Owner:'));}
 setLang('en');summary.relabel();summary.select('summary');
@@ -121,3 +124,56 @@ assert.ok(meeting.element.textContent.includes('Meeting summaries are off'));
 tabs()[1].fire('keydown',{key:'End',preventDefault(){}});assert.equal(tabs()[2].tabIndex,0);
 meeting.setActive(false);await tick();assert.ok(end.some(([id,cancel])=>id===7&&cancel));assert.equal(timers.size,0);
 console.log('Meeting summaries: explicit consent, late settings/save races, single start, cancellation, inert notes, fallback, translations, tabs and departure pass');
+
+let initialPrefsFail=true;
+const recovery=createMeetingSummary({...api,settings:async()=>{if(initialPrefsFail)throw Error('Unreadable settings');return {meetingSummary:false};}},()=>routed++);
+document.body.append(recovery.element);recovery.setActive(true);await tick();
+const recoveryDetails=recovery.element.querySelector('details');assert.ok(!recoveryDetails.hidden&&recoveryDetails.open,'Initial failure exposes recovery even before a transcript');
+click(recovery.element,'Reload summary status');initialPrefsFail=false;await tick();click(recovery.element,'Reload summary status');await tick();
+assert.ok(!recoveryDetails.hidden,'Consent off still exposes Meeting settings');assert.ok(!named(recovery.element,'Meeting settings').hidden);recovery.setActive(false);
+
+const saved={id:'meeting-1',recorded_ms:1700000000000,title:'Literal <img> meeting',
+ microphone:{duration_ms:3000,segments:[{start_ms:0,end_ms:500,text:'Private microphone <script> text',speaker:0},{start_ms:500,end_ms:1000,text:'Uncertain words',speaker:null}]},
+ system:{duration_ms:5000,segments:[{start_ms:2000,end_ms:2500,text:'Independent system clock',speaker:0}]},
+ speakers:[{source:'microphone',id:0,name:null},{source:'system',id:0,name:'Different person'}],notes};
+let savedRows=[saved], nextRead=null, nextList=null, renameRequests=[], exportRequests=[], deleteRequests=[], saveRequests=[];
+const archiveApi={
+ save:(id,title)=>{const call={...deferred(),id,title};saveRequests.push(call);return call.promise;},
+ list:async()=>nextList?nextList.promise:{epoch:0,rows:savedRows.map(({id,title,recorded_ms})=>({id,title,recorded_ms}))},
+ read:async id=>nextRead?nextRead.promise:{epoch:0,meeting:structuredClone(savedRows.find(m=>m.id===id)??null)},
+ rename:(id,source,speaker,name)=>{const call={...deferred(),id,source,speaker,name};renameRequests.push(call);return call.promise;},
+ remove:id=>{const call={...deferred(),id};deleteRequests.push(call);return call.promise;},
+ export:async(...args)=>{exportRequests.push(args);return false;},
+};
+const archive=createMeetingArchive(archiveApi);document.body.append(archive.element);archive.setActive(true);await tick();
+assert.ok(archive.element.textContent.includes(saved.title));assert.equal(renameRequests.length+exportRequests.length+deleteRequests.length,0,'Reading never mutates or exports');
+const search=nodes(archive.element).find(n=>n.tagName==='INPUT'&&n.type==='search');search.value='absent';search.fire('input');assert.ok(archive.element.textContent.includes('No saved meetings match'));
+search.value='';search.fire('input');named(archive.element,saved.title+new Date(saved.recorded_ms).toLocaleString('en',{dateStyle:'medium',timeStyle:'short'})).fire('click');await tick();
+assert.ok(archive.element.textContent.includes('Private microphone <script> text'));assert.ok(!archive.element.textContent.includes('Independent system clock'));
+assert.ok(archive.element.textContent.includes('Unknown voice'));assert.equal(nodes(archive.element).filter(n=>['IMG','SCRIPT'].includes(n.tagName)).length,0);
+click(archive.element,'System audio');assert.ok(archive.element.textContent.includes('Different person'));assert.ok(archive.element.textContent.includes('00:00:02.000'));
+click(archive.element,'Microphone');
+let nameInput=nodes(archive.element).find(n=>n.attributes['aria-label']==='Name for Voice 1 (Microphone)');
+nameInput.value='<b>Person</b>';nameInput.fire('input');click(archive.element,'Save name');named(archive.element,'Save name').fire('click');
+assert.equal(renameRequests.length,1,'Renaming is single-owner');assert.deepEqual([renameRequests[0].source,renameRequests[0].speaker,renameRequests[0].name],['microphone',0,'<b>Person</b>']);
+renameRequests[0].reject(Error('private database failure'));await tick();assert.equal(nameInput.value,'<b>Person</b>');assert.ok(archive.element.textContent.includes('Your draft is kept'));assert.ok(!archive.element.textContent.includes('private database failure'));
+for(const lang of ['pt-BR','es','zh']){setLang(lang);archive.relabel();assert.ok(!named(archive.element,'Saved meetings'));assert.ok(nodes(archive.element).some(n=>n.tagName==='INPUT'&&n.value==='<b>Person</b>'),'Relabel keeps drafts');}
+setLang('en');archive.relabel();nameInput=nodes(archive.element).find(n=>n.attributes['aria-label']==='Name for Voice 1 (Microphone)');
+click(archive.element,'Save name');renameRequests[1].resolve(true);await tick();assert.ok(archive.element.textContent.includes('<b>Person</b>'));assert.equal(nodes(archive.element).filter(n=>n.tagName==='B').length,0);
+click(archive.element,'Summary');assert.ok(archive.element.textContent.includes(notes.summary));click(archive.element,'To-dos');assert.ok(archive.element.textContent.includes('Owner: Not assigned'));
+const selectors=nodes(archive.element).filter(n=>n.tagName==='SELECT');selectors[0].value='srt';selectors[0].fire('change');assert.ok(named(archive.element,'Export…').disabled,'Subtitles require an explicit source');
+selectors[1].value='system';selectors[1].fire('change');click(archive.element,'Export…');await tick();assert.deepEqual(exportRequests[0],['meeting-1','srt','system','Export meeting']);assert.ok(archive.element.textContent.includes('Export cancelled. No file was written.'));
+nextRead=deferred();click(archive.element,'Reload');click(archive.element,'Delete…');assert.equal(deleteRequests.length,0,'Delete requires confirmation');click(archive.element,'Keep meeting');assert.equal(deleteRequests.length,0);
+click(archive.element,'Delete…');click(archive.element,'Delete saved meeting');named(archive.element,'Delete saved meeting').fire('click');assert.equal(deleteRequests.length,1);
+savedRows=[];deleteRequests[0].resolve(true);await tick();nextRead.resolve({epoch:0,meeting:saved});await tick();nextRead=null;
+assert.ok(!archive.element.textContent.includes(saved.title),'A pre-delete detail read cannot restore erased text');assert.ok(archive.element.textContent.includes('No saved meetings yet.'));
+savedRows=[saved];nextList=deferred();click(archive.element,'Reload');search.value='Private meeting title';search.fire('input');archive.invalidate();nextList.resolve({epoch:0,rows:[saved]});await tick();nextList=null;assert.ok(!archive.element.textContent.includes(saved.title),'Global erasure invalidates pending list reads');assert.equal(search.value,'','Erasure/departure also clears private search text');
+archive.setActive(false);
+
+const full=createMeetings({archive:archiveApi,summary:api,transcript:async()=>({id:7,microphone:{durationMs:1000,segments:[{startMs:0,endMs:500,text:'Current text'}]},system:{durationMs:0,segments:[]}}),
+ status:async()=>({id:7,phase:'finished',hasTranscript:true,elapsedMs:1000}),prepare:async()=>{throw Error('No implicit review');},begin:async()=>{throw Error('No implicit recording');},end:async(id,cancel)=>({id,phase:'cancelled',hasTranscript:false}),recover:async()=>{throw Error('No implicit recovery');}});
+document.body.append(full.element);full.setActive(true);await tick();await tick();
+const titleInput=nodes(full.element).find(n=>n.attributes['aria-label']==='Meeting title');titleInput.value='Explicit title';titleInput.fire('input');click(full.element,'Save meeting');named(full.element,'Saving meeting…').fire('click');assert.equal(saveRequests.length,1);assert.equal(saveRequests[0].title,'Explicit title');
+saveRequests[0].resolve('meeting-1');await tick();assert.ok(full.element.textContent.includes('Further changes on this recording do not update'));
+click(full.element,'View saved meeting');await tick();assert.ok(full.element.textContent.includes(saved.title));full.setActive(false);assert.equal(timers.size,0);
+console.log('Meeting archive: explicit snapshot/save, inert source-local detail/notes, name drafts and failures, export source/cancellation, confirmed single delete, stale reads/global erase and translations pass');

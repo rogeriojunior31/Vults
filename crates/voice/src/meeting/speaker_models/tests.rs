@@ -1,5 +1,8 @@
 use super::*;
+use crate::model_file::read_checked;
+use sha2::{Digest, Sha256};
 use std::io::Cursor;
+use std::io::Read;
 
 fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))

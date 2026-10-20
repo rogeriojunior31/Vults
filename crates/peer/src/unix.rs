@@ -12,7 +12,7 @@ pub fn parent_pid() -> u32 {
 }
 
 /// Shells an agent may run its hooks through (`fish -c` keeps itself between them).
-const SHELLS: &[&str] = &[
+pub(super) const SHELLS: &[&str] = &[
     "sh", "bash", "dash", "zsh", "fish", "ksh", "mksh", "tcsh", "csh", "busybox",
 ];
 
@@ -56,6 +56,19 @@ fn stat(pid: u32) -> Option<(String, u32)> {
 /// UID of the process on the other end of a connected Unix socket.
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn peer_uid(socket: &impl AsRawFd) -> Option<u32> {
+    credentials(socket).map(|cred| cred.uid)
+}
+
+/// Kernel-reported process on the connected socket; never taken from an event payload.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+pub fn peer_pid(socket: &impl AsRawFd) -> Option<u32> {
+    credentials(socket)
+        .and_then(|cred| u32::try_from(cred.pid).ok())
+        .filter(|pid| *pid > 1)
+}
+
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn credentials(socket: &impl AsRawFd) -> Option<libc::ucred> {
     let mut cred = libc::ucred {
         pid: 0,
         uid: 0,
@@ -72,7 +85,7 @@ pub fn peer_uid(socket: &impl AsRawFd) -> Option<u32> {
             &mut len,
         )
     } == 0;
-    ok.then_some(cred.uid)
+    (ok && len as usize == std::mem::size_of::<libc::ucred>()).then_some(cred)
 }
 
 /// UID of the process on the other end of a connected Unix socket.

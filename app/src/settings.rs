@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 39;
+const VERSION: u32 = 43;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -60,6 +60,9 @@ pub struct Settings {
     /// What the user speaks: a code (`pt`), `auto` to detect it, absent to follow the system.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_language: Option<String>,
+    /// External clients may request text questions; capture still requires a physical key.
+    #[serde(default)]
+    pub question_agents: bool,
     /// Explicit permission to paste into validated native X11 editors. Off by default.
     #[serde(default)]
     pub dictation_insert: bool,
@@ -79,6 +82,16 @@ pub struct Settings {
     pub meeting_summary: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meeting_summary_budget: Option<String>,
+    #[serde(default)]
+    pub voice_realtime: crate::realtime::Consent,
+    #[serde(default)]
+    pub voice_consultation: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice_consultation_budget: Option<String>,
+    #[serde(default)]
+    pub voice_codex_consultation: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice_codex_consultation_budget: Option<String>,
     #[serde(default = "natural_style")]
     pub dictation_style: vults_dictation::cleanup::Style,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -357,6 +370,7 @@ impl Default for Settings {
             now_playing: false,
             voice_model: None,
             voice_language: None,
+            question_agents: false,
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
@@ -365,6 +379,11 @@ impl Default for Settings {
             dictation_cleanup_budget: None,
             meeting_summary: false,
             meeting_summary_budget: None,
+            voice_realtime: crate::realtime::Consent::default(),
+            voice_consultation: false,
+            voice_consultation_budget: None,
+            voice_codex_consultation: false,
+            voice_codex_consultation_budget: None,
             dictation_style: natural_style(),
             dictation_write_in: None,
             dictation_sessions_english: false,
@@ -424,6 +443,8 @@ pub struct SettingsState(pub Mutex<Settings>);
 /// What the windows may read.
 #[derive(Serialize, Clone)]
 pub struct Public {
+    #[serde(rename = "questionAgents")]
+    pub question_agents: bool,
     #[serde(rename = "dictationKeep")]
     pub dictation_keep: String,
     #[serde(rename = "dictationSound")]
@@ -529,6 +550,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     use tauri_plugin_autostart::ManagerExt;
     let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
     Public {
+        question_agents: s.question_agents,
         dictation_caption: s.dictation_caption,
         dictation_sound: s.dictation_sound,
         dictation_commands: s.dictation_commands,
@@ -1003,8 +1025,10 @@ pub fn set_dictation_microphone<R: tauri::Runtime>(
     let mut next = saved.clone();
     next.dictation_microphone = device.clone();
     save(&next).map_err(|_| "Could not save the dictation microphone.")?;
-    *saved = next;
+    apply_change(&app, &mut saved, |settings| *settings = next);
     drop(saved);
+    #[cfg(target_os = "linux")]
+    crate::questions::invalidate_capture(&app);
     let _ = app.emit("settings", serde_json::json!({ "dictationMicrophone": device }));
     Ok(())
 }
@@ -1128,6 +1152,104 @@ fn bind_request_budget(
         return Err("The model request budget is unavailable.");
     }
     *expected = Some(identity);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_voice_consultation<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    on: bool,
+) -> Result<(), String> {
+    save_consultation(app, window, on, false)
+}
+
+#[tauri::command]
+pub fn set_voice_codex_consultation<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    on: bool,
+) -> Result<(), String> {
+    save_consultation(app, window, on, true)
+}
+
+fn save_consultation<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    on: bool,
+    codex: bool,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    if codex && on && !vults_chat::consult_codex::SUBSCRIPTION_AUTH_QUALIFIED {
+        return Err(vults_chat::consult_codex::UNAVAILABLE.into());
+    }
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    let identity = if codex {
+        &mut next.voice_codex_consultation_budget
+    } else {
+        &mut next.voice_consultation_budget
+    };
+    if on {
+        let store = if identity.is_some() {
+            vults_store::Store::open_current(&crate::history::dir())
+        } else {
+            vults_store::Store::open(&crate::history::dir())
+        }
+        .map_err(|_| "Could not read model request budget.")?;
+        bind_request_budget(identity, &store)?;
+    }
+    if codex {
+        next.voice_codex_consultation = on;
+    } else {
+        next.voice_consultation = on;
+    }
+    save(&next).map_err(|_| "Could not save voice consultation choice.")?;
+    crate::realtime::invalidate(&app);
+    *saved = next;
+    drop(saved);
+    let key = if codex {
+        "voiceCodexConsultation"
+    } else {
+        "voiceConsultation"
+    };
+    let _ = app.emit("settings", serde_json::json!({(key):on}));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_voice_realtime<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+    on: bool,
+    limit_microusd: u64,
+    model: String,
+) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    if limit_microusd > i64::MAX as u64 || vults_chat::realtime::Plan::new(&model, 8192, 1024).is_err() {
+        return Err("Invalid realtime voice budget or model.".into());
+    }
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    if on {
+        let store = if saved.voice_realtime.ledger.is_some() {
+            vults_store::Store::open_current(&crate::history::dir())
+        } else {
+            vults_store::Store::open(&crate::history::dir())
+        }
+        .map_err(|_| "Could not read model request budget.")?;
+        bind_request_budget(&mut next.voice_realtime.ledger, &store)?;
+    }
+    next.voice_realtime.on = on;
+    next.voice_realtime.model = model;
+    next.voice_realtime.limit_microusd = limit_microusd;
+    save(&next).map_err(|_| "Could not save realtime voice choice.")?;
+    crate::realtime::invalidate(&app);
+    *saved = next;
+    drop(saved);
+    let _ = app.emit("settings", serde_json::json!({"voiceRealtime":on}));
     Ok(())
 }
 
@@ -1276,6 +1398,7 @@ pub fn set_dictation_commands<R: tauri::Runtime>(
         _ => return Err("Unknown voice command setting.".into()),
     };
     save(&next).map_err(|_| "Could not save voice command choices.")?;
+    crate::realtime::invalidate(&app);
     #[cfg(target_os = "linux")]
     {
         // Cancel even when re-enabled: no ticket may inherit a later grant.
@@ -1505,8 +1628,37 @@ pub fn monitor(app: &AppHandle) -> Option<String> {
 pub fn edit(app: &AppHandle, change: impl FnOnce(&mut Settings)) -> Result<(), String> {
     let state = app.state::<SettingsState>();
     let mut s = state.0.lock().map_err(|_| "settings are busy")?;
-    change(&mut s);
-    save(&s).map_err(|e| format!("can't save the settings: {e}"))
+    let changed = apply_change(app, &mut s, change);
+    let result = save(&s).map_err(|e| format!("can't save the settings: {e}"));
+    drop(s);
+    #[cfg(target_os = "linux")]
+    if changed {
+        crate::questions::invalidate_capture(app);
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = changed;
+    result
+}
+
+/// Called under the Settings lock, before another writer can restore an earlier choice.
+pub(crate) fn apply_change<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    s: &mut Settings,
+    change: impl FnOnce(&mut Settings),
+) -> bool {
+    let before = (
+        s.voice_model.clone(),
+        s.voice_language.clone(),
+        s.dictation_microphone.clone(),
+        s.zeca,
+    );
+    change(s);
+    let capture_changed =
+        before.0 != s.voice_model || before.1 != s.voice_language || before.2 != s.dictation_microphone;
+    if capture_changed || before.3 != s.zeca {
+        crate::realtime::invalidate(app);
+    }
+    capture_changed
 }
 
 fn path() -> PathBuf {
@@ -1676,6 +1828,16 @@ mod tests {
     const RULE: &str =
         r#"{ "agent": "claude", "cwd": "/home/me/p", "tool": "Bash", "target": "Bash · cargo test" }"#;
 
+    #[test]
+    fn external_question_access_defaults_off_and_survives_only_an_explicit_saved_boolean() {
+        let (old, clean) = parse(r#"{ "version": 39 }"#);
+        assert!(clean && !old.question_agents);
+        let (on, clean) = parse(r#"{ "version": 40, "question_agents": true }"#);
+        assert!(clean && on.question_agents);
+        assert!(parse(&serde_json::to_string(&on).unwrap()).0.question_agents);
+        let (bad, clean) = parse(r#"{ "version": 40, "question_agents": "yes" }"#);
+        assert!(!clean && !bad.question_agents);
+    }
     #[test]
     fn one_bad_field_keeps_the_rest() {
         let text =
@@ -1955,6 +2117,55 @@ mod tests {
     }
 
     #[test]
+    fn voice_consultation_upgrade_stays_off_and_preserves_the_existing_budget_identity() {
+        let (mut settings, clean) = parse(r#"{"version":41}"#);
+        assert!(clean && !settings.voice_consultation && settings.voice_consultation_budget.is_none());
+        let directory =
+            std::env::temp_dir().join(format!("vults-consult-consent-{}", crate::traces::new_id()));
+        let store = vults_store::Store::open(&directory).unwrap();
+        bind_request_budget(&mut settings.voice_consultation_budget, &store).unwrap();
+        let identity = settings.voice_consultation_budget.clone();
+        settings.voice_consultation = true;
+        let (mut restored, clean) = parse(&serde_json::to_string(&settings).unwrap());
+        assert!(clean && restored.voice_consultation);
+        restored.voice_consultation = false;
+        bind_request_budget(&mut restored.voice_consultation_budget, &store).unwrap();
+        assert_eq!(restored.voice_consultation_budget, identity);
+        drop(store);
+        std::fs::remove_dir_all(&directory).unwrap();
+        let replacement = vults_store::Store::open(&directory).unwrap();
+        assert!(bind_request_budget(&mut restored.voice_consultation_budget, &replacement).is_err());
+        drop(replacement);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn codex_consultation_upgrade_never_borrows_claude_consent_or_rebinds_a_lost_ledger() {
+        let (mut settings, clean) =
+            parse(r#"{"version":42,"voice_consultation":true,"voice_consultation_budget":"claude"}"#);
+        assert!(clean && settings.voice_consultation);
+        assert!(!settings.voice_codex_consultation);
+        assert!(settings.voice_codex_consultation_budget.is_none());
+        let directory = std::env::temp_dir().join(format!("vults-codex-consent-{}", crate::traces::new_id()));
+        let store = vults_store::Store::open(&directory).unwrap();
+        bind_request_budget(&mut settings.voice_codex_consultation_budget, &store).unwrap();
+        settings.voice_codex_consultation = true;
+        let identity = settings.voice_codex_consultation_budget.clone();
+        let (mut restored, clean) = parse(&serde_json::to_string(&settings).unwrap());
+        assert!(clean && restored.voice_codex_consultation);
+        restored.voice_codex_consultation = false;
+        bind_request_budget(&mut restored.voice_codex_consultation_budget, &store).unwrap();
+        assert_eq!(restored.voice_codex_consultation_budget, identity);
+        assert_eq!(restored.voice_consultation_budget.as_deref(), Some("claude"));
+        drop(store);
+        std::fs::remove_dir_all(&directory).unwrap();
+        let replacement = vults_store::Store::open(&directory).unwrap();
+        assert!(bind_request_budget(&mut restored.voice_codex_consultation_budget, &replacement).is_err());
+        drop(replacement);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
     fn dictation_cleanup_is_a_separate_explicit_opt_in() {
         let (old, clean) = parse(r#"{"version":36,"zeca":true,"dictation_commands":true}"#);
         assert!(clean && !old.dictation_cleanup);
@@ -2030,6 +2241,7 @@ mod tests {
             now_playing: true,
             voice_model: Some("small".into()),
             voice_language: Some("pt".into()),
+            question_agents: false,
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
@@ -2038,6 +2250,11 @@ mod tests {
             dictation_cleanup_budget: None,
             meeting_summary: false,
             meeting_summary_budget: None,
+            voice_realtime: crate::realtime::Consent::default(),
+            voice_consultation: false,
+            voice_consultation_budget: None,
+            voice_codex_consultation: false,
+            voice_codex_consultation_budget: None,
             dictation_style: natural_style(),
             dictation_write_in: None,
             dictation_sessions_english: false,

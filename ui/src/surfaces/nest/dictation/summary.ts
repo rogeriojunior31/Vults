@@ -1,6 +1,7 @@
 import type { ApiProvider, MeetingSummaryStatus } from "../../../bridge";
 import { el } from "../../../dom";
 import { t, tk } from "../../../i18n";
+import { meetingNotes } from "./content";
 
 export interface MeetingSummaryBackend {
   settings(): Promise<{ meetingSummary: boolean }>;
@@ -23,8 +24,9 @@ export function createMeetingSummary(api: MeetingSummaryBackend | undefined, con
   const feedback = el("p", { class: "meeting-feedback" });
   const content = el("div", { class: "meeting-notes-content" });
   const generate = el("button"), cancel = el("button"), reload = el("button"), settings = el("button");
-  const actions = el("div", { class: "meeting-actions" }, generate, cancel, reload, settings);
-  const detailsTitle = el("summary"), details = el("details", {}, detailsTitle, destination, policy);
+  const actions = el("div", { class: "meeting-actions" }, generate, cancel);
+  const detailsTitle = el("summary"), details = el("details", {}, detailsTitle, destination, policy,
+    el("div", { class: "meeting-actions" }, reload, settings));
   let hadNotes: boolean | null = null;
   const element = el("section", { class: "meeting-notes" }, feedback, content, state, details, actions);
   state.setAttribute("role", "status"); feedback.setAttribute("role", "alert");
@@ -39,7 +41,7 @@ export function createMeetingSummary(api: MeetingSummaryBackend | undefined, con
     const on = !!prefs?.meetingSummary;
     const hasNotes = on && !!value?.notes;
     if (hasNotes !== hadNotes) { details.open = !hasNotes; hadNotes = hasNotes; }
-    detailsTitle.textContent = t("Summary details"); details.hidden = !on && !ready;
+    detailsTitle.textContent = t("Summary details");
     const available = !!provider?.model?.trim() && (provider.local || provider.hasKey);
     const label = !api || prefsFailed && !prefs ? t("Meeting summaries are unavailable.") : !prefs || loading ? t("Reading meeting settings…")
       : !on ? t("Meeting summaries are off. Enable them in Meeting settings to send transcript text to your chosen model.")
@@ -53,7 +55,7 @@ export function createMeetingSummary(api: MeetingSummaryBackend | undefined, con
       ? t("Transcript text goes to {provider} ({model}). No audio is sent.", { provider: provider.label, model: provider.model || t("Choose a model") })
       : t("Choose an API provider and model in Chat & voice before enabling meeting summaries.");
     destination.hidden = !on;
-    policy.textContent = on ? t("Up to 20 attempts per rolling 24 hours, including local calls and failures. Provider charges may apply. Leaving Meetings discards the transcript and notes. Notes never execute tasks.")
+    policy.textContent = on ? t("Up to 20 attempts per rolling 24 hours, including local calls and failures. Provider charges may apply. Leaving Meetings discards unsaved transcript and notes. Notes never execute tasks.")
       : t("Enable summaries before recording. Opening settings leaves Meetings and discards this temporary transcript.");
     policy.hidden = !on && !ready;
     const error = prefsFailed ? t("Could not read meeting settings or the provider. Reload to try again.")
@@ -61,6 +63,7 @@ export function createMeetingSummary(api: MeetingSummaryBackend | undefined, con
       : actionFailed ? t("Could not confirm the summary action. Reload status or check Meeting settings before trying again.")
       : value?.error ? t(errors[value.error]) : "";
     feedback.textContent = error; feedback.hidden = !error;
+    if (error) details.open = true;
     generate.textContent = t("Generate summary"); generate.classList.add("meeting-primary");
     generate.hidden = !api || !on || running || prefsFailed || readFailed;
     generate.disabled = busy || reading || loading || prefsFailed || readFailed || !ready || !available || !value;
@@ -72,19 +75,7 @@ export function createMeetingSummary(api: MeetingSummaryBackend | undefined, con
     if (key !== contentKey) {
       contentKey = key; content.replaceChildren();
       const notes = on ? value?.notes : null;
-      if (notes && mode === "summary") {
-        const list = el("ul");
-        for (const point of notes.key_points) list.append(el("li", { text: point }));
-        content.append(el("h3", { text: notes.title }), el("p", { class: "meeting-note-text", text: notes.summary }),
-          el("h4", { text: t("Key points") }), notes.key_points.length ? list : el("p", { text: t("No key points were returned.") }));
-      } else if (notes) {
-        const list = el("ol");
-        for (const todo of notes.todos) list.append(el("li", {},
-          el("p", { class: "meeting-note-text", text: todo.text }),
-          el("p", { class: "meeting-todo-metadata", text: t("Owner: {owner}", { owner: todo.owner ?? t("Not assigned") }) }),
-          el("p", { class: "meeting-todo-metadata", text: t("Due: {due}", { due: todo.due ?? t("Not stated") }) })));
-        content.append(notes.todos.length ? list : el("p", { text: t("No explicitly agreed actions were found.") }));
-      }
+      if (notes) content.append(...meetingNotes(notes, mode));
     }
     content.setAttribute("aria-busy", String(busy || reading || loading || running));
     const focused = document.activeElement;

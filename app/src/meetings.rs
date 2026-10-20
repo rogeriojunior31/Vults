@@ -9,6 +9,7 @@ use std::sync::{
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 
+pub(crate) mod archive;
 pub(crate) mod summary;
 #[cfg(target_os = "linux")]
 mod transcription;
@@ -76,6 +77,8 @@ struct Slot {
     summary: summary::Slot,
     #[cfg(target_os = "linux")]
     transcript: Option<transcription::Transcript>,
+    #[cfg(target_os = "linux")]
+    archive: Option<archive::Capture>,
 }
 impl Default for Slot {
     fn default() -> Self {
@@ -87,6 +90,8 @@ impl Default for Slot {
             summary: summary::Slot::default(),
             #[cfg(target_os = "linux")]
             transcript: None,
+            #[cfg(target_os = "linux")]
+            archive: None,
         }
     }
 }
@@ -113,6 +118,7 @@ impl Slot {
             #[cfg(target_os = "linux")]
             {
                 self.transcript = None;
+                self.archive = None;
             }
             if matches!(self.view.phase, "ready" | "finished") {
                 self.view.phase = "cancelled";
@@ -176,6 +182,10 @@ impl Slot {
         }
         self.reviewed = None;
         self.view.phase = "starting";
+        #[cfg(target_os = "linux")]
+        if let Some(capture) = self.archive.as_mut() {
+            capture.started();
+        }
         self.touched = now;
         self.action = Some(Action::Begin(id, identify));
         Ok(())
@@ -280,6 +290,7 @@ pub fn meeting_prepare(app: AppHandle, window: tauri::Webview) -> Result<Snapsho
     #[cfg(target_os = "linux")]
     {
         slot.transcript = None;
+        slot.archive = Some(archive::Capture::new());
         slot.view.progress = None;
     }
     slot.reviewed = None;

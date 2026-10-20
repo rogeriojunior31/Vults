@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 01d944bcef41 -->
+<!-- source: 8839804dc5af -->
 
 O que o Vults promete:
 
@@ -50,12 +50,25 @@ O que o Vults promete:
 - **A voz do Chat grava apenas na memória.** A voz do Chat fica desligada até você baixar um
   modelo; depois o mic grava só na memória enquanto o botão dele está vermelho (no máximo um minuto), e
   o whisper.cpp transcreve neste computador. O áudio do Chat e do ditado nunca é salvo nem enviado para lugar nenhum.
+- **Perguntas de texto exigem um Enviar humano separado.** No Linux, o `ask_user` da M7 aceita apenas
+  um solicitante ativo verificado. Clientes externos precisam do consentimento separado em Ditado > Agentes,
+  desligado por padrão; o servidor exclusivo de perguntas não tem ferramentas de bando ou memória. A resposta é consumida uma vez e auditada
+  sem uma segunda cópia do texto, antes da entrega. Sair, bloquear, expirar e desconectar invalidam
+  rascunhos pendentes; uma resposta consumida nunca é reenviada após uma entrega incerta. Ela nunca
+  responde a uma permissão. O [ditado em perguntas de agentes](guide/dictation.md#agent-question-dictation)
+  começa somente pela tecla física e edita o rascunho por transcrição local, somente na memória.
+  Desativar o acesso externo invalida perguntas pendentes; reativar não as retoma. Alterar a
+  configuração de agentes exige seu próprio diff, backup e clique. Um agente não pode abrir o mic
+  nem habilitar voz por configuração MCP.
 - **Verificações de gravação de reuniões exigem consentimento explícito.** No Linux, Ditado > Reuniões
   captura um microfone e um monitor da saída do sistema conferidos por até um minuto em WAVs temporários
   privados. A transcrição local mantém a trava de limpeza; concluir/cancelar remove o áudio e a
-  inicialização limpa sobras de interrupções. A transcrição fica apenas na página atual, sem gravação
-  no banco. Sair da página ou bloquear a tela cancela o trabalho pendente e descarta a transcrição.
-  Não há arquivo de áudio nem reunião salva. O backend de resumos tem consentimento próprio,
+  inicialização limpa sobras de interrupções. A transcrição não salva fica apenas na página atual.
+  Sair da página ou bloquear a tela cancela o trabalho pendente e descarta o texto não salvo.
+  **Salvar reunião** mantém explicitamente uma cópia somente de texto da transcrição e das notas
+  concluídas atuais; não há arquivo de áudio. Apagar todo o histórico também remove reuniões salvas,
+  enquanto arquivos exportados permanecem como cópias independentes. Veja
+  [Reuniões salvas e exportação](guide/dictation.md#saved-meetings-and-export). O backend de resumos tem consentimento próprio,
   desligado por padrão, e envia apenas o texto da transcrição ao modelo escolhido do chat por API,
   sem ferramentas e com prazo de 120 segundos. Ative em Ditado > Configurações de reuniões e
   depois escolha explicitamente Gerar resumo na aba Resumo; gravar/transcrever sozinho nunca pede
@@ -122,6 +135,8 @@ qualquer lugar além do próprio app.
 | Um turno do chat por uma API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama e LM Studio em `127.0.0.1`) | Você, a cada mensagem | O provedor e a chave que você escolheu; enviado só a esse provedor | `crates/chat/src/api.rs`, `openai.rs`, `providers.rs` |
 | Limpeza opcional do texto ditado | O app, após o ditado local, somente com **Ditado > Estilos > Limpar com um modelo** ligado (preferência separada `dictation_cleanup`, desligada por padrão) | O provedor de API selecionado em Chat & voice, ou Ollama/LM Studio em IP literal de loopback; o portão reserva uma das 2.000 tentativas em 24 horas móveis antes do envio, incluindo falhas e chamadas locais. Sem ferramentas, proxies, redirecionamentos ou novas tentativas automáticas; falha/prazo esgotado mantém o texto local | `crates/chat/src/filter.rs`, `app/src/dictation/cleanup.rs`, `app/src/gate.rs` |
 | Resumos opcionais de reuniões | Um pedido explícito do Ninho após consentimento separado em `meeting_summary`; nunca iniciado apenas pela gravação | Provedor/modelo escolhido do chat por API, incluindo Ollama/LM Studio em IP literal de loopback; `meeting-summary` registra de forma durável até 20 tentativas por 24 horas móveis, incluindo falhas/chamadas locais. Sem ferramentas, proxies, redirecionamentos ou novas tentativas automáticas; cancelamento, bloqueio/saída da página ou mudanças de provedor/modelo/chave revogam trabalho pendente. Apenas notas validadas e limitadas podem aparecer; falhas preservam a transcrição | `app/src/meetings/summary.rs`, `app/src/gate.rs`, `crates/chat/src/filter.rs` |
+| Consulta opcional pela voz nativa (ainda sem controle do renderer) | O modelo realtime após consentimento independente `voice_consultation` ou `voice_codex_consultation`, desligado por padrão; escrita somente em Configurações | Pergunta textual ao Claude ou Codex sem ferramentas, cada qual com cota própria de até 20 tentativas admitidas de forma durável por 24 horas móveis, com traces só de metadados. Sem contexto de projeto/sessão, expansão de arquivos, descoberta de memória nem resposta a permissões. Exige controles suportados na CLI; políticas gerenciadas continuam valendo. Cancelamento retém a posse nativa até a saída do processo. Ambos compartilham uma vaga; adesão, oferta, gate e execução do helper Codex são recusados pela capacidade não qualificada até garantir autenticação exclusiva da assinatura | `app/src/realtime/consultation.rs`, `app/src/gate.rs`, `crates/chat/src/summary.rs`, `crates/chat/src/consult_codex.rs` |
+| Backend de voz realtime (V6; sem entrada do renderer) | Apenas o responsável nativo de voz após consentimento independente desligado por padrão; escrita só em Configurações, limite móvel padrão de US$1, zero desativa | WebSocket TLS fixo da OpenAI; reserva monetária persistente antes de chaveiro/conexão/PCM, sem proxy/redirecionamento/repetição; PCM/filas/prazos limitados e revogação por escolha/bloqueio/encerramento. Custos desconhecidos mantêm o teto; posse exclusiva no Linux permite conciliação atômica de reservas órfãs pelo custo desconhecido integral, e cada worker desacoplado mantém a trava. Turnos completos que falham ficam em memória para recuperação local revisável pelo Whisper, sem download ou envio automático ao Chat/outro provedor; uma resposta de ferramenta consumida libera a entrada original. As cinco consultas do bando em cache são somente de leitura; cada continuação tem reserva própria, identidades/resultados limitados e nenhuma repetição. Testes sintéticos duplex/de processos não chamam o provedor | `crates/chat/src/realtime/transport.rs`, `app/src/realtime.rs`, `app/src/realtime/local.rs`, `app/src/gate/realtime.rs` |
 | A lista de modelos de um provedor | Você, ao abrir **Settings → Chat & voice** com uma chave salva (ou um Ollama ou LM Studio local), ou com **Try again** | O provedor e a chave que você escolheu | `crates/chat/src/providers.rs` |
 | Uma busca na web (a web do Zeca, **Settings → Chat & voice**, desligada até você ligar) | O modelo do chat por API, num turno que você mandou; pelo portão de rede (200 por dia, com as leituras de página) | Brave Search ou Tavily com a sua chave, ou o seu SearXNG | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
 | A leitura de uma página (o mesmo interruptor) | O modelo do chat por API, num turno que você mandou; pelo portão de rede (os mesmos 200) | O site da página, só endereços públicos; o texto dela então vai para o seu provedor de API numa chamada própria, sem ferramentas | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |

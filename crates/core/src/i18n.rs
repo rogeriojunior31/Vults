@@ -682,6 +682,9 @@ pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VoiceFeedback {
     Done,
+    Requested,
+    ExecutionFailed,
+    Consulting,
     SentToChat,
     ChatUnavailable,
     Answer,
@@ -715,6 +718,24 @@ pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
             "No se pudo enviar a Zeca. Revisa Chat, termina el borrador e inténtalo de nuevo."
         }
         (Lang::Zh, ChatUnavailable) => "无法发送给 Zeca。请检查聊天，完成草稿后重试。",
+        (Lang::En, Requested) => "Command requested.",
+        (Lang::PtBr, Requested) => "Comando solicitado.",
+        (Lang::Es, Requested) => "Comando solicitado.",
+        (Lang::Zh, Requested) => "命令已请求。",
+        (Lang::En, Consulting) => "I'm checking with Claude Code. You can cancel while you wait.",
+        (Lang::PtBr, Consulting) => "Estou consultando o Claude Code. Você pode cancelar enquanto espera.",
+        (Lang::Es, Consulting) => "Estoy consultando a Claude Code. Puedes cancelar mientras esperas.",
+        (Lang::Zh, Consulting) => "正在咨询 Claude Code。等待时可以取消。",
+        (Lang::En, ExecutionFailed) => {
+            "Could not complete every action. Some changes may already have happened."
+        }
+        (Lang::PtBr, ExecutionFailed) => {
+            "Não foi possível concluir todas as ações. Algumas alterações podem já ter ocorrido."
+        }
+        (Lang::Es, ExecutionFailed) => {
+            "No se pudieron completar todas las acciones. Es posible que algunos cambios ya se hayan realizado."
+        }
+        (Lang::Zh, ExecutionFailed) => "无法完成所有操作。部分更改可能已经发生。",
         (Lang::En, Done) => "Command completed.",
         (Lang::PtBr, Done) => "Comando concluído.",
         (Lang::Es, Done) => "Comando completado.",

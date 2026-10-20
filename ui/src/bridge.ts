@@ -9,6 +9,19 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
+export type QuestionAction = "edit" | "send" | "cancel" | "stop-dictation" | "apply-dictation";
+export interface TextQuestionView {
+  seq: number;
+  surface: string;
+  phase: string;
+  offer: { token: string; question: string; draft: string; clientPid: number; seconds: number; dictation?: { id: number; phase: string; text: string | null } | null } | null;
+}
+export interface QuestionInstallStatus {
+  agent: "claude" | "codex";
+  path: string;
+  installed: boolean;
+  error: string | null;
+}
 export interface FlockPlace {
   query: string;
   onlyNeeds: boolean;
@@ -432,7 +445,7 @@ export type DictationOutputLanguage = "en" | "pt-BR" | "es" | "zh";
 
 export type DictationMusic = "lower" | "pause" | "leave";
 
-export type SettingsChange = { theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
+export type SettingsChange = { questionAgents?: boolean; theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -454,6 +467,14 @@ export const Bridge = {
   installApply: (agent: InstallAgent, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
+  setQuestionAgents: (on: boolean) => invoke<void>("question_agents_set", { on }),
+  questionInstallStatus: () => invoke<QuestionInstallStatus[]>("question_install_status"),
+  questionInstallPreview: (agent: string, install: boolean) => invoke<InstallPreview>("question_install_preview", { agent, install }),
+  questionInstallApply: (agent: string, install: boolean, fingerprint: string) => invoke<string | null>("question_install_apply", { agent, install, fingerprint }),
+  textQuestionStatus: (token: string | null) => invoke<TextQuestionView>("text_question_status", { token }),
+  textQuestionAction: (token: string, action: QuestionAction, text: string, capture: number | null = null) => invoke<void>("text_question_action", { token, action, text, capture }),
+  textQuestionDepart: () => invoke<TextQuestionView>("text_question_depart"),
+  onTextQuestion(cb: (view: TextQuestionView) => void): void { void listen<TextQuestionView>("text-question", e => cb(e.payload)); },
   questionAnswer: (request: string, answers: Answer[]) => invoke<void>("question_answer", { request, answers }),
   questionRelease: (request: string) => invoke<void>("question_release", { request }),
   cardSkip: (request: string) => invoke<void>("card_skip", { request }),
@@ -505,7 +526,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   appSettings: () =>
-    invoke<{ theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ questionAgents: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -541,6 +562,13 @@ export const Bridge = {
   meetingSummaryCancel: (id: number) => invoke<void>("meeting_summary_cancel", { id }),
   setMeetingSummary: (on: boolean) => invoke<void>("set_meeting_summary", { on }),
   meetingTranscript: (id: number) => invoke<MeetingTranscript | null>("meeting_transcript", { id }),
+  meetingSave: (id: number, title: string) => invoke<string>("meeting_save", { id, title }),
+  meetingArchiveList: () => invoke<{ epoch: number; rows: MeetingEntry[] }>("meeting_archive_list", { limit: 500 }),
+  meetingArchiveRead: (id: string) => invoke<{ epoch: number; meeting: SavedMeeting | null }>("meeting_archive_read", { id }),
+  meetingArchiveDelete: (id: string) => invoke<boolean>("meeting_archive_delete", { id }),
+  meetingArchiveRename: (id: string, source: MeetingSource, speaker: number, name: string | null) => invoke<boolean>("meeting_archive_rename", { id, source, speaker, name }),
+  meetingArchiveExport: (id: string, format: "markdown" | "srt" | "vtt", source: MeetingSource | null, title: string) => invoke<boolean>("meeting_archive_export", { id, format, source, title }),
+  onMeetingArchiveErased(cb: () => void): void { void listen("meeting-archive-erased", cb); },
   meetingStatus: (id: number | null) => invoke<MeetingStatus>("meeting_status", { id }),
   meetingAssetsStatus: () => invoke<MeetingAssetsStatus>("meeting_assets_status"),
   meetingAssetsReview: () => invoke<MeetingAssetsStatus>("meeting_assets_review"),
@@ -921,6 +949,14 @@ export interface MeetingNotes {
   summary: string;
   key_points: string[];
   todos: { text: string; owner: string | null; due: string | null }[];
+}
+export type MeetingSource = "microphone" | "system";
+export interface MeetingEntry { id: string; recorded_ms: number; title: string }
+export interface SavedMeeting extends MeetingEntry {
+  microphone: { duration_ms: number; segments: { start_ms: number; end_ms: number; text: string; speaker: number | null }[] };
+  system: SavedMeeting["microphone"];
+  speakers: { source: MeetingSource; id: number; name: string | null }[];
+  notes: MeetingNotes | null;
 }
 export interface MeetingSummaryStatus {
   id: number;

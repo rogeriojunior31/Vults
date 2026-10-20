@@ -41,12 +41,23 @@ pub struct Recorder {
 impl Recorder {
     /// Chat retains its one-minute cap and scalar waveform; other callers can use audio's bands.
     pub fn start(level: impl Fn(f32) + Send + 'static, auto: Option<AutoStop>) -> Result<Self, String> {
-        let capture = Capture::start(
+        Self::start_guarded(level, auto, || true)
+    }
+
+    /// The owner may revoke admission while native device setup is still in progress.
+    pub fn start_guarded(
+        level: impl Fn(f32) + Send + 'static,
+        auto: Option<AutoStop>,
+        live: impl Fn() -> bool + Send + 'static,
+    ) -> Result<Self, String> {
+        let capture = Capture::start_guarded(
             CaptureOptions {
                 max_seconds: MAX_SECONDS,
                 ..Default::default()
             },
             move |meter| level(meter.level),
+            live,
+            || true,
         )?;
         let watching = Arc::new(AtomicBool::new(true));
         if let Some(auto) = auto {

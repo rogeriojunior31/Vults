@@ -1,0 +1,117 @@
+{
+  "recordedAt": "2026-10-19",
+  "roadmap": "V6.5.1",
+  "scope": "Isolated synthetic native PipeWire WebRTC experiment and read-only candidate inventory; no physical acceptance or app activation.",
+  "runtime": {
+    "pipewire": "1.6.9",
+    "wireplumber": "0.5.18",
+    "webrtcAudioProcessing": "1.3",
+    "sampleRate": 48000,
+    "channels": 1,
+    "format": "float32"
+  },
+  "command": "cargo run -p vults-audio --features meeting-capture --example echo-cancel-spike",
+  "syntheticInput": {
+    "seed": "0x4ec3",
+    "generator": "u32 LCG: x*1664525+1013904223; upper 24 bits / 16777216 minus 0.5, times 0.3",
+    "seconds": 8,
+    "echoDelayFrames": 960,
+    "echoGain": 0.5,
+    "localToneFrequenciesHz": [
+      300,
+      700
+    ],
+    "localToneAmplitudeEach": 0.03,
+    "localToneStartSeconds": 6,
+    "gainControl": false,
+    "noiseSuppression": false,
+    "highPassFilter": false
+  },
+  "fixedGate": {
+    "setBeforeMeasurement": true,
+    "echoReductionMinimumDb": 15,
+    "localToneGainRangeDb": [
+      -3,
+      3
+    ],
+    "farWindowSecondsAfterCapturedOnset": [
+      3,
+      4.5
+    ],
+    "localWindowSecondsAfterCapturedOnset": [
+      6.3,
+      7.5
+    ]
+  },
+  "selection": "Three consecutive final runs; no replacement based on measurements. Earlier setup runs diagnosed quoting and configuration isolation and are not final qualification evidence.",
+  "runs": [
+    {
+      "rate": 48000,
+      "frames": 432128,
+      "onset_frames": 2955,
+      "echo_reduction_db": 20.247,
+      "near_300_gain_db": -1.218,
+      "near_700_gain_db": -0.414,
+      "synthetic_gate_passed": true,
+      "physical_acceptance": false
+    },
+    {
+      "rate": 48000,
+      "frames": 432128,
+      "onset_frames": 3355,
+      "echo_reduction_db": 20.299,
+      "near_300_gain_db": -0.998,
+      "near_700_gain_db": -0.317,
+      "synthetic_gate_passed": true,
+      "physical_acceptance": false
+    },
+    {
+      "rate": 48000,
+      "frames": 432128,
+      "onset_frames": 3531,
+      "echo_reduction_db": 20.233,
+      "near_300_gain_db": -1.043,
+      "near_700_gain_db": -0.523,
+      "synthetic_gate_passed": true,
+      "physical_acceptance": false
+    }
+  ],
+  "sourceSha256": {
+    "crates/audio/examples/echo-cancel/main.rs": "f468705cc366eefdf9a3d8be5d433e9ddfcb130b07c3e7587e48474f128db74a",
+    "crates/audio/examples/echo-cancel/pipewire.conf": "1fb59e901ae5b90d818179cc9f851f1442785e91a13383e0bda942b3188c9f65",
+    "crates/audio/examples/echo-cancel/wireplumber.conf": "22dfe7a9632fa786d360d0b98861db7bfc4d386c3a194135a19b3a0619e780c4",
+    "crates/audio/examples/echo-cancel/client.conf": "05c9f60d3047af3335a9d6cd0eaa34d242dfafe8f8d4ade6c120bf1d13375fda",
+    "crates/audio/src/echo.rs": "17399b49d5d025889e0142b74245db21d950e05117793993882527d97e55070f",
+    "crates/audio/src/echo/tests.rs": "5a6442d1b1e37aa1c7e45b19de41582171023cd3db97261b0d234fe520be7363",
+    "crates/audio/src/meeting/pulse.rs": "3e40d570a3ca332595d0b4f6a3c3d2afbd7f49e8c3ba3b3cde78905bec55909a"
+  },
+  "isolation": {
+    "privateCore": true,
+    "privatePolicyOnlyWirePlumber": true,
+    "exclusiveClientAndPolicyConfig": true,
+    "stockWirePlumberScriptsOnly": true,
+    "privateStateAndCookie": true,
+    "hardwareMonitorsAndDBus": false,
+    "userDefaultsOrRoutesChanged": false,
+    "homeChanged": false,
+    "humanAudioStored": false,
+    "providerCalls": false,
+    "network": false
+  },
+  "limitations": [
+    "One stationary delayed noise echo path, two local tones and one virtual clock.",
+    "No human double-talk, physical acoustic/latency, moving paths, device changes, long-session or complete app-route acceptance.",
+    "Inventory/recheck is a snapshot, not route authority; native-only modules without Pulse ownership metadata unsupported.",
+    "Production module setup/Q6, routed duplex ownership/V6.5.2 and visible capture/V6.7 remain open."
+  ],
+  "decision": "Continue with native PipeWire WebRTC; do not add an embedded AEC dependency or enable app barge-in from this evidence.",
+  "physicalAcceptance": false,
+  "wholeV65Complete": false,
+  "primaryReferences": [
+    "https://docs.pipewire.org/page_module_echo_cancel.html",
+    "https://github.com/PipeWire/pipewire/blob/1.6.9/src/modules/module-protocol-pulse/module.c",
+    "https://github.com/PipeWire/pipewire/blob/1.6.9/src/pipewire/conf.c",
+    "https://github.com/PipeWire/pipewire/blob/1.6.9/spa/plugins/aec/aec-webrtc.cpp",
+    "https://pipewire.pages.freedesktop.org/wireplumber/daemon/locations.html"
+  ]
+}

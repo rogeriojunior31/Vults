@@ -2,6 +2,8 @@
 
 **Status:** Accepted, 2026-10-12. Consolidated on 2026-10-12 from 0013.
 Amended on 2026-10-17 for dictation, bounded follow-up listening and temporary meeting audio.
+Amended on 2026-10-19 for human-confirmed question drafts (V7.1). V7.2.2 delivers typed M7 questions;
+local dictation into their editor and external-agent offering remain separate steps.
 The maintainer accepted V0.1; N3 implementation still lands in separate steps.
 
 ## Context
@@ -27,8 +29,9 @@ built, and the user dropped it from the plan on 2026-10-12.
   default build, which links `espeak-ng` (GPL-3.0). A GPL tool the user installed may run as a
   separate process. Each engine or model that runs locally is checked for its license (code and
   model) before it goes in.
-- **Voice never answers a card** ([0004](0004-a-human-answers-permissions.md)), whatever the model
-  says.
+- **Voice never answers a permission** ([0004](0004-a-human-answers-permissions.md)), whatever the
+  model says. Dictation may only edit an eligible question draft under the separate confirmation
+  contract below; speech itself never submits a card.
 
 ## Consequences
 
@@ -66,17 +69,69 @@ They set N3's contract; acceptance does not mean the features are already implem
   source, code license, weights license, redistribution conditions and download SHA-256 in the
   model reference before offering it. A proposed model is not approved by appearing in the
   plan. Dependencies still pass `cargo deny`; no GPL-linked engine enters the binary.
-- **Voice still never answers a card.** None of these clauses changes [0004](0004-a-human-answers-permissions.md).
-  Spoken text is never interpreted as an approval or denial. A future question-card composer
-  requires its own decision and a separate human confirmation to send; this amendment does
-  not enable it.
+- **Permission authority is unchanged.** None of these clauses changes
+  [0004](0004-a-human-answers-permissions.md). Spoken text is never interpreted as an approval or
+  denial. The question-draft contract below permits text entry, with a separate human action to send.
 
 The eight-second follow-up and temporary meeting files are the explicit exceptions to the
 listening and storage rules. Dictation into other apps follows
 [0032](0032-dictation-into-other-apps.md).
 
+## Human-confirmed question drafts
+
+V7.1 defines this contract for M7's future `ask_user` question composer and
+`vults_dictate(question)`. V7.2.2 implements M7's typed `ask_user` for verified app-owned clients on
+Linux. V7.2.3 connects physical-key local draft dictation and the `vults_dictate` alias for those
+clients. V7.3 adds the default-off external-client consent, a question-only server and reviewed
+Claude Code/Codex setup. This decision adds no microphone control or installation by itself.
+
+- **A text question is a distinct request kind.** Only the app's typed, non-permission question
+  composer is eligible. A caller's label, question text or transcript cannot turn a permission into
+  a text question. The reply is text, never an Allow, Deny, Always rule, policy change or phone
+  decision. Existing permission and hook question paths gain no dictation access from this decision.
+- **An agent cannot open the microphone.** The user starts local, memory-only capture on the
+  displayed question by pressing its dictation key. The agent's request, focus,
+  notifications and realtime follow-up listening never start or extend capture. The
+  *Agents may ask for a spoken answer* setting is off by default; configuring MCP alone grants
+  no voice access. V7.3 enforces this for external clients without expanding permission authority.
+- **Speech edits a draft; the human sends it.** Show the final transcript in an editable composer.
+  Send requires a separate click or unmodified Enter in that focused composer after capture has
+  ended. Key release, silence, transcription completion, a spoken "send" or an agent/model request
+  cannot submit it. Shift+Enter and IME composition retain their editing behavior. Empty, failed or
+  cancelled transcription never sends. Question drafts use local transcription only: no optional
+  model clean-up or provider request, voice commands or Chat fallback.
+- **Bind the whole exchange to its owner.** M7 must verify the requesting client through its process
+  ancestry rather than trusting a supplied name/PID. Bind capture, draft and confirmed send to that
+  client, the exact live question and its generation/deadline. Recheck those bindings when publishing
+  text and sending it; consume a confirmed reply at most once. Replacement, expiry, client disconnect,
+  navigation, hide/close or screen lock revokes pending work and clears the unsent draft. Late audio,
+  decode or send acknowledgements cannot populate or answer another question. A failed send is
+  explicit; retry must not duplicate an already consumed reply.
+- **Keep authority, privacy and installation separate.** Question audio stays in memory for local
+  transcription; none goes to a remote model or disk. A confirmed reply goes only to its verified requesting client. M7 records a local audit
+  outcome with the request binding and verified requester, without audio, secrets or a duplicate
+  transcript. No voice path reaches `Intent::Decide` or `DecideAlways`. External-agent MCP setup
+  still needs a dated backup, a visible diff and a click under [0005](0005-agent-configs-backup-diff-click.md).
+  [0027](0027-an-open-reply-for-any-tool.md) and its hook reply protocol are unaffected.
+
+V7.2 starts with M7's typed question lifecycle, verified client identity, cancellation, once-only
+reply and audit round trip. Then it connects local dictation and the composer. Its regression checks
+must cover forged/replaced owners, stale generations, lock/departure, duplicate confirmation, lost
+acknowledgements, IME/Enter and literal approval-like text that never becomes a permission decision.
+V7.3 separately offers the feature to agents with the off-by-default setting and reviewed config edit.
+Until those steps land, existing card and microphone behavior stays as shipped.
+
 ## History
 
+- 2026-10-19: V7.3 adds default-off external text questions, consent revocation ordering and
+  Settings-only reviewed MCP setup. Existing permission and physical-key capture rules are unchanged.
+
+- 2026-10-19: V7.2.3 implements physical-key local question dictation with a separate apply/send
+  barrier and cancellation guards. External-agent setup remains V7.3; permission authority is unchanged.
+
+- 2026-10-19: N3 V7.1 distinguishes a dictated question draft from permission authority. Only a
+  separate human confirmation may send it; M7's question lifecycle and V7.2/V7.3 enforcement remain
+  unimplemented. ADR 0004 and ADR 0027 are unchanged.
 - 2026-10-17 (accepted by the maintainer): N3 V0.1 defines local vocabulary, bounded opt-in
   follow-up listening, temporary meeting audio and the license evidence required for new models.
 - 0013, 2026-10-04: local speech to text, no always-on mic, no GPL in

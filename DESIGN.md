@@ -82,7 +82,7 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
 - General configuration stays behind the gear. Dictation configuration lives under
   the Dictation tab, alongside its work pages, using one shared navigation.
 - Dictation has separate Voice, Keyboard shortcuts, Command settings, Vocabulary,
-  Styles, Meeting settings, Paste, Privacy and Diagnostics pages. Voice owns the shared Chat/dictation
+  Styles, Meeting settings, Agents, Paste, Privacy and Diagnostics pages. Voice owns the shared Chat/dictation
   transcription model and spoken language; Chat & voice links there. Statistics
   links to Activity > Dictation. Do not duplicate editors.
 - Configuration pages still run in the privileged Settings webview. Work pages with

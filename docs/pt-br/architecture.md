@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: d57c87105ad2 -->
+<!-- source: ab83744eb332 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -68,6 +68,173 @@ entrada `main.ts` e a sua folha de estilo. O código usado por mais de uma super
 as exceções são o painel do chat (`src/island/chat.ts`, com o Markdown e os ícones dele) e o card do
 GitHub (`src/island/board.ts`), que o Nest também desenha, e o visual das páginas das configurações
 (`surfaces/settings/pages.css`), que a Week do Nest usa dentro de uma shadow root.
+
+<a id="voice-conversation-turns"></a>
+## Turnos da conversa por voz
+
+A V6.1 acrescenta a máquina pura `voice::turn`, ainda sem chamadas pelo app. Tempo monotônico
+injetado e tokens opacos de turno/tentativa vinculam cada resultado assíncrono. A primeira saída
+consumida inicia um bloqueio de 500 ms com fones ou 1 s com cancelamento de eco; a interrupção com
+alto-falantes vem desligada. Um início de fala suprimido que continua ativo pode pedir uma análise
+separada com 260 ms de áudio anterior após o bloqueio. Só a confirmação da tentativa correspondente
+cancela a saída e avança o turno; rejeitar ou atingir o prazo de 1,5 s mantém a resposta em andamento.
+
+O fim da produção pede o escoamento da reprodução; uma fila vazia transitória anterior não significa
+conclusão. A confirmação desse escoamento inicia uma tolerância de cauda de 450 ms no desktop. Fala
+nesse intervalo é um novo turno, sem reaproveitar a cauda da saída anterior; expirar termina sem
+abrir captura. Um início pendente no escoamento vira um novo turno com seu áudio anterior, em vez
+de cancelar uma resposta já silenciosa. Cancelamento/falha limpa a saída e recusa callbacks
+atrasados. Adaptadores devem manter os tokens de cada ação, confirmar o consumo/escoamento real da
+saída e ser donos do buffer circular do microfone em memória; trocar o token de um resultado antigo
+pelo atual viola o contrato. A máquina não faz IO de áudio, provedor, permissão ou rede, e seus
+efeitos não concedem consentimento para o microfone. Captura/reaproveitamento no runtime,
+orçamento/gate realtime, reprodução e integração da interface continuam nas próximas etapas da V6.
+
+A V6.2.1 acrescenta a política pura de conversa `voice::turn::end`: 1,6 s de silêncio, ou 2,6 s após
+uma palavra de continuação em inglês/português. Exige fim de fala do VAD e palavras não vazias;
+silêncio antes da fala ou voz em andamento nunca concluem o turno. Só crescer além do maior número
+de palavras anterior da transcrição parcial reinicia seu timer de texto. Reescritas e eventos
+repetidos de fim do VAD não ficam reiniciando a pausa. Outros idiomas usam o prazo base.
+
+O agendador semântico opcional, só de áudio, emite no máximo um pedido pendente, vinculado a
+geração/token, a cada 200 ms. Uma probabilidade de pelo menos 0,5 só pode concluir após a política
+atual de silêncio; valores não finitos/fora do intervalo ou uma falha de inferência o desativam
+pelo resto da conversa. A espera adicional absoluta é de 1,2 s desde quando o silêncio seria
+elegível, não desde uma consulta atrasada; um pedido travado não a estende. Retomar a fala cancela
+o token e a espera pendentes; cancelamento/novos turnos recusam callbacks antigos. A conclusão é
+emitida uma vez. Limites de duração da captura e entrada vazia ficam com o adaptador. Os gravadores
+existentes do Chat/ditado mantêm suas próprias regras de parada.
+
+A V6.2.2 acrescenta o backend opcional `semantic-turn`, com grafo smart-turn v3.0 fixado e runtime
+CPU Linux x64 qualificado de forma independente. Corte/preenchimento à esquerda de oito segundos,
+normalização e features Whisper/Slaney correspondem às matrizes NumPy da implementação de referência;
+uma execução nativa explícita com artefatos conferidos corresponde às probabilidades de referência.
+A admissão compartilhada `model_file` mantém os bytes exatos, e `onnx::Runtime` passa a ser o único
+responsável nativo por diarização e turnos semânticos. Admissão interativa cancelável, prazos por
+quadro no pré-processamento e encerramento via RunOptions respeitam o orçamento restante do token
+da política. A construção do modelo/sessão nativa não promete aborto imediato. Não há chamada no app,
+download, opção em Configurações ou captura nova. Veja [Modelo semântico de fim de turno](reference/semantic-turn-model.md)
+para origem BSD-2-Clause, pins exatos, comandos de qualificação e critérios pendentes de fala/latência/plataforma.
+
+A V6.3.1 acrescenta `store::money` (migração 28): reservas em micro-USD inteiros e conciliação única
+do uso final, vinculadas à identidade existente do registro de requisições. Transações imediatas
+gravam a reserva e seu trace inicial juntas, impedindo operações simultâneas de gastar o mesmo saldo.
+Cotações ausentes/nulas, limites zerados, registros indisponíveis e estouro aritmético recusam a
+admissão. Reservas abertas nunca expiram, inclusive após falha do processo; custo final desconhecido
+permanece nulo e debita a reserva inteira. Só um transporte encerrado pode conciliar o uso. Débitos
+concluídos expiram 24 horas após a conclusão; horários futuros continuam debitados se o relógio recuar.
+Apagar o histórico preserva reservas/débitos e uma conciliação tardia não recria traces apagados.
+Excessos cobrados pelo provedor são debitados integralmente, sem truncamento.
+O sucesso/falha da requisição fica no trace independentemente da disponibilidade dos dados finais de cobrança.
+O app recusa explicitamente `voice-realtime` pelas configurações de conectores e pelo gate de
+contagem. As seções posteriores acrescentam admissão, transporte e recuperação sobre esta base de
+persistência. Nenhum reembolso ou recuperação automática libera um orçamento novo.
+
+A V6.3.2 acrescenta o responsável offline `chat::realtime`: tarifas inteiras revisadas, tetos
+conservadores por resposta, limites finitos explícitos de sessão e confirmação da configuração
+efetiva, uma tentativa vinculada ao identificador da resposta e recibos únicos de uso. Uso
+desconhecido, eventos antigos/grandes demais e configuração alterada não reabrem um responsável nem
+reembolsam sua reserva. Texto/áudio em cache têm preços separados; excessos conhecidos ficam visíveis
+integralmente. A cassette sintética é offline; não adiciona chamada ao provedor, microfone nem
+autoridade de permissão. Veja [Contabilidade realtime](reference/realtime-accounting.md) para fontes
+das tarifas, demonstração do teto, expiração da qualificação e validação em execução ainda obrigatória.
+
+A V6.3.3 acrescenta provedor WebSocket TLS de origem fixa, canais limitados de PCM em streaming e gate
+monetário controlado pelo app. Configurações 41 mantém consentimento independente desligado por
+padrão, limite/modelo e vínculo com o registro. Uma concessão revogável de voz verifica escolha/
+bloqueio/cancelamento durante configuração, IO e publicação; encerrar o app fecha permanentemente
+a admissão. Reservas antecedem chaveiro/conexão/áudio; a conciliação dos recibos continua após
+revogação. Guardiões de entrega não reclamada restituem apenas trabalho comprovadamente não enviado;
+reservas pendentes bloqueiam novas reservas dentro desse responsável. A V6.3.4 acrescenta trava do
+kernel no diretório de dados Linux, mantida pelo transporte e cada worker desacoplado. Só um novo
+responsável exclusivo concilia reservas órfãs, mantendo atomicamente o custo desconhecido integral
+por 24 horas desde a conciliação. Reiniciar não restitui nem adia um débito já conciliado, e traces
+apagados continuam apagados. Outras plataformas recusam a entrada. Não há entrada nativa de
+captura/reprodução. Testes duplex e de processos/falhas são offline; validação com provedor/
+dispositivos reais e continuação oferecida ao usuário continuam pendentes antes da ativação.
+O inventário de rede lista o transporte concreto e seus testes.
+
+A V6.3.5 altera o serviço nativo do app para controlar um turno completo limitado, independentemente
+da admissão remota. A entrada do transporte persistente continua em blocos; sucesso libera o
+original e falha encerra o transporte antes da recuperação local pelo Whisper. Um texto completo
+revisável ou o áudio original com falha local tipada volta ao chamador nativo, sem troca de provedor,
+envio automático ao Chat ou gravação de histórico. Cancelamento/revogação suprimem resultados antigos;
+mudanças compartilhadas revogam gerações sob a trava das Configurações e workers de decodificação
+mantêm a concessão nativa após o prazo. A espera local é limitada, mas a carga fria nativa continua
+cooperativa. Captura/reprodução e continuação visual ficam na V6.4-V6.7. Veja
+[Contabilidade realtime](reference/realtime-accounting.md#native-turn-retention-and-local-text).
+
+A V6.4.1 acrescenta a saída independente `audio::playback` e a contabilidade pura
+`voice::turn::heard`. Um worker CPAL limitado reamostra PCM16 a 24 kHz, distingue frames na fila,
+entregues e estimados como consumidos, e separa a conclusão do produtor da drenagem do dispositivo.
+Parada/revogação congela o cursor e limpa a fila; a destruição nativa mantém a propriedade exclusiva.
+O separador puro estima palavras inteiras ouvidas e calcula contexto interrompido do modelo mais
+uma dica única de texto não ouvido. Ele não escreve histórico nem envia nada. A V6.4.2 acrescenta o
+proprietário do serviço nativo: turnos completos/sinais vinculados à geração, identidades de
+provedor/item/transcrição pelo gate, consumo/drenagem CPAL e truncamento exato confirmado no servidor.
+Ele emite registros correspondentes de histórico ouvido em memória e admite uma dica de reparo
+citada uma vez na próxima resposta autorizada. Reprodução terminal ainda pode terminar ou ser
+interrompida; histórico sem confirmação do servidor é explicitamente não sincronizado e não pode
+retomar o proprietário. A saída nativa desacoplada mantém a concessão da sessão. Não há microfone,
+entrada do renderer nem gravação persistente de histórico do Chat; interrupção por fala continua
+desligada na entrada do app até a V6.5. Veja
+[Reprodução nativa e reparo de contexto](reference/realtime-accounting.md#native-playback-and-context-repair)
+para limites, premissas de relógio, testes ALSA nulos isolados e a aceitação física/real pendente.
+
+A V6.5.1 acrescenta o inventário somente de leitura `audio::echo` para pares de módulos WebRTC do
+PipeWire configurados explicitamente. Snapshots opacos vinculam módulo/grupo de fonte e destino e
+identidades de servidor/nós; verificá-los novamente não concede uma rota. Um experimento nativo
+privado qualifica apenas eco sintético/preservação de tons. A V6.5.2 acrescenta um proprietário
+nativo duplex separado, vinculado ao consentimento, com confirmação exata dos destinos e streams
+`DONT_MOVE`. Ele observa conexões internas do módulo AEC e destinos físicos, revoga rotas alteradas
+e mantém exclusividade nativa durante a destruição. Fones exigem escolha explícita; rotas de
+alto-falantes sem qualificação mantêm a interrupção desligada. Intervalos de conteúdo, latência do
+destino e confirmação separada de drenagem preservam a contabilidade da saída consumida. Invalidar
+a rota também limpa evidências retidas de interrupção. A captura limitada retorna somente ao
+chamador nativo; não é enviada nem salva automaticamente. O caminho CPAL padrão continua sem
+interrupção. Não há carregador de módulos de produção, entrada do renderer nem ativação visível
+de captura. O backend da V6.5 está entregue; ferramentas na V6.6 e captura/interface na V6.7 vêm
+a seguir. Veja [Cancelamento de eco](reference/echo-cancellation.md) para o teste privado de
+roteamento nativo e os limites restantes de aceitação física/real.
+
+A V6.6.1 encaminha transcrições locais finalizadas ao dispatcher de comandos da V8 antes do envio
+realtime. O proprietário do estado verifica Configurações/gerações e admissão cancelável de uso
+único, reutiliza leituras locais com remoção de segredos e separa o contexto do ditado independente.
+Comandos tratados/recusados/esclarecidos aposentam a geração sem Generate nem fallback de modelo.
+A V6.6.3 distingue recibos de efeitos concluídos, encaminhados e com falha; lotes que misturam
+leitura e ação também esperam. Salvar projetos com sucesso pode concluir, enquanto encaminhar
+aberturas continua como Solicitado. O consumo compartilhado da captura bloqueia recuperação e
+repetição de cópias com nova geração após confirmação, conciliação ou interrupção. Trabalho nativo
+enfileirado verifica novamente chamador/autoridade/prazo e mantém a concessão exclusiva até sair. O Linux
+exige transcrição limitada da mesma captura; texto ausente falha antes de construir o provedor e
+oferece apenas recuperação revisável. Não há ativação de renderer/montagem de captura, ferramenta
+do modelo nem consulta. Veja
+[Admissão de comandos locais](reference/realtime-accounting.md#local-commands-before-realtime-upload).
+
+A V6.6.2 fornece ao realtime as cinco leituras existentes do bando em cache por especificações
+congeladas e confirmadas. Respostas de função em sequência têm argumentos limitados, verificação
+exata de identidades transmitidas/finais e controle de repetição. A conciliação precede a reserva
+de cada continuação e leitura; envelopes inertes de sucesso/erro têm limite após escapes JSON.
+Recibos de ferramentas liberam a entrada original sem concluir a reprodução; a fala final mantém
+sua própria identidade/histórico. Chamadas consumidas não viram recuperação nem repetição automática.
+Não há ferramenta de ação/permissão nem ativação visível. Veja
+[Ferramentas realtime somente de leitura](reference/realtime-accounting.md#read-only-tools-in-realtime).
+
+A V6.6.3 pode acrescentar perguntas textuais `consult_claude` e `consult_codex`, com consentimentos
+separados, a esse registro nativo. Cada provedor tem opção própria desligada por padrão e cota
+persistente de 20 tentativas por 24 horas móveis; ambos compartilham uma vaga até confirmar a saída
+do processo. O Codex usa metadados fixos de modelo controlados pelo app e recusa versões não
+qualificadas. A verificação prévia de assinatura não é atômica com exec; trocas externas de login
+ainda bloqueiam a ativação. Uma capacidade de qualificação falsa bloqueia adesão ao Codex, oferta
+com consentimento salvo, gate de rede e execução do helper antes de qualquer acesso à CLI.
+Não há entrada de renderer/captura. Suas opções, orçamentos persistentes
+e traces locais de metadados são independentes dos custos realtime e do Chat. O cliente existente sem
+ferramentas desativa expansão de arquivos e carregamento de memória e exige controles suportados
+pela CLI; não herda sessão ativa de agente nem permissões do Chat. Um prazo original cobre
+preparação e saída do processo, com aviso nativo traduzido após 1,5 segundo; a posse da vaga/voz
+sobrevive a trabalho que não pode ser interrompido. Respostas são dados externos inertes. Políticas
+gerenciadas da CLI continuam valendo. Vínculo com a assinatura, qualificação de cliente real/gerenciado e controles visíveis seguem em aberto.
+Veja [Consulta textual](reference/realtime-accounting.md#text-consultation).
 
 <a id="local-dictation"></a>
 
@@ -397,6 +564,40 @@ ela exatamente: o mesmo agente, pasta, ferramenta e alvo ([ADR 0004](adr/0004-a-
 (`QuestionAsked`) espera do mesmo jeito, e só um `Intent::Answer` que se encaixe nas perguntas dela a transforma
 num effect `AnswerQuestion`. Um teste alimenta
 todas as outras entradas em todas as ordens e verifica que nenhuma delas responde.
+
+A interface Linux de perguntas de texto `ask_user` da M7 é separada desse caminho de respostas do
+hook. Um socket privado do mesmo usuário conecta o relay stdio ao runtime do app. O PID do par obtido
+do kernel, a identidade do executável, o início dos processos e a ancestralidade retida vinculam o
+pedido a um cliente ativo verificado; cabeçalhos fornecidos pelo cliente não comprovam a identidade.
+Clientes iniciados pelo app usam o servidor de chat existente. Clientes externos usam
+`--questions-mcp`, que expõe somente ferramentas de perguntas, e precisam do consentimento separado
+em Ditado > Agentes, desligado por padrão. A geração do consentimento e o horário de recebimento do
+transporte recusam pedidos antigos enfileirados após uma nova concessão. As travas de configurações
+e consentimento permanecem presas durante as transições do runtime, incluindo a entrega da resposta,
+impedindo uma revogação entre a leitura do acesso e a entrega. O runtime possui o `core::questions::Slot`, seu nonce novo por conexão, prazo
+absoluto, concessão da superfície e confirmação única do rascunho. Ele adia a entrega até a auditoria
+sem conteúdo ser persistida, enquanto continua processando invalidações. O relay confirma após
+descarregar a resposta MCP no fluxo; falha/perda de confirmação nunca reutiliza o texto consumido.
+Cards de permissão têm prioridade. Só o webview dono da ilha/Nest pode editar ou confirmar; bloquear,
+navegar, sair, expirar e desconectar invalidam o trabalho pendente e conclusões tardias.
+A [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts) também
+é implementada por uma gravação local iniciada somente pela tecla física, vinculada ao token da
+pergunta ativa e ao identificador da gravação. `vults_dictate` é um alias da mesma troca tipada de
+`ask_user`. A captura usa o microfone e o transcritor local em cache existentes, com verificações de
+admissão e duração e sem passar por provedor, download, área de transferência ou histórico. O resultado
+é acrescentado ao editor atual; uma confirmação de aplicação correspondente precede o Enviar humano
+separado. Cancelar e cada transição do ditado avançam a revisão da tela, impedindo que snapshots
+tardios restaurem palavras canceladas. Captura/transcrição nativas nunca bloqueiam o loop do runtime. A admissão do worker comum e o registro
+do gravador do Chat compartilham a trava de roteamento; concessões de microfone revogadas não voltam
+a valer após fechar uma pergunta. Um Status correspondente do renderer precisa confirmar a exibição
+da pergunta antes que a captura possa selecioná-la.
+Nenhum texto de pergunta vira intent de permissão, regra ou política. Somente Configurações pode
+mostrar/aplicar a configuração MCP exclusiva de perguntas do Claude Code/Codex. Um plano em cache
+vincula agente, executável, escolha de instalação/remoção, diff exato e fingerprint. `agent-config`
+fornece leitura estrita, backup datado e gravação atômica; entradas antigas/estrangeiras são recusadas.
+A entrada gerenciada pode acompanhar a mudança de caminho do executável, preservando os demais
+servidores, hooks e a confiança. Gerações de leitura da UI, versões de eventos de consentimento e
+gerações de saída impedem a volta de respostas antigas de configuração, estado ou prévia.
 
 <a id="the-island-on-wayland"></a>
 

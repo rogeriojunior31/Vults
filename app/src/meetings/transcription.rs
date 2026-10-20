@@ -41,6 +41,25 @@ impl From<vults_voice::meeting::Transcript> for Track {
 }
 
 impl Track {
+    pub(super) fn archived(&self) -> Result<vults_store::meetings::Track, String> {
+        let invalid = |_| "Meeting timing or speaker identity is invalid.".to_owned();
+        Ok(vults_store::meetings::Track {
+            duration_ms: self.duration_ms.try_into().map_err(invalid)?,
+            segments: self
+                .segments
+                .iter()
+                .map(|s| {
+                    Ok(vults_store::meetings::Segment {
+                        start_ms: s.start_ms.try_into().map_err(invalid)?,
+                        end_ms: s.end_ms.try_into().map_err(invalid)?,
+                        text: s.text.clone(),
+                        speaker: s.speaker.map(u32::try_from).transpose().map_err(invalid)?,
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()?,
+        })
+    }
+
     pub(super) fn summary_source(&self) -> String {
         self.segments
             .iter()
@@ -99,6 +118,34 @@ pub struct Transcript {
 #[cfg(test)]
 mod summary_tests {
     use super::*;
+
+    #[test]
+    fn archive_conversion_keeps_unknowns_and_rejects_unrepresentable_timing() {
+        let mut track = Track {
+            duration_ms: 300,
+            attribution: Some("analyzed"),
+            segments: vec![
+                Segment {
+                    start_ms: 0,
+                    end_ms: 100,
+                    text: "Unknown words".into(),
+                    speaker: None,
+                },
+                Segment {
+                    start_ms: 100,
+                    end_ms: 300,
+                    text: "Known voice".into(),
+                    speaker: Some(3),
+                },
+            ],
+        };
+        let archived = track.archived().unwrap();
+        assert_eq!(archived.segments[0].speaker, None);
+        assert_eq!(archived.segments[1].speaker, Some(3));
+        assert_eq!(archived.segments[1].start_ms, 100);
+        track.duration_ms = u64::from(u32::MAX) + 1;
+        assert!(track.archived().is_err());
+    }
 
     #[test]
     fn canonical_source_text_keeps_local_clocks_and_unknown_speakers() {

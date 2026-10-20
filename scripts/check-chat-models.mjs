@@ -36,6 +36,7 @@ class Element {
   getAttribute(name) { return this.attributes[name]; }
   toggleAttribute() {}
   focus() { document.activeElement = this; }
+  blur() { if (document.activeElement === this) { document.activeElement = null; this.listeners.blur?.({ target: this }); } }
   scrollTo() {}
   getBoundingClientRect() { return { height: 200 }; }
   getContext() { return { clearRect() {}, fillRect() {} }; }
@@ -452,6 +453,7 @@ globalThis.voiceTestCreateNest = (_root, backend) => {
     memoryChanged: noop, usageChanged: noop, spendChanged: noop, relabel: noop, view: noop, shortcut: noop };
 };
 globalThis.voiceTestBridge = new Proxy({}, { get: (_target, name) => {
+  if (name === "textQuestionStatus" || name === "textQuestionDepart") return async () => ({ seq: 0, surface: "", phase: "", offer: null });
   if (name.startsWith("on")) return cb => { voiceEvents[name] = cb; return Promise.resolve(); };
   return async (...args) => {
     switch (name) {

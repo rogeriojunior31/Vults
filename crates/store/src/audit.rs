@@ -187,6 +187,54 @@ mod tests {
     }
 
     #[test]
+    fn a_question_receipt_records_the_once_only_outcome_without_prompt_or_reply() {
+        use vults_core::questions::{Owner, Revocation, Slot};
+        let owner = Owner {
+            relay_pid: 20,
+            relay_started: 200,
+            client_pid: 10,
+            client_started: 100,
+        };
+        let mut slot = Slot::new(owner, [7; 16]).unwrap();
+        let time = std::time::Instant::now();
+        let question = "Private question about a customer.";
+        let reply = "Private reply; approve always.";
+        let first = slot.open("secret-rpc-id", question, time).unwrap();
+        slot.edit(first.ticket, reply, time).unwrap();
+        assert_eq!(slot.confirm(first.ticket, time).unwrap().text, reply);
+        assert!(slot.confirm(first.ticket, time).is_err());
+        slot.open("cancelled", question, time).unwrap();
+        slot.revoke(Revocation::Disconnected);
+        let records = slot.take_records();
+        let dir = temp("mcp-question-audit");
+        let mut store = Store::open(&dir).unwrap();
+        for record in records {
+            store.append_audit(now(), &record.audit()).unwrap();
+        }
+        let lines = store.audit(10).unwrap();
+        assert_eq!(lines.len(), 2);
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.actor == "human" && line.act == "answer")
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.actor == "system" && line.act == "release")
+        );
+        for line in lines {
+            assert_eq!(line.tool, "ask_user");
+            assert!(line.target.contains("client=10:100"));
+            assert!(!line.target.contains(question));
+            assert!(!line.target.contains(reply));
+            assert!(!line.target.contains("secret-rpc-id"));
+            assert!(line.consent.is_none());
+        }
+        assert!(slot.take_records().is_empty());
+    }
+
+    #[test]
     fn the_table_refuses_to_change_or_drop_a_recent_line() {
         let mut s = Store::open(&temp("a-guard")).unwrap();
         s.append_audit(now(), &line()).unwrap();

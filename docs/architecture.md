@@ -66,6 +66,156 @@ exceptions are the chat panel (`src/island/chat.ts`, with its Markdown and icons
 card (`src/island/board.ts`), which the Nest draws too, and the settings pages' look
 (`surfaces/settings/pages.css`), which the Nest's Week uses inside a shadow root.
 
+## Voice conversation turns
+
+V6.1 adds the pure `voice::turn` machine, not yet called by the app. Injected monotonic time and
+opaque turn/probe tokens bind every asynchronous result. First consumed output starts a 500 ms
+headphone lock or 1 s echo-cancelled lock; speaker interruption defaults off. A still-live suppressed
+speech onset can request a separate 260 ms pre-roll probe after the lock. Only the matching confirmed
+probe cancels output and advances the turn; rejection or a 1.5 s timeout leaves the response running.
+
+Production completion requests playback drain; an earlier transient empty queue is not completion.
+The requested drain acknowledgement enters a 450 ms desktop tail grace. Speech there is a new turn
+without replaying the old output tail; expiry finishes without opening capture. A pending onset at
+drain becomes a new turn with its pre-roll, rather than cancelling an already silent response.
+Cancellation/failure clears output and rejects late callbacks. Adapters must retain the tokens from
+each action, acknowledge actual output consumption/drain and own the memory-only microphone ring;
+relabeling old results with current tokens violates the contract. The machine itself has no audio,
+provider, permission or network IO, and its effects grant no microphone consent. Runtime capture/replay,
+realtime budget/gate, playback and UI integration remain later V6 work.
+
+V6.2.1 adds the pure `voice::turn::end` conversation policy: 1.6 s of silence, or 2.6 s after an
+English/Portuguese continuation word. It needs both a VAD speech end and nonempty words; silence
+before speech or an ongoing voice never commits. Only growth beyond the partial transcript's prior
+word-count maximum restarts its text timer. Rewrites and duplicate VAD end events cannot keep
+resetting the pause. Other languages use the base delay.
+
+The optional audio-only semantic scheduler emits at most one outstanding, generation/ticket-bound
+request every 200 ms. A probability at least 0.5 may finish only after the current silence policy;
+nonfinite/out-of-range scores or one inference failure disable it for the rest of that conversation.
+The absolute extra wait is 1.2 s from nominal silence eligibility, not from a delayed poll; a hung
+request cannot extend it. Renewed speech cancels the pending ticket and hold; cancellation/new turns
+reject old callbacks. Completion is emitted once. Capture duration/empty-input limits remain with the
+adapter. Existing Chat/dictation recorders keep their own stop rules.
+
+V6.2.2 adds the optional `semantic-turn` backend with a pinned smart-turn v3.0 graph and independently
+qualified Linux x64 CPU runtime. Eight-second crop/left-pad, normalization and Whisper/Slaney features
+match stored primary NumPy arrays; an explicit checked-artifact native run matches the reference
+probabilities. Shared `model_file` admission retains exact bytes, and `onnx::Runtime` is now the single
+native owner for both diarization and semantic turns. Cancellable foreground admission, per-frame
+preprocessing deadlines and native RunOptions termination respect the policy ticket's remaining
+budget. Model/native session construction cannot promise immediate abort. No app caller, download,
+Settings switch or capture is added. See [Semantic turn model](reference/semantic-turn-model.md) for
+BSD-2-Clause provenance, exact pins, qualification commands and open speech/latency/platform gates.
+
+V6.3.1 adds `store::money` (migration 28): integer micro-USD holds and once-only final usage
+settlement, bound to the existing request-ledger identity. Immediate transactions reserve the hold
+and starting trace together, so concurrent operations cannot spend the same allowance. Missing/zero
+quotes, zero limits, unavailable ledgers and arithmetic overflow refuse admission. Open holds never
+expire, including after a crash; unknown final cost remains null and debits the full reservation.
+Only a stopped transport may settle. Settled debits expire 24 hours after completion; future timestamps
+remain charged after a clock rollback. History erasure preserves holds/debits and a late settlement
+does not recreate erased traces. Provider overruns are charged in full rather than clipped.
+Request success/failure is traced independently of whether final billing data is available.
+The app explicitly rejects `voice-realtime` through connector settings and the count-only gate.
+The later runtime sections add admission, transport and recovery on this persistence foundation.
+No automatic refund or recovery grants a fresh budget.
+
+V6.3.2 adds the offline `chat::realtime` owner: reviewed integer rates, conservative per-response
+ceilings, explicit finite session caps and effective-configuration confirmation, one attempt bound
+to its response ID, and once-only usage receipts. Unknown usage, stale/oversized events and changed
+configuration cannot reopen an owner or refund its hold. Cached text/audio are priced separately;
+known overruns remain visible in full. The synthetic session cassette is offline; no provider call,
+microphone or permission authority is added. See [Realtime accounting](reference/realtime-accounting.md)
+for source rates, the ceiling proof, qualification expiry and runtime acceptance still required.
+
+V6.3.3 adds a fixed-origin TLS WebSocket provider, bounded streaming PCM channels and an app-owned
+monetary gate. Settings 41 keeps independent default-off consent, limit/model and ledger binding.
+One revocable voice lease checks consent/lock/cancel throughout setup, IO and publication; shutdown
+permanently closes admission. Reservations precede keyring access/connect/audio; receipt settlement
+continues after revocation. Unclaimed handoff guards refund only proven-unsent work; unresolved
+holds block further reservations within that owner. V6.3.4 adds a Linux data-directory kernel lock
+retained by the transport and every detached worker. Only a new exclusive owner reconciles orphaned
+holds, atomically keeping their full unknown cost for 24 hours from reconciliation. Restart cannot
+refund or slide an already settled debit, and trace erasure is preserved. Other platforms fail closed.
+No native capture/playback entry is added. Duplex socket and process/crash tests are offline;
+live-provider/native acceptance and user-facing continuation remain open before activation.
+The network inventory lists the concrete transport and its tests.
+
+V6.3.5 changes the app's native service to own a complete bounded turn independently of remote
+admission. Persistent transport input stays chunked; success releases the original and failure
+stops transport before local Whisper recovery. A complete reviewable text result or original audio
+with a typed local failure returns to the native caller, without provider substitution, automatic
+Chat send or history writes. Cancel/revocation suppresses stale results; shared settings changes
+invalidate epochs under the Settings lock and decoder workers retain the native lease after timeout.
+The local wait is bounded but cold native loading remains cooperative. Capture/playback and UI
+continuation remain V6.4-V6.7 work. See [Realtime accounting](reference/realtime-accounting.md#native-turn-retention-and-local-text).
+
+V6.4.1 adds independent `audio::playback` output and pure `voice::turn::heard` accounting. A bounded
+CPAL worker resamples 24 kHz PCM16, distinguishes queued/submitted/estimated consumed frames and
+separates producer completion from device drain. Stop/revocation freezes the cursor and clears the
+queue; native teardown retains exclusive ownership. The pure splitter estimates whole heard words
+and computes interrupted model context plus a one-shot unheard-text hint. It writes no history and
+sends nothing. V6.4.2 adds the native service owner: generation-bound complete turns/signals, gated
+provider/item/transcript identities, CPAL consumption/drain and exact acknowledged server truncation.
+It emits matching in-memory heard-history records and admits a quoted repair hint once in the next
+authorized response. Terminal playback can still drain or be interrupted; history without a server
+acknowledgement is explicitly unsynchronized and cannot resume the owner. Detached output retains
+the native session lease. No microphone, renderer entry or persistent Chat history write is added;
+barge-in stays disabled at app entry pending V6.5. See
+[Native playback and context repair](reference/realtime-accounting.md#native-playback-and-context-repair)
+for limits, clock assumptions, isolated ALSA null checks and the remaining physical/live acceptance.
+
+V6.5.1 adds read-only `audio::echo` inventory for explicitly configured PipeWire WebRTC module pairs.
+Opaque snapshots bind the module/source/sink group and server/node identities; rechecking them does
+not grant a route lease. A private native experiment qualifies only synthetic echo/tone preservation.
+V6.5.2 adds a separate consent-bound native duplex owner with exact target acknowledgements and
+`DONT_MOVE` streams. It watches the AEC module's internal connections and physical endpoints,
+revokes changed routes and retains native exclusivity through teardown. Headphones require an
+explicit choice; unqualified speaker routes keep interruption disabled. Content spans, sink latency
+and a separate drain acknowledgement preserve consumed-output accounting. Route invalidation also
+clears retained interruption evidence. Bounded capture returns only to the native caller; it is not
+automatically uploaded or saved. The default CPAL path remains non-interruptible. No production
+module loader, renderer entry or visible capture activation is added. Backend V6.5 is delivered;
+V6.6 tools and V6.7 capture/UI are next. See [Echo cancellation](reference/echo-cancellation.md)
+for the private native routing check and remaining physical/live acceptance limits.
+
+V6.6.1 routes finalized local transcripts through V8's command dispatcher before realtime upload.
+The state owner checks Settings/epochs and cancellable once-only admission, reuses redacted cached
+reads, and keeps context separate from independent dictation. Consumed/refused/clarified commands
+retire their input generation without Generate or model fallback. V6.6.3 distinguishes completed,
+submitted and failed effect receipts; mixed read/action batches wait too. Successful project saves
+can complete, while launch handoffs remain Requested. Shared capture consumption blocks recovery
+and relabelled-clone replay after commit, settlement or interruption. Queued native work rechecks
+its waiter/authority/deadline and keeps the exclusive lease through exit. Linux requires a bounded same-capture
+transcript; missing text fails before provider construction and only offers reviewable recovery.
+No renderer/capture assembly, model tool or consultation is enabled. See
+[Local command admission](reference/realtime-accounting.md#local-commands-before-realtime-upload).
+
+V6.6.2 supplies the existing five cached flock reads to realtime through frozen confirmed specs.
+Serial function responses have bounded arguments, exact streamed/final identity checks and replay
+sets. Settlement precedes each continuation reservation and read; inert success/error envelopes
+are bounded after JSON escaping. Tool receipts release original input without completing playback;
+final speech retains its own identity/history path. Consumed calls cannot become automatic recovery
+or replay. No action/permission tool or visible activation is added. See
+[Read-only realtime tools](reference/realtime-accounting.md#read-only-tools-in-realtime).
+
+
+V6.6.3 can add separately consented `consult_claude` and `consult_codex` text questions to that
+native registry. Each has its own default-off consent and durable 20-attempt rolling quota; the
+providers share one busy slot through acknowledged child exit. Codex uses fixed app-owned model
+metadata and a qualified-version guard. Its subscription status preflight is not atomic with exec;
+external login changes remain an activation blocker. One false qualification capability blocks
+Codex opt-in, saved-consent offering, the network gate and helper execution before any CLI access.
+No renderer/capture entry is present.
+Their switches, durable budgets and local metadata traces are independent
+of realtime costs and Chat. The existing tool-free client disables file expansion and memory
+loading and requires supported CLI controls; no active agent session or Chat permissions are
+inherited. One original deadline covers preparation and child teardown, with a translated native
+notice after 1.5 seconds; busy/voice ownership survives uninterruptible work. Responses are inert
+outside data. Managed CLI policy still applies. Subscription binding, live/managed-client qualification and visible controls remain
+open. See [Text consultation](reference/realtime-accounting.md#text-consultation).
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/
@@ -357,6 +507,35 @@ it exactly: the same agent, folder, tool and target ([ADR 0004](adr/0004-a-human
 (`QuestionAsked`) waits the same way, and only an `Intent::Answer` that fits its questions turns it
 into an `AnswerQuestion` effect. A test feeds
 every other input in every order and checks none of them answers.
+
+M7's Linux `ask_user` text-question interface is separate from this hook reply path. A private
+same-user socket connects the stdio relay to the app's runtime. Kernel peer PID, executable identity,
+process start times and retained ancestry bind it to a verified live client; self-supplied headers
+cannot establish ownership. App-owned clients use the existing chat server. External clients use
+`--questions-mcp`, whose dispatch exposes only question tools, and need the separate default-off
+Dictation > Agents consent. The consent generation and transport receive time reject old queued
+requests after a new grant. Settings/consent guards stay held through runtime transitions, including
+reply handoff, so revocation cannot race between an access read and delivery. The runtime owns `core::questions::Slot`, its fresh
+connection nonce, absolute deadline, surface lease and once-only draft confirmation. It defers delivery
+until the content-free audit is durable, while continuing to process revocation messages. The relay
+acknowledges after flushing the MCP response; failure/lost acknowledgement never reuses consumed text.
+Permission cards take priority. Only the owning island/Nest webview can edit or confirm; lock,
+navigation, departure, expiry and disconnect invalidate pending work and late completions.
+The question-draft contract in [ADR 0028](adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+is implemented by a physical-key-only local recording bound to the live question token and recording
+id. `vults_dictate` aliases the same typed `ask_user` exchange. Capture uses the existing microphone
+and cached local transcriber, with admission/lifetime guards and no provider, download, clipboard or
+history pipeline. Results append to the current editor; a matching apply acknowledgement precedes
+separate human Send. Cancellation and every dictation transition advance the view revision, so late
+snapshots cannot restore cancelled words. Native capture/decode never blocks the runtime loop. Ordinary worker admission and Chat recorder
+registration share the routing fence; revocable microphone grants cannot revive after a question
+closes. A matching renderer Status must acknowledge displaying a question before capture can select it.
+No question text becomes a permission intent, rule or policy. Only Settings can preview/apply the
+question-only MCP configuration for Claude Code/Codex. A cached plan binds the agent, executable,
+install/removal choice, exact diff and fingerprint. `agent-config` supplies strict reads, dated backup
+and atomic writes; stale/foreign entries are refused. The managed entry can follow an executable
+path update, while other servers, hooks and trust remain intact. UI read generations, consent-event
+versions and departure epochs prevent stale configuration/status/preview replies from returning.
 
 ## The island on Wayland
 

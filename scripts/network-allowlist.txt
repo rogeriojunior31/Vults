@@ -2,7 +2,7 @@
 # ADR 0019). One line each: a path or crate:<name>, then the reason. docs/safety.md, "Every request
 # Vults makes", lists the same requests for users; change both together.
 
-crate:vults-chat   the chat's HTTP client (providers.rs client()) and filter.rs's independently gated dictation clean-up and meeting-summary client; api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens; embed.rs asks a local Ollama on 127.0.0.1 only for recall's embeddings (M5)
+crate:vults-chat   the chat's HTTP client (providers.rs client()) and filter.rs's independently gated dictation clean-up and meeting-summary client; api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens; embed.rs asks a local Ollama on 127.0.0.1 only for recall's embeddings (M5); realtime/transport.rs uses a fixed-origin TLS WebSocket through app-owned monetary admission
 crate:vults-voice  user-clicked voice downloads (models.rs), plus the reviewed meeting installer (meeting/assets/download.rs), with app-owned explicit consent and durable gate
 crate:vults-relay  the phone's relay: its server (it listens, it never calls out) and the client both ends use, whose every request asks the app's network gate first (client.rs)
 
@@ -10,8 +10,12 @@ crates/chat/src/providers.rs     builds the chat's HTTP client, and lists a prov
 crates/chat/src/web.rs           Zeca's web tools: a search and a page read the model asked for, each let out first by the app's network gate (app/src/web_tools.rs), only to public addresses; and the page's reading by the user's API provider
 crates/chat/src/claude.rs        the claude CLI the user logged into: each run is a chat turn the user sent
 crates/chat/src/filter.rs        one tool-free API or literal-loopback text attempt for dictation clean-up or meeting summaries, admitted durably by app/src/gate.rs; independent default-off switches and rolling quotas, no proxy, redirects or automatic retries
+crates/chat/src/realtime/transport.rs  fixed api.openai.com TLS WebSocket: independent default-off voice consent, durable per-turn monetary reservation before audio, keyring-only key, cancellation/deadlines/bounded PCM; five cached read-only flock tools and separately consented tool-free Claude questions with independently reserved continuations; no renderer entry yet
+crates/chat/src/realtime/transport/tests.rs  in-memory duplex WebSocket pairs with synthetic PCM/credentials; no listener or external requests
 crates/chat/src/embed.rs         its own client, no proxy, to a local Ollama on 127.0.0.1 only: recall's embeddings, behind their switch (M5); nothing leaves the computer
-crates/chat/src/summary.rs       the claude CLI, with no tools: a past day of Zeca's journal summed up (app/src/journal.rs), memory suggestions from a finished conversation (app/src/memory.rs) and Zeca's sleep (app/src/sleep.rs), each only through the app's network gate
+crates/chat/src/summary.rs       the claude CLI, with no tools: a past day of Zeca's journal summed up (app/src/journal.rs), memory suggestions from a finished conversation (app/src/memory.rs), Zeca's sleep (app/src/sleep.rs) and independently consented voice consultations (app/src/realtime/consultation.rs), each only through the app's network gate
+crates/chat/src/consult_codex/qualification.rs  ignored installed-client qualification only: synthetic token/question in a loopback-only network namespace; rejected candidates get no model response, the isolated command gets fixed synthetic text; no external provider or app entry
+crates/chat/src/consult_codex.rs  tool-free CLI text helper with fixed model metadata and qualified-version guard; native consultation only through independent Codex consent, durable budget and app gate (app/src/realtime/consultation.rs); activation capability currently false: opt-in/offering/gate/helper refuse before CLI access; qualification commands remain test-only, subscription binding still open
 crates/chat/src/codex.rs         codex exec, the chat's fallback: each run is a chat turn the user sent
 crates/chat/src/codex_server.rs  codex app-server: a chat turn the user sent, the model list the user opened, or the usage read, which app/src/usage.rs makes only through the network gate
 app/src/folder.rs                git diff-files, ls-files and rev-parse in a session's repository at each turn's start and end, reading only (no content, no fsmonitor, no hooks), and a test's git init: local only
@@ -28,3 +32,4 @@ crates/peer/src/unix.rs          a test runs sh -c 'sleep 2; true' to find the a
 crates/platform/src/raw_keys.rs  names the Hyper keyboard modifier while matching shortcut chords: local key observation only, no network
 
 crates/voice/src/meeting/assets/download.rs  optional meeting installer: fixed reviewed HTTPS artifacts, Settings-owned review/consent, app gate with durable rolling quota and content-free traces including redirects, pinned sizes/SHA-256, no proxy or automatic retry
+crates/chat/src/consult_codex/auth_qualification.rs  ignored installed-client auth qualification only: disposable home and system-policy mounts in an isolated loopback namespace, synthetic credentials, bounded local GET/POST stand-in; no host auth/config or external provider

@@ -47,12 +47,23 @@ What Vults promises:
 - **Chat voice uses memory-only recording.** Chat voice is off until you download a
   model; then the mic records into memory only while its button is red (a minute at most), and
   whisper.cpp transcribes it on this computer. Chat and dictation audio are never saved or sent anywhere.
+- **Text questions require a separate human Send.** On Linux, M7's `ask_user` accepts only a
+  verified live requester. External clients need their own default-off Dictation > Agents consent;
+  their question-only server has no flock or memory tools. The reply is consumed once and audited without a second
+  copy of its text, before delivery. Leaving, lock, expiry and disconnection revoke pending drafts;
+  a consumed reply is never retried after an uncertain delivery. It never answers a permission.
+  [Agent-question dictation](guide/dictation.md#agent-question-dictation) starts only on a physical
+  key and edits the draft through local, memory-only transcription. Turning external access off
+  revokes pending questions; turning it on again cannot resume them. Agent configuration changes
+  require their own diff, backup and click. An agent cannot open the mic or enable voice via MCP config.
 - **Meeting recording checks require explicit consent.** On Linux, Dictation > Meetings captures
   a reviewed microphone and system-output monitor for up to one minute into private temporary WAVs.
   Local transcription retains the cleanup lock; completion/cancel removes audio and startup cleans
-  interrupted files. Transcripts stay only in the current page, without database writes. Leaving the
-  page or locking the screen cancels pending work and discards its transcript. There is no audio
-  archive or saved meeting. The summary backend has independent, default-off consent and sends only
+  interrupted files. Unsaved transcripts stay only in the current page. Leaving the page or locking
+  the screen cancels pending work and discards unsaved text. **Save meeting** explicitly keeps a
+  text-only snapshot of the current transcript/completed notes; no audio archive exists. Clear all
+  history removes saved meetings too, while exported files remain independent copies. See
+  [Saved meetings and export](guide/dictation.md#saved-meetings-and-export). The summary backend has independent, default-off consent and sends only
   transcript text through the selected API chat model, with no tools and a 120-second deadline.
   Enable it in Dictation > Meeting settings, then explicitly choose Generate summary on the
   Summary tab; recording/transcribing alone never requests a summary. Canceling notes or a failed request leaves the local transcript intact.
@@ -113,6 +124,8 @@ anywhere but the app.
 | A chat turn through an API (Anthropic, OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, xAI; Ollama and LM Studio on `127.0.0.1`) | You, with each message | The provider and key you chose; sent only to that provider | `crates/chat/src/api.rs`, `openai.rs`, `providers.rs` |
 | Optional dictation text clean-up | The app, after local dictation, only with **Dictation > Styles > Clean up with a model** on (separate `dictation_cleanup` preference, default off) | The selected Chat & voice API provider, or literal-loopback Ollama/LM Studio; gate reserves one of 2,000 attempts per rolling 24 hours before sending, including failures and local calls. No tools, proxies, redirects or automatic retries; failure/timeout keeps local text | `crates/chat/src/filter.rs`, `app/src/dictation/cleanup.rs`, `app/src/gate.rs` |
 | Optional meeting summaries | An explicit Nest request after separate `meeting_summary` consent; never triggered by recording alone | Selected API chat provider/model, including literal-loopback Ollama/LM Studio; `meeting-summary` durably charges up to 20 attempts per rolling 24 hours, including failures/local calls. No tools, proxies, redirects or automatic retries; cancellation, lock/page departure or provider/model/key changes revoke pending work. Only bounded validated notes can appear; transcripts are retained on failure | `app/src/meetings/summary.rs`, `app/src/gate.rs`, `crates/chat/src/filter.rs` |
+| Optional native voice consultation (no renderer control yet) | The realtime model after independent default-off `voice_consultation` or `voice_codex_consultation` consent; Settings-only writes | Tool-free Claude or Codex text question, each with its own quota of at most 20 durably admitted attempts per rolling day with metadata-only traces. No project/session context, file expansion, memory discovery or permission answers. Supported CLI controls required; managed policy still applies. Cancellation retains native ownership through child exit. Both providers share one busy slot; Codex opt-in, offering, gate and helper execution fail closed behind an unqualified capability until subscription-only authentication is established | `app/src/realtime/consultation.rs`, `app/src/gate.rs`, `crates/chat/src/summary.rs`, `crates/chat/src/consult_codex.rs` |
+| Realtime voice backend (V6; no renderer entry) | Only the native voice owner after independent default-off consent; Settings-only writes, US$1 default rolling limit, zero disables | Fixed OpenAI TLS WebSocket; durable monetary reservation before keyring/connect/PCM, no proxy/redirect/retry; bounded PCM/queues/deadlines and revocation on settings/lock/shutdown. Unknown costs keep the ceiling; Linux exclusive ownership permits atomic orphan reconciliation at full unknown cost, with every detached worker retaining the lock. Complete failed turns stay in memory for review-only local Whisper recovery, with no download or automatic Chat/provider handoff; a consumed tool response releases that original input. The five cached flock reads are read-only; every continuation gets its own reservation, bounded identities/results and no replay. Synthetic duplex/process tests make no provider calls | `crates/chat/src/realtime/transport.rs`, `app/src/realtime.rs`, `app/src/realtime/local.rs`, `app/src/gate/realtime.rs` |
 | The list of a provider's models | You, opening **Settings → Chat & voice** with a key saved (or a local Ollama or LM Studio), or with **Try again** | The provider and key you chose | `crates/chat/src/providers.rs` |
 | A web search (Zeca's web, **Settings → Chat & voice**, off until you turn it on) | The API chat's model, during a turn you sent; through the network gate (200 a day, with page reads) | Brave Search or Tavily with your key, or your own SearXNG | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |
 | A web page read (the same switch) | The API chat's model, during a turn you sent; through the network gate (the same 200) | The page's site, public addresses only; its text then goes to your API provider in a call of its own, with no tools | `crates/chat/src/web.rs`, `app/src/web_tools.rs` |

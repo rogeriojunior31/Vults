@@ -97,7 +97,7 @@ pub struct Meeting {
     pub notes: Option<Notes>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Entry {
     pub id: String,
     pub recorded_ms: i64,

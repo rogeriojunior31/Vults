@@ -16,7 +16,7 @@ pub(super) const TIMEOUT: Duration = Duration::from_secs(2);
 const CHECK_EVERY: Duration = Duration::from_millis(10);
 
 #[derive(Debug)]
-pub(super) struct Connection {
+pub(crate) struct Connection {
     pub client: pulseaudio::Client,
     socket: UnixStream,
     control: Option<Control>,
@@ -25,7 +25,11 @@ pub(super) struct Connection {
 }
 
 impl Connection {
-    pub fn open(control: Option<Control>, seconds: u32) -> Result<Self, String> {
+    pub(crate) fn inspect() -> Result<Self, String> {
+        Self::open(None, 0)
+    }
+
+    pub(super) fn open(control: Option<Control>, seconds: u32) -> Result<Self, String> {
         let path = local_socket()?;
         Self::connect(&path, control, seconds, cookie()?.as_deref())
     }
@@ -135,7 +139,7 @@ impl Drop for Connection {
     }
 }
 
-fn local_socket() -> Result<std::path::PathBuf, String> {
+pub(crate) fn local_socket() -> Result<std::path::PathBuf, String> {
     // Do not silently switch to another server when an explicit endpoint is invalid or remote.
     if let Some(server) = std::env::var_os("PULSE_SERVER") {
         return explicit_socket(&server);

@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libgtk-layer-shell-dev \
-            libayatana-appindicator3-dev librsvg2-dev libssl-dev libasound2-dev cmake libvulkan-dev glslc \
+            libayatana-appindicator3-dev librsvg2-dev libssl-dev libasound2-dev libpulse-dev cmake libvulkan-dev glslc \
             hyperfine libclang-dev
       - uses: actions/setup-node@v7
         with:
@@ -46,10 +46,14 @@ jobs:
           node scripts/check-dictation-words.mjs
           node scripts/check-dictation-statistics.mjs
           node scripts/check-dictation-diagnostics.mjs
+          node scripts/check-dictation-history.mjs
+          node scripts/check-dictation-island.mjs
+          node scripts/check-dictation-status.mjs
           node scripts/check-dictation-styles.mjs
           node scripts/check-meeting-assets.mjs
           node scripts/check-project-search.mjs
           node scripts/check-surface-continuity.mjs
+          node scripts/check-text-questions.mjs
       # rustup reads rust-toolchain.toml on the first cargo call.
       - uses: Swatinem/rust-cache@v2
       # Same sequence as CLAUDE.md.
@@ -64,11 +68,11 @@ jobs:
         run: |
           cargo clippy -p vults-audio --features meeting-capture --all-targets -- -D warnings
           cargo test -p vults-audio --features meeting-capture
-      - name: offline meeting backends (no models, runtime or audio downloads)
+      - name: offline speech backends (no models, runtime or audio downloads)
         if: runner.os == 'Linux'
         run: |
-          cargo clippy -p vults-voice -p vults-spike --features vults-spike/diarization,vults-spike/meeting-assets --all-targets -- -D warnings
-          cargo test -p vults-voice --features diarization,meeting-assets
+          cargo clippy -p vults-voice -p vults-spike --features vults-voice/semantic-turn,vults-spike/diarization,vults-spike/meeting-assets --all-targets -- -D warnings
+          cargo test -p vults-voice --features diarization,meeting-assets,semantic-turn
           cargo test -p vults-spike --features diarization --bin vults-diarization-spike
           cargo clippy -p vults-app --features meeting-speakers --all-targets -- -D warnings
           cargo test -p vults-app --features meeting-speakers

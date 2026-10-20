@@ -44,6 +44,7 @@ export interface Nest {
   /** The memory changed: its panel reads it again, when open. */
   memoryChanged: () => void;
   dictationChanged: (erased?: boolean) => void;
+  meetingsErased: () => void;
   /** Spend or its budget changed: refresh the open records. */
   spendChanged: () => void;
   /** Zeca switched on or off: the Chat tab comes or goes. */
@@ -444,7 +445,7 @@ export function createNest(
     flock.setActive(id === "flock" && !document.hidden && !last?.locked);
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
-    dictationArea.setActive(id === "dictation");
+    dictationArea.setActive(id === "dictation" && !last?.locked);
     if (id === "dictation") dictationArea.refresh();
     if (id === "chat") {
       chat.toggle(true);
@@ -551,6 +552,7 @@ export function createNest(
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    dictationArea.setActive(tab === "dictation" && !v.locked);
     if (v.locked) chat.cancelVoice();
     setZecaLook(v.look ?? null);
     paintPortrait();
@@ -696,6 +698,7 @@ export function createNest(
       if (tab === "dictation") dictationArea.refresh();
       if (tab === "activity" && (sub === "dictation-statistics" || sub === "week")) parts[sub].refresh();
     },
+    meetingsErased: dictationArea.meetingsErased,
     spendChanged,
     setZeca,
     open,

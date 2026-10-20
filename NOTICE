@@ -34,3 +34,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+-------------------------------------------------------------------------------
+
+The semantic turn-end backend follows the smart-turn v3.0 input contract from
+Daily's smart-turn project, https://github.com/pipecat-ai/smart-turn.
+Code and model metadata declare BSD-2-Clause. No weights are bundled.
+The retained license is crates/voice/assets/semantic-turn/SMART-TURN-LICENSE.txt.
+
+Its Whisper-compatible feature preprocessing is independently implemented in Rust
+and qualified against Hugging Face Transformers 4.57.1's WhisperFeatureExtractor
+(https://github.com/huggingface/transformers), licensed under Apache-2.0.
+The reference implementation's license is retained in
+crates/voice/assets/semantic-turn/TRANSFORMERS-LICENSE.txt.

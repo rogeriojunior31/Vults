@@ -1,3 +1,4 @@
+import { connectQuestions } from "../question-bridge";
 import { applyTheme } from "../theme";
 // The island window: Tauri in, DOM out.
 import { Bridge, type Place } from "../bridge";
@@ -15,6 +16,7 @@ import { dictationStatus } from "./dictation";
 
 Dock.restorePlace();
 const island = createIsland(document.getElementById("island")!, {
+  textQuestionDepart: () => questions.depart(),
   decide: (request, decision) => void Bridge.decide(request, decision),
   decideAlways: (request) => void Bridge.decideAlways(request),
   answer: (request, answers) => void Bridge.questionAnswer(request, answers),
@@ -95,6 +97,7 @@ const island = createIsland(document.getElementById("island")!, {
     },
   },
 });
+const questions = connectQuestions("island", card => island.setQuestion(card), on => { void Bridge.islandKeyboard(on); });
 let dictationViewReady = false;
 let dictationSettingsReady = false;
 // Only the persistent island owns audio; other surfaces render the same status silently.
@@ -185,6 +188,7 @@ void settings.then((s) => {
   dictation.captions(s.dictationCaption, true);
   dictation.startSound(s.dictationSound, true);
   setLang(s.lang);
+  questions.relabel();
   dictation.relabel();
   island.chat.relabel();
   Sound.setEnabled(s.sounds);
@@ -207,6 +211,7 @@ Bridge.onSettings((s) => {
   applyTheme(s.theme);
   if (s.lang !== undefined) {
     setLang(s.lang);
+    questions.relabel();
     dictation.relabel();
     island.chat.relabel();
   }

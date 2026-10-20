@@ -8,6 +8,9 @@ mod unix;
 #[cfg(unix)]
 pub use unix::*;
 
+#[cfg(target_os = "linux")]
+pub mod requester;
+
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]

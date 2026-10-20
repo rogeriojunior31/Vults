@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: b2d0474d0bfa -->
+<!-- source: cc29e6eb6e4c -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -345,7 +345,7 @@ que alterou para o teste.
 
 **Ditado > Voz > Música enquanto você fala** oferece **Baixar para 25%** (o padrão),
 **Pausar** e **Não alterar**. A próxima gravação independente mantém essa escolha até parar,
-inclusive no cancelamento. A voz do Chat e a futura captura de reuniões não usam esse controle.
+inclusive no cancelamento. A voz do Chat e a captura de reuniões não usam esse controle.
 
 No Linux, o Vults controla temporariamente apenas players MPRIS que já estão tocando. A redução
 limita o volume do próprio player a 25%; players mudos ou mais baixos ficam como estão. Ao parar
@@ -653,7 +653,7 @@ histórico de ditado** oferece a escolha de prazo. Escolha **Não guardar**, **7
 (o padrão), **1 ano** ou **Sempre**. Reduzir o prazo apaga os textos antigos imediatamente;
 abrir o histórico e gravar também aplica o prazo. **Não guardar** não escreve transcrição nem
 sessão no histórico, mas os totais medidos por dia/aplicativo continuam atualizados. Dicionário/
-Trechos são páginas funcionais, assim como Comandos de voz. **Estatísticas** abre Atividade > Ditado; reuniões continuam como etapa futura.
+Trechos são páginas funcionais, assim como Comandos de voz e Reuniões. **Estatísticas** abre Atividade > Ditado.
 **Privacidade > Apagar histórico de ditado…** usa a mesma exclusão confirmada da página de trabalho,
 com falha e nova tentativa explícitas. Modo de gravação, microfone, remoção de repetições, nova
 tentativa com Base, código falado, cancelamento por voz, música e vocabulário são controles funcionais.
@@ -844,7 +844,8 @@ e o limite persistente de requisições.
 No Linux, **Ditado > Reuniões** oferece gravação e transcrição local para uma verificação de até
 um minuto. Primeiro escolha um modelo local instalado em **Ditado > Voz**. Funciona com o Zeca
 desligado. Gravar/transcrever sozinho não faz requisições à rede nem baixa modelos automaticamente.
-Reuniões completas, reuniões salvas e exportação ainda não estão disponíveis.
+A captura de reuniões completas continua como etapa futura. **Nova gravação** controla a verificação
+temporária; **Reuniões salvas** abre textos salvos explicitamente sem gravar nem consultar um modelo.
 
 Escolha **Conferir fontes de áudio** para ler o microfone e o monitor da saída do sistema sem abrir
 um stream nem carregar um modelo. Confira os dois identificadores, qualquer aviso de fonte
@@ -871,11 +872,15 @@ trabalho automaticamente.
 Após concluir as duas fontes e limpar o áudio temporário, **Transcrição** oferece visualizações
 separadas de **Microfone** e **Áudio do sistema**. A ausência de fala é informada. Os horários dos
 segmentos são estimativas do modelo no tempo de gravação de cada fonte, sem inferir sincronização
-entre as fontes. As compilações normais não identificam falantes. O texto fica só na memória desta página: **Descartar
-transcrição**, sair, fechar, bloquear ou conferir uma nova gravação o remove. Ele nunca é inserido
-em outro aplicativo, copiado automaticamente, adicionado ao Histórico do ditado nem gravado no banco.
+entre as fontes. As compilações normais não identificam falantes. O texto não salvo fica só na memória
+desta página: **Descartar transcrição**, sair, fechar, bloquear ou conferir uma nova gravação o remove.
+Ele nunca é inserido em outro aplicativo, copiado automaticamente nem adicionado ao Histórico do ditado.
+Somente a ação explícita **Salvar reunião** grava uma cópia do texto no banco local.
 Falha ou cancelamento não publica transcrição parcial; outra tentativa exige uma nova gravação
 conferida.
+
+Após a conclusão, **Ações da gravação** mantém disponíveis descartar, conferir as fontes e abrir
+as configurações de Voz; **Detalhes do salvamento** explica a cópia salva sem ocupar o espaço da transcrição.
 
 Uma compilação de desenvolvimento com `--features meeting-speakers` também oferece **Também
 identificar vozes nesta gravação (experimental)** durante a revisão das fontes. A opção vem
@@ -920,13 +925,109 @@ uma identidade ou linha do tempo compartilhada.
 
 As abas aceitam Esquerda/Direita, Home e End. Gerar/Cancelar fica fora da rolagem das notas, também
 na janela mínima; **Detalhes do resumo** mantém o provedor e os termos das requisições disponíveis.
+Com resumos desligados ou falha de leitura, a mesma seção mantém Configurações de reuniões e
+Recarregar; uma falha a abre automaticamente.
 Enquanto os resumos estão desligados, a aba explica o motivo e leva a **Configurações de reuniões**.
 Abrir essa configuração sai de Reuniões e descarta a transcrição temporária, portanto ative os resumos
 antes de gravar. Sair, ocultar/fechar a janela, bloquear ou conferir outra gravação descarta transcrição
-e notas; esta etapa não oferece arquivo de resumos salvos nem exportação.
+e notas não salvas. Uma cópia salva anteriormente permanece em **Reuniões salvas**.
 
-A base de armazenamento e exportação está preparada para cópias explícitas somente de texto,
-renomeação de vozes por fonte e arquivos Markdown/SRT/VTT. Ela ainda não está conectada à gravação
-de teste: nada é salvo automaticamente, e os controles de arquivo e exportação chegam com a página
-completa de Reuniões. A exportação de legendas usa uma fonte selecionada, pois os relógios do microfone
-e do sistema não podem ser combinados com segurança.
+<a id="saved-meetings-and-export"></a>
+### Reuniões salvas e exportação
+
+Quando uma transcrição estiver pronta, preencha o **Título da reunião** e escolha **Salvar reunião**.
+Conclua um resumo primeiro se quiser incluir suas notas. Salvar fixa a transcrição atual e as notas
+concluídas; gerar novamente ou editar o título depois não altera aquela cópia salva. Uma nova tentativa
+preserva a primeira cópia e os nomes de vozes editados depois. O arquivo nunca retém áudio. Escolha
+**Ver reunião salva** ou abra **Reuniões salvas** para buscar títulos nas 500 entradas mais recentes.
+
+Abra uma entrada salva para ver **Transcrição**, **Resumo** e **Pendências**. A ausência de notas é
+informada; ler uma entrada salva nunca as gera. Microfone e Áudio do sistema mantêm relógios
+independentes. Em **Nomes das vozes**, digite um nome e escolha **Salvar nome**; um nome em branco
+restaura o rótulo anônimo. Os nomes pertencem apenas àquela voz naquela fonte e reunião. Não
+estabelecem identidade entre fontes nem gravações futuras. Uma fala desconhecida não tem identidade
+editável.
+
+Escolha **Formato de exportação** e **Exportar…** para selecionar um destino no diálogo de salvar do
+desktop. Markdown inclui as duas seções de fontes separadas e as notas salvas. SRT/VTT exigem uma
+**Fonte das legendas** explícita, pois os relógios das fontes não podem ser combinados com segurança.
+Texto e nomes são escapados para o formato escolhido. Cancelar o diálogo não grava nada; uma falha
+de exportação é informada e permite nova tentativa. Novos arquivos usam permissões privadas no Linux.
+Os arquivos exportados são cópias independentes: excluir uma reunião ou apagar o histórico não os remove.
+
+**Excluir…** pede confirmação antes de remover a transcrição, as notas e os nomes salvos selecionados.
+**Manter reunião** cancela a exclusão. **Apagar todo o histórico** nas configurações de Atividade também
+remove todas as reuniões salvas e invalida leituras/gravações pendentes do arquivo, mesmo com a
+retenção do ditado desligada. A exclusão exclusiva do ditado e seu prazo de retenção não removem
+reuniões. A lista e os detalhes são limpos ao bloquear ou sair e recarregam ao reabrir. Salvar, ver,
+renomear, excluir e exportar não usam modelo nem requisição à rede.
+
+<a id="agent-question-dictation"></a>
+## Ditado em perguntas de agentes
+
+No Linux, o processo do Claude Code iniciado pelo Vults pode usar o `ask_user` da M7 ou seu alias
+`vults_dictate` para exibir uma pergunta de texto no Quick ou no Nest visível. Digite sua resposta e
+escolha **Enviar resposta** ou pressione Enter sem modificadores no editor. Shift+Enter adiciona uma
+linha; compor texto com IME nunca envia. A pergunta identifica o processo solicitante e tem um prazo
+fixo de dois minutos. Sua resposta é texto simples, nunca uma aprovação de ferramenta.
+
+Com um modelo local de voz instalado, segure o atalho de ditado mostrado na pergunta. Fale, solte a
+tecla e revise/edite as palavras acrescentadas ao rascunho atual. A gravação dura até 60 segundos ou o
+prazo restante da pergunta, o que terminar primeiro. O editor continua editável durante a gravação e
+transcrição; Enviar fica desabilitado até o resultado local ser aplicado. A pergunta usa o gesto de
+segurar a tecla mesmo quando o ditado comum usa outro gesto. Botão de microfone, pedido do agente,
+mudança de foco, repetição da tecla, soltar a tecla, silêncio ou dizer "enviar" não enviam a resposta.
+
+**Cancelar ditado** para a gravação/transcrição e mantém o rascunho manual. Resultados com falha,
+vazios ou grandes demais nunca o substituem. Se o texto combinado exceder 2000 bytes UTF-8, cancele
+o ditado e encurte o rascunho. Alterar modelo, idioma ou microfone descarta a captura pendente. Um
+carregamento nativo de modelo já em andamento pode terminar de liberar seus recursos antes que uma
+nova gravação de pergunta possa começar.
+
+**Cancelar**, navegar, ocultar/fechar, bloquear a tela, expirar ou perder o solicitante limpa o
+rascunho da pergunta não enviado e cancela a gravação. Resultados tardios não entram em outra
+pergunta. Enviar consome a resposta uma vez, salva uma linha de auditoria sem conteúdo e aguarda a
+confirmação do relay de que descarregou a resposta MCP no fluxo. Uma entrega incerta é informada:
+peça uma nova pergunta em vez de reenviar a resposta consumida. Perguntas/respostas não são copiadas
+para essa auditoria. Uma permissão já existente ou recém-chegada tem prioridade.
+
+Esse caminho implementa a [decisão de voz](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+com transcrição local, somente na memória. Ele não baixa modelo, usa limpeza por provedor,
+interpreta comandos de voz, copia/insere texto em outro lugar nem salva histórico de ditado. Um
+card de permissão nunca aceita ditado nem aprovação/negação falada. O ditado comum continua sem
+inserir texto em uma sessão de agente esperando resposta. Os dois nomes da ferramenta usam o mesmo
+pedido tipado e a auditoria `ask_user` sem conteúdo.
+
+<a id="external-agent-setup"></a>
+### Configuração de agentes externos
+
+No Linux, abra **Ditado > Agentes** e ative **Agentes podem pedir uma resposta falada**. A opção vem
+desligada em instalações novas e atualizações sem uma escolha salva. Uma configuração MCP sozinha
+não habilita o acesso. Desativar cancela perguntas externas, incluindo gravação ou entrega auditada
+pendentes; reativar exige uma nova pergunta. Uma resposta já entregue ao relay não pode ser recolhida:
+a entrega incerta continua consumida e não deve ser repetida.
+
+Escolha **Revisar configuração…** para Claude Code ou Codex, leia o diff da configuração e escolha
+**Gravar o arquivo**. A prévia não grava nada. O instalador mantém um backup datado, recusa um arquivo
+alterado/ilegível ou outro servidor usando seu nome e preserva os demais servidores, hooks e a
+confiança do Codex. O servidor exclusivo de perguntas não expõe as ferramentas de bando, diário ou
+memória do Zeca. Ele roda localmente pelo executável deste app, sem requisição a modelo/provedor nem
+acesso automático ao microfone.
+
+Reinicie o agente após configurar. Peça que use `ask_user` ou `vults_dictate` para uma pergunta de
+texto e responda no Quick/Nest. O processo solicitante precisa continuar ativo e verificado neste
+computador. O agente pode pedir sua própria permissão antes de chamar uma ferramenta MCP; a opção
+do Vults não muda a política de permissões dele. Reconecte o agente se ele guardou uma lista vazia de
+ferramentas enquanto a opção estava desligada. Os instaladores integrados cobrem esses dois clientes;
+outros clientes não estão incluídos nas verificações de compatibilidade da instalação.
+
+**Revisar remoção…** continua disponível com o acesso desligado. Desativar o acesso deixa os arquivos
+de configuração no lugar; remover exige seu próprio diff e clique. **Revisar configuração…** em uma
+entrada instalada também atualiza o caminho gerenciado do executável após mover o app. Nenhuma
+instalação ou remoção de hooks está incluída nessa operação.
+
+Os instaladores usam a configuração MCP do usuário do Claude Code (`~/.claude.json`, ou `.claude.json`
+no `CLAUDE_CONFIG_DIR` explícito) e o `config.toml` do Codex na pasta configurada dele. A entrada do
+servidor no Codex define um prazo de 150 segundos para a ferramenta, cobrindo os dois minutos da
+pergunta. Esses formatos seguem a [documentação MCP do Claude Code](https://code.claude.com/docs/en/mcp#user-scope)
+e a [documentação MCP do Codex](https://developers.openai.com/codex/mcp).

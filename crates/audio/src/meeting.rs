@@ -1,7 +1,7 @@
 //! Two independent, bounded meeting-check streams; no transcription or model request.
 
 mod control;
-mod pulse;
+pub(crate) mod pulse;
 mod temporary;
 
 pub use control::{Outcome, Phase, Recording, Status, Tracks, recover};
