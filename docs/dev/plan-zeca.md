@@ -1654,3 +1654,18 @@ while completed core-only changes may report Done. Missing transcripts fail befo
 and retain the existing review-only local recovery. No renderer, automatic transcription assembly,
 provider tool or consultation is activated. Next: V6.6.2 bounded flock tools, then V6.6.3 agent
 consultation and V6.7 capture/UI. Whole V6.6 and physical/live acceptance remain open.
+
+
+**2026-10-20 V6.6.2 realtime flock reads.** The native app supplies the existing five cached
+read-only flock tools through frozen, exactly confirmed specs. A serial function-only response
+must complete with matching streamed/final identities and valid bounded arguments before its read
+can execute. Exact receipts settle first; every continuation needs a separate monetary reservation.
+Eight reads share the original chain deadline, and serialized success/error result envelopes include
+JSON escaping in their 16 KiB bound. Call/item identities stay consumed between turns. The native
+owner distinguishes tool settlement from audio completion, releases original input and remains
+Thinking without history/drain/listen. Final audio uses a fresh identity; stale tool attempts are
+rejected before playback. Failure cannot replay the consumed input/call or claim an action ran.
+Offline duplex/native-owner checks cover these paths without a provider, key or microphone. Review
+fixed escaped-envelope bounding and early stale-attempt rejection. No action/permission tool or
+renderer activation is added. Next: V6.6.3 consultation/completion, then V6.7 capture/UI. Whole
+V6.6 and physical/live acceptance remain open.

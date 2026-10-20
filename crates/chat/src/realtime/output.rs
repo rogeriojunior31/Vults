@@ -1,4 +1,4 @@
-//! One audio message per tool-free response. Identifiers and clocks never come from the renderer.
+//! One audio message per spoken response. Identifiers and clocks never come from the renderer.
 use super::{Rejection, id};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
@@ -73,6 +73,12 @@ impl Output {
             ..Self::default()
         };
     }
+    pub(super) fn reserve_item(&mut self, item: &str) -> Result<(), Rejection> {
+        if !self.seen.insert(item.into()) || self.seen.len() > 1024 {
+            return Err(Rejection::Event);
+        }
+        Ok(())
+    }
     pub fn bind(&mut self, event: &Value, attempt: &str) -> Result<Identity, Rejection> {
         let identity = Identity {
             attempt: attempt.into(),
@@ -85,9 +91,7 @@ impl Output {
         match &self.identity {
             Some(known) if *known != identity => return Err(Rejection::Event),
             None => {
-                if !self.seen.insert(identity.item.clone()) || self.seen.len() > 1024 {
-                    return Err(Rejection::Event);
-                }
+                self.reserve_item(&identity.item)?;
                 self.identity = Some(identity.clone());
             }
             _ => {}

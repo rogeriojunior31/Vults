@@ -229,9 +229,9 @@ producer completion requests drain, and confirmed drain drives tail grace. App e
 disabled until the V6.5 device/AEC policy lands. Scripted headphone cases exercise the available
 owner path without asserting that speaker interruption is safe.
 
-The tool-free protocol accepts one assistant audio item/content part at index zero per response.
+The spoken response path accepts one assistant audio item/content part at index zero per response.
 Attempt, response and item IDs are bound across PCM, transcript, final output and history; response
-and item IDs cannot be reused in the bounded session. Changed IDs, another content part, tools,
+and item IDs cannot be reused in the bounded session. Changed IDs, another content part, mixed tool/audio output,
 text-only output, duplicate audio/transcript endings, malformed text and missing/mismatched final transcripts close
 the owner. Text is bounded to 64 KiB and audio to 120 seconds. A finalized transcript covers the
 whole received audio extent as one estimated segment; the provider supplies no precise word clocks.
@@ -308,5 +308,52 @@ Scripted owner tests cover local input before lazy provider construction, local 
 established connection, stale/duplicate generations and cancellation during admission. Dispatcher
 checks cover permission refusal, command disablement, ambiguity, separate context, localized cached
 reads, expired admission and once-only mutation. These tests use no microphone, desktop action,
-key or provider. Model-side flock tools and consultation remain V6.6.2/V6.6.3; full V6.6, renderer
-activation and real speech/provider acceptance are still open.
+key or provider. V6.6.2 adds the model-side flock tools below; consultation remains V6.6.3. Full
+V6.6, renderer activation and real speech/provider acceptance are still open.
+
+
+## Read-only tools in realtime
+
+V6.6.2 connects the existing five `flock_tools` reads: `flock_list`, `session_detail`, `pending_asks`,
+`usage` and `github_snapshot`. They read cached data only; the model cannot execute an Intent,
+answer a card, open an agent session, change configuration or fetch a connector. Specs are frozen
+once, confirmed exactly by session setup and included in each admitted response. The default Plan
+still offers no tools; the native app supplies this read-only registry explicitly.
+
+The supported protocol subset is one function-only response per step, followed eventually by a
+separate spoken response. OpenAI documents `response.done` as containing the complete call and
+`function_call_output` as keyed by its call ID, followed by another `response.create`.
+[Official Realtime tool lifecycle](https://developers.openai.com/api/docs/guides/realtime-mcp).
+
+Vults checks response, attempt, item, call, name, streamed arguments, item completion and final
+output together. Calls must be completed successfully; cancelled/failed/incomplete responses never
+invoke a tool. Mixed audio/tools, parallel calls, changed identities, missing/extra/duplicate keys,
+non-string values or unoffered names fail closed. Arguments are at most 4 KiB, string values at
+most 256 bytes and argument deltas at most 128. Call/item IDs remain consumed across turns; a fresh
+response cannot replay one. At most eight reads fit in one input's original 120-second deadline.
+
+The exact receipt is durably settled before the read. A separate reservation for the continuation
+must succeed before invoking it. Only then does the transport execute the existing Tool and send
+one result followed by the new admitted response, in WebSocket order, without re-uploading audio
+or retrying a call. Unknown continuation cost keeps its ceiling; work proven not sent is settled
+as zero. No tool step creates another key lookup or bypasses the gate.
+
+Results are inert JSON envelopes with `is_error`, `outside`, `text` and `truncated`. Both success
+and error envelopes are at most 16 KiB after JSON escaping, before the outer event encodes that
+string. UTF-8 prefixes preserve valid JSON when text is shortened. A read error is returned once
+as data, never local-parser fallback. Existing outside flags mark GitHub content; tool instructions
+keep all results quoted data without permission authority.
+
+A tool receipt is distinct from spoken completion. The native owner publishes its settlement,
+releases the original input and stays Thinking with the same quiet output/generation. It emits no
+heard history, drain or Listen for a read. Final audio has its own attempt/item identity and uses
+the existing transcript, consumption, truncation and history path. A reused tool attempt is rejected
+before audio can queue. Failure after a consumed tool response cannot return the original capture
+for recovery or replay; it ends the owner without claiming an action completed.
+
+Offline duplex/native-owner checks cover successful/error continuations, separate reservations,
+known/unknown receipts, unaffordable reads, invalid/duplicate/cancelled calls, revocation during a
+read, escaped result bounds, exact offered specs and final audio/history after input release.
+They use synthetic credentials/PCM and no external provider, microphone or desktop action.
+Next: V6.6.3 consultation/completion semantics, then V6.7 capture/UI. Physical speech, provider
+compatibility and acoustic acceptance remain open before activation.

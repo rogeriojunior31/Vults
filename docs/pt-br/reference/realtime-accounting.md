@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 65879df9726f -->
+<!-- source: d2e9d0e15b76 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -263,10 +263,10 @@ margem final. A entrada do app mantém interrupção por fala desligada até che
 dispositivo/AEC da V6.5. Casos com fones simulados exercitam o caminho disponível no proprietário
 sem afirmar que interrupção por alto-falantes é segura.
 
-O protocolo sem ferramentas aceita um item de áudio de assistente, com parte de conteúdo no índice
+O caminho de resposta falada aceita um item de áudio de assistente, com parte de conteúdo no índice
 zero, por resposta. IDs de tentativa, resposta e item são vinculados entre PCM, transcrição, saída
 final e histórico; IDs de resposta e item não podem ser reutilizados na sessão limitada. IDs
-alterados, outra parte de conteúdo, ferramentas, saída somente em texto, términos duplicados de
+alterados, outra parte de conteúdo, mistura de ferramentas/áudio, saída somente em texto, términos duplicados de
 áudio/transcrição, texto malformado e transcrições finais ausentes/divergentes encerram o proprietário.
 O texto é limitado a 64 KiB e o áudio a 120 segundos. Uma transcrição finalizada cobre todo o áudio
 recebido como um único segmento estimado; o provedor não fornece tempos precisos de palavras.
@@ -353,5 +353,57 @@ Testes simulados do proprietário cobrem entrada local antes de construir o prov
 local em conexão existente, gerações antigas/duplicadas e cancelamento durante a admissão. Testes
 do dispatcher cobrem recusa de permissões, desativação, ambiguidade, contexto separado, leituras
 locais traduzidas, prazo vencido e mutação única. Esses testes não usam microfone, ação do desktop,
-chave nem provedor. Ferramentas do bando pelo modelo e consulta ficam na V6.6.2/V6.6.3; a V6.6
-completa, ativação do renderer e aceitação de fala/provedor real continuam em aberto.
+chave nem provedor. A V6.6.2 acrescenta as ferramentas do bando pelo modelo abaixo; consulta fica
+na V6.6.3. A V6.6 completa, ativação do renderer e aceitação de fala/provedor real continuam em aberto.
+
+
+<a id="read-only-tools-in-realtime"></a>
+## Ferramentas somente de leitura no realtime
+
+A V6.6.2 conecta as cinco leituras existentes de `flock_tools`: `flock_list`, `session_detail`,
+`pending_asks`, `usage` e `github_snapshot`. Elas leem somente dados em cache; o modelo não executa
+Intent, responde a card, abre sessão de agente, muda configurações nem busca dados de conector.
+As especificações são congeladas uma vez, confirmadas exatamente na configuração da sessão e
+incluídas em cada resposta admitida. O Plan padrão continua sem ferramentas; o app nativo fornece
+esse registro somente de leitura explicitamente.
+
+O subconjunto suportado é uma resposta somente de função por etapa, seguida eventualmente por
+uma resposta falada separada. A OpenAI documenta `response.done` com a chamada completa e
+`function_call_output` vinculado ao ID da chamada, seguido de outro `response.create`.
+[Ciclo oficial de ferramentas Realtime](https://developers.openai.com/api/docs/guides/realtime-mcp).
+
+O Vults verifica em conjunto resposta, tentativa, item, chamada, nome, argumentos transmitidos,
+conclusão do item e saída final. As chamadas precisam concluir com sucesso; respostas canceladas,
+com falha ou incompletas nunca invocam ferramenta. Mistura de áudio/ferramentas, chamadas paralelas,
+identidades alteradas, chaves ausentes/extras/duplicadas, valores que não são strings e nomes não
+oferecidos encerram o caminho. Argumentos têm no máximo 4 KiB, valores string até 256 bytes e até
+128 deltas. IDs de chamada/item continuam consumidos entre turnos; uma resposta nova não os repete.
+No máximo oito leituras cabem no prazo original de 120 segundos da mesma entrada.
+
+O recibo exato é conciliado de forma persistente antes da leitura. Uma reserva separada para a
+continuação deve ser aceita antes da invocação. Só então o transporte executa a Tool existente e
+envia um resultado seguido da nova resposta admitida, em ordem no WebSocket, sem reenviar áudio
+nem repetir a chamada. Custo desconhecido da continuação mantém seu teto; trabalho comprovadamente
+não enviado é conciliado como zero. Etapas de ferramenta não consultam a chave novamente nem
+ignoram o gate.
+
+Resultados são envelopes JSON inertes com `is_error`, `outside`, `text` e `truncated`. Envelopes de
+sucesso e erro têm até 16 KiB após os escapes JSON, antes de o evento externo codificar essa string.
+Prefixos UTF-8 preservam JSON válido ao encurtar texto. Erro de leitura retorna uma vez como dado,
+nunca fallback do parser local. As marcações existentes de origem externa identificam conteúdo do
+GitHub; as instruções mantêm todo resultado como dado citado, sem autoridade sobre permissões.
+
+Um recibo de ferramenta é diferente da conclusão falada. O proprietário nativo publica sua
+conciliação, libera a entrada original e permanece em Thinking com a mesma saída silenciosa e
+geração. Não emite histórico ouvido, drenagem nem Listen por uma leitura. O áudio final tem sua
+própria identidade de tentativa/item e usa o caminho existente de transcrição, consumo, truncamento
+e histórico. Reutilizar uma tentativa de ferramenta é recusado antes de enfileirar áudio. Falha
+após consumir uma resposta de ferramenta não devolve a captura original para recuperação ou
+repetição; encerra o proprietário sem afirmar que uma ação concluiu.
+
+Testes offline de duplex/proprietário nativo cobrem continuações com sucesso/erro, reservas
+separadas, recibos conhecidos/desconhecidos, orçamento insuficiente, chamadas inválidas/duplicadas/
+canceladas, revogação durante a leitura, limite com escapes, especificações exatas e áudio/histórico
+finais após liberar a entrada. Usam credenciais/PCM sintéticos, sem provedor externo, microfone nem
+ação do desktop. Próxima etapa: consulta/semântica de conclusão da V6.6.3, depois captura/interface
+na V6.7. Fala física, compatibilidade com provedor e aceitação acústica continuam pendentes.

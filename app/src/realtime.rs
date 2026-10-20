@@ -188,7 +188,10 @@ async fn run_with_audio(
             &*active,
             devices.interruption(),
             move |cancel| factory.output(cancel),
-            move |io| connect(consent, remote_active, io),
+            {
+                let source: Arc<dyn crate::flock_tools::Source> = Arc::new(app.clone());
+                move |io| connect(consent, remote_active, io, crate::flock_tools::all(source))
+            },
             {
                 let app = app.clone();
                 move |turn| {
@@ -256,6 +259,7 @@ async fn connect(
     consent: Consent,
     active: Arc<dyn Fn() -> bool + Send + Sync>,
     channels: transport::Channels,
+    tools: vults_chat::tools::Tools,
 ) -> Result<(), Failure> {
     if !consent.enabled() {
         return Err(if consent.limit_microusd == 0 {
@@ -264,7 +268,10 @@ async fn connect(
             Failure::Off
         });
     }
-    let plan = Plan::new(&consent.model, 8192, 1024).map_err(|_| Failure::Budget)?;
+    let plan = Plan::new(&consent.model, 8192, 1024)
+        .map_err(|_| Failure::Budget)?
+        .with_tools(tools)
+        .map_err(|_| Failure::Protocol)?;
     let cancel = channels.cancel.clone();
     let gate = crate::gate::realtime::RealtimeGate::open(
         crate::history::dir(),
@@ -280,6 +287,46 @@ mod tests {
     use super::*;
     #[cfg(target_os = "linux")]
     use vults_chat::realtime::transport::Gate;
+
+    #[test]
+    fn realtime_offers_only_the_existing_five_read_tools() {
+        struct Cached;
+        impl crate::flock_tools::Source for Cached {
+            fn view(&self) -> Option<serde_json::Value> {
+                Some(serde_json::json!({"sessions":[]}))
+            }
+            fn usage(&self) -> serde_json::Value {
+                serde_json::json!([])
+            }
+        }
+        let tools = crate::flock_tools::all(Arc::new(Cached));
+        let plan = Plan::new("gpt-realtime-2.1-mini", 8192, 1024)
+            .unwrap()
+            .with_tools(tools)
+            .unwrap();
+        let update = plan.session_update();
+        let offered = update["session"]["tools"].as_array().unwrap();
+        assert_eq!(
+            offered
+                .iter()
+                .map(|v| v["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            [
+                "flock_list",
+                "session_detail",
+                "pending_asks",
+                "usage",
+                "github_snapshot"
+            ]
+        );
+        for spec in offered {
+            assert_eq!(spec["parameters"]["additionalProperties"], false);
+            assert_eq!(
+                spec["parameters"]["properties"].as_object().unwrap().len(),
+                usize::from(spec["name"] == "session_detail")
+            );
+        }
+    }
 
     #[cfg(not(windows))]
     #[test]

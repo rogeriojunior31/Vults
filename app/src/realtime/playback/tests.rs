@@ -878,3 +878,125 @@ async fn pending_command_admission_is_cancellable_and_never_constructs_a_provide
     ));
     assert!(!called.load(Ordering::SeqCst));
 }
+
+#[tokio::test]
+async fn tool_receipts_keep_thinking_and_final_audio_without_recovering_consumed_input() {
+    for mode in 0..4 {
+        let (io, send, mut receive, _stop) = channels(128);
+        send.send(input(generation(), 77)).await.unwrap();
+        let control = device(true);
+        let output = control.clone();
+        let (release, wait) = tokio::sync::oneshot::channel();
+        let worker = tokio::spawn(async move {
+            without_commands(
+                io,
+                &|| true,
+                turn::BargeIn::Disabled,
+                move |_| Ok(Fake(output.clone())),
+                |mut remote| async move {
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    upload(&mut remote).await;
+                    let receipt = || Settlement {
+                        attempt: "tool_attempt".into(),
+                        actual_microusd: Some(5),
+                        ok: true,
+                        within_bounds: true,
+                    };
+                    remote
+                        .output
+                        .send(transport::Event::ToolStep(receipt()))
+                        .await
+                        .unwrap();
+                    wait.await.unwrap();
+                    if mode == 1 {
+                        return Err(Failure::Transport);
+                    }
+                    if mode == 2 {
+                        remote
+                            .output
+                            .send(transport::Event::ToolStep(receipt()))
+                            .await
+                            .unwrap();
+                        remote.cancel.changed().await.unwrap();
+                        return Err(Failure::Transport);
+                    }
+                    let mut spoken = identity(1);
+                    if mode == 3 {
+                        spoken.attempt = "tool_attempt".into();
+                    }
+                    remote
+                        .output
+                        .send(transport::Event::Audio {
+                            identity: spoken.clone(),
+                            pcm: vec![1; 4800],
+                        })
+                        .await
+                        .unwrap();
+                    remote
+                        .output
+                        .send(transport::Event::Transcript(Transcript {
+                            identity: spoken.clone(),
+                            text: "one two three four five six".into(),
+                            frames: 4800,
+                        }))
+                        .await
+                        .unwrap();
+                    remote
+                        .output
+                        .send(transport::Event::Finished(Settlement {
+                            attempt: spoken.attempt,
+                            actual_microusd: Some(8),
+                            ok: true,
+                            within_bounds: true,
+                        }))
+                        .await
+                        .unwrap();
+                    if mode == 3 {
+                        remote.cancel.changed().await.unwrap();
+                        return Err(Failure::Transport);
+                    }
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    assert!(remote.input.recv().await.is_none());
+                    Ok(())
+                },
+            )
+            .await
+        });
+        loop {
+            match next(&mut receive).await {
+                Event::Settled(receipt) => {
+                    assert_eq!(receipt.attempt, "tool_attempt");
+                    break;
+                }
+                Event::Action(a) => assert!(!matches!(a.effect, Effect::DrainPlayback | Effect::Finished)),
+                Event::History(_) => panic!("a read is not spoken history"),
+                _ => {}
+            }
+        }
+        assert!(
+            receive.try_recv().is_err(),
+            "tool completion must not emit drain, history or a new Listen"
+        );
+        release.send(()).unwrap();
+        if mode == 0 {
+            let record = history(&mut receive).await;
+            assert_eq!(record.identity, identity(1));
+            assert_eq!(record.played_frames, 4800);
+            drop(send);
+            assert!(worker.await.unwrap().unwrap().is_none());
+        } else {
+            let result = worker.await.unwrap();
+            assert!(
+                matches!(result, Err(Failure::Transport)) && mode == 1
+                    || matches!(result, Err(Failure::Protocol)) && mode >= 2,
+                "no original audio/text recovery after a consumed read: {result:?}"
+            );
+            if mode == 3 {
+                assert_eq!(control.lock().unwrap().cursor.total_frames, 0);
+            }
+            while let Ok(event) = receive.try_recv() {
+                assert!(!matches!(event, Event::History(_)));
+            }
+        }
+    }
+}

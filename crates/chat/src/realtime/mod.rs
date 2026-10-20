@@ -2,6 +2,7 @@
 //! The app must reserve the quoted ceiling through its monetary gate BEFORE sending a prepared event.
 mod output;
 mod pricing;
+mod tool;
 pub use output::{Identity, Repair, Transcript};
 pub mod transport;
 
@@ -28,6 +29,7 @@ pub struct Plan {
     rates: Rates,
     post_instructions: u64,
     output: u64,
+    tools: tool::Registry,
 }
 
 impl Plan {
@@ -41,7 +43,14 @@ impl Plan {
             rates,
             post_instructions,
             output,
+            tools: tool::Registry::default(),
         })
+    }
+
+    /// The app supplies only its frozen cached read tools, never renderer-defined tools.
+    pub fn with_tools(mut self, tools: crate::tools::Tools) -> Result<Self, Rejection> {
+        self.tools = tool::Registry::new(tools)?;
+        Ok(self)
     }
 
     pub fn model(&self) -> &'static str {
@@ -54,7 +63,8 @@ impl Plan {
 
     pub fn session_update(&self) -> Value {
         json!({"type":"session.update", "session": {
-            "type":"realtime", "instructions":persona!(), "tools":[], "tool_choice":"none",
+            "type":"realtime", "instructions":format!("{}{}",persona!(),self.tools.instructions()),
+            "tools":self.tools.definitions(), "tool_choice":self.tools.choice(),
             "output_modalities":["audio"], "max_output_tokens":self.output,
             "truncation":{"type":"retention_ratio", "retention_ratio":0.8,
                 "token_limits":{"post_instructions":self.post_instructions}},
@@ -163,7 +173,13 @@ impl Session {
         now_ms: i64,
         repair: Option<Repair>,
     ) -> Result<Prepared, Rejection> {
-        let instructions = repair.map(|repair| repair.instructions()).transpose()?;
+        let instructions = repair
+            .map(|repair| {
+                repair
+                    .instructions()
+                    .map(|text| format!("{text}{}", self.plan.tools.instructions()))
+            })
+            .transpose()?;
         if !matches!(self.state, State::Ready)
             || !valid_id(attempt)
             || self.used_attempts.contains(attempt)
@@ -177,7 +193,7 @@ impl Session {
             attempt: attempt.into(),
         };
         let mut event = json!({"type":"response.create", "response": {
-            "max_output_tokens":self.plan.output, "tools":[], "tool_choice":"none",
+            "max_output_tokens":self.plan.output, "tools":self.plan.tools.definitions(), "tool_choice":self.plan.tools.choice(),
             "metadata":{"vults_attempt":attempt}
         }});
         if let Some(instructions) = instructions {

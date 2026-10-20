@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 4016da4c515d -->
+<!-- source: ac6b3074fc39 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -206,6 +206,15 @@ exige transcrição limitada da mesma captura; texto ausente falha antes de cons
 oferece apenas recuperação revisável. Não há ativação de renderer/montagem de captura, ferramenta
 do modelo nem consulta. Veja
 [Admissão de comandos locais](reference/realtime-accounting.md#local-commands-before-realtime-upload).
+
+A V6.6.2 fornece ao realtime as cinco leituras existentes do bando em cache por especificações
+congeladas e confirmadas. Respostas de função em sequência têm argumentos limitados, verificação
+exata de identidades transmitidas/finais e controle de repetição. A conciliação precede a reserva
+de cada continuação e leitura; envelopes inertes de sucesso/erro têm limite após escapes JSON.
+Recibos de ferramentas liberam a entrada original sem concluir a reprodução; a fala final mantém
+sua própria identidade/histórico. Chamadas consumidas não viram recuperação nem repetição automática.
+Não há ferramenta de ação/permissão nem ativação visível. Veja
+[Ferramentas realtime somente de leitura](reference/realtime-accounting.md#read-only-tools-in-realtime).
 
 <a id="local-dictation"></a>
 

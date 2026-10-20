@@ -189,6 +189,14 @@ transcript; missing text fails before provider construction and only offers revi
 No renderer/capture assembly, model tool or consultation is enabled. See
 [Local command admission](reference/realtime-accounting.md#local-commands-before-realtime-upload).
 
+V6.6.2 supplies the existing five cached flock reads to realtime through frozen confirmed specs.
+Serial function responses have bounded arguments, exact streamed/final identity checks and replay
+sets. Settlement precedes each continuation reservation and read; inert success/error envelopes
+are bounded after JSON escaping. Tool receipts release original input without completing playback;
+final speech retains its own identity/history path. Consumed calls cannot become automatic recovery
+or replay. No action/permission tool or visible activation is added. See
+[Read-only realtime tools](reference/realtime-accounting.md#read-only-tools-in-realtime).
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/

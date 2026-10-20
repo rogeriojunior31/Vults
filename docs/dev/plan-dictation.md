@@ -48,7 +48,8 @@ delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only 
 an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
 device policy. Backend V6.5 is delivered. Next: V6.6 tools, then V6.7 capture/UI; Q6 production
 setup and physical/live acceptance remain open before activation. V6.6.1 now routes native finalized
-local transcripts through V8 before remote admission; model tools and consultation remain V6.6.2/V6.6.3.
+local transcripts through V8 before remote admission. V6.6.2 adds bounded read-only realtime flock
+tools with independent continuation admission. Next is V6.6.3 consultation, then V6.7 capture/UI.
 
 ## References
 
@@ -2576,7 +2577,7 @@ Delivery sequence:
    acceptance stays an activation gate. Backend V6.4 is delivered; full acceptance remains open.
    See [Native playback and context repair](../reference/realtime-accounting.md#native-playback-and-context-repair).
 
-Next engineering task: **V6.6.2 bounded realtime flock tools**, before V6.6.3 consultation and V6.7 capture/UI.
+Next engineering task: **V6.6.3 agent consultation and completion semantics**, before V6.7 capture/UI.
 
 **V6.5 Echo cancellation** (M, spike first)
 - Preferred: PipeWire's WebRTC engine with both the clean source and paired reference sink.
@@ -2643,11 +2644,18 @@ Next engineering task: **V6.6.2 bounded realtime flock tools**, before V6.6.3 co
    delegation is activated. Native-owner/dispatcher/turn regressions cover these paths; physical
    speech/provider acceptance remains open. See
    [Local commands before realtime upload](../reference/realtime-accounting.md#local-commands-before-realtime-upload).
-2. **V6.6.2 bounded realtime flock tools** (next).
-   Offer the existing read-only `flock_tools` to the realtime model through bounded identity-bound
-   calls/results, preserving per-response cost admission, cancellation and no replay on failure.
-   Unoffered tools, malformed arguments and stale/duplicate calls fail closed; no permission intent
-   or arbitrary action tool is offered. Cover receipt/continuation and model-failure paths offline.
+2. **V6.6.2 bounded realtime flock tools** (delivered 2026-10-20).
+   The native app offers only the existing five cached flock reads through frozen confirmed specs.
+   One complete successful function-only response precedes each read; identities, arguments,
+   stream/final agreement, duplicate keys and replay sets are checked before execution. Each known
+   receipt settles before the next independent reservation and local read. Up to eight reads share
+   one 120-second chain deadline; arguments/deltas/results are bounded, including JSON escaping.
+   Inert error/outside/truncation flags carry results without authority. A consumed tool receipt
+   releases original input while playback stays Thinking; final audio/history use their own identity.
+   Failure never re-uploads input or retries the consumed call, and reused tool attempts cannot queue
+   audio. Offline protocol/duplex/native-owner regressions cover these paths and exact offerings.
+   No action/permission tool, renderer entry, microphone or live provider is activated. Next is
+   V6.6.3. See [Read-only tools](../reference/realtime-accounting.md#read-only-tools-in-realtime).
 3. **V6.6.3 agent consultation and completion semantics** (remaining).
    Reuse the app's existing Claude Code/Codex question path with bounded consultation ownership,
    cancellation and the 1.5-second reassurance. Track actual execution before reporting Done and

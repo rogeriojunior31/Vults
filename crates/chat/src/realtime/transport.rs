@@ -110,6 +110,7 @@ pub enum Event {
     Transcript(Transcript),
     Truncated(Identity),
     Finished(Settlement),
+    ToolStep(Settlement),
 }
 impl std::fmt::Debug for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -120,6 +121,7 @@ impl std::fmt::Debug for Event {
                 .field("identity", identity)
                 .field("frames", &pcm.len())
                 .finish(),
+            Self::ToolStep(receipt) => f.debug_tuple("ToolStep").field(receipt).finish(),
             Self::Finished(receipt) => f.debug_tuple("Finished").field(receipt).finish(),
             Self::Transcript(transcript) => f.debug_tuple("Transcript").field(transcript).finish(),
             Self::Truncated(identity) => f.debug_tuple("Truncated").field(identity).finish(),
@@ -356,6 +358,7 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
     let mut prepared = None;
     let mut output = Output::default();
     let mut repair = None;
+    let mut calls = super::tool::Calls::default();
     let mut poll = tokio::time::interval(Duration::from_millis(25));
     loop {
         alive(gate, &channels.cancel)?;
@@ -391,6 +394,7 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                             }
                             prepared = Some(session.prepare_repair(pending.as_deref().ok_or(Failure::Ledger)?, gate.now_ms(), repair.take()).map_err(|_| Failure::Protocol)?);
                             output.reset();
+                            calls.new_turn();
                         }
                         input_frames += pcm.len();
                         for chunk in pcm.chunks(CHUNK_FRAMES) {
@@ -417,6 +421,12 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                         let event: Value = serde_json::from_str(&text).map_err(|_| Failure::Protocol)?;
                         if event["type"].as_str().is_some_and(|t| t.starts_with("response.")) { *billable = true; }
                         let receipt = session.receive(text.as_bytes()).map_err(|_| Failure::Protocol)?;
+                        let tool_event = if event["type"] != "response.done" {
+                            calls.event(&event, pending.as_deref().unwrap_or_default(), &mut output, &session.plan.tools).map_err(|_| Failure::Protocol)?
+                        } else { false };
+                        if calls.active() && !tool_event && event["type"].as_str().is_some_and(|k| k.starts_with("response.") && k != "response.done") {
+                            return Err(Failure::Protocol);
+                        }
                         if event["type"] == "response.output_audio.delta" {
                             let encoded = event["delta"].as_str().filter(|s| s.len()<=128*1024).ok_or(Failure::Protocol)?;
                             let bytes = STANDARD.decode(encoded).map_err(|_| Failure::Protocol)?;
@@ -439,7 +449,7 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                             deadline = Instant::now()+TURN_TIMEOUT;
                             emit(&channels.output, Event::Ready)?;
                         } else if event["type"].as_str().is_some_and(|kind| kind.starts_with("response."))
-                            && event["type"] != "response.done" {
+                            && event["type"] != "response.done" && !tool_event {
                             output.event(&event, pending.as_deref().ok_or(Failure::Ledger)?).map_err(|_| Failure::Protocol)?;
                         }
                         if let Some(receipt) = receipt {
@@ -451,6 +461,24 @@ async fn drive<S: AsyncRead + AsyncWrite + Unpin>(
                             *billable = false;
                             let valid = receipt.within_bounds;
                             alive(gate,&channels.cancel)?;
+                            if calls.active() {
+                                if !receipt.ok || !valid { return Err(Failure::Response); }
+                                let call = calls.finish(&event, &session.plan.tools).map_err(|_| Failure::Protocol)?;
+                                if call.identity.attempt != receipt.attempt { return Err(Failure::Protocol); }
+                                emit(&channels.output, Event::ToolStep(receipt))?;
+                                tokio::task::yield_now().await;
+                                let ceiling = session.plan.ceiling_microusd(gate.now_ms()).ok_or(Failure::Budget)?;
+                                *pending = Some(guarded(gate, &mut channels.cancel, gate.reserve(ceiling), deadline.min(Instant::now()+IO_TIMEOUT)).await?.ok_or(Failure::Budget)?.claim());
+                                let next = session.prepare(pending.as_deref().ok_or(Failure::Ledger)?,gate.now_ms()).map_err(|_|Failure::Protocol)?;
+                                let result = guarded(gate,&mut channels.cancel,session.plan.tools.execute(&call),deadline.min(Instant::now()+IO_TIMEOUT)).await?;
+                                alive(gate,&channels.cancel)?;
+                                send(socket,gate,&mut channels.cancel,json!({"type":"conversation.item.create","item":{"type":"function_call_output","call_id":call.call,"output":result}}),deadline).await?;
+                                output.reset();
+                                // A partial continuation send may already be billable; never resend its tool.
+                                *billable = true;
+                                send(socket,gate,&mut channels.cancel,next.event,deadline).await?;
+                                continue;
+                            }
                             let transcript = output.transcript(&event).map_err(|_| Failure::Protocol)?;
                             emit(&channels.output, Event::Transcript(transcript))?;
                             emit(&channels.output, Event::Finished(receipt))?;

@@ -391,3 +391,34 @@ fn reused_response_ids_and_oversized_repair_cannot_prepare_or_relabel_a_new_turn
         .unwrap();
     assert!(!format!("{prepared:?}").contains("private"));
 }
+
+#[test]
+fn offered_tools_are_frozen_and_confirmed_for_every_response() {
+    use std::sync::Arc;
+    for changed in [false, true] {
+        let plan = plan()
+            .with_tools(vec![Arc::new(crate::tools::tests::Echo)])
+            .unwrap();
+        let mut config = plan.session_update()["session"].clone();
+        let definitions = config["tools"].clone();
+        config["model"] = json!(plan.model());
+        config["id"] = json!("session_tools");
+        if changed {
+            config["tools"][0]["parameters"]["additionalProperties"] = json!(true);
+        }
+        let mut session = Session::new(plan);
+        let result = send(&mut session, &json!({"type":"session.updated","session":config}));
+        if changed {
+            assert!(result.is_err());
+            continue;
+        }
+        result.unwrap();
+        let create = session.prepare("tool_attempt", REVIEWED_MS).unwrap();
+        assert_eq!(create.event["response"]["tools"], definitions);
+        assert_eq!(create.event["response"]["tool_choice"], "auto");
+        assert_eq!(
+            create.ceiling_microusd, 179_200,
+            "full context ceiling also covers tool text"
+        );
+    }
+}

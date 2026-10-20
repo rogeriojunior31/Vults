@@ -131,6 +131,8 @@ struct Response<P> {
     frozen: Option<Cursor>,
     truncated: bool,
     local_only: bool,
+    committed: bool,
+    tool_attempts: std::collections::BTreeSet<String>,
 }
 fn emit(output: &mpsc::Sender<Event>, event: Event) -> Result<(), Failure> {
     output.try_send(event).map_err(|_| Failure::Output)
@@ -295,6 +297,7 @@ pub(super) async fn drive<
                 Ok(output) => { opening = None; response = Some(Response {
                     generation:machine.generation(), identity:None, output, transcript:None, settled:false,
                     first_played:false, frozen:None, truncated:false, local_only:false,
+                    committed:false, tool_attempts:std::collections::BTreeSet::new(),
                 }); },
                 Err(Failure::Busy) if opening.get_or_insert_with(std::time::Instant::now).elapsed() < Duration::from_secs(3) => {},
                 Err(error) => break Err(error),
@@ -320,8 +323,8 @@ pub(super) async fn drive<
                     },
                     Some(transport::Event::Audio { identity, pcm }) => {
                         let Some(current) = &mut response else { break Err(Failure::Protocol); };
-                        if current.frozen.is_none() && (pending.is_none() || offset.is_some()) { break Err(Failure::Protocol); }
-                        if current.identity.as_ref().is_some_and(|known| *known != identity) { break Err(Failure::Protocol); }
+                        if current.frozen.is_none() && (!current.committed || offset.is_some()) { break Err(Failure::Protocol); }
+                        if current.tool_attempts.contains(&identity.attempt) || current.identity.as_ref().is_some_and(|known| *known != identity) { break Err(Failure::Protocol); }
                         current.identity = Some(identity);
                         if current.frozen.is_none() {
                             pcm.chunks(24_000).try_for_each(|chunk| current.output.push(chunk))?;
@@ -332,9 +335,20 @@ pub(super) async fn drive<
                         if current.identity.as_ref() != Some(&text.identity) || current.transcript.is_some() { break Err(Failure::Protocol); }
                         current.transcript = Some(text);
                     },
+                    Some(transport::Event::ToolStep(receipt)) => {
+                        let Some(current) = &mut response else { break Err(Failure::Protocol); };
+                        if !current.committed || offset.is_some() || current.identity.is_some() || current.transcript.is_some()
+                            || current.settled || current.frozen.is_some() || !receipt.ok || !receipt.within_bounds
+                            || !current.tool_attempts.insert(receipt.attempt.clone()) || current.tool_attempts.len()>vults_chat::tools::MAX_STEPS {
+                            break Err(Failure::Protocol);
+                        }
+                        // A consumed tool turn cannot return as local recovery or execute again after failure.
+                        pending = None;
+                        emit(&channels.output, Event::Settled(receipt))?;
+                    },
                     Some(transport::Event::Finished(receipt)) => {
                         let Some(current) = &mut response else { break Err(Failure::Protocol); };
-                        if current.settled || !receipt.within_bounds || current.identity.as_ref().is_none_or(|i| i.attempt != receipt.attempt)
+                        if current.settled || !receipt.within_bounds || current.tool_attempts.contains(&receipt.attempt) || current.identity.as_ref().is_none_or(|i| i.attempt != receipt.attempt)
                             || current.transcript.is_none() { break Err(Failure::Protocol); }
                         if !receipt.ok && current.frozen.is_none() { break Err(Failure::Response); }
                         current.settled = true;
@@ -417,6 +431,7 @@ pub(super) async fn drive<
                     permit.send(transport::Command::Audio(samples[at..end].to_vec())); offset = Some(end);
                 } else {
                     permit.send(transport::Command::Commit); offset = None; ready = false;
+                    response.as_mut().ok_or(Failure::Protocol)?.committed = true;
                 }
             },
         }

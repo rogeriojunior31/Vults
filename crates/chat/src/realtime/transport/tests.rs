@@ -6,7 +6,7 @@ use std::sync::{
 use tokio::io::DuplexStream;
 use tokio_tungstenite::tungstenite::protocol::Role;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Mock {
     wait_finish: AtomicBool,
     finishing: tokio::sync::Notify,
@@ -799,7 +799,7 @@ async fn buffered_audio_bursts_yield_to_an_inline_bounded_consumer() {
                 Event::Audio { .. } => audio += 1,
                 Event::Finished(_) => { cancel.send(true).unwrap(); },
                 Event::Ready | Event::Transcript(_) => {},
-                Event::Truncated(_) => panic!("unexpected truncation"),
+                Event::Truncated(_) | Event::ToolStep(_) => panic!("unexpected non-audio result"),
             },
             result = &mut driver => break result,
         }
@@ -808,4 +808,248 @@ async fn buffered_audio_bursts_yield_to_an_inline_bounded_consumer() {
     assert_eq!(audio, 11);
     assert_eq!(gate.settled.lock().unwrap()[0].1, Some(2059));
     server.await.unwrap();
+}
+
+#[derive(Debug)]
+struct ReadTool {
+    calls: Arc<AtomicUsize>,
+    gate: Arc<Mock>,
+    mode: u8,
+}
+impl crate::tools::Tool for ReadTool {
+    fn name(&self) -> &str {
+        "flock_list"
+    }
+    fn description(&self) -> &str {
+        "Reads a cached snapshot."
+    }
+    fn schema(&self) -> Value {
+        json!({"type":"object","properties":{}})
+    }
+    fn call<'a>(&'a self, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+        Box::pin(async move {
+            assert!(
+                !self.gate.settled.lock().unwrap().is_empty(),
+                "settlement precedes the read"
+            );
+            assert!(
+                self.gate.attempts.load(Ordering::SeqCst) >= 2,
+                "next admission precedes the read"
+            );
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            if self.mode == 2 {
+                return std::future::pending().await;
+            }
+            if self.mode == 1 {
+                return Err("x".repeat(crate::tools::MAX_RESULT + 50));
+            }
+            Ok(r#"{"sessions":[]}"#.into())
+        })
+    }
+}
+async fn tool_response(
+    socket: &mut WebSocketStream<DuplexStream>,
+    response: &str,
+    call: &str,
+    args: &str,
+    status: &str,
+) {
+    let item = json!({"id":format!("item_{call}"),"type":"function_call","status":"completed","name":"flock_list","call_id":call,"arguments":args});
+    let mut added = item.clone();
+    added["status"] = json!("in_progress");
+    added["arguments"] = json!("");
+    write(
+        socket,
+        json!({"type":"response.output_item.added","response_id":response,"output_index":0,"item":added}),
+    )
+    .await;
+    write(socket,json!({"type":"response.function_call_arguments.delta","response_id":response,"output_index":0,"item_id":item["id"],"call_id":call,"delta":args})).await;
+    write(socket,json!({"type":"response.function_call_arguments.done","response_id":response,"output_index":0,"item_id":item["id"],"call_id":call,"name":"flock_list","arguments":args})).await;
+    write(socket,json!({"type":"response.output_item.done","response_id":response,"output_index":0,"item":item.clone()})).await;
+    let mut done: Value = serde_json::from_str(
+        include_str!("../../../tests/fixtures/realtime-session.jsonl")
+            .lines()
+            .nth(3)
+            .unwrap(),
+    )
+    .unwrap();
+    done["response"]["id"] = json!(response);
+    done["response"]["status"] = json!(status);
+    done["response"]["output"] = json!([item]);
+    write(socket, done).await;
+}
+async fn continuation(socket: &mut WebSocketStream<DuplexStream>, response: &str) -> String {
+    let create = read(socket).await;
+    assert_eq!(create["type"], "response.create");
+    let attempt = create["response"]["metadata"]["vults_attempt"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    write(socket,json!({"type":"response.created","response":{"id":response,"status":"in_progress","metadata":{"vults_attempt":attempt}}})).await;
+    attempt
+}
+#[tokio::test]
+async fn completed_tool_steps_settle_reserve_read_once_and_continue_without_another_upload() {
+    for mode in [0, 1] {
+        let gate = Arc::new(Mock::default());
+        let worker_gate = gate.clone();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let plan = plan()
+            .with_tools(vec![Arc::new(ReadTool {
+                calls: calls.clone(),
+                gate: gate.clone(),
+                mode,
+            })])
+            .unwrap();
+        let (client, mut server) = socket_pair().await;
+        let (io, tx, mut rx, _cancel) = channels(16);
+        let worker =
+            tokio::spawn(async move { start(plan, &*worker_gate, io, |_, _| async { Ok(client) }).await });
+        let server = tokio::spawn(async move {
+            config(&mut server).await;
+            request(&mut server, "resp_tool").await;
+            tool_response(&mut server, "resp_tool", "call_one", "{}", "completed").await;
+            let result = read(&mut server).await;
+            assert_eq!(result["type"], "conversation.item.create");
+            assert_eq!(result["item"]["type"], "function_call_output");
+            assert_eq!(result["item"]["call_id"], "call_one");
+            assert!(result["item"]["output"].as_str().unwrap().len() <= crate::tools::MAX_RESULT);
+            let payload: Value = serde_json::from_str(result["item"]["output"].as_str().unwrap()).unwrap();
+            assert_eq!(payload["is_error"], mode == 1);
+            assert_eq!(payload["outside"], false);
+            assert!(payload["text"].as_str().unwrap().len() <= crate::tools::MAX_RESULT + 64);
+            assert_eq!(continuation(&mut server, "resp_audio").await, "attempt_1");
+            response(&mut server, "resp_audio", false).await;
+            let _ = server.next().await;
+        });
+        assert!(matches!(next(&mut rx).await, Event::Ready));
+        turn(&tx).await;
+        assert!(
+            matches!(next(&mut rx).await,Event::ToolStep(ref receipt) if receipt.attempt=="attempt_0" && receipt.ok)
+        );
+        assert!(matches!(next(&mut rx).await, Event::Audio { .. }));
+        assert!(matches!(next(&mut rx).await,Event::Finished(ref receipt) if receipt.attempt=="attempt_1"));
+        assert!(matches!(next(&mut rx).await, Event::Ready));
+        drop(tx);
+        assert_eq!(worker.await.unwrap(), Ok(()));
+        server.await.unwrap();
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert_eq!(gate.settled.lock().unwrap().len(), 2);
+        assert!(
+            gate.settled
+                .lock()
+                .unwrap()
+                .iter()
+                .all(|(_, actual, _)| *actual == Some(2059))
+        );
+    }
+}
+#[tokio::test]
+async fn incomplete_invalid_duplicate_or_unaffordable_calls_cannot_execute_or_replay() {
+    for mode in 0..5 {
+        let gate = Arc::new(Mock::default());
+        let worker_gate = gate.clone();
+        let server_gate = gate.clone();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let plan = plan()
+            .with_tools(vec![Arc::new(ReadTool {
+                calls: calls.clone(),
+                gate: gate.clone(),
+                mode: 0,
+            })])
+            .unwrap();
+        let (client, mut server) = socket_pair().await;
+        let (io, tx, mut rx, _cancel) = channels(16);
+        let worker =
+            tokio::spawn(async move { start(plan, &*worker_gate, io, |_, _| async { Ok(client) }).await });
+        let server = tokio::spawn(async move {
+            config(&mut server).await;
+            request(&mut server, "resp_tool").await;
+            if mode == 2 {
+                server_gate.spent.store(true, Ordering::SeqCst);
+            }
+            tool_response(
+                &mut server,
+                "resp_tool",
+                "call_one",
+                if mode == 1 { r#"{"unexpected":"x"}"# } else { "{}" },
+                if mode == 0 { "cancelled" } else { "completed" },
+            )
+            .await;
+            if mode >= 3 {
+                let result = read(&mut server).await;
+                assert_eq!(result["item"]["call_id"], "call_one");
+                continuation(&mut server, "resp_next").await;
+                if mode == 4 {
+                    server.close(None).await.unwrap();
+                    return;
+                }
+                if mode == 3 {
+                    // Same call ID under a fresh response/attempt is still consumed.
+                    let item = json!({"id":"different_item","type":"function_call","name":"flock_list","call_id":"call_one","arguments":"","status":"in_progress"});
+                    write(&mut server,json!({"type":"response.output_item.added","response_id":"resp_next","output_index":0,"item":item})).await;
+                }
+            }
+            let _ = server.next().await;
+        });
+        next(&mut rx).await;
+        turn(&tx).await;
+        let result = worker.await.unwrap();
+        assert!(result.is_err());
+        if mode != 1 {
+            server.await.unwrap();
+        } else {
+            server.abort();
+            let _ = server.await;
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), usize::from(mode >= 3));
+        assert_eq!(gate.settled.lock().unwrap().len(), if mode >= 3 { 2 } else { 1 });
+        if mode >= 3 {
+            assert_eq!(
+                gate.settled.lock().unwrap()[1].1,
+                None,
+                "uncertain continuation stays charged"
+            );
+        }
+    }
+}
+#[tokio::test]
+async fn revocation_during_a_read_cancels_it_and_refunds_only_unsent_continuation() {
+    let gate = Arc::new(Mock::default());
+    let worker_gate = gate.clone();
+    let calls = Arc::new(AtomicUsize::new(0));
+    let plan = plan()
+        .with_tools(vec![Arc::new(ReadTool {
+            calls: calls.clone(),
+            gate: gate.clone(),
+            mode: 2,
+        })])
+        .unwrap();
+    let (client, mut server) = socket_pair().await;
+    let (io, tx, mut rx, cancel) = channels(16);
+    let worker =
+        tokio::spawn(async move { start(plan, &*worker_gate, io, |_, _| async { Ok(client) }).await });
+    let server = tokio::spawn(async move {
+        config(&mut server).await;
+        request(&mut server, "resp_tool").await;
+        tool_response(&mut server, "resp_tool", "call_one", "{}", "completed").await;
+        let _ = server.next().await;
+    });
+    next(&mut rx).await;
+    turn(&tx).await;
+    assert!(matches!(next(&mut rx).await, Event::ToolStep(_)));
+    timeout(Duration::from_secs(2), async {
+        while calls.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    cancel.send(true).unwrap();
+    assert_eq!(worker.await.unwrap(), Err(Failure::Cancelled));
+    server.await.unwrap();
+    let settled = gate.settled.lock().unwrap();
+    assert_eq!(settled.len(), 2);
+    assert_eq!(settled[0].1, Some(2059));
+    assert_eq!(settled[1].1, Some(0));
 }
