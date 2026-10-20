@@ -50,6 +50,8 @@ enum Msg {
     #[cfg(target_os = "linux")]
     Question(crate::questions::Command),
     #[cfg(target_os = "linux")]
+    RealtimeCommand(crate::realtime::routing::Request),
+    #[cfg(target_os = "linux")]
     VoiceCommand {
         text: String,
         ticket: crate::dictation::worker::Ticket,
@@ -402,6 +404,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
         let mut command_effects: Option<Vec<Effect>> = None;
         #[cfg(target_os = "linux")]
+        let mut command_reply = None;
+        #[cfg(target_os = "linux")]
         if questions.active() || matches!(msg, Msg::Question(_)) {
             let surface = if state.view().approval.is_some()
                 && matches!(msg, Msg::Question(crate::questions::Command::Open { .. }))
@@ -442,6 +446,15 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             Msg::CancelVoiceCommands => {
                 voice_commands.cancel();
                 continue;
+            }
+            #[cfg(target_os = "linux")]
+            Msg::RealtimeCommand(request) => {
+                let Some((reply, mut report)) = request.dispatch(&app, &mut state) else {
+                    continue;
+                };
+                command_effects = Some(std::mem::take(&mut report.effects));
+                command_reply = Some((reply, report));
+                None
             }
             #[cfg(target_os = "linux")]
             Msg::VoiceCommand {
@@ -820,6 +833,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
         }
 
+        #[cfg(target_os = "linux")]
+        if let Some((reply, report)) = command_reply {
+            let _ = reply.send(Ok(Some(report)));
+        }
         crate::phone::sync(&app, &state, now);
         let mut view = state.view();
         if crate::settings::zeca(&app) {
@@ -1766,6 +1783,17 @@ pub(crate) fn question_try(app: &AppHandle, command: crate::questions::Command) 
     if let Some(inbox) = app.try_state::<Inbox>() {
         let _ = inbox.0.try_send(Msg::Question(command));
     }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn realtime_command(
+    app: &AppHandle,
+    request: crate::realtime::routing::Request,
+) -> Result<(), vults_chat::realtime::transport::Failure> {
+    app.state::<Inbox>()
+        .0
+        .try_send(Msg::RealtimeCommand(request))
+        .map_err(|_| vults_chat::realtime::transport::Failure::Busy)
 }
 
 #[cfg(test)]

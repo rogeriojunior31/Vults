@@ -1641,3 +1641,16 @@ revocation, stale selection, explicit policy and lease release checks. No human/
 qualification is inferred. Backend V6.5 is delivered; next is V6.6 voice tools, then V6.7 capture/UI.
 Q6 setup and physical/live speech, acoustic latency, hotplug and long-session acceptance remain
 open. See [Echo cancellation](../reference/echo-cancellation.md#routed-validation).
+
+
+**2026-10-20 V6.6.1 local command admission.** Complete native turns can bind a bounded finalized
+local transcript. Linux requires that binding before upload and asks the one state owner to reuse
+V8's transactional command dispatcher and cached flock reads. Context belongs to this conversation;
+commands cannot answer cards, borrow a later enablement or fall through to a model after being
+handled/refused/clarified. Settings, cancellation, closed waiters, admission expiry and once-only
+consumption are checked before mutation. Local completion retires the generation without Generate;
+duplicate captures never upload. External effects report Requested after executor submission,
+while completed core-only changes may report Done. Missing transcripts fail before remote admission
+and retain the existing review-only local recovery. No renderer, automatic transcription assembly,
+provider tool or consultation is activated. Next: V6.6.2 bounded flock tools, then V6.6.3 agent
+consultation and V6.7 capture/UI. Whole V6.6 and physical/live acceptance remain open.

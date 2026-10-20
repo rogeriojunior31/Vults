@@ -682,6 +682,7 @@ pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VoiceFeedback {
     Done,
+    Requested,
     SentToChat,
     ChatUnavailable,
     Answer,
@@ -715,6 +716,10 @@ pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
             "No se pudo enviar a Zeca. Revisa Chat, termina el borrador e inténtalo de nuevo."
         }
         (Lang::Zh, ChatUnavailable) => "无法发送给 Zeca。请检查聊天，完成草稿后重试。",
+        (Lang::En, Requested) => "Command requested.",
+        (Lang::PtBr, Requested) => "Comando solicitado.",
+        (Lang::Es, Requested) => "Comando solicitado.",
+        (Lang::Zh, Requested) => "命令已请求。",
         (Lang::En, Done) => "Command completed.",
         (Lang::PtBr, Done) => "Comando concluído.",
         (Lang::Es, Done) => "Comando completado.",

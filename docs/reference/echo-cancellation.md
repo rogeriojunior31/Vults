@@ -143,7 +143,8 @@ full drain, interrupted cursor freeze, another response after stop, refusal of m
 revocation when an internal AEC connection moves, explicit headphones/speaker policy, module removal,
 stale selection refusal and native lease release. The
 [2026-10-20 fixture](../../crates/spike/fixtures/duplex-routing-2026-10-20.json) records three final
-consecutive passing runs. Pure and native-owner regressions additionally cover silence spans,
+consecutive passing runs, with source fingerprints from commit `86d6b80d`. Pure and native-owner
+regressions additionally cover silence spans,
 latency/corrupt clocks, admission revocation, worker-held references and stale interruption evidence.
 
 Backend V6.5 is delivered. Next is V6.6 tools, then V6.7 capture/UI; physical speech, double-talk,

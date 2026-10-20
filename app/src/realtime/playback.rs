@@ -54,6 +54,20 @@ impl std::fmt::Debug for Record {
             .finish()
     }
 }
+pub struct LocalReply {
+    pub feedback: crate::voice_commands::Feedback,
+    pub text: String,
+    pub choices: Vec<vults_dictation::command::names::Name>,
+}
+impl std::fmt::Debug for LocalReply {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LocalReply")
+            .field("feedback", &self.feedback)
+            .field("bytes", &self.text.len())
+            .field("choices", &self.choices.len())
+            .finish()
+    }
+}
 #[derive(Debug)]
 pub enum Event {
     Action(Action),
@@ -61,6 +75,10 @@ pub enum Event {
     History(Record),
     Settled(Settlement),
     Input(Input),
+    Local {
+        generation: Generation,
+        reply: LocalReply,
+    },
 }
 pub struct Input {
     pub samples: Vec<i16>,
@@ -125,13 +143,41 @@ fn actions(output: &mpsc::Sender<Event>, actions: Vec<Action>) -> Result<bool, F
     Ok(interrupted)
 }
 
+pub(super) const LOCAL_TIMEOUT: Duration = Duration::from_secs(3);
+async fn prepare_turn(
+    future: impl Future<Output = Result<Option<LocalReply>, Failure>>,
+    active: &(dyn Fn() -> bool + Send + Sync),
+    channels: &Channels,
+) -> Result<Option<LocalReply>, Failure> {
+    tokio::pin!(future);
+    let deadline = tokio::time::sleep(LOCAL_TIMEOUT);
+    tokio::pin!(deadline);
+    let mut poll = tokio::time::interval(Duration::from_millis(5));
+    loop {
+        local::check(active, &channels.cancel)?;
+        if channels.output.is_closed() {
+            return Err(Failure::Output);
+        }
+        tokio::select! { biased;
+            _ = &mut deadline => return Err(Failure::Timeout),
+            _ = poll.tick() => {},
+            result = &mut future => return result,
+        }
+    }
+}
+
 /// Dropping this borrowed future drops its transport/socket and stops its native output.
-pub(super) async fn drive<P: Output, F: Future<Output = Result<(), Failure>>>(
+pub(super) async fn drive<
+    P: Output,
+    F: Future<Output = Result<(), Failure>>,
+    Q: Future<Output = Result<Option<LocalReply>, Failure>>,
+>(
     mut channels: Channels,
     active: &(dyn Fn() -> bool + Send + Sync),
     mode: turn::BargeIn,
     mut open: impl FnMut(Arc<AtomicBool>) -> Result<P, Failure>,
     remote: impl FnOnce(transport::Channels) -> F,
+    mut prepare: impl FnMut(Turn) -> Q,
 ) -> Result<Option<(Turn, Failure)>, Failure> {
     let start = std::time::Instant::now();
     let mut machine = turn::Turn::new(mode);
@@ -145,7 +191,21 @@ pub(super) async fn drive<P: Output, F: Future<Output = Result<(), Failure>>>(
             _ = channels.cancel.changed() => {},
             _ = poll.tick() => {},
             command = channels.input.recv() => match command {
-                Some(Command::Turn { generation, turn }) if generation == machine.generation() => break Some(turn),
+                Some(Command::Turn { generation, turn }) if generation == machine.generation() => {
+                    let prepared = prepare_turn(prepare(turn.clone()), active, &channels).await;
+                    local::check(active, &channels.cancel)?;
+                    if channels.output.is_closed() { return Err(Failure::Output); }
+                    match prepared {
+                        Ok(Some(reply)) => {
+                            emit(&channels.output, Event::Local { generation, reply })?;
+                            actions(&channels.output, machine.handle(generation, turn::Event::LocalCompleted, start.elapsed()))?;
+                            let listen = machine.start(start.elapsed()).ok_or(Failure::Input)?;
+                            emit(&channels.output, Event::Action(listen))?;
+                        },
+                        Ok(None) => break Some(turn),
+                        Err(reason) => return Ok(Some((turn, reason))),
+                    }
+                },
                 Some(_) => {},
                 None => break None,
             },
@@ -302,8 +362,20 @@ pub(super) async fn drive<P: Output, F: Future<Output = Result<(), Failure>>>(
                         if stopped { continue; }
                         if generation != machine.generation() { continue; }
                         if pending.is_some() || machine.phase() != turn::Phase::Listening { break Err(Failure::Input); }
+                        let prepared = prepare_turn(prepare(turn.clone()), active, &channels).await;
+                        local::check(active, &channels.cancel)?;
+                        match prepared {
+                            Ok(Some(reply)) => {
+                                emit(&channels.output, Event::Local { generation, reply })?;
+                                let out = machine.handle(generation, turn::Event::LocalCompleted, start.elapsed());
+                                actions(&channels.output, out)?;
+                                continue;
+                            },
+                            Ok(None) => {},
+                            Err(reason) => { pending = Some(turn); break Err(reason); },
+                        }
                         pending = Some(turn); offset = Some(0);
-                        let out = machine.handle(generation, turn::Event::InputCommitted, now);
+                        let out = machine.handle(generation, turn::Event::InputCommitted, start.elapsed());
                         if let Err(error) = actions(&channels.output, out) { break Err(error); }
                     },
                     Some(Command::Signal { generation, signal }) => {

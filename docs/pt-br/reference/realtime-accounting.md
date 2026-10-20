@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 2d0f2e31cf55 -->
+<!-- source: 65879df9726f -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -316,3 +316,42 @@ também executa o driver nativo completo com um provedor sintético:
 `cargo test -p vults-app native_null_conversation -- --ignored`.
 Esse teste exercita CPAL real até o histórico em memória sem microfone, alto-falante do desktop,
 chave nem conexão com provedor. Ele não representa aceitação de fala ou provedor real.
+
+
+<a id="local-commands-before-realtime-upload"></a>
+## Comandos locais antes do envio realtime
+
+A V6.6.1 acrescenta admissão de comandos no Linux ao proprietário nativo. `Turn::with_transcript`
+vincula uma transcrição local finalizada ao mesmo PCM capturado, com limite de 4 KiB e sem caracteres
+de controle, exceto espaços em branco. Seu Debug informa apenas tamanhos. O proprietário da captura
+nativa é responsável por essa transcrição local; captura/VAD/montagem de turnos e controles visíveis
+continuam na V6.7. A ausência de transcrição falha antes de construir o provedor e pode retornar a
+recuperação local de texto revisável existente. Nunca envia áudio sem classificação remotamente
+nem executa texto recuperado automaticamente.
+
+O proprietário existente do estado no runtime recebe uma solicitação cancelável, verifica o mesmo
+consentimento/geração da conversa e a opção de comandos sob Configurações e reutiliza o dispatcher
+da V8 com estado provisório. Cada conversa tem seu próprio contexto limitado de 90 segundos para
+repetir/desfazer/esclarecer, separado do ditado independente. Alterar a opção de comandos também
+revoga as gerações de conversas existentes, inclusive ao reativar. A admissão no runtime verifica
+um prazo absoluto de três segundos com tempo atual após adquirir as travas; solicitações expiradas,
+canceladas, consumidas ou sem destinatário não alteram o bando. O chamador nativo verifica
+cancelamento/fechamento da saída e descarta a admissão pendente no prazo ou aborto.
+
+Somente um resultado NotCommand não reconhecido pode seguir ao transporte realtime. Comandos
+reconhecidos, respostas a cards recusadas, ações desativadas/indisponíveis e perguntas de
+esclarecimento ficam locais. Leituras reutilizam o formatador existente do bando com cache e
+remoção de segredos; não iniciam busca em conectores. Efeitos usam o executor existente e a lista
+exaustiva de Intents permitidos por voz. Aberturas externas ou persistência informam Comando
+solicitado após o encaminhamento, pois isso não comprova conclusão; mudanças já concluídas somente
+no core podem informar Comando concluído. Um resultado local emite um evento Local vinculado à
+identidade, termina sem Generate e aposenta a geração da entrada. Uma duplicata enfileirada não
+executa novamente nem é enviada. Uma entrada tratada nunca vira fallback automático de modelo/Chat
+após um erro.
+
+Testes simulados do proprietário cobrem entrada local antes de construir o provedor, continuação
+local em conexão existente, gerações antigas/duplicadas e cancelamento durante a admissão. Testes
+do dispatcher cobrem recusa de permissões, desativação, ambiguidade, contexto separado, leituras
+locais traduzidas, prazo vencido e mutação única. Esses testes não usam microfone, ação do desktop,
+chave nem provedor. Ferramentas do bando pelo modelo e consulta ficam na V6.6.2/V6.6.3; a V6.6
+completa, ativação do renderer e aceitação de fala/provedor real continuam em aberto.

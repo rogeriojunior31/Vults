@@ -180,6 +180,15 @@ module loader, renderer entry or visible capture activation is added. Backend V6
 V6.6 tools and V6.7 capture/UI are next. See [Echo cancellation](reference/echo-cancellation.md)
 for the private native routing check and remaining physical/live acceptance limits.
 
+V6.6.1 routes finalized local transcripts through V8's command dispatcher before realtime upload.
+The state owner checks Settings/epochs and cancellable once-only admission, reuses redacted cached
+reads, and keeps context separate from independent dictation. Consumed/refused/clarified commands
+retire their input generation without Generate or model fallback. External effects report Requested
+after executor submission rather than claiming completion. Linux requires a bounded same-capture
+transcript; missing text fails before provider construction and only offers reviewable recovery.
+No renderer/capture assembly, model tool or consultation is enabled. See
+[Local command admission](reference/realtime-accounting.md#local-commands-before-realtime-upload).
+
 ## Local dictation
 
 `dictation::command` provides the V8.1 grammar without a runtime caller. Unicode case/accent/

@@ -4,6 +4,19 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+async fn without_commands<P: Output, F: Future<Output = Result<(), Failure>>>(
+    channels: Channels,
+    active: &(dyn Fn() -> bool + Send + Sync),
+    mode: turn::BargeIn,
+    open: impl FnMut(Arc<AtomicBool>) -> Result<P, Failure>,
+    remote: impl FnOnce(transport::Channels) -> F,
+) -> Result<Option<(Turn, Failure)>, Failure> {
+    super::drive(channels, active, mode, open, remote, |_| {
+        std::future::ready(Ok(None))
+    })
+    .await
+}
+
 struct Device {
     cursor: Cursor,
     automatic: bool,
@@ -111,7 +124,7 @@ async fn a_closed_consumer_before_generate_never_offers_local_recovery() {
     let called = Arc::new(AtomicBool::new(false));
     let remote_called = called.clone();
     let worker = tokio::spawn(async move {
-        drive(
+        without_commands(
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -144,7 +157,7 @@ async fn temporary_native_teardown_busy_retries_before_any_upload() {
     let attempts = Arc::new(AtomicUsize::new(0));
     let opened = attempts.clone();
     let worker = tokio::spawn(async move {
-        drive(
+        without_commands(
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -179,7 +192,7 @@ async fn terminal_or_unacknowledged_interruption_keeps_only_unsynchronized_heard
         let state = device(false);
         let output = state.clone();
         let worker = tokio::spawn(async move {
-            drive(
+            without_commands(
                 io,
                 &|| true,
                 turn::BargeIn::Headphones,
@@ -328,7 +341,7 @@ async fn admission_refusal_keeps_the_complete_original_and_opens_no_output() {
     let (io, send, _receive, _stop) = channels(32);
     send.send(input(generation(), 31415)).await.unwrap();
     let opened = AtomicUsize::new(0);
-    let result = drive(
+    let result = without_commands(
         io,
         &|| true,
         turn::BargeIn::Disabled,
@@ -360,7 +373,7 @@ async fn native_null_conversation_drains_cpal_into_matching_memory_history() {
     send.send(input(generation(), 99)).await.unwrap();
     drop(send);
     let worker = tokio::spawn(async move {
-        drive(
+        without_commands(
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -403,7 +416,7 @@ async fn one_connection_releases_successful_audio_and_recovers_only_the_later_fa
     .await
     .unwrap();
     let worker = tokio::spawn(async move {
-        drive(
+        without_commands(
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -445,7 +458,7 @@ async fn completion_waits_for_device_drain_and_does_not_recover_a_completed_inpu
     let control = device(false);
     let output = control.clone();
     let worker = tokio::spawn(async move {
-        drive(
+        without_commands(
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -488,7 +501,7 @@ async fn cancellation_revocation_and_abort_stop_native_output_without_text_recov
         let enabled = Arc::new(AtomicBool::new(true));
         let active = enabled.clone();
         let worker = tokio::spawn(async move {
-            drive(
+            without_commands(
                 io,
                 &move || active.load(Ordering::SeqCst),
                 turn::BargeIn::Disabled,
@@ -530,7 +543,7 @@ async fn failed_receipts_and_output_saturation_retain_the_original() {
     for saturation in [false, true] {
         let (io, send, _receive, _stop) = channels(if saturation { 2 } else { 64 });
         send.send(input(generation(), 42)).await.unwrap();
-        let (turn, reason) = drive(
+        let (turn, reason) = without_commands(
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -570,7 +583,7 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
         let output = state.clone();
         let (ack, wait_ack) = tokio::sync::oneshot::channel();
         let worker = tokio::spawn(async move {
-            drive(
+            without_commands(
                 io,
                 &|| true,
                 turn::BargeIn::Headphones,
@@ -682,4 +695,186 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
         assert_eq!(original.samples().as_ref(), vec![456; 4800]);
         assert_eq!(reason, Failure::Transport);
     }
+}
+
+#[tokio::test]
+async fn local_commands_retire_generations_before_lazy_provider_admission() {
+    let (io, send, mut receive, _stop) = channels(128);
+    let prepared = Arc::new(AtomicUsize::new(0));
+    let count = prepared.clone();
+    let opened = Arc::new(AtomicBool::new(false));
+    let remote_opened = opened.clone();
+    let worker = tokio::spawn(async move {
+        super::drive(
+            io,
+            &|| true,
+            turn::BargeIn::Disabled,
+            |_| Ok(Fake(device(true))),
+            move |mut remote| {
+                remote_opened.store(true, Ordering::SeqCst);
+                async move {
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    let (pcm, _) = upload(&mut remote).await;
+                    assert_eq!(pcm, vec![77; 4800], "only the unrecognized turn uploads");
+                    Err(Failure::Transport)
+                }
+            },
+            move |turn| {
+                count.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok(if turn.samples()[0] == 77 {
+                    None
+                } else {
+                    Some(LocalReply {
+                        feedback: crate::voice_commands::Feedback::Done,
+                        text: "Command completed.".into(),
+                        choices: Vec::new(),
+                    })
+                }))
+            },
+        )
+        .await
+    });
+    let first = match next(&mut receive).await {
+        Event::Action(a) if matches!(a.effect, Effect::Listen { .. }) => a.generation,
+        other => panic!("{other:?}"),
+    };
+    send.send(input(first, 11)).await.unwrap();
+    // A queued duplicate may never execute, upload or masquerade as the next input.
+    send.send(input(first, 22)).await.unwrap();
+    let mut local = 0;
+    let second = loop {
+        match next(&mut receive).await {
+            Event::Local { generation, reply } => {
+                assert_eq!(generation, first);
+                assert_eq!(reply.feedback, crate::voice_commands::Feedback::Done);
+                local += 1;
+            }
+            Event::Action(a) if matches!(a.effect, Effect::Listen { .. }) => break a.generation,
+            Event::Action(a) => assert_ne!(a.effect, Effect::Generate),
+            other => panic!("{other:?}"),
+        }
+    };
+    assert_eq!(local, 1);
+    assert_ne!(first, second);
+    assert!(!opened.load(Ordering::SeqCst));
+    send.send(input(second, 77)).await.unwrap();
+    let (turn, reason) = worker.await.unwrap().unwrap().unwrap();
+    assert_eq!(reason, Failure::Transport);
+    assert_eq!(turn.samples()[0], 77);
+    assert_eq!(prepared.load(Ordering::SeqCst), 2);
+    assert!(opened.load(Ordering::SeqCst));
+}
+
+#[tokio::test]
+async fn an_established_connection_never_receives_a_locally_consumed_followup() {
+    let (io, send, mut receive, _stop) = channels(128);
+    send.send(input(generation(), 77)).await.unwrap();
+    let prepared = Arc::new(AtomicUsize::new(0));
+    let count = prepared.clone();
+    let worker = tokio::spawn(async move {
+        super::drive(
+            io,
+            &|| true,
+            turn::BargeIn::Disabled,
+            |_| Ok(Fake(device(true))),
+            |mut remote| async move {
+                remote.output.send(transport::Event::Ready).await.unwrap();
+                let (pcm, _) = upload(&mut remote).await;
+                assert_eq!(pcm, vec![77; 4800]);
+                audio(&remote, 0).await;
+                done(&remote, 0, true).await;
+                assert!(
+                    remote.input.recv().await.is_none(),
+                    "local command may not upload or retry"
+                );
+                Ok(())
+            },
+            move |turn| {
+                count.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Ok(if turn.samples()[0] == 77 {
+                    None
+                } else {
+                    Some(LocalReply {
+                        feedback: crate::voice_commands::Feedback::Requested,
+                        text: "Command requested.".into(),
+                        choices: Vec::new(),
+                    })
+                }))
+            },
+        )
+        .await
+    });
+    let second = loop {
+        if let Event::Action(a) = next(&mut receive).await
+            && matches!(a.effect, Effect::Listen { .. })
+            && a.generation != generation()
+        {
+            break a.generation;
+        }
+    };
+    send.send(input(second, 11)).await.unwrap();
+    let third = loop {
+        match next(&mut receive).await {
+            Event::Action(a) if matches!(a.effect, Effect::Listen { .. }) => break a.generation,
+            Event::Action(a) => assert_ne!(a.effect, Effect::Generate),
+            Event::Local { reply, .. } => {
+                assert_eq!(reply.feedback, crate::voice_commands::Feedback::Requested)
+            }
+            other => panic!("{other:?}"),
+        }
+    };
+    assert_ne!(third, second);
+    drop(send);
+    assert!(worker.await.unwrap().unwrap().is_none());
+    assert_eq!(prepared.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn pending_command_admission_is_cancellable_and_never_constructs_a_provider() {
+    let (io, send, mut receive, stop) = channels(64);
+    send.send(input(generation(), 11)).await.unwrap();
+    let (entered, waiting) = tokio::sync::oneshot::channel();
+    let mut entered = Some(entered);
+    let called = Arc::new(AtomicBool::new(false));
+    let remote_called = called.clone();
+    let worker = tokio::spawn(async move {
+        super::drive(
+            io,
+            &|| true,
+            turn::BargeIn::Disabled,
+            |_| Ok(Fake(device(true))),
+            move |_| {
+                remote_called.store(true, Ordering::SeqCst);
+                std::future::ready(Ok(()))
+            },
+            move |_| {
+                let entered = entered.take();
+                async move {
+                    let _ = entered.unwrap().send(());
+                    std::future::pending().await
+                }
+            },
+        )
+        .await
+    });
+    assert!(matches!(
+        next(&mut receive).await,
+        Event::Action(Action {
+            effect: Effect::Listen { .. },
+            ..
+        })
+    ));
+    tokio::time::timeout(Duration::from_secs(2), waiting)
+        .await
+        .unwrap()
+        .unwrap();
+    stop.send(true).unwrap();
+    assert!(matches!(
+        tokio::time::timeout(Duration::from_secs(2), worker)
+            .await
+            .unwrap()
+            .unwrap(),
+        Err(Failure::Cancelled)
+    ));
+    assert!(!called.load(Ordering::SeqCst));
 }

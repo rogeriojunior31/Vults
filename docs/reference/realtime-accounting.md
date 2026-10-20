@@ -276,3 +276,37 @@ The isolated ALSA null setup above also runs the complete native driver with a s
 `cargo test -p vults-app native_null_conversation -- --ignored`.
 This check exercises actual CPAL into memory history without a microphone, desktop speaker, key or
 provider connection. It is not real speech or live-provider acceptance.
+
+
+## Local commands before realtime upload
+
+V6.6.1 adds Linux command admission to the native owner. `Turn::with_transcript` binds a finalized
+local transcript to the same captured PCM, with a 4 KiB limit and no control characters except
+whitespace. Its Debug output reports lengths only. The native capture owner is responsible for
+that local transcription; V6.7 still owns capture/VAD/turn assembly and visible controls. A missing
+transcript fails before provider construction and may return the existing reviewable local-text
+recovery. It never sends unclassified audio remotely or executes recovered text automatically.
+
+The runtime's existing state owner receives a cancellable request, checks the same conversation
+consent/epoch and command switch under Settings, and reuses V8's shadow-state dispatcher. Each
+conversation has its own bounded 90-second repeat/undo/clarification context, separate from independent
+dictation. The command switch also revokes existing conversation epochs when changed, including a
+later re-enable. Runtime admission checks a fresh absolute three-second deadline after taking locks;
+expired, cancelled, consumed or closed-waiter requests cannot change the flock. The native waiter
+is polled for cancellation/output closure and drops pending admission on timeout or abort.
+
+Only an unrecognized NotCommand result may proceed to the realtime transport. Recognized commands,
+refused card answers, disabled/unavailable actions and clarification questions all stay local.
+Reads reuse the existing redacted cached flock formatter; no connector fetch is triggered. Effects
+use the existing runtime executor and the exhaustive voice-only Intent allowlist. External launches
+or persistence say Command requested after submission, since submission is not completion proof;
+finished core-only changes may say Command completed. A local result emits an identity-bound Local
+event, finishes without Generate and retires that input generation. A queued duplicate cannot run
+again or upload. A handled input never becomes automatic model/Chat fallback after an error.
+
+Scripted owner tests cover local input before lazy provider construction, local follow-up on an
+established connection, stale/duplicate generations and cancellation during admission. Dispatcher
+checks cover permission refusal, command disablement, ambiguity, separate context, localized cached
+reads, expired admission and once-only mutation. These tests use no microphone, desktop action,
+key or provider. Model-side flock tools and consultation remain V6.6.2/V6.6.3; full V6.6, renderer
+activation and real speech/provider acceptance are still open.

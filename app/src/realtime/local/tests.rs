@@ -27,7 +27,7 @@ async fn local_failure_retains_audio_and_revocation_discards_late_decode_results
         .await
         .unwrap();
         assert!(
-            matches!(result, Recovery::Audio { turn, failure, .. } if failure == expected && turn.0.len() == 4800)
+            matches!(result, Recovery::Audio { turn, failure, .. } if failure == expected && turn.samples.len() == 4800)
         );
     }
     let (_send, cancel) = watch::channel(false);
@@ -106,7 +106,7 @@ async fn timed_out_native_work_keeps_its_lease_and_original_audio_until_it_exits
     tokio::time::resume();
     let result = worker.await.unwrap().unwrap();
     assert!(
-        matches!(result, Recovery::Audio { failure: LocalFailure::Timeout, turn, .. } if turn.0.len() == 4800)
+        matches!(result, Recovery::Audio { failure: LocalFailure::Timeout, turn, .. } if turn.samples.len() == 4800)
     );
     assert!(flag.load(Ordering::SeqCst));
     assert_eq!(state.begin().err(), Some(Failure::Busy));

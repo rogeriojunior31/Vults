@@ -37,6 +37,8 @@ pub enum Phase {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Event {
     InputCommitted,
+    /// A local command consumed this input without creating a model response.
+    LocalCompleted,
     FirstAudioPlayed {
         at: Duration,
     },
@@ -216,6 +218,7 @@ impl Turn {
             }
         }
         match event {
+            Event::LocalCompleted if self.phase == Phase::Listening => self.finish(&mut out),
             Event::InputCommitted if self.phase == Phase::Listening => {
                 self.phase = Phase::Thinking;
                 out.push(self.action(Effect::Generate));

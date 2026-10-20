@@ -1323,6 +1323,7 @@ pub fn set_dictation_commands<R: tauri::Runtime>(
         _ => return Err("Unknown voice command setting.".into()),
     };
     save(&next).map_err(|_| "Could not save voice command choices.")?;
+    crate::realtime::invalidate(&app);
     #[cfg(target_os = "linux")]
     {
         // Cancel even when re-enabled: no ticket may inherit a later grant.

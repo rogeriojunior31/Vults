@@ -299,3 +299,27 @@ fn unverified_input_clears_suppressed_onsets_and_pending_probes() {
     assert!(send(&mut turn, Event::InterruptConfirmed(stale), 3200).is_empty());
     assert_eq!(turn.phase(), Phase::Armed);
 }
+
+#[test]
+fn local_completion_finishes_without_generate_and_retires_its_generation() {
+    let mut turn = Turn::default();
+    let first = turn.start(Duration::ZERO).unwrap();
+    let out = turn.handle(first.generation, Event::LocalCompleted, Duration::from_millis(1));
+    assert_eq!(
+        out.iter().map(|a| a.effect).collect::<Vec<_>>(),
+        [Effect::ResetVad, Effect::Finished]
+    );
+    let second = turn.start(Duration::from_millis(2)).unwrap();
+    assert_ne!(second.generation, first.generation);
+    assert!(
+        turn.handle(first.generation, Event::InputCommitted, Duration::from_millis(3))
+            .is_empty()
+    );
+    assert_eq!(turn.phase(), Phase::Listening);
+    turn.handle(second.generation, Event::InputCommitted, Duration::from_millis(3));
+    assert!(
+        turn.handle(second.generation, Event::LocalCompleted, Duration::from_millis(4))
+            .is_empty()
+    );
+    assert_eq!(turn.phase(), Phase::Thinking);
+}

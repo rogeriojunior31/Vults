@@ -1,5 +1,5 @@
 # Cancelamento de eco
-<!-- source: 0bf88505ed4e -->
+<!-- source: 6dd293826b0e -->
 
 A V6.5.1 qualifica um caminho nativo no Linux com inventário somente de leitura e um experimento
 sintético reproduzível. A V6.5.2 acrescenta propriedade duplex nativa explícita para essa rota e
@@ -157,7 +157,8 @@ drenagem completa, cursor congelado na interrupção, outra resposta após parar
 manuais, revogação ao mover uma conexão interna do AEC, política explícita de fones/alto-falantes,
 remoção do módulo, recusa de seleção antiga e liberação da concessão nativa. A
 [fixture de 2026-10-20](../../../crates/spike/fixtures/duplex-routing-2026-10-20.json) registra três
-execuções finais consecutivas bem-sucedidas. Regressões puras e do proprietário nativo também cobrem
+execuções finais consecutivas bem-sucedidas, com fingerprints do commit `86d6b80d`. Regressões puras
+e do proprietário nativo também cobrem
 silêncio entre trechos, latência/relógio corrompido, revogação de admissão, referências de workers e
 evidência antiga de interrupção.
 

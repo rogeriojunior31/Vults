@@ -13,8 +13,10 @@ use vults_chat::realtime::{
 mod local;
 mod playback;
 pub use local::{LocalFailure, Recovery, Turn};
-pub use playback::{Channels, Command, Event, Input, Record, Signal};
+pub use playback::{Channels, Command, Event, Input, LocalReply, Record, Signal};
 mod devices;
+#[cfg(target_os = "linux")]
+pub(crate) mod routing;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -146,22 +148,27 @@ async fn run_with_audio(
     let cancel = channels.cancel.clone();
     let check_app = app.clone();
     let (selected, spoken, cancellation) = (model.clone(), language.clone(), cancel.clone());
-    let active: Arc<dyn Fn() -> bool + Send + Sync> = Arc::new(move || {
+    let valid: Arc<dyn Fn(&crate::settings::Settings) -> bool + Send + Sync> = Arc::new(move |s| {
         state.current(epoch)
             && !*cancellation.borrow()
             && cancellation.has_changed().is_ok()
             && !crate::lock::locked(&check_app)
-            && check_app
-                .state::<crate::settings::SettingsState>()
-                .0
-                .lock()
-                .is_ok_and(|s| {
-                    s.zeca
-                        && s.voice_realtime == expected
-                        && s.voice_model == selected
-                        && s.voice_language == spoken
-                })
+            && s.zeca
+            && s.voice_realtime == expected
+            && s.voice_model == selected
+            && s.voice_language == spoken
     });
+    let app_check = app.clone();
+    let authority = valid.clone();
+    let active: Arc<dyn Fn() -> bool + Send + Sync> = Arc::new(move || {
+        app_check
+            .state::<crate::settings::SettingsState>()
+            .0
+            .lock()
+            .is_ok_and(|s| authority(&s))
+    });
+    #[cfg(target_os = "linux")]
+    let router = routing::Router::new(lease.clone(), valid);
     let remote_active = active.clone();
     if choice.captures() && !consent.enabled() {
         return Err(Failure::Off);
@@ -182,6 +189,20 @@ async fn run_with_audio(
             devices.interruption(),
             move |cancel| factory.output(cancel),
             move |io| connect(consent, remote_active, io),
+            {
+                let app = app.clone();
+                move |turn| {
+                    #[cfg(target_os = "linux")]
+                    {
+                        router.clone().prepare(app.clone(), turn)
+                    }
+                    #[cfg(not(target_os = "linux"))]
+                    {
+                        let _ = (&app, turn);
+                        std::future::ready(Ok(None))
+                    }
+                }
+            },
         );
         tokio::pin!(driver);
         let mut poll = tokio::time::interval(std::time::Duration::from_millis(5));

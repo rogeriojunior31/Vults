@@ -8,22 +8,45 @@ const MAX_FRAMES: usize = RATE * 30;
 const CHUNK: usize = RATE / 10;
 
 #[derive(Clone)]
-pub struct Turn(Arc<[i16]>);
+pub struct Turn {
+    samples: Arc<[i16]>,
+    transcript: Option<Arc<str>>,
+}
 impl Turn {
     /// Already captured, mono PCM16 at 24 kHz. This grants no microphone authority.
     pub fn new(pcm: Vec<i16>) -> Result<Self, Failure> {
         if !(CHUNK..=MAX_FRAMES).contains(&pcm.len()) {
             return Err(Failure::Input);
         }
-        Ok(Self(pcm.into()))
+        Ok(Self {
+            samples: pcm.into(),
+            transcript: None,
+        })
+    }
+    /// A finalized local transcript of this same capture, supplied by its native capture owner.
+    pub fn with_transcript(mut self, text: String) -> Result<Self, Failure> {
+        if text.trim().is_empty()
+            || text.len() > vults_dictation::command::MAX_INPUT_BYTES
+            || text.chars().any(|c| c.is_control() && !c.is_whitespace())
+        {
+            return Err(Failure::Input);
+        }
+        self.transcript = Some(text.into());
+        Ok(self)
+    }
+    pub(super) fn transcript(&self) -> Option<&str> {
+        self.transcript.as_deref()
     }
     pub(super) fn samples(&self) -> Arc<[i16]> {
-        self.0.clone()
+        self.samples.clone()
     }
 }
 impl std::fmt::Debug for Turn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Turn").field("frames", &self.0.len()).finish()
+        f.debug_struct("Turn")
+            .field("frames", &self.samples.len())
+            .field("transcript_bytes", &self.transcript.as_ref().map(|t| t.len()))
+            .finish()
     }
 }
 

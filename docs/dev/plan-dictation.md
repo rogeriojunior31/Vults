@@ -47,7 +47,8 @@ conversation microphone or user-facing realtime continuation is exposed yet. Bac
 delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only PipeWire pair inventory,
 an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
 device policy. Backend V6.5 is delivered. Next: V6.6 tools, then V6.7 capture/UI; Q6 production
-setup and physical/live acceptance remain open before activation.
+setup and physical/live acceptance remain open before activation. V6.6.1 now routes native finalized
+local transcripts through V8 before remote admission; model tools and consultation remain V6.6.2/V6.6.3.
 
 ## References
 
@@ -2575,7 +2576,7 @@ Delivery sequence:
    acceptance stays an activation gate. Backend V6.4 is delivered; full acceptance remains open.
    See [Native playback and context repair](../reference/realtime-accounting.md#native-playback-and-context-repair).
 
-Next engineering task: **V6.6 voice tools and delegation**, before V6.7 capture/UI.
+Next engineering task: **V6.6.2 bounded realtime flock tools**, before V6.6.3 consultation and V6.7 capture/UI.
 
 **V6.5 Echo cancellation** (M, spike first)
 - Preferred: PipeWire's WebRTC engine with both the clean source and paired reference sink.
@@ -2623,6 +2624,35 @@ Next engineering task: **V6.6 voice tools and delegation**, before V6.7 capture/
   - a consult pattern for Claude Code/Codex questions, with a reassurance line after 1.5 s.
 - Tests: the rule-2 test over every `Intent` (H1) covers the voice path: no `Decide`/`DecideAlways`
   reachable.
+
+### V6.6 delivery sequence
+
+1. **V6.6.1 local commands before remote admission** (delivered 2026-10-20).
+   A native complete turn may bind a finalized local transcript (at most 4 KiB); Linux admission
+   requires it before remote upload. Capture/transcription assembly remains the V6.7 caller's job.
+   The one runtime state owner reuses V8's transactional dispatcher and cached flock reads, with a
+   separate conversation's repeat/undo/clarification context. Command enablement, realtime consent,
+   cancellation, Settings epochs and an absolute three-second admission expiry are rechecked under
+   Settings/admission locks. Dropped waiters revoke queued work; consumed requests cannot run twice.
+   Local results retire the input generation without Generate; duplicate/stale captures cannot
+   upload or replay. Only NotCommand may proceed remotely. Refused cards, unavailable/disabled
+   commands and clarifications are consumed locally. External effects return Requested after being
+   submitted to the existing executor, never a false completion claim. No automatic model fallback
+   follows a consumed command. Missing transcripts fail before provider construction and may use
+   only the existing reviewable local-text recovery. No renderer, capture, provider tool or agent
+   delegation is activated. Native-owner/dispatcher/turn regressions cover these paths; physical
+   speech/provider acceptance remains open. See
+   [Local commands before realtime upload](../reference/realtime-accounting.md#local-commands-before-realtime-upload).
+2. **V6.6.2 bounded realtime flock tools** (next).
+   Offer the existing read-only `flock_tools` to the realtime model through bounded identity-bound
+   calls/results, preserving per-response cost admission, cancellation and no replay on failure.
+   Unoffered tools, malformed arguments and stale/duplicate calls fail closed; no permission intent
+   or arbitrary action tool is offered. Cover receipt/continuation and model-failure paths offline.
+3. **V6.6.3 agent consultation and completion semantics** (remaining).
+   Reuse the app's existing Claude Code/Codex question path with bounded consultation ownership,
+   cancellation and the 1.5-second reassurance. Track actual execution before reporting Done and
+   prevent model failure from replaying an already performed action. Reconcile docs/evidence and
+   the exhaustive H1 voice boundary before V6.7. Live-provider/human-speech acceptance remains separate.
 
 **V6.7 Talk with Zeca page and island speaking states** (M)
 - Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio

@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: f86d39aa1bba -->
+<!-- source: 4016da4c515d -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -196,6 +196,16 @@ interrupção. Não há carregador de módulos de produção, entrada do rendere
 de captura. O backend da V6.5 está entregue; ferramentas na V6.6 e captura/interface na V6.7 vêm
 a seguir. Veja [Cancelamento de eco](reference/echo-cancellation.md) para o teste privado de
 roteamento nativo e os limites restantes de aceitação física/real.
+
+A V6.6.1 encaminha transcrições locais finalizadas ao dispatcher de comandos da V8 antes do envio
+realtime. O proprietário do estado verifica Configurações/gerações e admissão cancelável de uso
+único, reutiliza leituras locais com remoção de segredos e separa o contexto do ditado independente.
+Comandos tratados/recusados/esclarecidos aposentam a geração sem Generate nem fallback de modelo.
+Efeitos externos informam Solicitado após encaminhamento ao executor, sem alegar conclusão. O Linux
+exige transcrição limitada da mesma captura; texto ausente falha antes de construir o provedor e
+oferece apenas recuperação revisável. Não há ativação de renderer/montagem de captura, ferramenta
+do modelo nem consulta. Veja
+[Admissão de comandos locais](reference/realtime-accounting.md#local-commands-before-realtime-upload).
 
 <a id="local-dictation"></a>
 
