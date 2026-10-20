@@ -583,7 +583,7 @@ mod label_tests {
                     app.handle().clone(),
                     view.clone(),
                     true,
-                    1_000_000,
+                    "1000000".into(),
                     "gpt-realtime-2.1-mini".into()
                 )
                 .is_err()
@@ -785,6 +785,7 @@ mod tests {
     fn dictation_restores_only_a_known_configuration_for_its_own_tab() {
         for section in [
             "dictationvoice",
+            "dictationconversation",
             "dictationkeys",
             "dictationcommands",
             "dictationwords",
@@ -1128,6 +1129,7 @@ fn valid_dictation_section(section: &str) -> bool {
     matches!(
         section,
         "dictationvoice"
+            | "dictationconversation"
             | "dictationkeys"
             | "dictationcommands"
             | "dictationwords"

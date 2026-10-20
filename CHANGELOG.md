@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Add Dictation > Talk with Zeca settings for explicit realtime voice consent, destination, model and exact rolling USD budget, with retained drafts, save readback and reload on conflicts. Recording and live conversation controls are not available yet.
+
 - Add Linux `ask_user` text questions for verified Claude Code processes started by Vults, in Quick and Nest. Keep drafts editable, require a separate Send/Enter, audit confirmation before delivery and never resend a consumed reply after failure. Cancel on departure/lock/expiry/disconnect and give permission cards priority.
 - Add local dictation into verified question drafts using the independent dictation key, with separate human confirmation. Offer external-agent question setup only through reviewed, default-off installation with backups and preserved third-party settings. Permission cards never take voice.
 - Add the gated native realtime voice backend with durable cost reservations, bounded playback, heard-prefix interruption accounting, local command routing and read-only flock tools. Renderer capture and conversation controls remain in V6.7; Codex voice consultation stays unavailable pending subscription-authentication qualification.

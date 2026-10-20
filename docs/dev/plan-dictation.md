@@ -2781,10 +2781,12 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    budget identity. The renderer bridge exposes this read and the existing explicit Settings write;
    unsafe/fractional JavaScript amounts are rejected before invocation. Native model, budget and
    webview authority checks remain decisive. This is configuration plumbing, not a live voice UI.
-2. **V6.7.2 Configuration page** — next. Render the opt-in, destination, model and budget under Voice,
-   preserving drafts and errors; keep configuration in the Settings webview. Explain that voice
-   never answers a permission card and keep unavailable Codex consultation explicit.
-3. **V6.7.3 Capture and conversation controls** — connect explicit native capture, local turn
+2. **V6.7.2 Configuration page** — implemented 2026-10-20. Dictation > Talk with Zeca exposes
+   opt-in, destination, model and budget in the existing Settings webview. Exact decimal-string writes
+   retain large saved limits. Saves require readback; errors keep drafts, foreign changes require
+   explicit reload and navigation preserves edits. Voice never answers permission cards and Codex
+   remains unavailable. No recording or live conversation control is exposed in this slice.
+3. **V6.7.3 Capture and conversation controls** — next. Connect explicit native capture, local turn
    assembly, listening/finish/cancel states and reviewable text recovery to the existing backend.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before

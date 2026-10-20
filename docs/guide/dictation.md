@@ -30,6 +30,24 @@ A standalone silence artifact such as "Thank you.", "Obrigado." or "Gracias." is
 even if intentionally spoken; longer sentences containing those words are kept. You can edit
 the draft before sending it. This filter uses no model or network request.
 
+## Voice conversation settings
+
+Open **Dictation > Talk with Zeca** to prepare realtime voice. The model and budget are separate
+from Chat and your CLI subscription. **Configure OpenAI key** opens the shared key settings; keys
+stay in the system keyring. This page does not record or send audio, and live conversation controls
+are not available yet.
+
+Voice is off by default. Review the OpenAI audio/context destination, choose a supported model and
+set the rolling 24-hour USD limit before enabling it. Use a decimal point or comma, with up to six
+decimal places and no thousands separators. Zero disables remote voice; enabling requires a
+positive limit. Unsettled requests retain their reserved cost.
+
+Edit the choices and click **Save**. Vults reads them back before confirming the save. A failure
+keeps your draft; **Discard edits and reload** explicitly replaces it with saved settings. Changes
+made elsewhere block saving stale edits until you reload. Leaving the page preserves unsent edits.
+Voice never answers a permission card, and Codex consultation remains unavailable. See
+[Realtime accounting](../reference/realtime-accounting.md#runtime-transport).
+
 ## Global dictation (first slice)
 
 For a first dictation, choose a model, focus your destination, hold the talk shortcut, speak and

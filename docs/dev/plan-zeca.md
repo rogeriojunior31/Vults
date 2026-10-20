@@ -1847,3 +1847,26 @@ and covers explicit invocation and unsafe-number refusal without capture or prov
 The local AGENTS instruction also names `check-task-actions.mjs`, which is absent from this
 checkout; that unavailable check is not reported as passed. No visual renderer changes or app
 launch are part of this contract; native UI validation begins with V6.7.2.
+
+
+**2026-10-20 V6.7.2 voice configuration page.** Dictation > Talk with Zeca now uses the existing
+Settings webview and shared navigation/components/theme. It shows default-off OpenAI audio/context
+consent, the reviewed model, an independent rolling USD budget and a link to shared key settings.
+The form preserves drafts across navigation and failed saves, confirms writes by readback and
+blocks stale edits after a foreign change until explicit reload. Both RPC directions use exact
+integer decimal strings; USD accepts a point or comma without floating-point arithmetic. Native
+validation rejects noncanonical/out-of-range amounts before IO. Voice never answers permission
+cards and Codex remains unavailable. Saving opens no microphone or provider connection.
+
+Validation: 1,413 workspace tests pass (16 documented ignores), 10 evals, build, all 19 renderer/bridge
+checks, workspace Clippy with warnings denied and formatting pass. The expanded production bridge/
+component regression covers stale reads, one save, failure/retry, exact large USD amounts, drafts,
+conflicts, acknowledgement readback, translations and explicit key navigation. Isolated native
+Tauri/WebKit validation exercised actual configuration RPCs, failure under a read-only config
+folder, focus/caret retention and exact limits. Visually reviewed Black/Light at 1180 x 820 and
+480 x 360 has no horizontal overflow and keeps Save reachable; all four languages render and
+translated narrow actions remain reachable. A private XDG profile, masked original HOME path and
+private DBus without service activation keep user configs/keyring apart. No microphone, model,
+provider or agent configuration is used. Shared Settings styles fix field sizing and action spacing.
+The local AGENTS task-actions script remains absent, not passed. Next is V6.7.3 explicit capture,
+turn assembly and conversation controls; live/physical voice acceptance and K8 completion stay open.

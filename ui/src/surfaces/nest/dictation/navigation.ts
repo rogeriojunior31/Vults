@@ -7,6 +7,7 @@ export const DICTATION_WORK_PAGES = ["history", "commands", "dictionary", "snipp
 export type DictationWorkPage = typeof DICTATION_WORK_PAGES[number];
 export const DICTATION_SETTINGS = [
   { id: "voice", label: tk("Voice"), icon: "mic" },
+  { id: "conversation", label: tk("Talk with Zeca"), icon: "chat" },
   { id: "keys", label: tk("Keyboard shortcuts"), icon: "terminal" },
   { id: "commands", label: tk("Command settings"), icon: "flock" },
   { id: "words", label: tk("Vocabulary"), icon: "file" },

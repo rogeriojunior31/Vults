@@ -452,7 +452,7 @@ export type DictationOutputLanguage = "en" | "pt-BR" | "es" | "zh";
 
 export type DictationMusic = "lower" | "pause" | "leave";
 
-export type SettingsChange = { questionAgents?: boolean; theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
+export type SettingsChange = { questionAgents?: boolean; theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; voiceRealtime?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -533,8 +533,8 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),
-  setVoiceRealtime: (on: boolean, limitMicrousd: number, model: string) =>
-    Number.isSafeInteger(limitMicrousd) && limitMicrousd >= 0
+  setVoiceRealtime: (on: boolean, limitMicrousd: string, model: string) =>
+    typeof limitMicrousd === "string" && /^(0|[1-9]\d{0,18})$/.test(limitMicrousd) && BigInt(limitMicrousd) <= 9223372036854775807n
       ? invoke<void>("set_voice_realtime", { on, limitMicrousd, model })
       : Promise.reject(new Error("Invalid realtime voice budget.")),
   appSettings: () =>

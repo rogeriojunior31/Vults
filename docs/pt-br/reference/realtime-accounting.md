@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 14f9afc9e27e -->
+<!-- source: 59afba14de3c -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -86,13 +86,17 @@ A versão 41 das configurações acrescenta consentimento independente `voice_re
 persistente do registro, limite móvel padrão de US$1 e um modelo explicitamente revisado. Zero
 desativa voz remota. Só a webview de Configurações salva essa escolha. A V6.7.1 acrescenta chamadas
 tipadas no bridge para essa gravação explícita e para leitura restrita às Configurações
-(`voice_realtime_settings`); ainda não acrescenta controle visual ou entrada de microfone.
+(`voice_realtime_settings`). A V6.7.2 apresenta essas escolhas em **Ditado > Conversar com o
+Zeca**; os controles de gravação e conversa ao vivo ainda não estão disponíveis.
 O campo `on` retornado é a escolha salva, não um indicador de sessão ativa ou de prontidão.
 A leitura retorna apenas `on`, `model` e `limitMicrousd`, com o valor codificado como texto decimal
 para preservar exatamente limites grandes no JavaScript. Ela omite a identidade privada do registro
-e não acessa chaveiro, dispositivo, banco ou rede. O bridge de gravação recusa valores fracionários,
-negativos ou inteiros sem representação exata no JavaScript antes da chamada; as verificações nativas
-de autoridade, modelo e orçamento continuam valendo. O backend nativo aceita canais limitados de comandos e
+e não acessa chaveiro, dispositivo, banco ou rede. A V6.7.2 também envia valores de gravação como
+texto decimal canônico, preservando toda a faixa inteira aceita sem conversão por ponto flutuante.
+O comando nativo recusa valores não canônicos ou fora da faixa antes de salvar; as verificações de
+autoridade, modelo e orçamento continuam valendo. O formulário aceita USD com ponto ou vírgula
+decimal e até seis casas, confirma a gravação por releitura, preserva rascunhos em falhas e bloqueia
+edições antigas até uma recarga explícita quando outro responsável muda a escolha salva. O backend nativo aceita canais limitados de comandos e
 saída e nunca inicia captura sozinho. Uma única concessão de voz do desktop controla a conexão.
 A revogação por geração cobre mudanças de escolha, bloqueio, liberação e encerramento permanente;
 apagar/trocar a chave compartilhada da OpenAI também revoga conexões existentes.

@@ -1247,10 +1247,15 @@ pub fn set_voice_realtime<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     window: tauri::Webview<R>,
     on: bool,
-    limit_microusd: u64,
+    limit_microusd: String,
     model: String,
 ) -> Result<(), String> {
     crate::settings_page(&window)?;
+    let limit_microusd = limit_microusd
+        .parse::<u64>()
+        .ok()
+        .filter(|value| value.to_string() == limit_microusd)
+        .ok_or("Invalid realtime voice budget or model.")?;
     if limit_microusd > i64::MAX as u64 || vults_chat::realtime::Plan::new(&model, 8192, 1024).is_err() {
         return Err("Invalid realtime voice budget or model.".into());
     }
@@ -1866,6 +1871,18 @@ mod tests {
             )
             .unwrap()
         };
+        for amount in ["", "01", "+1", "-1", "1.0", "9223372036854775808"] {
+            assert!(
+                set_voice_realtime(
+                    app.handle().clone(),
+                    window.as_ref().clone(),
+                    true,
+                    amount.into(),
+                    "gpt-realtime-2.1-mini".into(),
+                )
+                .is_err()
+            );
+        }
         assert_eq!(
             read(),
             serde_json::json!({"on":false,"model":"gpt-realtime-2.1-mini","limitMicrousd":"1000000"})

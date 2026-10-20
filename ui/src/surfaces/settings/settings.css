@@ -174,3 +174,7 @@ body.still #settings .page-enter { animation: none; }
 #settings .question-agents .path { overflow-wrap: anywhere; }
 #settings .question-agents > .card { margin-block: 16px; }
 #settings .question-agents details pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+#settings .realtime-settings.card { padding-bottom: 16px; }
+#settings .realtime-settings :is(select, .realtime-budget) { width: 220px; max-width: 100%; }
+#settings .realtime-settings > :is(.hint, .actions, .setting-feedback) { margin-top: 12px; }

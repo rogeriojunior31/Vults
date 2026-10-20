@@ -76,12 +76,17 @@ return content-free codes. See the [official WebSocket guide](https://developers
 Settings version 41 adds independent `voice_realtime` consent, a retained ledger identity, a default
 US$1 rolling limit and an explicit reviewed model. Zero disables remote voice. Only the Settings
 webview can save this choice. V6.7.1 adds typed bridge calls for that explicit save and Settings-only
-readback (`voice_realtime_settings`); it does not add a visual control or microphone entry yet.
+readback (`voice_realtime_settings`). V6.7.2 exposes these choices under **Dictation > Talk with
+Zeca**; recording and live conversation controls are not available yet.
 The returned `on` is the saved choice, not a live-session or readiness indicator.
 Readback returns only `on`, `model` and `limitMicrousd`, with the amount encoded as a decimal string
 so large persisted limits survive JavaScript exactly. It omits the private ledger identity and
-performs no keyring, device, store or network IO. The write bridge refuses fractional, negative or
-unsafe JavaScript integers before invocation; native authority, model and budget checks still apply.
+performs no keyring, device, store or network IO. V6.7.2 also sends write amounts as canonical
+decimal strings, preserving the full supported integer range without floating-point conversion.
+The native command rejects noncanonical or out-of-range amounts before persistence; authority,
+model and budget checks still apply. The form accepts USD with a decimal point or comma and up to
+six decimal places, confirms saves by reading back, preserves failed drafts and blocks stale edits
+until an explicit reload when another writer changes the saved choice.
 The native backend accepts bounded command/output channels and never starts capture by itself.
 One desktop voice lease owns the connection. Epoch revocation covers choice changes, lock, release
 and permanent shutdown; clearing/rotating the shared OpenAI key also revokes existing connections.

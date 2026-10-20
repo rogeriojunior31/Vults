@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: cc29e6eb6e4c -->
+<!-- source: 08560573932b -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -33,6 +33,27 @@ enquanto outros textos entre parênteses ou colchetes permanecem intactos. Um re
 associado a silêncio, como "Thank you.", "Obrigado." ou "Gracias.", é omitido, mesmo quando dito
 intencionalmente; frases maiores que contenham essas palavras são mantidas. Você pode editar o
 rascunho antes de enviar. Esse filtro não usa modelo nem faz requisições de rede.
+
+<a id="voice-conversation-settings"></a>
+
+## Configurações da conversa por voz
+
+Abra **Ditado > Conversar com o Zeca** para preparar a voz em tempo real. O modelo e o orçamento
+são separados do Chat e da assinatura da CLI. **Configurar chave da OpenAI** abre as configurações
+compartilhadas da chave; as chaves permanecem no chaveiro do sistema. Esta página não grava nem
+envia áudio, e os controles da conversa ao vivo ainda não estão disponíveis.
+
+A voz vem desligada por padrão. Revise o destino do áudio/contexto na OpenAI, escolha um modelo
+compatível e defina o limite móvel de 24 horas em USD antes de ativá-la. Use ponto ou vírgula decimal,
+com até seis casas e sem separadores de milhar. Zero desativa a voz remota; ativar exige um limite
+positivo. Solicitações ainda não conciliadas mantêm o custo reservado.
+
+Edite as escolhas e clique em **Salvar**. O Vults as relê antes de confirmar a gravação. Uma falha
+preserva o rascunho; **Descartar alterações e recarregar** o substitui explicitamente pelas
+configurações salvas. Mudanças feitas em outro lugar bloqueiam a gravação de edições antigas até
+você recarregar. Sair da página preserva edições não enviadas. A voz nunca responde a um cartão de
+permissão, e a consulta ao Codex continua indisponível. Veja
+[Contabilidade em tempo real](../reference/realtime-accounting.md#runtime-transport).
 
 <a id="global-dictation-first-slice"></a>
 
