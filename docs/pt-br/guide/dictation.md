@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: e48c2d7782cb -->
+<!-- source: b018306c08ce -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -63,7 +63,7 @@ local em **Voz**. Use **Iniciar gravação**, fale e clique em **Finalizar grava
 microfone, transcrever localmente e solicitar a resposta do Zeca. Após a reprodução terminar, o
 microfone fica desligado. **Gravar outra fala** continua a mesma conversa e o contexto do provedor;
 **Encerrar conversa** a fecha. Um comando local também retorna a esse estado de espera. Cada nova
-gravação exige seu clique. Um erro ou tempo limite do provedor encerra a sessão. Essa entrada manual
+gravação exige seu clique por padrão; a escolha separada de resposta limitada abaixo é a exceção. Um erro ou tempo limite do provedor encerra a sessão. Essa entrada manual
 não usa o atalho global do ditado nem interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
 sem envio automático. A espera local combinada de captura/transcrição é limitada a 60 segundos.
 Abrir essa página de trabalho pelas Configurações preserva o destino solicitado enquanto o Ninho
@@ -106,8 +106,9 @@ seguintes. Builds comuns não oferecem a prévia. Veja
 
 Se o detector ou a prévia estiver indisponível/falhar, a página informa **O encerramento automático
 está indisponível. Use Finalizar gravação.** Finalizar e Cancelar continuam disponíveis. Entrada
-vazia e o limite de 30 segundos nunca causam envio automático. O encerramento automático não reabre
-o microfone: cada nova fala ainda exige **Gravar outra fala**.
+vazia e o limite de 30 segundos nunca causam envio automático. O encerramento automático sozinho não reabre
+o microfone: cada nova fala ainda exige **Gravar outra fala**, exceto quando você ativou a escolha
+separada de resposta limitada.
 
 **Cancelar**, **Encerrar conversa**, sair da página, ocultar/fechar o Nest, bloquear ou mudar configurações cancela o
 trabalho da página. Perder contato com a página também interrompe a admissão após três segundos.
@@ -124,6 +125,33 @@ A sessão ativa do provedor mantém o contexto remoto da conversa até ser encer
 
 A qualidade do microfone/fala, a validação com provedor real e a interrupção continuam como etapas
 separadas antes de concluir K8. Essa entrada não ativa consulta ao Codex nem responde permissões.
+
+<a id="answer-without-the-key"></a>
+## Responder sem apertar a tecla
+
+Em **Conversa por voz**, mantenha **Modo do microfone > Falas manuais**, marque **Finalizar
+automaticamente após uma pausa** e depois marque explicitamente **Responder sem apertar a tecla**
+antes de Iniciar. Essa escolha fica desligada em cada nova conversa e fixada até encerrar/cancelar.
+Ela não muda configurações globais.
+
+Depois que o Zeca terminar uma pergunta falada completa, o dono nativo pode reabrir o microfone
+apenas pelo prazo original de oito segundos. A página informa explicitamente esse microfone aberto
+por pouco tempo. Afirmação, resposta interrompida, resultado de ferramenta, notificação ou cartão de
+permissão não podem abri-lo. A verificação de pergunta usa pontuação conservadora (`?`/`？`), não
+compreensão semântica.
+
+Faça uma pausa para finalizar automaticamente ou use **Finalizar gravação** antes de expirar. Se a
+finalização automática local estiver indisponível, a página informa; Finalizar e Cancelar continuam
+disponíveis. Expirar descarta o áudio sem transcrição final/envio e mostra **Microfone desligado**,
+mantendo a mesma conversa. **Gravar outra fala** inicia uma gravação normal explicitamente. A
+decodificação final de uma gravação válida já fechada pode terminar depois. **Cancelar**, sair/
+ocultar a página, bloquear, perder contato ou mudar configurações revoga o trabalho. Uma nova
+permissão/pergunta também mantém prioridade sobre a captura. A thread nativa de áudio fecha na
+próxima verificação do prazo; o encerramento do dispositivo pode demorar mais e mantém a voz ocupada.
+
+Essa opção ainda precisa de aceitação com microfone real, fala e provedor. Voz nunca responde
+cartões de permissão. Rotas contínuas já mantêm o microfone aberto com sua própria confirmação e
+não oferecem essa escolha separada.
 
 <a id="continuous-microphone-routes"></a>
 ## Rotas com microfone contínuo

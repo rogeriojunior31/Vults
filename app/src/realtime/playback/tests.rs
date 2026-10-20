@@ -1291,12 +1291,12 @@ async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit
             },
             |_, _| std::future::ready(Ok(None)),
         );
-        crate::realtime::capture::continue_turns(driver, captures, send, move |_| {
+        crate::realtime::capture::continue_turns(driver, captures, send, move |_, _| {
             recordings.fetch_add(1, Ordering::SeqCst);
             async {
                 // The provider/driver must keep being polled during the native capture wait.
                 tokio::time::sleep(Duration::from_millis(20)).await;
-                Turn::from_capture(&vec![0.2; 3200], "Second local words".into())
+                Turn::from_capture(&vec![0.2; 3200], "Second local words".into()).map(Some)
             }
         })
         .await

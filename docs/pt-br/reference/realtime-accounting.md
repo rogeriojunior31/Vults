@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: f995f3076d59 -->
+<!-- source: e19d5c35931a -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -439,9 +439,11 @@ chave nem conexão com provedor. Ele não representa aceitação de fala ou prov
 ## Propostas limitadas de escuta de resposta
 
 O backend da V6.7 agora tem uma política local, desligada por padrão, para **Responder sem apertar
-a tecla**. Ela ainda não está ligada às Configurações nem à admissão do microfone; a opção continua
-indisponível. Criar ou consumir uma proposta não abre o microfone, não executa comandos e não faz
-pedidos ao provedor.
+a tecla**. Ela agora está ligada à captura nativa limitada por uma escolha separada por conversa na página
+de trabalho de voz. Começa desligada em cada conversa e fica fixada por Iniciar. Exige o modo manual
+de microfone com finalização automática; rotas contínuas têm seu próprio consentimento. Nenhuma
+configuração global ou de agente é alterada. Uma proposta sozinha ainda não concede autoridade
+para abrir o microfone ou fazer pedidos ao provedor.
 
 Somente uma resposta falada completa do modelo pode propor a geração Listen imediatamente seguinte.
 O recibo nativo do histórico agora carrega sua geração original e o instante monotônico de término
@@ -459,11 +461,27 @@ cancelamento ou uma resposta mais recente sem pergunta descartam a proposta. Rec
 antigos não a recriam. Relógios regressivos/futuros e estouro de inteiros/tempo são recusados.
 O diagnóstico contém metadados, nunca o texto da pergunta falada.
 
-Isso é infraestrutura de tempo/evidências, não validação da função sem usar as mãos. O adaptador
-restante deve vincular consentimento explícito independente, visibilidade/bloqueio/prioridade de
-permissões, tempo real de abertura do microfone e descarte ao expirar, indicação visível de
-microfone aberto, Finalizar/Cancelar e uma fala final limitada. A aceitação com fala real e provedor
-continua necessária. O comportamento normal da conversa não mudou.
+O Ninho vincula a proposta ao controlador retido, ao Listen seguinte exato e ao relógio monotônico
+original. Somente o dono nativo pode enfileirar a captura limitada; atualizações de estado no
+renderer nunca a iniciam. Consentimento, visibilidade/contato, bloqueio, invalidação de configuração/
+chave e prioridade de perguntas preservam a autoridade existente. Atrasos na abertura ou
+inicialização consomem o mesmo prazo de oito segundos. A thread nativa de áudio verifica o prazo
+absoluto independentemente dos workers de VAD/prévia/modelo e fecha na próxima verificação de
+cancelamento (até o intervalo existente de 20 ms da thread, mais o encerramento nativo). Nenhum
+quadro após o prazo é autorizado; a destruição real do worker mantém a posse exclusiva do áudio.
+
+A conclusão automática ou Finalizar explícito antes de expirar fecha o microfone e depois faz a
+decodificação local final pelos gates existentes de comando/provedor. A decodificação pode terminar
+após fechar o microfone; nunca prolonga a captura. Expirar fecha/descarta sem decodificação final/envio e
+volta à espera no mesmo driver; Gravar outra fala inicia explicitamente uma gravação normal nova.
+Cancelar, prioridade de permissões ou revogação prevalecem sobre a expiração e suprimem publicação
+atrasada. Uma corrida entre Finalizar e expirar aguarda o resultado nativo. A página informa o
+microfone aberto por pouco tempo, a finalização automática indisponível e a expiração com microfone
+desligado. Encerrar, falha ao iniciar ou sair limpa a escolha.
+
+Isso é implementação opcional, não validação física da função sem usar as mãos. Tempo real do
+microfone, qualidade da fala local, provedor e dispositivos nativos ainda precisam de aceitação
+antes de marcar K8 como Done.
 
 <a id="local-commands-before-realtime-upload"></a>
 ## Comandos locais antes do envio realtime

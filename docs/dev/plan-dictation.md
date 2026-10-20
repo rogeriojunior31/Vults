@@ -2862,8 +2862,8 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    teardown. Actual worker/model/panic destruction retain the lease. No artifacts are downloaded or
    UI paths accepted; checked files must be provisioned explicitly for preview. Ordinary builds
    reject semantic activation. Next: V6.7.4 island feedback, artifact/endpoint/pt-BR qualification
-   and physical/live conversation sign-off. Answer without the key remains unavailable: its timing/
-   evidence foundation is now implemented, but consent, capture and UI activation are not. The pure
+   and physical/live conversation sign-off. Answer without the key now integrates the following
+   timing/evidence foundation with explicit, default-off per-conversation consent and bounded capture. The pure
    default-off FollowUp policy accepts only complete, synchronized, uninterrupted spoken response
    evidence ending in a conservative question mark plus letters. It proposes one exact following
    Listen generation with an eight-second absolute deadline from native playback completion.
@@ -2872,9 +2872,23 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    notifications and permission cards are refused. Native history binds the original generation and
    completion clock before later UI handling, with metadata-only Debug. A controlled native playback
    regression covers actual drain, receipt age, default-off behavior, exact next generation and no
-   capture/upload from proposal consumption. No microphone or real provider is used. Next: bind
-   independently reviewed consent and bounded capture/expiry, then expose the full control with
-   visible microphone feedback and physical/live acceptance. See
+   capture/upload from proposal consumption. No microphone or real provider is used. The work page
+   now offers the fresh choice only in manual mode with automatic finish, freezes it at Start and
+   clears it on End/Cancel/failure/departure. Native Start independently rejects incompatible modes.
+   A claimed exact Listen enqueues only its original absolute deadline; renderer polling never
+   rearms capture. The native audio pump checks expiry independently of preview/model workers.
+   Expiry closes/discards without final decode/upload, publishes microphone-off/waiting and keeps the
+   same driver for explicit continuation. Cancellation/revocation dominates expiry, and a Finish/
+   expiry race waits for actual native closure. The actual worker/model retains the lease through
+   teardown. The page distinguishes open-answer, unavailable automatic finish and expired states.
+   Manual continuation also preserves its generation for Generate/Speaking feedback. Native owner,
+   deadline, continuation and renderer regressions cover this integration without real audio/provider.
+   Controlled native WebKit review passed 64 combinations of answer/fallback/expired/waiting,
+   Black/Light, wide/minimum windows and all four languages, including keyboard actions, fresh/frozen
+   consent and no renderer autostart. Native foreign-surface, incompatible-mode and missing-ASR
+   refusals were checked in a private profile before capture. Minimum-window spacing preserves the
+   status, actions and scrollable content. No physical audio/model/provider was used; the app was
+   stopped and its temporary profile removed afterward. Next: physical/live acceptance. See
    [Bounded follow-up proposals](../reference/realtime-accounting.md#bounded-follow-up-proposals).
 4. **V6.7.4 Island states and acceptance** — in progress. The native page now consumes confirmed
    ClearPlayback feedback, retires the stopped response token and distinguishes stopped output with

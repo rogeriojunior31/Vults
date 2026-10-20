@@ -2574,6 +2574,8 @@ button.touched-row:hover,
 }
 
 @media (max-height: 440px) {
+  .voice-conversation { gap: 4px; }
+  .voice-conversation-actions { gap: 6px; }
   .meeting-check { padding: 6px 12px; }
   .meeting-check .meeting-state { margin-block: 4px; }
   .meeting-before-transcript > .meeting-tabs { display: none; }

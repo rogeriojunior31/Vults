@@ -34,6 +34,7 @@ pub enum CapturePhase {
     Transcribing,
     Manual,
     SemanticFallback,
+    FollowUpExpired,
 }
 
 /// Creating controls opens nothing. Dropping the only control cancels its one request.
@@ -86,6 +87,8 @@ struct Worker {
     owner: Owner,
     stop: Arc<AtomicBool>,
     record_for: Duration,
+    until: Option<Instant>,
+    expired: Arc<AtomicBool>,
 }
 struct Stop(Arc<AtomicBool>);
 impl Drop for Stop {
@@ -134,16 +137,30 @@ impl Worker {
         if *self.end.borrow() != End::Recording {
             return Err(Failure::Cancelled);
         }
+        if self.until.is_some_and(|at| Instant::now() >= at) {
+            self.expired.store(true, Ordering::SeqCst);
+            return Err(Failure::Timeout);
+        }
         self.notify(CapturePhase::Starting)?;
         let (live, admit) = (self.clone(), self.clone());
         let started = Instant::now();
-        let until = started + self.record_for;
-        let mut microphone = start(
-            Arc::new(move || live.live().is_ok()),
+        let until = self
+            .until
+            .map_or(started + self.record_for, |at| at.min(started + self.record_for));
+        let microphone = start(
+            Arc::new(move || live.live().is_ok() && live.until.is_none_or(|at| Instant::now() < at)),
             Arc::new(move || {
                 admit.live().is_ok() && *admit.end.borrow() == End::Recording && Instant::now() < until
             }),
-        )?;
+        );
+        self.live()?;
+        let mut microphone = match microphone {
+            Err(_) if self.until.is_some_and(|at| Instant::now() >= at) => {
+                self.expired.store(true, Ordering::SeqCst);
+                return Err(Failure::Timeout);
+            }
+            other => other?,
+        };
         self.notify(CapturePhase::Recording)?;
         let mut automatic = false;
         while self.live().is_ok() && *self.end.borrow() == End::Recording && Instant::now() < until {
@@ -154,11 +171,15 @@ impl Worker {
             std::thread::sleep(Duration::from_millis(10));
         }
         let finished = (automatic || *self.end.borrow() == End::Finished) && Instant::now() < until;
-        let pcm = finish(microphone)?;
+        let pcm = finish(microphone);
         self.live()?;
-        if !finished {
+        if !finished || pcm.is_err() && self.until.is_some_and(|at| Instant::now() >= at) {
+            if self.until.is_some_and(|at| Instant::now() >= at) {
+                self.expired.store(true, Ordering::SeqCst);
+            }
             return Err(Failure::Timeout);
         }
+        let pcm = pcm?;
         self.notify(CapturePhase::Transcribing)?;
         let text = decode(&pcm, &self.stop)?;
         self.live()?;
@@ -196,12 +217,28 @@ impl Worker {
 pub(super) async fn record(
     app: AppHandle,
     request: CaptureRequest,
+    owner: Owner,
+    options: vults_audio::CaptureOptions,
+    model: String,
+    language: Option<String>,
+    generation: Option<vults_voice::turn::Generation>,
+) -> Result<Turn, Failure> {
+    record_bounded(app, request, owner, options, model, language, generation, None)
+        .await?
+        .ok_or(Failure::Timeout)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) async fn record_bounded(
+    app: AppHandle,
+    request: CaptureRequest,
     mut owner: Owner,
     mut options: vults_audio::CaptureOptions,
     model: String,
     language: Option<String>,
     generation: Option<vults_voice::turn::Generation>,
-) -> Result<Turn, Failure> {
+    until: Option<Instant>,
+) -> Result<Option<Turn>, Failure> {
     if !vults_voice::installed(&crate::voice::models_dir()).contains(&model.as_str()) {
         return Err(Failure::Input);
     }
@@ -215,8 +252,16 @@ pub(super) async fn record(
         owner,
         stop: Arc::default(),
         record_for: Duration::from_secs(30),
+        until,
+        expired: Arc::default(),
     };
-    worker
+    if until.is_some_and(|at| Instant::now() >= at) {
+        worker.notify(CapturePhase::FollowUpExpired)?;
+        return Ok(None);
+    }
+    let expired = worker.expired.clone();
+    let completion = worker.clone();
+    let result = worker
         .execute(move |worker| {
             let (loader, selected, spoken) = (app.clone(), model.clone(), language.clone());
             worker.record_watched(
@@ -250,7 +295,13 @@ pub(super) async fn record(
                 |recording, now| recording.ended(now),
             )
         })
-        .await
+        .await;
+    if expired.load(Ordering::SeqCst) {
+        completion.notify(CapturePhase::FollowUpExpired)?;
+        Ok(None)
+    } else {
+        result.map(Some)
+    }
 }
 
 #[cfg(test)]
@@ -260,6 +311,10 @@ mod tests;
 pub(super) enum Request {
     Capture(vults_voice::turn::Generation),
     Interrupt(vults_voice::turn::Generation),
+    FollowUp {
+        generation: vults_voice::turn::Generation,
+        until: Instant,
+    },
 }
 
 /// Keep the retained provider driver polled while a following explicitly requested turn records.
@@ -267,11 +322,11 @@ pub(super) async fn continue_turns<F, Q>(
     driver: F,
     mut next: mpsc::Receiver<Request>,
     send: mpsc::Sender<super::Command>,
-    mut record: impl FnMut(vults_voice::turn::Generation) -> Q,
+    mut record: impl FnMut(vults_voice::turn::Generation, Option<Instant>) -> Q,
 ) -> F::Output
 where
     F: std::future::Future<Output = Result<Option<(Turn, Failure)>, Failure>>,
-    Q: std::future::Future<Output = Result<Turn, Failure>>,
+    Q: std::future::Future<Output = Result<Option<Turn>, Failure>>,
 {
     tokio::pin!(driver);
     let mut recording = None;
@@ -280,12 +335,15 @@ where
         tokio::select! { biased;
             result = &mut driver => return result,
             turn = async { recording.as_mut().expect("An admitted capture").await }, if recording.is_some() => {
-                let turn = turn?;
-                send.try_send(super::Command::Turn { generation: generation.take().expect("Capture generation"), turn }).map_err(|_| Failure::Output)?;
+                let current = generation.take().expect("Capture generation");
+                if let Some(turn) = turn? {
+                    send.try_send(super::Command::Turn { generation: current, turn }).map_err(|_| Failure::Output)?;
+                }
                 recording = None;
             },
             request = next.recv(), if recording.is_none() => match request {
-                Some(Request::Capture(value)) => { generation = Some(value); recording = Some(Box::pin(record(value))); },
+                Some(Request::Capture(value)) => { generation = Some(value); recording = Some(Box::pin(record(value, None))); },
+                Some(Request::FollowUp { generation: value, until }) => { generation = Some(value); recording = Some(Box::pin(record(value, Some(until)))); },
                 Some(Request::Interrupt(generation)) => {
                     send.try_send(super::Command::Signal { generation, signal: super::Signal::StopResponse }).map_err(|_| Failure::Output)?;
                 },

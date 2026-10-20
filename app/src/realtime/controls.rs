@@ -22,6 +22,7 @@ pub struct Snapshot {
     capture: Option<String>,
     routed: bool,
     semantic_fallback: bool,
+    follow_up: bool,
 }
 struct Session {
     view: Snapshot,
@@ -35,6 +36,10 @@ struct Session {
     next: Option<mpsc::Sender<capture::Request>>,
     #[cfg(target_os = "linux")]
     generation: Option<vults_voice::turn::Generation>,
+    #[cfg(target_os = "linux")]
+    origin: Instant,
+    #[cfg(target_os = "linux")]
+    follow_up: vults_voice::turn::follow_up::FollowUp,
 }
 #[derive(Default)]
 pub(crate) struct Controls(Mutex<(u64, Option<Session>)>);
@@ -100,12 +105,13 @@ pub fn voice_conversation_start(
     window: tauri::Webview,
     auto_finish: Option<bool>,
     semantic: Option<bool>,
+    follow_up: Option<bool>,
     route: Option<super::routes::Selection>,
 ) -> Result<Snapshot, String> {
     page(&window)?;
     #[cfg(not(target_os = "linux"))]
     {
-        let _ = (app, auto_finish, route, semantic);
+        let _ = (app, auto_finish, route, semantic, follow_up);
         Err("Voice conversation is available on Linux only.".into())
     }
     #[cfg(target_os = "linux")]
@@ -122,6 +128,10 @@ pub fn voice_conversation_start(
         let route = super::routes::resolve(&app, route)?;
         if route.is_some() && auto_finish.unwrap_or(false) {
             return Err("Use explicit Finish with a continuous microphone route.".into());
+        }
+        let follow_up = follow_up.unwrap_or(false);
+        if follow_up && (!auto_finish.unwrap_or(false) || route.is_some()) {
+            return Err("Answer without the key requires manual mode with automatic finish.".into());
         }
         let semantic = semantic.unwrap_or(false);
         if semantic && (!auto_finish.unwrap_or(false) || route.is_some() || !capture::semantic::supported()) {
@@ -157,6 +167,7 @@ pub fn voice_conversation_start(
             capture: None,
             routed,
             semantic_fallback: false,
+            follow_up: false,
         };
         slot.1 = Some(Session {
             view: view.clone(),
@@ -165,6 +176,8 @@ pub fn voice_conversation_start(
             touched: Instant::now(),
             next: Some(next),
             generation: None,
+            origin: Instant::now(),
+            follow_up: vults_voice::turn::follow_up::FollowUp::new(follow_up),
         });
         let handle = app.clone();
         tauri::async_runtime::spawn(async move {
@@ -258,7 +271,20 @@ fn capture_phase(session: &mut Session, phase: CapturePhase) {
                 control.finish();
             }
             session.view.capture = None;
+            session.view.follow_up = false;
             "transcribing"
+        }
+        CapturePhase::FollowUpExpired => {
+            if !session.view.follow_up {
+                return;
+            }
+            if let Some(control) = &session.control {
+                control.finish();
+            }
+            session.view.follow_up = false;
+            session.view.capture = None;
+            session.view.reason = Some("follow-up-expired");
+            "waiting"
         }
         CapturePhase::SemanticFallback => {
             session.view.semantic_fallback = true;
@@ -319,8 +345,13 @@ fn finish(session: &mut Session, capture: Option<&str>) -> Result<(), String> {
 }
 #[cfg(target_os = "linux")]
 fn listen(session: &mut Session, action: vults_voice::turn::Action, first: bool) {
+    if session.generation == Some(action.generation) && matches!(session.view.phase, "starting" | "recording")
+    {
+        return;
+    }
     session.generation = Some(action.generation);
     session.view.capture = None;
+    session.view.follow_up = false;
     if let Some(send) = &session.routed {
         if first || matches!(action.effect, Effect::Listen { replay } if !replay.is_zero()) {
             if send
@@ -349,14 +380,34 @@ fn listen(session: &mut Session, action: vults_voice::turn::Action, first: bool)
         }
     } else if session.view.phase != "interrupting" {
         session.view.phase = "waiting";
+        let now = Instant::now();
+        if let Some(window) = session
+            .follow_up
+            .take(action.generation, now.duration_since(session.origin))
+            && let Some(left) = window.remaining(now.duration_since(session.origin))
+            && let Some(until) = now.checked_add(left)
+        {
+            let _ = advance_recording(session, Some(until));
+        }
     }
 }
 
 #[cfg(target_os = "linux")]
 fn advance(session: &mut Session) -> Result<(), String> {
+    advance_recording(session, None)
+}
+#[cfg(target_os = "linux")]
+fn advance_recording(session: &mut Session, until: Option<Instant>) -> Result<(), String> {
     if session.view.phase != "waiting" {
         return Err("Wait for Zeca before recording another turn.".into());
     }
+    if until.is_some() && session.routed.is_some() {
+        return Err("Bounded answers require manual microphone mode.".into());
+    }
+    if until.is_some_and(|at| Instant::now() >= at) {
+        return Ok(());
+    }
+    session.view.follow_up = false;
     let generation = session
         .generation
         .take()
@@ -376,15 +427,19 @@ fn advance(session: &mut Session) -> Result<(), String> {
     if !control.restart() {
         return Err("Voice recording is not ready.".into());
     }
-    if session
-        .next
-        .as_ref()
-        .is_none_or(|send| send.try_send(capture::Request::Capture(generation)).is_err())
-    {
+    if session.next.as_ref().is_none_or(|send| {
+        send.try_send(match until {
+            Some(until) => capture::Request::FollowUp { generation, until },
+            None => capture::Request::Capture(generation),
+        })
+        .is_err()
+    }) {
         control.cancel();
         return Err("Voice conversation has ended.".into());
     }
+    session.generation = Some(generation);
     session.view.phase = "starting";
+    session.view.follow_up = until.is_some();
     Ok(())
 }
 
@@ -454,6 +509,9 @@ fn event_phase(session: &mut Session, event: Event, first_listen: &mut bool) {
             session.view.phase = "speaking";
         }
         Event::History(record) => {
+            if session.generation == Some(record.generation) && session.control.is_some() {
+                record.observe_follow_up(&mut session.follow_up, session.origin, Instant::now());
+            }
             session.view.reply = Some(bounded(record.text));
             if record.interrupted && session.view.phase == "interrupting" {
                 session.view.phase = "waiting";
@@ -516,6 +574,8 @@ async fn drive(
         session.control = None;
         session.routed = None;
         session.view.capture = None;
+        session.view.follow_up = false;
+        session.follow_up.cancel();
         session.next = None;
         session.generation = None;
         match result {
@@ -562,12 +622,15 @@ mod tests {
                 capture: None,
                 routed: false,
                 semantic_fallback: false,
+                follow_up: false,
             },
             control: Some(control),
             routed: None,
             touched: Instant::now(),
             next: Some(next),
             generation: Some(generation),
+            origin: Instant::now(),
+            follow_up: Default::default(),
         };
         assert!(advance(&mut session).is_err());
         assert!(receive.try_recv().is_err());
@@ -694,12 +757,15 @@ mod tests {
                 capture: None,
                 routed: true,
                 semantic_fallback: false,
+                follow_up: false,
             },
             control: Some(control),
             routed: Some(send),
             touched: Instant::now(),
             next: None,
             generation: None,
+            origin: Instant::now(),
+            follow_up: Default::default(),
         };
         listen(&mut session, first, true);
         assert!(
@@ -840,6 +906,116 @@ mod tests {
     }
 
     #[test]
+    fn follow_up_requires_explicit_consent_exact_heard_question_and_expires_back_to_waiting() {
+        for enabled in [false, true] {
+            let (control, request) = capture_control();
+            control.finish();
+            let (send, mut requests) = mpsc::channel(2);
+            let mut machine = vults_voice::turn::Turn::default();
+            let first = machine.start(Duration::ZERO).unwrap().generation;
+            let origin = Instant::now() - Duration::from_secs(3);
+            let mut session = Session {
+                view: Snapshot {
+                    id: "follow-up".into(),
+                    phase: "speaking",
+                    reason: None,
+                    draft: None,
+                    reply: None,
+                    response: Some("reply".into()),
+                    capture: None,
+                    routed: false,
+                    semantic_fallback: false,
+                    follow_up: false,
+                },
+                control: Some(control),
+                routed: None,
+                touched: Instant::now(),
+                next: Some(send),
+                generation: Some(first),
+                origin,
+                follow_up: vults_voice::turn::follow_up::FollowUp::new(enabled),
+            };
+            let mut first_listen = false;
+            event_phase(
+                &mut session,
+                Event::History(Record {
+                    identity: vults_chat::realtime::Identity {
+                        attempt: "attempt".into(),
+                        response: "response".into(),
+                        item: "item".into(),
+                    },
+                    generation: first,
+                    completed_at: Instant::now() - Duration::from_secs(2),
+                    text: "Continue?".into(),
+                    interrupted: false,
+                    played_frames: 4800,
+                    total_frames: 4800,
+                    server_synchronized: true,
+                }),
+                &mut first_listen,
+            );
+            machine.handle(first, vults_voice::turn::Event::LocalCompleted, Duration::ZERO);
+            let following = machine.start(Duration::from_secs(1)).unwrap();
+            event_phase(&mut session, Event::Action(following), &mut first_listen);
+            if !enabled {
+                assert!(requests.try_recv().is_err());
+                assert_eq!(session.view.phase, "waiting");
+                continue;
+            }
+            let capture::Request::FollowUp { generation, until } = requests.try_recv().unwrap() else {
+                panic!("A bounded answer only")
+            };
+            assert_eq!(generation, following.generation);
+            assert!(
+                until.duration_since(Instant::now()) < Duration::from_secs(7),
+                "Receipt handling cannot restart eight seconds"
+            );
+            assert!(session.view.follow_up);
+            assert_eq!(session.generation, Some(generation));
+            event_phase(&mut session, Event::Action(following), &mut first_listen);
+            assert!(
+                requests.try_recv().is_err(),
+                "Duplicate Listen cannot rearm capture"
+            );
+            capture_phase(&mut session, CapturePhase::Recording);
+            let token = session.view.capture.clone().unwrap();
+            finish(&mut session, Some(&token)).unwrap();
+            assert_eq!(session.view.phase, "transcribing");
+            assert!(
+                session.view.follow_up,
+                "Requested Finish must not hide a racing expiry before native close acknowledges it"
+            );
+            capture_phase(&mut session, CapturePhase::FollowUpExpired);
+            assert_eq!(session.view.phase, "waiting");
+            assert_eq!(session.view.reason, Some("follow-up-expired"));
+            assert!(!session.view.follow_up && session.view.capture.is_none());
+            finish(&mut session, Some(&token)).unwrap();
+            assert!(requests.try_recv().is_err());
+            advance(&mut session).unwrap();
+            assert!(
+                matches!(requests.try_recv().unwrap(),capture::Request::Capture(value) if value==generation)
+            );
+            assert_eq!(
+                session.generation,
+                Some(generation),
+                "Manual continuation retains response authority"
+            );
+            event_phase(
+                &mut session,
+                Event::Action(vults_voice::turn::Action {
+                    generation,
+                    effect: Effect::Generate,
+                }),
+                &mut first_listen,
+            );
+            event_phase(&mut session, Event::Speaking(generation), &mut first_listen);
+            assert_eq!(session.view.phase, "speaking");
+            drop(session);
+            assert!(!request.active()());
+        }
+    }
+
+    #[test]
     fn only_nest_can_control_voice_and_departure_discards_the_controller() {
         let app = tauri::test::mock_builder()
             .build(tauri::test::mock_context(tauri::test::noop_assets()))
@@ -865,12 +1041,15 @@ mod tests {
                 capture: None,
                 routed: false,
                 semantic_fallback: false,
+                follow_up: false,
             },
             control: Some(control),
             routed: None,
             touched: Instant::now(),
             next: None,
             generation: None,
+            origin: Instant::now(),
+            follow_up: Default::default(),
         });
         assert!(active());
         depart(app.handle());
@@ -898,12 +1077,15 @@ mod tests {
                 capture: None,
                 routed: false,
                 semantic_fallback: false,
+                follow_up: false,
             },
             control: Some(control),
             routed: None,
             touched: Instant::now(),
             next: None,
             generation: None,
+            origin: Instant::now(),
+            follow_up: Default::default(),
         });
         assert!(!update(app.handle(), "1", |_| panic!(
             "Stale work cannot publish"

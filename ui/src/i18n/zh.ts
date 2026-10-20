@@ -1,5 +1,11 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Answer without the key": "无需按键回答",
+  "Off for each new conversation. After Zeca finishes a spoken question, reopen the microphone for up to eight seconds. Automatic finish or Finish recording sends your answer. Expiry discards it. Cancel or leave to stop. No permission answers.": "每次新对话默认关闭。Zeca 说完一个问题后，重新开启麦克风，最长八秒。自动结束或点击完成录音可发送回答。超时后丢弃。取消或离开页面可停止。不会回答权限请求。",
+  "Answer microphone open for up to eight seconds. Automatic finish is unavailable. Use Finish recording before expiry, or cancel.": "回答麦克风已开启，最长八秒。自动结束不可用。请在超时前点击完成录音，或取消。",
+  "Answer microphone open for up to eight seconds. Pause to finish, press Finish recording, or cancel. Expiry discards the audio.": "回答麦克风已开启，最长八秒。暂停说话以结束、点击完成录音，或取消。超时后丢弃音频。",
+  "Answer window expired. Microphone off. Record another turn to continue, or end the conversation.": "回答时间已到。麦克风已关闭。录制下一轮以继续，或结束对话。",
+
   "Response stopped. Your microphone remains open. Record another turn, or end the conversation to close it.": "回复已停止。麦克风仍然开启。录制下一轮，或结束对话以关闭麦克风。",
   "Response stopped. Microphone off. Record another turn to continue, or end the conversation.": "回复已停止。麦克风已关闭。录制下一轮以继续，或结束对话。",
 

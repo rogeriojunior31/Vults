@@ -54,7 +54,7 @@ local model under **Voice**. Use **Start recording**, speak, then **Finish recor
 microphone, transcribe locally and request Zeca's response. After playback finishes, the microphone
 stays off. **Record another turn** continues the same conversation and provider context; **End
 conversation** closes it. A local command also returns to this waiting state. Each following
-recording requires your click. A provider error or timeout ends the session. This manual entry
+recording requires your click by default; the separate bounded-answer choice below is the exception. A provider error or timeout ends the session. This manual entry
 does not use the global dictation shortcut or barge-in.
 Recording is capped at 30 seconds; reaching the cap discards it rather than sending automatically.
 The combined local capture/transcription wait is limited to 60 seconds.
@@ -94,8 +94,8 @@ keeps that fallback for following turns. Ordinary builds do not offer the previe
 
 If the detector or preview is unavailable/fails, the page says **Automatic finish is unavailable.
 Use Finish recording.** Manual Finish and Cancel remain available. Empty input and the 30-second
-limit never trigger an automatic send. Automatic finish does not reopen the microphone: each next
-turn still requires **Record another turn**.
+limit never trigger an automatic send. Automatic finish alone does not reopen the microphone: each next
+turn still requires **Record another turn** unless you enabled the separate bounded-answer choice.
 
 **Cancel**, **End conversation**, leaving the page, hiding/closing the Nest, lock or changed settings cancels owned work.
 Lost page contact also stops admission after three seconds. A native worker that is still exiting
@@ -111,6 +111,29 @@ retains remote conversation context until it ends.
 
 Microphone/speech quality, live-provider acceptance and interruption remain separate validation
 steps before K8 is complete. This entry does not activate Codex consultation or answer permissions.
+
+## Answer without the key
+
+In **Voice conversation**, keep **Microphone mode > Manual turns**, select **Finish automatically
+after a pause**, then explicitly select **Answer without the key** before Start. This choice is off
+for every new conversation and stays frozen until you end/cancel it. It changes no global settings.
+
+After Zeca finishes a complete spoken question, the native owner may reopen the microphone for
+only the original eight-second window. The page explicitly announces this brief open microphone.
+A statement, interrupted reply, tool result, notification or permission card cannot open it. The
+question check is conservative punctuation (`?`/`？`), not semantic understanding.
+
+Pause to finish automatically, or use **Finish recording** before expiry. If local automatic finish
+is unavailable, the page says so; Finish and Cancel remain available. Expiry discards the audio
+without final transcription/upload and shows **Microphone off**, while retaining the same conversation.
+**Record another turn** starts a normal recording explicitly. Final decoding of a valid, already
+closed recording may finish later. **Cancel**, leaving/hiding the page, lock, lost contact or changed
+settings revokes work. A new permission/question also retains capture priority. The native audio
+pump closes on its next deadline check; device teardown may take longer and keeps voice busy.
+
+This opt-in path still needs real microphone, speech and provider acceptance. Voice never answers
+permission cards. Continuous routes already keep their microphone open under their own confirmation
+and do not offer this separate choice.
 
 ## Continuous microphone routes
 

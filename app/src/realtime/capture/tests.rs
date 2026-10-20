@@ -25,6 +25,8 @@ pub(super) fn fixture() -> (
         },
         stop: Arc::default(),
         record_for: Duration::from_secs(30),
+        until: None,
+        expired: Arc::default(),
     };
     (control, worker, events, cancel, state)
 }
@@ -252,4 +254,139 @@ fn automatic_completion_closes_capture_before_decode_but_never_overrides_cancel_
         }
         assert!(closed.load(Ordering::SeqCst));
     }
+}
+
+#[test]
+fn bounded_capture_closes_and_discards_at_the_original_deadline_without_decoding() {
+    let (_control, mut worker, _events, _cancel, _state) = fixture();
+    worker.until = Some(Instant::now() + Duration::from_millis(35));
+    let until = worker.until.unwrap();
+    let closed = Arc::new(AtomicBool::new(false));
+    let finished = closed.clone();
+    let result = worker.record(
+        |live, admit| {
+            assert!(live() && admit());
+            Ok(())
+        },
+        move |_| {
+            finished.store(true, Ordering::SeqCst);
+            Ok(vec![0.1; 3200])
+        },
+        |_, _| panic!("Expiry must not decode or create an uploadable turn"),
+    );
+    assert!(matches!(result, Err(Failure::Timeout)));
+    assert!(closed.load(Ordering::SeqCst));
+    assert!(worker.expired.load(Ordering::SeqCst));
+    assert!(Instant::now() >= until);
+    let (_control, mut worker, _events, _cancel, _state) = fixture();
+    worker.until = Some(Instant::now());
+    assert!(matches!(
+        worker.record(
+            |_, _| -> Result<(), Failure> { panic!("Late admission cannot open a microphone") },
+            |_| unreachable!(),
+            |_, _| unreachable!()
+        ),
+        Err(Failure::Timeout)
+    ));
+    assert!(worker.expired.load(Ordering::SeqCst));
+}
+
+#[test]
+fn bounded_microphone_guard_expires_even_if_native_initialization_is_delayed() {
+    let (_control, mut worker, _events, _cancel, _state) = fixture();
+    worker.until = Some(Instant::now() + Duration::from_millis(20));
+    let result = worker.record(
+        |live, admit| -> Result<(), Failure> {
+            std::thread::sleep(Duration::from_millis(30));
+            assert!(
+                !live() && !admit(),
+                "Both native admission checks retain the original deadline"
+            );
+            Err(Failure::Input)
+        },
+        |_| unreachable!(),
+        |_, _| unreachable!(),
+    );
+    assert!(matches!(result, Err(Failure::Timeout)));
+    assert!(worker.expired.load(Ordering::SeqCst));
+}
+
+#[test]
+fn cancellation_at_expiry_wins_and_valid_finish_can_decode_after_microphone_closure() {
+    let (control, mut worker, _events, _cancel, _state) = fixture();
+    worker.until = Some(Instant::now());
+    control.cancel();
+    assert!(matches!(
+        worker.record(
+            |_, _| -> Result<(), Failure> { panic!("Cancelled capture cannot open") },
+            |_| unreachable!(),
+            |_, _| unreachable!()
+        ),
+        Err(Failure::Cancelled)
+    ));
+    assert!(!worker.expired.load(Ordering::SeqCst));
+    let (control, mut worker, _events, _cancel, _state) = fixture();
+    worker.until = Some(Instant::now() + Duration::from_millis(100));
+    let closed = Arc::new(AtomicBool::new(false));
+    let finished = closed.clone();
+    let result = worker.record(
+        |_, _| {
+            control.finish();
+            Ok(())
+        },
+        move |_| {
+            finished.store(true, Ordering::SeqCst);
+            Ok(vec![0.1; 3200])
+        },
+        |_, _| {
+            assert!(closed.load(Ordering::SeqCst));
+            Ok("An explicitly finalized answer".into())
+        },
+    );
+    assert!(result.is_ok());
+    assert!(!worker.expired.load(Ordering::SeqCst));
+}
+
+#[tokio::test]
+async fn expired_continuation_keeps_the_driver_and_cannot_send_an_audio_turn() {
+    let (next, receive) = mpsc::channel(2);
+    let (send, mut output) = mpsc::channel(2);
+    let generation = vults_voice::turn::Turn::default()
+        .start(Duration::ZERO)
+        .unwrap()
+        .generation;
+    next.send(Request::FollowUp {
+        generation,
+        until: Instant::now(),
+    })
+    .await
+    .unwrap();
+    next.send(Request::Capture(generation)).await.unwrap();
+    let (finish, done) = tokio::sync::oneshot::channel();
+    let mut finish = Some(finish);
+    let result = continue_turns(
+        async {
+            done.await.unwrap();
+            Ok(None)
+        },
+        receive,
+        send,
+        move |value, until| {
+            assert_eq!(value, generation);
+            if until.is_some() {
+                std::future::ready(Ok(None))
+            } else {
+                finish.take().unwrap().send(()).unwrap();
+                std::future::ready(
+                    Turn::from_capture(&vec![0.1; 3200], "A new explicit answer".into()).map(Some),
+                )
+            }
+        },
+    )
+    .await;
+    assert!(result.unwrap().is_none());
+    assert!(
+        output.try_recv().is_err(),
+        "Expiry cannot publish a turn; the driver wins over unfinished following work"
+    );
 }

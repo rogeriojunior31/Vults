@@ -1,5 +1,11 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Answer without the key": "Responder sin pulsar la tecla",
+  "Off for each new conversation. After Zeca finishes a spoken question, reopen the microphone for up to eight seconds. Automatic finish or Finish recording sends your answer. Expiry discards it. Cancel or leave to stop. No permission answers.": "Desactivado en cada nueva conversación. Cuando Zeca termine una pregunta hablada, vuelve a abrir el micrófono durante un máximo de ocho segundos. La finalización automática o Finalizar grabación envía tu respuesta. Al expirar, se descarta. Cancela o sal para detenerlo. No responde permisos.",
+  "Answer microphone open for up to eight seconds. Automatic finish is unavailable. Use Finish recording before expiry, or cancel.": "Micrófono de respuesta abierto durante un máximo de ocho segundos. La finalización automática no está disponible. Usa Finalizar grabación antes de que expire o cancela.",
+  "Answer microphone open for up to eight seconds. Pause to finish, press Finish recording, or cancel. Expiry discards the audio.": "Micrófono de respuesta abierto durante un máximo de ocho segundos. Haz una pausa para finalizar, pulsa Finalizar grabación o cancela. Al expirar, se descarta el audio.",
+  "Answer window expired. Microphone off. Record another turn to continue, or end the conversation.": "El tiempo para responder ha expirado. Micrófono apagado. Graba otro turno para continuar o termina la conversación.",
+
   "Response stopped. Your microphone remains open. Record another turn, or end the conversation to close it.": "Respuesta detenida. Tu micrófono sigue abierto. Graba otro turno o termina la conversación para cerrarlo.",
   "Response stopped. Microphone off. Record another turn to continue, or end the conversation.": "Respuesta detenida. Micrófono apagado. Graba otro turno para continuar o termina la conversación.",
 

@@ -373,8 +373,8 @@ async fn run_with_audio(
         let driver = async {
             if let Some((next, send)) = continuation {
                 let request = capture.ok_or(Failure::Input)?;
-                capture::continue_turns(driver, next, send, |generation| {
-                    capture::record(
+                capture::continue_turns(driver, next, send, |generation, until| {
+                    capture::record_bounded(
                         app.clone(),
                         request.clone(),
                         capture::Owner {
@@ -388,6 +388,7 @@ async fn run_with_audio(
                         model.clone().unwrap_or_default(),
                         decode_language.clone(),
                         Some(generation),
+                        until,
                     )
                 })
                 .await

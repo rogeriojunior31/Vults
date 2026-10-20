@@ -385,8 +385,10 @@ provider connection. It is not real speech or live-provider acceptance.
 ## Bounded follow-up proposals
 
 The V6.7 backend now has an offline, default-off policy for **Answer without the key**. It is
-not connected to Settings or microphone admission yet; the option remains unavailable. Creating
-or consuming a proposal opens no microphone, executes no command and makes no provider request.
+now connected to bounded native capture through a separate per-conversation choice on the voice
+work page. It starts off for every conversation and is frozen by Start. It requires manual microphone
+mode with automatic finish; continuous routes have their separate consent. No global setting or
+agent configuration is changed. A proposal alone still grants no microphone or provider authority.
 
 Only a completed spoken model response can propose the exact following Listen generation. The
 native history receipt now carries its original generation and monotonic completed-playback time;
@@ -402,10 +404,24 @@ Exact expiry, an unexpected newer generation, cancellation or a newer non-questi
 proposal. Replayed/stale receipts do not recreate it. Backward/future clock evidence and integer/
 time overflow are refused. Debug output contains metadata, never the spoken question.
 
-This is timing/evidence infrastructure, not a hands-free feature sign-off. The remaining adapter
-must bind independent explicit consent, visibility/lock/permission priority, the actual microphone
-lifetime and expiry discard, visible open-microphone feedback, Finish/Cancel and a bounded final
-turn. Real speech/provider acceptance is still required. Ordinary conversation behavior is unchanged.
+The Nest binds the proposal to its retained controller, exact next Listen and original monotonic
+clock. Only the native owner can enqueue the bounded capture; renderer status updates never start
+it. Consent, visibility/heartbeat, lock, settings/key invalidation and question priority retain their
+existing authority. Opening or initialization delay consumes the same eight-second budget. The
+native audio pump rechecks the absolute deadline independently of VAD/preview/model workers and
+closes on its next cancellation check (up to the existing 20 ms pump interval plus native teardown).
+No frames after the deadline are authorized; actual worker destruction retains the desktop lease.
+
+Automatic completion or explicit Finish before expiry closes the microphone and then performs final
+local decoding through the existing command/provider gates. Decode may finish after microphone
+closure; it never extends capture. Expiry closes/discards without final decoding/upload and returns to
+waiting on the same driver; Record another turn explicitly starts a normal new recording. Cancel,
+permission priority or revocation wins over expiry and suppresses late publication. A Finish/expiry
+race waits for the native outcome. The page announces the brief open microphone, unavailable
+automatic finish and expired/microphone-off states. End, failed Start or departure clears the choice.
+
+This is opt-in engineering, not physical hands-free sign-off. Real microphone timing, local speech
+quality, provider and native-device acceptance remain required before K8 is Done.
 
 ## Local commands before realtime upload
 

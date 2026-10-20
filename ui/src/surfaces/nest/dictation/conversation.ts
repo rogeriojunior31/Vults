@@ -6,7 +6,7 @@ import { t } from "../../../i18n";
 export interface ConversationBackend {
   options?(): Promise<{ semantic: boolean }>;
   routes?(): Promise<VoiceRoutes>;
-  start(autoFinish: boolean, route?: VoiceRouteSelection, semantic?: boolean): Promise<VoiceConversation>;
+  start(autoFinish: boolean, route?: VoiceRouteSelection, semantic?: boolean, followUp?: boolean): Promise<VoiceConversation>;
   status(id: string): Promise<VoiceConversation>;
   control(id: string, action: "finish" | "cancel" | "next" | "interrupt", response?: string, capture?: string): Promise<void>;
   copy(text: string): Promise<void>;
@@ -29,8 +29,11 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   semantic.type = "checkbox"; semantic.checked = false; semantic.dataset.voiceSemantic = "";
   semanticFeedback.setAttribute("role", "status");
   const semanticChoice = el("label", { class: "voice-conversation-automatic" }, semantic, semanticTitle);
-  const route = createVoiceRoute(api?.routes, () => { if (!route.manual()) { automatic.checked = false; semantic.checked = false; } draw(); });
-  const content = el("div", { class: "voice-conversation-content" }, privacy, semanticFeedback, reply, review, route.element, automaticChoice, automaticNote, semanticChoice, semanticNote);
+  const followUp = el("input"), followUpTitle = el("span"), followUpNote = el("p", { class: "dictation-note" });
+  followUp.type = "checkbox"; followUp.checked = false; followUp.dataset.voiceFollowUp = "";
+  const followUpChoice = el("label", { class: "voice-conversation-automatic" }, followUp, followUpTitle);
+  const route = createVoiceRoute(api?.routes, () => { if (!route.manual()) { automatic.checked = false; semantic.checked = false; followUp.checked = false; } draw(); });
+  const content = el("div", { class: "voice-conversation-content" }, privacy, semanticFeedback, reply, review, route.element, automaticChoice, automaticNote, followUpChoice, followUpNote, semanticChoice, semanticNote);
   content.tabIndex = 0; content.setAttribute("role", "region");
   const perch = el("span", { class: "voice-conversation-character" });
   perch.setAttribute("aria-hidden", "true"); perch.hidden = true;
@@ -53,6 +56,10 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     settings.disabled = pending || running(view);
     automatic.disabled = !active || pending || running(view) || !route.manual();
     automaticChoice.hidden = automaticNote.hidden = !route.manual();
+    followUpChoice.hidden = followUpNote.hidden = !automatic.checked || !route.manual();
+    followUp.disabled = !active || pending || running(view) || !automatic.checked || !route.manual();
+    followUpTitle.textContent = t("Answer without the key");
+    followUpNote.textContent = t("Off for each new conversation. After Zeca finishes a spoken question, reopen the microphone for up to eight seconds. Automatic finish or Finish recording sends your answer. Expiry discards it. Cancel or leave to stop. No permission answers.");
     semanticChoice.hidden = semanticNote.hidden = !semanticAvailable || !automatic.checked || !route.manual();
     semantic.disabled = !active || pending || running(view) || !semanticAvailable || !automatic.checked || !route.manual();
     semanticTitle.textContent = t("Use local semantic turn detection (preview)");
@@ -64,6 +71,8 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     status.textContent = !api ? t("Voice conversation is unavailable.")
       : view?.phase === "preparing" ? t("Preparing local semantic detection. Microphone is off.")
       : view?.phase === "starting" ? t("Starting microphone…")
+      : view?.phase === "recording" && view.followUp && view.reason === "auto-unavailable" ? t("Answer microphone open for up to eight seconds. Automatic finish is unavailable. Use Finish recording before expiry, or cancel.")
+      : view?.phase === "recording" && view.followUp ? t("Answer microphone open for up to eight seconds. Pause to finish, press Finish recording, or cancel. Expiry discards the audio.")
       : view?.phase === "recording" && view.reason === "auto-unavailable" ? t("Automatic finish is unavailable. Use Finish recording.")
       : view?.phase === "recording" && automatic.checked ? t("Recording… Pause to finish automatically, or press Finish recording.")
       : view?.phase === "recording" ? t("Recording… Finish when you are done.")
@@ -74,6 +83,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       : view?.phase === "interrupting" ? t("Stopping the response…")
       : view?.phase === "responding" && view.routed ? t("Zeca is responding. Your microphone remains open.")
       : view?.phase === "responding" ? t("Zeca is responding…")
+      : view?.phase === "waiting" && view.reason === "follow-up-expired" ? t("Answer window expired. Microphone off. Record another turn to continue, or end the conversation.")
       : view?.phase === "waiting" && view.reason === "interrupted" && view.routed ? t("Response stopped. Your microphone remains open. Record another turn, or end the conversation to close it.")
       : view?.phase === "waiting" && view.reason === "interrupted" ? t("Response stopped. Microphone off. Record another turn to continue, or end the conversation.")
       : view?.phase === "waiting" && view.routed ? t("Microphone remains open for this conversation. Record another turn, or end the conversation to close it.")
@@ -98,7 +108,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     if (active && running(view)) timer = setTimeout(() => void poll(), 500);
   }
   function accept(value: VoiceConversation) {
-    if (running(view) && !running(value)) { route.clearConsent(); semantic.checked = false; }
+    if (running(view) && !running(value)) { route.clearConsent(); semantic.checked = false; followUp.checked = false; }
     view = value;
     if (value.draft !== null) draft.value = value.draft;
     draw(); schedule();
@@ -111,7 +121,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       if (active && mine === epoch && view?.id === id) accept(value);
     } catch {
       if (mine !== epoch) return;
-      stop(id); view = null; route.clearConsent(); failed = "status"; draw();
+      stop(id); view = null; route.clearConsent(); semantic.checked = false; followUp.checked = false; failed = "status"; draw();
     }
   }
   start.onclick = async () => {
@@ -120,10 +130,10 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     const mine = ++epoch; pending = true; failed = null; copyState = "idle"; draw();
     try {
       const id = view?.phase === "waiting" ? view.id : null;
-      const value = id ? await api.control(id, "next").then(() => api.status(id)) : await api.start(automatic.checked, route.selection(), semantic.checked);
+      const value = id ? await api.control(id, "next").then(() => api.status(id)) : await api.start(automatic.checked, route.selection(), semantic.checked, followUp.checked);
       if (!active || mine !== epoch) { stop(value.id); return; }
       draft.value = ""; accept(value);
-    } catch { if (mine === epoch) { if (view && running(view)) stop(view.id); view = null; route.expire(); semantic.checked = false; failed = "start"; } }
+    } catch { if (mine === epoch) { if (view && running(view)) stop(view.id); view = null; route.expire(); semantic.checked = false; followUp.checked = false; failed = "start"; } }
     finally { if (mine === epoch) { pending = false; draw(); } }
   };
   finish.onclick = async () => {
@@ -135,12 +145,12 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       if (mine === epoch && action === "finish" && view?.phase === "recording" && view.capture === recording) view = { ...view, phase: "transcribing", capture: null };
       if (mine === epoch && action === "interrupt" && view?.phase === "speaking") view = { ...view, phase: "interrupting" };
     }
-    catch { if (mine === epoch) { stop(id); view = null; route.clearConsent(); failed = "status"; } }
+    catch { if (mine === epoch) { stop(id); view = null; route.clearConsent(); semantic.checked = false; followUp.checked = false; failed = "status"; } }
     finally { if (mine === epoch) { pending = false; draw(); } }
   };
   cancel.onclick = () => {
     if (cancel.disabled || !view) return;
-    ++epoch; clearTimeout(timer); stop(view.id); route.clearConsent(); semantic.checked = false; view = { ...view, phase: "cancelled", draft: null, reply: null }; pending = false; draw();
+    ++epoch; clearTimeout(timer); stop(view.id); route.clearConsent(); semantic.checked = false; followUp.checked = false; view = { ...view, phase: "cancelled", draft: null, reply: null }; pending = false; draw();
   };
   copy.onclick = async () => {
     if (!api || copy.disabled) return;
@@ -149,8 +159,9 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     try { await api.copy(text); outcome = "done"; } catch { outcome = "failed"; }
     if (mine === epoch && text === draft.value) { copyState = outcome; draw(); }
   };
-  automatic.addEventListener("change", () => { if (!automatic.checked) semantic.checked = false; draw(); });
+  automatic.addEventListener("change", () => { if (!automatic.checked) { semantic.checked = false; followUp.checked = false; } draw(); });
   semantic.addEventListener("change", draw);
+  followUp.addEventListener("change", draw);
   draft.addEventListener("input", () => { copyState = "idle"; draw(); });
   function setActive(on: boolean) {
     if (active === on) return;
@@ -160,7 +171,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       void api.options().then(value => { if (active && mine === epoch) { semanticAvailable = value.semantic; draw(); } }).catch(() => {});
     }
     if (!on) {
-      ++epoch; clearTimeout(timer); pending = false; route.leave(); semantic.checked = false;
+      ++epoch; clearTimeout(timer); pending = false; route.leave(); semantic.checked = false; followUp.checked = false;
       if (view) { stop(view.id); if (running(view)) view = { ...view, phase: "cancelled", draft: null, reply: null }; }
     }
     draw();

@@ -15,6 +15,7 @@ export interface VoiceConversation {
   capture: string | null;
   routed: boolean;
   semanticFallback: boolean;
+  followUp: boolean;
   phase: "preparing" | "starting" | "recording" | "transcribing" | "responding" | "speaking" | "interrupting" | "waiting" | "finished" | "cancelled" | "failed" | "recovery";
   reason: string | null;
   draft: string | null;
@@ -548,7 +549,7 @@ export const Bridge = {
   /** Build capability only; this does not inspect model files or microphone readiness. */
   voiceConversationOptions: () => invoke<{ semantic: boolean }>("voice_conversation_options"),
   voiceConversationRoutes: () => invoke<VoiceRoutes>("voice_conversation_routes"),
-  voiceConversationStart: (autoFinish = false, route?: VoiceRouteSelection, semantic = false) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish, route, semantic }),
+  voiceConversationStart: (autoFinish = false, route?: VoiceRouteSelection, semantic = false, followUp = false) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish, route, semantic, followUp }),
   voiceConversationStatus: (id: string) => invoke<VoiceConversation>("voice_conversation_status", { id }),
   voiceConversationControl: (id: string, action: "finish" | "cancel" | "next" | "interrupt", response?: string, capture?: string) => invoke<void>("voice_conversation_control", { id, action, response, capture }),
   voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),

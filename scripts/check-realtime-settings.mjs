@@ -334,3 +334,29 @@ console.log("check-realtime-settings: explicit route/device/consent, frozen star
   } finally { globalThis.setTimeout = originalTimeout; globalThis.clearTimeout = originalClear; }
 }
 console.log("check-realtime-settings: semantic preview capability, explicit default-off choice, frozen session, visible failure fallback and late/departed capability pass");
+
+{
+  const starts=[], controls=[], localTimers=new Map();let timerId=0;
+  const state={id:'bounded-answer',phase:'recording',reason:null,draft:null,reply:null,response:null,capture:'answer-1',routed:false,semanticFallback:false,followUp:false};
+  globalThis.setTimeout=cb=>{localTimers.set(++timerId,cb);return timerId;};globalThis.clearTimeout=id=>localTimers.delete(id);
+  try {
+    const work=createVoiceConversation({start:async(automatic,route,semantic,followUp)=>{starts.push({automatic,route,semantic,followUp});return {...state};},status:async()=>({...state}),control:async(...args)=>controls.push(args),copy:async()=>{}},()=>{});
+    document.body.append(work.element);work.setActive(true);
+    const choice=nodes(work.element).find(n=>'voiceFollowUp' in n.dataset), automatic=nodes(work.element).find(n=>'voiceAutomatic' in n.dataset);
+    const button=text=>nodes(work.element).find(n=>n.tagName==='BUTTON'&&n.textContent===text);
+    assert.equal(choice.checked,false);assert.equal(choice.parentElement.hidden,true);
+    automatic.checked=true;automatic.fire('change');assert.equal(choice.parentElement.hidden,false);assert.equal(choice.checked,false);
+    choice.checked=true;choice.fire('change');await button('Start recording').onclick();
+    assert.deepEqual(starts,[{automatic:true,route:undefined,semantic:false,followUp:true}]);assert.equal(choice.disabled,true);
+    const poll=async()=>{const [id,cb]=localTimers.entries().next().value;localTimers.delete(id);cb();await tick();};
+    state.followUp=true;await poll();assert.ok(work.element.textContent.includes('Answer microphone open for up to eight seconds.'));
+    state.reason='auto-unavailable';await poll();assert.ok(work.element.textContent.includes('Use Finish recording before expiry'));
+    state.phase='waiting';state.followUp=false;state.reason='follow-up-expired';state.capture=null;await poll();
+    assert.ok(work.element.textContent.includes('Answer window expired. Microphone off.'));
+    assert.equal(button('Record another turn').disabled,false);assert.equal(button('Finish recording').disabled,true);
+    await button('End conversation').onclick();assert.equal(choice.checked,false);
+    assert.equal(starts.length,1,'Status and expiry cannot trigger a renderer-side start');
+    work.setActive(false);assert.equal(localTimers.size,0);work.element.remove();
+  } finally {globalThis.setTimeout=originalTimeout;globalThis.clearTimeout=originalClear;}
+}
+console.log('check-realtime-settings: fresh bounded-answer consent, frozen native start, explicit microphone/fallback/expiry state and no renderer auto-start pass');
