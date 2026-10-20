@@ -16,6 +16,8 @@ mod playback;
 pub use local::{LocalFailure, Recovery, Turn};
 pub use playback::{Channels, Command, Event, Input, LocalReply, Record, Signal};
 #[cfg(target_os = "linux")]
+mod barge;
+#[cfg(target_os = "linux")]
 mod capture;
 #[cfg(target_os = "linux")]
 mod consultation;
@@ -265,6 +267,10 @@ async fn run_with_audio(
         return Err(Failure::Off);
     }
     local::check(&*active, &cancel)?;
+    #[cfg(target_os = "linux")]
+    if choice.detects() && !barge::available(model.as_deref()) {
+        return Err(Failure::Input);
+    }
     let devices = Arc::new(devices::Devices::open(choice, lease.clone(), active.clone())?);
     while !devices.ready()? {
         local::check(&*active, &cancel)?;
@@ -280,28 +286,49 @@ async fn run_with_audio(
     let output = channels.output.clone();
     let factory = devices.clone();
     let outcome = {
-        let driver = playback::drive(
-            initial,
-            channels,
-            &*active,
-            devices.interruption(),
-            move |cancel| factory.output(cancel),
-            move |io| connect(consent, remote_active, io, tools),
-            {
-                let app = app.clone();
-                move |turn, deadline| {
-                    #[cfg(target_os = "linux")]
-                    {
-                        router.clone().prepare(app.clone(), turn, deadline)
+        let play = |channels| {
+            playback::drive(
+                initial,
+                channels,
+                &*active,
+                devices.interruption(),
+                move |cancel| factory.output(cancel),
+                move |io| connect(consent, remote_active, io, tools),
+                {
+                    let app = app.clone();
+                    move |turn, deadline| {
+                        #[cfg(target_os = "linux")]
+                        {
+                            router.clone().prepare(app.clone(), turn, deadline)
+                        }
+                        #[cfg(not(target_os = "linux"))]
+                        {
+                            let _ = (&app, turn, deadline);
+                            std::future::ready(Ok(None))
+                        }
                     }
-                    #[cfg(not(target_os = "linux"))]
-                    {
-                        let _ = (&app, turn, deadline);
-                        std::future::ready(Ok(None))
-                    }
-                }
-            },
-        );
+                },
+            )
+        };
+        #[cfg(target_os = "linux")]
+        let driver = async {
+            if devices.interruption() != vults_voice::turn::BargeIn::Disabled {
+                barge::drive(
+                    channels,
+                    lease.clone(),
+                    active.clone(),
+                    devices.clone(),
+                    app.clone(),
+                    model.clone().ok_or(Failure::Input)?,
+                    play,
+                )
+                .await
+            } else {
+                play(channels).await
+            }
+        };
+        #[cfg(not(target_os = "linux"))]
+        let driver = play(channels);
         #[cfg(target_os = "linux")]
         let driver = async {
             if let Some((next, send)) = continuation {
@@ -334,7 +361,7 @@ async fn run_with_audio(
                 result = &mut driver => break result?,
                 _ = poll.tick() => {
                     local::check(&*active, &cancel)?;
-                    while let Some(samples) = devices.input()? {
+                    while devices.interruption() == vults_voice::turn::BargeIn::Disabled && let Some(samples) = devices.input()? {
                         output.try_send(Event::Input(Input { samples })).map_err(|_| Failure::Output)?;
                     }
                 },

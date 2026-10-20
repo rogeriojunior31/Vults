@@ -8,6 +8,10 @@ pub(super) enum Choice {
     Routed(vults_audio::echo::duplex::Route),
 }
 impl Choice {
+    #[cfg(target_os = "linux")]
+    pub fn detects(&self) -> bool {
+        matches!(self, Self::Routed(route) if route.chosen_policy() != vults_audio::echo::duplex::Interruption::Disabled)
+    }
     pub fn captures(&self) -> bool {
         !matches!(self, Self::Default)
     }

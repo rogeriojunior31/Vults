@@ -298,10 +298,11 @@ output worker retains the native session lease through device destruction, inclu
 blocked setup, so abort/revocation cannot overlap a new session with old native work.
 
 Native commands and speech/probe signals carry the exact turn generation. Stale commands are
-discarded; only a matching confirmed probe freezes playback. Notifications of Listen/Probe actions
+discarded; voice interruption needs a matching confirmed probe. Explicit Stop response is bound
+to the audible reply. Notifications of Listen/Probe actions
 grant no microphone authority and do not start capture. First consumed output drives the lock;
-producer completion requests drain, and confirmed drain drives tail grace. App entry keeps barge-in
-disabled until the V6.5 device/AEC policy lands. Scripted headphone cases exercise the available
+producer completion requests drain, and confirmed drain drives tail grace. The ordinary entry keeps
+voice barge-in disabled; only explicit V6.5 headphone/AEC routes permit it. Scripted headphone cases exercise the available
 owner path without asserting that speaker interruption is safe.
 
 The spoken response path accepts one assistant audio item/content part at index zero per response.
@@ -341,10 +342,21 @@ selected AEC pair or devices, retains its lease through teardown and emits bound
 Input events to the native caller. The caller must assemble and commit complete turns; capture is
 never uploaded automatically. Explicit headphones/AEC policy stays separate from temporary route
 verification; an unverified route clears retained speech/probes before deferred playback events.
-The ordinary CPAL entry remains non-interruptible. No renderer command or visible voice conversation
-is exposed. Backend V6.4/V6.5 is delivered; see [Echo cancellation](echo-cancellation.md) for routing,
+The ordinary CPAL entry keeps voice barge-in disabled. No routed renderer command or duplex
+voice-conversation UI is exposed. Backend V6.4/V6.5 is delivered; see [Echo cancellation](echo-cancellation.md) for routing,
 clock and private-graph evidence. Next is V6.6 tools, then V6.7 capture/UI. Physical-device/acoustic
 timing, real speech and live-provider acceptance remain open before activation.
+V6.7.3 adds the native routed interruption adapter: checked local model/VAD availability before
+stream creation, a bounded eight-second ring, fresh post-playback VAD evidence and generation/probe
+bound local scratch transcription. Its words only confirm/reject a probe; they cannot call tools,
+answer permissions or create a user turn. A single worker holds the desktop lease until actual
+inference/model teardown exits. Cancellation, route loss, stale work and deadlines suppress late
+results. On confirmation, a typed memory-only Replay event follows the new Listen action, carrying
+the retained onset/pre-roll under the new generation. Complete-turn assembly/commit remain the
+native caller's responsibility; no routed UI switch, automatic upload or phone/card authority is
+added. Existing truncation acknowledgements, heard-prefix history and next-turn repair still own
+interruption. Physical/live validation and routed assembly/selection UI remain open.
+
 Offline socket/native-owner tests cover interruption before/after producer completion, exact
 acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.
 The isolated ALSA null setup above also runs the complete native driver with a synthetic provider:

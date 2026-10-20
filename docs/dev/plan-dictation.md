@@ -2833,8 +2833,13 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    integration. An explicit Stop response click now stops audible output through the existing
    acknowledged truncation/heard-prefix repair path, even with voice barge-in disabled. It opens
    no microphone and waits for heard-text completion before the next-turn action. Duplicate/stale
-   clicks cannot interrupt a different generation. Next: explicit duplex/voice interruption
-   integration, then V6.7.4
+   clicks cannot interrupt a different generation. The native routed entry now connects fresh VAD
+   evidence and token-bound scratch transcription to the existing interruption machine. Its
+   eight-second ring emits the retained onset/pre-roll in a typed Replay event after the new Listen;
+   it does not assemble/upload a following turn. One bounded worker retains its lease through real
+   teardown; route/model preflight, cancellation, stale generations and probe deadlines fail closed.
+   This is native-only: the Nest keeps manual capture. Next: routed turn assembly and explicit
+   route-selection/consent UI, then V6.7.4
    island feedback and physical/live conversation sign-off.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before

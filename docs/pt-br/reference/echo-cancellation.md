@@ -1,5 +1,5 @@
 # Cancelamento de eco
-<!-- source: 6dd293826b0e -->
+<!-- source: f6c6f9bda567 -->
 
 A V6.5.1 qualifica um caminho nativo no Linux com inventário somente de leitura e um experimento
 sintético reproduzível. A V6.5.2 acrescenta propriedade duplex nativa explícita para essa rota e
@@ -36,7 +36,7 @@ exata do assistente como referência remota e a encaminha ao alto-falante. Escol
 enquanto o CPAL toca na saída padrão não estabelece esse caminho de referência.
 [Contrato de quatro streams do PipeWire](https://docs.pipewire.org/page_module_echo_cancel.html).
 
-A entrada CPAL padrão da V6.4 continua sem interrupção. A entrada separada `realtime::run_routed`
+A entrada CPAL padrão da V6.4 mantém a interrupção por voz desativada. A entrada separada `realtime::run_routed`
 da V6.5.2 exige consentimento realtime explícito, rota escolhida e autoridade nativa atual. Um único
 worker fixa captura e reprodução PCM16 mono a 24 kHz nos índices exatos dos dispositivos escolhidos,
 confere formato negociado/confirmações de destino e define `DONT_MOVE`. Não há fallback para padrões.
@@ -73,13 +73,27 @@ de conteúdo confirmado e descarta a saída pendente; o stream antigo é encerra
 resposta tocar. A estimativa continua na fronteira de destino informada; o tempo físico posterior
 ainda exige validação acústica.
 
-`run_routed` encaminha apenas eventos `Input` limitados e em memória ao chamador nativo. Ele deve
-montar e confirmar turnos explicitamente; a captura bruta não é enviada, salva nem mandada ao Chat
-automaticamente. A verificação também condiciona sinais de interrupção e limpa fala/provas retidas
-antes de ticks ou eventos de primeira reprodução adiados. A política escolhida de fones/AEC fica
-separada da validade temporária da rota. Controles visíveis de captura, VAD/montagem de turnos e
-ativação pelo usuário ficam na V6.7; ferramentas de voz na V6.6. A escolha da Q6 sobre configuração
-de produção continua aberta; o Vults não carrega módulos do sistema silenciosamente.
+`run_routed` encaminha eventos `Input` limitados e apenas em memória ao chamador nativo. Para
+rotas com fones/AEC escolhidas explicitamente, a V6.7.3 agora também consome esses pacotes por um
+adaptador local de interrupção. Modelos instalados de transcrição/VAD são verificados antes de abrir
+streams nativos. A detecção começa somente após reprodução real, mantém um buffer circular de oito
+segundos e observa janelas recentes de fala. A máquina de turnos existente controla bloqueios de
+reprodução e tokens exatos de verificação; uma transcrição local separada pode confirmar palavras
+dentro do prazo da verificação. Seu texto nunca vira comando, permissão, rascunho do Chat ou entrada
+do provedor. Resultados vazios, com falha, expirados ou revogados não confirmam interrupção.
+
+Um único worker nativo limitado mantém a concessão do desktop durante inferência e destruição dos
+modelos. Cancelamento, perda da rota, gerações substituídas e encerramento do proprietário suprimem
+publicação atrasada. Após uma interrupção confirmada, `Replay` vem depois da nova ação `Listen` e
+carrega o início retido da fala e seu trecho anterior nessa geração exata. O chamador nativo ainda
+monta turnos completos e os confirma explicitamente; o adaptador não envia/salva áudio automaticamente
+nem o manda ao Chat.
+
+A política escolhida de fones/AEC continua separada da validade da rota ao vivo. A página de voz
+comum do Nest ainda usa captura manual e o botão Interromper resposta; isso não ativa uma rota na
+interface. Montagem de turnos da rota, interface de seleção/consentimento explícito e qualificação
+física/com provedor real continuam na V6.7. A decisão de configuração de produção da Q6 segue aberta;
+o Vults não carrega módulos do sistema silenciosamente.
 
 <a id="reproduce-the-isolated-experiment"></a>
 ## Reproduzir o experimento isolado

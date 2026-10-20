@@ -77,6 +77,10 @@ pub enum Event {
     Action(Action),
     Ready(Generation),
     Speaking(Generation),
+    Replay {
+        generation: Generation,
+        input: Input,
+    },
     History(Record),
     Settled(Settlement),
     Input(Input),

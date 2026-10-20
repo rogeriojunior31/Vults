@@ -2065,3 +2065,39 @@ actual foreign-surface/default-off entry. No physical audio, model, provider, or
 agent configuration is used. Private processes/profile/cache are removed afterward. The local
 AGENTS task-actions script remains absent, not passed. Physical/live interruption quality and
 explicit duplex/voice barge-in integration remain open; K8 and Codex activation are unchanged.
+
+
+**2026-10-20 V6.7.3 native routed interruption detector.** The explicit routed service now consumes
+verified headphone/AEC packets through a bounded local detector. Model/VAD availability is checked
+before streams open. Only actual playback enables observation. Fresh three-second VAD snapshots
+feed the retained turn machine; its 500/1,000 ms locks and exact probe tokens remain authoritative.
+Local scratch transcription can confirm meaningful words within a shorter 1,400 ms worker budget;
+core still enforces its original 1,500 ms deadline. Probe text is not published, executed, uploaded
+or used to answer a card. Missing/failed/empty, expired, revoked or replaced evidence cannot confirm.
+
+An eight-second ring retains the onset/pre-roll. On confirmation, native Replay follows the new
+Listen and carries that exact generation. A native caller still owns complete-turn assembly and
+explicit commit; no new Turn is created by the detector. One off-loop worker, one admitted analysis
+and bounded channels keep playback/Stop/cancellation responsive. Actual inference/model destruction
+retains the desktop lease. Weak route checks do not keep native streams open during teardown.
+Original input closure still finishes the driver normally; closed analysis owners fail closed.
+
+The ordinary Nest UI remains manual with Stop response; no continuous capture, route selection,
+module setup or automatic follow-up is enabled there. Next is routed turn assembly and explicit
+route/consent UI. Semantic-model integration, physical/live qualification and V6.7.4 island feedback
+remain open; K8 and Codex activation are unchanged.
+
+Validation: 1,442 workspace tests pass (17 documented ignores), 10 evals, build, all 19 renderer/
+bridge checks, workspace Clippy with warnings denied, formatting and repository guards pass. Six
+new deterministic tests exercise the actual native adapter with controlled analyzers: bounded
+retention and playback-only admission; a short utterance ending during its pending probe; matching
+confirmation and new-generation replay; cancellation and real worker-held lease release; route/
+authority revocation, replaced generations and expired probes; empty words/decode failure; closed
+analysis/input owners; and the actual async pump's action-before-Replay ordering with no generated
+or uploaded Turn. The tests use the retained pure turn machine and real bounded worker/channel
+owners, without physical audio, model weights, providers, OS keyring or user configuration.
+
+No renderer changes or production activation are included, so no new GUI run is required. The app
+remains closed. Existing manual/Stop-response renderer checks pass unchanged. The local AGENTS
+task-actions script remains absent, not passed. Real PT/EN speech/double-talk, acoustic timing,
+routed turn assembly, selection/consent UI and live-provider acceptance remain open.

@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: cd268200c2ab -->
+<!-- source: 7e0f69f4565c -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -340,11 +340,11 @@ destruição do dispositivo, inclusive em preparação desacoplada ou bloqueada,
 não sobreponha uma nova sessão ao trabalho nativo antigo.
 
 Comandos nativos e sinais de fala/prova carregam a geração exata do turno. Comandos antigos são
-descartados; somente uma prova confirmada correspondente congela a reprodução. Notificações das
-ações Listen/Probe não concedem acesso ao microfone nem iniciam captura. A primeira saída consumida
+descartados; a interrupção por voz exige uma prova confirmada correspondente. O botão Interromper
+resposta fica vinculado à resposta audível. Notificações das ações Listen/Probe não concedem acesso ao microfone nem iniciam captura. A primeira saída consumida
 controla a trava inicial; conclusão do produtor pede drenagem, e drenagem confirmada controla a
-margem final. A entrada do app mantém interrupção por fala desligada até chegar a política de
-dispositivo/AEC da V6.5. Casos com fones simulados exercitam o caminho disponível no proprietário
+margem final. A entrada comum mantém a interrupção por voz desativada; apenas rotas explícitas com
+fones/AEC da V6.5 a permitem. Casos com fones simulados exercitam o caminho disponível no proprietário
 sem afirmar que interrupção por alto-falantes é segura.
 
 O caminho de resposta falada aceita um item de áudio de assistente, com parte de conteúdo no índice
@@ -389,11 +389,26 @@ o fim da destruição e emite eventos Input limitados somente em memória ao cha
 chamador deve montar e confirmar turnos completos; a captura nunca é enviada automaticamente.
 A política explícita de fones/AEC fica separada da verificação temporária da rota; uma rota não
 verificada limpa fala/provas retidas antes de eventos adiados da reprodução. A entrada CPAL comum
-continua sem interrupção. Não há comando do renderer nem conversa de voz visível. O backend da
-V6.4/V6.5 está entregue; veja [Cancelamento de eco](echo-cancellation.md) para evidências de
+mantém a interrupção por voz desativada. Não há comando roteado do renderer nem interface de conversa
+de voz duplex. O backend da V6.4/V6.5 está entregue; veja [Cancelamento de eco](echo-cancellation.md) para evidências de
 roteamento, relógio e grafo privado. A próxima etapa é ferramentas na V6.6, depois captura/interface
 na V6.7. Tempo de dispositivo/acústica, fala real e aceitação com provedor real continuam em aberto
-antes da ativação. Testes offline de socket e proprietário
+antes da ativação.
+
+A V6.7.3 acrescenta o adaptador nativo de interrupção da rota: disponibilidade verificada dos modelos
+locais/VAD antes de criar streams, buffer circular de oito segundos, evidência recente de VAD após
+a reprodução e transcrição local isolada vinculada à geração/verificação. As palavras apenas
+confirmam/rejeitam uma verificação; não chamam ferramentas, respondem permissões nem criam um turno
+do usuário. Um único worker mantém a concessão do desktop até a saída real da inferência/destruição
+dos modelos. Cancelamento, perda da rota, trabalho antigo e prazos suprimem resultados atrasados.
+Na confirmação, um evento Replay tipado e somente em memória vem depois da nova ação Listen,
+levando o início retido da fala/trecho anterior na nova geração. Montagem/confirmação de turnos
+completos ainda cabem ao chamador nativo; não há controle de rota na interface, envio automático
+nem autoridade sobre celular/cartões. Confirmações de truncamento, histórico do trecho ouvido e
+correção do próximo turno continuam responsáveis pela interrupção. Validação física/com provedor
+real e montagem/seleção da rota na interface continuam abertas.
+
+Testes offline de socket e proprietário
 nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,
 admissão do reparo, falha, revogação, aborto e recuperação. A configuração ALSA nula isolada acima
 também executa o driver nativo completo com um provedor sintético:

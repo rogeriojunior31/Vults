@@ -50,6 +50,10 @@ impl std::fmt::Debug for Route {
     }
 }
 impl Route {
+    /// Immutable user choice, never proof that a live route is still verified.
+    pub fn chosen_policy(&self) -> Interruption {
+        self.mode
+    }
     pub fn echo(pair: Pair) -> Self {
         Self {
             server: pair.server,
