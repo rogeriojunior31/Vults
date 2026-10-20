@@ -1,4 +1,4 @@
-//! Explicit first-turn capture. The Nest adapter owns its native controls; no shortcut starts it.
+//! Explicit manual-turn capture. The Nest adapter owns its native controls; no shortcut starts it.
 use super::{Event, Lease, Turn, local};
 use std::{
     sync::{
@@ -22,7 +22,7 @@ enum End {
 
 #[derive(Debug)]
 pub struct CaptureControl(watch::Sender<End>);
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CaptureRequest(watch::Receiver<End>);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CapturePhase {
@@ -45,6 +45,16 @@ impl CaptureControl {
             *end = End::Finished;
             true
         });
+    }
+    // Only a completed Listen generation may admit another explicit user turn.
+    pub(super) fn restart(&self) -> bool {
+        self.0.send_if_modified(|end| {
+            if *end != End::Finished {
+                return false;
+            }
+            *end = End::Recording;
+            true
+        })
     }
     pub fn cancel(&self) {
         self.0.send_replace(End::Cancelled);
@@ -211,3 +221,33 @@ pub(super) async fn record(
 
 #[cfg(test)]
 mod tests;
+
+/// Keep the retained provider driver polled while a following explicitly requested turn records.
+pub(super) async fn continue_turns<F, Q>(
+    driver: F,
+    mut next: mpsc::Receiver<vults_voice::turn::Generation>,
+    send: mpsc::Sender<super::Command>,
+    mut record: impl FnMut() -> Q,
+) -> F::Output
+where
+    F: std::future::Future<Output = Result<Option<(Turn, Failure)>, Failure>>,
+    Q: std::future::Future<Output = Result<Turn, Failure>>,
+{
+    tokio::pin!(driver);
+    let mut recording = None;
+    let mut generation = None;
+    loop {
+        tokio::select! { biased;
+            result = &mut driver => return result,
+            turn = async { recording.as_mut().expect("An admitted capture").await }, if recording.is_some() => {
+                let turn = turn?;
+                send.try_send(super::Command::Turn { generation: generation.take().expect("Capture generation"), turn }).map_err(|_| Failure::Output)?;
+                recording = None;
+            },
+            request = next.recv(), if recording.is_none() => match request {
+                Some(value) => { generation = Some(value); recording = Some(Box::pin(record())); },
+                None => return Err(Failure::Cancelled),
+            },
+        }
+    }
+}

@@ -1,9 +1,13 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Finish each recording to hear Zeca. Record another turn to continue the same conversation.": "完成每次录音后听取 Zeca 的回复。录制下一轮以继续同一段对话。",
+  "Record another turn": "录制下一轮",
+  "End conversation": "结束对话",
+  "Microphone off. Record another turn to continue, or end the conversation.": "麦克风已关闭。录制下一轮以继续，或结束对话。",
+
   "Could not start recording. Check voice settings and try again.": "无法开始录音。请检查语音设置后重试。",
   "Cancelled.": "已取消。",
   "Voice conversation": "语音对话",
-  "Record one turn, then finish to hear Zeca. Start again for another turn.": "录制一轮后点击完成，即可听取 Zeca 的回复。再次开始可录制下一轮。",
   "Microphone audio and cached flock context may go to OpenAI. API charges apply. Voice never answers permission cards.": "麦克风音频和缓存的群组上下文可能会发送至 OpenAI，并产生 API 费用。语音绝不会回答权限卡片。",
   "Start recording": "开始录音",
   "Finish recording": "完成录音",

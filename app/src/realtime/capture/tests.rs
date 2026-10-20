@@ -37,10 +37,14 @@ fn controls_open_nothing_finish_is_sticky_and_cancel_cannot_be_restored() {
     control.finish();
     assert_eq!(*request.0.borrow(), End::Finished);
     assert!(active());
+    assert!(control.restart());
+    assert!(!control.restart());
+    control.finish();
     control.cancel();
     control.finish();
     assert_eq!(*request.0.borrow(), End::Cancelled);
     assert!(!active());
+    assert!(!control.restart());
     let (control, request) = capture_control();
     let active = request.active();
     drop(control);

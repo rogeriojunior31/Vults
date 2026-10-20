@@ -43,7 +43,8 @@ setup; full-client/human-speech acceptance stays open. V6.1-V6.3.5 provide the t
 realtime transport/accounting and native turn retention/local recovery. V6.4.1 adds a bounded CPAL
 output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
 provider identities, acknowledged server truncation and in-memory history/one-shot repair. V6.7.3
-now adds a manual capture entry; continuous realtime continuation remains open. Backend V6.4 is
+now retains a realtime session between explicitly recorded manual turns. Automatic turn-end and
+duplex continuation remain open. Backend V6.4 is
 delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only PipeWire pair inventory,
 an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
 device policy. Backend V6.5 is delivered; its continuous-turn UI adapter, Q6 production setup and
@@ -51,9 +52,10 @@ physical/live acceptance remain open. V6.6.1 now routes native finalized
 local transcripts through V8 before remote admission. V6.6.2 adds bounded read-only realtime flock
 tools with independent continuation admission. The V6.6.3 publication checks below are accepted
 with Codex consultation disabled. V6.7.1/V6.7.2 expose explicit Settings-owned configuration, and
-V6.7.3 adds Nest-owned manual Start/Finish/Cancel with editable text recovery. Continuous turn-end/
+V6.7.3 adds Nest-owned manual Start/Finish/Cancel with editable text recovery and a retained
+conversation for explicitly requested following turns. Automatic turn-end/
 duplex integration, island speaking states, optional Codex activation and physical/live acceptance
-remain open. The maintainer prioritized four-hour meeting capture before resuming that work.
+remain open. The maintainer accepted the four-hour meeting capture adjustment before resuming that work.
 
 ## References
 
@@ -1817,6 +1819,10 @@ plain text without labels. Full-duration physical/speech-quality qualification r
 Native synthetic capture passed 65 seconds with finalized PCM16 readers and cleanup; this is not
 a four-hour soak test. The dated one-minute checkpoints below describe the earlier delivered slice.
 
+**2026-10-20 maintainer validation:** the maintainer accepted the delivered long-recording adjustment
+and authorized the next roadmap task. This closes user acceptance of that scope; it does not claim
+a completed four-hour physical soak, crash resume, speech-quality qualification or K8 acceptance.
+
 
 **Goal.** Record a call (mic + system audio), get a diarized transcript, a summary and to-dos; the audio is
 deleted.
@@ -2812,8 +2818,14 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    Start/Finish/Cancel turn, 500 ms status contact with a three-second native deadline, local reply/
    heard text and editable recovery copied only on a click. The page uses Nest authority; Settings
    keeps configuration ownership. Wide/narrow Black/Light native UI checks use controlled owners.
-   The manual path has no automatic end-of-turn or duplex/barge-in adapter. V6.7.3 remains open
-   for continuous-turn integration. Next: connect those existing native adapters, then V6.7.4
+   Manual continuation now retains the same provider driver/context: after playback drains or a
+   local command completes, the page shows Microphone off and offers Record another turn or End
+   conversation. Only that explicit click rearms capture for the next native Listen generation;
+   idle, stale/duplicate requests and provider events cannot reopen it. Page contact, cancellation,
+   settings/key changes and the desktop lease span the whole conversation. Capture/decode for the
+   next turn runs alongside the retained provider driver. No automatic end-of-turn or duplex/
+   barge-in adapter is exposed. V6.7.3 remains open for those integrations. Next: connect the existing
+   end-of-turn/duplex adapters, then V6.7.4
    island feedback and physical/live conversation sign-off.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before

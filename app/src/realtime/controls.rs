@@ -25,6 +25,10 @@ struct Session {
     control: Option<CaptureControl>,
     #[cfg(target_os = "linux")]
     touched: Instant,
+    #[cfg(target_os = "linux")]
+    next: Option<mpsc::Sender<vults_voice::turn::Generation>>,
+    #[cfg(target_os = "linux")]
+    generation: Option<vults_voice::turn::Generation>,
 }
 #[derive(Default)]
 pub(crate) struct Controls(Mutex<(u64, Option<Session>)>);
@@ -99,6 +103,7 @@ pub fn voice_conversation_start(app: AppHandle, window: tauri::Webview) -> Resul
             .ok_or("Restart the app before recording again.")?;
         let id = slot.0.to_string();
         let (control, request) = capture_control();
+        let (next, turns) = mpsc::channel(1);
         let view = Snapshot {
             id: id.clone(),
             phase: "starting",
@@ -110,10 +115,12 @@ pub fn voice_conversation_start(app: AppHandle, window: tauri::Webview) -> Resul
             view: view.clone(),
             control: Some(control),
             touched: Instant::now(),
+            next: Some(next),
+            generation: None,
         });
         let handle = app.clone();
         tauri::async_runtime::spawn(async move {
-            drive(handle, id, request).await;
+            drive(handle, id, request, turns).await;
         });
         Ok(view)
     }
@@ -149,7 +156,7 @@ pub fn voice_conversation_control(
     action: String,
 ) -> Result<(), String> {
     page(&window)?;
-    if !matches!(action.as_str(), "finish" | "cancel") {
+    if !matches!(action.as_str(), "finish" | "cancel" | "next") {
         return Err("Invalid voice conversation action.".into());
     }
     let controls = app.state::<Controls>();
@@ -158,12 +165,16 @@ pub fn voice_conversation_control(
         return Ok(());
     };
     #[cfg(target_os = "linux")]
-    if action == "finish" {
+    if action != "cancel" {
         if !visible(&app) || crate::lock::locked(&app) {
             slot.1 = None;
             return Err("Voice conversation is no longer visible.".into());
         }
-        if let Some(control) = &session.control {
+        if action == "next" {
+            advance(session)?;
+        } else if session.view.phase == "recording"
+            && let Some(control) = &session.control
+        {
             control.finish();
         }
     } else {
@@ -174,6 +185,31 @@ pub fn voice_conversation_control(
         let _ = session;
         slot.1 = None;
     }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn advance(session: &mut Session) -> Result<(), String> {
+    if session.view.phase != "waiting" {
+        return Err("Wait for Zeca before recording another turn.".into());
+    }
+    let generation = session
+        .generation
+        .take()
+        .ok_or("Voice conversation is not ready.")?;
+    let control = session.control.as_ref().ok_or("Voice conversation has ended.")?;
+    if !control.restart() {
+        return Err("Voice recording is not ready.".into());
+    }
+    if session
+        .next
+        .as_ref()
+        .is_none_or(|send| send.try_send(generation).is_err())
+    {
+        control.cancel();
+        return Err("Voice conversation has ended.".into());
+    }
+    session.view.phase = "starting";
     Ok(())
 }
 
@@ -211,13 +247,18 @@ fn bounded(text: String) -> String {
 }
 
 #[cfg(target_os = "linux")]
-async fn drive(app: AppHandle, id: String, request: CaptureRequest) {
+async fn drive(
+    app: AppHandle,
+    id: String,
+    request: CaptureRequest,
+    next: mpsc::Receiver<vults_voice::turn::Generation>,
+) {
     let (send, input) = mpsc::channel(1);
-    // This manual entry accepts one capture. A following turn needs another explicit Start.
+    // Subsequent native turns enter through the retained, generation-bound capture adapter.
     drop(send);
     let (output, mut events) = mpsc::channel(32);
     let (stop, cancel) = watch::channel(false);
-    let run = run_captured(
+    let run = run_conversation(
         app.clone(),
         Channels {
             input,
@@ -225,10 +266,12 @@ async fn drive(app: AppHandle, id: String, request: CaptureRequest) {
             cancel,
         },
         request,
+        next,
     );
     tokio::pin!(run);
     let mut poll = tokio::time::interval(Duration::from_millis(100));
     let mut receiving = true;
+    let mut first_listen = true;
     let result = loop {
         tokio::select! { biased;
             _ = poll.tick() => {
@@ -245,6 +288,10 @@ async fn drive(app: AppHandle, id: String, request: CaptureRequest) {
                         Event::Capture(phase) => session.view.phase = match phase {
                             CapturePhase::Starting => "starting", CapturePhase::Recording => "recording", CapturePhase::Transcribing => "transcribing",
                         },
+                        Event::Action(action) if matches!(action.effect, Effect::Listen { .. }) => {
+                            if first_listen { first_listen = false; }
+                            else { session.generation = Some(action.generation); session.view.phase = "waiting"; }
+                        },
                         Event::Action(action) if matches!(action.effect, Effect::Generate) => session.view.phase = "responding",
                         Event::History(record) => session.view.reply = Some(bounded(record.text)),
                         Event::Local { reply, .. } => session.view.reply = Some(bounded(reply.text)),
@@ -258,6 +305,8 @@ async fn drive(app: AppHandle, id: String, request: CaptureRequest) {
     // Only bounded heard/local reply text and reviewable recovery cross this boundary.
     update(&app, &id, |session| {
         session.control = None;
+        session.next = None;
+        session.generation = None;
         match result {
             Ok(None) => session.view.phase = "finished",
             Ok(Some(Recovery::Text {
@@ -285,6 +334,43 @@ mod tests {
     use super::*;
 
     #[test]
+    fn next_turn_requires_waiting_generation_and_a_live_single_controller() {
+        let (control, request) = capture_control();
+        let active = request.active();
+        let mut machine = vults_voice::turn::Turn::new(vults_voice::turn::BargeIn::Disabled);
+        let generation = machine.start(Duration::ZERO).unwrap().generation;
+        let (next, mut receive) = mpsc::channel(1);
+        let mut session = Session {
+            view: Snapshot {
+                id: "1".into(),
+                phase: "recording",
+                reason: None,
+                draft: None,
+                reply: Some("Heard reply".into()),
+            },
+            control: Some(control),
+            touched: Instant::now(),
+            next: Some(next),
+            generation: Some(generation),
+        };
+        assert!(advance(&mut session).is_err());
+        assert!(receive.try_recv().is_err());
+        session.control.as_ref().unwrap().finish();
+        session.view.phase = "waiting";
+        assert!(advance(&mut session).is_ok());
+        assert_eq!(receive.try_recv().unwrap(), generation);
+        assert_eq!(session.view.phase, "starting");
+        assert_eq!(session.view.reply.as_deref(), Some("Heard reply"));
+        assert!(advance(&mut session).is_err(), "A duplicate cannot admit capture");
+        session.control.as_ref().unwrap().finish();
+        session.view.phase = "waiting";
+        session.generation = Some(generation);
+        drop(receive);
+        assert!(advance(&mut session).is_err());
+        assert!(!active(), "A disconnected driver revokes the whole owner");
+    }
+
+    #[test]
     fn only_nest_can_control_voice_and_departure_discards_the_controller() {
         let app = tauri::test::mock_builder()
             .build(tauri::test::mock_context(tauri::test::noop_assets()))
@@ -309,6 +395,8 @@ mod tests {
             },
             control: Some(control),
             touched: Instant::now(),
+            next: None,
+            generation: None,
         });
         assert!(active());
         depart(app.handle());
@@ -335,6 +423,8 @@ mod tests {
             },
             control: Some(control),
             touched: Instant::now(),
+            next: None,
+            generation: None,
         });
         assert!(!update(app.handle(), "1", |_| panic!(
             "Stale work cannot publish"

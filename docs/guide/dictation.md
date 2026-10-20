@@ -51,12 +51,15 @@ Voice never answers a permission card, and Codex consultation remains unavailabl
 
 On Linux, open **Dictation > Work > Voice conversation** after enabling voice and installing a
 local model under **Voice**. Use **Start recording**, speak, then **Finish recording** to stop the
-microphone, transcribe locally and request Zeca's response. This manual entry records one turn at
-a time; press Start again for another. It does not use the global dictation shortcut or barge-in.
+microphone, transcribe locally and request Zeca's response. After playback finishes, the microphone
+stays off. **Record another turn** continues the same conversation and provider context; **End
+conversation** closes it. A local command also returns to this waiting state. Each following
+recording requires your click. A provider error or timeout ends the session. This manual entry
+does not use the global dictation shortcut, automatic turn-end or barge-in.
 Recording is capped at 30 seconds; reaching the cap discards it rather than sending automatically.
 The combined local capture/transcription wait is limited to 60 seconds.
 
-**Cancel**, leaving the page, hiding/closing the Nest, lock or changed settings cancels owned work.
+**Cancel**, **End conversation**, leaving the page, hiding/closing the Nest, lock or changed settings cancels owned work.
 Lost page contact also stops admission after three seconds. A native worker that is still exiting
 may temporarily keep voice busy. Cancellation cannot undo an already submitted remote request or
 its charge. Voice uses the configured API model and independent budget, not a CLI subscription.
@@ -65,7 +68,8 @@ If remote voice fails with local words available, **Review recovered text** offe
 unsent draft. **Copy text** copies only on your click. Nothing is sent to Chat or executed from
 that draft. Your edits survive leaving and returning to this page. Starting a new recording
 replaces the previous recovered draft after Start is acknowledged. The page retains only the
-current turn's reply/recovery in memory, not a saved conversation history.
+most recent reply/recovery in memory, not a saved conversation history. The active provider session
+retains remote conversation context until it ends.
 
 Microphone/speech quality, live-provider acceptance and interruption remain separate validation
 steps before K8 is complete. This entry does not activate Codex consultation or answer permissions.

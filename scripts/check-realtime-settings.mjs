@@ -203,6 +203,24 @@ try {
   const fifth = click("Start recording"); starts[4].reject(Error("private preflight detail")); await fifth;
   assert.ok(work.element.textContent.includes("Could not start recording"));
   assert.ok(!work.element.textContent.includes("private preflight detail"));
+  const sixth = click("Start recording"); starts[5].resolve(state("6", "recording")); await sixth;
+  await refresh(); polls.at(-1).resolve(state("6", "waiting", { reply: "The first heard reply" })); await tick();
+  assert.equal(button("Record another turn").disabled, false);
+  assert.equal(button("Finish recording").disabled, true);
+  assert.equal(button("End conversation").disabled, false);
+  assert.ok(work.element.textContent.includes("Microphone off."));
+  assert.ok(timers.size > 0, "Waiting retains the page lease without reopening capture");
+  const following = click("Record another turn"); await tick();
+  assert.deepEqual(controls.at(-1), { id: "6", action: "next" });
+  await click("Record another turn");
+  assert.equal(controls.filter(c => c.action === "next").length, 1, "A duplicate click cannot enqueue another turn");
+  assert.equal(starts.length, 6, "Continuation must reuse the native session");
+  polls.at(-1).resolve(state("6", "starting", { reply: "The first heard reply" })); await following;
+  assert.ok(work.element.textContent.includes("The first heard reply"));
+  await refresh(); polls.at(-1).resolve(state("6", "waiting", { reply: "The second heard reply" })); await tick();
+  await click("End conversation");
+  assert.deepEqual(controls.at(-1), { id: "6", action: "cancel" });
+  assert.equal(timers.size, 0);
   work.setActive(false);
   assert.equal(timers.size, 0);
 } finally {

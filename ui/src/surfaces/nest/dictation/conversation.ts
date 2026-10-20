@@ -5,10 +5,10 @@ import { t } from "../../../i18n";
 export interface ConversationBackend {
   start(): Promise<VoiceConversation>;
   status(id: string): Promise<VoiceConversation>;
-  control(id: string, action: "finish" | "cancel"): Promise<void>;
+  control(id: string, action: "finish" | "cancel" | "next"): Promise<void>;
   copy(text: string): Promise<void>;
 }
-const running = (view: VoiceConversation | null) => !!view && ["starting", "recording", "transcribing", "responding"].includes(view.phase);
+const running = (view: VoiceConversation | null) => !!view && ["starting", "recording", "transcribing", "responding", "waiting"].includes(view.phase);
 export function createVoiceConversation(api: ConversationBackend | undefined, configure: () => void) {
   const title = el("h2"), about = el("p"), privacy = el("p", { class: "dictation-note" });
   const status = el("p"), error = el("p", { class: "meeting-feedback" });
@@ -29,10 +29,10 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   function draw() {
     title.textContent = t("Voice conversation");
     content.setAttribute("aria-label", t("Voice conversation"));
-    about.textContent = t("Record one turn, then finish to hear Zeca. Start again for another turn.");
+    about.textContent = t("Finish each recording to hear Zeca. Record another turn to continue the same conversation.");
     privacy.textContent = t("Microphone audio and cached flock context may go to OpenAI. API charges apply. Voice never answers permission cards.");
-    start.textContent = t("Start recording"); finish.textContent = t("Finish recording"); cancel.textContent = t("Cancel"); settings.textContent = t("Voice conversation settings");
-    start.disabled = !api || !active || pending || running(view);
+    start.textContent = view?.phase === "waiting" ? t("Record another turn") : t("Start recording"); finish.textContent = t("Finish recording"); cancel.textContent = view?.phase === "waiting" ? t("End conversation") : t("Cancel"); settings.textContent = t("Voice conversation settings");
+    start.disabled = !api || !active || pending || (running(view) && view?.phase !== "waiting");
     finish.disabled = !active || pending || view?.phase !== "recording";
     cancel.disabled = !active || !running(view);
     settings.disabled = pending || running(view);
@@ -41,6 +41,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       : view?.phase === "recording" ? t("Recording… Finish when you are done.")
       : view?.phase === "transcribing" ? t("Transcribing…")
       : view?.phase === "responding" ? t("Zeca is responding…")
+      : view?.phase === "waiting" ? t("Microphone off. Record another turn to continue, or end the conversation.")
       : view?.phase === "recovery" ? t("Voice could not finish. Review your local transcript below.")
       : view?.phase === "finished" ? t("Turn finished.")
       : view?.phase === "cancelled" ? t("Cancelled.")
@@ -77,12 +78,14 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   }
   start.onclick = async () => {
     if (!api || start.disabled) return;
+    clearTimeout(timer);
     const mine = ++epoch; pending = true; failed = null; copyState = "idle"; draw();
     try {
-      const value = await api.start();
+      const id = view?.phase === "waiting" ? view.id : null;
+      const value = id ? await api.control(id, "next").then(() => api.status(id)) : await api.start();
       if (!active || mine !== epoch) { stop(value.id); return; }
       draft.value = ""; accept(value);
-    } catch { if (mine === epoch) failed = "start"; }
+    } catch { if (mine === epoch) { if (view && running(view)) stop(view.id); view = null; failed = "start"; } }
     finally { if (mine === epoch) { pending = false; draw(); } }
   };
   finish.onclick = async () => {

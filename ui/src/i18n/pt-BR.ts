@@ -1,9 +1,13 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Finish each recording to hear Zeca. Record another turn to continue the same conversation.": "Finalize cada gravação para ouvir o Zeca. Grave outra fala para continuar a mesma conversa.",
+  "Record another turn": "Gravar outra fala",
+  "End conversation": "Encerrar conversa",
+  "Microphone off. Record another turn to continue, or end the conversation.": "Microfone desligado. Grave outra fala para continuar ou encerre a conversa.",
+
   "Could not start recording. Check voice settings and try again.": "Não foi possível iniciar a gravação. Confira as configurações de voz e tente novamente.",
   "Cancelled.": "Cancelado.",
   "Voice conversation": "Conversa por voz",
-  "Record one turn, then finish to hear Zeca. Start again for another turn.": "Grave uma fala e finalize para ouvir o Zeca. Inicie novamente para outra fala.",
   "Microphone audio and cached flock context may go to OpenAI. API charges apply. Voice never answers permission cards.": "O áudio do microfone e o contexto armazenado do bando podem ser enviados à OpenAI. Há cobrança pela API. A voz nunca responde a cartões de permissão.",
   "Start recording": "Iniciar gravação",
   "Finish recording": "Finalizar gravação",

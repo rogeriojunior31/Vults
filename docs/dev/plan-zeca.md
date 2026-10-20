@@ -1971,3 +1971,31 @@ profiles/caches are removed afterward; the user's app remains closed. The local 
 script remains absent, not passed. Four-hour physical soak, speech-quality acceptance, background/
 crash-resume UX and long-input hierarchical summaries are not claimed complete. V6.7 continuous-turn
 integration and K8 remain open after this user-prioritized meeting adjustment.
+
+
+**2026-10-20 long-meeting maintainer acceptance and manual voice continuation.** The maintainer
+accepted the delivered long-recording scope and authorized the next task. Four-hour physical soak,
+crash resume and speech-quality qualification remain separate; this is not K8 completion.
+
+V6.7.3 now retains the same provider driver and remote context between explicitly recorded turns.
+After heard playback drains or a local command completes, the Nest shows Microphone off and offers
+Record another turn or End conversation. The next click rearms only the sole live controller and
+uses the next native Listen generation. Idle does not open a microphone. Duplicate/stale requests,
+loss of page contact, departure, lock, changed settings/key and provider failure cannot start a
+following capture. Capture/transcription remains under the desktop lease while the provider driver
+continues polling; local routing and exact-text recovery use the existing path. The UI keeps only
+the most recent reply/recovery in memory. Automatic turn-end, duplex/barge-in, island feedback and
+physical/live K8 sign-off remain open. Codex consultation is unchanged and unavailable.
+
+Validation: 1,431 workspace tests pass (17 documented ignores), 10 evals, all 19 renderer/bridge
+checks, build, workspace Clippy with warnings denied, formatting and repository guards pass. A
+retained-driver regression uploads two native-assembled turns through one fake provider and admits
+no next capture during idle. Controls checks reject early/duplicate or disconnected continuation;
+controller cancellation stays irreversible. Renderer checks keep the same session ID, heard reply,
+heartbeat while waiting and explicit end. Native Tauri/WebKit checks use controlled owners at
+1180 x 820 and 480 x 360 in Black/Light and all four languages; actions stay visible and the named
+content scroller remains accessible. Actual commands reject a foreign webview and default-off
+consent before device/network access. No physical audio, model, provider, original keyring or agent
+config is used. The private app/server/profile/cache are removed afterward. The local AGENTS
+check-task-actions.mjs script remains absent, not passed. Live multi-turn speech/provider acceptance
+and automatic turn-end/duplex integration remain open.

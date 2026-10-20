@@ -115,7 +115,7 @@ impl Drop for Lease {
 
 /// Complete native turns only. Recovery is a reviewable draft, never an automatic Chat send.
 pub async fn run(app: AppHandle, channels: Channels) -> Result<Option<Recovery>, Failure> {
-    run_with_audio(app, channels, devices::Choice::Default, None).await
+    run_with_audio(app, channels, devices::Choice::Default, None, None).await
 }
 
 /// One explicit native recording, retained under the same owner through response and recovery.
@@ -125,7 +125,18 @@ pub async fn run_captured(
     channels: Channels,
     request: CaptureRequest,
 ) -> Result<Option<Recovery>, Failure> {
-    run_with_audio(app, channels, devices::Choice::Default, Some(request)).await
+    run_with_audio(app, channels, devices::Choice::Default, Some(request), None).await
+}
+
+/// Retain context between manually admitted turns; idle never reopens the microphone.
+#[cfg(target_os = "linux")]
+async fn run_conversation(
+    app: AppHandle,
+    channels: Channels,
+    request: CaptureRequest,
+    next: tokio::sync::mpsc::Receiver<vults_voice::turn::Generation>,
+) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Default, Some(request), Some(next)).await
 }
 
 /// Explicit native duplex admission; no renderer entry or automatic device choice.
@@ -135,7 +146,7 @@ pub async fn run_routed(
     channels: Channels,
     route: vults_audio::echo::duplex::Route,
 ) -> Result<Option<Recovery>, Failure> {
-    run_with_audio(app, channels, devices::Choice::Routed(route), None).await
+    run_with_audio(app, channels, devices::Choice::Routed(route), None, None).await
 }
 
 async fn run_with_audio(
@@ -144,7 +155,11 @@ async fn run_with_audio(
     choice: devices::Choice,
     #[cfg(target_os = "linux")] capture: Option<CaptureRequest>,
     #[cfg(not(target_os = "linux"))] _capture: Option<()>,
+    #[cfg(target_os = "linux")] next: Option<tokio::sync::mpsc::Receiver<vults_voice::turn::Generation>>,
+    #[cfg(not(target_os = "linux"))] _next: Option<()>,
 ) -> Result<Option<Recovery>, Failure> {
+    #[allow(unused_mut)]
+    let mut channels = channels;
     let state = app.state::<Arc<State>>().inner().clone();
     let (lease, epoch) = state.begin()?;
     let lease = Arc::new(lease);
@@ -201,7 +216,7 @@ async fn run_with_audio(
             .is_ok_and(|s| authority(&s))
     });
     #[cfg(target_os = "linux")]
-    let initial = if let Some(request) = capture {
+    let initial = if let Some(request) = capture.clone() {
         if !consent.enabled() {
             return Err(Failure::Off);
         }
@@ -214,7 +229,7 @@ async fn run_with_audio(
                 cancel: cancel.clone(),
                 output: channels.output.clone(),
             },
-            capture_options,
+            capture_options.clone(),
             model.clone().ok_or(Failure::Input)?,
             decode_language.clone(),
         )
@@ -252,6 +267,12 @@ async fn run_with_audio(
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
     }
     local::check(&*active, &cancel)?;
+    #[cfg(target_os = "linux")]
+    let continuation = next.map(|next| {
+        let (send, input) = tokio::sync::mpsc::channel(1);
+        channels.input = input;
+        (next, send)
+    });
     let output = channels.output.clone();
     let factory = devices.clone();
     let outcome = {
@@ -277,6 +298,30 @@ async fn run_with_audio(
                 }
             },
         );
+        #[cfg(target_os = "linux")]
+        let driver = async {
+            if let Some((next, send)) = continuation {
+                let request = capture.ok_or(Failure::Input)?;
+                capture::continue_turns(driver, next, send, || {
+                    capture::record(
+                        app.clone(),
+                        request.clone(),
+                        capture::Owner {
+                            lease: lease.clone(),
+                            active: active.clone(),
+                            cancel: cancel.clone(),
+                            output: output.clone(),
+                        },
+                        capture_options.clone(),
+                        model.clone().unwrap_or_default(),
+                        decode_language.clone(),
+                    )
+                })
+                .await
+            } else {
+                driver.await
+            }
+        };
         tokio::pin!(driver);
         let mut poll = tokio::time::interval(std::time::Duration::from_millis(5));
         loop {

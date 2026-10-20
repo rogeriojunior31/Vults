@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: e5836b64e737 -->
+<!-- source: 4d6988493031 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -60,12 +60,14 @@ permissão, e a consulta ao Codex continua indisponível. Veja
 
 No Linux, abra **Ditado > Trabalho > Conversa por voz** depois de ativar a voz e instalar um modelo
 local em **Voz**. Use **Iniciar gravação**, fale e clique em **Finalizar gravação** para parar o
-microfone, transcrever localmente e solicitar a resposta do Zeca. Essa entrada manual grava uma
-fala por vez; clique em Iniciar novamente para outra. Ela não usa o atalho global do ditado nem
-interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
+microfone, transcrever localmente e solicitar a resposta do Zeca. Após a reprodução terminar, o
+microfone fica desligado. **Gravar outra fala** continua a mesma conversa e o contexto do provedor;
+**Encerrar conversa** a fecha. Um comando local também retorna a esse estado de espera. Cada nova
+gravação exige seu clique. Um erro ou tempo limite do provedor encerra a sessão. Essa entrada manual
+não usa o atalho global do ditado, encerramento automático da fala nem interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
 sem envio automático. A espera local combinada de captura/transcrição é limitada a 60 segundos.
 
-**Cancelar**, sair da página, ocultar/fechar o Nest, bloquear ou mudar configurações cancela o
+**Cancelar**, **Encerrar conversa**, sair da página, ocultar/fechar o Nest, bloquear ou mudar configurações cancela o
 trabalho da página. Perder contato com a página também interrompe a admissão após três segundos.
 Um worker nativo ainda encerrando pode manter a voz temporariamente ocupada. Cancelar não desfaz
 uma solicitação remota já enviada nem sua cobrança. A voz usa o modelo da API e o orçamento
@@ -75,7 +77,8 @@ Se a voz remota falhar e houver palavras locais disponíveis, **Revisar texto re
 um rascunho editável e não enviado. **Copiar texto** só copia após seu clique. Nada desse rascunho
 é enviado ao Chat ou executado. Suas edições sobrevivem à saída e ao retorno à página. Iniciar
 uma nova gravação substitui o rascunho recuperado anterior após a confirmação de Iniciar. A página
-mantém apenas a resposta/recuperação da fala atual em memória, não um histórico salvo da conversa.
+mantém apenas a resposta/recuperação mais recente em memória, não um histórico salvo da conversa.
+A sessão ativa do provedor mantém o contexto remoto da conversa até ser encerrada.
 
 A qualidade do microfone/fala, a validação com provedor real e a interrupção continuam como etapas
 separadas antes de concluir K8. Essa entrada não ativa consulta ao Codex nem responde permissões.

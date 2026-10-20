@@ -1229,3 +1229,74 @@ async fn tool_receipts_keep_thinking_and_final_audio_without_recovering_consumed
         }
     }
 }
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit_turns() {
+    let (io, send, mut receive, stop) = channels(128);
+    let (next_capture, captures) = mpsc::channel(1);
+    let opened = Arc::new(AtomicUsize::new(0));
+    let openings = opened.clone();
+    let recorded = Arc::new(AtomicUsize::new(0));
+    let recordings = recorded.clone();
+    let worker = tokio::spawn(async move {
+        let driver = super::drive(
+            Some(Turn::from_capture(&vec![0.1; 3200], "First local words".into()).unwrap()),
+            io,
+            &|| true,
+            turn::BargeIn::Disabled,
+            |_| Ok(Fake(device(true))),
+            move |mut remote| {
+                openings.fetch_add(1, Ordering::SeqCst);
+                async move {
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    for index in 0..2 {
+                        let (pcm, _) = upload(&mut remote).await;
+                        assert_eq!(pcm.len(), 4800);
+                        audio(&remote, index).await;
+                        done(&remote, index, true).await;
+                    }
+                    // Keep the same socket alive while the page waits, without another capture.
+                    loop {
+                        tokio::select! {
+                            _ = remote.cancel.changed() => break,
+                            value = remote.input.recv() => if value.is_none() { break; },
+                        }
+                    }
+                    Ok(())
+                }
+            },
+            |_, _| std::future::ready(Ok(None)),
+        );
+        crate::realtime::capture::continue_turns(driver, captures, send, move || {
+            recordings.fetch_add(1, Ordering::SeqCst);
+            async {
+                // The provider/driver must keep being polled during the native capture wait.
+                tokio::time::sleep(Duration::from_millis(20)).await;
+                Turn::from_capture(&vec![0.2; 3200], "Second local words".into())
+            }
+        })
+        .await
+    });
+    assert!(
+        matches!(next(&mut receive).await, Event::Action(action) if matches!(action.effect, Effect::Listen { .. }))
+    );
+    let mut listens = 0;
+    loop {
+        if let Event::Action(action) = next(&mut receive).await
+            && matches!(action.effect, Effect::Listen { .. })
+        {
+            listens += 1;
+            assert_eq!(recorded.load(Ordering::SeqCst), listens - 1);
+            if listens == 1 {
+                next_capture.send(action.generation).await.unwrap();
+            } else {
+                break;
+            }
+        }
+    }
+    assert_eq!(opened.load(Ordering::SeqCst), 1);
+    assert_eq!(recorded.load(Ordering::SeqCst), 1);
+    stop.send_replace(true);
+    assert!(matches!(worker.await.unwrap(), Err(Failure::Cancelled)));
+}
