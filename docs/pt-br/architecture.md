@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 991a8d186103 -->
+<!-- source: f86d39aa1bba -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -184,11 +184,18 @@ para limites, premissas de relógio, testes ALSA nulos isolados e a aceitação 
 A V6.5.1 acrescenta o inventário somente de leitura `audio::echo` para pares de módulos WebRTC do
 PipeWire configurados explicitamente. Snapshots opacos vinculam módulo/grupo de fonte e destino e
 identidades de servidor/nós; verificá-los novamente não concede uma rota. Um experimento nativo
-privado qualifica apenas eco sintético/preservação de tons. A saída CPAL atual, somente padrão,
-não alimenta o destino pareado de referência; a V6.5.2 deve fixar os dois streams reais e revogar
-rotas alteradas antes da ativação. A interrupção com alto-falantes continua desligada; fones exigem
-escolha explícita. Não há carregador de módulos de produção nem novo microfone. Veja
-[Cancelamento de eco](reference/echo-cancellation.md) para evidências e limites da aceitação física.
+privado qualifica apenas eco sintético/preservação de tons. A V6.5.2 acrescenta um proprietário
+nativo duplex separado, vinculado ao consentimento, com confirmação exata dos destinos e streams
+`DONT_MOVE`. Ele observa conexões internas do módulo AEC e destinos físicos, revoga rotas alteradas
+e mantém exclusividade nativa durante a destruição. Fones exigem escolha explícita; rotas de
+alto-falantes sem qualificação mantêm a interrupção desligada. Intervalos de conteúdo, latência do
+destino e confirmação separada de drenagem preservam a contabilidade da saída consumida. Invalidar
+a rota também limpa evidências retidas de interrupção. A captura limitada retorna somente ao
+chamador nativo; não é enviada nem salva automaticamente. O caminho CPAL padrão continua sem
+interrupção. Não há carregador de módulos de produção, entrada do renderer nem ativação visível
+de captura. O backend da V6.5 está entregue; ferramentas na V6.6 e captura/interface na V6.7 vêm
+a seguir. Veja [Cancelamento de eco](reference/echo-cancellation.md) para o teste privado de
+roteamento nativo e os limites restantes de aceitação física/real.
 
 <a id="local-dictation"></a>
 

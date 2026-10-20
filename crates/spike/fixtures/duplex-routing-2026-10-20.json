@@ -1,0 +1,154 @@
+{
+  "recordedAt": "2026-10-20",
+  "roadmap": "V6.5.2",
+  "scope": "Pinned duplex capture/reference output and explicit device policy on a private native graph; no physical acceptance or renderer activation.",
+  "parentEvidence": {
+    "fixture": "echo-cancellation-2026-10-19.json",
+    "sourceCommit": "5099a43db8a09a3c7e45fad0945bbc9b09f69cf5"
+  },
+  "runtime": {
+    "pipewire": "1.6.9",
+    "wireplumber": "0.5.18",
+    "webrtcAudioProcessing": "1.3",
+    "libpulse": "17.0-134-g77d25",
+    "libpulseSys": "1.23.0",
+    "sampleRate": 24000,
+    "channels": 1,
+    "format": "s16le"
+  },
+  "command": "cargo run -p vults-audio --features meeting-capture --example echo-cancel-spike -- --duplex",
+  "syntheticInput": {
+    "playbackFrames": 24000,
+    "playbackSample": 200,
+    "privateNullSinksOnly": true,
+    "humanAudio": false
+  },
+  "fixedGate": {
+    "fullPlaybackConsumedFrames": 24000,
+    "interruptedFramesExclusiveBounds": [
+      0,
+      24000
+    ],
+    "stopCursorFrozen": true,
+    "reopenedOutputDrained": true,
+    "manualMoveRefused": true,
+    "internalRouteChangeRevokes": true,
+    "moduleRemovalRevokes": true,
+    "stalePairRefused": true,
+    "defaultChangesNeverRedirect": true,
+    "explicitHeadphonesPolicy": true,
+    "unqualifiedSpeakersCannotInterrupt": true,
+    "leaseReleasedOnlyAfterNativeTeardown": true
+  },
+  "selection": "Three consecutive final runs after the review fixes, with all structural checks passing. Earlier setup/teardown diagnoses are not qualification measurements.",
+  "runs": [
+    {
+      "routed_playback_drained": true,
+      "played_frames": 24000,
+      "default_changes_preserved_targets": true,
+      "interrupted_frames": 2080,
+      "stop_froze_cursor": true,
+      "new_output_after_stop_drained": true,
+      "dont_move_rejected_manual_move": true,
+      "changed_route_failure": "Route",
+      "explicit_headphone_policy": true,
+      "speaker_policy_disabled": true,
+      "module_unload_failure": "Route",
+      "stale_pair_failure": "Route",
+      "native_lease_released_after_teardown": true,
+      "physical_acceptance": false
+    },
+    {
+      "routed_playback_drained": true,
+      "played_frames": 24000,
+      "default_changes_preserved_targets": true,
+      "interrupted_frames": 1668,
+      "stop_froze_cursor": true,
+      "new_output_after_stop_drained": true,
+      "dont_move_rejected_manual_move": true,
+      "changed_route_failure": "Route",
+      "explicit_headphone_policy": true,
+      "speaker_policy_disabled": true,
+      "module_unload_failure": "Route",
+      "stale_pair_failure": "Route",
+      "native_lease_released_after_teardown": true,
+      "physical_acceptance": false
+    },
+    {
+      "routed_playback_drained": true,
+      "played_frames": 24000,
+      "default_changes_preserved_targets": true,
+      "interrupted_frames": 2080,
+      "stop_froze_cursor": true,
+      "new_output_after_stop_drained": true,
+      "dont_move_rejected_manual_move": true,
+      "changed_route_failure": "Route",
+      "explicit_headphone_policy": true,
+      "speaker_policy_disabled": true,
+      "module_unload_failure": "Route",
+      "stale_pair_failure": "Route",
+      "native_lease_released_after_teardown": true,
+      "physical_acceptance": false
+    }
+  ],
+  "sourceSha256": {
+    "crates/audio/Cargo.toml": "469eac74b2b7a832a0e0d124c6f9a92a93f64b394f30e4cd0bdd02ffcaa7bf2d",
+    "crates/audio/src/echo.rs": "9ff278d3473980f1c0ed124f398aa3305a7fd889575bd2b0506a3f771f67b933",
+    "crates/audio/src/echo/duplex.rs": "82054d6a0189416a9985413f573191dde835bbbb7e210fd1f08c40cebd53409f",
+    "crates/audio/src/echo/duplex/native.rs": "5177eea4784d83fe4cdb97402106251ffac9706f7e0c09523e553634a1c0de59",
+    "crates/audio/src/echo/duplex/raw.rs": "fb8a6e05ed4afec0ee0f24ecf3b2811ac8673c878619f6a3ee4f56d340431208",
+    "crates/audio/src/echo/duplex/graph.rs": "7e5a6d122a6dafcc7f2bdb9b0e0f3b0b9b12452c7e7066338582ea457a50d587",
+    "crates/audio/src/echo/duplex/tests.rs": "56426bbb40094e489e94d3ca867f626c5b56fa7e2c3951079610e240079d91eb",
+    "crates/audio/src/playback.rs": "e5a055067bcc8a347cbacdbb3620e580036c9fa51244f19ae6db9b3db2793b22",
+    "crates/audio/src/meeting/pulse.rs": "740e4786944f0bd592484bfd8f86b5bd439d22cce97ee14774cfd0753d44ff4b",
+    "app/src/realtime.rs": "51785f4757feaa350f13e3564c03b0a2d9620861f8bcc8543159829a95656b8b",
+    "app/src/realtime/devices.rs": "f99f9262758489a87d182059712e69010c2d9dcafce8f0c1fc4087f38387cef9",
+    "app/src/realtime/playback.rs": "c0f6f32e04b7bc2bd66653a5b7731b52eacc786568c4d4bc0f6852d6f8607904",
+    "app/src/realtime/playback/tests.rs": "359610c99f1ee27b57516fae5c6830f420987c2dd9842cc02e2d05b39f3179c2",
+    "crates/voice/src/turn.rs": "e65ea3f5844732d60ce43194106ec1ac94c523e4e81d5ca5a13d0112d396f8df",
+    "crates/voice/src/turn/tests.rs": "df8dcf291cacdfa68ab652928de927f8cc0a0df74cec93f9d6992d3ecbd7f607",
+    "crates/audio/examples/echo-cancel/main.rs": "647d60fb406cbb3e496ce5bb7b2fe3bcfaaacbb2a1024919fd6d6ec7e126ec28",
+    "crates/audio/examples/echo-cancel/linux/duplex_check.rs": "8c2a05ddc4cff44b52959f4bf983f47e29e646cfc1c040c2417900cdf3881040",
+    "crates/audio/examples/echo-cancel/pipewire.conf": "1fb59e901ae5b90d818179cc9f851f1442785e91a13383e0bda942b3188c9f65",
+    "crates/audio/examples/echo-cancel/wireplumber.conf": "22dfe7a9632fa786d360d0b98861db7bfc4d386c3a194135a19b3a0619e780c4",
+    "crates/audio/examples/echo-cancel/client.conf": "05c9f60d3047af3335a9d6cd0eaa34d242dfafe8f8d4ade6c120bf1d13375fda"
+  },
+  "isolation": {
+    "privateCore": true,
+    "privatePolicyOnlyWirePlumber": true,
+    "exclusiveClientAndPolicyConfig": true,
+    "stockWirePlumberScriptsOnly": true,
+    "privateStateAndCookie": true,
+    "hardwareMonitorsAndDBus": false,
+    "userDefaultsOrRoutesChanged": false,
+    "homeChanged": false,
+    "humanAudioStored": false,
+    "providerCalls": false,
+    "network": false
+  },
+  "regressionScopes": [
+    "Content spans exclude silent gaps and require consumption plus native drain acknowledgement.",
+    "Reported sink latency is subtracted; corrupt write/read clocks fail closed.",
+    "Revocation discards capture/output, rejects writes and prevents native admission.",
+    "Dropping the intentional output stops it even while a worker retains shared state.",
+    "Unverified input clears suppressed speech and pending probes before delayed unlock/first playback.",
+    "Asynchronous rearm discards native capture before verification; an exhausted discard bound fails closed."
+  ],
+  "limitations": [
+    "No human speech, double-talk, physical acoustic latency, hardware hotplug or long-session qualification.",
+    "Native timing estimates the reported sink boundary, not physical sound reaching a listener.",
+    "No live provider, key, renderer entry, automatic upload, turn assembly or persistent audio/history.",
+    "Only explicitly owned Pulse WebRTC module pairs are supported; production setup/Q6 and V6.7 capture/UI remain open."
+  ],
+  "decision": "Backend V6.5 is delivered; proceed to V6.6 voice tools, then V6.7 capture/UI. Keep physical/live activation gates open.",
+  "backendV65Delivered": true,
+  "physicalAcceptance": false,
+  "userActivationComplete": false,
+  "primaryReferences": [
+    "https://www.freedesktop.org/software/pulseaudio/doxygen/stream_8h.html",
+    "https://docs.pipewire.org/page_module_echo_cancel.html",
+    "https://github.com/PipeWire/pipewire/blob/1.6.9/src/modules/module-protocol-pulse/modules/module-echo-cancel.c",
+    "https://github.com/pulseaudio/pulseaudio/blob/v17.0/src/pulse/stream.c",
+    "https://github.com/pulseaudio/pulseaudio/blob/v17.0/src/pulse/context.c"
+  ]
+}

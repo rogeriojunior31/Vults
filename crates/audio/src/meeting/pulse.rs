@@ -139,7 +139,7 @@ impl Drop for Connection {
     }
 }
 
-fn local_socket() -> Result<std::path::PathBuf, String> {
+pub(crate) fn local_socket() -> Result<std::path::PathBuf, String> {
     // Do not silently switch to another server when an explicit endpoint is invalid or remote.
     if let Some(server) = std::env::var_os("PULSE_SERVER") {
         return explicit_socket(&server);

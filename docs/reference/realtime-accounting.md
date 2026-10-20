@@ -260,11 +260,16 @@ continuation. Cancellation, lock, changed choices and closed output suppress sta
 recovery; they stop output before bounded transport cleanup. A completed input is never recovered
 or replayed as a new user turn. Callers retain any unaccepted capture until its Generate notification.
 
-The native entry still has no microphone, renderer command or visible voice conversation. V6.4
-backend integration is delivered; physical-device/acoustic timing and live-provider acceptance stay
-open before activation. V6.5.1 now supplies read-only pair inventory and an isolated synthetic spike;
-see [Echo cancellation](echo-cancellation.md). Next is V6.5.2 pinned duplex routing before V6.6 tools
-and V6.7 capture/UI. Whole V6.5 and physical speech qualification remain open.
+V6.5.2 adds a separate Linux `run_routed` entry, guarded before native capture by the existing
+Settings consent, cancellation and epoch authority. It pins both native streams to an explicitly
+selected AEC pair or devices, retains its lease through teardown and emits bounded memory-only
+Input events to the native caller. The caller must assemble and commit complete turns; capture is
+never uploaded automatically. Explicit headphones/AEC policy stays separate from temporary route
+verification; an unverified route clears retained speech/probes before deferred playback events.
+The ordinary CPAL entry remains non-interruptible. No renderer command or visible voice conversation
+is exposed. Backend V6.4/V6.5 is delivered; see [Echo cancellation](echo-cancellation.md) for routing,
+clock and private-graph evidence. Next is V6.6 tools, then V6.7 capture/UI. Physical-device/acoustic
+timing, real speech and live-provider acceptance remain open before activation.
 Offline socket/native-owner tests cover interruption before/after producer completion, exact
 acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.
 The isolated ALSA null setup above also runs the complete native driver with a synthetic provider:

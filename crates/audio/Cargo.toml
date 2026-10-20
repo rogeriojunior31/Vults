@@ -15,11 +15,12 @@ rustfft = "6.4"
 hound = { version = "3.5", optional = true }
 libc = { workspace = true, optional = true }
 pulseaudio = { version = "0.3", optional = true }
+libpulse-sys = { version = "1.23", optional = true }
 socket2 = { version = "0.6", optional = true }
 
 [features]
 # Bounded meeting checks; the app opens sources only after explicit consent.
-meeting-capture = ["dep:pulseaudio", "dep:socket2", "dep:hound", "dep:libc"]
+meeting-capture = ["dep:pulseaudio", "dep:socket2", "dep:hound", "dep:libc", "dep:libpulse-sys"]
 
 [[example]]
 name = "meeting-capture"

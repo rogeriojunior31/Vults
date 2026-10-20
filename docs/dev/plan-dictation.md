@@ -44,9 +44,10 @@ realtime transport/accounting and native turn retention/local recovery. V6.4.1 a
 output primitive and pure heard-text/history-replacement math. V6.4.2 connects its native owner to
 provider identities, acknowledged server truncation and in-memory history/one-shot repair. No
 conversation microphone or user-facing realtime continuation is exposed yet. Backend V6.4 is
-delivered; physical/live acceptance stays open. V6.5.1 now delivers read-only PipeWire pair inventory
-and an isolated synthetic AEC experiment. Next: V6.5.2 pinned duplex routing, then V6.6-V6.7;
-whole V6.5 and physical speech acceptance remain open.
+delivered; physical/live acceptance stays open. V6.5.1/V6.5.2 deliver read-only PipeWire pair inventory,
+an isolated synthetic AEC experiment and consent-bound pinned native duplex routing with explicit
+device policy. Backend V6.5 is delivered. Next: V6.6 tools, then V6.7 capture/UI; Q6 production
+setup and physical/live acceptance remain open before activation.
 
 ## References
 
@@ -2574,7 +2575,7 @@ Delivery sequence:
    acceptance stays an activation gate. Backend V6.4 is delivered; full acceptance remains open.
    See [Native playback and context repair](../reference/realtime-accounting.md#native-playback-and-context-repair).
 
-Next engineering task: **V6.5.2 pinned duplex routing**, before V6.6 tools and V6.7 capture/UI.
+Next engineering task: **V6.6 voice tools and delegation**, before V6.7 capture/UI.
 
 **V6.5 Echo cancellation** (M, spike first)
 - Preferred: PipeWire's WebRTC engine with both the clean source and paired reference sink.
@@ -2596,15 +2597,21 @@ Next engineering task: **V6.5.2 pinned duplex routing**, before V6.6 tools and V
    ownership metadata are unsupported by this first inventory. No extra dependency, production
    module loader, app capture or barge-in activation is added. See
    [Echo cancellation](../reference/echo-cancellation.md) for the runnable experiment and evidence.
-2. **V6.5.2 pinned duplex routing and device policy** (next).
-   Bind actual input/output streams to the selected clean source/reference sink, acknowledge targets
-   and prevent silent moves. Revoke the generation on server/module/node/route changes; preserve
-   consumed-output/drain accounting and native exclusivity. The current default-only CPAL output
-   cannot establish that reference route. An explicit headphones choice may bypass AEC; speakers
-   remain non-interruptible without a qualified live route. Resolve Q6 before offering production
-   setup; no silent system module loading. Capture controls and visible activation stay in V6.7.
-   Validate stream pinning, teardown/moves and failure paths before proceeding to V6.6; physical/live
-   speech remains a separate activation gate. Whole V6.5 stays open until this integration lands.
+2. **V6.5.2 pinned duplex routing and device policy** (delivered 2026-10-20).
+   One native libpulse worker acknowledges exact input/output targets, forbids moves and watches
+   module-owned AEC connections plus physical endpoint identities/ports. Changed routes revoke the
+   session; default changes cannot redirect it. Content spans exclude silence, subtract reported
+   sink latency and require a separate successful drain acknowledgement. Stop freezes the cursor;
+   native teardown and callbacks retain ownership until cancellation/delete acknowledgement.
+   Explicit headphones may bypass AEC; ordinary speaker/CPAL paths remain non-interruptible.
+   The app's separate native entry checks consent/revocation before capture and forwards bounded
+   memory-only Input events, without automatic turn assembly, upload or persistence. Unverified
+   routes invalidate retained speech/probes before deferred events. Three consecutive isolated
+   native runs and clock/ownership/revocation regressions cover the backend. Backend V6.5 is
+   delivered; next is V6.6. Resolve Q6 before production setup; Vults loads no system modules
+   silently. Capture controls/turn assembly stay in V6.7. Physical/live speech, double-talk,
+   acoustic timing, hardware hotplug and long-session acceptance remain activation gates.
+   See [Routed validation](../reference/echo-cancellation.md#routed-validation).
 
 **V6.6 Zeca's voice tools and delegation** (M)
 - Build:

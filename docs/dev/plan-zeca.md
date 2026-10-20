@@ -1623,3 +1623,21 @@ argument parsing were corrected during independent review. No production module 
 microphone entry or barge-in activation is added. Next: V6.5.2 pinned duplex streams and explicit
 device policy, before V6.6 tools and V6.7 capture/UI. Whole V6.5 remains open. See the finite
 V6.5 sequence in Plan Dictation and [Echo cancellation](../reference/echo-cancellation.md).
+
+
+**2026-10-20 V6.5.2 pinned duplex ownership.** A consent-bound native libpulse worker pins clean
+capture and reference output with exact target acknowledgements and `DONT_MOVE`. Subscription
+precedes baseline validation; internal AEC connections, module/server/node identities and physical
+ports stay checked. Route changes revoke capture/output; default changes never redirect them.
+Explicit headphones policy stays separate from route validity; ordinary speakers/CPAL cannot
+interrupt. Content spans exclude silent gaps, subtract reported sink latency and separate producer
+end, consumed content and acknowledged drain. Stop freezes the last confirmed cursor. Native
+leases, callback storage and retired stream references survive teardown. The separate app entry
+checks authority before capture and emits bounded memory-only Input events to its native caller;
+it performs no automatic upload, turn assembly, persistent history or renderer activation.
+Invalid routes clear retained interruption evidence before delayed playback events. Three final
+private-graph native runs pass drain, frozen stop, next response, forbidden moves, route/module
+revocation, stale selection, explicit policy and lease release checks. No human/device/provider
+qualification is inferred. Backend V6.5 is delivered; next is V6.6 voice tools, then V6.7 capture/UI.
+Q6 setup and physical/live speech, acoustic latency, hotplug and long-session acceptance remain
+open. See [Echo cancellation](../reference/echo-cancellation.md#routed-validation).

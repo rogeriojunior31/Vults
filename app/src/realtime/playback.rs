@@ -60,6 +60,17 @@ pub enum Event {
     Ready(Generation),
     History(Record),
     Settled(Settlement),
+    Input(Input),
+}
+pub struct Input {
+    pub samples: Vec<i16>,
+}
+impl std::fmt::Debug for Input {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VoiceInput")
+            .field("frames", &self.samples.len())
+            .finish()
+    }
 }
 #[derive(Debug)]
 pub struct Channels {
@@ -74,6 +85,9 @@ pub(super) trait Output {
     fn finish(&self) -> Result<(), Failure>;
     fn cursor(&self) -> Cursor;
     fn stop(&self) -> Cursor;
+    fn route_verified(&self) -> bool {
+        true
+    }
 }
 impl Output for Playback {
     fn push(&self, pcm: &[i16]) -> Result<(), Failure> {
@@ -170,6 +184,10 @@ pub(super) async fn drive<P: Output, F: Future<Output = Result<(), Failure>>>(
     let result = async { loop {
         if let Err(error) = local::check(active, &channels.cancel) { break Err(error); }
         let now = start.elapsed();
+        if response.as_ref().is_some_and(|r| !r.output.route_verified()) {
+            let invalid = machine.handle(machine.generation(), turn::Event::InputUnavailable, now);
+            if let Err(error) = actions(&channels.output, invalid) { break Err(error); }
+        }
         let tick = machine.handle(machine.generation(), turn::Event::Tick, now);
         if let Err(error) = actions(&channels.output, tick) { break Err(error); }
         if machine.phase() == turn::Phase::Idle && !closed && let Some(listen) = machine.start(now) {
@@ -289,6 +307,11 @@ pub(super) async fn drive<P: Output, F: Future<Output = Result<(), Failure>>>(
                         if let Err(error) = actions(&channels.output, out) { break Err(error); }
                     },
                     Some(Command::Signal { generation, signal }) => {
+                        if response.as_ref().is_none_or(|r| !r.output.route_verified()) {
+                            let invalid = machine.handle(machine.generation(), turn::Event::InputUnavailable, now);
+                            if let Err(error) = actions(&channels.output, invalid) { break Err(error); }
+                            continue;
+                        }
                         let out = machine.handle(generation, signal.event(), now);
                         let interrupt = match actions(&channels.output, out) { Ok(interrupt) => interrupt, Err(error) => break Err(error) };
                         if interrupt && let Some(current) = &mut response {

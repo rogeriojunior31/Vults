@@ -13,7 +13,8 @@ use vults_chat::realtime::{
 mod local;
 mod playback;
 pub use local::{LocalFailure, Recovery, Turn};
-pub use playback::{Channels, Command, Event, Record, Signal};
+pub use playback::{Channels, Command, Event, Input, Record, Signal};
+mod devices;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -100,6 +101,24 @@ impl Drop for Lease {
 
 /// Complete native turns only. Recovery is a reviewable draft, never an automatic Chat send.
 pub async fn run(app: AppHandle, channels: Channels) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Default).await
+}
+
+/// Explicit native duplex admission; no renderer entry or automatic device choice.
+#[cfg(target_os = "linux")]
+pub async fn run_routed(
+    app: AppHandle,
+    channels: Channels,
+    route: vults_audio::echo::duplex::Route,
+) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Routed(route)).await
+}
+
+async fn run_with_audio(
+    app: AppHandle,
+    channels: Channels,
+    choice: devices::Choice,
+) -> Result<Option<Recovery>, Failure> {
     let state = app.state::<Arc<State>>().inner().clone();
     let (lease, epoch) = state.begin()?;
     let lease = Arc::new(lease);
@@ -144,22 +163,41 @@ pub async fn run(app: AppHandle, channels: Channels) -> Result<Option<Recovery>,
                 })
     });
     let remote_active = active.clone();
-    let output_lease = lease.clone();
-    let outcome = playback::drive(
-        channels,
-        &*active,
-        vults_voice::turn::BargeIn::Disabled,
-        move |cancel| {
-            vults_audio::playback::Playback::start_with_owner(cancel, output_lease.clone()).map_err(
-                |failure| match failure {
-                    vults_audio::playback::Failure::Busy => Failure::Busy,
-                    _ => Failure::Output,
+    if choice.captures() && !consent.enabled() {
+        return Err(Failure::Off);
+    }
+    local::check(&*active, &cancel)?;
+    let devices = Arc::new(devices::Devices::open(choice, lease.clone(), active.clone())?);
+    while !devices.ready()? {
+        local::check(&*active, &cancel)?;
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+    local::check(&*active, &cancel)?;
+    let output = channels.output.clone();
+    let factory = devices.clone();
+    let outcome = {
+        let driver = playback::drive(
+            channels,
+            &*active,
+            devices.interruption(),
+            move |cancel| factory.output(cancel),
+            move |io| connect(consent, remote_active, io),
+        );
+        tokio::pin!(driver);
+        let mut poll = tokio::time::interval(std::time::Duration::from_millis(5));
+        loop {
+            tokio::select! { biased;
+                result = &mut driver => break result?,
+                _ = poll.tick() => {
+                    local::check(&*active, &cancel)?;
+                    while let Some(samples) = devices.input()? {
+                        output.try_send(Event::Input(Input { samples })).map_err(|_| Failure::Output)?;
+                    }
                 },
-            )
-        },
-        move |io| connect(consent, remote_active, io),
-    )
-    .await?;
+            }
+        }
+    };
+    drop(devices);
     let Some((turn, reason)) = outcome else {
         return Ok(None);
     };

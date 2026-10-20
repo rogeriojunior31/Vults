@@ -29,7 +29,7 @@ npm run bundle:linux     # or build the .deb and .rpm into target/release/bundle
 ```
 
 Linux needs `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `openssl`,
-`alsa-lib`, `gst-plugins-good` (WebKitGTK plays the island's sounds through GStreamer) and the
+`alsa-lib`, `libpulse`, `gst-plugins-good` (WebKitGTK plays the island's sounds through GStreamer) and the
 Vulkan loader (building also needs `cmake`, the Vulkan headers and `glslc`). On KDE Plasma,
 Hyprland, Sway and other compositors with layer-shell, the island sits on the top edge like a panel;
 on GNOME it is a regular always-on-top window. **Settings → General → Start with the desktop** opens

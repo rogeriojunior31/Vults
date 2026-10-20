@@ -42,6 +42,8 @@ pub enum Event {
     },
     SpeechStarted,
     SpeechEnded,
+    /// Discard speech/probes whose native route can no longer be verified.
+    InputUnavailable,
     InterruptConfirmed(Probe),
     InterruptRejected(Probe),
     ResponseFinished,
@@ -190,6 +192,16 @@ impl Turn {
         }
         if self.phase == Phase::InterruptPending && self.deadline.is_some_and(|at| now >= at) {
             self.reject(&mut out);
+        }
+        if event == Event::InputUnavailable {
+            let speech = self.speech;
+            self.speech = false;
+            if self.phase == Phase::InterruptPending {
+                self.reject(&mut out);
+            } else if speech {
+                out.push(self.action(Effect::ResetVad));
+            }
+            return out;
         }
         if event == Event::SpeechEnded {
             self.speech = false;

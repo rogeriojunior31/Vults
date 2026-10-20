@@ -1,10 +1,10 @@
 # Cancelamento de eco
-<!-- source: 9a23d56913f7 -->
+<!-- source: 0bf88505ed4e -->
 
 A V6.5.1 qualifica um caminho nativo no Linux com inventário somente de leitura e um experimento
-sintético reproduzível. Ela não ativa interrupção por voz. A V6.5.2 deve vincular os dois streams
-reais ao par escolhido antes de considerar interrupção com alto-falantes; a aceitação física com
-fala continua pendente.
+sintético reproduzível. A V6.5.2 acrescenta propriedade duplex nativa explícita para essa rota e
+uma escolha separada de fones. Ainda não há entrada do renderer nem ativação visível do microfone;
+a aceitação física com fala e alto-falantes continua pendente antes da interface da V6.7.
 
 <a id="candidate-inventory"></a>
 ## Inventário de candidatos
@@ -36,13 +36,50 @@ exata do assistente como referência remota e a encaminha ao alto-falante. Escol
 enquanto o CPAL toca na saída padrão não estabelece esse caminho de referência.
 [Contrato de quatro streams do PipeWire](https://docs.pipewire.org/page_module_echo_cancel.html).
 
-O worker CPAL da V6.4 ainda usa a saída padrão; por isso a entrada do app mantém a interrupção
-desligada. A próxima task deve fixar captura e reprodução, confirmar os destinos dos streams,
-impedir movimentos silenciosos e revogar a geração da rota em mudanças de dispositivo/módulo/servidor.
-Drenagem e contabilidade do texto ouvido devem continuar ligadas à saída consumida. Sem AEC
-qualificado, a interrupção com alto-falantes fica desligada; com fones, exige escolha explícita do
-usuário, sem inferência pelo nome do dispositivo. A configuração e a escolha da Q6 sobre carregar
-módulos continuam pendentes; esta task não acrescenta carregador de produção nem nova entrada de microfone.
+A entrada CPAL padrão da V6.4 continua sem interrupção. A entrada separada `realtime::run_routed`
+da V6.5.2 exige consentimento realtime explícito, rota escolhida e autoridade nativa atual. Um único
+worker fixa captura e reprodução PCM16 mono a 24 kHz nos índices exatos dos dispositivos escolhidos,
+confere formato negociado/confirmações de destino e define `DONT_MOVE`. Não há fallback para padrões.
+`Route::echo` valida o par escolhido; `Route::headphones` é uma afirmação explícita do usuário, sem
+inferência por rótulos. `Route::speakers` mantém a interrupção desligada.
+
+<a id="routed-native-ownership"></a>
+## Propriedade nativa das rotas
+
+A assinatura precede o snapshot inicial do grafo. A rota registra identidades de servidor/nós,
+propriedade do módulo, conexões internas de captura/reprodução do AEC, seus endpoints físicos e
+portas ativas. Movimentos internos, mudanças/remoções físicas relevantes, alterações do módulo ou
+eventos conservadores de placas revogam a sessão inteira. Mudanças dos dispositivos padrão não
+redirecionam streams fixados. Outras alterações observadas suspendem a verificação imediatamente;
+somente um snapshot correspondente e estável entre eventos a restabelece. Amostras capturadas durante
+a suspensão da verificação são descartadas. O grafo é consultado pelo menos a cada 100 ms; ausência de
+validação/entrada por 500 ms, tempo inválido, overflow ou falha do servidor encerram o proprietário.
+A inicialização tem limite de três segundos, sessões de dez minutos e respostas de 120 segundos
+de PCM de origem. Filas de entrada/saída e cópias de metadados são limitadas.
+
+Um worker nativo mantém a concessão do app durante a limpeza e compartilha a exclusividade de saída
+com CPAL. Ele verifica revogação antes de conectar/despausar e durante o processamento. O armazenamento
+de callbacks continua sob propriedade até cancelar as operações nativas; uma saída encerrada mantém
+sua referência nativa até uma confirmação de exclusão. A ordem de destruição de streams/contexto/laço
+é explícita. Isso usa `libpulse` do sistema por `libpulse-sys`, sem protocolo Pulse reimplementado nem
+carregador de módulos de produção. Compilar no Linux exige os headers do libpulse; instaladores
+incluem a biblioteca em suas dependências.
+
+A reprodução mapeia trechos de conteúdo para posições do stream, incluindo intervalos de silêncio.
+O relógio bruto sozinho não conta palavras ouvidas: silêncio por underrun é excluído, a latência
+informada do destino é subtraída e tempo corrompido/antigo encerra a saída. Fim do produtor, conteúdo
+consumido e confirmação bem-sucedida de drenagem continuam separados. Parar congela o último cursor
+de conteúdo confirmado e descarta a saída pendente; o stream antigo é encerrado antes de outra
+resposta tocar. A estimativa continua na fronteira de destino informada; o tempo físico posterior
+ainda exige validação acústica.
+
+`run_routed` encaminha apenas eventos `Input` limitados e em memória ao chamador nativo. Ele deve
+montar e confirmar turnos explicitamente; a captura bruta não é enviada, salva nem mandada ao Chat
+automaticamente. A verificação também condiciona sinais de interrupção e limpa fala/provas retidas
+antes de ticks ou eventos de primeira reprodução adiados. A política escolhida de fones/AEC fica
+separada da validade temporária da rota. Controles visíveis de captura, VAD/montagem de turnos e
+ativação pelo usuário ficam na V6.7; ferramentas de voz na V6.6. A escolha da Q6 sobre configuração
+de produção continua aberta; o Vults não carrega módulos do sistema silenciosamente.
 
 <a id="reproduce-the-isolated-experiment"></a>
 ## Reproduzir o experimento isolado
@@ -104,5 +141,26 @@ Trata-se de um único caminho sintético estacionário de eco, dois tons locais 
 compartilhado. Isso não qualifica fala humana simultânea, acústica de microfone/alto-falantes,
 caminhos de eco móveis, mudanças de ganho, hotplug, estabilidade longa, latência física nem a rota
 completa do app. Nenhuma opção de produção ou aceitação física/real é marcada como concluída.
-A próxima etapa é propriedade duplex roteada na V6.5.2, depois ferramentas na V6.6 e captura/interface
-na V6.7.
+Os fingerprints da V6.5.1 se referem ao commit `5099a43d`; a evidência atual de rotas está abaixo.
+
+<a id="routed-validation"></a>
+## Validação das rotas
+
+Execute a verificação nativa dentro do mesmo grafo privado:
+
+```sh
+cargo run -p vults-audio --features meeting-capture --example echo-cancel-spike -- --duplex
+```
+
+Ela altera somente padrões/rotas/módulos privados e testa captura/confirmações reais de destino,
+drenagem completa, cursor congelado na interrupção, outra resposta após parar, recusa de movimentos
+manuais, revogação ao mover uma conexão interna do AEC, política explícita de fones/alto-falantes,
+remoção do módulo, recusa de seleção antiga e liberação da concessão nativa. A
+[fixture de 2026-10-20](../../../crates/spike/fixtures/duplex-routing-2026-10-20.json) registra três
+execuções finais consecutivas bem-sucedidas. Regressões puras e do proprietário nativo também cobrem
+silêncio entre trechos, latência/relógio corrompido, revogação de admissão, referências de workers e
+evidência antiga de interrupção.
+
+O backend da V6.5 está entregue. A próxima etapa é ferramentas na V6.6, depois captura/interface na
+V6.7; fala física, fala simultânea, latência acústica completa, hotplug e aceitação longa continuam
+em aberto. A verificação isolada comprova rotas nativas sintéticas, sem aceitação física.

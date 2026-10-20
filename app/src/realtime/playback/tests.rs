@@ -8,6 +8,7 @@ struct Device {
     cursor: Cursor,
     automatic: bool,
     stopped: bool,
+    verified: bool,
 }
 fn device(automatic: bool) -> Arc<Mutex<Device>> {
     Arc::new(Mutex::new(Device {
@@ -21,10 +22,14 @@ fn device(automatic: bool) -> Arc<Mutex<Device>> {
         },
         automatic,
         stopped: false,
+        verified: true,
     }))
 }
 struct Fake(Arc<Mutex<Device>>);
 impl Output for Fake {
+    fn route_verified(&self) -> bool {
+        self.0.lock().unwrap().verified
+    }
     fn push(&self, pcm: &[i16]) -> Result<(), Failure> {
         let mut state = self.0.lock().unwrap();
         state.cursor.total_frames += pcm.len() as u64;
@@ -201,7 +206,33 @@ async fn terminal_or_unacknowledged_interruption_keeps_only_unsynchronized_heard
             }
         }
         state.lock().unwrap().cursor.played_frames = 1681;
-        tokio::time::sleep(Duration::from_millis(520)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        send.send(Command::Signal {
+            generation: generation(),
+            signal: Signal::SpeechStarted,
+        })
+        .await
+        .unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        state.lock().unwrap().verified = false;
+        send.send(Command::Signal {
+            generation: generation(),
+            signal: Signal::SpeechEnded,
+        })
+        .await
+        .unwrap();
+        tokio::time::sleep(Duration::from_millis(420)).await;
+        while let Ok(event) = receive.try_recv() {
+            assert!(!matches!(
+                event,
+                Event::Action(Action {
+                    effect: Effect::ProbeInterruption { .. } | Effect::ClearPlayback,
+                    ..
+                })
+            ));
+        }
+        assert!(!state.lock().unwrap().stopped);
+        state.lock().unwrap().verified = true;
         send.send(Command::Signal {
             generation: generation(),
             signal: Signal::SpeechStarted,

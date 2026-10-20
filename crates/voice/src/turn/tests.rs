@@ -285,3 +285,17 @@ fn delayed_consumption_ack_uses_playback_time_and_retains_live_onsets() {
         }
     }
 }
+
+#[test]
+fn unverified_input_clears_suppressed_onsets_and_pending_probes() {
+    let mut turn = speaking(BargeIn::Headphones);
+    send(&mut turn, Event::SpeechStarted, 2100);
+    assert_eq!(send(&mut turn, Event::InputUnavailable, 2200), [Effect::ResetVad]);
+    assert!(send(&mut turn, Event::Tick, 3000).is_empty());
+    send(&mut turn, Event::SpeechStarted, 3100);
+    let stale = turn.probe;
+    assert_eq!(turn.phase(), Phase::InterruptPending);
+    assert_eq!(send(&mut turn, Event::InputUnavailable, 3150), [Effect::ResetVad]);
+    assert!(send(&mut turn, Event::InterruptConfirmed(stale), 3200).is_empty());
+    assert_eq!(turn.phase(), Phase::Armed);
+}

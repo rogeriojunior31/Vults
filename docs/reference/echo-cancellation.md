@@ -1,8 +1,9 @@
 # Echo cancellation
 
 V6.5.1 qualifies a native Linux path with a read-only inventory and a reproducible synthetic
-experiment. It does not activate voice interruption. V6.5.2 must bind both actual streams to the
-selected pair before speaker barge-in can be considered; physical speech acceptance remains open.
+experiment. V6.5.2 adds explicit native duplex ownership for that route and a separate headphones
+choice. There is still no renderer entry or visible microphone activation; physical speech and
+speaker acceptance remain open before the V6.7 interface.
 
 ## Candidate inventory
 
@@ -31,12 +32,45 @@ assistant output used as the far-end reference, then forwards it to the speaker.
 the source while CPAL plays to the default output does not establish that reference path.
 [PipeWire's four-stream contract](https://docs.pipewire.org/page_module_echo_cancel.html).
 
-The V6.4 CPAL worker still uses the default output, so the app entry keeps barge-in disabled. The
-next task must pin capture and playback, acknowledge stream targets, prevent silent moves and revoke
-the route generation on device/module/server changes. Playback drain and heard-text accounting must
-remain tied to consumed output. Without qualified AEC, speaker interruption stays off; headphone
-interruption requires an explicit user choice, never device-name inference. Settings setup and Q6's
-module-loading choice remain open; this task adds no production loader or new microphone entry.
+The default V6.4 CPAL entry remains non-interruptible. V6.5.2's separate `realtime::run_routed`
+entry requires explicit realtime consent, a selected route and current native authority. Its single
+worker pins a 24 kHz mono PCM16 capture stream and output stream to the exact chosen device indexes,
+checks their negotiated formats/target acknowledgements, and sets `DONT_MOVE`. No default fallback
+is allowed. `Route::echo` validates the selected pair; `Route::headphones` is an explicit assertion
+by the user, never a label-based inference. `Route::speakers` keeps interruption disabled.
+
+## Routed native ownership
+
+Subscription precedes the baseline graph snapshot. The route records server/node identities,
+module ownership, the AEC module's internal capture/playback connections, their physical endpoints
+and active ports. Internal moves, relevant physical changes/removals, module changes or conservative
+card events revoke the whole session. Default-device changes do not redirect pinned streams.
+Other watched changes suspend verification immediately; only an event-stable matching snapshot
+rearms it. Samples captured while verification is suspended are discarded. A graph refresh runs at
+least every 100 ms; missing validation/input for 500 ms, invalid timing, overflow or server failure
+ends the owner. Setup is limited to three seconds, sessions to ten minutes and responses to 120
+seconds of source PCM. Input/output queues and metadata copies are bounded.
+
+One native worker retains the app's lease through teardown and shares output exclusion with CPAL.
+It checks revocation before attach/uncork and throughout processing. Callback storage stays owned
+until native operations are cancelled; a retired output keeps its native reference until one delete
+acknowledgement. Stream/context/mainloop destruction order is explicit. This uses the system
+`libpulse` through `libpulse-sys`, without a handwritten Pulse protocol or a production module loader.
+Linux builds need libpulse headers; installer dependencies include the runtime library.
+
+Playback maps content spans into native stream positions, including silent gaps. A raw stream clock
+alone cannot count heard words: underrun silence is excluded, reported sink latency is subtracted
+and corrupt/stale timing fails closed. Producer completion, consumed content and a successful drain
+acknowledgement remain separate. Stop freezes the last confirmed content cursor and discards pending
+output; the old native stream is retired before a new response can play. The estimate remains at
+the reported sink boundary; physical downstream timing still needs acoustic validation.
+
+`run_routed` forwards only bounded, memory-only `Input` events to its native caller. That caller must
+assemble and explicitly commit turns; raw capture is not automatically uploaded, saved or sent to
+Chat. Route verification also gates interruption signals and clears retained speech/probes before
+deferred ticks or first-playback events. Chosen headphones/AEC policy stays distinct from temporary
+route validity. Visible capture controls, VAD/turn assembly and user activation remain V6.7 work;
+voice tools remain V6.6. Q6's production setup choice is open; Vults loads no system modules silently.
 
 ## Reproduce the isolated experiment
 
@@ -93,5 +127,25 @@ continuing with the native PipeWire engine; no extra AEC crate is justified by t
 This is one synthetic stationary echo path, two local tones and a shared virtual clock. It does
 not qualify human double-talk, microphone/speaker acoustics, moving echo paths, gain changes,
 device hotplug, long-session stability, physical latency or the complete app route. No production
-switch or physical/live acceptance is marked complete. Next is V6.5.2 routed duplex ownership,
-then V6.6 tools and V6.7 capture/UI.
+switch or physical/live acceptance is marked complete. The V6.5.1 source fingerprints refer to
+commit `5099a43d`; the current route evidence is recorded below.
+
+## Routed validation
+
+Run the native route check inside the same private graph:
+
+```sh
+cargo run -p vults-audio --features meeting-capture --example echo-cancel-spike -- --duplex
+```
+
+It changes only private defaults/routes/modules and tests actual capture/target acknowledgements,
+full drain, interrupted cursor freeze, another response after stop, refusal of manual moves,
+revocation when an internal AEC connection moves, explicit headphones/speaker policy, module removal,
+stale selection refusal and native lease release. The
+[2026-10-20 fixture](../../crates/spike/fixtures/duplex-routing-2026-10-20.json) records three final
+consecutive passing runs. Pure and native-owner regressions additionally cover silence spans,
+latency/corrupt clocks, admission revocation, worker-held references and stale interruption evidence.
+
+Backend V6.5 is delivered. Next is V6.6 tools, then V6.7 capture/UI; physical speech, double-talk,
+end-to-end acoustic latency, hardware hotplug and long-session acceptance stay open. The isolated
+check is synthetic native routing evidence, not physical acceptance.

@@ -199,10 +199,7 @@ impl Playback {
         if cancel.load(Ordering::Acquire) {
             return Err(Failure::Cancelled);
         }
-        if BUSY.swap(true, Ordering::AcqRel) {
-            return Err(Failure::Busy);
-        }
-        let owner = Owner;
+        let owner = Owner::claim()?;
         let shared = Arc::new(Shared {
             queue: Mutex::new(Queue::new(RATE)),
             producer: Mutex::new(Producer { converter: None }),
@@ -307,7 +304,16 @@ impl Drop for Playback {
         self.stop();
     }
 }
-struct Owner;
+pub(crate) struct Owner;
+impl Owner {
+    pub(crate) fn claim() -> Result<Self, Failure> {
+        if BUSY.swap(true, Ordering::AcqRel) {
+            Err(Failure::Busy)
+        } else {
+            Ok(Self)
+        }
+    }
+}
 impl Drop for Owner {
     fn drop(&mut self) {
         BUSY.store(false, Ordering::Release);

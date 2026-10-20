@@ -1,5 +1,6 @@
 //! Read-only PipeWire Pulse inventory. Discovery is not proof of a routed or effective AEC path.
 use crate::meeting::pulse::Connection;
+pub mod duplex;
 use pulseaudio::protocol::{ModuleInfo, Props, ServerInfo, SinkInfo, SourceInfo};
 use std::ffi::CStr;
 

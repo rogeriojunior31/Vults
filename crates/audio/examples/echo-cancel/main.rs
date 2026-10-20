@@ -69,10 +69,15 @@ mod linux {
         }
         cmd
     }
+    mod duplex_check;
     pub fn main() -> Result<()> {
         if std::env::args().nth(1).as_deref() == Some("--isolated-child") {
             return measure();
         }
+        if std::env::args().nth(1).as_deref() == Some("--isolated-duplex") {
+            return duplex_check::run();
+        }
+        let duplex = std::env::args().nth(1).as_deref() == Some("--duplex");
         let stamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
         let root =
             Directory(std::env::temp_dir().join(format!("vults-echo-spike-{}-{stamp}", std::process::id())));
@@ -172,11 +177,15 @@ mod linux {
             std::env::current_exe()?
                 .to_str()
                 .ok_or("invalid executable path")?,
-            &["--isolated-child"],
+            &[if duplex {
+                "--isolated-duplex"
+            } else {
+                "--isolated-child"
+            }],
             &env,
         );
         child.stderr(File::create(root.0.join("measure.log"))?);
-        let result = run(child, &root.0.join("result.json"), 30);
+        let result = run(child, &root.0.join("result.json"), if duplex { 60 } else { 30 });
         match result {
             Ok(text) => print!("{text}"),
             Err(error) => {

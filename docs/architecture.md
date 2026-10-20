@@ -169,10 +169,16 @@ for limits, clock assumptions, isolated ALSA null checks and the remaining physi
 V6.5.1 adds read-only `audio::echo` inventory for explicitly configured PipeWire WebRTC module pairs.
 Opaque snapshots bind the module/source/sink group and server/node identities; rechecking them does
 not grant a route lease. A private native experiment qualifies only synthetic echo/tone preservation.
-The existing default-only CPAL output does not feed the paired reference sink, so V6.5.2 must pin
-both actual streams and revoke changed routes before activation. Speaker barge-in stays disabled;
-headphones require an explicit choice. No production module loader or microphone is added. See
-[Echo cancellation](reference/echo-cancellation.md) for evidence and physical acceptance limits.
+V6.5.2 adds a separate consent-bound native duplex owner with exact target acknowledgements and
+`DONT_MOVE` streams. It watches the AEC module's internal connections and physical endpoints,
+revokes changed routes and retains native exclusivity through teardown. Headphones require an
+explicit choice; unqualified speaker routes keep interruption disabled. Content spans, sink latency
+and a separate drain acknowledgement preserve consumed-output accounting. Route invalidation also
+clears retained interruption evidence. Bounded capture returns only to the native caller; it is not
+automatically uploaded or saved. The default CPAL path remains non-interruptible. No production
+module loader, renderer entry or visible capture activation is added. Backend V6.5 is delivered;
+V6.6 tools and V6.7 capture/UI are next. See [Echo cancellation](reference/echo-cancellation.md)
+for the private native routing check and remaining physical/live acceptance limits.
 
 ## Local dictation
 

@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 1099cbbce2d7 -->
+<!-- source: 2d0f2e31cf55 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -298,12 +298,18 @@ saída fechada suprimem publicação e recuperação antigas; param a saída ant
 transporte. Uma entrada concluída nunca é recuperada nem repetida como novo turno do usuário.
 Chamadores retêm qualquer captura ainda não aceita até sua notificação Generate.
 
-A entrada nativa ainda não tem microfone, comando do renderer nem conversa de voz visível. A
-integração backend da V6.4 está entregue; tempo de dispositivo/acústica e aceitação com provedor
-real continuam em aberto antes da ativação. A V6.5.1 agora fornece inventário de pares somente de
-leitura e um spike sintético isolado; veja [Cancelamento de eco](echo-cancellation.md). A próxima
-etapa é roteamento duplex fixo na V6.5.2, antes de ferramentas na V6.6 e captura/interface na V6.7.
-A V6.5 completa e a qualificação física de fala continuam em aberto. Testes offline de socket e proprietário
+A V6.5.2 acrescenta a entrada Linux separada `run_routed`, protegida antes da captura nativa pelo
+consentimento existente das Configurações, cancelamento e autoridade da geração. Ela fixa os dois
+streams nativos em um par AEC ou dispositivos escolhidos explicitamente, mantém sua concessão até
+o fim da destruição e emite eventos Input limitados somente em memória ao chamador nativo. O
+chamador deve montar e confirmar turnos completos; a captura nunca é enviada automaticamente.
+A política explícita de fones/AEC fica separada da verificação temporária da rota; uma rota não
+verificada limpa fala/provas retidas antes de eventos adiados da reprodução. A entrada CPAL comum
+continua sem interrupção. Não há comando do renderer nem conversa de voz visível. O backend da
+V6.4/V6.5 está entregue; veja [Cancelamento de eco](echo-cancellation.md) para evidências de
+roteamento, relógio e grafo privado. A próxima etapa é ferramentas na V6.6, depois captura/interface
+na V6.7. Tempo de dispositivo/acústica, fala real e aceitação com provedor real continuam em aberto
+antes da ativação. Testes offline de socket e proprietário
 nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,
 admissão do reparo, falha, revogação, aborto e recuperação. A configuração ALSA nula isolada acima
 também executa o driver nativo completo com um provedor sintético:
