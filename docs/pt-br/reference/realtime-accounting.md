@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 59afba14de3c -->
+<!-- source: b3488c72dcd8 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -163,12 +163,25 @@ de avançar. Só um recibo final de sucesso libera o original pendente; recibos 
 processados antes de aplicar uma falha simultânea do transporte. Uma falha posterior em espera
 não recupera um turno antigo.
 
+A V6.7.3 acrescenta `Turn::from_capture` para uma captura nativa mono de 16 kHz em ponto flutuante
+já concluída e sua transcrição local finalizada. O adaptador reutiliza o reamostrador compartilhado
+com estado para produzir PCM16 de 24 kHz, preservando o relógio das amostras pela razão inteira
+exata de duração. A entrada é limitada a 100 ms-30 segundos antes da conversão; áudio não finito e
+transcrições inválidas são recusados, e picos finitos do filtro saturam em PCM16 sem transbordar.
+O áudio original não é alterado. O texto preserva os espaços originais, com o limite existente de
+4.096 bytes dos comandos nativos. Esse adaptador não abre microfone, não carrega modelo e não
+concede autoridade de captura/envio. Conectar o responsável pela captura explícita e os controles
+da conversa continua sendo a próxima tarefa da V6.7.3; a etapa completa e a aceitação física/ao vivo
+permanecem abertas.
+
 Admissão desligada/esgotada, chave ausente, falhas de transporte/protocolo/resposta ou saída cheia
 preservam o turno que falhou para recuperação local. O transporte recebe até 11 segundos para
 terminar seu caminho existente de conciliação limitada; depois, seu futuro/socket é descartado
-antes da decodificação. O modelo Whisper instalado e o idioma selecionados são congelados; o
-reamostrador existente converte o áudio preservado para 16 kHz. Não há download, limpeza por modelo,
-outro provedor nem envio automático ao Chat. A decodificação local bem-sucedida devolve o texto
+antes da recuperação. Se esse mesmo turno já contém uma transcrição local finalizada, a recuperação
+devolve essas palavras exatas sem uma segunda decodificação ou carga de modelo, após verificar
+cancelamento/revogação e a marca de turno consumido. Caso contrário, o modelo Whisper instalado e
+o idioma selecionados são congelados; o reamostrador existente converte o áudio preservado para
+16 kHz. Não há download, limpeza por modelo, outro provedor nem envio automático ao Chat. A decodificação local bem-sucedida devolve o texto
 inteiro, preservando espaços, para o chamador nativo oferecer como rascunho revisável. Isso não
 declara que o Zeca já respondeu em texto nem que existe uma interface para essa alternativa.
 

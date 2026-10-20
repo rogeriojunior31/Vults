@@ -9,7 +9,7 @@ use std::{
 use tokio::sync::watch;
 use vults_chat::realtime::transport::Failure;
 
-const RATE: usize = 24_000;
+const RATE: usize = vults_audio::playback::RATE as usize;
 const MAX_FRAMES: usize = RATE * 30;
 const CHUNK: usize = RATE / 10;
 
@@ -20,6 +20,34 @@ pub struct Turn {
     handled: Arc<AtomicBool>,
 }
 impl Turn {
+    /// Completed native 16 kHz capture and its finalized local transcript; no capture or upload.
+    pub fn from_capture(pcm: &[f32], text: String) -> Result<Self, Failure> {
+        let source_rate = vults_audio::SAMPLE_RATE as usize;
+        if !(source_rate / 10..=source_rate * 30).contains(&pcm.len())
+            || pcm.iter().any(|sample| !sample.is_finite())
+        {
+            return Err(Failure::Input);
+        }
+        check_transcript(&text)?;
+        let mut converter =
+            vults_audio::MonoResampler::at_rate(vults_audio::SAMPLE_RATE, vults_audio::playback::RATE)
+                .map_err(|_| Failure::Input)?;
+        let mut converted = converter.push(pcm).map_err(|_| Failure::Input)?;
+        converted.extend(converter.finish().map_err(|_| Failure::Input)?);
+        if converted.iter().any(|sample| !sample.is_finite()) {
+            return Err(Failure::Input);
+        }
+        // The filter may overshoot full scale. Float-to-integer casts saturate at PCM16 limits.
+        let mut turn = Self::new(
+            converted
+                .into_iter()
+                .map(|sample| (sample * 32768.0).round() as i16)
+                .collect(),
+        )?;
+        turn.transcript = Some(text.into());
+        Ok(turn)
+    }
+
     /// Already captured, mono PCM16 at 24 kHz. This grants no microphone authority.
     pub fn new(pcm: Vec<i16>) -> Result<Self, Failure> {
         if !(CHUNK..=MAX_FRAMES).contains(&pcm.len()) {
@@ -33,12 +61,7 @@ impl Turn {
     }
     /// A finalized local transcript of this same capture, supplied by its native capture owner.
     pub fn with_transcript(mut self, text: String) -> Result<Self, Failure> {
-        if text.trim().is_empty()
-            || text.len() > vults_dictation::command::MAX_INPUT_BYTES
-            || text.chars().any(|c| c.is_control() && !c.is_whitespace())
-        {
-            return Err(Failure::Input);
-        }
+        check_transcript(&text)?;
         self.transcript = Some(text.into());
         Ok(self)
     }
@@ -54,6 +77,16 @@ impl Turn {
     }
     pub(super) fn consume(&self) {
         self.handled.store(true, Ordering::SeqCst);
+    }
+}
+fn check_transcript(text: &str) -> Result<(), Failure> {
+    if text.trim().is_empty()
+        || text.len() > vults_dictation::command::MAX_INPUT_BYTES
+        || text.chars().any(|c| c.is_control() && !c.is_whitespace())
+    {
+        Err(Failure::Input)
+    } else {
+        Ok(())
     }
 }
 impl std::fmt::Debug for Turn {
@@ -139,6 +172,11 @@ pub(super) async fn recover(
     check(&*active, &cancel)?;
     if turn.handled() {
         return Err(Failure::Input);
+    }
+    if let Some(text) = &turn.transcript {
+        let text = text.to_string();
+        check(&*active, &cancel)?;
+        return Ok(Recovery::Text { reason, text });
     }
     let stop = Stop(Arc::default());
     let (pcm, flag) = (turn.samples(), stop.0.clone());

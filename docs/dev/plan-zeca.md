@@ -1870,3 +1870,24 @@ private DBus without service activation keep user configs/keyring apart. No micr
 provider or agent configuration is used. Shared Settings styles fix field sizing and action spacing.
 The local AGENTS task-actions script remains absent, not passed. Next is V6.7.3 explicit capture,
 turn assembly and conversation controls; live/physical voice acceptance and K8 completion stay open.
+
+
+**2026-10-20 V6.7.3 native turn assembly.** Completed mono 16 kHz capture and its finalized local
+transcript can now become a bounded 24 kHz PCM16 realtime turn through the existing shared
+resampler. The adapter preserves duration/pitch/level and the untouched source, validates
+100 ms-30 seconds and 4,096-byte local words, rejects non-finite samples and saturates filter peaks.
+Recovery returns the same finalized local text without another decode/model load, while consumed
+captures, cancellation and revoked authority remain refused. Untranscribed turns retain the
+existing guarded local decoder path. No microphone, model, provider, renderer command or new
+permission authority is opened by this adapter. The finite next step remains the explicitly
+started capture owner, followed by work-surface controls; V6.7.3 and live/physical acceptance stay open.
+
+Validation: 1,416 workspace tests pass (16 documented ignores), 10 feature evals, renderer build,
+all 19 renderer/bridge checks, workspace Clippy with warnings denied, formatting and repository
+guards pass. Nine local recovery/assembly tests include arbitrary/boundary capture lengths,
+1 kHz waveform phase/level, unchanged source/text, non-finite input, invalid/oversized UTF-8 text,
+signed PCM16 saturation and recovery without decoding for key/budget/transport/timeout failures.
+Cancelled, revoked and consumed turns are refused. The final portable sample-count assertion was
+rerun with targeted tests and Clippy. The local task-actions script remains absent, not passed.
+Reviewed EN/PT source marks match. No renderer changed; the app stays closed and no physical
+microphone/model/provider or live conversation acceptance is claimed.

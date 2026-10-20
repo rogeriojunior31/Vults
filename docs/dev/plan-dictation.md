@@ -2786,8 +2786,12 @@ before K8 can be marked Done. No gate is silently waived or relabeled as passed.
    retain large saved limits. Saves require readback; errors keep drafts, foreign changes require
    explicit reload and navigation preserves edits. Voice never answers permission cards and Codex
    remains unavailable. No recording or live conversation control is exposed in this slice.
-3. **V6.7.3 Capture and conversation controls** — next. Connect explicit native capture, local turn
-   assembly, listening/finish/cancel states and reviewable text recovery to the existing backend.
+3. **V6.7.3 Capture and conversation controls** — in progress. Native turn assembly implemented
+   2026-10-20: completed 16 kHz capture plus finalized local words becomes bounded 24 kHz PCM16
+   through the shared resampler, with exact duration and finite/saturating sample checks. Recovery
+   reuses those same words without another model load/decode. No microphone or renderer entry is
+   exposed by this adapter. Next: bind the explicit capture owner, then listening/finish/cancel
+   controls and reviewable recovery in the existing work surface. Whole V6.7.3 remains open.
 4. **V6.7.4 Island states and acceptance** — connect speaking/interrupted feedback, review native
    layouts and accessibility, then exercise microphone/provider/interruption acceptance before
    declaring K8 Done. Codex activation keeps its independent qualification gates.

@@ -143,12 +143,24 @@ queue relays output. Raw audio emission yields so buffered socket bursts cannot 
 consumer. Only a successful final receipt releases the pending original; queued receipts are drained
 before applying a simultaneous transport failure. A later idle failure cannot recover an older turn.
 
+V6.7.3 adds `Turn::from_capture` for a completed native mono 16 kHz float capture and its finalized
+local transcript. It reuses the shared stateful resampler to produce 24 kHz PCM16, preserving the
+sample clock with the exact integer duration ratio. Input is bounded to 100 ms-30 seconds before
+conversion; non-finite audio and invalid transcripts are rejected, and finite filter peaks saturate
+to PCM16 without wrapping. The source audio is not modified. Text keeps its original whitespace,
+with the existing 4,096-byte native-command bound. This adapter opens no microphone, loads no
+model and grants no capture/upload authority. Wiring the explicit capture owner and conversation
+controls remains the next V6.7.3 task; the whole milestone and physical/live acceptance remain open.
+
 Off/spent admission, missing keys, transport/protocol/response failures or saturated output retain
 the failed turn for local recovery. The transport gets up to 11 seconds to finish its existing
-bounded settlement path, then its future/socket is dropped before decoding. The selected installed
-Whisper model and language are snapshotted; the existing resampler converts the retained audio to
-16 kHz. No download, model clean-up, other provider or automatic Chat send is started. A successful
-local decode returns the whole text, preserving whitespace, for the native caller to offer as a
+bounded settlement path, then its future/socket is dropped before recovery. If this same turn
+already carries a finalized local transcript, recovery returns those exact words without a second
+decode or model load, after checking cancellation/revocation and the consumed-turn flag. Otherwise,
+the selected installed Whisper model and language are snapshotted; the existing resampler converts
+the retained audio to 16 kHz. No download, model clean-up, other provider or automatic Chat send is
+started. A successful local decode returns the whole text, preserving whitespace, for the native
+caller to offer as a
 reviewable draft. This is not a claim that Zeca already answered in text or that a fallback UI exists.
 
 Missing models, decode failure, empty output, invalid/oversized text or the 30-second local wait
