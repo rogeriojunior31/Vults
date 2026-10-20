@@ -376,6 +376,87 @@ mod tests {
         assert!(state.current(epoch));
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn microphone_setter_revokes_old_turns_without_touching_user_settings() {
+        use std::os::unix::fs::DirBuilderExt;
+        use std::path::PathBuf;
+        const CHILD: &str = "VULTS_MICROPHONE_SETTER_TEST";
+        let Some(root) = std::env::var_os(CHILD).map(PathBuf::from) else {
+            let root =
+                std::env::temp_dir().join(format!("vults-microphone-setter-{}", crate::traces::new_id()));
+            std::fs::DirBuilder::new().mode(0o700).create(&root).unwrap();
+            let result = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "realtime::tests::microphone_setter_revokes_old_turns_without_touching_user_settings",
+                    "--nocapture",
+                ])
+                .env(CHILD, &root)
+                .env("XDG_CONFIG_HOME", &root)
+                .output();
+            let _ = std::fs::remove_dir_all(&root);
+            let output = result.unwrap();
+            assert!(
+                output.status.success(),
+                "isolated setter regression failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return;
+        };
+        assert_eq!(
+            std::env::var_os("XDG_CONFIG_HOME"),
+            Some(root.clone().into_os_string())
+        );
+        assert_eq!(root.parent(), Some(std::env::temp_dir().as_path()));
+        assert!(
+            root.file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with("vults-microphone-setter-")
+        );
+        assert!(vults_peer::is_private_dir(&root));
+        let app = tauri::test::mock_app();
+        let state = Arc::new(State::default());
+        app.manage(state.clone());
+        app.manage(crate::settings::SettingsState(std::sync::Mutex::new(
+            crate::settings::Settings::default(),
+        )));
+        let settings = tauri::WebviewWindowBuilder::new(&app, crate::SETTINGS, tauri::WebviewUrl::default())
+            .build()
+            .unwrap();
+        let set = |device| {
+            crate::settings::set_dictation_microphone(app.handle().clone(), settings.as_ref().clone(), device)
+        };
+        let (lease, epoch) = state.begin().unwrap();
+        set(Some("Synthetic microphone".into())).unwrap();
+        set(None).unwrap();
+        assert!(
+            !state.current(epoch),
+            "restoring the device cannot restore the old turn"
+        );
+        drop(lease);
+        let (_lease, epoch) = state.begin().unwrap();
+        set(None).unwrap();
+        assert!(state.current(epoch), "unchanged device must not revoke a turn");
+        let directory = root.join(vults_brand::SLUG);
+        std::fs::remove_dir_all(&directory).unwrap();
+        std::fs::write(&directory, "blocked save").unwrap();
+        assert!(set(Some("Other synthetic microphone".into())).is_err());
+        assert!(
+            state.current(epoch),
+            "failed persistence must not publish a device change"
+        );
+        assert!(
+            app.state::<crate::settings::SettingsState>()
+                .0
+                .lock()
+                .unwrap()
+                .dictation_microphone
+                .is_none()
+        );
+    }
+
     #[test]
     fn revocation_between_entry_and_snapshot_and_shutdown_cannot_be_undone() {
         let state = Arc::new(State::default());

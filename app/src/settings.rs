@@ -1025,7 +1025,7 @@ pub fn set_dictation_microphone<R: tauri::Runtime>(
     let mut next = saved.clone();
     next.dictation_microphone = device.clone();
     save(&next).map_err(|_| "Could not save the dictation microphone.")?;
-    *saved = next;
+    apply_change(&app, &mut saved, |settings| *settings = next);
     drop(saved);
     #[cfg(target_os = "linux")]
     crate::questions::invalidate_capture(&app);

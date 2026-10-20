@@ -1804,3 +1804,27 @@ resolved inherited host policy in controls and auth-content assertion logging. T
 clarifies that a GET/POST retry after 401 may be handshake/fallback, not credential reload; that
 qualification remains open. The PT source mark, English heading anchors and 106 local documentation
 links/anchors are checked. The app stays closed and the production activation guard stays false.
+
+
+**2026-10-20 consolidated publication checkpoint before V6.7.** Full-branch independent review
+found three actionable gaps: the production microphone setter bypassed realtime invalidation,
+question-race checks were absent from CI and the changelog contradicted delivered dictation/setup.
+The setter now uses the shared change owner under Settings lock after persistence; a child-only
+private-config regression covers ABA restoration, unchanged device and failed persistence. CI
+runs all 18 renderer checks; Unreleased describes delivered question flows and backend-only voice.
+Nineteen isolated Codex auth/policy scenarios include effective requirements/account/config reads,
+keyring-required/noDBus refusal and true POST401 managed/unmanaged controls. Both HTTP controls
+terminate after one request without the replacement API bearer; this is refusal, not auth reload.
+The current host has no protected system policy. No original auth/keyring/system config, real
+provider or microphone is touched. Codex's four activation guards stay closed. At the user's request,
+publish this guarded baseline and proceed to V6.7 engineering; Codex activation, successful keyring,
+credential renewal and physical/live acceptance remain explicit open gates, not completed work.
+
+Validation: 1,412 workspace tests pass (16 documented ignores), 10 feature evals and all seven
+explicit Codex checks pass with 19 auth/policy scenarios. The renderer build, all 18 renderer
+checks, workspace/optional-feature Clippy and tests, formatting, repository guards, release-hook
+build and cold-start ceiling pass. Cargo deny passes advisories, bans, licenses and sources.
+Nine changed public EN/PT source marks are current; the latest checkpoint's headings and 108
+local documentation links are checked. Independent review confirms all three findings resolved
+and permits publication with Codex disabled; no successful credential renewal or live UI/audio
+acceptance is claimed. Local Rust is 1.99.1; PR CI also validates the pinned 1.98 toolchain.

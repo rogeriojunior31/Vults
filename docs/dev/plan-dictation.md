@@ -49,7 +49,9 @@ an isolated synthetic AEC experiment and consent-bound pinned native duplex rout
 device policy. Backend V6.5 is delivered. Next: V6.6 tools, then V6.7 capture/UI; Q6 production
 setup and physical/live acceptance remain open before activation. V6.6.1 now routes native finalized
 local transcripts through V8 before remote admission. V6.6.2 adds bounded read-only realtime flock
-tools with independent continuation admission. Next is V6.6.3 consultation, then V6.7 capture/UI.
+tools with independent continuation admission. The V6.6.3 publication checks below are accepted
+with Codex consultation disabled. Next engineering work is V6.7 capture/UI; optional Codex
+activation and physical/live acceptance remain explicit gates, not completed work.
 
 ## References
 
@@ -2577,7 +2579,8 @@ Delivery sequence:
    acceptance stays an activation gate. Backend V6.4 is delivered; full acceptance remains open.
    See [Native playback and context repair](../reference/realtime-accounting.md#native-playback-and-context-repair).
 
-Next engineering task: **V6.6.3 agent consultation and completion semantics**, before V6.7 capture/UI.
+Next engineering task: **V6.7 capture/UI**, after the V6.6.3 guarded-backend publication checkpoint below.
+Codex consultation remains unavailable; its activation qualification is carried separately.
 
 **V6.5 Echo cancellation** (M, spike first)
 - Preferred: PipeWire's WebRTC engine with both the clean source and paired reference sink.
@@ -2656,7 +2659,8 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
    audio. Offline protocol/duplex/native-owner regressions cover these paths and exact offerings.
    No action/permission tool, renderer entry, microphone or live provider is activated. Next is
    V6.6.3. See [Read-only tools](../reference/realtime-accounting.md#read-only-tools-in-realtime).
-3. **V6.6.3 agent consultation and completion semantics** (in progress).
+3. **V6.6.3 agent consultation and completion semantics** (backend publication checks accepted;
+   Codex activation remains unqualified).
    - **Completion receipts** (implemented 2026-10-20). Core-only changes complete at commit;
      project persistence completes only after a successful save. Native launches distinguish
      submission from completion: starting an editor or submitting a window-activation request
@@ -2723,7 +2727,7 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
      visible activation. App Server account/read has no stable identity for binding a separate exec.
      A synthetic-auth review probe confirms forced login on exec deletes mismatched API auth. Do not reuse Claude's consent, force a login
      mode that may log out an existing account, or claim live/managed-client acceptance. Whole
-     V6.6.3 remains open before V6.7.
+     Codex activation remains open. V6.7 engineering may proceed with that feature disabled.
 
      Reproduce the explicit installed-client checks on Linux (requires user/network namespaces
      and `ip`/`bwrap`; ordinary workspace tests skip these four client probes):
@@ -2734,6 +2738,35 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
 
      Baseline candidates must remain rejected; the exact helper must offer no tools, exclude
      canaries and accept only the fixed text reply. Passing does not authorize runtime activation.
+
+### V6.6.3 publication checkpoint (2026-10-20)
+
+The user requested consolidated verification and publication before V6.7 engineering. The release
+scope is the tested native backend, saved meetings and verified question flows; it does not enable
+unqualified Codex consultation or claim physical/live voice acceptance.
+
+- The actual microphone Settings setter now revokes realtime ownership under the Settings lock
+  after successful persistence. An isolated setter-level regression covers restoration, unchanged
+  choice and failed save. The earlier helper-only test did not cover this production writer.
+- Fresh isolated `configRequirements/read`, `account/read(refreshToken=false)` and `config/read`
+  verify absent policy, ChatGPT-only policy and required file/keyring stores. The host has no
+  `/etc/codex/requirements.toml`; it is not eligible for the managed route. No policy is installed.
+- Required keyring with DBus unavailable returns no account, sends no stored API bearer and never
+  falls back to an otherwise-valid synthetic ChatGPT file; the same file is accepted with file
+  storage. Neither file is altered. Successful/locked OS-keyring behavior is not qualified here.
+- A custom OpenAI-auth-required HTTP-only stand-in exercises actual POST401 for managed and
+  unmanaged synthetic ChatGPT-to-API replacement. Both terminate after one POST without sending
+  the replacement API key. This is bounded refusal evidence, not proof of credential reload or
+  successful renewal; it cannot enable the Codex activation capability.
+- Independent full-branch review found no additional P0/P1 issue. Its microphone invalidation,
+  missing question-race CI check and stale changelog findings are resolved. All 18 renderer checks
+  now run in CI. No microphone, model, original auth/keyring or agent config is used by these probes.
+
+**Disposition:** publish Codex consultation disabled behind all four existing guards. Keep its
+policy/provenance, successful keyring, credential renewal and live compatibility qualification open.
+Proceed to V6.7 engineering with that unavailability explicit. V6.7 must wire reviewed capture and
+controls, exercise physical/live acceptance with separate consent/budget, and run native UI review
+before K8 can be marked Done. No gate is silently waived or relabeled as passed.
 
 **V6.7 Talk with Zeca page and island speaking states** (M)
 - Build: the prototype's *Talk with Zeca* page under Voice (an opt-in switch saying where audio

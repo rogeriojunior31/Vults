@@ -82,14 +82,64 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
         Case::ManagedChatgptStatus,
         Case::SwitchedApiExec,
         Case::ManagedChatgpt401Switch,
+        Case::ManagedHttp401Switch,
+        Case::UnmanagedHttp401Switch,
+        Case::KeyringChatgptStatus,
+        Case::KeyringChatgptExec,
+        Case::KeyringStatus,
+        Case::KeyringExec,
+        Case::RequirementsUnmanaged,
+        Case::RequirementsManaged,
+        Case::RequirementsKeyring,
+        Case::RequirementsFile,
         Case::RestrictedExec,
     ] {
-        if matches!(mode, Case::ManagedChatgptStatus | Case::ManagedChatgpt401Switch) {
+        if matches!(
+            mode,
+            Case::ManagedChatgptStatus
+                | Case::ManagedChatgpt401Switch
+                | Case::ManagedHttp401Switch
+                | Case::UnmanagedHttp401Switch
+                | Case::KeyringChatgptStatus
+                | Case::KeyringChatgptExec
+        ) {
             std::fs::write(&auth_path, &chatgpt).unwrap();
+        }
+        if matches!(
+            mode,
+            Case::KeyringStatus | Case::KeyringExec | Case::KeyringChatgptStatus | Case::KeyringChatgptExec
+        ) {
+            if matches!(mode, Case::KeyringStatus | Case::KeyringExec) {
+                std::fs::write(&auth_path, sentinel).unwrap();
+            }
+            std::fs::write(
+                synthetic_etc.join("codex/requirements.toml"),
+                "allowed_login_methods = [\"chatgpt\"]\ncli_auth_credentials_store = \"keyring\"\n",
+            )
+            .unwrap();
+        }
+        if mode.requirements() {
+            let store = match mode {
+                Case::RequirementsKeyring => "cli_auth_credentials_store = \"keyring\"\n",
+                Case::RequirementsFile => "cli_auth_credentials_store = \"file\"\n",
+                _ => "",
+            };
+            std::fs::write(
+                synthetic_etc.join("codex/requirements.toml"),
+                format!("allowed_login_methods = [\"chatgpt\"]\n{store}"),
+            )
+            .unwrap();
         }
         let network = matches!(
             mode,
-            Case::ApiExec | Case::ManagedApiExec | Case::SwitchedApiExec | Case::ManagedChatgpt401Switch
+            Case::ApiExec
+                | Case::ManagedApiExec
+                | Case::SwitchedApiExec
+                | Case::ManagedChatgpt401Switch
+                | Case::ManagedHttp401Switch
+                | Case::UnmanagedHttp401Switch
+                | Case::KeyringExec
+                | Case::KeyringChatgptExec
         );
         let listener = if network {
             Some(tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap())
@@ -112,6 +162,14 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
                 | Case::ManagedChatgptStatus
                 | Case::SwitchedApiExec
                 | Case::ManagedChatgpt401Switch
+                | Case::ManagedHttp401Switch
+                | Case::KeyringStatus
+                | Case::KeyringExec
+                | Case::KeyringChatgptStatus
+                | Case::KeyringChatgptExec
+                | Case::RequirementsManaged
+                | Case::RequirementsKeyring
+                | Case::RequirementsFile
         ) {
             command.args(["--ro-bind"]).arg(&synthetic_etc).arg("/etc");
         } else {
@@ -121,7 +179,16 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
             command.arg("--share-net");
         }
         command.arg(&binary);
-        if mode.exec() {
+        if mode.requirements() {
+            command.args([
+                "app-server",
+                "--stdio",
+                "-c",
+                "analytics.enabled=false",
+                "-c",
+                "feedback.enabled=false",
+            ]);
+        } else if mode.exec() {
             command.args(exec.as_std().get_args());
             if let Some(listener) = &listener {
                 command.args([
@@ -130,6 +197,21 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
                     "--disable",
                     "enable_request_compression",
                 ]);
+            }
+            if matches!(mode, Case::ManagedHttp401Switch | Case::UnmanagedHttp401Switch) {
+                let address = listener.as_ref().unwrap().local_addr().unwrap();
+                for setting in [
+                    "model_provider=\"vults_auth_probe\"".to_string(),
+                    "model_providers.vults_auth_probe.name=\"Isolated authentication probe\"".into(),
+                    format!("model_providers.vults_auth_probe.base_url=\"http://{address}/v1\""),
+                    "model_providers.vults_auth_probe.wire_api=\"responses\"".into(),
+                    "model_providers.vults_auth_probe.requires_openai_auth=true".into(),
+                    "model_providers.vults_auth_probe.supports_websockets=false".into(),
+                    "model_providers.vults_auth_probe.request_max_retries=0".into(),
+                    "model_providers.vults_auth_probe.stream_max_retries=0".into(),
+                ] {
+                    command.args(["-c", &setting]);
+                }
             }
             if mode == Case::RestrictedExec {
                 command.args(["-c", "forced_login_method=\"chatgpt\""]);
@@ -149,13 +231,23 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
             }
         }
         command
-            .stdin(if mode.exec() {
+            .stdin(if mode.exec() || mode.requirements() {
                 Stdio::piped()
             } else {
                 Stdio::null()
             })
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        // Do not inherit kernel-session credentials even if a client changes keyring backend.
+        // SAFETY: only a direct syscall runs in the post-fork child.
+        unsafe {
+            command.pre_exec(|| {
+                if libc::syscall(libc::SYS_keyctl, libc::KEYCTL_JOIN_SESSION_KEYRING, 0_usize) < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
         command.kill_on_drop(true);
         let captured = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let count = captured.clone();
@@ -163,9 +255,16 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
             listener.map(|listener| tokio::spawn(capture(listener, mode, auth_path.clone(), count)));
         let mut child = command.spawn().expect("isolated client");
         let input = child.stdin.take();
-        let mut stdout = child.stdout.take().unwrap().take(4096);
+        let mut stdout = child.stdout.take().unwrap().take(64 * 1024);
         let mut stderr = child.stderr.take().unwrap().take(4096);
         let result = tokio::time::timeout(Duration::from_secs(10), async {
+            if mode.requirements() {
+                let mut input = input.unwrap();
+                policy_read(&mut input, &mut stdout, mode).await?;
+                drop(input);
+                child.start_kill()?;
+                return Ok((child.wait().await?, Vec::new(), Vec::new()));
+            }
             if let Some(mut input) = input {
                 input
                     .write_all(super::input("Synthetic question").as_bytes())
@@ -173,7 +272,7 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
             }
             let (mut out, mut error) = (Vec::new(), Vec::new());
             tokio::try_join!(stdout.read_to_end(&mut out), stderr.read_to_end(&mut error))?;
-            if out.len() == 4096 || error.len() == 4096 {
+            if out.len() == 64 * 1024 || error.len() == 4096 {
                 return Err(std::io::Error::other("status output exceeds probe limit"));
             }
             let status = child.wait().await?;
@@ -210,8 +309,23 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
             );
         }
         println!("Codex auth {mode:?}: observed_requests={attempts}");
+        if mode.requirements() {
+            assert!(
+                std::fs::read(&auth_path).is_ok_and(|bytes| bytes == sentinel),
+                "metadata reads must preserve auth"
+            );
+            continue;
+        }
         if !mode.exec() {
             assert!(out.is_empty(), "status unexpectedly used stdout");
+        }
+        if matches!(mode, Case::KeyringChatgptStatus | Case::KeyringChatgptExec) {
+            assert_eq!(status.code(), Some(1));
+            assert!(
+                std::fs::read_to_string(&auth_path).is_ok_and(|text| text == chatgpt),
+                "required keyring must not use or alter the otherwise-valid ChatGPT file"
+            );
+            continue;
         }
         if matches!(
             mode,
@@ -220,6 +334,10 @@ async fn managed_auth_refuses_api_credentials_without_forced_exec_logout() {
                 | Case::ManagedApiExec
                 | Case::SwitchedApiExec
                 | Case::ManagedChatgpt401Switch
+                | Case::ManagedHttp401Switch
+                | Case::UnmanagedHttp401Switch
+                | Case::KeyringStatus
+                | Case::KeyringExec
         ) {
             assert_eq!(status.code(), Some(1));
             assert!(
@@ -286,9 +404,28 @@ enum Case {
     ManagedChatgptStatus,
     SwitchedApiExec,
     ManagedChatgpt401Switch,
+    ManagedHttp401Switch,
+    UnmanagedHttp401Switch,
+    KeyringChatgptStatus,
+    KeyringChatgptExec,
+    KeyringStatus,
+    KeyringExec,
+    RequirementsUnmanaged,
+    RequirementsManaged,
+    RequirementsKeyring,
+    RequirementsFile,
     RestrictedExec,
 }
 impl Case {
+    fn requirements(self) -> bool {
+        matches!(
+            self,
+            Self::RequirementsUnmanaged
+                | Self::RequirementsManaged
+                | Self::RequirementsKeyring
+                | Self::RequirementsFile
+        )
+    }
     fn exec(self) -> bool {
         matches!(
             self,
@@ -296,6 +433,10 @@ impl Case {
                 | Self::ManagedApiExec
                 | Self::SwitchedApiExec
                 | Self::ManagedChatgpt401Switch
+                | Self::ManagedHttp401Switch
+                | Self::UnmanagedHttp401Switch
+                | Self::KeyringExec
+                | Self::KeyringChatgptExec
                 | Self::RestrictedExec
         )
     }
@@ -337,6 +478,10 @@ async fn capture(
             let expected = match mode {
                 Case::ApiExec => Some("Bearer sk-vults-synthetic-not-real"),
                 Case::ManagedChatgpt401Switch => Some("Bearer synthetic-access"),
+                Case::ManagedHttp401Switch | Case::UnmanagedHttp401Switch if attempt == 0 => {
+                    Some("Bearer synthetic-access")
+                }
+                Case::UnmanagedHttp401Switch => Some("Bearer sk-vults-synthetic-not-real"),
                 _ => None,
             };
             let auth: Vec<_> = head
@@ -350,7 +495,17 @@ async fn capture(
                 auth == expected.into_iter().collect::<Vec<_>>(),
                 "only the expected synthetic authentication may reach the stand-in"
             );
-            let response = if mode == Case::ManagedChatgpt401Switch && attempt == 0 {
+            if matches!(mode, Case::ManagedHttp401Switch | Case::UnmanagedHttp401Switch) {
+                assert!(
+                    head.starts_with("POST "),
+                    "this case must exercise HTTP401, not a WebSocket handshake"
+                );
+            }
+            let response = if matches!(
+                mode,
+                Case::ManagedChatgpt401Switch | Case::ManagedHttp401Switch | Case::UnmanagedHttp401Switch
+            ) && attempt == 0
+            {
                 std::fs::write(
                     &auth_path,
                     br#"{"auth_mode":"apikey","OPENAI_API_KEY":"sk-vults-synthetic-not-real"}"#,
@@ -360,8 +515,79 @@ async fn capture(
             } else {
                 "HTTP/1.1 400 Bad Request"
             };
-            socket.write_all(format!("{response}\r\ncontent-type: application/json\r\ncontent-length: 2\r\nconnection: close\r\n\r\n{{}}").as_bytes()).await.unwrap();
+            let body = r#"{"error":{"type":"invalid_request_error","code":"invalid_api_key","message":"Synthetic authentication failure."}}"#;
+            socket.write_all(format!("{response}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
             break;
         }
     }
+}
+
+async fn policy_read(
+    input: &mut tokio::process::ChildStdin,
+    output: &mut (impl tokio::io::AsyncRead + Unpin),
+    mode: Case,
+) -> std::io::Result<()> {
+    use serde_json::{Value, json};
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    let mut lines = BufReader::new(output).lines();
+    let requests = [
+        json!({"id":1,"method":"initialize","params":{"clientInfo":{"name":"vults_auth_probe","version":"0.0.0"}}}),
+        json!({"id":2,"method":"configRequirements/read","params":{}}),
+        json!({"id":3,"method":"account/read","params":{"refreshToken":false}}),
+        json!({"id":4,"method":"config/read","params":{"includeLayers":false}}),
+    ];
+    for request in requests {
+        input.write_all(format!("{request}\n").as_bytes()).await?;
+        let result = loop {
+            let line = lines
+                .next_line()
+                .await?
+                .ok_or_else(|| std::io::Error::other("metadata protocol ended"))?;
+            let value: Value = serde_json::from_str(&line)
+                .map_err(|_| std::io::Error::other("invalid metadata protocol"))?;
+            if value.get("id").is_some() && value.get("method").is_some() {
+                return Err(std::io::Error::other("unexpected server request"));
+            }
+            if value["id"] == request["id"] {
+                if value.get("error").is_some() {
+                    return Err(std::io::Error::other("metadata request failed"));
+                }
+                break value["result"].clone();
+            }
+        };
+        let valid = match request["id"].as_u64() {
+            Some(1) => {
+                input.write_all(b"{\"method\":\"initialized\"}\n").await?;
+                true
+            }
+            Some(2) if mode == Case::RequirementsUnmanaged => result["requirements"].is_null(),
+            Some(2) => {
+                result["requirements"]["allowedLoginMethods"] == json!(["chatgpt"])
+                    && match mode {
+                        Case::RequirementsKeyring => {
+                            result["requirements"]["cliAuthCredentialsStore"] == "keyring"
+                        }
+                        Case::RequirementsFile => result["requirements"]["cliAuthCredentialsStore"] == "file",
+                        _ => result["requirements"]["cliAuthCredentialsStore"].is_null(),
+                    }
+            }
+            Some(3) if mode == Case::RequirementsUnmanaged => result["account"]["type"] == "apiKey",
+            Some(3) => result["account"].is_null(),
+            Some(4) => {
+                result["config"]["cli_auth_credentials_store"]
+                    == if mode == Case::RequirementsKeyring {
+                        "keyring"
+                    } else {
+                        "file"
+                    }
+            }
+            _ => false,
+        };
+        if !valid {
+            return Err(std::io::Error::other(
+                "effective auth policy did not match the isolated case",
+            ));
+        }
+    }
+    Ok(())
 }

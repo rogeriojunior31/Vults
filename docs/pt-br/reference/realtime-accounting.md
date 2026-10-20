@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 036089709eec -->
+<!-- source: febbcb4921df -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -514,7 +514,9 @@ Testes offline exercitam o tempo do aviso, prazos originais durante admissão le
 cancelamento e destruição, saída confirmada do processo, limite da resposta, argumentos, controles/
 versão do cliente, admissão persistente independente e atualização do consentimento. Eles usam
 processos filhos locais sintéticos, sem modelo, microfone nem ação do desktop. Vínculo atômico com
-a assinatura e compatibilidade com cliente real/gerenciado continuam em aberto; a V6.6.3 não está concluída.
+a assinatura e compatibilidade com cliente real/gerenciado continuam em aberto para ativação do
+Codex e aceitação real. O backend protegido pode ser publicado; a engenharia da V6.7 segue com
+Codex indisponível.
 
 
 <a id="codex-qualification"></a>
@@ -571,8 +573,8 @@ autenticação sintética confirma que forçar o método de login em exec apaga 
 incompatível; o Vults não deve usá-lo. A [leitura de conta do App Server](https://learn.chatgpt.com/docs/app-server)
 documentada não fornece identidade estável de conta/workspace para vincular um exec separado.
 Garantir uso exclusivo da assinatura durante uma troca externa de login continua bloqueando a
-ativação. Compatibilidade com cliente real/gerenciado também segue pendente; a V6.6.3 permanece
-aberta antes da V6.7.
+ativação. Compatibilidade com cliente real/gerenciado também segue pendente; a ativação
+do Codex permanece aberta, e a engenharia da V6.7 segue com esse recurso indisponível.
 
 
 <a id="managed-policy-candidate"></a>
@@ -603,3 +605,33 @@ produção nem vínculo com uma conta específica. Verificação em execução d
 origem protegida, comportamento do keyring, casos mais amplos de renovação/falha e compatibilidade
 real continuam pendentes. A capacidade de ativação permanece falsa, inclusive em máquinas sem
 política administrada; nenhum recurso nativo ou visível é habilitado.
+
+
+<a id="guarded-backend-publication"></a>
+### Publicação do backend protegido
+
+A verificação consolidada permite publicar o backend com consulta ao Codex desativada; ela não
+qualifica nem habilita esse adaptador opcional. Verificações isoladas de metadados agora validam
+requisitos ausentes/exclusivos de ChatGPT e seleção de armazenamento em arquivo/keyring sem
+renovar tokens. Keyring obrigatório com DBus indisponível recusa tanto autenticação de API armazenada quanto um
+arquivo ChatGPT sintético que seria válido. O mesmo arquivo ChatGPT é aceito com armazenamento
+em arquivo, portanto os casos de keyring verificam recusa sem fallback; nenhum arquivo sintético
+é alterado. A máquina atual não tem arquivo protegido de requisitos do sistema,
+portanto nenhuma rota administrada é habilitada.
+
+Um servidor falso somente HTTP usa um provedor personalizado que exige a autenticação OpenAI da
+CLI. Ele retorna um POST401 válido após substituir autenticação ChatGPT sintética por uma chave de
+API sintética. Tanto o caso administrado quanto o sem política encerram após um POST e preservam
+o arquivo substituto sem enviar sua chave. Isso cobre recusa limitada, não renovação bem-sucedida
+nem recarga de credenciais. O WebSocket do provedor integrado e keyring disponível/bloqueado ainda
+precisam de qualificação. Nenhuma conta real, keyring, provedor ou política do sistema é alterada.
+
+O setter de microfone em produção agora invalida a geração da voz nativa antes de publicar um
+novo dispositivo; restaurá-lo não revive o turno antigo. Escolhas idênticas e falhas ao salvar
+mantêm a geração atual. Uma regressão do setter usa processo separado e configuração privada.
+Os testes de corrida/IME/saída das perguntas agora rodam na CI junto aos demais checks do renderer.
+
+A V6.7 pode montar captura e controles visíveis sobre o backend protegido. Aceitação com fala
+física, provedor e interface nativa pertence a essa integração; K8 segue aberto até passar.
+Consentimento, ferramentas, gate e execução do helper Codex continuam indisponíveis até concluir
+sua própria qualificação. Veja o [checkpoint de publicação](../../dev/plan-dictation.md#v663-publication-checkpoint-2026-10-20).

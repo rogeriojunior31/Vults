@@ -46,10 +46,14 @@ jobs:
           node scripts/check-dictation-words.mjs
           node scripts/check-dictation-statistics.mjs
           node scripts/check-dictation-diagnostics.mjs
+          node scripts/check-dictation-history.mjs
+          node scripts/check-dictation-island.mjs
+          node scripts/check-dictation-status.mjs
           node scripts/check-dictation-styles.mjs
           node scripts/check-meeting-assets.mjs
           node scripts/check-project-search.mjs
           node scripts/check-surface-continuity.mjs
+          node scripts/check-text-questions.mjs
       # rustup reads rust-toolchain.toml on the first cargo call.
       - uses: Swatinem/rust-cache@v2
       # Same sequence as CLAUDE.md.

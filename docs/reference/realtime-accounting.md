@@ -451,7 +451,8 @@ Offline tests exercise notice timing, original deadlines across slow admission, 
 teardown ownership, child reaping, bounded output, arguments, the client controls/version check,
 durable independent admission and consent upgrades. They run synthetic local child processes and
 no model, microphone or desktop action. Atomic subscription binding and live/managed-client compatibility
-remain open; V6.6.3 is not complete.
+remain open for Codex activation and live acceptance. The guarded backend can be published;
+V6.7 engineering proceeds with Codex unavailable.
 
 
 ### Codex qualification
@@ -503,7 +504,7 @@ that forcing the login method on exec deletes mismatched API authentication; Vul
 The documented [App Server account read](https://learn.chatgpt.com/docs/app-server) provides no stable
 account/workspace identity to bind a separate exec. Subscription-only behavior during an external
 login switch remains an activation blocker. Live/managed-client compatibility is also pending;
-V6.6.3 stays open before V6.7.
+Codex activation stays open; V6.7 engineering proceeds with that feature unavailable.
 
 
 ### Managed-policy candidate
@@ -529,3 +530,31 @@ These are synthetic file-store observations on CLI 0.163.0, not production eligi
 account binding. Runtime verification of effective policy and protected provenance, keyring
 behavior, broader refresh/failure cases and live compatibility remain pending. The activation
 capability stays false, including on unmanaged machines; no native or visible feature is enabled.
+
+
+### Guarded backend publication
+
+Consolidated verification permits publishing the backend with Codex consultation disabled; it
+does not qualify or enable that optional adapter. Fresh isolated metadata checks now verify
+absent/ChatGPT-only requirements and file/keyring store selection without refreshing tokens.
+Required keyring with DBus unavailable refuses both stored API auth and an otherwise-valid
+synthetic ChatGPT file. The same ChatGPT file is accepted under file storage, so the keyring cases
+check refusal without file fallback; neither synthetic file is altered.
+The current host has no protected system requirements file, so no managed route is enabled.
+
+A separate HTTP-only stand-in uses a custom provider requiring the CLI's OpenAI authentication.
+It returns a valid POST401 after replacing synthetic ChatGPT auth with a synthetic API key. Both
+managed and unmanaged cases terminate after one POST and preserve the replacement file without
+sending its key. This covers bounded refusal, not successful refresh or credential reload. The
+built-in provider's WebSocket behavior and successful/locked keyring still need qualification.
+No real account, keyring, provider or system policy is touched by these tests.
+
+The production microphone setter now invalidates the native voice epoch before publishing a
+changed device; restoring it cannot revive the old turn. Unchanged choices and failed saves retain
+the current epoch. A setter-level subprocess regression uses a private config root. The question
+race/IME/leave checks now run in CI alongside the remaining renderer checks.
+
+V6.7 can now assemble capture and visible controls against the guarded backend. Physical speech,
+provider and native UI acceptance belong to that integration; K8 remains open until they pass.
+Codex consent, tools, gate and helper execution remain unavailable until their own qualification
+is complete. See the [publication checkpoint](../dev/plan-dictation.md#v663-publication-checkpoint-2026-10-20).
