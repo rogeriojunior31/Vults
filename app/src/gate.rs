@@ -238,6 +238,7 @@ impl NetGate {
     ) -> Option<Span> {
         self.reserve_text(store, identity, MEETING_SUMMARY, provider, model, local)
     }
+    #[cfg(any(target_os = "linux", test))]
     pub fn reserve_voice_consultation(&self, store: &mut vults_store::Store, identity: &str) -> Option<Span> {
         self.reserve_text(
             store,
@@ -249,6 +250,7 @@ impl NetGate {
         )
     }
 
+    #[cfg(any(target_os = "linux", test))]
     pub fn reserve_codex_consultation(&self, store: &mut vults_store::Store, identity: &str) -> Option<Span> {
         self.reserve_text(
             store,

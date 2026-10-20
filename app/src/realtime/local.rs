@@ -42,6 +42,7 @@ impl Turn {
         self.transcript = Some(text.into());
         Ok(self)
     }
+    #[cfg(target_os = "linux")]
     pub(super) fn transcript(&self) -> Option<&str> {
         self.transcript.as_deref()
     }
