@@ -561,6 +561,11 @@ mod label_tests {
         };
         let (nest, settings, island) = (build(NEST), build(SETTINGS), build(ISLAND));
         assert!(settings_page(settings.as_ref()).is_ok());
+        assert_eq!(
+            settings::set_voice_codex_consultation(app.handle().clone(), settings.as_ref().clone(), true),
+            Err(vults_chat::consult_codex::UNAVAILABLE.into()),
+            "unqualified authentication must refuse before accessing settings or the ledger"
+        );
         assert!(settings_page(nest.as_ref()).is_err());
         assert!(settings_page(island.as_ref()).is_err());
         assert!(open_shortcut_settings(nest.as_ref().clone()).is_err());

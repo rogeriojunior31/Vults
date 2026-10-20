@@ -1180,6 +1180,9 @@ fn save_consultation<R: tauri::Runtime>(
     codex: bool,
 ) -> Result<(), String> {
     crate::settings_page(&window)?;
+    if codex && on && !vults_chat::consult_codex::SUBSCRIPTION_AUTH_QUALIFIED {
+        return Err(vults_chat::consult_codex::UNAVAILABLE.into());
+    }
     let state = app.state::<SettingsState>();
     let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
     let mut next = saved.clone();

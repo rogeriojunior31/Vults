@@ -403,8 +403,11 @@ changing it revokes the voice epoch even if the old choice is restored before th
 renderer has no conversation entry or consultation control yet. Default offerings remain the five
 cached flock reads. The backend also supports `consult_codex` with its own default-off
 `voice_codex_consultation` choice and original `voice_codex_consultation_budget` identity.
-Its Settings-only command invalidates the same voice epoch. There is no renderer control or
-capture entry for either provider; Codex activation remains gated on the account-switch issue below.
+Its Settings-only command invalidates the same voice epoch when a choice changes. Codex is
+currently blocked by the shared `SUBSCRIPTION_AUTH_QUALIFIED=false` capability: enabling it is
+refused before settings/ledger access, saved consent cannot offer its tool or open the network gate,
+and the text helper refuses before CLI or scratch access. Turning a saved choice off remains allowed.
+There is no renderer control or capture entry for either provider.
 
 Each consultation supplies one nonempty question of at most 256 bytes, without control characters.
 The Claude path uses the existing Claude Code text helper with Haiku, a new private empty working directory,
@@ -485,7 +488,8 @@ response through the actual CLI and reply parser. Captured instructions and cred
 saved or logged, and no external provider is contacted. Ordinary offline regressions check both
 tool registries, input round trips, version restrictions and reply rejection. A filesystem/network-isolated
 synthetic-auth test also proves the ChatGPT-only status check refuses API auth without altering it; the original
-home/auth/keyring are hidden, and HOME/CODEX_HOME values are never reassigned. See the
+home/auth/keyring are hidden, and HOME/CODEX_HOME values are never reassigned. The same test
+characterizes forced-exec auth deletion only inside that disposable synthetic mount. See the
 [roadmap reproduction command](../dev/plan-dictation.md#v6-talk-with-zeca-k8).
 
 The native backend now connects this helper through its own consent, durable quota and content-free
@@ -494,7 +498,7 @@ authorizes Codex, and exhausting one provider's quota does not consume the other
 activation or capture caller is present. The helper preserves the installed CLI's authentication,
 removes inherited API-key/base-URL/session environment overrides and requires a successful
 nonmutating ChatGPT-only `login status` check before starting exec. This is a preflight, not an
-atomic binding against a concurrent external login change. A synthetic-auth review probe confirmed
+atomic binding against a concurrent external login change. The repeatable synthetic-auth regression confirms
 that forcing the login method on exec deletes mismatched API authentication; Vults must not use it.
 The documented [App Server account read](https://learn.chatgpt.com/docs/app-server) provides no stable
 account/workspace identity to bind a separate exec. Subscription-only behavior during an external

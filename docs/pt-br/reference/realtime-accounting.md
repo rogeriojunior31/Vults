@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: ff66a212ee55 -->
+<!-- source: 9e0357a2ff8e -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -461,8 +461,11 @@ for restaurada antes da próxima verificação. O renderer ainda não tem entrad
 controle de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O backend
 também suporta `consult_codex` com sua própria opção `voice_codex_consultation`, desligada por
 padrão, e identidade original `voice_codex_consultation_budget`. Seu comando exclusivo de
-Configurações invalida a mesma geração da voz. Não há controle do renderer nem entrada de captura
-para nenhum provedor; a ativação do Codex depende da questão de troca de conta descrita abaixo.
+Configurações invalida a mesma geração da voz quando uma escolha muda. O Codex está bloqueado
+pela capacidade compartilhada `SUBSCRIPTION_AUTH_QUALIFIED=false`: ligar é recusado antes de
+acessar configurações/ledger, consentimento salvo não oferece sua ferramenta nem abre o gate de
+rede, e o helper textual recusa antes de acessar a CLI ou pasta temporária. Desligar uma escolha
+salva continua permitido. Não há controle do renderer nem entrada de captura para nenhum provedor.
 
 Cada consulta fornece uma pergunta não vazia de até 256 bytes, sem caracteres de controle. O caminho
 do Claude reutiliza seu cliente textual com Haiku, uma nova pasta de trabalho privada e vazia,
@@ -553,7 +556,8 @@ acessado. Regressões offline normais verificam os dois registros de ferramentas
 entrada, restrições de versão e rejeição de respostas. Um teste de autenticação sintética, isolado
 no sistema de arquivos e na rede, também comprova que a verificação de status exclusiva de ChatGPT
 recusa autenticação de API sem alterá-la; a pasta pessoal/autenticação/keyring originais ficam
-ocultos, e os valores de HOME/CODEX_HOME nunca são reatribuídos. Veja o
+ocultos, e os valores de HOME/CODEX_HOME nunca são reatribuídos. O mesmo teste caracteriza a
+exclusão de autenticação por exec forçado somente nessa montagem sintética descartável. Veja o
 [comando de reprodução no roadmap](../../dev/plan-dictation.md#v6-talk-with-zeca-k8).
 
 O backend nativo agora conecta esse helper por consentimento próprio, cota persistente e traces
@@ -562,8 +566,8 @@ do Claude nunca autoriza Codex, e esgotar a cota de um provedor não consome a d
 ativação visível nem chamador de captura. O helper preserva a autenticação da CLI instalada, remove
 sobrescritas de chave de API/URL base/sessão herdadas do ambiente e exige sucesso na verificação
 não mutante `login status` exclusiva de ChatGPT antes de iniciar exec. Isso é uma verificação prévia,
-não um vínculo atômico contra uma troca externa concorrente de login. Um teste de revisão com
-autenticação sintética confirmou que forçar o método de login em exec apaga autenticação de API
+não um vínculo atômico contra uma troca externa concorrente de login. A regressão repetível com
+autenticação sintética confirma que forçar o método de login em exec apaga autenticação de API
 incompatível; o Vults não deve usá-lo. A [leitura de conta do App Server](https://learn.chatgpt.com/docs/app-server)
 documentada não fornece identidade estável de conta/workspace para vincular um exec separado.
 Garantir uso exclusivo da assinatura durante uma troca externa de login continua bloqueando a

@@ -1761,3 +1761,23 @@ explicit installed-Codex checks pass inside the isolated namespace. The renderer
 18 existing renderer checks, workspace Clippy with warnings denied, formatting and repository
 guards pass. Independent code review found no backend blocker; subscription-switch activation
 remains explicitly outside this backend sign-off. No dependency or renderer changes.
+
+
+**2026-10-20 V6.6.3 enforce the Codex auth activation gate.** The prior backend wiring had an open
+qualification gate in documentation only. A shared false capability now rejects opt-in before
+settings/ledger access, excludes Codex from native offering despite a saved true choice, closes its
+network gate and refuses the public text helper before any process or scratch access. Independent
+consent/quota/ownership wiring and local qualification commands are retained. Existing Claude
+consultation is unaffected; turning a saved Codex choice off remains allowed. The isolated auth
+regression now reproduces destructive forced-exec mismatch using only disposable synthetic auth,
+while the status check remains nonmutating. Original home/auth/keyring stay hidden; no external
+provider, microphone or app launch. Neither ephemeral credential storage nor URL overrides is a
+documented binding of the existing subscription login, so neither is introduced as a workaround.
+This closes an activation bypass, not the subscription-binding issue: V6.6.3 stays open before V6.7.
+
+Validation: 1,411 workspace tests pass (16 documented ignores), 10 feature evals and seven explicit
+Codex checks pass, including the disposable forced-exec mismatch characterization. Build, all
+18 renderer checks, formatting, workspace Clippy with warnings denied and repository guards pass.
+The independent review found and resolved status-stdin race/child cleanup in the test harness;
+production guards have no confirmed blocker. Translation source marks, English anchors and
+173 local documentation links/anchors are verified. The app remains closed.

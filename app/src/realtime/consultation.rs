@@ -26,6 +26,9 @@ enum Provider {
 }
 impl Provider {
     fn ledger(self, settings: &crate::settings::Settings) -> Option<&String> {
+        if self == Self::Codex && !vults_chat::consult_codex::SUBSCRIPTION_AUTH_QUALIFIED {
+            return None;
+        }
         let (on, ledger) = match self {
             Self::Claude => (settings.voice_consultation, &settings.voice_consultation_budget),
             Self::Codex => (

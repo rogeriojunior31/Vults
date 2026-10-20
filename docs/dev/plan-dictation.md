@@ -2700,6 +2700,13 @@ Next engineering task: **V6.6.3 agent consultation and completion semantics**, b
      writes, durable 20-attempt rolling quota and metadata-only traces now reuse the native owner.
      Both providers share a busy slot through acknowledged child exit; consent/quota separation and
      cancellation ownership have offline regressions. There is no renderer/capture entry.
+     **Activation guard enforced 2026-10-20:** one false qualification capability now refuses
+     Codex opt-in before settings/ledger IO, omits its tool even with saved consent, closes its
+     network gate and refuses the public helper before CLI/scratch access. Turning a saved choice
+     off remains allowed. The isolated synthetic-auth regression now also reproduces forced-exec
+     deletion, without exposing original credentials or contacting a provider. This is containment,
+     not a subscription-binding solution. Ephemeral credential storage does not import the existing
+     login; URL overrides are not authentication-mode guarantees. Do not substitute either.
      **Next:** qualify subscription-only behavior during concurrent external login changes before
      visible activation. App Server account/read has no stable identity for binding a separate exec.
      A synthetic-auth review probe confirms forced login on exec deletes mismatched API auth. Do not reuse Claude's consent, force a login

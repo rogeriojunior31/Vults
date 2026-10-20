@@ -1,12 +1,16 @@
 //! A fresh Codex CLI question with an app-owned, tool-free model catalog.
 //! Callers must supply private scratch space and admit the request through their own gate.
-//! The native backend has independent consent; subscription binding still gates visible activation.
+//! Subscription binding is unqualified: native offering and execution remain blocked.
 use std::{fs::OpenOptions, io::Write, path::Path, process::Stdio};
 
 use serde_json::{Value, json};
 use tokio::{process::Command, sync::watch};
 
 pub const MODEL: &str = "gpt-6.1-sol";
+// A status preflight cannot bind exec; forced login can delete an existing mismatched account.
+pub const SUBSCRIPTION_AUTH_QUALIFIED: bool = false;
+pub const UNAVAILABLE: &str =
+    "Codex voice consultation is unavailable until subscription authentication is qualified.";
 
 /// Availability only; the exact version and ChatGPT eligibility are checked after admission.
 pub fn installed() -> bool {
@@ -155,6 +159,9 @@ pub async fn question(
     dir: &Path,
     cancel: &mut watch::Receiver<bool>,
 ) -> Result<String, String> {
+    if !SUBSCRIPTION_AUTH_QUALIFIED {
+        return Err(UNAVAILABLE.into());
+    }
     if system.len() > 4096
         || system.contains('\0')
         || text.trim().is_empty()
@@ -231,6 +238,16 @@ mod qualification;
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn unqualified_subscription_auth_refuses_before_cli_or_scratch_access() {
+        let (_stop, mut cancel) = tokio::sync::watch::channel(false);
+        let directory = Path::new("/vults-unavailable-must-not-access-scratch");
+        assert_eq!(
+            question("Fixed guidance", "A question", directory, &mut cancel).await,
+            Err(UNAVAILABLE.into())
+        );
+    }
+
     #[test]
     fn only_qualified_clients_and_complete_text_answers_are_accepted() {
         let question = "Explain $HOME and @file, with \\\"quotes\\\" and Unicode: 🦅";

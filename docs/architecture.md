@@ -205,7 +205,9 @@ V6.6.3 can add separately consented `consult_claude` and `consult_codex` text qu
 native registry. Each has its own default-off consent and durable 20-attempt rolling quota; the
 providers share one busy slot through acknowledged child exit. Codex uses fixed app-owned model
 metadata and a qualified-version guard. Its subscription status preflight is not atomic with exec;
-external login changes remain an activation blocker. No renderer/capture entry is present.
+external login changes remain an activation blocker. One false qualification capability blocks
+Codex opt-in, saved-consent offering, the network gate and helper execution before any CLI access.
+No renderer/capture entry is present.
 Their switches, durable budgets and local metadata traces are independent
 of realtime costs and Chat. The existing tool-free client disables file expansion and memory
 loading and requires supported CLI controls; no active agent session or Chat permissions are

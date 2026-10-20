@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 8b29ba702e56 -->
+<!-- source: ab83744eb332 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -225,7 +225,9 @@ separados, a esse registro nativo. Cada provedor tem opção própria desligada 
 persistente de 20 tentativas por 24 horas móveis; ambos compartilham uma vaga até confirmar a saída
 do processo. O Codex usa metadados fixos de modelo controlados pelo app e recusa versões não
 qualificadas. A verificação prévia de assinatura não é atômica com exec; trocas externas de login
-ainda bloqueiam a ativação. Não há entrada de renderer/captura. Suas opções, orçamentos persistentes
+ainda bloqueiam a ativação. Uma capacidade de qualificação falsa bloqueia adesão ao Codex, oferta
+com consentimento salvo, gate de rede e execução do helper antes de qualquer acesso à CLI.
+Não há entrada de renderer/captura. Suas opções, orçamentos persistentes
 e traces locais de metadados são independentes dos custos realtime e do Chat. O cliente existente sem
 ferramentas desativa expansão de arquivos e carregamento de memória e exige controles suportados
 pela CLI; não herda sessão ativa de agente nem permissões do Chat. Um prazo original cobre

@@ -113,7 +113,9 @@ pub fn budget(feature: &str) -> usize {
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
     if feature == VOICE_CODEX_CONSULTATION {
-        s.voice_codex_consultation && s.voice_codex_consultation_budget.is_some()
+        vults_chat::consult_codex::SUBSCRIPTION_AUTH_QUALIFIED
+            && s.voice_codex_consultation
+            && s.voice_codex_consultation_budget.is_some()
     } else if feature == VOICE_CONSULTATION {
         s.voice_consultation && s.voice_consultation_budget.is_some()
     } else if feature == VOICE_REALTIME {
@@ -842,9 +844,9 @@ mod tests {
         settings.voice_codex_consultation = true;
         assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
         settings.voice_codex_consultation_budget = Some("codex".into());
-        assert!(switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
         settings.voice_consultation = false;
-        assert!(switched_on(&settings, VOICE_CODEX_CONSULTATION));
+        assert!(!switched_on(&settings, VOICE_CODEX_CONSULTATION));
         let directory = std::env::temp_dir().join(format!("vults-codex-gate-{}", crate::traces::new_id()));
         let mut store = vults_store::Store::open(&directory).unwrap();
         let identity = store.request_budget_id().unwrap();

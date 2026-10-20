@@ -9,11 +9,14 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use tokio::{io::AsyncReadExt, process::Command};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    process::Command,
+};
 
 #[tokio::test]
 #[ignore = "requires the installed Codex CLI and bwrap user/network/mount namespaces"]
-async fn subscription_status_refuses_synthetic_api_auth_without_changing_it() {
+async fn status_is_nonmutating_but_forced_exec_deletes_synthetic_mismatched_auth() {
     let original_home = PathBuf::from(std::env::var_os("HOME").expect("original home"));
     assert!(original_home.is_absolute());
     assert!(
@@ -41,7 +44,10 @@ async fn subscription_status_refuses_synthetic_api_auth_without_changing_it() {
     std::fs::write(&auth_path, sentinel).unwrap();
     std::fs::set_permissions(&auth_path, std::fs::Permissions::from_mode(0o600)).unwrap();
 
-    for restricted in [false, true] {
+    let scratch = directory.0.join("scratch");
+    std::fs::DirBuilder::new().mode(0o700).create(&scratch).unwrap();
+    let exec = super::command("Answer only the supplied text.", &scratch).unwrap();
+    for mode in 0..3 {
         let candidate = super::subscription_status();
         let mut command = Command::new("bwrap");
         command.args(["--unshare-all", "--die-with-parent", "--ro-bind", "/", "/"]);
@@ -50,8 +56,12 @@ async fn subscription_status_refuses_synthetic_api_auth_without_changing_it() {
         command.args([
             "--tmpfs", "/run", "--tmpfs", "/tmp", "--proc", "/proc", "--dev", "/dev", "--chdir", "/tmp",
         ]);
+        command.args(["--ro-bind"]).arg(&directory.0).arg(&directory.0);
         command.arg(&binary);
-        if restricted {
+        if mode == 2 {
+            command.args(exec.as_std().get_args());
+            command.args(["-c", "forced_login_method=\"chatgpt\""]);
+        } else if mode == 1 {
             command.args(candidate.as_std().get_args());
         } else {
             command.args(["login", "status"]);
@@ -66,14 +76,20 @@ async fn subscription_status_refuses_synthetic_api_auth_without_changing_it() {
             }
         }
         command
-            .stdin(Stdio::null())
+            .stdin(if mode == 2 { Stdio::piped() } else { Stdio::null() })
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         command.kill_on_drop(true);
         let mut child = command.spawn().expect("isolated client");
+        let input = child.stdin.take();
         let mut stdout = child.stdout.take().unwrap().take(4096);
         let mut stderr = child.stderr.take().unwrap().take(4096);
         let result = tokio::time::timeout(Duration::from_secs(10), async {
+            if let Some(mut input) = input {
+                input
+                    .write_all(super::input("Synthetic question").as_bytes())
+                    .await?;
+            }
             let (mut out, mut error) = (Vec::new(), Vec::new());
             tokio::try_join!(stdout.read_to_end(&mut out), stderr.read_to_end(&mut error))?;
             if out.len() == 4096 || error.len() == 4096 {
@@ -88,7 +104,21 @@ async fn subscription_status_refuses_synthetic_api_auth_without_changing_it() {
         }
         let (status, out, error) = result.expect("status deadline").expect("status IO");
         assert!(out.is_empty(), "status unexpectedly used stdout");
-        if restricted {
+        if mode == 2 {
+            assert_eq!(status.code(), Some(1));
+            assert!(
+                !auth_path.exists(),
+                "forced exec must characterize the destructive mismatch path"
+            );
+            assert!(
+                error
+                    .windows(b"Logging out".len())
+                    .any(|bytes| bytes == b"Logging out"),
+                "expected fixed mismatch logout diagnostic"
+            );
+            continue;
+        }
+        if mode == 1 {
             assert_eq!(status.code(), Some(1));
             assert!(
                 error == b"Not logged in\n",

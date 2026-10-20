@@ -228,7 +228,8 @@ fn provider_consent_and_ledger_are_independent() {
             );
             assert_eq!(
                 Provider::Codex.ledger(&settings).map(String::as_str),
-                codex.then_some("codex-ledger")
+                None,
+                "saved consent cannot activate unqualified subscription authentication"
             );
         }
     }
