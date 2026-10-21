@@ -5,7 +5,9 @@ use std::{
     sync::Mutex,
     time::{Duration, Instant},
 };
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
+#[cfg(target_os = "linux")]
+use tauri::Manager;
 
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -15,6 +17,7 @@ pub enum Mode {
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub struct Selection {
     token: String,
     mode: Mode,
