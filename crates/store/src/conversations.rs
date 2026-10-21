@@ -6,7 +6,12 @@
 
 use rusqlite::{OptionalExtension, params};
 
-use crate::{Error, Store};
+use crate::{Error, Store, profiles::Snapshot};
+
+/// A pinned profile is never rewritten, including before a first reply.
+pub(crate) const PROFILE: &str = "ALTER TABLE conversations ADD COLUMN profile TEXT;
+CREATE TRIGGER conversation_profile_fixed BEFORE UPDATE OF profile ON conversations
+WHEN OLD.profile IS NOT NEW.profile BEGIN SELECT RAISE(ABORT, 'Conversation profile is immutable.'); END;";
 
 /// Migration 7: the tool that first brought outside content into a conversation (Z8), so it
 /// still warns when opened again. Shipped: never edit it.
@@ -65,6 +70,8 @@ pub struct New {
     pub settings: String,
     /// What follows the persona in its system prompt (M2): the memory as it began.
     pub frozen: Option<String>,
+    /// None for Zeca; a complete retained identity for a specialist.
+    pub profile: Option<Snapshot>,
 }
 
 /// A conversation as read back.
@@ -85,6 +92,8 @@ pub struct Conversation {
     pub outside: Option<String>,
     /// What follows the persona in its system prompt (M2).
     pub frozen: Option<String>,
+    /// None for Zeca; a complete retained identity for a specialist.
+    pub profile: Option<Snapshot>,
     /// Unix milliseconds.
     pub created_ms: i64,
     pub updated_ms: i64,
@@ -127,20 +136,42 @@ fn conversation(r: &rusqlite::Row<'_>) -> rusqlite::Result<Conversation> {
         updated_ms: r.get(10)?,
         outside: r.get(11)?,
         frozen: r.get(12)?,
+        profile: r
+            .get::<_, Option<String>>(13)?
+            .map(|json| {
+                serde_json::from_str(&json).map_err(|e| {
+                    rusqlite::Error::FromSqlConversionFailure(13, rusqlite::types::Type::Text, Box::new(e))
+                })
+            })
+            .transpose()?,
     })
 }
 
-const COLUMNS: &str = "id, engine, folder, title, session, model, effort, settings, history, created_ms, updated_ms, outside, frozen";
+const COLUMNS: &str = "id, engine, folder, title, session, model, effort, settings, history, created_ms, updated_ms, outside, frozen, profile";
 
 impl Store {
     /// Starts a conversation; its title is the first line of `new.title`, cut. Past [`KEEP`], the
     /// one left alone longest goes, with what was said in it.
     pub fn conversation_new(&mut self, new: &New, now_ms: i64) -> Result<ConversationId, Error> {
+        if let Some(profile) = &new.profile {
+            profile.validate(self)?;
+            if new.frozen.is_some() {
+                return Err(Error::Invalid(
+                    "Specialist conversations cannot use Zeca's frozen context.",
+                ));
+            }
+        }
+        let profile = new
+            .profile
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|_| Error::Invalid("Invalid profile snapshot."))?;
         let tx = self.conn.transaction()?;
         tx.execute(
-            "INSERT INTO conversations (engine, folder, title, model, effort, settings, created_ms, updated_ms, frozen)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, ?8)",
-            params![new.engine, new.folder, title(&new.title), new.model, new.effort, new.settings, now_ms, new.frozen],
+            "INSERT INTO conversations (engine, folder, title, model, effort, settings, created_ms, updated_ms, frozen, profile)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, ?8, ?9)",
+            params![new.engine, new.folder, title(&new.title), new.model, new.effort, new.settings, now_ms, new.frozen, profile],
         )?;
         let id = tx.last_insert_rowid();
         tx.execute(
@@ -160,6 +191,13 @@ impl Store {
     /// A conversation that never got a reply moved (another folder, model or provider before its
     /// first answer): its record follows, its title stays.
     pub fn conversation_restart(&mut self, id: ConversationId, new: &New) -> Result<(), Error> {
+        if let Some(old) = self.conversation(id)?
+            && (old.profile != new.profile || (old.profile.is_some() && new.frozen.is_some()))
+        {
+            return Err(Error::Invalid(
+                "A conversation's profile and context owner cannot be changed.",
+            ));
+        }
         self.conn.execute(
             "UPDATE conversations SET engine = ?2, folder = ?3, model = ?4, effort = ?5, settings = ?6, frozen = ?7
              WHERE id = ?1 AND session IS NULL AND history IS NULL",
@@ -427,5 +465,176 @@ mod tests {
         assert!(s.conversation(oldest).unwrap().is_none());
         assert!(s.conversation_messages(oldest).unwrap().is_empty());
         assert_eq!(s.conversations(u32::MAX).unwrap().len() as i64, KEEP);
+    }
+    #[test]
+    fn a_conversation_keeps_its_exact_profile_after_edits_restart_and_reopen() {
+        use crate::profiles::{Profile, Snapshot, Source};
+        let dir = crate::temp("conv-profile");
+        let mut s = Store::open(&dir).unwrap();
+        let mut profile = s
+            .agent_profile_save(&Profile {
+                id: 0,
+                revision: 0,
+                title: "My developer".into(),
+                instructions: "Original instructions".into(),
+                preset: "developer".into(),
+                preset_revision: 1,
+                species: "atratus".into(),
+                look: "none".into(),
+                about: "Description".into(),
+            })
+            .unwrap();
+        let pinned = Snapshot::from(profile.clone());
+        let request = New {
+            profile: Some(pinned.clone()),
+            ..new("A specialist conversation")
+        };
+        let id = s.conversation_new(&request, 1).unwrap();
+        profile.title = "Edited name".into();
+        profile.instructions = "Edited instructions".into();
+        profile.species = "vultur".into();
+        profile.look = "crown".into();
+        let edited = s.agent_profile_save(&profile).unwrap();
+        assert_eq!(edited.revision, 2);
+        assert_eq!(
+            s.agent_profile_revision(profile.id, 1)
+                .unwrap()
+                .unwrap()
+                .instructions,
+            "Original instructions"
+        );
+        assert_eq!(s.conversation(id).unwrap().unwrap().profile, Some(pinned.clone()));
+        s.conversation_restart(
+            id,
+            &New {
+                folder: "/another".into(),
+                ..request.clone()
+            },
+        )
+        .unwrap();
+        assert!(s.conversation_restart(id, &new("Zeca")).is_err());
+        assert!(
+            s.conversation_restart(
+                id,
+                &New {
+                    profile: Some(Snapshot::from(edited)),
+                    ..request.clone()
+                }
+            )
+            .is_err()
+        );
+        assert!(
+            s.conversation_new(
+                &New {
+                    frozen: Some("Zeca private memory".into()),
+                    ..request.clone()
+                },
+                2
+            )
+            .is_err()
+        );
+        let mut forged = pinned.clone();
+        forged.instructions = "Forged revision".into();
+        assert!(
+            s.conversation_new(
+                &New {
+                    profile: Some(forged),
+                    ..new("Forged")
+                },
+                2
+            )
+            .is_err()
+        );
+        let mut missing = pinned.clone();
+        missing.source = Source::Custom {
+            id: profile.id,
+            revision: 999,
+        };
+        assert!(
+            s.conversation_new(
+                &New {
+                    profile: Some(missing),
+                    ..new("Missing")
+                },
+                2
+            )
+            .is_err()
+        );
+        assert!(
+            s.conn
+                .execute("UPDATE conversations SET profile=NULL WHERE id=?1", [id.0])
+                .is_err()
+        );
+        assert_eq!(
+            s.conversations(50).unwrap().len(),
+            1,
+            "Failed binding does not create a partial conversation"
+        );
+        s.conversation_save(id, Some("session-1"), None, None, 3).unwrap();
+        s.conversation_rename(id, "Renamed").unwrap();
+        drop(s);
+        let mut s = Store::open(&dir).unwrap();
+        assert_eq!(s.conversation(id).unwrap().unwrap().profile, Some(pinned));
+        s.conversation_delete(id).unwrap();
+        assert!(s.conversation(id).unwrap().is_none());
+        assert_eq!(
+            s.agent_profiles().unwrap().len(),
+            1,
+            "Deleting a conversation preserves the user profile"
+        );
+    }
+
+    #[test]
+    fn preset_snapshots_are_retained_and_corrupt_snapshots_never_fall_back_to_zeca() {
+        use crate::profiles::{Snapshot, Source};
+        let dir = crate::temp("conv-preset-profile");
+        let mut s = Store::open(&dir).unwrap();
+        let preset = Snapshot {
+            source: Source::Preset {
+                id: "reviewer".into(),
+                revision: 1,
+            },
+            title: "Reviewer".into(),
+            about: "Review changes".into(),
+            instructions: "Review the changes".into(),
+            species: "gypaetus".into(),
+            look: "none".into(),
+        };
+        let legacy = s.conversation_new(&new("Zeca"), 1).unwrap();
+        assert!(s.conversation(legacy).unwrap().unwrap().profile.is_none());
+        let id = s
+            .conversation_new(
+                &New {
+                    profile: Some(preset.clone()),
+                    ..new("Review")
+                },
+                2,
+            )
+            .unwrap();
+        assert_eq!(s.conversation(id).unwrap().unwrap().profile, Some(preset));
+        s.conn.execute("INSERT INTO conversations(engine,folder,title,settings,created_ms,updated_ms,profile) VALUES('claude','','Broken','isolated',3,3,'{}')",[]).unwrap();
+        let broken = ConversationId(s.conn.last_insert_rowid());
+        assert!(s.conversation(broken).is_err());
+        assert!(s.conversations(50).is_err());
+        s.conversation_delete(broken).unwrap();
+        s.clear_all(&dir).unwrap();
+        assert!(s.conversations(50).unwrap().is_empty());
+    }
+    #[test]
+    fn adding_profile_snapshots_preserves_legacy_conversation_context() {
+        let dir = crate::temp("conv-profile-migration");
+        let s = Store::connect(&dir).unwrap();
+        for sql in &crate::MIGRATIONS[..30] {
+            s.conn.execute_batch(sql).unwrap();
+        }
+        s.conn.pragma_update(None, "user_version", 30).unwrap();
+        s.conn.execute("INSERT INTO conversations(id,engine,folder,title,settings,created_ms,updated_ms,frozen,session)
+            VALUES(1,'claude','','Legacy','isolated',1,2,'original frozen context','legacy-session')",[]).unwrap();
+        drop(s);
+        let s = Store::open(&dir).unwrap();
+        let legacy = s.conversation(ConversationId(1)).unwrap().unwrap();
+        assert!(legacy.profile.is_none());
+        assert_eq!(legacy.frozen.as_deref(), Some("original frozen context"));
+        assert_eq!(legacy.session.as_deref(), Some("legacy-session"));
     }
 }

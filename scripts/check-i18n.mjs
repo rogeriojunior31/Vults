@@ -1,4 +1,4 @@
-// Fails when a sentence the UI translates (`t("…")` in ui/src) is missing from a catalog in
+// Checks UI translations and marked native profile text against the catalogs in
 // ui/src/i18n/, or a catalog keeps a sentence no code asks for any more. Run by check-i18n.sh.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -17,7 +17,7 @@ function files(dir) {
 }
 
 const used = new Map();
-for (const file of files(src)) {
+for (const file of [...files(src), join(root, "crates/zeca/src/profiles.rs")]) {
   const text = readFileSync(file, "utf8");
   // t("…") translates now; tk("…") marks a sentence kept in a table and translated later.
   for (const m of text.matchAll(/\btk?\(\s*"((?:[^"\\]|\\.)*)"/g)) used.set(unquote(m[1]), file);

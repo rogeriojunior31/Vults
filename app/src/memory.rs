@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use serde_json::{Value, json};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use vults_agents::driver::BoxFuture;
 use vults_chat::tools::Tool;
 use vults_store::proposals::{New, Proposal};
@@ -157,6 +157,7 @@ pub async fn memory_command(
     window: tauri::Webview,
     text: String,
     folder: Option<String>,
+    generation: u32,
 ) -> Result<Option<Said>, String> {
     // The chat's windows only: the user typed it there.
     if ![crate::ISLAND, crate::NEST].contains(&window.label()) {
@@ -169,6 +170,8 @@ pub async fn memory_command(
     if verb != "/remember" && verb != "/forget" {
         return Ok(None);
     }
+    let state = app.state::<crate::chat::ChatState>();
+    let _recipient = state.companion_command(generation, folder.as_deref())?;
     if !crate::settings::memory(&app) {
         return Ok(Some(said(
             "Turn on Zeca's memory in Settings, Chat & voice, first.",
@@ -759,6 +762,26 @@ fn facts_of(answer: &str) -> Vec<(String, String, String)> {
         .collect()
 }
 
+type MemoryConversation = (
+    vults_store::conversations::Conversation,
+    Vec<vults_store::conversations::Message>,
+    i64,
+);
+
+fn conversation_for_memory(
+    store: &vults_store::Store,
+    id: vults_store::conversations::ConversationId,
+) -> Result<Option<MemoryConversation>, vults_store::Error> {
+    let Some(conversation) = store.conversation(id)?.filter(|c| c.profile.is_none()) else {
+        return Ok(None);
+    };
+    Ok(Some((
+        conversation,
+        store.conversation_messages(id)?,
+        store.conversation_extracted(id)?,
+    )))
+}
+
 /// A conversation just left (New, or another one opened): with the memory and its suggestions on,
 /// a small model reads it and proposes up to three facts. Never one that read outside content:
 /// its words may be someone else's.
@@ -771,14 +794,10 @@ pub fn conversation_ended(app: &AppHandle, id: vults_store::conversations::Conve
     tauri::async_runtime::spawn(async move {
         let read = tauri::async_runtime::spawn_blocking(move || {
             let s = vults_store::Store::open(&crate::history::dir())?;
-            Ok::<_, vults_store::Error>((
-                s.conversation(id)?,
-                s.conversation_messages(id)?,
-                s.conversation_extracted(id)?,
-            ))
+            conversation_for_memory(&s, id)
         })
         .await;
-        let Ok(Ok((Some(c), lines, extracted))) = read else {
+        let Ok(Ok(Some((c, lines, extracted)))) = read else {
             return;
         };
         // Read once per new line said: going back and forth between two conversations asks nothing.
@@ -895,5 +914,47 @@ mod tests {
                 "{t:?}"
             );
         }
+    }
+    #[test]
+    fn specialist_messages_are_not_an_input_to_companion_memory_extraction() {
+        let dir = std::env::temp_dir().join(format!("vults-memory-recipient-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = vults_store::Store::open(&dir).unwrap();
+        let mut new = vults_store::conversations::New {
+            engine: "claude".into(),
+            title: "Conversation".into(),
+            settings: "isolated".into(),
+            ..Default::default()
+        };
+        let companion = store.conversation_new(&new, 1).unwrap();
+        store
+            .conversation_say(companion, "you", "Companion message", &[], 1)
+            .unwrap();
+        assert_eq!(
+            conversation_for_memory(&store, companion)
+                .unwrap()
+                .unwrap()
+                .1
+                .len(),
+            1
+        );
+        new.profile = Some(vults_store::profiles::Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "reviewer".into(),
+                revision: 1,
+            },
+            title: "Reviewer".into(),
+            about: "Review".into(),
+            instructions: "Review changes".into(),
+            species: "gypaetus".into(),
+            look: "none".into(),
+        });
+        let specialist = store.conversation_new(&new, 2).unwrap();
+        store
+            .conversation_say(specialist, "you", "Specialist message", &[], 2)
+            .unwrap();
+        assert!(conversation_for_memory(&store, specialist).unwrap().is_none());
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

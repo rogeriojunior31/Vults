@@ -260,7 +260,9 @@ pub fn prompts() -> Vec<(&'static str, String)> {
 pub(crate) fn instructions(spec: &Spec) -> String {
     match spec.role {
         vults_agents::driver::Role::Chat => system(PERSONA, spec.system_append.as_deref()),
-        vults_agents::driver::Role::Worker => spec.system_append.clone().unwrap_or_default(),
+        vults_agents::driver::Role::Worker | vults_agents::driver::Role::Specialist => {
+            spec.system_append.clone().unwrap_or_default()
+        }
     }
 }
 
@@ -716,6 +718,30 @@ impl Chat {
         }
     }
 
+    /// Claude Code with a pinned specialist brief. The app must resolve its conversation snapshot
+    /// and session first; this constructor never imports companion memory or API history.
+    pub fn specialist(mut spec: Spec, session: Option<String>, instructions: String) -> Result<Self, String> {
+        if !valid_specialist_brief(&instructions) {
+            return Err(
+                "Use non-empty specialist instructions up to 32768 bytes without control characters.".into(),
+            );
+        }
+        spec.role = Role::Specialist;
+        spec.system_append = Some(instructions);
+        Ok(Self::resume(Provider::Claude, spec, session, None, None))
+    }
+
+    pub fn is_specialist(&self) -> bool {
+        self.spec.role == Role::Specialist
+    }
+
+    /// The pinned specialist brief, separate from companion frozen context.
+    pub fn specialist_brief(&self) -> Option<&str> {
+        self.is_specialist()
+            .then_some(self.spec.system_append.as_deref())
+            .flatten()
+    }
+
     /// The API provider and model for the next turns. Another provider starts a new
     /// conversation: a history is written in its provider's wire format.
     pub fn set_api(&mut self, provider: &'static providers::Provider, model: String) {
@@ -748,13 +774,19 @@ impl Chat {
     /// model and effort.
     pub fn resume(
         provider: Provider,
-        spec: Spec,
+        mut spec: Spec,
         session: Option<String>,
         history: Option<&str>,
         api: Option<(&'static providers::Provider, String)>,
     ) -> Self {
+        let specialist = spec.role == Role::Specialist;
+        if specialist {
+            spec.settings = Settings::Isolated;
+            spec.mcp_config = None;
+            spec.add_dirs.clear();
+        }
         let mut chat = Self::new(provider, spec.dir.clone());
-        if let Some(api) = api {
+        if let Some(api) = api.filter(|_| !specialist) {
             chat.api = api;
         }
         chat.spec = Spec {
@@ -765,6 +797,7 @@ impl Chat {
             chat.driver = drivers::resumed(provider, chat.spec.clone(), session);
         }
         chat.history = history
+            .filter(|_| !specialist)
             .and_then(|h| serde_json::from_str(h).ok())
             .unwrap_or_default();
         chat
@@ -806,8 +839,12 @@ impl Chat {
     }
 
     /// What the API chat's model may call; the CLIs bring their own tools.
-    pub fn set_tools(&mut self, tools: tools::Tools) {
+    pub fn set_tools(&mut self, tools: tools::Tools) -> bool {
+        if self.is_specialist() {
+            return false;
+        }
         self.tools = tools;
+        true
     }
 
     /// The API provider and model this conversation talks to.
@@ -859,7 +896,7 @@ impl Chat {
     /// An MCP config for its Claude Code (M7: Zeca's own server); like the folder, only before the
     /// first turn, so every turn of a conversation offers the same tools.
     pub fn set_mcp_config(&mut self, config: Option<PathBuf>) -> bool {
-        if self.started() {
+        if self.started() || (self.is_specialist() && config.is_some()) {
             return false;
         }
         if self.spec.mcp_config != config {
@@ -871,7 +908,7 @@ impl Chat {
 
     /// Which of the user's settings a CLI reads; like the folder, only before the first turn.
     pub fn set_settings(&mut self, settings: Settings) -> bool {
-        if self.started() {
+        if self.started() || (self.is_specialist() && settings != Settings::Isolated) {
             return false;
         }
         if self.spec.settings != settings {
@@ -884,7 +921,7 @@ impl Chat {
     /// The frozen context (M2) after the persona in the system prompt; like the folder, only before
     /// the first turn, so the system prompt never changes within a conversation.
     pub fn set_frozen(&mut self, frozen: Option<String>) -> bool {
-        if self.started() {
+        if self.started() || self.is_specialist() {
             return false;
         }
         if self.spec.system_append != frozen {
@@ -895,7 +932,11 @@ impl Chat {
     }
 
     pub fn frozen(&self) -> Option<&str> {
-        self.spec.system_append.as_deref()
+        if self.is_specialist() {
+            None
+        } else {
+            self.spec.system_append.as_deref()
+        }
     }
 
     /// A conversation that never started, gone: its driver and any rule clicked in it.
@@ -940,6 +981,10 @@ impl Chat {
             }
             Err(e) => e == oneshot::error::TryRecvError::Closed,
         };
+        if self.is_specialist() && (!specialist_ready(&self.spec, self.provider) || turn.context.is_some()) {
+            let _ = out.send(Delta::Error { message: "This specialist route requires Claude Code and an isolated brief without companion context.".into() }).await;
+            return;
+        }
         let name = self.name();
         if matches!(self.provider, Provider::Claude | Provider::Codex) && self.driver.is_none() {
             self.driver = drivers::for_cli(self.provider, self.spec.clone());
@@ -1052,6 +1097,22 @@ impl Chat {
             }
         }
     }
+}
+
+fn specialist_ready(spec: &Spec, provider: Provider) -> bool {
+    provider == Provider::Claude
+        && spec.settings == Settings::Isolated
+        && spec.mcp_config.is_none()
+        && spec.add_dirs.is_empty()
+        && spec.system_append.as_deref().is_some_and(valid_specialist_brief)
+}
+
+fn valid_specialist_brief(text: &str) -> bool {
+    !text.trim().is_empty()
+        && text.len() <= 32768
+        && !text
+            .chars()
+            .any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t')
 }
 
 /// Read from the keyring for each turn, so removing the key in Settings takes effect at once.
@@ -1927,5 +1988,119 @@ mod tests {
         assert!(brings_outside("mcp__vults-zeca__recall", "vitest", false));
         assert!(brings_outside("mcp__vults-zeca-fake__x", "", true));
         assert!(brings_outside("mcp__github__get_issue", "42", true));
+    }
+    #[test]
+    fn a_specialist_keeps_its_brief_without_companion_context_settings_or_tools() {
+        let brief = "Review the requested change. Explain evidence and remaining limitations.";
+        let spec = Spec {
+            settings: Settings::Project,
+            mcp_config: Some("private-memory.json".into()),
+            add_dirs: vec!["private-memory".into()],
+            system_append: Some("PRIVATE_CONTEXT".into()),
+            model: Some("sonnet".into()),
+            ..Spec::in_dir(std::env::temp_dir())
+        };
+        let unsafe_spec = Spec {
+            role: Role::Specialist,
+            ..spec.clone()
+        };
+        assert!(drivers::for_cli(Provider::Claude, unsafe_spec.clone()).is_none());
+        assert!(drivers::for_cli(Provider::Codex, unsafe_spec.clone()).is_none());
+        assert!(drivers::acp("opencode", unsafe_spec, None).is_none());
+        let mut chat = Chat::specialist(spec, None, brief.into()).unwrap();
+        assert!(drivers::for_cli(Provider::Claude, chat.spec.clone()).is_some());
+        assert!(chat.is_specialist());
+        assert_eq!(instructions(&chat.spec), brief);
+        assert_eq!(chat.frozen(), None);
+        assert_eq!(chat.settings(), Settings::Isolated);
+        assert!(chat.spec.mcp_config.is_none());
+        assert!(chat.spec.add_dirs.is_empty());
+        assert!(!chat.set_frozen(Some("PRIVATE_CONTEXT".into())));
+        assert!(!chat.set_frozen(None));
+        assert!(!chat.set_mcp_config(Some("private-memory.json".into())));
+        assert!(!chat.set_settings(Settings::User));
+        assert!(!chat.set_settings(Settings::Project));
+        assert!(!chat.set_tools(vec![Arc::new(Hang)]));
+        assert!(chat.tools.is_empty());
+        let command = claude::command(&chat.spec, &Turn::default(), None);
+        let args: Vec<_> = command
+            .as_std()
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert!(args.windows(2).any(|w| w == ["--setting-sources", ""]));
+        assert!(args.iter().any(|a| a == "--strict-mcp-config"));
+        assert!(
+            args.windows(2)
+                .any(|w| w == ["--permission-prompt-tool", "stdio"])
+        );
+        assert!(args.windows(2).any(|w| w == ["--append-system-prompt", brief]));
+        assert!(
+            !args
+                .iter()
+                .any(|a| a == "--mcp-config" || a.contains("PRIVATE_CONTEXT"))
+        );
+        chat.reset();
+        assert_eq!(instructions(&chat.spec), brief);
+        assert!(chat.rules.lock().unwrap().0.is_empty());
+    }
+
+    #[test]
+    fn specialist_resume_sanitizes_companion_inputs_and_rejects_invalid_briefs() {
+        for brief in ["".to_string(), " ".into(), "bad\0brief".into(), "x".repeat(32769)] {
+            assert!(Chat::specialist(Spec::in_dir(std::env::temp_dir()), None, brief).is_err());
+        }
+        let spec = Spec {
+            role: Role::Specialist,
+            settings: Settings::User,
+            mcp_config: Some("private.json".into()),
+            system_append: Some("Pinned brief".into()),
+            ..Spec::in_dir(std::env::temp_dir())
+        };
+        let chat = Chat::resume(
+            Provider::Claude,
+            spec,
+            Some("specialist-session".into()),
+            Some(r#"[{"role":"user","content":"PRIVATE_HISTORY"}]"#),
+            None,
+        );
+        assert_eq!(chat.session().as_deref(), Some("specialist-session"));
+        assert_eq!(chat.history(), None);
+        assert_eq!(chat.frozen(), None);
+        assert_eq!(instructions(&chat.spec), "Pinned brief");
+        assert_eq!(chat.settings(), Settings::Isolated);
+        assert!(chat.spec.mcp_config.is_none());
+    }
+
+    #[tokio::test]
+    async fn unsupported_specialist_routes_and_companion_context_fail_before_starting() {
+        for (provider, context, brief) in [
+            (Provider::Codex, None, Some("Brief")),
+            (Provider::ClaudeApi, None, Some("Brief")),
+            (Provider::Claude, Some("PRIVATE_CONTEXT"), Some("Brief")),
+            (Provider::Claude, None, None),
+        ] {
+            let spec = Spec {
+                role: Role::Specialist,
+                system_append: brief.map(str::to_string),
+                ..Spec::in_dir(std::env::temp_dir())
+            };
+            let mut chat = Chat::resume(provider, spec, None, None, None);
+            let (tx, mut rx) = mpsc::channel(4);
+            let (_stop_tx, stop) = oneshot::channel();
+            chat.send(
+                Turn {
+                    context: context.map(str::to_string),
+                    ..Turn::default()
+                },
+                tx,
+                Arc::new(Never),
+                stop,
+            )
+            .await;
+            assert!(matches!(rx.recv().await, Some(Delta::Error { .. })));
+            assert!(chat.driver.is_none());
+            assert!(chat.history.is_empty());
+        }
     }
 }

@@ -21,6 +21,9 @@ pub fn resumed(
     spec: Spec,
     session: Option<String>,
 ) -> Option<Box<dyn AgentDriver>> {
+    if spec.role == vults_agents::driver::Role::Specialist && !crate::specialist_ready(&spec, provider) {
+        return None;
+    }
     match provider {
         crate::Provider::Claude => Some(Box::new(ClaudeDriver::new(spec, session))),
         crate::Provider::Codex => Some(Box::new(CodexDriver {
@@ -37,6 +40,9 @@ pub fn resumed(
 /// A driver for an ACP agent by its key (`opencode`, `qwen`…; W10), going on with `session`
 /// when there is one.
 pub fn acp(name: &str, spec: Spec, session: Option<String>) -> Option<Box<dyn AgentDriver>> {
+    if spec.role == vults_agents::driver::Role::Specialist {
+        return None;
+    }
     let agent = crate::acp::agent(name)?;
     Some(Box::new(crate::acp::AcpDriver::new(agent, spec, session)))
 }

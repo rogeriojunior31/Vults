@@ -3,6 +3,7 @@
 // change only what the tray's menu already can (presence) and how long the island stays open.
 import type { Flock, Presence } from "../bridge";
 import { el } from "../dom";
+import { ISLAND_WIDTHS, type IslandWidth } from "./geometry";
 import { duration } from "../duration";
 import { currentLang, locale, t, tk } from "../i18n";
 import type { WeekView } from "../view.gen";
@@ -207,6 +208,8 @@ export interface QuickSettingsActions {
  * hanging outside it could not be clicked.
  */
 function pick<T extends string | number>(
+  id: string,
+  label: string,
   choices: { value: T; label: string }[],
   value: T,
   onPick: (v: T) => void,
@@ -214,6 +217,9 @@ function pick<T extends string | number>(
   wide = false,
 ): HTMLElement {
   const box = el("div", { class: `quick-pick${wide ? " wide" : ""}` });
+  box.dataset.quickPick = id;
+  box.setAttribute("role", "group");
+  box.setAttribute("aria-label", label);
   const current = choices.find((c) => c.value === value) ?? choices[0];
   const button = el(
     "button",
@@ -229,18 +235,57 @@ function pick<T extends string | number>(
         class: `quick-pick-item${c.value === value ? " on" : ""}`,
         text: c.label,
         onclick: () => {
-          box.classList.remove("open");
-          relayout();
+          close();
           if (c.value !== value) onPick(c.value);
         },
       }),
     ),
   );
-  button.addEventListener("click", () => {
-    box.classList.toggle("open");
+  list.id = `quick-pick-${id}`;
+  list.hidden = true;
+  button.setAttribute("aria-controls", list.id);
+  button.setAttribute("aria-expanded", "false");
+  const items = [...list.querySelectorAll<HTMLButtonElement>("button")];
+  const close = (focus = true) => {
+    box.classList.remove("open");
+    list.hidden = true;
+    button.setAttribute("aria-expanded", "false");
     relayout();
-    // The island stops growing at its tallest and scrolls: the list must come into sight.
-    if (box.classList.contains("open")) list.scrollIntoView({ block: "nearest" });
+    if (focus) button.focus({ preventScroll: true });
+  };
+  const open = () => {
+    box.classList.add("open");
+    list.hidden = false;
+    button.setAttribute("aria-expanded", "true");
+    relayout();
+    const selected = items.find(item => item.classList.contains("on")) ?? items[0];
+    selected?.focus({ preventScroll: true });
+    selected?.scrollIntoView({ block: "nearest" });
+  };
+  button.addEventListener("click", () => box.classList.contains("open") ? close() : open());
+  box.addEventListener("keydown", event => {
+    if (event.isComposing || event.keyCode === 229) return;
+    const expanded = box.classList.contains("open");
+    if (event.key === "Tab") { if (expanded) close(); return; }
+    if (event.key === "Escape" && expanded) {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    if (!expanded && event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!expanded) { open(); return; }
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1
+      : (at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items[next]?.focus({ preventScroll: true });
+    items[next]?.scrollIntoView({ block: "nearest" });
+  });
+  box.addEventListener("focusout", event => {
+    if (!box.contains(event.relatedTarget as Node | null) && box.classList.contains("open")) close(false);
   });
   box.append(button, list);
   return box;
@@ -253,13 +298,14 @@ export function settingsQuick(
   relayout: () => void,
   failed = false,
   page: QuickPage = "general",
+  width?: { value: IslandWidth; failed: boolean; change(value: IslandWidth): void },
 ): HTMLElement {
   const pages = PAGES.map((p) => ({ value: p.id, label: t(p.label) }));
   const head = el(
     "div",
     { class: "quick-settings-head" },
     el("div", { class: "quick-label", text: t("Settings") }),
-    pick(pages, page, (id) => (IN_PLACE.includes(id) ? on.show(id as QuickPage) : on.open(id)), relayout, true),
+    pick("page", t("Settings"), pages, page, (id) => (IN_PLACE.includes(id) ? on.show(id as QuickPage) : on.open(id)), relayout, true),
   );
   if (s === null)
     return el(
@@ -271,18 +317,21 @@ export function settingsQuick(
         text: failed ? t("Could not read them.") : t("Reading…"),
       }),
     );
-  const row = (title: string, sub: string, control: HTMLElement) =>
-    el(
+  const row = (title: string, sub: string, control: HTMLElement, announce = false) => {
+    const note = el("span", { text: sub });
+    if (announce) note.setAttribute("role", "alert");
+    return el(
       "div",
       { class: "quick-setting" },
       el(
         "div",
         { class: "quick-setting-text" },
         el("strong", { text: title }),
-        el("span", { text: sub }),
+        note,
       ),
       control,
     );
+  };
   /** A switch, as Settings draws one: its state said by aria-checked. */
   const swap = (onNow: boolean, change: (on: boolean) => void, label: string) => {
     const b = el("button", { class: `quick-switch${onNow ? " on" : ""}`, onclick: () => change(!onNow) }, el("span"));
@@ -309,6 +358,7 @@ export function settingsQuick(
         t("The flock draws from"),
         t("Real species, each with its own movements."),
         pick(
+          "flock", t("The flock draws from"),
           FLOCKS.map((f) => ({ value: f.value, label: t(f.label) })),
           s.flock,
           (f) => on.setFlock(f),
@@ -324,10 +374,17 @@ export function settingsQuick(
     "div",
     { class: "card quick quick-settings" },
     head,
+    width ? row(
+      t("Mini and Quick width"),
+      width.failed ? t("Could not save the width. Choose it again to retry.") : t("Shared width, limited to the available screen space."),
+      pick("width", t("Mini and Quick width"), ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), width.value, width.change, relayout),
+      width.failed,
+    ) : null,
     row(
       t("Presence"),
       t("Where the island appears."),
       pick(
+        "presence", t("Presence"),
         PRESENCES.map((p) => ({ value: p.value, label: t(p.label) })),
         s.presence,
         (p) => on.setPresence(p),
@@ -338,6 +395,7 @@ export function settingsQuick(
       t("Fold the island"),
       t("A permission keeps it open until you answer."),
       pick(
+        "fold", t("Fold the island"),
         FOLD_CHOICES.map((n) => ({ value: n, label: `${n} s` })),
         fold,
         (n) => on.setFoldAfter(n),

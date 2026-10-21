@@ -27,10 +27,21 @@ meant to steer whatever reads them.
   Activity and Connections keep their full views in the Nest.
 - **Four sizes**: **Mini** is the pill (340 x 38, the flock and no text at rest: news reaches it
   only as a body, a color or a motion; active dictation has the transient feedback below).
-  **Quick** is the island inside the fixed 720 x 640 logical-pixel
+  **Quick** is the island inside the fixed 880 x 640 logical-pixel
   layer surface: 440 CSS px wide normally, 492 CSS px in Chat, before the UI's 1.14 zoom
   (502 and 561 logical px respectively). Height stays within 556 CSS px (634 after zoom),
-  clamped further if the viewport is smaller. Only the measured visible rectangle takes input.
+  clamped further if the viewport is smaller. Mini and Quick may share a user-selected width of
+  560, 680 or 760 logical pixels, saved as local presentation state. Default restores the original
+  per-size/per-tab widths and Quick height; Room and Full are unaffected. Mini stays 38 logical
+  pixels high for every width. A selected width caps Quick at 600 logical pixels, including inline
+  dictation feedback. General > Appearance and Quick > General edit the same presentation
+  preference; shared storage notifications and refocus keep both controls current.
+  Selected dimensions are clamped to both the viewport and available screen space, with Quick
+  zoom applied exactly once. Selection never
+  resizes the mapped layer surface. Only the measured visible rectangle takes input.
+  Mini's overflow is an icon-only list button with a localized hidden-session count for assistive
+  technology. Reserve a separate hit target before placing birds. It opens the Nest's Flock through
+  the existing surface transition; it never decides, releases or changes an offer.
   **Room** is the Nest window, resizable down to 480 x 360 px with no maximum, first opened large
   within the screen. **Full** is the Nest maximized or in full screen; Esc returns to the size
   before it. The layer-shell overlay never grows past its fixed size.
@@ -161,3 +172,26 @@ meant to steer whatever reads them.
 
 - 2026-10-19: move Linux dictation status to a passive bottom capsule, with existing inline
   feedback as a creation-failure fallback; preserve card/lock priority and the captured focus.
+
+- 2026-10-21: UX7 adds a shared Mini/Quick width preference and a fixed 880 x 640 overlay
+  reserved at startup. Keep the original default widths, Mini height, Room/Full behavior and
+  authority; selection changes only content geometry and its synchronous input rectangle.
+
+- 2026-10-21: UX7.2 applies the paired 56/600 logical-pixel height references only to selected
+  widths. Preserve original defaults and sprite scale; bound the whole Quick box, including
+  inline feedback, before synchronous input-region measurement.
+
+- 2026-10-21: UX7.3 reserves a Mini overflow action for sessions beyond the available perches.
+  Keep the resting pill free of visible text, with a separate keyboard target and the existing
+  Nest/Flock navigation. Cards retain their priority and original action owner.
+
+- 2026-10-21: maintainer feedback restores Mini's 38 px height for every width, avoiding extra
+  resting-bar height over application tabs. Expose the same layout preference in General and
+  Quick, with shared storage and no additional privileged setting or permission authority.
+
+- 2026-10-21: UX8 starts with Agent profiles inside Flock, preserving the five main tabs. The Nest reads the built-in catalog and retains the bounded `flock-profiles` destination. The catalog is independent of Zeca and never owns a permission or agent-config write.
+- 2026-10-21: Agent profiles in Flock can create local copies and edit their name/instructions. The Nest alone owns these saves; drafts survive in-window navigation, and failed saves retain them. No new main tab, agent-config write or permission owner is introduced.
+- 2026-10-21: The profile editor adds native species/accessory selectors and a static full-frame preview. Appearance edits share the same local Save/Cancel and revision boundary; neither Zeca settings nor watched sessions are modified.
+- 2026-10-21: Profile-bound conversation records retain their own immutable snapshot across profile edits, rename, restart and reopen. The current Zeca Chat does not expose these records or reinterpret them as companion conversations; no profile Chat button or recipient selector is enabled in this storage slice.
+- 2026-10-21: The first specialist runtime is Claude Code only, with a fixed brief and no automatic companion context or MCP. No recipient selector, profile Chat action or specialist conversation reopening is enabled by this runtime-only slice; the existing Nest and Quick remain on their current conversation owner.
+- 2026-10-21: Native profile conversation restoration preserves the saved model, effort, session and profile snapshot rather than current profile edits or companion settings. Turn preflight rejects mismatched recipients, sources and unsupported voice/mention/source overrides. The existing Chat UI still refuses profile records until it can present and preserve these owners across surfaces.

@@ -490,7 +490,7 @@ const roomMic = nodes(roomChat.element).find(node => node.classList.contains("mi
 const roomInput = nodes(roomChat.element).find(node => node.tag === "textarea");
 assert.equal(roomMic.hidden, false, "A configured microphone is visible in Room after its native status read");
 roomMic.listeners.click(); await tick();
-assert.deepEqual(voiceCalls, [["start", true]], "Room starts its real native tap-to-talk binding");
+assert.deepEqual(voiceCalls, [["start", true, undefined]], "Room starts its real native tap-to-talk binding");
 voiceEvents.onVoiceLevel(0.8);
 voiceEvents.onVoicePartial("Words so far");
 assert.ok(roomChat.element.textContent.includes("Words so far"));
@@ -942,3 +942,165 @@ for (const surface of ["island", "nest"]) {
   window.setTimeout = oldTimeout;
 }
 console.log("check-chat-models: provider-only reasoning, stable tool disclosures/status, single selected approval, stale buttons/shortcuts, compact receipts, cancellation and display-only restored activity in both surfaces");
+
+// A queued draft save cannot redirect a click into a newly opened conversation.
+for (const surface of ["island", "nest"]) {
+  for (const transition of ["opened", "reset", "late-error", "same-source"]) {
+    let releaseSave, rejectSend;
+    const sent = [], saved = [];
+    const initial = { generation: 7, provider: "claude", label: "Claude", folder: "/old", started: false,
+      model: null, effort: null, lines: [], busy: false, partial: "", waiting: [] };
+    const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {},
+      current: async () => initial, draft: async () => ({ generation: 7, text: "", files: [], folder: "/old", provider: "claude" }),
+      saveDraft: (draft, generation) => { saved.push({ draft, generation }); return new Promise(resolve => { releaseSave = resolve; }); },
+      send: (...args) => { sent.push(args); return transition === "late-error" ? new Promise((_, reject) => { rejectSend = reject; }) : Promise.resolve(); },
+    }, () => {}, { window: surface });
+    await chat.restore(); chat.toggle(true);
+    const input = chat.element.querySelector("textarea");
+    input.value = "Only for the old conversation";
+    const sending = chat.submit(); await tick();
+    assert.equal(saved.at(-1).generation, 7);
+    if (transition === "late-error") { releaseSave(); await tick(); }
+    if (transition === "opened" || transition === "late-error") {
+      chat.sync({ kind: "opened", from: surface === "nest" ? "island" : "nest", conversation: { ...initial, generation: 8, folder: "/new" } });
+    } else if (transition === "reset") {
+      chat.sync({ kind: "reset", from: surface === "nest" ? "island" : "nest", provider: "claude", generation: 8 });
+    }
+    input.value = "Newer typing";
+    if (transition === "late-error") rejectSend("The conversation changed before sending. Review your draft and try again.");
+    else releaseSave();
+    await sending;
+    assert.equal(input.value, "Newer typing");
+    assert.equal(sent.length, ["same-source", "late-error"].includes(transition) ? 1 : 0);
+    if (sent.length) { assert.equal(sent[0][2], "/old"); assert.equal(sent[0][4], 7); }
+    if (transition !== "same-source") assert.ok(!chat.element.textContent.includes("Review your draft and try again."));
+    assert.equal(chat.element.querySelector(".chat-recipient").attributes["aria-label"], "Recipient: Zeca");
+  }
+}
+console.log("check-chat-models: conversation-bound send/save, empty reset/open cancellation, pinned folder and late failure isolation in both surfaces");
+
+for (const surface of ["island", "nest"]) {
+  let reads = 0;
+  const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {},
+    current: async () => ({ generation: 4, provider: "claude", label: "Claude", folder: "/old", started: false,
+      model: null, effort: null, lines: [], busy: false, partial: "", waiting: [] }),
+    draft: async () => ({ generation: ++reads === 1 ? 3 : 4, text: "Retained", files: [], folder: "/old", provider: "claude" }),
+    saveDraft: async () => {},
+  }, () => {}, { window: surface });
+  await assert.rejects(chat.restore(), /conversation changed/);
+  await chat.restore();
+  const input = chat.element.querySelector("textarea");
+  assert.equal(input.value, "Retained");
+  chat.sync({ kind: "reset", from: "settings", provider: "claude", generation: 5,
+    draft: { text: "Kept across Zeca off", files: ["/inbox/note"], folder: "/old", provider: "claude" } });
+  assert.equal(input.value, "Kept across Zeca off");
+  chat.sync({ kind: "draft", from: "other", generation: 4, draft: { text: "Obsolete draft", files: [], folder: "/old", provider: "claude" } });
+  assert.equal(input.value, "Kept across Zeca off");
+}
+console.log("check-chat-models: mismatched startup snapshots retry, settings reset retains draft and stale cross-surface draft is ignored");
+
+for (const surface of ["island", "nest"]) {
+  for (const [commandName, text] of [["memory", "/remember private fact"], ["memory", "/forget private fact"], ["handoff", "/continue review"]]) {
+    for (const mode of ["switch-success", "switch-error", "failure", "newer-typing"]) {
+      let resolve, reject;
+      const calls = [];
+      const current = { generation: 11, provider: "claude", label: "Claude", folder: "/old", started: false,
+        model: null, effort: null, lines: [], busy: false, partial: "", waiting: [] };
+      const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {}, current: async () => current,
+        draft: async () => ({ generation: 11, text, files: [], folder: "/old", provider: "claude" }), saveDraft: async () => {},
+        [commandName]: (...args) => { calls.push(args); return new Promise((yes, no) => { resolve = yes; reject = no; }); },
+        send: async () => assert.fail("A local command must not fall through to a model"),
+      }, () => {}, { window: surface });
+      await chat.restore();const input = chat.element.querySelector("textarea");
+      const pending = chat.submit();await tick();
+      assert.deepEqual(calls, [[text, "/old", 11]]);
+      if (mode.startsWith("switch")) chat.sync({ kind: "opened", from: "other", conversation: { ...current, generation: 12, folder: "/new" } });
+      if (mode !== "failure") input.value = "Newer draft";
+      if (mode.endsWith("error") || mode === "failure") reject("This action belongs to Zeca's conversation. Open Zeca before trying again.");
+      else resolve({ said: "Old command result", detail: null });
+      await pending;
+      assert.equal(input.value, mode === "failure" ? text : "Newer draft");
+      if (mode.startsWith("switch")) {
+        assert.ok(!chat.element.textContent.includes("Old command result"));
+        assert.ok(!chat.element.textContent.includes("Open Zeca before trying again."));
+      }
+    }
+  }
+  for (const transition of ["reset", "opened"]) {
+    let finish;
+    const calls = [];
+    const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), keyboard() {},
+      draft: async () => ({ generation: 21, text: "", files: [], folder: null, provider: "claude" }),
+      saveDraft: async () => {}, voice: {
+        start: async (...args) => calls.push(["start", ...args]),
+        stop: () => new Promise(resolve => { finish = resolve; }), cancel: () => calls.push(["cancel"]),
+      },
+    }, () => {}, { window: surface });
+    await chat.restore();const input = chat.element.querySelector("textarea");
+    await chat.startVoice(true);
+    assert.deepEqual(calls[0], ["start", true, 21]);
+    const stopping = chat.stopVoice();await tick();
+    chat.sync(transition === "reset" ? { kind: "reset", from: "other", generation: 22, provider: "claude" } :
+      { kind: "opened", from: "other", conversation: { generation: 22, provider: "claude", label: "Claude", folder: "/new", started: false, model: null, effort: null, busy: false, partial: "", waiting: [], lines: [] } });
+    input.value = "New conversation draft";
+    finish("Old recording");await stopping;
+    assert.equal(input.value, "New conversation draft");
+    assert.ok(calls.some(([kind]) => kind === "cancel"));
+    assert.equal(input.hidden, false);
+  }
+}
+console.log("check-chat-models: recipient-bound memory/continuation, retained rejected/newer drafts, late command isolation and cancelled recording results in both surfaces");
+
+for (const surface of ["island", "nest"]) {
+  for (const mode of ["success", "typing", "profile", "switch-success", "switch-error", "own-reset", "save-error", "off"]) {
+    let resolve, reject;
+    const prepared=[], saved=[];
+    const current={generation:31,provider:"claude",label:"Claude",folder:"/pinned",started:true,model:null,effort:null,lines:[],busy:true,partial:"",waiting:[{id:"retained-card",tool:"Bash",target:"git status",outside:null}]};
+    const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},current:async()=>current,
+      draft:async()=>({generation:31,text:"Unsent notes",files:["/inbox/file"],folder:"/pinned",provider:"claude"}),
+      saveDraft:async(draft,generation)=>{if(mode==="save-error")throw "Draft save unavailable.";saved.push({draft:structuredClone(draft),generation});},
+      prepareZeca:generation=>{prepared.push(generation);return new Promise((yes,no)=>{resolve=yes;reject=no});},
+      send:async()=>assert.fail("Preparing a Zeca question never sends"),reset:async()=>assert.fail("Preparing never resets another recipient"),
+    },()=>{},{window:surface});
+    await chat.restore();const input=chat.element.querySelector("textarea");
+    if(mode==="off")chat.setEnabled(false);
+    const pending=chat.askZeca("Question for Zeca");await tick();
+    if(!["save-error","off"].includes(mode)){
+      assert.deepEqual(prepared,[31]);
+      if(mode==="typing")input.value="Newer notes";
+      if(mode==="own-reset")chat.sync({kind:"reset",from:surface,generation:32,provider:"claude"});
+      if(mode.startsWith("switch")){
+        chat.sync({kind:"opened",from:"other",conversation:{...current,generation:32,busy:false,folder:"/other"}});
+        input.value="Other conversation draft";
+      }
+      if(mode==="profile"||mode==="switch-error")reject("This action belongs to Zeca's conversation. Open Zeca before trying again.");
+      else resolve();
+    }
+    const success=await pending;
+    assert.equal(success,["success","typing"].includes(mode));
+    if(success){
+      assert.equal(input.value,`${mode==="typing"?"Newer notes":"Unsent notes"}\n\nQuestion for Zeca`);
+      assert.deepEqual(saved.at(-1).draft.files,["/inbox/file"]);assert.equal(saved.at(-1).draft.folder,"/pinned");assert.equal(saved.at(-1).generation,31);
+    }else{
+      assert.equal(input.value,mode.startsWith("switch")?"Other conversation draft":"Unsent notes");
+      assert.ok(!input.value.includes("Question for Zeca"));
+      if(mode.startsWith("switch"))assert.ok(!chat.element.textContent.includes("Open Zeca before trying again."));
+    }
+    if(!mode.startsWith("switch")){
+      assert.equal(chat.isBusy(),true,"Preparation failure cannot end a running reply");
+      assert.ok(chat.element.textContent.includes("git status"),"Preparation never removes an existing permission");
+    }
+  }
+}
+console.log("check-chat-models: explicit Zeca preparation, draft/files/source retention, busy-reply continuity, off/profile/save rejection and late switch isolation in both surfaces");
+
+for(const surface of ["island","nest"]){
+ const calls=[];
+ const chat=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},draft:async()=>({generation:41,text:"Kept",files:[],folder:null,provider:"claude"}),saveDraft:async()=>{},prepareZeca:async()=>calls.push("prepare")},()=>{},{window:surface});
+ await chat.restore();
+ const pending=chat.askZeca("Old source question");
+ chat.sync({kind:"reset",from:"other",generation:42,provider:"claude"});
+ const input=chat.element.querySelector("textarea");input.value="New source draft";
+ assert.equal(await pending,false);assert.deepEqual(calls,[]);assert.equal(input.value,"New source draft");
+}
+console.log("check-chat-models: a question clicked before a source transition cannot inherit it across the initial preparation await");

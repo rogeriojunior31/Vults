@@ -60,7 +60,10 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
 ## Surface roles and continuity
 
 - Mini shows presence and attention and opens Quick. Keep one quiet horizontal
-  composition; approvals require the full card in an authorized surface.
+  composition; approvals require the full card in an authorized surface. When sessions
+  overflow, keep a separate keyboard-accessible list icon within Mini's input rectangle,
+  reserve its space before placing birds and put the hidden count in its accessible name.
+  Its only action opens the Nest's Flock; visible numeric text remains outside Mini.
 - Quick supports a decision, a conversation and short summaries. Use progressive
   detail to keep ordinary use within the initial view.
 - Room and Full use the same Nest content. Additional space reveals useful lists,
@@ -68,11 +71,15 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
 - Preserve selected session, area, filters, source, conversation and unsent draft
   across layout changes. A resize does not create a conversation or execution.
 - Honor the current registered capabilities and size rules in ADR 0021. The
-  prototype's paired widths (560/680/760 px), Mini height (56 px) and Quick height
-  (600 px) are layout references until native window, zoom, placement and input
-  region validation lands. Production currently uses Mini 340 x 38 and Quick
-  440 CSS px internally (492 in Chat), with a 1.14 UI zoom inside the fixed 720 x 640
-  logical-pixel overlay; display scaling must be accounted for.
+  paired widths (560/680/760 logical px) are an optional shared Mini/Quick preference.
+  Default keeps Mini 340 x 38 and Quick 440 CSS px internally (492 in Chat), with a
+  1.14 UI zoom inside the fixed 880 x 640 logical-pixel overlay. Bound content by the
+  available screen and viewport without overwriting the saved preference or resizing
+  the mapped surface. Mini stays 38 logical pixels high at every width; a wider choice must
+  not make the resting bar taller. Selected Quick widths remain capped at 600 logical pixels
+  including zoom and inline dictation feedback. General > Appearance and Quick's General page
+  edit the same shared width preference, with cross-view refresh and the same save-failure behavior. Native placement, display scaling and input behavior still need
+  desktop acceptance.
 - Room/Full share one header row with their tab navigation. At narrow widths,
   labels give way to named icons. The page body keeps its own layout and scroll.
 - Wide side panels resize by their separator, reset on double-click and fold to

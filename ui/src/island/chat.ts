@@ -20,13 +20,14 @@ import { usageLabel, usageLevel, usageWindowName } from "../cost";
 
 export interface ChatBackend {
   draft?: () => Promise<ChatDraft>;
+  prepareZeca?: (generation?: number) => Promise<void>;
   current?: () => Promise<OpenedConversation | null>;
-  saveDraft?: (draft: ChatDraft) => Promise<void>;
-  send(text: string, files: string[], folder: string | null, mentions?: ChatMention[]): Promise<void>;
+  saveDraft?: (draft: ChatDraft, generation?: number) => Promise<void>;
+  send(text: string, files: string[], folder: string | null, mentions?: ChatMention[], generation?: number): Promise<void>;
   decide(id: string, answer: ChatAnswer): void;
   /** Stops the turn running now. */
   stop(): void;
-  reset(provider: ChatProvider | null): Promise<ChatProvider>;
+  reset(provider: ChatProvider | null): Promise<ChatProvider | { provider: ChatProvider; generation: number }>;
   /** The models the provider's CLI offers. */
   models(provider: ChatProvider): Promise<ModelChoice[]>;
   /** The model and effort a new conversation in `folder` (null: the chat's own) starts with, by engine. */
@@ -50,9 +51,9 @@ export interface ChatBackend {
    *  back as a drop does. */
   pickFiles?: (title: string) => void;
   /** `/remember` and `/forget` (M6): what the memory says back, or null for any other text. */
-  memory?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
+  memory?: (text: string, folder: string | null, generation?: number) => Promise<MemorySaid | null>;
   /** `/continue` (W7): words for a stopped session in the folder, or null for any other text. */
-  handoff?: (text: string, folder: string | null) => Promise<MemorySaid | null>;
+  handoff?: (text: string, folder: string | null, generation?: number) => Promise<MemorySaid | null>;
   /** Who answers the chat's cards (ADR 0004); the app takes only less access from here. */
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
@@ -92,6 +93,9 @@ const MEMORY_SAID = new Set([
 ]);
 
 const REFERENCE_ERRORS = new Set([
+  tk("Chat is busy."),
+  tk("This action belongs to Zeca's conversation. Open Zeca before trying again."),
+  tk("The conversation changed before sending. Review your draft and try again."),
   tk("Chat references are invalid or too large."),
   tk("A referenced session or project is no longer in the flock. Remove its reference and choose again."),
   tk("Choose flock references from the @ suggestions again before sending."),
@@ -116,7 +120,7 @@ export interface ChatPanelOptions {
 export interface VoiceBackend {
   /** Starts recording; levels come back through `ChatPanel.voiceLevel`. `tap`: started by a click,
    *  so `ChatPanel.voiceSilence` comes when the user stops talking (if the app can tell). */
-  start(tap: boolean): Promise<void>;
+  start(tap: boolean, generation?: number): Promise<void>;
   /** Stops recording and resolves with the transcript. */
   stop(): Promise<string>;
   /** Drops the recording. */
@@ -231,6 +235,7 @@ export class ChatPanel {
   private restoring: Promise<void> | null = null;
   private conversationVersion = 0;
   private sourceVersion = 0;
+  private generation: number | undefined;
   private liveEnded = false;
 
   /** Failed reads stay retryable; never write over a draft the surface could not read. */
@@ -240,6 +245,10 @@ export class ChatPanel {
       const version = this.conversationVersion;
       const source = this.sourceVersion;
       this.restoring = Promise.all([this.backend.current?.(), this.backend.draft()]).then(([current, draft]) => {
+        if (source === this.sourceVersion) {
+          if (current && current.generation !== draft.generation) throw tk("The conversation changed before sending. Review your draft and try again.");
+          this.generation = draft.generation;
+        }
         // Live events or an opened/reset conversation outrank the startup snapshot.
         if (current && source === this.sourceVersion) this.load(current, false, version !== this.conversationVersion);
         this.restoreDraft(draft, true);
@@ -258,7 +267,8 @@ export class ChatPanel {
     this.draftEdited = true;
     this.mentions = this.mentions.filter(m => this.input.value.includes(m.token));
     const draft = { text: this.input.value, files: [...this.files], folder: this.folder, provider: this.provider, ...(this.mentions.length ? { mentions: [...this.mentions] } : {}) };
-    this.draftSaved = this.draftSaved.catch(() => {}).then(() => this.backend.saveDraft?.(draft));
+    const generation = this.generation;
+    this.draftSaved = this.draftSaved.catch(() => {}).then(() => this.backend.saveDraft?.(draft, generation));
     return this.draftSaved;
   }
 
@@ -342,6 +352,7 @@ export class ChatPanel {
   private deleting: number | null = null;
   private menuOpen = false;
   private keys: Record<string, string> = {};
+  private readonly recipient = el("span", { class: "chat-recipient" });
   private readonly place = el("button", { class: "place" });
   /** The CLI reads the user's own setup (Settings → Chat): shown for the conversation it began. */
   /** An icon, not words: the head is narrow (its title and label say what it means). */
@@ -585,6 +596,7 @@ export class ChatPanel {
       ? el(
           "div",
           { class: "chat-head" },
+          this.recipient,
           this.intro,
           el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
           this.newButton,
@@ -593,6 +605,7 @@ export class ChatPanel {
       : el(
       "div",
       { class: "chat-head" },
+      this.recipient,
       // The prototype's engine pill here too (L14), in place of the Claude / Codex switch.
       el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu),
       el("div", { class: "place-box" }, this.place, this.menu),
@@ -1000,7 +1013,10 @@ export class ChatPanel {
     this.levels = Array(WAVE_BARS).fill(0);
     this.partial = "";
     this.showVoice("listening");
-    this.starting = voice.start(tap).catch((e) => {
+    this.starting = this.restore().then(() => {
+      if (run !== this.voiceRun) return;
+      return voice.start(tap, this.generation);
+    }).catch((e) => {
       if (run !== this.voiceRun) return;
       this.showVoice("off");
       this.receive({ kind: "error", message: String(e) });
@@ -1054,6 +1070,37 @@ export class ChatPanel {
   /** A new conversation, the one so far saved in the list (the Nest's *New conversation*). */
   newConversation(): void {
     this.ask("new");
+  }
+
+  /** External questions keep the recipient and any draft typed while preparation was pending. */
+  async askZeca(text?: string): Promise<boolean> {
+    if (!this.enabled || !this.backend.prepareZeca) return false;
+    let source = this.sourceVersion;
+    let generation = this.generation;
+    const bound = this.restored || generation !== undefined;
+    try {
+      await this.restore();
+      if (!this.enabled || (bound && (source !== this.sourceVersion || generation !== this.generation))) return false;
+      source = this.sourceVersion;
+      generation = this.generation;
+      await this.flushDraft();
+      if (!this.enabled || source !== this.sourceVersion || generation !== this.generation) return false;
+      await this.backend.prepareZeca(generation);
+      if (!this.enabled || source !== this.sourceVersion || generation !== this.generation) return false;
+      if (text) {
+        this.draft(text);
+        await this.flushDraft();
+      }
+      return this.enabled && source === this.sourceVersion && generation === this.generation;
+    } catch (e) {
+      if (this.enabled && source === this.sourceVersion && generation === this.generation) {
+        const message = String(e);
+        this.messages.push({ who: "note", text: REFERENCE_ERRORS.has(message) ? t(message) : message });
+        this.paint();
+        this.changed();
+      }
+      return false;
+    }
   }
 
   /** Puts words in the composer for the user to finish or send (the Nest's *Ask Zeca*); after
@@ -1323,8 +1370,10 @@ export class ChatPanel {
 
   /** What the other window did (`chat-sync`), shown here too. */
   sync(s: ChatSync): void {
+    if (s.kind === "reset") this.generation = s.generation;
     if (s.from === this.opts.window) return;
     if (s.kind === "draft") {
+      if (s.generation !== this.generation) return;
       this.restoreDraft(s.draft);
       return;
     }
@@ -1352,7 +1401,7 @@ export class ChatPanel {
       this.paint();
       this.toEnd();
       this.changed();
-    } else if (s.kind === "reset") this.cleared(s.provider);
+    } else if (s.kind === "reset") this.cleared(s.provider, s.draft);
     else if (s.kind === "opened") this.load(s.conversation, true);
     else {
       const m = this.messages.find((m): m is Ask => m.who === "ask" && m.id === s.id);
@@ -1437,6 +1486,9 @@ export class ChatPanel {
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || (!text && !this.files.length)) return;
     const files = this.files;
+    const source = this.sourceVersion;
+    const generation = this.generation;
+    const folder = this.folder;
     // The user's own words for memory or continuation, kept by the app: never a turn, never sent to
     // a model. With files attached the command takes only the text, and the files wait for the next
     // message; where nothing keeps commands (the lab), nothing is sent.
@@ -1445,10 +1497,19 @@ export class ChatPanel {
     if (memory || handoff) {
       const command = memory ? this.backend.memory : this.backend.handoff;
       if (!command) return;
-      const answer = await command(text, this.folder).catch((e: unknown) => ({ said: String(e), detail: null }));
+      let answer: MemorySaid | null;
+      try {
+        answer = await command(text, folder, generation);
+      } catch (e) {
+        if (source === this.sourceVersion) this.receive({ kind: "error", message: String(e) });
+        return;
+      }
+      if (source !== this.sourceVersion) return;
       if (answer) {
-        this.input.value = "";
-        this.keepDraft();
+        if (this.input.value.trim() === text) {
+          this.input.value = "";
+          this.keepDraft();
+        }
         this.messages.push({ who: "you", text, files: [] });
         const said = MEMORY_SAID.has(answer.said) ? t(answer.said) : answer.said;
         this.messages.push({ who: "zeca", text: answer.detail ? `${said}\n${answer.detail}` : said });
@@ -1480,8 +1541,10 @@ export class ChatPanel {
     this.changed();
     try {
       await this.draftSaved;
-      await this.backend.send(text, files, this.folder, mentions);
+      if (source !== this.sourceVersion) return;
+      await this.backend.send(text, files, folder, mentions, generation);
     } catch (e) {
+      if (source !== this.sourceVersion) return;
       if (REFERENCE_ERRORS.has(String(e))) {
         this.started = wasStarted;
         // A rejected reference starts no turn; keep it editable without replacing newer typing.
@@ -1504,11 +1567,14 @@ export class ChatPanel {
 
   private async restart(provider: ChatProvider | null): Promise<void> {
     await this.flushDraft();
-    this.cleared(await this.backend.reset(provider));
+    const reset = await this.backend.reset(provider);
+    if (typeof reset !== "string") this.generation = reset.generation;
+    this.cleared(typeof reset === "string" ? reset : reset.provider);
   }
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
-  private cleared(provider: ChatProvider): void {
+  private cleared(provider: ChatProvider, draft?: ChatDraft | null): void {
+    this.cancelVoice();
     this.clearReaction();
     this.searching = false;
     this.mentions = [];
@@ -1528,6 +1594,7 @@ export class ChatPanel {
     this.modelOpen = false;
     this.native = this.nativeSetting;
     this.picked = false;
+    if (draft) this.restoreDraft(draft);
     this.keepDraft();
     this.paint();
     this.changed();
@@ -1891,6 +1958,8 @@ export class ChatPanel {
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    if (clearDraft) this.cancelVoice();
+    this.generation = c.generation;
     if (!preserveLive) {
       this.clearReaction();
       this.searching = c.busy && !!c.tools;
@@ -2313,6 +2382,9 @@ export class ChatPanel {
   }
 
   private paintHead(): void {
+    this.recipient.textContent = "Zeca";
+    this.recipient.title = t("Recipient: {name}", { name: "Zeca" });
+    this.recipient.setAttribute("aria-label", this.recipient.title);
     if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMentions();
     const active = document.activeElement as HTMLInputElement | null;
     const panel = active ? this.menuPanels().find(({ menu }) => menu.contains(active)) : null;

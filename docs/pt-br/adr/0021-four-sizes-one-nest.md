@@ -1,5 +1,5 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: aaf95dad0b56 -->
+<!-- source: e1a0b1efd036 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
@@ -35,10 +35,21 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
 - **Quatro tamanhos**: **Mini** é a pílula (340 x 38, o bando e nenhum texto em repouso: novidades
   chegam a ela só como corpo, cor ou movimento; o ditado ativo tem o estado transitório abaixo).
   **Quick** é a ilha dentro da superfície de camada fixa
-  de 720 x 640 pixels lógicos: normalmente com 440 CSS px de largura e 492 CSS px no Chat,
+  de 880 x 640 pixels lógicos: normalmente com 440 CSS px de largura e 492 CSS px no Chat,
   antes do zoom de 1,14 da interface (502 e 561 pixels lógicos, respectivamente).
   A altura fica dentro de 556 CSS px (634 após o zoom), reduzida quando a área disponível
-  é menor. Só o retângulo visível medido recebe entrada. **Room** é a janela do Nest, redimensionável a partir de 480 x 360 px, sem máximo, que na
+  é menor. Mini e Quick podem compartilhar uma largura escolhida pelo usuário de 560, 680 ou
+  760 pixels lógicos, salva como estado local de apresentação. Padrão restaura as larguras
+  originais por tamanho e aba e a altura do Quick; Room e Full não mudam. O Mini mantém 38 pixels
+  lógicos de altura em qualquer largura. Uma largura escolhida limita o Quick a 600 pixels lógicos,
+  incluindo o estado de ditado na ilha. Geral > Aparência e Quick > Geral editam a mesma preferência
+  de apresentação; notificações do armazenamento compartilhado e retorno do foco mantêm os dois
+  controles atualizados. As dimensões escolhidas são limitadas tanto pela área da página quanto pelo
+  espaço disponível na tela, com o zoom do Quick aplicado uma única vez. A seleção nunca redimensiona a superfície de camada mapeada. Só o retângulo visível
+  medido recebe entrada. O Mini usa um botão de lista apenas com ícone para as sessões que não
+  cabem, com contagem localizada no nome acessível. Reserva um alvo de interação separado antes
+  de posicionar as aves. Abre o Bando do Nest pela transição de superfície existente; nunca decide,
+  libera nem altera uma solicitação. **Room** é a janela do Nest, redimensionável a partir de 480 x 360 px, sem máximo, que na
   primeira vez abre grande dentro da tela. **Full** é o Nest maximizado ou em tela cheia; Esc volta
   ao tamanho anterior. A sobreposição de layer-shell nunca passa do seu tamanho fixo.
 - **As superfícies em repouso são superfícies de camada** mapeadas uma vez num tamanho fixo, cada
@@ -186,3 +197,28 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
 
 - 2026-10-19: mover o status de ditado no Linux para uma cápsula passiva inferior, com feedback
   interno como alternativa na falha de criação; preservar prioridade de cards/bloqueio e foco capturado.
+
+- 2026-10-21: UX7 adiciona uma preferência compartilhada de largura para Mini/Quick e uma
+  sobreposição fixa de 880 x 640 reservada na inicialização. Mantém as larguras padrão originais,
+  a altura do Mini, o comportamento de Room/Full e a autoridade; a seleção muda apenas a
+  geometria do conteúdo e seu retângulo de entrada medido de forma síncrona.
+
+- 2026-10-21: UX7.2 aplica as alturas de referência de 56/600 pixels lógicos apenas às larguras
+  escolhidas. Preserva os padrões originais e a escala dos sprites; limita toda a caixa do Quick,
+  incluindo o estado de ditado na ilha, antes da medição síncrona do retângulo de entrada.
+
+- 2026-10-21: UX7.3 reserva uma ação no Mini para as sessões além dos poleiros disponíveis.
+  Mantém a pílula em repouso sem texto visível, com alvo separado de teclado e a navegação
+  existente para o Bando do Nest. Os cartões mantêm a prioridade e o responsável original pelas ações.
+
+- 2026-10-21: o retorno do mantenedor restaura a altura de 38 px do Mini para qualquer largura,
+  evitando altura extra da barra em repouso sobre as abas dos aplicativos. Expõe a mesma preferência
+  de layout em Geral e no Quick, com armazenamento compartilhado, sem nova configuração
+  privilegiada nem autoridade sobre permissões.
+
+- 2026-10-21: UX8 começa com Perfis de agentes dentro do Bando, mantendo as cinco abas principais. O Nest lê o catálogo integrado e preserva o destino limitado `flock-profiles`. O catálogo independe do Zeca e nunca controla permissões nem grava configurações de agentes.
+- 2026-10-21: Os perfis de agentes no Bando podem criar cópias locais e editar seu nome/instruções. Somente o Nest controla esses salvamentos; os rascunhos sobrevivem à navegação na janela e são mantidos após falhas ao salvar. Não há nova aba principal, escrita de configurações de agentes nem responsável por permissões.
+- 2026-10-21: O editor de perfis adiciona seletores nativos de espécie/acessório e uma prévia estática do quadro completo. Edições de aparência usam o mesmo Salvar/Cancelar local e limite de revisão; não modificam configurações do Zeca nem sessões observadas.
+- 2026-10-21: Os registros de conversas vinculadas a perfis mantêm seu próprio snapshot imutável após edições de perfil, renomeação, reinício e reabertura. O Chat atual do Zeca não expõe esses registros nem os reinterpreta como conversas do companheiro; nenhum botão de Chat do perfil ou seletor de destinatário é habilitado nesta etapa de armazenamento.
+- 2026-10-21: O primeiro runtime especializado é exclusivo do Claude Code, com briefing fixo e sem contexto automático ou MCP do companheiro. Nenhum seletor de destinatário, ação de Chat do perfil ou reabertura de conversa especializada é habilitado nesta etapa exclusiva de runtime; o Nest e o Quick existentes continuam com o responsável atual pela conversa.
+- 2026-10-21: A restauração nativa de conversas de perfil preserva o modelo, esforço, sessão e snapshot do perfil salvos, em vez das edições atuais do perfil ou configurações do companheiro. A verificação anterior ao turno rejeita destinatários e origens incompatíveis e substituições não suportadas por voz/menções/origem. A interface atual do Chat ainda recusa registros de perfil até poder apresentar e preservar esses responsáveis entre superfícies.

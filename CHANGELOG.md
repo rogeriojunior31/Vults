@@ -4,6 +4,20 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Check Zeca as the recipient before preparing questions from Flock, Connections or the command palette. Preserve drafts and running replies on rejection, and cancel preparation after a conversation switch without sending or resetting.
+
+- Bind local memory/continuation commands and chat transcription to Zeca and their originating conversation. Keep rejected or newer drafts editable and cancel obsolete recordings on conversation changes.
+
+- Identify Zeca separately from the chat executor and bind sends and draft saves to their conversation. Cancel queued sends on a switch, reject obsolete window requests and preserve unsent drafts when Zeca is turned off.
+
+- Add species and fixed-accessory editing to custom agent profiles, with full-sprite previews and appearance saved in each revision. Existing profiles keep their species and start without an accessory.
+
+- Add local custom copies of agent profiles with editable names/instructions, retained revisions, stale-edit protection and recoverable drafts. Built-in profiles remain immutable; saving does not start an agent or change access.
+
+- Add a read-only Agent profiles catalog in Flock with built-in roles, instructions, explicit revisions, native read guards and retry. The catalog works with Zeca off and does not change permissions or start agents.
+
+- Add a saved shared Mini/Quick width choice (560/680/760 logical pixels), a slim 38 px Mini and a 600 px selected Quick cap and screen-aware bounds. General and Quick share the same width preference. Default restores the earlier sizes; Room and Full keep their own geometry. Mini reserves a keyboard-accessible list icon for sessions that do not fit, opening the existing Nest Flock page.
+
 - Add Dictation > Talk with Zeca settings for explicit realtime voice consent, destination, model and exact rolling USD budget, with retained drafts, save readback and reload on conflicts.
 - Add retained voice conversations with explicit recording/continuation/Stop controls, opt-in local silence completion, confirmed continuous microphone routes and default-off eight-second answers after fully played questions. Reuse Zeca's shared character for voice feedback and keep semantic turn detection behind an explicit developer preview.
 

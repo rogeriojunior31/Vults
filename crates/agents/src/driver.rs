@@ -153,6 +153,8 @@ pub enum Role {
     Chat,
     /// A continued session: none of Zeca's persona; `system_append` is its whole brief.
     Worker,
+    /// An isolated specialist: only its pinned brief, with no companion context or MCP tools.
+    Specialist,
 }
 
 /// What an agent runs with: given when the driver is made, fixed for its conversation.

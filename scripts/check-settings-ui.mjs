@@ -69,7 +69,9 @@ globalThis.document = { body: new Element("body"), documentElement: new Element(
   addEventListener() {}, dispatchEvent() {}, hidden: false,
 };
 document.body.append(root);
-globalThis.window = { setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, addEventListener() {} };
+const widthStorage = new Map(), windowEvents = {};
+globalThis.localStorage = { getItem: key => widthStorage.get(key) ?? null, setItem: (key, value) => widthStorage.set(key, value) };
+globalThis.window = { setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, addEventListener(name, fn) { (windowEvents[name] ??= []).push(fn); } };
 globalThis.matchMedia = () => ({ matches: true, addEventListener() {} });
 globalThis.location = { hash: "#general" };
 globalThis.Option = class extends Element {
@@ -583,3 +585,24 @@ for (const lang of ["pt-BR", "es", "zh"]) {
 }
 events.onSettings({lang:"en"});assert.ok(page().textContent.includes("Base: fast, but weak outside English"));
 console.log("check-settings-ui: retained Dictation configuration and localized voice-model descriptions");
+
+await go("General");
+const widthPick = () => rowNamed("Mini and Quick width").querySelector("select");
+assert.equal(widthPick().value, "0");
+const priorWrites = writes.length;
+widthPick().value = "2"; widthPick().fire("change"); await tick();
+assert.equal(widthStorage.get("island-width"), "680");
+assert.equal(writes.length, priorWrites, "Appearance width uses shared presentation state, not privileged config writes");
+widthStorage.set("island-width", "760");
+for (const fn of windowEvents.storage ?? []) fn({ key: "island-width" });
+assert.equal(widthPick().value, "3", "Compact changes appear in General");
+const saveWidth = localStorage.setItem;
+localStorage.setItem = () => { throw new Error("full"); };
+widthPick().value = "1"; widthPick().fire("change"); await tick();
+assert.equal(widthPick().value, "3", "A failed save rolls back to the shared saved width");
+assert.equal(widthStorage.get("island-width"), "760");
+localStorage.setItem = saveWidth;
+widthStorage.delete("island-width");
+for (const fn of windowEvents.storage ?? []) fn({ key: "island-width" });
+assert.equal(widthPick().value, "0");
+console.log("check-settings-ui: shared General/Compact width, cross-view refresh, Default and failed-save rollback");

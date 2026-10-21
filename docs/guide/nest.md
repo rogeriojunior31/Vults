@@ -84,6 +84,27 @@ keeps extended setup, access and API explanations beside their controls under **
 Open explanations and the scroll position survive refreshes; a focused input keeps
 its unsaved text and selection during an unrelated update.
 
+## Agent profiles
+
+Open **Flock > Agent profiles** to inspect the built-in Developer, Reviewer and Researcher profiles.
+Choose a card to read its instructions and explicit revision. **Create a copy** opens a local draft
+with an editable name and instructions. **Save profile** creates a custom profile; **Edit profile**
+saves a new revision of your copy. Built-in profiles remain unchanged. The copy initially inherits the preset's appearance.
+In **Appearance**, choose a **Species** and an **Accessory**; the preview uses the same sprites as
+the flock. Accessories are fixed choices, including **None**, without seasonal changes.
+The card shows the saved appearance after saving. Skills and applying a profile to Chat come later.
+
+Custom profiles live in the local database, independently of conversation history. Each save
+retains earlier revisions. A stale editor is rejected instead of overwriting newer changes;
+cancel and reopen to read the latest revision. Failed saves preserve your draft. Drafts also
+survive navigation within the current window, but are not saved across an app restart.
+The catalog works with Zeca off and has no access to his private memory. Saving does not start
+an agent, send a provider request, write agent configuration or change permissions.
+
+**Back to Flock** returns to your existing session view. Waiting-session chips remain available
+while reading profiles; open one to review its card in the Flock. A failed catalog read offers
+**Try again** and does not start an agent or make a provider request.
+
 ## Flock
 
 The flock sits on one wire, three times its size, with a project name under each bird. Below it,
@@ -149,6 +170,20 @@ waiting count, while the **Needs you** strip hides their tags. One with no card 
 ([The island](island.md#getting-to-a-session)).
 
 ## Chat
+
+The chat header identifies Zeca as the recipient separately from the executor. Sending keeps the
+conversation and folder selected at the click. A conversation change cancels a queued send; an
+obsolete window request is rejected before recall or a model turn, and stale draft saves cannot
+replace the new conversation's draft. Local `/remember`, `/forget` and `/continue` commands also
+check Zeca as their recipient and retain editable text on rejection. A late command result keeps
+newer typing. Changing conversations cancels the chat microphone and discards late transcription;
+voice-command handoff cannot inherit a later empty conversation.
+
+**Ask Zeca** actions in Flock, Connections and the command palette check the current recipient
+before adding a question. They preserve draft text, attachments and source, including text typed
+while preparation waits. A different recipient or a conversation switch rejects the preparation
+without resetting a conversation or sending anything. Preparation errors leave a running reply
+and its permission cards active.
 
 The island's conversation with Zeca, wide, with replies in full Markdown (a link shows its address
 and is never followed); a message, **New** or another engine in either one shows in both. Cards

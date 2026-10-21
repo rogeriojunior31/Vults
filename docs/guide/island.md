@@ -101,6 +101,30 @@ Two things keep it open until you are done:
 With nobody on the wire for a minute, the island **hides**. Move the pointer to the middle of the top
 edge of the screen to bring it back.
 
+**Settings > General > Appearance > Mini and Quick width**, also available in Quick's gear
+under **General**, offers 560, 680 or 760 logical pixels. Both controls edit the same preference;
+a change in one is reflected in the other. The flock wire, bird positions, labels and
+session targets follow the measured content width together, keeping the sprites at their original scale.
+The choice is shared by Mini and every Quick tab and restored on restart. **Default** restores
+Mini's original width and Quick's per-tab widths. A smaller screen limits the visible width without
+replacing your saved choice. Room and Full keep their own sizes. If saving fails, choose the width
+again to retry; the previously saved choice stays active.
+
+Mini stays 38 logical pixels high at every width, keeping the resting bar slim. With a selected
+width, Quick grows with its content up to 600 logical pixels, including zoom and inline dictation
+feedback. Smaller screens reduce those limits. Mini's birds keep their original scale and animation;
+**Default** restores Quick's earlier height too. Long content keeps its existing scrolling controls.
+
+When more sessions are running than Mini can show, a list icon opens **Room > Flock** to reach them
+all. Tab to the icon and press Enter or Space; its accessible name and tooltip include the number
+of additional sessions. It turns amber when one needs attention. The icon has its own space, so it
+does not cover a bird. Quick keeps its existing **+N** route to the same Flock page.
+
+Quick's inline settings selectors support Arrow Up/Down and Home/End. Enter or Space confirms a
+choice; Escape closes the list before folding the island, and Tab leaves it without applying a
+choice. Width changes and failed saves keep keyboard focus on the selector and retain its reading
+position. A failed width save is announced and leaves the saved choice active.
+
 ## Presence: how much it shows
 
 **Settings → General → Presence**, or the tray's menu (Linux), picks one of four presets, at once.

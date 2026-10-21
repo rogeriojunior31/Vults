@@ -13,6 +13,7 @@ pub mod history;
 pub mod journal;
 pub mod meetings;
 pub mod money;
+pub mod profiles;
 pub mod proposals;
 pub mod recall;
 pub mod requests;
@@ -162,6 +163,12 @@ const MIGRATIONS: &[&str] = &[
     meetings::TABLE,
     // 28: monetary holds and settled usage, independent of erasable request traces.
     money::TABLE,
+    // 29: user-owned agent profiles with immutable revisions (UX8).
+    profiles::TABLE,
+    // 30: a fixed accessory on each saved profile revision.
+    profiles::APPEARANCE,
+    // 31: immutable specialist identity snapshots on conversations.
+    conversations::PROFILE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

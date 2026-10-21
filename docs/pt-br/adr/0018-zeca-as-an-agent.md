@@ -1,5 +1,5 @@
 # 0018. Zeca: opcional, separado do bando, regras antes de modelos
-<!-- source: cd1459050027 -->
+<!-- source: ecda4c21e16d -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0010 e da 0012.
 Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): Tasks sai do Vults.
@@ -72,3 +72,10 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
   app.
 - 2026-10-16, [0031](0031-tasks-leave-vults.md): remover Tasks e a escolha de agentes; manter
   `/continue` e custos, e manter o bando independente do Zeca (D7).
+
+- 2026-10-21: UX8 começa com um catálogo inerte de perfis integrados na camada Connect. Os perfis descrevem papéis, instruções e aparência, sem definir acesso. A leitura independe do Zeca e de sua memória; esta etapa não oferece execução nem acesso a contexto privado.
+- 2026-10-21: A UX8 adiciona cópias dos perfis integrados pertencentes ao usuário, salvas como revisões imutáveis no banco local com rejeição de edições desatualizadas. Editar nome/instruções não concede execução, acesso à memória nem autoridade sobre permissões; origem e aparência do perfil integrado ficam fixadas.
+- 2026-10-21: As cópias de perfis podem revisar a espécie e um acessório fixo usando o catálogo existente de personagens. Cada revisão mantém a própria aparência; revisões anteriores e perfis integrados imutáveis não mudam. Aparência sazonal, habilidades e execução ficam fora desta etapa.
+- 2026-10-21: O armazenamento de conversas especializadas agora fixa a origem/revisão explícita do perfil e suas instruções/aparência completas na criação. Esses registros não podem carregar o contexto congelado do Zeca nem ser abertos/listados pela rota atual do Chat dele. A execução especializada e sua disponibilidade com o Zeca desligado continuam desabilitadas até a implementação do próprio contrato de isolamento.
+- 2026-10-21: Adicionar um construtor de runtime especializado para Claude Code que mantém somente o briefing fixado, configurações isoladas e o fluxo existente de aprovação humana. Ele remove MCP do companheiro, diretórios extras e histórico de API, rejeita contexto/ferramentas do companheiro e bloqueia provedores não suportados antes de iniciar um turno. Essa base não habilita Chat de perfil, recuperação de memória, escrita no diário nem disponibilidade especializada com o Zeca desligado; o roteamento nativo continua fechado.
+- 2026-10-21: O turno nativo agora fixa e verifica os metadados do destinatário antes da consulta à memória. Runtimes vinculados a perfis mantêm seu snapshot, origem e executor exatos, pulam os callbacks de consulta/contexto/MCP/diário do companheiro e não podem alimentar a extração de memória dele. Reiniciar/abrir/parar/excluir limpa ou substitui os metadados do destinatário junto com o runtime. O roteamento especializado para o usuário continua fechado até a interface de destinatário e as transições de comandos/voz.
