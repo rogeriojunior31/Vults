@@ -7,6 +7,131 @@ fn lease() -> Arc<super::super::Lease> {
 fn turn(value: i16) -> Turn {
     Turn::new(vec![value; 4800]).expect("bounded synthetic turn")
 }
+
+#[test]
+fn completed_capture_keeps_its_clock_signal_and_original_local_words() {
+    let rate = vults_audio::SAMPLE_RATE as usize;
+    for frames in [rate / 10, rate / 10 + 1, rate - 1, rate, rate * 30 - 1, rate * 30] {
+        let native = Turn::from_capture(&vec![0.0; frames], "A complete local sentence.".into()).unwrap();
+        assert_eq!(
+            native.samples.len(),
+            (frames as u64 * RATE as u64 / rate as u64) as usize
+        );
+        assert!(native.samples.iter().all(|sample| *sample == 0));
+    }
+    let source: Vec<f32> = (0..rate)
+        .map(|i| (i as f32 * std::f32::consts::TAU * 1000.0 / rate as f32).sin() * 0.25)
+        .collect();
+    let original = source.clone();
+    let text = "  Private captured words.\nThe complete last sentence.  ";
+    let native = Turn::from_capture(&source, text.into()).unwrap();
+    let error: f32 = (2400..RATE - 2400)
+        .map(|i| {
+            let expected = (i as f32 * std::f32::consts::TAU * 1000.0 / RATE as f32).sin() * 8192.0;
+            (f32::from(native.samples[i]) - expected).abs()
+        })
+        .sum::<f32>()
+        / (RATE - 4800) as f32;
+    assert!(
+        error < 2.0,
+        "Resampling must preserve pitch, phase and level: {error}"
+    );
+    assert_eq!(source, original);
+    assert_eq!(native.transcript.as_deref(), Some(text));
+    assert!(!format!("{native:?}").contains("Private captured words"));
+}
+
+#[test]
+fn capture_assembly_refuses_invalid_audio_and_text_and_saturates_filter_peaks() {
+    for frames in [0, 1599, 480001] {
+        assert!(matches!(
+            Turn::from_capture(&vec![0.0; frames], "Words.".into()),
+            Err(Failure::Input)
+        ));
+    }
+    for sample in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        let mut source = vec![0.0; 1600];
+        source[800] = sample;
+        assert!(matches!(
+            Turn::from_capture(&source, "Words.".into()),
+            Err(Failure::Input)
+        ));
+    }
+    for text in [
+        String::new(),
+        " \n\t".into(),
+        "bad\0text".into(),
+        "x".repeat(4097),
+        "\u{00e9}".repeat(2049),
+    ] {
+        assert!(matches!(
+            Turn::from_capture(&vec![0.0; 1600], text),
+            Err(Failure::Input)
+        ));
+    }
+    for (sample, expected) in [
+        (0.5, 16384_i16),
+        (-0.5, -16384),
+        (1.0, i16::MAX),
+        (-1.0, i16::MIN),
+        (1.1, i16::MAX),
+        (-1.1, i16::MIN),
+    ] {
+        let native = Turn::from_capture(&vec![sample; 4800], "Words.".into()).unwrap();
+        assert!(
+            native.samples[2400..4800]
+                .iter()
+                .all(|s| (i32::from(*s) - i32::from(expected)).abs() <= 1)
+        );
+    }
+}
+
+#[tokio::test]
+async fn captured_transcript_is_recovered_without_a_second_decode_and_never_after_revocation() {
+    let text = "  An already finalized capture.\nKeep these exact words.  ";
+    let native = Turn::from_capture(&vec![0.1; 3200], text.into()).unwrap();
+    for reason in [
+        Failure::Budget,
+        Failure::Key,
+        Failure::Transport,
+        Failure::Timeout,
+    ] {
+        let (_sender, cancel) = watch::channel(false);
+        let result = recover(
+            native.clone(),
+            reason,
+            Arc::new(|| true),
+            cancel,
+            lease(),
+            |_, _| panic!("A finalized native transcript must not load or decode a model again"),
+        )
+        .await
+        .unwrap();
+        assert!(
+            matches!(result, Recovery::Text { text: returned, reason: returned_reason } if returned == text && returned_reason == reason)
+        );
+    }
+    for (active, cancelled, handled) in [(false, false, false), (true, true, false), (true, false, true)] {
+        let (_sender, cancel) = watch::channel(cancelled);
+        let native = native.clone();
+        if handled {
+            native.consume();
+        }
+        assert!(
+            recover(
+                native,
+                Failure::Key,
+                Arc::new(move || active),
+                cancel,
+                lease(),
+                |_, _| { panic!("Revoked or consumed captures must not reach decoding") }
+            )
+            .await
+            .is_err()
+        );
+    }
+}
+
 #[tokio::test]
 async fn local_failure_retains_audio_and_revocation_discards_late_decode_results() {
     for (decoded, expected) in [

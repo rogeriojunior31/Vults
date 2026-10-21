@@ -15,19 +15,32 @@ use vults_voice::turn::{self, Action, Effect, Generation, Probe, heard};
 
 #[derive(Debug)]
 pub enum Command {
-    Turn { generation: Generation, turn: Turn },
-    Signal { generation: Generation, signal: Signal },
+    Turn {
+        generation: Generation,
+        turn: Turn,
+    },
+    Signal {
+        generation: Generation,
+        signal: Signal,
+    },
+    #[cfg(target_os = "linux")]
+    Capture {
+        generation: Generation,
+        operation: super::RoutedCapture,
+    },
 }
 #[derive(Debug, Clone, Copy)]
 pub enum Signal {
     SpeechStarted,
     SpeechEnded,
+    StopResponse,
     Confirm(Probe),
     Reject(Probe),
 }
 impl Signal {
     fn event(self) -> turn::Event {
         match self {
+            Self::StopResponse => turn::Event::InterruptRequested,
             Self::SpeechStarted => turn::Event::SpeechStarted,
             Self::SpeechEnded => turn::Event::SpeechEnded,
             Self::Confirm(probe) => turn::Event::InterruptConfirmed(probe),
@@ -37,11 +50,42 @@ impl Signal {
 }
 pub struct Record {
     pub identity: Identity,
+    pub generation: Generation,
+    pub completed_at: std::time::Instant,
     pub text: String,
     pub interrupted: bool,
     pub played_frames: u64,
     pub total_frames: u64,
     pub server_synchronized: bool,
+}
+impl Record {
+    /// One retained conversation clock binds actual drain time; this proposes, never opens a mic.
+    pub fn observe_follow_up(
+        &self,
+        policy: &mut turn::follow_up::FollowUp,
+        origin: std::time::Instant,
+        now: std::time::Instant,
+    ) -> bool {
+        let Some(drained_at) = self.completed_at.checked_duration_since(origin) else {
+            return false;
+        };
+        let Some(now) = now.checked_duration_since(origin) else {
+            return false;
+        };
+        policy.completed(
+            turn::follow_up::Reply {
+                generation: self.generation,
+                source: turn::follow_up::Source::SpokenResponse,
+                text: &self.text,
+                played_frames: self.played_frames,
+                total_frames: self.total_frames,
+                interrupted: self.interrupted,
+                synchronized: self.server_synchronized,
+            },
+            drained_at,
+            now,
+        )
+    }
 }
 impl std::fmt::Debug for Record {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -70,8 +114,15 @@ impl std::fmt::Debug for LocalReply {
 }
 #[derive(Debug)]
 pub enum Event {
+    #[cfg(target_os = "linux")]
+    Capture(super::CapturePhase),
     Action(Action),
     Ready(Generation),
+    Speaking(Generation),
+    Replay {
+        generation: Generation,
+        input: Input,
+    },
     History(Record),
     Settled(Settlement),
     Input(Input),
@@ -179,6 +230,7 @@ pub(super) async fn drive<
     F: Future<Output = Result<(), Failure>>,
     Q: Future<Output = Result<Option<LocalReply>, Failure>>,
 >(
+    initial_turn: Option<Turn>,
     mut channels: Channels,
     active: &(dyn Fn() -> bool + Send + Sync),
     mode: turn::BargeIn,
@@ -192,12 +244,16 @@ pub(super) async fn drive<
     local::check(active, &channels.cancel)?;
     emit(&channels.output, Event::Action(listen))?;
     let mut poll = tokio::time::interval(Duration::from_millis(5));
+    let mut initial = initial_turn.map(|turn| Command::Turn {
+        generation: machine.generation(),
+        turn,
+    });
     let first = loop {
         local::check(active, &channels.cancel)?;
         tokio::select! { biased;
             _ = channels.cancel.changed() => {},
             _ = poll.tick() => {},
-            command = channels.input.recv() => match command {
+            command = async { if let Some(first) = initial.take() { Some(first) } else { channels.input.recv().await } } => match command {
                 Some(Command::Turn { generation, turn }) if generation == machine.generation() => {
                     if turn.handled() { continue; }
                     let deadline = std::time::Instant::now() + LOCAL_TIMEOUT;
@@ -276,12 +332,14 @@ pub(super) async fn drive<
             }
             if !current.first_played && let Some(at) = cursor.first_played {
                 current.first_played = true;
+                emit(&channels.output, Event::Speaking(current.generation))?;
                 let event = turn::Event::FirstAudioPlayed { at:at.saturating_duration_since(start) };
                 let out = machine.handle(current.generation, event, now);
                 if let Err(error) = actions(&channels.output, out) { break Err(error); }
             }
             let done = current.settled && (if current.frozen.is_some() { current.truncated } else { cursor.phase == OutputPhase::Finished });
             if done {
+                let completed_at = std::time::Instant::now();
                 let Some(text) = current.transcript.take() else { break Err(Failure::Protocol); };
                 let interrupted = current.frozen.is_some();
                 let segments = [heard::Segment { text:&text.text, start_frame:0, end_frame:text.frames }];
@@ -292,7 +350,7 @@ pub(super) async fn drive<
                 let history = heard.history_text();
                 repair = heard.take_nudge().map(|unheard| Repair { heard:history.clone(), unheard });
                 if let Err(error) = emit(&channels.output, Event::History(Record {
-                    identity:text.identity, text:history, interrupted:heard.interrupted, played_frames:cursor.played_frames,
+                    identity:text.identity, generation:current.generation, completed_at, text:history, interrupted:heard.interrupted, played_frames:cursor.played_frames,
                     total_frames:text.frames, server_synchronized: !current.local_only,
                 })) { break Err(error); }
                 if !interrupted {
@@ -407,7 +465,7 @@ pub(super) async fn drive<
                         if let Err(error) = actions(&channels.output, out) { break Err(error); }
                     },
                     Some(Command::Signal { generation, signal }) => {
-                        if response.as_ref().is_none_or(|r| !r.output.route_verified()) {
+                        if !matches!(signal, Signal::StopResponse) && response.as_ref().is_none_or(|r| !r.output.route_verified()) {
                             let invalid = machine.handle(machine.generation(), turn::Event::InputUnavailable, now);
                             if let Err(error) = actions(&channels.output, invalid) { break Err(error); }
                             continue;
@@ -429,6 +487,8 @@ pub(super) async fn drive<
                             } else if sender.as_ref().ok_or(Failure::Transport)?.try_send(transport::Command::Interrupt { identity, played_frames:cursor.played_frames }).is_err() { break Err(Failure::Output); }
                         }
                     },
+                    #[cfg(target_os = "linux")]
+                    Some(Command::Capture { .. }) => {},
                     None => closed = true,
                 }
             },

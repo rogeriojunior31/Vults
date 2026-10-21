@@ -1,5 +1,5 @@
 # Cancelamento de eco
-<!-- source: 6dd293826b0e -->
+<!-- source: baa76af9489b -->
 
 A V6.5.1 qualifica um caminho nativo no Linux com inventário somente de leitura e um experimento
 sintético reproduzível. A V6.5.2 acrescenta propriedade duplex nativa explícita para essa rota e
@@ -36,7 +36,7 @@ exata do assistente como referência remota e a encaminha ao alto-falante. Escol
 enquanto o CPAL toca na saída padrão não estabelece esse caminho de referência.
 [Contrato de quatro streams do PipeWire](https://docs.pipewire.org/page_module_echo_cancel.html).
 
-A entrada CPAL padrão da V6.4 continua sem interrupção. A entrada separada `realtime::run_routed`
+A entrada CPAL padrão da V6.4 mantém a interrupção por voz desativada. A entrada separada `realtime::run_routed`
 da V6.5.2 exige consentimento realtime explícito, rota escolhida e autoridade nativa atual. Um único
 worker fixa captura e reprodução PCM16 mono a 24 kHz nos índices exatos dos dispositivos escolhidos,
 confere formato negociado/confirmações de destino e define `DONT_MOVE`. Não há fallback para padrões.
@@ -73,13 +73,41 @@ de conteúdo confirmado e descarta a saída pendente; o stream antigo é encerra
 resposta tocar. A estimativa continua na fronteira de destino informada; o tempo físico posterior
 ainda exige validação acústica.
 
-`run_routed` encaminha apenas eventos `Input` limitados e em memória ao chamador nativo. Ele deve
-montar e confirmar turnos explicitamente; a captura bruta não é enviada, salva nem mandada ao Chat
-automaticamente. A verificação também condiciona sinais de interrupção e limpa fala/provas retidas
-antes de ticks ou eventos de primeira reprodução adiados. A política escolhida de fones/AEC fica
-separada da validade temporária da rota. Controles visíveis de captura, VAD/montagem de turnos e
-ativação pelo usuário ficam na V6.7; ferramentas de voz na V6.6. A escolha da Q6 sobre configuração
-de produção continua aberta; o Vults não carrega módulos do sistema silenciosamente.
+`run_routed` encaminha eventos `Input` limitados e apenas em memória ao chamador nativo. Para
+rotas com fones/AEC escolhidas explicitamente, a V6.7.3 agora também consome esses pacotes por um
+adaptador local de interrupção. Modelos instalados de transcrição/VAD são verificados antes de abrir
+streams nativos. A detecção começa somente após reprodução real, mantém um buffer circular de oito
+segundos e observa janelas recentes de fala. A máquina de turnos existente controla bloqueios de
+reprodução e tokens exatos de verificação; uma transcrição local separada pode confirmar palavras
+dentro do prazo da verificação. Seu texto nunca vira comando, permissão, rascunho do Chat ou entrada
+do provedor. Resultados vazios, com falha, expirados ou revogados não confirmam interrupção.
+
+Um único worker nativo limitado mantém a concessão do desktop durante inferência e destruição dos
+modelos. Cancelamento, perda da rota, gerações substituídas e encerramento do proprietário suprimem
+publicação atrasada. Após uma interrupção confirmada, `Replay` vem depois da nova ação `Listen` e
+carrega o início retido da fala e seu trecho anterior nessa geração exata. `Command::Capture` nativo
+agora aceita as operações `Begin`, `Finish` e `Cancel` vinculadas à geração nesse mesmo stream. Begin
+inicia a captura com esse replay e acrescenta pacotes recebidos após Begin, mantendo até 30 segundos
+de PCM16 de 24 kHz; não abre um segundo microfone.
+Somente Finish inicia uma transcrição local final separada e cancelável. Palavras finais válidas
+acompanham o PCM original até o roteador existente de turnos completos; palavras da verificação
+nunca são reutilizadas. Decodificação vazia/com falha, cancelamento, substituição, perda da rota e o
+prazo de 60 segundos impedem envio. O worker real mantém a concessão do desktop durante o
+encerramento. Replay sozinho nunca grava/confirma um turno seguinte, e nenhum áudio é salvo ou
+enviado ao Chat.
+
+A política escolhida de fones/AEC continua separada da validade da rota ao vivo. O Nest agora começa
+com turnos manuais e também oferece rotas contínuas explícitas. Uma lista somente leitura e exclusiva
+do Nest fixa servidor/seriais dos dispositivos e pares WebRTC existentes sob um token de cinco
+minutos. Seleção e confirmação de microfone contínuo por conversa são obrigatórias; padrões ou nomes
+não escolhem rotas. Listas substituídas/expiradas não iniciam captura. Nenhum módulo é instalado e os
+padrões não mudam. Iniciar e uma interrupção confirmada admitem Begin nativo; Finalizar é vinculado
+à gravação exata. Interromper resposta manualmente e concluir normalmente aguardam outro clique
+explícito para gravar. Sair, expirar o contato da página e a autoridade existente de configurações/
+bloqueio/geração revogam o proprietário da rota. A página informa que o microfone continua aberto
+durante resposta/decodificação/espera. Finalizar após uma pausa fica indisponível na captura da rota.
+A qualificação física/com provedor real continua na V6.7. A decisão de configuração de produção da Q6
+segue aberta; o Vults não carrega módulos do sistema silenciosamente.
 
 <a id="reproduce-the-isolated-experiment"></a>
 ## Reproduzir o experimento isolado

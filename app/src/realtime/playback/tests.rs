@@ -11,7 +11,7 @@ async fn without_commands<P: Output, F: Future<Output = Result<(), Failure>>>(
     open: impl FnMut(Arc<AtomicBool>) -> Result<P, Failure>,
     remote: impl FnOnce(transport::Channels) -> F,
 ) -> Result<Option<(Turn, Failure)>, Failure> {
-    super::drive(channels, active, mode, open, remote, |_, _| {
+    super::drive(None, channels, active, mode, open, remote, |_, _| {
         std::future::ready(Ok(None))
     })
     .await
@@ -115,6 +115,68 @@ fn identity(n: usize) -> Identity {
         attempt: format!("attempt_{n}"),
         response: format!("response_{n}"),
         item: format!("item_{n}"),
+    }
+}
+
+#[tokio::test]
+async fn prepared_native_capture_uses_the_current_generation_and_existing_local_command_gate() {
+    for local in [false, true] {
+        let (io, send, mut receive, _stop) = channels(64);
+        let captured = Turn::from_capture(&vec![0.1; 3200], "A finalized native capture.".into()).unwrap();
+        let expected = captured.samples();
+        let uploaded = expected.clone();
+        let worker = tokio::spawn(async move {
+            super::drive(
+                Some(captured),
+                io,
+                &|| true,
+                turn::BargeIn::Disabled,
+                |_| Ok(Fake(device(true))),
+                move |mut remote| async move {
+                    assert!(!local, "A consumed local capture cannot open a provider");
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    let (pcm, _) = upload(&mut remote).await;
+                    assert_eq!(
+                        pcm.as_slice(),
+                        uploaded.as_ref(),
+                        "The native capture reaches the existing upload path unchanged"
+                    );
+                    Err(Failure::Transport)
+                },
+                move |_, _| {
+                    std::future::ready(Ok(local.then(|| LocalReply {
+                        feedback: crate::voice_commands::Feedback::Done,
+                        text: "Local command completed.".into(),
+                        choices: Vec::new(),
+                    })))
+                },
+            )
+            .await
+        });
+        if local {
+            let mut listening = 0;
+            let mut completed = 0;
+            loop {
+                match next(&mut receive).await {
+                    Event::Local { .. } => completed += 1,
+                    Event::Action(action) if matches!(action.effect, Effect::Listen { .. }) => {
+                        listening += 1;
+                        if listening == 2 {
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            assert_eq!(completed, 1);
+            drop(send);
+            assert!(worker.await.unwrap().unwrap().is_none());
+        } else {
+            drop(send);
+            let (original, reason) = worker.await.unwrap().unwrap().unwrap();
+            assert_eq!(reason, Failure::Transport);
+            assert!(Arc::ptr_eq(&original.samples(), &expected));
+        }
     }
 }
 
@@ -303,10 +365,13 @@ async fn audio(io: &transport::Channels, n: usize) {
         .unwrap();
 }
 async fn done(io: &transport::Channels, n: usize, ok: bool) {
+    done_text(io, n, ok, "one two three four five six").await;
+}
+async fn done_text(io: &transport::Channels, n: usize, ok: bool, text: &str) {
     io.output
         .send(transport::Event::Transcript(Transcript {
             identity: identity(n),
-            text: "one two three four five six".into(),
+            text: text.into(),
             frames: 4800,
         }))
         .await
@@ -576,7 +641,7 @@ async fn failed_receipts_and_output_saturation_retain_the_original() {
 
 #[tokio::test]
 async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_authorized_turn() {
-    for finished in [false, true] {
+    for (finished, manual) in [(false, false), (true, false), (false, true), (true, true)] {
         let (io, send, mut receive, _stop) = channels(128);
         let capture = Turn::new(vec![123; 4800]).unwrap();
         send.send(Command::Turn {
@@ -592,7 +657,11 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
             without_commands(
                 io,
                 &|| true,
-                turn::BargeIn::Headphones,
+                if manual {
+                    turn::BargeIn::Disabled
+                } else {
+                    turn::BargeIn::Headphones
+                },
                 move |_| {
                     let fresh = device(false).lock().unwrap().cursor;
                     output.lock().unwrap().cursor = fresh;
@@ -646,28 +715,44 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
         .await
         .unwrap();
         state.lock().unwrap().cursor.played_frames = 1680;
-        tokio::time::sleep(Duration::from_millis(520)).await;
-        send.send(Command::Signal {
-            generation: generation(),
-            signal: Signal::SpeechStarted,
-        })
-        .await
-        .unwrap();
-        let probe = loop {
-            if let Event::Action(Action {
-                effect: Effect::ProbeInterruption { probe, .. },
-                ..
-            }) = next(&mut receive).await
-            {
-                break probe;
+        let probe = if manual {
+            loop {
+                if matches!(next(&mut receive).await, Event::Speaking(_)) {
+                    break;
+                }
             }
+            send.send(Command::Signal {
+                generation: generation(),
+                signal: Signal::StopResponse,
+            })
+            .await
+            .unwrap();
+            None
+        } else {
+            tokio::time::sleep(Duration::from_millis(520)).await;
+            send.send(Command::Signal {
+                generation: generation(),
+                signal: Signal::SpeechStarted,
+            })
+            .await
+            .unwrap();
+            let probe = loop {
+                if let Event::Action(Action {
+                    effect: Effect::ProbeInterruption { probe, .. },
+                    ..
+                }) = next(&mut receive).await
+                {
+                    break probe;
+                }
+            };
+            send.send(Command::Signal {
+                generation: generation(),
+                signal: Signal::Confirm(probe),
+            })
+            .await
+            .unwrap();
+            Some(probe)
         };
-        send.send(Command::Signal {
-            generation: generation(),
-            signal: Signal::Confirm(probe),
-        })
-        .await
-        .unwrap();
         let next_generation = loop {
             if let Event::Action(Action {
                 generation,
@@ -691,7 +776,7 @@ async fn interruption_freezes_once_waits_for_ack_and_repairs_only_the_next_autho
         send.send(input(next_generation, 456)).await.unwrap();
         send.send(Command::Signal {
             generation: generation(),
-            signal: Signal::Confirm(probe),
+            signal: probe.map_or(Signal::StopResponse, Signal::Confirm),
         })
         .await
         .unwrap();
@@ -722,6 +807,7 @@ async fn local_commands_retire_generations_before_lazy_provider_admission() {
     let remote_opened = opened.clone();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -803,6 +889,7 @@ async fn an_established_connection_never_receives_a_locally_consumed_followup() 
     let count = prepared.clone();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -869,6 +956,7 @@ async fn pending_command_admission_is_cancellable_and_never_constructs_a_provide
     let remote_called = called.clone();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -917,6 +1005,7 @@ async fn a_committed_local_action_never_recovers_after_failure_before_or_after_c
         let original = capture.clone();
         let worker = tokio::spawn(async move {
             super::drive(
+                None,
                 io,
                 &|| true,
                 turn::BargeIn::Disabled,
@@ -988,6 +1077,7 @@ async fn unresolved_effect_receipt_publishes_requested_before_the_native_waiter_
     send.send(input(generation(), 11)).await.unwrap();
     let worker = tokio::spawn(async move {
         super::drive(
+            None,
             io,
             &|| true,
             turn::BargeIn::Disabled,
@@ -1160,5 +1250,175 @@ async fn tool_receipts_keep_thinking_and_final_audio_without_recovering_consumed
                 assert!(!matches!(event, Event::History(_)));
             }
         }
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn manual_capture_continuation_retains_one_provider_and_waits_for_explicit_turns() {
+    let (io, send, mut receive, stop) = channels(128);
+    let (next_capture, captures) = mpsc::channel(1);
+    let opened = Arc::new(AtomicUsize::new(0));
+    let openings = opened.clone();
+    let recorded = Arc::new(AtomicUsize::new(0));
+    let recordings = recorded.clone();
+    let worker = tokio::spawn(async move {
+        let driver = super::drive(
+            None,
+            io,
+            &|| true,
+            turn::BargeIn::Disabled,
+            |_| Ok(Fake(device(true))),
+            move |mut remote| {
+                openings.fetch_add(1, Ordering::SeqCst);
+                async move {
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    for index in 0..2 {
+                        let (pcm, _) = upload(&mut remote).await;
+                        assert_eq!(pcm.len(), 4800);
+                        audio(&remote, index).await;
+                        done(&remote, index, true).await;
+                    }
+                    // Keep the same socket alive while the page waits, without another capture.
+                    loop {
+                        tokio::select! {
+                            _ = remote.cancel.changed() => break,
+                            value = remote.input.recv() => if value.is_none() { break; },
+                        }
+                    }
+                    Ok(())
+                }
+            },
+            |_, _| std::future::ready(Ok(None)),
+        );
+        crate::realtime::capture::continue_turns(driver, captures, send, move |_, _| {
+            recordings.fetch_add(1, Ordering::SeqCst);
+            async {
+                // The provider/driver must keep being polled during the native capture wait.
+                tokio::time::sleep(Duration::from_millis(20)).await;
+                Turn::from_capture(&vec![0.2; 3200], "Second local words".into()).map(Some)
+            }
+        })
+        .await
+    });
+    let mut listens = 0;
+    loop {
+        if let Event::Action(action) = next(&mut receive).await
+            && matches!(action.effect, Effect::Listen { .. })
+        {
+            assert_eq!(recorded.load(Ordering::SeqCst), listens);
+            if listens < 2 {
+                next_capture
+                    .send(crate::realtime::capture::Request::Capture(action.generation))
+                    .await
+                    .unwrap();
+                listens += 1;
+            } else {
+                break;
+            }
+        }
+    }
+    assert_eq!(opened.load(Ordering::SeqCst), 1);
+    assert_eq!(recorded.load(Ordering::SeqCst), 2);
+    stop.send_replace(true);
+    assert!(matches!(worker.await.unwrap(), Err(Failure::Cancelled)));
+}
+
+#[tokio::test]
+async fn follow_up_proposals_use_actual_completed_audio_and_never_capture_or_upload() {
+    use vults_voice::turn::follow_up::FollowUp;
+    for (text, eligible) in [
+        ("Continue?", true),
+        ("Done.", false),
+        ("\u{7ee7}\u{7eed}\u{5417}\u{ff1f}", true),
+    ] {
+        let origin = std::time::Instant::now();
+        let (io, send, mut receive, stop) = channels(128);
+        send.send(input(generation(), 123)).await.unwrap();
+        let state = device(false);
+        let output = state.clone();
+        let uploads = Arc::new(AtomicUsize::new(0));
+        let count = uploads.clone();
+        let worker = tokio::spawn(async move {
+            without_commands(
+                io,
+                &|| true,
+                turn::BargeIn::Disabled,
+                move |_| Ok(Fake(output.clone())),
+                move |mut remote| async move {
+                    remote.output.send(transport::Event::Ready).await.unwrap();
+                    upload(&mut remote).await;
+                    count.fetch_add(1, Ordering::SeqCst);
+                    audio(&remote, 0).await;
+                    done_text(&remote, 0, true, text).await;
+                    remote.cancel.changed().await.unwrap();
+                    assert!(
+                        remote.input.try_recv().is_err(),
+                        "A proposal is not an upload or a new turn"
+                    );
+                    Err(Failure::Cancelled)
+                },
+            )
+            .await
+        });
+        tokio::time::timeout(Duration::from_secs(3), async {
+            while state.lock().unwrap().cursor.phase != OutputPhase::Draining {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
+        while let Ok(event) = receive.try_recv() {
+            assert!(
+                !matches!(event, Event::History(_)),
+                "Model completion is not actual playback completion"
+            );
+        }
+        let drained = std::time::Instant::now();
+        {
+            let mut output = state.lock().unwrap();
+            output.cursor.played_frames = output.cursor.total_frames;
+            output.cursor.phase = OutputPhase::Finished;
+        }
+        let record = history(&mut receive).await;
+        assert_eq!(record.generation, generation());
+        assert!(record.completed_at >= drained);
+        assert_eq!(record.text, text);
+        let mut policy = FollowUp::new(true);
+        let observed = record.completed_at + Duration::from_secs(2);
+        assert_eq!(record.observe_follow_up(&mut policy, origin, observed), eligible);
+        assert!(!record.observe_follow_up(&mut FollowUp::default(), origin, observed));
+        assert!(!record.observe_follow_up(
+            &mut FollowUp::new(true),
+            origin,
+            record.completed_at + Duration::from_secs(8)
+        ));
+        assert!(!record.observe_follow_up(
+            &mut FollowUp::new(true),
+            record.completed_at + Duration::from_secs(1),
+            observed
+        ));
+        let following = loop {
+            if let Event::Action(Action {
+                generation,
+                effect: Effect::Listen { .. },
+            }) = next(&mut receive).await
+            {
+                break generation;
+            }
+        };
+        let claimed = observed + Duration::from_secs(1);
+        let proposal = policy.take(following, claimed.duration_since(origin));
+        assert_eq!(proposal.is_some(), eligible);
+        if let Some(window) = proposal {
+            assert_eq!(
+                window.remaining(claimed.duration_since(origin)),
+                Some(Duration::from_secs(5))
+            );
+            assert!(policy.take(following, claimed.duration_since(origin)).is_none());
+        }
+        assert_eq!(uploads.load(Ordering::SeqCst), 1);
+        stop.send_replace(true);
+        assert!(matches!(worker.await.unwrap(), Err(Failure::Cancelled)));
     }
 }

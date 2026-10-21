@@ -48,7 +48,8 @@ impl Converter {
         Self::at_rate(rate, SAMPLE_RATE)
     }
 
-    pub(crate) fn at_rate(rate: u32, target: u32) -> Result<Self, String> {
+    /// Convert between explicit mono clocks; no device is opened or authorized here.
+    pub fn at_rate(rate: u32, target: u32) -> Result<Self, String> {
         if !(8_000..=384_000).contains(&rate) || !(8_000..=384_000).contains(&target) {
             return Err("the audio sample rate is outside 8-384 kHz".into());
         }

@@ -92,3 +92,51 @@ fn stop_and_cancel_leave_an_independent_dictation_stream_running() {
         pcm.len()
     );
 }
+
+#[test]
+#[ignore = "requires an explicitly configured isolated server with synthetic sources; records 65 seconds"]
+fn long_recording_passes_one_minute_with_bounded_pcm16_files_and_cleanup() {
+    let server = std::env::var("VULTS_AUDIO_TEST_SERVER").expect("explicit fixture server");
+    assert_eq!(std::env::var("PULSE_SERVER").unwrap(), server);
+    let socket = PathBuf::from(server.strip_prefix("unix:").unwrap());
+    let runtime = PathBuf::from(std::env::var("XDG_RUNTIME_DIR").unwrap());
+    assert!(runtime.starts_with(std::env::temp_dir()) && runtime != std::env::temp_dir());
+    assert!(socket.starts_with(&runtime));
+    let sources = meeting::sources().unwrap();
+    assert_eq!(sources.microphone, "vults_spike_mic");
+    assert_eq!(sources.monitor, "vults_spike_output.monitor");
+    let root = runtime.join("vults-long-meeting-test");
+    let (send, receive) = std::sync::mpsc::channel();
+    let mut recording = Recording::start_processed(&root, meeting::MAX_SECONDS, sources, move |tracks, _| {
+        let mut durations = Vec::new();
+        for input in [tracks.microphone, tracks.system] {
+            let bytes = input.get_ref().metadata().unwrap().len();
+            let wav = hound::WavReader::new(input).unwrap();
+            assert_eq!(wav.spec().sample_rate, 16_000);
+            assert_eq!(wav.spec().channels, 1);
+            assert_eq!(wav.spec().bits_per_sample, 16);
+            assert_eq!(wav.spec().sample_format, hound::SampleFormat::Int);
+            assert!(wav.duration() > 60 * 16_000);
+            assert!(bytes <= u64::from(wav.duration()) * 2 + 128);
+            durations.push(wav.duration());
+        }
+        send.send(durations).unwrap();
+        Ok(())
+    })
+    .unwrap();
+    wait_for_recording(&mut recording);
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_secs(65) {
+        assert_eq!(recording.status().phase, Phase::Recording);
+        assert!(recording.take_result().is_none());
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    recording.stop();
+    assert!(matches!(finish(&mut recording), Outcome::Finished(_)));
+    println!(
+        "Synthetic capture past one minute: {:?} normalized frames",
+        receive.recv().unwrap()
+    );
+    assert!(!root.join("mic.wav").exists() && !root.join("system.wav").exists());
+    meeting::recover(&root).unwrap();
+}

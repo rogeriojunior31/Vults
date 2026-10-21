@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: febbcb4921df -->
+<!-- source: 2401bf42fd05 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -84,8 +84,19 @@ de transporte retornam códigos sem conteúdo. Veja o [guia oficial de WebSocket
 
 A versão 41 das configurações acrescenta consentimento independente `voice_realtime`, identidade
 persistente do registro, limite móvel padrão de US$1 e um modelo explicitamente revisado. Zero
-desativa voz remota. Só a webview de Configurações salva essa escolha; ainda não há controle visual,
-chamada no bridge ou entrada de microfone. O backend nativo aceita canais limitados de comandos e
+desativa voz remota. Só a webview de Configurações salva essa escolha. A V6.7.1 acrescenta chamadas
+tipadas no bridge para essa gravação explícita e para leitura restrita às Configurações
+(`voice_realtime_settings`). A V6.7.2 apresenta essas escolhas em **Ditado > Conversar com o
+Zeca**. A V6.7.3 acrescenta os controles manuais separados do Nest descritos abaixo.
+O campo `on` retornado é a escolha salva, não um indicador de sessão ativa ou de prontidão.
+A leitura retorna apenas `on`, `model` e `limitMicrousd`, com o valor codificado como texto decimal
+para preservar exatamente limites grandes no JavaScript. Ela omite a identidade privada do registro
+e não acessa chaveiro, dispositivo, banco ou rede. A V6.7.2 também envia valores de gravação como
+texto decimal canônico, preservando toda a faixa inteira aceita sem conversão por ponto flutuante.
+O comando nativo recusa valores não canônicos ou fora da faixa antes de salvar; as verificações de
+autoridade, modelo e orçamento continuam valendo. O formulário aceita USD com ponto ou vírgula
+decimal e até seis casas, confirma a gravação por releitura, preserva rascunhos em falhas e bloqueia
+edições antigas até uma recarga explícita quando outro responsável muda a escolha salva. O backend nativo aceita canais limitados de comandos e
 saída e nunca inicia captura sozinho. Uma única concessão de voz do desktop controla a conexão.
 A revogação por geração cobre mudanças de escolha, bloqueio, liberação e encerramento permanente;
 apagar/trocar a chave compartilhada da OpenAI também revoga conexões existentes.
@@ -136,9 +147,9 @@ posse até terminar.
 Isso comprova que o transporte local anterior não pode mais enviar; não declara que o provedor
 terminou ao desconectar nem restitui trabalho incerto. Um processo encerrado libera sua trava no
 kernel; transportes abortados descartam o socket. A recuperação não está habilitada em outras
-plataformas. O backend existente não tem entrada de captura oferecida ao usuário. A V6.3.5 acrescenta
-retenção/recuperação nativas abaixo; captura, reprodução, continuação visual e validação com provedor
-real continuam obrigatórias antes da ativação.
+plataformas. O backend da V6.3.5 inicialmente não tinha entrada de captura oferecida ao usuário. A retenção e
+recuperação nativas são descritas abaixo; a V6.7.3 acrescenta controles manuais, enquanto a validação
+física e com provedor real continua em aberto.
 
 <a id="native-turn-retention-and-local-text"></a>
 ## Retenção do turno nativo e texto local
@@ -152,14 +163,26 @@ de avançar. Só um recibo final de sucesso libera o original pendente; recibos 
 processados antes de aplicar uma falha simultânea do transporte. Uma falha posterior em espera
 não recupera um turno antigo.
 
+A V6.7.3 acrescenta `Turn::from_capture` para uma captura nativa mono de 16 kHz em ponto flutuante
+já concluída e sua transcrição local finalizada. O adaptador reutiliza o reamostrador compartilhado
+com estado para produzir PCM16 de 24 kHz, preservando o relógio das amostras pela razão inteira
+exata de duração. A entrada é limitada a 100 ms-30 segundos antes da conversão; áudio não finito e
+transcrições inválidas são recusados, e picos finitos do filtro saturam em PCM16 sem transbordar.
+O áudio original não é alterado. O texto preserva os espaços originais, com o limite existente de
+4.096 bytes dos comandos nativos. Esse adaptador não abre microfone, não carrega modelo e não
+concede autoridade de captura/envio. O responsável nativo pela captura explícita é descrito abaixo;
+os controles da conversa, o marco completo e a validação física/real continuam em aberto.
+
 Admissão desligada/esgotada, chave ausente, falhas de transporte/protocolo/resposta ou saída cheia
 preservam o turno que falhou para recuperação local. O transporte recebe até 11 segundos para
 terminar seu caminho existente de conciliação limitada; depois, seu futuro/socket é descartado
-antes da decodificação. O modelo Whisper instalado e o idioma selecionados são congelados; o
-reamostrador existente converte o áudio preservado para 16 kHz. Não há download, limpeza por modelo,
-outro provedor nem envio automático ao Chat. A decodificação local bem-sucedida devolve o texto
-inteiro, preservando espaços, para o chamador nativo oferecer como rascunho revisável. Isso não
-declara que o Zeca já respondeu em texto nem que existe uma interface para essa alternativa.
+antes da recuperação. Se esse mesmo turno já contém uma transcrição local finalizada, a recuperação
+devolve essas palavras exatas sem uma segunda decodificação ou carga de modelo, após verificar
+cancelamento/revogação e a marca de turno consumido. Caso contrário, o modelo Whisper instalado e
+o idioma selecionados são congelados; o reamostrador existente converte o áudio preservado para
+16 kHz. Não há download, limpeza por modelo, outro provedor nem envio automático ao Chat. A decodificação local bem-sucedida devolve o texto
+inteiro, preservando espaços, para o chamador nativo oferecer como rascunho revisável. A V6.7.3
+oferece essas palavras para edição/cópia, sem envio automático ao Chat.
 
 Modelo ausente, falha de decodificação, saída vazia, texto inválido/grande demais ou prazo local
 de espera de 30 segundos devolvem o turno original em memória com um motivo tipado. Turnos muito
@@ -174,8 +197,8 @@ anterior não revive um turno antigo. O decodificador mantém a concessão nativ
 final de publicação; um worker desacoplado mantém sua própria concessão até o trabalho nativo
 terminar. A espera pode expirar antes de uma carga fria não abortável do modelo terminar; o sinal
 de parada suprime saída tardia e novos responsáveis de voz recebem Busy até o worker liberar sua
-concessão. Não há microfone, reprodução, comando de renderer ou caminho de permissões novo. Esses
-responsáveis continuam na V6.4-V6.7.
+concessão. Esse adaptador de retenção não acrescenta microfone, reprodução, comando do renderer
+ou autoridade de permissão.
 
 Execute `cargo test -p vults-chat realtime::transport::` e `cargo test -p vults-app realtime` offline.
 Testes de WebSocket duplex exercitam quadros reais com PCM/chaves sintéticos, dois turnos,
@@ -185,6 +208,81 @@ real é declarada. Os testes do controlador/decodificador nativos usam PCM sint�
 de trabalho local; qualidade real de modelo/fala e validação de captura/reprodução continuam
 separadas. Falhas do backend fornecem motivos estruturados e nunca enviam silenciosamente a outro
 provedor.
+
+
+<a id="native-first-turn-capture"></a>
+## Captura nativa do primeiro turno
+
+A V6.7.3 acrescenta a entrada `run_captured`, exclusiva do Linux, com um par nativo
+`CaptureControl`/`CaptureRequest`. Criar os controles não abre nada; a chamada nativa explícita
+adquire a posse existente do desktop antes da captura. A página de trabalho do Nest agora oferece
+os controles explícitos abaixo; nenhum atalho é atribuído a essa entrada. O consentimento configurado precisa estar habilitado e o modelo
+Whisper local selecionado já deve estar instalado. São reutilizadas a preferência compartilhada
+de microfone e a barreira existente das perguntas para capturas comuns.
+
+Finalizar fecha o microfone e aguarda seu encerramento antes da transcrição local e montagem
+limitada do turno. A gravação dura no máximo 30 segundos; atingir o limite descarta a captura,
+sem decodificar ou enviar automaticamente. A espera total pela captura/decodificação nativa é de
+60 segundos. Um carregamento inicial de modelo pode ultrapassar essa espera, mas mantém a mesma
+posse do desktop até realmente terminar e não pode publicar resultados atrasados. Cancelar ou
+perder o controlador revoga toda a sessão, inclusive depois de finalizar; o controlador precisa
+continuar vivo durante a resposta. Trava, desligamento, mudanças nas configurações/chave e perda
+do consumidor também interrompem a admissão. Eventos nativos de fase contêm apenas Starting,
+Recording ou Transcribing, nunca amostras ou palavras. Mantenha o controlador até a sessão terminar
+e só então descarte-o.
+
+O turno preparado entra na geração atual do controlador existente, na barreira de comandos locais
+e no caminho protegido do provedor sem passar áudio pelo renderer. Comandos locais consumidos ali
+nunca abrem um provedor; a recuperação reutiliza a transcrição local exata. Essa entrada desabilita
+a interrupção por fala e não acrescenta captura automática, download de modelo, envio ao Chat ou
+autoridade para responder permissões. Os controles da conversa e a recuperação revisável na
+superfície de trabalho são descritos abaixo; a V6.7.3 continua em aberto. Os testes usam microfones
+e decodificadores simulados e PCM sintético, sem captura física ou requisições pagas.
+
+
+<a id="nest-manual-controls"></a>
+## Controles manuais do Nest
+
+A página **Ditado > Trabalho > Conversa por voz** é a única entrada do renderer para esse responsável
+manual. `voice_conversation_start`, `voice_conversation_status` e `voice_conversation_control`
+exigem autoridade do Nest; Configurações, ilha e widget não podem chamá-los. Não expõem PCM,
+erros brutos, credenciais nem gravações de configurações. Iniciar também exige a superfície de
+trabalho do Ditado visível e desbloqueada, Zeca e consentimento remoto salvo. Uma identidade nativa
+vincula Finalizar, Cancelar, contato da página e resultados atrasados à sessão. Uma identidade
+estrangeira/antiga não pode controlar nem publicar em uma fala mais recente.
+
+A página consulta o estado a cada 500 ms enquanto há trabalho ativo. Três segundos sem contato
+descartam o controlador; sair da página, mudar de aba/webview, ocultar ou destruir o Nest também
+cancela a sessão. Trava, desligamento e mudanças relevantes de configurações/chave descartam a
+posição e revogam o trabalho nativo. A parada passa pelo responsável existente para preservar o
+encerramento e a conciliação nativos/do provedor. Ela não retira uma solicitação já enviada.
+Nenhum caminho para responder permissões é acrescentado.
+
+Iniciar admite explicitamente a primeira captura. A conclusão local ou a reprodução conciliada
+mantém o mesmo driver e contexto, aguardando **Gravar outra fala** com o microfone manual desligado.
+A finalização automática opcional encerra uma gravação já autorizada; não autoriza a próxima.
+Somente a [opção separada de resposta limitada](#bounded-follow-up-proposals) pode reabri-lo após
+uma pergunta inteiramente reproduzida. Captura contínua e interrupções por voz exigem sua própria
+confirmação de rota, descrita em [reprodução nativa](#native-playback-and-context-repair).
+
+Cada geração Listen nativa é admitida no máximo uma vez. Eventos Listen antigos ou repetidos são
+ignorados antes de alterar o token de gravação, a fase, o prazo da resposta ou a fila de captura,
+tanto no modo manual quanto no contínuo. Ações explícitas para a próxima fala ainda exigem espera e
+um controlador ativo; não repetem Listen. Testes de regressão cobrem eventos antigos/repetidos nas
+fases de início, gravação, transcrição, resposta, reprodução, interrupção e espera, sem dispositivos
+nem provedor.
+Uma falha na admissão da próxima fala preserva essa geração e o estado visível de espera. Uma fila
+de rota ocupada ou um controlador manual ainda não pronto não pode apagar a proteção contra
+repetição nem impedir uma nova tentativa válida. O estado de captura só muda após enfileirar a
+solicitação; um driver manual desconectado ainda cancela seu controlador.
+
+A interface distingue resposta de reprodução audível confirmada. Só são exibidos o texto do
+histórico ouvido ou a resposta do comando local, limitados em memória. O texto recuperado é editável
+e copiado explicitamente; as edições sobrevivem à navegação local da página. Um novo Iniciar
+confirmado substitui o rascunho anterior. Não há envio automático ao Chat nem histórico persistente
+de conversa. A validação do layout nativo usa responsáveis controlados, sem microfone, carga de
+modelo ou requisições pagas; a validação física e com provedor real e a conclusão de K8 continuam
+em aberto.
 
 
 <a id="playback-and-heard-text"></a>
@@ -256,11 +354,11 @@ destruição do dispositivo, inclusive em preparação desacoplada ou bloqueada,
 não sobreponha uma nova sessão ao trabalho nativo antigo.
 
 Comandos nativos e sinais de fala/prova carregam a geração exata do turno. Comandos antigos são
-descartados; somente uma prova confirmada correspondente congela a reprodução. Notificações das
-ações Listen/Probe não concedem acesso ao microfone nem iniciam captura. A primeira saída consumida
+descartados; a interrupção por voz exige uma prova confirmada correspondente. O botão Interromper
+resposta fica vinculado à resposta audível. Notificações das ações Listen/Probe não concedem acesso ao microfone nem iniciam captura. A primeira saída consumida
 controla a trava inicial; conclusão do produtor pede drenagem, e drenagem confirmada controla a
-margem final. A entrada do app mantém interrupção por fala desligada até chegar a política de
-dispositivo/AEC da V6.5. Casos com fones simulados exercitam o caminho disponível no proprietário
+margem final. A entrada comum mantém a interrupção por voz desativada; apenas rotas explícitas com
+fones/AEC da V6.5 a permitem. Casos com fones simulados exercitam o caminho disponível no proprietário
 sem afirmar que interrupção por alto-falantes é segura.
 
 O caminho de resposta falada aceita um item de áudio de assistente, com parte de conteúdo no índice
@@ -302,14 +400,47 @@ A V6.5.2 acrescenta a entrada Linux separada `run_routed`, protegida antes da ca
 consentimento existente das Configurações, cancelamento e autoridade da geração. Ela fixa os dois
 streams nativos em um par AEC ou dispositivos escolhidos explicitamente, mantém sua concessão até
 o fim da destruição e emite eventos Input limitados somente em memória ao chamador nativo. O
-chamador deve montar e confirmar turnos completos; a captura nunca é enviada automaticamente.
+envio de turnos completos ainda exige admissão nativa explícita; a captura nunca é enviada automaticamente.
 A política explícita de fones/AEC fica separada da verificação temporária da rota; uma rota não
 verificada limpa fala/provas retidas antes de eventos adiados da reprodução. A entrada CPAL comum
-continua sem interrupção. Não há comando do renderer nem conversa de voz visível. O backend da
-V6.4/V6.5 está entregue; veja [Cancelamento de eco](echo-cancellation.md) para evidências de
-roteamento, relógio e grafo privado. A próxima etapa é ferramentas na V6.6, depois captura/interface
-na V6.7. Tempo de dispositivo/acústica, fala real e aceitação com provedor real continuam em aberto
-antes da ativação. Testes offline de socket e proprietário
+mantém a interrupção por voz desativada. Os controles de rota da V6.7, com confirmação separada,
+agora expõem a captura duplex. O backend da V6.4/V6.5 está entregue; veja [Cancelamento de eco](echo-cancellation.md) para evidências de
+roteamento, relógio e grafo privado. A V6.6 controla ferramentas; a V6.7 controla captura/controles e
+validação. Tempo de dispositivo/acústica, fala real e aceitação com provedor real continuam em aberto
+antes de concluir K8.
+
+A V6.7.3 acrescenta o adaptador nativo de interrupção da rota: disponibilidade verificada dos modelos
+locais/VAD antes de criar streams, buffer circular de oito segundos, evidência recente de VAD após
+a reprodução e transcrição local isolada vinculada à geração/verificação. As palavras apenas
+confirmam/rejeitam uma verificação; não chamam ferramentas, respondem permissões nem criam um turno
+do usuário. Um único worker mantém a concessão do desktop até a saída real da inferência/destruição
+dos modelos. Cancelamento, perda da rota, trabalho antigo e prazos suprimem resultados atrasados.
+Na confirmação, um evento Replay tipado e somente em memória vem depois da nova ação Listen,
+levando o início retido da fala/trecho anterior na nova geração. Operações Capture nativas vinculadas
+à geração agora montam o turno seguinte nesse mesmo stream: Begin recebe o replay e o PCM posterior,
+somente Finish inicia a decodificação local final e envia o turno completo, e Cancel o descarta.
+O áudio original de 24 kHz fica limitado entre 100 ms e 30 segundos; ele não é reamostrado de volta
+a partir da decodificação local de 16 kHz. Uma decodificação final por vez, prazo de 60 segundos,
+verificações de rota/geração ao vivo e concessões mantidas pelos workers suprimem resultados antigos
+sem bloquear o cancelamento. O roteador de comandos locais existente atua antes da admissão pelo
+provedor. Replay/evidência de verificação nunca confirma por conta própria. O Nest agora acrescenta seleção
+de rota com padrão manual, atualização explícita da lista de dispositivos/AEC e confirmação de
+captura contínua por conversa. Um token da lista expira após cinco minutos e mantém identidades
+exatas dos dispositivos revisados; a verificação do stream ao vivo continua decisiva. Iniciar e uma
+interrupção confirmada admitem Begin; Finalizar exige o token da gravação nativa atual. Conclusão
+normal/Interromper resposta manualmente ainda aguardam um clique. Estado de microfone aberto,
+contato da página e cancelamento abrangem a sessão. Não há autoridade sobre celular/cartões.
+Confirmações de truncamento, histórico do trecho ouvido e correção do próximo turno continuam responsáveis pela interrupção e bloqueiam envios
+posteriores até estarem prontos. Validação física/com provedor real,
+qualificação de artefatos/fim de turno semântico e feedback/validação da ilha na V6.7.4 continuam abertos.
+A feature opcional `voice-semantic` do app agora conecta o proprietário de finalização automática
+manual a um worker/política local por conversa. Arquivos verificados são preparados antes de admitir
+o microfone; scores usam VAD/palavras atuais e o prazo original de espera. Uma falha mantém o
+fallback de silêncio visível. Builds comuns não podem ativá-la; não há download nem finalização
+automática em rota contínua. Veja
+[Modelo semântico de fim de turno](semantic-turn-model.md#conversation-preview-integration).
+
+Testes offline de socket e proprietário
 nativo cobrem interrupção antes/depois do fim do produtor, confirmações exatas, gerações antigas,
 admissão do reparo, falha, revogação, aborto e recuperação. A configuração ALSA nula isolada acima
 também executa o driver nativo completo com um provedor sintético:
@@ -317,6 +448,54 @@ também executa o driver nativo completo com um provedor sintético:
 Esse teste exercita CPAL real até o histórico em memória sem microfone, alto-falante do desktop,
 chave nem conexão com provedor. Ele não representa aceitação de fala ou provedor real.
 
+
+<a id="bounded-follow-up-proposals"></a>
+## Propostas limitadas de escuta de resposta
+
+O backend da V6.7 agora tem uma política local, desligada por padrão, para **Responder sem apertar
+a tecla**. Ela agora está ligada à captura nativa limitada por uma escolha separada por conversa na página
+de trabalho de voz. Começa desligada em cada conversa e fica fixada por Iniciar. Exige o modo manual
+de microfone com finalização automática; rotas contínuas têm seu próprio consentimento. Nenhuma
+configuração global ou de agente é alterada. Uma proposta sozinha ainda não concede autoridade
+para abrir o microfone ou fazer pedidos ao provedor.
+
+Somente uma resposta falada completa do modelo pode propor a geração Listen imediatamente seguinte.
+O recibo nativo do histórico agora carrega sua geração original e o instante monotônico de término
+da reprodução; eles nunca são expostos ao renderer. Todos os quadros de áudio devem ter tocado, o
+registro deve estar sincronizado e sem interrupção, e o último caractere que não seja espaço deve
+ser `?` ou `？`, com pelo menos uma letra. É uma verificação conservadora de pontuação, não um
+reconhecimento semântico de perguntas. Finais entre aspas e texto incompleto/interrompido são
+recusados. Resultados de ferramentas, notificações e cartões de permissão não podem propor nem
+prolongar uma janela.
+
+O prazo de oito segundos começa no fim da reprodução, não no processamento do recibo, em um novo
+Listen, no carregamento do modelo ou na abertura do microfone. Uma proposta consumida com atraso
+recebe apenas o tempo restante original. Expiração exata, uma geração posterior inesperada,
+cancelamento ou uma resposta mais recente sem pergunta descartam a proposta. Recibos repetidos ou
+antigos não a recriam. Relógios regressivos/futuros e estouro de inteiros/tempo são recusados.
+O diagnóstico contém metadados, nunca o texto da pergunta falada.
+
+O Ninho vincula a proposta ao controlador retido, ao Listen seguinte exato e ao relógio monotônico
+original. Somente o dono nativo pode enfileirar a captura limitada; atualizações de estado no
+renderer nunca a iniciam. Consentimento, visibilidade/contato, bloqueio, invalidação de configuração/
+chave e prioridade de perguntas preservam a autoridade existente. Atrasos na abertura ou
+inicialização consomem o mesmo prazo de oito segundos. A thread nativa de áudio verifica o prazo
+absoluto independentemente dos workers de VAD/prévia/modelo e fecha na próxima verificação de
+cancelamento (até o intervalo existente de 20 ms da thread, mais o encerramento nativo). Nenhum
+quadro após o prazo é autorizado; a destruição real do worker mantém a posse exclusiva do áudio.
+
+A conclusão automática ou Finalizar explícito antes de expirar fecha o microfone e depois faz a
+decodificação local final pelos gates existentes de comando/provedor. A decodificação pode terminar
+após fechar o microfone; nunca prolonga a captura. Expirar fecha/descarta sem decodificação final/envio e
+volta à espera no mesmo driver; Gravar outra fala inicia explicitamente uma gravação normal nova.
+Cancelar, prioridade de permissões ou revogação prevalecem sobre a expiração e suprimem publicação
+atrasada. Uma corrida entre Finalizar e expirar aguarda o resultado nativo. A página informa o
+microfone aberto por pouco tempo, a finalização automática indisponível e a expiração com microfone
+desligado. Encerrar, falha ao iniciar ou sair limpa a escolha.
+
+Isso é implementação opcional, não validação física da função sem usar as mãos. Tempo real do
+microfone, qualidade da fala local, provedor e dispositivos nativos ainda precisam de aceitação
+antes de marcar K8 como Done.
 
 <a id="local-commands-before-realtime-upload"></a>
 ## Comandos locais antes do envio realtime
@@ -457,15 +636,16 @@ V6.7. Fala física, compatibilidade com provedor e aceitação acústica continu
 No Linux, o proprietário nativo da V6.6.3 acrescenta `consult_claude` somente com a opção separada
 `voice_consultation`, desligada por padrão, e a identidade original do orçamento persistente.
 Somente Configurações pode alterá-la; a alteração revoga a geração da voz mesmo se a escolha anterior
-for restaurada antes da próxima verificação. O renderer ainda não tem entrada de conversa nem
-controle de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O backend
+for restaurada antes da próxima verificação. A entrada manual do renderer não tem controles
+de consulta. A oferta padrão continua nas cinco leituras do bando em cache. O backend
 também suporta `consult_codex` com sua própria opção `voice_codex_consultation`, desligada por
 padrão, e identidade original `voice_codex_consultation_budget`. Seu comando exclusivo de
 Configurações invalida a mesma geração da voz quando uma escolha muda. O Codex está bloqueado
 pela capacidade compartilhada `SUBSCRIPTION_AUTH_QUALIFIED=false`: ligar é recusado antes de
 acessar configurações/ledger, consentimento salvo não oferece sua ferramenta nem abre o gate de
 rede, e o helper textual recusa antes de acessar a CLI ou pasta temporária. Desligar uma escolha
-salva continua permitido. Não há controle do renderer nem entrada de captura para nenhum provedor.
+salva continua permitido. Nenhum provedor tem um controle dedicado de consulta no renderer;
+o Codex continua indisponível pela entrada manual de voz.
 
 Cada consulta fornece uma pergunta não vazia de até 256 bytes, sem caracteres de controle. O caminho
 do Claude reutiliza seu cliente textual com Haiku, uma nova pasta de trabalho privada e vazia,

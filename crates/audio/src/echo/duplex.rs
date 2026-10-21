@@ -50,6 +50,10 @@ impl std::fmt::Debug for Route {
     }
 }
 impl Route {
+    /// Immutable user choice, never proof that a live route is still verified.
+    pub fn chosen_policy(&self) -> Interruption {
+        self.mode
+    }
     pub fn echo(pair: Pair) -> Self {
         Self {
             server: pair.server,
@@ -62,6 +66,30 @@ impl Route {
     /// Only an explicit headphones choice grants this policy; device labels are never consulted.
     pub fn headphones(source: &str, sink: &str) -> Result<Self, Failure> {
         Self::devices(source, sink, Interruption::Headphones)
+    }
+    /// Freeze exactly the identities reviewed in a read-only inventory; live streams recheck them.
+    pub fn headphones_from(inventory: &super::Inventory, source: &str, sink: &str) -> Result<Self, Failure> {
+        let source = inventory
+            .sources
+            .iter()
+            .find(|(e, _)| e.name == source)
+            .ok_or(Failure::Route)?
+            .0
+            .clone();
+        let sink = inventory
+            .sinks
+            .iter()
+            .find(|(e, _)| e.name == sink)
+            .ok_or(Failure::Route)?
+            .0
+            .clone();
+        Ok(Self {
+            server: inventory.server,
+            source,
+            sink,
+            echo: None,
+            mode: Interruption::Headphones,
+        })
     }
     pub fn speakers(source: &str, sink: &str) -> Result<Self, Failure> {
         Self::devices(source, sink, Interruption::Disabled)

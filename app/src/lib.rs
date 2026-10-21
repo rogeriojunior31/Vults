@@ -182,6 +182,7 @@ pub fn run() {
             nest_connections_place,
             nest_connections_place_set,
             nest_tab_set,
+            nest_tab_ready,
             dictation_section_set,
             nest_record_query,
             nest_flock_place,
@@ -263,6 +264,12 @@ pub fn run() {
             settings::set_dictation_commands,
             settings::set_dictation_cleanup,
             settings::set_meeting_summary,
+            settings::voice_realtime_settings,
+            realtime::routes::voice_conversation_routes,
+            realtime::controls::voice_conversation_options,
+            realtime::controls::voice_conversation_start,
+            realtime::controls::voice_conversation_status,
+            realtime::controls::voice_conversation_control,
             settings::set_voice_realtime,
             settings::set_voice_consultation,
             settings::set_voice_codex_consultation,
@@ -410,6 +417,8 @@ pub fn run() {
             let handle = app.handle().clone();
             handle.manage(settings::SettingsState(std::sync::Mutex::new(settings::load())));
             handle.manage(std::sync::Arc::new(realtime::State::default()));
+            handle.manage(realtime::controls::Controls::default());
+            handle.manage(realtime::routes::Routes::default());
             handle.manage(media::MediaState::default());
             handle.manage(dictation_overlay::Ready::default());
             handle.manage(voice::VoiceState::default());
@@ -571,6 +580,7 @@ mod label_tests {
         assert!(open_shortcut_settings(nest.as_ref().clone()).is_err());
         assert!(open_shortcut_settings(island.as_ref().clone()).is_err());
         for view in [nest.as_ref(), island.as_ref()] {
+            assert!(settings::voice_realtime_settings(app.handle().clone(), view.clone()).is_err());
             assert!(settings::set_voice_consultation(app.handle().clone(), view.clone(), true).is_err());
             assert!(
                 settings::set_voice_codex_consultation(app.handle().clone(), view.clone(), true).is_err()
@@ -581,7 +591,7 @@ mod label_tests {
                     app.handle().clone(),
                     view.clone(),
                     true,
-                    1_000_000,
+                    "1000000".into(),
                     "gpt-realtime-2.1-mini".into()
                 )
                 .is_err()
@@ -780,9 +790,48 @@ mod tests {
     }
 
     #[test]
+    fn only_ready_nest_consumes_the_latest_request_without_acknowledging_a_tab() {
+        let app = tauri::test::mock_builder()
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap();
+        let window = tauri::WindowBuilder::new(&app, "navigation-test")
+            .build()
+            .unwrap();
+        let nest = window
+            .add_child(
+                tauri::WebviewBuilder::new(super::NEST, tauri::WebviewUrl::App("nest.html".into())),
+                tauri::LogicalPosition::new(0., 0.),
+                tauri::LogicalSize::new(480., 360.),
+            )
+            .unwrap();
+        let settings = window
+            .add_child(
+                tauri::WebviewBuilder::new(super::SETTINGS, tauri::WebviewUrl::App("settings.html".into())),
+                tauri::LogicalPosition::new(0., 0.),
+                tauri::LogicalSize::new(480., 360.),
+            )
+            .unwrap();
+        let acknowledged = super::NEST_TAB.lock().unwrap().clone();
+        *super::NEST_REQUEST.lock().unwrap() = Some("chat".into());
+        *super::NEST_REQUEST.lock().unwrap() = Some("dictation-conversation".into());
+        assert!(super::nest_tab_ready(settings.clone()).is_err());
+        assert_eq!(
+            super::nest_tab_ready(nest.clone()).unwrap().as_deref(),
+            Some("dictation-conversation")
+        );
+        assert!(super::nest_tab_ready(nest.clone()).unwrap().is_none());
+        assert_eq!(
+            *super::NEST_TAB.lock().unwrap(),
+            acknowledged,
+            "A request does not grant voice-page authority"
+        );
+    }
+
+    #[test]
     fn dictation_restores_only_a_known_configuration_for_its_own_tab() {
         for section in [
             "dictationvoice",
+            "dictationconversation",
             "dictationkeys",
             "dictationcommands",
             "dictationwords",
@@ -1100,6 +1149,7 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
                 | "dictation-dictionary"
                 | "dictation-snippets"
                 | "dictation-meetings"
+                | "dictation-conversation"
         )
     ) && let Ok(mut section) = DICTATION_SECTION.lock()
     {
@@ -1112,6 +1162,9 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
     }
     let last = NEST_TAB.lock().ok().and_then(|t| t.clone());
     let tab = restored_tab(tab, last.as_deref(), settings::zeca(app));
+    if let Ok(mut pending) = NEST_REQUEST.lock() {
+        *pending = Some(tab.to_owned());
+    }
     if app.get_webview(NEST).is_some() {
         let _ = app.emit_to(NEST, "nest-tab", tab);
     }
@@ -1119,6 +1172,8 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
 }
 
 static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+// Requested presentation is separate from the renderer's acknowledged tab and capture authority.
+static NEST_REQUEST: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 // Only presentation survives tab changes; configuration stays in its own webview.
 static DICTATION_SECTION: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 
@@ -1126,6 +1181,7 @@ fn valid_dictation_section(section: &str) -> bool {
     matches!(
         section,
         "dictationvoice"
+            | "dictationconversation"
             | "dictationkeys"
             | "dictationcommands"
             | "dictationwords"
@@ -1292,6 +1348,7 @@ fn valid_nest_tab(tab: &str) -> bool {
             | "dictation-dictionary"
             | "dictation-snippets"
             | "dictation-meetings"
+            | "dictation-conversation"
             | "dictation-statistics"
             | "week"
             | "projects"
@@ -1315,12 +1372,21 @@ fn restored_tab<'a>(asked: Option<&'a str>, last: Option<&'a str>, zeca: bool) -
 }
 
 #[tauri::command]
+fn nest_tab_ready<R: tauri::Runtime>(window: tauri::Webview<R>) -> Result<Option<String>, String> {
+    if window.label() != NEST {
+        return Err("Only the Nest may receive its pending navigation.".into());
+    }
+    Ok(NEST_REQUEST.lock().map_err(|e| e.to_string())?.take())
+}
+
+#[tauri::command]
 fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
     if window.label() != NEST || !valid_nest_tab(&tab) {
         return Err("Invalid Nest navigation state.".into());
     }
     #[cfg(target_os = "linux")]
     questions::depart(window.app_handle(), NEST);
+    realtime::controls::depart(window.app_handle());
     *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
     Ok(())
 }
@@ -1334,6 +1400,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
         questions::depart(app, ISLAND);
         questions::depart(app, NEST);
     }
+    realtime::controls::depart(app);
     use tauri::{LogicalPosition, WebviewBuilder, window::WindowBuilder};
     // Reopening after a failed saved close cancels its earlier return request.
     if let Ok(mut pending) = NEST_RETURN.lock() {
@@ -1343,6 +1410,11 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
     let window = match app.get_window(NEST_WINDOW) {
         Some(w) => w,
         None => {
+            if nest.is_none()
+                && let Ok(mut pending) = NEST_REQUEST.lock()
+            {
+                *pending = None;
+            }
             // The island grown larger (ADR 0021): no system title bar, the page's own frame with
             // the prototype's rounded corners; its header moves the window, its edges resize it.
             let first = nest_first_size(app);
@@ -1435,6 +1507,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                                 #[cfg(target_os = "linux")]
                                 questions::depart(&app2, NEST);
                                 meetings::cancel(&app2);
+                                realtime::controls::depart(&app2);
                             }
                             let _ = app2.emit_to(ISLAND, "nest-open", !minimized);
                         }
@@ -1444,6 +1517,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
                         #[cfg(target_os = "linux")]
                         questions::depart(&app2, NEST);
                         meetings::cancel(&app2);
+                        realtime::controls::depart(&app2);
                         let _ = app2.emit_to(ISLAND, "nest-open", false);
                         nest_holds(&app2, Some(false), Some(false));
                         save_nest_size(&app2);

@@ -134,7 +134,9 @@ system audio retain separate clocks and voice IDs; they are not synchronized or 
 The native backend can stream up to 30 minutes per source, with one global clustering pass. A
 public 30-minute CPU diarization run took 61.556 seconds and peaked at 158,916 KiB RSS. This is one
 resource experiment, not full transcription/capture or independent quality qualification. The app
-still records only the existing one-minute check. Native cancellation/preemption checks pass,
+now supports four-hour manual recording with bounded PCM16 storage, but speaker analysis remains
+limited to 30 minutes per source; longer recordings keep plain transcription without labels. Native
+cancellation/preemption checks pass,
 including cancellation beyond three minutes; blocking IO and native construction remain
 cooperative. The source-local preview has also been inspected in isolated native Black/Light
 windows using controlled responses. These checks do not pass the independent PT/EN quality gates

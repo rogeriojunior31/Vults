@@ -108,7 +108,12 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   let transcript: MeetingTranscript | null = null;
   let track: "microphone" | "system" = "microphone";
   let transcriptFailed = false, transcriptReading = false;
-  const clock = (ms: number) => `${Math.floor(ms / 60000).toString().padStart(2, "0")}:${Math.floor(ms / 1000 % 60).toString().padStart(2, "0")}`;
+  const clock = (ms: number) => {
+    const hours = Math.floor(ms / 3600000);
+    const minutes = Math.floor(ms / 60000 % 60).toString().padStart(2, "0");
+    const seconds = Math.floor(ms / 1000 % 60).toString().padStart(2, "0");
+    return hours ? `${hours}:${minutes}:${seconds}` : `${minutes}:${seconds}`;
+  };
   const range = (start: number, end: number) => {
     if (clock(start) !== clock(end)) return `${clock(start)}–${clock(end)}`;
     const digits = Math.floor(start / 10) === Math.floor(end / 10) ? 3 : 2;
@@ -121,6 +126,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   let saving = false, savedId: string | null = null, saveFailed = false;
   const visible = () => active && !document.hidden;
   const draw = () => {
+    element.classList.toggle("meeting-before-transcript", selected === "transcript" && !transcript);
     heading.textContent = t("Meetings");
     tabList.setAttribute("aria-label", t("Meeting content"));
     tabs.transcript.textContent = t("Transcript"); tabs.summary.textContent = t("Summary"); tabs.todos.textContent = t("To-dos");
@@ -130,11 +136,11 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     }
     if (selected !== "transcript" && notes.element.parentElement !== panels[selected]) panels[selected].append(notes.element);
     body.setAttribute("role", "region"); body.setAttribute("aria-label", selected === "transcript" ? t("Recording details") : t("Meeting content"));
-    about.textContent = t("Record up to one minute and transcribe both audio sources locally.");
-    disclosure.textContent = t("Tell everyone before recording. Temporary audio is deleted after transcription or cancellation. Unsaved text and notes are discarded when you leave or review another recording. Summaries require separate consent. Save meeting keeps a text-only snapshot on this computer.");
+    about.textContent = t("Record up to four hours. Both audio sources are transcribed locally after you stop.");
+    disclosure.textContent = t("Tell everyone before recording. Temporary audio uses up to 1 GiB and is deleted after transcription or cancellation. Unsaved text and notes are discarded when you leave or review another recording. Summaries require separate consent. Save meeting keeps a text-only snapshot on this computer.");
     const label = value?.phase === "transcribing" && value.progress?.stage === "speakers" ? t("Identifying voices locally; dictation has priority…") : value ? t(phases[value.phase]) : t("Reading recording status…");
     if (phase.textContent !== label) phase.textContent = label;
-    timer.textContent = `${Math.floor((value?.elapsedMs ?? 0) / 60000).toString().padStart(2, "0")}:${Math.floor((value?.elapsedMs ?? 0) / 1000 % 60).toString().padStart(2, "0")}`;
+    timer.textContent = clock(value?.elapsedMs ?? 0);
     timer.setAttribute("aria-label", t("Recording time"));
     line.hidden = !["starting", "recording", "stopping", "transcribing", "cancelling"].includes(value?.phase ?? "");
     const key = JSON.stringify([value?.microphone, value?.monitor, t("Microphone"), t("System audio")]);
@@ -162,7 +168,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     identification.hidden = !value?.identificationAvailable || value.phase !== "ready";
     identify.disabled = busy || identification.hidden;
     identifyText.textContent = t("Also identify voices for this recording (experimental)");
-    identifyNote.textContent = t("Voice labels may be wrong. Uncertain words stay unknown. Each audio source has separate labels.");
+    identifyNote.textContent = t("Voice labels may be wrong and are limited to 30 minutes per source. Longer recordings keep their transcript without voice labels.");
     review.textContent = t("Review audio sources");
     begin.textContent = t("Record and transcribe");
     stop.textContent = t("Stop recording"); cancel.textContent = value?.phase === "transcribing" ? t("Cancel transcription") : value?.hasTranscript ? t("Discard transcript") : t("Cancel recording");
@@ -193,9 +199,10 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     transcriptTitle.textContent = t("About this transcript");
     finishedNote.textContent = t(phases.finished);
     transcriptPanel.setAttribute("aria-label", t("Transcript"));
-    const attributed = transcript?.[track].attribution;
+    const attribution = transcript?.[track].attribution;
+    const attributed = attribution === "analyzed";
     transcriptNote.textContent = attributed ? t("Times are estimated by the local models. Voice numbers belong only to this source and recording; they do not identify people.") : t("Each source has its own recording clock. These are estimated segment times, without speaker identification.");
-    attributionNote.hidden = attributed !== "unavailable";
+    attributionNote.hidden = attribution !== "unavailable";
     attributionNote.textContent = t("Voice identification was unavailable. The transcript is kept without labels.");
     microphone.textContent = t("Microphone"); system.textContent = t("System audio");
     microphone.setAttribute("aria-pressed", String(track === "microphone")); system.setAttribute("aria-pressed", String(track === "system"));
@@ -304,7 +311,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   };
   document.addEventListener("visibilitychange", follow);
   window.addEventListener("pagehide", suspend);
-  if (!backend) value = { id: 0, phase: "unsupported", elapsedMs: 0, maxSeconds: 60, microphone: null, monitor: null, fallback: false, error: null, modelId: null, language: null, hasTranscript: false };
+  if (!backend) value = { id: 0, phase: "unsupported", elapsedMs: 0, maxSeconds: 14400, microphone: null, monitor: null, fallback: false, error: null, modelId: null, language: null, hasTranscript: false };
   draw();
   return { element, relabel() { draw(); notes.relabel(); }, refresh() { notes.refresh(); }, setActive(on: boolean) { if (active === on) return; active = on; follow(); } };
 }

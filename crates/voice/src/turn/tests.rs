@@ -323,3 +323,33 @@ fn local_completion_finishes_without_generate_and_retires_its_generation() {
     );
     assert_eq!(turn.phase(), Phase::Thinking);
 }
+
+#[test]
+fn explicit_stop_bypasses_the_voice_lock_once_without_requesting_microphone_replay() {
+    for mode in [BargeIn::Disabled, BargeIn::Headphones, BargeIn::EchoCancelled] {
+        let mut turn = speaking(mode);
+        let old = turn.generation();
+        assert_eq!(
+            send(&mut turn, Event::InterruptRequested, 2001),
+            [
+                Effect::CancelResponse,
+                Effect::ClearPlayback,
+                Effect::ResetVad,
+                Effect::Listen {
+                    replay: Duration::ZERO
+                }
+            ]
+        );
+        assert_ne!(turn.generation(), old);
+        assert!(turn.handle(old, Event::InterruptRequested, ms(2002)).is_empty());
+        assert!(send(&mut turn, Event::InterruptRequested, 2003).is_empty());
+        assert_eq!(turn.phase(), Phase::Listening);
+    }
+    let mut turn = Turn::new(BargeIn::Disabled);
+    turn.start(ms(0));
+    send(&mut turn, Event::InputCommitted, 10);
+    assert!(
+        send(&mut turn, Event::InterruptRequested, 20).is_empty(),
+        "No audible output to stop yet"
+    );
+}

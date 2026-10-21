@@ -178,8 +178,8 @@ impl Recording {
         seconds: u32,
         work: impl FnOnce(&TemporaryAudio, u32, &Control) -> Result<Outcome, String> + Send + 'static,
     ) -> Result<Self, String> {
-        if !(1..=60).contains(&seconds) {
-            return Err("the meeting spike must be limited to 1-60 seconds".into());
+        if !(1..=super::MAX_SECONDS).contains(&seconds) {
+            return Err("meeting capture must be limited to 1-14400 seconds".into());
         }
         let temporary = TemporaryAudio::open(root).map_err(|e| e.to_string())?;
         let control = Control::new();

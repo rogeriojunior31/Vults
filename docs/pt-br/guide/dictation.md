@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: cc29e6eb6e4c -->
+<!-- source: 74f22689a7ad -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -33,6 +33,160 @@ enquanto outros textos entre parênteses ou colchetes permanecem intactos. Um re
 associado a silêncio, como "Thank you.", "Obrigado." ou "Gracias.", é omitido, mesmo quando dito
 intencionalmente; frases maiores que contenham essas palavras são mantidas. Você pode editar o
 rascunho antes de enviar. Esse filtro não usa modelo nem faz requisições de rede.
+
+<a id="voice-conversation-settings"></a>
+
+## Configurações da conversa por voz
+
+Abra **Ditado > Conversar com o Zeca** para preparar a voz em tempo real. O modelo e o orçamento
+são separados do Chat e da assinatura da CLI. **Configurar chave da OpenAI** abre as configurações
+compartilhadas da chave; as chaves permanecem no chaveiro do sistema. Esta página de configuração
+não grava nem envia áudio.
+
+A voz vem desligada por padrão. Revise o destino do áudio/contexto na OpenAI, escolha um modelo
+compatível e defina o limite móvel de 24 horas em USD antes de ativá-la. Use ponto ou vírgula decimal,
+com até seis casas e sem separadores de milhar. Zero desativa a voz remota; ativar exige um limite
+positivo. Solicitações ainda não conciliadas mantêm o custo reservado.
+
+Edite as escolhas e clique em **Salvar**. O Vults as relê antes de confirmar a gravação. Uma falha
+preserva o rascunho; **Descartar alterações e recarregar** o substitui explicitamente pelas
+configurações salvas. Mudanças feitas em outro lugar bloqueiam a gravação de edições antigas até
+você recarregar. Sair da página preserva edições não enviadas. A voz nunca responde a um cartão de
+permissão, e a consulta ao Codex continua indisponível. Veja
+[Contabilidade em tempo real](../reference/realtime-accounting.md#runtime-transport).
+
+<a id="manual-voice-turns"></a>
+## Falas manuais por voz
+
+No Linux, abra **Ditado > Trabalho > Conversa por voz** depois de ativar a voz e instalar um modelo
+local em **Voz**. Use **Iniciar gravação**, fale e clique em **Finalizar gravação** para parar o
+microfone, transcrever localmente e solicitar a resposta do Zeca. Após a reprodução terminar, o
+microfone fica desligado. **Gravar outra fala** continua a mesma conversa e o contexto do provedor;
+**Encerrar conversa** a fecha. Um comando local também retorna a esse estado de espera. Cada nova
+gravação exige seu clique por padrão; a escolha separada de resposta limitada abaixo é a exceção. Um erro ou tempo limite do provedor encerra a sessão. Essa entrada manual
+não usa o atalho global do ditado nem interrupção por fala. A gravação tem limite de 30 segundos; atingir o limite descarta a captura,
+sem envio automático. A espera local combinada de captura/transcrição é limitada a 60 segundos.
+Abrir essa página de trabalho pelas Configurações preserva o destino solicitado enquanto o Ninho
+carrega. Uma escolha de navegação posterior tem prioridade. Abrir a página nunca inicia uma gravação.
+
+Quando o áudio do Zeca começa a tocar, **Interromper resposta** substitui Finalizar gravação. Ele
+interrompe a resposta falada sem encerrar a conversa nem abrir o microfone. A página aguarda o
+resultado do texto ouvido da resposta interrompida antes de oferecer **Gravar outra fala**; o
+truncamento remoto e o próximo envio usam o fluxo existente de confirmação/correção do contexto.
+Palavras não ouvidas ficam fora da resposta exibida. Após a confirmação, a página mostra **Resposta
+interrompida** e informa se o microfone está desligado ou continua aberto em uma rota contínua. O
+feedback nativo da interrupção invalida o token de controle da resposta parada; eventos de fala
+atrasados ou duplicados não a reativam nem substituem o token atual. Cliques duplicados/atrasados não
+interrompem uma nova geração nem iniciam captura. Durante a geração, antes de haver áudio audível, **Cancelar**
+ainda encerra toda a sessão. Esse controle exige um clique; interromper falando por cima do Zeca
+usa as rotas contínuas opcionais descritas abaixo.
+
+Durante a conversa, a página reutiliza o personagem Zeca do Chat: escutando ao gravar, pensando
+ao preparar/processar, falando durante a reprodução audível e descansando enquanto espera ou
+interrompe uma resposta. O estado em texto continua informando o acesso ao microfone. Janelas
+baixas ocultam o personagem para manter as ações visíveis. Movimento reduzido mantém uma pose
+estática; telas ocultas, bloqueadas ou inativas param de desenhar. Ocultar ou sair da página de voz
+cancela a conversa; voltar não repete um estado antigo de fala. Esse feedback nunca abre outra
+superfície nem inicia uma gravação.
+
+Opcionalmente, marque **Finalizar automaticamente após uma pausa** antes de iniciar. A opção começa
+desligada ao abrir o app e fica fixa durante aquela conversa. Ela usa o detector de fala local
+instalado e a prévia de transcrição na GPU; não baixa nada. Exige fala confirmada, palavras parciais
+locais e áudio novo. A política aguarda 1,6 segundo de silêncio detectado, ou 2,6 segundos após uma
+palavra de continuação em inglês/português; a detecção e a decodificação podem acrescentar demora.
+A transcrição local final ainda ocorre depois que o microfone fecha. Essa escolha não ativa o
+modelo semântico opcional por si só.
+Um build para desenvolvedores Linux x64 GNU com `voice-semantic` pode oferecer separadamente **Usar
+detecção semântica local de fim de turno (prévia)**. A opção começa desligada em cada conversa e
+exige arquivos verificados fornecidos explicitamente; o app não baixa nada. Ela pode aguardar até
+1,2 segundo além da regra de silêncio. Uma falha informa **O encerramento semântico está
+indisponível. Esta conversa usa detecção local de silêncio.** e mantém esse fallback nas falas
+seguintes. Builds comuns não oferecem a prévia. Veja
+[Modelo semântico de fim de turno](../reference/semantic-turn-model.md#conversation-preview-integration).
+
+Se o detector ou a prévia estiver indisponível/falhar, a página informa **O encerramento automático
+está indisponível. Use Finalizar gravação.** Finalizar e Cancelar continuam disponíveis. Entrada
+vazia e o limite de 30 segundos nunca causam envio automático. O encerramento automático sozinho não reabre
+o microfone: cada nova fala ainda exige **Gravar outra fala**, exceto quando você ativou a escolha
+separada de resposta limitada.
+
+**Cancelar**, **Encerrar conversa**, sair da página, ocultar/fechar o Nest, bloquear ou mudar configurações cancela o
+trabalho da página. Perder contato com a página também interrompe a admissão após três segundos.
+Um worker nativo ainda encerrando pode manter a voz temporariamente ocupada. Cancelar não desfaz
+uma solicitação remota já enviada nem sua cobrança. A voz usa o modelo da API e o orçamento
+independente configurados, não uma assinatura de CLI.
+
+Se a voz remota falhar e houver palavras locais disponíveis, **Revisar texto recuperado** oferece
+um rascunho editável e não enviado. **Copiar texto** só copia após seu clique. Nada desse rascunho
+é enviado ao Chat ou executado. Suas edições sobrevivem à saída e ao retorno à página. Iniciar
+uma nova gravação substitui o rascunho recuperado anterior após a confirmação de Iniciar. A página
+mantém apenas a resposta/recuperação mais recente em memória, não um histórico salvo da conversa.
+A sessão ativa do provedor mantém o contexto remoto da conversa até ser encerrada.
+
+A qualidade do microfone/fala, a validação com provedor real e a interrupção continuam como etapas
+separadas antes de concluir K8. Essa entrada não ativa consulta ao Codex nem responde permissões.
+
+<a id="answer-without-the-key"></a>
+## Responder sem apertar a tecla
+
+Em **Conversa por voz**, mantenha **Modo do microfone > Falas manuais**, marque **Finalizar
+automaticamente após uma pausa** e depois marque explicitamente **Responder sem apertar a tecla**
+antes de Iniciar. Essa escolha fica desligada em cada nova conversa e fixada até encerrar/cancelar.
+Ela não muda configurações globais.
+
+Depois que o Zeca terminar uma pergunta falada completa, o dono nativo pode reabrir o microfone
+apenas pelo prazo original de oito segundos. A página informa explicitamente esse microfone aberto
+por pouco tempo. Afirmação, resposta interrompida, resultado de ferramenta, notificação ou cartão de
+permissão não podem abri-lo. A verificação de pergunta usa pontuação conservadora (`?`/`？`), não
+compreensão semântica.
+
+Faça uma pausa para finalizar automaticamente ou use **Finalizar gravação** antes de expirar. Se a
+finalização automática local estiver indisponível, a página informa; Finalizar e Cancelar continuam
+disponíveis. Expirar descarta o áudio sem transcrição final/envio e mostra **Microfone desligado**,
+mantendo a mesma conversa. **Gravar outra fala** inicia uma gravação normal explicitamente. A
+decodificação final de uma gravação válida já fechada pode terminar depois. **Cancelar**, sair/
+ocultar a página, bloquear, perder contato ou mudar configurações revoga o trabalho. Uma nova
+permissão/pergunta também mantém prioridade sobre a captura. A thread nativa de áudio fecha na
+próxima verificação do prazo; o encerramento do dispositivo pode demorar mais e mantém a voz ocupada.
+
+Essa opção ainda precisa de aceitação com microfone real, fala e provedor. Voz nunca responde
+cartões de permissão. Rotas contínuas já mantêm o microfone aberto com sua própria confirmação e
+não oferecem essa escolha separada.
+
+![Conversa por voz após expirar o prazo de resposta](../../assets/voice-conversation.png)
+
+Exemplo controlado da interface: o microfone fica desligado após expirar e a conversa pode continuar.
+A captura de tela usa dados de teste, sem gravação física nem solicitação ao provedor.
+
+<a id="continuous-microphone-routes"></a>
+## Rotas com microfone contínuo
+
+**Modo do microfone** começa em **Turnos manuais**. Para interromper por voz, escolha
+**Microfone contínuo com fones** ou **Microfone contínuo com cancelamento de eco**. Clique em
+**Atualizar dispositivos de áudio**, escolha explicitamente o microfone/saída ou o par AEC instalado
+e confirme que o microfone pode permanecer aberto até você encerrar esta conversa. Nomes de
+dispositivos nunca comprovam o uso de fones. Use fones nesse modo; o AEC exige um par compatível
+configurado fora do Vults. O app apenas lê a lista: não altera padrões nem instala módulos.
+A lista revisada expira após cinco minutos; atualize-a se não conseguir iniciar.
+
+**Iniciar gravação** abre a rota escolhida e inicia a primeira fala. Durante uma resposta audível
+do Zeca, fala confirmada localmente pode interrompê-lo e iniciar outra gravação com o início retido.
+**Finalizar gravação** continua sendo necessário para enviar cada fala; palavras da verificação de
+interrupção nunca viram comandos nem entrada do provedor. A transcrição local final usa o mesmo
+stream, sem um segundo microfone. O limite de 30 segundos continua descartando, sem envio
+automático. Finalizar após uma pausa fica indisponível nesses modos. A troca de dispositivos fica
+bloqueada durante a conversa.
+
+O microfone permanece aberto durante a transcrição local, a resposta do Zeca e a espera; a página
+informa isso. Após reprodução normal ou **Interromper resposta**, somente **Gravar outra fala**
+inicia outra gravação. **Encerrar conversa**, Cancelar, sair da página, perder contato com ela,
+bloquear, mudar configurações ou perder a autoridade da rota cancela o proprietário. Uma nova
+conversa exige outra confirmação. Interromper resposta sozinho nunca inicia captura. Aplicam-se o
+mesmo roteador de transcrição final, confirmações de truncamento remoto, histórico do trecho ouvido
+e correção do próximo turno. A voz nunca responde permissões.
+
+Os controles e proprietários nativos são cobertos com cenários controlados. A qualidade real de
+microfone/fones/AEC e um provedor real ainda exigem validação física antes de concluir K8.
 
 <a id="global-dictation-first-slice"></a>
 
@@ -730,7 +884,7 @@ modelo ou destino.
 
 Ao relatar um problema, inclua a versão do app, desktop/sessão e escala, microfone selecionado,
 modelo/idioma, resultado real de entrega, quantidade de amostras dos tempos relevantes e os passos
-que falharam. Não é preciso compartilhar o texto ditado. Essas verificações cobrem as telas da V4; o checklist abaixo cobre comandos da V8. Reuniões completas e voz em tempo real continuam como etapas futuras.
+que falharam. Não é preciso compartilhar o texto ditado. Essas verificações cobrem as telas da V4; o checklist abaixo cobre comandos da V8. A validação física de reuniões longas e a voz contínua em tempo real continuam como verificações separadas.
 
 <a id="voice-commands-development-status"></a>
 
@@ -831,7 +985,8 @@ de ponta a ponta continua separada dos testes nativos isolados e automatizados; 
 próxima fase não significa aceitá-los.
 
 <a id="meeting-recording-check"></a>
-## Verificação de gravação de reuniões
+<a id="meeting-recording"></a>
+## Gravação de reuniões
 
 Os arquivos opcionais de análise de falantes podem ser preparados em **Ditado > Configurações de reuniões > Modelos de
 falantes para reuniões (experimental)**. Revise o pacote, confirme o consentimento do download e
@@ -841,11 +996,10 @@ confirmada é descartada. Ela nunca ativa identificação de falantes nem grava�
 [Artefatos dos modelos de reuniões](../reference/meeting-models.md) para licenças, verificação
 e o limite persistente de requisições.
 
-No Linux, **Ditado > Reuniões** oferece gravação e transcrição local para uma verificação de até
-um minuto. Primeiro escolha um modelo local instalado em **Ditado > Voz**. Funciona com o Zeca
+No Linux, **Ditado > Reuniões** oferece gravação de até **quatro horas**, seguida de transcrição
+local. Primeiro escolha um modelo local instalado em **Ditado > Voz**. Funciona com o Zeca
 desligado. Gravar/transcrever sozinho não faz requisições à rede nem baixa modelos automaticamente.
-A captura de reuniões completas continua como etapa futura. **Nova gravação** controla a verificação
-temporária; **Reuniões salvas** abre textos salvos explicitamente sem gravar nem consultar um modelo.
+**Nova gravação** controla a gravação temporária; **Reuniões salvas** abre textos salvos explicitamente sem gravar nem consultar um modelo.
 
 Escolha **Conferir fontes de áudio** para ler o microfone e o monitor da saída do sistema sem abrir
 um stream nem carregar um modelo. Confira os dois identificadores, qualquer aviso de fonte
@@ -856,8 +1010,8 @@ confira novamente. A captura fica vinculada aos nomes conferidos. Mudar o modelo
 exige uma nova conferência antes de iniciar e cancela uma gravação ou transcrição em andamento.
 
 A linha neutra, o estado, o cronômetro e as ações ficam fora da área de rolagem. **Parar gravação**
-fecha os dois streams e transcreve microfone e áudio do sistema localmente, um após o outro. Após um
-minuto, a gravação para sozinha e segue o mesmo caminho. A página mostra o progresso da transcrição;
+fecha os dois streams e transcreve microfone e áudio do sistema localmente, um após o outro. Após quatro
+horas, a gravação para sozinha e segue o mesmo caminho. A página mostra o progresso da transcrição;
 o microfone fica fechado enquanto o modelo local é carregado e trabalha. O ditado comum mantém seu
 stream independente e tem prioridade sobre a decodificação da reunião. Os blocos em segundo plano
 cedem pelo callback cooperativo de interrupção do Whisper; um carregamento nativo de modelo já
@@ -889,14 +1043,32 @@ mostra **Voz N** ou **Voz desconhecida**, usando tempos de palavras estimados pe
 disponíveis. Falas incertas continuam desconhecidas; se a análise falhar ou seus arquivos
 estiverem ausentes, a transcrição continua disponível sem identificação. As vozes são separadas
 para Microfone e Áudio do sistema e podem estar erradas. Essa prévia não qualifica a precisão
-independente em PT/EN nem estende a captura de um minuto.
+independente em PT/EN. A análise de falantes continua limitada a 30 minutos por fonte; gravações
+mais longas mantêm a transcrição simples sem rótulos de voz.
 
-Somente esta verificação explícita salva áudio temporariamente, em `meeting-audio/` na pasta de dados
+Somente uma gravação explícita de reunião salva áudio temporariamente, em `meeting-audio/` na pasta de dados
 do Vults. O diretório é privado (0700), com WAVs em 0600 e trava exclusiva mantida durante a transcrição
 local. Conclusão normal, cancelamento e falha tentam limpar os arquivos; a inicialização remove sobras
 de interrupções sem abrir uma fonte. Um erro de limpeza continua visível e nenhum novo áudio é aberto
-até a recuperação funcionar. Outras webviews não conseguem controlar uma verificação nem ler sua
+até a recuperação funcionar. Outras webviews não conseguem controlar uma gravação nem ler sua
 transcrição. O áudio de Chat/ditado continua só na memória, e a voz nunca responde a um card de permissão.
+
+Cada fonte é convertida incrementalmente para PCM16 mono de 16 kHz antes da gravação em disco.
+A reamostragem com estado preserva o relógio de cada fonte entre pacotes; as duas fontes continuam
+independentes. Filas e janelas de processamento são limitadas, sem manter todo o áudio na RAM.
+Quatro horas das duas faixas usam menos de 1 GiB de áudio temporário, cerca de 220 MiB por hora;
+reserve espaço livre para esse áudio e para o funcionamento normal do app. Falhas de escrita
+interrompem a captura e tentam limpar os arquivos, em vez de publicar uma transcrição completa.
+A transcrição ocorre depois de Parar, em blocos de até 28 segundos, com progresso e prioridade para
+o ditado interativo. Relógios de gravação/progresso/segmentos acima de uma hora usam horas:minutos:segundos.
+
+Mantenha Reuniões aberto durante a gravação ou transcrição. Uma queda ou interrupção remove o áudio
+restante na próxima inicialização; não retoma a gravação perdida. Salve o texto explicitamente após
+concluir. A entrada dos resumos continua limitada a 256 KiB somando as duas faixas; uma transcrição
+maior é recusada antes de consultar um modelo, enquanto salvar/exportar continua disponível. A
+capacidade de quatro horas é um limite de recursos, não uma declaração de validação física ou de
+qualidade de fala durante quatro horas.
+
 
 
 <a id="summary-and-to-dos"></a>

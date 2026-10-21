@@ -81,7 +81,7 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   narrow navigation instead of showing a rail.
 - General configuration stays behind the gear. Dictation configuration lives under
   the Dictation tab, alongside its work pages, using one shared navigation.
-- Dictation has separate Voice, Keyboard shortcuts, Command settings, Vocabulary,
+- Dictation has separate Voice, Talk with Zeca, Keyboard shortcuts, Command settings, Vocabulary,
   Styles, Meeting settings, Agents, Paste, Privacy and Diagnostics pages. Voice owns the shared Chat/dictation
   transcription model and spoken language; Chat & voice links there. Statistics
   links to Activity > Dictation. Do not duplicate editors.

@@ -49,6 +49,42 @@ impl Pair {
 /// Lists candidates without opening streams, loading modules, selecting defaults or changing routes.
 /// Native-only echo modules without Pulse ownership/explicit WebRTC arguments are not qualified here.
 pub fn discover() -> Result<Vec<Pair>, Failure> {
+    Ok(inventory()?.pairs)
+}
+
+/// An immutable read-only inventory. Names and labels never prove headphone use or effective AEC.
+pub struct Inventory {
+    server: u32,
+    sources: Vec<(Endpoint, String)>,
+    sinks: Vec<(Endpoint, String)>,
+    pairs: Vec<Pair>,
+}
+impl std::fmt::Debug for Inventory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AudioInventory")
+            .field("sources", &self.sources.len())
+            .field("sinks", &self.sinks.len())
+            .field("pairs", &self.pairs.len())
+            .finish()
+    }
+}
+impl Inventory {
+    pub fn sources(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.sources
+            .iter()
+            .map(|(e, label)| (e.name.as_str(), label.as_str()))
+    }
+    pub fn sinks(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.sinks
+            .iter()
+            .map(|(e, label)| (e.name.as_str(), label.as_str()))
+    }
+    pub fn pairs(&self) -> &[Pair] {
+        &self.pairs
+    }
+}
+/// Reads device identities only; no streams, default changes, module loading or file output.
+pub fn inventory() -> Result<Inventory, Failure> {
     let connection = Connection::inspect().map_err(|_| Failure::Unavailable)?;
     let server = connection
         .wait(connection.client.server_info())
@@ -68,7 +104,51 @@ pub fn discover() -> Result<Vec<Pair>, Failure> {
     if server.cookie != after.cookie {
         return Err(Failure::Changed);
     }
-    pairs(&server, &modules, &sources, &sinks)
+    inventory_from(&server, &modules, &sources, &sinks)
+}
+fn inventory_from(
+    server: &ServerInfo,
+    modules: &[ModuleInfo],
+    sources: &[SourceInfo],
+    sinks: &[SinkInfo],
+) -> Result<Inventory, Failure> {
+    let pairs = pairs(server, modules, sources, sinks)?;
+    let label = |e: &Endpoint, props: &Props| {
+        property(props, c"device.description")
+            .unwrap_or(&e.name)
+            .to_string()
+    };
+    let sources: Vec<_> = sources
+        .iter()
+        .filter(|s| s.monitor_of_sink_index.is_none() && s.monitor_of_sink_name.is_none())
+        .filter_map(|s| {
+            endpoint(s.index, &s.name, &s.props).map(|e| {
+                let label = label(&e, &s.props);
+                (e, label)
+            })
+        })
+        .collect();
+    let sinks: Vec<_> = sinks
+        .iter()
+        .filter_map(|s| {
+            endpoint(s.index, &s.name, &s.props).map(|e| {
+                let label = label(&e, &s.props);
+                (e, label)
+            })
+        })
+        .collect();
+    for devices in [&sources, &sinks] {
+        let mut names = std::collections::HashSet::new();
+        if devices.iter().any(|(e, _)| !names.insert(&e.name)) {
+            return Err(Failure::Inventory);
+        }
+    }
+    Ok(Inventory {
+        server: server.cookie,
+        sources,
+        sinks,
+        pairs,
+    })
 }
 
 /// Rechecking a snapshot still grants no stream/route lease; callers must pin both actual streams.

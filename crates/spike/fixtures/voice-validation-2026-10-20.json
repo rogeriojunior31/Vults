@@ -1,0 +1,288 @@
+{
+  "recordedAt": "2026-10-20",
+  "sourceCommit": "42d7b67db34080bea7f1a9df26dc14c4b34344a9",
+  "scope": "Consolidated autonomous validation of implemented V0-V8 voice engineering; neither human acceptance nor a release-quality claim.",
+  "engineeringRegressionPassed": true,
+  "productionQualified": false,
+  "rustChecks": {
+    "cargo fmt --all --check": {
+      "passed": true
+    },
+    "cargo clippy --workspace --all-targets -- -D warnings": {
+      "passed": true
+    },
+    "cargo test --workspace": {
+      "passed": true,
+      "tests": {
+        "passed": 1474,
+        "failed": 0,
+        "ignored": 17
+      }
+    },
+    "cargo clippy --workspace --all-targets --all-features -- -D warnings": {
+      "passed": true
+    },
+    "cargo test --workspace --all-features": {
+      "passed": true,
+      "tests": {
+        "passed": 1527,
+        "failed": 0,
+        "ignored": 23
+      }
+    },
+    "cargo test -p vults-evals --features evals": {
+      "passed": true,
+      "tests": {
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    "cargo test -p vults-platform private_ -- --ignored --nocapture --skip private_wezterm": {
+      "passed": true,
+      "tests": {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    "cargo deny check": {
+      "passed": true
+    }
+  },
+  "rendererChecks": 19,
+  "nativeIgnoredVoiceAndPlatformTestsPassed": 22,
+  "nativeIgnoredExclusion": "The unrelated installed OpenCode agent smoke was not run. No ignored voice/platform test remains unexecuted in this checkpoint.",
+  "additionalNativeCases": [
+    "Kitty variant of guarded terminal delivery",
+    "Private echo cancellation",
+    "Private pinned duplex capture/playback routing"
+  ],
+  "nativeUi": {
+    "suites": [
+      {
+        "suite": "answer",
+        "passed": true,
+        "cases": 64
+      },
+      {
+        "suite": "autofinish",
+        "passed": true,
+        "cases": 16
+      },
+      {
+        "suite": "character",
+        "passed": true,
+        "cases": 80
+      },
+      {
+        "suite": "continuation",
+        "passed": true,
+        "cases": 16
+      },
+      {
+        "suite": "controls",
+        "passed": true,
+        "cases": 4
+      },
+      {
+        "suite": "interruption",
+        "passed": true,
+        "cases": 64
+      },
+      {
+        "suite": "meeting",
+        "passed": true,
+        "cases": 12
+      },
+      {
+        "suite": "navigation",
+        "passed": true,
+        "cases": 12
+      },
+      {
+        "suite": "route",
+        "passed": true,
+        "cases": 64
+      },
+      {
+        "suite": "semantic",
+        "passed": true,
+        "cases": 64
+      },
+      {
+        "suite": "stop",
+        "passed": true,
+        "cases": 48
+      }
+    ],
+    "cases": 444,
+    "controlledProductionRenderers": true,
+    "defaultAndPreviewBuildsChecked": true,
+    "coldWindowsDestroyedAndRecreated": 12,
+    "physicalCapture": false
+  },
+  "offlineVocabulary": {
+    "speech": "Synthetic espeak-ng, 20 PT and 20 EN authored sentences per installed model, dictionary off/on and silence fixtures; not human quality qualification.",
+    "cells": [
+      {
+        "model": "base",
+        "language": "pt",
+        "referenceWords": 132,
+        "baselineEdits": 161,
+        "dictionaryEdits": 121,
+        "silenceClean": false,
+        "qualityGatePassed": false
+      },
+      {
+        "model": "base",
+        "language": "en",
+        "referenceWords": 136,
+        "baselineEdits": 52,
+        "dictionaryEdits": 39,
+        "silenceClean": false,
+        "qualityGatePassed": false
+      },
+      {
+        "model": "small",
+        "language": "pt",
+        "referenceWords": 132,
+        "baselineEdits": 113,
+        "dictionaryEdits": 102,
+        "silenceClean": false,
+        "qualityGatePassed": false
+      },
+      {
+        "model": "small",
+        "language": "en",
+        "referenceWords": 136,
+        "baselineEdits": 33,
+        "dictionaryEdits": 17,
+        "silenceClean": false,
+        "qualityGatePassed": false
+      },
+      {
+        "model": "turbo",
+        "language": "pt",
+        "referenceWords": 132,
+        "baselineEdits": 63,
+        "dictionaryEdits": 55,
+        "silenceClean": false,
+        "qualityGatePassed": false
+      },
+      {
+        "model": "turbo",
+        "language": "en",
+        "referenceWords": 136,
+        "baselineEdits": 19,
+        "dictionaryEdits": 8,
+        "silenceClean": true,
+        "qualityGatePassed": true
+      }
+    ],
+    "productionDictionaryRestriction": "Only the existing Turbo/fixed-English gate passes; no activation or threshold changed."
+  },
+  "nativeArtifacts": "Exact pinned semantic/segmentation/embedding/runtime bytes verified before native loading; all downloaded validation assets removed afterward.",
+  "syntheticCapture": {
+    "durationSeconds": 65,
+    "independentDictationSurvivesStopAndCancel": true,
+    "normalizedPcm16FilesRemoved": true,
+    "longSourceCancellation": "A 30-minute WAV repeated from the checked public repository fixture, cancelled during global analysis; not a real call."
+  },
+  "aec": {
+    "rate": 48000,
+    "frames": 432128,
+    "onset_frames": 2955,
+    "echo_reduction_db": 20.247,
+    "near_300_gain_db": -1.218,
+    "near_700_gain_db": -0.414,
+    "synthetic_gate_passed": true,
+    "physical_acceptance": false
+  },
+  "duplex": {
+    "routed_playback_drained": true,
+    "played_frames": 24000,
+    "default_changes_preserved_targets": true,
+    "interrupted_frames": 1796,
+    "stop_froze_cursor": true,
+    "new_output_after_stop_drained": true,
+    "dont_move_rejected_manual_move": true,
+    "changed_route_failure": "Route",
+    "explicit_headphone_policy": true,
+    "speaker_policy_disabled": true,
+    "module_unload_failure": "Route",
+    "stale_pair_failure": "Route",
+    "native_lease_released_after_teardown": true,
+    "physical_acceptance": false
+  },
+  "hookStartup": {
+    "meanMs": 0.81,
+    "ceilingMs": 10,
+    "freshReleaseHook": true,
+    "notDictationLatency": true
+  },
+  "documentation": {
+    "reviewed_pairs": 40,
+    "local_links_checked": 762,
+    "errors": []
+  },
+  "privacy": {
+    "userMicrophoneStarted": false,
+    "userClipboardChanged": false,
+    "realCredentialsRead": false,
+    "paidProviderRequests": 0,
+    "originalSettingsChanged": false,
+    "syntheticCliLoopbackOnly": true,
+    "privateAppProfilesRemoved": true,
+    "privateAudioServerStopped": true,
+    "temporaryToolsInstalledSystemWide": false,
+    "defaultAppBinaryRestored": true
+  },
+  "harnessCorrections": [
+    "Stable automatic-finish data selector replaces obsolete first-checkbox assumptions.",
+    "Default and preview capabilities are checked against their actual builds.",
+    "Cold navigation uses the current closeNest bridge and asserts native target destruction.",
+    "The private clipboard fixture starts with its own synthetic baseline.",
+    "Signed temporary WezTerm/font and hyperfine packages supply absent test prerequisites."
+  ],
+  "baselineMissingInstruction": "AGENTS.md references scripts/check-task-actions.mjs, which is absent; all actual 19 CI renderer checks pass.",
+  "remainingAcceptance": [
+    {
+      "phase": "V1/V7/V8",
+      "owner": "human-desktop-validation",
+      "check": "Physical dictation/command shortcuts and real focus/portal grants with Zeca on/off, editor and terminal delivery, waiting cards, question draft confirmation, cancellation and clipboard recovery."
+    },
+    {
+      "phase": "V1/V2/V4",
+      "owner": "human-speech-and-hardware",
+      "check": "Natural PT/EN transcription and vocabulary in noise/quiet speech; real Small/Vulkan release-to-delivery p95 below two seconds, measured separately from hook startup."
+    },
+    {
+      "phase": "V5",
+      "owner": "human-meeting-and-corpus-review",
+      "check": "Consented 30-minute dual-source meeting, source clocks, transcript/export/delete review and independent speaker-disjoint PT/EN speaker evaluation with frozen limits; speaker labels remain a preview."
+    },
+    {
+      "phase": "V6",
+      "owner": "human-speech-and-hardware",
+      "check": "Natural pauses, resumed/quiet speech, real headphones/AEC double-talk, stopped output and eight-second answer capture/expiry. Semantic endpoint quality needs independent PT/EN labels."
+    },
+    {
+      "phase": "V3/V5/V6",
+      "owner": "separate-provider-consent",
+      "check": "Optional cleanup, summary and live realtime output, flock_list and spend limits with explicitly reviewed provider/key/budget. The user has selected local-only validation; no paid provider is authorized by this checkpoint."
+    },
+    {
+      "phase": "V6-Codex",
+      "owner": "engineering-qualification",
+      "check": "Subscription-only credential binding under concurrent external auth changes remains unqualified. Synthetic CLI probes characterize the issue; the existing unavailable capability stays false."
+    }
+  ],
+  "maintainerAcceptance": {
+    "date": "2026-10-20",
+    "scope": "General local validation of the default app using the personal profile; PR publication authorized.",
+    "perCaseQualityOrLatencyMeasurementsReported": false,
+    "realtimeApiEnabled": false,
+    "remainingReleaseGatesUnchanged": true
+  }
+}

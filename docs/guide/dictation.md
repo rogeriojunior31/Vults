@@ -30,6 +30,143 @@ A standalone silence artifact such as "Thank you.", "Obrigado." or "Gracias." is
 even if intentionally spoken; longer sentences containing those words are kept. You can edit
 the draft before sending it. This filter uses no model or network request.
 
+## Voice conversation settings
+
+Open **Dictation > Talk with Zeca** to prepare realtime voice. The model and budget are separate
+from Chat and your CLI subscription. **Configure OpenAI key** opens the shared key settings; keys
+stay in the system keyring. This configuration page does not record or send audio.
+
+Voice is off by default. Review the OpenAI audio/context destination, choose a supported model and
+set the rolling 24-hour USD limit before enabling it. Use a decimal point or comma, with up to six
+decimal places and no thousands separators. Zero disables remote voice; enabling requires a
+positive limit. Unsettled requests retain their reserved cost.
+
+Edit the choices and click **Save**. Vults reads them back before confirming the save. A failure
+keeps your draft; **Discard edits and reload** explicitly replaces it with saved settings. Changes
+made elsewhere block saving stale edits until you reload. Leaving the page preserves unsent edits.
+Voice never answers a permission card, and Codex consultation remains unavailable. See
+[Realtime accounting](../reference/realtime-accounting.md#runtime-transport).
+
+## Manual voice turns
+
+On Linux, open **Dictation > Work > Voice conversation** after enabling voice and installing a
+local model under **Voice**. Use **Start recording**, speak, then **Finish recording** to stop the
+microphone, transcribe locally and request Zeca's response. After playback finishes, the microphone
+stays off. **Record another turn** continues the same conversation and provider context; **End
+conversation** closes it. A local command also returns to this waiting state. Each following
+recording requires your click by default; the separate bounded-answer choice below is the exception. A provider error or timeout ends the session. This manual entry
+does not use the global dictation shortcut or barge-in.
+Recording is capped at 30 seconds; reaching the cap discards it rather than sending automatically.
+The combined local capture/transcription wait is limited to 60 seconds.
+Opening this work page from Settings retains the requested destination while the Nest loads.
+A later navigation choice takes priority. Opening the page never starts a recording.
+
+Once Zeca's audio starts playing, **Stop response** replaces Finish recording. It stops the spoken
+reply without ending the conversation or opening the microphone. The page waits for the interrupted
+reply's heard-text result before offering **Record another turn**; remote truncation and the next
+upload use the existing acknowledgement/repair path. Unheard words are excluded from the displayed
+reply. After confirmation, the page shows **Response stopped** and whether the microphone is off
+or remains open for a continuous route. Native interruption feedback retires the stopped response's
+control token; delayed or duplicate speaking events cannot revive it or replace a current token.
+Duplicate/late clicks cannot stop a new generation or start capture. During generation before
+audible output, **Cancel** still ends the whole session. This is a click control; interruption by
+speaking over Zeca uses the separate opt-in continuous routes below.
+
+During a conversation, the page reuses Chat's Zeca character: listening while recording, thinking
+while preparing/processing, speaking during audible output, and resting while waiting or stopping a
+response. The text status remains authoritative about microphone access. Short windows hide the
+character to keep actions visible. Reduced motion keeps a static pose; hidden, locked and inactive
+views stop drawing. Hiding or leaving the voice page cancels its conversation; returning does not
+replay an old speaking state. This feedback never opens another surface or starts a recording.
+
+Optionally select **Finish automatically after a pause** before Start. It starts off when the app
+opens and is frozen for that conversation. It uses the installed local speech detector and GPU
+transcription preview; it downloads nothing. Confirmed speech, local partial words and fresh audio
+are required. The policy waits 1.6 seconds of detected silence, or 2.6 seconds after an English/
+Portuguese continuation word; detection/decoding may add latency. Final local transcription still
+runs after the microphone closes. This choice alone does not enable the optional semantic model.
+A Linux x64 GNU developer build with `voice-semantic` can separately offer **Use local semantic turn
+detection (preview)**. It starts off for each conversation and needs explicitly provisioned checked
+files; the app downloads nothing. It may wait up to 1.2 seconds beyond the silence policy. A failure
+shows **Semantic finish is unavailable. This conversation uses local silence detection.** and
+keeps that fallback for following turns. Ordinary builds do not offer the preview. See
+[Semantic turn model](../reference/semantic-turn-model.md#conversation-preview-integration).
+
+If the detector or preview is unavailable/fails, the page says **Automatic finish is unavailable.
+Use Finish recording.** Manual Finish and Cancel remain available. Empty input and the 30-second
+limit never trigger an automatic send. Automatic finish alone does not reopen the microphone: each next
+turn still requires **Record another turn** unless you enabled the separate bounded-answer choice.
+
+**Cancel**, **End conversation**, leaving the page, hiding/closing the Nest, lock or changed settings cancels owned work.
+Lost page contact also stops admission after three seconds. A native worker that is still exiting
+may temporarily keep voice busy. Cancellation cannot undo an already submitted remote request or
+its charge. Voice uses the configured API model and independent budget, not a CLI subscription.
+
+If remote voice fails with local words available, **Review recovered text** offers an editable,
+unsent draft. **Copy text** copies only on your click. Nothing is sent to Chat or executed from
+that draft. Your edits survive leaving and returning to this page. Starting a new recording
+replaces the previous recovered draft after Start is acknowledged. The page retains only the
+most recent reply/recovery in memory, not a saved conversation history. The active provider session
+retains remote conversation context until it ends.
+
+Microphone/speech quality, live-provider acceptance and interruption remain separate validation
+steps before K8 is complete. This entry does not activate Codex consultation or answer permissions.
+
+## Answer without the key
+
+In **Voice conversation**, keep **Microphone mode > Manual turns**, select **Finish automatically
+after a pause**, then explicitly select **Answer without the key** before Start. This choice is off
+for every new conversation and stays frozen until you end/cancel it. It changes no global settings.
+
+After Zeca finishes a complete spoken question, the native owner may reopen the microphone for
+only the original eight-second window. The page explicitly announces this brief open microphone.
+A statement, interrupted reply, tool result, notification or permission card cannot open it. The
+question check is conservative punctuation (`?`/`？`), not semantic understanding.
+
+Pause to finish automatically, or use **Finish recording** before expiry. If local automatic finish
+is unavailable, the page says so; Finish and Cancel remain available. Expiry discards the audio
+without final transcription/upload and shows **Microphone off**, while retaining the same conversation.
+**Record another turn** starts a normal recording explicitly. Final decoding of a valid, already
+closed recording may finish later. **Cancel**, leaving/hiding the page, lock, lost contact or changed
+settings revokes work. A new permission/question also retains capture priority. The native audio
+pump closes on its next deadline check; device teardown may take longer and keeps voice busy.
+
+This opt-in path still needs real microphone, speech and provider acceptance. Voice never answers
+permission cards. Continuous routes already keep their microphone open under their own confirmation
+and do not offer this separate choice.
+
+![Voice conversation after the answer window expires](../assets/voice-conversation.png)
+
+Controlled interface example: the microphone is off after expiry and the conversation can continue.
+The screenshot uses a test fixture, with no physical capture or provider request.
+
+## Continuous microphone routes
+
+**Microphone mode** defaults to **Manual turns**. For interruptions by voice, choose
+**Continuous microphone with headphones** or **Continuous microphone with echo cancellation**.
+Click **Refresh audio devices**, explicitly choose the microphone/output or installed AEC pair,
+then confirm that the microphone may remain open until you end this conversation. Device names
+never prove headphone use. Wear headphones for that mode; AEC needs a compatible pair configured
+outside Vults. The app only reads the inventory: it changes no defaults and installs no modules.
+The reviewed inventory expires after five minutes; refresh it if starting fails.
+
+**Start recording** opens the chosen route and starts the first turn. During Zeca's audible reply,
+confirmed local speech may interrupt him and start another recording with its retained onset.
+**Finish recording** still sends each turn; scratch interruption words never become commands or
+provider input. Local final transcription uses the same stream, not a second microphone. The
+30-second recording cap still discards rather than automatically sending. Automatic pause finish
+is unavailable in these modes. Device changes are locked during the conversation.
+
+The microphone stays open during local transcription, Zeca's reply and the waiting state; the page
+says so. After normal playback or **Stop response**, only **Record another turn** starts another
+recording. **End conversation**, Cancel, departure, lost page contact, lock, changed configuration
+or lost route authority cancels the owner. A new conversation needs fresh confirmation. Stop
+response itself never starts capture. The same final-transcript router, remote truncation
+acknowledgements, heard-prefix history and next-turn repair apply. Voice never answers permissions.
+
+The controls and native owners are covered with controlled fixtures. Real microphone/headphone/AEC
+quality and a live provider still require physical acceptance before K8 is complete.
+
 ## Global dictation (first slice)
 
 For a first dictation, choose a model, focus your destination, hold the talk shortcut, speak and
@@ -653,7 +790,7 @@ and a few quick samples do not establish a latency guarantee for a particular mo
 
 When reporting a problem, include the app version, desktop/session and scale, selected microphone,
 model/language, actual delivery outcome, the relevant timing sample counts and the steps that failed.
-There is no need to share the dictated text. These checks cover the V4 screens; the commands checklist below covers V8. Full-length meetings and realtime voice remain later steps.
+There is no need to share the dictated text. These checks cover the V4 screens; the commands checklist below covers V8. Physical long-meeting acceptance and continuous realtime voice remain separate checks.
 
 ## Voice commands development status
 
@@ -740,7 +877,8 @@ verify the old recording never sends. Review the work page in Black and Light, i
 Real microphone, compositor and end-to-end provider acceptance remain separate from isolated native
 UI fixtures and automated checks; continuing to the next phase does not sign them off.
 
-## Meeting recording check
+<a id="meeting-recording-check"></a>
+## Meeting recording
 
 Optional speaker-analysis files can be prepared in **Dictation > Meeting settings > Meeting speaker models
 (experimental)**. Review the package, confirm the download consent and install within one minute.
@@ -749,11 +887,10 @@ Installation continues when navigating away; an unconfirmed review is discarded.
 activates speaker labels or recording. See [Meeting model artifacts](../reference/meeting-models.md)
 for licenses, verification and the persistent request limit.
 
-On Linux, **Dictation > Meetings** offers recording and local transcription for a check of up to
-one minute. Choose an installed local model in **Dictation > Voice** first. This works with Zeca
+On Linux, **Dictation > Meetings** offers recording for up to **four hours**, followed by local
+transcription. Choose an installed local model in **Dictation > Voice** first. This works with Zeca
 off. Recording/transcribing alone makes no network request or automatic model download.
-Full-length capture remains a later step. **New recording** owns the temporary check;
-**Saved meetings** opens explicitly saved text without recording or making a model request.
+**New recording** owns the temporary recording; **Saved meetings** opens explicitly saved text without recording or making a model request.
 
 Choose **Review audio sources** to read the microphone and system-output monitor without opening
 an audio stream or loading a model. Check both identifiers, any fallback warning, the selected
@@ -765,7 +902,7 @@ requires a new review before starting, and cancels a recording or transcription 
 
 The neutral line, state, timer and actions stay outside the scroll area. **Stop recording** closes
 both streams, then transcribes the microphone and system audio locally, one after the other. At
-one minute recording stops itself and follows the same path. The page shows transcription progress;
+four hours recording stops itself and follows the same path. The page shows transcription progress;
 the microphone is closed while the local model loads and works. Ordinary dictation keeps its
 independent stream and has priority over background meeting decoding. Background chunks yield
 through Whisper's cooperative abort callback; a native cold model load already in progress cannot
@@ -793,14 +930,31 @@ installing models alone never enables it. With this choice, the local preview sh
 **Voice N** or **Unknown voice**, using model-estimated word times where available. Uncertain
 speech remains unknown; if speaker analysis fails or its files are missing, the transcript stays
 available without identification. Voices are separate for Microphone and System audio and may be
-wrong. This preview does not qualify independent PT/EN accuracy or extend the one-minute capture.
+wrong. Speaker analysis remains limited to 30 minutes per source; longer recordings keep their
+plain transcript without voice labels. This preview does not qualify independent PT/EN accuracy.
 
-Only this explicit check saves audio temporarily, under `meeting-audio/` in Vults' data folder.
+Only an explicit meeting recording saves audio temporarily, under `meeting-audio/` in Vults' data folder.
 The directory is private (0700), with 0600 WAVs and an exclusive lock retained through local
 transcription. Normal completion, cancellation and failure attempt cleanup; startup removes
 interrupted files without opening a source. A cleanup error remains visible and no new audio is
-opened until recovery succeeds. Other webviews cannot control a check or read its transcript.
+opened until recovery succeeds. Other webviews cannot control a recording or read its transcript.
 Chat/dictation audio still stays in memory, and voice never answers a permission card.
+
+Each source is downmixed/resampled incrementally to mono 16 kHz PCM16 before writing to disk.
+Stateful resampling preserves each source clock across packets; the two sources remain independent.
+Queues and processing windows are bounded, without retaining all audio in RAM. Four hours of both
+tracks uses less than 1 GiB of temporary audio (about 220 MiB per hour); allow free disk space for
+that audio and normal app work. File-write failures stop capture and attempt cleanup instead of
+publishing a complete transcript. Transcription runs after Stop, in blocks of at most 28 seconds,
+with progress and priority for interactive dictation. Hour-long recording/progress/segment clocks
+use hours:minutes:seconds.
+
+Keep Meetings open while recording or transcribing. A crash or interruption removes leftover
+audio at the next startup; it does not resume the lost recording. Save the text explicitly after
+completion. Summary input remains bounded to 256 KiB across both tracks; a longer transcript is
+refused before a model request, while saving/export remain available. Four-hour capacity is a
+resource bound, not a claim of four hours of physical-device or speech-quality acceptance.
+
 
 
 ### Summary and to-dos

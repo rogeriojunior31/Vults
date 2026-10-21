@@ -1,4 +1,4 @@
-//! Backend service for V6. No renderer or microphone entry point is exposed before V6.7.
+//! Native voice backend. Nest controls own explicit manual capture and reviewable recovery.
 use serde::{Deserialize, Serialize};
 use std::sync::{
     Arc,
@@ -10,13 +10,25 @@ use vults_chat::realtime::{
     transport::{self, Failure, OpenAi, Provider},
 };
 
+pub(crate) mod controls;
 mod local;
 mod playback;
+pub(crate) mod routes;
 pub use local::{LocalFailure, Recovery, Turn};
 pub use playback::{Channels, Command, Event, Input, LocalReply, Record, Signal};
 #[cfg(target_os = "linux")]
+mod barge;
+#[cfg(target_os = "linux")]
+mod routed_capture;
+#[cfg(target_os = "linux")]
+pub use routed_capture::Operation as RoutedCapture;
+#[cfg(target_os = "linux")]
+mod capture;
+#[cfg(target_os = "linux")]
 mod consultation;
 mod devices;
+#[cfg(target_os = "linux")]
+pub use capture::{CaptureControl, CapturePhase, CaptureRequest, capture_control};
 #[cfg(target_os = "linux")]
 pub(crate) mod routing;
 
@@ -81,16 +93,21 @@ impl State {
     }
 }
 pub(crate) fn invalidate<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    controls::depart(app);
     if let Some(state) = app.try_state::<Arc<State>>() {
         state.epoch.fetch_add(1, Ordering::SeqCst);
     }
 }
 pub(crate) fn shutdown<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    controls::depart(app);
     if let Some(state) = app.try_state::<Arc<State>>() {
         state.close();
     }
 }
 pub(crate) fn key_changed<R: tauri::Runtime>(app: &tauri::AppHandle<R>, provider: &str) {
+    if provider == "openai" {
+        controls::depart(app);
+    }
     if let Some(state) = app.try_state::<Arc<State>>() {
         state.key_changed(provider);
     }
@@ -105,7 +122,28 @@ impl Drop for Lease {
 
 /// Complete native turns only. Recovery is a reviewable draft, never an automatic Chat send.
 pub async fn run(app: AppHandle, channels: Channels) -> Result<Option<Recovery>, Failure> {
-    run_with_audio(app, channels, devices::Choice::Default).await
+    run_with_audio(app, channels, devices::Choice::Default, None, None).await
+}
+
+/// One explicit native recording, retained under the same owner through response and recovery.
+#[cfg(target_os = "linux")]
+pub async fn run_captured(
+    app: AppHandle,
+    channels: Channels,
+    request: CaptureRequest,
+) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Default, Some(request), None).await
+}
+
+/// Retain context between manually admitted turns; idle never reopens the microphone.
+#[cfg(target_os = "linux")]
+async fn run_conversation(
+    app: AppHandle,
+    channels: Channels,
+    request: CaptureRequest,
+    next: tokio::sync::mpsc::Receiver<capture::Request>,
+) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Default, Some(request), Some(next)).await
 }
 
 /// Explicit native duplex admission; no renderer entry or automatic device choice.
@@ -115,21 +153,37 @@ pub async fn run_routed(
     channels: Channels,
     route: vults_audio::echo::duplex::Route,
 ) -> Result<Option<Recovery>, Failure> {
-    run_with_audio(app, channels, devices::Choice::Routed(route)).await
+    run_with_audio(app, channels, devices::Choice::Routed(route), None, None).await
+}
+
+#[cfg(target_os = "linux")]
+async fn run_routed_conversation(
+    app: AppHandle,
+    channels: Channels,
+    route: vults_audio::echo::duplex::Route,
+    request: CaptureRequest,
+) -> Result<Option<Recovery>, Failure> {
+    run_with_audio(app, channels, devices::Choice::Routed(route), Some(request), None).await
 }
 
 async fn run_with_audio(
     app: AppHandle,
     channels: Channels,
     choice: devices::Choice,
+    #[cfg(target_os = "linux")] capture: Option<CaptureRequest>,
+    #[cfg(not(target_os = "linux"))] _capture: Option<()>,
+    #[cfg(target_os = "linux")] next: Option<tokio::sync::mpsc::Receiver<capture::Request>>,
+    #[cfg(not(target_os = "linux"))] _next: Option<()>,
 ) -> Result<Option<Recovery>, Failure> {
+    #[allow(unused_mut)]
+    let mut channels = channels;
     let state = app.state::<Arc<State>>().inner().clone();
     let (lease, epoch) = state.begin()?;
     let lease = Arc::new(lease);
     if crate::lock::locked(&app) {
         return Err(Failure::Off);
     }
-    let (consent, model, language, zeca) = app
+    let (consent, model, language, zeca, capture_options) = app
         .state::<crate::settings::SettingsState>()
         .0
         .lock()
@@ -139,6 +193,7 @@ async fn run_with_audio(
                 s.voice_model.clone(),
                 s.voice_language.clone(),
                 s.zeca,
+                s.dictation_capture_options(),
             )
         })
         .map_err(|_| Failure::Off)?;
@@ -151,7 +206,13 @@ async fn run_with_audio(
     let check_app = app.clone();
     let publication = channels.output.clone();
     let (selected, spoken, cancellation) = (model.clone(), language.clone(), cancel.clone());
+    #[cfg(target_os = "linux")]
+    let capture_active = capture.as_ref().map(CaptureRequest::active);
     let valid: Arc<dyn Fn(&crate::settings::Settings) -> bool + Send + Sync> = Arc::new(move |s| {
+        #[cfg(target_os = "linux")]
+        if capture_active.as_ref().is_some_and(|active| !active()) {
+            return false;
+        }
         state.current(epoch)
             && !publication.is_closed()
             && !*cancellation.borrow()
@@ -171,6 +232,63 @@ async fn run_with_audio(
             .lock()
             .is_ok_and(|s| authority(&s))
     });
+    #[cfg(target_os = "linux")]
+    if capture.is_some() && !consent.enabled() {
+        return Err(Failure::Off);
+    }
+    #[cfg(target_os = "linux")]
+    let semantic = if capture.as_ref().is_some_and(|request| request.2) {
+        if model.is_none() {
+            return Err(Failure::Input);
+        }
+        Some(
+            capture::semantic::open(
+                lease.clone(),
+                active.clone(),
+                crate::voice::models_dir().join("semantic-turn"),
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
+    #[cfg(target_os = "linux")]
+    if semantic.as_ref().is_some_and(|service| service.failed()) {
+        channels
+            .output
+            .try_send(Event::Capture(CapturePhase::SemanticFallback))
+            .map_err(|_| Failure::Output)?;
+    }
+    #[cfg(target_os = "linux")]
+    let initial = if !choice.captures()
+        && next.is_none()
+        && let Some(request) = capture.clone()
+    {
+        let microphone = capture::record(
+            app.clone(),
+            request,
+            capture::Owner {
+                lease: lease.clone(),
+                semantic: semantic.clone(),
+                active: active.clone(),
+                cancel: cancel.clone(),
+                output: channels.output.clone(),
+            },
+            capture_options.clone(),
+            model.clone().ok_or(Failure::Input)?,
+            decode_language.clone(),
+            None,
+        )
+        .await?;
+        Some(microphone)
+    } else {
+        None
+    };
+    #[cfg(not(target_os = "linux"))]
+    let initial = {
+        let _ = capture_options;
+        None
+    };
     let source: Arc<dyn crate::flock_tools::Source> = Arc::new(app.clone());
     #[allow(unused_mut)]
     let mut tools = crate::flock_tools::all(source);
@@ -189,36 +307,95 @@ async fn run_with_audio(
         return Err(Failure::Off);
     }
     local::check(&*active, &cancel)?;
+    #[cfg(target_os = "linux")]
+    if choice.detects() && !barge::available(model.as_deref()) {
+        return Err(Failure::Input);
+    }
     let devices = Arc::new(devices::Devices::open(choice, lease.clone(), active.clone())?);
     while !devices.ready()? {
         local::check(&*active, &cancel)?;
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
     }
     local::check(&*active, &cancel)?;
+    #[cfg(target_os = "linux")]
+    let continuation = next.map(|next| {
+        let (send, input) = tokio::sync::mpsc::channel(1);
+        channels.input = input;
+        (next, send)
+    });
     let output = channels.output.clone();
     let factory = devices.clone();
     let outcome = {
-        let driver = playback::drive(
-            channels,
-            &*active,
-            devices.interruption(),
-            move |cancel| factory.output(cancel),
-            move |io| connect(consent, remote_active, io, tools),
-            {
-                let app = app.clone();
-                move |turn, deadline| {
-                    #[cfg(target_os = "linux")]
-                    {
-                        router.clone().prepare(app.clone(), turn, deadline)
+        let play = |channels| {
+            playback::drive(
+                initial,
+                channels,
+                &*active,
+                devices.interruption(),
+                move |cancel| factory.output(cancel),
+                move |io| connect(consent, remote_active, io, tools),
+                {
+                    let app = app.clone();
+                    move |turn, deadline| {
+                        #[cfg(target_os = "linux")]
+                        {
+                            router.clone().prepare(app.clone(), turn, deadline)
+                        }
+                        #[cfg(not(target_os = "linux"))]
+                        {
+                            let _ = (&app, turn, deadline);
+                            std::future::ready(Ok(None))
+                        }
                     }
-                    #[cfg(not(target_os = "linux"))]
-                    {
-                        let _ = (&app, turn, deadline);
-                        std::future::ready(Ok(None))
-                    }
-                }
-            },
-        );
+                },
+            )
+        };
+        #[cfg(target_os = "linux")]
+        let driver = async {
+            if devices.interruption() != vults_voice::turn::BargeIn::Disabled {
+                barge::drive(
+                    channels,
+                    lease.clone(),
+                    active.clone(),
+                    devices.clone(),
+                    app.clone(),
+                    model.clone().ok_or(Failure::Input)?,
+                    play,
+                )
+                .await
+            } else {
+                play(channels).await
+            }
+        };
+        #[cfg(not(target_os = "linux"))]
+        let driver = play(channels);
+        #[cfg(target_os = "linux")]
+        let driver = async {
+            if let Some((next, send)) = continuation {
+                let request = capture.ok_or(Failure::Input)?;
+                capture::continue_turns(driver, next, send, |generation, until| {
+                    capture::record_bounded(
+                        app.clone(),
+                        request.clone(),
+                        capture::Owner {
+                            lease: lease.clone(),
+                            semantic: semantic.clone(),
+                            active: active.clone(),
+                            cancel: cancel.clone(),
+                            output: output.clone(),
+                        },
+                        capture_options.clone(),
+                        model.clone().unwrap_or_default(),
+                        decode_language.clone(),
+                        Some(generation),
+                        until,
+                    )
+                })
+                .await
+            } else {
+                driver.await
+            }
+        };
         tokio::pin!(driver);
         let mut poll = tokio::time::interval(std::time::Duration::from_millis(5));
         loop {
@@ -226,7 +403,7 @@ async fn run_with_audio(
                 result = &mut driver => break result?,
                 _ = poll.tick() => {
                     local::check(&*active, &cancel)?;
-                    while let Some(samples) = devices.input()? {
+                    while devices.interruption() == vults_voice::turn::BargeIn::Disabled && let Some(samples) = devices.input()? {
                         output.try_send(Event::Input(Input { samples })).map_err(|_| Failure::Output)?;
                     }
                 },

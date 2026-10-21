@@ -75,7 +75,18 @@ return content-free codes. See the [official WebSocket guide](https://developers
 
 Settings version 41 adds independent `voice_realtime` consent, a retained ledger identity, a default
 US$1 rolling limit and an explicit reviewed model. Zero disables remote voice. Only the Settings
-webview can save this choice; there is no renderer control, bridge call or microphone entry yet.
+webview can save this choice. V6.7.1 adds typed bridge calls for that explicit save and Settings-only
+readback (`voice_realtime_settings`). V6.7.2 exposes these choices under **Dictation > Talk with
+Zeca**. V6.7.3 adds the separate Nest-owned manual controls described below.
+The returned `on` is the saved choice, not a live-session or readiness indicator.
+Readback returns only `on`, `model` and `limitMicrousd`, with the amount encoded as a decimal string
+so large persisted limits survive JavaScript exactly. It omits the private ledger identity and
+performs no keyring, device, store or network IO. V6.7.2 also sends write amounts as canonical
+decimal strings, preserving the full supported integer range without floating-point conversion.
+The native command rejects noncanonical or out-of-range amounts before persistence; authority,
+model and budget checks still apply. The form accepts USD with a decimal point or comma and up to
+six decimal places, confirms saves by reading back, preserves failed drafts and blocks stale edits
+until an explicit reload when another writer changes the saved choice.
 The native backend accepts bounded command/output channels and never starts capture by itself.
 One desktop voice lease owns the connection. Epoch revocation covers choice changes, lock, release
 and permanent shutdown; clearing/rotating the shared OpenAI key also revokes existing connections.
@@ -120,8 +131,8 @@ ownership until it finishes.
 This proves that the former local transport can no longer send; it does not claim the provider
 completed at disconnect or refund uncertain work. A crashed process releases its kernel lock;
 aborted transports drop their socket. Recovery is not enabled on other platforms. The existing
-backend has no user-facing capture entry. V6.3.5 adds native retention/recovery below; capture,
-playback, visible continuation and live-provider acceptance remain required before activation.
+V6.3.5 backend initially had no user-facing capture entry. Native retention/recovery is described
+below; V6.7.3 adds manual controls, while live-provider and physical acceptance remain open.
 
 ## Native turn retention and local text
 
@@ -132,13 +143,25 @@ queue relays output. Raw audio emission yields so buffered socket bursts cannot 
 consumer. Only a successful final receipt releases the pending original; queued receipts are drained
 before applying a simultaneous transport failure. A later idle failure cannot recover an older turn.
 
+V6.7.3 adds `Turn::from_capture` for a completed native mono 16 kHz float capture and its finalized
+local transcript. It reuses the shared stateful resampler to produce 24 kHz PCM16, preserving the
+sample clock with the exact integer duration ratio. Input is bounded to 100 ms-30 seconds before
+conversion; non-finite audio and invalid transcripts are rejected, and finite filter peaks saturate
+to PCM16 without wrapping. The source audio is not modified. Text keeps its original whitespace,
+with the existing 4,096-byte native-command bound. This adapter opens no microphone, loads no
+model and grants no capture/upload authority. The explicit native capture owner is described below;
+conversation controls, the whole milestone and physical/live acceptance remain open.
+
 Off/spent admission, missing keys, transport/protocol/response failures or saturated output retain
 the failed turn for local recovery. The transport gets up to 11 seconds to finish its existing
-bounded settlement path, then its future/socket is dropped before decoding. The selected installed
-Whisper model and language are snapshotted; the existing resampler converts the retained audio to
-16 kHz. No download, model clean-up, other provider or automatic Chat send is started. A successful
-local decode returns the whole text, preserving whitespace, for the native caller to offer as a
-reviewable draft. This is not a claim that Zeca already answered in text or that a fallback UI exists.
+bounded settlement path, then its future/socket is dropped before recovery. If this same turn
+already carries a finalized local transcript, recovery returns those exact words without a second
+decode or model load, after checking cancellation/revocation and the consumed-turn flag. Otherwise,
+the selected installed Whisper model and language are snapshotted; the existing resampler converts
+the retained audio to 16 kHz. No download, model clean-up, other provider or automatic Chat send is
+started. A successful local decode returns the whole text, preserving whitespace, for the native
+caller to offer as a
+reviewable draft. V6.7.3 offers those words for editing/copying, without an automatic Chat send.
 
 Missing models, decode failure, empty output, invalid/oversized text or the 30-second local wait
 deadline return the original in-memory turn with a typed reason. Very short or trimmed-to-short
@@ -152,7 +175,7 @@ epoch under its lock, so restoring a previous choice cannot revive an old turn. 
 the native lease through the final publication check; a detached worker also retains its own lease
 until native work exits. The wait can expire before an unabortable cold model load finishes; the
 stop flag suppresses late output and new voice owners stay Busy until that worker releases its lease.
-No microphone, playback, renderer command or permissions path is added. Those owners remain V6.4-V6.7.
+This retention adapter adds no microphone, playback, renderer command or permission authority.
 
 Run `cargo test -p vults-chat realtime::transport::` and `cargo test -p vults-app realtime` offline.
 Duplex WebSocket tests exercise actual frames with synthetic PCM/keys, two turns, cancellation,
@@ -161,6 +184,72 @@ connection. No paid request, real microphone/playback or live speech acceptance 
 native driver/decoder tests use synthetic PCM and local work doubles; real model/speech quality
 and capture/playback acceptance remain separate. Backend failures provide structured reasons and
 never silently send to a different provider.
+
+
+## Native first-turn capture
+
+V6.7.3 adds a Linux-only `run_captured` entry with one native `CaptureControl`/`CaptureRequest`
+pair. Creating controls opens nothing; the explicit native call acquires the existing desktop
+lease before capture. The Nest work page now exposes the explicit controls below; no shortcut
+is assigned to this entry.
+The configured consent must be enabled and the selected local Whisper model must already be installed.
+The shared microphone preference and existing ordinary-capture question fence are reused.
+
+Finish closes and joins the microphone before local transcription and bounded turn assembly.
+Recording lasts at most 30 seconds; reaching the cap discards it instead of automatically decoding
+or uploading. The total native capture/decode wait is 60 seconds. A cold model load can outlive
+that wait, but retains the same desktop lease until actual exit and cannot publish late output.
+Cancel or losing the controller revokes the whole session, including after Finish; the controller
+must remain alive through the response. Lock, shutdown, settings/key changes and consumer loss also
+stop admission. Native phase events contain only Starting, Recording or Transcribing, never samples
+or words. Keep the controller until the session ends, then drop it.
+
+The prepared turn enters the existing driver's current generation, local-command gate and guarded
+provider path without a renderer audio round trip. Local commands consumed there never open a
+provider; recovery reuses the exact local transcript. This entry disables barge-in and adds no
+automatic capture, model download, Chat send or permission-answer authority. Conversation controls
+and reviewable recovery in the work surface are described below; V6.7.3 remains open. Tests use fake
+microphones/decoders and synthetic PCM, without physical capture or paid requests.
+
+
+## Nest manual controls
+
+The **Dictation > Work > Voice conversation** page is the only renderer entry for the manual owner.
+`voice_conversation_start`, `voice_conversation_status` and `voice_conversation_control` require
+Nest authority; Settings, island and widget cannot call them. They expose neither PCM, raw errors,
+credentials nor settings writes. Start additionally requires the visible, unlocked Dictation work
+surface, Zeca and saved remote consent. A native identity binds Finish, Cancel, heartbeat and late
+results to this session. A foreign/stale identity cannot control or publish into a newer turn.
+
+The page polls every 500 ms while work is active. Three seconds without contact drops the controller;
+leaving the page, changing tabs/webviews, hiding or destroying the Nest also cancels it. Lock,
+shutdown and relevant settings/key changes discard the slot and revoke its native work. Stop is
+forwarded through the existing owner to retain native/provider teardown and settlement. It cannot
+retract a request already sent. No permission-answer path is added.
+
+Start explicitly admits the first capture. Local completion or settled playback retains the same
+driver and context, waiting for **Record another turn** with the manual microphone off. Optional
+automatic finish closes an already authorized recording; it does not authorize the next one.
+Only the separately selected [bounded answer choice](#bounded-follow-up-proposals) can reopen it
+after a fully played question. Continuous capture and voice interruptions require their own route
+confirmation, described under [native playback](#native-playback-and-context-repair).
+
+Each native Listen generation is admitted at most once. Older or duplicate Listen events are
+ignored before changing the recording token, phase, follow-up deadline or capture queue, in both
+manual and continuous modes. Explicit next-turn actions still require waiting and a live controller;
+they do not replay Listen. Regression checks cover stale/repeated events across starting, recording,
+transcribing, responding, speaking, interrupting and waiting, without devices or a provider.
+Failed continuation admission preserves that generation and the visible waiting state. A busy route
+queue or a manual controller not yet ready cannot erase the replay guard or prevent a later valid
+retry. Capture state changes only after the request is queued; a disconnected manual driver still
+cancels its controller.
+
+The UI distinguishes responding from confirmed audible playback. Only heard-history text or the
+local-command reply is shown, bounded in memory. Recovery text is editable and copied explicitly;
+edits survive page navigation locally. A newly acknowledged Start replaces the previous draft.
+There is no automatic Chat send or persistent conversation history. Native layout validation uses
+controlled owners without microphones, model loads or paid requests; physical speech and
+live-provider acceptance and K8 completion remain open.
 
 
 ## Playback and heard text
@@ -223,10 +312,11 @@ output worker retains the native session lease through device destruction, inclu
 blocked setup, so abort/revocation cannot overlap a new session with old native work.
 
 Native commands and speech/probe signals carry the exact turn generation. Stale commands are
-discarded; only a matching confirmed probe freezes playback. Notifications of Listen/Probe actions
+discarded; voice interruption needs a matching confirmed probe. Explicit Stop response is bound
+to the audible reply. Notifications of Listen/Probe actions
 grant no microphone authority and do not start capture. First consumed output drives the lock;
-producer completion requests drain, and confirmed drain drives tail grace. App entry keeps barge-in
-disabled until the V6.5 device/AEC policy lands. Scripted headphone cases exercise the available
+producer completion requests drain, and confirmed drain drives tail grace. The ordinary entry keeps
+voice barge-in disabled; only explicit V6.5 headphone/AEC routes permit it. Scripted headphone cases exercise the available
 owner path without asserting that speaker interruption is safe.
 
 The spoken response path accepts one assistant audio item/content part at index zero per response.
@@ -263,13 +353,41 @@ or replayed as a new user turn. Callers retain any unaccepted capture until its 
 V6.5.2 adds a separate Linux `run_routed` entry, guarded before native capture by the existing
 Settings consent, cancellation and epoch authority. It pins both native streams to an explicitly
 selected AEC pair or devices, retains its lease through teardown and emits bounded memory-only
-Input events to the native caller. The caller must assemble and commit complete turns; capture is
+Input events to the native caller. Complete turns still require explicit native admission; capture is
 never uploaded automatically. Explicit headphones/AEC policy stays separate from temporary route
 verification; an unverified route clears retained speech/probes before deferred playback events.
-The ordinary CPAL entry remains non-interruptible. No renderer command or visible voice conversation
-is exposed. Backend V6.4/V6.5 is delivered; see [Echo cancellation](echo-cancellation.md) for routing,
-clock and private-graph evidence. Next is V6.6 tools, then V6.7 capture/UI. Physical-device/acoustic
-timing, real speech and live-provider acceptance remain open before activation.
+The ordinary CPAL entry keeps voice barge-in disabled. V6.7's separately confirmed route controls now
+expose duplex capture. Backend V6.4/V6.5 is delivered; see [Echo cancellation](echo-cancellation.md)
+for routing, clock and private-graph evidence. V6.6 owns tools; V6.7 owns capture/controls and
+acceptance. Physical-device/acoustic timing, real speech and live-provider acceptance remain open
+before K8 can be complete.
+V6.7.3 adds the native routed interruption adapter: checked local model/VAD availability before
+stream creation, a bounded eight-second ring, fresh post-playback VAD evidence and generation/probe
+bound local scratch transcription. Its words only confirm/reject a probe; they cannot call tools,
+answer permissions or create a user turn. A single worker holds the desktop lease until actual
+inference/model teardown exits. Cancellation, route loss, stale work and deadlines suppress late
+results. On confirmation, a typed memory-only Replay event follows the new Listen action, carrying
+the retained onset/pre-roll under the new generation. Generation-bound native Capture operations now
+assemble a following turn from that same stream: Begin takes the replay plus subsequent PCM, Finish
+alone starts final local decoding and submits the complete turn, and Cancel discards it. The original
+24 kHz audio remains bounded to 100 ms through 30 seconds; it is not resampled back from the local
+16 kHz decode. One final decode at a time, a 60-second deadline, live route/epoch checks and worker-held
+leases suppress stale results without blocking cancellation. The existing local-command router runs
+before provider admission. Replay/probe evidence never commits by itself. The Nest now adds
+default-manual route selection,
+explicit device/AEC inventory refresh and confirmation for continuous capture per conversation.
+An inventory token expires after five minutes and holds exact reviewed device identities; live
+stream verification remains decisive. First Start/confirmed interruption admit Begin, while Finish
+requires the current native recording token. Normal completion/manual Stop still wait for a click.
+Microphone-open status, page contact and cancellation span the session. No phone/card authority is
+added. Existing truncation acknowledgements, heard-prefix history and next-turn repair still own interruption and gate subsequent uploads. Physical/live validation,
+semantic artifact/endpoint qualification and V6.7.4 island feedback/acceptance remain open.
+The optional `voice-semantic` app feature now connects the manual automatic-finish owner to a
+conversation-scoped local worker/policy. Checked files prepare before microphone admission; scores
+use current VAD/words and the original hold deadline. A failure latches visible silence fallback.
+Ordinary builds cannot activate it; no download or continuous-route automatic finish is added.
+See [Semantic turn model](semantic-turn-model.md#conversation-preview-integration).
+
 Offline socket/native-owner tests cover interruption before/after producer completion, exact
 acknowledgements, stale generations, repair admission, failure, revocation, abort and recovery.
 The isolated ALSA null setup above also runs the complete native driver with a synthetic provider:
@@ -277,6 +395,47 @@ The isolated ALSA null setup above also runs the complete native driver with a s
 This check exercises actual CPAL into memory history without a microphone, desktop speaker, key or
 provider connection. It is not real speech or live-provider acceptance.
 
+
+## Bounded follow-up proposals
+
+The V6.7 backend now has an offline, default-off policy for **Answer without the key**. It is
+now connected to bounded native capture through a separate per-conversation choice on the voice
+work page. It starts off for every conversation and is frozen by Start. It requires manual microphone
+mode with automatic finish; continuous routes have their separate consent. No global setting or
+agent configuration is changed. A proposal alone still grants no microphone or provider authority.
+
+Only a completed spoken model response can propose the exact following Listen generation. The
+native history receipt now carries its original generation and monotonic completed-playback time;
+it never exposes them to the renderer. All audio frames must have played, the record must be
+synchronized and uninterrupted, and its final non-whitespace character must be `?` or `？`, with
+at least one letter. This is a conservative punctuation check, not semantic question recognition.
+Quoted endings and unfinished/interrupted text are refused. Tool results, notifications and
+permission cards cannot propose or extend a window.
+
+The eight-second deadline starts at completed playback, not receipt processing, a new Listen,
+model loading or microphone opening. A delayed claim gets only the original remaining budget.
+Exact expiry, an unexpected newer generation, cancellation or a newer non-question discards the
+proposal. Replayed/stale receipts do not recreate it. Backward/future clock evidence and integer/
+time overflow are refused. Debug output contains metadata, never the spoken question.
+
+The Nest binds the proposal to its retained controller, exact next Listen and original monotonic
+clock. Only the native owner can enqueue the bounded capture; renderer status updates never start
+it. Consent, visibility/heartbeat, lock, settings/key invalidation and question priority retain their
+existing authority. Opening or initialization delay consumes the same eight-second budget. The
+native audio pump rechecks the absolute deadline independently of VAD/preview/model workers and
+closes on its next cancellation check (up to the existing 20 ms pump interval plus native teardown).
+No frames after the deadline are authorized; actual worker destruction retains the desktop lease.
+
+Automatic completion or explicit Finish before expiry closes the microphone and then performs final
+local decoding through the existing command/provider gates. Decode may finish after microphone
+closure; it never extends capture. Expiry closes/discards without final decoding/upload and returns to
+waiting on the same driver; Record another turn explicitly starts a normal new recording. Cancel,
+permission priority or revocation wins over expiry and suppresses late publication. A Finish/expiry
+race waits for the native outcome. The page announces the brief open microphone, unavailable
+automatic finish and expired/microphone-off states. End, failed Start or departure clears the choice.
+
+This is opt-in engineering, not physical hands-free sign-off. Real microphone timing, local speech
+quality, provider and native-device acceptance remain required before K8 is Done.
 
 ## Local commands before realtime upload
 
@@ -400,14 +559,15 @@ and acoustic acceptance remain open before activation.
 On Linux, the V6.6.3 native owner adds `consult_claude` only with the separate default-off
 `voice_consultation` choice and its original durable budget identity. Only Settings may change it;
 changing it revokes the voice epoch even if the old choice is restored before the next poll. The
-renderer has no conversation entry or consultation control yet. Default offerings remain the five
+manual renderer entry has no consultation controls. Default offerings remain the five
 cached flock reads. The backend also supports `consult_codex` with its own default-off
 `voice_codex_consultation` choice and original `voice_codex_consultation_budget` identity.
 Its Settings-only command invalidates the same voice epoch when a choice changes. Codex is
 currently blocked by the shared `SUBSCRIPTION_AUTH_QUALIFIED=false` capability: enabling it is
 refused before settings/ledger access, saved consent cannot offer its tool or open the network gate,
 and the text helper refuses before CLI or scratch access. Turning a saved choice off remains allowed.
-There is no renderer control or capture entry for either provider.
+Neither provider has a dedicated consultation renderer control; Codex remains unavailable from
+the manual voice entry.
 
 Each consultation supplies one nonempty question of at most 256 bytes, without control characters.
 The Claude path uses the existing Claude Code text helper with Haiku, a new private empty working directory,

@@ -47,6 +47,7 @@ impl Pace {
 #[derive(Debug)]
 pub struct Preview {
     stop: Arc<AtomicBool>,
+    failed: Arc<AtomicBool>,
 }
 
 impl Preview {
@@ -62,6 +63,8 @@ impl Preview {
     ) -> Self {
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
+        let failed = Arc::new(AtomicBool::new(false));
+        let failure = failed.clone();
         let spawned = std::thread::Builder::new()
             .name("voice-preview".into())
             .spawn(move || {
@@ -74,13 +77,19 @@ impl Preview {
                     &show,
                     &flag,
                 ) {
+                    failure.store(true, Ordering::SeqCst);
                     tracing::warn!("voice preview: {e}");
                 }
             });
         if let Err(e) = spawned {
+            failed.store(true, Ordering::SeqCst);
             tracing::warn!("voice preview: {e}");
         }
-        Self { stop }
+        Self { stop, failed }
+    }
+    /// A watcher can fall back to an explicit Finish rather than trusting stale partial words.
+    pub fn failed(&self) -> bool {
+        self.failed.load(Ordering::SeqCst)
     }
 }
 

@@ -21,7 +21,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub use models::{MODELS, Model, VAD, download, installed, model, model_path, vad_path};
 pub use preview::Preview;
 pub use record::{AutoStop, Recorder};
-use vad::{EndOfSpeech, Vad};
+use vad::EndOfSpeech;
+/// Retained local detector for capture watchers; callers own microphone admission and lifetime.
+pub use vad::Vad;
 
 /// What whisper takes: 16 kHz, mono, f32.
 pub use vults_audio::SAMPLE_RATE;

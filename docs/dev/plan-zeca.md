@@ -1828,3 +1828,276 @@ Nine changed public EN/PT source marks are current; the latest checkpoint's head
 local documentation links are checked. Independent review confirms all three findings resolved
 and permits publication with Codex disabled; no successful credential renewal or live UI/audio
 acceptance is claimed. Local Rust is 1.99.1; PR CI also validates the pinned 1.98 toolchain.
+
+
+**2026-10-20 V6.7.1 realtime Settings bridge.** The Settings-only read command returns the saved
+switch, model and exact microdollar limit without device/keyring/store/network IO or a private
+ledger identity. The typed bridge exposes this read and the existing Settings write, refusing
+fractional, negative and unsafe JavaScript amounts before invocation. Native authority and
+validation remain decisive. This adds no capture or visual control; the next finite task is
+V6.7.2 configuration UI, followed by capture/controls and island/native acceptance. Codex activation
+remains unavailable and K8 stays open. See Plan Dictation
+[V6.7 delivery sequence](plan-dictation.md#v67-delivery-sequence).
+
+Validation: 1,413 workspace tests pass (16 documented ignores), 10 feature evals, workspace Clippy
+with warnings denied, formatting, renderer build, all 19 bridge/renderer checks and repository
+guards pass. Native readback covers default-off, exact large limits, private-identity omission and
+unchanged independent consent; Nest/island callers are refused. The new bridge check runs in CI
+and covers explicit invocation and unsafe-number refusal without capture or provider access.
+The local AGENTS instruction also names `check-task-actions.mjs`, which is absent from this
+checkout; that unavailable check is not reported as passed. No visual renderer changes or app
+launch are part of this contract; native UI validation begins with V6.7.2.
+
+
+**2026-10-20 V6.7.2 voice configuration page.** Dictation > Talk with Zeca now uses the existing
+Settings webview and shared navigation/components/theme. It shows default-off OpenAI audio/context
+consent, the reviewed model, an independent rolling USD budget and a link to shared key settings.
+The form preserves drafts across navigation and failed saves, confirms writes by readback and
+blocks stale edits after a foreign change until explicit reload. Both RPC directions use exact
+integer decimal strings; USD accepts a point or comma without floating-point arithmetic. Native
+validation rejects noncanonical/out-of-range amounts before IO. Voice never answers permission
+cards and Codex remains unavailable. Saving opens no microphone or provider connection.
+
+Validation: 1,413 workspace tests pass (16 documented ignores), 10 evals, build, all 19 renderer/bridge
+checks, workspace Clippy with warnings denied and formatting pass. The expanded production bridge/
+component regression covers stale reads, one save, failure/retry, exact large USD amounts, drafts,
+conflicts, acknowledgement readback, translations and explicit key navigation. Isolated native
+Tauri/WebKit validation exercised actual configuration RPCs, failure under a read-only config
+folder, focus/caret retention and exact limits. Visually reviewed Black/Light at 1180 x 820 and
+480 x 360 has no horizontal overflow and keeps Save reachable; all four languages render and
+translated narrow actions remain reachable. A private XDG profile, masked original HOME path and
+private DBus without service activation keep user configs/keyring apart. No microphone, model,
+provider or agent configuration is used. Shared Settings styles fix field sizing and action spacing.
+The local AGENTS task-actions script remains absent, not passed. Next is V6.7.3 explicit capture,
+turn assembly and conversation controls; live/physical voice acceptance and K8 completion stay open.
+
+
+**2026-10-20 V6.7.3 native turn assembly.** Completed mono 16 kHz capture and its finalized local
+transcript can now become a bounded 24 kHz PCM16 realtime turn through the existing shared
+resampler. The adapter preserves duration/pitch/level and the untouched source, validates
+100 ms-30 seconds and 4,096-byte local words, rejects non-finite samples and saturates filter peaks.
+Recovery returns the same finalized local text without another decode/model load, while consumed
+captures, cancellation and revoked authority remain refused. Untranscribed turns retain the
+existing guarded local decoder path. No microphone, model, provider, renderer command or new
+permission authority is opened by this adapter. The finite next step remains the explicitly
+started capture owner, followed by work-surface controls; V6.7.3 and live/physical acceptance stay open.
+
+Validation: 1,416 workspace tests pass (16 documented ignores), 10 feature evals, renderer build,
+all 19 renderer/bridge checks, workspace Clippy with warnings denied, formatting and repository
+guards pass. Nine local recovery/assembly tests include arbitrary/boundary capture lengths,
+1 kHz waveform phase/level, unchanged source/text, non-finite input, invalid/oversized UTF-8 text,
+signed PCM16 saturation and recovery without decoding for key/budget/transport/timeout failures.
+Cancelled, revoked and consumed turns are refused. The final portable sample-count assertion was
+rerun with targeted tests and Clippy. The local task-actions script remains absent, not passed.
+Reviewed EN/PT source marks match. No renderer changed; the app stays closed and no physical
+microphone/model/provider or live conversation acceptance is claimed.
+
+
+**2026-10-20 V6.7.3 explicit native capture owner.** The Linux native entry now starts one
+recording under the existing desktop lease, using the shared microphone preference, installed local
+model and ordinary-capture question fence. Explicit Finish joins the microphone before local decode;
+Cancel or losing the controller revokes the whole session, including response/recovery after Finish.
+A 30-second cap discards unfinished input; the total capture/decode wait is 60 seconds. Delayed
+native workers retain the same lease until actual exit and suppress late output. Prepared turns use
+the existing current generation, local-command gate, provider admission and exact local-text recovery.
+No renderer entry, automatic capture, model download, barge-in or permission authority is added.
+
+Validation: 1,422 workspace tests pass (16 documented ignores), 10 feature evals, renderer build,
+all 19 renderer/bridge checks, workspace Clippy with warnings denied, formatting and repository
+guards pass. Native tests cover explicit finish, consumer/controller loss, sticky cancellation,
+late Finish after the cap, revoked keys, blocked worker abort/timeout and lease retention. The
+prepared-turn driver test covers upload of the original PCM, recovery and a local command that never
+constructs a provider. Tests use fake devices/decoders and synthetic PCM; no physical microphone,
+model, provider or user configuration is used. The local task-actions script remains absent, not
+passed. Next is the native bridge and listening/finish/cancel controls with reviewable recovery in
+the existing work surface. V6.7.3, live/physical acceptance and K8 completion remain open. The app
+stays closed.
+
+
+**2026-10-20 V6.7.3 Nest manual controls and recovery.** Dictation > Work > Voice conversation
+now owns one explicit Start/Finish/Cancel turn. Configuration remains in the privileged Settings
+webview; three Nest-only commands expose status and bounded heard/local reply or review text,
+never PCM, raw failures, keys or settings writes. A native identity rejects stale controls/results.
+The page sends 500 ms heartbeats; a three-second loss drops its sole capture controller. Departure,
+hidden/closed Nest, lock, shutdown and relevant key/settings changes cancel the same native owner.
+Existing teardown/settlement retains delayed native work; cancellation cannot undo a sent request.
+One acknowledged Start replaces the previous draft; recovered text stays editable, unsent and copied
+only on a click. Navigation preserves local reviewed edits. There is no shortcut, automatic Chat
+send, permission answer, continuous capture, automatic turn-end or duplex/barge-in in this entry.
+
+Validation: 1,424 workspace tests pass (16 documented ignores), 10 evals, build, all 19 renderer/bridge
+checks, workspace Clippy with warnings denied, formatting and repository guards pass. Native owner
+tests cover foreign surfaces, stale identities, departure and heartbeat expiry. Production renderer
+regressions cover duplicate Start, late acknowledgements/status, explicit Finish/Cancel, failed
+bootstrap/status, inert recovered text, editable/copy behavior and retained drafts. Isolated native
+Tauri/WebKit checks refuse actual island/Settings commands and disabled-consent Start before any
+microphone. Controlled owners exercise the production work page, recovery/copy and focus/caret;
+Black/Light at 1180 x 820 and 480 x 360 keep controls visible without horizontal overflow. The
+short window uses a separate named transcript/recovery scroller so actions cannot cover the editor;
+all four languages render. No microphone/model/provider, original keyring or agent config is used.
+The private profile and app/server are stopped and removed after QA. The local task-actions script
+remains absent, not passed. V6.7.3 still needs continuous-turn integration; next connect the existing
+native end-of-turn/duplex adapters, followed by V6.7.4 island feedback and physical/live acceptance.
+K8 and Codex consultation qualification remain open.
+
+
+**2026-10-20 long-meeting capture prioritized.** The maintainer rejected the one-minute recording
+check as insufficient for real meetings and authorized prioritizing longer capture. Manual Meetings
+now reports/adopts the shared four-hour native cap. Independent source packets are downmixed and
+statefully resampled before disk writes to mono 16 kHz PCM16, with saturating conversion and peak
+metadata matching stored samples. Both tracks together stay below 1 GiB at the cap; bounded queues
+and resampler windows do not retain the full recording in memory. The existing local decoder
+processes finalized tracks in at most 28-second chunks after Stop, with dictation priority.
+Cancellation, reviewed sources/model/language, the page lease and private-file cleanup are retained.
+There is no live transcription, audio archive or crash resume. Startup still deletes leftover audio.
+The 256 KiB summary input bound remains separate; saving/export still accepts longer transcripts.
+
+Hour-aware clocks cover recording/progress/segments. UI copy discloses four hours, temporary storage
+and the experimental 30-minute speaker limit. Unavailable identification now shows the promised
+plain transcript without misleading Unknown labels. In the minimum window, pre-transcript tabs yield
+space to the named source/consent scroller; completed transcripts retain their tabs and actions.
+
+Validation: 1,429 workspace tests pass (17 documented ignores), 10 evals, build, all 19 renderer/
+bridge checks, workspace Clippy with warnings denied, formatting and repository guards pass. Unit
+checks cover 75-second streamed PCM, exact clocks at 8/44.1/192 kHz, clipping, failed writes/cleanup,
+the four-hour owner beyond a minute and matching app limits. An explicit isolated native PipeWire/
+Pulse test recorded 65 seconds from synthetic sources only, finalized both mono PCM16 readers and
+removed both WAVs; 1,041,280/1,040,960 frames retained their independent source clocks. It used no
+physical microphone/output, model, provider or user configuration. Native Tauri/WebKit inspection
+uses controlled owners at 1180 x 820 and 480 x 360, Black/Light, ready/recording/transcribing states,
+source-consent focus, hour clocks/progress and all four languages. The minimum keeps at least
+48 pixels for source/consent review and actions outside it. Private app/audio/server processes and
+profiles/caches are removed afterward; the user's app remains closed. The local task-actions
+script remains absent, not passed. Four-hour physical soak, speech-quality acceptance, background/
+crash-resume UX and long-input hierarchical summaries are not claimed complete. V6.7 continuous-turn
+integration and K8 remain open after this user-prioritized meeting adjustment.
+
+
+**2026-10-20 long-meeting maintainer acceptance and manual voice continuation.** The maintainer
+accepted the delivered long-recording scope and authorized the next task. Four-hour physical soak,
+crash resume and speech-quality qualification remain separate; this is not K8 completion.
+
+V6.7.3 now retains the same provider driver and remote context between explicitly recorded turns.
+After heard playback drains or a local command completes, the Nest shows Microphone off and offers
+Record another turn or End conversation. The next click rearms only the sole live controller and
+uses the next native Listen generation. Idle does not open a microphone. Duplicate/stale requests,
+loss of page contact, departure, lock, changed settings/key and provider failure cannot start a
+following capture. Capture/transcription remains under the desktop lease while the provider driver
+continues polling; local routing and exact-text recovery use the existing path. The UI keeps only
+the most recent reply/recovery in memory. Automatic turn-end, duplex/barge-in, island feedback and
+physical/live K8 sign-off remain open. Codex consultation is unchanged and unavailable.
+
+Validation: 1,431 workspace tests pass (17 documented ignores), 10 evals, all 19 renderer/bridge
+checks, build, workspace Clippy with warnings denied, formatting and repository guards pass. A
+retained-driver regression uploads two native-assembled turns through one fake provider and admits
+no next capture during idle. Controls checks reject early/duplicate or disconnected continuation;
+controller cancellation stays irreversible. Renderer checks keep the same session ID, heard reply,
+heartbeat while waiting and explicit end. Native Tauri/WebKit checks use controlled owners at
+1180 x 820 and 480 x 360 in Black/Light and all four languages; actions stay visible and the named
+content scroller remains accessible. Actual commands reject a foreign webview and default-off
+consent before device/network access. No physical audio, model, provider, original keyring or agent
+config is used. The private app/server/profile/cache are removed afterward. The local AGENTS
+check-task-actions.mjs script remains absent, not passed. Live multi-turn speech/provider acceptance
+and automatic turn-end/duplex integration remain open.
+
+
+**2026-10-20 V6.7.3 opt-in local silence completion.** The Voice conversation page now offers
+Finish automatically after a pause. It starts off in each app run and is frozen for the live
+conversation; no saved consent, automatic microphone reopening or shortcut changes are added.
+The same native capture owner polls the retained local VAD and GPU preview against V6.2's existing
+1.6/2.6-second English/Portuguese policy. Fresh audio, confirmed speech and local partial words are
+required. Partial text stays native and bounded to one 4,096-character snapshot. Final decoding
+and provider upload still follow microphone closure. Missing/failed detector or preview falls back
+to manual Finish with an explicit status. Cancel, page ownership, settings/key revocation, the
+30-second discard cap and the desktop lease remain in force. Preview callbacks retain the lease
+until their actual worker exits. No semantic model is enabled or downloaded.
+
+The first capture now also follows an actual Listen generation from the retained turn machine;
+subsequent captures keep the same provider context and explicit next-turn click. Automatic
+completion marks the controller finished before waiting, so the next user click can rearm it.
+Semantic-model integration, explicit duplex/barge-in, island feedback and physical/live acceptance
+remain open; K8 is not complete. Codex consultation remains unavailable.
+
+Validation: 1,435 workspace tests pass (17 documented ignores), 10 evals, all 19 renderer/bridge
+checks, build, workspace Clippy with warnings denied, formatting and repository guards pass. The
+actual policy adapter covers quiet without speech, missing words, once-only completion, both
+language delays, partial growth and resumed speech. Capture-owner checks prove automatic completion
+closes before final decoding and never beats cancellation or expiry. A blocked-detector regression
+proves Finish/departure need not wait for inference, its late result is suppressed and its real
+worker retains the lease until exit. Detector inference runs outside the capture-stop worker;
+old audio windows behind a busy decoder cannot end newly captured speech. The retained-driver
+regression now captures both initial and following Listen generations with one fake provider.
+
+Native Tauri/WebKit inspection uses controlled owners, default-off/frozen selection, explicit
+following turns, the visible manual fallback, actual foreign-surface/default-off refusal, four
+languages and wide/minimum Black/Light layouts. Actions remain visible and the checkbox is reachable
+through the named content scroller. No physical audio, model, provider, original keyring or agent
+configuration is used. Private processes/profile/cache are removed after QA. The local AGENTS
+task-actions script remains absent, not passed. Physical PT/EN speech timing and live-provider
+quality remain unqualified; semantic/duplex integration and K8 sign-off stay open.
+
+
+**2026-10-20 V6.7.3 explicit response interruption.** Once native playback actually starts, the
+Nest replaces Finish recording with Stop response. The explicit click bypasses voice-detection
+locks without granting microphone authority or replay. It uses the retained driver's existing
+played-frame freeze, response cancellation, acknowledged truncation and heard-prefix/next-turn
+repair. The same provider/context survives; the page waits for interrupted heard text before
+allowing another explicit capture. Producer completion does not prevent stopping buffered audio.
+No audio route is opened or inferred. Automatic voice barge-in still requires the separate explicit
+headphones/AEC adapter; semantic integration, island feedback and physical/live K8 sign-off remain
+open. A response that finishes before the click is harmless; duplicate clicks cannot enqueue another
+stop or a recording. Cancel remains available before audio and while interruption settles.
+
+Validation: 1,436 workspace tests pass (17 documented ignores), 10 evals, all 19 renderer/bridge
+checks, build, workspace Clippy with warnings denied, formatting and repository guards pass. Pure
+turn checks cover explicit stop during the voice lock with barge-in disabled/headphones/AEC, no
+microphone replay, generation replacement and stale/duplicate or inaudible requests. The retained
+playback regression now also exercises the explicit stop before/after producer completion, exact
+played-frame freeze, held truncation acknowledgement, heard-only history and repair of only the
+next admitted turn. Each displayed audible reply gets an opaque binding checked by the native
+controller; a late request cannot target the next reply. Renderer checks cover the same session,
+matching reply binding, disabled duplicate stop, interrupted feedback and no new capture.
+
+Native Tauri/WebKit inspection uses controlled owners at wide/minimum sizes in Black/Light and
+four languages for speaking, interrupting and waiting. It retains visible named actions and an
+accessible content scroller, exercises explicit stop without a new session/microphone and rejects
+actual foreign-surface/default-off entry. No physical audio, model, provider, original keyring or
+agent configuration is used. Private processes/profile/cache are removed afterward. The local
+AGENTS task-actions script remains absent, not passed. Physical/live interruption quality and
+explicit duplex/voice barge-in integration remain open; K8 and Codex activation are unchanged.
+
+
+**2026-10-20 V6.7.3 native routed interruption detector.** The explicit routed service now consumes
+verified headphone/AEC packets through a bounded local detector. Model/VAD availability is checked
+before streams open. Only actual playback enables observation. Fresh three-second VAD snapshots
+feed the retained turn machine; its 500/1,000 ms locks and exact probe tokens remain authoritative.
+Local scratch transcription can confirm meaningful words within a shorter 1,400 ms worker budget;
+core still enforces its original 1,500 ms deadline. Probe text is not published, executed, uploaded
+or used to answer a card. Missing/failed/empty, expired, revoked or replaced evidence cannot confirm.
+
+An eight-second ring retains the onset/pre-roll. On confirmation, native Replay follows the new
+Listen and carries that exact generation. A native caller still owns complete-turn assembly and
+explicit commit; no new Turn is created by the detector. One off-loop worker, one admitted analysis
+and bounded channels keep playback/Stop/cancellation responsive. Actual inference/model destruction
+retains the desktop lease. Weak route checks do not keep native streams open during teardown.
+Original input closure still finishes the driver normally; closed analysis owners fail closed.
+
+The ordinary Nest UI remains manual with Stop response; no continuous capture, route selection,
+module setup or automatic follow-up is enabled there. Next is routed turn assembly and explicit
+route/consent UI. Semantic-model integration, physical/live qualification and V6.7.4 island feedback
+remain open; K8 and Codex activation are unchanged.
+
+Validation: 1,442 workspace tests pass (17 documented ignores), 10 evals, build, all 19 renderer/
+bridge checks, workspace Clippy with warnings denied, formatting and repository guards pass. Six
+new deterministic tests exercise the actual native adapter with controlled analyzers: bounded
+retention and playback-only admission; a short utterance ending during its pending probe; matching
+confirmation and new-generation replay; cancellation and real worker-held lease release; route/
+authority revocation, replaced generations and expired probes; empty words/decode failure; closed
+analysis/input owners; and the actual async pump's action-before-Replay ordering with no generated
+or uploaded Turn. The tests use the retained pure turn machine and real bounded worker/channel
+owners, without physical audio, model weights, providers, OS keyring or user configuration.
+
+No renderer changes or production activation are included, so no new GUI run is required. The app
+remains closed. Existing manual/Stop-response renderer checks pass unchanged. The local AGENTS
+task-actions script remains absent, not passed. Real PT/EN speech/double-talk, acoustic timing,
+routed turn assembly, selection/consent UI and live-provider acceptance remain open.

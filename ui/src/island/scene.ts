@@ -330,7 +330,7 @@ export class Scene {
   update(
     sessions: SessionView[],
     focus: SessionView | null,
-    talking: { clip: string; agent: SessionView["agent"]; alone?: boolean } | null = null,
+    talking: { clip: string; agent: SessionView["agent"]; alone?: boolean; immediate?: boolean } | null = null,
   ): void {
     const now = Clock.now();
     const { width, zeca, vults, skyTop, flights, reflow } = this.layout;
@@ -358,7 +358,7 @@ export class Scene {
         // Only the empty wire's Zeca does his own thing; in the chat he answers you.
         this.zeca.alone = !focus && !!talking?.alone;
         this.zeca.agent = who.agent;
-        this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now);
+        this.want(this.zeca, focus ? clipFor(focus) : talking!.clip, now, !focus && !!talking?.immediate);
         this.zeca.emote = focus ? emoteFor(focus) : talkingEmote(talking!.clip);
       }
     }
@@ -408,13 +408,18 @@ export class Scene {
     this.schedule(0);
   }
 
-  private want(f: Flock, clip: string, now: number): void {
+  private want(f: Flock, clip: string, now: number, immediate = false): void {
     if (clip === f.clip) return;
     const asleep = f.roosting;
     f.clip = clip;
     f.idleSince = clip === "idle" ? now : null;
     f.signatureAt = clip === "idle" ? now + SIGNATURE_FIRST_MS : undefined;
     f.roosting = false;
+    if (immediate) {
+      // Confirmed voice transitions must stop the old speaking pose, including when returning idle.
+      f.bird.perchNow(clip, now);
+      return;
+    }
     if (clip === "swallow" && f.set.clips.fed) {
       // The swallow, then the crop full and going down while he rests: Zeca has eaten the file.
       // Anything he does next (thinking, listening, another file) cuts the crop short.

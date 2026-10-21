@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 pub mod end;
+pub mod follow_up;
 pub mod heard;
 #[cfg(feature = "semantic-turn")]
 pub mod semantic;
@@ -46,6 +47,8 @@ pub enum Event {
     SpeechEnded,
     /// Discard speech/probes whose native route can no longer be verified.
     InputUnavailable,
+    /// A human explicitly stops audible output; this grants no capture authority.
+    InterruptRequested,
     InterruptConfirmed(Probe),
     InterruptRejected(Probe),
     ResponseFinished,
@@ -263,6 +266,20 @@ impl Turn {
             }
             Event::SpeechEnded => {
                 self.speech = false;
+            }
+            Event::InterruptRequested
+                if self.unlock.is_some()
+                    && matches!(
+                        self.phase,
+                        Phase::SpeakingLocked | Phase::Armed | Phase::InterruptPending | Phase::Draining
+                    ) =>
+            {
+                out.push(self.action(Effect::CancelResponse));
+                out.push(self.action(Effect::ClearPlayback));
+                out.push(self.action(Effect::ResetVad));
+                if let Some(listen) = self.listen(Duration::ZERO) {
+                    out.push(listen);
+                }
             }
             Event::InterruptRejected(probe)
                 if self.phase == Phase::InterruptPending && probe == self.probe =>

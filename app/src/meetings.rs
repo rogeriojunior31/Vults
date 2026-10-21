@@ -14,7 +14,10 @@ pub(crate) mod summary;
 #[cfg(target_os = "linux")]
 mod transcription;
 
-const SECONDS: u32 = 60;
+#[cfg(target_os = "linux")]
+const SECONDS: u32 = vults_audio::meeting::MAX_SECONDS;
+#[cfg(not(target_os = "linux"))]
+const SECONDS: u32 = 4 * 60 * 60;
 const LEASE: Duration = Duration::from_secs(2);
 const REVIEW: Duration = Duration::from_secs(60);
 

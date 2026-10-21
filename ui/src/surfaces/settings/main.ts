@@ -18,6 +18,7 @@ import { button, diff, disclosure, row, saveSetting, toggle } from "./pieces";
 import { policiesSection, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
 import { createMeetingAssets } from "./meeting-assets";
+import { createRealtimeSettings } from "./realtime";
 import { createMeetingSettings } from "./meeting-summary";
 import { createCleanupSettings } from "./dictation-styles";
 import { createQuestionAgents } from "./question-agents";
@@ -72,6 +73,7 @@ interface Panel {
 const dictation = dictationStatus(true);
 const meetingAssets = createMeetingAssets({ status: Bridge.meetingAssetsStatus, review: Bridge.meetingAssetsReview,
   begin: Bridge.meetingAssetsBegin, cancel: Bridge.meetingAssetsCancel });
+const realtimeSettings = createRealtimeSettings({ load: Bridge.voiceRealtimeSettings, save: Bridge.setVoiceRealtime }, () => choosePage("chat"));
 const meetingSettings = createMeetingSettings({ load: Bridge.appSettings, providers: Bridge.apiProviders, enable: Bridge.setMeetingSummary }, () => choosePage("chat"));
 const dictationDoctor = createDictationDoctor({ report: Bridge.dictationDoctor, start: Bridge.dictationMicStart,
   status: Bridge.dictationMicStatus, stop: Bridge.dictationMicStop });
@@ -1013,6 +1015,7 @@ async function refreshMicrophones(): Promise<void> {
 }
 
 function dictationPage(): HTMLElement[] {
+  if (dictationSection === "conversation") return [el("h1", { text: t("Talk with Zeca") }), realtimeSettings.element];
   if (dictationSection === "agents") return [el("h1", { text: t("Agents") }), questionAgents.element];
   if (dictationSection === "meetings") return [el("h1", { text: t("Meeting settings") }), meetingSettings.element, meetingAssets.element];
   if (dictationSection === "styles") return [el("h1", { text: t("Styles") }), cleanupSettings.element];
@@ -1893,8 +1896,10 @@ function render(): void {
   questionAgents.visible(page === "dictation" && dictationSection === "agents" && !document.hidden);
   questionAgents.relabel();
   meetingAssets.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
+  realtimeSettings.visible(page === "dictation" && dictationSection === "conversation" && !document.hidden);
   meetingSettings.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
   meetingSettings.relabel();
+  realtimeSettings.relabel();
   cleanupSettings.visible(page === "dictation" && dictationSection === "styles" && !document.hidden);
   cleanupSettings.relabel();
   meetingAssets.relabel();
@@ -2087,6 +2092,7 @@ Bridge.onSettings((s) => {
   if (s.questionAgents !== undefined) questionAgents.changed(s.questionAgents);
   cleanupSettings.update(s);
   meetingSettings.update(s);
+  if (s.voiceRealtime !== undefined) realtimeSettings.changed();
   if (s.dictationMusic !== undefined) { dictationMusic = s.dictationMusic; dictationMusicChanged = true; if (page === "dictation") render(); }
   if (s.dictationCancelByVoice !== undefined) { dictationCancelByVoice = s.dictationCancelByVoice; dictationCancelByVoiceChanged = true; if (page === "dictation") render(); }
   if (s.dictationSpokenCode !== undefined) { dictationSpokenCode = s.dictationSpokenCode; dictationSpokenCodeChanged = true; if (page === "dictation") render(); }
@@ -2173,10 +2179,11 @@ void getVersion()
 window.setInterval(() => {
   if (!document.hidden) void refreshConnectors();
 }, 15_000);
-window.addEventListener("pagehide", () => { questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
+window.addEventListener("pagehide", () => { realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
 document.addEventListener("visibilitychange", () => {
   questionAgents.visible(page === "dictation" && dictationSection === "agents" && !document.hidden);
   meetingAssets.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
+  realtimeSettings.visible(page === "dictation" && dictationSection === "conversation" && !document.hidden);
   meetingSettings.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
   cleanupSettings.visible(page === "dictation" && dictationSection === "styles" && !document.hidden);
   dictationDoctor.visible(page === "dictation" && dictationSection === "diagnostics" && !document.hidden);

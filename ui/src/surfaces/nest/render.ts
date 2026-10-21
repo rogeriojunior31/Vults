@@ -201,7 +201,7 @@ export function createNest(
           }
         : null,
   });
-  const dictationArea = createDictationArea(backend.dictation, section => backend.settings(section ?? "dictation"), () => open("dictation-statistics"));
+  const dictationArea = createDictationArea(backend.dictation, section => backend.settings(section ?? "dictation"), () => open("dictation-statistics"), () => { if (mounted) paintPortrait(); });
   // Activity's parts, each read again when its sub-tab opens.
   const parts: Record<Sub, { element: HTMLElement; refresh: () => void; flush?: () => Promise<void> }> = {
     week: createWeek(backend.week),
@@ -402,10 +402,16 @@ export function createNest(
   const portraitSpace = window.matchMedia("(min-height: 561px)");
   const portraitNarrow = window.matchMedia("(max-width: 600px)");
   function paintPortrait(): void {
-    portrait.setActive(zecaOn && tab === "chat" && !document.hidden && !last?.locked
-      && root.isConnected && portraitSpace.matches && !(portraitNarrow.matches && !memoryPane.hidden)
-      && (wide.matches || !chatPane.classList.contains("recent-open")));
-    portrait.update([], null, zecaOn ? { clip: chat.clip(Clock.now()), agent: chat.agent() } : null);
+    const voice = tab === "dictation" ? dictationArea.character() : null;
+    dictationArea.perch.hidden = !voice || !zecaOn;
+    const destination = voice?.element ?? portraitButton.querySelector(".perch")!;
+    // Only the visible conversation owns this canvas; voice feedback never opens another surface.
+    if (portrait.canvas.parentElement !== destination) destination.append(portrait.canvas);
+    portrait.setActive(zecaOn && !document.hidden && !last?.locked
+      && root.isConnected && portraitSpace.matches && (!!voice || tab === "chat"
+        && !(portraitNarrow.matches && !memoryPane.hidden)
+        && (wide.matches || !chatPane.classList.contains("recent-open"))));
+    portrait.update([], null, zecaOn ? { clip: voice?.clip ?? chat.clip(Clock.now()), agent: voice ? "other" : chat.agent(), immediate: !!voice } : null);
   }
   portraitSpace.addEventListener("change", paintPortrait);
   portraitNarrow.addEventListener("change", paintPortrait);
@@ -489,6 +495,7 @@ export function createNest(
     head.setZeca(on);
     foot.setZeca(on);
     flock.setZeca(on);
+    paintPortrait();
     relabel();
     if (!on && tab === "chat") show("flock");
   };
@@ -546,6 +553,7 @@ export function createNest(
   // Hidden (minimized, covered) or locked, nobody is looking: the habitat rests.
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) chat.cancelVoice();
+    dictationArea.visible(!document.hidden);
     flock.setActive(tab === "flock" && !document.hidden && !last?.locked);
     paintPortrait();
   });

@@ -2552,3 +2552,37 @@ button.touched-row:hover,
 }
 @media (max-height: 560px) { .meeting-save label > span { display: none; } .meeting-save { padding-block: 4px; } }
 @media (max-width: 600px) { .meeting-archive .meeting-segment { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+.voice-conversation { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding: 16px 20px; gap: 8px; }
+.voice-conversation[hidden] { display: none; }
+.voice-conversation-character { position: relative; display: block; flex: none; width: 76px; height: 72px; pointer-events: none; }
+.voice-conversation-character[hidden] { display: none; }
+.voice-conversation-character .scene { position: absolute; left: 0; top: 0; transform: scale(calc(2 / 3)); transform-origin: top left; }
+@media (max-height: 560px) { .voice-conversation-character { display: none; } }
+.voice-conversation > p { margin: 0; flex: none; font-size: var(--text-m); overflow-wrap: anywhere; }
+.voice-conversation-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+.voice-conversation-content { min-width: 0; min-height: 0; overflow-y: auto; }
+.voice-conversation-automatic { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-m); }
+.voice-conversation-automatic input { flex: none; }
+.voice-conversation-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-m); }
+.voice-conversation-review label { display: flex; flex-direction: column; gap: 8px; font-size: var(--text-m); }
+.voice-conversation-review textarea { box-sizing: border-box; width: 100%; min-height: 72px; resize: vertical; background: var(--float); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-control); padding: 8px; font: var(--text-m)/1.5 var(--font); }
+.voice-conversation-review button { margin-top: 8px; }
+@media (max-height: 440px), (max-width: 600px) {
+  .voice-conversation { padding: 8px 12px; gap: 6px; }
+  .voice-conversation .dictation-heading p { display: none; }
+}
+
+@media (max-height: 440px) {
+  .voice-conversation { gap: 4px; }
+  .voice-conversation-actions { gap: 6px; }
+  .meeting-check { padding: 6px 12px; }
+  .meeting-check .meeting-state { margin-block: 4px; }
+  .meeting-before-transcript > .meeting-tabs { display: none; }
+}
+.voice-route { margin: 12px 0; font-size: var(--text-m); min-width: 0; }
+.voice-route label:not(.voice-conversation-automatic) { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; min-width: 0; }
+.voice-route select { width: 100%; min-width: 0; max-width: 100%; min-height: 32px; background: var(--input); color: var(--fg); border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 6px; font: inherit; }
+.voice-route p, .voice-route span { overflow-wrap: anywhere; }
+.voice-route-devices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 12px; }
+.voice-conversation .voice-route [hidden], .voice-conversation-automatic[hidden] { display: none; }

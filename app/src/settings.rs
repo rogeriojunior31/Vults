@@ -1218,15 +1218,44 @@ fn save_consultation<R: tauri::Runtime>(
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceRealtimeSettings {
+    on: bool,
+    model: String,
+    // JSON numbers cannot represent every persisted microdollar limit exactly.
+    limit_microusd: String,
+}
+
+#[tauri::command]
+pub fn voice_realtime_settings<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::Webview<R>,
+) -> Result<VoiceRealtimeSettings, String> {
+    crate::settings_page(&window)?;
+    let state = app.state::<SettingsState>();
+    let saved = state.0.lock().map_err(|_| "settings are busy")?;
+    Ok(VoiceRealtimeSettings {
+        on: saved.voice_realtime.on,
+        model: saved.voice_realtime.model.clone(),
+        limit_microusd: saved.voice_realtime.limit_microusd.to_string(),
+    })
+}
+
 #[tauri::command]
 pub fn set_voice_realtime<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     window: tauri::Webview<R>,
     on: bool,
-    limit_microusd: u64,
+    limit_microusd: String,
     model: String,
 ) -> Result<(), String> {
     crate::settings_page(&window)?;
+    let limit_microusd = limit_microusd
+        .parse::<u64>()
+        .ok()
+        .filter(|value| value.to_string() == limit_microusd)
+        .ok_or("Invalid realtime voice budget or model.")?;
     if limit_microusd > i64::MAX as u64 || vults_chat::realtime::Plan::new(&model, 8192, 1024).is_err() {
         return Err("Invalid realtime voice budget or model.".into());
     }
@@ -1827,6 +1856,57 @@ mod tests {
 
     const RULE: &str =
         r#"{ "agent": "claude", "cwd": "/home/me/p", "tool": "Bash", "target": "Bash · cargo test" }"#;
+
+    #[cfg(not(windows))]
+    #[test]
+    fn voice_realtime_readback_is_exact_and_does_not_grant_or_expose_authority() {
+        let app = tauri::test::mock_app();
+        app.manage(SettingsState(Mutex::new(Settings::default())));
+        let window = tauri::WebviewWindowBuilder::new(&app, "settings", tauri::WebviewUrl::default())
+            .build()
+            .unwrap();
+        let read = || {
+            serde_json::to_value(
+                voice_realtime_settings(app.handle().clone(), window.as_ref().clone()).unwrap(),
+            )
+            .unwrap()
+        };
+        for amount in ["", "01", "+1", "-1", "1.0", "9223372036854775808"] {
+            assert!(
+                set_voice_realtime(
+                    app.handle().clone(),
+                    window.as_ref().clone(),
+                    true,
+                    amount.into(),
+                    "gpt-realtime-2.1-mini".into(),
+                )
+                .is_err()
+            );
+        }
+        assert_eq!(
+            read(),
+            serde_json::json!({"on":false,"model":"gpt-realtime-2.1-mini","limitMicrousd":"1000000"})
+        );
+        {
+            let state = app.state::<SettingsState>();
+            let mut saved = state.0.lock().unwrap();
+            saved.voice_realtime.on = true;
+            saved.voice_realtime.model = "gpt-realtime-2.1".into();
+            saved.voice_realtime.limit_microusd = i64::MAX as u64;
+            saved.voice_realtime.ledger = Some("private-budget-identity".into());
+        }
+        assert_eq!(
+            read(),
+            serde_json::json!({"on":true,"model":"gpt-realtime-2.1","limitMicrousd":"9223372036854775807"})
+        );
+        let state = app.state::<SettingsState>();
+        let saved = state.0.lock().unwrap();
+        assert_eq!(
+            saved.voice_realtime.ledger.as_deref(),
+            Some("private-budget-identity")
+        );
+        assert!(!saved.voice_codex_consultation && !saved.voice_consultation);
+    }
 
     #[test]
     fn external_question_access_defaults_off_and_survives_only_an_explicit_saved_boolean() {

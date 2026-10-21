@@ -9,6 +9,27 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
+export interface VoiceConversation {
+  id: string;
+  response: string | null;
+  capture: string | null;
+  routed: boolean;
+  semanticFallback: boolean;
+  followUp: boolean;
+  phase: "preparing" | "starting" | "recording" | "transcribing" | "responding" | "speaking" | "interrupting" | "waiting" | "finished" | "cancelled" | "failed" | "recovery";
+  reason: string | null;
+  draft: string | null;
+  reply: string | null;
+}
+export interface VoiceRouteSelection { token: string; mode: "headphones" | "echo"; source: string; sink: string; confirmed: boolean }
+export interface VoiceRoutes { token: string; sources: { name: string; label: string }[]; sinks: { name: string; label: string }[]; pairs: { source: string; sink: string }[] }
+export interface VoiceRealtimeSettings {
+  /** Saved opt-in, not a live-session or readiness indicator. */
+  on: boolean;
+  model: string;
+  /** Exact persisted microdollars, including values beyond JavaScript's safe integer range. */
+  limitMicrousd: string;
+}
 export type QuestionAction = "edit" | "send" | "cancel" | "stop-dictation" | "apply-dictation";
 export interface TextQuestionView {
   seq: number;
@@ -445,7 +466,7 @@ export type DictationOutputLanguage = "en" | "pt-BR" | "es" | "zh";
 
 export type DictationMusic = "lower" | "pause" | "leave";
 
-export type SettingsChange = { questionAgents?: boolean; theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
+export type SettingsChange = { questionAgents?: boolean; theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; voiceRealtime?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -525,6 +546,17 @@ export const Bridge = {
   },
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
+  /** Build capability only; this does not inspect model files or microphone readiness. */
+  voiceConversationOptions: () => invoke<{ semantic: boolean }>("voice_conversation_options"),
+  voiceConversationRoutes: () => invoke<VoiceRoutes>("voice_conversation_routes"),
+  voiceConversationStart: (autoFinish = false, route?: VoiceRouteSelection, semantic = false, followUp = false) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish, route, semantic, followUp }),
+  voiceConversationStatus: (id: string) => invoke<VoiceConversation>("voice_conversation_status", { id }),
+  voiceConversationControl: (id: string, action: "finish" | "cancel" | "next" | "interrupt", response?: string, capture?: string) => invoke<void>("voice_conversation_control", { id, action, response, capture }),
+  voiceRealtimeSettings: () => invoke<VoiceRealtimeSettings>("voice_realtime_settings"),
+  setVoiceRealtime: (on: boolean, limitMicrousd: string, model: string) =>
+    typeof limitMicrousd === "string" && /^(0|[1-9]\d{0,18})$/.test(limitMicrousd) && BigInt(limitMicrousd) <= 9223372036854775807n
+      ? invoke<void>("set_voice_realtime", { on, limitMicrousd, model })
+      : Promise.reject(new Error("Invalid realtime voice budget.")),
   appSettings: () =>
     invoke<{ questionAgents: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
@@ -668,9 +700,8 @@ export const Bridge = {
   /** Percent, 0 to 100. */
   setVolume: (percent: number) => invoke<void>("set_volume", { percent }),
   /** `open_nest` asked the open Nest for a tab. */
-  onNestTab(cb: (tab: string) => void): void {
-    void listen<string>("nest-tab", (e) => cb(e.payload));
-  },
+  onNestTab: (cb: (tab: string) => void) => listen<string>("nest-tab", (e) => cb(e.payload)),
+  nestTabReady: () => invoke<string | null>("nest_tab_ready"),
   /** A setting changed somewhere; only the fields that changed are present. */
   onSettings(cb: (s: SettingsChange) => void): void {
     void listen<SettingsChange>("settings", (e) => cb(e.payload));
