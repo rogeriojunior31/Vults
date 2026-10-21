@@ -361,6 +361,7 @@ export type AgentRow = {
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 /** A saved conversation, opened: what the chat goes on with. */
 export type OpenedConversation = {
+  generation?: number;
   /** A turn runs: what Zeca said so far, and the cards it waits on. */
   busy: boolean;
   partial: string;
@@ -379,7 +380,7 @@ export type OpenedConversation = {
 
 /** What one of the chat's windows did, for the other to show too; each skips its own (`from`). */
 export type ChatMention = { token: string; target: { kind: "session"; agent: string; id: string } | { kind: "project"; cwd: string } };
-export type ChatDraft = { text: string; files: string[]; folder: string | null; provider: ChatProvider | null; mentions?: ChatMention[] };
+export type ChatDraft = { generation?: number; text: string; files: string[]; folder: string | null; provider: ChatProvider | null; mentions?: ChatMention[] };
 export type ConnectionsPlace = {
   chosen: string | null;
   picked: string | null;
@@ -388,9 +389,9 @@ export type ConnectionsPlace = {
   detailOpen: boolean;
 };
 export type ChatSync =
-  | { kind: "draft"; from: string; draft: ChatDraft }
+  | { kind: "draft"; from: string; draft: ChatDraft; generation?: number }
   | { kind: "sent"; from: string; text: string; files: string[]; provider: ChatProvider; folder: string | null; model: string | null; effort: string | null; mentions?: ChatMention[] }
-  | { kind: "reset"; from: string; provider: ChatProvider }
+  | { kind: "reset"; from: string; provider: ChatProvider; generation?: number; draft?: ChatDraft | null }
   | { kind: "opened"; from: string; conversation: OpenedConversation }
   | { kind: "answered"; from: string; id: string; answer: ChatAnswer };
 
@@ -474,7 +475,24 @@ export type Place = { presence: Presence; dock: "top" | "bottom" };
 /** The screen corner of the corner widget. */
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
+export type AgentProfileEdit =
+  | { action: "copy"; preset: string; title: string; instructions: string; species: string; look: string }
+  | { action: "update"; id: number; revision: number; title: string; instructions: string; species: string; look: string };
+
+export interface AgentProfile {
+  built_in: boolean;
+  id: string;
+  revision: number;
+  title: string;
+  about: string;
+  species: string;
+  look: string;
+  instructions: string;
+}
+
 export const Bridge = {
+  agentProfiles: () => invoke<AgentProfile[]>("agent_profiles"),
+  agentProfileSave: (edit: AgentProfileEdit) => invoke<AgentProfile>("agent_profile_save", { edit }),
   onView(cb: (v: ViewModel) => void): void {
     void listen<ViewModel>("view", (e) => cb(e.payload));
     void invoke<ViewModel | null>("current_view").then((v) => v && cb(v));
@@ -669,7 +687,7 @@ export const Bridge = {
   voiceLanguageSet: (language: string | null) => invoke<void>("voice_language_set", { language }),
   voiceOff: () => invoke<void>("voice_off"),
   /** `tap`: a click started it, so `onVoiceSilence` says when the user stopped talking. */
-  voiceStart: (tap: boolean) => invoke<void>("voice_start", { tap }),
+  voiceStart: (tap: boolean, generation?: number) => invoke<void>("voice_start", { tap, generation }),
   voiceStop: () => invoke<string>("voice_stop"),
   voiceCancel: () => invoke<void>("voice_cancel"),
   /** The last usage read, for an island that loads after it. */
@@ -717,13 +735,14 @@ export const Bridge = {
   apiModelSet: (provider: string, model: string) => invoke<void>("api_model_set", { provider, model }),
   /** The chat's paperclip: the system's file chooser; picked files arrive as `files`, like a drop. */
   chatPickFiles: (title: string) => void invoke<void>("chat_pick_files", { title }),
-  chatSend: (text: string, files: string[], folder: string | null, mentions: ChatMention[] = []) => invoke<void>("chat_send", { text, files, folder, mentions }),
+  chatSend: (text: string, files: string[], folder: string | null, mentions: ChatMention[] = [], generation?: number) => invoke<void>("chat_send", { text, files, folder, mentions, generation }),
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
-  chatReset: (provider: ChatProvider | null) => invoke<ChatProvider>("chat_reset", { provider }),
+  chatReset: (provider: ChatProvider | null) => invoke<{ provider: ChatProvider; generation: number }>("chat_reset", { provider }),
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
   chatDraft: () => invoke<ChatDraft>("chat_draft"),
-  chatDraftSet: (draft: ChatDraft) => invoke<void>("chat_draft_set", { draft }),
+  chatPrepareZeca: (generation?: number) => invoke<void>("chat_prepare_zeca", { generation }),
+  chatDraftSet: (draft: ChatDraft, generation?: number) => invoke<void>("chat_draft_set", { draft, generation }),
   connectionsPlace: () => invoke<ConnectionsPlace | null>("nest_connections_place"),
   connectionsPlaceSet: (place: ConnectionsPlace) => invoke<void>("nest_connections_place_set", { place }),
   nestTabSet: (tab: string) => invoke<void>("nest_tab_set", { tab }),
@@ -772,8 +791,8 @@ export const Bridge = {
   roostSharePreview: (key: string) => invoke<SharePreview>("roost_share_preview", { key }),
   roostShareApply: (key: string, file: string, fingerprint: string) =>
     invoke<void>("roost_share_apply", { key, file, fingerprint }),
-  continueCommand: (text: string, folder: string | null) =>
-    invoke<{ said: string; detail: string | null } | null>("continue_command", { text, folder }),
+  continueCommand: (text: string, folder: string | null, generation?: number) =>
+    invoke<{ said: string; detail: string | null } | null>("continue_command", { text, folder, generation }),
   nestHistory: () => invoke<HistoryView>("nest_history"),
   nestAudit: () => invoke<AuditRow[]>("nest_audit"),
   nestTraces: () => invoke<TraceRow[]>("nest_traces"),
@@ -783,8 +802,8 @@ export const Bridge = {
   onSpend(cb: () => void): void {
     void listen("spend-changed", () => cb());
   },
-  memoryCommand: (text: string, folder: string | null) =>
-    invoke<{ said: string; detail: string | null } | null>("memory_command", { text, folder }),
+  memoryCommand: (text: string, folder: string | null, generation?: number) =>
+    invoke<{ said: string; detail: string | null } | null>("memory_command", { text, folder, generation }),
   memoryView: () => invoke<MemoryView>("memory_view"),
   memoryDecide: (id: number, accept: boolean) => invoke<void>("memory_decide", { id, accept }),
   memoryUndo: (id: string) => invoke<void>("memory_undo", { id }),

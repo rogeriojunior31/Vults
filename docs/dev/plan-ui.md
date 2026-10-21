@@ -59,8 +59,9 @@ for the user's PR validation before UX7 starts.
 | UX4 | Larger drafts, editable empty-state suggestions, selected-session summary and metrics before explanation | Accepted by the user on 2026-10-14 |
 | UX5 | Task status/next step, connection detail/return, searchable grouped History/Audit, concise Presence, memory/web disclosures and phone prerequisites | Accepted by the user on 2026-10-14 |
 | UX6 | Shared state and integrated handoff checks; delayed shortcuts and saved native return fixed | Final desktop matrix and user PR acceptance |
-| UX7 | Not started | Paired Mini/Quick widths and native geometry contract |
-| UX8-UX10 | Not started | Agents workspace, Studio, scoped investigations |
+| UX7 | Paired widths/proportions, bounded session overflow and keyboard continuity implemented | Native compositor/desktop acceptance deferred |
+| UX8 | Native catalog/editor/appearance, retained revisions and conversation snapshots; isolated Claude runtime groundwork; source-bound Chat, local commands, voice and Ask Zeca guards | Pinned skills, specialist Chat entry/availability contract, Quick summary and execution projection |
+| UX9-UX10 | Not started | Studio and scoped investigations |
 | UX11-UX12 | Feature owners remain authoritative | Companion refinements, agent availability and Android flows |
 
 Deliver the small fixes to existing features in UX1-UX5. UX6-UX7 change surface
@@ -76,7 +77,7 @@ with their owning K/M/W/L/G steps, rather than as an unrelated redesign.
 | 5 | UX5 Existing detail and settings polish | P2 / small slices | UX1, UX2 | Better task actions, records, connection detail and setup guidance |
 | 6 | UX6 Cross-surface continuity | P1 / medium | UX2 | Selection and drafts survive the real island/Nest handoff |
 | 7 | UX7 Paired Mini/Quick extension | P2 / large | UX6; ADR 0021 reconciliation | Shared horizontal extension validated on Linux |
-| 9 | UX8 Native Agents workspace | New / large, staged | UX6; ADR 0018/0021 reconciliation | Profiles and specialist context attached to existing task/chat/run owners |
+| 9 | UX8 Native Agents workspace | New / large, staged | UX6; ADR 0018/0021 reconciliation | Profiles and specialist context attached to existing session/conversation owners |
 | 10 | UX9 Studio skills and connections | New / large, staged | UX8; configuration and storage contracts | Selective imports and verified connections with retained revisions |
 | 11 | UX10 Investigation workflows | New / large, later | UX8; target/evidence contracts; UX9 where tools are needed | A small verified workflow before engine expansion |
 | With owner | UX11 Companion refinements | Feature-coupled | K1-K8/K10, M7, W2/W9b as below | Each UI slice ships with its real source of state |
@@ -435,17 +436,76 @@ renderer-only results cannot close this task. **Reference:** B05, R04, C01/C06.
 
 ## UX7 - shared extension, native feature work
 
+**2026-10-21 UX7.1 shared width implementation:** at the maintainer's request, proceed with
+implementation while manual voice/desktop acceptance stays deferred. Quick's General page now
+saves one presentation-only width (Default/560/680/760) for Mini and all Quick tabs. It restores
+before first rendering, preserves the saved choice on smaller screens and reports storage failure
+without applying an unsaved choice. The mapped overlay reserves 880 x 640 at startup; no width
+change resizes/hides it. Existing synchronous geometry, dock anchoring and Scene resettling remain
+the owners. Room/Full, default dimensions, Mini height, cards and capture authority stay unchanged.
+The 56 px Mini/600 px Quick heights remain prototype references for a later refinement, not a
+claim of this slice. Native compositor and overflow acceptance remain open; no user sign-off is
+inferred. See ADR 0021's dated amendment.
+
+**2026-10-21 UX7.2 paired proportions:** selected widths now use Mini's 56 logical-pixel
+height and Quick's 600 logical-pixel total-height cap, including inline dictation feedback.
+The original dimensions remain the Default. Both sizes account for available screen height;
+Mini's existing 38 px canvas and its badges move together without changing sprite scale, owners
+or clip phase. Quick keeps content-driven height and existing scrolling/action priorities.
+Build/typecheck and focused geometry/continuity checks are engineering checks only; the maintainer
+requested no new manual validation in this step. Real desktop acceptance stays deferred.
+
+**2026-10-21 UX7.3 session overflow:** Mini now reserves a separate 32 px list action when
+sessions exceed its available perches. Capacity depends on width and reserves the action before
+placing birds; narrow views reduce the visible count instead of overlapping targets. Keep the
+existing eight-other-bird maximum. The icon's localized accessible name/tooltip states the hidden
+count and its warning color reflects hidden attention. Mouse and native button keyboard activation
+use the same saved transition to Room/Flock as Quick's existing +N. The stable button remains a
+sibling of Mini's role=button, not an interactive descendant. Remove it for Quick, hidden/locked
+views and absent navigation; a disappearing overflow returns keyboard focus to Mini when it stays
+visible. No decision, microphone or separate interaction owner is introduced. Native desktop
+acceptance remains deferred at the maintainer's request.
+
+**2026-10-21 UX7.4 keyboard continuity:** repair the shared inline Quick picker instead of
+adding a second width control. Stable groups and expanded/control relationships describe the
+selector; arrows/Home/End move focus without changing a value, explicit activation selects, Escape
+closes the list before the global fold handler, Tab/blur leave without trapping focus and IME
+composition is ignored. Selection returns focus before calling its owner; Quick redraw restores
+the same picker trigger and scroll position. Failed width saves announce the retained choice.
+The production-renderer regression exercises these key paths with no desktop, provider or
+settings writes. This closes the planned UX7 implementation slices; the compositor/desktop matrix
+below stays deferred, without an acceptance or release-completion claim.
+
+**2026-10-21 maintainer feedback:** the 56 px resting bar was too tall over application tabs.
+Restore Mini's original 38 px height for every chosen width, with no extra canvas/badge inset.
+At the maintainer's explicit request, General > Appearance exposes the same width control as
+Quick > General. Both use the same presentation-storage key and shared change/refocus refresh;
+failed writes retain the saved width. This supersedes the Mini height in UX7.2; Quick's selected
+600 px cap remains. The app stays open with the personal profile for ongoing validation.
+
+**2026-10-21 native wire correction before UX8:** the maintainer noticed Quick's wire stayed
+narrow after increasing width. The live personal-profile app reproduced a 471 px habitat with
+an approximately 420 px canvas. Measure the mounted overview instead of reusing HABITAT_W;
+resize/reposition the existing Scene, labels, badges and overflow column together. A guarded
+ResizeObserver also catches content-width changes caused by scrollbars without using rAF. Account for
+the original integer sprite size before applying zoom to perch positions, and partition hit
+columns using shared rounded boundaries. A native WebKit matrix at Default/560/680/760 passed
+canvas-to-host alignment, bounded label targets and 38 px Mini height; screenshots were inspected.
+Mini's visible 560 px wire also matched its canvas and 38 px frame. Restore the maintainer's
+560 px preference after the matrix. This does not claim the complete deferred compositor matrix
+or start UX8 implementation.
+
 A bounded Chat-only refinement was implemented on 2026-10-15 at the user's request
 ([delivery record](#quick-chat-proportions---2026-10-15)). ADR 0021 now describes its
 width and zoom within the current fixed overlay. This does not implement the
 paired Mini/Quick width selector or close the desktop acceptance below.
 
-- [ ] Reconcile the requested wider Mini/Quick with ADR 0021's fixed overlay and
+- [x] Reconcile the requested wider Mini/Quick with ADR 0021's fixed overlay and
   four-size contract before landing runtime changes. Keep Room and Full behavior.
-- [ ] Implement paired width selection and restoration, with display scaling,
+- [x] Implement paired width selection and restoration, with display scaling,
   screen bounds, zoom, anchoring and input region measured together.
-- [ ] Use 560/680/760 px with Mini 56 and Quick 600 as initial prototype references;
-  validate minimum usable sizes and overflow behavior for more sessions.
+- [x] Implement 560/680/760 px with Mini 38 and Quick 600, viewport bounds and a keyboard-accessible
+  session overflow path. Physical minimum-size usability remains in the deferred desktop pass.
 - [ ] Verify KWin/Wayland placement, hover/folding, card arrival, click-through
   outside the island and the one-visible-surface behavior on a real desktop.
 
@@ -455,14 +515,67 @@ cards remain reachable and extra sessions have an accessible overflow path.
 
 ## UX8 - Agents workspace, a new feature in stages
 
-1. **Shell and ownership:** main entry Profiles/Tasks/Studio; reconcile ADRs 0018
-   and 0021; retain all native TaskRow actions, storage and task/run relationships.
-   Add the Quick summary as a new supported view, with explicit Nest detail.
+**Resume checkpoint after the UX7/UX8 groundwork PR:** all work listed in the delivery table is
+included in this branch. Profiles can be read, copied and edited locally; their Chat action is
+still gated. Continue with pinned skill selection/content in immutable revisions and conversation
+snapshots, then the explicit recipient/executor/source UI and the specialist availability contract
+with Zeca off. Release the specialist entry only after those owners agree. Quick summaries and
+execution projection follow. Native evidence is retained locally; automated checks do not replace
+unperformed maintainer or external-provider acceptance. Keep N3/K8 and the N4 release gates open.
+
+**2026-10-21 UX8 Ask Zeca routes:** Flock session questions, Connections questions, palette prompts
+and Quick's empty-flock Ask Zeca use one ChatPanel preparation path. It restores and flushes the
+existing draft, checks the native recipient/generation and appends to the latest text only while
+the source is unchanged. Native preparation is read-only, requires a Chat surface and Zeca on,
+and rejects specialist ownership. It does not reset a recipient, send a turn or answer a card.
+Preparation remains available beside an active companion reply. Failure is a local note rather
+than a terminal stream error, preserving the live reply and its approvals. Rejected or obsolete
+questions never replace current text/files/source; native source-bound draft saves remain the
+last guard. Profile Chat stays gated for the remaining skills and availability contract.
+Seventeen native Chat tests, production Chat/continuity renderer checks, app Clippy and UI/native
+builds pass. The integrated Nest check clicks the real selected-session action at each supported
+fixture width; native personal checks exercised Flock Ask Zeca and Quick palette preparation,
+rejected an obsolete generation and restored the original draft without a model turn.
+
+**2026-10-21 UX8 companion commands and voice ownership:** local memory and continuation commands
+carry the composer's source generation and retain a native recipient lock through their action.
+Specialist metadata/runtime, obsolete sources, busy Chat and changed started folders reject before
+memory or continuation work. Rejected commands preserve editable text; late results/errors do not
+enter another conversation, and successful commands keep newer typing. Chat microphone start, preview/level/silence events and
+transcription completion check the companion recipient/generation. Reset/open/current-delete cancel
+the native recorder, both renderers cancel their recording run, and an obsolete transcript cannot
+enter the new composer. Voice-command handoff captures generation before asynchronous dispatch;
+an identical empty draft after reset is still a different source. Profile Chat remains gated for
+Ask Zeca transitions, skills and Zeca-off availability; this slice makes no provider request.
+Nineteen targeted native Chat/Voice tests, renderer continuity/Chat checks, Clippy, builds and
+repository checks pass. Personal native checks reject stale commands and microphone admission
+before side effects; empty command usage renders in Portuguese in Nest and Quick, with the draft
+restored afterward. No audio capture, memory fact write or model request was used for this pass.
+
+**2026-10-21 UX8 conversation-bound composer:** native source generations distinguish resets,
+opens and separate empty conversations. First-turn persistence keeps the same generation. Chat
+draft snapshots and reset replies carry the source identity; mismatched startup snapshots retry.
+Both renderers capture the identity and folder before awaiting draft saves. Native turn preflight refuses obsolete sends before recall, while
+draft writes check identity under the draft lock. A local switch cancels a queued send and obsolete
+failures cannot overwrite the new composer or transcript. The existing header names Zeca separately
+from the executor without adding a row. Switching Zeca off resets the source and preserves the
+unsent draft; obsolete cross-surface draft events are ignored. Profile Chat remains gated pending
+slash-command, voice, Ask Zeca, skills and availability ownership. Targeted native and renderer fixtures cover first save,
+empty reset, open, late save and late failure without provider requests. Native personal-profile
+checks rejected obsolete send/save requests without changing the draft. Nest at 1180 x 820 and
+480 x 360 and Quick kept the recipient visible without an added header row or horizontal overflow.
+Sixteen native Chat tests, both renderer checks, UI/native builds, Clippy and repository checks passed.
+
+1. **UX8.1 catalog and ownership:** read-only Agent profiles inside Flock, with an inert native
+   built-in catalog, explicit revisions and the bounded saved route `flock-profiles`. Keep five
+   main tabs, session-state retention, Zeca-off availability and visible card attention. ADRs
+   0018/0021 record the boundary. Tasks and task/run relationships remain removed under ADR 0031.
+   The Quick summary remains a later slice.
 2. **Profiles:** immutable Vults presets, user copies, role/species/accessory,
    instructions and selected skills. Specify persistence and pinned revision;
    role/appearance does not create a permission profile.
 3. **Specialist Chat:** explicit recipient/executor/source, retained conversation
-   and task context, and pinned profile/skill revision. Keep Zeca's private memory
+   and project/conversation context, and pinned profile/skill revision. Keep Zeca's private memory
    private. Resolve specialist availability with Zeca off as part of the contract.
 4. **Flock projection:** working Vults-owned runs use the existing session pipeline
    and their configured identity; watched sessions keep their actual capabilities.
@@ -473,6 +586,90 @@ commands, failure/reset fixtures and a real desktop pass. The standalone browser
 prototype's arrays and synthetic run transitions are reference data, not a migration.
 **Reference:** C04-C06/C08-C10, D03-D05, R04;
 original Studio specification (a local prototype reference, not shipped in this repository).
+
+**2026-10-21 UX8.1 implementation:** the Connect catalog provides Developer, Reviewer and
+Researcher presets with stable ids, revision 1, species and English instructions. A Nest-only read
+command returns those immutable descriptions. UI translations include the native marked text in
+the existing catalog audit. Flock opens the read-only profile list and instruction detail; selected
+profile survives local redraw, stale reads are ignored and failure has an explicit retry. Reading
+starts no process, network request, config write or memory read. Custom profile persistence,
+copy/edit, Chat binding, Quick summaries and execution projection remain later UX8 slices.
+Native checks at 1180 x 820 and 480 x 360 verified exclusive screen ownership, translated cards,
+selection and the return focus. Island and Settings cannot call the Nest-only catalog endpoint.
+
+**2026-10-21 UX8 profile copies:** Nest-owned copy/edit commands save literal user names and
+instructions in migration 29. Presets stay immutable; each copy retains its preset revision,
+appearance and description, while each edit appends a revision under an expected-revision check.
+History erasure preserves these preferences. Errors retain the in-window draft; saving starts no
+agent and does not alter access. Native copy/edit/reload, rejected stale writes and Island write
+rejection passed in an isolated profile. Wide and 480 x 360 editor checks kept Save/Cancel reachable,
+including scrolled instructions. The personal profile was reopened without test copies.
+Appearance/skills editing and Chat binding remain subsequent slices.
+
+**2026-10-21 UX8 profile appearance:** custom profiles select from the existing 23 species and
+fixed accessory catalog. The editor changes only its preview while drafting; the saved card uses
+the same dressed sprite after saving. Migration 30 adds `none` to earlier revisions and retains
+species, text and provenance. Native validation rejects unknown ids and calendar-dependent `auto`.
+New revisions keep their own species/accessory; no earlier revision, Zeca setting or watched session
+changes. The renderer check covers every species/accessory combination without clipping. Native
+copy/edit/reload at 1180 x 820 and 480 x 360, scrolled controls, invalid appearance, stale saves and
+Island write rejection passed in an isolated profile. The personal profile was restored without
+test copies. Skills and Chat binding remain separate subsequent slices.
+
+**2026-10-21 UX8 conversation binding storage:** migration 31 adds an optional typed profile
+snapshot to each conversation. It records preset/custom identity and revision plus the literal
+name, instructions, description, species and fixed accessory. Custom snapshots must match the
+retained revision exactly; missing or altered references fail before creating a record. Later
+profile edits do not change existing conversations, and the snapshot cannot be rewritten even
+before a first reply. Conversation rename/resume preserve it; deletion/history erasure remove it
+with the conversation while preserving user profiles. Legacy conversations retain their original
+context and have no profile snapshot.
+
+This storage slice deliberately enables no recipient selector or Chat action. Profile-bound
+records reject Zeca's frozen context. The current Zeca list/open/render paths exclude or refuse
+them rather than resuming them under his persona, MCP tools or private memory. A corrupt snapshot
+fails reading rather than falling back to Zeca. Runtime persona/tool isolation, explicit executor
+and project context, pinned skills and the Zeca-off capability decision remain required before
+specialist Chat becomes available. Store tests cover exact retained revisions, forged/missing
+references, direct snapshot rewrite rejection, history deletion and migration from schema 30.
+A native isolated fixture confirmed that only the regular conversation is listed/opened, a bound
+conversation is rejected without replacing it, and no model request is made.
+
+**2026-10-21 UX8 specialist runtime primitive:** the Chat crate adds a distinct specialist role
+and a Claude Code constructor. Its immutable brief replaces the companion persona; resume forces
+isolated settings and strips MCP, extra directories and API history. Companion frozen context,
+API tools and user/project settings cannot be attached later. Driver factories reject unsupported
+providers, ACP and unsanitized specialist specs. Turn preflight rejects companion context before
+starting a driver or reaching an API key/network path. The existing CLI stdio approval flow and
+conversation rules stay authoritative.
+
+This is not the native specialist Chat feature yet. The app's profile-record guards remain closed.
+Native routing still needs an explicit recipient/executor/source, exact snapshot/session pairing,
+and separation of recall prefetch, volatile context, journaling, memory proposals and MCP scope.
+Draft/reset/open/voice/Ask Zeca transitions must preserve the intended recipient before a profile
+Chat action is exposed. The Zeca-off capability decision, skills and flock projection remain open.
+Local checks cover exact brief/CLI flags, rejected configuration and tool injection, sanitized
+resume and preflight rejection without driver creation. The Chat suite includes fake CLI
+interrupt/resume fixtures; real external-provider qualification remains unperformed.
+
+**2026-10-21 UX8 native recipient and memory separation:** ChatState retains the exact recipient
+snapshot alongside its locked runtime. Native restoration selects the isolated Claude constructor
+for bound records, preserves their saved pick/session and validates full identity, source and brief.
+Turn preflight reads the persisted record before recall and refuses missing/mismatched metadata;
+specialist voice commands, flock mentions and source overrides are not yet supported. The first-turn
+record builder carries the pinned snapshot instead of dropping it. Specialist turns skip companion
+recall, volatile context, MCP scope, native-setting initialization, journal writes and Memory refresh.
+Reset/open/stop/delete update recipient metadata with the runtime. The memory-extraction reader
+rejects specialist records before reading their messages.
+
+The current list/open/render guards still block user-facing specialist Chat. Exposing the profile
+CTA requires recipient/executor/source UI, slash-command ownership, voice/Ask Zeca transitions and
+cross-surface draft continuity. UI-origin sends must carry an expected conversation/recipient identity
+to reject a stale draft after a switch. No new model request, profile action or Zeca-off capability is enabled
+by this native separation slice. Targeted checks passed for native restore/turn identity, source,
+revision, appearance, model/effort/session mismatches, missing history and memory-extraction
+exclusion. Existing companion Chat and runtime isolation checks remain passing. No live provider
+request or renderer change was made in this step.
 
 ## UX9 - Studio library and tool connections, later
 

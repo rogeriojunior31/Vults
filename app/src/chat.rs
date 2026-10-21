@@ -12,6 +12,7 @@ use vults_chat::providers::{self, Provider as ApiProvider};
 use vults_chat::{Approver, Chat, Delta, Provider, Turn};
 use vults_secrets as secrets;
 use vults_store::conversations::{self, ConversationId};
+use vults_store::profiles::Snapshot;
 
 use crate::settings::{self, SettingsState};
 use crate::{ISLAND, paths};
@@ -31,6 +32,9 @@ pub struct ChatState {
     stop: std::sync::Mutex<Option<oneshot::Sender<()>>>,
     /// The saved conversation the chat is in; none until its first message.
     current: std::sync::Mutex<Option<ConversationId>>,
+    generation: std::sync::atomic::AtomicU32,
+    /// Pinned recipient, changed under the conversation lock alongside the runtime.
+    profile: std::sync::Mutex<Option<Snapshot>>,
     /// What a window opening now must show, read without waiting on a turn (which holds `chat`).
     live: std::sync::Mutex<Live>,
     /// Unsent composer state, shared by the island and disposable Nest, never saved to disk.
@@ -66,8 +70,19 @@ impl Draft {
 }
 
 #[tauri::command]
-pub fn chat_draft(state: tauri::State<'_, ChatState>) -> Result<Draft, String> {
-    state.draft.lock().map(|d| d.clone()).map_err(|e| e.to_string())
+pub fn chat_draft(state: tauri::State<'_, ChatState>) -> Result<DraftView, String> {
+    let draft = state.draft.lock().map_err(|e| e.to_string())?;
+    Ok(DraftView {
+        draft: draft.clone(),
+        generation: state.generation(),
+    })
+}
+
+#[derive(serde::Serialize)]
+pub struct DraftView {
+    #[serde(flatten)]
+    draft: Draft,
+    generation: u32,
 }
 
 #[tauri::command]
@@ -75,20 +90,43 @@ pub fn chat_draft_set(
     window: tauri::Webview,
     state: tauri::State<'_, ChatState>,
     draft: Draft,
+    generation: u32,
 ) -> Result<(), String> {
     if !crate::runtime::card_host(&window) {
         return Err("Chat draft belongs to the island or Nest.".into());
     }
     draft.validate()?;
-    *state.draft.lock().map_err(|e| e.to_string())? = draft.clone();
+    {
+        let mut saved = state.draft.lock().map_err(|e| e.to_string())?;
+        state.check_generation(generation)?;
+        *saved = draft.clone();
+    }
     sync(
         window.app_handle(),
         Sync::Draft {
+            generation,
             from: window.label().into(),
             draft,
         },
     );
     Ok(())
+}
+
+/// Preparing a question never resets a conversation or grants permission to send it.
+#[tauri::command]
+pub fn chat_prepare_zeca(
+    app: AppHandle,
+    window: tauri::Webview,
+    state: tauri::State<'_, ChatState>,
+    generation: u32,
+) -> Result<(), String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat draft belongs to the island or Nest.".into());
+    }
+    if !crate::settings::zeca(&app) {
+        return Err("Zeca is off (Settings → Flock & Zeca).".into());
+    }
+    state.check_companion(generation)
 }
 
 /// The chat as it is this moment.
@@ -294,6 +332,8 @@ impl ChatState {
             waiting: Arc::default(),
             stop: std::sync::Mutex::new(None),
             current: std::sync::Mutex::new(None),
+            generation: std::sync::atomic::AtomicU32::new(1),
+            profile: Default::default(),
             live: Default::default(),
             draft: Default::default(),
         }
@@ -309,7 +349,64 @@ impl ChatState {
         self.current.lock().ok().and_then(|c| *c)
     }
 
+    fn profile(&self) -> Result<Option<Snapshot>, String> {
+        self.profile
+            .lock()
+            .map(|p| p.clone())
+            .map_err(|_| "The conversation recipient is unavailable.".into())
+    }
+
+    fn set_profile(&self, profile: Option<Snapshot>) {
+        if let Ok(mut current) = self.profile.lock() {
+            *current = profile;
+        }
+    }
+
+    fn generation(&self) -> u32 {
+        self.generation.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn check_generation(&self, expected: u32) -> Result<(), String> {
+        if self.generation() != expected {
+            return Err("The conversation changed before sending. Review your draft and try again.".into());
+        }
+        Ok(())
+    }
+
+    pub(crate) fn check_companion(&self, generation: u32) -> Result<(), String> {
+        self.check_generation(generation)?;
+        if self.profile()?.is_some() || self.chat.try_lock().is_ok_and(|chat| chat.is_specialist()) {
+            return Err("This action belongs to Zeca's conversation. Open Zeca before trying again.".into());
+        }
+        Ok(())
+    }
+
+    pub(crate) fn companion_command(
+        &self,
+        generation: u32,
+        folder: Option<&str>,
+    ) -> Result<tokio::sync::MutexGuard<'_, Chat>, String> {
+        let chat = self.chat.try_lock().map_err(|_| "Chat is busy.")?;
+        self.check_companion(generation)?;
+        if chat.is_specialist() {
+            return Err("This action belongs to Zeca's conversation. Open Zeca before trying again.".into());
+        }
+        if chat.started() && folder_key(folder.map(Path::new)) != folder_key(Some(chat.folder())) {
+            return Err("The conversation changed before sending. Review your draft and try again.".into());
+        }
+        Ok(chat)
+    }
+
     fn set_current(&self, id: Option<ConversationId>) {
+        // A startup draft read must observe its owner and contents together.
+        if let Ok(mut draft) = self.draft.lock() {
+            self.set_saved(id);
+            *draft = Draft::default();
+            self.generation.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    fn set_saved(&self, id: Option<ConversationId>) {
         if let Ok(mut c) = self.current.lock() {
             *c = id;
         }
@@ -337,6 +434,7 @@ fn emit_chat<S: serde::Serialize + Clone>(app: &AppHandle, event: &str, payload:
 #[serde(tag = "kind", rename_all = "lowercase")]
 enum Sync {
     Draft {
+        generation: u32,
         from: String,
         draft: Draft,
     },
@@ -352,6 +450,8 @@ enum Sync {
         mentions: Vec<crate::mentions::Mention>,
     },
     Reset {
+        draft: Option<Draft>,
+        generation: u32,
         from: String,
         provider: Provider,
     },
@@ -383,10 +483,11 @@ pub async fn chat_send(
     files: Vec<String>,
     folder: Option<String>,
     mentions: Option<Vec<crate::mentions::Mention>>,
+    generation: u32,
 ) -> Result<(), String> {
     send(
         app,
-        Origin::Window(window.label().into()),
+        Origin::Window(window.label().into(), generation),
         text,
         files,
         folder,
@@ -396,25 +497,25 @@ pub async fn chat_send(
 }
 
 enum Origin {
-    Window(String),
+    Window(String, u32),
     #[cfg(target_os = "linux")]
-    Voice(crate::dictation::worker::Ticket),
+    Voice(crate::dictation::worker::Ticket, u32),
 }
 
 impl Origin {
     fn label(&self) -> &str {
         match self {
-            Self::Window(label) => label,
+            Self::Window(label, _) => label,
             #[cfg(target_os = "linux")]
-            Self::Voice(_) => "voice-command",
+            Self::Voice(..) => "voice-command",
         }
     }
 
     fn is_voice(&self) -> bool {
         match self {
-            Self::Window(_) => false,
+            Self::Window(..) => false,
             #[cfg(target_os = "linux")]
-            Self::Voice(_) => true,
+            Self::Voice(..) => true,
         }
     }
 
@@ -437,7 +538,8 @@ impl Origin {
             return Err("Zeca is off (Settings → Flock & Zeca).".into());
         }
         #[cfg(target_os = "linux")]
-        if let Self::Voice(ticket) = self {
+        if let Self::Voice(ticket, generation) = self {
+            app.state::<ChatState>().check_companion(*generation)?;
             if !saved.command_chat() || crate::lock::locked(app) || ticket.dispatch(|| ()).is_none() {
                 return Err("Voice command handoff was cancelled.".into());
             }
@@ -453,8 +555,9 @@ impl Origin {
 
 #[cfg(target_os = "linux")]
 pub(crate) fn voice_command(app: AppHandle, text: String, ticket: crate::dictation::worker::Ticket) {
+    let generation = app.state::<ChatState>().generation();
     tauri::async_runtime::spawn(async move {
-        let origin = Origin::Voice(ticket.clone());
+        let origin = Origin::Voice(ticket.clone(), generation);
         if send(app.clone(), origin, text.clone(), Vec::new(), None, None)
             .await
             .is_err()
@@ -623,13 +726,33 @@ async fn send(
             }
         })
     };
-    let (api, model) = api_choice(&app);
-    // What the journal holds about this message (M5), before the chat is locked: a slow local
-    // model must never hold Stop back. Nothing with the memory off.
-    let memories = crate::recall::passages(&app, &text, crate::recall::PREFETCH, true).await;
+    // Keep the recipient stable before any memory read, including asynchronous recall.
     let mut chat = match reserved {
         Some(chat) => chat,
         None => state.chat.lock().await,
+    };
+    match &origin {
+        Origin::Window(_, generation) => state.check_generation(*generation)?,
+        #[cfg(target_os = "linux")]
+        Origin::Voice(_, generation) => state.check_companion(*generation)?,
+    }
+    let record = if let Some(id) = state.current() {
+        store(move |s| s.conversation(id)).await?
+    } else {
+        None
+    };
+    let expected_profile = state.profile()?;
+    let profile = turn_profile(&chat, record.as_ref(), expected_profile.as_ref())?;
+    let companion = profile.is_none();
+    if !companion && (origin.is_voice() || !mentions.is_empty() || folder.is_some()) {
+        return Err(
+            "Use the profile conversation's fixed source without voice commands or flock mentions.".into(),
+        );
+    }
+    let memories = if companion {
+        crate::recall::passages(&app, &text, crate::recall::PREFETCH, true).await
+    } else {
+        Vec::new()
     };
     origin.check(&app)?;
     // Turned off while this turn waited for the lock: `stop` found no turn to end.
@@ -637,23 +760,26 @@ async fn send(
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }
     // A conversation keeps the provider and model it began with, as a CLI keeps its pick.
-    if !chat.started() {
+    if !chat.started() && companion {
+        let (api, model) = api_choice(&app);
         chat.set_api(api, model);
     }
     // Ignored once the conversation has started: it stays where it began. None is the chat's own
     // folder, so a pick made for it (and shown) is the one that runs.
-    let dir = folder
-        .map(PathBuf::from)
-        .filter(|d| d.is_absolute())
-        .unwrap_or_else(|| {
-            let own = paths::chat_dir();
-            let _ = std::fs::create_dir_all(&own);
-            own
-        });
-    chat.set_folder(dir);
+    if companion {
+        let dir = folder
+            .map(PathBuf::from)
+            .filter(|d| d.is_absolute())
+            .unwrap_or_else(|| {
+                let own = paths::chat_dir();
+                let _ = std::fs::create_dir_all(&own);
+                own
+            });
+        chat.set_folder(dir);
+    }
     // After the folder: the memory's tool proposes for the roost the conversation is in.
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
-    if chat.provider() == Provider::ClaudeApi {
+    if companion && chat.provider() == Provider::ClaudeApi {
         let mut tools = crate::flock_tools::all(source.clone());
         tools.extend(crate::recall::tools(&app));
         tools.extend(crate::memory::tools(&app, chat.folder()));
@@ -665,10 +791,10 @@ async fn send(
         }
         chat.set_tools(tools);
     }
-    if chat.provider() == Provider::Claude {
+    if companion && chat.provider() == Provider::Claude {
         crate::mcp::keep_scope(targets.as_deref())?;
     }
-    if !chat.started() {
+    if !chat.started() && companion {
         let pick = pick_for(&app, chat.folder(), chat.provider());
         let effort = pick.effort.as_deref().and_then(vults_chat::Effort::parse);
         let effort = effort.filter(|e| effort_fits(chat.provider(), pick.model.as_deref(), *e));
@@ -696,13 +822,16 @@ async fn send(
     let conversation = match state.current() {
         // Moved before its first reply (a failed first turn): the record follows.
         Some(id) if !chat.started() => {
-            let new = new_conversation(&chat, &text, &names);
-            let _ = store(move |s| s.conversation_restart(id, &new)).await;
+            let new = new_conversation(&chat, &text, &names, profile.clone());
+            let saved = store(move |s| s.conversation_restart(id, &new)).await;
+            if !companion {
+                saved?;
+            }
             Some(id)
         }
         Some(id) => Some(id),
         None => {
-            let new = new_conversation(&chat, &text, &names);
+            let new = new_conversation(&chat, &text, &names, profile.clone());
             let made = tauri::async_runtime::spawn_blocking(move || {
                 vults_store::Store::open(&crate::history::dir())
                     .and_then(|mut s| s.conversation_new(&new, crate::traces::now_ms()))
@@ -710,7 +839,7 @@ async fn send(
             .await;
             match made {
                 Ok(Ok(id)) => {
-                    state.set_current(Some(id));
+                    state.set_saved(Some(id));
                     Some(id)
                 }
                 // The chat still works; it just won't be there after a restart.
@@ -723,6 +852,9 @@ async fn send(
     };
     let shown: Vec<String> = files.iter().map(|f| f.to_string_lossy().into_owned()).collect();
     let (model, effort) = chat.pick();
+    if !companion && state.current() != record.as_ref().map(|c| c.id) {
+        return Err("The profile conversation changed before the turn started.".into());
+    }
     // Preflight can await local IO; an old recording cannot inherit a later opt-in.
     origin.check(&app)?;
     #[cfg(target_os = "linux")]
@@ -776,12 +908,14 @@ async fn send(
         *t = Some(turn.clone());
     }
     // Older conversations omit general context; an explicit reference still carries its scope.
-    let context = (chat.frozen().is_some() || targets.is_some())
+    let context = (companion && (chat.frozen().is_some() || targets.is_some()))
         .then(|| crate::context::volatile(source.as_ref(), &memories));
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
-    crate::journal::chat(&app, "you", chat.folder(), &text, false);
+    if companion {
+        crate::journal::chat(&app, "you", chat.folder(), &text, false);
+    }
     #[cfg(target_os = "linux")]
-    if let Origin::Voice(ticket) = &origin {
+    if let Origin::Voice(ticket, _) = &origin {
         voice_result(&app, ticket, &text, vults_core::i18n::VoiceFeedback::SentToChat);
     }
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
@@ -794,14 +928,14 @@ async fn send(
     let claude = chat.provider() == Provider::Claude;
     drop(chat);
     // Zeca's MCP server may have kept a proposal during the turn: the Memory tab reads again.
-    if claude {
+    if companion && claude {
         crate::memory::changed(&app);
     }
     let _ = forward.await;
     if let Some(id) = conversation {
         let now = crate::traces::now_ms();
         let (reply, error) = said.lock().map(|s| s.clone()).unwrap_or_default();
-        if !reply.is_empty() {
+        if companion && !reply.is_empty() {
             crate::journal::chat(&app, "zeca", &folder, &reply, outside.is_some());
         }
         let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
@@ -1073,8 +1207,24 @@ pub fn stop(app: &AppHandle) {
         let mut chat = state.chat.lock().await;
         let provider = chat.provider();
         *chat = Chat::new(provider, paths::chat_dir());
+        let draft = state.draft.lock().ok().map(|d| d.clone());
         state.set_current(None);
+        if let Some(draft) = &draft
+            && let Ok(mut saved) = state.draft.lock()
+        {
+            *saved = draft.clone();
+        }
+        state.set_profile(None);
         state.live(|l| *l = Live::default());
+        sync(
+            &app,
+            Sync::Reset {
+                from: "settings".into(),
+                provider,
+                generation: state.generation(),
+                draft,
+            },
+        );
     });
 }
 
@@ -1094,7 +1244,13 @@ pub fn busy(app: &AppHandle) -> bool {
 /// The saved record of the chat's conversation was removed (Clear history): the next message
 /// saves it anew rather than into a record that is gone.
 pub fn forget_current(app: &AppHandle) {
-    app.state::<ChatState>().set_current(None);
+    app.state::<ChatState>().set_saved(None);
+}
+
+#[derive(serde::Serialize)]
+pub struct Reset {
+    provider: Provider,
+    generation: u32,
 }
 
 /// A new conversation, optionally with the other provider. The one before stays saved.
@@ -1103,28 +1259,43 @@ pub async fn chat_reset(
     window: tauri::Webview,
     state: tauri::State<'_, ChatState>,
     provider: Option<Provider>,
-) -> Result<Provider, ()> {
+) -> Result<Reset, ()> {
     // Anything still waiting is a no: that conversation is over.
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
+    crate::voice::cancel(window.app_handle());
     let provider = provider.unwrap_or(chat.provider());
     let outside_before = chat.outside().is_some();
+    let companion = !chat.is_specialist();
     *chat = Chat::new(provider, paths::chat_dir());
     // The one left may hold something worth remembering (M6).
-    if let Some(left) = state.current() {
+    if companion && let Some(left) = state.current() {
         crate::memory::conversation_ended(window.app_handle(), left, outside_before);
     }
     state.set_current(None);
+    state.set_profile(None);
     *state.draft.lock().map_err(|_| ())? = Draft::default();
     state.live(|l| *l = Live::default());
     let from = window.label().to_string();
-    sync(window.app_handle(), Sync::Reset { from, provider });
-    Ok(provider)
+    sync(
+        window.app_handle(),
+        Sync::Reset {
+            from,
+            provider,
+            generation: state.generation(),
+            draft: None,
+        },
+    );
+    Ok(Reset {
+        provider,
+        generation: state.generation(),
+    })
 }
 
 /// The conversation the chat is in now, as saved, for a window that opens on it (the Nest).
 #[tauri::command]
 pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<Opened>, String> {
+    let generation = state.generation();
     let Some(id) = state.current() else {
         return Ok(None);
     };
@@ -1175,6 +1346,8 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
             w.detail.outside.clone_from(&outside);
         }
     }
+    state.check_generation(generation)?;
+    opened.generation = generation;
     Ok(Some(opened))
 }
 
@@ -1215,6 +1388,7 @@ pub struct LineView {
 /// A saved conversation, opened: what the chat needs to go on with it.
 #[derive(serde::Serialize, Clone)]
 pub struct Opened {
+    generation: u32,
     /// A turn runs: what Zeca said so far, and the cards it waits on.
     busy: bool,
     tools: bool,
@@ -1277,7 +1451,12 @@ fn settings_of(name: &str) -> vults_chat::Settings {
 }
 
 /// The record a conversation starts with, from its first message (or its files' names).
-fn new_conversation(chat: &Chat, text: &str, files: &[String]) -> conversations::New {
+fn new_conversation(
+    chat: &Chat,
+    text: &str,
+    files: &[String],
+    profile: Option<Snapshot>,
+) -> conversations::New {
     let (model, effort) = chat.pick();
     let model = match chat.provider() {
         Provider::ClaudeApi => Some(chat.api().1.to_string()),
@@ -1295,6 +1474,85 @@ fn new_conversation(chat: &Chat, text: &str, files: &[String]) -> conversations:
         effort: effort.map(|e| e.name().to_string()),
         settings: settings_name(chat.settings()).into(),
         frozen: chat.frozen().map(str::to_string),
+        profile,
+    }
+}
+
+/// A specialist turn must still belong to the exact retained recipient, source and executor.
+fn turn_profile(
+    chat: &Chat,
+    record: Option<&conversations::Conversation>,
+    expected: Option<&Snapshot>,
+) -> Result<Option<Snapshot>, String> {
+    if !chat.is_specialist() {
+        if expected.is_some() || record.is_some_and(|c| c.profile.is_some()) {
+            return Err("The conversation recipient does not match its runtime.".into());
+        }
+        return Ok(None);
+    }
+    let c = record.ok_or("The profile conversation is gone.")?;
+    let profile = c
+        .profile
+        .as_ref()
+        .ok_or("The profile conversation has no recipient.")?;
+    if expected != Some(profile)
+        || c.engine != "claude"
+        || chat.provider() != Provider::Claude
+        || c.frozen.is_some()
+        || c.history.is_some()
+        || chat.specialist_brief() != Some(profile.instructions.as_str())
+        || folder_key(Some(chat.folder())) != c.folder
+        || c.model.as_deref() != chat.pick().0
+        || c.effort.as_deref().and_then(vults_chat::Effort::parse) != chat.pick().1
+        || c.session
+            .as_ref()
+            .is_some_and(|id| Some(id.as_str()) != chat.session().as_deref())
+    {
+        return Err("The profile conversation does not match its pinned runtime.".into());
+    }
+    Ok(Some(profile.clone()))
+}
+
+/// The UI route remains gated until it can represent the recipient and all transitions.
+fn restore_conversation(
+    c: &conversations::Conversation,
+    mut spec: vults_agents::driver::Spec,
+    api: Option<(&'static ApiProvider, String)>,
+) -> Result<(Chat, Option<Snapshot>), String> {
+    let provider = engine_provider(&c.engine).ok_or("That conversation's engine is unknown.")?;
+    if let Some(profile) = &c.profile {
+        if provider != Provider::Claude
+            || !spec.dir.is_absolute()
+            || c.frozen.is_some()
+            || c.history.is_some()
+            || api.is_some()
+            || c.session.as_ref().is_some_and(|id| !valid_session(id))
+            || c.model
+                .as_ref()
+                .is_some_and(|model| !vults_chat::valid_model(model))
+            || c.effort
+                .as_deref()
+                .is_some_and(|effort| vults_chat::Effort::parse(effort).is_none())
+        {
+            return Err("This profile conversation cannot be resumed by the isolated runtime.".into());
+        }
+        spec.model = c.model.clone();
+        spec.effort = c.effort.as_deref().and_then(vults_chat::Effort::parse);
+        let chat = Chat::specialist(spec, c.session.clone(), profile.instructions.clone())?;
+        turn_profile(&chat, Some(c), Some(profile))?;
+        Ok((chat, Some(profile.clone())))
+    } else {
+        spec.role = vults_chat::Role::Chat;
+        Ok((
+            Chat::resume(
+                provider,
+                spec,
+                c.session.clone().filter(|s| valid_session(s)),
+                c.history.as_deref(),
+                api,
+            ),
+            None,
+        ))
     }
 }
 
@@ -1318,6 +1576,9 @@ pub async fn chat_conversations(state: tauri::State<'_, ChatState>) -> Result<Ve
     Ok(list
         .into_iter()
         .filter_map(|c| {
+            if c.profile.is_some() {
+                return None;
+            }
             Some(ConversationView {
                 provider: engine_provider(&c.engine)?,
                 label: engine_label(&c.engine),
@@ -1337,6 +1598,9 @@ pub async fn chat_open(app: AppHandle, window: tauri::Webview, id: i64) -> Resul
     let id = ConversationId(id);
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
     let c = c.ok_or("That conversation is gone.")?;
+    if c.profile.is_some() {
+        return Err("Specialist conversations are not available in Zeca's chat.".into());
+    }
     let provider = engine_provider(&c.engine).ok_or("That conversation's engine is unknown.")?;
     let dir = if c.folder.is_empty() {
         paths::chat_dir()
@@ -1363,25 +1627,31 @@ pub async fn chat_open(app: AppHandle, window: tauri::Webview, id: i64) -> Resul
         settings: settings_of(&c.settings),
         // The same system prompt it began with (M2); with the memory off now, the same without his
         // facts: off means none of it reaches a model.
-        system_append: if crate::settings::memory(&app) {
+        system_append: if c.profile.is_some() {
+            None
+        } else if crate::settings::memory(&app) {
             c.frozen.clone()
         } else {
             c.frozen.as_ref().map(|_| crate::context::frozen(None, &dir))
         },
-        mcp_config: (provider == Provider::Claude)
+        mcp_config: (c.profile.is_none() && provider == Provider::Claude)
             .then(crate::mcp::config_file)
             .flatten(),
         ..vults_agents::driver::Spec::in_dir(dir)
     };
     // A session id reaches Claude Code as `--resume`'s value: never anything that reads as a flag.
-    let session = c.session.clone().filter(|s| valid_session(s));
+    let restored = restore_conversation(&c, spec, api)?;
     let state = app.state::<ChatState>();
     state.waiting.close_all();
     let mut chat = state.chat.lock().await;
-    if let Some(left) = state.current().filter(|l| *l != c.id) {
+    if !chat.is_specialist()
+        && let Some(left) = state.current().filter(|l| *l != c.id)
+    {
         crate::memory::conversation_ended(&app, left, chat.outside().is_some());
     }
-    *chat = Chat::resume(provider, spec, session, c.history.as_deref(), api);
+    crate::voice::cancel(&app);
+    *chat = restored.0;
+    state.set_profile(restored.1);
     // It read from outside before: its cards still say so.
     chat.set_outside(c.outside.clone());
     state.set_current(Some(c.id));
@@ -1393,7 +1663,8 @@ pub async fn chat_open(app: AppHandle, window: tauri::Webview, id: i64) -> Resul
             ..Live::default()
         }
     });
-    let conversation = opened(c, lines, started).ok_or("That conversation's engine is unknown.")?;
+    let mut conversation = opened(c, lines, started).ok_or("That conversation's engine is unknown.")?;
+    conversation.generation = state.generation();
     let from = window.label().to_string();
     sync(
         &app,
@@ -1411,7 +1682,11 @@ fn opened(
     lines: Vec<conversations::Message>,
     started: bool,
 ) -> Option<Opened> {
+    if c.profile.is_some() {
+        return None;
+    }
     Some(Opened {
+        generation: 0,
         busy: false,
         tools: false,
         partial: String::new(),
@@ -1460,12 +1735,22 @@ pub async fn chat_delete(
     if was_current {
         state.waiting.close_all();
         let mut chat = state.chat.lock().await;
+        crate::voice::cancel(window.app_handle());
         let provider = chat.provider();
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
+        state.set_profile(None);
         state.live(|l| *l = Live::default());
         let from = window.label().to_string();
-        sync(window.app_handle(), Sync::Reset { from, provider });
+        sync(
+            window.app_handle(),
+            Sync::Reset {
+                from,
+                provider,
+                generation: state.generation(),
+                draft: None,
+            },
+        );
     }
     store(move |s| s.conversation_delete(id)).await?;
     Ok(was_current)
@@ -1854,6 +2139,86 @@ pub fn clean_inbox() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn companion_actions_reject_stale_sources_and_specialist_ownership() {
+        let state = ChatState::new();
+        let generation = state.generation();
+        let held = state.companion_command(generation, None).unwrap();
+        assert!(
+            state.chat.try_lock().is_err(),
+            "Keep the recipient until the action completes"
+        );
+        assert!(
+            state.companion_command(generation, None).is_err(),
+            "Do not queue local actions"
+        );
+        drop(held);
+        state.set_current(None);
+        assert!(state.companion_command(generation, None).is_err());
+        assert!(state.check_companion(generation).is_err());
+        let generation = state.generation();
+        let profile = Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "developer".into(),
+                revision: 1,
+            },
+            title: "Developer".into(),
+            about: "Description".into(),
+            instructions: "Pinned instructions".into(),
+            species: "atratus".into(),
+            look: "none".into(),
+        };
+        let dir = std::env::temp_dir();
+        *state.chat.try_lock().unwrap() = Chat::resume(
+            Provider::Claude,
+            vults_agents::driver::Spec::in_dir(dir.clone()),
+            Some("retained-session".into()),
+            None,
+            None,
+        );
+        assert!(state.chat.try_lock().unwrap().started());
+        assert!(state.companion_command(generation, dir.to_str()).is_ok());
+        assert!(
+            state
+                .companion_command(generation, Some("/different-project"))
+                .is_err()
+        );
+        state.set_profile(Some(profile.clone()));
+        assert!(state.companion_command(generation, None).is_err());
+        assert!(state.check_companion(generation).is_err());
+        state.set_profile(None);
+        *state.chat.try_lock().unwrap() = Chat::specialist(
+            vults_agents::driver::Spec::in_dir(std::env::temp_dir()),
+            None,
+            profile.instructions,
+        )
+        .unwrap();
+        assert!(
+            state.companion_command(generation, None).is_err(),
+            "Inconsistent metadata never grants companion access"
+        );
+    }
+
+    #[test]
+    fn sends_stay_bound_across_empty_reset_open_and_first_save() {
+        let state = super::ChatState::new();
+        let initial = state.generation();
+        assert!(state.check_generation(initial).is_ok());
+        state.set_saved(Some(super::ConversationId(42)));
+        assert!(state.check_generation(initial).is_ok());
+        state.set_current(None);
+        assert!(state.check_generation(initial).is_err());
+        let empty = state.generation();
+        state.set_current(None);
+        assert!(state.check_generation(empty).is_err());
+        let second_empty = state.generation();
+        state.set_current(Some(super::ConversationId(42)));
+        assert!(state.check_generation(second_empty).is_err());
+        let opened = state.generation();
+        state.set_current(Some(super::ConversationId(42)));
+        assert!(state.check_generation(opened).is_err());
+    }
+
     use super::*;
     use vults_chat::Settings;
 
@@ -1866,7 +2231,7 @@ mod tests {
         )));
         app.manage(ChatState::new());
         let ticket = crate::dictation::worker::Ticket::test_command();
-        let origin = Origin::Voice(ticket.clone());
+        let origin = Origin::Voice(ticket.clone(), app.state::<ChatState>().generation());
         assert!(origin.check(app.handle()).is_err(), "No implicit model grant");
         let settings = app.state::<SettingsState>();
         settings.0.lock().unwrap().dictation_command_chat = true;
@@ -1891,6 +2256,13 @@ mod tests {
         settings.0.lock().unwrap().dictation_commands = false;
         assert!(origin.check(app.handle()).is_err());
         settings.0.lock().unwrap().dictation_commands = true;
+        assert!(origin.check(app.handle()).is_ok());
+        chat.set_current(None);
+        assert!(
+            origin.check(app.handle()).is_err(),
+            "An identical empty composer is a different recipient generation"
+        );
+        let origin = Origin::Voice(ticket.clone(), chat.generation());
         assert!(origin.check(app.handle()).is_ok());
         ticket.test_cancel();
         assert!(
@@ -2079,7 +2451,7 @@ mod tests {
     fn a_conversation_is_named_by_its_first_message_or_its_files() {
         let mut chat = Chat::new(Provider::ClaudeApi, paths::chat_dir());
         chat.set_api(&vults_chat::providers::PROVIDERS[1], "m-1".into());
-        let new = new_conversation(&chat, "  ", &["shot.png".into()]);
+        let new = new_conversation(&chat, "  ", &["shot.png".into()], None);
         assert_eq!(new.title, "shot.png");
         assert_eq!(
             new.engine,
@@ -2087,7 +2459,7 @@ mod tests {
         );
         assert_eq!(new.model.as_deref(), Some("m-1"));
         assert_eq!(new.folder, "");
-        assert_eq!(new_conversation(&chat, "Hi", &[]).title, "Hi");
+        assert_eq!(new_conversation(&chat, "Hi", &[], None).title, "Hi");
     }
 
     #[test]
@@ -2147,5 +2519,147 @@ mod tests {
             Settings::User
         );
         std::fs::remove_dir_all(&tmp).unwrap();
+    }
+    #[test]
+    fn a_specialist_record_cannot_be_presented_as_zeca() {
+        let dir = std::env::temp_dir().join(format!("vults-chat-profile-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = vults_store::Store::open(&dir).unwrap();
+        let chat = Chat::new(Provider::Claude, dir.clone());
+        let mut request = new_conversation(&chat, "Hello", &[], None);
+        assert!(request.profile.is_none());
+        let normal = store.conversation_new(&request, 1).unwrap();
+        assert!(opened(store.conversation(normal).unwrap().unwrap(), vec![], false).is_some());
+        request.frozen = None;
+        request.profile = Some(vults_store::profiles::Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "developer".into(),
+                revision: 1,
+            },
+            title: "Developer".into(),
+            about: "Description".into(),
+            instructions: "Implement changes".into(),
+            species: "atratus".into(),
+            look: "none".into(),
+        });
+        let specialist = store.conversation_new(&request, 2).unwrap();
+        assert!(opened(store.conversation(specialist).unwrap().unwrap(), vec![], false).is_none());
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn native_restore_and_turn_keep_the_exact_specialist_recipient_and_source() {
+        let dir = std::env::temp_dir().join(format!("vults-native-profile-source-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = vults_store::Store::open(&dir).unwrap();
+        let profile = vults_store::profiles::Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "developer".into(),
+                revision: 1,
+            },
+            title: "Developer".into(),
+            about: "Description".into(),
+            instructions: "Pinned specialist instructions".into(),
+            species: "atratus".into(),
+            look: "none".into(),
+        };
+        let id = store
+            .conversation_new(
+                &conversations::New {
+                    engine: "claude".into(),
+                    folder: dir.to_string_lossy().into_owned(),
+                    title: "Specialist".into(),
+                    model: Some("sonnet".into()),
+                    settings: "isolated".into(),
+                    profile: Some(profile.clone()),
+                    ..Default::default()
+                },
+                1,
+            )
+            .unwrap();
+        let record = store.conversation(id).unwrap().unwrap();
+        let unsafe_spec = vults_agents::driver::Spec {
+            settings: vults_chat::Settings::Project,
+            system_append: Some("PRIVATE_MEMORY".into()),
+            mcp_config: Some("private-memory.json".into()),
+            ..vults_agents::driver::Spec::in_dir(dir.clone())
+        };
+        let (chat, expected) = restore_conversation(&record, unsafe_spec, None).unwrap();
+        assert!(chat.is_specialist());
+        assert_eq!(chat.frozen(), None);
+        assert_eq!(chat.settings(), vults_chat::Settings::Isolated);
+        assert_eq!(
+            turn_profile(&chat, Some(&record), expected.as_ref()).unwrap(),
+            Some(profile.clone())
+        );
+        assert!(turn_profile(&chat, None, expected.as_ref()).is_err());
+        let plain = Chat::new(Provider::Claude, dir.clone());
+        assert!(turn_profile(&plain, Some(&record), None).is_err());
+        assert!(turn_profile(&chat, Some(&record), None).is_err());
+        let state = ChatState::new();
+        state.set_profile(expected.clone());
+        assert_eq!(state.profile().unwrap(), expected);
+        state.set_profile(None);
+        assert!(state.profile().unwrap().is_none());
+        let saved = new_conversation(&chat, "Hello", &[], Some(profile.clone()));
+        assert_eq!(saved.profile, Some(profile));
+        assert!(saved.frozen.is_none());
+        store.conversation_restart(id, &saved).unwrap();
+        for field in [
+            "identity",
+            "revision",
+            "title",
+            "appearance",
+            "brief",
+            "source",
+            "model",
+            "effort",
+            "session",
+            "frozen",
+            "history",
+            "engine",
+        ] {
+            let mut changed = record.clone();
+            match field {
+                "identity" => {
+                    changed.profile.as_mut().unwrap().source = vults_store::profiles::Source::Preset {
+                        id: "reviewer".into(),
+                        revision: 1,
+                    }
+                }
+                "revision" => {
+                    changed.profile.as_mut().unwrap().source = vults_store::profiles::Source::Preset {
+                        id: "developer".into(),
+                        revision: 2,
+                    }
+                }
+                "title" => changed.profile.as_mut().unwrap().title = "Changed name".into(),
+                "appearance" => changed.profile.as_mut().unwrap().look = "crown".into(),
+                "brief" => changed.profile.as_mut().unwrap().instructions = "Changed".into(),
+                "source" => changed.folder = "different-source".into(),
+                "model" => changed.model = Some("different-model".into()),
+                "effort" => changed.effort = Some("max".into()),
+                "session" => changed.session = Some("different-session".into()),
+                "frozen" => changed.frozen = Some("PRIVATE_MEMORY".into()),
+                "history" => changed.history = Some("PRIVATE_HISTORY".into()),
+                _ => changed.engine = "codex".into(),
+            }
+            assert!(
+                turn_profile(&chat, Some(&changed), expected.as_ref()).is_err(),
+                "{field}"
+            );
+        }
+        let mut invalid = record.clone();
+        invalid.session = Some("--wrong".into());
+        assert!(
+            restore_conversation(&invalid, vults_agents::driver::Spec::in_dir(dir.clone()), None).is_err()
+        );
+        invalid = record.clone();
+        invalid.frozen = Some("PRIVATE_MEMORY".into());
+        assert!(
+            restore_conversation(&invalid, vults_agents::driver::Spec::in_dir(dir.clone()), None).is_err()
+        );
+        drop(store);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

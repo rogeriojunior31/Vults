@@ -15,7 +15,7 @@ use crate::{paths, settings};
 
 #[derive(Debug, Default)]
 pub struct VoiceState {
-    recording: Mutex<Option<(String, Recorder)>>,
+    recording: Mutex<Option<(String, (u32, Recorder))>>,
     /// The loaded model, by id: loading it again for every question would cost more than the
     /// transcription.
     loaded: Mutex<Option<(String, Arc<Transcriber>)>>,
@@ -234,7 +234,17 @@ fn announce(app: &AppHandle) {
 /// `tap`: started by a click, so it ends by itself when the user stops talking (`voice-silence`
 /// tells the recording's webview, which stops it as a click would). Held down: only the key ends it.
 #[tauri::command]
-pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) -> Result<(), String> {
+pub fn voice_start(
+    app: AppHandle,
+    window: tauri::Webview,
+    tap: Option<bool>,
+    generation: u32,
+) -> Result<(), String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat voice belongs to the island or Nest.".into());
+    }
+    app.state::<crate::chat::ChatState>()
+        .check_companion(generation)?;
     #[cfg(target_os = "linux")]
     if crate::questions::active(&app) {
         return Err("Use the physical dictation key to edit the question before sending.".into());
@@ -258,7 +268,13 @@ pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) ->
             AutoStop {
                 vad,
                 ended: Box::new(move || {
-                    let _ = events.emit_to(target.as_str(), "voice-silence", ());
+                    if events
+                        .state::<crate::chat::ChatState>()
+                        .check_companion(generation)
+                        .is_ok()
+                    {
+                        let _ = events.emit_to(target.as_str(), "voice-silence", ());
+                    }
                 }),
             }
         });
@@ -276,7 +292,13 @@ pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) ->
     let live = grant.clone();
     let mut recorder = Recorder::start_guarded(
         move |level| {
-            let _ = levels.emit_to(levels_target.as_str(), "voice-level", level);
+            if levels
+                .state::<crate::chat::ChatState>()
+                .check_companion(generation)
+                .is_ok()
+            {
+                let _ = levels.emit_to(levels_target.as_str(), "voice-level", level);
+            }
         },
         auto,
         move || !live.load(Ordering::Acquire),
@@ -288,6 +310,8 @@ pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) ->
             return Err("The recording was cancelled.".into());
         }
 
+        app.state::<crate::chat::ChatState>()
+            .check_companion(generation)?;
         // The text so far, dimmed, while the user speaks (on a GPU only); the final text replaces it.
         if let Some(id) = preview_model {
             let (loader, events) = (app.clone(), app.clone());
@@ -295,14 +319,20 @@ pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) ->
                 move || transcriber(&loader, &id),
                 preview_language,
                 move |text| {
-                    let _ = events.emit_to(target.as_str(), "voice-partial", text);
+                    if events
+                        .state::<crate::chat::ChatState>()
+                        .check_companion(generation)
+                        .is_ok()
+                    {
+                        let _ = events.emit_to(target.as_str(), "voice-partial", text);
+                    }
                 },
             );
         }
         *app.state::<VoiceState>()
             .recording
             .lock()
-            .unwrap_or_else(|e| e.into_inner()) = Some((window.label().to_owned(), recorder));
+            .unwrap_or_else(|e| e.into_inner()) = Some((window.label().to_owned(), (generation, recorder)));
         Ok(())
     };
     #[cfg(target_os = "linux")]
@@ -320,20 +350,26 @@ pub fn voice_start(app: AppHandle, window: tauri::Webview, tap: Option<bool>) ->
 #[tauri::command]
 pub async fn voice_stop(app: AppHandle, window: tauri::Webview) -> Result<String, String> {
     let recorder = take_recording(&app.state::<VoiceState>().recording, window.label());
-    let Some(recorder) = recorder else {
+    let Some((generation, recorder)) = recorder else {
         return Ok(String::new());
     };
+    app.state::<crate::chat::ChatState>()
+        .check_companion(generation)?;
     let id = settings::voice_model(&app).ok_or("No voice model is chosen.")?;
     let language = language(&app);
     let vad = vults_voice::vad_path(&models_dir());
     // Seconds of CPU, and a cold model takes seconds to load: off the async workers.
-    tauri::async_runtime::spawn_blocking(move || {
-        let transcriber = transcriber(&app, &id)?;
+    let worker = app.clone();
+    let text = tauri::async_runtime::spawn_blocking(move || {
+        let transcriber = transcriber(&worker, &id)?;
         let pcm = recorder.finish()?;
         transcriber.transcribe(&pcm, language.as_deref(), vad.as_deref())
     })
     .await
-    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())??;
+    app.state::<crate::chat::ChatState>()
+        .check_companion(generation)?;
+    Ok(text)
 }
 
 #[tauri::command]

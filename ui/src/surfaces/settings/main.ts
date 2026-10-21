@@ -3,6 +3,7 @@ import { voiceCommandHelp } from "../../voice-command-help";
 import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
 import { applyTheme } from "../../theme";
+import { ISLAND_WIDTHS, restoreWidth, saveWidth, watchWidth } from "../../island/geometry";
 // Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
@@ -825,6 +826,10 @@ function generalPage(): HTMLElement[] {
     el("h1", { text: t("General") }),
     el("section", { class: "card rows" },
       el("h2", { class: "settings-group-title", text: t("Appearance") }),
+      row(t("Mini and Quick width"), t("Shared width, limited to the available screen space."),
+        dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
+          if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
+        })),
       row(t("Theme"), t("Black or a neutral light theme, across every window."),
         dropdown([{ value: "black" as const, label: t("Black") }, { value: "light" as const, label: t("Light") }], theme, async value => { await Bridge.setTheme(value); theme = value; })),
       row(
@@ -2007,6 +2012,8 @@ window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}),
 if (page === "activity") { void refreshActivity(); budget.refresh(); }
 if (page === "phone") void refreshPhone(renderPhone);
 Bridge.onPhone(phoneEvent);
+watchWidth(() => { if (page === "general") render(); });
+
 void Bridge.appSettings().then((s) => {
   dictationCaption = dictation.captions(s.dictationCaption, true);
   dictationSound = dictation.startSound(s.dictationSound, true);

@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 2ed601972b1a -->
+<!-- source: 7017f4a0a288 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -112,6 +112,31 @@ Duas coisas a mantêm aberta até você terminar:
 
 Sem ninguém no fio por um minuto, a ilha **se esconde**. Leve o ponteiro ao meio da borda de cima da
 tela para trazê-la de volta.
+
+**Configurações > Geral > Aparência > Largura do Mini e Quick**, também disponível na engrenagem
+do Quick em **Geral**, oferece 560, 680 ou 760 pixels lógicos. Os dois controles editam a mesma
+preferência; uma alteração em um é refletida no outro. O fio do bando, as posições das aves, os
+nomes e os alvos das sessões acompanham juntos a largura medida do conteúdo, mantendo a escala original dos sprites. A escolha é compartilhada pelo Mini e todas as abas do Quick e restaurada ao reiniciar.
+**Padrão** restaura a largura original do Mini e as larguras por aba do Quick. Uma tela menor limita
+a largura visível sem substituir a escolha salva. Room e Full mantêm seus próprios tamanhos. Se
+não for possível salvar, selecione a largura novamente para tentar outra vez; a escolha salva
+anteriormente continua ativa.
+
+O Mini mantém 38 pixels lógicos de altura em qualquer largura, deixando a barra em repouso fina.
+Com uma largura escolhida, o Quick cresce com seu conteúdo até 600 pixels lógicos, incluindo o zoom
+e o estado de ditado na ilha. Telas menores reduzem esses limites. As aves do Mini mantêm a escala
+e a animação originais; **Padrão** também restaura a altura anterior do Quick. Conteúdos longos
+mantêm os controles de rolagem existentes.
+
+Quando há mais sessões do que o Mini consegue mostrar, um ícone de lista abre **Room > Bando**
+para acessar todas. Use Tab até o ícone e pressione Enter ou Espaço; o nome acessível e a dica
+incluem o número de sessões adicionais. Ele fica âmbar quando alguma precisa de atenção. O ícone
+tem espaço próprio e não cobre uma ave. O Quick mantém seu caminho **+N** para a mesma página do Bando.
+
+Os seletores das configurações rápidas aceitam Seta para cima/baixo e Home/End. Enter ou Espaço
+confirma uma escolha; Escape fecha a lista antes de recolher a ilha, e Tab sai sem aplicar uma
+escolha. Mudanças de largura e falhas ao salvar mantêm o foco do teclado no seletor e preservam a
+posição de leitura. Uma falha ao salvar a largura é anunciada e mantém a escolha salva ativa.
 
 <a id="presence-how-much-it-shows"></a>
 

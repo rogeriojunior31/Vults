@@ -575,6 +575,61 @@ risk line (`card-risk`, K3).
 
 ### UI delivery sequence
 
+**2026-10-21 UX8.1:** begin with a read-only built-in profile catalog in Flock, backed by native
+Connect descriptions and a Nest-only command. Persist the bounded destination, retain the session
+view and keep waiting cards reachable. The catalog works with Zeca off; no memory, execution,
+provider or permission route is added. Custom copies and Chat use remain subsequent slices.
+
+**2026-10-21 UX8 profile copies:** local preset copies now support name/instruction editing and
+immutable revision saves in migration 29. Stale edits are rejected; drafts survive in-window
+navigation and save failures. Preset provenance and appearance stay pinned. Store and renderer
+checks cover retention, revisions and recovery, and native copy/edit/reload passed at wide/narrow
+sizes without using the personal profile. Appearance/skills editing and Chat binding remain open.
+
+**2026-10-21 UX8 profile appearance:** add species and fixed-accessory editing to local copies,
+using production sprites for the draft preview and saved card. Migration 30 retains earlier
+species/text/provenance and defaults missing accessories to none. Native validation rejects
+unknown choices and seasonal Auto; each new revision retains its complete appearance.
+Skills and specialist Chat binding remain open.
+
+**2026-10-21 UX8 conversation binding storage:** migration 31 retains exact preset/custom profile
+snapshots with each conversation. Custom references resolve a retained revision; later profile
+edits cannot rewrite old conversations. Creation is atomic, Zeca's frozen context is rejected and
+legacy conversations retain their existing context without a binding. Zeca's current Chat refuses
+these records until specialist persona/tool isolation and the explicit recipient/executor/source
+contract are implemented. No specialist Chat action or execution route is enabled yet.
+
+**2026-10-21 UX8 specialist runtime primitive:** a Claude Code-only constructor now uses the
+pinned brief without the companion persona, frozen context, API tools/history or companion MCP.
+Resume forces isolated settings and drops extra directories. Unsupported providers/ACP and unsafe
+specs fail before driver execution; the normal approval channel remains in place. Native profile
+Chat routing stays blocked until recipient/source ownership and all recall/journal/MCP callbacks
+are separated. No new Chat action or live provider request is introduced by this slice.
+
+**2026-10-21 UX8 native recipient and memory separation:** the native runtime now retains and
+checks the exact saved profile, source, pick and session before recall. Bound turns skip companion
+memory, context, MCP scope and journal callbacks, and never feed companion memory extraction.
+Native restore uses the isolated Claude constructor and first-turn persistence keeps the snapshot.
+Recipient metadata is cleared/replaced with reset/open/stop/delete. User-facing profile Chat stays
+blocked until recipient UI and command/voice/cross-surface transitions are implemented.
+
+**2026-10-21 next implementation:** after merging #375, the maintainer deferred further manual
+voice validation and requested pending project work. Proceed with UX7.1's shared Mini/Quick width
+selection on `feat/ux7-shared-width`; keep N3's unperformed human/external acceptance explicit.
+This implements presentation work without declaring N3, K8 or the N4 release complete.
+UX7.2 adds the selected 56/600 logical-pixel height proportions while preserving Default,
+existing bird animation and content scrolling. Manual desktop acceptance remains deferred.
+UX7.3 adds Mini's reserved, keyboard-accessible overflow icon and routes hidden sessions to
+Room/Flock through the existing saved surface transition. Cards keep priority and authority.
+UX7.4 completes the implementation slices with shared-picker keyboard navigation, local Escape,
+retained focus/scroll after width saves and announced save failures. Only native UX7 acceptance
+remains deferred; subsequent implementation work can move to UX8 under the maintainer's direction.
+During desktop review, the maintainer requested a slim bar and the same width control in global
+General. Mini now stays 38 px high at every width; General and Quick share the saved preference.
+The subsequent desktop wire report was reproduced and corrected before UX8: Quick measures its
+mounted overview and updates the wire, perches and targets together; the four-width native matrix
+passed and restored the maintainer's 560 px preference. UX8 began with the catalog described above.
+
 Requested 2026-10-13, following the Compact/Nest review. Prioritize existing-feature repairs.
 The detailed tasks, dependencies, acceptance criteria and audit mapping are in
 [UI implementation sequence](plan-ui.md); [DESIGN.md](../../DESIGN.md) holds UI rules.
@@ -594,7 +649,13 @@ The [current delivery status](plan-ui.md#current-delivery-status) distinguishes
 implemented slices from pending acceptance. The user accepted the current
 UX1-UX5 block on 2026-10-14 after merging #351; those steps are indexed in Done.
 UX6 implementation and automated integration are complete, awaiting the final
-desktop PR validation. UX7 and the new workspaces have not started.
+desktop PR validation. UX7 implements shared widths, bounded proportions, Mini overflow and
+keyboard continuity, with native geometry/wire checks recorded in the UI plan. UX8 delivers the
+local profile catalog/editor, retained revisions and appearance, immutable conversation snapshots,
+isolated Claude runtime groundwork and source-bound Chat/command/voice preparation guards.
+Specialist Chat remains unavailable in the UI. Resume with pinned skills and the explicit
+recipient/executor/source and Zeca-off availability contract, then Quick summaries and execution
+projection. The remaining desktop acceptance and release gates are unchanged.
 
 The user also validated #353's saved close, model-list retry and short/wide Chat
 repairs after merging it on 2026-10-14. UX6 now retains Flock search, Needs you

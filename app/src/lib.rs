@@ -33,6 +33,7 @@ mod panel;
 mod paths;
 mod phone;
 mod policies;
+mod profiles;
 #[cfg(target_os = "linux")]
 mod questions;
 pub mod realtime;
@@ -179,6 +180,7 @@ pub fn run() {
             chat::chat_current,
             chat::chat_draft,
             chat::chat_draft_set,
+            chat::chat_prepare_zeca,
             nest_connections_place,
             nest_connections_place_set,
             nest_tab_set,
@@ -211,6 +213,8 @@ pub fn run() {
             runtime::session_hush,
             runtime::digest_dismiss,
             runtime::recap_dismiss,
+            profiles::agent_profiles,
+            profiles::agent_profile_save,
             runtime::projects_list,
             runtime::project_set,
             open::editor_found,
@@ -772,6 +776,10 @@ mod tests {
         );
         assert_eq!(super::restored_tab(None, Some("chat"), false), "flock");
         assert_eq!(super::restored_tab(None, Some("dictation"), false), "dictation");
+        assert_eq!(
+            super::restored_tab(None, Some("flock-profiles"), false),
+            "flock-profiles"
+        );
         assert_eq!(
             super::restored_tab(None, Some("dictation-statistics"), false),
             "dictation-statistics"
@@ -1338,6 +1346,7 @@ fn valid_nest_tab(tab: &str) -> bool {
     matches!(
         tab,
         "flock"
+            | "flock-profiles"
             | "memory"
             | "chat"
             | "activity"

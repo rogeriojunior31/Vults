@@ -18,7 +18,7 @@ body {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 720px;
+  width: 880px;
   height: 640px;
   pointer-events: none;
   image-rendering: pixelated;
@@ -85,11 +85,26 @@ button:focus-visible,
   padding: 6px 10px 10px;
 }
 
-/* ── Compact (Mini): a pill of fixed size, only the flock (ADR 0021) ── */
+/* ── Compact (Mini): a bounded pill, only the flock (ADR 0021) ── */
 .compact {
   width: 340px;
   height: 38px;
 }
+.mini-more {
+  position: absolute;
+  right: 6px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-control);
+  color: var(--fg-dim);
+  background: var(--raised);
+}
+.mini-more[hidden] { display: none; }
+.mini-more.needs { color: var(--warn); }
+.mini-more:hover { color: var(--fg); background: var(--float); }
 .pill-fuel {
   position: absolute;
   right: 14px;
@@ -558,7 +573,9 @@ body.still .compact.needs::after {
 /* +N stands in the last column, where a sixth bird would perch. */
 .habitat-more {
   position: absolute;
-  right: 18px;
+  transform: translateX(-50%);
+  min-width: 32px;
+  min-height: 32px;
   top: 46px;
   padding: 2px 7px;
   border-radius: 9px;
@@ -2706,6 +2723,7 @@ button.ghost:hover {
 .quick-pick.open .quick-pick-list {
   display: flex;
 }
+.quick-pick-list[hidden] { display: none; }
 .quick-pick-item {
   padding: 6px 9px;
   border-radius: 5px;
@@ -3798,3 +3816,10 @@ body.still .chat .approval-enter { animation: none; }
 }
 
 .chat .ask-more:not([open]) > button { display: none; }
+
+.chat-recipient {
+  flex: none;
+  align-self: center;
+  color: var(--fg-dim);
+  font-size: var(--text-s);
+}

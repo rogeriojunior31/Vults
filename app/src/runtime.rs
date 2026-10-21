@@ -1731,7 +1731,7 @@ pub async fn alert_dismiss(key: String, inbox: tauri::State<'_, Inbox>) -> Resul
 /// Logical size of the island window. Fixed: the UI draws the island inside it and reports
 /// the island's rectangle, which becomes the only part that takes the mouse.
 /// Tall enough for the open island at its zoom (ui render.ts OPEN_ZOOM: 556 x 1.14).
-pub const ISLAND_SIZE: (i32, i32) = (720, 640);
+pub const ISLAND_SIZE: (i32, i32) = (880, 640);
 
 /// The page measured what it draws; `width == 0` means nothing is shown. Each window sets its
 /// own surface's region, never another's.

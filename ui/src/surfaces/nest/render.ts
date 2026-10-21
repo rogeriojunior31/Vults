@@ -1,3 +1,4 @@
+import { createProfiles } from "./profiles";
 import { DICTATION_WORK_PAGES } from "./dictation/navigation";
 import { createDictationArea, type DictationAreaBackend } from "./dictation/area";
 import { createDictationStatistics } from "./dictation/statistics";
@@ -5,7 +6,7 @@ import { sidePanel } from "./panels";
 // The Nest's page takes its backend: four tabs and the gear (ADRs 0021, 0031). Chat keeps
 // Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
 // Without Zeca there is no Chat tab.
-import type { MediaAction, NowPlaying, Size, SpendToday } from "../../bridge";
+import type { AgentProfile, MediaAction, NowPlaying, Size, SpendToday } from "../../bridge";
 import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
@@ -72,6 +73,8 @@ export interface Nest {
 }
 
 export interface NestBackend {
+  profiles?: () => Promise<AgentProfile[]>;
+  profileSave?: typeof import("../../bridge").Bridge.agentProfileSave;
   chat: ChatBackend;
   dictation: DictationAreaBackend;
   roosts: RoostsBackend;
@@ -186,7 +189,7 @@ export function createNest(
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
     ask: (s) => {
       show("chat");
-      chat.draft(t("What is {project} doing now?", { project: s.project || agentName(s) }));
+      void chat.askZeca(t("What is {project} doing now?", { project: s.project || agentName(s) }));
     },
   });
   const memory = createMemory(backend.memory);
@@ -197,7 +200,7 @@ export function createNest(
       zecaOn
         ? (text: string) => {
             show("chat");
-            chat.draft(text);
+            void chat.askZeca(text);
           }
         : null,
   });
@@ -357,8 +360,16 @@ export function createNest(
     ...SUBS.map((id) => subPanes[id]),
   );
 
+  let profilesShown = false;
+  const profilesLink = el("button", { class: "btn agent-profiles-open", onclick: () => {
+    profilesShown = true; show("flock");
+  } });
+  flock.element.querySelector(".habitat-header")?.append(profilesLink);
+  const profiles = createProfiles(() => backend.profiles?.() ?? Promise.reject(), () => {
+    profilesShown = false; show("flock"); profilesLink.focus({ preventScroll: true });
+  }, backend.profileSave);
   const panes: Record<Tab, HTMLElement> = {
-    flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element),
+    flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element, profiles.element),
     chat: chatPane,
     activity: activityPane,
     dictation: el("div", { class: "nest-pane nest-dictation-pane" }, dictationArea.element),
@@ -398,7 +409,7 @@ export function createNest(
   let tab: Tab = "flock";
   let last: ViewModel | null = null;
   let sub: Sub = "week";
-  const currentPlace = () => tab === "activity" ? sub : tab;
+  const currentPlace = () => tab === "activity" ? sub : tab === "flock" && profilesShown ? "flock-profiles" : tab;
   const portraitSpace = window.matchMedia("(min-height: 561px)");
   const portraitNarrow = window.matchMedia("(max-width: 600px)");
   function paintPortrait(): void {
@@ -437,6 +448,7 @@ export function createNest(
     rememberPlace();
   }
   function chooseTab(id: Tab): void {
+    if (id === "flock") profilesShown = false;
     if (id === "dictation" && backend.openDictation) backend.openDictation();
     else show(id);
   }
@@ -446,9 +458,14 @@ export function createNest(
     if (id !== "activity") rememberPlace();
     for (const k of TABS) panes[k].hidden = k !== id;
     head.set(id);
+    panes.flock.classList.toggle("show-profiles", profilesShown);
+    flock.element.hidden = id === "flock" && profilesShown;
+    profilesLink.hidden = profilesShown;
+    profiles.element.hidden = !profilesShown;
+    profiles.visible(id === "flock" && profilesShown);
     paintNeeds();
     // The habitat draws only while it is in sight.
-    flock.setActive(id === "flock" && !document.hidden && !last?.locked);
+    flock.setActive(id === "flock" && !profilesShown && !document.hidden && !last?.locked);
     if (id === "activity") showSub(sub);
     if (id === "connections") connections.refresh();
     dictationArea.setActive(id === "dictation" && !last?.locked);
@@ -460,6 +477,8 @@ export function createNest(
     paintPortrait();
   }
   const relabel = () => {
+    profilesLink.textContent = t("Agent profiles");
+    profiles.relabel();
     portraitButton.setAttribute("aria-label", t("Greet Zeca"));
     portraitButton.title = t("Greet Zeca");
     const subWords: Record<Sub, string> = {
@@ -506,7 +525,7 @@ export function createNest(
   const paintNeeds = () => {
     // Drawn on every view: the tag that had the focus gets it back.
     const had = needStrip.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.key : null;
-    const wanting = tab === "flock" ? [] : (last?.sessions ?? []).filter((s) => !s.skipped && (needsYou(s) || s.status === "failed" || s.attention === "failed"));
+    const wanting = tab === "flock" && !profilesShown ? [] : (last?.sessions ?? []).filter((s) => !s.skipped && (needsYou(s) || s.status === "failed" || s.attention === "failed"));
     needStrip.hidden = !wanting.length;
     needStrip.setAttribute("aria-label", wanting.length === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: wanting.length }));
     needStrip.replaceChildren(
@@ -518,7 +537,7 @@ export function createNest(
             class: `need-tag${failed ? " failed" : ""}`,
             onclick: () => {
               backend.flock.focus(s);
-              show("flock");
+              chooseTab("flock");
             },
           },
           el("i", { text: failed ? "×" : "!" }),
@@ -554,7 +573,7 @@ export function createNest(
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) chat.cancelVoice();
     dictationArea.visible(!document.hidden);
-    flock.setActive(tab === "flock" && !document.hidden && !last?.locked);
+    flock.setActive(tab === "flock" && !profilesShown && !document.hidden && !last?.locked);
     paintPortrait();
   });
   let waiting: number | null = null;
@@ -572,7 +591,7 @@ export function createNest(
     });
     const f = front();
     foot.setTerminal(!!f && f.raise !== false);
-    flock.setActive(tab === "flock" && !document.hidden && !v.locked);
+    flock.setActive(tab === "flock" && !profilesShown && !document.hidden && !v.locked);
     flock.update(v);
     connections.update(v);
     paintNeeds();
@@ -592,6 +611,8 @@ export function createNest(
       parts[sub].refresh();
   };
   const open = (id: string) => {
+    if (id === "flock-profiles") { profilesShown = true; show("flock"); return; }
+    if (id === "flock") profilesShown = false;
     if (id === "memory") {
       if (zecaOn) { show("chat"); setMemory(true); }
       return;
@@ -632,7 +653,7 @@ export function createNest(
         command: zecaOn
           ? (text) => {
               show("chat");
-              chat.draft(text);
+              void chat.askZeca(text);
             }
           : null,
         tab: id => { if (id === "dictation") chooseTab("dictation"); else open(id); },
@@ -732,7 +753,7 @@ export function createNest(
       if (id !== "allow" && id !== "deny") return;
       const allow = id === "allow";
       if (tab === "chat") chat.answerWaiting(allow);
-      else if (tab === "flock") flock.shortcut(allow);
+      else if (tab === "flock" && !profilesShown) flock.shortcut(allow);
     },
   };
 }

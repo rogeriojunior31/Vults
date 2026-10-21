@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 9e7b2edd5a30 -->
+<!-- source: 4028dd5d15af -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -160,6 +160,21 @@ aparece onde o Vults consegue trazer o terminal dela para a frente
 
 ## Chat
 
+O cabeçalho identifica Zeca como destinatário, separado do executor. O envio mantém a conversa e
+a pasta selecionadas no clique. Trocar de conversa cancela um envio na fila; uma solicitação de
+janela desatualizada é recusada antes da busca de memórias ou de um turno do modelo, e salvamentos
+antigos de rascunho não substituem o rascunho da nova conversa. Os comandos locais `/remember`,
+`/forget` e `/continue` também conferem Zeca como destinatário e mantêm o texto editável em caso de
+recusa. Um resultado atrasado preserva a digitação mais recente. Trocar de conversa cancela o
+microfone do chat e descarta transcrições atrasadas; o encaminhamento de um comando de voz não
+pode assumir uma conversa vazia criada depois.
+
+As ações **Perguntar ao Zeca** no Bando, nas Conexões e na paleta de comandos conferem o
+destinatário atual antes de acrescentar uma pergunta. Elas preservam o texto do rascunho, os
+anexos e a origem, incluindo texto digitado durante a preparação. Outro destinatário ou uma troca
+de conversa recusa a preparação sem reiniciar uma conversa nem enviar nada. Erros de preparação
+mantêm a resposta em andamento e seus cards de permissão ativos.
+
 A conversa da ilha com o Zeca, larga, com respostas em Markdown completo (um link mostra o endereço
 e nunca é seguido); uma mensagem, **New** ou outro motor em qualquer um aparece nos dois. Os cards
 são respondidos aqui também, com **Deny**, **Allow** e **Always in this chat**, como na ilha.
@@ -258,6 +273,31 @@ Uma atualização que falha mantém as linhas atuais e permite tentar de novo. *
 título mais discreto sem esmaecer o status ou as ações. **Add a connection** lista só conectores
 suportados que estão comprovadamente desligados; **Turn on in Settings…** e **Manage connections**
 abrem o único lugar que liga um conector ([Conectores](connectors.md)).
+
+<a id="agent-profiles"></a>
+## Perfis de agentes
+
+Abra **Bando > Perfis de agentes** para consultar os perfis integrados de Desenvolvedor, Revisor e
+Pesquisador. Escolha um cartão para ler suas instruções e a revisão explícita. **Criar uma cópia**
+abre um rascunho local com nome e instruções editáveis. **Salvar perfil** cria um perfil personalizado;
+**Editar perfil** salva uma nova revisão da sua cópia. Os perfis integrados permanecem inalterados.
+A cópia inicialmente herda a aparência do perfil integrado.
+Em **Aparência**, escolha uma **Espécie** e um **Acessório**; a prévia usa os mesmos sprites do bando.
+Os acessórios são escolhas fixas, incluindo **Nenhum**, sem mudanças sazonais.
+O cartão mostra a aparência salva após o salvamento. Habilidades e aplicação de um perfil ao Chat
+ficam para depois.
+
+Os perfis personalizados ficam no banco local, independentes do histórico de conversas. Cada
+salvamento mantém as revisões anteriores. Um editor desatualizado é rejeitado em vez de sobrescrever
+alterações mais recentes; cancele e abra novamente para ler a última revisão. Falhas ao salvar
+preservam o rascunho. Os rascunhos também sobrevivem à navegação na janela atual, mas não são
+salvos ao reiniciar o app. O catálogo funciona com o Zeca desligado e não acessa sua memória privada.
+Salvar não inicia agentes, não faz solicitações a provedores, não escreve configurações de agentes
+nem altera permissões.
+
+**Voltar ao Bando** retorna à visualização existente das suas sessões. Os indicadores de sessões
+aguardando continuam disponíveis durante a leitura; abra um para revisar o cartão no Bando. Uma
+falha de leitura oferece **Tentar novamente**, sem iniciar agentes nem fazer solicitações a provedores.
 
 <a id="dictation"></a>
 

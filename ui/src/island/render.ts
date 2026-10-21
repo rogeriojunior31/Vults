@@ -2,7 +2,7 @@
 // real island with made-up views.
 //
 // Three modes (fsm.ts). Hidden, only an invisible strip at the top edge is left, to wake it.
-// Compact (Mini), it is a fixed-size pill with no text: the session in front on the left (Zeca
+// Compact (Mini), it is a bounded pill with no text: the session in front on the left (Zeca
 // with none), up to eight vults on the right with a badge each. Open (Quick: a click, a
 // permission, the chat), it has a header, the habitat (every other session on one wire) over the
 // focus card (the session in front, or Zeca), and connector news; a connector's tab swaps the
@@ -14,7 +14,7 @@ import type { WeekView } from "../view.gen";
 import { el } from "../dom";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
-import { DICTATION_HEIGHT, OPEN_ZOOM, quickBounds, quickPixels } from "./geometry";
+import { DICTATION_HEIGHT, OPEN_ZOOM, miniHeight, miniSessions, miniWidth, quickBounds, quickPixels, restoreWidth, saveWidth, watchWidth, type IslandWidth } from "./geometry";
 import { idleClip, setMusic } from "./behavior";
 import { onDayPart } from "./daypart";
 import { ChatPanel, type ChatBackend } from "./chat";
@@ -292,6 +292,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const habitatScene = new Scene(HABITAT_SCENE, hidden, OPEN_ZOOM);
   let habitatPlaces = HABITAT_PLACES;
   let habitatColumns = HABITAT_PLACES;
+  let habitatWidth = HABITAT_W;
   let compactPerched = -1;
   const ticker = new Ticker();
   /** Zeca's place in the focus card: his canvas and the glow behind him. It moves with the card. */
@@ -306,6 +307,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const newsDot = el("span", { class: "pill-dot" });
   newsDot.setAttribute("aria-hidden", "true");
   const compact = el("div", { class: "layer compact" }, compactScene.canvas, badges, fuel, newsDot);
+  const compactMore = el("button", { class: "mini-more", onclick: () => {
+    if (fsm.mode !== "compact" || compactMore.hidden || raw.locked || nestIsOpen()) return;
+    actions.setSize?.("room", "flock");
+  } }, icon("list", 14, 1.6));
+  compactMore.hidden = true;
   compact.setAttribute("role", "button");
   compact.tabIndex = 0;
   compact.addEventListener("keydown", (e) => {
@@ -333,9 +339,17 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const topNeeds = el("div", { class: "need-strip top" });
   const inner = el("div", { class: "layer inner" }, headerSlot, topNeeds, main, alertsSlot);
   inner.style.setProperty("zoom", String(OPEN_ZOOM));
+  let preferredWidth = restoreWidth();
+  let widthSaveFailed = false;
+  const availableWidth = () => Math.min(window.innerWidth, window.screen?.availWidth || window.innerWidth);
+  const availableHeight = () => Math.min(window.innerHeight, window.screen?.availHeight || window.innerHeight);
+  const compactWidth = () => miniWidth(availableWidth(), preferredWidth);
+  const compactHeight = () => miniHeight(availableHeight() - dictationSpace);
+  let compactWidthShown = -1;
+  let compactReserved = 0;
   let boundsShown = "";
   const fitQuick = () => {
-    const bounds = quickBounds(window.innerWidth, window.innerHeight, dictationSpace);
+    const bounds = quickBounds(availableWidth(), availableHeight(), dictationSpace, preferredWidth);
     const signature = `${bounds.width}|${bounds.chatWidth}|${bounds.height}`;
     if (signature === boundsShown) return;
     boundsShown = signature;
@@ -346,7 +360,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   fitQuick();
   const countdown = el("div", { class: "countdown" });
-  root.replaceChildren(compact, inner, countdown);
+  root.replaceChildren(compact, compactMore, inner, countdown);
   root.after(sky.canvas);
   // Outside the island, so it can be hovered while the island is retracted.
   const wake = el("div", { class: "wake" });
@@ -1085,9 +1099,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const vults = compactScene.slots();
     const name = song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running");
     const failed = shown.filter((s) => s.status === "failed" || s.attention === "failed").length;
+    const overflow = shown.filter(s => s !== front).slice(compactPerched);
+    const moreLabel = overflow.length ? t("{n} more: see them all in the Nest", { n: overflow.length }) : "";
+    compactMore.hidden = !overflow.length || fsm.mode !== "compact" || !actions.setSize || !!raw.locked;
+    compactMore.title = moreLabel;
+    compactMore.setAttribute("aria-label", moreLabel);
+    compactMore.classList.toggle("needs", overflow.some(needsYou));
+    if (compactMore.hidden && fsm.mode === "compact" && document.activeElement === compactMore) compact.focus({ preventScroll: true });
     compact.setAttribute(
       "aria-label",
-      [name, detail, failed ? (failed === 1 ? t("1 failed") : t("{n} failed", { n: failed })) : "", alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "),
+      [name, detail, moreLabel, failed ? (failed === 1 ? t("1 failed") : t("{n} failed", { n: failed })) : "", alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "),
     );
     // Someone needs you: the pill's border pulses amber.
     // Not while paused: every card is answered in its terminal then.
@@ -1278,25 +1299,18 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const idle = zecaShown() ? { clip: presenceNow() === "paused" ? "sleep" : idleClip(), agent: "claude" as const, alone: true } : null;
     assignSpecies(shown);
     // The pill's vults spread over the wire after Zeca, as many as there are (up to eight).
-    const perched = Math.min(COMPACT_SCENE.vults.max, shown.filter((s) => s !== front).length);
-    if (perched !== compactPerched) {
-      compactPerched = perched;
-      compactScene.resize(COMPACT_W, COMPACT_SCENE.vults.max, compactAt(perched));
+    const mini = miniSessions(compactWidth(), shown.filter((s) => s !== front).length);
+    const reserved = mini.hidden ? 40 : 0;
+    if (mini.visible !== compactPerched || compactWidthShown !== compactWidth() || compactReserved !== reserved) {
+      compactPerched = mini.visible;
+      compactReserved = reserved;
+      compactWidthShown = compactWidth();
+      compact.style.width = `${compactWidthShown}px`;
+      compactScene.resize(compactWidthShown, mini.visible, compactAt(mini.visible, compactWidthShown, reserved));
     }
     compactScene.update(shown, front, front ? null : idle);
     if (chatShown) focusScene.update([], null, { clip: chat.clip(now), agent: chat.agent() });
     else focusScene.update([], front, front ? null : idle);
-    // Columns as the prototype's: four wide ones for up to four sessions, up to six; past six the
-    // last column is +N's, five birds keeping their places, none under the chip.
-    const columns = Math.min(HABITAT_PLACES, Math.max(4, others.length));
-    const places = others.length > HABITAT_PLACES ? HABITAT_PLACES - 1 : columns;
-    if (places !== habitatPlaces || columns !== habitatColumns) {
-      habitatPlaces = places;
-      habitatColumns = columns;
-      const col = HABITAT_W / columns;
-      habitatScene.resize(HABITAT_W, places, (slot) => ({ x: Math.round(slot * col + (col - BIRD_W * 2) / 2), wire: HABITAT_SCENE.wire! }));
-    }
-    habitatScene.update(others, null);
     // Locked, nobody is looking: the scene and the sky rest (no frames, no timers).
     const awake = !v.locked;
     compactScene.setActive(awake && mode === "compact");
@@ -1360,7 +1374,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
                       boardOpen = null;
                       quickOpen = null;
                       chat.toggle(true);
-                      chat.draft(text);
+                      void chat.askZeca(text);
                     }
                   : undefined,
                 // The marked row is gone: focus goes to the next one, not to the page.
@@ -1381,7 +1395,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         show(paletteHost);
       } else if (quick) {
         // Rebuilt only when what it shows changes.
-        const sig = JSON.stringify([quick, quick === "settings" ? [quickSettings, quickPage] : quick === "activity" ? [quickWeek, quickPrevious] : null, quickFailed, zecaShown(), currentLang()]);
+        const sig = JSON.stringify([quick, quick === "settings" ? [quickSettings, quickPage, preferredWidth, widthSaveFailed] : quick === "activity" ? [quickWeek, quickPrevious] : null, quickFailed, zecaShown(), currentLang()]);
         if (sig !== quickSig || !quickHost.firstChild) {
           quickSig = sig;
           const settingsActions = {
@@ -1416,9 +1430,20 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
             },
             open: (page?: string) => actions.openSettings(page),
           };
+          const active = document.activeElement as HTMLElement | null;
+          const focusedPick = quickHost.contains(active) ? active?.closest<HTMLElement>(".quick-pick")?.dataset.quickPick : undefined;
+          const scroll = main.scrollTop;
           quickHost.replaceChildren(
             quick === "settings"
-              ? settingsQuick(quickSettings, settingsActions, () => reshape(fsm.mode), quickFailed, quickPage)
+              ? settingsQuick(quickSettings, settingsActions, () => reshape(fsm.mode), quickFailed, quickPage, {
+                  value: preferredWidth, failed: widthSaveFailed,
+                  change: (next: IslandWidth) => {
+                    widthSaveFailed = !saveWidth(next);
+                    if (!widthSaveFailed) preferredWidth = next;
+                    fitQuick();
+                    render(raw);
+                  },
+                })
               : quick === "connections"
                 ? connectionsCard([], null, connectorName, { open: () => {}, show: () => {}, add: () => actions.setSize?.("room", "connections") })
                 : weekQuick(quickWeek?.week ?? null, quickWeek?.history ?? true, () => actions.setSize?.("room", "activity"), quickFailed, {
@@ -1441,6 +1466,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
                     },
                   }),
           );
+          if (focusedPick) {
+            quickHost.querySelector<HTMLElement>(`[data-quick-pick="${CSS.escape(focusedPick)}"]`)
+              ?.querySelector<HTMLButtonElement>(".quick-pick-btn")?.focus({ preventScroll: true });
+            main.scrollTop = scroll;
+          }
         }
         show(quickHost);
       } else if (picking) {
@@ -1530,6 +1560,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   // Scale/output changes move the CSS box even when the island keeps the same size.
   // Measure synchronously: WebKit may suspend animation frames while this surface is hidden.
   window.addEventListener("resize", () => { fitQuick(); render(raw); });
+  new ResizeObserver(() => {
+    if (fsm.mode === "open" && main.firstElementChild === overview && overview.clientWidth > 0
+      && overview.clientWidth !== habitatWidth) render(raw);
+  }).observe(overview);
+  watchWidth(value => {
+    preferredWidth = value;
+    widthSaveFailed = false;
+    fitQuick();
+    render(raw);
+  });
 
   /**
    * Puts the chat or the overview in the island's body. Only when it is not there already: taking
@@ -1554,6 +1594,19 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
    *  a click puts it in front, a right-click opens its quick actions; and its badge, when its state
    *  asks. Past the last place, +N opens the Nest's Flock, amber when one of them needs you. */
   function paintHabitat(others: SessionView[], chosen: SessionView | null = null): void {
+    // Measure after mounting the overview: scrollbar space and Quick's zoom belong to this layout.
+    const measuredWidth = overview.clientWidth;
+    const columns = Math.min(HABITAT_PLACES, Math.max(4, others.length));
+    const places = others.length > HABITAT_PLACES ? HABITAT_PLACES - 1 : columns;
+    if (measuredWidth !== habitatWidth || places !== habitatPlaces || columns !== habitatColumns) {
+      habitatWidth = measuredWidth;
+      habitatPlaces = places;
+      habitatColumns = columns;
+      const col = habitatWidth / columns;
+      const birdWidth = BIRD_W * HABITAT_SCENE.vults.scale / OPEN_ZOOM;
+      habitatScene.resize(habitatWidth, places, (slot) => ({ x: slot * col + (col - birdWidth) / 2, wire: HABITAT_SCENE.wire! }));
+    }
+    habitatScene.update(others, null);
     const byKey = new Map(others.map((s) => [key(s), s]));
     const placed = new Set(habitatScene.slots().map((s) => s.key));
     const rest = others.filter((s) => !placed.has(key(s)));
@@ -1564,13 +1617,16 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           onclick: () => actions.setSize?.("room", "flock"),
         })
       : null;
-    if (more) more.title = t("{n} more: see them all in the Nest", { n: rest.length });
+    if (more) {
+      more.title = t("{n} more: see them all in the Nest", { n: rest.length });
+      more.style.left = `${habitatWidth - habitatWidth / habitatColumns / 2}px`;
+    }
     // Each badge by its bird's head, wherever its species puts it. The scene speaks screen pixels
     // (OPEN_ZOOM); the labels and badges sit in the island's own CSS pixels.
     const heads = new Map(habitatScene.anchors().map((a) => [a.key, a.y]));
     habitatBadges.replaceChildren(
       // In wire order, so a screen reader and the keyboard meet them left to right.
-      ...[...habitatScene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
+      ...[...habitatScene.slots()].sort((a, b) => a.x - b.x).flatMap((slot, index) => {
         const s = byKey.get(slot.key);
         if (!s) return [];
         const name = s.project || agentName(s);
@@ -1580,11 +1636,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         mark.setAttribute("aria-hidden", "true");
         const b = el("button", { class: `habitat-bird ${s.status}${chosen && key(chosen) === key(s) ? " chosen" : ""}`, onclick: () => pick(s) }, el("span", { class: "label" }, el("span", { class: "name", text: name }), mark));
         b.dataset.key = slot.key;
-        const column = HABITAT_W / habitatColumns;
+        const column = habitatWidth / habitatColumns;
         const x = slot.x / OPEN_ZOOM;
         const width = slot.width / OPEN_ZOOM;
-        b.style.left = `${Math.round(x - (column - width) / 2)}px`;
-        b.style.width = `${Math.round(column)}px`;
+        const left = Math.round(index * column);
+        b.style.left = `${left}px`;
+        b.style.width = `${Math.round((index + 1) * column) - left}px`;
         b.setAttribute("aria-label", said);
         b.title = `${said}\n${t("Right-click for more")}`;
         const kind = badgeOf(s);
@@ -1889,7 +1946,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       seen.set(key(s), s.status);
       render(raw);
     },
-    openChat: () => chat.toggle(true),
+    openChat: () => { chat.toggle(true); void chat.askZeca(); },
     hush: (s: SessionView, hush: Hush) => {
       actions.hush?.(s.agent, s.id, hush);
       Sound.play("tap");
@@ -1944,11 +2001,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
 
   function target(mode: Mode): { w: number; h: number; r: number } {
     if (mode === "hidden") return {
-      w: dictationSpace ? Math.min(COMPACT_W, window.innerWidth) : HIDDEN_W,
+      w: dictationSpace ? compactWidth() : Math.min(HIDDEN_W, availableWidth()),
       h: dictationSpace, r: RADIUS.compact,
     };
     if (mode === "compact")
-      return { w: COMPACT_W, h: COMPACT_H + dictationSpace, r: RADIUS.compact };
+      return { w: compactWidth(), h: compactHeight() + dictationSpace, r: RADIUS.compact };
     // Layout dimensions include the zoom explicitly; the frame and input region use screen pixels.
     return {
       ...quickPixels(inner.offsetWidth, inner.offsetHeight, dictationSpace),
@@ -1960,13 +2017,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   function reshape(mode: Mode): void {
     const shown = !!dictationLine && !raw.locked && !raw.approval && !raw.sessions.some(s => s.card || s.waiting)
       && !chat.hasWaitingApproval() && !raw.inbox?.some(item => item.source.kind === "chat" && item.source.count > 0)
-      && !nestIsOpen() && presenceNow() !== "paused" && window.innerHeight >= COMPACT_H + DICTATION_HEIGHT;
+      && !nestIsOpen() && presenceNow() !== "paused" && availableHeight() >= miniHeight(availableHeight()) + DICTATION_HEIGHT;
     if (dictationLine) dictationLine.hidden = !shown;
     dictationSpace = shown ? DICTATION_HEIGHT : 0;
     root.classList.toggle("has-dictation", shown);
     root.style.setProperty("--dictation-space", `${dictationSpace}px`);
     inner.style.top = `${dictationSpace / OPEN_ZOOM}px`;
     compact.style.top = `${dictationSpace}px`;
+    compact.style.height = `${compactHeight()}px`;
+    compactMore.style.top = `${dictationSpace + Math.max(0, (compactHeight() - 32) / 2)}px`;
     fitQuick();
     if (mode === "open" && main.contains(chat.element)) chat.fitContents();
     const t = target(mode);
@@ -2164,7 +2223,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         command: zecaShown()
           ? (text) => {
               chat.toggle(true);
-              chat.draft(text);
+              void chat.askZeca(text);
             }
           : null,
         tab: (id) => (id === "chat" ? chat.toggle(true) : actions.setSize?.("room", id)),
@@ -2181,7 +2240,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   });
   // Escape drops a recording first, then closes the chat; with the chat closed, it folds the island.
   window.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape" || fsm.mode !== "open") return;
+    if (e.key !== "Escape" || e.isComposing || e.keyCode === 229 || e.defaultPrevented || fsm.mode !== "open") return;
     if (paletteOpen) {
       closePalette();
       render(raw);

@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 /// What `/continue` says back, as `/remember` does: an English sentence the window translates, and
 /// its detail.
@@ -25,6 +25,7 @@ pub async fn continue_command(
     window: tauri::Webview,
     text: String,
     folder: Option<String>,
+    generation: u32,
 ) -> Result<Option<Said>, String> {
     if ![crate::ISLAND, crate::NEST].contains(&window.label()) {
         return Err("only the chat can do this".into());
@@ -36,9 +37,13 @@ pub async fn continue_command(
     else {
         return Ok(None);
     };
+    let state = app.state::<crate::chat::ChatState>();
+    let _recipient = state.companion_command(generation, folder.as_deref())?;
     let words = rest.trim().to_string();
     if words == "stop" {
-        return Ok(Some(said(crate::continuation::stop_continuation(app).await)));
+        return Ok(Some(said(
+            crate::continuation::stop_continuation(app.clone()).await,
+        )));
     }
     if words.is_empty() {
         return Ok(Some(said((
@@ -53,6 +58,6 @@ pub async fn continue_command(
         ))));
     };
     Ok(Some(said(
-        crate::continuation::continue_session(app, cwd.to_string_lossy().into_owned(), words).await,
+        crate::continuation::continue_session(app.clone(), cwd.to_string_lossy().into_owned(), words).await,
     )))
 }

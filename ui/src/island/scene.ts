@@ -89,9 +89,9 @@ export const COMPACT_SCENE: SceneLayout = {
 };
 
 /** The pill's places for `n` vults: spread evenly from after Zeca to the right end. */
-export function compactAt(n: number): SceneLayout["vults"]["at"] {
+export function compactAt(n: number, width = COMPACT_W, reserved = 0): SceneLayout["vults"]["at"] {
   const first = 52;
-  const last = COMPACT_W - 14 - BIRD_W;
+  const last = Math.max(first, width - 14 - BIRD_W - reserved);
   const step = n > 1 ? (last - first) / (n - 1) : 0;
   return (slot) => ({ x: Math.round(first + slot * step), wire: 33 });
 }

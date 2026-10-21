@@ -104,6 +104,8 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { setMusic, emoteFor } from ${source("island/behavior.ts")};
       export { badgeOf } from ${source("island/views.ts")};
       export { createNow } from ${source("island/now.ts")};
+      export { createProfiles } from ${source("surfaces/nest/profiles.ts")};
+      export { settingsQuick } from ${source("island/quick.ts")};
       export { focusCard, questionBody } from ${source("island/views.ts")};
       export { applyTheme } from ${source("theme.ts")};
       export { sidePanel } from ${source("surfaces/nest/panels.ts")};
@@ -121,7 +123,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { createProfiles, settingsQuick, createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -141,7 +143,7 @@ for (const width of [480, 760, 900, 1180]) {
     const view = { sessions: [session], alerts: [], focus: { agent: "codex", id: "owned-run" }, front: { agent: "codex", id: "owned-run" },
       approval: { agent: "codex", session: "owned-run", request: "pending-request", tool: "Bash", target: "git status", description: "Current permission", questions: [], queue: 1, always: false },
       boards: [{ connector: "github", rows: [row] }] };
-    const originalView = structuredClone(view), actions = [], voiceCalls = [];
+    const originalView = structuredClone(view), actions = [], voiceCalls = [], preparations = [];
     let draft = { text: "Unsent", files: ["/inbox/note.txt"], folder: "/work/alpha", provider: "codex" };
     let place = "audit", flockPlace = { query: "Alpha", onlyNeeds: true, status: null, detail: "context", change: null };
     let connectionPlace = { chosen: "github", picked: row.item, repo: "org/alpha", tab: "prs", detailOpen: width < 900 };
@@ -149,6 +151,7 @@ for (const width of [480, 760, 900, 1180]) {
     const current = { provider: "codex", label: "Codex", folder: "/work/alpha", started: true, model: "gpt", effort: "high", lines: [], busy: true, partial: "", waiting: [] };
     let nest, page, quick, requested, saveFails = false, transitionErrors = 0;
     const chat = from => ({ current: async () => current, draft: async () => structuredClone(draft),
+      prepareZeca: async generation => { preparations.push([from, generation]); },
       saveDraft: async value => { if (saveFails) throw new Error("Draft save unavailable."); draft = structuredClone(value); (from === "nest" ? quick : nest?.chat)?.sync({ kind: "draft", from, draft }); },
       models: async () => [], pick: async () => ({}), conversations: async () => [], keyboard() {},
       voice: { start: async tap => { voiceCalls.push(["start", from, tap]); },
@@ -259,6 +262,19 @@ for (const width of [480, 760, 900, 1180]) {
     nest.chat.load(current);
     Clock.freeze(null);
     nest.chat.setVoiceReady(true);
+    nest.open("flock");
+    await nest.chat.flushDraft();
+    const questionSnapshot = structuredClone(draft);
+    const questionDraft = nest.chat.element.querySelector("textarea").value;
+    const ask = page.querySelector('[data-fid="act:ask"]');
+    assert.ok(ask, "The selected session retains its Ask Zeca action");
+    ask.click(); await tick(); await tick();
+    assert.equal(nest.current(), "chat");
+    assert.deepEqual(preparations.at(-1), ["nest", undefined]);
+    assert.ok(nest.chat.element.querySelector("textarea").value.startsWith(questionDraft));
+    assert.ok(nest.chat.element.querySelector("textarea").value.includes("What is Alpha doing now?"));
+    assert.deepEqual(actions, [], "A session question never resets, sends or answers its permission");
+    nest.chat.restoreDraft(questionSnapshot); await nest.chat.flushDraft();
     nest.open("flock");
     const beforeDictation = voiceCalls.length;
     nest.shortcut("talk"); nest.shortcut("talk-up"); await tick();
@@ -1008,3 +1024,146 @@ console.log("check-surface-continuity: explicit meeting consent, source review, 
   view.setActive(false); await tick(); view.element.remove();
 }
 console.log("check-surface-continuity: speaker preview opt-in, readable model words, unknown/failure fallback and separate sources");
+
+// Quick's inline picks must consume only navigation, never apply a choice on an arrow or Escape.
+{
+  const changes = [];
+  const settings = { presence: "island", foldAfter: 15, history: true, zeca: true, flock: "world" };
+  const view = settingsQuick(settings, {}, () => {}, false, "general", { value: 680, failed: false,
+    change: value => changes.push(value),
+  });
+  document.body.append(view);
+  const pick = view.querySelectorAll(".quick-pick").find(node => node.dataset.quickPick === "width");
+  const trigger = pick.querySelector(".quick-pick-btn"), list = pick.querySelector(".quick-pick-list");
+  const choices = list.querySelectorAll("button");
+  const key = (name, extra = {}) => {
+    const result = { prevented: false, stopped: false };
+    pick.fire("keydown", { key: name, target: document.activeElement,
+      preventDefault: () => { result.prevented = true; }, stopPropagation: () => { result.stopped = true; }, ...extra });
+    return result;
+  };
+  assert.equal(trigger.getAttribute("aria-controls"), list.id);
+  assert.equal(trigger.getAttribute("aria-expanded"), "false");
+  assert.equal(list.hidden, true);
+  trigger.focus();
+  key("ArrowDown", { isComposing: true });
+  assert.equal(list.hidden, true, "Composition must not open a selector");
+  key("ArrowDown");
+  assert.equal(document.activeElement, choices[2], "Opening starts at the saved choice");
+  assert.equal(trigger.getAttribute("aria-expanded"), "true");
+  assert.deepEqual(choices[2].scrolledIntoView, { block: "nearest" });
+  key("End"); assert.equal(document.activeElement, choices[3]);
+  key("Home"); assert.equal(document.activeElement, choices[0]);
+  key("ArrowUp"); assert.equal(document.activeElement, choices[3]);
+  key("ArrowDown"); assert.equal(document.activeElement, choices[0]);
+  assert.deepEqual(changes, []);
+  assert.deepEqual(key("Escape"), { prevented: true, stopped: true }, "Escape closes the list before the island can fold");
+  assert.equal(document.activeElement, trigger);
+  assert.equal(list.hidden, true);
+  trigger.click(); choices[3].click();
+  assert.deepEqual(changes, [760], "Only explicit activation applies a choice");
+  assert.equal(document.activeElement, trigger, "Focus returns before a callback can redraw the picker");
+  trigger.click();
+  assert.deepEqual(key("Tab"), { prevented: false, stopped: false }, "Tab closes without trapping native navigation");
+  assert.equal(list.hidden, true);
+  trigger.click();
+  const outside = new Element("button"); document.body.append(outside); outside.focus();
+  pick.fire("focusout", { relatedTarget: outside });
+  assert.equal(list.hidden, true);
+  assert.equal(document.activeElement, outside, "Leaving the selector must not steal focus");
+  outside.remove(); view.remove();
+  const failed = settingsQuick(settings, {}, () => {}, false, "general", { value: 680, failed: true, change() {} });
+  assert.ok(failed.querySelector('[role="alert"]'), "A failed width save must be announced");
+}
+console.log("check-surface-continuity: Quick picker arrows/Home/End, IME, explicit choice, Escape, Tab, blur and focus return");
+
+{
+  const reads = [];
+  let returned = false;
+  const profiles = createProfiles(() => new Promise((resolve, reject) => reads.push({ resolve, reject })), () => { returned = true; });
+  document.body.append(profiles.element);
+  assert.equal(reads.length, 0, "Hidden profiles do not read a catalog");
+  profiles.visible(true); assert.equal(reads.length, 1);
+  profiles.visible(false);
+  const fixture = [{ id: "reviewer", built_in: true, revision: 1, title: "Reviewer", about: "Review fixture", species: "gypaetus", look: "none", instructions: "Inspect changes." }];
+  reads[0].resolve(fixture); await tick();
+  assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 0, "A retired read cannot repaint hidden profiles");
+  profiles.visible(true); reads[1].reject(new Error("offline")); await tick();
+  assert.ok(profiles.element.querySelector(".view-state"));
+  profiles.element.querySelector(".view-state-body").querySelector("button").click();
+  reads[2].resolve(fixture); await tick();
+  const choice = profiles.element.querySelector(".agent-profile-choice");
+  choice.click();
+  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("Inspect changes."));
+  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("1"));
+  assert.equal(profiles.element.querySelector(".agent-profile-choice").getAttribute("aria-pressed"), "true");
+  profiles.relabel();
+  assert.equal(profiles.element.querySelector(".agent-profile-choice").getAttribute("aria-pressed"), "true");
+  profiles.element.querySelector(".activity-heading").querySelector("button").click();
+  assert.equal(returned, true);
+  profiles.visible(false); profiles.element.remove();
+}
+console.log("check-surface-continuity: profile catalog lazy read, late cancellation, explicit retry, selection/revision and return");
+
+{
+  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Original instructions" };
+  const writes = [];
+  const profiles = createProfiles(async () => [preset], () => {}, edit => new Promise((resolve, reject) => writes.push({ edit, resolve, reject })));
+  document.body.append(profiles.element); profiles.visible(true); await tick();
+  profiles.element.querySelector(".agent-profile-choice").click();
+  profiles.element.querySelector(".agent-profile-edit").click();
+  const input = profiles.element.querySelector("input"); input.value = "Literal custom title"; input.fire("input");
+  const text = profiles.element.querySelector("textarea"); text.value = "Keep this draft\nexactly."; text.fire("input");
+  const species = profiles.element.querySelector('[data-field="species"]'); species.value = "vultur"; species.fire("change");
+  const look = profiles.element.querySelector('[data-field="look"]'); look.value = "crown"; look.fire("change");
+  assert.equal(profiles.element.querySelector("input").value, "Literal custom title", "Appearance updates retain text and controls");
+  profiles.visible(false); profiles.relabel(); profiles.visible(true);
+  assert.equal(profiles.element.querySelector('[data-field="species"]').value, "vultur");
+  assert.equal(profiles.element.querySelector('[data-field="look"]').value, "crown");
+  assert.equal(profiles.element.querySelector("textarea").value, "Keep this draft\nexactly.", "Navigation and relabel retain unsaved instructions");
+  const submit = () => profiles.element.querySelector("form").fire("submit", { preventDefault() {} });
+  submit(); submit(); assert.equal(writes.length, 1, "A pending save cannot create duplicate copies");
+  writes[0].reject("storage"); await tick();
+  assert.ok(profiles.element.querySelector('[role="alert"]'));
+  assert.equal(profiles.element.querySelector("input").value, "Literal custom title");
+  assert.equal(profiles.element.querySelector("textarea").value, "Keep this draft\nexactly.");
+  submit();
+  assert.deepEqual(writes[1].edit, { action: "copy", preset: "developer", title: "Literal custom title", instructions: "Keep this draft\nexactly.", species: "vultur", look: "crown" });
+  const custom = { ...preset, built_in: false, id: "custom-7", title: writes[1].edit.title, instructions: writes[1].edit.instructions, species: writes[1].edit.species, look: writes[1].edit.look };
+  writes[1].resolve(custom); await tick();
+  assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 2, "The preset survives creating a copy");
+  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("Literal custom title"));
+  profiles.element.querySelector(".agent-profile-edit").click(); submit();
+  assert.equal(writes[2].edit.action, "update"); assert.equal(writes[2].edit.id, 7); assert.equal(writes[2].edit.revision, 1);
+  writes[2].reject("conflict"); await tick();
+  assert.ok(profiles.element.querySelector('[role="alert"]').textContent.includes("Cancel"));
+  assert.equal(profiles.element.querySelector("textarea").value, custom.instructions);
+  profiles.visible(false); profiles.element.remove();
+}
+console.log("check-surface-continuity: profile copies, retained drafts, single pending save, failure retry and expected revision");
+
+{
+  const original = Element.prototype.getContext;
+  let pixels = 0;
+  Element.prototype.getContext = function () {
+    const canvas = this;
+    return { fillRect(x, y, w, h) {
+      assert.ok(x >= 0 && y >= 0 && x + w <= canvas.width && y + h <= canvas.height, "An accessory or species must never be clipped in a profile preview");
+      pixels++;
+    } };
+  };
+  try {
+    const preset = {id:"developer",built_in:true,revision:1,title:"Developer",about:"Description",species:"atratus",look:"none",instructions:"Instructions"};
+    const profiles = createProfiles(async () => [preset], () => {}, async () => preset);
+    document.body.append(profiles.element);profiles.visible(true);await tick();
+    profiles.element.querySelector(".agent-profile-choice").click();profiles.element.querySelector(".agent-profile-edit").click();
+    const species = profiles.element.querySelector('[data-field="species"]'), look = profiles.element.querySelector('[data-field="look"]');
+    assert.equal(species.options.length, 23);
+    assert.ok(!look.options.some(option => option.value === "auto"), "Profile appearance is pinned, never calendar-dependent");
+    for (const bird of species.options) for (const accessory of look.options) {
+      species.value = bird.value;look.value = accessory.value;look.fire("change");
+    }
+    assert.ok(pixels > 0);profiles.visible(false);profiles.element.remove();
+  } finally { Element.prototype.getContext = original; }
+}
+console.log("check-surface-continuity: every species/accessory preview fits with integer pixels and no calendar option");
