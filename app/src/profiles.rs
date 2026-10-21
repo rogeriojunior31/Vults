@@ -1,6 +1,9 @@
 //! The Nest owns local profiles; saving instructions never starts an agent or changes access.
 use serde::{Deserialize, Serialize};
-use vults_store::{Store, profiles::Profile};
+use vults_store::{
+    Store,
+    profiles::{Profile, SkillSnapshot},
+};
 
 #[derive(Serialize)]
 pub struct View {
@@ -12,6 +15,8 @@ pub struct View {
     look: String,
     instructions: String,
     built_in: bool,
+    skills: Vec<SkillSnapshot>,
+    skill_catalog: Vec<vults_zeca::profiles::Skill>,
 }
 
 impl From<Profile> for View {
@@ -25,6 +30,8 @@ impl From<Profile> for View {
             look: p.look,
             instructions: p.instructions,
             built_in: false,
+            skills: p.skills,
+            skill_catalog: vults_zeca::profiles::SKILLS.to_vec(),
         }
     }
 }
@@ -38,6 +45,7 @@ pub enum Edit {
         instructions: String,
         species: String,
         look: String,
+        skill_ids: Vec<String>,
     },
     Update {
         id: i64,
@@ -46,6 +54,7 @@ pub enum Edit {
         instructions: String,
         species: String,
         look: String,
+        skill_ids: Vec<String>,
     },
 }
 
@@ -54,6 +63,29 @@ fn page(window: &tauri::Webview) -> Result<(), String> {
         return Err("Agent profiles are available in the Nest only.".into());
     }
     Ok(())
+}
+
+fn skills(ids: Vec<String>) -> Result<Vec<SkillSnapshot>, String> {
+    if ids.len() > 8 {
+        return Err("invalid".into());
+    }
+    let mut result = Vec::with_capacity(ids.len());
+    for id in ids {
+        let skill = vults_zeca::profiles::SKILLS
+            .iter()
+            .find(|skill| skill.id == id)
+            .ok_or("invalid")?;
+        if result.iter().any(|saved: &SkillSnapshot| saved.id == skill.id) {
+            return Err("invalid".into());
+        }
+        result.push(SkillSnapshot {
+            id: skill.id.into(),
+            revision: skill.revision,
+            title: skill.title.into(),
+            content: skill.content.into(),
+        });
+    }
+    Ok(result)
 }
 fn error(e: vults_store::Error) -> String {
     match e {
@@ -81,6 +113,8 @@ pub async fn agent_profiles(window: tauri::Webview) -> Result<Vec<View>, String>
                 look: "none".into(),
                 instructions: p.instructions.into(),
                 built_in: true,
+                skills: Vec::new(),
+                skill_catalog: vults_zeca::profiles::SKILLS.to_vec(),
             })
             .collect();
         profiles.extend(
@@ -108,6 +142,7 @@ pub async fn agent_profile_save(window: tauri::Webview, edit: Edit) -> Result<Vi
                 instructions,
                 species,
                 look,
+                skill_ids,
             } => {
                 let p = vults_zeca::profiles::PRESETS
                     .iter()
@@ -123,6 +158,7 @@ pub async fn agent_profile_save(window: tauri::Webview, edit: Edit) -> Result<Vi
                     species,
                     look,
                     about: p.about.into(),
+                    skills: skills(skill_ids)?,
                 }
             }
             Edit::Update {
@@ -132,6 +168,7 @@ pub async fn agent_profile_save(window: tauri::Webview, edit: Edit) -> Result<Vi
                 instructions,
                 species,
                 look,
+                skill_ids,
             } => {
                 let mut p = store
                     .agent_profiles()
@@ -144,6 +181,7 @@ pub async fn agent_profile_save(window: tauri::Webview, edit: Edit) -> Result<Vi
                 p.instructions = instructions;
                 p.species = species;
                 p.look = look;
+                p.skills = skills(skill_ids)?;
                 p
             }
         };

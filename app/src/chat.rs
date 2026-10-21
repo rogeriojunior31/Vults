@@ -1500,7 +1500,7 @@ fn turn_profile(
         || chat.provider() != Provider::Claude
         || c.frozen.is_some()
         || c.history.is_some()
-        || chat.specialist_brief() != Some(profile.instructions.as_str())
+        || chat.specialist_brief() != Some(specialist_brief(profile).as_str())
         || folder_key(Some(chat.folder())) != c.folder
         || c.model.as_deref() != chat.pick().0
         || c.effort.as_deref().and_then(vults_chat::Effort::parse) != chat.pick().1
@@ -1538,7 +1538,7 @@ fn restore_conversation(
         }
         spec.model = c.model.clone();
         spec.effort = c.effort.as_deref().and_then(vults_chat::Effort::parse);
-        let chat = Chat::specialist(spec, c.session.clone(), profile.instructions.clone())?;
+        let chat = Chat::specialist(spec, c.session.clone(), specialist_brief(profile))?;
         turn_profile(&chat, Some(c), Some(profile))?;
         Ok((chat, Some(profile.clone())))
     } else {
@@ -1554,6 +1554,20 @@ fn restore_conversation(
             None,
         ))
     }
+}
+
+fn specialist_brief(profile: &Snapshot) -> String {
+    let mut brief = profile.instructions.clone();
+    if !profile.skills.is_empty() {
+        brief.push_str("\n\nPinned skills:\n");
+        for skill in &profile.skills {
+            brief.push_str(&format!(
+                "\n## {} (revision {})\n{}\n",
+                skill.title, skill.revision, skill.content
+            ));
+        }
+    }
+    brief
 }
 
 /// One thing done with the database, off the async runtime.
@@ -2140,6 +2154,30 @@ pub fn clean_inbox() {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn specialist_brief_includes_exact_pinned_skill_content() {
+        let profile = Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "developer".into(),
+                revision: 1,
+            },
+            title: "Developer".into(),
+            about: "Description".into(),
+            instructions: "Pinned instructions".into(),
+            species: "atratus".into(),
+            look: "none".into(),
+            skills: vec![vults_store::profiles::SkillSnapshot {
+                id: "verify-change".into(),
+                revision: 2,
+                title: "Verify".into(),
+                content: "Pinned check text".into(),
+            }],
+        };
+        let brief = super::specialist_brief(&profile);
+        assert!(brief.starts_with("Pinned instructions\n\nPinned skills:"));
+        assert!(brief.contains("## Verify (revision 2)\nPinned check text"));
+    }
+
+    #[test]
     fn companion_actions_reject_stale_sources_and_specialist_ownership() {
         let state = ChatState::new();
         let generation = state.generation();
@@ -2167,6 +2205,7 @@ mod tests {
             instructions: "Pinned instructions".into(),
             species: "atratus".into(),
             look: "none".into(),
+            skills: vec![],
         };
         let dir = std::env::temp_dir();
         *state.chat.try_lock().unwrap() = Chat::resume(
@@ -2541,6 +2580,7 @@ mod tests {
             instructions: "Implement changes".into(),
             species: "atratus".into(),
             look: "none".into(),
+            skills: vec![],
         });
         let specialist = store.conversation_new(&request, 2).unwrap();
         assert!(opened(store.conversation(specialist).unwrap().unwrap(), vec![], false).is_none());
@@ -2562,6 +2602,7 @@ mod tests {
             instructions: "Pinned specialist instructions".into(),
             species: "atratus".into(),
             look: "none".into(),
+            skills: vec![],
         };
         let id = store
             .conversation_new(

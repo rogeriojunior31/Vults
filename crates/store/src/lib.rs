@@ -169,6 +169,8 @@ const MIGRATIONS: &[&str] = &[
     profiles::APPEARANCE,
     // 31: immutable specialist identity snapshots on conversations.
     conversations::PROFILE,
+    // 32: skill content pinned to each user profile revision.
+    profiles::SKILLS,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

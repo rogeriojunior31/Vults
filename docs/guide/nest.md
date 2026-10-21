@@ -92,7 +92,11 @@ with an editable name and instructions. **Save profile** creates a custom profil
 saves a new revision of your copy. Built-in profiles remain unchanged. The copy initially inherits the preset's appearance.
 In **Appearance**, choose a **Species** and an **Accessory**; the preview uses the same sprites as
 the flock. Accessories are fixed choices, including **None**, without seasonal changes.
-The card shows the saved appearance after saving. Skills and applying a profile to Chat come later.
+The card shows the saved appearance after saving. In **Pinned skills**, choose from the built-in
+skills and review their literal content and revision. Each profile save keeps the selected content
+with that immutable revision, and a future bound conversation can retain the same snapshot.
+Pinned skills do not enable tools. Applying a profile to Chat remains gated until recipient,
+executor, source and Zeca-off behavior are ready.
 
 Custom profiles live in the local database, independently of conversation history. Each save
 retains earlier revisions. A stale editor is rejected instead of overwriting newer changes;

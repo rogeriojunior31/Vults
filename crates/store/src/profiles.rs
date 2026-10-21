@@ -18,6 +18,19 @@ CREATE TABLE agent_profile_revisions (
 pub(crate) const APPEARANCE: &str =
     "ALTER TABLE agent_profile_revisions ADD COLUMN look TEXT NOT NULL DEFAULT 'none';";
 
+pub(crate) const SKILLS: &str =
+    "ALTER TABLE agent_profile_revisions ADD COLUMN skills TEXT NOT NULL DEFAULT '[]';";
+
+/// Skill content is copied into the profile revision so later catalog edits cannot change it.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SkillSnapshot {
+    pub id: String,
+    pub revision: u32,
+    pub title: String,
+    pub content: String,
+}
+
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct Profile {
     pub id: i64,
@@ -29,6 +42,7 @@ pub struct Profile {
     pub species: String,
     pub look: String,
     pub about: String,
+    pub skills: Vec<SkillSnapshot>,
 }
 
 fn validate(title: &str, instructions: &str) -> Result<(), Error> {
@@ -56,6 +70,8 @@ pub struct Snapshot {
     pub instructions: String,
     pub species: String,
     pub look: String,
+    #[serde(default)]
+    pub skills: Vec<SkillSnapshot>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -77,6 +93,7 @@ impl From<Profile> for Snapshot {
             instructions: profile.instructions,
             species: profile.species,
             look: profile.look,
+            skills: profile.skills,
         }
     }
 }
@@ -88,6 +105,7 @@ impl Snapshot {
         if self.about.len() > 1024 {
             return Err(Error::Invalid("Invalid profile snapshot."));
         }
+        validate_skills(&self.skills)?;
         match &self.source {
             // The native caller resolves the preset revision from its catalog before snapshotting.
             Source::Preset { id, revision }
@@ -118,6 +136,35 @@ fn appearance(species: &str, look: &str) -> Result<(), Error> {
     Ok(())
 }
 
+fn validate_skills(skills: &[SkillSnapshot]) -> Result<(), Error> {
+    if skills.len() > 8 {
+        return Err(Error::Invalid("Invalid profile skills."));
+    }
+    let mut ids = std::collections::HashSet::new();
+    for skill in skills {
+        if skill.id.is_empty()
+            || skill.id.len() > 64
+            || !skill
+                .id
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+            || skill.revision == 0
+            || skill.title.trim().is_empty()
+            || skill.title.len() > 120
+            || skill.content.trim().is_empty()
+            || skill.content.len() > 8192
+            || skill
+                .content
+                .chars()
+                .any(|c| c.is_control() && c != '\n' && c != '\t' && c != '\r')
+            || !ids.insert(skill.id.as_str())
+        {
+            return Err(Error::Invalid("Invalid profile skills."));
+        }
+    }
+    Ok(())
+}
+
 fn row(r: &rusqlite::Row<'_>) -> rusqlite::Result<Profile> {
     Ok(Profile {
         id: r.get(0)?,
@@ -129,12 +176,13 @@ fn row(r: &rusqlite::Row<'_>) -> rusqlite::Result<Profile> {
         species: r.get(6)?,
         about: r.get(7)?,
         look: r.get(8)?,
+        skills: serde_json::from_str(&r.get::<_, String>(9)?).map_err(|_| rusqlite::Error::InvalidQuery)?,
     })
 }
 
 impl Store {
     pub fn agent_profiles(&self) -> Result<Vec<Profile>, Error> {
-        Ok(self.conn.prepare("SELECT profile_id, revision, title, instructions, preset, preset_revision, species, about, look
+        Ok(self.conn.prepare("SELECT profile_id, revision, title, instructions, preset, preset_revision, species, about, look, skills
             FROM agent_profile_revisions r WHERE revision =
             (SELECT MAX(revision) FROM agent_profile_revisions WHERE profile_id = r.profile_id) ORDER BY profile_id")?
             .query_map([], row)?.collect::<Result<_, _>>()?)
@@ -142,7 +190,7 @@ impl Store {
 
     /// A retained revision, not the latest editable profile.
     pub fn agent_profile_revision(&self, id: i64, revision: u32) -> Result<Option<Profile>, Error> {
-        Ok(self.conn.query_row("SELECT profile_id, revision, title, instructions, preset, preset_revision, species, about, look
+        Ok(self.conn.query_row("SELECT profile_id, revision, title, instructions, preset, preset_revision, species, about, look, skills
             FROM agent_profile_revisions WHERE profile_id=?1 AND revision=?2", params![id,revision], row).optional()?)
     }
 
@@ -150,6 +198,7 @@ impl Store {
     pub fn agent_profile_save(&mut self, profile: &Profile) -> Result<Profile, Error> {
         validate(&profile.title, &profile.instructions)?;
         appearance(&profile.species, &profile.look)?;
+        validate_skills(&profile.skills)?;
         let tx = self
             .conn
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
@@ -170,7 +219,7 @@ impl Store {
             p.revision = 1;
             p
         } else {
-            let mut old = tx.query_row("SELECT profile_id, revision, title, instructions, preset, preset_revision, species, about, look
+            let mut old = tx.query_row("SELECT profile_id, revision, title, instructions, preset, preset_revision, species, about, look, skills
                 FROM agent_profile_revisions WHERE profile_id = ?1 ORDER BY revision DESC LIMIT 1", [profile.id], row)
                 .optional()?.ok_or(Error::Invalid("Profile no longer exists."))?;
             if old.revision != profile.revision {
@@ -184,12 +233,13 @@ impl Store {
             old.look.clone_from(&profile.look);
             old.title.clone_from(&profile.title);
             old.instructions.clone_from(&profile.instructions);
+            old.skills.clone_from(&profile.skills);
             old
         };
         saved.title = saved.title.trim().to_owned();
         tx.execute("INSERT INTO agent_profile_revisions
-            (profile_id, revision, title, instructions, preset, preset_revision, species, about, look) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
-            params![saved.id, saved.revision, saved.title, saved.instructions, saved.preset, saved.preset_revision, saved.species, saved.about, saved.look])?;
+            (profile_id, revision, title, instructions, preset, preset_revision, species, about, look, skills) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
+            params![saved.id, saved.revision, saved.title, saved.instructions, saved.preset, saved.preset_revision, saved.species, saved.about, saved.look, serde_json::to_string(&saved.skills).map_err(|_| Error::Invalid("Invalid profile skills."))?])?;
         tx.commit()?;
         Ok(saved)
     }
@@ -198,6 +248,17 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn pre_skill_conversation_snapshots_default_to_no_skills() {
+        let snapshot: Snapshot = serde_json::from_value(serde_json::json!({
+            "source": { "kind": "preset", "id": "developer", "revision": 1 },
+            "title": "Developer", "about": "Description", "instructions": "Do the work",
+            "species": "atratus", "look": "none"
+        }))
+        .unwrap();
+        assert!(snapshot.skills.is_empty());
+    }
+
     #[test]
     fn copies_and_revisions_survive_reopen_and_reject_stale_or_invalid_edits() {
         let dir = std::env::temp_dir().join(format!("vults-profiles-{}", std::process::id()));
@@ -213,6 +274,12 @@ mod tests {
             species: "atratus".into(),
             look: "none".into(),
             about: "Original description".into(),
+            skills: vec![SkillSnapshot {
+                id: "verify-change".into(),
+                revision: 1,
+                title: "Verify the change".into(),
+                content: "Run focused checks".into(),
+            }],
         };
         let mut copy = s.agent_profile_save(&base).unwrap();
         assert_eq!(copy.revision, 1);
@@ -227,12 +294,17 @@ mod tests {
         assert_eq!(changed.revision, 2);
         assert_eq!(changed.species, "vultur");
         assert_eq!(changed.look, "crown");
+        assert_eq!(changed.skills, base.skills);
         assert_eq!(s.conn.query_row("SELECT species || '/' || look FROM agent_profile_revisions WHERE profile_id=?1 AND revision=1",[changed.id],|r|r.get::<_,String>(0)).unwrap(),"atratus/none");
         assert!(s.agent_profile_save(&copy).is_err());
         copy.title = " ".into();
         assert!(s.agent_profile_save(&copy).is_err());
         copy.title = "Name".into();
         copy.instructions = "\0".into();
+        assert!(s.agent_profile_save(&copy).is_err());
+        copy.instructions = "Valid instructions".into();
+        let duplicate = copy.skills[0].clone();
+        copy.skills.push(duplicate);
         assert!(s.agent_profile_save(&copy).is_err());
         assert_eq!(
             s.conn
@@ -270,13 +342,15 @@ mod migration_tests {
         }
         s.conn.pragma_update(None, "user_version", 29).unwrap();
         s.conn.execute_batch("INSERT INTO agent_profiles(id) VALUES(1);
-            INSERT INTO agent_profile_revisions VALUES(1,1,'My reviewer','Review','reviewer',1,'gypaetus','Description');").unwrap();
+            INSERT INTO agent_profile_revisions(profile_id,revision,title,instructions,preset,preset_revision,species,about)
+            VALUES(1,1,'My reviewer','Review','reviewer',1,'gypaetus','Description');").unwrap();
         drop(s);
         let s = Store::open(&dir).unwrap();
         let profiles = s.agent_profiles().unwrap();
         assert_eq!(profiles[0].species, "gypaetus");
         assert_eq!(profiles[0].look, "none");
         assert_eq!(profiles[0].revision, 1);
+        assert!(profiles[0].skills.is_empty());
         drop(s);
         std::fs::remove_dir_all(dir).unwrap();
     }

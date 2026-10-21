@@ -476,8 +476,10 @@ export type Place = { presence: Presence; dock: "top" | "bottom" };
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 export type AgentProfileEdit =
-  | { action: "copy"; preset: string; title: string; instructions: string; species: string; look: string }
-  | { action: "update"; id: number; revision: number; title: string; instructions: string; species: string; look: string };
+  | { action: "copy"; preset: string; title: string; instructions: string; species: string; look: string; skill_ids: string[] }
+  | { action: "update"; id: number; revision: number; title: string; instructions: string; species: string; look: string; skill_ids: string[] };
+
+export interface AgentSkill { id: string; revision: number; title: string; content: string }
 
 export interface AgentProfile {
   built_in: boolean;
@@ -488,6 +490,8 @@ export interface AgentProfile {
   species: string;
   look: string;
   instructions: string;
+  skills: AgentSkill[];
+  skill_catalog: AgentSkill[];
 }
 
 export const Bridge = {

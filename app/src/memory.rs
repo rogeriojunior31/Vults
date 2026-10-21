@@ -948,6 +948,7 @@ mod tests {
             instructions: "Review changes".into(),
             species: "gypaetus".into(),
             look: "none".into(),
+            skills: vec![],
         });
         let specialist = store.conversation_new(&new, 2).unwrap();
         store

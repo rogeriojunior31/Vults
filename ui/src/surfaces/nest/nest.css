@@ -2618,3 +2618,10 @@ button.touched-row:hover,
 .agent-profile-appearance-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
 .agent-profile-appearance-grid > div:last-child { display: grid; gap: 8px; }
 .agent-profile-preview-slot { display: flex; align-items: center; justify-content: center; }
+.agent-profile-skills { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.agent-profile-skills legend { margin-bottom: 2px; }
+.agent-profile-skills > p { margin: 0; }
+.agent-profile-skill { display: grid !important; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 8px !important; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+.agent-profile-skill input { width: 16px; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
+.agent-profile-skill > span { display: grid; gap: 4px; min-width: 0; }
+.agent-profile-skill > span > span { color: var(--fg-dim); font-size: var(--text-s); line-height: 1.5; }

@@ -482,6 +482,12 @@ mod tests {
                 species: "atratus".into(),
                 look: "none".into(),
                 about: "Description".into(),
+                skills: vec![crate::profiles::SkillSnapshot {
+                    id: "verify-change".into(),
+                    revision: 1,
+                    title: "Verify the change".into(),
+                    content: "Run focused checks".into(),
+                }],
             })
             .unwrap();
         let pinned = Snapshot::from(profile.clone());
@@ -494,6 +500,7 @@ mod tests {
         profile.instructions = "Edited instructions".into();
         profile.species = "vultur".into();
         profile.look = "crown".into();
+        profile.skills.clear();
         let edited = s.agent_profile_save(&profile).unwrap();
         assert_eq!(edited.revision, 2);
         assert_eq!(
@@ -504,6 +511,10 @@ mod tests {
             "Original instructions"
         );
         assert_eq!(s.conversation(id).unwrap().unwrap().profile, Some(pinned.clone()));
+        assert_eq!(
+            s.agent_profile_revision(profile.id, 1).unwrap().unwrap().skills,
+            pinned.skills
+        );
         s.conversation_restart(
             id,
             &New {
@@ -528,6 +539,18 @@ mod tests {
                 &New {
                     frozen: Some("Zeca private memory".into()),
                     ..request.clone()
+                },
+                2
+            )
+            .is_err()
+        );
+        let mut changed_skill = pinned.clone();
+        changed_skill.skills[0].content = "Different content".into();
+        assert!(
+            s.conversation_new(
+                &New {
+                    profile: Some(changed_skill),
+                    ..new("Forged skill")
                 },
                 2
             )
@@ -599,6 +622,7 @@ mod tests {
             instructions: "Review the changes".into(),
             species: "gypaetus".into(),
             look: "none".into(),
+            skills: vec![],
         };
         let legacy = s.conversation_new(&new("Zeca"), 1).unwrap();
         assert!(s.conversation(legacy).unwrap().unwrap().profile.is_none());
