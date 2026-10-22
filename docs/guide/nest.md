@@ -87,23 +87,50 @@ its unsaved text and selection during an unrelated update.
 ## Agent profiles
 
 Open **Flock > Agent profiles** to inspect the built-in Developer, Reviewer and Researcher profiles.
-Choose a card to read its instructions and explicit revision. **Create a copy** opens a local draft
-with an editable name and instructions. **Save profile** creates a custom profile; **Edit profile**
-saves a new revision of your copy. Built-in profiles remain unchanged. The copy initially inherits the preset's appearance.
+Choose a card to read its instructions and explicit revision. **Create profile** opens a dedicated
+blank editor: enter your own name and instructions without choosing or copying a preset.
+**Create a copy** remains available on built-in profiles and fills the same editor with that
+profile's instructions and appearance. The editor puts name and instructions first, with appearance
+and optional pinned skills alongside them in a wide window and below them in a narrow window.
+**Save profile** creates a custom profile with Ask access by default; choose another access level
+after saving. **Edit profile** saves a new revision. Built-in profiles remain unchanged.
 In **Appearance**, choose a **Species** and an **Accessory**; the preview uses the same sprites as
 the flock. Accessories are fixed choices, including **None**, without seasonal changes.
 The card shows the saved appearance after saving. In **Pinned skills**, choose from the built-in
 skills and review their literal content and revision. Each profile save keeps the selected content
-with that immutable revision, and a future bound conversation can retain the same snapshot.
-Pinned skills do not enable tools. Applying a profile to Chat remains gated until recipient,
-executor, source and Zeca-off behavior are ready.
+with that immutable revision, and each specialist conversation keeps the exact profile and skill
+snapshot it began with. Pinned skills do not enable tools.
+
+The profile catalog keeps the birds in a compact list beside the selected profile. Its animated
+bird greets you on click and follows your appearance choices in the editor; hidden pages stop
+animation, and reduced motion keeps it still. **Open specialist chat** and **Create a copy** sit
+beside the selected bird, with its access choice below. Expand
+**Instructions**, **Pinned skills** or **Source** for the complete retained content and execution scope.
+Opening waits for an access save to finish, and a failed opening stays visible with a retryable action.
+Choose **Open specialist chat** to start or resume that profile in the existing **Chat** tab.
+The recipient selector switches between Zeca and profiles, using the same composer, transcript,
+history sidebar and approval cards while retaining each recipient's draft and conversation. The
+animated perch and reply signatures show the species and accessory pinned to that conversation,
+including when Zeca is off. Changing the profile affects new conversations; an older conversation
+shows its pinned revision and the latest available revision. Start a new conversation to use it. It runs
+through an isolated Claude Code session with only the pinned profile and skills: no project or flock
+context, files, voice, or Zeca memory. It remains available when Zeca is off. Its saved conversations
+and approval cards stay inside the selected profile and never appear in Zeca's Chat history.
+
+Each profile has its own **Access for this profile** setting: **Asks first** is the default, **Your
+policies** applies the policies you accepted, and **Full access** answers what those policies leave
+open. Policy denies block the call. Destructive commands, policy asks and actions after reading outside
+content still show an approval card. Choose any access level directly in the Chat picker or the profile; opening Settings is not required.
+Access changes stay synchronized between the profile and Chat and apply to the next tool call only
+after saving. A failed save keeps the previous access and offers a retry in Chat. Review the command and any outside-content disclosure before choosing **Allow**;
+**Always in this conversation** repeats only that exact call in that conversation. The app records the decision.
 
 Custom profiles live in the local database, independently of conversation history. Each save
 retains earlier revisions. A stale editor is rejected instead of overwriting newer changes;
 cancel and reopen to read the latest revision. Failed saves preserve your draft. Drafts also
 survive navigation within the current window, but are not saved across an app restart.
-The catalog works with Zeca off and has no access to his private memory. Saving does not start
-an agent, send a provider request, write agent configuration or change permissions.
+The catalog and specialist Chat work with Zeca off and do not access his private memory. Saving a
+profile does not start an agent, send a provider request, write agent configuration or change permissions.
 
 **Back to Flock** returns to your existing session view. Waiting-session chips remain available
 while reading profiles; open one to review its card in the Flock. A failed catalog read offers
@@ -264,6 +291,11 @@ new), **Pull requests**, **Actions** (your default branches' checks; red with ho
 **Releases** (each repository's latest). Search filters the loaded tab by title, reference,
 repository, branch or author, alongside the **All repos** filter. It makes no network request.
 The search stays on this computer across reopening; **Clear filters** restores the list.
+
+Each list row with check data shows a small segmented summary beside its status. Failures come
+first, followed by running and waiting checks. Hover for each check's name and state; assistive
+technology reads the same information. Large matrices show up to twelve segments and a remaining
+count; the selected detail still lists every check. Rows without check data show no check summary.
 
 The list and selected detail scroll independently; ordinary polling keeps their reading
 positions, search focus and expanded details. At narrow widths, **Back** or **Esc** returns from

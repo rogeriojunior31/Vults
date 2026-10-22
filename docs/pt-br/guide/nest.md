@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: ae57c132afc5 -->
+<!-- source: de0b46f8e3c4 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -247,13 +247,19 @@ ligado aguardando seu primeiro card mostra a espera ou o erro com Atualizar e Co
 um status que não pôde ser lido oferece **Try again**, sem tratar o conector como desligado.
 Quando o limite diário de requisições se esgota, o motivo da espera fica explícito.
 
-No GitHub, cinco abas mantêm suas contagens: **Inbox** (o que espera por você: revisões pedidas
+No GitHub, quatro abas mantêm suas contagens: **Inbox** (o que espera por você: revisões pedidas
 a você, seus pull requests falhando, devolvidos ou prontos para merge e um branch padrão
 falhando; quantos são novos), **Pull requests**, **Actions** (os checks dos seus branches padrão;
 em vermelho com quantos falham) e **Releases** (a mais recente de cada repositório). A busca
 filtra a aba carregada por título, referência, repositório, branch ou autor, junto do filtro
 **All repos**. Ela não faz requisições de rede. A busca fica neste computador ao reabrir;
 **Clear filters** restaura a lista.
+
+Cada linha com dados de checks mostra um pequeno resumo segmentado ao lado do estado. As falhas
+vêm primeiro, seguidas pelos checks em execução e em espera. Passe o mouse para ler o nome e o
+estado de cada check; a tecnologia assistiva lê as mesmas informações. Matrizes grandes mostram
+até doze segmentos e a contagem restante; o detalhe selecionado continua listando todos os checks.
+Linhas sem dados de checks não mostram esse resumo.
 
 A lista e o detalhe selecionado rolam de forma independente; as atualizações normais mantêm as
 posições de leitura, o foco da busca e os detalhes expandidos. Em janelas estreitas, **Voltar** ou
@@ -278,25 +284,52 @@ abrem o único lugar que liga um conector ([Conectores](connectors.md)).
 ## Perfis de agentes
 
 Abra **Bando > Perfis de agentes** para consultar os perfis integrados de Desenvolvedor, Revisor e
-Pesquisador. Escolha um cartão para ler suas instruções e a revisão explícita. **Criar uma cópia**
-abre um rascunho local com nome e instruções editáveis. **Salvar perfil** cria um perfil personalizado;
-**Editar perfil** salva uma nova revisão da sua cópia. Os perfis integrados permanecem inalterados.
-A cópia inicialmente herda a aparência do perfil integrado.
+Pesquisador. Escolha um cartão para ler suas instruções e a revisão explícita. **Criar perfil** abre
+um editor próprio em branco: informe seu nome e suas instruções sem escolher ou copiar um perfil
+integrado. **Criar uma cópia** continua disponível nos perfis integrados e preenche o mesmo editor
+com as instruções e a aparência desse perfil. O editor destaca nome e instruções, com aparência e
+skills opcionais ao lado numa janela larga e abaixo numa janela estreita. **Salvar perfil** cria um
+perfil personalizado com acesso Ask por padrão; escolha outro nível de acesso depois de salvar.
+**Editar perfil** salva uma nova revisão. Os perfis integrados permanecem inalterados.
 Em **Aparência**, escolha uma **Espécie** e um **Acessório**; a prévia usa os mesmos sprites do bando.
 Os acessórios são escolhas fixas, incluindo **Nenhum**, sem mudanças sazonais.
 O cartão mostra a aparência salva após o salvamento. Em **Skills fixadas**, escolha entre as skills
 integradas e consulte seu conteúdo literal e sua revisão. Cada salvamento mantém o conteúdo
 selecionado nessa revisão imutável, e uma conversa futura vinculada poderá reter o mesmo snapshot.
-Skills fixadas não habilitam ferramentas. Aplicar um perfil ao Chat continua bloqueado até que
-destinatário, executor, origem e comportamento com o Zeca desligado estejam definidos.
+Skills fixadas não habilitam ferramentas.
+
+O catálogo mantém as aves numa lista compacta ao lado do perfil selecionado. A ave animada
+cumprimenta ao clicar e acompanha as escolhas de aparência no editor; páginas ocultas param a
+animação, e o movimento reduzido mantém a ave parada. **Abrir chat do especialista** e **Criar uma
+cópia** ficam ao lado da ave selecionada, com a escolha de acesso abaixo.
+Expanda **Instruções**, **Skills fixadas** ou **Origem** para consultar o conteúdo completo e o escopo
+de execução. A abertura espera o acesso terminar de salvar; uma falha fica visível e permite tentar
+novamente. Escolha **Abrir chat do especialista** para iniciar ou retomar esse perfil na aba **Chat** existente.
+O seletor de destinatário alterna entre Zeca e os perfis, com o mesmo compositor, conversa, histórico
+lateral e cartões de aprovação, preservando o rascunho e a conversa de cada destinatário. O poleiro
+animado e as assinaturas das respostas mostram a espécie e o acessório fixados nessa conversa,
+inclusive com o Zeca desligado. Editar o perfil afeta novas conversas; uma conversa antiga mostra
+a revisão fixada e a revisão mais recente disponível. Inicie uma nova conversa para usá-la. Ela usa uma sessão isolada do Claude Code com apenas o perfil e as skills fixadas: sem
+contexto de projeto ou do bando, arquivos, voz ou memória do Zeca. Continua disponível com o Zeca
+desligado. O histórico e os cartões de aprovação ficam no perfil selecionado e nunca aparecem no
+histórico do Chat do Zeca.
+
+Cada perfil tem sua própria opção **Acesso deste perfil**: **Pergunta antes** é o padrão, **Suas
+políticas** aplica as políticas aceitas, e **Acesso total** responde o que as políticas deixam em
+aberto. As recusas das políticas bloqueiam a chamada. Comandos destrutivos, perguntas das políticas e ações
+depois de ler conteúdo externo ainda mostram um cartão de aprovação. Escolha qualquer nível de acesso diretamente no seletor do Chat ou no perfil, sem abrir as configurações.
+Mudanças de acesso ficam sincronizadas entre o perfil e o Chat e valem para a próxima chamada de
+ferramenta depois de salvas. Uma falha mantém o acesso anterior e permite tentar novamente no Chat. Revise o comando e qualquer aviso de conteúdo externo
+antes de escolher **Permitir**; **Sempre nesta conversa** repete apenas aquela chamada exata naquela conversa. O app
+registra a decisão.
 
 Os perfis personalizados ficam no banco local, independentes do histórico de conversas. Cada
 salvamento mantém as revisões anteriores. Um editor desatualizado é rejeitado em vez de sobrescrever
 alterações mais recentes; cancele e abra novamente para ler a última revisão. Falhas ao salvar
 preservam o rascunho. Os rascunhos também sobrevivem à navegação na janela atual, mas não são
-salvos ao reiniciar o app. O catálogo funciona com o Zeca desligado e não acessa sua memória privada.
-Salvar não inicia agentes, não faz solicitações a provedores, não escreve configurações de agentes
-nem altera permissões.
+salvos ao reiniciar o app. O catálogo e o Chat do especialista funcionam com o Zeca desligado e não
+acessam sua memória privada. Salvar um perfil não inicia agentes, não faz solicitações a provedores,
+não escreve configurações de agentes nem altera permissões.
 
 **Voltar ao Bando** retorna à visualização existente das suas sessões. Os indicadores de sessões
 aguardando continuam disponíveis durante a leitura; abra um para revisar o cartão no Bando. Uma

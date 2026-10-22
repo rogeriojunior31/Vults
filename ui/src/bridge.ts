@@ -359,6 +359,10 @@ export type AgentRow = {
 
 /** A saved conversation in the chat's list. */
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
+export type SpecialistConversationView = ConversationView & { profileTitle: string; profileRevision: number };
+export type SpecialistCurrent = { generation: number; conversation: OpenedConversation | null; draft: ChatDraft; profileTitle: string; profileRevision: number; profileSpecies: string; profileLook: string };
+export type SpecialistChatEvent = { profile: string; delta: ChatDelta };
+export type SpecialistChatSync = { profile: string; sync: ChatSync };
 /** A saved conversation, opened: what the chat goes on with. */
 export type OpenedConversation = {
   generation?: number;
@@ -376,6 +380,10 @@ export type OpenedConversation = {
   model: string | null;
   effort: string | null;
   lines: { who: string; text: string; files: string[] }[];
+  profileTitle?: string;
+  profileRevision?: number;
+  profileSpecies?: string;
+  profileLook?: string;
 };
 
 /** What one of the chat's windows did, for the other to show too; each skips its own (`from`). */
@@ -476,6 +484,7 @@ export type Place = { presence: Presence; dock: "top" | "bottom" };
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 export type AgentProfileEdit =
+  | { action: "create"; title: string; instructions: string; species: string; look: string; skill_ids: string[] }
   | { action: "copy"; preset: string; title: string; instructions: string; species: string; look: string; skill_ids: string[] }
   | { action: "update"; id: number; revision: number; title: string; instructions: string; species: string; look: string; skill_ids: string[] };
 
@@ -492,11 +501,13 @@ export interface AgentProfile {
   instructions: string;
   skills: AgentSkill[];
   skill_catalog: AgentSkill[];
+  access: ChatAccess;
 }
 
 export const Bridge = {
   agentProfiles: () => invoke<AgentProfile[]>("agent_profiles"),
   agentProfileSave: (edit: AgentProfileEdit) => invoke<AgentProfile>("agent_profile_save", { edit }),
+  setSpecialistChatAccess: (profile: string, access: ChatAccess) => invoke<void>("set_specialist_chat_access", { profile, access }),
   onView(cb: (v: ViewModel) => void): void {
     void listen<ViewModel>("view", (e) => cb(e.payload));
     void invoke<ViewModel | null>("current_view").then((v) => v && cb(v));
@@ -789,7 +800,23 @@ export const Bridge = {
   onChatSync(cb: (s: ChatSync) => void): void {
     void listen<ChatSync>("chat-sync", (e) => cb(e.payload));
   },
+  onSpecialistChat(cb: (event: SpecialistChatEvent) => void): void {
+    void listen<SpecialistChatEvent>("specialist-chat", e => cb(e.payload));
+  },
+  onSpecialistChatSync(cb: (event: SpecialistChatSync) => void): void {
+    void listen<SpecialistChatSync>("specialist-chat-sync", e => cb(e.payload));
+  },
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
+  specialistChatConversations: (profile: string) => invoke<SpecialistConversationView[]>("specialist_chat_conversations", { profile }),
+  specialistChatCurrent: (profile: string) => invoke<SpecialistCurrent>("specialist_chat_current", { profile }),
+  specialistChatSend: (profile: string, text: string, generation: number) => invoke<void>("specialist_chat_send", { profile, text, generation }),
+  specialistChatOpen: (profile: string, id: number) => invoke<OpenedConversation>("specialist_chat_open", { profile, id }),
+  specialistChatReset: (profile: string) => invoke<SpecialistCurrent & { provider: ChatProvider }>("specialist_chat_reset", { profile }),
+  specialistChatDraftSet: (profile: string, draft: ChatDraft, generation: number) => invoke<void>("specialist_chat_draft_set", { profile, draft, generation }),
+  specialistChatRename: (profile: string, id: number, title: string) => invoke<void>("specialist_chat_rename", { profile, id, title }),
+  specialistChatDelete: (profile: string, id: number) => invoke<boolean>("specialist_chat_delete", { profile, id }),
+  specialistChatStop: (profile: string) => invoke<void>("specialist_chat_stop", { profile }),
+  specialistChatDecide: (profile: string, id: string, answer: ChatAnswer) => invoke<void>("specialist_chat_decide", { profile, id, answer }),
   roosts: () => invoke<RoostView[]>("roosts"),
   agentsDoctor: (fresh: boolean) => invoke<AgentRow[]>("agents_doctor", { fresh }),
   roostSharePreview: (key: string) => invoke<SharePreview>("roost_share_preview", { key }),

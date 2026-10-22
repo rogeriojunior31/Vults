@@ -60,7 +60,7 @@ for the user's PR validation before UX7 starts.
 | UX5 | Task status/next step, connection detail/return, searchable grouped History/Audit, concise Presence, memory/web disclosures and phone prerequisites | Accepted by the user on 2026-10-14 |
 | UX6 | Shared state and integrated handoff checks; delayed shortcuts and saved native return fixed | Final desktop matrix and user PR acceptance |
 | UX7 | Paired widths/proportions, bounded session overflow and keyboard continuity implemented | Native compositor/desktop acceptance deferred |
-| UX8 | Native catalog/editor/appearance, retained revisions and conversation snapshots; isolated Claude runtime groundwork; source-bound Chat, local commands, voice and Ask Zeca guards | Pinned skills, specialist Chat entry/availability contract, Quick summary and execution projection |
+| UX8 | Native catalog/editor/appearance, pinned skills and revisions, isolated Claude specialist Chat with per-profile access and history | Quick summary and execution projection |
 | UX9-UX10 | Not started | Studio and scoped investigations |
 | UX11-UX12 | Feature owners remain authoritative | Companion refinements, agent availability and Android flows |
 
@@ -517,9 +517,11 @@ cards remain reachable and extra sessions have an accessible overflow path.
 
 **Resume checkpoint after the UX7/UX8 groundwork PR:** profiles can be read, copied and edited
 locally, and their selected built-in skill content is pinned in immutable revisions and conversation
-snapshots. Their Chat action is still gated. Continue with the explicit recipient/executor/source UI
-and specialist availability contract with Zeca off. Release the specialist entry only after those
-owners agree. Quick summaries and execution projection follow. Native evidence is retained locally;
+snapshots. Profile detail states its recipient/executor/source and its availability with Zeca off.
+Specialist Chat opens inside the selected profile, uses its own event stream and saved history, and
+keeps the pinned revision for each conversation. Users choose Ask, accepted policies, or full access
+per profile; the default is Ask, independent of Zeca's Chat setting. The selected level is read for each tool call; policy denies block the call, while destructive
+actions, policy asks and actions after outside content still require a card. Quick summaries and execution projection follow. Native evidence is retained locally;
 automated checks do not replace unperformed maintainer or external-provider acceptance. Keep N3/K8
 and the N4 release gates open.
 
@@ -574,9 +576,10 @@ Sixteen native Chat tests, both renderer checks, UI/native builds, Clippy and re
 2. **Profiles:** immutable Vults presets, user copies, role/species/accessory,
    instructions and selected skills. Specify persistence and pinned revision;
    role/appearance does not create a permission profile.
-3. **Specialist Chat:** explicit recipient/executor/source, retained conversation
-   and project/conversation context, and pinned profile/skill revision. Keep Zeca's private memory
-   private. Resolve specialist availability with Zeca off as part of the contract.
+3. **Specialist Chat:** explicit recipient/executor/source, retained conversation and pinned
+   profile/skill revision. The first route uses its isolated chat folder without project/flock
+   context; any future project context needs its own reviewed scope. Keep Zeca's private memory
+   private and the specialist route available with Zeca off.
 4. **Flock projection:** working Vults-owned runs use the existing session pipeline
    and their configured identity; watched sessions keep their actual capabilities.
    Prove that one run cannot appear as duplicate birds or conversations.
@@ -678,6 +681,37 @@ selected content, and the isolated specialist brief uses that exact snapshot whe
 duplicate, oversized or malformed selections fail closed. Skill selection does not activate tools
 or expose the gated Chat action. Renderer build, translation audit and source checks pass; manual
 desktop acceptance remains open.
+
+**2026-10-22 UX8 specialist route contract:** profile detail now states the recipient, isolated
+Claude Code executor, pinned profile/skills source, absence of project/flock context and private
+Zeca memory. Specialist text Chat is defined as profile-owned and available with Zeca off, without
+adding a global Chat tab. Each profile owns an Ask/Policies/Full choice, defaulting to Ask; it is
+independent of Zeca's access setting and retains destructive/outside-content confirmation. The entry
+remains gated until native routing and cross-surface continuity enforce the contract.
+
+**2026-10-22 UX8 specialist Zeca-off preflight:** native Chat send now checks the Zeca switch only
+for companion turns. Profile-bound turns no longer inherit that switch; their selected profile
+access still governs tool cards. Window sends resolve their recipient before the switch check, while
+voice commands remain Zeca-only; companion sends stop before memory recall and recheck after local
+async work. The UI route remains gated until it owns separate conversation state and cross-surface
+transitions.
+
+**2026-10-22 UX8 specialist history boundary:** a Nest-only command now lists retained conversations
+for one preset or current/retained custom profile at a time. It returns only conversation metadata,
+including the pinned profile revision, excludes companion and other-profile records, and never
+changes the active Zeca conversation. The native selector can consume this inventory later;
+specialist Chat stays gated until its independent runtime and event stream are ready.
+
+**2026-10-22 UX8 specialist Chat delivery:** each profile now opens in the existing Nest Chat tab
+with a recipient selector and the production ChatPanel, retaining the isolated Claude Code executor, pinned instructions/skills, profile-specific Ask/Policies/Full
+access, and a retained history filtered by profile identity. Start, reset and resume preserve the exact
+conversation snapshot. Specialist messages, approvals and state updates use a Nest-only event stream;
+they never enter Zeca's transcript, draft, memory, tools, voice or project/flock context. Permission
+cards remain explicit, show outside-content disclosures and support deny, allow and conversation-only
+Always. The profile editor and access setting remain available independently of the Chat view.
+The shared Chat renderer covers recipient switching, scoped sending, approval routing, Zeca-off
+access and the companion transcript/draft boundary. The roadmap's Quick summary and execution
+projection remain separate work; a live-provider turn and desktop visual acceptance remain pending.
 
 ## UX9 - Studio library and tool connections, later
 
@@ -1094,3 +1128,76 @@ Automated result: TypeScript/Vite build, nine renderer checks, fmt/clippy,
 864 workspace tests and 8 eval tests pass. Brand, English, i18n, layer,
 network, README translation and whitespace checks pass; the Nest mirror source
 mark matches. The running Tauri process received the updated renderer via Vite.
+
+### UX8 profile implementation review - 2026-10-22
+
+The specialist route now requires a native generation even for an empty conversation. Failed reads
+keep send disabled and retryable; obsolete reads, sends and failures cannot overwrite another route.
+The separate specialist screen has been removed: the existing Chat tab owns recipient selection,
+messages, drafts, history, reasoning/tools and approval cards through the production ChatPanel.
+Switching recipients clears old history rows before loading the selected history. Approval writes
+reject duplicate clicks and shortcuts outside the visible Chat. Empty runtimes retain their pinned identity after profile edits.
+
+The native turn stays reserved through transcript/session persistence and emits completion afterward.
+Preflight Stop is cancellable, busy open/reset requests fail promptly, outside-content state resumes
+with its conversation, and specialist permission decisions retain their profile audit identity.
+Profile saves retain the selected access and reject combined instructions/skills beyond the executor
+limit. History erasure also stops and resets specialist runtimes. Automated regression coverage
+exercises these failures; live-provider and desktop visual acceptance remain separate.
+
+### UX8 profile flow refinement - 2026-10-22
+
+The selected profile presents Chat first, keeps its access choice visible and moves the full
+instructions, pinned skill content and execution scope into retained disclosures. Opening is
+single-flight, waits for access persistence and reports errors in the requesting profile. Catalog
+reentry refreshes saved access; Chat and profile changes update each other's existing controls.
+Pinned conversations disclose their retained revision when a newer profile is available. A new
+specialist conversation returns generation and identity together, without a second fallible read.
+The retained species/accessory drives both the production animated perch and reply signatures.
+Production-renderer checks cover failure/retry, save/open races, revision transitions, retained
+appearance/drafts and approval isolation. Native checks cover the reset wire shape. Desktop visual
+and live-provider acceptance remain pending; Quick summaries and run projection remain later slices.
+
+### UX8 direct profile creation - 2026-10-22
+
+Agent profiles now offers Create profile as a direct blank editor, alongside the existing preset
+copy route. The native create action carries no preset; storage retains empty preset provenance
+with revision zero and the profile's own immutable revisions. Copies keep their real preset source.
+The shared create/copy/edit editor separates identity/instructions from appearance and optional
+skills, adapts to narrow windows and preserves drafts through navigation and failed saves. Saving
+starts no turn and retains default Ask access for a new profile. Renderer checks cover direct
+creation, distinct wire actions, duplicate-save guards, retry and cancellation; store tests cover
+original provenance, retained revisions and rejection of invalid preset/revision combinations.
+Desktop visual acceptance remains pending in the running app.
+
+### UX8 character and Chat control refinement - 2026-10-22
+
+Desktop feedback rejected the form-heavy profile layout and oversized native recipient select.
+Profiles now uses a compact bird catalog beside the selected animated character, with Chat/copy
+actions alongside its identity and secondary explanations behind disclosures. Creation uses the
+same production Scene for a larger live appearance preview; inactive pages stop it and reduced
+motion stays static. Species labels now use the language catalogs. The native recipient select
+retains keyboard behavior within the existing 30 px Chat control sizing.
+The maintainer also requested direct access selection for both Zeca and specialists. ADR 0004
+records this change. Native Zeca access accepts only Chat/Settings surfaces and publishes authority
+after persistence; the shared ChatPanel applies either direction without Settings redirection,
+blocks duplicate saves and keeps a failed save visible with the previous access active. Regression
+checks exercise both recipients and the visible/hidden character owner. Desktop screenshots were
+inspected for the profile catalog; editor and Chat acceptance remain with the maintainer.
+
+The maintainer clarified that no profile-specific prototype exists yet. This is a new UI to refine
+together, not an approved prototype implementation. Keep the current layout provisional, review it
+with the maintainer before further visual expansion, and do not equate passing checks with design
+acceptance.
+
+### Existing Connections check overview - 2026-10-22
+
+At the maintainer's request, pause further agent-profile/skill design work and return to existing
+approved prototype areas. This slice implements the segmented check overview already present in
+`design/ui-motion-proposal/connections.js` (`checkBar`) and its template styles. Production rows
+retain their explicit status text and show failed/running/waiting checks before successful ones.
+The overview is bounded to twelve segments plus a remainder count, with complete named states in
+the accessible label and tooltip. The existing detail remains the owner of the full matrix; no
+check data produces no invented success summary. Selection, filtering, merging and polling retain
+their existing contracts. Renderer checks cover mixed/absent/large matrices, failure visibility and
+unchanged source ordering. Native visual acceptance remains for the running app.

@@ -12,6 +12,7 @@ use vults_store::conversations::ConversationId;
 use vults_store::traces::Span;
 
 pub enum Job {
+    Barrier(tokio::sync::oneshot::Sender<()>),
     /// An audit line, at its time (Unix seconds).
     Audit(i64, Audit),
     Span(Span),
@@ -32,6 +33,7 @@ pub enum Job {
 impl Job {
     fn write(&self, store: &mut Store) -> Result<(), vults_store::Error> {
         match self {
+            Self::Barrier(..) => Ok(()),
             Self::Audit(at, line) => store.append_audit(*at, line),
             Self::Span(span) => store.append_span(span),
             Self::FinishRequest(span) => store.finish_request(span),
@@ -48,6 +50,7 @@ impl Job {
 
     fn what(&self) -> &'static str {
         match self {
+            Self::Barrier(..) => "barrier",
             Self::Audit(..) => "audit line",
             Self::Span(_) | Self::FinishRequest(_) => "trace span",
             Self::Say(..) | Self::Save(..) => "conversation",
@@ -65,6 +68,10 @@ pub fn send(job: Job) {
         std::thread::spawn(move || {
             let mut store: Option<Store> = None;
             for job in rx {
+                if let Job::Barrier(reply) = job {
+                    let _ = reply.send(());
+                    continue;
+                }
                 for tries in 0.. {
                     let result = match store.as_mut() {
                         Some(s) => job.write(s),
@@ -95,4 +102,11 @@ pub fn send(job: Job) {
     if let Ok(tx) = writer.lock() {
         let _ = tx.send(job);
     }
+}
+
+/// Wait until earlier writes have completed before exposing a resumable session.
+pub async fn flush() {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    send(Job::Barrier(tx));
+    let _ = rx.await;
 }

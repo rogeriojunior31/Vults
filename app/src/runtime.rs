@@ -1362,7 +1362,7 @@ pub async fn clear_history(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .map_err(|e| format!("can't clear the history: {e}"))?;
     // Its saved record is gone with the rest: the chat's next message starts a new one.
-    crate::chat::forget_current(&app);
+    crate::chat::forget_current(&app).await;
     Ok(())
 }
 

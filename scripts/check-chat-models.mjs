@@ -1104,3 +1104,30 @@ for(const surface of ["island","nest"]){
  assert.equal(await pending,false);assert.deepEqual(calls,[]);assert.equal(input.value,"New source draft");
 }
 console.log("check-chat-models: a question clicked before a source transition cannot inherit it across the initial preparation await");
+
+for (const specialist of [false, true]) {
+  const choices = [], requests = [];
+  let redirects = 0;
+  const access = new ChatPanel({ models: async () => [], pick: async () => ({}),
+    setAccess: value => { choices.push(value); return new Promise((resolve, reject) => requests.push({ resolve, reject })); },
+    openSettings: () => { redirects++; },
+  }, () => {}, { window: "nest", ...(specialist ? { specialist: { name: "Reviewer", revision: 1, species: "gypaetus", look: "none" } } : {}) });
+  const control = nodes(access.element).find(node => node.classList.contains("access"));
+  control.click();
+  nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  assert.equal(control.disabled, true, "The access picker waits for persistence");
+  assert.ok(control.textContent.includes("Asks first"), "A pending increase does not claim authority");
+  nodes(access.element).find(node => node.dataset.choice === "access:policies").click();
+  assert.deepEqual(choices, ["full"], "Pending access changes cannot queue duplicates");
+  requests[0].reject(new Error("Disk unavailable")); await tick();
+  assert.ok(control.textContent.includes("Asks first"));
+  assert.ok(access.element.textContent.includes("Your previous choice is still active"));
+  nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  requests[1].resolve(); await tick();
+  assert.ok(control.textContent.includes("Full access"));
+  assert.equal(redirects, 0, "Increasing companion or specialist access stays in Chat");
+  control.click(); nodes(access.element).find(node => node.dataset.choice === "access:ask").click();
+  requests[2].resolve(); await tick();
+  assert.ok(control.textContent.includes("Asks first"));
+}
+console.log("check-chat-models: direct companion/profile access increases and decreases, persist-before-display, duplicate guard and visible failure/retry without Settings redirects");

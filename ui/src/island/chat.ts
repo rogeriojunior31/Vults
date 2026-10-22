@@ -7,7 +7,9 @@ import type { ChatActivity, ChatActivityEvent } from "../bridge";
 import { Clock } from "../clock";
 import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
 import { NAME_BY_KIND } from "../agents";
-import { drawFrame, frameWidth } from "../character/sprites";
+import { dress } from "../character/looks";
+import { speciesSet } from "../character/flock";
+import { drawFrame, type SpriteSet } from "../character/sprites";
 import { ZECA } from "../character/zeca";
 import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDelta, ChatPick, ChatProvider, ChatSync, ConversationView, ModelChoice, OpenedConversation } from "../bridge";
 import { el } from "../dom";
@@ -24,9 +26,9 @@ export interface ChatBackend {
   current?: () => Promise<OpenedConversation | null>;
   saveDraft?: (draft: ChatDraft, generation?: number) => Promise<void>;
   send(text: string, files: string[], folder: string | null, mentions?: ChatMention[], generation?: number): Promise<void>;
-  decide(id: string, answer: ChatAnswer): void;
+  decide(id: string, answer: ChatAnswer): void | Promise<void>;
   /** Stops the turn running now. */
-  stop(): void;
+  stop(): void | Promise<void>;
   reset(provider: ChatProvider | null): Promise<ChatProvider | { provider: ChatProvider; generation: number }>;
   /** The models the provider's CLI offers. */
   models(provider: ChatProvider): Promise<ModelChoice[]>;
@@ -113,6 +115,7 @@ export interface MemorySaid {
 export interface ChatPanelOptions {
   /** The window's label, to tell its own actions from the other window's. */
   window: "island" | "nest";
+  specialist?: { name: string; builtIn?: boolean; revision: number; latestRevision?: number; species: string; look: string };
   /** How a reply is drawn: the island's light Markdown, or the Nest's full one. */
   render?: (text: string) => DocumentFragment;
 }
@@ -215,7 +218,8 @@ const REFUSED: Record<Refused["reason"], (name: string) => string> = {
 };
 
 /** What a permission asks for, in a few words. */
-function asks(tool: string): string {
+function asks(tool: string, name?: string): string {
+  if (name) return t("{name} requests {tool}", { name, tool });
   if (tool === "Bash") return t("Zeca wants to run");
   if (tool === "Edit" || tool === "Write" || tool === "MultiEdit")
     return t("Zeca wants to change");
@@ -298,6 +302,7 @@ export class ChatPanel {
   /** The island moves its perch here; the Nest keeps its own scene in the same slot. */
   readonly perchSlot = el("div", { class: "chat-perch" });
   private readonly greeting = el("h2", { class: "chat-greeting" });
+  private readonly profileNotice = el("p", { class: "chat-profile-notice" });
   private readonly caption = el("p", { class: "chat-caption" });
   private readonly intro = el("div", { class: "chat-intro" }, this.greeting, this.caption);
   private readonly suggestions = el("div", { class: "suggestions" });
@@ -369,8 +374,10 @@ export class ChatPanel {
   private selectionLabel = "";
   private readonly modelMenu = el("div", { class: "menu model-menu" });
   private modelOpen = false;
-  /** Who answers the cards, as Settings says; the picker shows it and gives some back. */
+  /** The human chooses access here; authority changes only after persistence. */
   private access: ChatAccess = "ask";
+  private accessSaving = false;
+  private accessFailure = false;
   private readonly accessButton = el("button", { class: "place access" });
   private readonly accessMenu = el("div", { class: "menu access-menu" });
   private accessOpen = false;
@@ -620,11 +627,12 @@ export class ChatPanel {
       { class: "chat-main" },
       head,
       this.approvalQueue,
+      this.profileNotice,
       el("div", { class: "log-box" }, this.log, this.jump),
       el("div", { class: "composer" },
         this.mentionMenu,
         this.chips,
-        el("div", { class: "composer-row" }, this.attachButton(), this.input, this.wave,
+        el("div", { class: "composer-row" }, this.opts.specialist ? null : this.attachButton(), this.input, this.wave,
           el("div", { class: "composer-tools" }, this.mic, this.send)),
       ),
       compact ? null : this.composerHint,
@@ -640,8 +648,8 @@ export class ChatPanel {
    *  says which one, so the first call comes from there too. */
   relabel(): void {
     this.askNodes = new WeakMap();
-    this.input.placeholder = t("Ask Zeca…");
-    this.input.setAttribute("aria-label", t("Ask Zeca…"));
+    this.input.placeholder = this.opts.specialist ? t("Message {name}…", { name: this.recipientName() }) : t("Ask Zeca…");
+    this.input.setAttribute("aria-label", this.input.placeholder);
     this.input.title = t("Type @ to reference a session or project. References limit this turn's flock reads.");
     this.log.setAttribute("aria-label", t("Chat"));
     this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.");
@@ -657,11 +665,29 @@ export class ChatPanel {
       this.newButton.setAttribute("aria-label", t("New"));
     } else this.newButton.textContent = t("New");
     this.jump.textContent = t("↓ new text");
+    if (this.opts.specialist) {
+      this.input.title = t("This profile and its pinned skills");
+      this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line.");
+    }
     this.paint();
   }
 
   isOpen(): boolean {
     return this.open;
+  }
+
+  recipientName(): string {
+    const profile = this.opts.specialist;
+    return profile ? profile.builtIn ? t(profile.name) : profile.name : "Zeca";
+  }
+
+  setProfileRevision(revision: number): void {
+    if (this.opts.specialist) { this.opts.specialist.latestRevision = revision; this.paintHead(); }
+  }
+
+  specialistAppearance(): SpriteSet | null {
+    const profile = this.opts.specialist;
+    return profile ? dress(speciesSet(profile.species), profile.look) : null;
   }
 
   /** Which bird talks: the API chat is Claude too. */
@@ -828,14 +854,15 @@ export class ChatPanel {
   }
 
   private paintOffers(): void {
-    this.greeting.textContent = this.offers?.greeting ?? t("Ask Zeca");
+    this.greeting.textContent = this.opts.specialist ? this.recipientName() : this.offers?.greeting ?? t("Ask Zeca");
     const api = t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.");
     this.caption.textContent = this.offers?.caption ?? t("Ask anything, or drop a file on the island.");
     this.caption.hidden = !this.offers && (this.compact || this.provider === "api");
+    if (this.opts.specialist) { this.caption.textContent = t("This chat uses the pinned profile in an isolated Claude Code session. It has no project or flock context and never uses Zeca's memory."); this.caption.hidden = false; }
     this.apiNotice.textContent = api;
     this.apiNotice.hidden = this.provider !== "api";
     this.intro.hidden = this.compact && (this.messages.length > 0 || this.busy);
-    const questions = this.compact ? [] : this.offers?.suggestions ?? (this.provider === "api" ? [] : SUGGESTIONS.map(q => ({ id: q, text: t(q), session: null })));
+    const questions = this.compact || this.opts.specialist ? [] : this.offers?.suggestions ?? (this.provider === "api" ? [] : SUGGESTIONS.map(q => ({ id: q, text: t(q), session: null })));
     this.offerButtons(this.suggestions, questions.map(q => ({ id: q.id, text: q.text })), id => this.chooseSuggestion(id));
     const labels = { explain: t("Explain more simply"), next: t("What should I check next?"), flock: t("Open Flock") };
     const followups = (this.offers?.followups ?? []).filter(id => id !== "flock" || !!this.backend.openFlock);
@@ -871,6 +898,7 @@ export class ChatPanel {
   }
 
   private findMentions(): void {
+    if (this.opts.specialist) return;
     if (!this.enabled) { this.closeMentions(); return; }
     const end = this.input.selectionStart ?? this.input.value.length;
     const before = this.input.value.slice(0, end);
@@ -1437,7 +1465,8 @@ export class ChatPanel {
 
   private sendOrStop(): void {
     if (this.busy) {
-      this.backend.stop();
+      const source = this.sourceVersion;
+      void Promise.resolve(this.backend.stop()).catch(error => { if (source === this.sourceVersion) { this.messages.push({ who: "note", text: String(error) }); this.paint(); } });
       return;
     }
     void this.submit();
@@ -1494,7 +1523,7 @@ export class ChatPanel {
     // message; where nothing keeps commands (the lab), nothing is sent.
     const memory = /^\/(remember|forget)(\s|$)/.test(text);
     const handoff = /^\/continue(\s|$)/.test(text);
-    if (memory || handoff) {
+    if (!this.opts.specialist && (memory || handoff)) {
       const command = memory ? this.backend.memory : this.backend.handoff;
       if (!command) return;
       let answer: MemorySaid | null;
@@ -1562,7 +1591,10 @@ export class ChatPanel {
   /** New, or another provider: the conversation so far stays saved, in the list. */
   private ask(what: ChatProvider | "new"): void {
     if (this.busy) return;
-    void this.restart(what === "new" ? null : what);
+    const source = this.sourceVersion;
+    void this.restart(what === "new" ? null : what).catch(error => {
+      if (source === this.sourceVersion) { this.messages.push({ who: "note", text: String(error) }); this.paint(); }
+    });
   }
 
   private async restart(provider: ChatProvider | null): Promise<void> {
@@ -1605,7 +1637,12 @@ export class ChatPanel {
     m.answer = answer;
     this.askNodes.delete(m);
     Sound.play(answer === "deny" ? "deny" : "allow");
-    this.backend.decide(m.id, answer);
+    const version = this.sourceVersion;
+    void Promise.resolve(this.backend.decide(m.id, answer)).catch(error => {
+      if (version !== this.sourceVersion || !this.messages.includes(m)) return;
+      m.answer = undefined; this.askNodes.delete(m);
+      this.messages.push({ who: "note", text: String(error) }); this.paint(); this.changed();
+    });
     this.paint();
     this.reviewApproval();
     this.changed();
@@ -1683,7 +1720,7 @@ export class ChatPanel {
       // The latest reply, once it is whole, keeps its tools in view; the others show them on hover.
       const b = el("div", { class: `msg zeca${last && !this.busy ? " settled" : ""}` });
       // In the Nest's wide column a turn's reply is signed, so each one reads apart from the next.
-      if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who === "you") b.append(this.signature());
+      if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who !== "zeca") b.append(this.signature());
       b.append((this.opts.render ?? renderFull)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
       if (last && !this.busy && m.text.trim()) b.append(this.replySuggestions);
       return b;
@@ -1868,7 +1905,7 @@ export class ChatPanel {
         { class: "who" },
         el("span", { class: "ask-heading" },
           el("span", { class: "ask-state", text: m.answer ? t("Permission answered") : t("Permission required") }),
-          el("span", { class: "label", text: asks(m.tool) }),
+          el("span", { class: "label", text: asks(m.tool, this.opts.specialist ? this.recipientName() : undefined) }),
         ),
         diff,
       ),
@@ -1960,6 +1997,12 @@ export class ChatPanel {
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
     if (clearDraft) this.cancelVoice();
     this.generation = c.generation;
+    if (this.opts.specialist) {
+      this.opts.specialist.name = c.profileTitle ?? this.opts.specialist.name;
+      this.opts.specialist.revision = c.profileRevision ?? this.opts.specialist.revision;
+      this.opts.specialist.species = c.profileSpecies ?? this.opts.specialist.species;
+      this.opts.specialist.look = c.profileLook ?? this.opts.specialist.look;
+    }
     if (!preserveLive) {
       this.clearReaction();
       this.searching = c.busy && !!c.tools;
@@ -2111,8 +2154,9 @@ export class ChatPanel {
   private signature(): HTMLElement {
     const face = el("img", { class: "msg-face" });
     face.alt = "";
-    face.src = faceImage();
-    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: "Zeca" }), el("span", { class: "msg-engine", text: this.name(this.provider) }));
+    face.src = faceImage(this.specialistAppearance() ?? ZECA);
+    face.classList.toggle("msg-face-profile", !!this.opts.specialist);
+    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: this.recipientName() }), el("span", { class: "msg-engine", text: this.opts.specialist ? t("Claude Code · isolated") : this.name(this.provider) }));
   }
 
   /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
@@ -2192,6 +2236,15 @@ export class ChatPanel {
   }
 
   private paintModel(api: boolean): void {
+    if (this.opts.specialist) {
+      this.modelButton.classList.add("engine");
+      this.modelButton.replaceChildren(el("span", { class: "engine-dot claude" }), el("span", { class: "engine-labels", text: t("Claude Code · isolated") }));
+      this.modelButton.disabled = true;
+      this.modelButton.setAttribute("aria-label", t("Claude Code · isolated"));
+      this.modelButton.setAttribute("aria-expanded", "false");
+      this.modelMenu.classList.remove("on");
+      return;
+    }
     if (this.provider === "claude" || this.modelOpen) this.loadModels(this.provider);
     const pick = this.picks[this.provider] ?? {};
     const choices = this.models[this.provider] ?? [];
@@ -2312,42 +2365,36 @@ export class ChatPanel {
 
   private paintAccess(api: boolean): void {
     const now = ACCESS.find((a) => a.id === this.access) ?? ACCESS[0];
-    const rank = (id: ChatAccess) => ACCESS.findIndex((a) => a.id === id);
     // The API chat runs nothing: there is nothing to answer.
     this.accessButton.hidden = api;
+    this.accessButton.disabled = this.accessSaving;
     this.accessButton.classList.toggle("full", this.access === "full");
     this.accessButton.replaceChildren(el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
-    this.accessButton.title = t("Who answers Zeca's cards in this chat.");
+    this.accessButton.title = this.opts.specialist ? t("Access for this profile") : t("Who answers Zeca's cards in this chat.");
     this.accessMenu.classList.toggle("on", this.accessOpen && !api);
     if (!this.accessOpen) return;
     this.accessMenu.replaceChildren(
       el("span", { class: "menu-label", text: t("Who answers the cards") }),
       ...ACCESS.map((a) => {
-        // More access is given in Settings, like a policy: from here, the item leads there.
-        const more = rank(a.id) > rank(this.access);
-        const button = el(
-          "button",
-          {
-            class: `menu-item access-item${a.id === this.access ? " on" : ""}`,
-            onclick: () => {
-              this.accessOpen = false;
-              if (more) this.backend.openSettings?.();
-              else if (a.id !== this.access) {
-                const before = this.access;
-                this.access = a.id;
-                void this.backend.setAccess?.(a.id).catch(() => this.setAccess(before));
-              }
-              this.paintHead();
-              this.changed();
-            },
+        const button = el("button", {
+          class: `menu-item access-item${a.id === this.access ? " on" : ""}`,
+          onclick: () => {
+            if (this.accessSaving || !this.backend.setAccess) return;
+            if (a.id === this.access) { this.accessOpen = false; this.paintHead(); return; }
+            this.accessSaving = true; this.accessFailure = false; this.paintHead();
+            void this.backend.setAccess(a.id).then(() => {
+              this.access = a.id; this.accessOpen = false;
+            }, () => { this.accessFailure = true; this.accessOpen = true; }).finally(() => {
+              this.accessSaving = false; this.paintHead(); this.changed();
+            });
           },
-          el("span", { class: "access-name", text: t(a.label) }),
-          el("span", { class: "access-about", text: t(a.about) }),
-          ...(more ? [el("span", { class: "access-more", text: t("Choose it in Settings →") })] : []),
-        );
+        }, el("span", { class: "access-name", text: t(a.label) }), el("span", { class: "access-about", text: t(a.about) }));
+        button.disabled = this.accessSaving || !this.backend.setAccess;
         return this.choice(button, `access:${a.id}`, a.id === this.access);
       }),
+      ...(this.accessFailure ? [el("p", { class: "access-save-error", text: t("Could not save access. Your previous choice is still active.") })] : []),
     );
+    this.accessMenu.querySelector(".access-save-error")?.setAttribute("role", "alert");
   }
 
   private menuPanels(): { id: string; menu: HTMLElement; trigger: HTMLElement; name: string }[] {
@@ -2382,20 +2429,27 @@ export class ChatPanel {
   }
 
   private paintHead(): void {
-    this.recipient.textContent = "Zeca";
-    this.recipient.title = t("Recipient: {name}", { name: "Zeca" });
+    const profile = this.opts.specialist;
+    this.profileNotice.hidden = !profile || !profile.latestRevision || profile.revision === profile.latestRevision;
+    this.profileNotice.textContent = profile && !this.profileNotice.hidden ? t("This conversation uses profile revision {revision}. Start a new conversation to use revision {latest}.", { revision: profile.revision, latest: profile.latestRevision! }) : "";
+    if (this.opts.specialist) {
+      this.input.placeholder = t("Message {name}…", { name: this.recipientName() });
+      this.input.setAttribute("aria-label", this.input.placeholder);
+    }
+    this.recipient.textContent = this.recipientName();
+    this.recipient.title = t("Recipient: {name}", { name: this.recipientName() });
     this.recipient.setAttribute("aria-label", this.recipient.title);
     if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMentions();
     const active = document.activeElement as HTMLInputElement | null;
     const panel = active ? this.menuPanels().find(({ menu }) => menu.contains(active)) : null;
     const choice = panel ? active?.dataset.choice : null;
     const draft = panel && active?.tagName === "INPUT" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
-    this.loadPicks();
+    if (!this.opts.specialist) this.loadPicks();
     // The API chat has no tools, so it works nowhere in particular.
     const api = this.provider === "api";
     this.element.classList.toggle("chat-api", api);
-    this.place.hidden = api;
-    this.setup.hidden = api || !this.native;
+    this.place.hidden = api || !!this.opts.specialist;
+    this.setup.hidden = api || !this.native || !!this.opts.specialist;
     this.paintModel(api);
     this.paintAccess(api);
     this.place.classList.toggle("fixed", this.started);
@@ -2574,17 +2628,21 @@ function flightStrip(): string {
   return strip;
 }
 
-/** Zeca's head, cut from his resting frame, drawn once for the replies' signature. */
-let face: string | null = null;
-function faceImage(): string {
-  if (face) return face;
-  const frame = ZECA.clips.idle?.frames[0] ?? Object.values(ZECA.clips)[0].frames[0];
-  const w = frameWidth(ZECA, frame);
-  const h = Math.max(...frame.layers.map(([p, , y]) => y + ZECA.parts[p].length));
+/** Cache the complete resting sprite, including accessories above or beside its body. */
+const faces = new WeakMap<SpriteSet, string>();
+function faceImage(set: SpriteSet): string {
+  const cached = faces.get(set);
+  if (cached) return cached;
+  const frame = set.clips.idle?.frames[0] ?? Object.values(set.clips)[0].frames[0];
+  const minX = Math.min(...frame.layers.map(([, x]) => x));
+  const minY = Math.min(...frame.layers.map(([, , y]) => y));
+  const maxX = Math.max(...frame.layers.map(([part, x]) => x + Math.max(...set.parts[part].map(row => row.length))));
+  const maxY = Math.max(...frame.layers.map(([part, , y]) => y + set.parts[part].length));
   const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  drawFrame(canvas.getContext("2d")!, ZECA, { ...frame, dx: 0, dy: 0 }, 0, 0, 1);
-  face = canvas.toDataURL();
-  return face;
+  canvas.width = maxX - minX;
+  canvas.height = maxY - minY;
+  drawFrame(canvas.getContext("2d")!, set, { ...frame, dx: 0, dy: 0 }, -minX, -minY, 1);
+  const image = canvas.toDataURL();
+  faces.set(set, image);
+  return image;
 }

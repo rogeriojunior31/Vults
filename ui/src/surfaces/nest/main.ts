@@ -105,6 +105,19 @@ const nest = createNest(
     },
     profiles: Bridge.agentProfiles,
     profileSave: Bridge.agentProfileSave,
+    profileAccess: Bridge.setSpecialistChatAccess,
+    profileChat: {
+      current: Bridge.specialistChatCurrent,
+      saveDraft: Bridge.specialistChatDraftSet,
+      rename: Bridge.specialistChatRename,
+      remove: Bridge.specialistChatDelete,
+      conversations: Bridge.specialistChatConversations,
+      send: Bridge.specialistChatSend,
+      open: Bridge.specialistChatOpen,
+      reset: Bridge.specialistChatReset,
+      stop: Bridge.specialistChatStop,
+      decide: Bridge.specialistChatDecide,
+    },
     flock: {
       loadPlace: Bridge.flockPlace,
       savePlace: Bridge.flockPlaceSet,
@@ -196,6 +209,8 @@ Bridge.onSpend(() => nest.spendChanged());
 let lastView: Parameters<typeof nest.view>[0] | null = null;
 const dictationContext = () => dictation.context(lastView ?? { sessions: [], approval: null }, nest.chat.hasWaitingApproval());
 Bridge.onChat((d) => { nest.chat.receive(d); dictationContext(); });
+Bridge.onSpecialistChat(({ profile, delta }) => nest.receiveSpecialistChat(profile, delta));
+Bridge.onSpecialistChatSync(({ profile, sync }) => nest.syncSpecialistChat(profile, sync));
 // Allow and Deny's keys come here while the user is in the Nest (ADR 0021).
 Bridge.onShortcut((id) => nest.shortcut(id));
 void Bridge.shortcutKeys().then((keys) => nest.setKeys(shownKeys(keys)), () => {});

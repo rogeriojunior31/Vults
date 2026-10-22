@@ -1,3 +1,4 @@
+import { specialistBackend } from "./specialist";
 import { createProfiles } from "./profiles";
 import { DICTATION_WORK_PAGES } from "./dictation/navigation";
 import { createDictationArea, type DictationAreaBackend } from "./dictation/area";
@@ -5,7 +6,7 @@ import { createDictationStatistics } from "./dictation/statistics";
 import { sidePanel } from "./panels";
 // The Nest's page takes its backend: four tabs and the gear (ADRs 0021, 0031). Chat keeps
 // Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
-// Without Zeca there is no Chat tab.
+// Specialist recipients remain available with Zeca off.
 import type { AgentProfile, MediaAction, NowPlaying, Size, SpendToday } from "../../bridge";
 import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
@@ -70,11 +71,15 @@ export interface Nest {
   /** Allow or Deny's key while the user is in the Nest: answers the card on screen, if one is
    *  (the Chat's in its tab, the session in front's on the Flock). */
   shortcut: (id: string) => void;
+  receiveSpecialistChat: (profile: string, delta: import("../../bridge").ChatDelta) => void;
+  syncSpecialistChat: (profile: string, sync: import("../../bridge").ChatSync) => void;
 }
 
 export interface NestBackend {
   profiles?: () => Promise<AgentProfile[]>;
   profileSave?: typeof import("../../bridge").Bridge.agentProfileSave;
+  profileAccess?: typeof import("../../bridge").Bridge.setSpecialistChatAccess;
+  profileChat?: import("./specialist").SpecialistChatBackend;
   chat: ChatBackend;
   dictation: DictationAreaBackend;
   roosts: RoostsBackend;
@@ -170,10 +175,17 @@ export function createNest(
     window.clearTimeout(recentTimer);
     recentTimer = window.setTimeout(() => refreshRecent(), 400);
   };
-  const chat = new ChatPanel(backend.chat, chatChanged, {
+  let chat = new ChatPanel(backend.chat, chatChanged, {
     window: "nest",
     render: renderFull,
   });
+  const companionChat = chat;
+  let activeProfile: AgentProfile | null = null;
+  const profilePanels = new Map<string, ChatPanel>();
+  const panelHeads = new Map<ChatPanel, HTMLElement>();
+  const recipientProfiles = new Map<string, AgentProfile>();
+  let recipientRequest = 0;
+  let chatKeys: Record<string, string> = {};
   const portraitButton = el("button", { class: "chat-character", onclick: () => {
     if (chat.clip(Clock.now()) === "idle" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
       && !document.body.classList.contains("still")) portrait.react("hello");
@@ -188,8 +200,7 @@ export function createNest(
     ...backend.flock,
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
     ask: (s) => {
-      show("chat");
-      void chat.askZeca(t("What is {project} doing now?", { project: s.project || agentName(s) }));
+      void askCompanion(t("What is {project} doing now?", { project: s.project || agentName(s) }));
     },
   });
   const memory = createMemory(backend.memory);
@@ -199,8 +210,7 @@ export function createNest(
     zeca: () =>
       zecaOn
         ? (text: string) => {
-            show("chat");
-            void chat.askZeca(text);
+            void askCompanion(text);
           }
         : null,
   });
@@ -232,6 +242,7 @@ export function createNest(
     memoryLabel,
   );
   const setMemory = (open: boolean, returnFocus = false) => {
+    if (open && activeProfile) return;
     memoryPane.hidden = !open;
     memoryButton.classList.toggle("on", open);
     memoryButton.setAttribute("aria-pressed", String(open));
@@ -293,6 +304,25 @@ export function createNest(
     if (!wide.matches && !chatPane.classList.contains("recent-open") && recent.element.contains(document.activeElement)) recentButton.focus();
     if (mounted) paintPortrait();
   });
+  const recipientPicker = el("select", { class: "place chat-recipient-picker" });
+  recipientPicker.setAttribute("aria-label", t("Recipient"));
+  const recipientControl = el("div", { class: "chat-recipient-control" }, recipientPicker, icon("chevronDown", 11, 2));
+  const recipientError = el("p", { class: "nest-close-error" }); recipientError.hidden = true; recipientError.setAttribute("role", "alert");
+  const fillRecipients = () => {
+    const zeca = el("option", { text: "Zeca" }); zeca.value = "zeca"; zeca.disabled = !zecaOn;
+    recipientPicker.replaceChildren(zeca, ...[...recipientProfiles.values()].map(profile => {
+      const option = el("option", { text: profile.built_in ? t(profile.title) : profile.title }); option.value = profile.id; return option;
+    }));
+    recipientPicker.value = activeProfile?.id ?? "zeca";
+  };
+  recipientPicker.addEventListener("focus", () => {
+    void backend.profiles?.().then(rows => { for (const profile of rows) recipientProfiles.set(profile.id, profile); fillRecipients(); }, error => { recipientError.textContent = String(error); recipientError.hidden = false; });
+  });
+  recipientPicker.addEventListener("change", () => { void selectRecipient(recipientProfiles.get(recipientPicker.value) ?? null); });
+  const companionHead = chat.element.querySelector<HTMLElement>(".chat-head")!;
+  panelHeads.set(chat, companionHead);
+  const chatControls = el("div", { class: "chat-controls" }, companionHead);
+  const chatMain = el("div", { class: "nest-chat-main" }, chat.element);
   const chatPane = el(
     "div",
     { class: "nest-chat" },
@@ -302,18 +332,77 @@ export function createNest(
       recentButton,
       chatTitle,
       // The chat's pickers and buttons, moved once: they keep their listeners and repaint in place.
-      chat.element.querySelector(".chat-head") ?? el("span"),
+      recipientControl, chatControls,
       memoryButton,
     ),
     el(
       "div",
       { class: "nest-chat-body" },
       // After the conversation in the page, so the keyboard meets the composer first; drawn left.
-      el("div", { class: "nest-chat-main" }, chat.element),
+      chatMain,
       recent.element,
       memoryPane,
     ),
+    recipientError,
   );
+
+  async function selectRecipient(profile: AgentProfile | null): Promise<boolean> {
+    const mine = ++recipientRequest;
+    const previous = chat;
+    recipientPicker.disabled = true;
+    try {
+      if (!profile && !zecaOn) throw new Error(t("Zeca is off (Settings → Flock & Zeca)."));
+      await previous.flushDraft();
+      if (mine !== recipientRequest) return false;
+      let next = companionChat;
+      if (profile) {
+        recipientProfiles.set(profile.id, profile);
+        if (!backend.profileChat) throw new Error(t("Could not load {name}.", { name: t("Chat") }));
+        const existing = profilePanels.get(profile.id);
+        if (existing) next = existing;
+        else {
+          const identity = { name: profile.title, builtIn: profile.built_in, revision: profile.revision, latestRevision: profile.revision, species: profile.species, look: profile.look };
+          let panel: ChatPanel | undefined;
+          const adapter = specialistBackend(backend.profileChat, profile, identity);
+          adapter.setAccess = async access => { await backend.profileAccess?.(profile.id, access); profile.access = access; profiles.updateAccess(profile.id, access); };
+          adapter.openSettings = () => { profilesShown = true; profiles.select(profile.id); show("flock"); };
+          panel = new ChatPanel(adapter, () => { if (panel && chat === panel) chatChanged(); }, { window: "nest", render: renderFull, specialist: identity });
+          panel.setKeys(chatKeys);
+          panel.setAccess(profile.access);
+          profilePanels.set(profile.id, panel);
+          panelHeads.set(panel, panel.element.querySelector<HTMLElement>(".chat-head")!);
+          next = panel;
+        }
+        next.setAccess(profile.access);
+        next.setProfileRevision(profile.revision);
+      }
+      await next.restore();
+      if (mine !== recipientRequest) return false;
+      previous.toggle(false);
+      chat = next; activeProfile = profile;
+      recent.clear();
+      chatTitle.textContent = t("New conversation");
+      chatControls.replaceChildren(panelHeads.get(chat)!);
+      chatMain.replaceChildren(chat.element);
+      chat.element.querySelector(".log-box")?.prepend(chat.perchSlot);
+      chat.perchSlot.append(portraitButton);
+      memoryButton.hidden = !!profile; setMemory(false);
+      head.setZeca(zecaOn || !!profile);
+      recipientError.hidden = true;
+      fillRecipients();
+      show("chat");
+      return true;
+    } catch (error) {
+      if (mine !== recipientRequest) return false;
+      recipientError.textContent = String(error); recipientError.hidden = false; fillRecipients();
+      return false;
+    } finally { if (mine === recipientRequest) recipientPicker.disabled = false; }
+  }
+
+  async function askCompanion(text: string): Promise<void> {
+    const selected = await selectRecipient(null);
+    if (selected && chat === companionChat && zecaOn) await companionChat.askZeca(text);
+  }
 
   function setRecent(open: boolean, returnFocus = false): void {
     if (open && window.innerWidth <= 1100) setMemory(false);
@@ -367,7 +456,14 @@ export function createNest(
   flock.element.querySelector(".habitat-header")?.append(profilesLink);
   const profiles = createProfiles(() => backend.profiles?.() ?? Promise.reject(), () => {
     profilesShown = false; show("flock"); profilesLink.focus({ preventScroll: true });
-  }, backend.profileSave);
+  }, backend.profileSave, backend.profileAccess, async profile => {
+    if (!await selectRecipient(profile)) throw new Error(recipientError.textContent ?? t("Could not load {name}.", { name: t("Chat") }));
+  }, profile => {
+    recipientProfiles.set(profile.id, profile);
+    profilePanels.get(profile.id)?.setAccess(profile.access);
+    profilePanels.get(profile.id)?.setProfileRevision(profile.revision);
+    fillRecipients();
+  });
   const panes: Record<Tab, HTMLElement> = {
     flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element, profiles.element),
     chat: chatPane,
@@ -418,11 +514,15 @@ export function createNest(
     const destination = voice?.element ?? portraitButton.querySelector(".perch")!;
     // Only the visible conversation owns this canvas; voice feedback never opens another surface.
     if (portrait.canvas.parentElement !== destination) destination.append(portrait.canvas);
-    portrait.setActive(zecaOn && !document.hidden && !last?.locked
+    const available = voice ? zecaOn : zecaOn || !!activeProfile;
+    const name = voice ? "Zeca" : chat.recipientName();
+    portraitButton.setAttribute("aria-label", t("Greet {name}", { name }));
+    portraitButton.title = t("Greet {name}", { name });
+    portrait.setActive(available && !document.hidden && !last?.locked
       && root.isConnected && portraitSpace.matches && (!!voice || tab === "chat"
         && !(portraitNarrow.matches && !memoryPane.hidden)
         && (wide.matches || !chatPane.classList.contains("recent-open"))));
-    portrait.update([], null, zecaOn ? { clip: voice?.clip ?? chat.clip(Clock.now()), agent: voice ? "other" : chat.agent(), immediate: !!voice } : null);
+    portrait.update([], null, available ? { clip: voice?.clip ?? chat.clip(Clock.now()), agent: voice ? "other" : chat.agent(), immediate: !!voice, set: voice ? undefined : chat.specialistAppearance() ?? undefined } : null);
   }
   portraitSpace.addEventListener("change", paintPortrait);
   portraitNarrow.addEventListener("change", paintPortrait);
@@ -453,7 +553,7 @@ export function createNest(
     else show(id);
   }
   function show(id: Tab): void {
-    if (id === "chat" && !zecaOn) id = "flock";
+    if (id === "chat" && !zecaOn && !activeProfile) id = "flock";
     tab = id;
     if (id !== "activity") rememberPlace();
     for (const k of TABS) panes[k].hidden = k !== id;
@@ -477,10 +577,9 @@ export function createNest(
     paintPortrait();
   }
   const relabel = () => {
+    recipientPicker.setAttribute("aria-label", t("Recipient"));
     profilesLink.textContent = t("Agent profiles");
     profiles.relabel();
-    portraitButton.setAttribute("aria-label", t("Greet Zeca"));
-    portraitButton.title = t("Greet Zeca");
     const subWords: Record<Sub, string> = {
       week: t("Week"),
       "dictation-statistics": t("Dictation"),
@@ -500,23 +599,27 @@ export function createNest(
     memoryPanel.relabel(); recentPanel.relabel();
     foot.relabel();
     head.relabel();
-    chat.relabel();
+    companionChat.relabel();
+    for (const panel of profilePanels.values()) panel.relabel();
+    fillRecipients();
     // What the tabs drew is in the old language too.
     if (last) flock.update(last);
     connections.redraw();
     dictationArea.relabel();
     if (tab === "activity") parts[sub].refresh();
     refreshRecent();
+    paintPortrait();
   };
   const setZeca = (on: boolean) => {
     zecaOn = on;
-    chat.setEnabled(on);
-    head.setZeca(on);
+    companionChat.setEnabled(on);
+    head.setZeca(on || !!activeProfile);
+    fillRecipients();
     foot.setZeca(on);
     flock.setZeca(on);
     paintPortrait();
     relabel();
-    if (!on && tab === "chat") show("flock");
+    if (!on && tab === "chat" && !activeProfile) show("flock");
   };
 
   // Over every tab but the Flock (which shows them on the wire), who needs you: a tag each, as the
@@ -614,7 +717,7 @@ export function createNest(
     if (id === "flock-profiles") { profilesShown = true; show("flock"); return; }
     if (id === "flock") profilesShown = false;
     if (id === "memory") {
-      if (zecaOn) { show("chat"); setMemory(true); }
+      if (zecaOn) { void selectRecipient(null).then(() => setMemory(true)); }
       return;
     }
     if (id.startsWith("connection:")) {
@@ -652,8 +755,7 @@ export function createNest(
         review: backend.flock.review,
         command: zecaOn
           ? (text) => {
-              show("chat");
-              void chat.askZeca(text);
+              void askCompanion(text);
             }
           : null,
         tab: id => { if (id === "dictation") chooseTab("dictation"); else open(id); },
@@ -695,7 +797,7 @@ export function createNest(
       backend.size("room", currentPlace());
       return;
     }
-    const pick = tabByKey(e, zecaOn);
+    const pick = tabByKey(e, zecaOn || !!activeProfile);
     if (pick) {
       e.preventDefault();
       chooseTab(pick);
@@ -718,7 +820,7 @@ export function createNest(
       rememberPlace();
       await placeSaved;
     },
-    chat,
+    chat: companionChat,
     view,
     relabel,
     memoryChanged,
@@ -745,15 +847,22 @@ export function createNest(
       if (tab === "activity" && sub === "cost") parts.cost.refresh();
     },
     setKeys: (keys) => {
-      chat.setKeys(keys);
+      chatKeys = keys;
+      companionChat.setKeys(keys);
+      for (const panel of profilePanels.values()) panel.setKeys(keys);
       flock.setKeys(keys);
     },
     shortcut: (id) => {
-      if (id === "talk-cancel") { chat.cancelVoice(); return; }
+      if (id === "talk-cancel") {
+        chat.cancelVoice();
+        return;
+      }
       if (id !== "allow" && id !== "deny") return;
       const allow = id === "allow";
       if (tab === "chat") chat.answerWaiting(allow);
       else if (tab === "flock" && !profilesShown) flock.shortcut(allow);
     },
+    receiveSpecialistChat: (profile, delta) => profilePanels.get(profile)?.receive(delta),
+    syncSpecialistChat: (profile, sync) => profilePanels.get(profile)?.sync(sync),
   };
 }

@@ -191,6 +191,9 @@ pub struct Settings {
     /// the user chooses their policies or full access.
     #[serde(default, skip_serializing_if = "ChatAccess::is_ask")]
     pub chat_access: ChatAccess,
+    /// Permission level selected separately for each built-in or custom specialist profile.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub specialist_access: BTreeMap<String, ChatAccess>,
     /// The chat's model and effort per folder (`""` for its own empty one), then per engine
     /// (`claude`, `codex`): what a new conversation there starts with.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -274,15 +277,6 @@ pub enum ChatAccess {
 impl ChatAccess {
     fn is_ask(&self) -> bool {
         *self == Self::Ask
-    }
-
-    /// How much it lets run without a card.
-    fn rank(self) -> u8 {
-        match self {
-            Self::Ask => 0,
-            Self::Policies => 1,
-            Self::Full => 2,
-        }
     }
 }
 
@@ -417,6 +411,7 @@ impl Default for Settings {
             codex_usage: None,
             native_chat: true,
             chat_access: ChatAccess::Ask,
+            specialist_access: BTreeMap::new(),
             chat_picks: BTreeMap::new(),
             nest_size: None,
             web: false,
@@ -1489,17 +1484,33 @@ pub fn chat_access(app: &AppHandle) -> ChatAccess {
     state.0.lock().map(|s| s.chat_access).unwrap_or_default()
 }
 
-/// The user's choice; it holds at once, for the card the chat asks next. More access is given
-/// only in Settings, like a policy (the island and the Nest show agents' text); the chat's own
-/// picker only gives some back.
+pub fn specialist_chat_access(app: &AppHandle, profile: &str) -> ChatAccess {
+    let state = app.state::<SettingsState>();
+    state
+        .0
+        .lock()
+        .ok()
+        .and_then(|s| s.specialist_access.get(profile).copied())
+        .unwrap_or_default()
+}
+
+fn chat_access_surface(label: &str) -> bool {
+    [crate::SETTINGS, crate::ISLAND, crate::NEST].contains(&label)
+}
+
+/// An explicit human choice from Chat or Settings holds after persistence.
 #[tauri::command]
 pub fn set_chat_access(app: AppHandle, window: tauri::Webview, access: ChatAccess) -> Result<(), String> {
-    let now = chat_access(&app);
-    let less = access.rank() <= now.rank() && [crate::ISLAND, crate::NEST].contains(&window.label());
-    if window.label() != crate::SETTINGS && !less {
-        return Err("More access is given in Settings → Chat & voice.".into());
+    if !chat_access_surface(window.label()) {
+        return Err("Chat access is available in Chat or Settings only.".into());
     }
-    edit(&app, |s| s.chat_access = access)?;
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    next.chat_access = access;
+    save(&next).map_err(|e| format!("can't save the settings: {e}"))?;
+    *saved = next;
+    drop(saved);
     tracing::info!(?access, "chat access changed");
     let _ = app.emit("settings", serde_json::json!({ "chatAccess": access }));
     Ok(())
@@ -1651,6 +1662,25 @@ pub fn set_monitor(app: AppHandle, name: Option<String>) -> Result<(), String> {
 pub fn monitor(app: &AppHandle) -> Option<String> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.monitor.clone())
+}
+
+/// Publish profile authority only after the explicit choice is saved successfully.
+pub(crate) fn save_specialist_access(
+    app: &AppHandle,
+    profile: String,
+    access: ChatAccess,
+) -> Result<(), String> {
+    let state = app.state::<SettingsState>();
+    let mut saved = state.0.lock().map_err(|_| "settings are busy")?;
+    let mut next = saved.clone();
+    if access == ChatAccess::Ask {
+        next.specialist_access.remove(&profile);
+    } else {
+        next.specialist_access.insert(profile, access);
+    }
+    save(&next).map_err(|e| format!("can't save the settings: {e}"))?;
+    *saved = next;
+    Ok(())
 }
 
 /// Changes the settings and saves them.
@@ -1856,6 +1886,16 @@ mod tests {
 
     const RULE: &str =
         r#"{ "agent": "claude", "cwd": "/home/me/p", "tool": "Bash", "target": "Bash · cargo test" }"#;
+
+    #[test]
+    fn access_choices_are_available_on_chat_and_settings_surfaces_only() {
+        for label in [crate::ISLAND, crate::NEST, crate::SETTINGS] {
+            assert!(chat_access_surface(label));
+        }
+        for label in ["widget", "dictation", "untrusted", ""] {
+            assert!(!chat_access_surface(label));
+        }
+    }
 
     #[cfg(not(windows))]
     #[test]
@@ -2368,6 +2408,7 @@ mod tests {
             codex_usage: None,
             native_chat: true,
             chat_access: ChatAccess::Ask,
+            specialist_access: BTreeMap::new(),
             chat_picks: BTreeMap::new(),
             nest_size: None,
             web: false,
@@ -2584,6 +2625,22 @@ mod tests {
         // A value from another version reads as asking, never as more access.
         let (s, clean) = parse(r#"{ "version": 22, "chat_access": "everything" }"#);
         assert!(!clean && s.chat_access == ChatAccess::Ask);
+    }
+
+    #[test]
+    fn specialist_access_is_per_profile_and_defaults_to_ask() {
+        assert!(Settings::default().specialist_access.is_empty());
+        let (s, clean) = parse(
+            r#"{ "version": 23, "specialist_access": { "reviewer": "full", "custom-4": "policies" } }"#,
+        );
+        assert!(clean);
+        assert_eq!(s.specialist_access["reviewer"], ChatAccess::Full);
+        assert_eq!(s.specialist_access["custom-4"], ChatAccess::Policies);
+        let encoded = serde_json::to_string(&s).unwrap();
+        assert_eq!(parse(&encoded).0.specialist_access, s.specialist_access);
+        let (invalid, clean) =
+            parse(r#"{ "version": 23, "specialist_access": { "reviewer": "unrestricted" } }"#);
+        assert!(!clean || invalid.specialist_access.is_empty());
     }
 
     #[test]

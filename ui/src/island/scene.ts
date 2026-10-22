@@ -330,7 +330,7 @@ export class Scene {
   update(
     sessions: SessionView[],
     focus: SessionView | null,
-    talking: { clip: string; agent: SessionView["agent"]; alone?: boolean; immediate?: boolean } | null = null,
+    talking: { clip: string; agent: SessionView["agent"]; alone?: boolean; immediate?: boolean; set?: SpriteSet } | null = null,
   ): void {
     const now = Clock.now();
     const { width, zeca, vults, skyTop, flights, reflow } = this.layout;
@@ -341,7 +341,7 @@ export class Scene {
       if (!who) this.zeca = null;
       else {
         // The front session keeps its own bird; Zeca sits here only with no session.
-        const set = focus ? speciesOf(key(focus)) : zecaSet();
+        const set = focus ? speciesOf(key(focus)) : talking?.set ?? zecaSet();
         const whose = focus ? key(focus) : "zeca";
         if (!this.zeca || this.zeca.key !== whose || this.zeca.set !== set) {
           const bird = new Bird(set, {

@@ -651,13 +651,27 @@ UX1-UX5 block on 2026-10-14 after merging #351; those steps are indexed in Done.
 UX6 implementation and automated integration are complete, awaiting the final
 desktop PR validation. UX7 implements shared widths, bounded proportions, Mini overflow and
 keyboard continuity, with native geometry/wire checks recorded in the UI plan. UX8 delivers the
-local profile catalog/editor, retained revisions and appearance, immutable conversation snapshots,
-isolated Claude runtime groundwork and source-bound Chat/command/voice preparation guards.
-Specialist Chat remains unavailable in the UI. Pinned built-in skills now retain their literal
-content and revision with each profile revision and conversation snapshot; the specialist brief
-uses that snapshot on restore. Resume with the explicit recipient/executor/source and Zeca-off
-availability contract, then Quick summaries and execution projection. The remaining desktop
-acceptance and release gates are unchanged.
+local profile catalog/editor, retained revisions, appearance, pinned skills, immutable conversation
+snapshots and profile-owned Claude Code Chat. Specialist conversations have per-profile
+Ask/Policies/Full access, separate saved history and approval streams, and remain available with
+Zeca off without importing project/flock context or Zeca memory. User desktop acceptance remains
+open. Quick summaries and execution projection are the remaining UX8 slices; release gates are
+unchanged.
+
+**2026-10-22 UX8 profile access and Zeca-off preflight:** each profile now stores its own Ask,
+Policies or Full choice, defaulting to Ask, separately from Zeca's Chat setting. Native turn
+settlement uses that profile choice and retains destructive/outside-content confirmations. The
+Zeca switch now blocks companion turns only; specialist turns no longer inherit it. The specialist
+Chat UI remains gated until it owns separate conversation state and cross-surface transitions.
+
+**2026-10-22 UX8 specialist Chat delivery:** Flock profile detail now opens the existing Chat tab
+with that profile selected as recipient. The production ChatPanel owns the shared UI; each recipient
+retains its own draft, history and native runtime. New conversations and history resume the exact saved instructions, skills and
+revision. A Nest-only runtime and event stream keep messages and permission cards out of Zeca's
+conversation. The human-only approval path, policy priority, destructive-action rule and
+outside-content disclosure remain active. Keyboard shortcuts answer or stop the selected specialist
+conversation while it is open. The shared renderer has automated regression coverage and awaits the user's
+wide/narrow desktop validation; Quick summaries and execution projection remain separate.
 
 The user also validated #353's saved close, model-list retry and short/wide Chat
 repairs after merging it on 2026-10-14. UX6 now retains Flock search, Needs you
