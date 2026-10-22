@@ -1085,7 +1085,7 @@ console.log("check-surface-continuity: Quick picker arrows/Home/End, IME, explic
   assert.equal(reads.length, 0, "Hidden profiles do not read a catalog");
   profiles.visible(true); assert.equal(reads.length, 1);
   profiles.visible(false);
-  const fixture = [{ id: "reviewer", built_in: true, revision: 1, title: "Reviewer", about: "Review fixture", species: "gypaetus", look: "none", instructions: "Inspect changes." }];
+  const fixture = [{ id: "reviewer", built_in: true, revision: 1, title: "Reviewer", about: "Review fixture", species: "gypaetus", look: "none", instructions: "Inspect changes.", skills: [], skill_catalog: [] }];
   reads[0].resolve(fixture); await tick();
   assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 0, "A retired read cannot repaint hidden profiles");
   profiles.visible(true); reads[1].reject(new Error("offline")); await tick();
@@ -1106,7 +1106,7 @@ console.log("check-surface-continuity: Quick picker arrows/Home/End, IME, explic
 console.log("check-surface-continuity: profile catalog lazy read, late cancellation, explicit retry, selection/revision and return");
 
 {
-  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Original instructions" };
+  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Original instructions", skills: [], skill_catalog: [{ id: "verify-change", revision: 1, title: "Verify", content: "Run focused checks" }] };
   const writes = [];
   const profiles = createProfiles(async () => [preset], () => {}, edit => new Promise((resolve, reject) => writes.push({ edit, resolve, reject })));
   document.body.append(profiles.element); profiles.visible(true); await tick();
@@ -1114,6 +1114,9 @@ console.log("check-surface-continuity: profile catalog lazy read, late cancellat
   profiles.element.querySelector(".agent-profile-edit").click();
   const input = profiles.element.querySelector("input"); input.value = "Literal custom title"; input.fire("input");
   const text = profiles.element.querySelector("textarea"); text.value = "Keep this draft\nexactly."; text.fire("input");
+  const skill = profiles.element.querySelector(".agent-profile-skills").querySelector("input");
+  assert.ok(profiles.element.querySelector(".agent-profile-skill").textContent.includes("Run focused checks"));
+  skill.checked = true; skill.fire("change");
   const species = profiles.element.querySelector('[data-field="species"]'); species.value = "vultur"; species.fire("change");
   const look = profiles.element.querySelector('[data-field="look"]'); look.value = "crown"; look.fire("change");
   assert.equal(profiles.element.querySelector("input").value, "Literal custom title", "Appearance updates retain text and controls");
@@ -1128,13 +1131,14 @@ console.log("check-surface-continuity: profile catalog lazy read, late cancellat
   assert.equal(profiles.element.querySelector("input").value, "Literal custom title");
   assert.equal(profiles.element.querySelector("textarea").value, "Keep this draft\nexactly.");
   submit();
-  assert.deepEqual(writes[1].edit, { action: "copy", preset: "developer", title: "Literal custom title", instructions: "Keep this draft\nexactly.", species: "vultur", look: "crown" });
-  const custom = { ...preset, built_in: false, id: "custom-7", title: writes[1].edit.title, instructions: writes[1].edit.instructions, species: writes[1].edit.species, look: writes[1].edit.look };
+  assert.deepEqual(writes[1].edit, { action: "copy", preset: "developer", title: "Literal custom title", instructions: "Keep this draft\nexactly.", species: "vultur", look: "crown", skill_ids: ["verify-change"] });
+  const custom = { ...preset, built_in: false, id: "custom-7", title: writes[1].edit.title, instructions: writes[1].edit.instructions, species: writes[1].edit.species, look: writes[1].edit.look, skills: preset.skill_catalog };
   writes[1].resolve(custom); await tick();
   assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 2, "The preset survives creating a copy");
   assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("Literal custom title"));
   profiles.element.querySelector(".agent-profile-edit").click(); submit();
   assert.equal(writes[2].edit.action, "update"); assert.equal(writes[2].edit.id, 7); assert.equal(writes[2].edit.revision, 1);
+  assert.deepEqual(writes[2].edit.skill_ids, ["verify-change"]);
   writes[2].reject("conflict"); await tick();
   assert.ok(profiles.element.querySelector('[role="alert"]').textContent.includes("Cancel"));
   assert.equal(profiles.element.querySelector("textarea").value, custom.instructions);
@@ -1153,7 +1157,7 @@ console.log("check-surface-continuity: profile copies, retained drafts, single p
     } };
   };
   try {
-    const preset = {id:"developer",built_in:true,revision:1,title:"Developer",about:"Description",species:"atratus",look:"none",instructions:"Instructions"};
+    const preset = {id:"developer",built_in:true,revision:1,title:"Developer",about:"Description",species:"atratus",look:"none",instructions:"Instructions",skills:[],skill_catalog:[]};
     const profiles = createProfiles(async () => [preset], () => {}, async () => preset);
     document.body.append(profiles.element);profiles.visible(true);await tick();
     profiles.element.querySelector(".agent-profile-choice").click();profiles.element.querySelector(".agent-profile-edit").click();

@@ -653,9 +653,11 @@ desktop PR validation. UX7 implements shared widths, bounded proportions, Mini o
 keyboard continuity, with native geometry/wire checks recorded in the UI plan. UX8 delivers the
 local profile catalog/editor, retained revisions and appearance, immutable conversation snapshots,
 isolated Claude runtime groundwork and source-bound Chat/command/voice preparation guards.
-Specialist Chat remains unavailable in the UI. Resume with pinned skills and the explicit
-recipient/executor/source and Zeca-off availability contract, then Quick summaries and execution
-projection. The remaining desktop acceptance and release gates are unchanged.
+Specialist Chat remains unavailable in the UI. Pinned built-in skills now retain their literal
+content and revision with each profile revision and conversation snapshot; the specialist brief
+uses that snapshot on restore. Resume with the explicit recipient/executor/source and Zeca-off
+availability contract, then Quick summaries and execution projection. The remaining desktop
+acceptance and release gates are unchanged.
 
 The user also validated #353's saved close, model-list retry and short/wide Chat
 repairs after merging it on 2026-10-14. UX6 now retains Flock search, Needs you

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 4028dd5d15af -->
+<!-- source: ae57c132afc5 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -284,8 +284,11 @@ abre um rascunho local com nome e instruções editáveis. **Salvar perfil** cri
 A cópia inicialmente herda a aparência do perfil integrado.
 Em **Aparência**, escolha uma **Espécie** e um **Acessório**; a prévia usa os mesmos sprites do bando.
 Os acessórios são escolhas fixas, incluindo **Nenhum**, sem mudanças sazonais.
-O cartão mostra a aparência salva após o salvamento. Habilidades e aplicação de um perfil ao Chat
-ficam para depois.
+O cartão mostra a aparência salva após o salvamento. Em **Skills fixadas**, escolha entre as skills
+integradas e consulte seu conteúdo literal e sua revisão. Cada salvamento mantém o conteúdo
+selecionado nessa revisão imutável, e uma conversa futura vinculada poderá reter o mesmo snapshot.
+Skills fixadas não habilitam ferramentas. Aplicar um perfil ao Chat continua bloqueado até que
+destinatário, executor, origem e comportamento com o Zeca desligado estejam definidos.
 
 Os perfis personalizados ficam no banco local, independentes do histórico de conversas. Cada
 salvamento mantém as revisões anteriores. Um editor desatualizado é rejeitado em vez de sobrescrever

@@ -515,13 +515,13 @@ cards remain reachable and extra sessions have an accessible overflow path.
 
 ## UX8 - Agents workspace, a new feature in stages
 
-**Resume checkpoint after the UX7/UX8 groundwork PR:** all work listed in the delivery table is
-included in this branch. Profiles can be read, copied and edited locally; their Chat action is
-still gated. Continue with pinned skill selection/content in immutable revisions and conversation
-snapshots, then the explicit recipient/executor/source UI and the specialist availability contract
-with Zeca off. Release the specialist entry only after those owners agree. Quick summaries and
-execution projection follow. Native evidence is retained locally; automated checks do not replace
-unperformed maintainer or external-provider acceptance. Keep N3/K8 and the N4 release gates open.
+**Resume checkpoint after the UX7/UX8 groundwork PR:** profiles can be read, copied and edited
+locally, and their selected built-in skill content is pinned in immutable revisions and conversation
+snapshots. Their Chat action is still gated. Continue with the explicit recipient/executor/source UI
+and specialist availability contract with Zeca off. Release the specialist entry only after those
+owners agree. Quick summaries and execution projection follow. Native evidence is retained locally;
+automated checks do not replace unperformed maintainer or external-provider acceptance. Keep N3/K8
+and the N4 release gates open.
 
 **2026-10-21 UX8 Ask Zeca routes:** Flock session questions, Connections questions, palette prompts
 and Quick's empty-flock Ask Zeca use one ChatPanel preparation path. It restores and flushes the
@@ -670,6 +670,14 @@ by this native separation slice. Targeted checks passed for native restore/turn 
 revision, appearance, model/effort/session mismatches, missing history and memory-extraction
 exclusion. Existing companion Chat and runtime isolation checks remain passing. No live provider
 request or renderer change was made in this step.
+
+**2026-10-21 UX8 pinned skills:** the profile editor can select from the small built-in skill catalog.
+Each choice carries a stable id, revision, title and literal content into a new immutable profile
+revision. Migration 32 defaults existing revisions to no skills. Conversation snapshots retain the
+selected content, and the isolated specialist brief uses that exact snapshot when restored. Stale,
+duplicate, oversized or malformed selections fail closed. Skill selection does not activate tools
+or expose the gated Chat action. Renderer build, translation audit and source checks pass; manual
+desktop acceptance remains open.
 
 ## UX9 - Studio library and tool connections, later
 

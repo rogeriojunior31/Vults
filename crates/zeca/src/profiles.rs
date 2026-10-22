@@ -11,6 +11,14 @@ pub struct Profile {
     pub instructions: &'static str,
 }
 
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Skill {
+    pub id: &'static str,
+    pub revision: u32,
+    pub title: &'static str,
+    pub content: &'static str,
+}
+
 // Marks sentences rendered through the UI's translation catalogs.
 const fn tk(text: &'static str) -> &'static str {
     text
@@ -45,6 +53,33 @@ pub const PRESETS: [Profile; 3] = [
         species: "aura",
         instructions: tk(
             "Investigate the requested question using relevant sources. Distinguish evidence, inferences and unresolved questions.",
+        ),
+    },
+];
+
+pub const SKILLS: [Skill; 3] = [
+    Skill {
+        id: "small-diff",
+        revision: 1,
+        title: tk("Keep changes focused"),
+        content: tk(
+            "Keep the change focused on the requested behavior. Avoid unrelated refactoring and explain any necessary scope expansion.",
+        ),
+    },
+    Skill {
+        id: "verify-change",
+        revision: 1,
+        title: tk("Verify the change"),
+        content: tk(
+            "Choose checks that exercise the changed behavior. Report what passed and distinguish automated checks from manual validation.",
+        ),
+    },
+    Skill {
+        id: "evidence-first-review",
+        revision: 1,
+        title: tk("Evidence-first review"),
+        content: tk(
+            "Prioritize actionable defects. Support each finding with a code location and a concrete failure path; report uncertainty explicitly.",
         ),
     },
 ];

@@ -36,13 +36,14 @@ export function createProfiles(load: () => Promise<AgentProfile[]>, back: () => 
   let active = false;
   let asked = 0;
   let pending = false;
-  let draft: { profile: AgentProfile; title: string; instructions: string; species: string; look: string } | null = null;
+  let draft: { profile: AgentProfile; title: string; instructions: string; species: string; look: string; skillIds: string[] } | null = null;
   let saving = false;
   let saveError = "";
   const begin = (profile: AgentProfile) => {
     if (pending) return;
     draft = { profile, title: profile.built_in ? t("{name} copy", { name: t(profile.title) }) : profile.title,
-      instructions: profile.built_in ? t(profile.instructions) : profile.instructions, species: profile.species, look: profile.look };
+      instructions: profile.built_in ? t(profile.instructions) : profile.instructions, species: profile.species, look: profile.look,
+      skillIds: profile.skills.map(skill => skill.id) };
     saveError = ""; draw();
     element.querySelector<HTMLInputElement>(".agent-profile-editor input")?.focus();
   };
@@ -50,9 +51,9 @@ export function createProfiles(load: () => Promise<AgentProfile[]>, back: () => 
     if (!draft || !save || saving) return;
     const current = draft;
     const edit: AgentProfileEdit = current.profile.built_in
-      ? { action: "copy", preset: current.profile.id, title: current.title, instructions: current.instructions, species: current.species, look: current.look }
+      ? { action: "copy", preset: current.profile.id, title: current.title, instructions: current.instructions, species: current.species, look: current.look, skill_ids: current.skillIds }
       : { action: "update", id: Number(current.profile.id.slice(7)), revision: current.profile.revision,
-        title: current.title, instructions: current.instructions, species: current.species, look: current.look };
+        title: current.title, instructions: current.instructions, species: current.species, look: current.look, skill_ids: current.skillIds };
     saving = true; saveError = ""; draw();
     void save(edit).then(profile => {
       profiles = [...(profiles ?? []).filter(p => p.id !== profile.id), profile];
@@ -102,6 +103,18 @@ export function createProfiles(load: () => Promise<AgentProfile[]>, back: () => 
         el("div", { class: "agent-profile-appearance-grid" }, image, el("div", {},
           el("label", {}, el("span", { text: t("Species") }), species),
           el("label", {}, el("span", { text: t("Accessory") }), look))));
+      const skillChoices = el("fieldset", { class: "agent-profile-skills" }, el("legend", { text: t("Pinned skills") }),
+        el("p", { class: "note", text: t("Skill content and revision are saved with this profile. They do not enable tools.") }));
+      for (const skill of draft.profile.skill_catalog) {
+        const checkbox = el("input"); checkbox.type = "checkbox"; checkbox.value = skill.id;
+        checkbox.checked = draft.skillIds.includes(skill.id); checkbox.disabled = saving;
+        checkbox.addEventListener("change", () => {
+          if (!draft) return;
+          draft.skillIds = checkbox.checked ? [...new Set([...draft.skillIds, skill.id])] : draft.skillIds.filter(id => id !== skill.id);
+        });
+        skillChoices.append(el("label", { class: "agent-profile-skill" }, checkbox,
+          el("span", {}, el("strong", { text: t(skill.title) }), el("span", { text: `${t("Revision {revision}", { revision: skill.revision })} · ${t(skill.content)}` }))));
+      }
       const saveButton = el("button", { class: "btn primary", text: saving ? t("Saving…") : t("Save profile") });
       saveButton.type = "submit"; saveButton.disabled = saving;
       const cancel = el("button", { class: "btn", text: t("Cancel"), onclick: () => {
@@ -112,6 +125,7 @@ export function createProfiles(load: () => Promise<AgentProfile[]>, back: () => 
         el("h3", { text: draft.profile.built_in ? t("Create a custom profile") : t("Edit profile") }),
         el("label", {}, el("span", { text: t("Profile name") }), name),
         appearance,
+        skillChoices,
         el("label", {}, el("span", { text: t("Instructions") }), instructions),
         el("p", { class: "note", text: t("Saved locally. This does not start an agent or change permissions.") }),
         el("div", { class: "agent-profile-actions" }, saveButton, cancel));
@@ -138,6 +152,8 @@ export function createProfiles(load: () => Promise<AgentProfile[]>, back: () => 
       if (profile) detail.append(el("h3", { text: profile.built_in ? t(profile.title) : profile.title }),
         el("p", { class: "note", text: profile.built_in ? t("Built-in profile · Revision {revision}", { revision: profile.revision }) : t("Custom profile · Revision {revision}", { revision: profile.revision }) }),
         el("h4", { text: t("Instructions") }), el("p", { text: profile.built_in ? t(profile.instructions) : profile.instructions }));
+      if (profile?.skills.length) detail.append(el("h4", { text: t("Pinned skills") }),
+        ...profile.skills.map(skill => el("p", { class: "note", text: `${t(skill.title)} · ${t("Revision {revision}", { revision: skill.revision })}` })));
       if (profile && save) {
         const edit = el("button", { class: "btn agent-profile-edit",
           text: profile.built_in ? t("Create a copy") : t("Edit profile"), onclick: () => begin(profile) });
