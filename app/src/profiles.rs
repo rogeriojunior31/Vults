@@ -1,4 +1,5 @@
 //! The Nest owns local profiles; saving instructions never starts an agent or changes access.
+use crate::settings;
 use serde::{Deserialize, Serialize};
 use vults_store::{
     Store,
@@ -17,6 +18,7 @@ pub struct View {
     built_in: bool,
     skills: Vec<SkillSnapshot>,
     skill_catalog: Vec<vults_zeca::profiles::Skill>,
+    access: crate::settings::ChatAccess,
 }
 
 impl From<Profile> for View {
@@ -32,6 +34,7 @@ impl From<Profile> for View {
             built_in: false,
             skills: p.skills,
             skill_catalog: vults_zeca::profiles::SKILLS.to_vec(),
+            access: crate::settings::ChatAccess::Ask,
         }
     }
 }
@@ -39,6 +42,13 @@ impl From<Profile> for View {
 #[derive(Deserialize)]
 #[serde(tag = "action", rename_all = "camelCase", deny_unknown_fields)]
 pub enum Edit {
+    Create {
+        title: String,
+        instructions: String,
+        species: String,
+        look: String,
+        skill_ids: Vec<String>,
+    },
     Copy {
         preset: String,
         title: String,
@@ -99,9 +109,10 @@ fn error(e: vults_store::Error) -> String {
 }
 
 #[tauri::command]
-pub async fn agent_profiles(window: tauri::Webview) -> Result<Vec<View>, String> {
+pub async fn agent_profiles(app: tauri::AppHandle, window: tauri::Webview) -> Result<Vec<View>, String> {
     page(&window)?;
-    tauri::async_runtime::spawn_blocking(|| {
+    tauri::async_runtime::spawn_blocking(move || {
+        let app_for_access = app.clone();
         let mut profiles: Vec<View> = vults_zeca::profiles::PRESETS
             .iter()
             .map(|p| View {
@@ -115,6 +126,7 @@ pub async fn agent_profiles(window: tauri::Webview) -> Result<Vec<View>, String>
                 built_in: true,
                 skills: Vec::new(),
                 skill_catalog: vults_zeca::profiles::SKILLS.to_vec(),
+                access: crate::settings::specialist_chat_access(&app_for_access, p.id),
             })
             .collect();
         profiles.extend(
@@ -122,7 +134,12 @@ pub async fn agent_profiles(window: tauri::Webview) -> Result<Vec<View>, String>
                 .and_then(|s| s.agent_profiles())
                 .map_err(error)?
                 .into_iter()
-                .map(View::from),
+                .map(|p| {
+                    let id = format!("custom-{}", p.id);
+                    let mut view = View::from(p);
+                    view.access = crate::settings::specialist_chat_access(&app_for_access, &id);
+                    view
+                }),
         );
         Ok(profiles)
     })
@@ -131,11 +148,65 @@ pub async fn agent_profiles(window: tauri::Webview) -> Result<Vec<View>, String>
 }
 
 #[tauri::command]
-pub async fn agent_profile_save(window: tauri::Webview, edit: Edit) -> Result<View, String> {
+pub async fn set_specialist_chat_access(
+    app: tauri::AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    access: crate::settings::ChatAccess,
+) -> Result<(), String> {
+    page(&window)?;
+    let preset = vults_zeca::profiles::PRESETS.iter().any(|p| p.id == profile);
+    let valid = if let Some(id) = profile
+        .strip_prefix("custom-")
+        .and_then(|id| id.parse::<i64>().ok())
+        .filter(|id| *id > 0 && format!("custom-{id}") == profile)
+    {
+        let dir = crate::history::dir();
+        tauri::async_runtime::spawn_blocking(move || {
+            Store::open(&dir)
+                .and_then(|store| store.agent_profiles())
+                .map(|profiles| profiles.iter().any(|p| p.id == id))
+                .unwrap_or(false)
+        })
+        .await
+        .map_err(|_| "storage".to_owned())?
+    } else {
+        preset
+    };
+    if !valid {
+        return Err("invalid".into());
+    }
+    settings::save_specialist_access(&app, profile, access)
+}
+
+#[tauri::command]
+pub async fn agent_profile_save(
+    app: tauri::AppHandle,
+    window: tauri::Webview,
+    edit: Edit,
+) -> Result<View, String> {
     page(&window)?;
     tauri::async_runtime::spawn_blocking(move || {
         let mut store = Store::open(&crate::history::dir()).map_err(error)?;
         let profile = match edit {
+            Edit::Create {
+                title,
+                instructions,
+                species,
+                look,
+                skill_ids,
+            } => Profile {
+                id: 0,
+                revision: 0,
+                title,
+                instructions,
+                preset: String::new(),
+                preset_revision: 0,
+                species,
+                look,
+                about: "Custom agent profile".into(),
+                skills: skills(skill_ids)?,
+            },
             Edit::Copy {
                 preset,
                 title,
@@ -185,7 +256,17 @@ pub async fn agent_profile_save(window: tauri::Webview, edit: Edit) -> Result<Vi
                 p
             }
         };
-        store.agent_profile_save(&profile).map(View::from).map_err(error)
+        if crate::chat::specialist_brief(&vults_store::profiles::Snapshot::from(profile.clone())).len()
+            > 32768
+        {
+            return Err("brief".into());
+        }
+        let mut view = store
+            .agent_profile_save(&profile)
+            .map(View::from)
+            .map_err(error)?;
+        view.access = settings::specialist_chat_access(&app, &view.id);
+        Ok(view)
     })
     .await
     .map_err(|_| "storage".to_owned())?

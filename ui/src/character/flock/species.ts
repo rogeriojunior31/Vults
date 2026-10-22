@@ -1,6 +1,7 @@
 // The 23 vulture species, each built from Zeca's rig: a palette, a size from the real bird's
 // measurements, a few pixel details, and only the clips where the real bird behaves differently.
 // Every species also has a signature: one clip of its own, from something the real bird does.
+import { tk } from "../../i18n";
 import type { Clip } from "../sprites";
 import {
   BODIES,
@@ -94,7 +95,7 @@ export const SPECIES: Species[] = [
   {
     id: "atratus",
     paleHand: true,
-    name: "Black vulture",
+    name: tk("Black vulture"),
     latin: "Coragyps atratus",
     family: "new-world",
     iucn: "LC",
@@ -126,7 +127,7 @@ export const SPECIES: Species[] = [
   {
     id: "aura",
     paleHand: true,
-    name: "Turkey vulture",
+    name: tk("Turkey vulture"),
     latin: "Cathartes aura",
     family: "new-world",
     iucn: "LC",
@@ -188,7 +189,7 @@ export const SPECIES: Species[] = [
   {
     id: "burrovianus",
     paleHand: true,
-    name: "Lesser yellow-headed vulture",
+    name: tk("Lesser yellow-headed vulture"),
     latin: "Cathartes burrovianus",
     family: "new-world",
     iucn: "LC",
@@ -261,7 +262,7 @@ export const SPECIES: Species[] = [
   {
     id: "melambrotus",
     paleHand: true,
-    name: "Greater yellow-headed vulture",
+    name: tk("Greater yellow-headed vulture"),
     latin: "Cathartes melambrotus",
     family: "new-world",
     iucn: "LC",
@@ -324,7 +325,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "papa",
-    name: "King vulture",
+    name: tk("King vulture"),
     latin: "Sarcoramphus papa",
     family: "new-world",
     iucn: "LC",
@@ -426,7 +427,7 @@ export const SPECIES: Species[] = [
   {
     id: "vultur",
     panel: true,
-    name: "Andean condor",
+    name: tk("Andean condor"),
     latin: "Vultur gryphus",
     family: "new-world",
     iucn: "VU",
@@ -496,7 +497,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gymnogyps",
-    name: "California condor",
+    name: tk("California condor"),
     latin: "Gymnogyps californianus",
     family: "new-world",
     iucn: "CR",
@@ -572,7 +573,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "neophron",
-    name: "Egyptian vulture",
+    name: tk("Egyptian vulture"),
     latin: "Neophron percnopterus",
     family: "old-world",
     iucn: "EN",
@@ -640,7 +641,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gypaetus",
-    name: "Bearded vulture",
+    name: tk("Bearded vulture"),
     latin: "Gypaetus barbatus",
     family: "old-world",
     iucn: "NT",
@@ -701,7 +702,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gypohierax",
-    name: "Palm-nut vulture",
+    name: tk("Palm-nut vulture"),
     latin: "Gypohierax angolensis",
     family: "old-world",
     iucn: "LC",
@@ -760,7 +761,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "necrosyrtes",
-    name: "Hooded vulture",
+    name: tk("Hooded vulture"),
     latin: "Necrosyrtes monachus",
     family: "old-world",
     iucn: "CR",
@@ -813,7 +814,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-fulvus",
-    name: "Griffon vulture",
+    name: tk("Griffon vulture"),
     latin: "Gyps fulvus",
     family: "old-world",
     iucn: "LC",
@@ -861,7 +862,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-rueppelli",
-    name: "Rüppell's vulture",
+    name: tk("Rüppell's vulture"),
     latin: "Gyps rueppelli",
     family: "old-world",
     iucn: "CR",
@@ -911,7 +912,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-coprotheres",
-    name: "Cape vulture",
+    name: tk("Cape vulture"),
     latin: "Gyps coprotheres",
     family: "old-world",
     iucn: "VU",
@@ -959,7 +960,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-himalayensis",
-    name: "Himalayan vulture",
+    name: tk("Himalayan vulture"),
     latin: "Gyps himalayensis",
     family: "old-world",
     iucn: "NT",
@@ -1034,7 +1035,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-africanus",
-    name: "White-backed vulture",
+    name: tk("White-backed vulture"),
     latin: "Gyps africanus",
     family: "old-world",
     iucn: "CR",
@@ -1082,7 +1083,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-indicus",
-    name: "Indian vulture",
+    name: tk("Indian vulture"),
     latin: "Gyps indicus",
     family: "old-world",
     iucn: "CR",
@@ -1152,7 +1153,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-tenuirostris",
-    name: "Slender-billed vulture",
+    name: tk("Slender-billed vulture"),
     latin: "Gyps tenuirostris",
     family: "old-world",
     iucn: "CR",
@@ -1203,7 +1204,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "gyps-bengalensis",
-    name: "White-rumped vulture",
+    name: tk("White-rumped vulture"),
     latin: "Gyps bengalensis",
     family: "old-world",
     iucn: "CR",
@@ -1258,7 +1259,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "aegypius",
-    name: "Cinereous vulture",
+    name: tk("Cinereous vulture"),
     latin: "Aegypius monachus",
     family: "old-world",
     iucn: "NT",
@@ -1317,7 +1318,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "torgos",
-    name: "Lappet-faced vulture",
+    name: tk("Lappet-faced vulture"),
     latin: "Torgos tracheliotos",
     family: "old-world",
     iucn: "EN",
@@ -1377,7 +1378,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "sarcogyps",
-    name: "Red-headed vulture",
+    name: tk("Red-headed vulture"),
     latin: "Sarcogyps calvus",
     family: "old-world",
     iucn: "CR",
@@ -1428,7 +1429,7 @@ export const SPECIES: Species[] = [
   },
   {
     id: "trigonoceps",
-    name: "White-headed vulture",
+    name: tk("White-headed vulture"),
     latin: "Trigonoceps occipitalis",
     family: "old-world",
     iucn: "CR",

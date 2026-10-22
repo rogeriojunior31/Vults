@@ -207,10 +207,10 @@ impl Store {
             if count >= 100 {
                 return Err(Error::Invalid("Profile limit reached."));
             }
-            if !matches!(profile.preset.as_str(), "developer" | "reviewer" | "researcher")
-                || profile.preset_revision == 0
-                || profile.about.len() > 1024
-            {
+            let blank = profile.preset.is_empty() && profile.preset_revision == 0;
+            let copied = matches!(profile.preset.as_str(), "developer" | "reviewer" | "researcher")
+                && profile.preset_revision > 0;
+            if (!blank && !copied) || profile.about.len() > 1024 {
                 return Err(Error::Invalid("Invalid profile source."));
             }
             tx.execute("INSERT INTO agent_profiles DEFAULT VALUES", [])?;
@@ -248,6 +248,47 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_profiles_keep_no_preset_and_retain_their_own_revisions() {
+        let dir = std::env::temp_dir().join(format!("vults-original-profiles-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = Store::open(&dir).unwrap();
+        let mut original = Profile {
+            id: 0,
+            revision: 0,
+            title: "Release specialist".into(),
+            instructions: "Review release readiness.".into(),
+            preset: String::new(),
+            preset_revision: 0,
+            species: "vultur".into(),
+            look: "crown".into(),
+            about: "Custom agent profile".into(),
+            skills: vec![],
+        };
+        original.preset_revision = 1;
+        assert!(store.agent_profile_save(&original).is_err());
+        original.preset_revision = 0;
+        original.preset = "forged".into();
+        assert!(store.agent_profile_save(&original).is_err());
+        original.preset.clear();
+        let first = store.agent_profile_save(&original).unwrap();
+        assert!(first.preset.is_empty());
+        assert_eq!(first.preset_revision, 0);
+        assert_eq!(first.revision, 1);
+        Snapshot::from(first.clone()).validate(&store).unwrap();
+        let mut edit = first.clone();
+        edit.instructions = "Updated instructions".into();
+        let second = store.agent_profile_save(&edit).unwrap();
+        assert_eq!(second.revision, 2);
+        assert!(second.preset.is_empty());
+        drop(store);
+        let reopened = Store::open(&dir).unwrap();
+        assert_eq!(reopened.agent_profiles().unwrap(), vec![second]);
+        assert_eq!(reopened.agent_profile_revision(first.id, 1).unwrap(), Some(first));
+        drop(reopened);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
     #[test]
     fn pre_skill_conversation_snapshots_default_to_no_skills() {
         let snapshot: Snapshot = serde_json::from_value(serde_json::json!({

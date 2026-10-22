@@ -34,6 +34,8 @@ export interface ActivityView {
   confirming: boolean;
   /** The image leaves the project names out. */
   hideProjects: boolean;
+  /** The recap is being drawn or its native save dialog is open. */
+  exporting?: boolean;
   /** Where the image went (`~/Pictures/…`), or why it did not; null before any. */
   saved: { ok: boolean; text: string } | null;
 }

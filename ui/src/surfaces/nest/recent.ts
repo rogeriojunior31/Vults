@@ -28,7 +28,7 @@ function day(ms: number): string {
     ? { month: "long", day: "numeric" } : { year: "numeric", month: "long", day: "numeric" });
 }
 
-export function createRecent(on: RecentActions): { element: HTMLElement; refresh: () => void } {
+export function createRecent(on: RecentActions): { element: HTMLElement; refresh: () => void; clear: () => void } {
   const back = on.close ? el("button", { class: "nest-recent-back", onclick: on.close }) : null;
   const fresh = el("button", { class: "outline nest-new-chat", onclick: () => { if (!on.busy()) on.fresh(); } });
   const search = el("input", { class: "nest-recent-search" });
@@ -117,5 +117,5 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
       () => { if (mine === asked) failed = true; },
     ).finally(() => { if (mine === asked) { loading = false; paint(); } });
   };
-  return { element, refresh };
+  return { element, refresh, clear: () => { asked++; rows = null; failed = false; loading = false; expanded = false; paint(); } };
 }

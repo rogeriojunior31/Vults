@@ -278,3 +278,37 @@ for (const [make, snapshot, rowsExpected] of [
   assert.equal(count(part.element, "view-state error"), 0);
 }
 console.log("check-record-search: all record surfaces distinguish loading/error/empty, retain snapshots and summaries, explicit guarded retry and obsolete response rejection");
+
+for (const [create, label, value] of [
+  [createHistory, "Search turns", { on: true, turns }],
+  [createAudit, "Search answers and commands", []],
+]) {
+  let reads = 0;
+  const writes = [];
+  const view = create(async () => { reads++; return value; }, async (_tab, text) => { if (text !== undefined) writes.push(text); return ""; });
+  view.refresh(); await tick();
+  const input = nodes(view.element).find(node => node.tag === "input");
+  const clear = nodes(view.element).find(node => node.tag === "button");
+  assert.equal(input.placeholder, label);
+  assert.equal(input.getAttribute("aria-label"), label);
+  assert.equal(clear.disabled, true, "An empty search has no clear action");
+  input.value = "Alpha"; input.listeners.input();
+  assert.equal(clear.disabled, false);
+  for (const composition of [{ isComposing: true }, { keyCode: 229 }]) {
+    input.listeners.keydown({ key: "Escape", ...composition, preventDefault() { assert.fail("IME keeps Escape"); }, stopPropagation() { assert.fail("IME keeps its key event"); } });
+    assert.equal(input.value, "Alpha");
+  }
+  let prevented = 0, stopped = 0;
+  input.listeners.keydown({ key: "Escape", preventDefault() { prevented++; }, stopPropagation() { stopped++; } });
+  await view.flush();
+  assert.equal(input.value, "");
+  assert.equal(document.activeElement, input);
+  assert.equal(clear.disabled, true);
+  assert.equal(prevented, 1); assert.equal(stopped, 1);
+  assert.deepEqual(writes, ["Alpha", ""], "Escape saves the clear after older search writes");
+  input.listeners.keydown({ key: "Escape", preventDefault() { assert.fail("An empty search leaves Escape to the owning surface"); }, stopPropagation() { assert.fail("An empty search leaves Escape to the owning surface"); } });
+  clear.listeners.click(); await view.flush();
+  assert.deepEqual(writes, ["Alpha", ""], "A stale clear button cannot queue redundant writes");
+  assert.equal(reads, 1, "Clearing stays on the already loaded records");
+}
+console.log("check-record-search: prototype-specific History/Audit search labels, empty-clear state, IME-safe Escape, retained focus, ordered clear persistence and no extra record queries");

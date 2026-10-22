@@ -50,6 +50,8 @@ export function createWeek(backend: WeekBackend): {
   let github: GithubGrid | null = null;
   let confirming = false;
   let hideProjects = false;
+  let exporting = false;
+  let periodVersion = 0;
   let saved: { ok: boolean; text: string } | null = null;
   let asked = 0;
   let loading = false;
@@ -71,7 +73,7 @@ export function createWeek(backend: WeekBackend): {
     page.replaceChildren(
       ...(failed ? [viewState("error", t("Could not load {name}.", { name: t("This week") }),
         activity ? t("The last loaded view is kept and may be out of date.") : t("Try again to read the data saved on this computer."), retry, failure)] : []),
-      ...(!activity ? failed ? [] : [viewState("loading", t("Reading the history…"))] : nestWeek(activity, { tab, github, confirming, hideProjects, saved }, on, day, (d) => {
+      ...(!activity ? failed ? [] : [viewState("loading", t("Reading the history…"))] : nestWeek(activity, { tab, github, confirming, hideProjects, saved, exporting }, on, day, (d) => {
         day = d;
         render();
         // The page was drawn again: the keyboard stays on the day picked.
@@ -88,6 +90,7 @@ export function createWeek(backend: WeekBackend): {
     try {
       const next = await backend.activity(monday);
       if (mine !== asked) return;
+      if (activity?.week.monday !== next.week.monday) saved = null;
       activity = next;
       failed = false;
     } catch (error) {
@@ -101,6 +104,7 @@ export function createWeek(backend: WeekBackend): {
   const on: Pick<ActivityActions, "week" | "tab" | "connectors" | "hideProjects" | "saveImage"> & { settings: () => void } = {
     settings: () => backend.settings(),
     week: (m) => {
+      periodVersion++;
       monday = m;
       day = null;
       saved = null;
@@ -120,25 +124,25 @@ export function createWeek(backend: WeekBackend): {
         .finally(render);
     },
     hideProjects: (hide) => {
+      if (exporting) return;
       hideProjects = hide;
     },
     saveImage: () => {
-      if (!activity) return;
+      if (!activity?.week.turns || exporting) return;
       const week = activity.week;
-      void recapPng(week, { hideProjects })
+      const owner = periodVersion;
+      const options = { hideProjects };
+      exporting = true;
+      saved = null;
+      render();
+      const current = () => owner === periodVersion && activity?.week.monday === week.monday;
+      void recapPng(week, options)
         .then((png) => backend.saveImage(`vults-week-${week.monday}.png`, png))
         .then(
-          (path) =>
-            (saved = path
-              ? { ok: true, text: t("Saved to {path}", { path }) }
-              : null),
-          (e) =>
-            (saved = {
-              ok: false,
-              text: t("Not saved: {error}", { error: String(e) }),
-            }),
+          (path) => { if (current()) saved = path ? { ok: true, text: t("Saved to {path}", { path }) } : null; },
+          (error) => { if (current()) saved = { ok: false, text: t("Not saved: {error}", { error: String(error) }) }; },
         )
-        .finally(render);
+        .finally(() => { exporting = false; render(); });
     },
     connectors: () => backend.connectors(),
   };

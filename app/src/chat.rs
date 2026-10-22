@@ -24,8 +24,11 @@ const INBOX_KEEP: Duration = Duration::from_secs(7 * 24 * 3600);
 
 /// One conversation at a time; a turn holds the lock until it ends. Permissions the turn is
 /// waiting on live outside that lock, so a click can answer them meanwhile.
+#[derive(Debug, Clone)]
+pub struct ChatState(Arc<ChatInner>);
+
 #[derive(Debug)]
-pub struct ChatState {
+pub struct ChatInner {
     chat: Mutex<Chat>,
     waiting: Arc<Waiting>,
     /// Stops the turn running now, if one is.
@@ -39,6 +42,84 @@ pub struct ChatState {
     live: std::sync::Mutex<Live>,
     /// Unsent composer state, shared by the island and disposable Nest, never saved to disk.
     draft: std::sync::Mutex<Draft>,
+}
+
+impl std::ops::Deref for ChatState {
+    type Target = ChatInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct SpecialistChatState(std::sync::Mutex<HashMap<String, ChatState>>);
+
+impl SpecialistChatState {
+    fn runtime(&self, profile: &str, snapshot: &Snapshot) -> Result<ChatState, String> {
+        let mut runtimes = self.0.lock().map_err(|_| "Specialist Chat is busy.")?;
+        if let Some(state) = runtimes.get(profile) {
+            return Ok(state.clone());
+        }
+        let state = ChatState::specialist(snapshot)?;
+        runtimes.insert(profile.to_owned(), state.clone());
+        Ok(state)
+    }
+
+    fn existing(&self, profile: &str) -> Result<Option<ChatState>, String> {
+        self.0
+            .lock()
+            .map(|runtimes| runtimes.get(profile).cloned())
+            .map_err(|_| "Specialist Chat is busy.".into())
+    }
+
+    fn pending_count(&self) -> usize {
+        self.0
+            .lock()
+            .map(|runtimes| runtimes.values().map(|state| state.waiting.pending_count()).sum())
+            .unwrap_or_default()
+    }
+}
+
+async fn specialist_snapshot(profile: &str) -> Result<Snapshot, String> {
+    if let Some(preset) = vults_zeca::profiles::PRESETS.iter().find(|p| p.id == profile) {
+        return Ok(Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: preset.id.into(),
+                revision: preset.revision,
+            },
+            title: preset.title.into(),
+            about: preset.about.into(),
+            instructions: preset.instructions.into(),
+            species: preset.species.into(),
+            look: "none".into(),
+            skills: Vec::new(),
+        });
+    }
+    let id = profile
+        .strip_prefix("custom-")
+        .and_then(|id| id.parse::<i64>().ok())
+        .filter(|id| *id > 0 && format!("custom-{id}") == profile)
+        .ok_or("That profile is unavailable.")?;
+    store(move |s| s.agent_profiles())
+        .await?
+        .into_iter()
+        .find(|p| p.id == id)
+        .map(Snapshot::from)
+        .ok_or_else(|| "That profile is unavailable.".into())
+}
+
+fn specialist_route(window: &tauri::Webview) -> Result<(), String> {
+    if window.label() == crate::NEST {
+        Ok(())
+    } else {
+        Err("Specialist Chat is available in the Nest only.".into())
+    }
+}
+
+async fn specialist_runtime(app: &AppHandle, profile: &str) -> Result<ChatState, String> {
+    let snapshot = specialist_snapshot(profile).await?;
+    app.state::<SpecialistChatState>().runtime(profile, &snapshot)
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -172,9 +253,18 @@ struct Scope {
     app: AppHandle,
     folder: String,
     agent: vults_core::AgentKind,
+    profile_access: Option<settings::ChatAccess>,
+    profile_key: Option<String>,
 }
 
 impl Waiting {
+    fn subject(&self) -> String {
+        self.2
+            .lock()
+            .ok()
+            .and_then(|scope| scope.as_ref().and_then(|scope| scope.profile_key.clone()))
+            .unwrap_or_else(|| "zeca".into())
+    }
     fn pending_count(&self) -> usize {
         self.0
             .lock()
@@ -232,7 +322,14 @@ impl Approver for Waiting {
 
     /// The user's rule for this conversation answered: on the record as the rule's, with its span.
     fn ruled(&self, tool: &str, target: &str) {
-        crate::audit::keep(Audit::new(Actor::Rule, Act::Allow, "zeca", "", tool, target));
+        crate::audit::keep(Audit::new(
+            Actor::Rule,
+            Act::Allow,
+            &self.subject(),
+            "",
+            tool,
+            target,
+        ));
         if let Some(turn) = self.1.lock().ok().and_then(|t| t.clone()) {
             let now = crate::traces::now_ms();
             crate::traces::tool(&turn, tool, target, now, "ok");
@@ -244,10 +341,13 @@ impl Approver for Waiting {
         let scope = self.2.lock().ok()?;
         let scope = scope.as_ref()?;
         let access = settings::chat_access(&scope.app);
-        if access == settings::ChatAccess::Ask {
-            return None;
-        }
-        settle(
+        let profile_access = scope
+            .profile_key
+            .as_deref()
+            .map(|key| settings::specialist_chat_access(&scope.app, key))
+            .or(scope.profile_access);
+        settle_in_route(
+            profile_access,
             &crate::policies::active(),
             access,
             &scope.folder,
@@ -265,7 +365,7 @@ impl Approver for Waiting {
                 (Actor::FullAccess, if allow { Act::Allow } else { Act::Deny })
             }
         };
-        let audit = Audit::new(actor, act, "zeca", "", tool, target);
+        let audit = Audit::new(actor, act, &self.subject(), "", tool, target);
         crate::audit::keep(match s.consent {
             Some(consent) => audit.by_consent(consent),
             None => audit,
@@ -275,6 +375,22 @@ impl Approver for Waiting {
             crate::traces::tool(&turn, tool, target, crate::traces::now_ms(), status);
         }
     }
+}
+
+fn settle_in_route(
+    profile_access: Option<settings::ChatAccess>,
+    policies: &[vults_core::policies::Active],
+    access: settings::ChatAccess,
+    folder: &str,
+    agent: vults_core::AgentKind,
+    ask: &vults_agents::driver::Ask,
+    outside: bool,
+) -> Option<vults_chat::Settled> {
+    let access = profile_access.unwrap_or(access);
+    if access == settings::ChatAccess::Ask {
+        return None;
+    }
+    settle(policies, access, folder, agent, ask, outside)
 }
 
 /// What the user's choice answers before a card (ADR 0004). Their policies speak first, as on the
@@ -327,7 +443,7 @@ fn settle(
 
 impl ChatState {
     pub fn new() -> Self {
-        Self {
+        Self(Arc::new(ChatInner {
             chat: Mutex::new(Chat::new(Provider::Claude, paths::chat_dir())),
             waiting: Arc::default(),
             stop: std::sync::Mutex::new(None),
@@ -336,7 +452,17 @@ impl ChatState {
             profile: Default::default(),
             live: Default::default(),
             draft: Default::default(),
-        }
+        }))
+    }
+
+    fn specialist(profile: &Snapshot) -> Result<Self, String> {
+        let state = Self::new();
+        let dir = paths::chat_dir();
+        let spec = vults_agents::driver::Spec::in_dir(dir);
+        *state.chat.try_lock().map_err(|_| "Specialist Chat is busy.")? =
+            Chat::specialist(spec, None, specialist_brief(profile))?;
+        state.set_profile(Some(profile.clone()));
+        Ok(state)
     }
 
     fn live(&self, change: impl FnOnce(&mut Live)) {
@@ -414,7 +540,10 @@ impl ChatState {
 }
 
 pub(crate) fn attention(app: &AppHandle) -> Option<vults_core::AttentionItem> {
-    let count = app.try_state::<ChatState>()?.waiting.pending_count();
+    let count = app.try_state::<ChatState>()?.waiting.pending_count()
+        + app
+            .try_state::<SpecialistChatState>()
+            .map_or(0, |state| state.pending_count());
     (count > 0).then_some(vults_core::AttentionItem {
         level: vults_core::Attention::NeedsYou,
         source: vults_core::AttentionSource::Chat { count },
@@ -473,6 +602,34 @@ fn sync(app: &AppHandle, s: Sync) {
     emit_chat(app, "chat-sync", &s);
 }
 
+fn specialist_sync(app: &AppHandle, profile: &str, s: Sync) {
+    if !matches!(s, Sync::Draft { .. }) {
+        crate::runtime::recheck(app);
+    }
+    let payload = serde_json::json!({ "profile": profile, "sync": s });
+    let _ = app.emit_to(crate::NEST, "specialist-chat-sync", payload);
+}
+
+fn route_sync(app: &AppHandle, profile: Option<&str>, s: Sync) {
+    if let Some(profile) = profile {
+        specialist_sync(app, profile, s);
+    } else {
+        sync(app, s);
+    }
+}
+
+fn route_delta(app: &AppHandle, profile: Option<&str>, delta: &Delta) {
+    if let Some(profile) = profile {
+        let _ = app.emit_to(
+            crate::NEST,
+            "specialist-chat",
+            serde_json::json!({ "profile": profile, "delta": delta }),
+        );
+    } else {
+        emit_chat(app, "chat", delta);
+    }
+}
+
 /// Streams the reply to the island as `chat` events: text, permissions to ask, then done or
 /// error. `folder` (the focused session's project) is where a new conversation works.
 #[tauri::command]
@@ -487,6 +644,7 @@ pub async fn chat_send(
 ) -> Result<(), String> {
     send(
         app,
+        (*window.app_handle().state::<ChatState>()).clone(),
         Origin::Window(window.label().into(), generation),
         text,
         files,
@@ -498,6 +656,7 @@ pub async fn chat_send(
 
 enum Origin {
     Window(String, u32),
+    SpecialistWindow(String, u32, String),
     #[cfg(target_os = "linux")]
     Voice(crate::dictation::worker::Ticket, u32),
 }
@@ -505,7 +664,7 @@ enum Origin {
 impl Origin {
     fn label(&self) -> &str {
         match self {
-            Self::Window(label, _) => label,
+            Self::Window(label, _) | Self::SpecialistWindow(label, ..) => label,
             #[cfg(target_os = "linux")]
             Self::Voice(..) => "voice-command",
         }
@@ -513,14 +672,23 @@ impl Origin {
 
     fn is_voice(&self) -> bool {
         match self {
-            Self::Window(..) => false,
+            Self::Window(..) | Self::SpecialistWindow(..) => false,
             #[cfg(target_os = "linux")]
             Self::Voice(..) => true,
         }
     }
 
+    fn specialist_profile(&self) -> Option<&str> {
+        match self {
+            Self::SpecialistWindow(_, _, profile) => Some(profile),
+            Self::Window(..) => None,
+            #[cfg(target_os = "linux")]
+            Self::Voice(..) => None,
+        }
+    }
+
     fn reserve<'a>(&self, state: &'a ChatState) -> Result<Option<tokio::sync::MutexGuard<'a, Chat>>, String> {
-        if self.is_voice() {
+        if self.is_voice() || self.specialist_profile().is_some() {
             state
                 .chat
                 .try_lock()
@@ -534,7 +702,9 @@ impl Origin {
     fn check<R: tauri::Runtime>(&self, app: &tauri::AppHandle<R>) -> Result<(), String> {
         let settings = app.state::<SettingsState>();
         let saved = settings.0.lock().map_err(|_| "settings are busy")?;
-        if !saved.zeca {
+        // Window sends resolve their recipient before checking the Zeca switch: profile Chat has
+        // its own availability. Voice commands always target the companion.
+        if !saved.zeca && self.is_voice() {
             return Err("Zeca is off (Settings → Flock & Zeca).".into());
         }
         #[cfg(target_os = "linux")]
@@ -558,9 +728,17 @@ pub(crate) fn voice_command(app: AppHandle, text: String, ticket: crate::dictati
     let generation = app.state::<ChatState>().generation();
     tauri::async_runtime::spawn(async move {
         let origin = Origin::Voice(ticket.clone(), generation);
-        if send(app.clone(), origin, text.clone(), Vec::new(), None, None)
-            .await
-            .is_err()
+        if send(
+            app.clone(),
+            (*app.state::<ChatState>()).clone(),
+            origin,
+            text.clone(),
+            Vec::new(),
+            None,
+            None,
+        )
+        .await
+        .is_err()
         {
             voice_result(
                 &app,
@@ -608,6 +786,7 @@ fn check_voice_source(state: &ChatState, expected: &Draft, provider: Provider) -
 
 async fn send(
     app: AppHandle,
+    state: ChatState,
     origin: Origin,
     text: String,
     files: Vec<String>,
@@ -616,7 +795,6 @@ async fn send(
 ) -> Result<(), String> {
     origin.check(&app)?;
     // Voice never queues behind a turn or a conversation change, including local memory reads.
-    let state = app.state::<ChatState>();
     let reserved = origin.reserve(&state)?;
     #[cfg(target_os = "linux")]
     let voice_source = if let Some(chat) = &reserved {
@@ -658,15 +836,18 @@ async fn send(
         let app = app.clone();
         let ended = ended.clone();
         let said = said.clone();
+        let state = state.clone();
+        let specialist = origin.specialist_profile().map(str::to_owned);
         tauri::async_runtime::spawn(async move {
+            let mut terminal = None;
             while let Some(delta) = rx.recv().await {
                 if let Ok(mut s) = said.lock() {
                     match &delta {
                         Delta::Text { text } => {
                             s.0.push_str(text);
-                            app.state::<ChatState>().live(|l| l.text.push_str(text));
+                            state.live(|l| l.text.push_str(text));
                         }
-                        Delta::ToolState { active } => app.state::<ChatState>().live(|l| l.tools = *active),
+                        Delta::ToolState { active } => state.live(|l| l.tools = *active),
                         Delta::Error { message } => s.1 = Some(message.clone()),
                         _ => {}
                     }
@@ -682,7 +863,7 @@ async fn send(
                         _ => {}
                     }
                 }
-                app.state::<ChatState>().live(|l| match &delta {
+                state.live(|l| match &delta {
                     Delta::Activity { event } => l.activity.apply(event),
                     Delta::Allowed { tool, target } => {
                         l.activity.apply(&vults_chat::activity::Event::Decision {
@@ -711,7 +892,7 @@ async fn send(
                 });
                 if let Delta::Permission { id, detail, .. } = &delta {
                     let outside = detail.outside.clone();
-                    app.state::<ChatState>().live(|l| {
+                    state.live(|l| {
                         l.outside = outside;
                         l.permissions.insert(id.clone(), detail.clone());
                     });
@@ -722,8 +903,15 @@ async fn send(
                 ) {
                     crate::runtime::recheck(&app);
                 }
-                emit_chat(&app, "chat", &delta);
+                if matches!(delta, Delta::Done | Delta::Stopped | Delta::Error { .. }) {
+                    if !matches!(terminal.as_ref(), Some(Delta::Error { .. } | Delta::Stopped)) {
+                        terminal = Some(delta);
+                    }
+                } else {
+                    route_delta(&app, specialist.as_deref(), &delta);
+                }
             }
+            terminal
         })
     };
     // Keep the recipient stable before any memory read, including asynchronous recall.
@@ -733,9 +921,13 @@ async fn send(
     };
     match &origin {
         Origin::Window(_, generation) => state.check_generation(*generation)?,
+        Origin::SpecialistWindow(_, generation, _) => state.check_generation(*generation)?,
         #[cfg(target_os = "linux")]
         Origin::Voice(_, generation) => state.check_companion(*generation)?,
     }
+    let (stop_tx, mut stop) = oneshot::channel();
+    *state.stop.lock().map_err(|_| "Chat is busy.")? = Some(stop_tx);
+    let stop_guard = TurnStop(&state);
     let record = if let Some(id) = state.current() {
         store(move |s| s.conversation(id)).await?
     } else {
@@ -749,6 +941,9 @@ async fn send(
             "Use the profile conversation's fixed source without voice commands or flock mentions.".into(),
         );
     }
+    if zeca_switch_blocks_turn(crate::settings::zeca(&app), !companion) {
+        return Err("Zeca is off (Settings → Flock & Zeca).".into());
+    }
     let memories = if companion {
         crate::recall::passages(&app, &text, crate::recall::PREFETCH, true).await
     } else {
@@ -756,7 +951,8 @@ async fn send(
     };
     origin.check(&app)?;
     // Turned off while this turn waited for the lock: `stop` found no turn to end.
-    if !crate::settings::zeca(&app) {
+    // Profile Chat has its own opt-in and identity; only Zeca's chat follows his switch.
+    if zeca_switch_blocks_turn(crate::settings::zeca(&app), !companion) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }
     // A conversation keeps the provider and model it began with, as a CLI keeps its pick.
@@ -844,6 +1040,9 @@ async fn send(
                 }
                 // The chat still works; it just won't be there after a restart.
                 _ => {
+                    if !companion {
+                        return Err("Could not save the specialist conversation. Try again.".into());
+                    }
                     tracing::warn!("conversation not saved");
                     None
                 }
@@ -852,7 +1051,7 @@ async fn send(
     };
     let shown: Vec<String> = files.iter().map(|f| f.to_string_lossy().into_owned()).collect();
     let (model, effort) = chat.pick();
-    if !companion && state.current() != record.as_ref().map(|c| c.id) {
+    if !companion && state.current() != conversation {
         return Err("The profile conversation changed before the turn started.".into());
     }
     // Preflight can await local IO; an old recording cannot inherit a later opt-in.
@@ -861,12 +1060,26 @@ async fn send(
     if let Some(expected) = &voice_source {
         check_voice_source(&state, expected, chat.provider())?;
     }
-    sync(
+    if !matches!(stop.try_recv(), Err(oneshot::error::TryRecvError::Empty)) {
+        return Err("Chat turn was stopped before sending.".into());
+    }
+    state.live(|l| {
+        l.busy = true;
+        l.started = true;
+        l.sent = Some((text.clone(), shown.clone()));
+        l.text.clear();
+    });
+    if let Some(id) = conversation {
+        let now = crate::traces::now_ms();
+        crate::writer::send(crate::writer::Job::Say(id, "you", text.clone(), names, now));
+    }
+    route_sync(
         &app,
+        origin.specialist_profile(),
         Sync::Sent {
             from: origin.label().to_string(),
             text: text.clone(),
-            files: shown.clone(),
+            files: shown,
             provider: chat.provider(),
             folder: Some(folder_key(Some(chat.folder()))).filter(|f| !f.is_empty()),
             model: model.map(str::to_string),
@@ -874,16 +1087,6 @@ async fn send(
             mentions: mentions.clone(),
         },
     );
-    state.live(|l| {
-        l.busy = true;
-        l.started = true;
-        l.sent = Some((text.clone(), shown));
-        l.text.clear();
-    });
-    if let Some(id) = conversation {
-        let now = crate::traces::now_ms();
-        crate::writer::send(crate::writer::Job::Say(id, "you", text.clone(), names, now));
-    }
     if let Ok(mut scope) = state.waiting.2.lock() {
         let agent = match chat.provider() {
             Provider::Codex => vults_core::AgentKind::Codex,
@@ -894,13 +1097,13 @@ async fn send(
             app: app.clone(),
             folder: folder.to_owned(),
             agent,
+            profile_key: profile.as_ref().map(profile_access_key),
+            profile_access: profile
+                .as_ref()
+                .map(|profile| settings::specialist_chat_access(&app, &profile_access_key(profile))),
         });
     }
     let approver: Arc<dyn Approver> = state.waiting.clone();
-    let (stop_tx, stop) = oneshot::channel();
-    if let Ok(mut s) = state.stop.lock() {
-        *s = Some(stop_tx);
-    }
     tracing::info!(provider = ?chat.provider(), files = files.len(), "chat turn");
     let (provider, model) = chat.engine();
     let turn = Arc::new(crate::traces::Turn::start(provider, model));
@@ -919,19 +1122,17 @@ async fn send(
         voice_result(&app, ticket, &text, vults_core::i18n::VoiceFeedback::SentToChat);
     }
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
-    if let Ok(mut s) = state.stop.lock() {
-        *s = None;
-    }
+    drop(stop_guard);
     let (session, history, outside) = (chat.session(), chat.history(), chat.outside());
     let started = chat.started();
     let folder = chat.folder().to_path_buf();
     let claude = chat.provider() == Provider::Claude;
-    drop(chat);
+    // Keep the runtime reserved until its session and transcript are persisted.
     // Zeca's MCP server may have kept a proposal during the turn: the Memory tab reads again.
     if companion && claude {
         crate::memory::changed(&app);
     }
-    let _ = forward.await;
+    let terminal = forward.await.ok().flatten();
     if let Some(id) = conversation {
         let now = crate::traces::now_ms();
         let (reply, error) = said.lock().map(|s| s.clone()).unwrap_or_default();
@@ -956,6 +1157,9 @@ async fn send(
         }
         crate::writer::send(crate::writer::Job::Save(id, session, history, outside, now));
     }
+    if !companion {
+        crate::writer::flush().await;
+    }
     state.live(|l| {
         *l = Live {
             started,
@@ -968,6 +1172,11 @@ async fn send(
     if let Ok(e) = ended.lock() {
         turn.end(e.0.as_ref(), e.1);
     }
+    if let Some(terminal) = terminal {
+        route_delta(&app, origin.specialist_profile(), &terminal);
+    }
+    crate::runtime::recheck(&app);
+    drop(chat);
     Ok(())
 }
 
@@ -1136,8 +1345,19 @@ pub fn chat_decide(
     if !crate::runtime::card_host(&window) {
         return;
     }
+    decide_for(window.app_handle(), &window, &state, &id, answer, "zeca");
+}
+
+fn decide_for(
+    app: &AppHandle,
+    window: &tauri::Webview,
+    state: &ChatState,
+    id: &str,
+    answer: ChatAnswer,
+    subject: &str,
+) {
     tracing::info!(?answer, "chat permission answered");
-    let asked = state.waiting.0.lock().ok().and_then(|mut m| m.remove(&id));
+    let asked = state.waiting.0.lock().ok().and_then(|mut m| m.remove(id));
     if let Some(asked) = asked {
         let (reply, act) = match answer {
             ChatAnswer::Deny => (vults_chat::Answer::Deny, Act::Deny),
@@ -1149,7 +1369,7 @@ pub fn chat_decide(
             .live
             .lock()
             .ok()
-            .and_then(|mut l| l.permissions.remove(&id))
+            .and_then(|mut l| l.permissions.remove(id))
             .and_then(|d| d.full)
             .unwrap_or_else(|| asked.target.clone());
         state.live(|l| {
@@ -1166,11 +1386,12 @@ pub fn chat_decide(
             })
         });
         let _ = asked.answer.send(reply);
-        sync(
-            window.app_handle(),
+        route_sync(
+            app,
+            (subject != "zeca").then_some(subject),
             Sync::Answered {
                 from: window.label().to_string(),
-                id: id.clone(),
+                id: id.to_owned(),
                 answer,
             },
         );
@@ -1178,7 +1399,7 @@ pub fn chat_decide(
         crate::audit::keep(Audit::new(
             Actor::Human,
             act,
-            "zeca",
+            subject,
             "",
             &asked.tool,
             &asked.target,
@@ -1236,6 +1457,16 @@ fn end_turn(state: &ChatState) {
     }
 }
 
+// A failed preflight must not leave a stop sender that can cancel a later turn.
+struct TurnStop<'a>(&'a ChatState);
+impl Drop for TurnStop<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut stop) = self.0.stop.lock() {
+            *stop = None;
+        }
+    }
+}
+
 /// A chat turn runs now (the sleep waits for it, M8).
 pub fn busy(app: &AppHandle) -> bool {
     app.state::<ChatState>().live.lock().is_ok_and(|l| l.busy)
@@ -1243,8 +1474,46 @@ pub fn busy(app: &AppHandle) -> bool {
 
 /// The saved record of the chat's conversation was removed (Clear history): the next message
 /// saves it anew rather than into a record that is gone.
-pub fn forget_current(app: &AppHandle) {
+pub async fn forget_current(app: &AppHandle) {
     app.state::<ChatState>().set_saved(None);
+    let runtimes = app
+        .state::<SpecialistChatState>()
+        .0
+        .lock()
+        .map(|states| {
+            states
+                .iter()
+                .map(|(key, state)| (key.clone(), state.clone()))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    for (_, state) in &runtimes {
+        end_turn(state);
+    }
+    for (profile, state) in runtimes {
+        let mut chat = state.chat.lock().await;
+        if let Ok(Some(snapshot)) = state.profile()
+            && let Ok(fresh) = Chat::specialist(
+                vults_agents::driver::Spec::in_dir(paths::chat_dir()),
+                None,
+                specialist_brief(&snapshot),
+            )
+        {
+            *chat = fresh;
+        }
+        state.set_current(None);
+        state.live(|live| *live = Live::default());
+        specialist_sync(
+            app,
+            &profile,
+            Sync::Reset {
+                from: "history".into(),
+                provider: Provider::Claude,
+                generation: state.generation(),
+                draft: None,
+            },
+        );
+    }
 }
 
 #[derive(serde::Serialize)]
@@ -1367,6 +1636,44 @@ pub struct ConversationView {
     current: bool,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecialistConversationView {
+    id: i64,
+    current: bool,
+    title: String,
+    provider: Provider,
+    label: String,
+    folder: Option<String>,
+    updated_ms: i64,
+    profile_title: String,
+    profile_revision: u32,
+}
+
+fn specialist_conversation_view(
+    conversation: conversations::Conversation,
+    profile: &str,
+) -> Option<SpecialistConversationView> {
+    let bound = conversation.profile.as_ref()?;
+    if profile_access_key(bound) != profile {
+        return None;
+    }
+    Some(SpecialistConversationView {
+        current: false,
+        provider: engine_provider(&conversation.engine)?,
+        label: engine_label(&conversation.engine),
+        id: conversation.id.0,
+        title: conversation.title,
+        folder: (!conversation.folder.is_empty()).then_some(conversation.folder),
+        updated_ms: conversation.updated_ms,
+        profile_title: bound.title.clone(),
+        profile_revision: match &bound.source {
+            vults_store::profiles::Source::Preset { revision, .. }
+            | vults_store::profiles::Source::Custom { revision, .. } => *revision,
+        },
+    })
+}
+
 /// A card the chat waits on, for a window that opens while it waits.
 #[derive(serde::Serialize, Clone)]
 pub struct WaitingView {
@@ -1402,6 +1709,14 @@ pub struct Opened {
     model: Option<String>,
     effort: Option<String>,
     lines: Vec<LineView>,
+    #[serde(rename = "profileTitle", skip_serializing_if = "Option::is_none")]
+    profile_title: Option<String>,
+    #[serde(rename = "profileRevision", skip_serializing_if = "Option::is_none")]
+    profile_revision: Option<u32>,
+    #[serde(rename = "profileSpecies", skip_serializing_if = "Option::is_none")]
+    profile_species: Option<String>,
+    #[serde(rename = "profileLook", skip_serializing_if = "Option::is_none")]
+    profile_look: Option<String>,
 }
 
 /// `claude`, `codex`, or `api:<provider>`: what a saved conversation runs on.
@@ -1490,7 +1805,19 @@ fn turn_profile(
         }
         return Ok(None);
     }
-    let c = record.ok_or("The profile conversation is gone.")?;
+    let Some(c) = record else {
+        return if !chat.started()
+            && expected
+                .is_some_and(|profile| chat.specialist_brief() == Some(specialist_brief(profile).as_str()))
+        {
+            expected
+                .cloned()
+                .ok_or_else(|| "The conversation recipient does not match its runtime.".into())
+                .map(Some)
+        } else {
+            Err("The profile conversation is gone.".into())
+        };
+    };
     let profile = c
         .profile
         .as_ref()
@@ -1513,7 +1840,25 @@ fn turn_profile(
     Ok(Some(profile.clone()))
 }
 
-/// The UI route remains gated until it can represent the recipient and all transitions.
+fn profile_access_key(profile: &Snapshot) -> String {
+    match &profile.source {
+        vults_store::profiles::Source::Preset { id, .. } => id.clone(),
+        vults_store::profiles::Source::Custom { id, .. } => format!("custom-{id}"),
+    }
+}
+
+fn snapshot_revision(profile: &Snapshot) -> u32 {
+    match &profile.source {
+        vults_store::profiles::Source::Preset { revision, .. }
+        | vults_store::profiles::Source::Custom { revision, .. } => *revision,
+    }
+}
+
+fn zeca_switch_blocks_turn(zeca_on: bool, specialist: bool) -> bool {
+    !zeca_on && !specialist
+}
+
+/// Restore the retained executor and source without importing companion context.
 fn restore_conversation(
     c: &conversations::Conversation,
     mut spec: vults_agents::driver::Spec,
@@ -1538,7 +1883,8 @@ fn restore_conversation(
         }
         spec.model = c.model.clone();
         spec.effort = c.effort.as_deref().and_then(vults_chat::Effort::parse);
-        let chat = Chat::specialist(spec, c.session.clone(), specialist_brief(profile))?;
+        let mut chat = Chat::specialist(spec, c.session.clone(), specialist_brief(profile))?;
+        chat.set_outside(c.outside.clone());
         turn_profile(&chat, Some(c), Some(profile))?;
         Ok((chat, Some(profile.clone())))
     } else {
@@ -1556,7 +1902,7 @@ fn restore_conversation(
     }
 }
 
-fn specialist_brief(profile: &Snapshot) -> String {
+pub(crate) fn specialist_brief(profile: &Snapshot) -> String {
     let mut brief = profile.instructions.clone();
     if !profile.skills.is_empty() {
         brief.push_str("\n\nPinned skills:\n");
@@ -1604,6 +1950,397 @@ pub async fn chat_conversations(state: tauri::State<'_, ChatState>) -> Result<Ve
             })
         })
         .collect())
+}
+
+/// Specialist history is read only in the Nest and only for the selected profile.
+#[tauri::command]
+pub async fn specialist_chat_conversations(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+) -> Result<Vec<SpecialistConversationView>, String> {
+    if window.label() != crate::NEST {
+        return Err("Specialist conversations are available in the Nest only.".into());
+    }
+    let preset = vults_zeca::profiles::PRESETS
+        .iter()
+        .any(|entry| entry.id == profile);
+    let custom_id = profile
+        .strip_prefix("custom-")
+        .and_then(|id| id.parse::<i64>().ok())
+        .filter(|id| *id > 0 && format!("custom-{id}") == profile);
+    if !preset && custom_id.is_none() {
+        return Err("That profile is unavailable.".into());
+    }
+    let profile_key = profile.clone();
+    let (known_custom, conversations) = store(move |s| {
+        let conversations = s.conversations(vults_store::conversations::KEEP as u32)?;
+        let retained = custom_id.is_some_and(|_| {
+            conversations.iter().any(|conversation| {
+                conversation
+                    .profile
+                    .as_ref()
+                    .is_some_and(|snapshot| profile_access_key(snapshot) == profile_key)
+            })
+        });
+        let current = if let Some(id) = custom_id {
+            s.agent_profiles()?.iter().any(|entry| entry.id == id)
+        } else {
+            false
+        };
+        Ok((retained || current, conversations))
+    })
+    .await?;
+    if !preset && !known_custom {
+        return Err("That profile is unavailable.".into());
+    }
+    let current = app
+        .state::<SpecialistChatState>()
+        .existing(&profile)?
+        .and_then(|state| state.current());
+    Ok(conversations
+        .into_iter()
+        .filter_map(|conversation| specialist_conversation_view(conversation, &profile))
+        .map(|mut view| {
+            view.current = current == Some(ConversationId(view.id));
+            view
+        })
+        .collect())
+}
+
+#[derive(serde::Serialize)]
+pub struct SpecialistCurrent {
+    generation: u32,
+    conversation: Option<Opened>,
+    #[serde(rename = "profileTitle")]
+    profile_title: String,
+    #[serde(rename = "profileRevision")]
+    profile_revision: u32,
+    #[serde(rename = "profileSpecies")]
+    profile_species: String,
+    #[serde(rename = "profileLook")]
+    profile_look: String,
+    draft: DraftView,
+}
+
+fn specialist_current_view(
+    state: &ChatState,
+    conversation: Option<Opened>,
+) -> Result<SpecialistCurrent, String> {
+    let profile = state
+        .profile()?
+        .ok_or("The conversation recipient is unavailable.")?;
+    let draft = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
+    Ok(SpecialistCurrent {
+        generation: state.generation(),
+        draft: DraftView {
+            draft: draft.clone(),
+            generation: state.generation(),
+        },
+        profile_title: profile.title.clone(),
+        profile_revision: snapshot_revision(&profile),
+        profile_species: profile.species.clone(),
+        profile_look: profile.look.clone(),
+        conversation,
+    })
+}
+
+#[tauri::command]
+pub async fn specialist_chat_current(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+) -> Result<SpecialistCurrent, String> {
+    specialist_route(&window)?;
+    let state = specialist_runtime(&app, &profile).await?;
+    let Some(id) = state.current() else {
+        return specialist_current_view(&state, None);
+    };
+    let generation = state.generation();
+    let (busy, tools, started, sent, text, outside, activity, permissions) = state
+        .live
+        .lock()
+        .map(|l| {
+            (
+                l.busy,
+                l.tools,
+                l.started,
+                l.sent.clone(),
+                l.text.clone(),
+                l.outside.clone(),
+                l.activity.clone(),
+                l.permissions.clone(),
+            )
+        })
+        .unwrap_or_default();
+    let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
+    let Some(c) = c.filter(|c| {
+        c.profile
+            .as_ref()
+            .is_some_and(|p| profile_access_key(p) == profile)
+    }) else {
+        return specialist_current_view(&state, None);
+    };
+    let pinned = c.profile.as_ref().expect("filtered specialist conversation");
+    let profile_title = pinned.title.clone();
+    let profile_revision = snapshot_revision(pinned);
+    let mut opened = opened_specialist(c, lines, started).ok_or("That conversation's engine is unknown.")?;
+    opened.profile_title = Some(profile_title);
+    opened.profile_revision = Some(profile_revision);
+    if busy {
+        if let Some((text, files)) = sent
+            && !opened
+                .lines
+                .last()
+                .is_some_and(|l| l.who == "you" && l.text == text)
+        {
+            opened.lines.push(LineView {
+                who: "you".into(),
+                text,
+                files,
+            });
+        }
+        opened.busy = true;
+        opened.tools = tools;
+        opened.partial = text;
+        opened.activity = activity;
+        opened.waiting = state.waiting.shown();
+        for waiting in &mut opened.waiting {
+            if let Some(detail) = permissions.get(&waiting.id) {
+                waiting.detail = detail.clone();
+            }
+            waiting.detail.outside.clone_from(&outside);
+        }
+    }
+    state.check_generation(generation)?;
+    opened.generation = generation;
+    specialist_current_view(&state, Some(opened))
+}
+
+#[tauri::command]
+pub async fn specialist_chat_draft_set(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    draft: Draft,
+    generation: u32,
+) -> Result<(), String> {
+    specialist_route(&window)?;
+    draft.validate()?;
+    if !draft.files.is_empty()
+        || draft.folder.is_some()
+        || !draft.mentions.is_empty()
+        || draft
+            .provider
+            .is_some_and(|provider| provider != Provider::Claude)
+    {
+        return Err("Use the profile conversation's fixed source without files or flock mentions.".into());
+    }
+    let state = specialist_runtime(&app, &profile).await?;
+    let mut saved = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
+    state.check_generation(generation)?;
+    *saved = draft;
+    Ok(())
+}
+
+async fn specialist_record(profile: &str, id: i64) -> Result<(), String> {
+    let record = store(move |s| s.conversation(ConversationId(id)))
+        .await?
+        .ok_or("That conversation is gone.")?;
+    if record
+        .profile
+        .as_ref()
+        .is_none_or(|snapshot| profile_access_key(snapshot) != profile)
+    {
+        return Err("That conversation belongs to another profile.".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn specialist_chat_rename(
+    window: tauri::Webview,
+    profile: String,
+    id: i64,
+    title: String,
+) -> Result<(), String> {
+    specialist_route(&window)?;
+    specialist_record(&profile, id).await?;
+    store(move |s| s.conversation_rename(ConversationId(id), &title)).await
+}
+
+#[tauri::command]
+pub async fn specialist_chat_delete(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    id: i64,
+) -> Result<bool, String> {
+    specialist_route(&window)?;
+    specialist_record(&profile, id).await?;
+    let state = specialist_runtime(&app, &profile).await?;
+    let current = state.current() == Some(ConversationId(id));
+    if current {
+        specialist_chat_reset(app, window, profile).await?;
+    }
+    store(move |s| s.conversation_delete(ConversationId(id))).await?;
+    Ok(current)
+}
+
+#[tauri::command]
+pub async fn specialist_chat_send(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    text: String,
+    generation: u32,
+) -> Result<(), String> {
+    specialist_route(&window)?;
+    if text.trim().is_empty() {
+        return Err("Write a message first.".into());
+    }
+    if text.len() > 1_000_000 {
+        return Err("Message is too large.".into());
+    }
+    let state = specialist_runtime(&app, &profile).await?;
+    send(
+        app,
+        state,
+        Origin::SpecialistWindow(window.label().into(), generation, profile),
+        text,
+        Vec::new(),
+        None,
+        None,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn specialist_chat_open(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    id: i64,
+) -> Result<Opened, String> {
+    specialist_route(&window)?;
+    let state = specialist_runtime(&app, &profile).await?;
+    let id = ConversationId(id);
+    let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
+    let c = c.ok_or("That conversation is gone.")?;
+    let pinned = c
+        .profile
+        .as_ref()
+        .ok_or("That is not a specialist conversation.")?;
+    if profile_access_key(pinned) != profile {
+        return Err("That conversation belongs to another profile.".into());
+    }
+    let profile_title = pinned.title.clone();
+    let profile_revision = snapshot_revision(pinned);
+    if !c.folder.is_empty() && !Path::new(&c.folder).is_dir() {
+        return Err("That conversation's runtime folder is gone.".into());
+    }
+    let spec = vults_agents::driver::Spec {
+        model: c.model.clone(),
+        effort: c.effort.as_deref().and_then(vults_chat::Effort::parse),
+        ..vults_agents::driver::Spec::in_dir(paths::chat_dir())
+    };
+    let (restored, snapshot) = restore_conversation(&c, spec, None)?;
+    let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
+    state.waiting.close_all();
+    *chat = restored;
+    chat.set_outside(c.outside.clone());
+    state.set_profile(snapshot);
+    state.set_current(Some(id));
+    *state.draft.lock().map_err(|e| e.to_string())? = Draft::default();
+    let started = chat.started();
+    state.live(|l| {
+        *l = Live {
+            started,
+            ..Live::default()
+        }
+    });
+    let mut conversation =
+        opened_specialist(c, lines, started).ok_or("That conversation's engine is unknown.")?;
+    conversation.profile_title = Some(profile_title);
+    conversation.profile_revision = Some(profile_revision);
+    conversation.generation = state.generation();
+    specialist_sync(
+        &app,
+        &profile,
+        Sync::Opened {
+            from: window.label().into(),
+            conversation: conversation.clone(),
+        },
+    );
+    Ok(conversation)
+}
+
+#[derive(serde::Serialize)]
+pub struct SpecialistReset {
+    provider: Provider,
+    #[serde(flatten)]
+    current: SpecialistCurrent,
+}
+
+#[tauri::command]
+pub async fn specialist_chat_reset(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+) -> Result<SpecialistReset, String> {
+    specialist_route(&window)?;
+    let state = specialist_runtime(&app, &profile).await?;
+    let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
+    let snapshot = specialist_snapshot(&profile).await?;
+    *chat = Chat::specialist(
+        vults_agents::driver::Spec::in_dir(paths::chat_dir()),
+        None,
+        specialist_brief(&snapshot),
+    )?;
+    state.waiting.close_all();
+    state.set_profile(Some(snapshot));
+    state.set_current(None);
+    *state.draft.lock().map_err(|e| e.to_string())? = Draft::default();
+    state.live(|l| *l = Live::default());
+    specialist_sync(
+        &app,
+        &profile,
+        Sync::Reset {
+            from: window.label().into(),
+            provider: Provider::Claude,
+            generation: state.generation(),
+            draft: None,
+        },
+    );
+    Ok(SpecialistReset {
+        provider: Provider::Claude,
+        current: specialist_current_view(&state, None)?,
+    })
+}
+
+#[tauri::command]
+pub fn specialist_chat_stop(app: AppHandle, window: tauri::Webview, profile: String) -> Result<(), String> {
+    specialist_route(&window)?;
+    if let Some(state) = app.state::<SpecialistChatState>().existing(&profile)? {
+        end_turn(&state);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn specialist_chat_decide(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    id: String,
+    answer: ChatAnswer,
+) -> Result<(), String> {
+    specialist_route(&window)?;
+    let Some(state) = app.state::<SpecialistChatState>().existing(&profile)? else {
+        return Ok(());
+    };
+    decide_for(&app, &window, &state, &id, answer, &profile);
+    Ok(())
 }
 
 /// Goes on with a saved conversation: the chat becomes that one, as it was.
@@ -1699,6 +2436,28 @@ fn opened(
     if c.profile.is_some() {
         return None;
     }
+    opened_record(c, lines, started)
+}
+
+fn opened_specialist(
+    c: conversations::Conversation,
+    lines: Vec<conversations::Message>,
+    started: bool,
+) -> Option<Opened> {
+    let profile = c.profile.as_ref()?;
+    let species = profile.species.clone();
+    let look = profile.look.clone();
+    let mut opened = opened_record(c, lines, started)?;
+    opened.profile_species = Some(species);
+    opened.profile_look = Some(look);
+    Some(opened)
+}
+
+fn opened_record(
+    c: conversations::Conversation,
+    lines: Vec<conversations::Message>,
+    started: bool,
+) -> Option<Opened> {
     Some(Opened {
         generation: 0,
         busy: false,
@@ -1720,6 +2479,10 @@ fn opened(
                 files: l.files,
             })
             .collect(),
+        profile_title: None,
+        profile_revision: None,
+        profile_species: None,
+        profile_look: None,
     })
 }
 
@@ -2154,6 +2917,61 @@ pub fn clean_inbox() {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn stop_during_preflight_cancels_once_and_failed_preflight_cleans_up() {
+        let state = ChatState::new();
+        let (tx, mut rx) = oneshot::channel();
+        *state.stop.lock().unwrap() = Some(tx);
+        let guard = TurnStop(&state);
+        end_turn(&state);
+        assert!(rx.try_recv().is_ok());
+        drop(guard);
+        let (tx, mut rx) = oneshot::channel();
+        *state.stop.lock().unwrap() = Some(tx);
+        drop(TurnStop(&state));
+        assert!(matches!(rx.try_recv(), Err(oneshot::error::TryRecvError::Closed)));
+    }
+
+    #[test]
+    fn specialist_empty_runtime_keeps_its_generation_and_exact_brief() {
+        let profile = Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "developer".into(),
+                revision: 1,
+            },
+            title: "Developer".into(),
+            about: "Description".into(),
+            instructions: "Pinned brief".into(),
+            species: "atratus".into(),
+            look: "none".into(),
+            skills: vec![],
+        };
+        let registry = SpecialistChatState::default();
+        let first = registry.runtime("developer", &profile).unwrap();
+        first.set_current(None);
+        let mut edited = profile.clone();
+        edited.instructions = "Later brief".into();
+        let second = registry.runtime("developer", &edited).unwrap();
+        assert!(Arc::ptr_eq(&first.0, &second.0));
+        let view = specialist_current_view(&second, None).unwrap();
+        assert_eq!(view.generation, first.generation());
+        let reset = serde_json::to_value(SpecialistReset {
+            provider: Provider::Claude,
+            current: view,
+        })
+        .unwrap();
+        assert_eq!(reset["generation"], first.generation());
+        assert_eq!(reset["profileSpecies"], "atratus");
+        assert_eq!(reset["profileLook"], "none");
+        assert_eq!(reset["profileRevision"], 1);
+        assert_eq!(reset["provider"], "claude");
+        assert!(reset["conversation"].is_null());
+        assert_eq!(second.profile().unwrap(), Some(profile.clone()));
+        let chat = second.chat.try_lock().unwrap();
+        assert!(turn_profile(&chat, None, Some(&edited)).is_err());
+        assert_eq!(turn_profile(&chat, None, Some(&profile)).unwrap(), Some(profile));
+    }
+
+    #[test]
     fn specialist_brief_includes_exact_pinned_skill_content() {
         let profile = Snapshot {
             source: vults_store::profiles::Source::Preset {
@@ -2428,6 +3246,58 @@ mod tests {
     }
 
     #[test]
+    fn specialist_actions_use_the_profile_access_choice() {
+        use settings::ChatAccess::{Ask, Full, Policies};
+        use vults_core::AgentKind::Claude;
+        let allow = policy("allow read");
+        let read = call("Read", "file_path", "/home/u/site/src/main.rs");
+        assert!(settle_in_route(Some(Ask), &allow, Full, "/home/u/site", Claude, &read, false).is_none());
+        assert_eq!(
+            settled_profile(&allow, Policies, Claude, &read, false),
+            Some((true, false))
+        );
+        assert_eq!(
+            settled_profile(&allow, Full, Claude, &read, false),
+            Some((true, false))
+        );
+        let list = call("Bash", "command", "ls");
+        assert_eq!(
+            settled_profile(&[], Full, Claude, &list, false),
+            Some((true, true))
+        );
+        let wipe = call("Bash", "command", "rm -rf /tmp/work");
+        assert!(settle_in_route(Some(Full), &[], Ask, "/home/u/site", Claude, &wipe, false).is_none());
+        assert!(settle_in_route(Some(Full), &[], Ask, "/home/u/site", Claude, &list, true).is_none());
+    }
+
+    #[test]
+    fn zeca_off_blocks_only_companion_turns() {
+        assert!(zeca_switch_blocks_turn(false, false));
+        assert!(!zeca_switch_blocks_turn(false, true));
+        assert!(!zeca_switch_blocks_turn(true, false));
+        assert!(!zeca_switch_blocks_turn(true, true));
+    }
+
+    fn settled_profile(
+        policies: &[vults_core::policies::Active],
+        access: settings::ChatAccess,
+        agent: vults_core::AgentKind,
+        ask: &vults_agents::driver::Ask,
+        outside: bool,
+    ) -> Option<(bool, bool)> {
+        settle_in_route(
+            Some(access),
+            policies,
+            settings::ChatAccess::Ask,
+            "/home/u/site",
+            agent,
+            ask,
+            outside,
+        )
+        .map(|s| (s.answer.allows(), s.by == vults_chat::SettledBy::FullAccess))
+    }
+
+    #[test]
     fn the_chats_access_answers_what_the_user_chose_and_nothing_more() {
         use settings::ChatAccess::{Full, Policies};
         use vults_core::AgentKind::{Claude, Codex};
@@ -2560,7 +3430,7 @@ mod tests {
         std::fs::remove_dir_all(&tmp).unwrap();
     }
     #[test]
-    fn a_specialist_record_cannot_be_presented_as_zeca() {
+    fn specialist_records_are_hidden_from_zeca_and_listed_only_under_their_profile() {
         let dir = std::env::temp_dir().join(format!("vults-chat-profile-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let mut store = vults_store::Store::open(&dir).unwrap();
@@ -2578,12 +3448,24 @@ mod tests {
             title: "Developer".into(),
             about: "Description".into(),
             instructions: "Implement changes".into(),
-            species: "atratus".into(),
-            look: "none".into(),
+            species: "gyps-rueppelli".into(),
+            look: "crown".into(),
             skills: vec![],
         });
         let specialist = store.conversation_new(&request, 2).unwrap();
-        assert!(opened(store.conversation(specialist).unwrap().unwrap(), vec![], false).is_none());
+        let retained = store.conversation(specialist).unwrap().unwrap();
+        assert!(opened(retained.clone(), vec![], false).is_none());
+        let opened = opened_specialist(retained.clone(), vec![], false).unwrap();
+        assert_eq!(opened.profile_species.as_deref(), Some("gyps-rueppelli"));
+        assert_eq!(opened.profile_look.as_deref(), Some("crown"));
+        let listed = specialist_conversation_view(retained.clone(), "developer").unwrap();
+        assert_eq!(listed.id, specialist.0);
+        assert_eq!(listed.profile_title, "Developer");
+        assert_eq!(listed.profile_revision, 1);
+        assert!(specialist_conversation_view(retained, "researcher").is_none());
+        assert!(
+            specialist_conversation_view(store.conversation(normal).unwrap().unwrap(), "developer").is_none()
+        );
         drop(store);
         std::fs::remove_dir_all(dir).unwrap();
     }
@@ -2618,7 +3500,8 @@ mod tests {
                 1,
             )
             .unwrap();
-        let record = store.conversation(id).unwrap().unwrap();
+        let mut record = store.conversation(id).unwrap().unwrap();
+        record.outside = Some("External evidence".into());
         let unsafe_spec = vults_agents::driver::Spec {
             settings: vults_chat::Settings::Project,
             system_append: Some("PRIVATE_MEMORY".into()),
@@ -2627,13 +3510,34 @@ mod tests {
         };
         let (chat, expected) = restore_conversation(&record, unsafe_spec, None).unwrap();
         assert!(chat.is_specialist());
+        assert_eq!(chat.outside().as_deref(), Some("External evidence"));
         assert_eq!(chat.frozen(), None);
         assert_eq!(chat.settings(), vults_chat::Settings::Isolated);
         assert_eq!(
             turn_profile(&chat, Some(&record), expected.as_ref()).unwrap(),
             Some(profile.clone())
         );
-        assert!(turn_profile(&chat, None, expected.as_ref()).is_err());
+        assert_eq!(
+            turn_profile(&chat, None, expected.as_ref()).unwrap(),
+            Some(profile.clone())
+        );
+        let started = Chat::specialist(
+            vults_agents::driver::Spec::in_dir(dir.clone()),
+            Some("session-1".into()),
+            specialist_brief(&profile),
+        )
+        .unwrap();
+        assert!(turn_profile(&started, None, expected.as_ref()).is_err());
+        let fresh = Chat::specialist(
+            vults_agents::driver::Spec::in_dir(dir.clone()),
+            None,
+            specialist_brief(&profile),
+        )
+        .unwrap();
+        assert_eq!(
+            turn_profile(&fresh, None, Some(&profile)).unwrap(),
+            Some(profile.clone())
+        );
         let plain = Chat::new(Provider::Claude, dir.clone());
         assert!(turn_profile(&plain, Some(&record), None).is_err());
         assert!(turn_profile(&chat, Some(&record), None).is_err());

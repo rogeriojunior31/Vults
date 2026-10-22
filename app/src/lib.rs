@@ -169,6 +169,16 @@ pub fn run() {
             chat::chat_reset,
             chat::chat_models,
             chat::chat_conversations,
+            chat::specialist_chat_conversations,
+            chat::specialist_chat_current,
+            chat::specialist_chat_draft_set,
+            chat::specialist_chat_rename,
+            chat::specialist_chat_delete,
+            chat::specialist_chat_send,
+            chat::specialist_chat_open,
+            chat::specialist_chat_reset,
+            chat::specialist_chat_stop,
+            chat::specialist_chat_decide,
             roosts::roosts,
             doctor::agents_doctor,
             doctor::dictation::dictation_doctor,
@@ -215,6 +225,7 @@ pub fn run() {
             runtime::recap_dismiss,
             profiles::agent_profiles,
             profiles::agent_profile_save,
+            profiles::set_specialist_chat_access,
             runtime::projects_list,
             runtime::project_set,
             open::editor_found,
@@ -459,6 +470,7 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             settings::move_legacy_autostart(&handle);
             handle.manage(chat::ChatState::new());
+            handle.manage(chat::SpecialistChatState::default());
             chat::clean_inbox();
             tray::start(&handle)?;
             handle.manage(ShortcutKeys::default());

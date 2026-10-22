@@ -34,8 +34,8 @@ timer, a guess, a model or another program, nor from a message that merely claim
   - Kotlin is allowed for the Android shell only; its logic is the Rust core through UniFFI.
     Android is the one exception to "Linux first and only"; iOS and macOS come later on the same
     protocol.
-- **In Zeca's chat only, what the user chose** in Settings → Chat & voice → *Who answers Zeca's
-  cards*:
+- **In Zeca's chat only, what the user chose** in Chat or Settings → Chat & voice → *Who answers
+  Zeca's cards*:
   - **Asks first** (the default): a card for every call no *Always* rule covers (*Always in this
     chat* is one exact command, until the conversation ends).
   - **Your policies**: accepted policies answer the chat's calls exactly as they answer Claude
@@ -44,8 +44,9 @@ timer, a guess, a model or another program, nor from a message that merely claim
   - **Full access**: every call runs with no card, except that what a policy denies is denied, what
     a policy asks first still asks, and once the conversation has read content from outside (a web
     page, a fetch, an MCP tool) its cards ask again for the rest of that conversation.
-  - More access is given only in Settings; the chat's picker shows the choice and can only give
-    some back. The chat says what ran on whose word, and its CLI still runs with
+  - The human chooses access directly in the Chat picker or in Settings. The selected scope is
+    explicit: Zeca or one specialist profile. A successful save applies the choice to the next call;
+    a failed save grants no access. The chat says what ran on whose word, and its CLI still runs with
     `--permission-mode default` so the answers come from Vults. The flock's sessions are untouched.
 
 Above all of these:
@@ -82,3 +83,5 @@ Above all of these:
   call.
 - 0026, 2026-10-12: who answers Zeca's chat cards
   is the user's choice.
+
+- 2026-10-22: At the maintainer's request, the Chat access picker may increase or decrease access directly. Keep the selected recipient explicit, persist before applying authority, and retain all policy, destructive-action and outside-content guards.

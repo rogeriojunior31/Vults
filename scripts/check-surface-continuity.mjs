@@ -110,9 +110,12 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { applyTheme } from ${source("theme.ts")};
       export { sidePanel } from ${source("surfaces/nest/panels.ts")};
       export { createWeek } from ${source("surfaces/nest/week.ts")};
+      export { toggle } from ${source("surfaces/settings/pieces.ts")};
       export { paletteItems } from ${source("palette.ts")};
       export { NEST_TABS, tabByKey } from ${source("surfaces/nest/head.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
+      export { speciesSet } from ${source("character/flock/index.ts")};
+      export { dress } from ${source("character/looks.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
       export { Sky } from ${source("island/sky.ts")};
       export { Scene } from ${source("island/scene.ts")};
@@ -123,7 +126,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { createProfiles, settingsQuick, createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { toggle, speciesSet, dress, createProfiles, settingsQuick, createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -206,6 +209,76 @@ for (const width of [480, 760, 900, 1180]) {
     assert.equal(auditTab.attributes["aria-pressed"], "true");
     assert.deepEqual(auditTab.scrolledIntoView, { block: "nearest", inline: "nearest" }, "Restoring a sub-tab keeps its selection visible in the navigation strip");
     if (width === 480 && presence === "island") {
+      const specialist = { id: "reviewer", built_in: true, revision: 1, title: "Reviewer", about: "Review fixture", species: "gypaetus", look: "none", instructions: "Inspect changes.", skills: [], skill_catalog: [], access: "ask" };
+      const specialistCalls = [];
+      let specialistGeneration = 7, specialistReads = 0;
+      let specialistDraft = { text: "Profile draft", files: [], folder: null, provider: "claude", mentions: [] };
+      backend.profiles = async () => [specialist];
+      backend.profileChat = {
+        current: async id => { specialistReads++; assert.equal(id, "reviewer"); return { generation: specialistGeneration, profileTitle: "Reviewer", profileRevision: 1, profileSpecies: "gyps-rueppelli", profileLook: "crown", conversation: null, draft: specialistDraft }; },
+        conversations: async () => [],
+        saveDraft: async (id, value, generation) => { assert.equal(id, "reviewer"); assert.equal(generation, specialistGeneration); specialistDraft = value; },
+        send: async (...args) => { specialistCalls.push(args); },
+        decide: async (...args) => { specialistCalls.push(args); },
+        stop: async () => {}, reset: async () => { specialistGeneration = 8; return { provider: "claude", generation: 8, profileTitle: "Reviewer", profileRevision: 2, profileSpecies: "atratus", profileLook: "none", conversation: null, draft: specialistDraft }; },
+        rename: async () => {}, remove: async () => false,
+      };
+      nest.open("flock"); page.querySelector(".agent-profiles-open").click(); await tick();
+      page.querySelector(".agent-profile-choice").click();
+      nodes(page.querySelector(".agent-profile-detail")).find(n => n.tag === "button" && n.textContent === "Open specialist chat").click();
+      await tick(); await tick();
+      assert.equal(nest.current(), "chat", "A profile opens the existing Chat tab");
+      const recipient = page.querySelector(".chat-recipient-picker");
+      assert.equal(recipient.value, "reviewer");
+      assert.equal(page.querySelector(".specialist-chat-view"), null, "No parallel specialist chat screen");
+      const sharedMain = page.querySelector(".nest-chat-main");
+      const specialistCanvas = sharedMain.querySelector(".scene");
+      assert.ok(specialistCanvas, "The selected specialist shares the production animated perch");
+      const specialistScene = scenes.get(specialistCanvas);
+      const specialistSet = specialistScene.zeca.set;
+      assert.equal(active.get(specialistCanvas), true);
+      assert.equal(sharedMain.querySelector(".chat-character").getAttribute("aria-label"), "Greet Reviewer");
+      assert.equal(specialistSet, dress(speciesSet("gyps-rueppelli"), "crown"), "The retained conversation appearance overrides the edited catalog species");
+      const specialistInput = sharedMain.querySelector("textarea");
+      assert.equal(specialistInput.value, "Profile draft");
+      assert.equal(specialistInput.getAttribute("aria-label"), "Message Reviewer…");
+      assert.equal(sharedMain.querySelector(".attach"), null);
+      assert.equal(page.querySelector(".model").disabled, true, "The specialist executor stays isolated");
+      specialistInput.value = "Review this change"; specialistInput.fire("input");
+      specialistInput.fire("keydown", { key: "Enter", preventDefault() {} }); await tick();
+      assert.deepEqual(specialistCalls[0], ["reviewer", "Review this change", 7], "The shared composer sends to its selected native profile and generation");
+      nest.receiveSpecialistChat("reviewer", { kind: "permission", id: "profile-card", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
+      assert.ok(sharedMain.textContent.includes("Reviewer requests Bash"));
+      nest.shortcut("deny"); await tick();
+      assert.deepEqual(specialistCalls.at(-1), ["reviewer", "profile-card", "deny"]);
+      nest.receiveSpecialistChat("reviewer", { kind: "text", text: "Profile-only answer" });
+      nest.receiveSpecialistChat("reviewer", { kind: "done" });
+      assert.ok(sharedMain.querySelector(".msg-face-profile"), "Replies after tool/approval activity still show the specialist sprite");
+      nest.setZeca(false); assert.equal(nest.current(), "chat", "Specialists remain available with Zeca off");
+      assert.equal(active.get(specialistCanvas), true, "Zeca off keeps the selected specialist portrait active");
+      nest.setZeca(true);
+      recipient.value = "zeca"; recipient.fire("change"); await tick(); await tick();
+      assert.equal(sharedMain.querySelector(".scene"), specialistCanvas, "Recipient changes keep one scene owner");
+      assert.notEqual(specialistScene.zeca.set, specialistSet, "Returning to Zeca restores his own appearance");
+      assert.equal(sharedMain.querySelector("textarea").value, "Unsent", "Returning to Zeca retains his own draft");
+      assert.ok(!sharedMain.textContent.includes("Profile-only answer"));
+      assert.ok(!nest.chat.element.textContent.includes("git status"), "Specialist cards never enter the companion transcript");
+      recipient.value = "reviewer"; recipient.fire("change"); await tick(); await tick();
+      assert.ok(sharedMain.textContent.includes("Profile-only answer"), "Switching back reuses the production panel and transcript");
+      backend.profiles = async () => [{ ...specialist, revision: 2, access: "full" }];
+      nest.open("flock-profiles"); await tick();
+      page.querySelector(".agent-profile-chat-open").click(); await tick(); await tick();
+      const revisionNotice = sharedMain.querySelector(".chat-profile-notice");
+      assert.equal(revisionNotice.hidden, false, "An older pinned conversation explicitly discloses the available revision");
+      assert.ok(revisionNotice.textContent.includes("revision 1"));
+      assert.ok(page.querySelector(".access").textContent.includes("Full access"), "Reopening profiles synchronizes saved access into the cached Chat panel");
+      page.querySelector(".nest-new-chat").click(); await tick(); await tick();
+      assert.equal(revisionNotice.hidden, true, "A new conversation uses the current profile revision");
+      assert.ok(!sharedMain.textContent.includes("Profile-only answer"));
+      assert.equal(specialistReads, 1, "A successful reset never depends on a second current read");
+
+      recipient.value = "zeca"; recipient.fire("change"); await tick(); await tick();
+      console.log("check-surface-continuity: specialists share the Chat tab/composer, scoped generation, approval shortcuts, Zeca-off and retained isolated transcripts/drafts");
       const reads = [];
       const originalSpend = readSpend;
       readSpend = () => new Promise((resolve, reject) => reads.push({ resolve, reject }));
@@ -652,7 +725,28 @@ connectionUI.update(connectionView); connectionReads.at(-1).resolve(healthy); aw
 assert.equal(connectionUI.element.querySelector(".conn-check-list").open, true, "Newly failing checks become visible even after success was collapsed");
 assert.equal(cAt("row:org/alpha#7").querySelector(".conn-tag").textContent, "Checks failing", "A review approval cannot conceal failing checks");
 assert.ok(connectionUI.element.querySelector(".conn-check").classList.contains("failed"));
+const checkOverview = cAt("row:org/alpha#7").querySelector(".conn-check-bar");
+assert.equal(checkOverview.children.length, 2);
+assert.equal(checkOverview.children[0].className, "failed", "The list exposes failing checks first, like the detail");
+assert.ok(checkOverview.getAttribute("aria-label").includes("Very long failed check name: failed"));
+assert.ok(checkOverview.getAttribute("aria-label").includes("Fine: passed"), "The visual overview also exposes named states without color");
+
 assert.equal(cAt("act:merge"), null, "Only the real row offers merge");
+const matrix = [...Array.from({ length: 20 }, (_, i) => ({ name: `Build ${i}`, state: "passed" })),
+  { name: "Final failure", state: "failed" }, { name: "Still running", state: "running" },
+  { name: "Queued", state: "waiting" }, { name: "Optional", state: "skipped" }];
+const matrixOrder = matrix.map(run => run.name);
+connectionView = { boards: [{ ...connectionView.boards[0], rows: [{ ...connectionView.boards[0].rows[0], facts: { ...connectionView.boards[0].rows[0].facts, runs: matrix } }, second] }] };
+connectionUI.update(connectionView); connectionReads.at(-1).resolve(healthy); await tick();
+const matrixBar = cAt("row:org/alpha#7").querySelector(".conn-check-bar");
+assert.equal(matrixBar.children.filter(node => node.tag === "i").length, 12);
+assert.equal(matrixBar.children[0].className, "failed");
+assert.equal(matrixBar.children[1].className, "running");
+assert.equal(matrixBar.children[2].className, "waiting");
+assert.equal(matrixBar.querySelector("small").textContent, "+12");
+assert.ok(matrixBar.title.includes("Optional: skipped"));
+assert.deepEqual(matrix.map(run => run.name), matrixOrder, "Rendering never sorts the connector snapshot in place");
+assert.equal(cAt("row:org/beta#9").querySelector(".conn-check-bar"), null, "No check data never invents a passing overview");
 connectionUI.element.querySelector(".conn-check-list").open = false; connectionUI.redraw();
 assert.equal(connectionUI.element.querySelector(".conn-check-list").open, false, "Manual disclosure choice survives an unchanged status");
 const outsideControl = new Element("button"); outsideControl.dataset.fid = "act:open"; document.body.append(outsideControl); outsideControl.focus();
@@ -721,6 +815,68 @@ weekUI.refresh(); weekReads.at(-1).resolve({ ...recap, week: populatedWeek, prev
 assert.ok(weekPage.textContent.includes("No recorded baseline for comparison."));
 
 console.log("check-surface-continuity: Week initial error/retry, retained recap and obsolete read rejection without setting/export actions");
+
+{
+  const oldContext = Element.prototype.getContext, oldBlob = Element.prototype.toBlob;
+  const blobs = [], saves = [], drawn = [];
+  Element.prototype.getContext = function () { return { fillRect() {}, clearRect() {}, beginPath() {}, roundRect() {}, fill() {},
+    measureText: text => ({ width: text.length * 10 }), fillText: text => drawn.push(text) }; };
+  Element.prototype.toBlob = function (done) { blobs.push(done); };
+  try {
+    const current = { ...populatedWeek, commands: 2, top_project: "PrivateAlpha", top_agent: null };
+    const older = { ...current, monday: "2026-10-05", sunday: "2026-10-11" };
+    const panel = createWeek({ activity: async monday => ({ ...recap, weeks: [current.monday, older.monday], week: monday === older.monday ? older : current }),
+      github: async () => ({ state: "off" }), settings() {}, connectors() {},
+      saveImage: (name, png) => new Promise((resolve, reject) => saves.push({ name, png, resolve, reject })) });
+    const page = panel.element.shadowRoot.querySelector(".page");
+    const save = () => page.querySelector(".week-export");
+    const privacy = () => page.querySelector(".recap-card").querySelector("input");
+    panel.refresh(); await tick();
+    privacy().checked = true; privacy().fire("change"); await tick();
+    const recapText = page.querySelector(".recap-card").textContent;
+    for (let i = 0; i < 20; i++) {
+      privacy().checked = !privacy().checked; privacy().fire("change"); await tick();
+      assert.equal(page.querySelector(".recap-card").textContent, recapText);
+      assert.equal(page.querySelector(".recap-card").querySelectorAll(".setting-feedback").length, 0,
+        "An export privacy choice never adds setting-save messages");
+    }
+    const staleButton = save(); staleButton.click(); staleButton.fire("click");
+    assert.equal(blobs.length, 1, "Repeated clicks cannot draw or export the image twice");
+    assert.equal(save().disabled, true); assert.equal(save().getAttribute("aria-busy"), "true");
+    assert.ok(save().textContent.includes("Saving image"));
+    assert.equal(privacy().disabled, true, "The displayed privacy choice stays fixed for the in-flight image");
+    panel.refresh(); await tick(); assert.equal(save().disabled, true, "Refreshing cannot unlock a pending export");
+    page.querySelectorAll("button").find(button => button.getAttribute("aria-label") === "Older week").click(); await tick();
+    blobs[0](new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" })); await tick(); await tick();
+    assert.equal(saves.length, 1);
+    assert.equal(saves[0].name, "vults-week-2026-10-12.png", "Navigation never changes the image's captured week");
+    assert.deepEqual([...saves[0].png], [1, 2, 3]);
+    assert.ok(drawn.every(text => !text.includes("PrivateAlpha")), "The in-flight image honors the captured privacy choice");
+    saves[0].resolve("/exports/current.png"); await tick();
+    assert.ok(!page.textContent.includes("/exports/current.png"), "An old week's completion cannot appear as the displayed week's export result");
+    assert.equal(save().disabled, false); assert.equal(privacy().disabled, false); assert.equal(privacy().checked, true);
+    save().click(); blobs[1](null); await tick();
+    assert.ok(page.querySelector('[role="alert"]').textContent.includes("Not saved"));
+    assert.equal(saves.length, 1, "A failed encoding never opens a save dialog");
+    save().click(); blobs[2](new Blob([new Uint8Array([4])])); await tick(); await tick();
+    saves[1].reject(new Error("Disk unavailable")); await tick();
+    assert.ok(page.querySelector('[role="alert"]').textContent.includes("Disk unavailable"));
+    assert.equal(save().disabled, false, "A failed save is retryable");
+    save().click(); blobs[3](new Blob([new Uint8Array([5])])); await tick(); await tick();
+    saves[2].resolve(null); await tick();
+    assert.equal(page.querySelector('[role="alert"]'), null, "Cancelling the save dialog reports no failure or success");
+    save().click(); blobs[4](new Blob([new Uint8Array([6])])); await tick(); await tick();
+    assert.equal(saves[3].name, "vults-week-2026-10-05.png");
+    saves[3].resolve("/exports/older.png"); await tick();
+    assert.ok(page.querySelector('[role="status"]').textContent.includes("/exports/older.png"));
+    assert.equal(save().disabled, false);
+  } finally {
+    Element.prototype.getContext = oldContext;
+    if (oldBlob) Element.prototype.toBlob = oldBlob; else delete Element.prototype.toBlob;
+  }
+}
+console.log("check-surface-continuity: Week export pending/duplicate guard, retained privacy, captured period, stale-result isolation, encoder/save failure retry, cancellation and accessible success");
+
 
 assert.deepEqual(NEST_TABS, ["flock", "chat", "activity", "connections", "dictation"]);
 for (const zeca of [true, false]) {
@@ -1080,12 +1236,14 @@ console.log("check-surface-continuity: Quick picker arrows/Home/End, IME, explic
 {
   const reads = [];
   let returned = false;
-  const profiles = createProfiles(() => new Promise((resolve, reject) => reads.push({ resolve, reject })), () => { returned = true; });
+  const accessChanges = [];
+  const profiles = createProfiles(() => new Promise((resolve, reject) => reads.push({ resolve, reject })), () => { returned = true; }, undefined,
+    (profile, access) => { accessChanges.push([profile, access]); return Promise.resolve(); });
   document.body.append(profiles.element);
   assert.equal(reads.length, 0, "Hidden profiles do not read a catalog");
   profiles.visible(true); assert.equal(reads.length, 1);
   profiles.visible(false);
-  const fixture = [{ id: "reviewer", built_in: true, revision: 1, title: "Reviewer", about: "Review fixture", species: "gypaetus", look: "none", instructions: "Inspect changes.", skills: [], skill_catalog: [] }];
+  const fixture = [{ id: "reviewer", built_in: true, revision: 1, title: "Reviewer", about: "Review fixture", species: "gypaetus", look: "none", instructions: "Inspect changes.", skills: [], skill_catalog: [], access: "ask" }];
   reads[0].resolve(fixture); await tick();
   assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 0, "A retired read cannot repaint hidden profiles");
   profiles.visible(true); reads[1].reject(new Error("offline")); await tick();
@@ -1094,8 +1252,17 @@ console.log("check-surface-continuity: Quick picker arrows/Home/End, IME, explic
   reads[2].resolve(fixture); await tick();
   const choice = profiles.element.querySelector(".agent-profile-choice");
   choice.click();
-  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("Inspect changes."));
-  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("1"));
+  const detail = profiles.element.querySelector(".agent-profile-detail");
+  assert.ok(detail.textContent.includes("Inspect changes."));
+  assert.ok(detail.textContent.includes("1"));
+  for (const label of ["Recipient", "Executor", "Claude Code · isolated", "Source", "This profile and its pinned skills", "Project and flock context", "Zeca memory", "Never shared"])
+    assert.ok(detail.textContent.includes(label), `Profile route contract includes ${label}`);
+  assert.ok(detail.textContent.includes("never uses Zeca's memory"), "The route discloses isolated profile context");
+  const access = detail.querySelector("select");
+  assert.equal(access.value, "ask", "Profile access defaults to Ask");
+  access.value = "full"; access.fire("change"); await tick();
+  assert.deepEqual(accessChanges, [["reviewer", "full"]], "Only this profile's selected access is saved");
+  assert.equal(fixture[0].access, "full");
   assert.equal(profiles.element.querySelector(".agent-profile-choice").getAttribute("aria-pressed"), "true");
   profiles.relabel();
   assert.equal(profiles.element.querySelector(".agent-profile-choice").getAttribute("aria-pressed"), "true");
@@ -1104,6 +1271,32 @@ console.log("check-surface-continuity: Quick picker arrows/Home/End, IME, explic
   profiles.visible(false); profiles.element.remove();
 }
 console.log("check-surface-continuity: profile catalog lazy read, late cancellation, explicit retry, selection/revision and return");
+
+{
+  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Original instructions", skills: [], skill_catalog: [], access: "ask" };
+  let saveAccess, opens = 0;
+  const profiles = createProfiles(async () => [{ ...preset }], () => {}, undefined,
+    () => new Promise(resolve => { saveAccess = resolve; }), async () => { opens++; throw new Error("Profile session unavailable."); });
+  document.body.append(profiles.element); profiles.visible(true); await tick();
+  profiles.element.querySelector(".agent-profile-choice").click();
+  const scope = profiles.element.querySelector(".agent-profile-scope"); scope.open = true; scope.fire("toggle");
+  const open = profiles.element.querySelector(".agent-profile-chat-open");
+  const access = profiles.element.querySelector("select"); access.value = "full"; access.fire("change");
+  assert.equal(open.disabled, true, "Opening waits for the explicit access save to settle");
+  open.click(); assert.equal(opens, 0);
+  saveAccess(); await tick(); assert.equal(open.disabled, false);
+  open.click(); open.click(); await tick(); await tick();
+  assert.equal(opens, 1, "Only one profile opening is pending");
+  assert.equal(profiles.element.querySelector(".agent-profile-open-error").hidden, false);
+  assert.ok(profiles.element.textContent.includes("Profile session unavailable."), "A failed entry remains visible on the profile that requested it");
+  assert.equal(profiles.element.querySelector(".agent-profile-scope").open, true, "Disclosure state survives save/failure redraws");
+  assert.equal(profiles.element.querySelector(".agent-profile-chat-open").disabled, false, "A failed open is retryable");
+  profiles.updateAccess("developer", "ask");
+  assert.equal(profiles.element.querySelector("select").value, "ask", "Chat access changes update the existing profile view");
+  profiles.visible(false); profiles.element.remove();
+}
+console.log("check-surface-continuity: profile open failure/retry, duplicate/access-save guards, retained disclosures and access synchronization");
+
 
 {
   const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Original instructions", skills: [], skill_catalog: [{ id: "verify-change", revision: 1, title: "Verify", content: "Run focused checks" }] };
@@ -1147,6 +1340,48 @@ console.log("check-surface-continuity: profile catalog lazy read, late cancellat
 console.log("check-surface-continuity: profile copies, retained drafts, single pending save, failure retry and expected revision");
 
 {
+  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Preset instructions", skills: [], skill_catalog: [], access: "ask" };
+  const writes = [];
+  const profiles = createProfiles(async () => [preset], () => {}, edit => new Promise((resolve, reject) => writes.push({ edit, resolve, reject })));
+  document.body.append(profiles.element); profiles.visible(true); await tick();
+  profiles.element.querySelector(".agent-profile-create").click();
+  const avatar = profiles.element.querySelector(".agent-profile-character");
+  assert.ok(avatar, "Profile creation centers the production animated bird");
+  const profileScene = scenes.get(avatar.querySelector("canvas"));
+  assert.equal(active.get(profileScene.canvas), true);
+  profiles.visible(false); assert.equal(active.get(profileScene.canvas), false, "Hidden editors stop their animated scene");
+  profiles.visible(true);
+  assert.equal(active.get(profileScene.canvas), true);
+  assert.equal(profiles.element.querySelector("input").value, "", "Direct creation starts with an empty name");
+  assert.equal(profiles.element.querySelector("textarea").value, "", "Direct creation never imports preset instructions");
+  assert.ok(profiles.element.querySelector(".agent-profile-editor-grid"));
+  let name = profiles.element.querySelector("input"); name.value = "Original agent"; name.fire("input");
+  let instructions = profiles.element.querySelector("textarea"); instructions.value = "Use my original instructions."; instructions.fire("input");
+  profiles.visible(false); profiles.relabel(); profiles.visible(true);
+  assert.equal(profiles.element.querySelector("textarea").value, "Use my original instructions.");
+  const submit = () => profiles.element.querySelector("form").fire("submit", { preventDefault() {} });
+  submit(); submit(); assert.equal(writes.length, 1);
+  assert.deepEqual(writes[0].edit, { action: "create", title: "Original agent", instructions: "Use my original instructions.", species: "atratus", look: "none", skill_ids: [] });
+  assert.equal("preset" in writes[0].edit, false, "Creation has its own native operation without a hidden preset");
+  writes[0].reject("storage"); await tick();
+  assert.equal(profiles.element.querySelector("input").value, "Original agent");
+  assert.ok(profiles.element.querySelector('[role="alert"]'));
+  submit();
+  writes[1].resolve({ ...preset, id: "custom-9", built_in: false, title: "Original agent", about: "Custom agent profile", instructions: "Use my original instructions." });
+  await tick();
+  assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 2);
+  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("Original agent"));
+  assert.equal(profiles.element.querySelector("select").value, "ask");
+  profiles.element.querySelector(".agent-profile-create").click();
+  assert.equal(profiles.element.querySelector("input").value, "");
+  nodes(profiles.element).find(node => node.tag === "button" && node.textContent === "Cancel").click(); await tick();
+  assert.equal(writes.length, 2, "Cancelling a blank profile never creates a record");
+  profiles.visible(false); profiles.element.remove();
+}
+console.log("check-surface-continuity: direct blank profile creation, separate native action, draft retention, single save, failure/retry, default access and cancellation");
+
+
+{
   const original = Element.prototype.getContext;
   let pixels = 0;
   Element.prototype.getContext = function () {
@@ -1171,3 +1406,28 @@ console.log("check-surface-continuity: profile copies, retained drafts, single p
   } finally { Element.prototype.getContext = original; }
 }
 console.log("check-surface-continuity: every species/accessory preview fits with integer pixels and no calendar option");
+
+{
+  const parent = document.createElement("div");
+  let fail = false;
+  const first = toggle(false, async () => { if (fail) throw new Error("Write failed"); });
+  const second = toggle(false, async () => {});
+  parent.append(first, second);
+  for (let i = 0; i < 20; i++) {
+    first.checked = !first.checked; first.fire("change"); await tick();
+    assert.equal(parent.querySelectorAll(".setting-feedback").length, 1,
+      "A standalone setting reuses its feedback across repeated writes");
+  }
+  fail = true; first.checked = true; first.fire("change"); await tick();
+  assert.equal(first.checked, false);
+  assert.equal(parent.querySelectorAll(".setting-feedback").length, 1);
+  assert.ok(parent.querySelector(".setting-feedback").textContent.includes("previous choice"));
+  second.checked = true; second.fire("change"); await tick();
+  assert.equal(parent.querySelectorAll(".setting-feedback").length, 2,
+    "Sibling standalone settings keep independent feedback");
+  assert.ok(parent.querySelector(".setting-feedback").textContent.includes("previous choice"));
+  fail = false; first.checked = true; first.fire("change"); await tick();
+  assert.equal(parent.querySelectorAll(".setting-feedback").length, 2);
+  assert.equal(parent.querySelector(".setting-feedback").textContent, "Saved.");
+}
+console.log("check-surface-continuity: repeated export privacy changes and standalone setting feedback remain bounded");

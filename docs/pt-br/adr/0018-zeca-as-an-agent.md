@@ -1,5 +1,5 @@
 # 0018. Zeca: opcional, separado do bando, regras antes de modelos
-<!-- source: ecda4c21e16d -->
+<!-- source: e1ebbca87003 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0010 e da 0012.
 Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): Tasks sai do Vults.
@@ -21,9 +21,21 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
 
 - **Opcional.** Tudo sobre o bando funciona com o Zeca desligado: sessões, cards, notificações,
   conectores, o Nest com seus registros e custos ([0021](0021-four-sizes-one-nest.md)). Com ele
-  desligado: nada de chat, de microfone, de atalho de fala, de *Chat…* na bandeja, de aba Chat ou de
-  *Ask Zeca*; a ilha tem a sua própria aparência ociosa, e o `zeca` não inicia processo, não escreve
-  arquivo e não faz requisição.
+  desligado: nada de Chat do Zeca, microfone, atalho de fala, *Chat…* na bandeja, aba Chat ou
+  *Ask Zeca*; a ilha tem a própria aparência ociosa, e o `zeca` não inicia processo, não escreve
+  arquivo nem faz requisição.
+- **O Chat de especialista usa a interface de Chat existente.** Um perfil abre pelo Bando na aba
+  Chat existente, selecionado como destinatário. Alternar preserva a conversa e o rascunho de cada um.
+  O especialista continua disponível com o Zeca desligado, sem ligá-lo. O destinatário é o perfil
+  imutável e o snapshot das skills. Claude Code é o único executor, com configurações isoladas e um
+  espaço de Chat gerenciado pelo Vults. Nenhuma pasta de projeto, menção ao bando, contexto do
+  companheiro, MCP, configuração do usuário ou memória do Zeca é anexada. O usuário escolhe Ask,
+  políticas aceitas ou acesso total separadamente para cada perfil; o padrão é Ask, e mudanças valem
+  para a próxima chamada de ferramenta. Ações destrutivas, perguntas das políticas e ações após ler
+  conteúdo externo exigem um card; negações das políticas bloqueiam a chamada. O acesso do Chat do
+  Zeca não concede acesso ao especialista. Voz, Ask Zeca e comandos locais do companheiro não estão
+  disponíveis nessa rota. Estado nativo, histórico e aprovações permanecem no perfil selecionado,
+  enquanto a interface reutiliza o ChatPanel de produção.
 - **Onde:** o cérebro dele é um crate `zeca` na camada Connect, ao lado do `chat`; o corpo dele
   (sprites, a ilha, o Nest) fica em Experience. Nenhum crate abaixo do `zeca` sabe que ele existe;
   o `app` o conecta.
@@ -79,3 +91,7 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
 - 2026-10-21: O armazenamento de conversas especializadas agora fixa a origem/revisão explícita do perfil e suas instruções/aparência completas na criação. Esses registros não podem carregar o contexto congelado do Zeca nem ser abertos/listados pela rota atual do Chat dele. A execução especializada e sua disponibilidade com o Zeca desligado continuam desabilitadas até a implementação do próprio contrato de isolamento.
 - 2026-10-21: Adicionar um construtor de runtime especializado para Claude Code que mantém somente o briefing fixado, configurações isoladas e o fluxo existente de aprovação humana. Ele remove MCP do companheiro, diretórios extras e histórico de API, rejeita contexto/ferramentas do companheiro e bloqueia provedores não suportados antes de iniciar um turno. Essa base não habilita Chat de perfil, recuperação de memória, escrita no diário nem disponibilidade especializada com o Zeca desligado; o roteamento nativo continua fechado.
 - 2026-10-21: O turno nativo agora fixa e verifica os metadados do destinatário antes da consulta à memória. Runtimes vinculados a perfis mantêm seu snapshot, origem e executor exatos, pulam os callbacks de consulta/contexto/MCP/diário do companheiro e não podem alimentar a extração de memória dele. Reiniciar/abrir/parar/excluir limpa ou substitui os metadados do destinatário junto com o runtime. O roteamento especializado para o usuário continua fechado até a interface de destinatário e as transições de comandos/voz.
+
+- 2026-10-22: O acesso do especialista é escolhido por perfil (Ask, políticas aceitas ou total), usa Ask por padrão e independe do Chat do Zeca. Ações destrutivas, perguntas das políticas e ações após leitura externa exigem um card; negações das políticas bloqueiam a chamada.
+
+- 2026-10-22: Integrar especialistas à aba Chat existente com seleção de destinatário e o ChatPanel de produção. Manter runtimes nativos, rascunhos, históricos e aprovações por perfil; mudanças de acesso valem para a próxima chamada de ferramenta.

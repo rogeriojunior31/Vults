@@ -94,6 +94,24 @@ function fid<E extends HTMLElement>(e: E, id: string): E {
   return e;
 }
 
+/** Keep failing checks visible even when a repository has a long CI matrix. */
+function checksBar(runs: RowView["facts"]["runs"]): HTMLElement | null {
+  if (!runs.length) return null;
+  const urgency: Record<CheckState, number> = { failed: 0, running: 1, waiting: 2, passed: 3, skipped: 4 };
+  const ordered = [...runs].sort((a, b) => urgency[a.state] - urgency[b.state]);
+  const describe = (run: typeof runs[number]) => t("{name}: {state}", { name: run.name, state: t(RUN[run.state]) });
+  const bar = el("span", { class: "conn-check-bar" }, ...ordered.slice(0, 12).map(run => {
+    const segment = el("i", { class: run.state });
+    segment.title = describe(run);
+    return segment;
+  }));
+  if (runs.length > 12) bar.append(el("small", { text: `+${runs.length - 12}` }));
+  bar.setAttribute("role", "img");
+  bar.setAttribute("aria-label", ordered.map(describe).join("; "));
+  bar.title = ordered.map(describe).join("\n");
+  return bar;
+}
+
 export function createConnections(actions: ConnectionsActions & { zeca: () => ConnectionsAsk["ask"] }): {
   element: HTMLElement;
   update: (v: ViewModel) => void;
@@ -188,7 +206,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         icon(iconOf(r), 15, 1.6),
         el("span", { class: "conn-row-words" }, el("strong", { text: r.title }),
           el("span", { class: "conn-row-meta" }, el("small", { text: sub(r) }), isSeen(b.connector, r) ? el("span", { class: "conn-seen", text: t("✓ Seen") }) : null)),
-        end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null,
+        end || r.facts.runs.length ? el("span", { class: "conn-row-side" },
+          end ? el("span", { class: `conn-tag ${end.kind}`, text: end.text }) : null, checksBar(r.facts.runs)) : null,
       ),
       `row:${r.item}`,
     );

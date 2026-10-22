@@ -16,9 +16,19 @@ calibrate without collecting data ([0019](0019-requests-on-the-users-behalf.md))
 
 - **Optional.** Everything about the flock works with Zeca off: sessions, cards, notifications,
   connectors, the Nest with its records and costs ([0021](0021-four-sizes-one-nest.md)). With him
-  off: no chat, no microphone, no talk shortcut, no *Chat…* in the tray, no Chat tab or *Ask Zeca*,
-  the island has its own idle look, and `zeca` starts no process, writes no file and makes no
-  request.
+  off: no Zeca chat, microphone, talk shortcut, *Chat…* in the tray, Chat tab or *Ask Zeca*; the
+  island has its own idle look, and `zeca` starts no process, writes no file and makes no request.
+- **Specialist Chat uses the existing Chat UI.** A profile opens from Flock into the existing Chat
+  tab, selected as the recipient. Switching recipients retains each conversation and draft. A
+  specialist remains available with Zeca off without turning him on. The recipient is the immutable
+  profile and skill snapshot. Claude Code is the only executor, with isolated settings and a
+  Vults-managed chat workspace. No project folder, flock mention, companion context, MCP, user
+  setup or Zeca memory is attached. The user chooses Ask, accepted policies or full access separately
+  for each profile; the default is Ask, and changes apply to the next tool call. Destructive actions,
+  policy asks and actions after reading outside content require a card; policy denies block the call.
+  Zeca's Chat access setting cannot grant specialist access. Voice, Ask Zeca and local companion
+  commands are unavailable in this route. Native state, history and approval streams remain scoped
+  to the selected profile while the UI reuses the production ChatPanel.
 - **Where:** his brain is a `zeca` crate in the Connect layer, beside `chat`; his body (sprites,
   the island, the Nest) stays in Experience. No crate below `zeca` knows it exists; `app` wires it in.
 - **What he reads:** the flock through a `FlockReader` built from the view, with no path to an
@@ -67,3 +77,6 @@ calibrate without collecting data ([0019](0019-requests-on-the-users-behalf.md))
 - 2026-10-21: Specialist conversation storage now freezes an explicit profile source/revision and complete instructions/appearance at creation. These records cannot carry Zeca's frozen context or be opened/listed by his current Chat route. Specialist execution and availability with Zeca off remain disabled until their own isolation contract is implemented.
 - 2026-10-21: Add a Claude Code specialist runtime constructor that keeps only the pinned brief, isolated settings and the existing human approval path. It removes companion MCP, extra directories and API history, rejects companion context/tools and blocks unsupported providers before a turn starts. This primitive does not enable profile Chat, memory recall, journal writes or specialist availability with Zeca off; native routing remains closed.
 - 2026-10-21: The native turn now fixes and checks recipient metadata before memory recall. Profile-bound runtimes keep their exact snapshot, source and executor, skip companion recall/context/MCP/journal callbacks, and cannot feed companion memory extraction. Reset/open/stop/delete clear or replace recipient metadata with the runtime. User-facing specialist routing remains closed pending recipient UI and command/voice transitions.
+- 2026-10-22: Specialist access is chosen per profile (Ask, accepted policies or full), defaults to Ask and is independent of Zeca's Chat setting. Destructive actions, policy asks and actions after outside content still require a card; policy denies block the call.
+
+- 2026-10-22: Integrate specialists into the existing Chat tab with recipient selection and the production ChatPanel. Keep native runtimes, drafts, histories and approvals scoped by profile; access changes apply to the next tool call.

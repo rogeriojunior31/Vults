@@ -1,5 +1,5 @@
 # 0004. Quem responde a uma permissão
-<!-- source: 54cd17a0af3d -->
+<!-- source: ee12a2a39f96 -->
 
 **Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da 0014, da 0017, da 0025 e da
 0026.
@@ -43,7 +43,7 @@ uma escolha de um humano:
     cards ([0021](0021-four-sizes-one-nest.md)).
   - Kotlin é permitido só para a casca Android; a lógica dela é o núcleo Rust via UniFFI. O Android
     é a única exceção a "Linux primeiro e só Linux"; iOS e macOS vêm depois, no mesmo protocolo.
-- **Só no chat do Zeca, o que o usuário escolheu** em Settings → Chat & voice → *Who answers Zeca's
+- **Só no chat do Zeca, o que o usuário escolheu** no Chat ou em Settings → Chat & voice → *Who answers Zeca's
   cards*:
   - **Asks first** (o padrão): um card para cada chamada que nenhuma regra *Always* cobre (o
     *Always in this chat* é um comando exato, até a conversa acabar).
@@ -54,8 +54,9 @@ uma escolha de um humano:
     uma política manda perguntar ainda pergunta, e depois que a conversa leu conteúdo de fora (uma
     página web, um fetch, uma ferramenta MCP) os cards dela voltam a perguntar pelo resto da
     conversa.
-  - Mais acesso só se dá no Settings; o seletor do chat mostra a escolha e só pode devolver parte
-    dela. O chat diz o que rodou com a palavra de quem, e a CLI dele continua rodando com
+  - A pessoa escolhe o acesso diretamente no seletor do Chat ou nas configurações. O escopo
+    selecionado fica explícito: Zeca ou um perfil especialista. A escolha vale para a próxima chamada
+    depois de salva; uma falha ao salvar não concede acesso. O chat diz o que rodou com a palavra de quem, e a CLI dele continua rodando com
     `--permission-mode default`, para que as respostas venham do Vults. As sessões do bando não
     mudam.
 
@@ -99,3 +100,5 @@ Acima de tudo isso:
   chamada destrutiva.
 - 0026, 2026-10-12: quem responde os cards do chat
   do Zeca é escolha do usuário.
+
+- 2026-10-22: A pedido do mantenedor, o seletor de acesso do Chat pode aumentar ou reduzir o acesso diretamente. Manter o destinatário explícito, salvar antes de aplicar a autoridade e preservar as regras de políticas, ações destrutivas e conteúdo externo.
