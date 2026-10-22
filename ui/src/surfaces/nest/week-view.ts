@@ -2,7 +2,7 @@
 import { el } from "../../dom";
 import { locale, t } from "../../i18n";
 import { AGENT, duration, gridCard, weekday, weekdays, weekLabel, type Activity, type ActivityActions, type ActivityView } from "../settings/activity";
-import { button, toggle } from "../settings/pieces";
+import { button } from "../settings/pieces";
 import { viewState } from "./view-state";
 
 /** The prototype's look for this page, over the settings pages' own (both in the Week's shadow root). */
@@ -44,6 +44,20 @@ export const WEEK_CSS = `
 /** The page; `day` is the day shown under the bars (Monday is 0), `pick` changes it. */
 export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<ActivityActions, "week" | "tab" | "connectors" | "hideProjects" | "saveImage"> & { settings: () => void }, day: number | null, pick: (d: number) => void): HTMLElement[] {
   if (!a) return [viewState("loading", t("Reading the history…"))];
+  const save = button(view.exporting ? t("Saving image…") : t("Save as image…"), () => on.saveImage());
+  save.disabled = !!view.exporting;
+  save.className += " week-export";
+  save.setAttribute("aria-busy", String(!!view.exporting));
+  const privacy = el("input", { class: "toggle" });
+  privacy.type = "checkbox";
+  privacy.checked = view.hideProjects;
+  privacy.addEventListener("change", () => {
+    if (view.exporting) { privacy.checked = view.hideProjects; return; }
+    on.hideProjects(privacy.checked);
+  });
+  privacy.disabled = !!view.exporting;
+  const result = view.saved ? el("p", { class: `note${view.saved.ok ? " ok" : " error"}`, text: view.saved.text }) : null;
+  result?.setAttribute("role", view.saved?.ok ? "status" : "alert");
   const w = a.week;
   const i = a.weeks.indexOf(w.monday);
   const older = i >= 0 && i < a.weeks.length - 1 ? a.weeks[i + 1] : null;
@@ -156,10 +170,10 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
           "label",
           { class: "share-row" },
           el("div", {}, el("strong", { text: t("Hide project names") }), el("small", { text: t("For the saved image.") })),
-          toggle(view.hideProjects, async (hide) => on.hideProjects(hide)),
+          privacy,
         ),
-        button(t("Save as image…"), () => on.saveImage()),
-        view.saved ? el("p", { class: `note${view.saved.ok ? " ok" : " error"}`, text: view.saved.text }) : null,
+        save,
+        result,
       ),
     ),
     el("section", { class: "activity-card agent-turns" },

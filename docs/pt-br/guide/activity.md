@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 35f53ec8dd4e -->
+<!-- source: f993eed74d34 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -109,6 +109,10 @@ O card mostra uma semana, de segunda a domingo, pelos seus dias locais: esta sem
 **Save as image…** embaixo da semana a desenha como uma imagem (1080 × 1350), com o Zeca no fio
 dele. **Hide project names** tira o projeto dela. O diálogo *Salvar como* do desktop pergunta onde
 (no Windows ela vai para a sua pasta Imagens), e nada é enviado.
+O botão mostra **Salvando imagem…** até a geração e o salvamento terminarem; cliques repetidos não
+iniciam outra exportação. A semana selecionada e a opção **Hide project names** ficam fixadas
+nessa imagem. O sucesso ou a falha aparece apenas na mesma semana; mudar de semana nunca mostra
+um resultado antigo no novo período. Cancelar não mostra erro, e uma falha permite tentar de novo.
 
 <a id="on-monday-morning"></a>
 

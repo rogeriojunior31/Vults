@@ -236,6 +236,9 @@ composer waits in the middle with a few questions to start. Without Zeca there i
 
 ## Activity
 
+**History** uses **Search turns**; **Audit** uses **Search answers and commands**, matching the
+records each view contains. **Clear filters** is available when a query is present. Press **Esc**
+in a non-empty search to clear it and keep focus there; text composition retains its Escape key.
 History and Audit keep their searches independently until Vults exits. Returning
 to Mini or Quick waits for pending search saves; reopening the Nest restores the
 filters. **Clear filters** clears only that subsection's search. A delayed

@@ -1201,3 +1201,38 @@ the accessible label and tooltip. The existing detail remains the owner of the f
 check data produces no invented success summary. Selection, filtering, merging and polling retain
 their existing contracts. Renderer checks cover mixed/absent/large matrices, failure visibility and
 unchanged source ordering. Native visual acceptance remains for the running app.
+
+### Existing History and Audit search refinement - 2026-10-22
+
+Following the accumulated-work commit, continue within the approved existing-feature prototype.
+`design/ui-motion-proposal/records.js` names the History search Search turns and the Audit search
+Search answers and commands; production now uses those same scoped labels and accessible names.
+Clear filters is disabled for an empty query. Escape clears a non-empty query in place, preserves
+IME composition and lets an empty search's Escape reach the owning surface. Existing ordered
+query persistence, independent History/Audit filters and loaded-record search remain unchanged.
+Production-renderer checks cover both labels, clear state, focus, composition, ordered saves and
+zero extra record reads. Profiles and skills receive no new work in this slice. Native visual
+acceptance remains for the running application.
+
+### Existing Week image export feedback - 2026-10-22
+
+Continue within Activity's existing Save as image action from the approved records prototype.
+The production Week renderer now shows Saving image and disables repeated export/privacy edits
+through PNG generation and the native save dialog. Export captures the displayed week's snapshot
+and privacy choice, preserves pending state across refreshes and scopes completion feedback to
+that period. Changing weeks cannot show the old export's result on the new week. Encoding and save
+failures remain retryable; native cancellation reports no false success. Result messages expose
+status/alert roles. Regression checks run the real image renderer with a held encoder and mocked
+save dialog, covering duplicates, privacy, navigation, refresh, errors, cancellation and success.
+No actual image is written by the checks; native dialog/visual acceptance remains for the running
+app. Agent profiles and skills remain paused.
+
+### Week privacy toggle feedback repair - 2026-10-22
+
+The image privacy choice now updates only the current export draft, without a
+settings-save status. Standalone persisted settings reuse one status node per
+control, including failure and retry, instead of appending a node on every write.
+Renderer regression checks cover twenty consecutive changes, rollback and
+independent sibling controls. Build, Settings checks, English and i18n checks
+pass. The running development app received the update; native visual acceptance
+of the recap card remains with the user.

@@ -110,6 +110,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { applyTheme } from ${source("theme.ts")};
       export { sidePanel } from ${source("surfaces/nest/panels.ts")};
       export { createWeek } from ${source("surfaces/nest/week.ts")};
+      export { toggle } from ${source("surfaces/settings/pieces.ts")};
       export { paletteItems } from ${source("palette.ts")};
       export { NEST_TABS, tabByKey } from ${source("surfaces/nest/head.ts")};
       export { createNest } from ${source("surfaces/nest/render.ts")};
@@ -125,7 +126,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { speciesSet, dress, createProfiles, settingsQuick, createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { toggle, speciesSet, dress, createProfiles, settingsQuick, createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -815,6 +816,68 @@ assert.ok(weekPage.textContent.includes("No recorded baseline for comparison."))
 
 console.log("check-surface-continuity: Week initial error/retry, retained recap and obsolete read rejection without setting/export actions");
 
+{
+  const oldContext = Element.prototype.getContext, oldBlob = Element.prototype.toBlob;
+  const blobs = [], saves = [], drawn = [];
+  Element.prototype.getContext = function () { return { fillRect() {}, clearRect() {}, beginPath() {}, roundRect() {}, fill() {},
+    measureText: text => ({ width: text.length * 10 }), fillText: text => drawn.push(text) }; };
+  Element.prototype.toBlob = function (done) { blobs.push(done); };
+  try {
+    const current = { ...populatedWeek, commands: 2, top_project: "PrivateAlpha", top_agent: null };
+    const older = { ...current, monday: "2026-10-05", sunday: "2026-10-11" };
+    const panel = createWeek({ activity: async monday => ({ ...recap, weeks: [current.monday, older.monday], week: monday === older.monday ? older : current }),
+      github: async () => ({ state: "off" }), settings() {}, connectors() {},
+      saveImage: (name, png) => new Promise((resolve, reject) => saves.push({ name, png, resolve, reject })) });
+    const page = panel.element.shadowRoot.querySelector(".page");
+    const save = () => page.querySelector(".week-export");
+    const privacy = () => page.querySelector(".recap-card").querySelector("input");
+    panel.refresh(); await tick();
+    privacy().checked = true; privacy().fire("change"); await tick();
+    const recapText = page.querySelector(".recap-card").textContent;
+    for (let i = 0; i < 20; i++) {
+      privacy().checked = !privacy().checked; privacy().fire("change"); await tick();
+      assert.equal(page.querySelector(".recap-card").textContent, recapText);
+      assert.equal(page.querySelector(".recap-card").querySelectorAll(".setting-feedback").length, 0,
+        "An export privacy choice never adds setting-save messages");
+    }
+    const staleButton = save(); staleButton.click(); staleButton.fire("click");
+    assert.equal(blobs.length, 1, "Repeated clicks cannot draw or export the image twice");
+    assert.equal(save().disabled, true); assert.equal(save().getAttribute("aria-busy"), "true");
+    assert.ok(save().textContent.includes("Saving image"));
+    assert.equal(privacy().disabled, true, "The displayed privacy choice stays fixed for the in-flight image");
+    panel.refresh(); await tick(); assert.equal(save().disabled, true, "Refreshing cannot unlock a pending export");
+    page.querySelectorAll("button").find(button => button.getAttribute("aria-label") === "Older week").click(); await tick();
+    blobs[0](new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" })); await tick(); await tick();
+    assert.equal(saves.length, 1);
+    assert.equal(saves[0].name, "vults-week-2026-10-12.png", "Navigation never changes the image's captured week");
+    assert.deepEqual([...saves[0].png], [1, 2, 3]);
+    assert.ok(drawn.every(text => !text.includes("PrivateAlpha")), "The in-flight image honors the captured privacy choice");
+    saves[0].resolve("/exports/current.png"); await tick();
+    assert.ok(!page.textContent.includes("/exports/current.png"), "An old week's completion cannot appear as the displayed week's export result");
+    assert.equal(save().disabled, false); assert.equal(privacy().disabled, false); assert.equal(privacy().checked, true);
+    save().click(); blobs[1](null); await tick();
+    assert.ok(page.querySelector('[role="alert"]').textContent.includes("Not saved"));
+    assert.equal(saves.length, 1, "A failed encoding never opens a save dialog");
+    save().click(); blobs[2](new Blob([new Uint8Array([4])])); await tick(); await tick();
+    saves[1].reject(new Error("Disk unavailable")); await tick();
+    assert.ok(page.querySelector('[role="alert"]').textContent.includes("Disk unavailable"));
+    assert.equal(save().disabled, false, "A failed save is retryable");
+    save().click(); blobs[3](new Blob([new Uint8Array([5])])); await tick(); await tick();
+    saves[2].resolve(null); await tick();
+    assert.equal(page.querySelector('[role="alert"]'), null, "Cancelling the save dialog reports no failure or success");
+    save().click(); blobs[4](new Blob([new Uint8Array([6])])); await tick(); await tick();
+    assert.equal(saves[3].name, "vults-week-2026-10-05.png");
+    saves[3].resolve("/exports/older.png"); await tick();
+    assert.ok(page.querySelector('[role="status"]').textContent.includes("/exports/older.png"));
+    assert.equal(save().disabled, false);
+  } finally {
+    Element.prototype.getContext = oldContext;
+    if (oldBlob) Element.prototype.toBlob = oldBlob; else delete Element.prototype.toBlob;
+  }
+}
+console.log("check-surface-continuity: Week export pending/duplicate guard, retained privacy, captured period, stale-result isolation, encoder/save failure retry, cancellation and accessible success");
+
+
 assert.deepEqual(NEST_TABS, ["flock", "chat", "activity", "connections", "dictation"]);
 for (const zeca of [true, false]) {
   const tabs = NEST_TABS.filter(id => id !== "chat" || zeca);
@@ -1343,3 +1406,28 @@ console.log("check-surface-continuity: direct blank profile creation, separate n
   } finally { Element.prototype.getContext = original; }
 }
 console.log("check-surface-continuity: every species/accessory preview fits with integer pixels and no calendar option");
+
+{
+  const parent = document.createElement("div");
+  let fail = false;
+  const first = toggle(false, async () => { if (fail) throw new Error("Write failed"); });
+  const second = toggle(false, async () => {});
+  parent.append(first, second);
+  for (let i = 0; i < 20; i++) {
+    first.checked = !first.checked; first.fire("change"); await tick();
+    assert.equal(parent.querySelectorAll(".setting-feedback").length, 1,
+      "A standalone setting reuses its feedback across repeated writes");
+  }
+  fail = true; first.checked = true; first.fire("change"); await tick();
+  assert.equal(first.checked, false);
+  assert.equal(parent.querySelectorAll(".setting-feedback").length, 1);
+  assert.ok(parent.querySelector(".setting-feedback").textContent.includes("previous choice"));
+  second.checked = true; second.fire("change"); await tick();
+  assert.equal(parent.querySelectorAll(".setting-feedback").length, 2,
+    "Sibling standalone settings keep independent feedback");
+  assert.ok(parent.querySelector(".setting-feedback").textContent.includes("previous choice"));
+  fail = false; first.checked = true; first.fire("change"); await tick();
+  assert.equal(parent.querySelectorAll(".setting-feedback").length, 2);
+  assert.equal(parent.querySelector(".setting-feedback").textContent, "Saved.");
+}
+console.log("check-surface-continuity: repeated export privacy changes and standalone setting feedback remain bounded");

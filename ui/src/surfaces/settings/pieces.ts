@@ -3,6 +3,7 @@ import { el } from "../../dom";
 import { t } from "../../i18n";
 
 let rowNumber = 0;
+const standaloneFeedback = new WeakMap<HTMLElement, HTMLElement>();
 
 type SettingField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement;
 const fields = (control: HTMLElement): SettingField[] => control.matches("input, select, textarea, button")
@@ -39,7 +40,10 @@ export function saveSetting(control: HTMLElement, write: () => Promise<void>, ro
       }
     });
   };
-  const feedback = control.closest(".row")?.querySelector<HTMLElement>(".setting-feedback") ?? el("span", { class: "setting-feedback" });
+  const feedback = control.closest(".row")?.querySelector<HTMLElement>(".setting-feedback")
+    ?? standaloneFeedback.get(control) ?? el("span", { class: "setting-feedback" });
+  standaloneFeedback.set(control, feedback);
+  feedback.setAttribute("role", "status");
   if (!feedback.parentElement) control.parentElement?.append(feedback);
   const state = { pending: true, error: false, message: t("Saving…"), views: [{ control, feedback, disabled: fields(control).map(field => field.disabled) }], sync: capture() };
   if (key) operations.set(key, state);
@@ -61,7 +65,7 @@ export function saveSetting(control: HTMLElement, write: () => Promise<void>, ro
   });
 }
 
-export function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTMLElement {
+export function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTMLInputElement {
   const input = document.createElement("input");
   input.type = "checkbox";
   input.className = "toggle";
@@ -120,7 +124,7 @@ export function disclosure(title: string, ...content: HTMLElement[]): HTMLDetail
   return details;
 }
 
-export function button(text: string, onclick: () => void, primary = false): HTMLElement {
+export function button(text: string, onclick: () => void, primary = false): HTMLButtonElement {
   return el("button", { class: primary ? "btn primary" : "btn", text, onclick });
 }
 

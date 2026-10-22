@@ -92,6 +92,10 @@ through the weeks the history keeps (12).
 **Save as image…** under the week draws it as a picture (1080 × 1350), with Zeca on his wire.
 **Hide project names** leaves the project out of it. The desktop's *Save as* dialog asks where (on
 Windows it goes to your Pictures folder), and nothing is uploaded.
+The button shows **Saving image…** until drawing and saving finish, and repeated clicks cannot
+start another export. The selected week and **Hide project names** choice are fixed for that
+image. Success or failure appears on the same week only; switching weeks never shows an old
+export result on the new period. Cancelling is silent, and a failed export can be retried.
 
 ## On Monday morning
 

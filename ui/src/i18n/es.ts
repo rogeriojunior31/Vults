@@ -1,5 +1,8 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Saving image…": "Guardando imagen…",
+  "Search turns": "Buscar turnos",
+  "Search answers and commands": "Buscar respuestas y comandos",
   "{name}: {state}": "{name}: {state}",
   "Black vulture": "Zopilote negro",
   "Turkey vulture": "Aura gallipavo",
@@ -607,7 +610,6 @@ export default {
   "Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content.": "Envía la conversación que dejas a Haiku de Claude Code, con tu suscripción, para sugerir recuerdos. Los revisas en Chat, Memoria. Hasta 20 solicitudes al día; excluye conversaciones que leyeron contenido externo.",
   "While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace.": "Por la noche, sin trabajo activo, Haiku de Claude Code, con tu suscripción, revisa recuerdos y resúmenes recientes. Las propuestas de fusión te esperan en el Nido. Hasta 4 solicitudes al día, registradas en la traza local.",
   "Lets API chat search the web and read pages through your chosen engine and each site's server. Up to 200 requests a day, recorded in the local trace. Outside content never grants permissions.": "Permite al chat por API buscar en la web y leer páginas mediante el motor elegido y el servidor de cada sitio. Hasta 200 solicitudes al día, registradas en la traza local. El contenido externo nunca concede permisos.",
-  "Search records": "Buscar registros",
   "No records match. Clear filters to see all records.": "Ningún registro coincide. Borra los filtros para ver todos los registros.",
   "Back to Chat": "Volver al chat",
   "Settings page": "Página de ajustes",

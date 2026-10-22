@@ -1,5 +1,8 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Saving image…": "Salvando imagem…",
+  "Search turns": "Buscar turnos",
+  "Search answers and commands": "Buscar respostas e comandos",
   "{name}: {state}": "{name}: {state}",
   "Black vulture": "Urubu-preto",
   "Turkey vulture": "Urubu-de-cabeça-vermelha",
@@ -607,7 +610,6 @@ export default {
   "Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content.": "Envia a conversa que você deixou ao Haiku do Claude Code, na sua assinatura, para sugerir memórias. Você as revisa em Chat, Memória. Até 20 requisições por dia; exclui conversas que leram conteúdo externo.",
   "While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace.": "À noite, enquanto não há trabalho, o Haiku do Claude Code, na sua assinatura, revisa memórias e resumos recentes. As propostas de união aguardam você no Ninho. Até 4 requisições por dia, registradas no rastreio local.",
   "Lets API chat search the web and read pages through your chosen engine and each site's server. Up to 200 requests a day, recorded in the local trace. Outside content never grants permissions.": "Permite ao chat por API buscar na web e ler páginas pelo serviço escolhido e pelo servidor de cada site. Até 200 requisições por dia, registradas no rastreio local. Conteúdo externo nunca concede permissões.",
-  "Search records": "Buscar registros",
   "No records match. Clear filters to see all records.": "Nenhum registro corresponde. Limpe os filtros para ver todos os registros.",
   "Back to Chat": "Voltar ao Chat",
   "Settings page": "Página de configurações",

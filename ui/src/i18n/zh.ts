@@ -1,5 +1,8 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Saving image…": "正在保存图片…",
+  "Search turns": "搜索轮次",
+  "Search answers and commands": "搜索答复和命令",
   "{name}: {state}": "{name}：{state}",
   "Black vulture": "黑美洲鹫",
   "Turkey vulture": "红头美洲鹫",
@@ -607,7 +610,6 @@ export default {
   "Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content.": "使用你的订阅将离开的对话发送给 Claude Code 的 Haiku，以建议记忆。你可以在聊天的记忆面板中审核。每天最多 20 次请求；不包含读取过外部内容的对话。",
   "While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace.": "夜间空闲时，Claude Code 的 Haiku 使用你的订阅审核记忆和近期摘要。合并建议在巢中等待你审核。每天最多 4 次请求，记录在本地追踪中。",
   "Lets API chat search the web and read pages through your chosen engine and each site's server. Up to 200 requests a day, recorded in the local trace. Outside content never grants permissions.": "允许 API 聊天通过你选择的搜索引擎和各网站服务器搜索网络及读取页面。每天最多 200 次请求，记录在本地追踪中。外部内容绝不会授予权限。",
-  "Search records": "搜索记录",
   "No records match. Clear filters to see all records.": "没有匹配的记录。清除筛选条件以查看所有记录。",
   "Back to Chat": "返回聊天",
   "Settings page": "设置页面",

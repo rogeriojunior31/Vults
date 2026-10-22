@@ -302,8 +302,9 @@ function tab<T>(
   search.type = "search";
   search.maxLength = 4096;
   search.className = "field";
-  search.setAttribute("aria-label", t("Search records"));
-  search.placeholder = t("Search records");
+  const searchLabel = () => cls === "audit" ? t("Search answers and commands") : t("Search turns");
+  search.setAttribute("aria-label", searchLabel());
+  search.placeholder = searchLabel();
   let loaded: T | undefined;
   let loading = false;
   let failed = false;
@@ -313,6 +314,7 @@ function tab<T>(
   element.tabIndex = -1;
   const paint = () => {
     element.setAttribute("aria-label", t(names[cls]));
+    clear.disabled = !search.value;
     const returning = document.activeElement === retry;
     if (loaded !== undefined) content.replaceChildren(...draw(loaded, search.value.trim().toLocaleLowerCase(locale())));
     element.setAttribute("aria-busy", String(loading));
@@ -341,17 +343,26 @@ function tab<T>(
     void saved.catch(() => {});
   };
   search.addEventListener("input", change);
-  const clear = el("button", { class: "btn", text: t("Clear filters"), onclick: () => {
+  const clearSearch = () => {
+    if (!search.value) return;
     search.value = "";
     change();
     search.focus();
-  } });
+  };
+  const clear = el("button", { class: "btn", text: t("Clear filters"), onclick: clearSearch });
+  clear.disabled = true;
+  search.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || event.isComposing || event.keyCode === 229 || !search.value) return;
+    event.preventDefault();
+    event.stopPropagation();
+    clearSearch();
+  });
   if (searchable) element.append(el("div", { class: "records-search" }, search, clear));
   element.append(status, content);
   let asked = 0;
   const refresh = () => {
-    search.setAttribute("aria-label", t("Search records"));
-    search.placeholder = t("Search records");
+    search.setAttribute("aria-label", searchLabel());
+    search.placeholder = searchLabel();
     clear.textContent = t("Clear filters");
     const mine = ++asked;
     loading = true;

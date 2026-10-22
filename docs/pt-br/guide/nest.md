@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: de0b46f8e3c4 -->
+<!-- source: 6e110a5a59a7 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -196,6 +196,9 @@ aba Chat.
 
 ## Activity
 
+**Histórico** usa **Buscar turnos**; **Auditoria** usa **Buscar respostas e comandos**, conforme os
+registros de cada tela. **Limpar filtros** fica disponível quando existe uma busca. Pressione **Esc**
+numa busca preenchida para limpá-la e manter o foco ali; a composição de texto mantém sua tecla Escape.
 Histórico e Auditoria mantêm suas buscas separadamente até você sair do Vults.
 Voltar para Mini ou Quick aguarda o salvamento das buscas pendentes; reabrir o Nest
 restaura os filtros. **Limpar filtros** limpa apenas a busca daquela subseção.
