@@ -70,7 +70,7 @@ export interface ConnectionsActions {
 }
 
 /** Each merge asked for, by connector and row. A merged row stays so until the poll takes it. */
-type Merge = { state: "running" } | { state: "merged" } | { state: "refused"; error: string };
+type Merge = { state: "running" } | { state: "merged" | "queued" | "pending" } | { state: "refused"; error: string };
 const merges = new Map<string, Merge>();
 /** The row whose merge is being confirmed: kept across the card's rebuilds (a poll, a ✓). */
 let asking: string | null = null;
@@ -81,8 +81,8 @@ export function mergeStarted(connector: string, item: string): void {
 }
 
 /** A merge ended: a refusal stays on the row; a merged row leaves with the next poll. */
-export function mergeEnded(connector: string, item: string, error: string | null): void {
-  merges.set(mergeKey(connector, item), error ? { state: "refused", error } : { state: "merged" });
+export function mergeEnded(connector: string, item: string, error: string | null, status?: string): void {
+  merges.set(mergeKey(connector, item), error ? { state: "refused", error } : { state: status === "queued" ? "queued" : status === "accepted_pending_verification" ? "pending" : "merged" });
 }
 
 /** Changes whenever a merge starts or ends, for the card's rebuild check. */
@@ -159,10 +159,10 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
     );
     body.title = r.title;
     const line = el("div", { class: "qconn-row" }, body);
-    const merging = r.merge && on.merge ? merges.get(mergeKey(board.connector, r.item)) : undefined;
+    const merging = on.merge ? merges.get(mergeKey(board.connector, r.item)) : undefined;
     // Run once the row is whole: the confirm goes under everything else on it.
     let reopen: (() => void) | null = null;
-    if (r.merge && on.merge) {
+    if ((r.merge || merging?.state === "queued" || merging?.state === "pending") && on.merge) {
       const go = on.merge;
       const k = mergeKey(board.connector, r.item);
       // Two clicks: the first only asks, under the row, what the second will do on GitHub.
@@ -187,13 +187,13 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
             act.focus();
           },
         });
-        const ask = el("div", { class: "qconn-confirm" }, el("span", { text: t("Squash {name} into its base branch and delete its branch on GitHub?", { name: r.name }) }), no, yes);
+        const ask = el("div", { class: "qconn-confirm" }, el("span", { text: t("Squash {name} into its base branch or its required merge queue? This action does not request branch deletion.", { name: r.name }) }), no, yes);
         line.append(ask);
         if (focus) yes.focus();
       };
-      const label = merging?.state === "running" ? t("Merging…") : merging?.state === "merged" ? t("Merged") : t("Squash and merge");
+      const label = merging?.state === "running" ? t("Merging…") : merging?.state === "merged" ? t("Merged") : merging?.state === "queued" ? t("In merge queue") : merging?.state === "pending" ? t("Merge pending") : t("Squash and merge");
       const act = el("button", { class: "qconn-act", text: label, onclick: () => confirm(true) });
-      act.disabled = merging?.state === "running" || merging?.state === "merged";
+      act.disabled = merging?.state === "running" || merging?.state === "merged" || merging?.state === "queued" || merging?.state === "pending";
       line.append(act);
       if (asking === k && !act.disabled) reopen = () => confirm(false);
     } else if (end) line.append(el("span", { class: `qconn-tag ${end.kind}`, text: end.text }));

@@ -70,7 +70,12 @@ pub(crate) async fn turn(
                         event: crate::activity::Event::Start {
                             id: c.id.clone(),
                             tool: c.name.clone(),
-                            detail: c.arguments.clone(),
+                            detail: tools::activity_detail(
+                                tools,
+                                &c.name,
+                                &serde_json::from_str::<Value>(&c.arguments)
+                                    .unwrap_or_else(|_| Value::String(c.arguments.clone())),
+                            ),
                         },
                     })
                     .await;
@@ -83,7 +88,16 @@ pub(crate) async fn turn(
                 // Arguments that don't read as JSON: the tool is not run with ones it wasn't sent.
                 let (text, error) = match serde_json::from_str::<Value>(args) {
                     Ok(input) => {
-                        let (text, error) = tools::run(tools, &c.name, &input).await;
+                        let (text, error) = tools::run_with_approval(
+                            tools,
+                            &c.name,
+                            &c.id,
+                            &input,
+                            kit.approver,
+                            outside,
+                            out,
+                        )
+                        .await;
                         if !error && tools::outside(tools, &c.name) {
                             crate::taint(outside, c.name.clone());
                         }
@@ -526,6 +540,7 @@ mod tests {
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -568,6 +583,7 @@ mod tests {
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -605,6 +621,7 @@ mod tests {
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -659,6 +676,7 @@ mod tests {
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -768,6 +786,7 @@ mod tests {
                     tools: &Vec::new(),
                     outside: &Default::default(),
                     frozen: Some("# Your memory"),
+                    approver: &crate::TestApprover,
                 },
                 &tx,
             )
@@ -814,6 +833,7 @@ mod tests {
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -891,6 +911,7 @@ mod tests {
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -929,6 +950,7 @@ mod tests {
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )

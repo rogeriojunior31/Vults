@@ -88,6 +88,91 @@ pub struct Source {
 }
 
 impl crate::flock_tools::Source for Source {
+    fn github_merge_prepare(
+        &self,
+        action: vults_connectors::github::MergeControl,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_merge_prepare(action)
+    }
+    fn github_merge_execute(
+        &self,
+        action: vults_connectors::github::MergeControl,
+        preview: Value,
+        hash: String,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_merge_execute(action, preview, hash)
+    }
+    fn github_actions_prepare(
+        &self,
+        action: vults_connectors::github::ActionsControl,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_actions_prepare(action)
+    }
+    fn github_actions_execute(
+        &self,
+        action: vults_connectors::github::ActionsControl,
+        preview: Value,
+        hash: String,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_actions_execute(action, preview, hash)
+    }
+    fn github_pull_request_prepare(
+        &self,
+        action: vults_connectors::github::PullRequestWrite,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_pull_request_prepare(action)
+    }
+    fn github_pull_request_execute(
+        &self,
+        action: vults_connectors::github::PullRequestWrite,
+        preview: Value,
+        hash: String,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_pull_request_execute(action, preview, hash)
+    }
+    fn github_issue_write_prepare(
+        &self,
+        action: vults_connectors::github::IssueWrite,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_issue_write_prepare(action)
+    }
+    fn github_issue_write_execute(
+        &self,
+        action: vults_connectors::github::IssueWrite,
+        preview: Value,
+        request_hash: String,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source
+            .github_issue_write_execute(action, preview, request_hash)
+    }
+    fn github_snapshot_allowed(&self) -> bool {
+        self.source.github_snapshot_allowed()
+    }
+    fn github_work_item_allowed(&self) -> bool {
+        self.source.github_work_item_allowed()
+    }
+    fn github_work_item(
+        &self,
+        repository: String,
+        number: u32,
+        cursors: crate::flock_tools::GithubCursors,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_work_item(repository, number, cursors)
+    }
+    fn github_search_repositories(
+        &self,
+        query: String,
+        cursor: Option<String>,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_search_repositories(query, cursor)
+    }
+    fn github_read(
+        &self,
+        operation: String,
+        input: Value,
+    ) -> vults_agents::driver::BoxFuture<'static, Result<Value, String>> {
+        self.source.github_read(operation, input)
+    }
     fn view(&self) -> Option<Value> {
         self.source.view().map(|v| scoped(v, &self.targets))
     }

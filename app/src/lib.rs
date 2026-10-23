@@ -252,6 +252,9 @@ pub fn run() {
             runtime::board_open,
             runtime::board_merge,
             connectors::connectors_status,
+            connectors::connector_zeca_tools,
+            connectors::set_connector_zeca_snapshot,
+            connectors::set_connector_zeca_work_item,
             connectors::connector_enable,
             connectors::connectors_refresh,
             connectors::github_calendar,
@@ -987,7 +990,10 @@ mod tests {
         });
         let place: super::ConnectionsPlace = serde_json::from_value(input.clone()).unwrap();
         place.validate().unwrap();
-        assert_eq!(serde_json::to_value(&place).unwrap(), input);
+        assert!(!place.zeca);
+        let mut expected = input;
+        expected["zeca"] = serde_json::json!(false);
+        assert_eq!(serde_json::to_value(&place).unwrap(), expected);
         let mut invalid = place;
         invalid.tab = Some("merge".into());
         assert!(invalid.validate().is_err());
@@ -1641,6 +1647,8 @@ struct ConnectionsPlace {
     repo: Option<String>,
     tab: Option<String>,
     detail_open: bool,
+    #[serde(default)]
+    zeca: bool,
 }
 
 impl ConnectionsPlace {

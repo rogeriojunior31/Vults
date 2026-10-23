@@ -27,6 +27,9 @@ pub struct Provider {
     pub wire: Wire,
     /// Runs on this machine: no key, and nothing leaves it.
     pub local: bool,
+    /// This endpoint accepts the tool-call contract used by the API chat.
+    #[serde(skip)]
+    pub supports_tools: bool,
     /// How its keys start, as a hint in the key field (and a check for Anthropic's).
     pub key_hint: &'static str,
     /// Used until the user picks one from the live list.
@@ -109,6 +112,7 @@ const fn cloud(
         base_url,
         wire,
         local: false,
+        supports_tools: true,
         key_hint,
         default_model,
     }
@@ -121,6 +125,7 @@ const fn local(id: &'static str, label: &'static str, base_url: &'static str) ->
         base_url,
         wire: Wire::OpenAi,
         local: true,
+        supports_tools: false,
         key_hint: "",
         default_model: "",
     }
@@ -264,6 +269,12 @@ mod tests {
             }
         }
         assert_eq!(find("ollama").unwrap().host(), "127.0.0.1:11434");
+    }
+
+    #[test]
+    fn tool_support_is_explicit_and_local_model_support_is_not_assumed() {
+        assert!(PROVIDERS.iter().filter(|p| !p.local).all(|p| p.supports_tools));
+        assert!(PROVIDERS.iter().filter(|p| p.local).all(|p| !p.supports_tools));
     }
 
     #[test]

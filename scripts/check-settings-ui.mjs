@@ -104,7 +104,8 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "spendToday": budgetReads++; return { usd: 1, tokens: 100, budget: 2, subscription: true };
       case "budgetSet": writes.push([name, ...args]); return new Promise((resolve, reject) => pendingBudgets.push({ resolve, reject }));
       case "nestIsFull": return false;
-      case "monitors": case "connectorsStatus": case "rulesList": case "policiesList": case "agentsDoctor": return [];
+      case "monitors": case "rulesList": case "policiesList": case "agentsDoctor": return [];
+      case "connectorsStatus": return [{ id: "github", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "maintainer", host: "github.com" }];
       case "projectPrefs": return {};
       case "installStatus": return { installed: false, hookReady: true, statusLine: "ours", configPath: "/home/example/agent.json" };
       case "apiProviders": return { selected: "example", providers: [{ id: "example", label: "Example", local: false, hasKey: false }] };
@@ -192,6 +193,8 @@ for (const label of ["Dictation", "Approvals", "Projects", "Connectors", "Phone"
   assert.equal(page().querySelectorAll("h1").length, 1, `${label} keeps one page heading`);
   assert.ok(page().querySelector(".settings-heading"));
 }
+await go("Connectors");
+assert.ok(page().textContent.includes("Last successful GitHub CLI account: maintainer on github.com."), "GitHub settings identify the last successful account and host from the connector poll");
 assert.deepEqual(writes, []);
 console.log("check-settings-ui: all eleven pages, single headings, disclosed diagnostics/shortcuts, retained scroll/focus/draft, Activity routing and explicit history confirmation");
 

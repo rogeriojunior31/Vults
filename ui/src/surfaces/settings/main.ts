@@ -809,6 +809,7 @@ function connectorsPage(): HTMLElement[] {
           ),
         ),
         el("p", { class: "row-about", text: t(c.about) }),
+        c.id === "github" && st?.account && st.host ? el("p", { class: "note", text: t("Last successful GitHub CLI account: {account} on {host}.", { account: st.account, host: st.host }) }) : null,
         st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: t("Last checked {when}.", { when: ago(st.lastOk) }) }) : null,
         st?.enabled && st.error ? el("p", { class: "note error", text: st.error }) : null,
         st?.enabled && st.overBudget

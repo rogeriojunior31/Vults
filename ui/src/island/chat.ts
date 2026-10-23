@@ -20,6 +20,24 @@ import { copyTextButton } from "../clipboard";
 import { locale, t, tk } from "../i18n";
 import { usageLabel, usageLevel, usageWindowName } from "../cost";
 
+const GITHUB_CONTROL_EFFECT: Record<string, string> = {
+  "github_pull_request_merge": tk("Merge the exact commit below using the selected method and all branch rules. A required merge queue is not a completed merge. Keep the branch."),
+  "github_pull_request_delete_branch": tk("Delete only the unchanged branch of the merged pull request below. This is a separate action from merging."),
+  "github_actions_rerun_failed": tk("Rerun all failed jobs and their dependent jobs for the exact attempt and commit below. This may consume Actions minutes."),
+  "github_actions_rerun_run": tk("Rerun the entire workflow, including jobs that already passed, for the exact attempt and commit below. This may consume Actions minutes."),
+  "github_actions_rerun_job": tk("Rerun the selected failed job and its dependent jobs for the exact attempt and commit below. This may consume Actions minutes."),
+  "github_actions_cancel": tk("Request cancellation of the exact active run attempt and commit below. Acceptance does not mean cancellation has completed."),
+
+  "github_pull_request_create": tk("Create the pull request shown below. Check its draft choice, branches and commits before allowing."),
+  "github_pull_request_edit": tk("Change the pull request fields shown below. The current refs and commits will be checked again."),
+  "github_pull_request_ready": tk("Mark this draft ready for review. GitHub may request reviews from code owners."),
+  "github_pull_request_draft": tk("Convert this pull request to a draft. It cannot be merged until it is marked ready again."),
+  "github_pull_request_request_reviewers": tk("Request reviews from the exact people and teams shown below. GitHub will notify them."),
+  "github_pull_request_review_comment": tk("Publish this comment review and its inline comments on the exact commit shown below."),
+  "github_pull_request_review_approve": tk("Publish this approval review and its inline comments on the exact commit shown below."),
+  "github_pull_request_review_request_changes": tk("Publish this request for changes and its inline comments on the exact commit shown below."),
+};
+
 export interface ChatBackend {
   draft?: () => Promise<ChatDraft>;
   prepareZeca?: (generation?: number) => Promise<void>;
@@ -1893,6 +1911,8 @@ export class ChatPanel {
       deny: t("Denied"),
       always: t("Allowed for this conversation"),
     };
+    const githubChange = this.provider === "api" && !this.opts.specialist && Object.hasOwn(GITHUB_CONTROL_EFFECT, m.tool);
+    const description = githubChange ? t(GITHUB_CONTROL_EFFECT[m.tool]) : m.description;
     const operation = el("pre", { class: "code", text: m.full ? `${m.tool} · ${m.full}` : m.target });
     operation.tabIndex = 0;
     operation.setAttribute("role", "region");
@@ -1909,8 +1929,8 @@ export class ChatPanel {
         ),
         diff,
       ),
-      el("div", { class: "ask-context" }, el("span", { text: t("Folder") }),
-        el("code", { text: this.folder ?? t("An empty folder") })),
+      el("div", { class: "ask-context" }, el("span", { text: githubChange ? t("Repository") : t("Folder") }),
+        el("code", { text: githubChange ? m.target.split(" · ")[0] : this.folder ?? t("An empty folder") })),
       ...(m.outside
         ? [
             el("div", {
@@ -1919,8 +1939,8 @@ export class ChatPanel {
             }),
           ]
         : []),
-      ...(m.description
-        ? [el("div", { class: "ask-what", text: m.description })]
+      ...(description
+        ? [el("div", { class: "ask-what", text: description })]
         : []),
       operation,
       m.answer

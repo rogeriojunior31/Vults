@@ -291,7 +291,7 @@ async fn run_with_audio(
     };
     let source: Arc<dyn crate::flock_tools::Source> = Arc::new(app.clone());
     #[allow(unused_mut)]
-    let mut tools = crate::flock_tools::all(source);
+    let mut tools = crate::flock_tools::realtime(source);
     #[cfg(target_os = "linux")]
     consultation::offer(
         app.clone(),
@@ -488,7 +488,7 @@ mod tests {
                 serde_json::json!([])
             }
         }
-        let tools = crate::flock_tools::all(Arc::new(Cached));
+        let tools = crate::flock_tools::realtime(Arc::new(Cached));
         let plan = Plan::new("gpt-realtime-2.1-mini", 8192, 1024)
             .unwrap()
             .with_tools(tools)

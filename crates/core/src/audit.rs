@@ -45,6 +45,8 @@ pub enum Act {
     /// An agent's config or plugin written by the installer.
     ConfigInstall,
     ConfigRemove,
+    /// A Zeca chat write to an external connector, including its outcome.
+    ExternalWrite,
     /// The user cleared the log: the first line after the gap, so the gap shows.
     AuditCleared,
 }
@@ -74,6 +76,7 @@ impl Act {
             Self::Expire => "expire",
             Self::ConfigInstall => "config-install",
             Self::ConfigRemove => "config-remove",
+            Self::ExternalWrite => "external-write",
             Self::AuditCleared => "audit-cleared",
         }
     }
@@ -129,7 +132,12 @@ mod tests {
 
     #[test]
     fn an_acts_name_is_its_wire_name() {
-        for act in [Act::AlwaysAllow, Act::AllowInConversation, Act::AuditCleared] {
+        for act in [
+            Act::AlwaysAllow,
+            Act::AllowInConversation,
+            Act::AuditCleared,
+            Act::ExternalWrite,
+        ] {
             assert_eq!(serde_json::to_value(act).unwrap(), act.name());
         }
     }

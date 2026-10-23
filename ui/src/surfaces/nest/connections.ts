@@ -4,7 +4,7 @@ import { sidePanel } from "./panels";
 // Refresh), its tabs (Inbox, Pull requests, Actions, Releases), its rows, and the row picked in
 // detail beside them: its facts, each check, a command to copy. Only connectors that exist are
 // offered (ADR 0011), and only what each row holds is shown; turning one on stays in Settings.
-import type { BoardView, ConnectorStatus, ConnectionsPlace } from "../../bridge";
+import type { BoardView, ConnectorStatus, ConnectionsPlace, ConnectorZecaTools } from "../../bridge";
 import { CONNECTORS } from "../../connectors";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
@@ -16,6 +16,10 @@ import { icon } from "../../island/icons";
 import type { CheckState, RowView, Said, ViewModel } from "../../view.gen";
 
 export interface ConnectionsActions {
+  zecaTools?: () => Promise<ConnectorZecaTools>;
+  setSnapshot?: (on: boolean) => Promise<void>;
+  setWorkItem?: (on: boolean) => Promise<void>;
+  traces?: () => void;
   loadPlace?: () => Promise<ConnectionsPlace | null>;
   savePlace?: (place: ConnectionsPlace) => Promise<void>;
   open: (connector: string, item: string) => void;
@@ -28,7 +32,7 @@ export interface ConnectionsActions {
    *  app did not take it. */
   merge: (connector: string, item: string) => Promise<void>;
   /** How each merge went, from the app. */
-  onMerged: (cb: (m: { connector: string; item: string; error: string | null }) => void) => void;
+  onMerged: (cb: (m: { connector: string; item: string; error: string | null; status?: string }) => void) => void;
 }
 
 /** What the tab adds for itself: the Chat with a question in its composer, only with Zeca on. */
@@ -126,6 +130,17 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   search.type = "search";
   const searchKey = "vults.connections-query";
   try { search.value = localStorage.getItem(searchKey) ?? ""; } catch { /* Filtering remains local without storage. */ }
+  let zecaFace = false;
+  let tools: ConnectorZecaTools | null = null;
+  let toolsReading = false;
+  let toolsFailed = false;
+  let snapshotSaving = false;
+  let snapshotChoice: boolean | null = null;
+  let snapshotFailed = false;
+  let workItemSaving = false;
+  let workItemChoice: boolean | null = null;
+  let workItemFailed = false;
+  let toolsAsked = 0;
   let view: ViewModel | null = null;
   let status = new Map<string, ConnectorStatus>();
   /** The status answered once: until then nothing is offered, so an enabled connector that has
@@ -145,7 +160,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   let restored = !actions.loadPlace;
   let saved: Promise<void> = Promise.resolve();
   const remember = () => {
-    const place = { chosen, picked, repo, tab, detailOpen };
+    const place = { chosen, picked, repo, tab, detailOpen, ...(zecaFace ? { zeca: true } : {}) };
     saved = saved.catch(() => {}).then(() => actions.savePlace?.(place));
     void saved.catch(() => {});
   };
@@ -157,12 +172,12 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   const checkDisclosures = new Map<string, HTMLDetailsElement>();
   /** The row whose merge is being confirmed, and how each merge asked for here went. */
   let asking: string | null = null;
-  const merges = new Map<string, { state: "running" | "merged" } | { state: "refused"; error: string }>();
+  const merges = new Map<string, { state: "running" | "merged" | "queued" | "pending" } | { state: "refused"; error: string }>();
   actions.onMerged((m) => {
-    merges.set(`${m.connector}\n${m.item}`, m.error ? { state: "refused", error: m.error } : { state: "merged" });
+    merges.set(`${m.connector}\n${m.item}`, m.error ? { state: "refused", error: m.error } : { state: m.status === "queued" ? "queued" : m.status === "accepted_pending_verification" ? "pending" : "merged" });
     draw();
   });
-  const busy = (m: ReturnType<typeof merges.get>) => m?.state === "running" || m?.state === "merged";
+  const busy = (m: ReturnType<typeof merges.get>) => m?.state === "running" || m?.state === "merged" || m?.state === "queued" || m?.state === "pending";
   // A row marked seen on the island dims here too.
   onSeen(() => draw());
   const name = (id: string) => CONNECTORS.find((c) => c.id === id)?.name ?? id;
@@ -242,8 +257,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     const q = ask ? question(r) : null;
     // The prototype's actions: the row's own (merge, a question for Zeca), the way to it, and ✓.
     const acts: HTMLElement[] = [];
-    if (r.merge) {
-      const label = merging?.state === "running" ? t("Merging…") : merging?.state === "merged" ? t("Merged") : t("Squash and merge");
+    if (r.merge || merging?.state === "queued" || merging?.state === "pending") {
+      const label = merging?.state === "running" ? t("Merging…") : merging?.state === "merged" ? t("Merged") : merging?.state === "queued" ? t("In merge queue") : merging?.state === "pending" ? t("Merge pending") : t("Squash and merge");
       const go = fid(el("button", { class: asking === k ? "outline" : "primary", text: label, onclick: () => ((asking = k), draw()) }), "act:merge");
       go.disabled = busy(merging);
       acts.push(go);
@@ -266,7 +281,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         ? el(
             "div",
             { class: "conn-confirm" },
-            el("span", { text: t("Squash {name} into its base branch and delete its branch on GitHub?", { name: r.name }) }),
+            el("span", { text: t("Squash {name} into its base branch or its required merge queue? This action does not request branch deletion.", { name: r.name }) }),
             fid(el("button", { class: "outline", text: t("Cancel"), onclick: () => ((asking = null), draw()) }), "act:merge-cancel"),
             fid(
               el("button", {
@@ -362,6 +377,78 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     panel.setAttribute("aria-label", r.title);
     panel.setAttribute("role", "region");
     return panel;
+  };
+
+  const readTools = () => {
+    if (!actions.zecaTools || toolsReading || snapshotSaving || workItemSaving) return;
+    const mine = ++toolsAsked;
+    toolsReading = true;
+    void actions.zecaTools().then(next => {
+      if (mine === toolsAsked) { tools = next; toolsFailed = false; }
+    }, () => { if (mine === toolsAsked) toolsFailed = true; }).finally(() => {
+      if (mine === toolsAsked) toolsReading = false;
+      draw();
+    });
+    draw();
+  };
+  const toolView = (enabled: boolean): HTMLElement[] => {
+    const retry = () => fid(el("button", { class: "outline", text: t("Try again"), onclick: readTools }), "act:tools-retry");
+    const failure = toolsFailed ? viewState("error", t("Could not load Zeca's GitHub tools."), tools ? t("The last loaded view is kept and may be out of date.") : undefined, retry()) : null;
+    if (!tools) return [failure ?? viewState("loading", t("Reading GitHub tool settings…"))];
+    const control = fid(el("input", { class: "toggle" }), "act:snapshot");
+    control.type = "checkbox"; control.checked = snapshotChoice ?? tools.snapshot;
+    control.disabled = snapshotSaving || !actions.setSnapshot;
+    control.setAttribute("aria-label", t("Let Zeca read the GitHub snapshot"));
+    control.setAttribute("aria-busy", String(snapshotSaving));
+    control.addEventListener("change", () => {
+      if (snapshotSaving || !actions.setSnapshot || !tools) { control.checked = snapshotChoice ?? tools?.snapshot ?? false; return; }
+      const next = control.checked;
+      snapshotChoice = next;
+      ++toolsAsked; toolsReading = false; snapshotSaving = true; snapshotFailed = false;
+      void actions.setSnapshot(next).then(() => { if (tools) tools.snapshot = next; }, () => { snapshotFailed = true; }).finally(() => { snapshotSaving = false; snapshotChoice = null; draw(); });
+      draw();
+    });
+    const feedback = el("p", { class: `conn-tool-feedback${snapshotFailed ? " error" : ""}`, text: snapshotSaving ? t("Saving…") : snapshotFailed ? t("Could not save. Your previous choice is restored. Try again.") : "" });
+    feedback.setAttribute("role", snapshotFailed ? "alert" : "status");
+    const row = (name: string, about: string, state: string, action?: HTMLElement, stats?: string) => el("article", { class: "conn-zeca-tool" },
+      el("div", { class: "conn-tool-copy" }, el("div", { class: "conn-tool-title" }, el("code", { text: name }), el("span", { class: "conn-tag", text: state })),
+        el("p", { text: about }), stats ? el("small", { text: stats }) : null),
+      action ? el("div", { class: "conn-tool-actions" }, action) : null);
+    const last = tools.lastUsed == null ? t("Never recorded") : ago(tools.lastUsed / 1000, Date.now() / 1000);
+    const snapshot = row("github_snapshot", t("Reads pull requests, checks and review requests from the last sync. No new GitHub request."), t("Reads"), control,
+      t("Recorded calls in the last 24 hours: {n}. Last recorded use: {when}.", { n: tools.calls, when: last }));
+    snapshot.append(feedback);
+    const workItemControl = fid(el("input", { class: "toggle" }), "act:work-item");
+    workItemControl.type = "checkbox";
+    workItemControl.checked = workItemChoice ?? tools.workItem;
+    workItemControl.disabled = workItemSaving || !actions.setWorkItem;
+    workItemControl.setAttribute("aria-label", t("Let Zeca use GitHub tools with approval for changes"));
+    workItemControl.setAttribute("aria-busy", String(workItemSaving));
+    workItemControl.addEventListener("change", () => {
+      if (workItemSaving || !actions.setWorkItem || !tools) { workItemControl.checked = workItemChoice ?? tools?.workItem ?? false; return; }
+      const next = workItemControl.checked;
+      workItemChoice = next;
+      ++toolsAsked; toolsReading = false; workItemSaving = true; workItemFailed = false;
+      void actions.setWorkItem(next).then(() => { if (tools) tools.workItem = next; }, () => { workItemFailed = true; }).finally(() => { workItemSaving = false; workItemChoice = null; draw(); });
+      draw();
+    });
+    const workItemFeedback = el("p", { class: `conn-tool-feedback${workItemFailed ? " error" : ""}`, text: workItemSaving ? t("Saving…") : workItemFailed ? t("Could not save. Your previous choice is restored. Try again.") : "" });
+    workItemFeedback.setAttribute("role", workItemFailed ? "alert" : "status");
+    const workItemLast = tools.liveReadLastUsed == null ? t("Never recorded") : ago(tools.liveReadLastUsed / 1000, Date.now() / 1000);
+    const workItem = row("github_work_item", t("Read repositories, issues, pull requests, checks and Actions through your GitHub connection. Issue, pull request and Actions changes always show an approval card and are checked again before they run."), t("Reads and approved changes"), workItemControl,
+      t("Recorded calls in the last 24 hours: {n}. Last recorded use: {when}.", { n: tools.liveReadCalls, when: workItemLast }));
+    workItem.append(workItemFeedback);
+    return [
+      ...(failure ? [failure] : []),
+      el("p", { class: "conn-tool-intro", text: t("Control Zeca's GitHub tools in supported API chats. The cached snapshot is also available in realtime voice. CLI command access is managed separately in Chat.") }),
+      ...(!enabled ? [el("p", { class: "conn-status", text: t("GitHub is off. Turn on the connector in Settings to receive snapshots.") })] : []),
+      ...(!actions.zeca() ? [el("p", { class: "conn-status", text: t("Zeca is off. Your tool choice is kept for when he is turned on.") })] : []),
+      snapshot,
+      workItem,
+      row("github_pull_request_merge", t("Proposes a merge of the exact commit after checking reviews, checks and branch rules. Every merge needs its own approval. Branch deletion is separate."), t("Reads and approved changes")),
+      el("div", { class: "conn-tool-footer" }, el("p", { text: t("Cached reads use no network budget. Live GitHub tools and connector polling share a limit of {n} per 24 hours.", { n: tools.budget }) }),
+        fid(el("button", { class: "outline", text: t("Open traces"), onclick: () => actions.traces?.() }), "act:tool-traces")),
+    ];
   };
 
   const draw = (resetList = false) => {
@@ -596,6 +683,26 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         })(),
       ];
     }
+    const faces = el("div", { class: "nest-subs conn-faces" }, ...[false, true].map(zeca => {
+      const button = fid(el("button", { class: `nest-sub${zecaFace === zeca ? " on" : ""}`, text: zeca ? t("For Zeca") : t("For you"), onclick: () => {
+        zecaFace = zeca; asking = null; remember();
+        if (zeca) readTools();
+        draw();
+      } }), zeca ? "face:zeca" : "face:you");
+      button.setAttribute("aria-pressed", String(zecaFace === zeca));
+      return button;
+    }));
+    faces.setAttribute("role", "group");
+    faces.setAttribute("aria-label", t("Connection audience"));
+    if (actions.zecaTools) {
+      const split = body.findIndex(node => node.classList.contains("conn-tabs"));
+      if (split >= 0) {
+        body.splice(split, 0, faces);
+        if (zecaFace) body.splice(split + 1, body.length, ...toolView(isOn("github")));
+      } else if (known) {
+        body = [el("header", { class: "activity-heading conn-head" }, el("h2", { text: t("Connections") }), fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), "act:manage")), faces, ...(zecaFace ? toolView(isOn("github")) : [])];
+      }
+    }
     const statusWarning = statusFailed ? viewState("error", t("Connection status could not load. Try again."), undefined,
       fid(el("button", { class: "outline", text: t("Try again"), onclick: readStatus }), "act:status-retry")) : null;
     statusWarning?.setAttribute("role", "alert");
@@ -604,7 +711,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       ...(!board && refreshError ? [viewState("error", t("Connections could not update. Try again."))] : []),
       ...(chips ? [chips] : []),
       ...body,
-      ...pending.map(c => el("section", { class: "conn-waiting" },
+      ...(zecaFace ? [] : pending).map(c => el("section", { class: "conn-waiting" },
         el("h3", { text: c.name }),
         el("p", { text: t("{name} is on; its card shows after its first check.", { name: c.name }) }),
         status.get(c.id)?.error ? el("p", { class: "conn-refused", text: status.get(c.id)!.error! })
@@ -612,7 +719,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         el("div", { class: "conn-actions" },
           fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),
           fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), `manage:${c.id}`)))),
-      ...(add ? [add] : []),
+      ...(!zecaFace && add ? [add] : []),
       ...(!board && !add && !pending.length && !statusFailed ? [viewState("loading", t("Checking connections…"))] : []),
     );
     element.setAttribute("aria-busy", String(refreshing));
@@ -637,7 +744,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   element.addEventListener("keydown", e => {
     if (e.key !== "Escape" || e.isComposing || e.keyCode === 229 || e.defaultPrevented) return;
     if (asking) { asking = null; draw(); element.querySelector<HTMLElement>('[data-fid="act:merge"]')?.focus(); }
-    else if (detailOpen && window.innerWidth < 900) {
+    else if (!zecaFace && detailOpen && window.innerWidth < 900) {
       detailOpen = false; remember(); draw();
       element.querySelector<HTMLElement>(`[data-fid="row:${CSS.escape(picked ?? "")}"]`)?.focus();
     } else if (e.target === search && search.value) { search.value = ""; rememberQuery(); draw(true); search.focus(); }
@@ -647,9 +754,10 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   // CSS and the list/detail DOM must switch at the same breakpoint.
   matchMedia("(min-width: 900px)").addEventListener("change", () => draw());
   void actions.loadPlace?.().then((place) => {
-    if (!restored && place) ({ chosen, picked, repo, tab, detailOpen } = place);
+    if (!restored && place) { ({ chosen, picked, repo, tab, detailOpen } = place); zecaFace = place.zeca ?? false; }
   }, () => {}).then(() => {
     restored = true;
+    if (zecaFace) readTools();
     draw();
     if (detailOpen && element.offsetParent !== null) {
       (element.querySelector<HTMLElement>(".conn-back") ?? element.querySelector<HTMLElement>(".conn-row.on"))?.focus();
@@ -692,6 +800,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     element,
     select: (connector, item) => {
       restored = true;
+      zecaFace = false;
       chosen = connector; picked = item; repo = null; tab = "inbox";
       search.value = ""; detailOpen = true; focusDetail = true; asking = null;
       rememberQuery();
@@ -712,6 +821,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       return saved;
     },
     refresh: () => {
+      if (zecaFace) readTools();
       draw();
       readStatus();
     },

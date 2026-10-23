@@ -1,12 +1,18 @@
-//! Tools for the API chat's loop (`docs/dev/plan-zeca.md` Z6): the model calls one, the harness
-//! runs it and hands the result back, up to [`MAX_STEPS`] times a turn. A tool here only reads:
-//! anything with an effect goes through `core::policy` and the ledger in `app`, never through this
-//! loop. Z7's web tools and Z9's flock tools implement [`Tool`].
+//! The API chat tool loop. Reads run directly; writes prepare an exact request for the
+//! application's human approver before execution. The loop admits at most [`MAX_STEPS`] calls.
 
 use std::sync::Arc;
 
 use serde_json::Value;
 use vults_agents::driver::BoxFuture;
+
+#[derive(Debug, Clone)]
+pub struct ToolApproval {
+    pub target: String,
+    pub description: String,
+    pub full: String,
+    pub context: Value,
+}
 
 /// Model calls in one turn: past this the turn ends, saying so.
 pub const MAX_STEPS: usize = 8;
@@ -27,6 +33,18 @@ pub trait Tool: Send + Sync + std::fmt::Debug {
     /// The input's JSON Schema.
     fn schema(&self) -> Value;
     fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>>;
+    /// Prepare a write for a human card. Read tools leave this unset.
+    fn approval<'a>(&'a self, _input: &'a Value) -> Option<BoxFuture<'a, Result<ToolApproval, String>>> {
+        None
+    }
+    /// Execute only after the exact prepared input was allowed on its human card.
+    fn call_approved<'a>(
+        &'a self,
+        input: &'a Value,
+        _context: &'a Value,
+    ) -> BoxFuture<'a, Result<String, String>> {
+        self.call(input)
+    }
     /// Realtime reads are short; a bounded text consultation may explicitly need longer.
     fn realtime_timeout(&self) -> std::time::Duration {
         std::time::Duration::from_secs(10)
@@ -35,6 +53,21 @@ pub trait Tool: Send + Sync + std::fmt::Debug {
     /// conversation, so a later card says so (Z8).
     fn reads_outside(&self) -> bool {
         false
+    }
+    /// Labels the source of this call in the persisted Activity detail.
+    fn activity_mode(&self) -> Option<&'static str> {
+        None
+    }
+}
+
+pub(crate) fn activity_detail(tools: &Tools, name: &str, input: &Value) -> String {
+    match tools
+        .iter()
+        .find(|tool| tool.name() == name)
+        .and_then(|tool| tool.activity_mode())
+    {
+        Some(mode) => serde_json::json!({"readMode":mode,"input":input}).to_string(),
+        None => input.to_string(),
     }
 }
 
@@ -53,6 +86,7 @@ pub(crate) struct Kit<'a> {
     pub tools: &'a Tools,
     pub outside: &'a std::sync::Mutex<Option<String>>,
     pub frozen: Option<&'a str>,
+    pub approver: &'a dyn super::Approver,
 }
 
 impl Kit<'_> {
@@ -66,6 +100,62 @@ impl Kit<'_> {
             },
             self.frozen,
         )
+    }
+}
+
+pub(crate) async fn run_with_approval(
+    tools: &Tools,
+    name: &str,
+    _id: &str,
+    input: &Value,
+    approver: &dyn super::Approver,
+    outside: &std::sync::Mutex<Option<String>>,
+    out: &tokio::sync::mpsc::Sender<super::Delta>,
+) -> (String, bool) {
+    let Some(tool) = tools.iter().find(|tool| tool.name() == name) else {
+        return (format!("There is no tool named {name}."), true);
+    };
+    let Some(preparation) = tool.approval(input) else {
+        return run(tools, name, input).await;
+    };
+    let prepared = match preparation.await {
+        Ok(prepared) => prepared,
+        Err(error) => return (cut(error), true),
+    };
+    static NEXT_PERMISSION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let permission_id = format!(
+        "write-{}",
+        NEXT_PERMISSION.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    );
+    let answer = approver.wait(&permission_id, name, &prepared.target);
+    let detail = super::Detail {
+        description: Some(prepared.description),
+        full: Some(prepared.full),
+        always: false,
+        outside: outside.lock().ok().and_then(|value| value.clone()),
+        ..super::Detail::default()
+    };
+    if out
+        .send(super::Delta::Permission {
+            id: permission_id,
+            tool: name.to_owned(),
+            target: prepared.target,
+            detail,
+        })
+        .await
+        .is_err()
+    {
+        return (
+            "The approval card could not be displayed. No write was sent.".into(),
+            true,
+        );
+    }
+    match tokio::time::timeout(super::DECISION_TIMEOUT, answer).await {
+        Ok(Ok(super::Answer::Allow)) => match tool.call_approved(input, &prepared.context).await {
+            Ok(text) => (cut(text), false),
+            Err(error) => (cut(error), true),
+        },
+        _ => ("The user did not approve this GitHub write.".into(), true),
     }
 }
 
@@ -166,6 +256,106 @@ fn carries_results(m: &Value) -> bool {
 pub(crate) mod tests {
     use super::*;
     use serde_json::json;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[derive(Debug)]
+    struct ApprovedWrite(Arc<AtomicUsize>);
+    impl Tool for ApprovedWrite {
+        fn name(&self) -> &str {
+            "github_issue_close"
+        }
+        fn description(&self) -> &str {
+            "propose an issue close"
+        }
+        fn schema(&self) -> Value {
+            json!({"type":"object"})
+        }
+        fn call<'a>(&'a self, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+            Box::pin(async { Err("approval required".into()) })
+        }
+        fn approval<'a>(&'a self, _: &'a Value) -> Option<BoxFuture<'a, Result<ToolApproval, String>>> {
+            Some(Box::pin(async {
+                Ok(ToolApproval {
+                    target: "org/repo · issue #7".into(),
+                    description: "Review this exact write".into(),
+                    full: "close issue #7".into(),
+                    context: json!({"hash":"abc"}),
+                })
+            }))
+        }
+        fn call_approved<'a>(&'a self, _: &'a Value, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async { Ok("verified".into()) })
+        }
+    }
+
+    struct FixedAnswer(crate::Answer);
+    impl crate::Approver for FixedAnswer {
+        fn wait(&self, _: &str, _: &str, _: &str) -> tokio::sync::oneshot::Receiver<crate::Answer> {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            let _ = tx.send(self.0);
+            rx
+        }
+    }
+
+    #[tokio::test]
+    async fn approved_write_requires_one_explicit_allow_and_shows_exact_card() {
+        let mut seen = std::collections::HashSet::new();
+        for (answer, should_run) in [
+            (crate::Answer::Deny, false),
+            (crate::Answer::AllowInConversation, false),
+            (crate::Answer::Allow, true),
+        ] {
+            let calls = Arc::new(AtomicUsize::new(0));
+            let tools: Tools = vec![Arc::new(ApprovedWrite(calls.clone()))];
+            let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+            let result = run_with_approval(
+                &tools,
+                "github_issue_close",
+                "call-1",
+                &json!({"repository":"org/repo","number":7}),
+                &FixedAnswer(answer),
+                &std::sync::Mutex::new(None),
+                &tx,
+            )
+            .await;
+            let Some(crate::Delta::Permission {
+                id, detail, target, ..
+            }) = rx.recv().await
+            else {
+                panic!("approval card not sent")
+            };
+            assert!(
+                seen.insert(id),
+                "repeated model call IDs must never reuse a human card"
+            );
+            assert_eq!(target, "org/repo · issue #7");
+            assert_eq!(detail.full.as_deref(), Some("close issue #7"));
+            assert!(!detail.always);
+            assert_eq!(result.1, !should_run);
+            assert_eq!(calls.load(Ordering::SeqCst), usize::from(should_run));
+        }
+    }
+
+    #[tokio::test]
+    async fn a_write_cannot_run_when_its_card_cannot_be_displayed() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let tools: Tools = vec![Arc::new(ApprovedWrite(calls.clone()))];
+        let (tx, rx) = tokio::sync::mpsc::channel(1);
+        drop(rx);
+        let result = run_with_approval(
+            &tools,
+            "github_issue_close",
+            "same-id",
+            &json!({}),
+            &FixedAnswer(crate::Answer::Allow),
+            &std::sync::Mutex::new(None),
+            &tx,
+        )
+        .await;
+        assert!(result.1);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+    }
 
     /// A tool that echoes its input's `text`, for the loop's tests.
     #[derive(Debug)]
@@ -224,6 +414,39 @@ pub(crate) mod tests {
         assert!(run(&tools, "rm", &json!({})).await.1);
         let long = cut("x".repeat(MAX_RESULT + 10));
         assert!(long.len() < MAX_RESULT + 64 && long.ends_with("longer]"));
+    }
+
+    #[test]
+    fn activity_records_read_mode_only_for_tools_that_declare_one() {
+        #[derive(Debug)]
+        struct Snapshot;
+        impl Tool for Snapshot {
+            fn name(&self) -> &str {
+                "github_snapshot"
+            }
+            fn description(&self) -> &str {
+                "cached"
+            }
+            fn schema(&self) -> Value {
+                json!({"type":"object"})
+            }
+            fn call<'a>(&'a self, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+                Box::pin(async { Ok(String::new()) })
+            }
+            fn activity_mode(&self) -> Option<&'static str> {
+                Some("cached_snapshot")
+            }
+        }
+        let tools: Tools = vec![Arc::new(Snapshot), Arc::new(Echo)];
+        assert_eq!(
+            serde_json::from_str::<Value>(&activity_detail(&tools, "github_snapshot", &json!({"page":1})))
+                .unwrap(),
+            json!({"readMode":"cached_snapshot","input":{"page":1}})
+        );
+        assert_eq!(
+            activity_detail(&tools, "echo", &json!({"text":"x"})),
+            r#"{"text":"x"}"#
+        );
     }
 
     #[test]

@@ -125,7 +125,7 @@ pub(crate) async fn turn(
                             event: crate::activity::Event::Start {
                                 id: id.clone(),
                                 tool: name.clone(),
-                                detail: b["input"].to_string(),
+                                detail: tools::activity_detail(tools, &name, &b["input"]),
                             },
                         })
                         .await;
@@ -136,7 +136,8 @@ pub(crate) async fn turn(
                         b["input"] = json!({});
                         ("The arguments were not valid JSON.".to_string(), true)
                     } else {
-                        tools::run(tools, &name, &b["input"]).await
+                        tools::run_with_approval(tools, &name, &id, &b["input"], kit.approver, outside, out)
+                            .await
                     };
                     if !error && tools::outside(tools, &name) {
                         crate::taint(outside, name.clone());
@@ -692,6 +693,7 @@ mod tests {
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -720,6 +722,7 @@ mod tests {
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -774,6 +777,7 @@ mod tests {
                     tools: &Vec::new(),
                     outside: &Default::default(),
                     frozen: Some("# Your memory\n\n- Works on Vults."),
+                    approver: &crate::TestApprover,
                 },
                 &tx,
             )
@@ -819,6 +823,7 @@ mod tests {
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -876,6 +881,7 @@ mod tests {
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -905,6 +911,7 @@ mod tests {
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -945,6 +952,7 @@ mod tests {
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -995,6 +1003,7 @@ mod tests {
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )
@@ -1033,6 +1042,7 @@ mod tests {
                 tools: &tools,
                 outside: &outside,
                 frozen: None,
+                approver: &crate::TestApprover,
             },
             &tx,
         )

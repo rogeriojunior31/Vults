@@ -1131,3 +1131,23 @@ for (const specialist of [false, true]) {
   assert.ok(control.textContent.includes("Asks first"));
 }
 console.log("check-chat-models: direct companion/profile access increases and decreases, persist-before-display, duplicate guard and visible failure/retry without Settings redirects");
+
+// GitHub changes keep their existing card owner, with a remote scope and explicit effects.
+for (const surface of ["island", "nest"]) {
+  for (const [tool, effect] of [["github_pull_request_merge", "A required merge queue is not a completed merge"], ["github_pull_request_delete_branch", "This is a separate action from merging"], ["github_actions_rerun_failed", "failed jobs and their dependent jobs"], ["github_actions_rerun_run", "including jobs that already passed"], ["github_actions_rerun_job", "selected failed job and its dependent jobs"], ["github_actions_cancel", "Acceptance does not mean cancellation has completed"], ["github_pull_request_ready", "code owners"], ["github_pull_request_review_approve", "approval review"], ["github_pull_request_request_reviewers", "GitHub will notify them"]]) {
+    let writes = 0;
+    const chat = new ChatPanel({ models: async () => [], pick: async () => ({}), decide: () => { writes++; } }, () => {}, {window:surface});
+    await tick();
+    chat.load({...conversation,provider:"api",busy:true,lines:[]});
+    chat.receive({kind:"permission",id:tool,tool,target:"org/repo · PR #7",description:"Generic backend description",full:'{"head":"exact-commit","body":"Exact approved text"}',added:0,removed:0,always:false,outside:null});
+    const card=nodes(chat.element).find(n=>n.classList.contains("ask"));
+    assert.ok(card.textContent.includes("Repository"));assert.ok(card.textContent.includes("org/repo"));assert.ok(!card.textContent.includes("Folder"));
+    assert.ok(card.textContent.includes(effect));assert.ok(card.textContent.includes("Exact approved text"));assert.ok(!card.textContent.includes("Always in this chat"));assert.equal(writes,0);
+  }
+  const cli = new ChatPanel({models:async()=>[],pick:async()=>({})},()=>{},{window:surface});await tick();
+  cli.load({...conversation,provider:"claude",busy:true,lines:[]});
+  cli.receive({kind:"permission",id:"cli-same-name",tool:"github_pull_request_ready",target:"CLI target",description:"CLI supplied description",full:null,added:0,removed:0,always:false,outside:null});
+  const card=nodes(cli.element).find(n=>n.classList.contains("ask"));
+  assert.ok(card.textContent.includes("Folder"));assert.ok(card.textContent.includes("CLI supplied description"));assert.ok(!card.textContent.includes("code owners"));
+}
+console.log("check-chat-models: GitHub API cards show repository, exact content and localized action effects in both surfaces, without inherited CLI scope or automatic decisions");
