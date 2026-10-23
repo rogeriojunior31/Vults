@@ -1236,3 +1236,42 @@ Renderer regression checks cover twenty consecutive changes, rollback and
 independent sibling controls. Build, Settings checks, English and i18n checks
 pass. The running development app received the update; native visual acceptance
 of the recap card remains with the user.
+
+
+### Connections For Zeca - 2026-10-23
+
+Deliver the approved `conn-face-zeca` prototype against actual capabilities. For you keeps the
+existing list/detail, filters and confirmed merge. For Zeca exposes the built-in GitHub snapshot
+read used by API Chat and realtime voice, with a native persisted switch checked per call and
+forwarded through scoped sources. Writes publish only after persistence. Existing installs retain
+their enabled cached-read behavior; neither audience switch enables a connector or makes a request.
+Recorded tool calls and last use come from local spans, with a link to Activity traces. The
+connector's rolling network limit is distinguished from free cached reads. Issue creation and
+model-initiated merging remain unavailable, with no pretend switches. Audience navigation is
+retained with the existing Connections place. Profiles and Studio remain paused.
+
+Regression checks cover loading/retry, duplicate writes, pending choice, save rollback, retained
+selection/audience, off states, unsupported tools and no remote actions on navigation. Native tests
+cover live revocation through scoped sources, legacy settings and allowed webview surfaces.
+Desktop layout acceptance remains with the maintainer in the running app.
+
+### GitHub account context - 2026-10-23
+
+The existing GitHub poll includes the authenticated viewer's login in the same response, so
+Settings can identify the `gh` account without a second request. The label is metadata: it does
+not become a watched item or emit connector news, and status counts exclude it. No token, scopes,
+or repository content is exposed by the status field. The remaining GitHub roadmap is staged in
+the [GitHub for Luna implementation plan](plan-github-luna.md): authentication and capability diagnosis, complete bounded reads,
+model tool access, guarded writes/reviews/Actions, merge checks, and specialist binding. Account
+identity alone does not prove access to any particular repository or permission.
+
+
+### GitHub pull request proposals - 2026-10-23
+
+GH4 and GH5 extend the existing Chat tool cards with typed issue and pull request proposals.
+Connections keeps the same For you / For Zeca audience and live switch; its copy now names
+approved issue and PR changes, and its usage count includes the write tools. No additional editor
+or independent review surface is introduced. Human cards show exact content and recipients,
+current refs/SHAs and inline context. Ready transitions explain code-owner requests. Changed
+heads, bases or anchors require a fresh proposal; unknown outcomes remain explicit in Activity
+and Audit. Native visual acceptance of these cards remains pending.

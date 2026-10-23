@@ -1431,3 +1431,88 @@ console.log("check-surface-continuity: every species/accessory preview fits with
   assert.equal(parent.querySelector(".setting-feedback").textContent, "Saved.");
 }
 console.log("check-surface-continuity: repeated export privacy changes and standalone setting feedback remain bounded");
+
+{
+  storage.delete("vults.connections-query");
+  const reads = [], writes = [], liveWrites = [], places = [];
+  let openedTraces = 0, settingsOpens = 0, remoteActions = 0;
+  const panel = createConnections({
+    status: async () => [{ id: "github", enabled: true, lastOk: 100, error: null, watching: 1, overBudget: false }],
+    zecaTools: () => new Promise((resolve, reject) => reads.push({ resolve, reject })),
+    setSnapshot: on => new Promise((resolve, reject) => writes.push({ on, resolve, reject })),
+    setWorkItem: on => new Promise((resolve, reject) => liveWrites.push({ on, resolve, reject })),
+    savePlace: async place => { places.push(place); },
+    traces: () => { openedTraces++; },
+    refresh: async () => { remoteActions++; }, settings: () => { settingsOpens++; },
+    open() { remoteActions++; }, merge: async () => { remoteActions++; }, onMerged() {}, zeca: () => null,
+  });
+  const page = panel.element;
+  const action = id => page.querySelectorAll("[data-fid]").find(node => node.dataset.fid === id);
+  panel.update({ boards: [{ connector: "github", rows: [row] }] }); await tick();
+  action("row:org/alpha#7").click(); await tick();
+  action("face:zeca").click(); await tick();
+  assert.ok(page.textContent.includes("Reading GitHub tool settings"));
+  assert.equal(remoteActions, 0, "Opening tool settings makes no GitHub request");
+  reads[0].reject(new Error("Read failed")); await tick();
+  assert.ok(page.textContent.includes("Could not load"));
+  action("act:tools-retry").click(); await tick();
+  reads[1].resolve({ snapshot: true, calls: 0, lastUsed: null, workItem: false, workItemCalls: 0, workItemLastUsed: null, budget: 3000 }); await tick();
+  assert.ok(page.textContent.includes("Never recorded"));
+  assert.ok(page.textContent.includes("Zeca is off"));
+  assert.ok(page.textContent.includes("Issue, pull request and Actions changes always show an approval card"));
+  assert.ok(page.textContent.includes("Branch deletion is separate."));
+  assert.ok(!page.textContent.includes("Merging through Zeca is not available yet"));
+  assert.ok(!page.textContent.includes("Creating or editing GitHub issues through Zeca is not available yet."));
+  assert.equal(page.querySelectorAll("input").length, 2, "Only the implemented cached and live read tools have switches");
+  const stale = action("act:snapshot"); stale.checked = false; stale.fire("change"); stale.fire("change"); await tick();
+  assert.equal(writes.length, 1); assert.equal(writes[0].on, false);
+  assert.equal(action("act:snapshot").disabled, true);
+  assert.equal(action("act:snapshot").checked, false, "The pending choice remains visible");
+  panel.refresh(); await tick(); assert.equal(reads.length, 2, "Refresh cannot overwrite a pending switch");
+  writes[0].reject(new Error("Disk full")); await tick();
+  assert.equal(action("act:snapshot").checked, true);
+  assert.ok(page.querySelector('[role="alert"]').textContent.includes("previous choice"));
+  action("act:snapshot").checked = false; action("act:snapshot").fire("change"); await tick();
+  writes[1].resolve(); await tick(); assert.equal(action("act:snapshot").checked, false);
+  assert.equal(action("act:snapshot").disabled, false);
+  action("act:work-item").checked = true; action("act:work-item").fire("change"); await tick();
+  assert.equal(liveWrites.length, 1); assert.equal(liveWrites[0].on, true);
+  assert.equal(action("act:work-item").disabled, true);
+  const pendingLiveReads = reads.length;
+  panel.refresh(); await tick();
+  assert.equal(reads.length, pendingLiveReads, "A pending GitHub choice cannot be overwritten by a refresh");
+  liveWrites[0].reject(new Error("Disk full")); await tick();
+  assert.equal(action("act:work-item").checked, false, "A failed live-read grant restores its previous choice");
+  action("act:work-item").checked = true; action("act:work-item").fire("change"); await tick();
+  liveWrites[1].resolve(); await tick(); assert.equal(action("act:work-item").checked, true);
+  assert.equal(action("act:work-item").disabled, false);
+  action("act:tool-traces").click(); assert.equal(openedTraces, 1);
+  action("face:you").click(); await tick();
+  assert.equal(page.querySelector(".conn-detail").dataset.item, "org/alpha#7", "Audience changes retain the selected row");
+  assert.equal(places.at(-1).zeca ?? false, false);
+  assert.equal(remoteActions, 0); assert.equal(settingsOpens, 0);
+  const restored = createConnections({
+    loadPlace: async () => ({ chosen: "github", picked: null, repo: null, tab: "prs", detailOpen: false, zeca: true }),
+    zecaTools: async () => ({ snapshot: false, calls: 2, lastUsed: Date.now(), workItem: false, workItemCalls: 0, workItemLastUsed: null, budget: 3000 }),
+    status: async () => [{ id: "github", enabled: false }], refresh: async () => {}, settings() {}, open() {}, merge: async () => {}, onMerged() {}, zeca: () => null,
+  });
+  restored.update({ boards: [] }); await tick(); await tick();
+  assert.ok(restored.element.textContent.includes("GitHub is off"));
+  assert.equal(restored.element.querySelector('[data-fid="face:zeca"]').getAttribute("aria-pressed"), "true");
+}
+console.log("check-surface-continuity: real connector audience, loading/retry, guarded cached/live read switches, approved issue writes, traces and retained navigation");
+
+// A queue or async acceptance never becomes a completed merge or unlocks another click.
+for(const [status,label] of [["queued","In merge queue"],["accepted_pending_verification","Merge pending"]]){
+ let onMerged,writes=0;
+ const page=createConnections({status:async()=>[],refresh:async()=>{},onMerged:cb=>{onMerged=cb;},merge:async()=>{writes++;},settings(){},open(){},zeca:()=>null});
+ const queuedRow={...mergeRow};
+ page.update({boards:[{connector:"github",title:"GitHub",rows:[queuedRow]}]});await tick();
+ page.element.querySelector(".conn-row").fire("click");
+ onMerged({connector:"github",item:queuedRow.item,error:null,status});
+ assert.ok(page.element.textContent.includes(label));assert.ok(!page.element.textContent.includes("Merged"));
+ const button=nodes(page.element).find(n=>n.textContent===label&&n.tagName==="BUTTON");assert.ok(button?.disabled);
+ page.update({boards:[{connector:"github",title:"GitHub",rows:[{...queuedRow,merge:false}]}]});await tick();
+ assert.ok(page.element.textContent.includes(label),"Polling away the old merge offer retains the pending outcome");assert.equal(writes,0);
+}
+console.log("check-surface-continuity: queued and pending merges stay distinct, disabled and retained after offer refresh");

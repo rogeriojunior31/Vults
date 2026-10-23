@@ -207,6 +207,7 @@ export function createNest(
   // A row's question for Zeca opens the Chat with it in the composer; nothing is sent.
   const connections = createConnections({
     ...backend.connections,
+    traces: () => open("traces"),
     zeca: () =>
       zecaOn
         ? (text: string) => {

@@ -41,6 +41,11 @@ pub struct Status {
     pub error: Option<String>,
     /// How many things it watches right now.
     pub watching: usize,
+    /// The authenticated account, when the connector can identify it without extra requests.
+    #[serde(default)]
+    pub account: Option<String>,
+    #[serde(default)]
+    pub host: Option<String>,
 }
 
 /// Where a connector's task stands, for [`Runtime::refresh_if_stale`].
@@ -223,10 +228,13 @@ impl Task {
                             .await;
                     }
                     self.save(&snapshot);
+                    let identity = self.connector.identity(&snapshot);
                     self.status(&id, |s| {
                         s.last_ok = Some(now_secs());
                         s.error = None;
-                        s.watching = snapshot.len();
+                        s.watching = self.connector.watching(&snapshot);
+                        s.account = identity.as_ref().map(|(account, _)| account.clone());
+                        s.host = identity.map(|(_, host)| host);
                     })
                     .await;
                     backoff = BACKOFF_BASE;
@@ -237,7 +245,7 @@ impl Task {
                     match err {
                         Error::RateLimited { retry_after } => retry_after,
                         Error::Unavailable(_) | Error::Auth(_) => NEEDS_USER,
-                        Error::Other(_) => {
+                        Error::Partial(_) | Error::Other(_) => {
                             backoff = (backoff * 2).min(MAX_BACKOFF);
                             backoff
                         }

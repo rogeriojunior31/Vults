@@ -198,13 +198,15 @@ pub enum Error {
     RateLimited {
         retry_after: Duration,
     },
+    /// GitHub returned data alongside GraphQL errors; its omissions are not a complete snapshot.
+    Partial(String),
     Other(String),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Unavailable(m) | Error::Auth(m) | Error::Other(m) => f.write_str(m),
+            Error::Unavailable(m) | Error::Auth(m) | Error::Partial(m) | Error::Other(m) => f.write_str(m),
             Error::RateLimited { retry_after } => {
                 write!(f, "rate limited, retrying in {}s", retry_after.as_secs())
             }
@@ -225,6 +227,14 @@ pub trait Connector: Send + Sync {
     /// Its card on the island, from the latest snapshot; `None` when it has no card.
     fn board(&self, _snapshot: &Snapshot) -> Option<Vec<Row>> {
         None
+    }
+    /// A safe identity label for settings; never a credential or token.
+    fn identity(&self, _snapshot: &Snapshot) -> Option<(String, String)> {
+        None
+    }
+    /// Count actual service objects, excluding connector metadata.
+    fn watching(&self, snapshot: &Snapshot) -> usize {
+        snapshot.len()
     }
 }
 

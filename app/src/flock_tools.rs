@@ -1,6 +1,9 @@
-//! Zeca's flock tools for the API chat (`docs/dev/plan-zeca.md` Z9): what the island shows, read
-//! through his own snapshot (`vults_zeca::FlockReader`), so "what is Codex doing?" is answered
-//! without pasting anything. They only read: none of them can reach an intent, let alone a card.
+//! Zeca's API chat tools read the flock and GitHub. GitHub writes use typed requests and
+//! human approval cards; no tool can answer an agent permission.
+
+mod actions;
+pub(crate) mod merging;
+mod pull_requests;
 
 use std::sync::Arc;
 
@@ -8,6 +11,7 @@ use serde_json::{Value, json};
 use tauri::{AppHandle, Manager};
 use vults_agents::driver::BoxFuture;
 use vults_chat::tools::{Tool, Tools};
+use vults_core::audit::{Act, Actor, Audit};
 use vults_zeca::flock::{Flock, FlockReader, Session};
 
 /// Where the tools read the flock from: the app's last view, or a test's.
@@ -16,9 +20,442 @@ pub trait Source: Send + Sync + 'static {
     fn view(&self) -> Option<Value>;
     /// The plans' usage windows (JSON).
     fn usage(&self) -> Value;
+    fn github_snapshot_allowed(&self) -> bool {
+        true
+    }
+    fn github_work_item_allowed(&self) -> bool {
+        false
+    }
+    fn github_work_item(
+        &self,
+        _repository: String,
+        _number: u32,
+        _cursors: GithubCursors,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("Live GitHub reads are unavailable.".into()) })
+    }
+    fn github_search_repositories(
+        &self,
+        _query: String,
+        _cursor: Option<String>,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("Live GitHub reads are unavailable.".into()) })
+    }
+    fn github_read(&self, _operation: String, _input: Value) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("This GitHub read is unavailable.".into()) })
+    }
+    fn github_merge_prepare(
+        &self,
+        _action: vults_connectors::github::MergeControl,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub merge controls are unavailable.".into()) })
+    }
+    fn github_merge_execute(
+        &self,
+        _action: vults_connectors::github::MergeControl,
+        _preview: Value,
+        _hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub merge controls are unavailable.".into()) })
+    }
+    fn github_actions_prepare(
+        &self,
+        _action: vults_connectors::github::ActionsControl,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub Actions controls are unavailable.".into()) })
+    }
+    fn github_actions_execute(
+        &self,
+        _action: vults_connectors::github::ActionsControl,
+        _preview: Value,
+        _hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub Actions controls are unavailable.".into()) })
+    }
+    fn github_pull_request_prepare(
+        &self,
+        _action: vults_connectors::github::PullRequestWrite,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub pull request changes are unavailable.".into()) })
+    }
+    fn github_pull_request_execute(
+        &self,
+        _action: vults_connectors::github::PullRequestWrite,
+        _preview: Value,
+        _hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub pull request changes are unavailable.".into()) })
+    }
+    fn github_issue_write_prepare(
+        &self,
+        _action: vults_connectors::github::IssueWrite,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub issue writes are unavailable.".into()) })
+    }
+    fn github_issue_write_execute(
+        &self,
+        _action: vults_connectors::github::IssueWrite,
+        _preview: Value,
+        _request_hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        Box::pin(async { Err("GitHub issue writes are unavailable.".into()) })
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct GithubCursors {
+    pub comment: Option<String>,
+    pub file: Option<String>,
+    pub review: Option<String>,
+    pub check: Option<String>,
+    pub thread: Option<String>,
+}
+
+struct GithubToolGate {
+    app: AppHandle,
+    gate: std::sync::Arc<crate::gate::NetGate>,
+}
+
+impl GithubToolGate {
+    fn new(app: AppHandle) -> Self {
+        Self {
+            gate: crate::gate::shared(&app),
+            app,
+        }
+    }
+}
+
+impl vults_connectors::Gate for GithubToolGate {
+    fn allow(&self, connector: &str) -> bool {
+        connector == "github"
+            && self.app.github_work_item_allowed()
+            && vults_connectors::Gate::allow(&*self.gate, connector)
+    }
+
+    fn done(&self, connector: &str, ok: bool, took: std::time::Duration) {
+        vults_connectors::Gate::done(&*self.gate, connector, ok, took);
+    }
+}
+
+fn issue_write_repository(action: &vults_connectors::github::IssueWrite) -> &str {
+    use vults_connectors::github::IssueWrite as Write;
+    match action {
+        Write::Create { repository, .. }
+        | Write::Edit { repository, .. }
+        | Write::Comment { repository, .. }
+        | Write::EditComment { repository, .. }
+        | Write::AddLabels { repository, .. }
+        | Write::RemoveLabels { repository, .. }
+        | Write::SetAssignees { repository, .. }
+        | Write::Close { repository, .. }
+        | Write::Reopen { repository, .. } => repository,
+    }
+}
+
+fn issue_write_tool_name(action: &vults_connectors::github::IssueWrite) -> &'static str {
+    use vults_connectors::github::IssueWrite as Write;
+    match action {
+        Write::Create { .. } => "github_issue_create",
+        Write::Edit { .. } => "github_issue_edit",
+        Write::Comment { .. } => "github_issue_comment",
+        Write::EditComment { .. } => "github_issue_comment_edit",
+        Write::AddLabels { .. } => "github_issue_add_labels",
+        Write::RemoveLabels { .. } => "github_issue_remove_labels",
+        Write::SetAssignees { .. } => "github_issue_set_assignees",
+        Write::Close { .. } => "github_issue_close",
+        Write::Reopen { .. } => "github_issue_reopen",
+    }
+}
+
+fn audit_issue_write(action: &vults_connectors::github::IssueWrite, hash: &str, outcome: &str) {
+    let repository = issue_write_repository(action);
+    let number = match action {
+        vults_connectors::github::IssueWrite::Create { .. } => "new issue".to_owned(),
+        vults_connectors::github::IssueWrite::Edit { number, .. }
+        | vults_connectors::github::IssueWrite::Comment { number, .. }
+        | vults_connectors::github::IssueWrite::EditComment { number, .. }
+        | vults_connectors::github::IssueWrite::AddLabels { number, .. }
+        | vults_connectors::github::IssueWrite::RemoveLabels { number, .. }
+        | vults_connectors::github::IssueWrite::SetAssignees { number, .. }
+        | vults_connectors::github::IssueWrite::Close { number, .. }
+        | vults_connectors::github::IssueWrite::Reopen { number, .. } => format!("issue #{number}"),
+    };
+    crate::audit::keep(Audit::new(
+        Actor::System,
+        Act::ExternalWrite,
+        "zeca",
+        repository,
+        issue_write_tool_name(action),
+        &format!("{number} · sha256:{hash} · {outcome}"),
+    ));
+}
+
+struct IssueWriteAudit<'a> {
+    action: &'a vults_connectors::github::IssueWrite,
+    hash: &'a str,
+    outcome: &'static str,
+}
+impl Drop for IssueWriteAudit<'_> {
+    fn drop(&mut self) {
+        audit_issue_write(self.action, self.hash, self.outcome);
+    }
 }
 
 impl Source for AppHandle {
+    fn github_snapshot_allowed(&self) -> bool {
+        self.state::<crate::settings::SettingsState>()
+            .0
+            .lock()
+            .map(|s| s.zeca && s.zeca_github_snapshot)
+            .unwrap_or(false)
+    }
+    fn github_work_item_allowed(&self) -> bool {
+        self.state::<crate::settings::SettingsState>()
+            .0
+            .lock()
+            .is_ok_and(|s| {
+                s.zeca && s.zeca_github_work_item && s.connectors.get("github").copied().unwrap_or(false)
+            })
+    }
+    fn github_work_item(
+        &self,
+        repository: String,
+        number: u32,
+        cursors: GithubCursors,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        let app = self.clone();
+        Box::pin(async move {
+            if !app.github_work_item_allowed() {
+                return Err("Turn on GitHub live reads for Zeca and the GitHub connector first.".into());
+            }
+            let request = crate::gate::connector_request(&app, "github").ok_or_else(|| {
+                "The GitHub connector is off or its daily request limit is spent.".to_string()
+            })?;
+            let result = vults_connectors::github::work_item(
+                &repository,
+                number,
+                cursors.comment.as_deref(),
+                cursors.file.as_deref(),
+                cursors.review.as_deref(),
+                cursors.check.as_deref(),
+                cursors.thread.as_deref(),
+            )
+            .await;
+            request.finish(result.is_ok());
+            if !app.github_work_item_allowed() {
+                return Err("GitHub live reads were disabled while the request was running.".into());
+            }
+            result.map_err(|error| error.to_string())
+        })
+    }
+    fn github_search_repositories(
+        &self,
+        query: String,
+        cursor: Option<String>,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        let app = self.clone();
+        Box::pin(async move {
+            if !app.github_work_item_allowed() {
+                return Err("Turn on GitHub live reads for Zeca and the GitHub connector first.".into());
+            }
+            let request = crate::gate::connector_request(&app, "github").ok_or_else(|| {
+                "The GitHub connector is off or its daily request limit is spent.".to_string()
+            })?;
+            let result = vults_connectors::github::search_repositories(&query, cursor.as_deref()).await;
+            request.finish(result.is_ok());
+            if !app.github_work_item_allowed() {
+                return Err("GitHub live reads were disabled while the request was running.".into());
+            }
+            result.map_err(|error| error.to_string())
+        })
+    }
+    fn github_read(&self, operation: String, input: Value) -> BoxFuture<'static, Result<Value, String>> {
+        let app = self.clone();
+        Box::pin(async move {
+            if !app.github_work_item_allowed() {
+                return Err("Turn on GitHub live reads for Zeca and the GitHub connector first.".into());
+            }
+            if operation == "github_pull_request_merge_status" {
+                let gate = GithubToolGate::new(app.clone());
+                let result = vults_connectors::github::merge_status(
+                    &gate,
+                    input["repository"].as_str().unwrap_or_default(),
+                    input["number"].as_u64().unwrap_or_default() as u32,
+                    input.get("requestId").and_then(Value::as_str),
+                )
+                .await
+                .map_err(|e| e.to_string())?;
+                if !app.github_work_item_allowed() {
+                    return Err("GitHub tools were disabled while the request was running.".into());
+                }
+                return Ok(result);
+            }
+            if operation == "github_actions_log" {
+                let gate = GithubToolGate::new(app.clone());
+                let result = vults_connectors::github::actions_job_log(
+                    &gate,
+                    input["repository"].as_str().unwrap_or_default(),
+                    input["runId"].as_u64().unwrap_or_default(),
+                    input["jobId"].as_u64().unwrap_or_default(),
+                    input["attempt"].as_u64().unwrap_or_default() as u32,
+                )
+                .await
+                .map_err(|error| error.to_string())?;
+                if !app.github_work_item_allowed() {
+                    return Err("GitHub tools were disabled while the request was running.".into());
+                }
+                return Ok(result);
+            }
+            let request = crate::gate::connector_request(&app, "github").ok_or_else(|| {
+                "The GitHub connector is off or its daily request limit is spent.".to_string()
+            })?;
+            let repository = input["repository"].as_str().unwrap_or_default();
+            let result = match operation.as_str() {
+                "github_account" => vults_connectors::github::account().await,
+                "github_repository" => vults_connectors::github::repository_details(repository).await,
+                "github_pull_request_diff" => {
+                    vults_connectors::github::pull_request_diff(
+                        repository,
+                        input["number"].as_u64().unwrap_or_default() as u32,
+                    )
+                    .await
+                }
+                "github_actions_run" => {
+                    vults_connectors::github::actions_run(
+                        repository,
+                        input["runId"].as_u64().unwrap_or_default(),
+                        input
+                            .get("attempt")
+                            .and_then(Value::as_u64)
+                            .and_then(|value| u32::try_from(value).ok()),
+                    )
+                    .await
+                }
+                "github_actions_runs" => {
+                    vults_connectors::github::actions_runs(
+                        repository,
+                        input["page"].as_u64().unwrap_or(1) as u32,
+                    )
+                    .await
+                }
+                "github_actions_jobs" => {
+                    vults_connectors::github::actions_jobs(
+                        repository,
+                        input["runId"].as_u64().unwrap_or_default(),
+                        input["attempt"].as_u64().unwrap_or_default() as u32,
+                        input["page"].as_u64().unwrap_or(1) as u32,
+                    )
+                    .await
+                }
+                "github_branch_rules" => {
+                    vults_connectors::github::branch_rules(
+                        repository,
+                        input["branch"].as_str().unwrap_or_default(),
+                        input["page"].as_u64().unwrap_or(1) as u32,
+                    )
+                    .await
+                }
+                _ => Err(vults_connectors::Error::Other("Unsupported GitHub read.".into())),
+            };
+            request.finish(result.is_ok());
+            if !app.github_work_item_allowed() {
+                return Err("GitHub live reads were disabled while the request was running.".into());
+            }
+            result.map_err(|error| error.to_string())
+        })
+    }
+    fn github_merge_prepare(
+        &self,
+        action: vults_connectors::github::MergeControl,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        merging::prepare(self.clone(), action)
+    }
+    fn github_merge_execute(
+        &self,
+        action: vults_connectors::github::MergeControl,
+        preview: Value,
+        hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        merging::execute(self.clone(), action, preview, hash)
+    }
+    fn github_actions_prepare(
+        &self,
+        action: vults_connectors::github::ActionsControl,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        actions::prepare(self.clone(), action)
+    }
+    fn github_actions_execute(
+        &self,
+        action: vults_connectors::github::ActionsControl,
+        preview: Value,
+        hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        actions::execute(self.clone(), action, preview, hash)
+    }
+    fn github_pull_request_prepare(
+        &self,
+        action: vults_connectors::github::PullRequestWrite,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        pull_requests::prepare(self.clone(), action)
+    }
+    fn github_pull_request_execute(
+        &self,
+        action: vults_connectors::github::PullRequestWrite,
+        preview: Value,
+        hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        pull_requests::execute(self.clone(), action, preview, hash)
+    }
+    fn github_issue_write_prepare(
+        &self,
+        action: vults_connectors::github::IssueWrite,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        let app = self.clone();
+        Box::pin(async move {
+            if !app.github_work_item_allowed() {
+                return Err("Turn on GitHub tools for Zeca and the GitHub connector first.".into());
+            }
+            let gate = GithubToolGate::new(app.clone());
+            let preview = vults_connectors::github::prepare_issue_write(&gate, &action)
+                .await
+                .map_err(|error| error.to_string())?;
+            if !app.github_work_item_allowed() {
+                return Err("GitHub tools were disabled while the proposal was being prepared.".into());
+            }
+            Ok(preview)
+        })
+    }
+    fn github_issue_write_execute(
+        &self,
+        action: vults_connectors::github::IssueWrite,
+        preview: Value,
+        request_hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        let app = self.clone();
+        Box::pin(async move {
+            if !app.github_work_item_allowed() {
+                audit_issue_write(&action, &request_hash, "denied");
+                return Err("Turn on GitHub tools for Zeca and the GitHub connector first.".into());
+            }
+            let gate = GithubToolGate::new(app.clone());
+            let mut audit = IssueWriteAudit {
+                action: &action,
+                hash: &request_hash,
+                outcome: "cancelled_or_uncertain",
+            };
+            let result =
+                vults_connectors::github::execute_issue_write(&gate, &action, &preview, &request_hash)
+                    .await
+                    .map_err(|error| error.to_string());
+            let outcome = if result.is_ok() {
+                "verified"
+            } else {
+                "failed_or_uncertain"
+            };
+            audit.outcome = outcome;
+            result
+        })
+    }
     fn view(&self) -> Option<Value> {
         let view = self.state::<crate::runtime::LastView>().get()?;
         serde_json::to_value(view).ok()
@@ -29,15 +466,100 @@ impl Source for AppHandle {
     }
 }
 
-/// Every flock tool, reading from `source`.
+/// Flock reads and typed GitHub tools backed by the application.
 pub fn all(source: Arc<dyn Source>) -> Tools {
-    vec![
+    let mut tools: Tools = vec![
         Arc::new(FlockList(source.clone())),
         Arc::new(SessionDetail(source.clone())),
         Arc::new(PendingAsks(source.clone())),
         Arc::new(Usage(source.clone())),
-        Arc::new(GithubSnapshot(source)),
-    ]
+        Arc::new(GithubSnapshot(source.clone())),
+        Arc::new(GithubWorkItem(source.clone())),
+        Arc::new(GithubRepositorySearch(source.clone())),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_account",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_repository",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_pull_request_diff",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_pull_request_merge_status",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_actions_run",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_actions_runs",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_actions_jobs",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_actions_log",
+        }),
+        Arc::new(GithubRead {
+            source: source.clone(),
+            operation: "github_branch_rules",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_create",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_edit",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_comment",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_comment_edit",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_add_labels",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_remove_labels",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_set_assignees",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_close",
+        }),
+        Arc::new(GithubIssueWrite {
+            source: source.clone(),
+            operation: "github_issue_reopen",
+        }),
+    ];
+    tools.extend(pull_requests::tools(source.clone()));
+    tools.extend(actions::tools(source.clone()));
+    tools.extend(merging::tools(source));
+    tools
+}
+
+/// Realtime currently admits five tools; keep the slower live GitHub lookup in regular chat.
+pub fn realtime(source: Arc<dyn Source>) -> Tools {
+    let mut tools = all(source);
+    tools.retain(|tool| !tool.name().starts_with("github_") || tool.name() == "github_snapshot");
+    tools
 }
 
 /// Zeca's snapshot of the flock from the view. Every agent-supplied text (a card's target, what a
@@ -135,6 +657,20 @@ struct PendingAsks(Arc<dyn Source>);
 struct Usage(Arc<dyn Source>);
 #[derive(Debug)]
 struct GithubSnapshot(Arc<dyn Source>);
+#[derive(Debug)]
+struct GithubWorkItem(Arc<dyn Source>);
+#[derive(Debug)]
+struct GithubRepositorySearch(Arc<dyn Source>);
+#[derive(Debug)]
+struct GithubRead {
+    source: Arc<dyn Source>,
+    operation: &'static str,
+}
+#[derive(Debug)]
+struct GithubIssueWrite {
+    source: Arc<dyn Source>,
+    operation: &'static str,
+}
 
 impl std::fmt::Debug for dyn Source {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -279,7 +815,7 @@ pub fn cached_read(view: &Value, usage: Value, name: &str) -> Option<Value> {
                 .as_array()?
                 .iter()
                 .find(|board| board["connector"] == "github")?;
-            json!({"rows":open_rows(&board["rows"])})
+            json!({"source":{"provider":"github","mode":"cached_snapshot"},"rows":open_rows(&board["rows"])})
         }
         _ => return None,
     })
@@ -290,14 +826,17 @@ impl Tool for GithubSnapshot {
         "github_snapshot"
     }
     fn description(&self) -> &str {
-        "The user's GitHub card as the island shows it: their pull requests and reviews, with checks."
+        "The user's GitHub card as the island shows it: their pull requests and reviews, with checks. The source says this is a cached snapshot, not a live read."
     }
     fn schema(&self) -> Value {
         NO_INPUT()
     }
     fn call<'a>(&'a self, _: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+        if !self.0.github_snapshot_allowed() {
+            return failed(json!({"error":"The user disabled the built-in GitHub snapshot tool."}));
+        }
         match cached_read(&self.0.view().unwrap_or_default(), Value::Null, "github_snapshot") {
-            Some(value) => answer(value),
+            Some(value) => Box::pin(async move { github_result(value) }),
             None => failed(json!({"error":"The GitHub connector is off, or has nothing yet."})),
         }
     }
@@ -306,6 +845,571 @@ impl Tool for GithubSnapshot {
     fn reads_outside(&self) -> bool {
         true
     }
+
+    fn activity_mode(&self) -> Option<&'static str> {
+        Some("cached_snapshot")
+    }
+}
+
+impl Tool for GithubWorkItem {
+    fn name(&self) -> &str {
+        "github_work_item"
+    }
+    fn description(&self) -> &str {
+        "Reads one GitHub issue or pull request by exact owner/repository and number. Returns bounded pages of discussion, changed files, reviews, review threads and checks. For each collection, pass its nextCursor in the matching cursor field while hasMore is true. Each call is a separate GitHub request. Cite source.repository, source.url and source.fetchedAt; check coverage and truncation before treating the result as complete."
+    }
+    fn schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", "description": "Exact repository in owner/name form." },
+                "number": { "type": "integer", "minimum": 1, "maximum": 2147483647, "description": "Issue or pull request number." },
+                "commentCursor": { "type": "string", "maxLength": 512, "description": "discussion.nextCursor from a previous page, when discussion.hasMore is true." },
+                "fileCursor": { "type": "string", "maxLength": 512, "description": "pullRequest.files.nextCursor from a previous page, when pullRequest.files.hasMore is true." },
+                "reviewCursor": { "type": "string", "maxLength": 512, "description": "pullRequest.reviews.nextCursor from a previous page." },
+                "checkCursor": { "type": "string", "maxLength": 512, "description": "pullRequest.checks.nextCursor from a previous page." },
+                "threadCursor": { "type": "string", "maxLength": 512, "description": "pullRequest.reviewThreads.nextCursor from a previous page." }
+            },
+            "required": ["repository", "number"],
+            "additionalProperties": false
+        })
+    }
+    fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+        if !self.0.github_work_item_allowed() {
+            return failed(
+                json!({ "error": "Live GitHub issue and pull request reads are off, or the GitHub connector is off." }),
+            );
+        }
+        let Some(repository) = input["repository"].as_str().map(str::to_owned) else {
+            return failed(json!({ "error": "Give the exact GitHub repository as owner/name." }));
+        };
+        let Some(number) = input["number"]
+            .as_u64()
+            .and_then(|value| u32::try_from(value).ok())
+        else {
+            return failed(json!({ "error": "Give a positive issue or pull request number." }));
+        };
+        let comment_cursor = match input.get("commentCursor") {
+            None | Some(Value::Null) => None,
+            Some(Value::String(cursor)) => Some(cursor.clone()),
+            _ => return failed(json!({ "error": "The discussion cursor must be a string." })),
+        };
+        let file_cursor = match input.get("fileCursor") {
+            None | Some(Value::Null) => None,
+            Some(Value::String(cursor)) => Some(cursor.clone()),
+            _ => return failed(json!({ "error": "The changed-file cursor must be a string." })),
+        };
+        let mut collection_cursors = Vec::new();
+        for (key, label) in [
+            ("reviewCursor", "review"),
+            ("checkCursor", "check"),
+            ("threadCursor", "review thread"),
+        ] {
+            match input.get(key) {
+                None | Some(Value::Null) => collection_cursors.push(None),
+                Some(Value::String(cursor)) => collection_cursors.push(Some(cursor.clone())),
+                _ => return failed(json!({"error":format!("The {label} cursor must be a string.")})),
+            }
+        }
+        let result = self.0.github_work_item(
+            repository,
+            number,
+            GithubCursors {
+                comment: comment_cursor,
+                file: file_cursor,
+                review: collection_cursors.remove(0),
+                check: collection_cursors.remove(0),
+                thread: collection_cursors.remove(0),
+            },
+        );
+        Box::pin(async move {
+            let value = result.await?;
+            github_result(value)
+        })
+    }
+    fn realtime_timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(30)
+    }
+    fn reads_outside(&self) -> bool {
+        true
+    }
+    fn activity_mode(&self) -> Option<&'static str> {
+        Some("live")
+    }
+}
+
+impl Tool for GithubRepositorySearch {
+    fn name(&self) -> &str {
+        "github_search_repositories"
+    }
+    fn description(&self) -> &str {
+        "Searches repositories visible to the user's selected GitHub account. Use a short repository name, owner, or topic phrase, then read a selected issue or pull request by exact owner/name and number. Returns one page of at most ten matches. If hasMore is true, pass nextCursor as cursor to fetch the next page; every page is a separate GitHub request. Cite source.account, source.host, source.fetchedAt and each selected repository's URL."
+    }
+    fn schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "query": { "type": "string", "minLength": 1, "maxLength": 160, "description": "Repository name, owner, or topic phrase." },
+                "cursor": { "type": "string", "maxLength": 512, "description": "nextCursor from the previous page, when hasMore is true." }
+            },
+            "required": ["query"],
+            "additionalProperties": false
+        })
+    }
+    fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+        if !self.0.github_work_item_allowed() {
+            return failed(json!({ "error": "Live GitHub reads are off, or the GitHub connector is off." }));
+        }
+        let Some(query) = input["query"].as_str().map(str::to_owned) else {
+            return failed(json!({ "error": "Give a repository name, owner, or topic phrase to search." }));
+        };
+        let cursor = match input.get("cursor") {
+            None | Some(Value::Null) => None,
+            Some(Value::String(cursor)) => Some(cursor.clone()),
+            _ => return failed(json!({ "error": "The repository search cursor must be a string." })),
+        };
+        let result = self.0.github_search_repositories(query, cursor);
+        Box::pin(async move {
+            let value = result.await?;
+            github_result(value)
+        })
+    }
+    fn realtime_timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(30)
+    }
+    fn reads_outside(&self) -> bool {
+        true
+    }
+    fn activity_mode(&self) -> Option<&'static str> {
+        Some("live")
+    }
+}
+
+impl Tool for GithubRead {
+    fn name(&self) -> &str {
+        self.operation
+    }
+    fn description(&self) -> &str {
+        match self.operation {
+            "github_account" => {
+                "Reads the account login and host selected by gh, with a profile URL and retrieval time. Cite source.url and source.fetchedAt."
+            }
+            "github_repository" => {
+                "Reads metadata for one exact accessible repository, including its visibility, archive state, default branch and source URL. Cite source.repository, source.url and source.fetchedAt."
+            }
+            "github_pull_request_diff" => {
+                "Reads only the unified diff for one exact pull request. Cite source.repository, source.url and source.fetchedAt. The diff is capped at 48 KiB; check truncated and containsBinary before relying on full file coverage."
+            }
+            "github_pull_request_merge_status" => {
+                "Reads the exact PR's merged, queued, pending, open or closed state without submitting a merge. Optionally supply the requestId UUID returned by an asynchronous merge to read its result. A queued or pending result is never merged. Does not clear durable uncertain receipts or resend a control."
+            }
+            "github_actions_run" => {
+                "Reads one exact workflow run or historical attempt. Omit attempt to inspect the latest observed attempt after a control. Returns commit SHA, workflow, observed attempt and distinct queued/running/waiting/cancelled/completed phase. Never interpret an accepted control as a verified new attempt."
+            }
+            "github_actions_runs" => {
+                "Lists one page of ten recent workflow runs for an exact repository. Cite source.repository, source.url and source.fetchedAt. Pass nextPage as page while hasMore is true."
+            }
+            "github_actions_jobs" => {
+                "Lists one page of ten jobs for an exact workflow run and attempt. Cite source.repository, source.url and source.fetchedAt. Pass nextPage as page while hasMore is true."
+            }
+            "github_actions_log" => {
+                "Reads one exact Actions job log for a repository, run, job and attempt. Cite source.repository, source.url and source.fetchedAt. Output is capped and secrets are redacted; check truncated."
+            }
+            _ => {
+                "Reads active rules that apply to an exact branch, including organization-level rulesets. Cite source.repository, source.url and source.fetchedAt. Returns at most 100 rules per page; check hasMore and pass nextPage as page."
+            }
+        }
+    }
+    fn schema(&self) -> Value {
+        let (properties, required): (Value, &[&str]) = match self.operation {
+            "github_account" => (json!({}), &[]),
+            "github_repository" => (
+                json!({"repository":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"}}),
+                &["repository"],
+            ),
+            "github_pull_request_diff" => (
+                json!({"repository":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},"number":{"type":"integer","minimum":1,"maximum":2147483647}}),
+                &["repository", "number"],
+            ),
+            "github_pull_request_merge_status" => (
+                json!({"repository":{"type":"string"},"number":{"type":"integer","minimum":1,"maximum":2147483647},"requestId":{"type":"string","pattern":"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"}}),
+                &["repository", "number"],
+            ),
+            "github_actions_run" => (
+                json!({"repository":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},"runId":{"type":"integer","minimum":1},"attempt":{"type":"integer","minimum":1,"maximum":4294967295u64}}),
+                &["repository", "runId"],
+            ),
+            "github_actions_runs" => (
+                json!({"repository":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},"page":{"type":"integer","minimum":1,"maximum":100,"default":1}}),
+                &["repository"],
+            ),
+            "github_actions_jobs" => (
+                json!({"repository":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},"runId":{"type":"integer","minimum":1},"attempt":{"type":"integer","minimum":1},"page":{"type":"integer","minimum":1,"maximum":100,"default":1}}),
+                &["repository", "runId", "attempt"],
+            ),
+            "github_actions_log" => (
+                json!({"repository":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},"runId":{"type":"integer","minimum":1},"jobId":{"type":"integer","minimum":1},"attempt":{"type":"integer","minimum":1}}),
+                &["repository", "runId", "jobId", "attempt"],
+            ),
+            _ => (
+                json!({"repository":{"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},"branch":{"type":"string","minLength":1,"maxLength":255},"page":{"type":"integer","minimum":1,"maximum":100,"default":1}}),
+                &["repository", "branch"],
+            ),
+        };
+        json!({"type":"object","properties":properties,"required":required,"additionalProperties":false})
+    }
+    fn call<'a>(&'a self, input: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+        if !self.source.github_work_item_allowed() {
+            return failed(json!({"error":"Live GitHub reads are off, or the GitHub connector is off."}));
+        }
+        if self.operation != "github_account" && input["repository"].as_str().is_none() {
+            return failed(json!({"error":"Give the exact GitHub repository as owner/name."}));
+        }
+        let positive = |key: &str| input[key].as_u64().is_some_and(|n| n > 0);
+        let valid = match self.operation {
+            "github_account" => true,
+            "github_repository" => input["repository"].as_str().is_some_and(|name| !name.is_empty()),
+            "github_pull_request_diff" => input["number"]
+                .as_u64()
+                .is_some_and(|n| (1..=i32::MAX as u64).contains(&n)),
+            "github_pull_request_merge_status" => {
+                input["number"]
+                    .as_u64()
+                    .is_some_and(|n| (1..=i32::MAX as u64).contains(&n))
+                    && input.get("requestId").is_none_or(|v| {
+                        v.as_str().is_some_and(|s| {
+                            s.len() == 36
+                                && s.bytes().enumerate().all(|(i, c)| {
+                                    if [8, 13, 18, 23].contains(&i) {
+                                        c == b'-'
+                                    } else {
+                                        c.is_ascii_hexdigit()
+                                    }
+                                })
+                        })
+                    })
+            }
+            "github_actions_run" => {
+                positive("runId")
+                    && input.get("attempt").is_none_or(|value| {
+                        value.as_u64().is_some_and(|n| (1..=u32::MAX as u64).contains(&n))
+                    })
+            }
+            "github_actions_runs" => input.get("page").is_none_or(|_| positive_page(input, "page")),
+            "github_actions_jobs" => {
+                positive("runId")
+                    && input["attempt"]
+                        .as_u64()
+                        .is_some_and(|n| (1..=u32::MAX as u64).contains(&n))
+                    && input.get("page").is_none_or(|_| positive_page(input, "page"))
+            }
+            "github_actions_log" => {
+                positive("runId")
+                    && positive("jobId")
+                    && input["attempt"]
+                        .as_u64()
+                        .is_some_and(|n| (1..=u32::MAX as u64).contains(&n))
+            }
+            _ => {
+                input["branch"].as_str().is_some_and(|s| !s.is_empty())
+                    && input.get("page").is_none_or(|_| positive_page(input, "page"))
+            }
+        };
+        if !valid {
+            return failed(json!({"error":"The GitHub read arguments are missing or invalid."}));
+        }
+        let result = self.source.github_read(self.operation.to_string(), input.clone());
+        Box::pin(async move {
+            let value = result.await?;
+            github_result(value)
+        })
+    }
+    fn realtime_timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(30)
+    }
+    fn reads_outside(&self) -> bool {
+        true
+    }
+    fn activity_mode(&self) -> Option<&'static str> {
+        Some("live")
+    }
+}
+
+impl Tool for GithubIssueWrite {
+    fn name(&self) -> &str {
+        self.operation
+    }
+
+    fn description(&self) -> &str {
+        match self.operation {
+            "github_issue_create" => {
+                "Proposes creating an issue in an exact repository. The user must approve the complete title and body."
+            }
+            "github_issue_edit" => {
+                "Proposes editing an issue title or body. The user must approve the exact change."
+            }
+            "github_issue_comment" => {
+                "Proposes posting an issue comment. The user must approve the exact comment text."
+            }
+            "github_issue_comment_edit" => {
+                "Proposes editing one existing issue comment by its exact ID. The user must approve the exact replacement text."
+            }
+            "github_issue_add_labels" => {
+                "Proposes adding labels to an issue. The user must approve the exact labels."
+            }
+            "github_issue_remove_labels" => {
+                "Proposes removing labels from an issue. The user must approve the exact labels."
+            }
+            "github_issue_set_assignees" => {
+                "Proposes replacing an issue's assignees, including clearing them with an empty list. The user must approve the exact usernames."
+            }
+            "github_issue_close" => {
+                "Proposes closing an issue. The user must approve the exact repository and issue."
+            }
+            _ => "Proposes reopening an issue. The user must approve the exact repository and issue.",
+        }
+    }
+
+    fn schema(&self) -> Value {
+        let repo = json!({"type":"string","pattern":"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$","maxLength":200});
+        let number = json!({"type":"integer","minimum":1,"maximum":2147483647});
+        let text = |max| json!({"type":"string","maxLength":max});
+        let names = |max, minimum| json!({"type":"array","minItems":minimum,"maxItems":max,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":50}});
+        let (properties, required) = match self.operation {
+            "github_issue_create" => (
+                json!({"repository":repo,"title":text(256),"body":text(10000)}),
+                json!(["repository", "title", "body"]),
+            ),
+            "github_issue_edit" => (
+                json!({"repository":repo,"number":number,"title":text(256),"body":text(10000)}),
+                json!(["repository", "number"]),
+            ),
+            "github_issue_comment" => (
+                json!({"repository":repo,"number":number,"body":text(10000)}),
+                json!(["repository", "number", "body"]),
+            ),
+            "github_issue_comment_edit" => (
+                json!({"repository":repo,"number":number,"commentId":{"type":"integer","minimum":1},"body":text(10000)}),
+                json!(["repository", "number", "commentId", "body"]),
+            ),
+            "github_issue_add_labels" | "github_issue_remove_labels" => (
+                json!({"repository":repo,"number":number,"labels":names(10,1)}),
+                json!(["repository", "number", "labels"]),
+            ),
+            "github_issue_set_assignees" => (
+                json!({"repository":repo,"number":number,"assignees":{"type":"array","maxItems":10,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":39}}}),
+                json!(["repository", "number", "assignees"]),
+            ),
+            _ => (
+                json!({"repository":repo,"number":number}),
+                json!(["repository", "number"]),
+            ),
+        };
+        json!({"type":"object","properties":properties,"required":required,"additionalProperties":false})
+    }
+
+    fn call<'a>(&'a self, _input: &'a Value) -> BoxFuture<'a, Result<String, String>> {
+        failed(json!({"error":"GitHub issue changes require the explicit approval card."}))
+    }
+
+    fn approval<'a>(
+        &'a self,
+        input: &'a Value,
+    ) -> Option<BoxFuture<'a, Result<vults_chat::tools::ToolApproval, String>>> {
+        let action = match parse_issue_write(self.operation, input) {
+            Ok(action) => action,
+            Err(error) => return Some(Box::pin(async move { Err(error) })),
+        };
+        Some(Box::pin(async move {
+            let preview = self.source.github_issue_write_prepare(action.clone()).await?;
+            let hash = action.request_hash();
+            let number = input["number"]
+                .as_u64()
+                .map(|n| format!("issue #{n}"))
+                .unwrap_or_else(|| "new issue".into());
+            let target = format!(
+                "{} · {number} · {} · sha256:{hash}",
+                issue_write_repository(&action),
+                self.operation
+            );
+            let description = format!(
+                "Review the exact GitHub change for {} ({number}). This request will be checked again before it runs.",
+                issue_write_repository(&action)
+            );
+            let issue = &preview["issue"];
+            let full = serde_json::to_string_pretty(&json!({"operation":self.operation,"request":action,"requestHash":hash,"source":preview["source"],"current":{"title":issue["title"],"state":issue["state"],"url":issue["url"],"labels":issue["labels"],"assignees":issue["assignees"]}})).map_err(|error|error.to_string())?;
+            Ok(vults_chat::tools::ToolApproval {
+                target,
+                description,
+                full,
+                context: json!({"preview":preview,"requestHash":hash}),
+            })
+        }))
+    }
+
+    fn call_approved<'a>(
+        &'a self,
+        input: &'a Value,
+        context: &'a Value,
+    ) -> BoxFuture<'a, Result<String, String>> {
+        let action = match parse_issue_write(self.operation, input) {
+            Ok(action) => action,
+            Err(error) => return Box::pin(async move { Err(error) }),
+        };
+        let hash = action.request_hash();
+        let approved_hash = context["requestHash"].as_str().unwrap_or_default();
+        if hash != approved_hash {
+            return Box::pin(async {
+                Err("The GitHub request changed after approval. Review a new card.".into())
+            });
+        }
+        let source = self.source.clone();
+        let preview = context["preview"].clone();
+        Box::pin(async move {
+            let result = source.github_issue_write_execute(action, preview, hash).await?;
+            github_result(result)
+        })
+    }
+
+    fn reads_outside(&self) -> bool {
+        true
+    }
+    fn activity_mode(&self) -> Option<&'static str> {
+        Some("live")
+    }
+}
+
+fn parse_issue_write(operation: &str, input: &Value) -> Result<vults_connectors::github::IssueWrite, String> {
+    use vults_connectors::github::IssueWrite as W;
+    let allowed: &[&str] = match operation {
+        "github_issue_create" => &["repository", "title", "body"],
+        "github_issue_edit" => &["repository", "number", "title", "body"],
+        "github_issue_comment" => &["repository", "number", "body"],
+        "github_issue_comment_edit" => &["repository", "number", "commentId", "body"],
+        "github_issue_add_labels" | "github_issue_remove_labels" => &["repository", "number", "labels"],
+        "github_issue_set_assignees" => &["repository", "number", "assignees"],
+        "github_issue_close" | "github_issue_reopen" => &["repository", "number"],
+        _ => return Err("Unsupported GitHub issue write.".into()),
+    };
+    let object = input
+        .as_object()
+        .ok_or("GitHub issue write arguments must be an object.")?;
+    if object.keys().any(|key| !allowed.contains(&key.as_str())) {
+        return Err("GitHub issue write arguments contain an unsupported field.".into());
+    }
+    let repository = input["repository"]
+        .as_str()
+        .ok_or("Give the exact GitHub repository as owner/name.")?
+        .to_owned();
+    let number = || {
+        input["number"]
+            .as_u64()
+            .and_then(|n| u32::try_from(n).ok())
+            .filter(|n| *n > 0)
+            .ok_or_else(|| "Give a positive issue number.".to_owned())
+    };
+    let list = |key: &'static str| -> Result<Vec<String>, String> {
+        input[key]
+            .as_array()
+            .ok_or_else(|| format!("Give {key} as a list."))?
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| format!("Every {key} entry must be text."))
+            })
+            .collect()
+    };
+    let action = match operation {
+        "github_issue_create" => W::Create {
+            repository,
+            title: input["title"].as_str().ok_or("Give an issue title.")?.to_owned(),
+            body: input["body"].as_str().ok_or("Give the issue body.")?.to_owned(),
+        },
+        "github_issue_edit" => {
+            let optional_text = |key| -> Result<Option<String>, String> {
+                match input.get(key) {
+                    None => Ok(None),
+                    Some(Value::String(value)) => Ok(Some(value.clone())),
+                    _ => Err(format!("The {key} field must be text.")),
+                }
+            };
+            W::Edit {
+                repository,
+                number: number()?,
+                title: optional_text("title")?,
+                body: optional_text("body")?,
+            }
+        }
+        "github_issue_comment" => W::Comment {
+            repository,
+            number: number()?,
+            body: input["body"].as_str().ok_or("Give the comment body.")?.to_owned(),
+        },
+        "github_issue_comment_edit" => W::EditComment {
+            repository,
+            number: number()?,
+            comment_id: input["commentId"]
+                .as_u64()
+                .filter(|value| *value > 0)
+                .ok_or("Give a positive issue comment ID.")?,
+            body: input["body"].as_str().ok_or("Give the comment body.")?.to_owned(),
+        },
+        "github_issue_add_labels" => W::AddLabels {
+            repository,
+            number: number()?,
+            labels: list("labels")?,
+        },
+        "github_issue_remove_labels" => W::RemoveLabels {
+            repository,
+            number: number()?,
+            labels: list("labels")?,
+        },
+        "github_issue_set_assignees" => W::SetAssignees {
+            repository,
+            number: number()?,
+            assignees: list("assignees")?,
+        },
+        "github_issue_close" => W::Close {
+            repository,
+            number: number()?,
+        },
+        "github_issue_reopen" => W::Reopen {
+            repository,
+            number: number()?,
+        },
+        _ => return Err("Unsupported GitHub issue write.".into()),
+    };
+    action.validate().map_err(|error| error.to_string())?;
+    Ok(action)
+}
+
+// Preserve a valid JSON envelope and its coverage flags at the chat transport limit.
+fn github_result(mut value: Value) -> Result<String, String> {
+    loop {
+        let text = serde_json::to_string(&value).map_err(|error| error.to_string())?;
+        if text.len() <= vults_chat::tools::MAX_RESULT {
+            return Ok(text);
+        }
+        let field = ["log", "diff"]
+            .into_iter()
+            .find(|key| value[*key].as_str().is_some_and(|text| !text.is_empty()));
+        let Some(field) = field else {
+            return Err("GitHub returned more context than the chat can hold. Request a narrower page or a separate diff or log.".into());
+        };
+        let text = value[field].as_str().expect("text field selected");
+        let mut end = text.len() / 2;
+        while !text.is_char_boundary(end) {
+            end -= 1;
+        }
+        value[field] = json!(&text[..end]);
+        value["truncated"] = json!(true);
+        value["coverage"] = json!("partial-byte-limit");
+    }
+}
+
+fn positive_page(input: &Value, key: &str) -> bool {
+    input[key].as_u64().is_some_and(|page| (1..=100).contains(&page))
 }
 
 #[cfg(test)]
@@ -321,6 +1425,82 @@ mod tests {
         fn usage(&self) -> Value {
             json!([{ "agent": "claude", "minutes": 300, "used_percent": 42, "resets_at": null }])
         }
+    }
+
+    #[test]
+    fn github_results_remain_valid_json_with_explicit_transport_coverage() {
+        let value = json!({"source":{"repository":"org/repo"},"log":"\u{1}".repeat(30000),"truncated":false,"coverage":"complete"});
+        let text = github_result(value).unwrap();
+        assert!(text.len() <= vults_chat::tools::MAX_RESULT);
+        let value: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(value["truncated"], true);
+        assert_eq!(value["coverage"], "partial-byte-limit");
+        assert_eq!(value["source"]["repository"], "org/repo");
+        assert!(github_result(json!({"items":"x".repeat(30000)})).is_err());
+        assert!(
+            parse_issue_write(
+                "github_issue_edit",
+                &json!({"repository":"org/repo","number":7,"title":12,"body":"valid"})
+            )
+            .is_err()
+        );
+        assert!(
+            parse_issue_write(
+                "github_issue_close",
+                &json!({"repository":"org/repo","number":7,"extra":"ignored"})
+            )
+            .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn a_write_changed_after_approval_never_reaches_the_service() {
+        struct Writes(std::sync::atomic::AtomicUsize);
+        impl Source for Writes {
+            fn view(&self) -> Option<Value> {
+                None
+            }
+            fn usage(&self) -> Value {
+                Value::Null
+            }
+            fn github_issue_write_prepare(
+                &self,
+                _: vults_connectors::github::IssueWrite,
+            ) -> BoxFuture<'static, Result<Value, String>> {
+                Box::pin(async {
+                    Ok(
+                        json!({"source":{"account":"person","host":"github.com"},"issue":{"title":"Issue","state":"open"},"related":{"comments":"huge history".repeat(5000)}}),
+                    )
+                })
+            }
+            fn github_issue_write_execute(
+                &self,
+                _: vults_connectors::github::IssueWrite,
+                _: Value,
+                _: String,
+            ) -> BoxFuture<'static, Result<Value, String>> {
+                self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Box::pin(async { Ok(json!({"status":"verified"})) })
+            }
+        }
+        let source = Arc::new(Writes(std::sync::atomic::AtomicUsize::new(0)));
+        let tools = all(source.clone());
+        let tool = tool(&tools, "github_issue_comment");
+        let input = json!({"repository":"org/repo","number":7,"body":"exact approved content"});
+        let prepared = tool.approval(&input).unwrap().await.unwrap();
+        assert!(prepared.full.contains("exact approved content"));
+        assert!(!prepared.full.contains("huge history"));
+        assert!(
+            tool.call_approved(
+                &json!({"repository":"org/repo","number":7,"body":"changed"}),
+                &prepared.context
+            )
+            .await
+            .is_err()
+        );
+        assert_eq!(source.0.load(std::sync::atomic::Ordering::SeqCst), 0);
+        tool.call_approved(&input, &prepared.context).await.unwrap();
+        assert_eq!(source.0.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 
     fn view() -> Value {
@@ -423,6 +1603,10 @@ mod tests {
             call(&tools, "github_snapshot", json!({})).await["rows"][0]["name"],
             "vults#12"
         );
+        assert_eq!(
+            call(&tools, "github_snapshot", json!({})).await["source"]["mode"],
+            "cached_snapshot"
+        );
         assert!(tool(&tools, "github_snapshot").reads_outside());
         assert!(!tool(&tools, "flock_list").reads_outside());
         let off = all(Arc::new(Fake(json!({ "sessions": [] }))));
@@ -440,6 +1624,206 @@ mod tests {
         }
         let none = all(Arc::new(Nothing));
         assert_eq!(call(&none, "pending_asks", json!({})).await["waiting"], json!([]));
+    }
+
+    #[tokio::test]
+    async fn live_github_work_item_requires_its_switch_and_returns_outside_content() {
+        struct Live(std::sync::atomic::AtomicBool, std::sync::atomic::AtomicUsize);
+        impl Source for Live {
+            fn view(&self) -> Option<Value> {
+                Some(view())
+            }
+            fn usage(&self) -> Value {
+                Value::Null
+            }
+            fn github_work_item_allowed(&self) -> bool {
+                self.0.load(std::sync::atomic::Ordering::SeqCst)
+            }
+            fn github_work_item(
+                &self,
+                repository: String,
+                number: u32,
+                cursors: GithubCursors,
+            ) -> BoxFuture<'static, Result<Value, String>> {
+                self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Box::pin(async move {
+                    Ok(json!({
+                        "repository":repository,"number":number,"commentCursor":cursors.comment,"fileCursor":cursors.file,
+                        "reviewCursor":cursors.review,"checkCursor":cursors.check,"threadCursor":cursors.thread
+                    }))
+                })
+            }
+            fn github_search_repositories(
+                &self,
+                query: String,
+                cursor: Option<String>,
+            ) -> BoxFuture<'static, Result<Value, String>> {
+                self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Box::pin(async move { Ok(json!({ "query": query, "cursor": cursor, "repositories": [] })) })
+            }
+            fn github_read(
+                &self,
+                operation: String,
+                input: Value,
+            ) -> BoxFuture<'static, Result<Value, String>> {
+                self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Box::pin(async move { Ok(json!({"operation":operation,"input":input})) })
+            }
+        }
+        let source = Arc::new(Live(
+            std::sync::atomic::AtomicBool::new(false),
+            std::sync::atomic::AtomicUsize::new(0),
+        ));
+        let tools = all(source.clone());
+        let work_item = tool(&tools, "github_work_item");
+        let repository_search = tool(&tools, "github_search_repositories");
+        let actions = tool(&tools, "github_actions_jobs");
+        let account = tool(&tools, "github_account");
+        let issue_writes = [
+            "github_issue_create",
+            "github_issue_edit",
+            "github_issue_comment",
+            "github_issue_comment_edit",
+            "github_issue_add_labels",
+            "github_issue_remove_labels",
+            "github_issue_set_assignees",
+            "github_issue_close",
+            "github_issue_reopen",
+        ];
+        for name in issue_writes {
+            let write = tool(&tools, name);
+            assert!(write.reads_outside());
+            assert_eq!(write.activity_mode(), Some("live"));
+            assert_eq!(write.schema()["additionalProperties"], false);
+            assert!(
+                realtime(Arc::new(Fake(view())))
+                    .iter()
+                    .all(|tool| tool.name() != name)
+            );
+        }
+        assert!(
+            error(
+                &tools,
+                "github_issue_close",
+                json!({"repository":"org/repo","number":7})
+            )
+            .await["error"]
+                .as_str()
+                .unwrap()
+                .contains("approval card")
+        );
+        for github_tool in tools.iter().filter(|tool| tool.name().starts_with("github_")) {
+            assert!(github_tool.reads_outside(), "{}", github_tool.name());
+            assert_eq!(
+                github_tool.activity_mode(),
+                Some(if github_tool.name() == "github_snapshot" {
+                    "cached_snapshot"
+                } else {
+                    "live"
+                })
+            );
+        }
+        assert!(work_item.reads_outside());
+        assert_eq!(work_item.schema()["required"], json!(["repository", "number"]));
+        assert!(repository_search.reads_outside());
+        assert_eq!(repository_search.schema()["required"], json!(["query"]));
+        assert_eq!(
+            actions.schema()["required"],
+            json!(["repository", "runId", "attempt"])
+        );
+        assert!(actions.reads_outside());
+        assert_eq!(account.schema()["required"], json!([]));
+        assert!(account.reads_outside());
+        assert!(
+            !realtime(Arc::new(Fake(view())))
+                .iter()
+                .any(|tool| tool.name() == "github_account")
+        );
+        assert!(
+            !realtime(Arc::new(Fake(view())))
+                .iter()
+                .any(|tool| tool.name().starts_with("github_actions_"))
+        );
+        assert!(
+            error(
+                &tools,
+                "github_work_item",
+                json!({ "repository": "team/app", "number": 12 })
+            )
+            .await["error"]
+                .is_string()
+        );
+        assert_eq!(source.1.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert!(
+            error(&tools, "github_search_repositories", json!({ "query": "vults" })).await["error"]
+                .is_string()
+        );
+        assert_eq!(source.1.load(std::sync::atomic::Ordering::SeqCst), 0);
+        source.0.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert_eq!(
+            call(
+                &tools,
+                "github_actions_jobs",
+                json!({"repository":"team/app","runId":42,"attempt":1})
+            )
+            .await["operation"],
+            "github_actions_jobs"
+        );
+        assert_eq!(
+            call(
+                &tools,
+                "github_work_item",
+                json!({ "repository": "team/app", "number": 12 })
+            )
+            .await,
+            json!({ "repository": "team/app", "number": 12, "commentCursor": null, "fileCursor": null, "reviewCursor":null,"checkCursor":null,"threadCursor":null })
+        );
+        assert_eq!(
+            call(
+                &tools,
+                "github_work_item",
+                json!({ "repository": "team/app", "number": 12, "commentCursor": "discussion-page-2" })
+            )
+            .await,
+            json!({ "repository": "team/app", "number": 12, "commentCursor": "discussion-page-2", "fileCursor": null,"reviewCursor":null,"checkCursor":null,"threadCursor":null })
+        );
+        assert_eq!(
+            call(
+                &tools,
+                "github_work_item",
+                json!({ "repository": "team/app", "number": 12, "fileCursor": "files-page-2" })
+            )
+            .await,
+            json!({ "repository": "team/app", "number": 12, "commentCursor": null, "fileCursor": "files-page-2","reviewCursor":null,"checkCursor":null,"threadCursor":null })
+        );
+        assert_eq!(
+            call(&tools, "github_search_repositories", json!({ "query": "vults" })).await,
+            json!({ "query": "vults", "cursor": null, "repositories": [] })
+        );
+        assert_eq!(
+            call(
+                &tools,
+                "github_search_repositories",
+                json!({ "query": "vults", "cursor": "cursor-page-2" })
+            )
+            .await,
+            json!({ "query": "vults", "cursor": "cursor-page-2", "repositories": [] })
+        );
+        source.0.store(false, std::sync::atomic::Ordering::SeqCst);
+        assert!(
+            error(
+                &tools,
+                "github_work_item",
+                json!({ "repository": "team/app", "number": 12 })
+            )
+            .await["error"]
+                .is_string()
+        );
+        assert!(
+            error(&tools, "github_search_repositories", json!({ "query": "vults" })).await["error"]
+                .is_string()
+        );
+        assert_eq!(source.1.load(std::sync::atomic::Ordering::SeqCst), 6);
     }
 
     #[test]
@@ -520,5 +1904,37 @@ mod tests {
             target.contains("deploy.sh") && !target.contains("abc123"),
             "{target}"
         );
+    }
+    #[tokio::test]
+    async fn snapshot_switch_is_checked_on_every_call_through_scoped_sources() {
+        struct Switched(std::sync::atomic::AtomicBool);
+        impl Source for Switched {
+            fn view(&self) -> Option<Value> {
+                Some(view())
+            }
+            fn usage(&self) -> Value {
+                Value::Null
+            }
+            fn github_snapshot_allowed(&self) -> bool {
+                self.0.load(std::sync::atomic::Ordering::SeqCst)
+            }
+        }
+        let source = Arc::new(Switched(std::sync::atomic::AtomicBool::new(true)));
+        let scoped = Arc::new(crate::mentions::Source {
+            source: source.clone(),
+            targets: Vec::new(),
+        });
+        let tools = all(scoped);
+        assert!(call(&tools, "github_snapshot", json!({})).await["rows"].is_array());
+        source.0.store(false, std::sync::atomic::Ordering::SeqCst);
+        assert!(
+            error(&tools, "github_snapshot", json!({})).await["error"]
+                .as_str()
+                .unwrap()
+                .contains("disabled")
+        );
+        assert!(call(&tools, "flock_list", json!({})).await["sessions"].is_array());
+        source.0.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert!(call(&tools, "github_snapshot", json!({})).await["rows"].is_array());
     }
 }

@@ -7216,7 +7216,9 @@ version = "0.1.8"
 dependencies = [
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
+ "vults-core",
 ]
 
 [[package]]

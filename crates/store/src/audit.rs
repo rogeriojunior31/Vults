@@ -2,7 +2,7 @@
 //! agent config the installer wrote. Append-only: the database itself refuses to change a row, or
 //! to delete one younger than [`KEEP_DAYS`].
 
-use rusqlite::params;
+use rusqlite::{OptionalExtension, TransactionBehavior, params};
 use vults_core::audit::Audit;
 
 use crate::{Error, Store};
@@ -50,26 +50,83 @@ pub struct Line {
     pub consent: Option<i64>,
 }
 
+pub(crate) fn insert_audit(conn: &rusqlite::Connection, at: i64, a: &Audit) -> Result<(), Error> {
+    conn.execute(
+        // Never later than the database's own clock: a line from a clock run ahead would
+        // otherwise be guarded, and kept, for years.
+        "INSERT INTO audit (at, actor, act, agent, project, tool, target, consent)
+             VALUES (MIN(?1, CAST(strftime('%s', 'now') AS INTEGER)), ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![
+            at,
+            a.actor.name(),
+            a.act.name(),
+            a.agent,
+            a.project,
+            a.tool,
+            a.target,
+            a.consent
+        ],
+    )?;
+    Ok(())
+}
+
+fn last_github_control_outcome(conn: &rusqlite::Connection, key: &str) -> Result<Option<String>, Error> {
+    Ok(conn
+        .query_row(
+            "SELECT json_extract(target,'$.outcome') FROM audit
+        WHERE act='external-write' AND tool IN ('github_actions_rerun_failed','github_actions_rerun_run','github_actions_rerun_job','github_actions_cancel','github_pull_request_merge','github_pull_request_delete_branch')
+        AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{}' END,'$.controlKey')=?1
+        AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{}' END,'$.receipt')=1
+        ORDER BY id DESC LIMIT 1",
+            params![key],
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
 impl Store {
     /// One more line, at `at` (Unix seconds).
     pub fn append_audit(&mut self, at: i64, a: &Audit) -> Result<(), Error> {
-        self.conn.execute(
-            // Never later than the database's own clock: a line from a clock run ahead would
-            // otherwise be guarded, and kept, for years.
-            "INSERT INTO audit (at, actor, act, agent, project, tool, target, consent)
-             VALUES (MIN(?1, CAST(strftime('%s', 'now') AS INTEGER)), ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![
-                at,
-                a.actor.name(),
-                a.act.name(),
-                a.agent,
-                a.project,
-                a.tool,
-                a.target,
-                a.consent
-            ],
-        )?;
-        Ok(())
+        insert_audit(&self.conn, at, a)
+    }
+
+    /// A durable GitHub-control reservation is an execution receipt, never a permission decision.
+    pub fn reserve_github_control(&mut self, at: i64, a: &Audit) -> Result<bool, Error> {
+        let value: serde_json::Value =
+            serde_json::from_str(&a.target).map_err(|_| Error::Invalid("Invalid GitHub control receipt."))?;
+        let key = value["controlKey"]
+            .as_str()
+            .filter(|key| !key.is_empty() && key.len() <= 512)
+            .ok_or(Error::Invalid("Invalid GitHub control key."))?;
+        if a.actor != vults_core::audit::Actor::System
+            || a.act != vults_core::audit::Act::ExternalWrite
+            || value["receipt"] != true
+            || value["outcome"] != "reserved"
+            || !matches!(
+                a.tool.as_str(),
+                "github_actions_rerun_failed"
+                    | "github_actions_rerun_run"
+                    | "github_actions_rerun_job"
+                    | "github_actions_cancel"
+                    | "github_pull_request_merge"
+                    | "github_pull_request_delete_branch"
+            )
+        {
+            return Err(Error::Invalid("Invalid GitHub control reservation."));
+        }
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        if last_github_control_outcome(&tx, key)?.is_some_and(|outcome| outcome != "rejected") {
+            return Ok(false);
+        }
+        insert_audit(&tx, at, a)?;
+        tx.commit()?;
+        Ok(true)
+    }
+
+    pub fn github_control_blocked(&self, key: &str) -> Result<bool, Error> {
+        Ok(last_github_control_outcome(&self.conn, key)?.is_some_and(|outcome| outcome != "rejected"))
     }
 
     /// The newest `limit` lines, newest first.
@@ -320,5 +377,134 @@ mod tests {
         assert!(s.turns().unwrap().is_empty() && s.days().unwrap().is_empty());
         let wal = dir.join(format!("{}-wal", crate::FILE));
         assert!(!wal.exists() || std::fs::metadata(&wal).unwrap().len() == 0);
+    }
+}
+
+#[cfg(test)]
+mod actions_receipts_tests {
+    use super::*;
+    use vults_core::audit::{Act, Actor};
+    fn record(key: &str, outcome: &str, receipt: bool) -> Audit {
+        Audit::new(
+            Actor::System,
+            Act::ExternalWrite,
+            "zeca",
+            "org/repo",
+            "github_actions_rerun_run",
+            &serde_json::json!({"controlKey":key,"receipt":receipt,"outcome":outcome}).to_string(),
+        )
+    }
+    #[test]
+    fn actions_reservations_survive_restart_and_only_definite_rejection_allows_a_retry() {
+        let dir = crate::temp("actions-receipt");
+        let key = "github.com/20/12/1";
+        {
+            let mut store = Store::open(&dir).unwrap();
+            assert!(
+                store
+                    .reserve_github_control(1, &record(key, "reserved", true))
+                    .unwrap()
+            );
+        }
+        let mut store = Store::open(&dir).unwrap();
+        assert!(
+            !store
+                .reserve_github_control(1, &record(key, "reserved", true))
+                .unwrap()
+        );
+        store
+            .append_audit(1, &record(key, "preflight_failed", false))
+            .unwrap();
+        assert!(
+            !store
+                .reserve_github_control(1, &record(key, "reserved", true))
+                .unwrap()
+        );
+        store.append_audit(1, &record(key, "rejected", true)).unwrap();
+        assert!(
+            store
+                .reserve_github_control(1, &record(key, "reserved", true))
+                .unwrap()
+        );
+        store.append_audit(1, &record(key, "uncertain", true)).unwrap();
+        assert!(
+            !store
+                .reserve_github_control(1, &record(key, "reserved", true))
+                .unwrap()
+        );
+        assert!(
+            store
+                .reserve_github_control(1, &record("github.com/20/12/2", "reserved", true))
+                .unwrap()
+        );
+    }
+    #[test]
+    fn immutable_receipts_ignore_repository_spelling_and_reject_invalid_reservations() {
+        let mut store = Store::open(&crate::temp("actions-key")).unwrap();
+        let key = "github.com/20/12/1/rerun";
+        assert!(
+            store
+                .reserve_github_control(1, &record(key, "reserved", true))
+                .unwrap()
+        );
+        let mut renamed = record(key, "reserved", true);
+        renamed.project = "new-owner/Renamed".into();
+        assert!(!store.reserve_github_control(2, &renamed).unwrap());
+        assert!(store.github_control_blocked(key).unwrap());
+        assert!(
+            store
+                .reserve_github_control(2, &record(key, "reserved", false))
+                .is_err()
+        );
+        assert!(
+            store
+                .reserve_github_control(2, &record("github.com/20/12/1/cancel", "reserved", true))
+                .unwrap()
+        );
+    }
+    #[test]
+    fn merge_and_branch_delete_receipts_share_the_same_durable_guard() {
+        let mut store = Store::open(&crate::temp("merge-receipts")).unwrap();
+        for tool in ["github_pull_request_merge", "github_pull_request_delete_branch"] {
+            let mut audit = record(tool, "reserved", true);
+            audit.tool = tool.into();
+            assert!(store.reserve_github_control(1, &audit).unwrap());
+            assert!(!store.reserve_github_control(2, &audit).unwrap());
+            let mut pending = record(tool, "accepted_pending_verification", true);
+            pending.tool = tool.into();
+            store.append_audit(2, &pending).unwrap();
+            assert!(store.github_control_blocked(tool).unwrap());
+            pending.target =
+                serde_json::json!({"controlKey":tool,"receipt":true,"outcome":"rejected"}).to_string();
+            store.append_audit(3, &pending).unwrap();
+            assert!(store.reserve_github_control(4, &audit).unwrap());
+        }
+    }
+    #[test]
+    fn concurrent_control_admission_has_one_winner() {
+        let dir = crate::temp("actions-receipt-race");
+        Store::open(&dir).unwrap();
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
+        let workers: Vec<_> = (0..2)
+            .map(|_| {
+                let dir = dir.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    let mut store = Store::open(&dir).unwrap();
+                    barrier.wait();
+                    store
+                        .reserve_github_control(1, &record("github.com/20/12/1", "reserved", true))
+                        .unwrap()
+                })
+            })
+            .collect();
+        assert_eq!(
+            workers
+                .into_iter()
+                .map(|worker| worker.join().unwrap())
+                .filter(|won| *won)
+                .count(),
+            1
+        );
     }
 }

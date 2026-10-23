@@ -140,6 +140,9 @@ const nest = createNest(
       projectPref: (s, pref, on) => void Bridge.sessionProjectPref(s.agent, s.id, pref, on),
     },
     connections: {
+      zecaTools: Bridge.connectorZecaTools,
+      setSnapshot: Bridge.setConnectorZecaSnapshot,
+      setWorkItem: Bridge.setConnectorZecaWorkItem,
       loadPlace: Bridge.connectionsPlace,
       savePlace: Bridge.connectionsPlaceSet,
       open: (connector, item) => void Bridge.boardOpen(connector, item),

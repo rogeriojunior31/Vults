@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 43;
+const VERSION: u32 = 44;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -27,6 +27,12 @@ pub struct Settings {
     /// Connector id → enabled. Off until the user turns one on.
     #[serde(default)]
     pub connectors: BTreeMap<String, bool>,
+    /// Built-in cached GitHub reads; disabling does not stop the human-facing connector.
+    #[serde(default = "yes")]
+    pub zeca_github_snapshot: bool,
+    /// Live GitHub tools, with a human card for writes; off by default.
+    #[serde(default)]
+    pub zeca_github_work_item: bool,
     #[serde(default = "yes")]
     pub sounds: bool,
     /// How loud the sounds are, in percent; 50 is how loud 0.1.0 played them.
@@ -351,6 +357,8 @@ impl Default for Settings {
         Self {
             version: VERSION,
             connectors: BTreeMap::new(),
+            zeca_github_snapshot: true,
+            zeca_github_work_item: false,
             sounds: true,
             volume: volume(),
             fold_after: fold_after(),
@@ -2348,6 +2356,8 @@ mod tests {
         let expected = Settings {
             version: VERSION,
             connectors: BTreeMap::from([("github".into(), true)]),
+            zeca_github_snapshot: true,
+            zeca_github_work_item: false,
             sounds: false,
             volume: 50,
             fold_after: 30,
@@ -2625,6 +2635,32 @@ mod tests {
         // A value from another version reads as asking, never as more access.
         let (s, clean) = parse(r#"{ "version": 22, "chat_access": "everything" }"#);
         assert!(!clean && s.chat_access == ChatAccess::Ask);
+    }
+
+    #[test]
+    fn github_snapshot_choice_roundtrips_and_preserves_existing_defaults() {
+        assert!(Settings::default().zeca_github_snapshot);
+        assert!(!Settings::default().zeca_github_work_item);
+        let (saved, clean) = parse(r#"{ "version": 23, "zeca_github_snapshot": false }"#);
+        assert!(clean);
+        assert!(!saved.zeca_github_snapshot);
+        assert!(
+            !parse(&serde_json::to_string(&saved).unwrap())
+                .0
+                .zeca_github_snapshot
+        );
+        assert!(
+            !parse(r#"{ "version": 43, "zeca_github_snapshot": true }"#)
+                .0
+                .zeca_github_work_item
+        );
+        let mut live = saved;
+        live.zeca_github_work_item = true;
+        assert!(
+            parse(&serde_json::to_string(&live).unwrap())
+                .0
+                .zeca_github_work_item
+        );
     }
 
     #[test]

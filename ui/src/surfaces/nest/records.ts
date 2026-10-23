@@ -48,6 +48,7 @@ const ACT: Record<string, string> = {
   expire: tk("Nobody answered in time"),
   "config-install": tk("Hooks installed"),
   "config-remove": tk("Hooks removed"),
+  "external-write": tk("External change attempted"),
   "audit-cleared": tk("The log was cleared"),
 };
 

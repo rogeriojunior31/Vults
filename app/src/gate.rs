@@ -321,6 +321,39 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
     .clone()
 }
 
+/// A gated connector request that still leaves a failure trace if its caller is cancelled.
+pub(crate) struct ConnectorRequest {
+    gate: Arc<NetGate>,
+    feature: &'static str,
+    started: Instant,
+    finished: bool,
+}
+
+pub(crate) fn connector_request(app: &AppHandle, feature: &'static str) -> Option<ConnectorRequest> {
+    let gate = shared(app);
+    vults_connectors::Gate::allow(&*gate, feature).then(|| ConnectorRequest {
+        gate,
+        feature,
+        started: Instant::now(),
+        finished: false,
+    })
+}
+
+impl ConnectorRequest {
+    pub(crate) fn finish(mut self, ok: bool) {
+        vults_connectors::Gate::done(&*self.gate, self.feature, ok, self.started.elapsed());
+        self.finished = true;
+    }
+}
+
+impl Drop for ConnectorRequest {
+    fn drop(&mut self) {
+        if !self.finished {
+            vults_connectors::Gate::done(&*self.gate, self.feature, false, self.started.elapsed());
+        }
+    }
+}
+
 /// The name of a connector's request spans; also how the budget is counted back at start.
 pub fn span_name(connector: &str) -> String {
     format!("request {connector}")
@@ -909,5 +942,22 @@ mod tests {
         );
         assert_eq!(s.end_ms - s.start_ms, 250);
         assert_eq!(s.attrs["vults.target"], "github");
+    }
+
+    #[test]
+    fn a_cancelled_connector_read_still_leaves_a_failure_trace() {
+        let (gate, spans) = gate(true, CONNECTOR_BUDGET, BTreeMap::new());
+        let request = ConnectorRequest {
+            gate: Arc::new(gate),
+            feature: "github",
+            started: Instant::now(),
+            finished: false,
+        };
+        drop(request);
+        let spans = spans.lock().unwrap();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].status, "error");
+        assert_eq!(spans[0].attrs["vults.feature"], "connectors");
+        assert_eq!(spans[0].attrs["vults.target"], "github");
     }
 }

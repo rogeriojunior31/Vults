@@ -264,7 +264,7 @@ export interface Island {
   /** A setting the gear shows changed elsewhere. */
   settingsChanged(change: Partial<QuickSettings>): void;
   /** How a confirmed merge went: GitHub's refusal, or none once merged. */
-  merged(connector: string, item: string, error: string | null): void;
+  merged(connector: string, item: string, error: string | null, status?: string): void;
   /** Zeca lands and says hello at start-up, by the user's first name when there is one. */
   greet(name?: string | null): void;
   /** The window says the pointer came onto it or left it (Linux: GTK's crossings, in order). */
@@ -2256,8 +2256,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     else foldNow();
   });
   /** How a confirmed merge went (`row-merged`). */
-  const merged = (connector: string, item: string, error: string | null) => {
-    mergeEnded(connector, item, error);
+  const merged = (connector: string, item: string, error: string | null, status?: string) => {
+    mergeEnded(connector, item, error, status);
     render(raw);
   };
   const jumpFailed = () => {

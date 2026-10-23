@@ -323,7 +323,7 @@ pub enum Delta {
         #[serde(flatten)]
         detail: Detail,
     },
-    /// The API chat called one of its tools (they only read: no card).
+    /// The API chat called one of its tools.
     Tool {
         tool: String,
     },
@@ -420,6 +420,15 @@ pub trait Approver: Send + Sync {
     }
     /// A settled answer was given: for the audit log, as the policy's or the full access's.
     fn settled(&self, _tool: &str, _target: &str, _settled: Settled) {}
+}
+
+#[cfg(test)]
+pub(crate) struct TestApprover;
+#[cfg(test)]
+impl Approver for TestApprover {
+    fn wait(&self, _: &str, _: &str, _: &str) -> oneshot::Receiver<Answer> {
+        oneshot::channel().1
+    }
 }
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
@@ -1072,6 +1081,7 @@ impl Chat {
                                 tools: &self.tools,
                                 outside: &self.outside,
                                 frozen: self.spec.system_append.as_deref(),
+                                approver,
                             },
                             out,
                         )
@@ -1088,6 +1098,7 @@ impl Chat {
                                 tools: &self.tools,
                                 outside: &self.outside,
                                 frozen: self.spec.system_append.as_deref(),
+                                approver,
                             },
                             out,
                         )

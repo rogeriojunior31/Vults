@@ -975,7 +975,7 @@ async fn send(
     }
     // After the folder: the memory's tool proposes for the roost the conversation is in.
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
-    if companion && chat.provider() == Provider::ClaudeApi {
+    if api_companion_tools_enabled(companion, chat.provider(), chat.api().0.supports_tools) {
         let mut tools = crate::flock_tools::all(source.clone());
         tools.extend(crate::recall::tools(&app));
         tools.extend(crate::memory::tools(&app, chat.folder()));
@@ -1852,6 +1852,10 @@ fn snapshot_revision(profile: &Snapshot) -> u32 {
         vults_store::profiles::Source::Preset { revision, .. }
         | vults_store::profiles::Source::Custom { revision, .. } => *revision,
     }
+}
+
+fn api_companion_tools_enabled(companion: bool, provider: Provider, supports_tools: bool) -> bool {
+    companion && provider == Provider::ClaudeApi && supports_tools
 }
 
 fn zeca_switch_blocks_turn(zeca_on: bool, specialist: bool) -> bool {
@@ -3276,6 +3280,15 @@ mod tests {
         assert!(!zeca_switch_blocks_turn(false, true));
         assert!(!zeca_switch_blocks_turn(true, false));
         assert!(!zeca_switch_blocks_turn(true, true));
+    }
+
+    #[test]
+    fn built_in_api_tools_require_a_supported_companion_provider() {
+        assert!(api_companion_tools_enabled(true, Provider::ClaudeApi, true));
+        assert!(!api_companion_tools_enabled(true, Provider::ClaudeApi, false));
+        assert!(!api_companion_tools_enabled(false, Provider::ClaudeApi, true));
+        assert!(!api_companion_tools_enabled(true, Provider::Claude, true));
+        assert!(!api_companion_tools_enabled(true, Provider::Codex, true));
     }
 
     fn settled_profile(

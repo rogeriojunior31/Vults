@@ -175,6 +175,8 @@ export type Flock = "brazil" | "americas" | "world";
 /** A reply to one question: a choice or the user's own words, or several for a multi-select. */
 export type Answer = string | string[];
 
+export interface ConnectorZecaTools { snapshot: boolean; calls: number; lastUsed: number | null; workItem: boolean; liveReadCalls: number; liveReadLastUsed: number | null; budget: number }
+
 export interface ConnectorStatus {
   id: string;
   enabled: boolean;
@@ -183,6 +185,8 @@ export interface ConnectorStatus {
   watching: number;
   /** The network gate's daily budget for it is spent (ADR 0019): it waits. */
   overBudget: boolean;
+  account: string | null;
+  host: string | null;
 }
 
 /** What the user chose for one project folder; a choice left out is off. */
@@ -395,6 +399,7 @@ export type ConnectionsPlace = {
   repo: string | null;
   tab: "inbox" | "prs" | "runs" | "rels" | null;
   detailOpen: boolean;
+  zeca?: boolean;
 };
 export type ChatSync =
   | { kind: "draft"; from: string; draft: ChatDraft; generation?: number }
@@ -565,9 +570,12 @@ export const Bridge = {
   /** *Squash and merge*, confirmed: the core merges only a row it offered it for. */
   boardMerge: (connector: string, item: string) => invoke<void>("board_merge", { connector, item }),
   /** How a confirmed merge went: `error` is GitHub's refusal, none once merged. */
-  onRowMerged(cb: (m: { connector: string; item: string; error: string | null }) => void): void {
-    void listen<{ connector: string; item: string; error: string | null }>("row-merged", (e) => cb(e.payload));
+  onRowMerged(cb: (m: { connector: string; item: string; error: string | null; status?: string }) => void): void {
+    void listen<{ connector: string; item: string; error: string | null; status?: string }>("row-merged", (e) => cb(e.payload));
   },
+  connectorZecaTools: () => invoke<ConnectorZecaTools>("connector_zeca_tools"),
+  setConnectorZecaSnapshot: (on: boolean) => invoke<void>("set_connector_zeca_snapshot", { on }),
+  setConnectorZecaWorkItem: (on: boolean) => invoke<void>("set_connector_zeca_work_item", { on }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
