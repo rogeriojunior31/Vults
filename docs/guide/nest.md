@@ -55,8 +55,8 @@ bar's controls and the footer reachable.
 When there is room, the header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
-full-screen button. The same header holds five tabs with their
-icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
+full-screen button. The same header holds five tabs in this order: **Flock**, **Chat**, **Dictation**,
+**Connections** and **Activity**. They show their icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
 brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or
 failed); a click opens **Flock** with it in front (a card that waits comes first there), where you
@@ -64,7 +64,7 @@ answer it. Settings stays a page of its own there: it is the only one that chang
 agent's config, a key, a policy or a phone, and it never shows an agent's text. The switch keeps
 the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
-pill. **Alt+1** to **Alt+5** pick a tab. At the bottom, **Zeca on · optional** / **Zeca off**
+pill. **Alt+1** to **Alt+5** pick a tab in that order (hidden Chat is skipped). At the bottom, **Zeca on · optional** / **Zeca off**
 switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.

@@ -1,3 +1,4 @@
+@import "../../dictation-workspace.css";
 @import "../../dictation-navigation.css";
 @import "../../dictation-styles.css";
 @import "./pages.css";
@@ -2406,10 +2407,8 @@ button.touched-row:hover,
 .dictation-area button { min-height: 32px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--raised); color: var(--fg); padding: 6px 10px; font: 500 var(--text-s)/1.4 var(--font); cursor: pointer; }
 .dictation-area button:disabled { opacity: .5; cursor: default; }
 .dictation-area :is(button, input, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.dictation-history { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: 20px 24px; }
+.dictation-history { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; }
 .dictation-history[hidden] { display: none; }
-.dictation-history > * { width: 100%; max-width: 960px; margin-inline: auto; box-sizing: border-box; }
-.dictation-history > .dictation-toolbar { margin-inline: auto; }
 .dictation-maintenance { flex: none; font-size: var(--text-s); }
 .dictation-maintenance[hidden] { display: none; }
 .dictation-maintenance > summary { min-height: 32px; box-sizing: border-box; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--fg-dim); cursor: pointer; }
@@ -2441,15 +2440,14 @@ button.touched-row:hover,
 .your-words .dictation-confirmation { overflow-wrap: anywhere; }
 .dictation-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .dictation-heading > div { flex: 1; min-width: 160px; }
-.dictation-heading h2 { margin: 0; font-size: var(--text-xl); }
-.dictation-heading p, .dictation-note { margin: 8px 0; color: var(--fg-dim); font: var(--text-s)/1.6 var(--font); }
+.dictation-note { margin: 8px 0; color: var(--fg-dim); font: var(--text-s)/1.6 var(--font); }
 .dictation-figures[hidden] { display: none; }
 .dictation-figures { display: flex; flex-wrap: wrap; gap: 20px; padding: 16px 0; }
 .dictation-figures > div { display: flex; flex-direction: column; gap: 4px; min-width: 100px; }
 .dictation-figures strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 .dictation-figures span { color: var(--fg-dim); font-size: var(--text-s); }
-.dictation-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 16px; }
-.dictation-search { flex: 1; min-width: 140px; min-height: 32px; padding: 6px 10px; box-sizing: border-box; background: var(--input); color: var(--fg); border: 1px solid var(--control-border); border-radius: var(--radius-control); }
+.dictation-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dictation-search { flex: 1; padding: 6px 10px; box-sizing: border-box; background: var(--input); color: var(--fg); border: 1px solid var(--control-border); border-radius: var(--radius-control); }
 .dictation-entry { border-top: 1px solid var(--border); padding: 16px 0; }
 .dictation-entry > .dictation-meta { align-items: baseline; gap: 6px 12px; }
 .dictation-entry > .dictation-meta time { color: var(--fg); font-variant-numeric: tabular-nums; }
@@ -2467,13 +2465,11 @@ button.touched-row:hover,
 @media (max-width: 899px) {
   .dictation-area { flex-direction: column; }
 }
-@media (max-width: 600px) { .dictation-history { padding: 16px; } }
 
 .dictation-summary[hidden] { display: none; }
 .dictation-summary > summary { min-height: 28px; color: var(--fg-dim); font: 500 var(--text-s)/1.5 var(--font); cursor: pointer; }
 .dictation-summary > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 600px), (max-height: 560px) {
-  .dictation-history { padding: 12px 16px; }
   .dictation-history .dictation-heading { gap: 8px; }
   .dictation-history .dictation-heading p { display: none; }
   .dictation-history .dictation-toolbar { margin: 8px 0; }
@@ -2484,11 +2480,10 @@ button.touched-row:hover,
   .dictation-summary .dictation-figures { gap: 12px; padding: 8px 0; }
 }
 
-.meeting-check { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; padding: 20px 24px; }
+.meeting-check { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .meeting-check > header, .meeting-state, .meeting-actions { flex-shrink: 0; }
 .meeting-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; padding-inline: 2px; }
 .meeting-check[hidden], .meeting-check [hidden] { display: none; }
-.meeting-check h2 { font-size: var(--text-xl); margin: 0 0 8px; }
 .meeting-check p { font-size: var(--text-m); line-height: 1.5; color: var(--fg-dim); margin: 8px 0; max-width: 76ch; }
 .meeting-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-block: 12px; }
 .meeting-state p { color: var(--fg); margin: 0; }
@@ -2502,7 +2497,6 @@ button.touched-row:hover,
 .meeting-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-block: 8px; }
 .meeting-actions button { min-height: 32px; }
 .meeting-check .meeting-feedback { color: var(--error-text); }
-@media (max-width: 899px), (max-height: 560px) { .meeting-check { padding: 12px 16px; } }
 
 .meeting-actions button.meeting-primary { background: var(--accent); color: var(--on-accent); }
 @media (max-height: 560px) { .meeting-state { margin-block: 6px; } .meeting-check h2 { margin-bottom: 2px; } .meeting-actions { padding-block: 4px; } }
@@ -2529,12 +2523,12 @@ button.touched-row:hover,
 
 .meetings-workspace { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .meetings-workspace[hidden], .meeting-archive[hidden], .meeting-archive [hidden] { display: none; }
-.meeting-workspace-navigation { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 8px; padding: 12px 24px 0; }
+.meeting-workspace-navigation { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
 .meeting-workspace-navigation button { min-height: 32px; }
 .meeting-workspace-navigation button[aria-pressed="true"] { background: var(--raised); color: var(--fg); border-color: var(--fg-dim); }
-.meeting-archive { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; padding: 12px 24px; }
+.meeting-archive { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .meeting-archive > header { display: flex; flex-shrink: 0; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
-.meeting-archive h2 { font-size: var(--text-xl); margin: 0; flex: 1; }
+.meeting-archive h2 { flex: 1; }
 .meeting-archive h3 { overflow-wrap: anywhere; }
 .meeting-archive p { font-size: var(--text-m); line-height: 1.5; color: var(--fg-dim); margin-block: 8px; overflow-wrap: anywhere; }
 .meeting-archive .meeting-body { flex: 1; }
@@ -2561,14 +2555,13 @@ button.touched-row:hover,
 .meeting-footer > .meeting-actions { flex-shrink: 0; }
 .meeting-recording-options > summary { font-size: var(--text-m); color: var(--fg-dim); cursor: pointer; padding-block: 8px; }
 @media (max-width: 899px), (max-height: 560px) {
-  .meeting-workspace-navigation { padding: 8px 16px 0; }
-  .meeting-archive { padding: 8px 16px; }
+  .meeting-workspace-navigation { padding-top: 8px; }
   .meeting-export { gap: 6px; }
 }
 @media (max-height: 560px) { .meeting-save label > span { display: none; } .meeting-save { padding-block: 4px; } }
 @media (max-width: 600px) { .meeting-archive .meeting-segment { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
 
-.voice-conversation { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding: 16px 20px; gap: 8px; }
+.voice-conversation { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; gap: 8px; }
 .voice-conversation[hidden] { display: none; }
 .voice-conversation-character { position: relative; display: block; flex: none; width: 76px; height: 72px; pointer-events: none; }
 .voice-conversation-character[hidden] { display: none; }
@@ -2584,14 +2577,13 @@ button.touched-row:hover,
 .voice-conversation-review textarea { box-sizing: border-box; width: 100%; min-height: 72px; resize: vertical; background: var(--float); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-control); padding: 8px; font: var(--text-m)/1.5 var(--font); }
 .voice-conversation-review button { margin-top: 8px; }
 @media (max-height: 440px), (max-width: 600px) {
-  .voice-conversation { padding: 8px 12px; gap: 6px; }
+  .voice-conversation { gap: 6px; }
   .voice-conversation .dictation-heading p { display: none; }
 }
 
 @media (max-height: 440px) {
   .voice-conversation { gap: 4px; }
   .voice-conversation-actions { gap: 6px; }
-  .meeting-check { padding: 6px 12px; }
   .meeting-check .meeting-state { margin-block: 4px; }
   .meeting-before-transcript > .meeting-tabs { display: none; }
 }

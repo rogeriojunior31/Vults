@@ -1690,7 +1690,7 @@ export default {
   "1 year": "1 年",
   "Always": "永久",
   "Configure dictation keys, feedback, insertion and history in its own page.": "在专属页面配置听写按键、反馈、插入和历史。",
-  "Choose Flock, Chat, Activity, Connections or Dictation. Esc leaves Full.": "选择鸟群、聊天、活动、连接或听写。Esc 退出全屏。",
+  "Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full.": "选择鸟群、聊天、听写、连接或活动。Esc 退出全屏。",
   "Erase dictation history": "清除听写历史",
   "Speak in another app. Transcription stays on this computer, with your choice of insertion and history.": "在其他应用中说话。转写保留在本机，插入方式和历史由你选择。",
   "Voice model and language": "语音模型和语言",

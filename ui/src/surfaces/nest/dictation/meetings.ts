@@ -3,6 +3,7 @@ import { createMeetingArchive, type MeetingArchiveBackend } from "./archive";
 import type { MeetingStatus, MeetingTranscript, MeetingTrack } from "../../../bridge";
 import { el } from "../../../dom";
 import { t, tk } from "../../../i18n";
+import { icon } from "../../../island/icons";
 
 export interface MeetingBackend {
   archive?: MeetingArchiveBackend;
@@ -48,7 +49,7 @@ function readableSegments(track: MeetingTrack | undefined) {
 function createRecording(backend: MeetingBackend | undefined, configure: () => void, summarySettings: () => void, openSaved: (id: string) => void) {
   const notes = createMeetingSummary(backend?.summary, summarySettings);
   let selected: "transcript" | "summary" | "todos" = "transcript";
-  const heading = el("h2"), about = el("p"), disclosure = el("p");
+  const heading = el("span"), about = el("p"), disclosure = el("p");
   const phase = el("p");
   const timer = el("output");
   const line = el("div", { class: "meeting-recording-line" });
@@ -100,7 +101,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   const body = el("div", { class: "meeting-body" }, feedback, saveError, saveStatus, transcriptPage, summaryPage, todosPage, saveDetails, recordingOptions);
   const stateRegion = el("div", { class: "meeting-state" }, line, phase, timer, progress);
   const footer = el("div", { class: "meeting-footer" }, saveRegion, notes.actions);
-  const element = el("section", { class: "meeting-check" }, el("header", {}, heading), stateRegion, tabList, body, footer, actions);
+  const element = el("section", { class: "meeting-check" }, el("header", { class: "dictation-heading" }, el("h2", { class: "dictation-title" }, icon("mic", 18), heading)), stateRegion, tabList, body, footer, actions);
   body.tabIndex = 0;
   phase.setAttribute("role", "status"); phase.setAttribute("aria-live", "polite");
   feedback.setAttribute("role", "alert"); timer.setAttribute("aria-live", "off"); line.setAttribute("aria-hidden", "true");

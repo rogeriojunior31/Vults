@@ -1763,3 +1763,101 @@ Build and all 19 CI renderer checks pass. Native development remains open with r
 fresh desktop visual acceptance remains manual because no computer-use surface is available.
 No actual clipboard action, user-data mutation, capture or provider request was performed.
 Changes remain local in the same branch, without commit, push or PR.
+
+### Dictation integrated workspace layout - 2026-10-25
+
+Committed the preceding navigation, work-page and settings refinements as `c7863fb8` after build,
+all 19 CI renderer checks, Rust formatting, workspace Clippy with warnings denied, workspace tests,
+feature-enabled evals and repository checks passed. No dependency changed.
+
+Continue on the same branch with a shared Dictation presentation stylesheet used by Nest and the
+privileged Settings webview. Work pages and configuration share a 960 px reading bound, page
+insets, compact title scale, existing decorative icons and quieter heading actions. Move the
+previous per-page inset rules to this shared owner. Meetings and voice fields use the existing
+theme roles, with bounded transcript scrolling, visible recording actions and a separated save
+footer. No new page, capture action, permission, connection or storage behavior is introduced.
+
+Container queries use the actual work-page width after the sidebar rather than only the window
+width. History rows and figures, word forms, meeting save/export controls and Settings rows adapt
+without changing their existing owners or drafts. Viewport-based compact fallbacks remain, and
+short windows reduce page spacing. All titles keep semantic headings and the decorative icons
+remain hidden from assistive technology. Existing black/light theme tokens are reused.
+
+Build and all 19 renderer checks pass after the markup/layout changes, including translated
+labels, saved navigation, search/drafts, async focus, recording controls, confirmation and provider
+consent tests. SVG support was added to the two local DOM harnesses that now render title icons.
+Repository checks pass. The native app remains running with HMR updates, but fresh native visual
+acceptance of Room/Full, sidebar folding, long content and short windows remains manual because
+this session exposes no computer-use surface. Automated renderer tests do not measure layout.
+This next slice remains uncommitted for review; no push or PR was made.
+
+### Saved meeting list return and keyboard continuity - 2026-10-25
+
+Returning from a saved transcript now restores the list's prior scroll position and keyboard
+focus to its originating meeting when that row is still available; otherwise search remains
+usable. List rebuilds preserve the outer list scroll and independent wide-sidebar scroll, and
+restore focused rows by meeting identity. A delayed list refresh cannot steal a newer search
+focus. Existing filter, detail/source selection, explicit export/delete and stale-read guards
+remain under the same archive owner. Invalidation clears the temporary position with the view.
+
+The archive regression check reproduced the initial jump to zero, then separately reproduced
+browser scroll clamping while replacing the list. Checks cover return position, originating
+row focus, a delayed refresh after newer focus and sidebar scroll/focus across relabeling.
+Build and the meeting renderer check pass; broader renderer/repository checks are recorded by
+the development run. Native development remains open for manual visual acceptance because no
+computer-use surface is exposed. No actual history, capture or provider action was performed.
+Changes remain local with the integrated workspace refinement; no new commit, push or PR.
+
+### Dictation configuration reading and navigation focus - 2026-10-25
+
+Keep independent scroll positions for the bounded Dictation configuration destinations during
+the current Settings window's lifetime. Existing same-page refresh retention remains; returning
+to an already visited configuration page now restores its reading position. First visits and
+other Settings pages retain their existing behavior. Positions are transient numbers with no
+new disk storage, draft serialization, native requests or configuration writes.
+
+Give the shared configuration disclosure summary a stable existing Settings focus key. The
+native editor redraw already restores keyed controls after removing/reinserting its navigation;
+the summary now participates instead of losing focus after the old tree is detached. The
+existing expansion choice and search behavior remain unchanged.
+
+Regression checks reproduced lost per-page scroll and then disclosure-focus loss separately.
+They cover independent Paste/Privacy positions, refresh retention and real-DOM-style focus
+loss when the root is detached, without settings writes. Build and the Settings renderer check
+pass; the broader renderer/repository checks run with this development slice. Native visual
+acceptance remains manual with no computer-use surface available; the app remains open.
+Changes remain local alongside the pending workspace refinement, with no new commit or PR.
+
+### Dictation consistent search and input-method Escape - 2026-10-25
+
+Reuse one small text-folding function for Dictation navigation, History/commands, Dictionary/
+Snippets and saved meeting titles. Searches ignore case and Latin combining accents consistently;
+original displayed text, literal snippet bodies and saved values remain unchanged. Query folding
+is computed once per words-page draw rather than once for every candidate. No extra IO or writes.
+
+All four search owners now leave Escape to active character composition, including the legacy
+229 key marker. Ordinary Escape retains the existing clear-search and focus behavior. This uses
+the same guard already present in the local records search and adds no new keyboard shortcut.
+
+Regression checks first reproduced accent-search failures in History and saved meetings and
+composition Escape failures in Your words and navigation. All four owner checks now pass with
+both composition signals and normal Escape recovery; existing local/no-write behavior remains.
+Build passes. Broader renderer and repository checks run with the slice. The native app remains
+open for manual visual acceptance with no computer-use surface available. Changes remain local
+on the same branch with the pending workspace refinements; no commit, push or PR was made.
+
+
+### Dictation refinement PR preparation - 2026-10-25
+
+Consolidate the accepted work on this branch for review. Nest tabs and palette destinations now
+follow Flock, Chat, Dictation, Connections, Activity; Alt+1 through Alt+5 follow that same order,
+skipping hidden Chat as before. The shared Settings shortcut description and all three UI
+catalogs and both Nest guides reflect the order.
+
+Pre-commit validation passes: production UI build, all 19 CI renderer checks, Rust formatting,
+workspace Clippy with warnings denied, workspace tests and feature-enabled evals. Brand, English,
+i18n, layer, network, version, README translation and diff checks pass; changed user-guide source
+hashes match their reviewed translations. No dependency or permission rule changed. The local
+branch is based on current main without conflicts. Native development remains open; fresh desktop
+visual acceptance and a current screenshot are still pending with no available computer-use
+surface. Preserve this limitation in the PR checklist rather than claiming automated visual QA.

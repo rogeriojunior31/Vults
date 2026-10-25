@@ -1,3 +1,4 @@
+import { searchText } from "./search";
 import { appliedStyle, appliedLanguage } from "../../../dictation-styles";
 import type { DictationHistory, DictationRow } from "../../../bridge";
 import { copyTextButton } from "../../../clipboard";
@@ -15,7 +16,8 @@ export interface DictationBackend {
 
 export function createDictationHistory(backend: DictationBackend, settings: () => void, commandsOnly = false) {
   const element = el("section", { class: "dictation-history" });
-  const title = el("h2");
+  const title = el("span");
+  const titleLine = el("h2", { class: "dictation-title" }, icon(commandsOnly ? "flock" : "mic", 18), title);
   const about = el("p");
   const configure = el("button", { onclick: settings });
   const figures = el("div", { class: "dictation-figures" });
@@ -43,7 +45,7 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
   const list = el("div", { class: "dictation-list" });
   list.tabIndex = -1;
   const limit = el("p", { class: "dictation-note" });
-  element.append(el("header", { class: "dictation-heading" }, el("div", {}, title, about), configure),
+  element.append(el("header", { class: "dictation-heading" }, el("div", {}, titleLine, about), configure),
     hero, el("div", { class: "dictation-toolbar" }, search, refresh, maintenance), results, feedback, confirmation, list, limit);
   let data: DictationHistory | null = null;
   let asked = 0, loading = false, busy = false;
@@ -130,8 +132,8 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
       list.append(viewState("empty", t("Dictation history is not kept."), commandsOnly ? t("Commands still work; no transcript or result is saved.") : t("Usage totals still update. Copy again keeps the last successful text in memory only.")));
       return;
     }
-    const query = search.value.trim().toLocaleLowerCase(locale());
-    const rows = data.rows.filter(row => (!commandsOnly || row.outcome === "command") && (!query || `${row.heard}\n${row.text}\n${row.app ?? ""}\n${row.session ?? ""}`.toLocaleLowerCase(locale()).includes(query)));
+    const query = searchText(search.value.trim());
+    const rows = data.rows.filter(row => (!commandsOnly || row.outcome === "command") && (!query || searchText(`${row.heard}\n${row.text}\n${row.app ?? ""}\n${row.session ?? ""}`).includes(query)));
     results.hidden = false;
     const resultText = rows.length === 1 ? t("1 entry") : t("{count} entries", { count: number(rows.length) });
     if (results.textContent !== resultText) results.textContent = resultText;
@@ -222,6 +224,7 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
   };
   search.addEventListener("input", draw);
   search.addEventListener("keydown", event => {
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === "Escape" && search.value) {
       event.preventDefault(); event.stopPropagation(); search.value = ""; draw();
     }

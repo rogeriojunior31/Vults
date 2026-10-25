@@ -1,3 +1,4 @@
+import { searchText } from "./search";
 import { el } from "../../../dom";
 import { t, tk } from "../../../i18n";
 import { icon, type IconName } from "../../../island/icons";
@@ -50,11 +51,11 @@ export function createDictationNavigation(selected: string, work: (page: Dictati
   empty.setAttribute("role", "status");
   const nav = el("nav", { class: "dictation-nav" }, el("div", { class: "dictation-nav-controls" }, search, picker), groups, empty);
   const configurationTitle = el("summary");
+  configurationTitle.dataset.setting = "dictation-configuration-toggle";
   const configuration = el("details", { class: "dictation-nav-config" }, configurationTitle);
   let configurationExpanded = selected.startsWith("dictation") && selected !== "dictationstyles";
   configuration.addEventListener("toggle", () => { if (!search.value.trim()) configurationExpanded = configuration.open; });
   const panel = sidePanel(nav, "dictation", "Dictation", 210, "left", 180, 300);
-  const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
   const relabel = () => {
     const active = document.activeElement as HTMLElement | null;
     const focusedConfiguration = active === configurationTitle;
@@ -85,7 +86,7 @@ export function createDictationNavigation(selected: string, work: (page: Dictati
       }) })),
       { label: t("System"), config: false, entries: [{ id: "statistics", label: t("Statistics"), glyph: "bars", click: statistics, about: "" }] },
     ];
-    const query = normalize(search.value.trim());
+    const query = searchText(search.value.trim());
     groups.replaceChildren(); picker.replaceChildren();
     configurationTitle.textContent = t("Dictation settings");
     configuration.replaceChildren(configurationTitle);
@@ -93,7 +94,7 @@ export function createDictationNavigation(selected: string, work: (page: Dictati
     let configCount = 0;
     let selectedVisible = false, count = 0;
     for (const section of sections) {
-      const entries = section.entries.filter(entry => normalize(`${entry.label} ${entry.about} ${section.label}`).includes(query));
+      const entries = section.entries.filter(entry => searchText(`${entry.label} ${entry.about} ${section.label}`).includes(query));
       if (!entries.length) continue;
       const group = el("section", { class: "dictation-nav-group" }, section.label === t("System") && configCount > 0 ? null : el("h3", { text: section.label }));
       group.setAttribute("aria-label", section.label);
@@ -125,6 +126,7 @@ export function createDictationNavigation(selected: string, work: (page: Dictati
   };
   search.addEventListener("input", relabel);
   search.addEventListener("keydown", event => {
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === "Escape" && search.value) { event.preventDefault(); event.stopPropagation(); search.value = ""; relabel(); }
   });
   groups.addEventListener("keydown", event => {

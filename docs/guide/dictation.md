@@ -14,7 +14,9 @@ Model sources, licenses and the experimental meeting installer are documented in
 The Dictation navigation follows the prototype groups: Voice, Your words and System.
 Expand **Dictation settings** for configuration pages; selecting a setting or searching reveals
 the relevant controls. Styles remains under Your words and opens its existing settings editor. Use **Find a page** to search page names and setting descriptions without changing the
-current page or saving a setting. Press Escape in the search field to clear it. The navigation
+current page or saving a setting. Dictation page searches ignore case and accents, including
+History, words and saved meeting titles, while displaying the original text. Press Escape in the
+search field to clear it; Escape used by an input method to compose characters keeps the query. The navigation
 keeps your search and the configuration group's folded state when settings refresh. A search
 temporarily reveals matching configuration pages; clearing it restores your fold choice. Reopening the Nest during the same app run restores
 its selected Dictation work page, such as Dictionary, Snippets or Voice commands. Room/Full size
@@ -22,6 +24,9 @@ changes keep that destination through the existing saved-close flow. Arrow Up/Do
 sidebar actions; Enter opens the focused page. Narrow windows use the same grouped page picker.
 Finishing a History action or saving Dictionary/Snippets entries keeps a newer search or control
 focus. If you stay on the action, its existing keyboard return remains available.
+Dictation configuration pages keep independent reading positions while this Settings window
+exists. Returning to a page restores its position; refreshing settings also keeps keyboard focus
+on the navigation group toggle. These positions are not saved across app or window restarts.
 
 Keyboard shortcuts separates global bindings from recording controls. It shows the independent
 voice-command key alongside dictation, copy-last and cancel; X11-specific recording keys live
@@ -32,6 +37,12 @@ No overview requests keyboard access; that still requires the existing explicit 
 The Voice settings page separates model/language, microphone, and sound/feedback. Less common
 loop removal and empty-result retry options live under **Advanced processing**. Settings still
 apply through their existing controls, with save failures restoring the previous choice.
+
+Work pages and Dictation settings share a bounded reading column, compact titles and the same
+control scale. History actions, word forms, meeting save/export controls and configuration rows
+adapt to the page width remaining beside the navigation. Short windows reduce spacing while
+transcripts and configuration content keep their scroll regions. Recording controls stay outside
+the transcript scroll region; consent and delivery notices remain part of their existing flows.
 
 ## Voice available today
 
@@ -1055,6 +1066,9 @@ In a wide, tall window, selecting a saved meeting keeps the searchable list besi
 Smaller windows show the detail with **Back to saved meetings**, preserving the selection when
 resizing. The list shows a result count; Escape and **Clear search** restore a filtered list.
 Export and deletion remain explicit actions. Deletion focuses **Keep meeting** first.
+Returning from a transcript restores the list position and focuses the meeting you opened when
+it is still listed. A refreshed list or language change preserves its scroll and keyboard focus;
+a newer search focus remains yours.
 
 
 When a transcript is ready, enter a **Meeting title** and choose **Save meeting**. Finish a summary

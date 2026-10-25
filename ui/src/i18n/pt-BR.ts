@@ -1690,7 +1690,7 @@ export default {
   "1 year": "1 ano",
   "Always": "Sempre",
   "Configure dictation keys, feedback, insertion and history in its own page.": "Configure teclas, feedback, inserção e histórico do ditado na página própria.",
-  "Choose Flock, Chat, Activity, Connections or Dictation. Esc leaves Full.": "Escolha Bando, Chat, Atividade, Conexões ou Ditado. Esc sai da tela cheia.",
+  "Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full.": "Escolha Bando, Chat, Ditado, Conexões ou Atividade. Esc sai da tela cheia.",
   "Erase dictation history": "Apagar histórico de ditado",
   "Speak in another app. Transcription stays on this computer, with your choice of insertion and history.": "Fale em outro aplicativo. A transcrição fica neste computador, com sua escolha de inserção e histórico.",
   "Voice model and language": "Modelo de voz e idioma",

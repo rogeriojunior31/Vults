@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 4a2ea21eacff -->
+<!-- source: 9071cc71fe3b -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -18,7 +18,10 @@ Expanda **Configurações do ditado** para acessar as páginas de configuração
 configuração ou buscar revela os controles relevantes. Estilos continua em Suas palavras e abre
 o editor de configurações existente.
 Use **Buscar página** para pesquisar nomes de páginas e descrições das configurações sem mudar a
-página atual nem salvar uma configuração. Pressione Escape na busca para limpá-la. A navegação
+página atual nem salvar uma configuração. As buscas do Ditado ignoram maiúsculas e acentos,
+incluindo Histórico, palavras e títulos de reuniões salvas, mantendo o texto original na tela.
+Pressione Escape na busca para limpá-la; o Escape usado por um método de entrada para compor
+caracteres preserva a consulta. A navegação
 mantém a busca e o estado recolhido do grupo de configurações durante atualizações. Uma busca
 revela temporariamente as páginas de configuração correspondentes; limpá-la restaura sua escolha. Reabrir o Nest durante a mesma execução do
 app restaura a página de trabalho do Ditado escolhida, como Dicionário, Trechos ou Comandos de voz.
@@ -27,6 +30,10 @@ o foco entre as ações visíveis da barra lateral; Enter abre a página em foco
 usam o mesmo seletor de páginas agrupadas.
 Concluir uma ação no Histórico ou salvar entradas no Dicionário/Trechos preserva o foco de uma
 busca ou controle usado depois. Se você continuar na ação, o retorno de teclado existente permanece.
+As páginas de configuração do Ditado mantêm posições de leitura independentes enquanto esta janela
+de Configurações existir. Voltar a uma página restaura sua posição; atualizar as configurações
+também mantém o foco de teclado no controle do grupo de navegação. Essas posições não são salvas
+entre reinícios do app ou da janela.
 
 Atalhos de teclado separa as teclas globais dos controles de gravação. Mostra o atalho independente
 de comandos de voz junto com ditado, copiar último e cancelar; as teclas de gravação específicas
@@ -37,6 +44,13 @@ de cópia. O resumo não solicita acesso ao teclado; isso continua exigindo a a�
 A página Voz separa modelo/idioma, microfone e som/feedback. As opções menos comuns de remoção de
 repetições e nova tentativa de resultado vazio ficam em **Processamento avançado**. As configurações
 continuam usando os controles existentes; falhas ao salvar restauram a escolha anterior.
+
+As páginas de trabalho e as configurações do Ditado compartilham uma coluna de leitura limitada,
+títulos compactos e controles na mesma escala. Ações do Histórico, formulários de palavras,
+controles de salvar/exportar reuniões e linhas de configuração se adaptam à largura restante ao
+lado da navegação. Janelas baixas reduzem os espaços enquanto transcrições e configurações mantêm
+suas áreas de rolagem. Os controles de gravação ficam fora da rolagem da transcrição; os avisos
+de consentimento e entrega continuam nos fluxos existentes.
 
 <a id="voice-available-today"></a>
 
@@ -1182,6 +1196,9 @@ Em uma janela larga e alta, selecionar uma reunião salva mantém a lista com bu
 Janelas menores mostram o detalhe com **Voltar às reuniões salvas**, preservando a seleção ao mudar
 o tamanho. A lista mostra a contagem de resultados; Escape e **Limpar busca** restauram uma lista
 filtrada. Exportação e exclusão continuam explícitas. A exclusão começa com **Manter reunião** em foco.
+Voltar de uma transcrição restaura a posição da lista e o foco na reunião aberta quando ela ainda
+está listada. Atualizar a lista ou mudar o idioma preserva sua rolagem e foco de teclado; uma busca
+focada depois continua com o foco.
 
 
 Quando uma transcrição estiver pronta, preencha o **Título da reunião** e escolha **Salvar reunião**.

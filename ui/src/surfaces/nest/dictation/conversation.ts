@@ -2,6 +2,7 @@ import type { VoiceConversation, VoiceRoutes, VoiceRouteSelection } from "../../
 import { createVoiceRoute } from "./voice-route";
 import { el } from "../../../dom";
 import { t } from "../../../i18n";
+import { icon } from "../../../island/icons";
 
 export interface ConversationBackend {
   options?(): Promise<{ semantic: boolean }>;
@@ -13,7 +14,7 @@ export interface ConversationBackend {
 }
 const running = (view: VoiceConversation | null) => !!view && ["preparing", "starting", "recording", "transcribing", "responding", "speaking", "interrupting", "waiting"].includes(view.phase);
 export function createVoiceConversation(api: ConversationBackend | undefined, configure: () => void, changed: () => void = () => {}) {
-  const title = el("h2"), about = el("p"), privacy = el("p", { class: "dictation-note" });
+  const title = el("span"), about = el("p"), privacy = el("p", { class: "dictation-note" });
   const status = el("p", { class: "voice-conversation-state" }), error = el("p", { class: "meeting-feedback" });
   status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); error.setAttribute("role", "alert");
   const start = el("button"), finish = el("button"), cancel = el("button"), settings = el("button", { onclick: configure });
@@ -39,7 +40,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   content.tabIndex = 0; content.setAttribute("role", "region");
   const perch = el("span", { class: "voice-conversation-character" });
   perch.setAttribute("aria-hidden", "true"); perch.hidden = true;
-  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, title, about), el("div", { class: "voice-conversation-header-actions" }, perch, settings)), status, error, actions, content);
+  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, el("h2", { class: "dictation-title" }, icon("chat", 18), title), about), el("div", { class: "voice-conversation-header-actions" }, perch, settings)), status, error, actions, content);
   let view: VoiceConversation | null = null, active = false, pending = false, epoch = 0;
   let semanticAvailable = false;
   let timer: ReturnType<typeof setTimeout> | undefined;

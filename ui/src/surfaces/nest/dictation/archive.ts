@@ -1,6 +1,8 @@
+import { searchText } from "./search";
 import type { MeetingEntry, MeetingSource, SavedMeeting } from "../../../bridge";
 import { el } from "../../../dom";
 import { locale, t } from "../../../i18n";
+import { icon } from "../../../island/icons";
 import { meetingNotes } from "./content";
 
 export interface MeetingArchiveBackend {
@@ -13,8 +15,8 @@ export interface MeetingArchiveBackend {
 }
 
 export function createMeetingArchive(api: MeetingArchiveBackend) {
-  const heading = el("h2"), back = el("button"), reload = el("button");
-  const header = el("header", {}, back, heading, reload);
+  const heading = el("span"), back = el("button"), reload = el("button");
+  const header = el("header", { class: "dictation-heading" }, back, el("h2", { class: "dictation-title" }, icon("file", 18), heading), reload);
   const notice = el("p"), feedback = el("p", { class: "meeting-feedback" });
   feedback.setAttribute("role", "alert"); notice.setAttribute("role", "status");
   const search = el("input"); search.type = "search";
@@ -51,6 +53,7 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   let rows: MeetingEntry[] | null = null, selected: string | null = null, meeting: SavedMeeting | null = null;
   let mode: keyof typeof tabs = "transcript", source: MeetingSource = "microphone", confirming = false;
   let contentKey = "", speakerKey = "", listKey = "";
+  let listScroll = 0;
   const drafts = new Map<string, string>();
   const wide = window.matchMedia?.("(min-width: 1100px) and (min-height: 561px)");
   wide?.addEventListener("change", () => draw());
@@ -59,6 +62,11 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   const sourceName = (key: MeetingSource) => key === "microphone" ? t("Microphone") : t("System audio");
   const time = (ms: number) => `${Math.floor(ms / 3600000).toString().padStart(2, "0")}:${Math.floor(ms / 60000 % 60).toString().padStart(2, "0")}:${Math.floor(ms / 1000 % 60).toString().padStart(2, "0")}.${Math.floor(ms % 1000).toString().padStart(3, "0")}`;
   const dated = (at: number) => new Date(at).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "short" });
+
+  const focusMeeting = (id: string | null) => {
+    const row = [...list.querySelectorAll<HTMLButtonElement>(".meeting-archive-row")].find(button => button.dataset.meetingId === id);
+    (row ?? search).focus({ preventScroll: true });
+  };
 
   function draw() {
     heading.textContent = t("Saved meetings"); back.textContent = t("Back to saved meetings"); reload.textContent = t("Reload");
@@ -79,9 +87,12 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
     list.hidden = selected !== null && !split; detail.hidden = !meeting || selected === null;
     const nextList = JSON.stringify([rows, search.value, locale(), selected, busy]);
     if (nextList !== listKey) {
+      const focused = document.activeElement as HTMLElement | null;
+      const focusedId = focused && list.contains(focused) ? focused.dataset.meetingId : null;
+      const scroll = sidebar.scrollTop, pageScroll = body.scrollTop;
       listKey = nextList; list.replaceChildren();
-      const query = search.value.trim().toLocaleLowerCase(locale());
-      const matches = rows?.filter(row => row.title.toLocaleLowerCase(locale()).includes(query)) ?? [];
+      const query = searchText(search.value.trim());
+      const matches = rows?.filter(row => searchText(row.title).includes(query)) ?? [];
       results.hidden = rows === null;
       results.textContent = matches.length === 1 ? t("1 entry") : t("{count} entries", { count: matches.length });
       clearSearch.textContent = t("Clear search");
@@ -92,10 +103,14 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
       for (const row of matches) {
         const button = el("button", { class: "meeting-archive-row", onclick: () => open(row.id) },
           el("strong", { text: row.title }), el("span", { text: dated(row.recorded_ms) }));
+        button.dataset.meetingId = row.id;
         button.disabled = busy; button.setAttribute("aria-pressed", String(row.id === selected));
         button.setAttribute("aria-label", t("Open {title}, recorded {date}", { title: row.title, date: dated(row.recorded_ms) }));
         list.append(button);
       }
+      sidebar.scrollTop = scroll;
+      if (selected === null) body.scrollTop = pageScroll;
+      if (focusedId && !sidebar.hidden) focusMeeting(focusedId);
     }
     confirmation.hidden = !confirming || !meeting;
     confirmation.setAttribute("role", "group"); confirmation.setAttribute("aria-label", t("Delete saved meeting"));
@@ -180,8 +195,10 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   }
   function open(id: string | null) {
     if (busy) return;
+    if (selected === null && id !== null) listScroll = body.scrollTop;
     ++generation; selected = id; meeting = null; failed = false; confirming = false; exported = null; actionError = "";
-    body.scrollTop = 0; contentKey = ""; speakerKey = ""; people.open = false; draw();
+    contentKey = ""; speakerKey = ""; people.open = false; draw();
+    body.scrollTop = id === null ? listScroll : 0;
     if (id) back.focus({ preventScroll: true });
     void load();
   }
@@ -204,9 +221,10 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
       draw(); tabs[mode].focus();
     });
   }
-  back.addEventListener("click", () => { open(null); search.focus(); });
+  back.addEventListener("click", () => { const id = selected; open(null); focusMeeting(id); });
   reload.addEventListener("click", () => { actionError = ""; void load(); });
   search.addEventListener("keydown", event => {
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === "Escape" && search.value) { event.preventDefault(); event.stopPropagation(); search.value = ""; draw(); }
   });
   search.addEventListener("input", draw); format.addEventListener("change", draw); exportSource.addEventListener("change", draw);
@@ -233,7 +251,7 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   });
   function invalidate() {
     ++generation; reading = false; busy = false; rows = null; meeting = null; confirming = false; actionError = ""; exported = null;
-    contentKey = ""; speakerKey = ""; listKey = ""; search.value = ""; drafts.clear(); draw();
+    contentKey = ""; speakerKey = ""; listKey = ""; listScroll = 0; search.value = ""; drafts.clear(); draw();
   }
   draw();
   return { element, open, relabel: draw, refresh: load, invalidate,

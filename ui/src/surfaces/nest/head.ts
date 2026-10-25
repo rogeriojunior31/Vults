@@ -20,9 +20,9 @@ export type NestTab = "flock" | "chat" | "activity" | "connections" | "dictation
 export const NEST_TABS: NestTab[] = [
   "flock",
   "chat",
-  "activity",
-  "connections",
   "dictation",
+  "connections",
+  "activity",
 ];
 
 const TAB_ICONS: Record<NestTab | "settings", IconName> = {

@@ -31,7 +31,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent", plugi
 const { createDictationHistory, setLang } = await import(`data:text/javascript;base64,${Buffer.from(bundles[0].output.find(p => p.type === "chunk").code).toString("base64")}`);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const row = (id, text) => ({ id, at: 2_000_000_000 - (id === 2 ? 86_400 : 0), app: "<img src=x>", session: "codex:api", heard: `heard ${text}`, text, words: 2, secs: 2.5, style: "polished", outputLanguage: "es", language: "en", fixes: null, outcome: "copied" });
-let data = { retention: "30", rows: [row(1, "<script>inert text</script>"), row(2, "Other words")], today: { words: 4, secs: 5, count: 2 } };
+let data = { retention: "30", rows: [row(1, "<script>inert text</script>"), row(2, "Other words caf\u00e9")], today: { words: 4, secs: 5, count: 2 } };
 let loads = 0, removals = [], clears = 0, again = [], failRead = false, failAction = false, settings = 0, deferred, pendingAction;
 const view = createDictationHistory({
   load: async () => { loads++; if (deferred) return deferred; if (failRead) throw Error("Database unavailable"); return structuredClone(data); },
@@ -61,6 +61,7 @@ assert.ok(view.element.textContent.includes("<script>inert text</script>"));
 assert.equal(entries()[0].children[0].children.length, 0, "Transcript HTML is inert");
 assert.ok(!view.element.textContent.includes("corrections"), "Unknown correction counts remain absent");
 search(" HEARD OTHER "); assert.equal(entries().length, 1);
+search("CAFE"); assert.equal(entries().length, 1, "Search ignores case and accents in retained text");
 assert.equal(loads, 1, "Filtering never reopens the database");
 search("missing"); assert.equal(entries().length, 0);
 assert.ok(view.element.textContent.includes("No dictations match"));
@@ -69,6 +70,10 @@ named("Clear search").click();
 assert.equal(input.value, ""); assert.equal(document.activeElement, input);
 assert.equal(entries().length, 2);
 search("missing");
+for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+  input.listeners.keydown({ key: "Escape", ...composing, preventDefault() { assert.fail("Composition belongs to the input method"); } });
+  assert.equal(input.value, "missing", "Composing Escape keeps the query");
+}
 input.listeners.keydown({ key: "Escape", preventDefault() {}, stopPropagation() {} });
 assert.equal(input.value, ""); assert.equal(entries().length, 2);
 assert.equal(nodes().find(n => n.className === "dictation-results").textContent, "2 entries");

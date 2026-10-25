@@ -57,6 +57,10 @@ assert.equal(reads, beforeSearch.reads); assert.equal(writes.length, beforeSearc
 named('Clear search').click();
 assert.equal(dictionarySearch.value, ''); assert.equal(document.activeElement, dictionarySearch);
 type(dictionarySearch, 'missing-entry');
+for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+  dictionarySearch.listeners.keydown({ key: 'Escape', ...composing, preventDefault() { assert.fail('Composition belongs to the input method'); } });
+  assert.equal(dictionarySearch.value, 'missing-entry');
+}
 dictionarySearch.listeners.keydown({ key: 'Escape', preventDefault() {}, stopPropagation() {} });
 assert.equal(dictionarySearch.value, '');
 assert.equal(!!all(view.dictionary).find(n => n.className === 'words-try').open, false, 'Sentence testing starts folded');

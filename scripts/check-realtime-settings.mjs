@@ -89,7 +89,7 @@ class Element {
 }
 
 globalThis.document = { body: new Element("body"), documentElement: new Element("html"),
-  createElement: tag => new Element(tag), createTextNode: text => { const n = new Element("text"); n.textContent = text; return n; },
+  createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag), createTextNode: text => { const n = new Element("text"); n.textContent = text; return n; },
   dispatchEvent() {}, addEventListener() {} };
 globalThis.window = { addEventListener() {} };
 const pageBundles = await build({ configFile: false, root, logLevel: "silent", plugins: [{

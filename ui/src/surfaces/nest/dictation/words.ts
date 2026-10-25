@@ -1,3 +1,4 @@
+import { searchText } from "./search";
 import type { DictationTry, DictationWords, DictationWordsChange } from "../../../bridge";
 import { el } from "../../../dom";
 import { t } from "../../../i18n";
@@ -14,11 +15,11 @@ export function createYourWords(backend: WordsBackend, settings: () => void) {
   const snippets = el("section", { class: "dictation-history your-words" });
   const labels: [HTMLElement, () => string][] = [];
   const label = <T extends HTMLElement>(node: T, text: () => string): T => { labels.push([node, text]); return node; };
-  const heading = (title: () => string, about: () => string) => el("header", { class: "dictation-heading" },
-    el("div", {}, label(el("h2"), title), label(el("p"), about)),
+  const heading = (title: () => string, about: () => string, glyph: "file" | "tag") => el("header", { class: "dictation-heading" },
+    el("div", {}, el("h2", { class: "dictation-title" }, icon(glyph, 18), label(el("span"), title)), label(el("p"), about)),
     label(el("button", { onclick: settings }), () => t("Dictation settings")));
-  dictionary.append(heading(() => t("Dictionary"), () => t("Names, spelling and replacements for independent dictation.")));
-  snippets.append(heading(() => t("Snippets"), () => t("Say a short phrase to insert its saved text unchanged.")));
+  dictionary.append(heading(() => t("Dictionary"), () => t("Names, spelling and replacements for independent dictation."), "file"));
+  snippets.append(heading(() => t("Snippets"), () => t("Say a short phrase to insert its saved text unchanged."), "tag"));
   const status = [el("p", { class: "dictation-note" }), el("p", { class: "dictation-note" })];
   const confirmations = [el("div", { class: "dictation-confirmation" }), el("div", { class: "dictation-confirmation" })];
   const searches = [0, 1].map(() => { const input = el("input", { class: "dictation-search" }); input.type = "search"; return input; });
@@ -150,7 +151,8 @@ export function createYourWords(backend: WordsBackend, settings: () => void) {
     }
     for (const input of [word.control, from.control, to.control, trigger.control, body.control]) input.disabled = busy || loading || !data;
     for (const button of forms) button.disabled = busy || loading || !data;
-    const matches = (page: number, ...text: string[]) => text.join("\n").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().includes(searches[page].value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase());
+    const queries = searches.map(input => searchText(input.value.trim()));
+    const matches = (page: number, ...text: string[]) => searchText(text.join("\n")).includes(queries[page]);
     const words = (data?.words ?? []).filter(word => matches(0, word));
     const pairs = (data?.replacements ?? []).filter(pair => matches(0, pair.from, pair.to));
     const clips = (data?.snippets ?? []).filter(snippet => matches(1, snippet.trigger, snippet.text));
@@ -226,6 +228,7 @@ export function createYourWords(backend: WordsBackend, settings: () => void) {
   for (const search of searches) {
     search.addEventListener("input", draw);
     search.addEventListener("keydown", event => {
+      if (event.isComposing || event.keyCode === 229) return;
       if (event.key === "Escape" && search.value) { event.preventDefault(); event.stopPropagation(); search.value = ""; draw(); }
     });
   }

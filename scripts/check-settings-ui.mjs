@@ -601,6 +601,10 @@ pageSearch.value = "no-such-page-123"; pageSearch.fire("input");
 assert.equal(navItems().length, 0);
 assert.equal(navigation.querySelector(".dictation-page-picker").disabled, true);
 assert.equal(navigation.querySelector(".dictation-nav-empty").hidden, false);
+for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+  pageSearch.fire("keydown", { key: "Escape", ...composing, preventDefault() { assert.fail("Composition belongs to the input method"); } });
+  assert.equal(pageSearch.value, "no-such-page-123");
+}
 pageSearch.fire("keydown", { key: "Escape", preventDefault() {}, stopPropagation() {} });
 assert.equal(pageSearch.value, "");
 assert.equal(navItems().length, 18);
@@ -633,6 +637,29 @@ assert.equal(configGroup.open, false, "Clearing search restores the manual fold 
 events.onSettingsSection("dictationpaste"); await tick();
 assert.equal(configGroup.open, true, "A different configuration destination reveals its selected page");
 assert.equal(page().querySelector("h1").textContent, "Paste");
+const writesBeforeNavigation = writes.length;
+page().scrollTop = 245;
+await dictationPage("privacy"); page().scrollTop = 92;
+await dictationPage("paste");
+assert.equal(page().scrollTop, 245, "Returning to Paste restores that page's reading position");
+await dictationPage("privacy");
+assert.equal(page().scrollTop, 92, "Dictation configuration pages retain independent scroll positions");
+await dictationPage("paste");
+const configToggle = configGroup.querySelector("summary");
+const replaceRoot = root.replaceChildren;
+root.replaceChildren = function (...children) {
+  const hadFocus = this.contains(document.activeElement);
+  replaceRoot.apply(this, children);
+  if (hadFocus) document.activeElement = document.body;
+};
+try {
+  configToggle.focus();
+  events.onSettings({ dictationCommands: true }); await tick();
+  assert.equal(document.activeElement, configToggle, "A Settings repaint restores the navigation disclosure's keyboard focus after detachment");
+  assert.equal(page().scrollTop, 245, "Refresh retains the restored page position");
+} finally { root.replaceChildren = replaceRoot; }
+assert.equal(writes.length, writesBeforeNavigation, "Navigation continuity never writes settings");
+
 
 root.querySelectorAll("[data-dictation-page]").find(n=>n.dataset.dictationPage==="dictionary").fire("click");await tick();
 assert.equal(routes.at(-1),"dictation-dictionary","Work-page links return to the transcript webview");

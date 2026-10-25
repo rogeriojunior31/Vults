@@ -51,7 +51,7 @@ class Element {
 }
 const timers = new Map(); let timer = 0;
 globalThis.document = { body: new Element('body'), documentElement: new Element('html'), hidden: false,
-  createElement: tag => new Element(tag), createTextNode: text => { const n=new Element('text'); n.textContent=text; return n; }, addEventListener() {} };
+  createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag), createTextNode: text => { const n=new Element('text'); n.textContent=text; return n; }, addEventListener() {} };
 globalThis.window = { setInterval: fn => { timers.set(++timer,fn); return timer; }, clearInterval: id => timers.delete(id), addEventListener() {} };
 const ui=normalizePath(fileURLToPath(new URL('../ui/',import.meta.url)));
 const entry='meeting-summary-check';
@@ -144,7 +144,7 @@ const recoveryDetails=recovery.element.querySelector('details');assert.ok(!recov
 click(recovery.element,'Reload summary status');initialPrefsFail=false;await tick();click(recovery.element,'Reload summary status');await tick();
 assert.ok(!recoveryDetails.hidden,'Consent off still exposes Meeting settings');assert.ok(!named(recovery.element,'Meeting settings').hidden);recovery.setActive(false);
 
-const saved={id:'meeting-1',recorded_ms:1700000000000,title:'Literal <img> meeting',
+const saved={id:'meeting-1',recorded_ms:1700000000000,title:'Literal <img> caf\u00e9 meeting',
  microphone:{duration_ms:3000,segments:[{start_ms:0,end_ms:500,text:'Private microphone <script> text',speaker:0},{start_ms:500,end_ms:1000,text:'Uncertain words',speaker:null}]},
  system:{duration_ms:5000,segments:[{start_ms:2000,end_ms:2500,text:'Independent system clock',speaker:0}]},
  speakers:[{source:'microphone',id:0,name:null},{source:'system',id:0,name:'Different person'}],notes};
@@ -161,9 +161,25 @@ const archiveMedia = { matches: false, addEventListener(_name, callback) { this.
 window.matchMedia = () => archiveMedia;
 const archive=createMeetingArchive(archiveApi);document.body.append(archive.element);archive.setActive(true);await tick();
 assert.ok(archive.element.textContent.includes(saved.title));assert.equal(renameRequests.length+exportRequests.length+deleteRequests.length,0,'Reading never mutates or exports');
+const accentSearch = nodes(archive.element).find(n=>n.tagName==='INPUT'&&n.type==='search');
+accentSearch.value='CAFE';accentSearch.fire('input');
+assert.ok(archive.element.textContent.includes(saved.title), 'Meeting title search ignores case and accents');
+accentSearch.value='';accentSearch.fire('input');
 const search=nodes(archive.element).find(n=>n.tagName==='INPUT'&&n.type==='search');search.value='absent';search.fire('input');assert.ok(archive.element.textContent.includes('No saved meetings match'));
 click(archive.element,'Clear search');assert.equal(search.value,'');assert.equal(document.activeElement,search);
-search.value='absent';search.fire('input');search.fire('keydown',{key:'Escape',preventDefault(){},stopPropagation(){}});assert.equal(search.value,'');
+search.value='absent';search.fire('input');
+for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+ search.fire('keydown',{key:'Escape',...composing,preventDefault(){assert.fail('Composition belongs to the input method');}});
+ assert.equal(search.value,'absent');
+}
+search.fire('keydown',{key:'Escape',preventDefault(){},stopPropagation(){}});assert.equal(search.value,'');
+const archiveBody = archive.element.querySelector('.meeting-body');
+const archiveSidebar = archive.element.querySelector('.meeting-archive-sidebar');
+const archiveList = archive.element.querySelector('.meeting-archive-list');
+const replaceList = archiveList.replaceChildren.bind(archiveList);
+// Removing the list can clamp browser scroll offsets before replacement rows are appended.
+archiveList.replaceChildren = (...children) => { archiveBody.scrollTop = 0; archiveSidebar.scrollTop = 0; replaceList(...children); };
+archiveBody.scrollTop = 320;
 named(archive.element,saved.title+new Date(saved.recorded_ms).toLocaleString('en',{dateStyle:'medium',timeStyle:'short'})).fire('click');await tick();
 assert.equal(search.hidden,true,'Narrow detail keeps its existing return path');
 archiveMedia.matches=true;archiveMedia.changed();
@@ -172,6 +188,26 @@ assert.equal(archive.element.querySelector('.meeting-archive-list').hidden,false
 assert.equal(archive.element.querySelector('.meeting-archive-row').getAttribute('aria-pressed'),'true');
 archiveMedia.matches=false;archiveMedia.changed();assert.equal(search.hidden,true,'Narrow resize preserves the current detail');
 assert.ok(archive.element.textContent.includes('Private microphone <script> text'));assert.ok(!archive.element.textContent.includes('Independent system clock'));
+archiveBody.scrollTop = 700;
+nextList = deferred();
+click(archive.element, 'Back to saved meetings');
+assert.equal(archiveBody.scrollTop, 320, 'Returning from a long transcript restores the list position');
+assert.equal(document.activeElement.dataset.meetingId, saved.id, 'Back returns keyboard focus to the originating meeting');
+search.focus();
+nextList.resolve({epoch:0, rows:savedRows.map(({id,title,recorded_ms})=>({id,title:title+' updated',recorded_ms}))});
+await tick(); nextList = null;
+assert.equal(document.activeElement, search, 'Late list refresh never steals newer focus');
+assert.equal(archiveBody.scrollTop, 320);
+archive.open(saved.id); await tick();
+archiveMedia.matches = true; archiveMedia.changed();
+archiveSidebar.scrollTop = 180;
+archive.element.querySelector('.meeting-archive-row').focus();
+setLang('es'); archive.relabel();
+assert.equal(archiveSidebar.scrollTop, 180, 'Relabeling preserves the independent wide list scroll');
+assert.equal(document.activeElement.dataset.meetingId, saved.id, 'Relabeling preserves meeting identity for keyboard focus');
+setLang('en'); archive.relabel();
+archiveMedia.matches = false; archiveMedia.changed();
+
 assert.ok(archive.element.textContent.includes('Unknown voice'));assert.equal(nodes(archive.element).filter(n=>['IMG','SCRIPT'].includes(n.tagName)).length,0);
 click(archive.element,'System audio');assert.ok(archive.element.textContent.includes('Different person'));assert.ok(archive.element.textContent.includes('00:00:02.000'));
 click(archive.element,'Microphone');

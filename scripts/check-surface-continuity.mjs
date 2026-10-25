@@ -933,7 +933,7 @@ console.log("check-surface-continuity: Week initial error/retry, retained recap 
 console.log("check-surface-continuity: Week export pending/duplicate guard, retained privacy, captured period, stale-result isolation, encoder/save failure retry, cancellation and accessible success");
 
 
-assert.deepEqual(NEST_TABS, ["flock", "chat", "activity", "connections", "dictation"]);
+assert.deepEqual(NEST_TABS, ["flock", "chat", "dictation", "connections", "activity"]);
 for (const zeca of [true, false]) {
   const tabs = NEST_TABS.filter(id => id !== "chat" || zeca);
   for (let n = 1; n <= 5; n++) {

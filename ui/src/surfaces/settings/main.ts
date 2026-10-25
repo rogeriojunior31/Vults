@@ -1000,7 +1000,7 @@ function generalPage(): HTMLElement[] {
       row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
       row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
       row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
-      row(t("The Nest's tabs"), t("Choose Flock, Chat, Activity, Connections or Dictation. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
+      row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
     )),
   ];
 }
@@ -1906,9 +1906,10 @@ function flockPage(): HTMLElement[] {
 
 // ── Layout ───────────────────────────────────────────────────────────────────
 
-/** The page last drawn: a re-render of it keeps the scroll, a new page starts at the top. */
+/** Dictation keeps each configuration page's reading position during this window's lifetime. */
 let drawn: string | null = null;
 const expanded = new Map<string, Set<string>>();
+const dictationScroll = new Map<string, number>();
 
 /** Draws the page again when it is the phone's (its rows refresh on their own). */
 function renderPhone(): void {
@@ -1948,7 +1949,9 @@ const dictationNavigation = createDictationNavigation("dictationvoice", id => vo
 function render(): void {
   const place = page === "dictation" ? `dictation${dictationSection}` : page;
   if (page === "activity") budget.relabel();
-  const scroll = place === drawn ? (root.querySelector("main.page")?.scrollTop ?? 0) : 0;
+  const currentScroll = root.querySelector("main.page")?.scrollTop ?? 0;
+  if (drawn?.startsWith("dictation")) dictationScroll.set(drawn, currentScroll);
+  const scroll = place === drawn ? currentScroll : dictationScroll.get(place) ?? 0;
   if (drawn) expanded.set(drawn, new Set([...root.querySelectorAll<HTMLDetailsElement>("details")].filter(node => node.open).map(node => node.dataset.setting ?? "")));
   const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
   const focus = drawn === place && active && root.contains(active) && active.dataset.setting ? active : null;
