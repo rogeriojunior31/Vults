@@ -19,6 +19,7 @@ use crate::{ISLAND, paths};
 
 /// Dropped files bigger than this are refused: the model would not read them whole anyway.
 const MAX_FILE: u64 = 20 * 1024 * 1024;
+const MAX_ATTACHMENTS: usize = 16;
 /// Inbox copies older than this are deleted at start-up.
 const INBOX_KEEP: Duration = Duration::from_secs(7 * 24 * 3600);
 
@@ -502,6 +503,12 @@ impl ChatState {
         Ok(())
     }
 
+    fn navigation(&self, generation: u32) -> Result<tokio::sync::MutexGuard<'_, Chat>, String> {
+        let chat = self.chat.try_lock().map_err(|_| "Chat is busy.")?;
+        self.check_generation(generation)?;
+        Ok(chat)
+    }
+
     pub(crate) fn check_companion(&self, generation: u32) -> Result<(), String> {
         self.check_generation(generation)?;
         if self.profile()?.is_some() || self.chat.try_lock().is_ok_and(|chat| chat.is_specialist()) {
@@ -826,13 +833,8 @@ async fn send(
         }),
         None => Arc::new(app.clone()),
     };
-    // Only our own inbox copies may be attached, never an arbitrary path from the webview.
-    let inbox = paths::inbox_dir();
-    let files: Vec<PathBuf> = files
-        .into_iter()
-        .map(PathBuf::from)
-        .filter(|f| f.starts_with(&inbox))
-        .collect();
+    // Renderer paths are untrusted even when they look like inbox paths.
+    let files = inbox_files(&paths::inbox_dir(), &files)?;
     let (tx, mut rx) = mpsc::channel::<Delta>(64);
     // What the turn cost and how it ended, for its trace span; the usage never reaches the chat.
     let ended = Arc::new(std::sync::Mutex::new((None::<vults_chat::Usage>, "ok")));
@@ -955,7 +957,7 @@ async fn send(
         {
             preferences.defaults = choice;
         }
-        check_specialist_state(&preferences, record.is_some() || chat.started())?;
+        check_specialist_state(&preferences)?;
         let selected = specialist_project(
             folder.as_deref(),
             &preferences.defaults,
@@ -966,8 +968,8 @@ async fn send(
             *chat = new_specialist(&app, profile, &preferences.defaults, selected)?;
         }
     }
-    if !companion && (origin.is_voice() || !mentions.is_empty() || !files.is_empty()) {
-        return Err("Specialist conversations do not accept voice commands, files or flock mentions.".into());
+    if !companion && (origin.is_voice() || !mentions.is_empty()) {
+        return Err("Specialist conversations do not accept voice commands or flock mentions.".into());
     }
     if zeca_switch_blocks_turn(crate::settings::zeca(&app), !companion) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
@@ -1013,6 +1015,14 @@ async fn send(
                 app.clone(),
             ))));
         }
+        chat.set_tools(tools);
+    }
+    if !companion {
+        let tools = profile
+            .as_ref()
+            .filter(|_| chat.provider() != Provider::ClaudeApi || chat.api().0.supports_tools)
+            .map(|p| crate::specialist_github::tools(&app, &profile_access_key(p)))
+            .unwrap_or_default();
         chat.set_tools(tools);
     }
     if companion && chat.provider() == Provider::Claude {
@@ -1560,10 +1570,13 @@ pub async fn chat_reset(
     window: tauri::Webview,
     state: tauri::State<'_, ChatState>,
     provider: Option<Provider>,
-) -> Result<Reset, ()> {
-    // Anything still waiting is a no: that conversation is over.
+    generation: u32,
+) -> Result<Reset, String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat history belongs to the island or Nest.".into());
+    }
+    let mut chat = state.navigation(generation)?;
     state.waiting.close_all();
-    let mut chat = state.chat.lock().await;
     crate::voice::cancel(window.app_handle());
     let provider = provider.unwrap_or(chat.provider());
     let outside_before = chat.outside().is_some();
@@ -1575,7 +1588,7 @@ pub async fn chat_reset(
     }
     state.set_current(None);
     state.set_profile(None);
-    *state.draft.lock().map_err(|_| ())? = Draft::default();
+    *state.draft.lock().map_err(|_| "Chat draft is busy.")? = Draft::default();
     state.live(|l| *l = Live::default());
     let from = window.label().to_string();
     sync(
@@ -1856,7 +1869,6 @@ fn turn_profile(
         .ok_or("The profile conversation has no recipient.")?;
     if expected != Some(profile)
         || c.engine != engine_name(chat)
-        || chat.provider() == Provider::Codex
         || c.frozen.is_some()
         || (chat.provider() != Provider::ClaudeApi && c.history.is_some())
         || (chat.provider() == Provider::ClaudeApi && c.session.is_some())
@@ -1879,20 +1891,9 @@ fn turn_profile(
     Ok(Some(profile.clone()))
 }
 
-fn check_specialist_state(state: &vults_store::profiles::ProfileState, bound: bool) -> Result<(), String> {
+fn check_specialist_state(state: &vults_store::profiles::ProfileState) -> Result<(), String> {
     if state.archived {
         return Err("This agent is archived. Restore it before sending a new message.".into());
-    }
-    if !bound
-        && matches!(
-            state.defaults,
-            vults_store::profiles::ExecutionDefaults::Codex { .. }
-        )
-    {
-        return Err(
-            "The selected executor is saved but is not available for new specialist conversations yet."
-                .into(),
-        );
     }
     Ok(())
 }
@@ -1906,7 +1907,7 @@ fn specialist_project(
     if matches!(defaults, vults_store::profiles::ExecutionDefaults::Api { .. }) && !bound && folder.is_some()
     {
         return Err(
-            "API specialists accept messages only. Start a new conversation to clear the project.".into(),
+            "API specialists cannot access projects. Start a new conversation to clear the project.".into(),
         );
     }
     let selected = match folder {
@@ -1932,32 +1933,44 @@ fn specialist_from_defaults(
 ) -> Result<Chat, String> {
     use vults_store::profiles::ExecutionDefaults;
     let mut spec = vults_agents::driver::Spec::in_dir(dir);
-    let (provider, api) =
-        match defaults {
-            ExecutionDefaults::Claude { model, effort } => {
-                spec.model = model.clone();
-                spec.effort = effort.as_deref().and_then(vults_chat::Effort::parse);
-                if spec
-                    .effort
-                    .is_some_and(|e| !effort_fits(Provider::Claude, model.as_deref(), e))
-                {
-                    return Err("The saved effort is not supported by this model.".into());
-                }
-                (Provider::Claude, None)
+    spec.state_dir = Some(
+        paths::data_dir()
+            .join("specialists")
+            .join(profile_access_key(profile))
+            .join("codex"),
+    );
+    let (provider, api) = match defaults {
+        ExecutionDefaults::Claude { model, effort } => {
+            spec.model = model.clone();
+            spec.effort = effort.as_deref().and_then(vults_chat::Effort::parse);
+            if spec
+                .effort
+                .is_some_and(|e| !effort_fits(Provider::Claude, model.as_deref(), e))
+            {
+                return Err("The saved effort is not supported by this model.".into());
             }
-            ExecutionDefaults::Api { provider, model } => {
-                let provider = self::provider(provider)?;
-                let model = model.as_deref().or(api_model).unwrap_or(provider.default_model);
-                if !vults_chat::valid_model(model) {
-                    return Err("Choose a model in this agent's conversation defaults.".into());
-                }
-                (Provider::ClaudeApi, Some((provider, model.to_owned())))
+            (Provider::Claude, None)
+        }
+        ExecutionDefaults::Api { provider, model } => {
+            let provider = self::provider(provider)?;
+            let model = model.as_deref().or(api_model).unwrap_or(provider.default_model);
+            if !vults_chat::valid_model(model) {
+                return Err("Choose a model in this agent's conversation defaults.".into());
             }
-            ExecutionDefaults::Codex { .. } => return Err(
-                "The selected executor is saved but is not available for new specialist conversations yet."
-                    .into(),
-            ),
-        };
+            (Provider::ClaudeApi, Some((provider, model.to_owned())))
+        }
+        ExecutionDefaults::Codex { model, effort } => {
+            spec.model = model.clone();
+            spec.effort = effort.as_deref().and_then(vults_chat::Effort::parse);
+            if spec
+                .effort
+                .is_some_and(|e| !effort_fits(Provider::Codex, model.as_deref(), e))
+            {
+                return Err("The saved effort is not supported by this model.".into());
+            }
+            (Provider::Codex, None)
+        }
+    };
     Chat::specialist_for(provider, spec, None, None, api, specialist_brief(profile))
 }
 
@@ -2012,8 +2025,13 @@ fn restore_conversation(
 ) -> Result<(Chat, Option<Snapshot>), String> {
     let provider = engine_provider(&c.engine).ok_or("That conversation's engine is unknown.")?;
     if let Some(profile) = &c.profile {
-        if provider == Provider::Codex
-            || !spec.dir.is_absolute()
+        spec.state_dir = Some(
+            paths::data_dir()
+                .join("specialists")
+                .join(profile_access_key(profile))
+                .join("codex"),
+        );
+        if !spec.dir.is_absolute()
             || c.frozen.is_some()
             || (provider != Provider::ClaudeApi && (c.history.is_some() || api.is_some()))
             || (provider == Provider::ClaudeApi
@@ -2335,7 +2353,7 @@ pub async fn specialist_chat_choice_set(
         preferences.defaults = choice.clone();
     }
     // Clearing an override may restore unavailable defaults, but never executes them.
-    check_specialist_state(&preferences, choice.is_none())?;
+    check_specialist_state(&preferences)?;
     let snapshot = state
         .profile()?
         .ok_or("The conversation recipient is unavailable.")?;
@@ -2369,11 +2387,8 @@ pub async fn specialist_chat_draft_set(
 ) -> Result<(), String> {
     specialist_route(&window)?;
     draft.validate()?;
-    if !draft.files.is_empty()
-        || !draft.mentions.is_empty()
-        || draft.provider.is_some_and(|provider| provider == Provider::Codex)
-    {
-        return Err("Specialist conversations do not accept voice commands, files or flock mentions.".into());
+    if !draft.mentions.is_empty() {
+        return Err("Specialist conversations do not accept voice commands or flock mentions.".into());
     }
     let state = specialist_runtime(&app, &profile).await?;
     let mut saved = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
@@ -2382,18 +2397,20 @@ pub async fn specialist_chat_draft_set(
     Ok(())
 }
 
-async fn specialist_record(profile: &str, id: i64) -> Result<(), String> {
-    let record = store(move |s| s.conversation(ConversationId(id)))
-        .await?
-        .ok_or("That conversation is gone.")?;
-    if record
-        .profile
-        .as_ref()
-        .is_none_or(|snapshot| profile_access_key(snapshot) != profile)
-    {
-        return Err("That conversation belongs to another profile.".into());
+fn history_owner(
+    store: &vults_store::Store,
+    id: ConversationId,
+    profile: Option<&str>,
+) -> Result<(), vults_store::Error> {
+    use vults_store::Error;
+    let record = store
+        .conversation(id)?
+        .ok_or(Error::Invalid("That conversation is gone."))?;
+    match (record.profile.as_ref(), profile) {
+        (None, None) => Ok(()),
+        (Some(snapshot), Some(key)) if profile_access_key(snapshot) == key => Ok(()),
+        _ => Err(Error::Invalid("That conversation belongs to another profile.")),
     }
-    Ok(())
 }
 
 #[tauri::command]
@@ -2404,8 +2421,17 @@ pub async fn specialist_chat_rename(
     title: String,
 ) -> Result<(), String> {
     specialist_route(&window)?;
-    specialist_record(&profile, id).await?;
-    store(move |s| s.conversation_rename(ConversationId(id), &title)).await
+    store(move |s| {
+        history_owner(s, ConversationId(id), Some(&profile))?;
+        s.conversation_rename(ConversationId(id), &title)
+    })
+    .await
+}
+
+#[derive(serde::Serialize)]
+pub struct SpecialistDeleted {
+    current: bool,
+    reset: Option<SpecialistReset>,
 }
 
 #[tauri::command]
@@ -2414,16 +2440,63 @@ pub async fn specialist_chat_delete(
     window: tauri::Webview,
     profile: String,
     id: i64,
-) -> Result<bool, String> {
+) -> Result<SpecialistDeleted, String> {
     specialist_route(&window)?;
-    specialist_record(&profile, id).await?;
     let state = specialist_runtime(&app, &profile).await?;
+    let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
     let current = state.current() == Some(ConversationId(id));
-    if current {
-        specialist_chat_reset(app, window, profile).await?;
-    }
-    store(move |s| s.conversation_delete(ConversationId(id))).await?;
-    Ok(current)
+    // Prepare the replacement before deleting; archived history can still be removed.
+    let fresh = if current {
+        let snapshot = specialist_snapshot(&profile).await?;
+        let chat = Chat::specialist(
+            vults_agents::driver::Spec::in_dir(paths::chat_dir()),
+            None,
+            specialist_brief(&snapshot),
+        )?;
+        let key = profile.clone();
+        let preferences = store(move |s| s.agent_profile_state(&key)).await?;
+        let provider = if matches!(
+            preferences.defaults,
+            vults_store::profiles::ExecutionDefaults::Api { .. }
+        ) {
+            Provider::ClaudeApi
+        } else {
+            Provider::Claude
+        };
+        Some((snapshot, chat, provider))
+    } else {
+        None
+    };
+    let key = profile.clone();
+    store(move |s| {
+        history_owner(s, ConversationId(id), Some(&key))?;
+        s.conversation_delete(ConversationId(id))
+    })
+    .await?;
+    let reset = if let Some((snapshot, fresh, provider)) = fresh {
+        *chat = fresh;
+        state.waiting.close_all();
+        state.set_profile(Some(snapshot));
+        state.set_current(None);
+        state.live(|l| *l = Live::default());
+        specialist_sync(
+            &app,
+            &profile,
+            Sync::Reset {
+                from: window.label().into(),
+                provider,
+                generation: state.generation(),
+                draft: None,
+            },
+        );
+        Some(SpecialistReset {
+            provider,
+            current: specialist_current_view(&state, None)?,
+        })
+    } else {
+        None
+    };
+    Ok(SpecialistDeleted { current, reset })
 }
 
 #[tauri::command]
@@ -2432,11 +2505,12 @@ pub async fn specialist_chat_send(
     window: tauri::Webview,
     profile: String,
     text: String,
+    files: Vec<String>,
     generation: u32,
     folder: Option<String>,
 ) -> Result<(), String> {
     specialist_route(&window)?;
-    if text.trim().is_empty() {
+    if text.trim().is_empty() && files.is_empty() {
         return Err("Write a message first.".into());
     }
     if text.len() > 1_000_000 {
@@ -2448,7 +2522,7 @@ pub async fn specialist_chat_send(
         state,
         Origin::SpecialistWindow(window.label().into(), generation, profile),
         text,
-        Vec::new(),
+        files,
         folder,
         None,
     )
@@ -2461,9 +2535,11 @@ pub async fn specialist_chat_open(
     window: tauri::Webview,
     profile: String,
     id: i64,
+    generation: u32,
 ) -> Result<Opened, String> {
     specialist_route(&window)?;
     let state = specialist_runtime(&app, &profile).await?;
+    let mut chat = state.navigation(generation)?;
     let id = ConversationId(id);
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
     let c = c.ok_or("That conversation is gone.")?;
@@ -2496,7 +2572,6 @@ pub async fn specialist_chat_open(
             .map(|id| self::provider(id).map(|p| (p, c.model.clone().unwrap_or_default())))
             .transpose()?,
     )?;
-    let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
     state.waiting.close_all();
     *chat = restored;
     chat.set_outside(c.outside.clone());
@@ -2538,13 +2613,14 @@ pub async fn specialist_chat_reset(
     app: AppHandle,
     window: tauri::Webview,
     profile: String,
+    generation: u32,
 ) -> Result<SpecialistReset, String> {
     specialist_route(&window)?;
     let key = profile.clone();
     let preferences = store(move |s| s.agent_profile_state(&key)).await?;
-    check_specialist_state(&preferences, true)?;
+    check_specialist_state(&preferences)?;
     let state = specialist_runtime(&app, &profile).await?;
-    let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
+    let mut chat = state.navigation(generation)?;
     let snapshot = specialist_snapshot(&profile).await?;
     *chat = Chat::specialist(
         vults_agents::driver::Spec::in_dir(paths::chat_dir()),
@@ -2607,7 +2683,17 @@ pub fn specialist_chat_decide(
 
 /// Goes on with a saved conversation: the chat becomes that one, as it was.
 #[tauri::command]
-pub async fn chat_open(app: AppHandle, window: tauri::Webview, id: i64) -> Result<Opened, String> {
+pub async fn chat_open(
+    app: AppHandle,
+    window: tauri::Webview,
+    id: i64,
+    generation: u32,
+) -> Result<Opened, String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat history belongs to the island or Nest.".into());
+    }
+    let state = app.state::<ChatState>();
+    let mut chat = state.navigation(generation)?;
     let id = ConversationId(id);
     let (c, lines) = store(move |s| Ok((s.conversation(id)?, s.conversation_messages(id)?))).await?;
     let c = c.ok_or("That conversation is gone.")?;
@@ -2654,9 +2740,7 @@ pub async fn chat_open(app: AppHandle, window: tauri::Webview, id: i64) -> Resul
     };
     // A session id reaches Claude Code as `--resume`'s value: never anything that reads as a flag.
     let restored = restore_conversation(&c, spec, api)?;
-    let state = app.state::<ChatState>();
     state.waiting.close_all();
-    let mut chat = state.chat.lock().await;
     if !chat.is_specialist()
         && let Some(left) = state.current().filter(|l| *l != c.id)
     {
@@ -2758,40 +2842,53 @@ pub(crate) fn valid_session(id: &str) -> bool {
 }
 
 #[tauri::command]
-pub async fn chat_rename(id: i64, title: String) -> Result<(), String> {
-    store(move |s| s.conversation_rename(ConversationId(id), &title)).await
+pub async fn chat_rename(window: tauri::Webview, id: i64, title: String) -> Result<(), String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat history belongs to the island or Nest.".into());
+    }
+    store(move |s| {
+        history_owner(s, ConversationId(id), None)?;
+        s.conversation_rename(ConversationId(id), &title)
+    })
+    .await
 }
 
-/// Deletes a saved conversation; if the chat is in it, the chat starts a new one. True then.
+/// Deletes a saved conversation; clears the runtime only after the database succeeds.
 #[tauri::command]
 pub async fn chat_delete(
     window: tauri::Webview,
     state: tauri::State<'_, ChatState>,
     id: i64,
 ) -> Result<bool, String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat history belongs to the island or Nest.".into());
+    }
     let id = ConversationId(id);
+    let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
     let was_current = state.current() == Some(id);
+    store(move |s| {
+        history_owner(s, id, None)?;
+        s.conversation_delete(id)
+    })
+    .await?;
     if was_current {
         state.waiting.close_all();
-        let mut chat = state.chat.lock().await;
         crate::voice::cancel(window.app_handle());
         let provider = chat.provider();
         *chat = Chat::new(provider, paths::chat_dir());
         state.set_current(None);
         state.set_profile(None);
         state.live(|l| *l = Live::default());
-        let from = window.label().to_string();
         sync(
             window.app_handle(),
             Sync::Reset {
-                from,
+                from: window.label().into(),
                 provider,
                 generation: state.generation(),
                 draft: None,
             },
         );
     }
-    store(move |s| s.conversation_delete(id)).await?;
     Ok(was_current)
 }
 
@@ -3061,23 +3158,7 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf], to: &'static str) {
     let app = app.clone();
     let dropped = dropped.to_vec();
     tauri::async_runtime::spawn_blocking(move || {
-        let mut out = Dropped {
-            copied: Vec::new(),
-            refused: Vec::new(),
-            to,
-        };
-        for path in &dropped {
-            match copy_to_inbox(path) {
-                Ok(copy) => out.copied.push(copy),
-                Err(reason) => out.refused.push(Refused {
-                    name: path
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_default(),
-                    reason,
-                }),
-            }
-        }
+        let out = copy_dropped(&dropped, to);
         let _ = app.emit("files", &out);
     });
 }
@@ -3122,6 +3203,135 @@ pub fn chat_pick_files(app: AppHandle, window: tauri::Webview, title: String) {
     });
 }
 
+#[derive(serde::Serialize)]
+pub struct SpecialistFiles {
+    generation: u32,
+    #[serde(flatten)]
+    files: Dropped,
+}
+
+struct Picking;
+impl Drop for Picking {
+    fn drop(&mut self) {
+        PICKING.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+#[tauri::command]
+pub async fn specialist_chat_pick_files(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    generation: u32,
+    title: String,
+) -> Result<SpecialistFiles, String> {
+    use tauri_plugin_dialog::DialogExt;
+    specialist_route(&window)?;
+    let state = specialist_runtime(&app, &profile).await?;
+    state.check_generation(generation)?;
+    let key = profile.clone();
+    let preferences = store(move |s| s.agent_profile_state(&key)).await?;
+    check_specialist_state(&preferences)?;
+    if PICKING.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return Err("A file chooser is already open.".into());
+    }
+    let picking = Picking;
+    let title: String = title.chars().filter(|c| !c.is_control()).take(80).collect();
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        let _picking = picking;
+        app.dialog()
+            .file()
+            .set_title(title)
+            .blocking_pick_files()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|p| p.into_path().ok())
+            .collect::<Vec<_>>()
+    })
+    .await
+    .map_err(|_| "Could not choose files. Your draft stays here.")?;
+    state.check_generation(generation)?;
+    let preferences = store(move |s| s.agent_profile_state(&profile)).await?;
+    check_specialist_state(&preferences)?;
+    if picked.len() > MAX_ATTACHMENTS {
+        return Err("Attach at most 16 files and 20 MB in total.".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        state.check_generation(generation)?;
+        let files = copy_dropped(&picked, crate::NEST);
+        if let Err(error) = state.check_generation(generation) {
+            for copy in files.copied {
+                let _ = std::fs::remove_file(copy);
+            }
+            return Err(error);
+        }
+        Ok(SpecialistFiles { generation, files })
+    })
+    .await
+    .map_err(|_| "Could not choose files. Your draft stays here.".to_owned())?
+}
+
+fn inbox_files(inbox: &Path, files: &[String]) -> Result<Vec<PathBuf>, String> {
+    if files.len() > MAX_ATTACHMENTS {
+        return Err("Attach at most 16 files and 20 MB in total.".into());
+    }
+    if files.is_empty() {
+        return Ok(Vec::new());
+    }
+    let root = std::fs::canonicalize(inbox)
+        .map_err(|_| "An attachment is unavailable. Remove it and choose the file again.")?;
+    let mut total = 0u64;
+    let mut selected = Vec::with_capacity(files.len());
+    for file in files {
+        let path = Path::new(file);
+        let valid = path.is_absolute()
+            && path.parent() == Some(inbox)
+            && !path
+                .components()
+                .any(|part| matches!(part, std::path::Component::ParentDir));
+        if !valid {
+            return Err("Only files selected through Vults can be attached. Choose the file again.".into());
+        }
+        let meta = std::fs::symlink_metadata(path)
+            .map_err(|_| "An attachment is unavailable. Remove it and choose the file again.")?;
+        let canonical = std::fs::canonicalize(path)
+            .map_err(|_| "An attachment is unavailable. Remove it and choose the file again.")?;
+        if !meta.file_type().is_file() || canonical.parent() != Some(root.as_path()) {
+            return Err("Only files selected through Vults can be attached. Choose the file again.".into());
+        }
+        total = total.saturating_add(meta.len());
+        if total > MAX_FILE {
+            return Err("Attach at most 16 files and 20 MB in total.".into());
+        }
+        if selected.contains(&canonical) {
+            return Err("Choose each attachment only once.".into());
+        }
+        selected.push(canonical);
+    }
+    Ok(selected)
+}
+
+fn copy_dropped(paths: &[PathBuf], to: &'static str) -> Dropped {
+    let mut out = Dropped {
+        copied: Vec::new(),
+        refused: Vec::new(),
+        to,
+    };
+    for path in paths {
+        match copy_to_inbox(path) {
+            Ok(copy) => out.copied.push(copy),
+            Err(reason) => out.refused.push(Refused {
+                name: path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                reason,
+            }),
+        }
+    }
+    out
+}
+
 /// Something is being dragged over the island (true) or left it (false).
 pub fn on_drag(app: &AppHandle, over: bool) {
     if !crate::settings::zeca(app) {
@@ -3145,16 +3355,34 @@ fn copy_to_inbox(src: &Path) -> Result<String, &'static str> {
 }
 
 fn copy_file(src: &Path) -> Option<String> {
-    let dir = paths::inbox_dir();
-    std::fs::create_dir_all(&dir).ok()?;
+    copy_file_into(src, &paths::inbox_dir())
+}
+
+fn copy_file_into(src: &Path, dir: &Path) -> Option<String> {
+    use std::io::Read;
+    std::fs::create_dir_all(dir).ok()?;
     let stamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or(0);
+        .ok()?
+        .as_nanos();
     let name = src.file_name()?.to_string_lossy();
     let dest = dir.join(format!("{stamp}-{name}"));
-    std::fs::copy(src, &dest).ok()?;
-    Some(dest.display().to_string())
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut output = options.open(&dest).ok()?;
+    let copied =
+        std::fs::File::open(src).and_then(|file| std::io::copy(&mut file.take(MAX_FILE + 1), &mut output));
+    if copied.is_err() || copied.is_ok_and(|len| len > MAX_FILE) {
+        drop(output);
+        let _ = std::fs::remove_file(dest);
+        return None;
+    }
+    Some(dest.to_string_lossy().into_owned())
 }
 
 /// Deletes inbox copies older than a week.
@@ -3179,10 +3407,10 @@ pub fn clean_inbox() {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn specialist_archive_blocks_new_turns_and_defaults_only_gate_unbound_conversations() {
+    fn specialist_archive_blocks_new_turns_with_every_executor() {
         use vults_store::profiles::{ExecutionDefaults, ProfileState};
         let mut state = ProfileState::default();
-        assert!(super::check_specialist_state(&state, false).is_ok());
+        assert!(super::check_specialist_state(&state).is_ok());
         for defaults in [
             ExecutionDefaults::Codex {
                 model: Some("test-model".into()),
@@ -3194,17 +3422,14 @@ mod tests {
             },
         ] {
             state.defaults = defaults;
-            assert_eq!(
-                super::check_specialist_state(&state, false).is_err(),
-                matches!(state.defaults, ExecutionDefaults::Codex { .. })
-            );
-            assert!(super::check_specialist_state(&state, true).is_ok());
+            assert!(super::check_specialist_state(&state).is_ok());
+            assert!(super::check_specialist_state(&state).is_ok());
         }
         state.archived = true;
-        assert!(super::check_specialist_state(&state, false).is_err());
-        assert!(super::check_specialist_state(&state, true).is_err());
+        assert!(super::check_specialist_state(&state).is_err());
+        assert!(super::check_specialist_state(&state).is_err());
         state.archived = false;
-        assert!(super::check_specialist_state(&state, true).is_ok());
+        assert!(super::check_specialist_state(&state).is_ok());
     }
     #[test]
     fn specialist_api_resume_pins_provider_model_messages_and_profile() {
@@ -3320,6 +3545,39 @@ mod tests {
             look: "none".into(),
             skills: Vec::new(),
         };
+        let defaults = ExecutionDefaults::Codex {
+            model: Some("codex-test-model".into()),
+            effort: Some("high".into()),
+        };
+        let codex = specialist_from_defaults(&profile, &defaults, paths::chat_dir(), None).unwrap();
+        assert_eq!(codex.provider(), Provider::Codex);
+        let directory =
+            std::env::temp_dir().join(format!("vults-codex-profile-resume-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&directory);
+        let mut store = vults_store::Store::open(&directory).unwrap();
+        let record = new_conversation(&codex, "Codex question", &[], Some(profile.clone()));
+        assert_eq!(record.engine, "codex");
+        assert_eq!(record.profile, Some(profile.clone()));
+        let id = store.conversation_new(&record, 1).unwrap();
+        store
+            .conversation_save(id, Some("codex-profile-thread"), None, None, 2)
+            .unwrap();
+        let saved = store.conversation(id).unwrap().unwrap();
+        let (restored, pinned) = restore_conversation(
+            &saved,
+            vults_agents::driver::Spec::in_dir(paths::chat_dir()),
+            None,
+        )
+        .unwrap();
+        assert_eq!(restored.provider(), Provider::Codex);
+        assert_eq!(restored.session().as_deref(), Some("codex-profile-thread"));
+        assert_eq!(pinned, Some(profile.clone()));
+        assert_eq!(
+            restored.specialist_brief(),
+            Some(specialist_brief(&profile).as_str())
+        );
+        drop(store);
+        std::fs::remove_dir_all(directory).unwrap();
         let state = ChatState::specialist(&profile).unwrap();
         state.draft.lock().unwrap().text = "Keep my words".into();
         let choice = ExecutionDefaults::Api {
@@ -3367,6 +3625,60 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn attachments_are_private_inbox_copies_with_bounded_unambiguous_paths() {
+        let root = std::env::temp_dir().join(format!("vults-attachments-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let inbox = root.join("inbox");
+        let source = root.join("notes.txt");
+        std::fs::write(&source, "USER_FILE").unwrap();
+        let copied = copy_file_into(&source, &inbox).unwrap();
+        let second = copy_file_into(&source, &inbox).unwrap();
+        assert_ne!(copied, second);
+        assert_eq!(std::fs::read_to_string(&source).unwrap(), "USER_FILE");
+        assert_eq!(std::fs::read_to_string(&copied).unwrap(), "USER_FILE");
+        assert_eq!(
+            inbox_files(&inbox, std::slice::from_ref(&copied)).unwrap(),
+            vec![std::fs::canonicalize(&copied).unwrap()]
+        );
+        assert!(inbox_files(&inbox, &[copied.clone(), copied.clone()]).is_err());
+        assert!(inbox_files(&inbox, &vec![copied.clone(); MAX_ATTACHMENTS + 1]).is_err());
+        for invalid in [
+            source.to_string_lossy().into_owned(),
+            format!("{}/../notes.txt", inbox.display()),
+            "relative.txt".into(),
+            inbox.join("missing").to_string_lossy().into_owned(),
+        ] {
+            assert!(inbox_files(&inbox, &[invalid]).is_err());
+        }
+        let child = inbox.join("child");
+        std::fs::create_dir(&child).unwrap();
+        std::fs::write(child.join("nested.txt"), "NESTED").unwrap();
+        assert!(inbox_files(&inbox, &[child.to_string_lossy().into_owned()]).is_err());
+        assert!(inbox_files(&inbox, &[child.join("nested.txt").to_string_lossy().into_owned()]).is_err());
+        let large = inbox.join("large");
+        let file = std::fs::File::create(&large).unwrap();
+        file.set_len(MAX_FILE).unwrap();
+        drop(file);
+        assert!(inbox_files(&inbox, &[copied.clone(), large.to_string_lossy().into_owned()]).is_err());
+        #[cfg(unix)]
+        {
+            use std::os::unix::{fs::PermissionsExt, fs::symlink};
+            assert_eq!(
+                std::fs::metadata(&copied).unwrap().permissions().mode() & 0o077,
+                0
+            );
+            let link = inbox.join("link");
+            symlink(&source, &link).unwrap();
+            assert!(inbox_files(&inbox, &[link.to_string_lossy().into_owned()]).is_err());
+            std::fs::remove_file(&link).unwrap();
+            symlink(&copied, &link).unwrap();
+            assert!(inbox_files(&inbox, &[link.to_string_lossy().into_owned()]).is_err());
+        }
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
@@ -3507,6 +3819,25 @@ mod tests {
             state.companion_command(generation, None).is_err(),
             "Inconsistent metadata never grants companion access"
         );
+    }
+
+    #[test]
+    fn navigation_never_waits_for_a_turn_or_accepts_an_obsolete_source() {
+        let state = ChatState::new();
+        state.set_current(Some(ConversationId(42)));
+        state.draft.lock().unwrap().text = "Retain this draft".into();
+        let generation = state.generation();
+        let running = state.chat.try_lock().unwrap();
+        assert_eq!(state.navigation(generation).err().unwrap(), "Chat is busy.");
+        assert_eq!(state.current(), Some(ConversationId(42)));
+        assert_eq!(state.draft.lock().unwrap().text, "Retain this draft");
+        drop(running);
+        state.set_current(Some(ConversationId(43)));
+        state.draft.lock().unwrap().text = "The newer source".into();
+        assert!(state.navigation(generation).is_err());
+        assert_eq!(state.current(), Some(ConversationId(43)));
+        assert_eq!(state.draft.lock().unwrap().text, "The newer source");
+        assert!(state.navigation(state.generation()).is_ok());
     }
 
     #[test]
@@ -3915,6 +4246,12 @@ mod tests {
             skills: vec![],
         });
         let specialist = store.conversation_new(&request, 2).unwrap();
+        assert!(history_owner(&store, normal, None).is_ok());
+        assert!(history_owner(&store, normal, Some("developer")).is_err());
+        assert!(history_owner(&store, specialist, Some("developer")).is_ok());
+        assert!(history_owner(&store, specialist, Some("researcher")).is_err());
+        assert!(history_owner(&store, specialist, None).is_err());
+        assert!(history_owner(&store, ConversationId(i64::MAX), None).is_err());
         let retained = store.conversation(specialist).unwrap().unwrap();
         assert!(opened(retained.clone(), vec![], false).is_none());
         let opened = opened_specialist(retained.clone(), vec![], false).unwrap();

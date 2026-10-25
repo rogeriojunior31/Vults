@@ -131,6 +131,19 @@ pub(crate) async fn run_with_approval(
         "write-{}",
         NEXT_PERMISSION.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     );
+    let ask = vults_agents::driver::Ask {
+        id: permission_id.clone(),
+        tool: name.into(),
+        target: prepared.target.clone(),
+        full: Some(prepared.full.clone()),
+        input: input.clone(),
+    };
+    if let Some(settled) = approver.settle(&ask, true)
+        && !settled.answer.allows()
+    {
+        approver.settled(name, &prepared.target, settled);
+        return ("This GitHub write is denied by the active policy.".into(), true);
+    }
     let answer = approver.wait(&permission_id, name, &prepared.target);
     let detail = super::Detail {
         description: Some(prepared.description),
@@ -339,6 +352,39 @@ pub(crate) mod tests {
             assert_eq!(result.1, !should_run);
             assert_eq!(calls.load(Ordering::SeqCst), usize::from(should_run));
         }
+    }
+
+    #[tokio::test]
+    async fn a_policy_deny_blocks_writes_even_before_a_human_card() {
+        struct Denied;
+        impl crate::Approver for Denied {
+            fn wait(&self, _: &str, _: &str, _: &str) -> tokio::sync::oneshot::Receiver<crate::Answer> {
+                panic!("A policy deny must not offer approval")
+            }
+            fn settle(&self, _: &vults_agents::driver::Ask, _: bool) -> Option<crate::Settled> {
+                Some(crate::Settled {
+                    answer: crate::Answer::Deny,
+                    by: crate::SettledBy::Policy,
+                    consent: Some(7),
+                })
+            }
+        }
+        let calls = Arc::new(AtomicUsize::new(0));
+        let tools: Tools = vec![Arc::new(ApprovedWrite(calls.clone()))];
+        let (tx, mut rx) = tokio::sync::mpsc::channel(2);
+        let result = run_with_approval(
+            &tools,
+            "github_issue_close",
+            "policy",
+            &json!({"repository":"org/repo","number":7}),
+            &Denied,
+            &std::sync::Mutex::new(None),
+            &tx,
+        )
+        .await;
+        assert!(result.1);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert!(rx.try_recv().is_err());
     }
 
     #[tokio::test]

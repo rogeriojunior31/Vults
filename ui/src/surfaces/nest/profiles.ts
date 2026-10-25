@@ -9,6 +9,7 @@ export function createProfiles(
   save?: AgentWorkspaceBackend["save"], setAccess?: AgentWorkspaceBackend["access"],
   openChat?: (profile: AgentProfile) => void | Promise<void>, changed?: (profile: AgentProfile) => void,
   setState?: AgentWorkspaceBackend["state"],
+  setGithub?: AgentWorkspaceBackend["github"],
 ) {
   const element = el("section", { class: "agent-profiles" });
   let workspace: ReturnType<typeof createAgentWorkspace> | null = null;
@@ -19,7 +20,7 @@ export function createProfiles(
   let selected: string | null = null;
   const unavailable = () => Promise.reject("unavailable");
   const backend: AgentWorkspaceBackend = {
-    save: save ?? unavailable, state: setState ?? unavailable, access: setAccess ?? unavailable,
+    save: save ?? unavailable, state: setState ?? unavailable, access: setAccess ?? unavailable, github:setGithub,
     open: async profile => { await openChat?.(profile); }, reload: refresh, changed: profile => changed?.(profile),
   };
   const draw = () => {
@@ -43,6 +44,8 @@ export function createProfiles(
       else workspace = createAgentWorkspace(rows, back, backend);
       if (selected) { workspace.select(selected); selected = null; }
       rows.forEach(profile => changed?.(profile)); draw();
+      if (first && import.meta.env.DEV && import.meta.env.VITE_AGENTS_PREVIEW === "1" && import.meta.env.VITE_AGENTS_PREVIEW_START === "github")
+        queueMicrotask(() => element.querySelector<HTMLInputElement>('[aria-label="'+t("GitHub repository")+'"]')?.scrollIntoView({block:"center"}));
       if (first && import.meta.env.DEV && import.meta.env.VITE_AGENTS_PREVIEW === "1" && ["chat","setup"].includes(import.meta.env.VITE_AGENTS_PREVIEW_START) && rows[0])
         void backend.open(rows[0]).then(()=>{if(import.meta.env.VITE_AGENTS_PREVIEW_START==="setup")document.querySelector<HTMLButtonElement>(".chat-controls .model")?.click();}).catch(error => element.append(viewState("error", t("Could not load {name}.", {name:t("Chat")}), String(error))));
     }, () => { if (mine === request) { pending = false; failed = true; draw(); } });

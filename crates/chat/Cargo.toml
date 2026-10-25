@@ -19,6 +19,7 @@ unicode-normalization = "0.1"
 vults-secrets.workspace = true
 vults-agents.workspace = true
 vults-protocol.workspace = true
+vults-peer.workspace = true
 vults-core.workspace = true
 vults-dictation.workspace = true
 

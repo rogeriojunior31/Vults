@@ -41,7 +41,7 @@ ignore = true
 # Arboard's Windows-only dependencies: reviewed permissive Boost license, scoped to these versions.
 [[licenses.exceptions]]
 name = "clipboard-win"
-version = "=5.4.1"
+version = "=5.4.3"
 allow = ["BSL-1.0"]
 
 [[licenses.exceptions]]

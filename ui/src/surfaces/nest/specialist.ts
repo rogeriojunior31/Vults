@@ -5,6 +5,7 @@ import { t } from "../../i18n";
 export interface SpecialistChatBackend {
   current: typeof Bridge.specialistChatCurrent;
   choice?: typeof Bridge.specialistChatChoiceSet;
+  pickFiles?: typeof Bridge.specialistChatPickFiles;
   conversations: typeof Bridge.specialistChatConversations;
   send: typeof Bridge.specialistChatSend;
   open: typeof Bridge.specialistChatOpen;
@@ -33,22 +34,27 @@ export function specialistBackend(api: SpecialistChatBackend, profile: AgentProf
     return value;
   };
   return {
+    chooseFiles: api.pickFiles ? (title,expected) => api.pickFiles!(profile.id,generation(expected),title) : undefined,
     setSpecialistChoice: api.choice ? async (choice,expected) => { return api.choice!(profile.id,choice,generation(expected)); } : undefined,
     current: () => read().then(snapshot => snapshot.conversation),
     draft: () => read().then(snapshot => ({ ...snapshot.draft, generation: snapshot.generation })),
     saveDraft: (draft: ChatDraft, expected) => api.saveDraft(profile.id, draft, generation(expected)),
     send: (text, files, folder, mentions, expected) => {
-      if (files.length || mentions?.length) return Promise.reject("Specialist conversations do not accept voice commands, files or flock mentions.");
-      return api.send(profile.id, text, generation(expected), folder);
+      if (mentions?.length) return Promise.reject("Specialist conversations do not accept voice commands or flock mentions.");
+      return api.send(profile.id, text, generation(expected), folder, files);
     },
     decide: (id, answer) => api.decide(profile.id, id, answer),
     stop: () => api.stop(profile.id),
-    reset: async () => { const result = await api.reset(profile.id); identify(result); return result; },
+    reset: (_provider, expected) => api.reset(profile.id, generation(expected)),
     models: async () => [], pick: async () => ({}), setPick: async () => {},
     conversations: () => api.conversations(profile.id),
-    open: id => api.open(profile.id, id),
+    open: (id, expected) => api.open(profile.id, id, generation(expected)),
     rename: (id, title) => api.rename(profile.id, id, title),
-    remove: id => api.remove(profile.id, id),
+    remove: async id => {
+      const result = await api.remove(profile.id, id);
+      if (result.reset) return { ...result.reset, current: result.current };
+      return result.current;
+    },
     keyboard: () => {},
   };
 }

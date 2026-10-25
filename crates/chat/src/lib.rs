@@ -23,6 +23,11 @@ pub mod activity;
 mod api;
 mod claude;
 mod codex;
+mod codex_isolation;
+#[cfg(target_os = "linux")]
+mod mcp_tools;
+#[cfg(target_os = "linux")]
+pub use mcp_tools::stdio as specialist_mcp_main;
 mod codex_server;
 pub mod consult_codex;
 pub mod drivers;
@@ -742,7 +747,7 @@ impl Chat {
         api: Option<(&'static providers::Provider, String)>,
         instructions: String,
     ) -> Result<Self, String> {
-        if provider == Provider::Codex
+        if (provider == Provider::Codex && !spec.state_dir.as_ref().is_some_and(|p| p.is_absolute()))
             || (provider == Provider::ClaudeApi && (api.is_none() || session.is_some()))
             || (provider != Provider::ClaudeApi && (api.is_some() || history.is_some()))
         {
@@ -877,9 +882,9 @@ impl Chat {
         serde_json::to_string(&kept).ok()
     }
 
-    /// What the API chat's model may call; the CLIs bring their own tools.
+    /// Host tools for the API or the isolated CLI relay; specialists accept GitHub tools only.
     pub fn set_tools(&mut self, tools: tools::Tools) -> bool {
-        if self.is_specialist() {
+        if self.is_specialist() && tools.iter().any(|tool| !tool.name().starts_with("github_")) {
             return false;
         }
         self.tools = tools;
@@ -1024,6 +1029,9 @@ impl Chat {
             let _ = out.send(Delta::Error { message: "This specialist route requires a supported executor and an isolated brief without companion context.".into() }).await;
             return;
         }
+        if !turn.files.is_empty() && self.outside().is_none() {
+            self.set_outside(Some("attachments".into()));
+        }
         let name = self.name();
         if matches!(self.provider, Provider::Claude | Provider::Codex) && self.driver.is_none() {
             self.driver = drivers::for_cli(self.provider, self.spec.clone());
@@ -1074,9 +1082,25 @@ impl Chat {
         std::fs::create_dir_all(&self.spec.dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
         match self.provider {
             Provider::Claude | Provider::Codex => {
+                let specialist = self.is_specialist();
                 let Some(driver) = self.driver.as_mut() else {
                     return Err("This chat has no agent to run.".into());
                 };
+                #[cfg(target_os = "linux")]
+                let service = if specialist {
+                    Some(mcp_tools::Service::bind()?)
+                } else {
+                    None
+                };
+                #[cfg(target_os = "linux")]
+                if specialist {
+                    driver.set_tool_service(service.as_ref().map(|s| s.config.clone()))?;
+                }
+                #[cfg(not(target_os = "linux"))]
+                if specialist && !self.tools.is_empty() {
+                    return Err("Specialist GitHub tools currently require Linux.".into());
+                }
+
                 let sink = TurnSink {
                     out,
                     approver,
@@ -1087,6 +1111,13 @@ impl Chat {
                     running: Default::default(),
                     zeca_mcp: self.provider == Provider::Claude && self.spec.mcp_config.is_some(),
                 };
+                #[cfg(target_os = "linux")]
+                if let Some(service) = service {
+                    return tokio::select! {
+                        result = driver.send(turn,&sink) => result,
+                        () = service.serve(&self.tools,approver,&self.outside,out) => Err("The specialist tool service stopped.".into()),
+                    };
+                }
                 driver.send(turn, &sink).await
             }
             Provider::ClaudeApi => {
@@ -1144,7 +1175,8 @@ impl Chat {
 }
 
 fn specialist_ready(spec: &Spec, provider: Provider) -> bool {
-    matches!(provider, Provider::Claude | Provider::ClaudeApi)
+    (matches!(provider, Provider::Claude | Provider::ClaudeApi)
+        || (provider == Provider::Codex && spec.state_dir.as_ref().is_some_and(|p| p.is_absolute())))
         && spec.settings == Settings::Isolated
         && spec.mcp_config.is_none()
         && spec.add_dirs.is_empty()
@@ -2136,7 +2168,10 @@ mod tests {
             serde_json::from_str::<serde_json::Value>(history).unwrap()
         );
         assert!(chat.frozen().is_none());
-        assert!(!chat.set_tools(Vec::new()));
+        assert!(
+            chat.set_tools(Vec::new()),
+            "Revocation clears all specialist tools"
+        );
         assert!(!chat.set_frozen(Some("COMPANION".into())));
         let kit = tools::Kit {
             specialist: true,
@@ -2158,6 +2193,37 @@ mod tests {
                 )
                 .is_err()
             );
+        }
+    }
+
+    #[tokio::test]
+    async fn explicit_files_taint_permissions_before_any_tool_or_model_request() {
+        let mut chat = Chat::specialist_for(
+            Provider::ClaudeApi,
+            Spec::in_dir(std::env::temp_dir()),
+            None,
+            None,
+            Some((providers::find("ollama").unwrap(), String::new())),
+            "Pinned only".into(),
+        )
+        .unwrap();
+        for before in [None, Some("prior-web-tool".to_string())] {
+            chat.set_outside(before.clone());
+            let (tx, mut rx) = mpsc::channel(4);
+            let (_stop_tx, stop) = oneshot::channel();
+            chat.send(
+                Turn {
+                    files: vec![PathBuf::from("/not-read/selected.txt")],
+                    ..Turn::default()
+                },
+                tx,
+                Arc::new(Never),
+                stop,
+            )
+            .await;
+            assert!(matches!(rx.recv().await, Some(Delta::Error { .. })));
+            assert_eq!(chat.outside(), before.or_else(|| Some("attachments".into())));
+            assert!(chat.history.is_empty());
         }
     }
 

@@ -1,5 +1,5 @@
 // One agent workspace renders production data or an explicitly marked, local-only design preview.
-import type { AgentDefaults, AgentPreferenceEdit, AgentProfile, AgentProfileEdit, AgentProfileState, AgentProvider, AgentStateChange, ChatAccess } from "../../bridge";
+import type { AgentGithubGrant, AgentDefaults, AgentPreferenceEdit, AgentProfile, AgentProfileEdit, AgentProfileState, AgentProvider, AgentStateChange, ChatAccess } from "../../bridge";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { SPECIES, speciesSet } from "../../character/flock";
@@ -15,6 +15,7 @@ export interface AgentWorkspaceBackend {
   save(edit: AgentProfileEdit, preferences: AgentPreferenceEdit): Promise<AgentProfile>;
   state(profile: string, version: number, change: AgentStateChange): Promise<AgentProfileState>;
   access(profile: string, access: ChatAccess): Promise<void>;
+  github?: (profile:string,version:number,enabled:boolean,repository:string)=>Promise<AgentGithubGrant>;
   open(profile: AgentProfile): Promise<void>;
   changed(profile: AgentProfile): void;
   reload(): void;
@@ -153,7 +154,7 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
       }), provider,
       modelField,
       effort,
-      el("p", { class: "note", text: backend?t("Defaults apply to new conversations. API agents use messages only; Codex is not available yet."):t("Use these defaults for new conversations. You can choose another executor or model in Chat.") }));
+      el("p", { class: "note", text: backend?t("Defaults apply to new conversations. GitHub access is selected separately for each agent."):t("Use these defaults for new conversations. You can choose another executor or model in Chat.") }));
   };
   // Keep each model field with its defaults form rather than a shared mutable selection.
   const defaultFields = (agent: Example) => {
@@ -303,7 +304,23 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
           if(pending)return;busy(true);feedback.textContent="";void backend.access(agent.id,value as ChatAccess).then(()=>{agent.access=value as ChatAccess;backend.changed(agent);busy(false);},()=>{busy(false);access.querySelector("select")!.value=agent.access;feedback.textContent=t("Could not save this profile's access level.");});
         }); detail.append(access);
       }
-      if(backend && agent.executor!=="claude")detail.append(el("p",{class:"note",text:t("API agents use messages only. Codex specialist execution is not available yet.")}));
+      if (backend?.github && ["developer","reviewer"].includes(agent.id)) {
+        const grant=agent.github??{version:0,enabled:false,repository:"",host:"",account:""};
+        const repository=el("input");repository.value=grant.repository;repository.placeholder="owner/name";
+        repository.setAttribute("aria-label",t("GitHub repository"));repository.disabled=grant.enabled;
+        const toggle=button(grant.enabled?t("Disable GitHub"):t("Enable GitHub"),()=>{
+          if(pending)return;
+          busy(true);feedback.textContent="";
+          void backend.github!(agent.id,grant.version,!grant.enabled,repository.value.trim()).then(github=>{
+            agent.github=github;backend.changed(agent);busy(false);paintDetail();
+          },()=>{busy(false);repository.disabled=grant.enabled;feedback.textContent=t("Could not update GitHub access. Check the connector, repository and account, then try again.");});
+        });
+        detail.append(el("fieldset",{class:"agent-preview-defaults"},el("legend",{text:"GitHub"}),
+          el("label",{},el("span",{text:t("GitHub repository")}),repository),
+          el("p",{class:"note",text:t("Only this repository. Writes require approval. This agent does not inherit Zeca's GitHub access.")}),
+          ...(grant.enabled?[el("p",{class:"note",text:t("Enabled for {account} on {host}",{account:grant.account,host:grant.host})})]:[]),toggle));
+      }
+      if(backend && agent.executor!=="claude")detail.append(el("p",{class:"note",text:t("API agents use their own messages and selected files. CLI agents use an isolated runtime.")}));
       detail.append(el("details", {}, el("summary", { text: t("Instructions") }), el("p", { text: agent.built_in ? t(agent.instructions) : agent.instructions })),
         el("details", {}, el("summary", { text: t("Pinned skills") }), ...agent.skills.map(s => el("p", { text: `${t(s.title)} · ${t("Revision {revision}",{revision:s.revision})}` }))));
       detail.append(feedback);

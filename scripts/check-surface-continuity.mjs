@@ -223,7 +223,7 @@ for (const width of [480, 760, 900, 1180]) {
         send: async (...args) => { specialistCalls.push(args); },
         decide: async (...args) => { specialistCalls.push(args); },
         stop: async () => {}, reset: async () => { specialistGeneration = 8; return { provider: "claude", generation: 8, profileTitle: "Reviewer", profileRevision: 2, profileSpecies: "atratus", profileLook: "none", conversation: null, draft: specialistDraft }; },
-        rename: async () => {}, remove: async () => false,
+        rename: async () => {}, remove: async () => ({current:false,reset:null}),
       };
       nest.open("flock"); page.querySelector(".agent-profiles-open").click(); await tick();
       page.querySelector(".agent-preview-card").click();
@@ -252,7 +252,7 @@ for (const width of [480, 760, 900, 1180]) {
       assert.ok(projectChoice,"A specialist can explicitly choose a project before the first turn");projectChoice.click();
       specialistInput.value = "Review this change"; specialistInput.fire("input");
       specialistInput.fire("keydown", { key: "Enter", preventDefault() {} }); await tick();
-      assert.deepEqual(specialistCalls[0], ["reviewer", "Review this change", 7, "/work/alpha"], "The shared composer sends to its selected native profile and generation");
+      assert.deepEqual(specialistCalls[0], ["reviewer", "Review this change", 7, "/work/alpha", []], "The shared composer sends to its selected native profile and generation");
       nest.receiveSpecialistChat("reviewer", { kind: "permission", id: "profile-card", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
       assert.ok(sharedMain.textContent.includes("Reviewer requests Bash"));
       const agentState={version:1,defaults:{executor:"claude",model:null,effort:null},archived:true};
@@ -295,18 +295,18 @@ for (const width of [480, 760, 900, 1180]) {
       assert.ok(!sharedMain.textContent.includes("Profile-only answer"));
       assert.equal(specialistReads, 1, "A successful reset never depends on a second current read");
       nest.profileStateChanged("reviewer",{...agentState,version:4,archived:false,defaults:{executor:"codex",model:"test",effort:null}});
-      assert.equal(specialistInput.readOnly,true,"An unavailable executor cannot silently fall back to Claude");
-      assert.ok(revisionNotice.textContent.includes("not available"));
+      assert.equal(specialistInput.readOnly,false,"The qualified Codex runtime is selectable without falling back to Claude");
+      assert.ok(page.querySelector(".model").textContent.includes("Codex"));
       nest.profileStateChanged("reviewer",{...agentState,version:5,archived:false});
       assert.equal(specialistInput.readOnly,false);
       nest.profileStateChanged("reviewer",{...agentState,version:6,archived:false,defaults:{executor:"api",provider:"ollama",model:"local-model"}});
       assert.equal(specialistInput.readOnly,false,"API specialists can send without inheriting companion capabilities");
       assert.ok(page.querySelector(".model").textContent.includes("ollama"));
-      assert.ok(sharedMain.querySelector(".chat-caption").textContent.includes("messages only"));
+      assert.ok(sharedMain.querySelector(".chat-caption").textContent.includes("selected files"));
       assert.equal(page.querySelector(".chat-controls").querySelectorAll(".place").find(n=>n.tagName==="BUTTON"&&!n.classList.contains("model")&&!n.classList.contains("access")).hidden,true,"API specialists cannot read a project");
       assert.equal(specialistInput.value,"","New conversations clear the former project's draft");
       specialistInput.value="API question";specialistInput.fire("input");specialistInput.fire("keydown",{key:"Enter",preventDefault(){}});await tick();
-      assert.deepEqual(specialistCalls.at(-1),["reviewer","API question",8,null]);
+      assert.deepEqual(specialistCalls.at(-1),["reviewer","API question",8,null,[]]);
       nest.receiveSpecialistChat("reviewer",{kind:"text",text:"Own API answer"});nest.receiveSpecialistChat("reviewer",{kind:"done"});
       nest.profileStateChanged("reviewer",{...agentState,version:7,archived:false});
       assert.ok(page.querySelector(".model").textContent.includes("ollama"),"Future defaults cannot relabel a bound API conversation");
@@ -1505,7 +1505,7 @@ console.log("check-surface-continuity: agent proposal keeps real data unchanged 
  const snapshot=()=>({generation,choice:savedChoice,profileTitle:"Developer",profileRevision:1,profileSpecies:"atratus",profileLook:"none",conversation:null,draft:{text:"Keep this draft",files:[],folder:null,provider:savedChoice?.executor==="api"?"api":"claude",generation}});
  const api={current:async()=>snapshot(),choice:(...args)=>new Promise((resolve,reject)=>writes.push({args,resolve,reject})),
   saveDraft:async(id,draft,expected)=>{assert.equal(id,"developer");if(expected!==generation)throw "The conversation changed before sending. Review your draft and try again.";drafts.push({draft,expected});},
-  conversations:async()=>[],send:async(...args)=>{sent.push(args);},decide:async()=>{},stop:async()=>{},open:async()=>{throw "unused";},rename:async()=>{},remove:async()=>false,
+  conversations:async()=>[],send:async(...args)=>{sent.push(args);},decide:async()=>{},stop:async()=>{},open:async()=>{throw "unused";},rename:async()=>{},remove:async()=>({current:false,reset:null}),
   reset:async()=>{generation++;savedChoice=null;return {...snapshot(),provider:"claude"};}};
  const make=()=>{const identity={name:"Developer",revision:1,species:"atratus",look:"none",state:structuredClone(profile.state),providers:profile.providers};return new ChatPanel(specialistBackend(api,profile,identity),()=>{},{window:"nest",specialist:identity});};
  let panel=make();document.body.replaceChildren(panel.element);await panel.restore();panel.toggle(true);
@@ -1516,7 +1516,7 @@ console.log("check-surface-continuity: agent proposal keeps real data unchanged 
  const defaults=()=>menu().querySelectorAll("input").find(n=>n.type==="checkbox");
  const submit=()=>menu().querySelector("form").fire("submit",{preventDefault(){}});
  open();assert.ok(menu().querySelector("form"));assert.equal(defaults().checked,true);
- assert.equal(control("Executor").disabled,true);assert.ok(control("Executor").options.find(n=>n.value==="codex").disabled);
+ assert.equal(control("Executor").disabled,true);assert.equal(control("Executor").options.find(n=>n.value==="codex").disabled,false);
  defaults().checked=false;defaults().fire("change");control("Executor").value="api:ollama";control("Executor").fire("change");
  control("Model").focus();control("Model").value="chosen-local";control("Model").fire("input");
  panel.setProfileState({...profile.state,version:1});assert.equal(control("Model").value,"chosen-local","Background repaint retains model edits");assert.equal(document.activeElement,control("Model"),"Repaint retains model focus instead of selecting the defaults checkbox");
@@ -1531,7 +1531,7 @@ console.log("check-surface-continuity: agent proposal keeps real data unchanged 
  panel.toggle(false);panel.element.remove();panel=make();document.body.append(panel.element);await panel.restore();panel.toggle(true);
  assert.ok(panel.element.querySelector(".model").textContent.includes("Ollama"),"Reopening reads the retained native override");
  input().value="Use my choice";input().fire("input");input().fire("keydown",{key:"Enter",preventDefault(){}});await tick();
- assert.deepEqual(sent.at(-1),["developer","Use my choice",12,null]);assert.equal(panel.element.querySelector(".model").disabled,true);
+ assert.deepEqual(sent.at(-1),["developer","Use my choice",12,null,[]]);assert.equal(panel.element.querySelector(".model").disabled,true);
  open();assert.equal(writes.length,2,"A bound conversation cannot change its executor");panel.receive({kind:"done"});
  panel.newConversation();await tick();await tick();assert.ok(panel.element.querySelector(".model").textContent.includes("Claude"));
  open();defaults().checked=false;defaults().fire("change");control("Model").value="temporary";control("Model").fire("input");submit();await tick();
@@ -1541,4 +1541,97 @@ console.log("check-surface-continuity: agent proposal keeps real data unchanged 
  assert.equal(input().readOnly,false,"A late response cannot lock or change the new source");
  panel.toggle(false);panel.element.remove();
 }
+{
+ const profile={id:"developer"};
+ const identity={name:"Old revision",revision:1,species:"atratus",look:"none",choice:{executor:"claude",model:"old",effort:null}};
+ const reset={provider:"api",generation:23,profileTitle:"Current revision",profileRevision:2,profileSpecies:"gypaetus",profileLook:"crown",choice:null,conversation:null,draft:{text:"",files:[],folder:null,provider:"api"}};
+ const backend=specialistBackend({
+  remove:async(...args)=>{assert.deepEqual(args,["developer",42]);return {current:true,reset};},
+  reset:async(...args)=>{assert.deepEqual(args,["developer",22]);return reset;},
+  open:async(...args)=>{assert.deepEqual(args,["developer",42,22]);return {generation:23};},
+ },profile,identity);
+ assert.deepEqual(await backend.reset(null,22),reset);
+ assert.deepEqual(await backend.open(42,22),{generation:23});
+ assert.deepEqual(await backend.remove(42),{...reset,current:true});
+ assert.equal(identity.name,"Old revision","Adapters leave identity publication to the source-fenced Chat panel");
+ assert.equal(identity.revision,1);assert.equal(identity.look,"none");
+}
 console.log("check-surface-continuity: per-conversation executor/model overrides, native profile/generation scope, pending/failure/retry, retained drafts, reopening, immutable defaults and late-reset rejection");
+
+{
+ const picks=[],sends=[],drafts=[];const generations={reviewer:31,developer:71};
+ const profile=id=>({id,built_in:true,revision:1,title:id,species:"atratus",look:"none",access:"ask",state:{version:0,defaults:{executor:"claude",model:null,effort:null},archived:false}});
+ const api={current:async id=>({generation:generations[id],profileTitle:id,profileRevision:1,profileSpecies:"atratus",profileLook:"none",conversation:null,draft:{text:"Files draft",files:[],folder:null,provider:"claude"}}),
+  pickFiles:(...args)=>new Promise((resolve,reject)=>picks.push({args,resolve,reject})),
+  saveDraft:async(id,draft,expected)=>{if(expected!==generations[id])throw "The conversation changed before sending. Review your draft and try again.";drafts.push({id,draft});},
+  conversations:async()=>[],send:async(...args)=>{sends.push(args);},decide:async()=>{},stop:async()=>{},open:async()=>{throw "unused";},rename:async()=>{},remove:async()=>({current:false,reset:null}),
+  reset:async id=>{generations[id]++;return {generation:generations[id],provider:"claude",profileTitle:id,profileRevision:1,profileSpecies:"atratus",profileLook:"none",conversation:null,draft:{text:"",files:[],folder:null,provider:"claude"}};}};
+ const make=id=>{const p=profile(id),identity={name:id,revision:1,species:p.species,look:p.look,state:p.state};return new ChatPanel(specialistBackend(api,p,identity),()=>{},{window:"nest",specialist:identity});};
+ const panel=make("reviewer");document.body.replaceChildren(panel.element);await panel.restore();panel.toggle(true);
+ const input=()=>panel.element.querySelector("textarea");const attach=()=>panel.element.querySelector(".attach");
+ attach().click();attach().click();await tick();assert.equal(picks.length,1);assert.deepEqual(picks[0].args,["reviewer",31,"Attach a file"]);
+ picks[0].reject("picker failed");await tick();assert.equal(input().value,"Files draft");assert.ok(panel.element.textContent.includes("Your draft stays here"));
+ attach().click();await tick();picks[1].resolve({generation:31,to:"nest",copied:["/inbox/owned.txt"],refused:[]});await tick();
+ assert.equal(panel.element.querySelectorAll(".chip").length,1);assert.deepEqual(drafts.at(-1).draft.files,["/inbox/owned.txt"]);assert.equal(input().value,"Files draft");
+ attach().click();await tick();generations.reviewer=32;panel.sync({kind:"reset",from:"history",provider:"claude",generation:32});
+ input().value="New source words";input().fire("input");picks[2].resolve({generation:31,to:"nest",copied:["/inbox/stale.txt"],refused:[]});await tick();
+ assert.equal(panel.element.querySelectorAll(".chip").length,0,"A late chooser cannot attach into a new conversation");assert.equal(input().value,"New source words");
+ attach().click();await tick();panel.toggle(false);
+ const other=make("developer");document.body.replaceChildren(other.element);await other.restore();other.toggle(true);
+ picks[3].resolve({generation:32,to:"nest",copied:["/inbox/reviewer-only.txt"],refused:[]});await tick();
+ assert.equal(other.element.querySelectorAll(".chip").length,0,"A profile chooser never delivers to the active recipient by accident");
+ assert.equal(panel.element.querySelectorAll(".chip").length,1,"The original profile retains its own selected copy");
+ other.toggle(false);other.element.remove();document.body.append(panel.element);panel.toggle(true);
+ input().value="";input().fire("input");input().fire("keydown",{key:"Enter",preventDefault(){}});await tick();
+ assert.deepEqual(sends.at(-1),["reviewer","",32,null,["/inbox/reviewer-only.txt"]],"Files-only messages use the selected profile and source");
+ attach().click();await tick();picks[4].reject("picker failed");await tick();
+ assert.equal(panel.element.querySelector(".send").classList.contains("stop"),true,"A picker failure never stops a streaming turn or settles its approvals");
+ panel.receive({kind:"done"});
+ const beforeCancel=panel.element.textContent;attach().click();await tick();picks[5].resolve({generation:32,to:"nest",copied:[],refused:[]});await tick();
+ assert.equal(panel.element.textContent,beforeCancel,"Cancelling the chooser leaves the conversation untouched");
+ panel.toggle(false);panel.element.remove();
+}
+console.log("check-surface-continuity: scoped specialist file chooser, duplicate/failure/retry, retained draft, reset and recipient races, files-only send and streaming continuity");
+
+// Developer and Reviewer GitHub grants are independent, explicit and persisted before display.
+{
+ const grant={version:0,enabled:false,repository:"",host:"",account:""};const writes=[],changed=[];
+ const profile=id=>({id,built_in:true,revision:1,title:id==="developer"?"Developer":"Reviewer",about:"Changes",species:"atratus",look:"none",instructions:"Pinned",skills:[],skill_catalog:[],access:"ask",github:{...grant},state:{version:0,archived:false,defaults:{executor:"codex",model:null,effort:null}}});
+ const profiles=createProfiles(async()=>[profile("developer"),profile("reviewer")],()=>{},undefined,undefined,undefined,p=>changed.push(p),undefined,
+  (...args)=>new Promise((resolve,reject)=>writes.push({args,resolve,reject})));
+ document.body.replaceChildren(profiles.element);profiles.visible(true);await tick();
+ const click=text=>{const button=nodes(profiles.element).find(n=>n.tagName==="BUTTON"&&n.textContent===text);assert.ok(button,`Missing ${text}`);button.click();};
+ const repository=()=>profiles.element.querySelector('[aria-label="GitHub repository"]');
+ repository().value="org/repo";click("Enable GitHub");click("Enable GitHub");
+ assert.equal(writes.length,1);assert.deepEqual(writes[0].args,["developer",0,true,"org/repo"]);
+ assert.ok(!profiles.element.textContent.includes("Enabled for"),"Enabling is shown only after a successful save");
+ writes[0].reject("offline");await tick();assert.equal(repository().value,"org/repo");
+ assert.ok(profiles.element.textContent.includes("Could not update GitHub access"));
+ click("Enable GitHub");writes[1].resolve({version:1,enabled:true,repository:"org/repo",host:"github.com",account:"maintainer"});await tick();
+ assert.ok(profiles.element.textContent.includes("Enabled for maintainer on github.com"));assert.equal(repository().disabled,true);
+ profiles.select("reviewer");assert.equal(repository().value,"");click("Enable GitHub");
+ assert.equal(writes[2].args[0],"reviewer");writes[2].reject("invalid");await tick();
+ profiles.select("developer");click("Disable GitHub");assert.deepEqual(writes[3].args,["developer",1,false,"org/repo"]);
+ writes[3].resolve({version:2,enabled:false,repository:"org/repo",host:"github.com",account:"maintainer"});await tick();
+ assert.equal(repository().disabled,false);assert.equal(changed.at(-1).github.enabled,false);
+ profiles.visible(false);profiles.element.remove();
+}
+console.log("check-surface-continuity: per-profile GitHub enable/disable, exact repository/version, persist-before-display, duplicate guard and failed-save draft retention");
+
+// Selecting Codex in conversation setup must reach native admission as Codex.
+{
+ const writes=[];const identity={name:"Developer",revision:1,species:"atratus",look:"none",state:{version:0,archived:false,defaults:{executor:"claude",model:null,effort:null}}};
+ const panel=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard:()=>{},saveDraft:async()=>{},
+  setSpecialistChoice:async(choice,generation)=>{writes.push({choice,generation});return {generation:18,choice};}},()=>{},{window:"nest",specialist:identity});
+ document.body.replaceChildren(panel.element);panel.generation=17;panel.restored=true;
+ panel.element.querySelector(".model").click();
+ const menu=()=>panel.element.querySelector(".model-menu");const control=label=>menu().querySelector(`[aria-label="${label}"]`);
+ const defaults=menu().querySelectorAll("input").find(n=>n.type==="checkbox");defaults.checked=false;defaults.fire("change");
+ control("Executor").value="codex";control("Executor").fire("change");
+ control("Model").value="codex-test-model";control("Model").fire("input");control("Effort").value="high";control("Effort").fire("change");
+ menu().querySelector("form").fire("submit",{preventDefault(){}});await tick();
+ assert.deepEqual(writes,[{generation:17,choice:{executor:"codex",model:"codex-test-model",effort:"high"}}]);
+ assert.equal(panel.provider,"codex");assert.ok(panel.element.querySelector(".model").textContent.includes("Codex"));
+ panel.toggle(false);panel.element.remove();
+}
+console.log("check-surface-continuity: explicit Codex selection preserves executor/model/effort and never falls back to Claude");

@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::{Signature, SigningKey};
+use p256::elliptic_curve::Generate;
 use vults_core::{
     AgentEvent, AgentKind, AgentUpdate, Ask, Decision, Effect, Input, RequestId, SessionKey, State, Terminal,
     reduce,
@@ -29,7 +30,7 @@ async fn relay() -> String {
 }
 
 fn sec1(k: &SigningKey) -> Vec<u8> {
-    k.verifying_key().to_encoded_point(false).as_bytes().to_vec()
+    k.verifying_key().to_sec1_point(false).as_bytes().to_vec()
 }
 
 const WAIT: Duration = Duration::from_secs(2);
@@ -48,8 +49,8 @@ async fn a_phone_pairs_and_answers_a_card_through_the_relay() {
     // The phone scans it and answers through the relay the QR names.
     let scanned = scan(&invite.qr()).unwrap();
     let phone_seal = SealKey::generate();
-    let sign = SigningKey::random(&mut rand_core::OsRng);
-    let bio = SigningKey::random(&mut rand_core::OsRng);
+    let sign = SigningKey::generate();
+    let bio = SigningKey::generate();
     let (request, id) = scanned
         .request(&phone_seal, "Pixel", &sec1(&sign), &sec1(&bio))
         .unwrap();

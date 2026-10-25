@@ -124,6 +124,10 @@ impl ClaudeDriver {
 }
 
 impl AgentDriver for ClaudeDriver {
+    fn set_tool_service(&mut self, config: Option<std::path::PathBuf>) -> Result<(), String> {
+        self.spec.mcp_config = config;
+        Ok(())
+    }
     fn spec(&self) -> &Spec {
         &self.spec
     }
@@ -171,6 +175,11 @@ pub struct CodexDriver {
 }
 
 impl AgentDriver for CodexDriver {
+    fn set_tool_service(&mut self, config: Option<std::path::PathBuf>) -> Result<(), String> {
+        self.spec.mcp_config = config;
+        self.server = None;
+        Ok(())
+    }
     fn spec(&self) -> &Spec {
         &self.spec
     }
@@ -209,7 +218,10 @@ impl AgentDriver for CodexDriver {
 
 impl CodexDriver {
     async fn turn(&mut self, input: &Input, sink: &dyn Sink) -> Result<(), String> {
-        if self.start().await.is_err() {
+        if let Err(error) = self.start().await {
+            if self.spec.role == vults_agents::driver::Role::Specialist {
+                return Err(error);
+            }
             // Without an app-server nothing can ask the user, so this fallback stays read-only.
             return codex::turn(&self.spec, &mut self.session, input, sink, &self.stop).await;
         }

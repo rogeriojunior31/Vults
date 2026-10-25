@@ -1,11 +1,11 @@
 //! Chat and connector rows share gated, non-bypassing merges and durable execution receipts.
+use super::GithubSource;
 use super::{GithubToolGate, Source, failed, github_result};
 use serde_json::{Value, json};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-use tauri::AppHandle;
 use vults_agents::driver::BoxFuture;
 use vults_chat::tools::{Tool, ToolApproval, Tools};
 use vults_connectors::github::MergeControl;
@@ -23,6 +23,7 @@ pub(super) fn tools(source: Arc<dyn Source>) -> Tools {
         .collect()
 }
 fn record(
+    subject: &str,
     action: &MergeControl,
     preview: &Value,
     hash: &str,
@@ -30,9 +31,10 @@ fn record(
     outcome: &str,
     receipt: bool,
 ) -> Audit {
-    Audit::new(Actor::System,Act::ExternalWrite,"zeca",action.repository(),action.tool_name(),&json!({"controlKey":key,"receipt":receipt,"outcome":outcome,"account":preview["source"]["account"],"host":preview["source"]["host"],"repositoryId":preview["binding"]["repositoryId"],"number":action.number(),"headSha":action.head_sha(),"requestHash":hash,"scope":preview["scope"]}).to_string())
+    Audit::new(Actor::System,Act::ExternalWrite,subject,action.repository(),action.tool_name(),&json!({"controlKey":key,"receipt":receipt,"outcome":outcome,"account":preview["source"]["account"],"host":preview["source"]["host"],"repositoryId":preview["binding"]["repositoryId"],"number":action.number(),"headSha":action.head_sha(),"requestHash":hash,"scope":preview["scope"]}).to_string())
 }
 struct Receipt<'a> {
+    subject: String,
     action: &'a MergeControl,
     preview: &'a Value,
     hash: &'a str,
@@ -43,6 +45,7 @@ struct Receipt<'a> {
 impl Drop for Receipt<'_> {
     fn drop(&mut self) {
         crate::audit::keep(record(
+            &self.subject,
             self.action,
             self.preview,
             self.hash,
@@ -65,7 +68,7 @@ async fn ensure_available(key: String) -> Result<(), String> {
     }
     Ok(())
 }
-pub(super) fn prepare(app: AppHandle, action: MergeControl) -> BoxFuture<'static, Result<Value, String>> {
+pub(super) fn prepare(app: GithubSource, action: MergeControl) -> BoxFuture<'static, Result<Value, String>> {
     Box::pin(async move {
         if !app.github_work_item_allowed() {
             return Err("Turn on GitHub tools for Zeca and the GitHub connector first.".into());
@@ -82,23 +85,26 @@ pub(super) fn prepare(app: AppHandle, action: MergeControl) -> BoxFuture<'static
     })
 }
 pub(super) fn execute(
-    app: AppHandle,
+    app: GithubSource,
     action: MergeControl,
     preview: Value,
     hash: String,
 ) -> BoxFuture<'static, Result<Value, String>> {
+    let subject = app.subject().to_owned();
     let gate = Arc::new(GithubToolGate::new(app));
-    Box::pin(execute_gated(gate, action, preview, hash))
+    Box::pin(execute_gated(gate, action, preview, hash, subject))
 }
 async fn execute_gated(
     gate: Arc<dyn vults_connectors::Gate>,
     action: MergeControl,
     preview: Value,
     hash: String,
+    subject: String,
 ) -> Result<Value, String> {
     let key = action.control_key(&preview).map_err(|e| e.to_string())?;
     let reserved = Arc::new(AtomicBool::new(false));
     let mut receipt = Receipt {
+        subject: subject.clone(),
         action: &action,
         preview: &preview,
         hash: &hash,
@@ -106,7 +112,7 @@ async fn execute_gated(
         reserved: reserved.clone(),
         outcome: "cancelled_or_uncertain".into(),
     };
-    let reservation = record(&action, &preview, &hash, &key, "reserved", true);
+    let reservation = record(&subject, &action, &preview, &hash, &key, "reserved", true);
     let result=vults_connectors::github::execute_merge_control(&*gate,&action,&preview,&hash,move||async move{
         let won=tauri::async_runtime::spawn_blocking(move||{
             let won=vults_store::Store::open(&crate::history::dir()).and_then(|mut s|s.reserve_github_control(crate::history::unix_now(),&reservation)).map_err(|e|e.to_string())?;
@@ -122,7 +128,8 @@ async fn execute_gated(
     result
 }
 /// The row's explicit squash click keeps its head binding and never deletes a branch.
-pub(crate) async fn merge_row(app: AppHandle, item: &str, head: &str) -> Result<Value, String> {
+pub(crate) async fn merge_row(app: tauri::AppHandle, item: &str, head: &str) -> Result<Value, String> {
+    let app = GithubSource::companion(app);
     let (repository, number) = item
         .strip_prefix("pr:")
         .and_then(|v| v.rsplit_once('#'))
@@ -142,7 +149,7 @@ pub(crate) async fn merge_row(app: AppHandle, item: &str, head: &str) -> Result<
         .map_err(|e| e.to_string())?;
     ensure_available(action.control_key(&preview).map_err(|e| e.to_string())?).await?;
     let hash = action.request_hash();
-    execute_gated(gate, action, preview, hash).await
+    execute_gated(gate, action, preview, hash, "zeca".into()).await
 }
 #[derive(Debug)]
 struct MergeTool {
@@ -319,7 +326,15 @@ mod tests {
             assert!(parse("github_pull_request_merge", &bad).is_err(), "{key}");
         }
         assert!(parse("github_pull_request_delete_branch", &input()).is_err());
-        let audit = record(&action, &preview, &action.request_hash(), "key", "reserved", true);
+        let audit = record(
+            "zeca",
+            &action,
+            &preview,
+            &action.request_hash(),
+            "key",
+            "reserved",
+            true,
+        );
         let audit: Value = serde_json::from_str(&audit.target).unwrap();
         assert_eq!(audit["headSha"], "b".repeat(40));
         assert_eq!(audit["repositoryId"], 20);

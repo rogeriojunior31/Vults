@@ -23,19 +23,34 @@ calibrate without collecting data ([0019](0019-requests-on-the-users-behalf.md))
   specialist remains available with Zeca off without turning him on. The recipient is the immutable
   profile and skill snapshot. Claude Code uses isolated settings in the empty managed workspace or
   a project explicitly selected before the first turn. Configured API/local providers use only the
-  pinned instructions and their own messages, without tools or project access. Codex remains blocked
-  pending an isolated specialist driver. No flock mention, companion context, MCP, user setup or
-  Zeca memory is attached. The user chooses Ask, accepted policies or full access separately
+  pinned instructions, their own messages and explicitly selected attachments without terminal or
+  project access. Codex uses an app-owned home per profile and authenticated principal/workspace,
+  binds resumed threads to that identity, suppresses project instructions and
+  external configuration, and receives subscription authentication only in memory from the existing
+  CLI login; it never falls back to an unqualified driver. No flock mention, companion context,
+  external MCP, user setup or Zeca memory is attached. The user chooses Ask, accepted policies or full access separately
   for each profile; the default is Ask, and changes apply to the next tool call. Destructive actions,
   policy asks and actions after reading outside content require a card; policy denies block the call.
   Zeca's Chat access setting cannot grant specialist access. Voice, Ask Zeca and local companion
   commands are unavailable in this route. Native state, history and approval streams remain scoped
   to the selected profile while the UI reuses the production ChatPanel.
+- **Specialist GitHub is an explicit, revocable grant.** Developer and Reviewer have independent,
+  default-off controls for one exact repository, host and signed-in account. They do not inherit
+  Zeca's switches, another profile or an earlier grant. The existing connector must be enabled and
+  its network gate, budgets, traces and typed services remain authoritative. Only scoped GitHub
+  tools are offered: no cached global snapshot, account discovery, repository search, memory or
+  flock tools. Supported API tools run in the host; local providers retain messaging only; CLI tools use a private same-user, per-turn MCP
+  relay that ends with its turn. Reads taint the conversation. Every write still requires its exact
+  human card, active policy denies remain binding, and revocation/version/account checks run before
+  approval execution and before returning data. A new grant cannot revive a pending old write.
+  GitHub controls govern Vults connector tools; separately approved shell commands retain their own
+  permission boundary.
 - **Agent preferences are separate from immutable revisions.** Each profile keeps versioned local
   executor/model/effort defaults, independent of Chat access. Content and defaults save atomically;
   conflicts retain the draft. Defaults apply only before the first turn. API history is scoped to its
-  profile, provider and model; it never adopts a companion prompt or history. Codex defaults may be
-  saved but cannot run yet. A bound conversation keeps its original executor, model and source.
+  profile, provider and model; it never adopts a companion prompt or history. Claude and Codex
+  defaults apply to new isolated CLI conversations. A bound conversation keeps its original
+  executor, model and source.
   Custom agents can be archived/restored without deleting revisions or history. Archived agents
   reject new turns and resets; an admitted turn may finish, with Stop and human cards still usable.
   Reading history remains available. Copies start with Ask, regardless of the source's access.
@@ -96,3 +111,9 @@ calibrate without collecting data ([0019](0019-requests-on-the-users-behalf.md))
 - 2026-10-25: Enable specialist API/local conversations on both supported wires with an exact pinned system prompt and no tools or companion memory. Allow an explicitly selected project for Claude Code, validate and pin its source, and retain executor/model/history through reopening and changed defaults. Codex remains unavailable pending isolated configuration handling.
 
 - 2026-10-25: Allow a conversation-local executor/model/effort override before the first send. Its native source generation invalidates queued older actions; draft text and profile defaults/access remain untouched. New/Open/history clear the unsent override. Reopening a sent conversation retains its stored executor and source. Codex remains blocked until its isolated runtime is qualified.
+
+- 2026-10-25: Add an explicitly invoked file chooser scoped by specialist profile and source generation, independent of Zeca. Attachments use validated private inbox copies and the existing CLI/API formats, with 16 files/20 MB per message. They never grant tools or auto-send; pending chooser results cannot cross source changes. Attachment input taints the shared Chat permission context before tools run, so full access does not bypass cards after reading files.
+
+- 2026-10-25: Qualify Codex specialists with an app-owned CLI home and ephemeral external ChatGPT authentication. Read the existing file/keyring login without duplicating credentials; the original CLI owns renewal. Do not inherit user/project instructions, hooks, skills or MCP. Add independent, default-off Developer/Reviewer GitHub grants bound to repository/account/host and a version, using existing typed services, human write cards and a per-turn same-user CLI relay. This supersedes the earlier Codex/GitHub blocks without granting companion capabilities.
+
+- 2026-10-25: Bind managed Codex threads to the authenticated principal and workspace, using hashed local ownership metadata. Reject cross-login resume before starting the CLI; rotating tokens for the same identity preserve continuity.

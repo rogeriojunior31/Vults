@@ -251,4 +251,57 @@ pass CI; a reviewer checks every external write path, and CI passes on Linux and
   active rules, and unavailable protection metadata fail closed. Ref deletion has no atomic
   compare-and-delete; concurrent pushes require keeping the branch and managing it on GitHub.
   Live repository mutations and visual acceptance of native cards remain pending.
-- GH8–GH9: not started.
+- GH8: implemented locally on 2026-10-25; native model/repository acceptance remains pending.
+- GH9: not started.
+
+
+### GH8 delivery - 2026-10-25
+
+The maintainer authorized Codex and explicit Developer/Reviewer GitHub switches. ADR 0018 now
+permits only host-scoped GitHub tools under independent, default-off grants. Each grant retains an
+exact repository, host, account and CAS version; enabling needs an active connector and network
+budget. Disabling/version changes invalidate older tool objects, including approved proposals.
+Calls check the current grant and account before execution and returning data. Global snapshots,
+account tools, repository search, flock and memory tools never join these specialists.
+
+Reuse GH2-GH7's typed read/write services and their human cards, durable control receipts and
+network gate. Source/audit attribution follows the actual profile rather than Zeca. Policy denies
+block writes before a human card; full access cannot execute a write without its exact approval.
+Supported API wires use the host tools directly; local providers retain messaging only. Claude/Codex use a private, same-user, bounded per-turn
+MCP relay. Stopping a turn removes its service; disconnecting a request cancels pending execution,
+and an old grant cannot return after re-enabling.
+
+Codex now uses per-profile app-owned CLI state, isolated HOME/config discovery, disabled project
+docs/skill instructions/hooks, exact pinned base instructions and external ChatGPT auth in memory.
+The source login can be the CLI's existing file or keyring entry; renewal remains owned by the
+original CLI, with account continuity checked. No credentials are duplicated on disk, no user
+configuration is edited, and isolated failure cannot use the native exec fallback. The installed
+0.164.0 CLI passed a no-model configuration canary probe, also retained as an explicitly invoked
+native test. Live model/subscription and controlled-repository writes remain manual acceptance.
+
+Validation includes native grant/repository/account/revocation checks, policy-deny and human-card
+execution tests, relay disconnect/lifetime tests and production UI enable/disable failure/retry.
+The workspace suite and Clippy pass. Cargo deny found the pre-existing RUSTSEC-2026-0387 chain
+crypto-bigint 0.5.5 -> elliptic-curve 0.13 -> p256 0.13 in phone signing dependencies. It is not
+introduced by the reused peer dependency; no advisory is suppressed. Resolve that release gate
+separately before publication. GH9 and the live/native acceptance matrix are still open.
+
+
+### PR readiness - 2026-10-25
+
+The earlier dependency gate is resolved: p256 0.14 removes the vulnerable crypto-bigint 0.5 chain;
+clipboard-win is updated to 5.4.3 with the existing scoped license exception reviewed and updated.
+Cargo deny passes without a new advisory ignore. Phone signing retains SHA-256/ECDSA DER and SEC1
+wire formats, checked with an independent OpenSSL signature fixture.
+
+Managed Codex state is partitioned by profile and hashed principal/workspace. Thread ownership
+rejects a different login, including another user in the same workspace, before spawning a resume.
+A new conversation can use the new login; token rotation keeps the original identity. A fake CLI
+integration checks start/resume, changed login, new conversation, external MCP rejection before
+authentication and absence of native-exec fallback. The installed CLI no-model canary also checks
+the explicitly scoped MCP configuration. No live inference or repository mutation was performed.
+
+Final workspace verification: 1600 passed, 18 ignored, no failures; feature-enabled evals, all-target
+Clippy, renderer checks and repository rules pass. Native Room profile inspection is recorded in
+`assets/agent-github.png`. Live model/repository acceptance and Light/minimum layout remain manual;
+GH9 remains open. The maintainer authorized commits, push and a PR for these accumulated changes.

@@ -1,9 +1,9 @@
 //! Pull request tools share Chat's human cards and the connector's gated typed service.
 
+use super::GithubSource;
 use super::{GithubToolGate, Source, failed, github_result};
 use serde_json::{Value, json};
 use std::sync::Arc;
-use tauri::AppHandle;
 use vults_agents::driver::BoxFuture;
 use vults_chat::tools::{Tool, ToolApproval, Tools};
 use vults_connectors::github::PullRequestWrite;
@@ -32,7 +32,10 @@ pub(super) fn tools(source: Arc<dyn Source>) -> Tools {
         .collect()
 }
 
-pub(super) fn prepare(app: AppHandle, action: PullRequestWrite) -> BoxFuture<'static, Result<Value, String>> {
+pub(super) fn prepare(
+    app: GithubSource,
+    action: PullRequestWrite,
+) -> BoxFuture<'static, Result<Value, String>> {
     Box::pin(async move {
         if !app.github_work_item_allowed() {
             return Err("Turn on GitHub tools for Zeca and the GitHub connector first.".into());
@@ -51,6 +54,7 @@ pub(super) fn prepare(app: AppHandle, action: PullRequestWrite) -> BoxFuture<'st
 }
 
 struct WriteAudit<'a> {
+    subject: String,
     action: &'a PullRequestWrite,
     hash: &'a str,
     preview: &'a Value,
@@ -61,7 +65,7 @@ impl Drop for WriteAudit<'_> {
         crate::audit::keep(Audit::new(
             Actor::System,
             Act::ExternalWrite,
-            "zeca",
+            &self.subject,
             self.action.repository(),
             self.action.tool_name(),
             &audit_target(self.action, self.preview, self.hash, self.outcome),
@@ -79,13 +83,14 @@ fn audit_target(action: &PullRequestWrite, preview: &Value, hash: &str, outcome:
 }
 
 pub(super) fn execute(
-    app: AppHandle,
+    app: GithubSource,
     action: PullRequestWrite,
     preview: Value,
     hash: String,
 ) -> BoxFuture<'static, Result<Value, String>> {
     Box::pin(async move {
         let mut audit = WriteAudit {
+            subject: app.subject().into(),
             action: &action,
             hash: &hash,
             preview: &preview,

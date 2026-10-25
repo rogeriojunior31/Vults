@@ -1151,3 +1151,101 @@ for (const surface of ["island", "nest"]) {
   assert.ok(card.textContent.includes("Folder"));assert.ok(card.textContent.includes("CLI supplied description"));assert.ok(!card.textContent.includes("code owners"));
 }
 console.log("check-chat-models: GitHub API cards show repository, exact content and localized action effects in both surfaces, without inherited CLI scope or automatic decisions");
+
+// History writes keep their owner and drafts until persistence succeeds.
+for (const surface of ["island", "nest"]) {
+  let renameRequest, deleteRequest, renameCalls = 0, deleteCalls = 0;
+  let listFails = false;
+  let records = [{ id: 42, title: "Original title", folder: null, label: "Claude Code", current: true }];
+  const historyChat = new ChatPanel({
+    models: async () => [], pick: async () => ({}), saveDraft: async () => {}, keyboard: () => {},
+    conversations: async () => { if (listFails) throw "History unavailable"; return records.map(record => ({ ...record })); },
+    rename: (_id, title) => { renameCalls++; return new Promise((resolve, reject) => { renameRequest = { title, resolve, reject }; }); },
+    remove: () => { deleteCalls++; return new Promise((resolve, reject) => { deleteRequest = { resolve, reject }; }); },
+  }, () => {}, { window: surface });
+  historyChat.element.isConnected = true;
+  await historyChat.loadSaved(); historyChat.historyOpen = true; historyChat.paintHead();
+  listFails = true; await historyChat.loadSaved();
+  assert.equal(historyChat.saved.length, 1, "A read failure preserves cached history");
+  listFails = false;
+  const choice = key => nodes(historyChat.element).find(node => node.dataset.choice === key);
+  choice("rename-button:42").click(); await tick();
+  let rename = choice("rename:42"); rename.value = "Retry title";
+  const enter = { key: "Enter", preventDefault() {}, stopPropagation() {} };
+  rename.listeners.keydown(enter); rename.listeners.keydown(enter);
+  assert.equal(renameCalls, 1, "Repeated Enter never queues another rename");
+  assert.equal(historyChat.saved[0].title, "Original title", "The cached title changes only after persistence");
+  renameRequest.reject("Rename failed"); await tick();
+  assert.equal(choice("rename:42").value, "Retry title");
+  assert.ok(historyChat.historyMenu.textContent.includes("Could not save this history change. Try again."));
+  choice("rename:42").listeners.keydown(enter);
+  records[0].title = "Retry title"; renameRequest.resolve(); await tick();
+  assert.equal(historyChat.saved[0].title, "Retry title");
+  historyChat.draft("Keep my draft"); historyChat.attach(["/inbox/selected.txt"], []);
+  choice("delete:42").click(); choice("delete:42").click(); choice("delete:42").click();
+  assert.equal(deleteCalls, 1, "Delete is single flight");
+  deleteRequest.reject("Delete failed"); await tick();
+  assert.equal(historyChat.input.value, "Keep my draft"); assert.equal(historyChat.files.length, 1);
+  assert.ok(historyChat.historyMenu.textContent.includes("Could not save this history change. Try again."));
+  choice("delete:42").click(); records = [];
+  deleteRequest.resolve({ current: true, provider: "claude", generation: 9 }); await tick();
+  assert.equal(historyChat.input.value, ""); assert.deepEqual(historyChat.files, []);
+  assert.equal(historyChat.generation, 9); assert.equal(historyChat.folder, null);
+  // A result for the old conversation must not clear a newly restored source.
+  const deleting = historyChat.writeHistory(42);
+  historyChat.cleared("claude"); historyChat.draft("Another conversation");
+  deleteRequest.resolve(true); await deleting;
+  assert.equal(historyChat.input.value, "Another conversation");
+  historyChat.toggle(false);
+}
+console.log("check-chat-models: history rename/delete failure retry, single flight, complete current reset and late-source protection");
+
+// Delayed navigation must never replace a newer source, its draft or its identity.
+for (const surface of ["island", "nest"]) {
+  let resets = [], opens = [], failSave = false;
+  const identity = {name:"Current profile",revision:2,species:"atratus",look:"none",state:{defaults:{executor:"claude",model:null,effort:null},archived:false}};
+  const navigation = new ChatPanel({
+    models:async()=>[],pick:async()=>({}),keyboard:()=>{},
+    saveDraft:async()=>{if(failSave)throw "Save failed";},
+    reset:(_provider,generation)=>new Promise((resolve,reject)=>resets.push({generation,resolve,reject})),
+    open:(id,generation)=>new Promise((resolve,reject)=>opens.push({id,generation,resolve,reject})),
+  },()=>{},{window:surface,specialist:identity});
+  navigation.generation=8;navigation.restored=true;navigation.element.isConnected=true;
+  navigation.draft("Retained draft"); navigation.attach(["/inbox/file.txt"],[]);
+  navigation.newConversation();navigation.newConversation();navigation.openConversation(42);await tick();
+  assert.equal(resets.length,1);assert.equal(opens.length,0);assert.equal(resets[0].generation,8);
+  assert.equal(navigation.isBusy(),true);assert.equal(navigation.input.readOnly,true);
+  resets[0].reject("Reset failed");await tick();
+  assert.equal(navigation.input.value,"Retained draft");assert.equal(navigation.files.length,1);
+  assert.equal(navigation.isBusy(),false);assert.equal(navigation.input.readOnly,false);
+  failSave=true;navigation.newConversation();await tick();assert.equal(resets.length,1,"A failed draft save cannot start navigation");failSave=false;
+  navigation.openConversation(42);navigation.openConversation(43);await tick();
+  assert.equal(opens.length,1);assert.equal(opens[0].id,42);assert.equal(opens[0].generation,8);
+  const other=surface==="nest"?"island":"nest";
+  navigation.sync({kind:"reset",from:other,provider:"claude",generation:10});
+  navigation.draft("A newer conversation");
+  opens[0].resolve({provider:"claude",generation:9,folder:null,model:null,effort:null,label:"Claude",started:true,lines:[{who:"you",text:"Old history",files:[]}],profileTitle:"Stale identity",profileRevision:1});await tick();
+  assert.equal(navigation.input.value,"A newer conversation");assert.equal(identity.name,"Current profile");assert.equal(navigation.generation,10);
+  navigation.newConversation();await tick();
+  navigation.sync({kind:"reset",from:other,provider:"claude",generation:12});navigation.draft("Newer again");
+  resets[1].resolve({provider:"claude",generation:11,profileTitle:"Stale reset",profileRevision:1});await tick();
+  assert.equal(navigation.input.value,"Newer again");assert.equal(identity.name,"Current profile");assert.equal(navigation.generation,12);
+  navigation.newConversation();await tick();resets[2].resolve({provider:"claude",generation:13,profileTitle:"Accepted revision",profileRevision:3});await tick();
+  assert.equal(navigation.input.value,"");assert.equal(identity.name,"Accepted revision");assert.equal(identity.revision,3);assert.equal(navigation.isBusy(),false);
+  navigation.toggle(false);
+}
+console.log("check-chat-models: New/Open single flight, save/reset failure retention, native generation forwarding and stale history/reset identity isolation in both surfaces");
+
+// An external reset during initial restoration outranks an earlier navigation click too.
+{
+ let finishDraft;let resets=0;
+ const startup=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard:()=>{},current:async()=>null,
+  draft:()=>new Promise(resolve=>{finishDraft=resolve;}),saveDraft:async()=>{},reset:async()=>{resets++;return "claude";},
+ },()=>{},{window:"nest"});
+ startup.newConversation();
+ startup.sync({kind:"reset",from:"island",provider:"claude",generation:22});
+ startup.draft("An external source during startup");
+ finishDraft({text:"Old snapshot",files:[],folder:null,provider:"claude",generation:21});await tick();await tick();
+ assert.equal(resets,0);assert.equal(startup.input.value,"An external source during startup");assert.equal(startup.generation,22);
+ startup.toggle(false);
+}

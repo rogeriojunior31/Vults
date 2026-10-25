@@ -1397,3 +1397,133 @@ Native acceptance for this slice: inspected the real conversation setup popover 
 ### Agent refinements commit checkpoint - 2026-10-25
 
 The maintainer authorized committing the accumulated refinements before the next implementation slice. Full workspace Clippy with warnings rejected, workspace tests, feature-enabled evals, renderer build, geometry, record search, saved close, Chat models, Flock continuity, surface continuity, Settings and repository checks passed. The requested check-task-actions.mjs script does not exist in this checkout; the available production surface checks were run. No dependencies changed. Light/minimum-size desktop and authenticated inference acceptance remain pending, rather than being marked as automated coverage. No PR or push is authorized here.
+
+### Agent refinement stage 3.3 - 2026-10-25
+
+After commit 9b4bfe95, add explicit specialist attachments through a generation/profile-scoped
+chooser response rather than the companion files event. The control reuses ChatPanel's chips,
+removal and composer. Zeca may stay off. Late responses cannot cross reset or recipient boundaries;
+chooser failure/cancellation does not send, replace a draft or end a streaming turn.
+
+Validate all rendered attachment paths at native send admission: immediate regular inbox copies,
+no traversal, links, nested/foreign paths, duplicates or missing files. Bound each message to 16
+files and 20 MB. New private copies use exclusive creation rather than overwriting a same-name
+copy/link. Shared Chat marks attachments as outside input before any model/tool call, so a full
+access choice cannot skip the outside-content card path. API history continues to strip file bytes.
+No tools, project capability, configuration, key or model request is enabled by the chooser itself.
+
+Tests cover path/size/count/duplicate/link/missing boundaries, private copies and original retention;
+shared taint with no real model request; an intercepted local API payload and stripped disk history;
+and the actual specialist adapter through pending/failure/retry, source reset, recipient change,
+files-only submission, cancellation and streaming continuity. Native dialog completion, minimum-size
+and Light visual acceptance remain manual. Codex activation remains blocked pending isolation;
+file drag-and-drop is not routed to specialists. This new slice remains uncommitted for review.
+
+Stage 3.3 validation: app 404 passed / 1 ignored; Chat 169 passed / 4 ignored; targeted all-target Clippy, build, surface continuity, Chat models, geometry, Settings and language/layer/network/README checks passed. Inspected the production Developer Chat in the running native app: its paperclip shares the existing composer without increasing the resting height. Actual chooser completion and authenticated model delivery remain manual acceptance; no user file was opened or sent during automated validation. Commit 9b4bfe95 contains the prior refinements only; these attachment changes remain local.
+
+
+### Agent refinement stage 4.1 - 2026-10-25
+
+Repair integrated history lifecycle before the remaining acceptance matrix. Native rename/delete
+checks the stored recipient in the same store operation as its mutation; Zeca and specialists
+cannot mutate each other's records. Deletion takes the runtime lock without waiting for a turn,
+prepares its replacement, then deletes before clearing any runtime or draft. An archived agent's
+current conversation can be deleted without invoking the archive-blocked New action. A successful
+specialist deletion returns its new generation and latest identity to the existing Chat adapter.
+
+The shared renderer serializes history writes, retains rename text and delete confirmation on
+failure, shows translated errors for retry and keeps cached rows when listing fails. Successful
+current deletion clears attachments, draft, project and conversation model override. Late results
+cannot clear a newly opened source; stale list reads are discarded. Regression checks exercise
+both shared surface modes and the production specialist adapter. Native ownership checks use a
+temporary store, never user history.
+
+Validation: app 404 passed / 1 ignored; targeted all-target Clippy, build, Chat models, surface
+continuity, geometry, format and repository language/layer/network/README checks passed. Inspected
+the updated Developer Chat in the running native app. Actual native history mutation, chooser
+completion, authenticated model delivery, Light and minimum-size acceptance remain pending;
+Codex isolation remains blocked. These changes and stage 3.3 remain local, with no push or PR.
+
+
+### Agent refinement stage 4.2 - 2026-10-25
+
+Fence New/Open transitions by recipient generation in both the shared renderer and native commands.
+The native navigation guard takes the runtime lock without waiting and validates the expected
+generation before reading/restoring history or closing any approval waiter. This also serializes
+Open against Delete, so a previously fetched deleted record cannot become the active runtime.
+Companion routes forward the same generation as specialist routes; stale or busy calls leave the
+current runtime and draft untouched.
+
+ChatPanel owns one pending navigation across New/Open, saves the draft before switching and blocks
+sending or another navigation while it completes. Failure retains the draft/files with a translated
+retry message. External source changes outrank delayed results. Specialist adapters return reset
+identity unchanged; ChatPanel applies it only after its source check, including successful current
+history deletion. This prevents an ignored reset from still overwriting the new recipient's name,
+revision or appearance. Recent uses the same pending state without another navigation owner.
+
+Regression checks cover both shared surfaces: duplicate New/Open, failed draft save and reset,
+retry, generation forwarding, stale opened/reset results, retained newer draft/identity and a
+successful latest-revision reset. A native guard check covers busy/stale rejection with intact
+current record and draft. Native dialog/model and Light/minimum-size acceptance remain pending;
+Codex activation remains blocked on CLI isolation. No push or PR.
+
+Stage 4.2 validation: app 405 passed / 1 ignored; targeted all-target Clippy, renderer build,
+Chat models (including initial-restore/external-reset race), surface continuity, geometry and
+repository language/layer/network/README checks passed. The updated production Developer Chat
+was inspected in the running native app at Room size. No user conversation was renamed, deleted
+or sent for these checks; native command interaction and the remaining visual/manual matrix are
+not marked as accepted. Changes remain local.
+
+
+### Agent refinement: Codex and GH8 - 2026-10-25
+
+The maintainer requested Codex specialist execution and independent GitHub enable/disable for
+Developer and Reviewer. This explicitly supersedes the earlier Codex/GH8 pause. Codex uses an
+app-owned CLI home and ephemeral external subscription auth from the existing CLI login, without
+copying credentials or inheriting user/project configuration. An installed-CLI no-model canary
+qualifies configuration isolation; an isolated error cannot fall back to native exec. Resume keeps
+the saved profile/model/effort/session. Live authenticated inference remains acceptance work.
+
+Profiles reuse the accepted workspace to show an exact repository, Enable/Disable GitHub and the
+saved host/account. Each profile has its own versioned, default-off grant. Saving is CAS guarded;
+a failed save keeps the repository input and prior choice. The Chat notice shows the selected
+scope. GitHub tools are separate from Zeca and continue to require the connector, its budgets,
+network traces, exact human write cards and live grant/account checks. Supported API tools run in the
+host; local providers retain messaging only; Claude/Codex use a private per-turn same-user relay. No companion memory/flock tools or
+global GitHub discovery are offered. Typed issue/PR/review/Actions/merge services remain shared.
+
+Tests cover grant independence, repository and account changes, revocation/re-enable, human-only
+writes, policy deny, MCP service cleanup/disconnect and UI duplicate/failure/retry. Workspace tests,
+targeted/native qualification, renderer checks and Clippy pass. Cargo deny currently fails on the
+pre-existing phone-signing crypto-bigint advisory RUSTSEC-2026-0387; it is not suppressed. Real
+model/GitHub repository mutation and Light/minimum-size acceptance remain open. No commit/push/PR.
+
+Delivery verification: workspace 1597 passed / 18 ignored; Chat 173 passed / 5 ignored; app 406
+passed / 1 ignored; feature-enabled evals passed. The explicitly invoked installed-Codex canary
+passed with no model request. Workspace all-target Clippy, build, surface continuity (including
+Codex executor/model/effort forwarding), Chat models, Settings, geometry, records, saved close,
+Flock placement and repository checks passed. Rechecked native Codex profile/session resume in a
+temporary store. Inspected the production profile catalogue in the running native app at Room
+size; the GitHub section is present in Developer's detail. The app remains open on Profiles for
+maintainer acceptance. Live inference/repository writes and Light/minimum layout remain manual.
+Cargo deny still reports the pre-existing signing dependency advisory; no ignore was added.
+
+
+### PR readiness - 2026-10-25
+
+The earlier dependency gate is resolved: p256 0.14 removes the vulnerable crypto-bigint 0.5 chain;
+clipboard-win is updated to 5.4.3 with the existing scoped license exception reviewed and updated.
+Cargo deny passes without a new advisory ignore. Phone signing retains SHA-256/ECDSA DER and SEC1
+wire formats, checked with an independent OpenSSL signature fixture.
+
+Managed Codex state is partitioned by profile and hashed principal/workspace. Thread ownership
+rejects a different login, including another user in the same workspace, before spawning a resume.
+A new conversation can use the new login; token rotation keeps the original identity. A fake CLI
+integration checks start/resume, changed login, new conversation, external MCP rejection before
+authentication and absence of native-exec fallback. The installed CLI no-model canary also checks
+the explicitly scoped MCP configuration. No live inference or repository mutation was performed.
+
+Final workspace verification: 1600 passed, 18 ignored, no failures; feature-enabled evals, all-target
+Clippy, renderer checks and repository rules pass. Native Room profile inspection is recorded in
+`assets/agent-github.png`. Live model/repository acceptance and Light/minimum layout remain manual;
+GH9 remains open. The maintainer authorized commits, push and a PR for these accumulated changes.

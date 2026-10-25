@@ -20,6 +20,7 @@ pub struct View {
     skill_catalog: Vec<vults_zeca::profiles::Skill>,
     access: crate::settings::ChatAccess,
     state: ProfileState,
+    github: crate::specialist_github::Grant,
     providers: Vec<vults_chat::providers::Provider>,
 }
 
@@ -38,6 +39,7 @@ impl From<Profile> for View {
             skill_catalog: vults_zeca::profiles::SKILLS.to_vec(),
             access: crate::settings::ChatAccess::Ask,
             state: ProfileState::default(),
+            github: Default::default(),
             providers: vults_chat::providers::PROVIDERS.to_vec(),
         }
     }
@@ -134,6 +136,7 @@ pub async fn agent_profiles(app: tauri::AppHandle, window: tauri::Webview) -> Re
                 skill_catalog: vults_zeca::profiles::SKILLS.to_vec(),
                 access: crate::settings::specialist_chat_access(&app_for_access, p.id),
                 state: ProfileState::default(),
+                github: crate::specialist_github::current(&app_for_access, p.id),
                 providers: vults_chat::providers::PROVIDERS.to_vec(),
             })
             .collect();
@@ -145,6 +148,7 @@ pub async fn agent_profiles(app: tauri::AppHandle, window: tauri::Webview) -> Re
         }));
         for profile in &mut profiles {
             profile.state = store.agent_profile_state(&profile.id).map_err(error)?;
+            profile.github = crate::specialist_github::current(&app_for_access, &profile.id);
         }
         Ok(profiles)
     })

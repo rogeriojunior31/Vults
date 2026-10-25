@@ -1,5 +1,5 @@
 # 0018. Zeca: opcional, separado do bando, regras antes de modelos
-<!-- source: faa0a7cd8597 -->
+<!-- source: 324d0f9ee5d0 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0010 e da 0012.
 Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): Tasks sai do Vults.
@@ -29,20 +29,34 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
   O especialista continua disponível com o Zeca desligado, sem ligá-lo. O destinatário é o perfil
   imutável e o snapshot das skills. Claude Code usa configurações isoladas no espaço vazio gerenciado
   ou em um projeto escolhido explicitamente antes do primeiro turno. Provedores API/locais configurados
-  usam apenas as instruções fixadas e suas próprias mensagens, sem ferramentas ou acesso ao projeto.
-  Codex permanece bloqueado até ter um driver de especialista isolado. Nenhuma menção ao bando,
-  contexto do companheiro, MCP, configuração do usuário ou memória do Zeca é anexada. O usuário escolhe Ask,
+  usam as instruções fixadas, suas próprias mensagens e anexos selecionados explicitamente, sem
+  acesso ao terminal ou projeto. Codex usa um diretório próprio do app por perfil e identidade/workspace
+  autenticados, vincula a retomada da conversa a essa identidade e suprime instruções
+  do projeto e configurações externas e recebe a autenticação da assinatura apenas em memória pelo
+  login existente da CLI; nunca usa um executor alternativo sem qualificação. Nenhuma menção ao bando,
+  contexto do companheiro, MCP externo, configuração do usuário ou memória do Zeca é anexada. O usuário escolhe Ask,
   políticas aceitas ou acesso total separadamente para cada perfil; o padrão é Ask, e mudanças valem
   para a próxima chamada de ferramenta. Ações destrutivas, perguntas das políticas e ações após ler
   conteúdo externo exigem um card; negações das políticas bloqueiam a chamada. O acesso do Chat do
   Zeca não concede acesso ao especialista. Voz, Ask Zeca e comandos locais do companheiro não estão
   disponíveis nessa rota. Estado nativo, histórico e aprovações permanecem no perfil selecionado,
   enquanto a interface reutiliza o ChatPanel de produção.
+- **GitHub para especialistas exige autorização explícita e revogável.** Desenvolvedor e Revisor
+  têm controles independentes, desligados por padrão, para um repositório, host e conta autenticada
+  exatos. Não herdam interruptores do Zeca, outro perfil ou uma autorização anterior. A conexão
+  existente deve estar ligada, e seu gate de rede, limites, rastros e serviços tipados continuam
+  valendo. Apenas ferramentas GitHub restritas são oferecidas: sem snapshot global, descoberta de
+  conta, busca de repositórios, memória ou ferramentas do bando. Ferramentas de APIs compatíveis rodam no app; provedores locais mantêm apenas mensagens;
+  as CLIs usam um relay MCP privado, do mesmo usuário e por turno, encerrado com o turno. Leituras
+  marcam conteúdo externo. Toda escrita exige seu card humano exato, negações das políticas continuam
+  valendo, e revogação/versão/conta são verificadas antes de executar a aprovação e devolver dados.
+  Uma autorização nova não reativa escrita antiga pendente. Esses controles abrangem ferramentas
+  da conexão Vults; comandos de shell aprovados separadamente mantêm sua própria permissão.
 - **Preferências dos agentes são separadas das revisões imutáveis.** Cada perfil mantém padrões locais
   versionados de executor/modelo/esforço, independentes do acesso do Chat. Conteúdo e padrões são salvos
   atomicamente; conflitos preservam o rascunho. Padrões valem apenas antes do primeiro turno. O histórico
   de API fica restrito ao perfil, provedor e modelo; nunca adota o prompt ou histórico do companheiro.
-  Padrões do Codex podem ser salvos, mas ainda não executam. Uma conversa iniciada mantém seu executor,
+  Os padrões de Claude e Codex se aplicam a novas conversas CLI isoladas. Uma conversa iniciada mantém seu executor,
   modelo e fonte originais. Agentes personalizados podem ser arquivados/restaurados sem apagar revisões
   ou histórico. Arquivados rejeitam novos turnos e reinícios; um turno já admitido pode terminar, com
   Parar e cards humanos ainda disponíveis. O histórico continua acessível. Cópias começam com Ask,
@@ -112,3 +126,9 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
 - 2026-10-25: Habilitar conversas de especialista por API/local nos dois protocolos suportados com prompt de sistema fixado exato, sem ferramentas ou memória do companheiro. Permitir projeto escolhido explicitamente no Claude Code, validar e fixar sua fonte e preservar executor/modelo/histórico ao reabrir e alterar padrões. Codex continua indisponível até isolar as configurações.
 
 - 2026-10-25: Permitir escolha de executor/modelo/esforço específica da conversa antes do primeiro envio. A geração nativa da fonte invalida ações antigas enfileiradas; o texto do rascunho e os padrões/acesso do perfil permanecem intactos. Nova/Abrir/histórico limpam a escolha não enviada. Reabrir uma conversa enviada mantém o executor e a fonte salvos. Codex permanece bloqueado até qualificar sua execução isolada.
+
+- 2026-10-25: Adicionar seletor de arquivos invocado explicitamente, restrito ao perfil de especialista e à geração da fonte, independente do Zeca. Anexos usam cópias privadas validadas e formatos existentes de CLI/API, com 16 arquivos/20 MB por mensagem. Nunca concedem ferramentas nem enviam automaticamente; resultados pendentes não atravessam mudanças de fonte. Anexos marcam o contexto compartilhado de permissões como externo antes das ferramentas, para que acesso total não ignore cards após ler arquivos.
+
+- 2026-10-25: Qualificar especialistas Codex com diretório CLI próprio do app e autenticação ChatGPT externa efêmera. Ler o login existente em arquivo/chaveiro sem duplicar credenciais; a CLI original renova o login. Não herdar instruções, hooks, skills ou MCP do usuário/projeto. Adicionar autorizações GitHub independentes, desligadas por padrão, para Desenvolvedor/Revisor vinculadas a repositório/conta/host e versão, com serviços tipados existentes, cards humanos de escrita e relay CLI do mesmo usuário por turno. Isso substitui os bloqueios anteriores de Codex/GitHub sem conceder capacidades do companheiro.
+
+- 2026-10-25: Vincular conversas Codex gerenciadas à identidade e ao workspace autenticados, com metadados locais de propriedade em hash. Recusar retomada entre logins antes de iniciar a CLI; tokens renovados da mesma identidade preservam a continuidade.

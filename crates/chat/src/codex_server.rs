@@ -27,6 +27,7 @@ pub(crate) struct AppServer {
     changes: HashMap<String, (Vec<String>, Value)>,
     /// The thread's token total as last heard, across turns: where the next turn starts from.
     seen: Option<Usage>,
+    auth_source: Option<(std::path::PathBuf, String)>,
 }
 
 /// What a message from the server means for the turn being read.
@@ -55,6 +56,9 @@ pub(crate) enum Msg {
     },
     /// Any other request of us: refused, never a yes.
     Request {
+        id: Value,
+    },
+    RefreshAuth {
         id: Value,
     },
     /// A file change item began; these are its paths, and its changes whole (with their diffs).
@@ -123,6 +127,7 @@ pub(crate) fn classify(raw: &str) -> Msg {
             item: v["params"]["itemId"].as_str().unwrap_or_default().to_string(),
             reason: v["params"]["reason"].as_str().unwrap_or_default().to_string(),
         },
+        (Some(id), Some("account/chatgptAuthTokens/refresh")) => Msg::RefreshAuth { id: id.clone() },
         (Some(id), Some(_)) => Msg::Request { id: id.clone() },
         (None, Some("item/started")) if v["params"]["item"]["type"] == "fileChange" => Msg::Changes {
             item: v["params"]["item"]["id"].as_str().unwrap_or_default().to_string(),
@@ -280,7 +285,24 @@ impl TurnTokens {
 impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
     pub(crate) async fn start(spec: &Spec, resume: Option<&str>) -> Result<Self, String> {
-        let mut server = Self::spawn(&spec.dir, Some(spec)).await?;
+        let auth = if spec.role == vults_agents::driver::Role::Specialist {
+            Some(crate::codex_isolation::credentials(
+                &crate::codex_isolation::auth_path()?,
+            )?)
+        } else {
+            None
+        };
+        let isolated = auth
+            .as_ref()
+            .map(|auth| crate::codex_isolation::runtime(spec, auth))
+            .transpose()?;
+        let spec = isolated.as_ref().unwrap_or(spec);
+        if isolated.is_some()
+            && let Some(session) = resume
+        {
+            crate::codex_isolation::session_owner(spec, session, false)?;
+        }
+        let mut server = Self::spawn_authenticated(&spec.dir, Some(spec), auth).await?;
         let instructions = crate::instructions(spec);
         let mut common = json!({
             "cwd": spec.dir,
@@ -289,6 +311,10 @@ impl AppServer {
             "sandbox": "workspace-write",
             "developerInstructions": instructions,
         });
+        if spec.role == vults_agents::driver::Role::Specialist {
+            common["baseInstructions"] = json!(instructions);
+            common["developerInstructions"] = Value::Null;
+        }
         if let Some(model) = &spec.model {
             common["model"] = json!(model);
         }
@@ -301,6 +327,9 @@ impl AppServer {
             None => server.call("thread/start", common).await?,
         };
         server.thread = result["thread"]["id"].as_str().ok_or("no thread id")?.to_string();
+        if isolated.is_some() {
+            crate::codex_isolation::session_owner(spec, &server.thread, resume.is_none())?;
+        }
         Ok(server)
     }
 
@@ -337,7 +366,21 @@ impl AppServer {
     /// The process, past `initialize`; no conversation yet. `spec` sets what the process itself
     /// takes (effort, writable folders, environment, hooks); none for the usage read.
     async fn spawn(work_dir: &Path, spec: Option<&Spec>) -> Result<Self, String> {
+        Self::spawn_authenticated(work_dir, spec, None).await
+    }
+    async fn spawn_authenticated(
+        work_dir: &Path,
+        spec: Option<&Spec>,
+        auth: Option<Value>,
+    ) -> Result<Self, String> {
         let mut cmd = command(spec);
+        let specialist = spec.filter(|s| s.role == vults_agents::driver::Role::Specialist);
+        if let Some(spec) = specialist {
+            crate::codex_isolation::prepare(spec, &mut cmd)?;
+            if auth.is_none() {
+                return Err("The Codex specialist login is unavailable.".into());
+            }
+        }
         let mut child = crate::dies_with_app(&mut cmd)
             .current_dir(work_dir)
             .stdin(Stdio::piped())
@@ -355,12 +398,32 @@ impl AppServer {
             thread: String::new(),
             changes: HashMap::new(),
             seen: None,
+            auth_source: None,
         };
 
         server
             .call("initialize", json!({ "clientInfo": { "name": "vults", "title": "Vults", "version": env!("CARGO_PKG_VERSION") }, "capabilities": null }))
             .await?;
         server.write(&json!({ "method": "initialized" })).await?;
+        if let Some(spec) = specialist {
+            let config = server
+                .call("config/read", json!({"cwd":work_dir,"includeLayers":false}))
+                .await?;
+            crate::codex_isolation::qualify(&config, spec.mcp_config.is_some())?;
+        }
+        if let Some(auth) = auth {
+            server.auth_source = Some((
+                crate::codex_isolation::auth_path()?,
+                crate::codex_isolation::identity(&auth)?,
+            ));
+            server.call("account/login/start", auth).await.map_err(|_| "Could not use the Codex subscription in the isolated runtime. Sign in again in your terminal.")?;
+        }
+        if let Some(spec) = specialist {
+            let config = server
+                .call("config/read", json!({"cwd":work_dir,"includeLayers":false}))
+                .await?;
+            crate::codex_isolation::qualify(&config, spec.mcp_config.is_some())?;
+        }
         Ok(server)
     }
 
@@ -410,6 +473,10 @@ impl AppServer {
             };
             let raw = line.map_err(|e| e.to_string())?.ok_or("Codex stopped")?;
             let msg = match classify(&raw) {
+                Msg::RefreshAuth { id } => {
+                    Box::pin(self.refresh_auth(&id)).await?;
+                    continue;
+                }
                 Msg::Request { id } => {
                     self.refuse(&id).await?;
                     continue;
@@ -525,6 +592,33 @@ impl AppServer {
         }
     }
 
+    async fn refresh_auth(&mut self, id: &Value) -> Result<(), String> {
+        let source = self.auth_source.clone();
+        let auth = if let Some((path, identity)) = source {
+            // The original CLI owns renewal and its credential store; the isolated child stays ephemeral.
+            let renewed = tokio::time::timeout(std::time::Duration::from_secs(8), async {
+                let mut cli = Box::pin(Self::spawn(&std::env::temp_dir(), None)).await?;
+                cli.call("account/read", json!({"refreshToken":true}))
+                    .await
+                    .map(|_| ())
+            })
+            .await;
+            if matches!(renewed, Ok(Ok(()))) {
+                crate::codex_isolation::credentials(&path).ok().filter(|value| {
+                    crate::codex_isolation::identity(value).ok().as_deref() == Some(identity.as_str())
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        match auth {
+            Some(mut value) => { if let Some(object)=value.as_object_mut() {object.remove("type");} self.write(&json!({"id":id,"result":value})).await },
+            None => self.write(&json!({"id":id,"error":{"code":-32001,"message":"The Codex CLI login changed or expired. Sign in again in your terminal."}})).await,
+        }
+    }
+
     /// Any request of us the chat does not handle: refused, never a yes.
     async fn refuse(&mut self, id: &Value) -> Result<(), String> {
         let refusal =
@@ -576,6 +670,7 @@ impl AppServer {
                 .map_err(|e| e.to_string())?
                 .ok_or("Codex stopped")?;
             match classify(&line) {
+                Msg::RefreshAuth { id } => Box::pin(self.refresh_auth(&id)).await?,
                 Msg::Request { id } => self.refuse(&id).await?,
                 other => return Ok(other),
             }

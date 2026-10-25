@@ -517,6 +517,8 @@ mod tests {
     async fn specialist_wire_sends_only_its_brief_and_messages() {
         let (provider,request)=server("data: {\"choices\":[{\"delta\":{\"content\":\"own answer\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n").await;
         let (tx, _rx) = mpsc::channel(16);
+        let file = std::env::temp_dir().join(format!("vults-specialist-file-{}.txt", std::process::id()));
+        std::fs::write(&file, "EXPLICIT_FILE_CANARY").unwrap();
         let mut history = vec![
             json!({"role":"user","content":"own previous question"}),
             json!({"role":"assistant","content":"own previous answer"}),
@@ -528,6 +530,7 @@ mod tests {
             &mut history,
             &Turn {
                 text: "own question".into(),
+                files: vec![file.clone()],
                 ..Turn::default()
             },
             tools::Kit {
@@ -550,6 +553,14 @@ mod tests {
         assert_eq!(body["messages"].as_array().unwrap().len(), 4);
         assert!(body.get("tools").is_none());
         assert_eq!(history.len(), 4);
+        assert!(body.to_string().contains("EXPLICIT_FILE_CANARY"));
+        let mut kept = crate::Chat::new(crate::Provider::ClaudeApi, std::env::temp_dir());
+        kept.history = history;
+        assert!(
+            !kept.history().unwrap().contains("EXPLICIT_FILE_CANARY"),
+            "The saved API history retains file names, never attachment bytes"
+        );
+        std::fs::remove_file(file).unwrap();
     }
 
     #[tokio::test]
