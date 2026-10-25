@@ -3,7 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { applyActivity, emptyActivity, readActivity } from "./chat-activity";
-import type { ChatActivity, ChatActivityEvent } from "../bridge";
+import type { AgentDefaults, AgentProfileState, AgentProvider, ChatActivity, ChatActivityEvent } from "../bridge";
 import { Clock } from "../clock";
 import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
 import { NAME_BY_KIND } from "../agents";
@@ -39,6 +39,7 @@ const GITHUB_CONTROL_EFFECT: Record<string, string> = {
 };
 
 export interface ChatBackend {
+  setSpecialistChoice?: (choice: AgentDefaults | null, generation?: number) => Promise<{generation:number;choice?:AgentDefaults|null}>;
   draft?: () => Promise<ChatDraft>;
   prepareZeca?: (generation?: number) => Promise<void>;
   current?: () => Promise<OpenedConversation | null>;
@@ -114,6 +115,14 @@ const MEMORY_SAID = new Set([
 
 const REFERENCE_ERRORS = new Set([
   tk("Chat is busy."),
+  tk("This agent is archived. Restore it before sending a new message."),
+  tk("The selected executor is saved but is not available for new specialist conversations yet."),
+  tk("The saved effort is not supported by this model."),
+  tk("API specialists accept messages only. Start a new conversation to clear the project."),
+  tk("That project is unavailable."),
+  tk("The conversation project changed. Start a new conversation to choose another project."),
+  tk("Choose a model in this agent's conversation defaults."),
+  tk("Specialist conversations do not accept voice commands, files or flock mentions."),
   tk("This action belongs to Zeca's conversation. Open Zeca before trying again."),
   tk("The conversation changed before sending. Review your draft and try again."),
   tk("Chat references are invalid or too large."),
@@ -133,7 +142,7 @@ export interface MemorySaid {
 export interface ChatPanelOptions {
   /** The window's label, to tell its own actions from the other window's. */
   window: "island" | "nest";
-  specialist?: { name: string; builtIn?: boolean; revision: number; latestRevision?: number; species: string; look: string };
+  specialist?: { name: string; builtIn?: boolean; revision: number; latestRevision?: number; state?: AgentProfileState; choice?: AgentDefaults | null; providers?: AgentProvider[]; species: string; look: string };
   /** How a reply is drawn: the island's light Markdown, or the Nest's full one. */
   render?: (text: string) => DocumentFragment;
 }
@@ -392,6 +401,11 @@ export class ChatPanel {
   private selectionLabel = "";
   private readonly modelMenu = el("div", { class: "menu model-menu" });
   private modelOpen = false;
+  private specialistChoiceSaving = false;
+  private specialistChoiceRequest = 0;
+  private specialistChoiceError = "";
+  private specialistUseDefaults = true;
+  private specialistChoiceDraft: AgentDefaults | null = null;
   /** The human chooses access here; authority changes only after persistence. */
   private access: ChatAccess = "ask";
   private accessSaving = false;
@@ -516,7 +530,7 @@ export class ChatPanel {
     });
     this.historyButton.append(icon("list", 14, 2));
     this.historyButton.addEventListener("click", () => {
-      if (this.busy) return;
+      if (this.busy || this.specialistChoiceSaving) return;
       this.historyOpen = !this.historyOpen;
       this.menuOpen = this.modelOpen = this.accessOpen = false;
       this.renaming = this.deleting = null;
@@ -532,6 +546,17 @@ export class ChatPanel {
       this.changed();
     });
     this.modelButton.addEventListener("click", () => {
+      if (this.opts.specialist) {
+        if (this.started || this.specialistChoiceSaving) return;
+        this.modelOpen = !this.modelOpen;
+        if (this.modelOpen) {
+          this.specialistChoiceDraft = structuredClone(this.specialistDefaults());
+          this.specialistUseDefaults = !this.opts.specialist.choice;
+          this.specialistChoiceError = "";
+          this.menuOpen = this.accessOpen = this.historyOpen = false;
+        }
+        this.paintHead(); this.changed(); return;
+      }
       // It is the engine's pill too, in both windows: the engine can change whatever was said.
       this.modelOpen = !this.modelOpen;
       this.menuOpen = this.accessOpen = this.historyOpen = false;
@@ -701,6 +726,30 @@ export class ChatPanel {
 
   setProfileRevision(revision: number): void {
     if (this.opts.specialist) { this.opts.specialist.latestRevision = revision; this.paintHead(); }
+  }
+
+  setProfileState(state: AgentProfileState | undefined): void {
+    const profile = this.opts.specialist;
+    if (!profile || (state && state.version < (profile.state?.version ?? 0))) return;
+    profile.state = state;
+    if(state?.archived)this.modelOpen=false;
+    this.paintHead(); this.paintSend();
+  }
+
+  private specialistDefaults(): AgentDefaults {
+    return this.opts.specialist?.choice ?? this.opts.specialist?.state?.defaults ?? {executor:"claude",model:null,effort:null};
+  }
+
+  private profileBlocked(): boolean {
+    if (!this.opts.specialist) return false;
+    const defaults=this.specialistDefaults();
+    return !!this.opts.specialist.state?.archived || this.specialistChoiceSaving || (!this.started && (defaults.executor === "codex" || (defaults.executor === "api" && !!this.folder)));
+  }
+
+  private specialistEngineLabel(): string {
+    const defaults = this.specialistDefaults();
+    if (!this.started && defaults?.executor === "codex") return "Codex";
+    return this.provider === "api" ? t("{engine} · isolated", { engine: this.api.label }) : t("Claude Code · isolated");
   }
 
   specialistAppearance(): SpriteSet | null {
@@ -876,9 +925,14 @@ export class ChatPanel {
     const api = t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.");
     this.caption.textContent = this.offers?.caption ?? t("Ask anything, or drop a file on the island.");
     this.caption.hidden = !this.offers && (this.compact || this.provider === "api");
-    if (this.opts.specialist) { this.caption.textContent = t("This chat uses the pinned profile in an isolated Claude Code session. It has no project or flock context and never uses Zeca's memory."); this.caption.hidden = false; }
+    if (this.opts.specialist) {
+      this.caption.textContent = this.provider === "api"
+        ? t("This agent uses its pinned instructions and messages only. It has no tools, project access or Zeca memory.")
+        : t("This agent uses its pinned instructions and the project you choose. It never uses Zeca memory or flock tools.");
+      this.caption.hidden = false;
+    }
     this.apiNotice.textContent = api;
-    this.apiNotice.hidden = this.provider !== "api";
+    this.apiNotice.hidden = this.provider !== "api" || !!this.opts.specialist;
     this.intro.hidden = this.compact && (this.messages.length > 0 || this.busy);
     const questions = this.compact || this.opts.specialist ? [] : this.offers?.suggestions ?? (this.provider === "api" ? [] : SUGGESTIONS.map(q => ({ id: q, text: t(q), session: null })));
     this.offerButtons(this.suggestions, questions.map(q => ({ id: q.id, text: q.text })), id => this.chooseSuggestion(id));
@@ -1110,6 +1164,7 @@ export class ChatPanel {
 
   /** Goes on with a saved conversation (the Nest's *Recent*); never while a turn runs. */
   openConversation(id: number): void {
+    if (this.specialistChoiceSaving) return;
     void this.openSaved(id);
   }
 
@@ -1531,7 +1586,7 @@ export class ChatPanel {
     }
     const text = this.input.value.trim();
     // Typing ahead is fine while a reply streams; sending waits for it.
-    if (this.busy || (!text && !this.files.length)) return;
+    if (this.busy || this.profileBlocked() || (!text && !this.files.length)) return;
     const files = this.files;
     const source = this.sourceVersion;
     const generation = this.generation;
@@ -1608,7 +1663,7 @@ export class ChatPanel {
 
   /** New, or another provider: the conversation so far stays saved, in the list. */
   private ask(what: ChatProvider | "new"): void {
-    if (this.busy) return;
+    if (this.busy || this.specialistChoiceSaving || this.opts.specialist?.state?.archived) return;
     const source = this.sourceVersion;
     void this.restart(what === "new" ? null : what).catch(error => {
       if (source === this.sourceVersion) { this.messages.push({ who: "note", text: String(error) }); this.paint(); }
@@ -1644,6 +1699,9 @@ export class ChatPanel {
     this.modelOpen = false;
     this.native = this.nativeSetting;
     this.picked = false;
+    if (this.opts.specialist) { this.folder = null; this.opts.specialist.choice = null; }
+    this.specialistChoiceRequest++;this.specialistChoiceSaving=false;
+    this.specialistChoiceDraft=null;this.specialistChoiceError="";
     if (draft) this.restoreDraft(draft);
     this.keepDraft();
     this.paint();
@@ -2015,6 +2073,7 @@ export class ChatPanel {
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    this.specialistChoiceRequest++;this.specialistChoiceSaving=false;
     if (clearDraft) this.cancelVoice();
     this.generation = c.generation;
     if (this.opts.specialist) {
@@ -2042,7 +2101,7 @@ export class ChatPanel {
     if (c.provider === "api") this.api = { ...this.api, label: c.label };
     this.folder = c.folder;
     this.picked = true;
-    this.started = c.started;
+    this.started = c.started || !!this.opts.specialist;
     // Its own model and effort, not the folder's pick for new conversations.
     this.picksFor = c.folder;
     this.picksSeq++;
@@ -2176,7 +2235,7 @@ export class ChatPanel {
     face.alt = "";
     face.src = faceImage(this.specialistAppearance() ?? ZECA);
     face.classList.toggle("msg-face-profile", !!this.opts.specialist);
-    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: this.recipientName() }), el("span", { class: "msg-engine", text: this.opts.specialist ? t("Claude Code · isolated") : this.name(this.provider) }));
+    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: this.recipientName() }), el("span", { class: "msg-engine", text: this.opts.specialist ? this.specialistEngineLabel() : this.name(this.provider) }));
   }
 
   /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
@@ -2255,14 +2314,96 @@ export class ChatPanel {
     this.changed();
   }
 
+  private paintSpecialistChoice(): void {
+    const defaults = this.opts.specialist?.state?.defaults ?? { executor: "claude" as const, model: null, effort: null };
+    const draft = this.specialistUseDefaults ? structuredClone(defaults)
+      : this.specialistChoiceDraft ??= structuredClone(this.specialistDefaults());
+    const form = el("form", { class: "specialist-choice" });
+    const useDefaults = el("input"); useDefaults.dataset.choice = "specialist:defaults"; useDefaults.type = "checkbox"; useDefaults.checked = this.specialistUseDefaults;
+    useDefaults.disabled = this.specialistChoiceSaving;
+    useDefaults.addEventListener("change", () => { this.specialistUseDefaults = useDefaults.checked; this.paintHead(); });
+    const executor = el("select"); executor.dataset.choice = "specialist:executor"; executor.setAttribute("aria-label", t("Executor"));
+    const executors: [string, string, boolean][] = [
+      ["claude", "Claude Code", false], ["codex", t("Codex is not available yet"), true],
+      ...(this.opts.specialist?.providers ?? []).map(p => [`api:${p.id}`, p.label, false] as [string, string, boolean]),
+    ];
+    for (const [value, label, disabled] of executors) {
+      const option = el("option", { text: label }); option.value = value; option.disabled = disabled; executor.append(option);
+    }
+    executor.value = draft.executor === "api" ? `api:${draft.provider}` : draft.executor;
+    executor.disabled = this.specialistUseDefaults || this.specialistChoiceSaving;
+    executor.addEventListener("change", () => {
+      this.specialistChoiceDraft = executor.value.startsWith("api:")
+        ? { executor: "api", provider: executor.value.slice(4), model: null }
+        : { executor: "claude", model: null, effort: null };
+      this.paintHead();
+    });
+    const model = el("input"); model.dataset.choice = "specialist:model"; model.type = "text"; model.value = draft.model ?? ""; model.maxLength = 100;
+    model.setAttribute("aria-label", t("Model")); model.placeholder = t("Use the executor default");
+    model.disabled = this.specialistUseDefaults || this.specialistChoiceSaving;
+    model.addEventListener("input", () => { draft.model = model.value.trim() || null; });
+    const fields = el("div", { class: "specialist-choice-fields" },
+      el("label", {}, el("span", { text: t("Executor") }), executor),
+      el("label", {}, el("span", { text: t("Model") }), model));
+    if (draft.executor !== "api") {
+      const effort = el("select"); effort.dataset.choice = "specialist:effort"; effort.setAttribute("aria-label", t("Effort"));
+      for (const [value, label] of [["", t("Default effort")], ...Object.entries(EFFORTS).map(([value, label]) => [value, t(label)])]) {
+        const option = el("option", { text: label }); option.value = value; effort.append(option);
+      }
+      effort.value = draft.effort ?? ""; effort.disabled = this.specialistUseDefaults || this.specialistChoiceSaving;
+      effort.addEventListener("change", () => { draft.effort = effort.value || null; });
+      fields.append(el("label", {}, el("span", { text: t("Effort") }), effort));
+    }
+    const apply = el("button", { class: "menu-item specialist-choice-apply",
+      text: this.specialistChoiceSaving ? t("Saving…") : t("Apply to this conversation") });
+    apply.dataset.choice = "specialist:apply"; apply.type = "submit"; apply.disabled = this.specialistChoiceSaving;
+    form.append(el("strong", { text: t("Conversation setup") }),
+      el("label", { class: "specialist-choice-defaults" }, useDefaults, el("span", { text: t("Use agent defaults") })), fields,
+      el("p", { class: "menu-hint", text: t("This changes only this conversation. The agent's defaults stay unchanged.") }), apply);
+    if (this.specialistChoiceError) {
+      const error = el("p", { class: "specialist-choice-error", text: this.specialistChoiceError });
+      error.setAttribute("role", "alert"); form.append(error);
+    }
+    form.addEventListener("submit", event => { event.preventDefault(); void this.saveSpecialistChoice(); });
+    this.modelMenu.replaceChildren(form);
+  }
+
+  private async saveSpecialistChoice(): Promise<void> {
+    if (this.started || this.busy || this.specialistChoiceSaving || !this.backend.setSpecialistChoice || !this.opts.specialist) return;
+    const source = this.sourceVersion;
+    const request = ++this.specialistChoiceRequest;
+    const choice = this.specialistUseDefaults ? null : structuredClone(this.specialistChoiceDraft ?? this.specialistDefaults());
+    this.specialistChoiceSaving = true; this.specialistChoiceError = ""; this.paintHead(); this.paintSend();
+    try {
+      await this.flushDraft();
+      if (source !== this.sourceVersion) return;
+      const saved = await this.backend.setSpecialistChoice(choice, this.generation);
+      if (source !== this.sourceVersion) return;
+      this.generation = saved.generation; this.sourceVersion++;
+      this.opts.specialist.choice = saved.choice ?? null; this.modelOpen = false;
+      this.paintHead(); this.keepDraft();
+    } catch (error) {
+      if (source === this.sourceVersion) this.specialistChoiceError = REFERENCE_ERRORS.has(String(error))
+        ? t(String(error)) : t("Could not update this conversation. Your previous choice is still active.");
+    } finally {
+      if (request === this.specialistChoiceRequest) {
+        this.specialistChoiceSaving = false; this.paintHead(); this.paintSend(); this.changed();
+      }
+    }
+  }
+
   private paintModel(api: boolean): void {
     if (this.opts.specialist) {
       this.modelButton.classList.add("engine");
-      this.modelButton.replaceChildren(el("span", { class: "engine-dot claude" }), el("span", { class: "engine-labels", text: t("Claude Code · isolated") }));
-      this.modelButton.disabled = true;
-      this.modelButton.setAttribute("aria-label", t("Claude Code · isolated"));
-      this.modelButton.setAttribute("aria-expanded", "false");
-      this.modelMenu.classList.remove("on");
+      const defaults = this.specialistDefaults();
+      const model = this.started ? this.picks[this.provider]?.model : defaults?.model;
+      const label = this.specialistEngineLabel();
+      this.modelButton.replaceChildren(el("span", { class: `engine-dot ${this.provider}` }), el("span", { class: "engine-labels", text: label }), ...(model ? [el("span", { class: "model-name", text: model })] : []));
+      this.modelButton.disabled = this.started || this.specialistChoiceSaving || !!this.opts.specialist.state?.archived || !this.backend.setSpecialistChoice;
+      this.modelButton.setAttribute("aria-label", label);
+      this.modelButton.setAttribute("aria-expanded", String(this.modelOpen && !this.started));
+      this.modelMenu.classList.toggle("on", this.modelOpen && !this.started);
+      if (this.modelOpen && !this.started) this.paintSpecialistChoice();
       return;
     }
     if (this.provider === "claude" || this.modelOpen) this.loadModels(this.provider);
@@ -2450,8 +2591,17 @@ export class ChatPanel {
 
   private paintHead(): void {
     const profile = this.opts.specialist;
-    this.profileNotice.hidden = !profile || !profile.latestRevision || profile.revision === profile.latestRevision;
-    this.profileNotice.textContent = profile && !this.profileNotice.hidden ? t("This conversation uses profile revision {revision}. Start a new conversation to use revision {latest}.", { revision: profile.revision, latest: profile.latestRevision! }) : "";
+    if (profile && !this.started) {
+      const defaults = this.specialistDefaults();
+      this.provider = defaults?.executor === "api" ? "api" : "claude";
+      if (defaults?.executor === "api") this.api.label = profile.providers?.find(p => p.id === defaults.provider)?.label ?? defaults.provider;
+      this.paintOffers();
+    }
+    const blocked = profile?.state?.archived ? t("This agent is archived. Restore it before sending a new message.") : !!profile && this.specialistDefaults().executor === "api" && !this.started && this.folder ? t("API specialists accept messages only. Start a new conversation to clear the project.") : this.specialistChoiceSaving ? t("Saving…") : this.profileBlocked() ? t("The selected executor is saved but is not available for new specialist conversations yet.") : "";
+    this.input.readOnly = this.profileBlocked();
+    this.newButton.disabled = !!profile?.state && (profile.state.archived || this.specialistChoiceSaving);
+    this.profileNotice.hidden = !blocked && (!profile || !profile.latestRevision || profile.revision === profile.latestRevision);
+    this.profileNotice.textContent = blocked || (profile && !this.profileNotice.hidden ? t("This conversation uses profile revision {revision}. Start a new conversation to use revision {latest}.", { revision: profile.revision, latest: profile.latestRevision! }) : "");
     if (this.opts.specialist) {
       this.input.placeholder = t("Message {name}…", { name: this.recipientName() });
       this.input.setAttribute("aria-label", this.input.placeholder);
@@ -2463,12 +2613,13 @@ export class ChatPanel {
     const active = document.activeElement as HTMLInputElement | null;
     const panel = active ? this.menuPanels().find(({ menu }) => menu.contains(active)) : null;
     const choice = panel ? active?.dataset.choice : null;
-    const draft = panel && active?.tagName === "INPUT" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
+    const draft = panel && active?.tagName === "INPUT" && active.type !== "checkbox" && active.type !== "radio" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
     if (!this.opts.specialist) this.loadPicks();
     // The API chat has no tools, so it works nowhere in particular.
     const api = this.provider === "api";
     this.element.classList.toggle("chat-api", api);
-    this.place.hidden = api || !!this.opts.specialist;
+    this.place.hidden = api;
+    this.place.disabled = this.profileBlocked();
     this.setup.hidden = api || !this.native || !!this.opts.specialist;
     this.paintModel(api);
     this.paintAccess(api);
@@ -2534,7 +2685,7 @@ export class ChatPanel {
     this.send.setAttribute("aria-label", this.send.title);
     this.send.toggleAttribute(
       "disabled",
-      !stop && !this.input.value.trim() && !this.files.length,
+      !stop && (this.profileBlocked() || (!this.input.value.trim() && !this.files.length)),
     );
   }
 

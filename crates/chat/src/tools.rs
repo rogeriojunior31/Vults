@@ -83,6 +83,7 @@ pub type Tools = Vec<Arc<dyn Tool>>;
 /// content in (Z8), and the conversation's frozen context for the system prompt (M2).
 #[derive(Clone, Copy)]
 pub(crate) struct Kit<'a> {
+    pub specialist: bool,
     pub tools: &'a Tools,
     pub outside: &'a std::sync::Mutex<Option<String>>,
     pub frozen: Option<&'a str>,
@@ -92,6 +93,9 @@ pub(crate) struct Kit<'a> {
 impl Kit<'_> {
     /// The system prompt: the persona for whether tools are offered, then the frozen context.
     pub(crate) fn system(&self, persona: &str, persona_tools: &str) -> String {
+        if self.specialist {
+            return self.frozen.unwrap_or_default().to_owned();
+        }
         crate::system(
             if self.tools.is_empty() {
                 persona

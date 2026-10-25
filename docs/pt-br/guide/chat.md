@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: fc4528af62ed -->
+<!-- source: c401e0fc5d76 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -440,3 +440,48 @@ volta. Os títulos e trechos de uma busca chegam ao modelo, marcados como não c
 são lidas de endereços públicos. Cada busca e cada página é uma requisição em seu nome com um limite
 diário ([Segurança](../safety.md#every-request-vults-makes)), e a conversa então conta como tendo
 lido de fora.
+
+<a id="agent-profiles"></a>
+
+## Perfis de agentes
+
+Abra **Bando → Perfis de agentes** para criar um agente, copiar um modelo ou editar um agente
+personalizado. O urubu animado, as instruções e as skills fixadas com busca pertencem ao perfil.
+Skills orientam o comportamento; nunca concedem ferramentas ou permissões. Salvar registra o
+conteúdo e os padrões de execução localmente, sem iniciar um modelo. **Padrões da conversa** altera
+as preferências de um modelo sem copiar suas instruções. Conversas existentes mantêm sua revisão
+e seu modelo salvos.
+
+Claude Code executa atualmente as conversas de especialista na aba Chat existente, isoladas da
+memória do Zeca e do contexto do bando. Padrões de modelo/esforço do Claude valem para novas conversas.
+Escolha um projeto opcional no controle de pasta antes de enviar; depois disso, o projeto fica fixado.
+Conversas novas limpam o projeto anterior. Pastas ausentes ou inválidas são rejeitadas preservando o
+rascunho. Essa escolha não habilita configurações do projeto, servidores MCP ou ferramentas do companheiro.
+
+Agentes via API/local usam o provedor e modelo escolhidos nos padrões (ou o modelo salvo daquele
+provedor). Recebem apenas suas instruções fixadas e próprias mensagens, sem ferramentas, arquivos ou
+acesso ao projeto. Configure chaves de nuvem nas Configurações; provedores locais usam os endpoints
+locais existentes. Um papel via API nunca concede acesso ao terminal ou GitHub. Provedor, modelo e
+mensagens ficam fixados ao reabrir, mesmo após alterar os padrões futuros. Padrões do Codex podem ser
+salvos, mas a execução de especialistas continua indisponível até isolar suas configurações. Nenhum
+executor substituto é iniciado. Escolha permissões diretamente no Chat; Ask, políticas ou acesso total de cada perfil
+são independentes do Zeca. Cópias e agentes novos começam com Ask.
+
+Antes da primeira mensagem, clique no controle de executor do especialista para abrir
+**Configuração da conversa**. Mantenha **Usar padrões do agente** marcado ou desmarque para escolher
+Claude Code ou um provedor API/local configurado, modelo e esforço da CLI para esta conversa.
+**Aplicar nesta conversa** preserva o rascunho da mensagem e mantém iguais as instruções, skills,
+permissões e padrões do perfil. Uma falha ao salvar mantém a escolha anterior ativa. Codex continua
+visivelmente indisponível. Agentes por API seguem sem ferramentas ou acesso ao projeto; escolha uma
+pasta vazia antes de mudar para um provedor API.
+
+A escolha ainda não enviada permanece no perfil enquanto o app está aberto e sobrevive ao fechamento
+do Nest ou à troca de destinatário. Após o primeiro envio, executor/modelo/fonte salvos ficam fixados,
+inclusive se o primeiro turno do modelo falhar. **Nova** limpa a escolha específica e volta aos
+padrões do agente. Isso não inicia uma requisição ao modelo. Escolhas não enviadas, assim como
+rascunhos não enviados, não são salvas entre reinícios do app.
+
+**Arquivar agente** preserva suas revisões e conversas. Encontre-o em **Arquivados** e use
+**Ver conversas** para ler o histórico ou **Restaurar agente** para voltar a enviar. Arquivar bloqueia
+novos turnos e reinícios, enquanto um turno já admitido pode terminar. Parar e os cards de aprovação
+pendentes continuam disponíveis. Restaurar preserva os padrões e as permissões escolhidas separadamente.

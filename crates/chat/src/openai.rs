@@ -514,6 +514,45 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn specialist_wire_sends_only_its_brief_and_messages() {
+        let (provider,request)=server("data: {\"choices\":[{\"delta\":{\"content\":\"own answer\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n").await;
+        let (tx, _rx) = mpsc::channel(16);
+        let mut history = vec![
+            json!({"role":"user","content":"own previous question"}),
+            json!({"role":"assistant","content":"own previous answer"}),
+        ];
+        turn(
+            &provider,
+            None,
+            "local-model",
+            &mut history,
+            &Turn {
+                text: "own question".into(),
+                ..Turn::default()
+            },
+            tools::Kit {
+                specialist: true,
+                tools: &Vec::new(),
+                outside: &Default::default(),
+                frozen: Some("PINNED_EXACT"),
+                approver: &crate::TestApprover,
+            },
+            &tx,
+        )
+        .await
+        .unwrap();
+        let raw = request.await.unwrap();
+        let body: Value = serde_json::from_str(raw.split("\r\n\r\n").nth(1).unwrap()).unwrap();
+        assert_eq!(
+            body["messages"][0],
+            json!({"role":"system","content":"PINNED_EXACT"})
+        );
+        assert_eq!(body["messages"].as_array().unwrap().len(), 4);
+        assert!(body.get("tools").is_none());
+        assert_eq!(history.len(), 4);
+    }
+
+    #[tokio::test]
     async fn a_turn_streams_from_a_local_server() {
         let (provider, request) = server(concat!(
             "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"}}]}\n\n",
@@ -537,6 +576,7 @@ mod tests {
             &mut history,
             &t,
             tools::Kit {
+                specialist: false,
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
@@ -580,6 +620,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
@@ -618,6 +659,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
@@ -673,6 +715,7 @@ mod tests {
             &mut Vec::new(),
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
@@ -783,6 +826,7 @@ mod tests {
                     ..Turn::default()
                 },
                 tools::Kit {
+                    specialist: false,
                     tools: &Vec::new(),
                     outside: &Default::default(),
                     frozen: Some("# Your memory"),
@@ -830,6 +874,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
@@ -908,6 +953,7 @@ mod tests {
             &mut Vec::new(),
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
@@ -947,6 +993,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,

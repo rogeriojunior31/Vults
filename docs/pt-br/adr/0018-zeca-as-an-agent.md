@@ -1,5 +1,5 @@
 # 0018. Zeca: opcional, separado do bando, regras antes de modelos
-<!-- source: e1ebbca87003 -->
+<!-- source: faa0a7cd8597 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0010 e da 0012.
 Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): Tasks sai do Vults.
@@ -27,15 +27,26 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
 - **O Chat de especialista usa a interface de Chat existente.** Um perfil abre pelo Bando na aba
   Chat existente, selecionado como destinatário. Alternar preserva a conversa e o rascunho de cada um.
   O especialista continua disponível com o Zeca desligado, sem ligá-lo. O destinatário é o perfil
-  imutável e o snapshot das skills. Claude Code é o único executor, com configurações isoladas e um
-  espaço de Chat gerenciado pelo Vults. Nenhuma pasta de projeto, menção ao bando, contexto do
-  companheiro, MCP, configuração do usuário ou memória do Zeca é anexada. O usuário escolhe Ask,
+  imutável e o snapshot das skills. Claude Code usa configurações isoladas no espaço vazio gerenciado
+  ou em um projeto escolhido explicitamente antes do primeiro turno. Provedores API/locais configurados
+  usam apenas as instruções fixadas e suas próprias mensagens, sem ferramentas ou acesso ao projeto.
+  Codex permanece bloqueado até ter um driver de especialista isolado. Nenhuma menção ao bando,
+  contexto do companheiro, MCP, configuração do usuário ou memória do Zeca é anexada. O usuário escolhe Ask,
   políticas aceitas ou acesso total separadamente para cada perfil; o padrão é Ask, e mudanças valem
   para a próxima chamada de ferramenta. Ações destrutivas, perguntas das políticas e ações após ler
   conteúdo externo exigem um card; negações das políticas bloqueiam a chamada. O acesso do Chat do
   Zeca não concede acesso ao especialista. Voz, Ask Zeca e comandos locais do companheiro não estão
   disponíveis nessa rota. Estado nativo, histórico e aprovações permanecem no perfil selecionado,
   enquanto a interface reutiliza o ChatPanel de produção.
+- **Preferências dos agentes são separadas das revisões imutáveis.** Cada perfil mantém padrões locais
+  versionados de executor/modelo/esforço, independentes do acesso do Chat. Conteúdo e padrões são salvos
+  atomicamente; conflitos preservam o rascunho. Padrões valem apenas antes do primeiro turno. O histórico
+  de API fica restrito ao perfil, provedor e modelo; nunca adota o prompt ou histórico do companheiro.
+  Padrões do Codex podem ser salvos, mas ainda não executam. Uma conversa iniciada mantém seu executor,
+  modelo e fonte originais. Agentes personalizados podem ser arquivados/restaurados sem apagar revisões
+  ou histórico. Arquivados rejeitam novos turnos e reinícios; um turno já admitido pode terminar, com
+  Parar e cards humanos ainda disponíveis. O histórico continua acessível. Cópias começam com Ask,
+  independentemente do acesso do perfil original.
 - **Onde:** o cérebro dele é um crate `zeca` na camada Connect, ao lado do `chat`; o corpo dele
   (sprites, a ilha, o Nest) fica em Experience. Nenhum crate abaixo do `zeca` sabe que ele existe;
   o `app` o conecta.
@@ -95,3 +106,9 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
 - 2026-10-22: O acesso do especialista é escolhido por perfil (Ask, políticas aceitas ou total), usa Ask por padrão e independe do Chat do Zeca. Ações destrutivas, perguntas das políticas e ações após leitura externa exigem um card; negações das políticas bloqueiam a chamada.
 
 - 2026-10-22: Integrar especialistas à aba Chat existente com seleção de destinatário e o ChatPanel de produção. Manter runtimes nativos, rascunhos, históricos e aprovações por perfil; mudanças de acesso valem para a próxima chamada de ferramenta.
+
+- 2026-10-24: Persistir padrões versionados e arquivamento/restauração de agentes personalizados separadamente das revisões imutáveis e do acesso. Aplicar padrões do Claude apenas a conversas não iniciadas; rejeitar explicitamente executores de especialista indisponíveis. Preservar histórico, turnos admitidos, Parar e decisões humanas pendentes ao arquivar.
+
+- 2026-10-25: Habilitar conversas de especialista por API/local nos dois protocolos suportados com prompt de sistema fixado exato, sem ferramentas ou memória do companheiro. Permitir projeto escolhido explicitamente no Claude Code, validar e fixar sua fonte e preservar executor/modelo/histórico ao reabrir e alterar padrões. Codex continua indisponível até isolar as configurações.
+
+- 2026-10-25: Permitir escolha de executor/modelo/esforço específica da conversa antes do primeiro envio. A geração nativa da fonte invalida ações antigas enfileiradas; o texto do rascunho e os padrões/acesso do perfil permanecem intactos. Nova/Abrir/histórico limpam a escolha não enviada. Reabrir uma conversa enviada mantém o executor e a fonte salvos. Codex permanece bloqueado até qualificar sua execução isolada.

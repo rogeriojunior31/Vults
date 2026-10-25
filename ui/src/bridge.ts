@@ -364,7 +364,7 @@ export type AgentRow = {
 /** A saved conversation in the chat's list. */
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 export type SpecialistConversationView = ConversationView & { profileTitle: string; profileRevision: number };
-export type SpecialistCurrent = { generation: number; conversation: OpenedConversation | null; draft: ChatDraft; profileTitle: string; profileRevision: number; profileSpecies: string; profileLook: string };
+export type SpecialistCurrent = { choice?: AgentDefaults | null; generation: number; conversation: OpenedConversation | null; draft: ChatDraft; profileTitle: string; profileRevision: number; profileSpecies: string; profileLook: string };
 export type SpecialistChatEvent = { profile: string; delta: ChatDelta };
 export type SpecialistChatSync = { profile: string; sync: ChatSync };
 /** A saved conversation, opened: what the chat goes on with. */
@@ -493,6 +493,13 @@ export type AgentProfileEdit =
   | { action: "copy"; preset: string; title: string; instructions: string; species: string; look: string; skill_ids: string[] }
   | { action: "update"; id: number; revision: number; title: string; instructions: string; species: string; look: string; skill_ids: string[] };
 
+export type AgentDefaults =
+  | { executor: "claude" | "codex"; model: string | null; effort: string | null }
+  | { executor: "api"; provider: string; model: string | null };
+export interface AgentProfileState { version: number; defaults: AgentDefaults; archived: boolean }
+export type AgentStateChange = { action: "defaults"; defaults: AgentDefaults } | { action: "archive"; archived: boolean };
+export interface AgentPreferenceEdit { version: number; defaults: AgentDefaults }
+export interface AgentProvider { id: string; label: string; local: boolean }
 export interface AgentSkill { id: string; revision: number; title: string; content: string }
 
 export interface AgentProfile {
@@ -507,11 +514,15 @@ export interface AgentProfile {
   skills: AgentSkill[];
   skill_catalog: AgentSkill[];
   access: ChatAccess;
+  state?: AgentProfileState;
+  providers?: AgentProvider[];
 }
 
 export const Bridge = {
   agentProfiles: () => invoke<AgentProfile[]>("agent_profiles"),
-  agentProfileSave: (edit: AgentProfileEdit) => invoke<AgentProfile>("agent_profile_save", { edit }),
+  agentProfileSave: (edit: AgentProfileEdit, preferences?: AgentPreferenceEdit) => invoke<AgentProfile>("agent_profile_save", { edit, preferences: preferences ?? null }),
+  agentProfileStateSet: (profile: string, version: number, change: AgentStateChange) => invoke<AgentProfileState>("agent_profile_state_set", { profile, version, change }),
+  onAgentProfileState(cb: (event: {profile: string; state: AgentProfileState}) => void): void { void listen<{profile: string; state: AgentProfileState}>("agent-profile-state", e => cb(e.payload)); },
   setSpecialistChatAccess: (profile: string, access: ChatAccess) => invoke<void>("set_specialist_chat_access", { profile, access }),
   onView(cb: (v: ViewModel) => void): void {
     void listen<ViewModel>("view", (e) => cb(e.payload));
@@ -817,8 +828,9 @@ export const Bridge = {
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
   specialistChatConversations: (profile: string) => invoke<SpecialistConversationView[]>("specialist_chat_conversations", { profile }),
   specialistChatCurrent: (profile: string) => invoke<SpecialistCurrent>("specialist_chat_current", { profile }),
-  specialistChatSend: (profile: string, text: string, generation: number) => invoke<void>("specialist_chat_send", { profile, text, generation }),
+  specialistChatSend: (profile: string, text: string, generation: number, folder?: string | null) => invoke<void>("specialist_chat_send", { profile, text, generation, folder: folder ?? null }),
   specialistChatOpen: (profile: string, id: number) => invoke<OpenedConversation>("specialist_chat_open", { profile, id }),
+  specialistChatChoiceSet: (profile: string, choice: AgentDefaults | null, generation: number) => invoke<SpecialistCurrent>("specialist_chat_choice_set", { profile, choice, generation }),
   specialistChatReset: (profile: string) => invoke<SpecialistCurrent & { provider: ChatProvider }>("specialist_chat_reset", { profile }),
   specialistChatDraftSet: (profile: string, draft: ChatDraft, generation: number) => invoke<void>("specialist_chat_draft_set", { profile, draft, generation }),
   specialistChatRename: (profile: string, id: number, title: string) => invoke<void>("specialist_chat_rename", { profile, id, title }),

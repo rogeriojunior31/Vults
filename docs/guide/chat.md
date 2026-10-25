@@ -388,3 +388,43 @@ search's titles and snippets do reach the model, marked untrusted. Pages are rea
 addresses. Each search and page is a request on your behalf with a daily cap
 ([Safety](../safety.md#every-request-vults-makes)), and the conversation then counts as having read
 from outside.
+
+## Agent profiles
+
+Open **Flock → Agent profiles** to create an agent, copy a template, or edit a custom agent.
+The animated bird, instructions and searchable pinned skills belong to the profile. Skills guide
+behavior; they never grant tools or permissions. Save records the content and execution defaults
+locally without starting a model. **Conversation defaults** changes a template's preferences without
+copying its instructions. Existing conversations keep their saved revision and model.
+
+Claude Code currently runs specialist conversations in the existing Chat tab, isolated from
+Zeca's memory and flock context. Claude model/effort defaults apply to new conversations. Choose
+an optional project from the folder control before sending; the project stays pinned after that.
+New conversations clear the previous project. Missing or invalid folders are rejected with the
+draft preserved. Project settings, MCP servers and companion tools are not enabled by this choice.
+
+API/local agents use the provider and model selected in their defaults (or that provider's saved
+model). They receive their pinned instructions and own messages only, without tools, files or
+project access. Configure cloud keys in Settings; local providers use the existing local endpoints.
+An API role never grants terminal or GitHub access. Its provider, model and messages remain fixed
+when reopened, even after changing future defaults. Codex defaults can be saved, but specialist
+execution remains unavailable until its configuration isolation is implemented. No fallback runs.
+Choose permissions directly in Chat; each profile's Ask, policies or full access is independent
+of Zeca. Copies and new agents start with Ask.
+
+Before the first message, click the specialist's executor control to open **Conversation setup**.
+Keep **Use agent defaults** checked, or clear it to choose Claude Code or a configured API/local
+provider, model and CLI effort for this conversation. **Apply to this conversation** preserves your
+message draft and leaves profile instructions, skills, permissions and defaults unchanged. A failed
+save keeps the previous choice active. Codex remains visibly unavailable. API agents still have no
+tools or project access; choose an empty folder before switching to an API provider.
+
+The unsent choice stays with that profile while the app runs and survives closing the Nest or
+switching recipients. After the first send, the saved executor/model/source stay fixed, including
+a failed first model turn. **New** clears the override and uses the agent defaults again. This does
+not start a model request. Unsent choices, like unsent drafts, are not saved across app restarts.
+
+**Archive agent** preserves its revisions and conversations. Find it under **Archived**, then
+**View conversations** to read history or **Restore agent** to resume sending. Archiving blocks new
+turns and resets, while a turn already admitted can finish. Stop and pending approval cards remain
+usable. Restoring preserves the agent's defaults and its separately selected permissions.

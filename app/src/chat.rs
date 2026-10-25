@@ -38,6 +38,8 @@ pub struct ChatInner {
     generation: std::sync::atomic::AtomicU32,
     /// Pinned recipient, changed under the conversation lock alongside the runtime.
     profile: std::sync::Mutex<Option<Snapshot>>,
+    /// An unsent conversation may override the profile defaults without changing its revision.
+    specialist_choice: std::sync::Mutex<Option<vults_store::profiles::ExecutionDefaults>>,
     /// What a window opening now must show, read without waiting on a turn (which holds `chat`).
     live: std::sync::Mutex<Live>,
     /// Unsent composer state, shared by the island and disposable Nest, never saved to disk.
@@ -450,6 +452,7 @@ impl ChatState {
             current: std::sync::Mutex::new(None),
             generation: std::sync::atomic::AtomicU32::new(1),
             profile: Default::default(),
+            specialist_choice: Default::default(),
             live: Default::default(),
             draft: Default::default(),
         }))
@@ -528,6 +531,9 @@ impl ChatState {
         if let Ok(mut draft) = self.draft.lock() {
             self.set_saved(id);
             *draft = Draft::default();
+            if let Ok(mut choice) = self.specialist_choice.lock() {
+                *choice = None;
+            }
             self.generation.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }
     }
@@ -936,10 +942,32 @@ async fn send(
     let expected_profile = state.profile()?;
     let profile = turn_profile(&chat, record.as_ref(), expected_profile.as_ref())?;
     let companion = profile.is_none();
-    if !companion && (origin.is_voice() || !mentions.is_empty() || folder.is_some()) {
-        return Err(
-            "Use the profile conversation's fixed source without voice commands or flock mentions.".into(),
-        );
+    if let Some(profile) = &profile {
+        let key = profile_access_key(profile);
+        let mut preferences = store(move |s| s.agent_profile_state(&key)).await?;
+        if record.is_none()
+            && !chat.started()
+            && let Some(choice) = state
+                .specialist_choice
+                .lock()
+                .map_err(|_| "Chat is busy.")?
+                .clone()
+        {
+            preferences.defaults = choice;
+        }
+        check_specialist_state(&preferences, record.is_some() || chat.started())?;
+        let selected = specialist_project(
+            folder.as_deref(),
+            &preferences.defaults,
+            record.is_some() || chat.started(),
+            chat.folder(),
+        )?;
+        if record.is_none() && !chat.started() {
+            *chat = new_specialist(&app, profile, &preferences.defaults, selected)?;
+        }
+    }
+    if !companion && (origin.is_voice() || !mentions.is_empty() || !files.is_empty()) {
+        return Err("Specialist conversations do not accept voice commands, files or flock mentions.".into());
     }
     if zeca_switch_blocks_turn(crate::settings::zeca(&app), !companion) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
@@ -1082,7 +1110,11 @@ async fn send(
             files: shown,
             provider: chat.provider(),
             folder: Some(folder_key(Some(chat.folder()))).filter(|f| !f.is_empty()),
-            model: model.map(str::to_string),
+            model: if chat.provider() == Provider::ClaudeApi {
+                Some(chat.api().1.to_string())
+            } else {
+                model.map(str::to_string)
+            },
             effort: effort.map(|e| e.name().to_string()),
             mentions: mentions.clone(),
         },
@@ -1823,13 +1855,20 @@ fn turn_profile(
         .as_ref()
         .ok_or("The profile conversation has no recipient.")?;
     if expected != Some(profile)
-        || c.engine != "claude"
-        || chat.provider() != Provider::Claude
+        || c.engine != engine_name(chat)
+        || chat.provider() == Provider::Codex
         || c.frozen.is_some()
-        || c.history.is_some()
+        || (chat.provider() != Provider::ClaudeApi && c.history.is_some())
+        || (chat.provider() == Provider::ClaudeApi && c.session.is_some())
+        || c.settings != "isolated"
         || chat.specialist_brief() != Some(specialist_brief(profile).as_str())
         || folder_key(Some(chat.folder())) != c.folder
-        || c.model.as_deref() != chat.pick().0
+        || c.model.as_deref()
+            != if chat.provider() == Provider::ClaudeApi {
+                Some(chat.api().1)
+            } else {
+                chat.pick().0
+            }
         || c.effort.as_deref().and_then(vults_chat::Effort::parse) != chat.pick().1
         || c.session
             .as_ref()
@@ -1838,6 +1877,109 @@ fn turn_profile(
         return Err("The profile conversation does not match its pinned runtime.".into());
     }
     Ok(Some(profile.clone()))
+}
+
+fn check_specialist_state(state: &vults_store::profiles::ProfileState, bound: bool) -> Result<(), String> {
+    if state.archived {
+        return Err("This agent is archived. Restore it before sending a new message.".into());
+    }
+    if !bound
+        && matches!(
+            state.defaults,
+            vults_store::profiles::ExecutionDefaults::Codex { .. }
+        )
+    {
+        return Err(
+            "The selected executor is saved but is not available for new specialist conversations yet."
+                .into(),
+        );
+    }
+    Ok(())
+}
+
+fn specialist_project(
+    folder: Option<&str>,
+    defaults: &vults_store::profiles::ExecutionDefaults,
+    bound: bool,
+    current: &Path,
+) -> Result<PathBuf, String> {
+    if matches!(defaults, vults_store::profiles::ExecutionDefaults::Api { .. }) && !bound && folder.is_some()
+    {
+        return Err(
+            "API specialists accept messages only. Start a new conversation to clear the project.".into(),
+        );
+    }
+    let selected = match folder {
+        Some(folder) if Path::new(folder).is_absolute() && Path::new(folder).is_dir() => {
+            std::fs::canonicalize(folder).map_err(|_| "That project is unavailable.")?
+        }
+        Some(_) => return Err("That project is unavailable.".into()),
+        None => paths::chat_dir(),
+    };
+    if bound && selected != current {
+        return Err(
+            "The conversation project changed. Start a new conversation to choose another project.".into(),
+        );
+    }
+    Ok(selected)
+}
+
+fn specialist_from_defaults(
+    profile: &Snapshot,
+    defaults: &vults_store::profiles::ExecutionDefaults,
+    dir: PathBuf,
+    api_model: Option<&str>,
+) -> Result<Chat, String> {
+    use vults_store::profiles::ExecutionDefaults;
+    let mut spec = vults_agents::driver::Spec::in_dir(dir);
+    let (provider, api) =
+        match defaults {
+            ExecutionDefaults::Claude { model, effort } => {
+                spec.model = model.clone();
+                spec.effort = effort.as_deref().and_then(vults_chat::Effort::parse);
+                if spec
+                    .effort
+                    .is_some_and(|e| !effort_fits(Provider::Claude, model.as_deref(), e))
+                {
+                    return Err("The saved effort is not supported by this model.".into());
+                }
+                (Provider::Claude, None)
+            }
+            ExecutionDefaults::Api { provider, model } => {
+                let provider = self::provider(provider)?;
+                let model = model.as_deref().or(api_model).unwrap_or(provider.default_model);
+                if !vults_chat::valid_model(model) {
+                    return Err("Choose a model in this agent's conversation defaults.".into());
+                }
+                (Provider::ClaudeApi, Some((provider, model.to_owned())))
+            }
+            ExecutionDefaults::Codex { .. } => return Err(
+                "The selected executor is saved but is not available for new specialist conversations yet."
+                    .into(),
+            ),
+        };
+    Chat::specialist_for(provider, spec, None, None, api, specialist_brief(profile))
+}
+
+fn new_specialist(
+    app: &AppHandle,
+    profile: &Snapshot,
+    defaults: &vults_store::profiles::ExecutionDefaults,
+    dir: PathBuf,
+) -> Result<Chat, String> {
+    if dir == paths::chat_dir() {
+        std::fs::create_dir_all(&dir).map_err(|_| "Could not prepare the agent conversation folder.")?;
+    }
+    let model = if let vults_store::profiles::ExecutionDefaults::Api { provider, .. } = defaults {
+        app.state::<SettingsState>()
+            .0
+            .lock()
+            .ok()
+            .and_then(|s| s.api_models.get(provider).cloned())
+    } else {
+        None
+    };
+    specialist_from_defaults(profile, defaults, dir, model.as_deref())
 }
 
 fn profile_access_key(profile: &Snapshot) -> String {
@@ -1870,11 +2012,13 @@ fn restore_conversation(
 ) -> Result<(Chat, Option<Snapshot>), String> {
     let provider = engine_provider(&c.engine).ok_or("That conversation's engine is unknown.")?;
     if let Some(profile) = &c.profile {
-        if provider != Provider::Claude
+        if provider == Provider::Codex
             || !spec.dir.is_absolute()
             || c.frozen.is_some()
-            || c.history.is_some()
-            || api.is_some()
+            || (provider != Provider::ClaudeApi && (c.history.is_some() || api.is_some()))
+            || (provider == Provider::ClaudeApi
+                && (api.is_none() || c.session.is_some() || c.effort.is_some() || !c.folder.is_empty()))
+            || c.settings != "isolated"
             || c.session.as_ref().is_some_and(|id| !valid_session(id))
             || c.model
                 .as_ref()
@@ -1885,9 +2029,20 @@ fn restore_conversation(
         {
             return Err("This profile conversation cannot be resumed by the isolated runtime.".into());
         }
-        spec.model = c.model.clone();
+        spec.model = if provider == Provider::ClaudeApi {
+            None
+        } else {
+            c.model.clone()
+        };
         spec.effort = c.effort.as_deref().and_then(vults_chat::Effort::parse);
-        let mut chat = Chat::specialist(spec, c.session.clone(), specialist_brief(profile))?;
+        let mut chat = Chat::specialist_for(
+            provider,
+            spec,
+            c.session.clone(),
+            c.history.as_deref(),
+            api,
+            specialist_brief(profile),
+        )?;
         chat.set_outside(c.outside.clone());
         turn_profile(&chat, Some(c), Some(profile))?;
         Ok((chat, Some(profile.clone())))
@@ -2015,6 +2170,7 @@ pub async fn specialist_chat_conversations(
 #[derive(serde::Serialize)]
 pub struct SpecialistCurrent {
     generation: u32,
+    choice: Option<vults_store::profiles::ExecutionDefaults>,
     conversation: Option<Opened>,
     #[serde(rename = "profileTitle")]
     profile_title: String,
@@ -2037,6 +2193,11 @@ fn specialist_current_view(
     let draft = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
     Ok(SpecialistCurrent {
         generation: state.generation(),
+        choice: state
+            .specialist_choice
+            .lock()
+            .map_err(|_| "Chat is busy.")?
+            .clone(),
         draft: DraftView {
             draft: draft.clone(),
             generation: state.generation(),
@@ -2121,6 +2282,83 @@ pub async fn specialist_chat_current(
     specialist_current_view(&state, Some(opened))
 }
 
+fn choice_editable(state: &ChatState, chat: &Chat, generation: u32) -> Result<(), String> {
+    state.check_generation(generation)?;
+    if state.profile()?.is_none() || !chat.is_specialist() {
+        return Err("The conversation recipient does not match its runtime.".into());
+    }
+    if state.current().is_some() || chat.started() {
+        return Err("Start a new conversation before changing its executor or model.".into());
+    }
+    Ok(())
+}
+
+fn install_specialist_choice(
+    state: &ChatState,
+    chat: &mut Chat,
+    fresh: Chat,
+    choice: Option<vults_store::profiles::ExecutionDefaults>,
+    generation: u32,
+) -> Result<(), String> {
+    choice_editable(state, chat, generation)?;
+    let snapshot = state
+        .profile()?
+        .ok_or("The conversation recipient is unavailable.")?;
+    turn_profile(&fresh, None, Some(&snapshot))?;
+    let mut draft = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
+    let mut selected = state.specialist_choice.lock().map_err(|_| "Chat is busy.")?;
+    *chat = fresh;
+    *selected = choice;
+    draft.provider = Some(chat.provider());
+    state.generation.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn specialist_chat_choice_set(
+    app: AppHandle,
+    window: tauri::Webview,
+    profile: String,
+    generation: u32,
+    choice: Option<vults_store::profiles::ExecutionDefaults>,
+) -> Result<SpecialistCurrent, String> {
+    specialist_route(&window)?;
+    if let Some(choice) = &choice {
+        crate::profiles::validate_defaults(choice)?;
+    }
+    let state = specialist_runtime(&app, &profile).await?;
+    let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
+    choice_editable(&state, &chat, generation)?;
+    let key = profile.clone();
+    let mut preferences = store(move |s| s.agent_profile_state(&key)).await?;
+    if let Some(choice) = &choice {
+        preferences.defaults = choice.clone();
+    }
+    // Clearing an override may restore unavailable defaults, but never executes them.
+    check_specialist_state(&preferences, choice.is_none())?;
+    let snapshot = state
+        .profile()?
+        .ok_or("The conversation recipient is unavailable.")?;
+    let folder = state
+        .draft
+        .lock()
+        .map_err(|_| "Chat draft is busy.")?
+        .folder
+        .clone();
+    let dir = specialist_project(folder.as_deref(), &preferences.defaults, false, chat.folder())?;
+    let fresh = if choice.is_some() {
+        new_specialist(&app, &snapshot, &preferences.defaults, dir)?
+    } else {
+        Chat::specialist(
+            vults_agents::driver::Spec::in_dir(dir),
+            None,
+            specialist_brief(&snapshot),
+        )?
+    };
+    install_specialist_choice(&state, &mut chat, fresh, choice, generation)?;
+    specialist_current_view(&state, None)
+}
+
 #[tauri::command]
 pub async fn specialist_chat_draft_set(
     app: AppHandle,
@@ -2132,13 +2370,10 @@ pub async fn specialist_chat_draft_set(
     specialist_route(&window)?;
     draft.validate()?;
     if !draft.files.is_empty()
-        || draft.folder.is_some()
         || !draft.mentions.is_empty()
-        || draft
-            .provider
-            .is_some_and(|provider| provider != Provider::Claude)
+        || draft.provider.is_some_and(|provider| provider == Provider::Codex)
     {
-        return Err("Use the profile conversation's fixed source without files or flock mentions.".into());
+        return Err("Specialist conversations do not accept voice commands, files or flock mentions.".into());
     }
     let state = specialist_runtime(&app, &profile).await?;
     let mut saved = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
@@ -2198,6 +2433,7 @@ pub async fn specialist_chat_send(
     profile: String,
     text: String,
     generation: u32,
+    folder: Option<String>,
 ) -> Result<(), String> {
     specialist_route(&window)?;
     if text.trim().is_empty() {
@@ -2213,7 +2449,7 @@ pub async fn specialist_chat_send(
         Origin::SpecialistWindow(window.label().into(), generation, profile),
         text,
         Vec::new(),
-        None,
+        folder,
         None,
     )
     .await
@@ -2246,9 +2482,20 @@ pub async fn specialist_chat_open(
     let spec = vults_agents::driver::Spec {
         model: c.model.clone(),
         effort: c.effort.as_deref().and_then(vults_chat::Effort::parse),
-        ..vults_agents::driver::Spec::in_dir(paths::chat_dir())
+        ..vults_agents::driver::Spec::in_dir(if c.folder.is_empty() {
+            paths::chat_dir()
+        } else {
+            PathBuf::from(&c.folder)
+        })
     };
-    let (restored, snapshot) = restore_conversation(&c, spec, None)?;
+    let (restored, snapshot) = restore_conversation(
+        &c,
+        spec,
+        c.engine
+            .strip_prefix("api:")
+            .map(|id| self::provider(id).map(|p| (p, c.model.clone().unwrap_or_default())))
+            .transpose()?,
+    )?;
     let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
     state.waiting.close_all();
     *chat = restored;
@@ -2293,6 +2540,9 @@ pub async fn specialist_chat_reset(
     profile: String,
 ) -> Result<SpecialistReset, String> {
     specialist_route(&window)?;
+    let key = profile.clone();
+    let preferences = store(move |s| s.agent_profile_state(&key)).await?;
+    check_specialist_state(&preferences, true)?;
     let state = specialist_runtime(&app, &profile).await?;
     let mut chat = state.chat.try_lock().map_err(|_| "Chat is busy.")?;
     let snapshot = specialist_snapshot(&profile).await?;
@@ -2301,6 +2551,14 @@ pub async fn specialist_chat_reset(
         None,
         specialist_brief(&snapshot),
     )?;
+    let provider = if matches!(
+        preferences.defaults,
+        vults_store::profiles::ExecutionDefaults::Api { .. }
+    ) {
+        Provider::ClaudeApi
+    } else {
+        Provider::Claude
+    };
     state.waiting.close_all();
     state.set_profile(Some(snapshot));
     state.set_current(None);
@@ -2311,13 +2569,13 @@ pub async fn specialist_chat_reset(
         &profile,
         Sync::Reset {
             from: window.label().into(),
-            provider: Provider::Claude,
+            provider,
             generation: state.generation(),
             draft: None,
         },
     );
     Ok(SpecialistReset {
-        provider: Provider::Claude,
+        provider,
         current: specialist_current_view(&state, None)?,
     })
 }
@@ -2920,6 +3178,197 @@ pub fn clean_inbox() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn specialist_archive_blocks_new_turns_and_defaults_only_gate_unbound_conversations() {
+        use vults_store::profiles::{ExecutionDefaults, ProfileState};
+        let mut state = ProfileState::default();
+        assert!(super::check_specialist_state(&state, false).is_ok());
+        for defaults in [
+            ExecutionDefaults::Codex {
+                model: Some("test-model".into()),
+                effort: None,
+            },
+            ExecutionDefaults::Api {
+                provider: "ollama".into(),
+                model: None,
+            },
+        ] {
+            state.defaults = defaults;
+            assert_eq!(
+                super::check_specialist_state(&state, false).is_err(),
+                matches!(state.defaults, ExecutionDefaults::Codex { .. })
+            );
+            assert!(super::check_specialist_state(&state, true).is_ok());
+        }
+        state.archived = true;
+        assert!(super::check_specialist_state(&state, false).is_err());
+        assert!(super::check_specialist_state(&state, true).is_err());
+        state.archived = false;
+        assert!(super::check_specialist_state(&state, true).is_ok());
+    }
+    #[test]
+    fn specialist_api_resume_pins_provider_model_messages_and_profile() {
+        use vults_store::profiles::ExecutionDefaults;
+        let profile = Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "developer".into(),
+                revision: 1,
+            },
+            title: "Developer".into(),
+            about: "Description".into(),
+            instructions: "PINNED_ONLY".into(),
+            species: "atratus".into(),
+            look: "none".into(),
+            skills: Vec::new(),
+        };
+        let dir = std::env::temp_dir();
+        let defaults = ExecutionDefaults::Api {
+            provider: "ollama".into(),
+            model: Some("local-model".into()),
+        };
+        let chat =
+            specialist_from_defaults(&profile, &defaults, paths::chat_dir(), Some("other-model")).unwrap();
+        assert_eq!(chat.api().0.id, "ollama");
+        assert_eq!(chat.api().1, "local-model");
+        assert!(chat.frozen().is_none());
+        let directory = std::env::temp_dir().join(format!("vults-specialist-api-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&directory);
+        let mut store = vults_store::Store::open(&directory).unwrap();
+        let id = store
+            .conversation_new(&new_conversation(&chat, "Hello", &[], Some(profile.clone())), 1)
+            .unwrap();
+        store
+            .conversation_save(
+                id,
+                None,
+                Some(r#"[{"role":"user","content":"own"},{"role":"assistant","content":"answer"}]"#),
+                None,
+                2,
+            )
+            .unwrap();
+        let record = store.conversation(id).unwrap().unwrap();
+        let (restored, pinned) = restore_conversation(
+            &record,
+            vults_agents::driver::Spec::in_dir(paths::chat_dir()),
+            Some((providers::find("ollama").unwrap(), "local-model".into())),
+        )
+        .unwrap();
+        assert!(restored.started());
+        assert_eq!(pinned, Some(profile.clone()));
+        assert_eq!(
+            turn_profile(&restored, Some(&record), Some(&profile)).unwrap(),
+            Some(profile)
+        );
+        let mut changed = record.clone();
+        changed.engine = "api:openai".into();
+        assert!(turn_profile(&restored, Some(&changed), pinned.as_ref()).is_err());
+        changed = record.clone();
+        changed.frozen = Some("PRIVATE".into());
+        assert!(
+            restore_conversation(
+                &changed,
+                vults_agents::driver::Spec::in_dir(dir.clone()),
+                Some((providers::find("ollama").unwrap(), "local-model".into()))
+            )
+            .is_err()
+        );
+        assert!(specialist_project(Some("relative"), &ExecutionDefaults::default(), false, &dir).is_err());
+        assert!(
+            specialist_project(
+                Some("/nonexistent-vults-project"),
+                &ExecutionDefaults::default(),
+                false,
+                &dir
+            )
+            .is_err()
+        );
+        let canonical = std::fs::canonicalize(&dir).unwrap();
+        assert_eq!(
+            specialist_project(dir.to_str(), &ExecutionDefaults::default(), false, &dir).unwrap(),
+            canonical
+        );
+        assert!(specialist_project(Some("/"), &ExecutionDefaults::default(), true, &canonical).is_err());
+        assert!(specialist_project(dir.to_str(), &defaults, false, &dir).is_err());
+        assert!(
+            specialist_from_defaults(
+                pinned.as_ref().unwrap(),
+                &ExecutionDefaults::Api {
+                    provider: "unknown".into(),
+                    model: Some("model".into())
+                },
+                dir,
+                None
+            )
+            .is_err()
+        );
+        drop(store);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn conversation_choices_preserve_the_draft_and_profile_and_fence_old_actions() {
+        use vults_store::profiles::ExecutionDefaults;
+        let profile = Snapshot {
+            source: vults_store::profiles::Source::Preset {
+                id: "developer".into(),
+                revision: 1,
+            },
+            title: "Developer".into(),
+            about: "Description".into(),
+            instructions: "Pinned".into(),
+            species: "atratus".into(),
+            look: "none".into(),
+            skills: Vec::new(),
+        };
+        let state = ChatState::specialist(&profile).unwrap();
+        state.draft.lock().unwrap().text = "Keep my words".into();
+        let choice = ExecutionDefaults::Api {
+            provider: "ollama".into(),
+            model: Some("local-model".into()),
+        };
+        let fresh = specialist_from_defaults(&profile, &choice, paths::chat_dir(), None).unwrap();
+        let generation = state.generation();
+        let mut chat = state.chat.try_lock().unwrap();
+        install_specialist_choice(&state, &mut chat, fresh, Some(choice.clone()), generation).unwrap();
+        assert_eq!(state.profile().unwrap(), Some(profile.clone()));
+        assert_eq!(state.draft.lock().unwrap().text, "Keep my words");
+        assert_eq!(state.specialist_choice.lock().unwrap().as_ref(), Some(&choice));
+        assert_eq!(chat.provider(), Provider::ClaudeApi);
+        assert!(choice_editable(&state, &chat, generation).is_err());
+        assert!(choice_editable(&state, &chat, state.generation()).is_ok());
+        state.set_saved(Some(ConversationId(99)));
+        assert!(
+            choice_editable(&state, &chat, state.generation()).is_err(),
+            "A failed first model turn still binds the saved executor"
+        );
+        state.set_current(None);
+        assert!(state.specialist_choice.lock().unwrap().is_none());
+        assert!(state.draft.lock().unwrap().text.is_empty());
+        let mut other = profile.clone();
+        other.instructions = "Other source".into();
+        let foreign = Chat::specialist(
+            vults_agents::driver::Spec::in_dir(paths::chat_dir()),
+            None,
+            specialist_brief(&other),
+        )
+        .unwrap();
+        assert!(install_specialist_choice(&state, &mut chat, foreign, None, state.generation()).is_err());
+        assert_eq!(
+            chat.provider(),
+            Provider::ClaudeApi,
+            "A rejected source cannot replace the existing runtime"
+        );
+        let companion = ChatState::new();
+        assert!(
+            choice_editable(
+                &companion,
+                &companion.chat.try_lock().unwrap(),
+                companion.generation()
+            )
+            .is_err()
+        );
+    }
+
     #[test]
     fn stop_during_preflight_cancels_once_and_failed_preflight_cleans_up() {
         let state = ChatState::new();

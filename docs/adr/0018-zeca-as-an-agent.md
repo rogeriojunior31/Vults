@@ -21,14 +21,24 @@ calibrate without collecting data ([0019](0019-requests-on-the-users-behalf.md))
 - **Specialist Chat uses the existing Chat UI.** A profile opens from Flock into the existing Chat
   tab, selected as the recipient. Switching recipients retains each conversation and draft. A
   specialist remains available with Zeca off without turning him on. The recipient is the immutable
-  profile and skill snapshot. Claude Code is the only executor, with isolated settings and a
-  Vults-managed chat workspace. No project folder, flock mention, companion context, MCP, user
-  setup or Zeca memory is attached. The user chooses Ask, accepted policies or full access separately
+  profile and skill snapshot. Claude Code uses isolated settings in the empty managed workspace or
+  a project explicitly selected before the first turn. Configured API/local providers use only the
+  pinned instructions and their own messages, without tools or project access. Codex remains blocked
+  pending an isolated specialist driver. No flock mention, companion context, MCP, user setup or
+  Zeca memory is attached. The user chooses Ask, accepted policies or full access separately
   for each profile; the default is Ask, and changes apply to the next tool call. Destructive actions,
   policy asks and actions after reading outside content require a card; policy denies block the call.
   Zeca's Chat access setting cannot grant specialist access. Voice, Ask Zeca and local companion
   commands are unavailable in this route. Native state, history and approval streams remain scoped
   to the selected profile while the UI reuses the production ChatPanel.
+- **Agent preferences are separate from immutable revisions.** Each profile keeps versioned local
+  executor/model/effort defaults, independent of Chat access. Content and defaults save atomically;
+  conflicts retain the draft. Defaults apply only before the first turn. API history is scoped to its
+  profile, provider and model; it never adopts a companion prompt or history. Codex defaults may be
+  saved but cannot run yet. A bound conversation keeps its original executor, model and source.
+  Custom agents can be archived/restored without deleting revisions or history. Archived agents
+  reject new turns and resets; an admitted turn may finish, with Stop and human cards still usable.
+  Reading history remains available. Copies start with Ask, regardless of the source's access.
 - **Where:** his brain is a `zeca` crate in the Connect layer, beside `chat`; his body (sprites,
   the island, the Nest) stays in Experience. No crate below `zeca` knows it exists; `app` wires it in.
 - **What he reads:** the flock through a `FlockReader` built from the view, with no path to an
@@ -80,3 +90,9 @@ calibrate without collecting data ([0019](0019-requests-on-the-users-behalf.md))
 - 2026-10-22: Specialist access is chosen per profile (Ask, accepted policies or full), defaults to Ask and is independent of Zeca's Chat setting. Destructive actions, policy asks and actions after outside content still require a card; policy denies block the call.
 
 - 2026-10-22: Integrate specialists into the existing Chat tab with recipient selection and the production ChatPanel. Keep native runtimes, drafts, histories and approvals scoped by profile; access changes apply to the next tool call.
+
+- 2026-10-24: Persist versioned agent defaults and custom-agent archive/restore independently of immutable revisions and access. Apply Claude defaults only to unbound conversations; reject unsupported specialist executors explicitly. Preserve history, admitted turns, Stop and pending human decisions when archived.
+
+- 2026-10-25: Enable specialist API/local conversations on both supported wires with an exact pinned system prompt and no tools or companion memory. Allow an explicitly selected project for Claude Code, validate and pin its source, and retain executor/model/history through reopening and changed defaults. Codex remains unavailable pending isolated configuration handling.
+
+- 2026-10-25: Allow a conversation-local executor/model/effort override before the first send. Its native source generation invalidates queued older actions; draft text and profile defaults/access remain untouched. New/Open/history clear the unsent override. Reopening a sent conversation retains its stored executor and source. Codex remains blocked until its isolated runtime is qualified.

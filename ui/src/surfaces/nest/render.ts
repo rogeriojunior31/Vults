@@ -7,7 +7,7 @@ import { sidePanel } from "./panels";
 // The Nest's page takes its backend: four tabs and the gear (ADRs 0021, 0031). Chat keeps
 // Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
 // Specialist recipients remain available with Zeca off.
-import type { AgentProfile, MediaAction, NowPlaying, Size, SpendToday } from "../../bridge";
+import type { AgentProfileState, AgentProfile, MediaAction, NowPlaying, Size, SpendToday } from "../../bridge";
 import { el } from "../../dom";
 import { createPalette, paletteItems } from "../../palette";
 import { t } from "../../i18n";
@@ -71,6 +71,7 @@ export interface Nest {
   /** Allow or Deny's key while the user is in the Nest: answers the card on screen, if one is
    *  (the Chat's in its tab, the session in front's on the Flock). */
   shortcut: (id: string) => void;
+  profileStateChanged: (profile: string, state: AgentProfileState) => void;
   receiveSpecialistChat: (profile: string, delta: import("../../bridge").ChatDelta) => void;
   syncSpecialistChat: (profile: string, sync: import("../../bridge").ChatSync) => void;
 }
@@ -78,6 +79,7 @@ export interface Nest {
 export interface NestBackend {
   profiles?: () => Promise<AgentProfile[]>;
   profileSave?: typeof import("../../bridge").Bridge.agentProfileSave;
+  profileState?: typeof import("../../bridge").Bridge.agentProfileStateSet;
   profileAccess?: typeof import("../../bridge").Bridge.setSpecialistChatAccess;
   profileChat?: import("./specialist").SpecialistChatBackend;
   chat: ChatBackend;
@@ -184,6 +186,12 @@ export function createNest(
   const profilePanels = new Map<string, ChatPanel>();
   const panelHeads = new Map<ChatPanel, HTMLElement>();
   const recipientProfiles = new Map<string, AgentProfile>();
+  const rememberProfile = (profile: AgentProfile) => {
+    const current = recipientProfiles.get(profile.id);
+    if ((current?.state?.version ?? 0) > (profile.state?.version ?? 0)) profile = { ...profile, state: current!.state };
+    recipientProfiles.set(profile.id, profile);
+    return profile;
+  };
   let recipientRequest = 0;
   let chatKeys: Record<string, string> = {};
   const portraitButton = el("button", { class: "chat-character", onclick: () => {
@@ -311,13 +319,13 @@ export function createNest(
   const recipientError = el("p", { class: "nest-close-error" }); recipientError.hidden = true; recipientError.setAttribute("role", "alert");
   const fillRecipients = () => {
     const zeca = el("option", { text: "Zeca" }); zeca.value = "zeca"; zeca.disabled = !zecaOn;
-    recipientPicker.replaceChildren(zeca, ...[...recipientProfiles.values()].map(profile => {
+    recipientPicker.replaceChildren(zeca, ...[...recipientProfiles.values()].filter(profile => !profile.state?.archived || profile.id === activeProfile?.id).map(profile => {
       const option = el("option", { text: profile.built_in ? t(profile.title) : profile.title }); option.value = profile.id; return option;
     }));
     recipientPicker.value = activeProfile?.id ?? "zeca";
   };
   recipientPicker.addEventListener("focus", () => {
-    void backend.profiles?.().then(rows => { for (const profile of rows) recipientProfiles.set(profile.id, profile); fillRecipients(); }, error => { recipientError.textContent = String(error); recipientError.hidden = false; });
+    void backend.profiles?.().then(rows => { for (const profile of rows) rememberProfile(profile); fillRecipients(); }, error => { recipientError.textContent = String(error); recipientError.hidden = false; });
   });
   recipientPicker.addEventListener("change", () => { void selectRecipient(recipientProfiles.get(recipientPicker.value) ?? null); });
   const companionHead = chat.element.querySelector<HTMLElement>(".chat-head")!;
@@ -357,27 +365,29 @@ export function createNest(
       if (mine !== recipientRequest) return false;
       let next = companionChat;
       if (profile) {
-        recipientProfiles.set(profile.id, profile);
+        const selectedProfile = rememberProfile(profile);
         if (!backend.profileChat) throw new Error(t("Could not load {name}.", { name: t("Chat") }));
-        const existing = profilePanels.get(profile.id);
+        const existing = profilePanels.get(selectedProfile.id);
         if (existing) next = existing;
         else {
-          const identity = { name: profile.title, builtIn: profile.built_in, revision: profile.revision, latestRevision: profile.revision, species: profile.species, look: profile.look };
+          const identity = { name: selectedProfile.title, builtIn: selectedProfile.built_in, revision: selectedProfile.revision, latestRevision: selectedProfile.revision, state: selectedProfile.state, providers: selectedProfile.providers, species: selectedProfile.species, look: selectedProfile.look };
           let panel: ChatPanel | undefined;
-          const adapter = specialistBackend(backend.profileChat, profile, identity);
-          adapter.setAccess = async access => { await backend.profileAccess?.(profile.id, access); profile.access = access; profiles.updateAccess(profile.id, access); };
-          adapter.openSettings = () => { profilesShown = true; profiles.select(profile.id); show("flock"); };
+          const adapter = specialistBackend(backend.profileChat, selectedProfile, identity);
+          adapter.setAccess = async access => { await backend.profileAccess?.(selectedProfile.id, access); selectedProfile.access = access; profiles.updateAccess(selectedProfile.id, access); };
+          adapter.openSettings = () => { profilesShown = true; profiles.select(selectedProfile.id); show("flock"); };
           panel = new ChatPanel(adapter, () => { if (panel && chat === panel) chatChanged(); }, { window: "nest", render: renderFull, specialist: identity });
           panel.setKeys(chatKeys);
-          panel.setAccess(profile.access);
-          profilePanels.set(profile.id, panel);
+          panel.setAccess(selectedProfile.access);
+          profilePanels.set(selectedProfile.id, panel);
           panelHeads.set(panel, panel.element.querySelector<HTMLElement>(".chat-head")!);
           next = panel;
         }
-        next.setAccess(profile.access);
-        next.setProfileRevision(profile.revision);
+        next.setAccess(selectedProfile.access);
+        next.setProfileRevision(selectedProfile.revision);
+        next.setProfileState(selectedProfile.state);
       }
       await next.restore();
+      if (profile) next.setFolders(last?.sessions.flatMap(s => s.cwd ? [{cwd:s.cwd,project:s.project}] : []) ?? [], null);
       if (mine !== recipientRequest) return false;
       previous.toggle(false);
       chat = next; activeProfile = profile;
@@ -460,11 +470,13 @@ export function createNest(
   }, backend.profileSave, backend.profileAccess, async profile => {
     if (!await selectRecipient(profile)) throw new Error(recipientError.textContent ?? t("Could not load {name}.", { name: t("Chat") }));
   }, profile => {
-    recipientProfiles.set(profile.id, profile);
+    profile = rememberProfile(profile);
     profilePanels.get(profile.id)?.setAccess(profile.access);
     profilePanels.get(profile.id)?.setProfileRevision(profile.revision);
+    profilePanels.get(profile.id)?.setProfileState(profile.state);
+    if (activeProfile?.id === profile.id) activeProfile = profile;
     fillRecipients();
-  });
+  }, backend.profileState);
   const panes: Record<Tab, HTMLElement> = {
     flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element, profiles.element),
     chat: chatPane,
@@ -683,6 +695,7 @@ export function createNest(
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
     last = v;
+    for (const panel of profilePanels.values()) panel.setFolders(v.sessions.flatMap(s => s.cwd ? [{cwd:s.cwd,project:s.project}] : []), null);
     dictationArea.setActive(tab === "dictation" && !v.locked);
     if (v.locked) chat.cancelVoice();
     setZecaLook(v.look ?? null);
@@ -862,6 +875,15 @@ export function createNest(
       const allow = id === "allow";
       if (tab === "chat") chat.answerWaiting(allow);
       else if (tab === "flock" && !profilesShown) flock.shortcut(allow);
+    },
+    profileStateChanged: (id, state) => {
+      const profile = recipientProfiles.get(id);
+      if (profile && state.version >= (profile.state?.version ?? 0)) {
+        profile.state = state;
+        if (activeProfile?.id === id) activeProfile = profile;
+        profilePanels.get(id)?.setProfileState(state);
+        profiles.updateState(id, state); fillRecipients();
+      }
     },
     receiveSpecialistChat: (profile, delta) => profilePanels.get(profile)?.receive(delta),
     syncSpecialistChat: (profile, sync) => profilePanels.get(profile)?.sync(sync),

@@ -45,7 +45,7 @@ class Element {
   matches(selector) {
     if (selector.includes(",")) return selector.split(",").some(value => this.matches(value.trim()));
     const attr = selector.match(/\[([^=\]]+)(?:="([^"]*)")?\]/);
-    if (attr) { const value = attr[1].startsWith("data-") ? this.dataset[attr[1].slice(5)] : this.getAttribute(attr[1]); if (attr[2] !== undefined ? value !== attr[2] : value === undefined) return false; }
+    if (attr) { const value = attr[1].startsWith("data-") ? this.dataset[attr[1].slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] : this.getAttribute(attr[1]); if (attr[2] !== undefined ? value !== attr[2] : value === undefined) return false; }
     const plain = selector.replace(/\[[^\]]*\]/g, "");
     if (!plain) return true;
     if (plain.startsWith(".")) return plain.slice(1).split(".").every(name => this.classList.contains(name));
@@ -104,6 +104,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { setMusic, emoteFor } from ${source("island/behavior.ts")};
       export { badgeOf } from ${source("island/views.ts")};
       export { createNow } from ${source("island/now.ts")};
+      export { createAgentPreview } from ${source("surfaces/nest/agent-preview.ts")};
       export { createProfiles } from ${source("surfaces/nest/profiles.ts")};
       export { settingsQuick } from ${source("island/quick.ts")};
       export { focusCard, questionBody } from ${source("island/views.ts")};
@@ -117,6 +118,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
       export { speciesSet } from ${source("character/flock/index.ts")};
       export { dress } from ${source("character/looks.ts")};
       export { ChatPanel } from ${source("island/chat.ts")};
+      export { specialistBackend } from ${source("surfaces/nest/specialist.ts")};
       export { Sky } from ${source("island/sky.ts")};
       export { Scene } from ${source("island/scene.ts")};
       export { Clock } from ${source("clock.ts")};
@@ -126,7 +128,7 @@ const bundles = await build({ configFile: false, root, logLevel: "silent",
   build: { write: false, minify: false, lib: { entry: "continuity-entry", formats: ["es"] } },
 });
 const chunk = bundles[0].output.find(part => part.type === "chunk");
-const { toggle, speciesSet, dress, createProfiles, settingsQuick, createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
+const { specialistBackend, createAgentPreview, toggle, speciesSet, dress, createProfiles, settingsQuick, createMeetings, setDayPart, setMusic, emoteFor, badgeOf, createNow, focusCard, questionBody, applyTheme, sidePanel, paletteItems, NEST_TABS, tabByKey, createWeek, createMemory, createConnections, createRecent, createNest, ChatPanel, Scene, Sky, Clock, savedClose, savedTransition, fsm, dock } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const scenes = new WeakMap(), active = new WeakMap();
 const updateScene = Scene.prototype.update, activateScene = Scene.prototype.setActive;
 Scene.prototype.update = function (...args) { scenes.set(this.canvas, this); return updateScene.apply(this, args); };
@@ -224,12 +226,13 @@ for (const width of [480, 760, 900, 1180]) {
         rename: async () => {}, remove: async () => false,
       };
       nest.open("flock"); page.querySelector(".agent-profiles-open").click(); await tick();
-      page.querySelector(".agent-profile-choice").click();
-      nodes(page.querySelector(".agent-profile-detail")).find(n => n.tag === "button" && n.textContent === "Open specialist chat").click();
+      page.querySelector(".agent-preview-card").click();
+      nodes(page.querySelector(".agent-preview-detail")).find(n => n.tag === "button" && n.textContent === "Open specialist chat").click();
       await tick(); await tick();
       assert.equal(nest.current(), "chat", "A profile opens the existing Chat tab");
       const recipient = page.querySelector(".chat-recipient-picker");
       assert.equal(recipient.value, "reviewer");
+      assert.equal(page.querySelector(".nest-memory-toggle").hidden,true,"A specialist never exposes companion memory controls");
       assert.equal(page.querySelector(".specialist-chat-view"), null, "No parallel specialist chat screen");
       const sharedMain = page.querySelector(".nest-chat-main");
       const specialistCanvas = sharedMain.querySelector(".scene");
@@ -244,16 +247,31 @@ for (const width of [480, 760, 900, 1180]) {
       assert.equal(specialistInput.getAttribute("aria-label"), "Message Reviewer…");
       assert.equal(sharedMain.querySelector(".attach"), null);
       assert.equal(page.querySelector(".model").disabled, true, "The specialist executor stays isolated");
+      page.querySelector(".chat-controls").querySelectorAll(".place").find(n=>n.tagName==="BUTTON"&&!n.classList.contains("model")&&!n.classList.contains("access")).click();
+      const projectChoice=nodes(page).find(n=>n.dataset.choice==="folder:/work/alpha");
+      assert.ok(projectChoice,"A specialist can explicitly choose a project before the first turn");projectChoice.click();
       specialistInput.value = "Review this change"; specialistInput.fire("input");
       specialistInput.fire("keydown", { key: "Enter", preventDefault() {} }); await tick();
-      assert.deepEqual(specialistCalls[0], ["reviewer", "Review this change", 7], "The shared composer sends to its selected native profile and generation");
+      assert.deepEqual(specialistCalls[0], ["reviewer", "Review this change", 7, "/work/alpha"], "The shared composer sends to its selected native profile and generation");
       nest.receiveSpecialistChat("reviewer", { kind: "permission", id: "profile-card", tool: "Bash", target: "git status", description: null, full: null, added: 0, removed: 0, always: false, outside: null });
       assert.ok(sharedMain.textContent.includes("Reviewer requests Bash"));
+      const agentState={version:1,defaults:{executor:"claude",model:null,effort:null},archived:true};
+      nest.profileStateChanged("reviewer",agentState);
+      assert.equal(specialistInput.readOnly,true);
+      assert.equal(Boolean(sharedMain.querySelector(".send").disabled),false,"An archive retains the running turn Stop control");
+      assert.ok(sharedMain.textContent.includes("This agent is archived."));
       nest.shortcut("deny"); await tick();
       assert.deepEqual(specialistCalls.at(-1), ["reviewer", "profile-card", "deny"]);
       nest.receiveSpecialistChat("reviewer", { kind: "text", text: "Profile-only answer" });
       nest.receiveSpecialistChat("reviewer", { kind: "done" });
       assert.ok(sharedMain.querySelector(".msg-face-profile"), "Replies after tool/approval activity still show the specialist sprite");
+      specialistInput.value="Retained archived draft";specialistInput.fire("input");
+      const callsBefore=specialistCalls.length;specialistInput.fire("keydown",{key:"Enter",preventDefault(){}});await tick();
+      assert.equal(specialistCalls.length,callsBefore);assert.equal(specialistInput.value,"Retained archived draft");
+      nest.profileStateChanged("reviewer",{...agentState,version:2,archived:false,defaults:{executor:"codex",model:null,effort:null}});
+      assert.equal(specialistInput.readOnly,false,"New defaults never replace a bound conversation executor");
+      nest.profileStateChanged("reviewer",{...agentState,version:3,archived:false});
+
       nest.setZeca(false); assert.equal(nest.current(), "chat", "Specialists remain available with Zeca off");
       assert.equal(active.get(specialistCanvas), true, "Zeca off keeps the selected specialist portrait active");
       nest.setZeca(true);
@@ -276,6 +294,24 @@ for (const width of [480, 760, 900, 1180]) {
       assert.equal(revisionNotice.hidden, true, "A new conversation uses the current profile revision");
       assert.ok(!sharedMain.textContent.includes("Profile-only answer"));
       assert.equal(specialistReads, 1, "A successful reset never depends on a second current read");
+      nest.profileStateChanged("reviewer",{...agentState,version:4,archived:false,defaults:{executor:"codex",model:"test",effort:null}});
+      assert.equal(specialistInput.readOnly,true,"An unavailable executor cannot silently fall back to Claude");
+      assert.ok(revisionNotice.textContent.includes("not available"));
+      nest.profileStateChanged("reviewer",{...agentState,version:5,archived:false});
+      assert.equal(specialistInput.readOnly,false);
+      nest.profileStateChanged("reviewer",{...agentState,version:6,archived:false,defaults:{executor:"api",provider:"ollama",model:"local-model"}});
+      assert.equal(specialistInput.readOnly,false,"API specialists can send without inheriting companion capabilities");
+      assert.ok(page.querySelector(".model").textContent.includes("ollama"));
+      assert.ok(sharedMain.querySelector(".chat-caption").textContent.includes("messages only"));
+      assert.equal(page.querySelector(".chat-controls").querySelectorAll(".place").find(n=>n.tagName==="BUTTON"&&!n.classList.contains("model")&&!n.classList.contains("access")).hidden,true,"API specialists cannot read a project");
+      assert.equal(specialistInput.value,"","New conversations clear the former project's draft");
+      specialistInput.value="API question";specialistInput.fire("input");specialistInput.fire("keydown",{key:"Enter",preventDefault(){}});await tick();
+      assert.deepEqual(specialistCalls.at(-1),["reviewer","API question",8,null]);
+      nest.receiveSpecialistChat("reviewer",{kind:"text",text:"Own API answer"});nest.receiveSpecialistChat("reviewer",{kind:"done"});
+      nest.profileStateChanged("reviewer",{...agentState,version:7,archived:false});
+      assert.ok(page.querySelector(".model").textContent.includes("ollama"),"Future defaults cannot relabel a bound API conversation");
+
+
 
       recipient.value = "zeca"; recipient.fire("change"); await tick(); await tick();
       console.log("check-surface-continuity: specialists share the Chat tab/composer, scoped generation, approval shortcuts, Zeca-off and retained isolated transcripts/drafts");
@@ -1234,151 +1270,50 @@ console.log("check-surface-continuity: speaker preview opt-in, readable model wo
 console.log("check-surface-continuity: Quick picker arrows/Home/End, IME, explicit choice, Escape, Tab, blur and focus return");
 
 {
-  const reads = [];
-  let returned = false;
-  const accessChanges = [];
-  const profiles = createProfiles(() => new Promise((resolve, reject) => reads.push({ resolve, reject })), () => { returned = true; }, undefined,
-    (profile, access) => { accessChanges.push([profile, access]); return Promise.resolve(); });
-  document.body.append(profiles.element);
-  assert.equal(reads.length, 0, "Hidden profiles do not read a catalog");
-  profiles.visible(true); assert.equal(reads.length, 1);
-  profiles.visible(false);
-  const fixture = [{ id: "reviewer", built_in: true, revision: 1, title: "Reviewer", about: "Review fixture", species: "gypaetus", look: "none", instructions: "Inspect changes.", skills: [], skill_catalog: [], access: "ask" }];
-  reads[0].resolve(fixture); await tick();
-  assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 0, "A retired read cannot repaint hidden profiles");
-  profiles.visible(true); reads[1].reject(new Error("offline")); await tick();
-  assert.ok(profiles.element.querySelector(".view-state"));
-  profiles.element.querySelector(".view-state-body").querySelector("button").click();
-  reads[2].resolve(fixture); await tick();
-  const choice = profiles.element.querySelector(".agent-profile-choice");
-  choice.click();
-  const detail = profiles.element.querySelector(".agent-profile-detail");
-  assert.ok(detail.textContent.includes("Inspect changes."));
-  assert.ok(detail.textContent.includes("1"));
-  for (const label of ["Recipient", "Executor", "Claude Code · isolated", "Source", "This profile and its pinned skills", "Project and flock context", "Zeca memory", "Never shared"])
-    assert.ok(detail.textContent.includes(label), `Profile route contract includes ${label}`);
-  assert.ok(detail.textContent.includes("never uses Zeca's memory"), "The route discloses isolated profile context");
-  const access = detail.querySelector("select");
-  assert.equal(access.value, "ask", "Profile access defaults to Ask");
-  access.value = "full"; access.fire("change"); await tick();
-  assert.deepEqual(accessChanges, [["reviewer", "full"]], "Only this profile's selected access is saved");
-  assert.equal(fixture[0].access, "full");
-  assert.equal(profiles.element.querySelector(".agent-profile-choice").getAttribute("aria-pressed"), "true");
-  profiles.relabel();
-  assert.equal(profiles.element.querySelector(".agent-profile-choice").getAttribute("aria-pressed"), "true");
-  profiles.element.querySelector(".activity-heading").querySelector("button").click();
-  assert.equal(returned, true);
-  profiles.visible(false); profiles.element.remove();
+ const fixture={id:"developer",built_in:true,revision:1,title:"Developer",about:"Focused changes",species:"atratus",look:"none",instructions:"Inspect changes.",skills:[],skill_catalog:[{id:"verify-change",revision:1,title:"Verify",content:"Run focused checks"}],access:"full",state:{version:0,defaults:{executor:"claude",model:null,effort:null},archived:false},providers:[{id:"openai",label:"OpenAI",local:false},{id:"xai",label:"xAI",local:false},{id:"ollama",label:"Ollama",local:true}]};
+ const reads=[],writes=[],states=[],accesses=[];let opened=0,returned=0,live=false,reloadFailure=false;let catalog=[fixture];
+ const profiles=createProfiles(()=>live?(reloadFailure?Promise.reject("offline"):Promise.resolve(catalog)):new Promise((resolve,reject)=>reads.push({resolve,reject})),()=>returned++,
+  (edit,preferences)=>new Promise((resolve,reject)=>writes.push({edit,preferences,resolve,reject})),
+  (...args)=>new Promise((resolve,reject)=>accesses.push({args,resolve,reject})),async()=>{opened++;throw new Error("Profile session unavailable.");},()=>{},
+  (...args)=>new Promise((resolve,reject)=>states.push({args,resolve,reject})));
+ document.body.replaceChildren(profiles.element);
+ const click=text=>{const n=nodes(profiles.element).find(n=>n.tagName==="BUTTON"&&n.textContent===text);assert.ok(n,`Missing agent action ${text}`);n.click();};
+ const field=label=>profiles.element.querySelector(`[aria-label="${label}"]`);
+ const submit=()=>profiles.element.querySelector("form").fire("submit",{preventDefault(){}});
+ assert.equal(reads.length,0);profiles.visible(true);profiles.visible(false);reads[0].resolve([fixture]);await tick();
+ assert.equal(profiles.element.querySelectorAll(".agent-preview-card").length,0,"Retired reads cannot repaint hidden profiles");
+ profiles.visible(true);reads[1].reject("offline");await tick();click("Try again");reads[2].resolve([fixture]);await tick();live=true;
+ assert.equal(profiles.element.querySelectorAll(".agent-preview-card").length,1,"Production has no simulated custom agent");
+ assert.ok(!profiles.element.textContent.includes("Design preview."));
+ const access=field("Access for this profile");access.value="ask";access.fire("change");click("Open specialist chat");assert.equal(opened,0,"Opening waits for access persistence");
+ accesses[0].reject("storage");await tick();assert.equal(access.value,"full","Failed permissions roll back");
+ click("Open specialist chat");click("Open specialist chat");await tick();assert.equal(opened,1);assert.ok(profiles.element.textContent.includes("Profile session unavailable."));
+ profiles.updateAccess("developer","ask");assert.equal(field("Access for this profile").value,"ask");
+ click("Conversation defaults");assert.equal(field("Agent name"),null,"Built-in preferences do not copy or edit preset content");
+ field("Executor").value="api";field("Executor").fire("change");assert.ok(field("Provider").options.some(p=>p.value==="xai"));
+ field("Provider").value="xai";field("Provider").fire("change");submit();submit();assert.equal(states.length,1);
+ assert.deepEqual(states[0].args,["developer",0,{action:"defaults",defaults:{executor:"api",provider:"xai",model:null}}]);
+ states[0].reject("conflict");await tick();assert.equal(field("Provider").value,"xai","Conflicts preserve the draft");click("Cancel");
+ click("Create a copy");assert.equal(field("Agent name").value,"Developer copy");assert.equal(field("Access for this profile"),null,"Copies cannot inherit or silently grant full access");
+ field("Agent name").value="My agent";field("Agent name").fire("input");field("Species").value="vultur";field("Species").fire("change");field("Accessory").value="crown";field("Accessory").fire("change");
+ field("Verify").checked=true;field("Verify").fire("change");
+ profiles.visible(false);profiles.relabel();profiles.visible(true);await tick();
+ assert.equal(field("Species").value,"vultur");assert.equal(field("Accessory").value,"crown");assert.equal(field("Agent name").value,"My agent");
+ submit();submit();assert.equal(writes.length,1);assert.equal(writes[0].edit.action,"copy");assert.deepEqual(writes[0].edit.skill_ids,["verify-change"]);
+ assert.equal(writes[0].preferences.version,0);profiles.relabel();assert.equal(nodes(profiles.element).find(n=>n.tagName==="BUTTON"&&n.textContent==="Save profile").disabled,true,"Relabel cannot unlock a pending save");writes[0].reject("storage");await tick();assert.equal(field("Agent name").value,"My agent");
+ submit();const custom={...fixture,...writes[1].edit,id:"custom-7",built_in:false,access:"ask",state:{...fixture.state,version:1}};catalog=[fixture,custom];writes[1].resolve(custom);await tick();
+ assert.equal(profiles.element.querySelectorAll(".agent-preview-card").length,2);
+ profiles.visible(false);reloadFailure=true;profiles.visible(true);await tick();
+ assert.ok(profiles.element.querySelector(".view-state"),"Refresh failure has an explicit retry beside the retained catalog");
+ assert.equal(profiles.element.querySelectorAll(".agent-preview-card").length,2);reloadFailure=false;click("Try again");await tick();click("Edit agent");
+ profiles.updateState("custom-7",{...custom.state,version:2,archived:true});submit();assert.equal(writes[2].preferences.version,1,"A concurrent archive cannot silently replace the editor version");writes[2].reject("archived");await tick();assert.equal(field("Agent name").value,"My agent");click("Cancel");
+ click("Archived");assert.ok(profiles.element.textContent.includes("View conversations"));assert.equal(nodes(profiles.element).some(n=>n.textContent==="Edit agent"),false);
+ click("Restore agent");assert.deepEqual(states[1].args,["custom-7",2,{action:"archive",archived:false}]);states[1].resolve({...custom.state,version:3,archived:false});await tick();
+ click("Archive agent");states[2].reject("storage");await tick();assert.ok(profiles.element.textContent.includes("Archive agent"),"A failed archive leaves the agent active");
+ click("Create agent");assert.equal(field("Agent name").value,"");assert.equal(field("Instructions").value,"");field("Agent name").value="Original";field("Agent name").fire("input");field("Instructions").value="My instructions";field("Instructions").fire("input");submit();assert.equal(writes[3].edit.action,"create");assert.equal("preset"in writes[3].edit,false);writes[3].reject("storage");await tick();click("Cancel");click("Back to Flock");assert.equal(returned,1);
+ assert.equal(fixture.access,"full","Native catalog inputs are never mutated optimistically");profiles.visible(false);profiles.element.remove();
 }
-console.log("check-surface-continuity: profile catalog lazy read, late cancellation, explicit retry, selection/revision and return");
-
-{
-  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Original instructions", skills: [], skill_catalog: [], access: "ask" };
-  let saveAccess, opens = 0;
-  const profiles = createProfiles(async () => [{ ...preset }], () => {}, undefined,
-    () => new Promise(resolve => { saveAccess = resolve; }), async () => { opens++; throw new Error("Profile session unavailable."); });
-  document.body.append(profiles.element); profiles.visible(true); await tick();
-  profiles.element.querySelector(".agent-profile-choice").click();
-  const scope = profiles.element.querySelector(".agent-profile-scope"); scope.open = true; scope.fire("toggle");
-  const open = profiles.element.querySelector(".agent-profile-chat-open");
-  const access = profiles.element.querySelector("select"); access.value = "full"; access.fire("change");
-  assert.equal(open.disabled, true, "Opening waits for the explicit access save to settle");
-  open.click(); assert.equal(opens, 0);
-  saveAccess(); await tick(); assert.equal(open.disabled, false);
-  open.click(); open.click(); await tick(); await tick();
-  assert.equal(opens, 1, "Only one profile opening is pending");
-  assert.equal(profiles.element.querySelector(".agent-profile-open-error").hidden, false);
-  assert.ok(profiles.element.textContent.includes("Profile session unavailable."), "A failed entry remains visible on the profile that requested it");
-  assert.equal(profiles.element.querySelector(".agent-profile-scope").open, true, "Disclosure state survives save/failure redraws");
-  assert.equal(profiles.element.querySelector(".agent-profile-chat-open").disabled, false, "A failed open is retryable");
-  profiles.updateAccess("developer", "ask");
-  assert.equal(profiles.element.querySelector("select").value, "ask", "Chat access changes update the existing profile view");
-  profiles.visible(false); profiles.element.remove();
-}
-console.log("check-surface-continuity: profile open failure/retry, duplicate/access-save guards, retained disclosures and access synchronization");
-
-
-{
-  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Original instructions", skills: [], skill_catalog: [{ id: "verify-change", revision: 1, title: "Verify", content: "Run focused checks" }] };
-  const writes = [];
-  const profiles = createProfiles(async () => [preset], () => {}, edit => new Promise((resolve, reject) => writes.push({ edit, resolve, reject })));
-  document.body.append(profiles.element); profiles.visible(true); await tick();
-  profiles.element.querySelector(".agent-profile-choice").click();
-  profiles.element.querySelector(".agent-profile-edit").click();
-  const input = profiles.element.querySelector("input"); input.value = "Literal custom title"; input.fire("input");
-  const text = profiles.element.querySelector("textarea"); text.value = "Keep this draft\nexactly."; text.fire("input");
-  const skill = profiles.element.querySelector(".agent-profile-skills").querySelector("input");
-  assert.ok(profiles.element.querySelector(".agent-profile-skill").textContent.includes("Run focused checks"));
-  skill.checked = true; skill.fire("change");
-  const species = profiles.element.querySelector('[data-field="species"]'); species.value = "vultur"; species.fire("change");
-  const look = profiles.element.querySelector('[data-field="look"]'); look.value = "crown"; look.fire("change");
-  assert.equal(profiles.element.querySelector("input").value, "Literal custom title", "Appearance updates retain text and controls");
-  profiles.visible(false); profiles.relabel(); profiles.visible(true);
-  assert.equal(profiles.element.querySelector('[data-field="species"]').value, "vultur");
-  assert.equal(profiles.element.querySelector('[data-field="look"]').value, "crown");
-  assert.equal(profiles.element.querySelector("textarea").value, "Keep this draft\nexactly.", "Navigation and relabel retain unsaved instructions");
-  const submit = () => profiles.element.querySelector("form").fire("submit", { preventDefault() {} });
-  submit(); submit(); assert.equal(writes.length, 1, "A pending save cannot create duplicate copies");
-  writes[0].reject("storage"); await tick();
-  assert.ok(profiles.element.querySelector('[role="alert"]'));
-  assert.equal(profiles.element.querySelector("input").value, "Literal custom title");
-  assert.equal(profiles.element.querySelector("textarea").value, "Keep this draft\nexactly.");
-  submit();
-  assert.deepEqual(writes[1].edit, { action: "copy", preset: "developer", title: "Literal custom title", instructions: "Keep this draft\nexactly.", species: "vultur", look: "crown", skill_ids: ["verify-change"] });
-  const custom = { ...preset, built_in: false, id: "custom-7", title: writes[1].edit.title, instructions: writes[1].edit.instructions, species: writes[1].edit.species, look: writes[1].edit.look, skills: preset.skill_catalog };
-  writes[1].resolve(custom); await tick();
-  assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 2, "The preset survives creating a copy");
-  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("Literal custom title"));
-  profiles.element.querySelector(".agent-profile-edit").click(); submit();
-  assert.equal(writes[2].edit.action, "update"); assert.equal(writes[2].edit.id, 7); assert.equal(writes[2].edit.revision, 1);
-  assert.deepEqual(writes[2].edit.skill_ids, ["verify-change"]);
-  writes[2].reject("conflict"); await tick();
-  assert.ok(profiles.element.querySelector('[role="alert"]').textContent.includes("Cancel"));
-  assert.equal(profiles.element.querySelector("textarea").value, custom.instructions);
-  profiles.visible(false); profiles.element.remove();
-}
-console.log("check-surface-continuity: profile copies, retained drafts, single pending save, failure retry and expected revision");
-
-{
-  const preset = { id: "developer", built_in: true, revision: 1, title: "Developer", about: "Description", species: "atratus", look: "none", instructions: "Preset instructions", skills: [], skill_catalog: [], access: "ask" };
-  const writes = [];
-  const profiles = createProfiles(async () => [preset], () => {}, edit => new Promise((resolve, reject) => writes.push({ edit, resolve, reject })));
-  document.body.append(profiles.element); profiles.visible(true); await tick();
-  profiles.element.querySelector(".agent-profile-create").click();
-  const avatar = profiles.element.querySelector(".agent-profile-character");
-  assert.ok(avatar, "Profile creation centers the production animated bird");
-  const profileScene = scenes.get(avatar.querySelector("canvas"));
-  assert.equal(active.get(profileScene.canvas), true);
-  profiles.visible(false); assert.equal(active.get(profileScene.canvas), false, "Hidden editors stop their animated scene");
-  profiles.visible(true);
-  assert.equal(active.get(profileScene.canvas), true);
-  assert.equal(profiles.element.querySelector("input").value, "", "Direct creation starts with an empty name");
-  assert.equal(profiles.element.querySelector("textarea").value, "", "Direct creation never imports preset instructions");
-  assert.ok(profiles.element.querySelector(".agent-profile-editor-grid"));
-  let name = profiles.element.querySelector("input"); name.value = "Original agent"; name.fire("input");
-  let instructions = profiles.element.querySelector("textarea"); instructions.value = "Use my original instructions."; instructions.fire("input");
-  profiles.visible(false); profiles.relabel(); profiles.visible(true);
-  assert.equal(profiles.element.querySelector("textarea").value, "Use my original instructions.");
-  const submit = () => profiles.element.querySelector("form").fire("submit", { preventDefault() {} });
-  submit(); submit(); assert.equal(writes.length, 1);
-  assert.deepEqual(writes[0].edit, { action: "create", title: "Original agent", instructions: "Use my original instructions.", species: "atratus", look: "none", skill_ids: [] });
-  assert.equal("preset" in writes[0].edit, false, "Creation has its own native operation without a hidden preset");
-  writes[0].reject("storage"); await tick();
-  assert.equal(profiles.element.querySelector("input").value, "Original agent");
-  assert.ok(profiles.element.querySelector('[role="alert"]'));
-  submit();
-  writes[1].resolve({ ...preset, id: "custom-9", built_in: false, title: "Original agent", about: "Custom agent profile", instructions: "Use my original instructions." });
-  await tick();
-  assert.equal(profiles.element.querySelectorAll(".agent-profile-choice").length, 2);
-  assert.ok(profiles.element.querySelector(".agent-profile-detail").textContent.includes("Original agent"));
-  assert.equal(profiles.element.querySelector("select").value, "ask");
-  profiles.element.querySelector(".agent-profile-create").click();
-  assert.equal(profiles.element.querySelector("input").value, "");
-  nodes(profiles.element).find(node => node.tag === "button" && node.textContent === "Cancel").click(); await tick();
-  assert.equal(writes.length, 2, "Cancelling a blank profile never creates a record");
-  profiles.visible(false); profiles.element.remove();
-}
-console.log("check-surface-continuity: direct blank profile creation, separate native action, draft retention, single save, failure/retry, default access and cancellation");
+console.log("check-surface-continuity: native agents lazy reads/retry, defaults CAS, registry IDs, atomic saves, retained drafts, access rollback, archive/restore and shared Chat entry");
 
 
 {
@@ -1395,8 +1330,8 @@ console.log("check-surface-continuity: direct blank profile creation, separate n
     const preset = {id:"developer",built_in:true,revision:1,title:"Developer",about:"Description",species:"atratus",look:"none",instructions:"Instructions",skills:[],skill_catalog:[]};
     const profiles = createProfiles(async () => [preset], () => {}, async () => preset);
     document.body.append(profiles.element);profiles.visible(true);await tick();
-    profiles.element.querySelector(".agent-profile-choice").click();profiles.element.querySelector(".agent-profile-edit").click();
-    const species = profiles.element.querySelector('[data-field="species"]'), look = profiles.element.querySelector('[data-field="look"]');
+    profiles.element.querySelector(".agent-preview-card").click();profiles.element.querySelector("[data-preview-edit]").click();
+    const species = profiles.element.querySelector('[aria-label="Species"]'), look = profiles.element.querySelector('[aria-label="Accessory"]');
     assert.equal(species.options.length, 23);
     assert.ok(!look.options.some(option => option.value === "auto"), "Profile appearance is pinned, never calendar-dependent");
     for (const bird of species.options) for (const accessory of look.options) {
@@ -1516,3 +1451,94 @@ for(const [status,label] of [["queued","In merge queue"],["accepted_pending_veri
  assert.ok(page.element.textContent.includes(label),"Polling away the old merge offer retains the pending outcome");assert.equal(writes,0);
 }
 console.log("check-surface-continuity: queued and pending merges stay distinct, disabled and retained after offer refresh");
+
+// The agent proposal exercises the production scene and Chat without bridge writes or model calls.
+{
+ const fixtures=[{id:"developer",built_in:true,revision:1,title:"Developer",about:"Focused changes with clear checks and explanations.",species:"atratus",look:"none",instructions:"Implement the requested change within the selected project. Explain the result, checks and remaining limitations.",skills:[],skill_catalog:[{id:"verify-change",revision:1,title:"Verify the change",content:"Choose checks that exercise the changed behavior. Report what passed and distinguish automated checks from manual validation."}],access:"ask"}];
+ const original=JSON.stringify(fixtures);let closed=0;
+ const preview=createAgentPreview(fixtures,()=>{closed++;});
+ document.body.replaceChildren(preview.element);preview.visible(true);
+ const buttons=()=>nodes(preview.element).filter(n=>n.tagName==="BUTTON");
+ const click=text=>{const node=buttons().find(n=>n.textContent===text);assert.ok(node,`Missing preview action: ${text}`);node.click();};
+ const field=label=>preview.element.querySelector(`[aria-label="${label}"]`);
+ assert.equal(preview.element.querySelectorAll(".agent-preview-card").length,2);
+ assert.ok(preview.element.textContent.includes("Design preview."));
+ click("Edit agent");
+ const name=field("Agent name");name.value="Retained preview draft";name.fire("input");
+ const search=field("Search skills");search.value="missing";search.fire("input");
+ assert.ok(preview.element.textContent.includes("No matching skills."));
+ assert.equal(name.value,"Retained preview draft");
+ search.value="";search.fire("input");
+ const check=field("Verify the change");check.checked=false;check.fire("change");
+ assert.ok(preview.element.textContent.includes("0 selected"));
+ field("Verify the change").checked=true;field("Verify the change").fire("change");
+ const executor=field("Executor");executor.value="api";executor.fire("change");
+ const provider=field("Provider");provider.value="openai";provider.fire("change");
+ const model=field("Default model");model.value="preview-model";model.fire("input");
+ preview.element.querySelector("form").fire("submit",{preventDefault(){}});
+ assert.ok(preview.element.textContent.includes("Retained preview draft"));assert.ok(preview.element.textContent.includes("preview-model"));
+ assert.ok(preview.element.textContent.includes("OpenAI"));
+ click("Edit agent");field("Agent name").value="Discarded change";field("Agent name").fire("input");click("Cancel");
+ assert.ok(!preview.element.textContent.includes("Discarded change"));
+ click("Open preview chat");
+ field("Project").value="example";field("Project").fire("change");
+ const input=preview.element.querySelector("textarea");input.value="Local preview message";input.fire("input");
+ input.fire("keydown",{key:"Enter",preventDefault(){},stopPropagation(){}});await tick();
+ assert.ok(preview.element.textContent.includes("Preview only. Your message was not sent to a model."));
+ click("Back to agents");click("Open preview chat");
+ assert.ok(preview.element.textContent.includes("Local preview message"));assert.equal(field("Project").value,"example");
+ assert.equal(field("Project").disabled,true);assert.equal(field("Executor").disabled,true);assert.equal(Boolean(field("Access for this profile").disabled),false);
+ click("Back to agents");click("Archive agent");assert.ok(preview.element.textContent.includes("Restore agent"));click("Restore agent");
+ assert.ok(preview.element.textContent.includes("Open preview chat"));
+ const agentSearch=field("Search agents");agentSearch.value="no match";agentSearch.fire("input");
+ assert.ok(preview.element.textContent.includes("No matching agents."));
+ assert.equal(JSON.stringify(fixtures),original,"Preview edits, skills, preferences and archive never mutate the real catalog");
+ click("Create agent");field("Agent name").value="Blank agent";field("Agent name").fire("input");field("Instructions").value="Use only the selected project.";field("Instructions").fire("input");
+ preview.element.querySelector("form").fire("submit",{preventDefault(){}});assert.ok(preview.element.textContent.includes("Blank agent"));
+ click("Close preview");assert.equal(closed,1);preview.visible(false);
+}
+console.log("check-surface-continuity: agent proposal keeps real data unchanged through search, draft cancel/save, skill filtering, defaults, simulated Chat, retained messages/project and archive/restore");
+
+{
+ const profile={id:"developer",built_in:true,revision:1,title:"Developer",species:"atratus",look:"none",access:"ask",state:{version:0,defaults:{executor:"claude",model:null,effort:null},archived:false},providers:[{id:"ollama",label:"Ollama",local:true}]};
+ const original=JSON.stringify(profile),writes=[],sent=[],drafts=[];let generation=11,savedChoice=null;
+ const snapshot=()=>({generation,choice:savedChoice,profileTitle:"Developer",profileRevision:1,profileSpecies:"atratus",profileLook:"none",conversation:null,draft:{text:"Keep this draft",files:[],folder:null,provider:savedChoice?.executor==="api"?"api":"claude",generation}});
+ const api={current:async()=>snapshot(),choice:(...args)=>new Promise((resolve,reject)=>writes.push({args,resolve,reject})),
+  saveDraft:async(id,draft,expected)=>{assert.equal(id,"developer");if(expected!==generation)throw "The conversation changed before sending. Review your draft and try again.";drafts.push({draft,expected});},
+  conversations:async()=>[],send:async(...args)=>{sent.push(args);},decide:async()=>{},stop:async()=>{},open:async()=>{throw "unused";},rename:async()=>{},remove:async()=>false,
+  reset:async()=>{generation++;savedChoice=null;return {...snapshot(),provider:"claude"};}};
+ const make=()=>{const identity={name:"Developer",revision:1,species:"atratus",look:"none",state:structuredClone(profile.state),providers:profile.providers};return new ChatPanel(specialistBackend(api,profile,identity),()=>{},{window:"nest",specialist:identity});};
+ let panel=make();document.body.replaceChildren(panel.element);await panel.restore();panel.toggle(true);
+ const input=()=>panel.element.querySelector(".composer").querySelector("textarea");
+ const control=label=>panel.element.querySelectorAll("input, select").find(n=>n.getAttribute("aria-label")===label);
+ const menu=()=>panel.element.querySelector(".model-menu");
+ const open=()=>panel.element.querySelector(".model").click();
+ const defaults=()=>menu().querySelectorAll("input").find(n=>n.type==="checkbox");
+ const submit=()=>menu().querySelector("form").fire("submit",{preventDefault(){}});
+ open();assert.ok(menu().querySelector("form"));assert.equal(defaults().checked,true);
+ assert.equal(control("Executor").disabled,true);assert.ok(control("Executor").options.find(n=>n.value==="codex").disabled);
+ defaults().checked=false;defaults().fire("change");control("Executor").value="api:ollama";control("Executor").fire("change");
+ control("Model").focus();control("Model").value="chosen-local";control("Model").fire("input");
+ panel.setProfileState({...profile.state,version:1});assert.equal(control("Model").value,"chosen-local","Background repaint retains model edits");assert.equal(document.activeElement,control("Model"),"Repaint retains model focus instead of selecting the defaults checkbox");
+ submit();submit();await tick();assert.equal(writes.length,1,"Only one choice write may be pending");
+ assert.deepEqual(writes[0].args,["developer",{executor:"api",provider:"ollama",model:"chosen-local"},11]);
+ assert.equal(input().readOnly,true);writes[0].reject("storage");await tick();
+ assert.equal(input().value,"Keep this draft");assert.ok(menu().querySelector('[role="alert"]'));assert.ok(panel.element.querySelector(".model").textContent.includes("Claude"));
+ assert.equal(control("Model").value,"chosen-local");submit();await tick();
+ generation=12;savedChoice=writes[1].args[1];writes[1].resolve(snapshot());await tick();await tick();
+ assert.equal(input().value,"Keep this draft");assert.ok(panel.element.querySelector(".model").textContent.includes("Ollama"));assert.equal(drafts.at(-1).expected,12);
+ assert.equal(JSON.stringify(profile),original,"A conversation override never edits agent defaults or access");
+ panel.toggle(false);panel.element.remove();panel=make();document.body.append(panel.element);await panel.restore();panel.toggle(true);
+ assert.ok(panel.element.querySelector(".model").textContent.includes("Ollama"),"Reopening reads the retained native override");
+ input().value="Use my choice";input().fire("input");input().fire("keydown",{key:"Enter",preventDefault(){}});await tick();
+ assert.deepEqual(sent.at(-1),["developer","Use my choice",12,null]);assert.equal(panel.element.querySelector(".model").disabled,true);
+ open();assert.equal(writes.length,2,"A bound conversation cannot change its executor");panel.receive({kind:"done"});
+ panel.newConversation();await tick();await tick();assert.ok(panel.element.querySelector(".model").textContent.includes("Claude"));
+ open();defaults().checked=false;defaults().fire("change");control("Model").value="temporary";control("Model").fire("input");submit();await tick();
+ generation=15;savedChoice=null;panel.sync({kind:"reset",from:"history",provider:"claude",generation});
+ input().value="New source draft";input().fire("input");writes[2].resolve({...snapshot(),generation:14,choice:{executor:"claude",model:"temporary",effort:null}});await tick();
+ assert.equal(input().value,"New source draft");assert.ok(!panel.element.querySelector(".model").textContent.includes("temporary"));
+ assert.equal(input().readOnly,false,"A late response cannot lock or change the new source");
+ panel.toggle(false);panel.element.remove();
+}
+console.log("check-surface-continuity: per-conversation executor/model overrides, native profile/generation scope, pending/failure/retry, retained drafts, reopening, immutable defaults and late-reset rejection");

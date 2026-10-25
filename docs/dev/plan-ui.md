@@ -1275,3 +1275,125 @@ or independent review surface is introduced. Human cards show exact content and 
 current refs/SHAs and inline context. Ready transitions explain code-owner requests. Changed
 heads, bases or anchors require a fresh proposal; unknown outcomes remain explicit in Activity
 and Audit. Native visual acceptance of these cards remains pending.
+
+### Agent refinement proposal - 2026-10-24
+
+Pause specialist GitHub integration while refining agents with the maintainer. The agreed flow
+separates profile identity/instructions/skills from its executor. Profiles will have per-agent
+executor/model defaults, optional per-conversation project selection, the current searchable
+skill catalog, and archive/restore for custom agents. Existing conversations retain their pinned
+identity, revision, executor and source. Provider choice must not import Zeca's memory or tools.
+API/local providers retain their existing capabilities; terminal execution is not added by a role.
+
+Deliver the visual proposal before native persistence or executor changes. A development-only
+entry in the existing Profiles view reuses the theme, sprites, Scene and production ChatPanel.
+The proposal clones only preset data and owns in-memory examples: save, copy, defaults, skills,
+archive/restore, project selection, example attachments and Chat replies make no native write or
+provider request. A visible banner identifies those limits. Production specialist execution remains
+unchanged. VITE_AGENTS_PREVIEW=1 opens this proposal on the development Nest navigation route;
+without it, the normal Profiles view exposes the explicit preview button in development builds.
+
+Acceptance before native implementation: review the catalogue, create/edit flow, animated identity,
+skill selection and compact Chat header with the maintainer. Renderer regressions cover catalogue
+immutability, search and filtered empty states, draft save/cancel, skills and defaults, retained
+simulated messages/project, archive/restore and explicit preview exit. Build and translations must
+pass; inspect the running app and retain any unperformed native matrix checks as pending.
+
+The catalogue, editor and Chat proposal were inspected in the running app with Black at the
+maintainer's Room size. This caught and corrected single-card stretching, native-select styling,
+portrait/greeting overlap and prototype field styling leaking into the production composer.
+Light and the 480 x 360 native layout matrix remain pending maintainer acceptance. Development
+QA may start directly in the editor or Chat with VITE_AGENTS_PREVIEW_START=editor or chat;
+normal preview startup always opens the catalogue.
+
+Next after visual acceptance: amend ADR 0018; add profile preferences and archival metadata with
+backward-compatible defaults; generalize specialist initialization/resume to the Chat's existing
+Claude, Codex and API/local routes; preserve scoped drafts/history/approvals and validate project
+selection. Finish provider/capability, revocation, restart and native layout checks before GH8.
+
+### Agent refinement stage 2 - 2026-10-24
+
+The maintainer accepted the visual proposal and requested the next stage. The shared workspace now
+renders the real profile catalog, creation/copy/edit flow, searchable skills and preferences. The
+legacy development navigation flag VITE_AGENTS_PREVIEW=1 now opens this real workspace; the isolated
+preview remains a fixture for regression checks, without being the production Chat route.
+
+Migration 33 stores versioned execution defaults and archive/restore metadata separately from
+immutable content revisions and per-profile access. Content/defaults save in one transaction.
+Stale updates reject without replacing the draft. New profiles/copies retain Ask. Built-in defaults
+can change without creating a copy. Archived custom agents retain history and revisions; native
+send/reset admission rejects them while Stop and pending human decisions remain available.
+The Chat picker omits archived agents except its active recipient, without falling back to Zeca.
+
+Claude defaults apply only before the first turn. Codex and API/local preferences are persisted
+against the current provider registry, but an explicit notice blocks unsupported new specialist
+conversations. Existing Claude conversations remain pinned. Multi-executor runtimes, optional
+conversation projects and attachments are stage 3, followed by the integrated stage 4 checks.
+
+Validation: Store 109 tests; app 401 passed / 1 ignored; targeted all-target Clippy with warnings
+rejected; renderer build, surface continuity, Chat models, Settings, island geometry, formatting,
+brand, English, translations, layers, network and README checks. Renderer regressions include CAS
+conflicts, concurrent archive during edits, save retry/single flight, access rollback, registry IDs,
+archived Stop/cards/draft retention and no executor fallback. The production catalogue was inspected
+in the running native app with Black at Room size. Light, 480 x 360 and manual create/archive flows
+remain for desktop acceptance; automated state/DOM tests do not replace that matrix. No commit or PR.
+
+### Agent refinement stage 3.1 - 2026-10-25
+
+Connect the existing API/local provider registry to specialist Chat with the exact pinned profile
+brief on both API wires. The prompt includes neither Zeca's persona/name nor companion memory or
+tools. Retained API messages are scoped by profile/provider/model, and malformed or foreign system
+history is rejected. Defaults select the provider and model before the first turn, with the saved
+model for that provider as fallback. Changing future defaults never relabels a bound conversation.
+API agents have no project, file, terminal or GitHub capability; errors preserve editable drafts.
+
+Claude specialists can explicitly select a project from the existing sessions' folder picker before
+the first turn. Validate existing absolute paths, canonicalize them, and bind the source with the
+conversation. Reset clears the old project. Isolated settings and the human approver remain in force;
+selecting a folder imports no companion context, flock references, MCP or permission settings.
+
+The Codex app-server currently inherits external configuration; its CLI consultation isolation is a
+separate, tool-free path. Do not silently reuse either as a qualified specialist. Codex execution,
+per-conversation executor/model overrides and attachments remain subsequent stage 3 slices. GH8 stays
+paused. No model request, key, CLI configuration, dependency, commit or PR is created by these checks.
+
+Checks: app 402 passed / 1 ignored; Chat 168 passed / 4 ignored; local HTTP captures on both wires
+assert the exact system brief and absent tools; native round-trip covers provider/model/profile,
+API history and project source rejection. Renderer checks cover explicit project selection, API
+message routing/capability labels, default changes on a bound API chat, and archive continuity.
+Build, targeted all-target Clippy, Chat models, surface continuity, Settings, geometry and repository
+language/layer/network checks pass. Real cloud authentication/inference and the full Light/narrow
+matrix remain manual acceptance. The existing development start=chat flag opens the real specialist
+route for native inspection, without executing or simulating a turn.
+
+Native inspection: the actual Developer Chat route was opened with the shared project selector, animated profile perch and composer. The screenshot exposed a CSS override of the Memory button hidden state; its selector now honors hidden. API-specific visual acceptance and Light/minimum-size checks remain pending.
+
+### Agent refinement stage 3.2 - 2026-10-25
+
+The installed CLI is now 0.164.0. Its app-server does not expose exec's ignore-user-config/rules
+switches; a profile cannot inherit external configuration while claiming specialist isolation.
+Retain the explicit Codex block, without falling back to another executor. Source inspection used
+upstream [rust-v0.164.0 CLI](https://github.com/openai/codex/blob/rust-v0.164.0/codex-rs/cli/src/main.rs), [app-server](https://github.com/openai/codex/blob/rust-v0.164.0/codex-rs/app-server/src/lib.rs) and [config loader](https://github.com/openai/codex/blob/rust-v0.164.0/codex-rs/config/src/loader/mod.rs), not a model call,
+forced login, credential copy or configuration edit. Native Codex activation is still unfinished.
+
+Deliver the next independent planned slice: per-conversation executor/provider/model/CLI effort in
+the existing Chat model menu. Native configuration is scoped by profile and source generation,
+validated under the runtime lock and rejected after any saved first turn. Publishing advances the
+generation, preserving draft text and profile identity; older sends and draft writes cannot inherit
+the choice. Apply does not start a model or alter profile defaults, skills or access. Unsent choices
+are retained with the runtime, not on disk. New/Open/history reset them; unavailable defaults may
+be shown on an empty new conversation without running a substitute executor.
+
+Renderer checks cover duplicate writes, failure/retry, typing retained, native profile/generation
+scope, catalog immutability, reopening, fixed started conversations, and a delayed choice reply after
+history reset. Native checks cover source ownership, draft preservation, changed generation, an
+already saved but unstarted conversation and rejected foreign/companion sources. App: 403 passed,
+1 ignored; targeted all-target Clippy, build and existing renderer/geometry/language checks pass.
+Remaining stage 3: qualified Codex isolation/activation and explicitly chosen file attachments;
+then stage 4 integrated acceptance and GH8. No commits or PR.
+
+Native acceptance for this slice: inspected the real conversation setup popover in Black at Room size. Fixed its overflowing model input with border-box sizing and bounded horizontal overflow. Assigned unique focus identities to all setup controls; checkbox repaints do not attempt text caret restoration. Light, minimum-size desktop acceptance and manual authenticated inference remain pending. The app remains open; no model or configuration write was triggered by opening the menu.
+
+### Agent refinements commit checkpoint - 2026-10-25
+
+The maintainer authorized committing the accumulated refinements before the next implementation slice. Full workspace Clippy with warnings rejected, workspace tests, feature-enabled evals, renderer build, geometry, record search, saved close, Chat models, Flock continuity, surface continuity, Settings and repository checks passed. The requested check-task-actions.mjs script does not exist in this checkout; the available production surface checks were run. No dependencies changed. Light/minimum-size desktop and authenticated inference acceptance remain pending, rather than being marked as automated coverage. No PR or push is authorized here.

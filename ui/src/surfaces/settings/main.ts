@@ -2202,3 +2202,6 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("focus", () => {
   for (const a of AGENTS) if (!panels.get(a.kind)?.pending) void refresh(a.kind);
 });
+
+// Enter the development proposal through the existing Nest route, without changing saved settings.
+if (import.meta.env.DEV && import.meta.env.VITE_AGENTS_PREVIEW === "1") void Bridge.openNest("flock-profiles");

@@ -601,6 +601,14 @@ mod tests {
         model: &'static str,
         cap: u64,
     ) -> (Provider, std::sync::Arc<std::sync::Mutex<Vec<u64>>>) {
+        claude_api_role(model, cap, false).await
+    }
+
+    async fn claude_api_role(
+        model: &'static str,
+        cap: u64,
+        specialist: bool,
+    ) -> (Provider, std::sync::Arc<std::sync::Mutex<Vec<u64>>>) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}/v1", listener.local_addr().unwrap());
@@ -641,6 +649,12 @@ mod tests {
                         json!({ "id": model, "max_tokens": cap }).to_string(),
                     )
                 } else {
+                    if specialist {
+                        let request: Value = serde_json::from_str(&body).unwrap();
+                        assert_eq!(request["system"], "PINNED_EXACT");
+                        assert!(request.get("tools").is_none());
+                        assert_eq!(request["messages"][0]["role"], "user");
+                    }
                     let wanted = serde_json::from_str::<Value>(&body).unwrap()["max_tokens"]
                         .as_u64()
                         .unwrap();
@@ -678,6 +692,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn specialist_wire_sends_only_its_brief_and_messages() {
+        let (provider, asked) = claude_api_role("specialist-test", 128_000, true).await;
+        let (tx, _rx) = mpsc::channel(16);
+        let mut history = Vec::new();
+        turn(
+            &provider,
+            "key",
+            "specialist-test",
+            &mut history,
+            &Turn {
+                text: "own question".into(),
+                ..Turn::default()
+            },
+            tools::Kit {
+                specialist: true,
+                tools: &Vec::new(),
+                outside: &Default::default(),
+                frozen: Some("PINNED_EXACT"),
+                approver: &crate::TestApprover,
+            },
+            &tx,
+        )
+        .await
+        .unwrap();
+        assert_eq!(asked.lock().unwrap().len(), 1);
+        assert_eq!(history.len(), 2);
+    }
+
+    #[tokio::test]
     async fn an_older_model_gets_no_more_tokens_than_it_can_write() {
         // Claude 3 Haiku writes at most 4096 tokens; asking it for 64000 is a 400 on every turn.
         let (provider, asked) = claude_api("claude-3-haiku-20240307", 4096).await;
@@ -690,6 +733,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
@@ -719,6 +763,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
@@ -774,6 +819,7 @@ mod tests {
                     ..Turn::default()
                 },
                 tools::Kit {
+                    specialist: false,
                     tools: &Vec::new(),
                     outside: &Default::default(),
                     frozen: Some("# Your memory\n\n- Works on Vults."),
@@ -820,6 +866,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
@@ -878,6 +925,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
@@ -908,6 +956,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &Vec::new(),
                 outside: &Default::default(),
                 frozen: None,
@@ -949,6 +998,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
@@ -1000,6 +1050,7 @@ mod tests {
             &mut history,
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &Default::default(),
                 frozen: None,
@@ -1039,6 +1090,7 @@ mod tests {
             &mut Vec::new(),
             &Turn::default(),
             tools::Kit {
+                specialist: false,
                 tools: &tools,
                 outside: &outside,
                 frozen: None,
