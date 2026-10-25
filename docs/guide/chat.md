@@ -388,3 +388,93 @@ search's titles and snippets do reach the model, marked untrusted. Pages are rea
 addresses. Each search and page is a request on your behalf with a daily cap
 ([Safety](../safety.md#every-request-vults-makes)), and the conversation then counts as having read
 from outside.
+
+## Agent profiles
+
+Open **Flock → Agent profiles** to create an agent, copy a template, or edit a custom agent.
+The animated bird, instructions and searchable pinned skills belong to the profile. Skills guide
+behavior; they never grant tools or permissions. Save records the content and execution defaults
+locally without starting a model. **Conversation defaults** changes a template's preferences without
+copying its instructions. Existing conversations keep their saved revision and model.
+
+Claude Code currently runs specialist conversations in the existing Chat tab, isolated from
+Zeca's memory and flock context. Claude model/effort defaults apply to new conversations. Choose
+an optional project from the folder control before sending; the project stays pinned after that.
+New conversations clear the previous project. Missing or invalid folders are rejected with the
+draft preserved. Project settings, MCP servers and companion tools are not enabled by this choice.
+
+API/local agents use the provider and model selected in their defaults (or that provider's saved
+model). They receive their pinned instructions, own messages and explicitly selected attachments,
+without terminal or project access. Configure cloud keys in Settings; local providers use the existing local endpoints.
+An API role never grants terminal access. GitHub requires the separate profile grant described below.
+Its provider, model and messages remain fixed when reopened, even after changing future defaults.
+Codex specialists use the installed CLI and existing ChatGPT subscription login, in an app-owned
+home per profile and signed-in account/workspace. Existing conversations reject a changed login;
+start a new conversation to use that login. Token renewal preserves the same identity.
+Only hashed ownership metadata is saved. User/project instructions, hooks, skills and external MCP are not inherited.
+Credentials are passed only in memory; the existing CLI owns token renewal. An isolated startup
+failure never falls back to another executor or an unqualified CLI path.
+Choose permissions directly in Chat; each profile's Ask, policies or full access is independent
+of Zeca. Copies and new agents start with Ask.
+
+Before the first message, click the specialist's executor control to open **Conversation setup**.
+Keep **Use agent defaults** checked, or clear it to choose Claude Code, Codex or a configured API/local
+provider, model and CLI effort for this conversation. **Apply to this conversation** preserves your
+message draft and leaves profile instructions, skills, permissions and defaults unchanged. A failed
+save keeps the previous choice active. API agents still have no terminal or project access;
+choose an empty folder before switching to an API provider.
+
+The specialist's paperclip opens a file chooser for that profile and conversation, including with
+Zeca off. Picking files never sends them automatically. They stay above the composer until removed
+or sent; a files-only message is allowed. A new conversation or source change discards a pending
+chooser result. Switching recipients cannot send the result to Zeca or another profile. Limits are
+16 attachments and 20 MB in total per message; missing copies, links and forged paths are rejected
+while keeping the editable draft. Inbox copies are private and existing originals are never replaced.
+
+The existing API file formats still apply: supported images/text, and PDFs on the Anthropic wire.
+Unsupported files or text larger than 512 KB are named rather than inlined. Saved API history keeps
+attachment names, never their bytes. Attached content is outside input; in CLI conversations,
+permission cards ask again before actions under full access. Files do not enable API tools, GitHub
+or project access. Specialist drag-and-drop is not added in this slice; use its paperclip.
+
+The unsent choice stays with that profile while the app runs and survives closing the Nest or
+switching recipients. After the first send, the saved executor/model/source stay fixed, including
+a failed first model turn. **New** clears the override and uses the agent defaults again. This does
+not start a model request. Unsent choices, like unsent drafts, are not saved across app restarts.
+
+**Archive agent** preserves its revisions and conversations. Find it under **Archived**, then
+**View conversations** to read history or **Restore agent** to resume sending. Archiving blocks new
+turns and resets, while a turn already admitted can finish. Stop and pending approval cards remain
+usable. Restoring preserves the agent's defaults and its separately selected permissions.
+
+History actions are scoped to their recipient: Zeca cannot rename or delete a specialist's
+conversation, or another specialist's history. Rename and Delete retain the current draft and
+attachments if saving fails, with the error shown for retry. Deleting the current conversation
+clears its draft, attachments, project and model override only after the deletion succeeds.
+Archived agents' conversations can still be deleted without restoring the agent or starting a turn.
+
+New and opening history save the current draft before switching. While the switch is pending,
+conversation controls wait for it to finish. If saving or switching fails, the draft and attachments
+stay in place for retry. A delayed request cannot replace a conversation selected more recently in
+another window, change its profile identity or close a running turn's approval cards.
+
+### GitHub for Developer and Reviewer
+
+In **Flock → Agent profiles**, select **Developer** or **Reviewer**, enter one exact repository as
+`owner/name`, then click **Enable GitHub**. The GitHub connector must already be enabled and have
+request budget available. The saved grant shows its account and host before you start a turn.
+Each profile is independent, starts disabled and works with Zeca off. Copies inherit no grant.
+
+The selected executor can use the existing bounded GitHub reads and approved issue, pull request,
+review, Actions and merge tools for that repository. Supported cloud API executors run these tools in Vults; local providers retain messaging only.
+Claude and Codex use a private per-turn relay. No global snapshot, account search, repository search,
+flock or memory tool joins the specialist. Reads count against the connector's request budget,
+including account-binding checks, and bring outside content into the conversation. Every write
+still shows its exact human approval card; full access never bypasses that card or a policy deny.
+
+Click **Disable GitHub** to revoke the grant, including a pending proposal's authority. Disable it
+before changing the repository. Re-enabling creates a new version and never revives an earlier
+pending write. Account/host changes require reviewing and enabling the grant again. The Chat notice
+shows the expected repository/account/host. A write already sent may still complete: inspect its
+Activity/audit result before retrying. These controls cover Vults connector tools; a shell command
+that you separately approve keeps its own command permission.

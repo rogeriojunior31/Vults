@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::{Signature, SigningKey};
+use p256::elliptic_curve::Generate;
 use vults_core::audit::Actor;
 use vults_core::ledger::Binding;
 use vults_core::{
@@ -108,7 +109,7 @@ fn session() -> SessionKey {
 }
 
 fn sec1(k: &SigningKey) -> Vec<u8> {
-    k.verifying_key().to_encoded_point(false).as_bytes().to_vec()
+    k.verifying_key().to_sec1_point(false).as_bytes().to_vec()
 }
 
 /// A desktop and a phone paired through the QR, as the user would.
@@ -117,8 +118,8 @@ fn paired() -> (Desk, Phone) {
     let desktop = SealKey::generate();
     let mut invite = Invite::new(&desktop, "https://relay.example", start);
     let seal = SealKey::generate();
-    let sign = SigningKey::random(&mut rand_core::OsRng);
-    let bio = SigningKey::random(&mut rand_core::OsRng);
+    let sign = SigningKey::generate();
+    let bio = SigningKey::generate();
     let scanned = scan(&invite.qr()).unwrap();
     let (request, id) = scanned
         .request(&seal, "Pixel", &sec1(&sign), &sec1(&bio))
@@ -256,7 +257,7 @@ fn an_approval_without_biometrics_is_refused() {
     let lie = phone.send("r1", b, 1, Act::Allow, Key::Bio, &phone.sign);
     assert_eq!(desk.hear(&lie, 1.0), Err(Error::BadSignature));
     // Signed by a key that is not the device's at all.
-    let stranger = SigningKey::random(&mut rand_core::OsRng);
+    let stranger = SigningKey::generate();
     let forged = phone.send("r1", b, 1, Act::Allow, Key::Bio, &stranger);
     assert_eq!(desk.hear(&forged, 1.0), Err(Error::BadSignature));
     assert!(desk.waiting("r1"));

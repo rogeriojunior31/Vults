@@ -4,6 +4,8 @@ import { t } from "../../i18n";
 
 export interface SpecialistChatBackend {
   current: typeof Bridge.specialistChatCurrent;
+  choice?: typeof Bridge.specialistChatChoiceSet;
+  pickFiles?: typeof Bridge.specialistChatPickFiles;
   conversations: typeof Bridge.specialistChatConversations;
   send: typeof Bridge.specialistChatSend;
   open: typeof Bridge.specialistChatOpen;
@@ -19,6 +21,7 @@ export interface SpecialistChatBackend {
 export function specialistBackend(api: SpecialistChatBackend, profile: AgentProfile, identity: NonNullable<ChatPanelOptions["specialist"]>): ChatBackend {
   let reading: ReturnType<SpecialistChatBackend["current"]> | null = null;
   const identify = (snapshot: Awaited<ReturnType<SpecialistChatBackend["current"]>>) => {
+    identity.choice = snapshot.choice ?? null;
     identity.name = snapshot.profileTitle;
     identity.revision = snapshot.profileRevision;
     identity.species = snapshot.profileSpecies;
@@ -31,21 +34,27 @@ export function specialistBackend(api: SpecialistChatBackend, profile: AgentProf
     return value;
   };
   return {
+    chooseFiles: api.pickFiles ? (title,expected) => api.pickFiles!(profile.id,generation(expected),title) : undefined,
+    setSpecialistChoice: api.choice ? async (choice,expected) => { return api.choice!(profile.id,choice,generation(expected)); } : undefined,
     current: () => read().then(snapshot => snapshot.conversation),
     draft: () => read().then(snapshot => ({ ...snapshot.draft, generation: snapshot.generation })),
     saveDraft: (draft: ChatDraft, expected) => api.saveDraft(profile.id, draft, generation(expected)),
     send: (text, files, folder, mentions, expected) => {
-      if (files.length || folder || mentions?.length) return Promise.reject(new Error(t("This chat uses the pinned profile in an isolated Claude Code session. It has no project or flock context and never uses Zeca's memory.")));
-      return api.send(profile.id, text, generation(expected));
+      if (mentions?.length) return Promise.reject("Specialist conversations do not accept voice commands or flock mentions.");
+      return api.send(profile.id, text, generation(expected), folder, files);
     },
     decide: (id, answer) => api.decide(profile.id, id, answer),
     stop: () => api.stop(profile.id),
-    reset: async () => { const result = await api.reset(profile.id); identify(result); return result; },
+    reset: (_provider, expected) => api.reset(profile.id, generation(expected)),
     models: async () => [], pick: async () => ({}), setPick: async () => {},
     conversations: () => api.conversations(profile.id),
-    open: id => api.open(profile.id, id),
+    open: (id, expected) => api.open(profile.id, id, generation(expected)),
     rename: (id, title) => api.rename(profile.id, id, title),
-    remove: id => api.remove(profile.id, id),
+    remove: async id => {
+      const result = await api.remove(profile.id, id);
+      if (result.reset) return { ...result.reset, current: result.current };
+      return result.current;
+    },
     keyboard: () => {},
   };
 }

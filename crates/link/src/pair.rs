@@ -260,9 +260,10 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
     use p256::ecdsa::SigningKey;
+    use p256::elliptic_curve::Generate;
 
     fn sec1(k: &SigningKey) -> Vec<u8> {
-        k.verifying_key().to_encoded_point(false).as_bytes().to_vec()
+        k.verifying_key().to_sec1_point(false).as_bytes().to_vec()
     }
 
     struct Phone {
@@ -274,8 +275,8 @@ mod tests {
     fn phone() -> Phone {
         Phone {
             seal: SealKey::generate(),
-            sign: sec1(&SigningKey::random(&mut rand_core::OsRng)),
-            bio: sec1(&SigningKey::random(&mut rand_core::OsRng)),
+            sign: sec1(&SigningKey::generate()),
+            bio: sec1(&SigningKey::generate()),
         }
     }
 
@@ -310,8 +311,8 @@ mod tests {
         let desktop = SealKey::generate();
         let mut invite = Invite::new(&desktop, "https://relay.example", now);
         let p = phone();
-        let k = SigningKey::random(&mut rand_core::OsRng);
-        let short = k.verifying_key().to_encoded_point(true).as_bytes().to_vec();
+        let k = SigningKey::generate();
+        let short = k.verifying_key().to_sec1_point(true).as_bytes().to_vec();
         let (req, id) = scan(&invite.qr())
             .unwrap()
             .request(&p.seal, "x", &short, &p.bio)
@@ -361,8 +362,8 @@ mod tests {
         let (same, _) = scanned.request(&p.seal, "x", &p.sign, &p.sign).unwrap();
         assert_eq!(invite.accept(&desktop, &same, now), Err(Error::BadKey));
         // The same key twice, once compressed and once not.
-        let k = SigningKey::random(&mut rand_core::OsRng);
-        let short = k.verifying_key().to_encoded_point(true).as_bytes().to_vec();
+        let k = SigningKey::generate();
+        let short = k.verifying_key().to_sec1_point(true).as_bytes().to_vec();
         let (twice, _) = scanned.request(&p.seal, "x", &short, &sec1(&k)).unwrap();
         assert_eq!(invite.accept(&desktop, &twice, now), Err(Error::BadKey));
         // Off the curve: the phone cannot even build its request.

@@ -1,12 +1,12 @@
 //! Human-approved Actions controls reserve a durable receipt before GitHub sees the POST.
 
+use super::GithubSource;
 use super::{GithubToolGate, Source, failed, github_result};
 use serde_json::{Value, json};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-use tauri::AppHandle;
 use vults_agents::driver::BoxFuture;
 use vults_chat::tools::{Tool, ToolApproval, Tools};
 use vults_connectors::github::ActionsControl;
@@ -51,6 +51,7 @@ fn control_key(action: &ActionsControl, preview: &Value) -> Result<String, Strin
     ))
 }
 fn record(
+    subject: &str,
     action: &ActionsControl,
     preview: &Value,
     hash: &str,
@@ -58,9 +59,10 @@ fn record(
     outcome: &str,
     receipt: bool,
 ) -> Audit {
-    Audit::new(Actor::System,Act::ExternalWrite,"zeca",action.repository(),action.tool_name(),&json!({"controlKey":key,"receipt":receipt,"outcome":outcome,"account":preview["source"]["account"],"host":preview["source"]["host"],"runId":action.run_id(),"attempt":action.attempt(),"headSha":action.head_sha(),"requestHash":hash,"scope":preview["scope"]["kind"],"jobId":if let ActionsControl::RerunJob{job_id,..}=action{Some(*job_id)}else{None},"accountId":preview["binding"]["identity"]["id"],"repositoryId":preview["binding"]["repositoryId"]}).to_string())
+    Audit::new(Actor::System,Act::ExternalWrite,subject,action.repository(),action.tool_name(),&json!({"controlKey":key,"receipt":receipt,"outcome":outcome,"account":preview["source"]["account"],"host":preview["source"]["host"],"runId":action.run_id(),"attempt":action.attempt(),"headSha":action.head_sha(),"requestHash":hash,"scope":preview["scope"]["kind"],"jobId":if let ActionsControl::RerunJob{job_id,..}=action{Some(*job_id)}else{None},"accountId":preview["binding"]["identity"]["id"],"repositoryId":preview["binding"]["repositoryId"]}).to_string())
 }
 struct Receipt<'a> {
+    subject: String,
     action: &'a ActionsControl,
     preview: &'a Value,
     hash: &'a str,
@@ -71,6 +73,7 @@ struct Receipt<'a> {
 impl Drop for Receipt<'_> {
     fn drop(&mut self) {
         crate::audit::keep(record(
+            &self.subject,
             self.action,
             self.preview,
             self.hash,
@@ -81,7 +84,10 @@ impl Drop for Receipt<'_> {
     }
 }
 
-pub(super) fn prepare(app: AppHandle, action: ActionsControl) -> BoxFuture<'static, Result<Value, String>> {
+pub(super) fn prepare(
+    app: GithubSource,
+    action: ActionsControl,
+) -> BoxFuture<'static, Result<Value, String>> {
     Box::pin(async move {
         if !app.github_work_item_allowed() {
             return Err("Turn on GitHub tools for Zeca and the GitHub connector first.".into());
@@ -109,7 +115,7 @@ pub(super) fn prepare(app: AppHandle, action: ActionsControl) -> BoxFuture<'stat
 }
 
 pub(super) fn execute(
-    app: AppHandle,
+    app: GithubSource,
     action: ActionsControl,
     preview: Value,
     hash: String,
@@ -118,6 +124,7 @@ pub(super) fn execute(
         let key = control_key(&action, &preview)?;
         let reserved = Arc::new(AtomicBool::new(false));
         let mut receipt = Receipt {
+            subject: app.subject().into(),
             action: &action,
             preview: &preview,
             hash: &hash,
@@ -129,7 +136,7 @@ pub(super) fn execute(
             receipt.outcome = "not_sent".into();
             return Err("Turn on GitHub tools for Zeca and the GitHub connector first.".into());
         }
-        let reservation = record(&action, &preview, &hash, &key, "reserved", true);
+        let reservation = record(app.subject(), &action, &preview, &hash, &key, "reserved", true);
         let gate = GithubToolGate::new(app);
         let result=vults_connectors::github::execute_actions_control(&gate,&action,&preview,&hash,move||async move{
             let won=tauri::async_runtime::spawn_blocking(move||{
@@ -331,7 +338,15 @@ mod tests {
         let mut job = input();
         job["jobId"] = json!(55);
         let action = parse("github_actions_rerun_job", &job).unwrap();
-        let audit = record(&action, &preview, &action.request_hash(), "key", "reserved", true);
+        let audit = record(
+            "zeca",
+            &action,
+            &preview,
+            &action.request_hash(),
+            "key",
+            "reserved",
+            true,
+        );
         let value: Value = serde_json::from_str(&audit.target).unwrap();
         assert_eq!(value["jobId"], 55);
         assert_eq!(value["repositoryId"], 20);

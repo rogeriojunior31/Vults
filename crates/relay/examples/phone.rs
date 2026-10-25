@@ -14,6 +14,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::{Signature, SigningKey};
+use p256::elliptic_curve::Generate;
 use vults_link::SealKey;
 use vults_link::answer::{Act, Key, Unsigned};
 use vults_link::card::{Card, ToPhone};
@@ -29,9 +30,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let scanned = scan(&qr).map_err(|e| format!("not a Vults QR: {e}"))?;
     let seal = SealKey::generate();
-    let sign = SigningKey::random(&mut rand_core::OsRng);
-    let bio = SigningKey::random(&mut rand_core::OsRng);
-    let public = |k: &SigningKey| k.verifying_key().to_encoded_point(false).as_bytes().to_vec();
+    let sign = SigningKey::generate();
+    let bio = SigningKey::generate();
+    let public = |k: &SigningKey| k.verifying_key().to_sec1_point(false).as_bytes().to_vec();
     let (request, id) = scanned.request(&seal, &name, &public(&sign), &public(&bio))?;
     let client = Client::new(&scanned.relay, Arc::new(Open))?;
     rt.block_on(client.send(&scanned.pair_box(), &request))?;

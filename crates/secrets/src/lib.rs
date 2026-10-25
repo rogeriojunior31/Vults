@@ -71,6 +71,23 @@ pub fn has(secret: Secret) -> bool {
     matches!(get(secret), Ok(Some(_)))
 }
 
+/// Read an existing Codex CLI login without migrating, copying or writing its credential.
+pub fn codex_login(account: &str) -> Result<Option<String>, String> {
+    if account.len() != 20
+        || !account.starts_with("cli|")
+        || !account[4..].bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        return Err("Invalid Codex credential identity.".into());
+    }
+    let entry =
+        keyring::Entry::new("Codex Auth", account).map_err(|_| "Could not read the Codex CLI login.")?;
+    match entry.get_password() {
+        Ok(value) => Ok(Some(value)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(_) => Err("Could not read the Codex CLI login.".into()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -31,14 +31,14 @@ const nest = createNest(
       send: (text, files, folder, mentions, generation) => Bridge.chatSend(text, files, folder, mentions, generation),
       decide: (id, answer) => void Bridge.chatDecide(id, answer),
       stop: () => void Bridge.chatStop(),
-      reset: (provider) => Bridge.chatReset(provider),
+      reset: (provider, generation) => Bridge.chatReset(provider, generation),
       keyboard: () => {},
       models: (provider) => Bridge.chatModels(provider),
       pick: (folder) => Bridge.chatPick(folder),
       setPick: (folder, provider, pick) =>
         Bridge.setChatPick(folder, provider, pick),
       conversations: () => Bridge.chatConversations(),
-      open: (id) => Bridge.chatOpen(id),
+      open: (id, generation) => Bridge.chatOpen(id, generation),
       rename: (id, title) => Bridge.chatRename(id, title),
       remove: (id) => Bridge.chatDelete(id),
       memory: (text, folder, generation) => Bridge.memoryCommand(text, folder, generation),
@@ -105,9 +105,13 @@ const nest = createNest(
     },
     profiles: Bridge.agentProfiles,
     profileSave: Bridge.agentProfileSave,
+    profileState: Bridge.agentProfileStateSet,
     profileAccess: Bridge.setSpecialistChatAccess,
+    profileGithub: Bridge.setSpecialistGithub,
     profileChat: {
       current: Bridge.specialistChatCurrent,
+      choice: Bridge.specialistChatChoiceSet,
+      pickFiles: Bridge.specialistChatPickFiles,
       saveDraft: Bridge.specialistChatDraftSet,
       rename: Bridge.specialistChatRename,
       remove: Bridge.specialistChatDelete,
@@ -201,7 +205,7 @@ void restoreNavigation(Bridge.onNestTab, Bridge.nestTabReady, tab => {
   navigationReady = true;
   ++navigationRevision;
   asked = tab;
-  nest.open(tab);
+  nest.open(import.meta.env.DEV && import.meta.env.VITE_AGENTS_PREVIEW === "1" ? "flock-profiles" : tab);
 }, () => navigationRevision, asked);
 Bridge.onMemory(() => nest.memoryChanged());
 Bridge.onDictationHistory(erased => nest.dictationChanged(erased));
@@ -212,6 +216,7 @@ Bridge.onSpend(() => nest.spendChanged());
 let lastView: Parameters<typeof nest.view>[0] | null = null;
 const dictationContext = () => dictation.context(lastView ?? { sessions: [], approval: null }, nest.chat.hasWaitingApproval());
 Bridge.onChat((d) => { nest.chat.receive(d); dictationContext(); });
+Bridge.onAgentProfileState(({ profile, state }) => nest.profileStateChanged(profile, state));
 Bridge.onSpecialistChat(({ profile, delta }) => nest.receiveSpecialistChat(profile, delta));
 Bridge.onSpecialistChatSync(({ profile, sync }) => nest.syncSpecialistChat(profile, sync));
 // Allow and Deny's keys come here while the user is in the Nest (ADR 0021).

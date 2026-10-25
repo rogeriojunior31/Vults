@@ -153,7 +153,7 @@ pub enum Role {
     Chat,
     /// A continued session: none of Zeca's persona; `system_append` is its whole brief.
     Worker,
-    /// An isolated specialist: only its pinned brief, with no companion context or MCP tools.
+    /// An isolated specialist: only its pinned brief and host-scoped tools, without companion context.
     Specialist,
 }
 
@@ -161,6 +161,8 @@ pub enum Role {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Spec {
     pub dir: PathBuf,
+    /// App-owned persistent runtime state, separate from the user's CLI home.
+    pub state_dir: Option<PathBuf>,
     /// More folders it may read and write besides `dir`.
     pub add_dirs: Vec<PathBuf>,
     /// None: the CLI's own default.
@@ -170,7 +172,7 @@ pub struct Spec {
     /// Added to the process's environment (Z1: `VULTS_ZECA=1`, so the hook knows the chat).
     pub env: Vec<(String, String)>,
     /// An MCP config file for this process alone (M7); never a write to the agent's config.
-    /// Claude Code only, today: Codex takes its MCP servers from its own config.
+    /// Both specialist CLIs accept the host relay; companion Codex keeps its own MCP setup.
     pub mcp_config: Option<PathBuf>,
     /// Appended to the system prompt after the persona (M2's frozen context).
     pub system_append: Option<String>,
@@ -270,6 +272,10 @@ pub trait Interrupter: Send + Sync {
 /// An agent the app runs. A driver keeps what lets the next turn go on (a session id, a live
 /// process); `send` is one turn, ended when it resolves.
 pub trait AgentDriver: Send + std::fmt::Debug {
+    /// A per-turn MCP service owned by the host, never an agent configuration edit.
+    fn set_tool_service(&mut self, _config: Option<PathBuf>) -> Result<(), String> {
+        Err("This agent cannot use a host tool service.".into())
+    }
     fn spec(&self) -> &Spec;
     /// A handle that can stop this driver's turns while `send` holds the driver.
     fn interrupter(&self) -> Arc<dyn Interrupter>;

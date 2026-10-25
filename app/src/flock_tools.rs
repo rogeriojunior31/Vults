@@ -111,13 +111,137 @@ pub struct GithubCursors {
     pub thread: Option<String>,
 }
 
+#[derive(Clone)]
+pub(super) struct GithubSource {
+    pub(super) app: AppHandle,
+    pub(super) grant: Option<(String, crate::specialist_github::Grant)>,
+}
+impl std::ops::Deref for GithubSource {
+    type Target = AppHandle;
+    fn deref(&self) -> &AppHandle {
+        &self.app
+    }
+}
+impl GithubSource {
+    pub(super) fn companion(app: AppHandle) -> Self {
+        Self { app, grant: None }
+    }
+    pub(crate) fn specialist(
+        app: AppHandle,
+        profile: String,
+        grant: crate::specialist_github::Grant,
+    ) -> Self {
+        Self {
+            app,
+            grant: Some((profile, grant)),
+        }
+    }
+    fn audience_allowed(&self, settings: &crate::settings::Settings) -> bool {
+        match &self.grant {
+            None => settings.zeca && settings.zeca_github_work_item,
+            Some((profile, expected)) => crate::specialist_github::grant_active(settings, profile, expected),
+        }
+    }
+    pub(super) fn subject(&self) -> &str {
+        self.grant.as_ref().map_or("zeca", |(profile, _)| profile)
+    }
+}
+impl Source for AppHandle {
+    fn view(&self) -> Option<Value> {
+        GithubSource::companion(self.clone()).view()
+    }
+    fn usage(&self) -> Value {
+        GithubSource::companion(self.clone()).usage()
+    }
+    fn github_snapshot_allowed(&self) -> bool {
+        GithubSource::companion(self.clone()).github_snapshot_allowed()
+    }
+    fn github_work_item_allowed(&self) -> bool {
+        GithubSource::companion(self.clone()).github_work_item_allowed()
+    }
+    fn github_work_item(
+        &self,
+        _repository: String,
+        _number: u32,
+        _cursors: GithubCursors,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_work_item(_repository, _number, _cursors)
+    }
+    fn github_search_repositories(
+        &self,
+        _query: String,
+        _cursor: Option<String>,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_search_repositories(_query, _cursor)
+    }
+    fn github_read(&self, _operation: String, _input: Value) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_read(_operation, _input)
+    }
+    fn github_merge_prepare(
+        &self,
+        _action: vults_connectors::github::MergeControl,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_merge_prepare(_action)
+    }
+    fn github_merge_execute(
+        &self,
+        _action: vults_connectors::github::MergeControl,
+        _preview: Value,
+        _hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_merge_execute(_action, _preview, _hash)
+    }
+    fn github_actions_prepare(
+        &self,
+        _action: vults_connectors::github::ActionsControl,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_actions_prepare(_action)
+    }
+    fn github_actions_execute(
+        &self,
+        _action: vults_connectors::github::ActionsControl,
+        _preview: Value,
+        _hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_actions_execute(_action, _preview, _hash)
+    }
+    fn github_pull_request_prepare(
+        &self,
+        _action: vults_connectors::github::PullRequestWrite,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_pull_request_prepare(_action)
+    }
+    fn github_pull_request_execute(
+        &self,
+        _action: vults_connectors::github::PullRequestWrite,
+        _preview: Value,
+        _hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_pull_request_execute(_action, _preview, _hash)
+    }
+    fn github_issue_write_prepare(
+        &self,
+        _action: vults_connectors::github::IssueWrite,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_issue_write_prepare(_action)
+    }
+    fn github_issue_write_execute(
+        &self,
+        _action: vults_connectors::github::IssueWrite,
+        _preview: Value,
+        _request_hash: String,
+    ) -> BoxFuture<'static, Result<Value, String>> {
+        GithubSource::companion(self.clone()).github_issue_write_execute(_action, _preview, _request_hash)
+    }
+}
+
 struct GithubToolGate {
-    app: AppHandle,
+    app: GithubSource,
     gate: std::sync::Arc<crate::gate::NetGate>,
 }
 
 impl GithubToolGate {
-    fn new(app: AppHandle) -> Self {
+    fn new(app: GithubSource) -> Self {
         Self {
             gate: crate::gate::shared(&app),
             app,
@@ -167,7 +291,12 @@ fn issue_write_tool_name(action: &vults_connectors::github::IssueWrite) -> &'sta
     }
 }
 
-fn audit_issue_write(action: &vults_connectors::github::IssueWrite, hash: &str, outcome: &str) {
+fn audit_issue_write(
+    subject: &str,
+    action: &vults_connectors::github::IssueWrite,
+    hash: &str,
+    outcome: &str,
+) {
     let repository = issue_write_repository(action);
     let number = match action {
         vults_connectors::github::IssueWrite::Create { .. } => "new issue".to_owned(),
@@ -183,7 +312,7 @@ fn audit_issue_write(action: &vults_connectors::github::IssueWrite, hash: &str, 
     crate::audit::keep(Audit::new(
         Actor::System,
         Act::ExternalWrite,
-        "zeca",
+        subject,
         repository,
         issue_write_tool_name(action),
         &format!("{number} · sha256:{hash} · {outcome}"),
@@ -191,17 +320,18 @@ fn audit_issue_write(action: &vults_connectors::github::IssueWrite, hash: &str, 
 }
 
 struct IssueWriteAudit<'a> {
+    subject: String,
     action: &'a vults_connectors::github::IssueWrite,
     hash: &'a str,
     outcome: &'static str,
 }
 impl Drop for IssueWriteAudit<'_> {
     fn drop(&mut self) {
-        audit_issue_write(self.action, self.hash, self.outcome);
+        audit_issue_write(&self.subject, self.action, self.hash, self.outcome);
     }
 }
 
-impl Source for AppHandle {
+impl Source for GithubSource {
     fn github_snapshot_allowed(&self) -> bool {
         self.state::<crate::settings::SettingsState>()
             .0
@@ -213,9 +343,7 @@ impl Source for AppHandle {
         self.state::<crate::settings::SettingsState>()
             .0
             .lock()
-            .is_ok_and(|s| {
-                s.zeca && s.zeca_github_work_item && s.connectors.get("github").copied().unwrap_or(false)
-            })
+            .is_ok_and(|s| self.audience_allowed(&s) && s.connectors.get("github").copied().unwrap_or(false))
     }
     fn github_work_item(
         &self,
@@ -434,11 +562,12 @@ impl Source for AppHandle {
         let app = self.clone();
         Box::pin(async move {
             if !app.github_work_item_allowed() {
-                audit_issue_write(&action, &request_hash, "denied");
+                audit_issue_write(app.subject(), &action, &request_hash, "denied");
                 return Err("Turn on GitHub tools for Zeca and the GitHub connector first.".into());
             }
             let gate = GithubToolGate::new(app.clone());
             let mut audit = IssueWriteAudit {
+                subject: app.subject().into(),
                 action: &action,
                 hash: &request_hash,
                 outcome: "cancelled_or_uncertain",
@@ -462,7 +591,7 @@ impl Source for AppHandle {
     }
 
     fn usage(&self) -> Value {
-        serde_json::to_value(crate::usage::usage(self.clone())).unwrap_or_default()
+        serde_json::to_value(crate::usage::usage(self.app.clone())).unwrap_or_default()
     }
 }
 

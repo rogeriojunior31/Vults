@@ -3,7 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { applyActivity, emptyActivity, readActivity } from "./chat-activity";
-import type { ChatActivity, ChatActivityEvent } from "../bridge";
+import type { AgentGithubGrant, SpecialistFiles, AgentDefaults, AgentProfileState, AgentProvider, ChatActivity, ChatActivityEvent } from "../bridge";
 import { Clock } from "../clock";
 import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
 import { NAME_BY_KIND } from "../agents";
@@ -38,7 +38,10 @@ const GITHUB_CONTROL_EFFECT: Record<string, string> = {
   "github_pull_request_review_request_changes": tk("Publish this request for changes and its inline comments on the exact commit shown below."),
 };
 
+type ChatReset = { provider: ChatProvider; generation: number } & Pick<OpenedConversation, "profileTitle" | "profileRevision" | "profileSpecies" | "profileLook">;
+
 export interface ChatBackend {
+  setSpecialistChoice?: (choice: AgentDefaults | null, generation?: number) => Promise<{generation:number;choice?:AgentDefaults|null}>;
   draft?: () => Promise<ChatDraft>;
   prepareZeca?: (generation?: number) => Promise<void>;
   current?: () => Promise<OpenedConversation | null>;
@@ -47,7 +50,7 @@ export interface ChatBackend {
   decide(id: string, answer: ChatAnswer): void | Promise<void>;
   /** Stops the turn running now. */
   stop(): void | Promise<void>;
-  reset(provider: ChatProvider | null): Promise<ChatProvider | { provider: ChatProvider; generation: number }>;
+  reset(provider: ChatProvider | null, generation?: number): Promise<ChatProvider | ChatReset>;
   /** The models the provider's CLI offers. */
   models(provider: ChatProvider): Promise<ModelChoice[]>;
   /** The model and effort a new conversation in `folder` (null: the chat's own) starts with, by engine. */
@@ -56,10 +59,10 @@ export interface ChatBackend {
   /** The saved conversations, the latest used first. */
   conversations(): Promise<ConversationView[]>;
   /** Goes on with a saved conversation. */
-  open(id: number): Promise<OpenedConversation>;
+  open(id: number, generation?: number): Promise<OpenedConversation>;
   rename(id: number, title: string): Promise<void>;
   /** Deletes one; true when the chat was in it (and now starts a new one). */
-  remove(id: number): Promise<boolean>;
+  remove(id: number): Promise<boolean | (ChatReset & { current: boolean })>;
   keyboard(on: boolean, exclusive?: boolean): void;
   /** Speech to text; absent while no engine is set up, and then there is no mic button. */
   voice?: VoiceBackend;
@@ -70,6 +73,7 @@ export interface ChatBackend {
   /** The paperclip: the system's file chooser, titled in the user's language; what it picks comes
    *  back as a drop does. */
   pickFiles?: (title: string) => void;
+  chooseFiles?: (title: string, generation?: number) => Promise<SpecialistFiles>;
   /** `/remember` and `/forget` (M6): what the memory says back, or null for any other text. */
   memory?: (text: string, folder: string | null, generation?: number) => Promise<MemorySaid | null>;
   /** `/continue` (W7): words for a stopped session in the folder, or null for any other text. */
@@ -113,7 +117,28 @@ const MEMORY_SAID = new Set([
 ]);
 
 const REFERENCE_ERRORS = new Set([
+  tk("This Codex conversation belongs to another login or its local runtime is missing. Start a new conversation."),
+  tk("Sign in to Codex with ChatGPT in your terminal, then try again."),
+  tk("Could not use the Codex subscription in the isolated runtime. Sign in again in your terminal."),
+  tk("The managed Codex runtime contains external configuration."),
+
+  tk("That conversation is gone."),
+  tk("That conversation belongs to another profile."),
   tk("Chat is busy."),
+  tk("Attach at most 16 files and 20 MB in total."),
+  tk("An attachment is unavailable. Remove it and choose the file again."),
+  tk("Only files selected through Vults can be attached. Choose the file again."),
+  tk("Choose each attachment only once."),
+  tk("A file chooser is already open."),
+  tk("Could not choose files. Your draft stays here."),
+  tk("This agent is archived. Restore it before sending a new message."),
+  tk("The selected executor is saved but is not available for new specialist conversations yet."),
+  tk("The saved effort is not supported by this model."),
+  tk("API specialists cannot access projects. Start a new conversation to clear the project."),
+  tk("That project is unavailable."),
+  tk("The conversation project changed. Start a new conversation to choose another project."),
+  tk("Choose a model in this agent's conversation defaults."),
+  tk("Specialist conversations do not accept voice commands or flock mentions."),
   tk("This action belongs to Zeca's conversation. Open Zeca before trying again."),
   tk("The conversation changed before sending. Review your draft and try again."),
   tk("Chat references are invalid or too large."),
@@ -133,7 +158,7 @@ export interface MemorySaid {
 export interface ChatPanelOptions {
   /** The window's label, to tell its own actions from the other window's. */
   window: "island" | "nest";
-  specialist?: { name: string; builtIn?: boolean; revision: number; latestRevision?: number; species: string; look: string };
+  specialist?: { github?: AgentGithubGrant; name: string; builtIn?: boolean; revision: number; latestRevision?: number; state?: AgentProfileState; choice?: AgentDefaults | null; providers?: AgentProvider[]; species: string; look: string };
   /** How a reply is drawn: the island's light Markdown, or the Nest's full one. */
   render?: (text: string) => DocumentFragment;
 }
@@ -373,6 +398,12 @@ export class ChatPanel {
   private saved: ConversationView[] = [];
   private renaming: number | null = null;
   private deleting: number | null = null;
+  private historyPending: symbol | null = null;
+  private navigating = false;
+  private historyError = "";
+  private historyReadError = "";
+  private historyRead = 0;
+  private renameDraft: string | null = null;
   private menuOpen = false;
   private keys: Record<string, string> = {};
   private readonly recipient = el("span", { class: "chat-recipient" });
@@ -392,6 +423,11 @@ export class ChatPanel {
   private selectionLabel = "";
   private readonly modelMenu = el("div", { class: "menu model-menu" });
   private modelOpen = false;
+  private specialistChoiceSaving = false;
+  private specialistChoiceRequest = 0;
+  private specialistChoiceError = "";
+  private specialistUseDefaults = true;
+  private specialistChoiceDraft: AgentDefaults | null = null;
   /** The human chooses access here; authority changes only after persistence. */
   private access: ChatAccess = "ask";
   private accessSaving = false;
@@ -508,7 +544,7 @@ export class ChatPanel {
     this.input.addEventListener("click", () => this.findMentions());
     this.input.addEventListener("keyup", (e) => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) this.findMentions(); });
     this.place.addEventListener("click", () => {
-      if (this.started || this.provider === "api") return;
+      if (this.navigating || this.started || this.provider === "api") return;
       this.menuOpen = !this.menuOpen;
       this.modelOpen = this.accessOpen = this.historyOpen = false;
       this.paintHead();
@@ -516,7 +552,7 @@ export class ChatPanel {
     });
     this.historyButton.append(icon("list", 14, 2));
     this.historyButton.addEventListener("click", () => {
-      if (this.busy) return;
+      if (this.busy || this.navigating || this.historyPending || this.specialistChoiceSaving) return;
       this.historyOpen = !this.historyOpen;
       this.menuOpen = this.modelOpen = this.accessOpen = false;
       this.renaming = this.deleting = null;
@@ -532,6 +568,17 @@ export class ChatPanel {
       this.changed();
     });
     this.modelButton.addEventListener("click", () => {
+      if (this.opts.specialist) {
+        if (this.started || this.navigating || this.historyPending || this.specialistChoiceSaving) return;
+        this.modelOpen = !this.modelOpen;
+        if (this.modelOpen) {
+          this.specialistChoiceDraft = structuredClone(this.specialistDefaults());
+          this.specialistUseDefaults = !this.opts.specialist.choice;
+          this.specialistChoiceError = "";
+          this.menuOpen = this.accessOpen = this.historyOpen = false;
+        }
+        this.paintHead(); this.changed(); return;
+      }
       // It is the engine's pill too, in both windows: the engine can change whatever was said.
       this.modelOpen = !this.modelOpen;
       this.menuOpen = this.accessOpen = this.historyOpen = false;
@@ -650,7 +697,7 @@ export class ChatPanel {
       el("div", { class: "composer" },
         this.mentionMenu,
         this.chips,
-        el("div", { class: "composer-row" }, this.opts.specialist ? null : this.attachButton(), this.input, this.wave,
+        el("div", { class: "composer-row" }, this.opts.specialist && !this.backend.chooseFiles ? null : this.attachButton(), this.input, this.wave,
           el("div", { class: "composer-tools" }, this.mic, this.send)),
       ),
       compact ? null : this.composerHint,
@@ -699,8 +746,35 @@ export class ChatPanel {
     return profile ? profile.builtIn ? t(profile.name) : profile.name : "Zeca";
   }
 
+  setProfileGithub(github: AgentGithubGrant | undefined): void {
+    if (this.opts.specialist) { this.opts.specialist.github=github; this.paintHead(); }
+  }
+
   setProfileRevision(revision: number): void {
     if (this.opts.specialist) { this.opts.specialist.latestRevision = revision; this.paintHead(); }
+  }
+
+  setProfileState(state: AgentProfileState | undefined): void {
+    const profile = this.opts.specialist;
+    if (!profile || (state && state.version < (profile.state?.version ?? 0))) return;
+    profile.state = state;
+    if(state?.archived)this.modelOpen=false;
+    this.paintHead(); this.paintSend();
+  }
+
+  private specialistDefaults(): AgentDefaults {
+    return this.opts.specialist?.choice ?? this.opts.specialist?.state?.defaults ?? {executor:"claude",model:null,effort:null};
+  }
+
+  private profileBlocked(): boolean {
+    if (!this.opts.specialist) return false;
+    const defaults=this.specialistDefaults();
+    return !!this.opts.specialist.state?.archived || this.specialistChoiceSaving || (!this.started && defaults.executor === "api" && !!this.folder);
+  }
+
+  private specialistEngineLabel(): string {
+    if (this.provider === "codex") return t("{engine} · isolated", { engine: "Codex" });
+    return this.provider === "api" ? t("{engine} · isolated", { engine: this.api.label }) : t("Claude Code · isolated");
   }
 
   specialistAppearance(): SpriteSet | null {
@@ -876,9 +950,14 @@ export class ChatPanel {
     const api = t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.");
     this.caption.textContent = this.offers?.caption ?? t("Ask anything, or drop a file on the island.");
     this.caption.hidden = !this.offers && (this.compact || this.provider === "api");
-    if (this.opts.specialist) { this.caption.textContent = t("This chat uses the pinned profile in an isolated Claude Code session. It has no project or flock context and never uses Zeca's memory."); this.caption.hidden = false; }
+    if (this.opts.specialist) {
+      this.caption.textContent = this.provider === "api"
+        ? t("This agent uses its own instructions, messages and selected files. GitHub is available only when enabled for this profile.")
+        : t("This agent uses its pinned instructions and the project you choose. It never uses Zeca memory or flock tools.");
+      this.caption.hidden = false;
+    }
     this.apiNotice.textContent = api;
-    this.apiNotice.hidden = this.provider !== "api";
+    this.apiNotice.hidden = this.provider !== "api" || !!this.opts.specialist;
     this.intro.hidden = this.compact && (this.messages.length > 0 || this.busy);
     const questions = this.compact || this.opts.specialist ? [] : this.offers?.suggestions ?? (this.provider === "api" ? [] : SUGGESTIONS.map(q => ({ id: q, text: t(q), session: null })));
     this.offerButtons(this.suggestions, questions.map(q => ({ id: q.id, text: q.text })), id => this.chooseSuggestion(id));
@@ -1100,7 +1179,7 @@ export class ChatPanel {
 
   /** A turn runs: no other conversation can be opened or started until it ends. */
   isBusy(): boolean {
-    return this.busy;
+    return this.busy || this.navigating || !!this.historyPending || this.specialistChoiceSaving;
   }
 
   /** The saved conversations, newest first (the Nest's *Recent*). */
@@ -1110,6 +1189,7 @@ export class ChatPanel {
 
   /** Goes on with a saved conversation (the Nest's *Recent*); never while a turn runs. */
   openConversation(id: number): void {
+    if (this.specialistChoiceSaving) return;
     void this.openSaved(id);
   }
 
@@ -1531,7 +1611,7 @@ export class ChatPanel {
     }
     const text = this.input.value.trim();
     // Typing ahead is fine while a reply streams; sending waits for it.
-    if (this.busy || (!text && !this.files.length)) return;
+    if (this.busy || this.navigating || this.historyPending || this.profileBlocked() || (!text && !this.files.length)) return;
     const files = this.files;
     const source = this.sourceVersion;
     const generation = this.generation;
@@ -1608,22 +1688,44 @@ export class ChatPanel {
 
   /** New, or another provider: the conversation so far stays saved, in the list. */
   private ask(what: ChatProvider | "new"): void {
-    if (this.busy) return;
-    const source = this.sourceVersion;
-    void this.restart(what === "new" ? null : what).catch(error => {
-      if (source === this.sourceVersion) { this.messages.push({ who: "note", text: String(error) }); this.paint(); }
-    });
+    if (this.busy || this.navigating || this.historyPending || this.specialistChoiceSaving || this.opts.specialist?.state?.archived) return;
+    void this.navigate({ provider: what === "new" ? null : what });
   }
 
-  private async restart(provider: ChatProvider | null): Promise<void> {
-    await this.flushDraft();
-    const reset = await this.backend.reset(provider);
-    if (typeof reset !== "string") this.generation = reset.generation;
-    this.cleared(typeof reset === "string" ? reset : reset.provider);
+  private async navigate(target: { id: number } | { provider: ChatProvider | null }): Promise<void> {
+    if (this.isBusy()) return;
+    this.navigating = true;
+    let source = this.sourceVersion;
+    this.paintHead(); this.paintSend(); this.changed();
+    try {
+      await this.restore();
+      if (source !== this.sourceVersion) return;
+      source = this.sourceVersion;
+      await this.flushDraft();
+      if (source !== this.sourceVersion) return;
+      if ("id" in target) {
+        const opened = await this.backend.open(target.id, this.generation);
+        if (source === this.sourceVersion) this.load(opened, true);
+      } else {
+        const reset = await this.backend.reset(target.provider, this.generation);
+        if (source !== this.sourceVersion) return;
+        if (typeof reset !== "string") { this.generation = reset.generation; this.identify(reset); }
+        this.cleared(typeof reset === "string" ? reset : reset.provider);
+      }
+    } catch (error) {
+      if (source === this.sourceVersion) {
+        this.messages.push({ who: "note", text: REFERENCE_ERRORS.has(String(error)) ? t(String(error)) : t("Could not switch conversations. Your draft stays here.") });
+        this.paint();
+      }
+    } finally {
+      this.navigating = false;
+      this.paintHead(); this.paintSend(); this.changed();
+    }
   }
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider, draft?: ChatDraft | null): void {
+    this.historyRead++; this.historyPending = null; this.historyError = this.historyReadError = ""; this.renaming = this.deleting = null; this.renameDraft = null;
     this.cancelVoice();
     this.clearReaction();
     this.searching = false;
@@ -1644,6 +1746,9 @@ export class ChatPanel {
     this.modelOpen = false;
     this.native = this.nativeSetting;
     this.picked = false;
+    if (this.opts.specialist) { this.folder = null; this.opts.specialist.choice = null; }
+    this.specialistChoiceRequest++;this.specialistChoiceSaving=false;
+    this.specialistChoiceDraft=null;this.specialistChoiceError="";
     if (draft) this.restoreDraft(draft);
     this.keepDraft();
     this.paint();
@@ -1935,7 +2040,7 @@ export class ChatPanel {
         ? [
             el("div", {
               class: "ask-outside",
-              text: t("This conversation read content from outside ({tool}). It may be steering this request: check it carefully.", { tool: m.outside }),
+              text: t("This conversation read content from outside ({tool}). It may be steering this request: check it carefully.", { tool: m.outside === "attachments" ? t("Attachments") : m.outside }),
             }),
           ]
         : []),
@@ -1986,10 +2091,15 @@ export class ChatPanel {
   }
 
   private async loadSaved(): Promise<void> {
+    const read = ++this.historyRead;
     try {
-      this.saved = await this.backend.conversations();
-    } catch {
-      this.saved = [];
+      const saved = await this.backend.conversations();
+      if (read !== this.historyRead) return;
+      this.saved = saved;
+      this.historyReadError = "";
+    } catch (error) {
+      if (read !== this.historyRead) return;
+      this.historyReadError = t("Could not load conversations. Try again.");
     }
     this.paintHead();
     this.changed();
@@ -1997,32 +2107,25 @@ export class ChatPanel {
 
   /** Goes on with a saved conversation, as it was. */
   private async openSaved(id: number): Promise<void> {
-    // Never while a turn runs: opening ends the conversation, and its waiting card with it.
-    if (this.busy) return;
-    let c: OpenedConversation;
-    try {
-      await this.flushDraft();
-      c = await this.backend.open(id);
-    } catch (e) {
-      this.historyOpen = false;
-      this.messages.push({ who: "note", text: String(e) });
-      this.paint();
-      this.changed();
-      return;
-    }
-    this.load(c, true);
+    await this.navigate({ id });
+  }
+
+  private identify(c: Pick<OpenedConversation, "profileTitle" | "profileRevision" | "profileSpecies" | "profileLook">): void {
+    const profile = this.opts.specialist;
+    if (!profile) return;
+    profile.name = c.profileTitle ?? profile.name;
+    profile.revision = c.profileRevision ?? profile.revision;
+    profile.species = c.profileSpecies ?? profile.species;
+    profile.look = c.profileLook ?? profile.look;
   }
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    this.historyRead++; this.historyPending = null; this.historyError = this.historyReadError = ""; this.renaming = this.deleting = null; this.renameDraft = null;
+    this.specialistChoiceRequest++;this.specialistChoiceSaving=false;
     if (clearDraft) this.cancelVoice();
     this.generation = c.generation;
-    if (this.opts.specialist) {
-      this.opts.specialist.name = c.profileTitle ?? this.opts.specialist.name;
-      this.opts.specialist.revision = c.profileRevision ?? this.opts.specialist.revision;
-      this.opts.specialist.species = c.profileSpecies ?? this.opts.specialist.species;
-      this.opts.specialist.look = c.profileLook ?? this.opts.specialist.look;
-    }
+    this.identify(c);
     if (!preserveLive) {
       this.clearReaction();
       this.searching = c.busy && !!c.tools;
@@ -2042,7 +2145,7 @@ export class ChatPanel {
     if (c.provider === "api") this.api = { ...this.api, label: c.label };
     this.folder = c.folder;
     this.picked = true;
-    this.started = c.started;
+    this.started = c.started || !!this.opts.specialist;
     // Its own model and effort, not the folder's pick for new conversations.
     this.picksFor = c.folder;
     this.picksSeq++;
@@ -2085,6 +2188,36 @@ export class ChatPanel {
     this.changed();
   }
 
+  private async writeHistory(id: number, title?: string): Promise<void> {
+    if (this.busy || this.navigating || this.historyPending) return;
+    const request = Symbol();
+    const source = this.sourceVersion;
+    this.historyPending = request; this.historyError = "";
+    this.paintHead(); this.changed();
+    try {
+      if (title !== undefined) await this.backend.rename(id, title);
+      else {
+        const result = await this.backend.remove(id);
+        if (source !== this.sourceVersion) return;
+        const current = typeof result === "boolean" ? result : result.current;
+        if (current) {
+          if (typeof result !== "boolean") { this.generation = result.generation; this.identify(result); }
+          this.folder = null;
+          this.cleared(typeof result === "boolean" ? this.provider : result.provider);
+        }
+      }
+      if (source === this.sourceVersion) {
+        this.renaming = this.deleting = null; this.renameDraft = null;
+      }
+      await this.loadSaved();
+    } catch (error) {
+      if (source === this.sourceVersion) this.historyError = REFERENCE_ERRORS.has(String(error)) ? t(String(error)) : t("Could not save this history change. Try again.");
+    } finally {
+      if (this.historyPending === request) this.historyPending = null;
+      this.paintHead(); this.changed();
+    }
+  }
+
   private paintHistory(): void {
     this.historyButton.classList.toggle("on", this.historyOpen);
     this.historyMenu.classList.toggle("on", this.historyOpen);
@@ -2096,23 +2229,21 @@ export class ChatPanel {
         input.className = "rename";
         input.setAttribute("aria-label", t("Rename"));
         input.dataset.choice = `rename:${c.id}`;
-        input.value = c.title;
+        input.value = this.renameDraft ?? c.title;
+        input.disabled = !!this.historyPending;
+        input.addEventListener("input", () => { this.renameDraft = input.value; });
         input.addEventListener("keydown", (e) => {
           if (e.isComposing || e.keyCode === 229) return;
           if (e.key === "Enter") {
             e.preventDefault();
             const title = input.value.trim();
-            this.renaming = null;
-            if (title) {
-              c.title = title;
-              void this.backend.rename(c.id, title).then(() => this.loadSaved());
-            }
-            this.paintHead();
-            this.changed();
+            this.renameDraft = input.value;
+            if (title) void this.writeHistory(c.id, title);
           } else if (e.key === "Escape") {
             // The island's own Escape closes the chat: this one only ends the renaming.
             e.stopPropagation();
-            this.renaming = null;
+            if (this.historyPending) return;
+            this.renaming = null; this.renameDraft = null;
             this.paintHead();
             this.changed();
           }
@@ -2120,7 +2251,7 @@ export class ChatPanel {
         queueMicrotask(() => input.focus());
         return el("div", { class: "saved-row" }, input);
       }
-      const edit = el("button", { class: "ghost icon", onclick: () => ((this.renaming = c.id), (this.deleting = null), this.paintHead(), this.changed()) });
+      const edit = el("button", { class: "ghost icon", onclick: () => { if (this.historyPending) return; this.renaming = c.id; this.deleting = null; this.renameDraft = null; this.historyError = ""; this.paintHead(); this.changed(); } });
       edit.append(icon("pencil", 12, 2));
       edit.title = t("Rename");
       const remove =
@@ -2128,25 +2259,14 @@ export class ChatPanel {
           ? el("button", {
               class: "ghost danger",
               text: t("Delete"),
-              onclick: () =>
-                !this.busy &&
-                void this.backend.remove(c.id).then((current) => {
-                  this.deleting = null;
-                  if (current) {
-                    this.messages = [];
-                    this.started = false;
-                    this.picked = false;
-                    this.picksFor = undefined;
-                    this.paint();
-                  }
-                  return this.loadSaved();
-                }),
+              onclick: () => void this.writeHistory(c.id),
             })
-          : el("button", { class: "ghost icon", onclick: () => ((this.deleting = c.id), (this.renaming = null), this.paintHead(), this.changed()) });
+          : el("button", { class: "ghost icon", onclick: () => { if (this.historyPending) return; this.deleting = c.id; this.renaming = null; this.historyError = ""; this.paintHead(); this.changed(); } });
       if (this.deleting !== c.id) {
         remove.append(icon("close", 12, 2.2));
         remove.title = t("Delete");
       }
+      edit.disabled = remove.disabled = !!this.historyPending;
       this.choice(edit, `rename-button:${c.id}`);
       this.choice(remove, `delete:${c.id}`);
       return el(
@@ -2162,12 +2282,16 @@ export class ChatPanel {
         remove,
       );
     };
+    const error = this.historyError || this.historyReadError;
+    this.historyMenu.setAttribute("aria-busy", String(!!this.historyPending));
     this.historyMenu.replaceChildren(
       el("span", { class: "menu-label", text: t("Conversations") }),
+      ...(error ? [el("span", { class: "saved-empty", text: error })] : []),
       ...(this.saved.length
         ? this.saved.map(row)
         : [el("span", { class: "saved-empty", text: t("No saved conversations yet.") })]),
     );
+    if (error) this.historyMenu.querySelector(".saved-empty")?.setAttribute("role", "alert");
   }
 
   /** Zeca's head and name over a reply, with the engine that wrote it. */
@@ -2176,7 +2300,7 @@ export class ChatPanel {
     face.alt = "";
     face.src = faceImage(this.specialistAppearance() ?? ZECA);
     face.classList.toggle("msg-face-profile", !!this.opts.specialist);
-    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: this.recipientName() }), el("span", { class: "msg-engine", text: this.opts.specialist ? t("Claude Code · isolated") : this.name(this.provider) }));
+    return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: this.recipientName() }), el("span", { class: "msg-engine", text: this.opts.specialist ? this.specialistEngineLabel() : this.name(this.provider) }));
   }
 
   /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
@@ -2188,9 +2312,24 @@ export class ChatPanel {
 
   /** The paperclip: the file chooser, the files then swallowed as a drop's. */
   private attachButton(): HTMLElement {
-    const b = el("button", { class: "attach", onclick: () => this.backend.pickFiles?.(t("Attach a file")) }, icon("clip", 16, 1.8), this.attachLabel);
-    b.title = t("Attach a file");
-    b.setAttribute("aria-label", t("Attach a file"));
+    let picking = false;
+    const b = el("button", { class: "attach", onclick: () => {
+      if (!this.backend.chooseFiles) { this.backend.pickFiles?.(t("Attach a file")); return; }
+      if (picking || this.navigating || this.profileBlocked()) return;
+      const source = this.sourceVersion;
+      picking = true; b.dataset.picking = "true"; b.disabled = true;
+      void this.restore().then(async () => {
+        if (source !== this.sourceVersion || this.profileBlocked()) return;
+        const picked = await this.backend.chooseFiles!(t("Attach a file"), this.generation);
+        if (source === this.sourceVersion && picked.generation === this.generation && !this.profileBlocked() && (picked.copied.length > 0 || picked.refused.length > 0))
+          this.attach(picked.copied, picked.refused);
+      }).catch(error => {
+        if (source !== this.sourceVersion) return;
+        this.messages.push({ who: "note", text: REFERENCE_ERRORS.has(String(error)) ? t(String(error)) : t("Could not choose files. Your draft stays here.") });
+        this.paint(); this.changed();
+      }).finally(() => { picking = false; delete b.dataset.picking; b.disabled = this.navigating || this.profileBlocked(); });
+    } }, icon("clip", 16, 1.8), this.attachLabel);
+    b.title = t("Attach a file"); b.setAttribute("aria-label", t("Attach a file"));
     return b;
   }
 
@@ -2255,14 +2394,96 @@ export class ChatPanel {
     this.changed();
   }
 
+  private paintSpecialistChoice(): void {
+    const defaults = this.opts.specialist?.state?.defaults ?? { executor: "claude" as const, model: null, effort: null };
+    const draft = this.specialistUseDefaults ? structuredClone(defaults)
+      : this.specialistChoiceDraft ??= structuredClone(this.specialistDefaults());
+    const form = el("form", { class: "specialist-choice" });
+    const useDefaults = el("input"); useDefaults.dataset.choice = "specialist:defaults"; useDefaults.type = "checkbox"; useDefaults.checked = this.specialistUseDefaults;
+    useDefaults.disabled = this.specialistChoiceSaving;
+    useDefaults.addEventListener("change", () => { this.specialistUseDefaults = useDefaults.checked; this.paintHead(); });
+    const executor = el("select"); executor.dataset.choice = "specialist:executor"; executor.setAttribute("aria-label", t("Executor"));
+    const executors: [string, string, boolean][] = [
+      ["claude", "Claude Code", false], ["codex", "Codex", false],
+      ...(this.opts.specialist?.providers ?? []).map(p => [`api:${p.id}`, p.label, false] as [string, string, boolean]),
+    ];
+    for (const [value, label, disabled] of executors) {
+      const option = el("option", { text: label }); option.value = value; option.disabled = disabled; executor.append(option);
+    }
+    executor.value = draft.executor === "api" ? `api:${draft.provider}` : draft.executor;
+    executor.disabled = this.specialistUseDefaults || this.specialistChoiceSaving;
+    executor.addEventListener("change", () => {
+      this.specialistChoiceDraft = executor.value.startsWith("api:")
+        ? { executor: "api", provider: executor.value.slice(4), model: null }
+        : { executor: executor.value === "codex" ? "codex" : "claude", model: null, effort: null };
+      this.paintHead();
+    });
+    const model = el("input"); model.dataset.choice = "specialist:model"; model.type = "text"; model.value = draft.model ?? ""; model.maxLength = 100;
+    model.setAttribute("aria-label", t("Model")); model.placeholder = t("Use the executor default");
+    model.disabled = this.specialistUseDefaults || this.specialistChoiceSaving;
+    model.addEventListener("input", () => { draft.model = model.value.trim() || null; });
+    const fields = el("div", { class: "specialist-choice-fields" },
+      el("label", {}, el("span", { text: t("Executor") }), executor),
+      el("label", {}, el("span", { text: t("Model") }), model));
+    if (draft.executor !== "api") {
+      const effort = el("select"); effort.dataset.choice = "specialist:effort"; effort.setAttribute("aria-label", t("Effort"));
+      for (const [value, label] of [["", t("Default effort")], ...Object.entries(EFFORTS).map(([value, label]) => [value, t(label)])]) {
+        const option = el("option", { text: label }); option.value = value; effort.append(option);
+      }
+      effort.value = draft.effort ?? ""; effort.disabled = this.specialistUseDefaults || this.specialistChoiceSaving;
+      effort.addEventListener("change", () => { draft.effort = effort.value || null; });
+      fields.append(el("label", {}, el("span", { text: t("Effort") }), effort));
+    }
+    const apply = el("button", { class: "menu-item specialist-choice-apply",
+      text: this.specialistChoiceSaving ? t("Saving…") : t("Apply to this conversation") });
+    apply.dataset.choice = "specialist:apply"; apply.type = "submit"; apply.disabled = this.specialistChoiceSaving;
+    form.append(el("strong", { text: t("Conversation setup") }),
+      el("label", { class: "specialist-choice-defaults" }, useDefaults, el("span", { text: t("Use agent defaults") })), fields,
+      el("p", { class: "menu-hint", text: t("This changes only this conversation. The agent's defaults stay unchanged.") }), apply);
+    if (this.specialistChoiceError) {
+      const error = el("p", { class: "specialist-choice-error", text: this.specialistChoiceError });
+      error.setAttribute("role", "alert"); form.append(error);
+    }
+    form.addEventListener("submit", event => { event.preventDefault(); void this.saveSpecialistChoice(); });
+    this.modelMenu.replaceChildren(form);
+  }
+
+  private async saveSpecialistChoice(): Promise<void> {
+    if (this.started || this.busy || this.specialistChoiceSaving || !this.backend.setSpecialistChoice || !this.opts.specialist) return;
+    const source = this.sourceVersion;
+    const request = ++this.specialistChoiceRequest;
+    const choice = this.specialistUseDefaults ? null : structuredClone(this.specialistChoiceDraft ?? this.specialistDefaults());
+    this.specialistChoiceSaving = true; this.specialistChoiceError = ""; this.paintHead(); this.paintSend();
+    try {
+      await this.flushDraft();
+      if (source !== this.sourceVersion) return;
+      const saved = await this.backend.setSpecialistChoice(choice, this.generation);
+      if (source !== this.sourceVersion) return;
+      this.generation = saved.generation; this.sourceVersion++;
+      this.opts.specialist.choice = saved.choice ?? null; this.modelOpen = false;
+      this.paintHead(); this.keepDraft();
+    } catch (error) {
+      if (source === this.sourceVersion) this.specialistChoiceError = REFERENCE_ERRORS.has(String(error))
+        ? t(String(error)) : t("Could not update this conversation. Your previous choice is still active.");
+    } finally {
+      if (request === this.specialistChoiceRequest) {
+        this.specialistChoiceSaving = false; this.paintHead(); this.paintSend(); this.changed();
+      }
+    }
+  }
+
   private paintModel(api: boolean): void {
     if (this.opts.specialist) {
       this.modelButton.classList.add("engine");
-      this.modelButton.replaceChildren(el("span", { class: "engine-dot claude" }), el("span", { class: "engine-labels", text: t("Claude Code · isolated") }));
-      this.modelButton.disabled = true;
-      this.modelButton.setAttribute("aria-label", t("Claude Code · isolated"));
-      this.modelButton.setAttribute("aria-expanded", "false");
-      this.modelMenu.classList.remove("on");
+      const defaults = this.specialistDefaults();
+      const model = this.started ? this.picks[this.provider]?.model : defaults?.model;
+      const label = this.specialistEngineLabel();
+      this.modelButton.replaceChildren(el("span", { class: `engine-dot ${this.provider}` }), el("span", { class: "engine-labels", text: label }), ...(model ? [el("span", { class: "model-name", text: model })] : []));
+      this.modelButton.disabled = this.navigating || this.started || this.specialistChoiceSaving || !!this.opts.specialist.state?.archived || !this.backend.setSpecialistChoice;
+      this.modelButton.setAttribute("aria-label", label);
+      this.modelButton.setAttribute("aria-expanded", String(this.modelOpen && !this.started));
+      this.modelMenu.classList.toggle("on", this.modelOpen && !this.started);
+      if (this.modelOpen && !this.started) this.paintSpecialistChoice();
       return;
     }
     if (this.provider === "claude" || this.modelOpen) this.loadModels(this.provider);
@@ -2450,8 +2671,22 @@ export class ChatPanel {
 
   private paintHead(): void {
     const profile = this.opts.specialist;
-    this.profileNotice.hidden = !profile || !profile.latestRevision || profile.revision === profile.latestRevision;
-    this.profileNotice.textContent = profile && !this.profileNotice.hidden ? t("This conversation uses profile revision {revision}. Start a new conversation to use revision {latest}.", { revision: profile.revision, latest: profile.latestRevision! }) : "";
+    if (profile && !this.started) {
+      const defaults = this.specialistDefaults();
+      this.provider = defaults?.executor === "api" ? "api" : defaults?.executor === "codex" ? "codex" : "claude";
+      if (defaults?.executor === "api") this.api.label = profile.providers?.find(p => p.id === defaults.provider)?.label ?? defaults.provider;
+      this.paintOffers();
+    }
+    const blocked = profile?.state?.archived ? t("This agent is archived. Restore it before sending a new message.") : !!profile && this.specialistDefaults().executor === "api" && !this.started && this.folder ? t("API specialists cannot access projects. Start a new conversation to clear the project.") : this.specialistChoiceSaving ? t("Saving…") : this.profileBlocked() ? t("The selected executor is saved but is not available for new specialist conversations yet.") : "";
+    this.input.readOnly = this.navigating || this.profileBlocked();
+    const attach = this.element.querySelector<HTMLButtonElement>(".attach");
+    if (attach) attach.disabled = this.navigating || this.profileBlocked() || attach.dataset.picking === "true";
+    this.newButton.disabled = this.navigating || !!this.historyPending || !!profile?.state && (profile.state.archived || this.specialistChoiceSaving);
+    this.profileNotice.hidden = !blocked && !profile?.github?.enabled && (!profile || !profile.latestRevision || profile.revision === profile.latestRevision);
+    this.profileNotice.textContent = blocked || (profile && profile.latestRevision && profile.revision !== profile.latestRevision ? t("This conversation uses profile revision {revision}. Start a new conversation to use revision {latest}.", { revision: profile.revision, latest: profile.latestRevision! }) : "");
+    if (profile?.github?.enabled) this.profileNotice.textContent += (this.profileNotice.textContent ? " " : "") + t("GitHub: {repository} · {account} on {host}. Writes require approval.",{repository:profile.github.repository,account:profile.github.account,host:profile.github.host});
+    if (profile?.github?.enabled && this.provider === "api" && profile.providers?.find(p=>p.label===this.api.label)?.local)
+      this.profileNotice.textContent += " " + t("This provider does not support GitHub tools.");
     if (this.opts.specialist) {
       this.input.placeholder = t("Message {name}…", { name: this.recipientName() });
       this.input.setAttribute("aria-label", this.input.placeholder);
@@ -2463,12 +2698,13 @@ export class ChatPanel {
     const active = document.activeElement as HTMLInputElement | null;
     const panel = active ? this.menuPanels().find(({ menu }) => menu.contains(active)) : null;
     const choice = panel ? active?.dataset.choice : null;
-    const draft = panel && active?.tagName === "INPUT" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
+    const draft = panel && active?.tagName === "INPUT" && active.type !== "checkbox" && active.type !== "radio" ? { value: active.value, start: active.selectionStart, end: active.selectionEnd } : null;
     if (!this.opts.specialist) this.loadPicks();
     // The API chat has no tools, so it works nowhere in particular.
     const api = this.provider === "api";
     this.element.classList.toggle("chat-api", api);
-    this.place.hidden = api || !!this.opts.specialist;
+    this.place.hidden = api;
+    this.place.disabled = this.profileBlocked();
     this.setup.hidden = api || !this.native || !!this.opts.specialist;
     this.paintModel(api);
     this.paintAccess(api);
@@ -2534,7 +2770,7 @@ export class ChatPanel {
     this.send.setAttribute("aria-label", this.send.title);
     this.send.toggleAttribute(
       "disabled",
-      !stop && !this.input.value.trim() && !this.files.length,
+      !stop && (this.navigating || !!this.historyPending || this.profileBlocked() || (!this.input.value.trim() && !this.files.length)),
     );
   }
 

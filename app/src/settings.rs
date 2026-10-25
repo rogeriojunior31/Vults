@@ -200,6 +200,8 @@ pub struct Settings {
     /// Permission level selected separately for each built-in or custom specialist profile.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub specialist_access: BTreeMap<String, ChatAccess>,
+    #[serde(default)]
+    pub specialist_github: BTreeMap<String, crate::specialist_github::Grant>,
     /// The chat's model and effort per folder (`""` for its own empty one), then per engine
     /// (`claude`, `codex`): what a new conversation there starts with.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -420,6 +422,7 @@ impl Default for Settings {
             native_chat: true,
             chat_access: ChatAccess::Ask,
             specialist_access: BTreeMap::new(),
+            specialist_github: BTreeMap::new(),
             chat_picks: BTreeMap::new(),
             nest_size: None,
             web: false,
@@ -2419,6 +2422,7 @@ mod tests {
             native_chat: true,
             chat_access: ChatAccess::Ask,
             specialist_access: BTreeMap::new(),
+            specialist_github: BTreeMap::new(),
             chat_picks: BTreeMap::new(),
             nest_size: None,
             web: false,

@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+# These unsigned fixture tokens exercise identity changes; they cannot authenticate.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Exact fake Codex tokens in the isolated CLI integration test"
+condition = "AND"
+regexTarget = "secret"
+paths = ['''^crates/chat/tests/specialist_codex\.rs$''']
+regexes = ['''^e30\.eyJzdWIiOiJGQUtFX1VTRVIifQ\.test$''', '''^e30\.eyJzdWIiOiJPVEhFUl9VU0VSIn0\.test$''']

@@ -2,6 +2,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    #[cfg(target_os = "linux")]
+    if std::env::args().nth(1).as_deref() == Some("--specialist-mcp") {
+        if let Some(path) = std::env::args_os().nth(2) {
+            vults_chat::specialist_mcp_main(std::path::Path::new(&path));
+        }
+        return;
+    }
+
     // Disable native telemetry before any runtime can create an uploader or persistent ID.
     // SAFETY: process entry, before the MCP server, Tauri, GTK or application worker threads.
     unsafe { std::env::set_var("ORT_DISABLE_TELEMETRY", "1") };

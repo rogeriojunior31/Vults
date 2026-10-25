@@ -43,6 +43,7 @@ mod roosts;
 mod runtime;
 mod settings;
 mod sleep;
+mod specialist_github;
 mod spend;
 mod traces;
 mod tray;
@@ -177,6 +178,8 @@ pub fn run() {
             chat::specialist_chat_send,
             chat::specialist_chat_open,
             chat::specialist_chat_reset,
+            chat::specialist_chat_choice_set,
+            chat::specialist_chat_pick_files,
             chat::specialist_chat_stop,
             chat::specialist_chat_decide,
             roosts::roosts,
@@ -225,7 +228,9 @@ pub fn run() {
             runtime::recap_dismiss,
             profiles::agent_profiles,
             profiles::agent_profile_save,
+            profiles::agent_profile_state_set,
             profiles::set_specialist_chat_access,
+            specialist_github::set_specialist_github,
             runtime::projects_list,
             runtime::project_set,
             open::editor_found,

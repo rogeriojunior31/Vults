@@ -171,6 +171,8 @@ const MIGRATIONS: &[&str] = &[
     conversations::PROFILE,
     // 32: skill content pinned to each user profile revision.
     profiles::SKILLS,
+    // 33: mutable defaults and archival state are separate from immutable profile revisions.
+    profiles::STATE,
 ];
 
 /// An open database. Short-lived: open, do one thing, drop; SQLite's own locking keeps two

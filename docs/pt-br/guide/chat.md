@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: fc4528af62ed -->
+<!-- source: b1e46a7eb7be -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -440,3 +440,102 @@ volta. Os títulos e trechos de uma busca chegam ao modelo, marcados como não c
 são lidas de endereços públicos. Cada busca e cada página é uma requisição em seu nome com um limite
 diário ([Segurança](../safety.md#every-request-vults-makes)), e a conversa então conta como tendo
 lido de fora.
+
+<a id="agent-profiles"></a>
+
+## Perfis de agentes
+
+Abra **Bando → Perfis de agentes** para criar um agente, copiar um modelo ou editar um agente
+personalizado. O urubu animado, as instruções e as skills fixadas com busca pertencem ao perfil.
+Skills orientam o comportamento; nunca concedem ferramentas ou permissões. Salvar registra o
+conteúdo e os padrões de execução localmente, sem iniciar um modelo. **Padrões da conversa** altera
+as preferências de um modelo sem copiar suas instruções. Conversas existentes mantêm sua revisão
+e seu modelo salvos.
+
+Claude Code executa atualmente as conversas de especialista na aba Chat existente, isoladas da
+memória do Zeca e do contexto do bando. Padrões de modelo/esforço do Claude valem para novas conversas.
+Escolha um projeto opcional no controle de pasta antes de enviar; depois disso, o projeto fica fixado.
+Conversas novas limpam o projeto anterior. Pastas ausentes ou inválidas são rejeitadas preservando o
+rascunho. Essa escolha não habilita configurações do projeto, servidores MCP ou ferramentas do companheiro.
+
+Agentes via API/local usam o provedor e modelo escolhidos nos padrões (ou o modelo salvo daquele
+provedor). Recebem suas instruções fixadas, próprias mensagens e anexos selecionados explicitamente,
+sem acesso ao terminal ou projeto. Configure chaves de nuvem nas Configurações; provedores locais usam os endpoints
+locais existentes. Um papel via API nunca concede acesso ao terminal. GitHub exige a autorização
+separada do perfil descrita abaixo. Provedor, modelo e mensagens ficam fixados ao reabrir, mesmo após
+alterar os padrões futuros. Especialistas Codex usam a CLI instalada e o login existente da assinatura
+ChatGPT, com diretório próprio do app por perfil e conta/workspace autenticados. Conversas existentes
+recusam outro login; inicie uma nova conversa para usá-lo. A renovação do token mantém a mesma
+identidade. Apenas metadados de propriedade em hash são salvos. Não herdam instruções, hooks, skills ou MCP externo
+do usuário/projeto. Credenciais são passadas apenas em memória; a CLI existente renova os tokens.
+Uma falha ao iniciar isoladamente nunca usa outro executor ou um caminho CLI sem qualificação. Escolha permissões diretamente no Chat; Ask, políticas ou acesso total de cada perfil
+são independentes do Zeca. Cópias e agentes novos começam com Ask.
+
+Antes da primeira mensagem, clique no controle de executor do especialista para abrir
+**Configuração da conversa**. Mantenha **Usar padrões do agente** marcado ou desmarque para escolher
+Claude Code, Codex ou um provedor API/local configurado, modelo e esforço da CLI para esta conversa.
+**Aplicar nesta conversa** preserva o rascunho da mensagem e mantém iguais as instruções, skills,
+permissões e padrões do perfil. Uma falha ao salvar mantém a escolha anterior ativa. Agentes por API
+continuam sem acesso ao terminal ou projeto; escolha uma pasta vazia antes de mudar para um provedor API.
+
+O clipe do especialista abre um seletor de arquivos para aquele perfil e conversa, inclusive com
+Zeca desligado. Escolher arquivos nunca os envia automaticamente. Eles ficam acima do campo até
+serem removidos ou enviados; uma mensagem só com arquivos é permitida. Uma conversa nova ou mudança
+de fonte descarta o resultado de um seletor pendente. Trocar de destinatário não entrega os arquivos
+ao Zeca ou a outro perfil. Os limites são 16 anexos e 20 MB no total por mensagem; cópias ausentes,
+links e caminhos forjados são rejeitados preservando o rascunho editável. As cópias são privadas e
+os arquivos originais existentes nunca são substituídos.
+
+Valem os formatos de arquivo já suportados pela API: imagens/texto compatíveis e PDFs no protocolo
+Anthropic. Arquivos incompatíveis ou textos maiores que 512 KB são apenas nomeados, sem conteúdo
+embutido. O histórico salvo da API mantém nomes dos anexos, nunca seus bytes. Anexos são conteúdo
+externo; em conversas por CLI, cards voltam a perguntar antes de ações sob acesso total. Arquivos
+não habilitam ferramentas da API, GitHub ou acesso ao projeto. Arrastar arquivos para especialistas
+não é adicionado nesta etapa; use seu clipe.
+
+A escolha ainda não enviada permanece no perfil enquanto o app está aberto e sobrevive ao fechamento
+do Nest ou à troca de destinatário. Após o primeiro envio, executor/modelo/fonte salvos ficam fixados,
+inclusive se o primeiro turno do modelo falhar. **Nova** limpa a escolha específica e volta aos
+padrões do agente. Isso não inicia uma requisição ao modelo. Escolhas não enviadas, assim como
+rascunhos não enviados, não são salvas entre reinícios do app.
+
+**Arquivar agente** preserva suas revisões e conversas. Encontre-o em **Arquivados** e use
+**Ver conversas** para ler o histórico ou **Restaurar agente** para voltar a enviar. Arquivar bloqueia
+novos turnos e reinícios, enquanto um turno já admitido pode terminar. Parar e os cards de aprovação
+pendentes continuam disponíveis. Restaurar preserva os padrões e as permissões escolhidas separadamente.
+
+As ações do histórico ficam restritas ao destinatário: Zeca não pode renomear ou excluir uma
+conversa de especialista, nem um especialista acessar o histórico de outro. Rename e Delete
+preservam o rascunho e os anexos se houver falha ao salvar, com o erro visível para tentar novamente.
+Excluir a conversa atual limpa rascunho, anexos, projeto e modelo específico somente após a exclusão
+ter sucesso. Conversas de agentes arquivados podem ser excluídas sem restaurar o agente ou iniciar
+um turno.
+
+New e a abertura do histórico salvam o rascunho atual antes de trocar de conversa. Durante a troca,
+os controles de conversa aguardam a conclusão. Se salvar ou trocar falhar, o rascunho e os anexos
+permanecem para tentar novamente. Um pedido atrasado não pode substituir uma conversa selecionada
+mais recentemente em outra janela, mudar a identidade do perfil ou encerrar os cards de aprovação
+de um turno em andamento.
+
+<a id="github-for-developer-and-reviewer"></a>
+
+### GitHub para Desenvolvedor e Revisor
+
+Em **Bando → Perfis de agentes**, selecione **Desenvolvedor** ou **Revisor**, informe um repositório
+exato como `owner/name` e clique em **Ativar GitHub**. A conexão GitHub já deve estar ligada e ter
+saldo de requisições. A autorização salva mostra conta e host antes de iniciar um turno. Cada perfil
+é independente, começa desligado e funciona com Zeca desligado. Cópias não herdam autorização.
+
+O executor escolhido pode usar as leituras limitadas e ferramentas aprovadas de issues, pull requests,
+revisões, Actions e merge desse repositório. Executores API de nuvem compatíveis rodam essas ferramentas no Vults; provedores locais mantêm apenas mensagens.
+Claude e Codex usam um relay privado por turno. Nenhum snapshot global, busca de conta/repositórios,
+ferramenta do bando ou memória entra no especialista. Leituras usam o saldo da conexão, incluindo
+verificações da conta, e trazem conteúdo externo para a conversa. Toda escrita ainda mostra seu card
+humano exato; acesso total nunca pula esse card nem uma negação das políticas.
+
+Clique em **Desativar GitHub** para revogar a autorização, inclusive a autoridade de uma proposta
+pendente. Desative antes de mudar o repositório. Reativar cria uma nova versão e nunca reativa escrita
+antiga pendente. Mudanças de conta/host exigem revisar e ativar novamente. O aviso no Chat mostra o
+repositório/conta/host esperados. Uma escrita já enviada ainda pode terminar: confira o resultado em
+Atividade/auditoria antes de tentar novamente. Esses controles abrangem ferramentas da conexão Vults;
+um comando de shell que você aprove separadamente mantém sua própria permissão de comando.

@@ -364,7 +364,8 @@ export type AgentRow = {
 /** A saved conversation in the chat's list. */
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 export type SpecialistConversationView = ConversationView & { profileTitle: string; profileRevision: number };
-export type SpecialistCurrent = { generation: number; conversation: OpenedConversation | null; draft: ChatDraft; profileTitle: string; profileRevision: number; profileSpecies: string; profileLook: string };
+export type AgentGithubGrant = { version:number; enabled:boolean; repository:string; host:string; account:string };
+export type SpecialistCurrent = { choice?: AgentDefaults | null; generation: number; conversation: OpenedConversation | null; draft: ChatDraft; profileTitle: string; profileRevision: number; profileSpecies: string; profileLook: string };
 export type SpecialistChatEvent = { profile: string; delta: ChatDelta };
 export type SpecialistChatSync = { profile: string; sync: ChatSync };
 /** A saved conversation, opened: what the chat goes on with. */
@@ -454,6 +455,7 @@ export type ChatDelta =
 
 /** Files dropped on the island or picked with a paperclip: the inbox copies, the ones refused with
  *  why, and the page whose chat takes them. */
+export type SpecialistFiles = Dropped & { generation: number };
 export interface Dropped {
   copied: string[];
   refused: { name: string; reason: "folder" | "too-big" | "unreadable" }[];
@@ -493,9 +495,17 @@ export type AgentProfileEdit =
   | { action: "copy"; preset: string; title: string; instructions: string; species: string; look: string; skill_ids: string[] }
   | { action: "update"; id: number; revision: number; title: string; instructions: string; species: string; look: string; skill_ids: string[] };
 
+export type AgentDefaults =
+  | { executor: "claude" | "codex"; model: string | null; effort: string | null }
+  | { executor: "api"; provider: string; model: string | null };
+export interface AgentProfileState { version: number; defaults: AgentDefaults; archived: boolean }
+export type AgentStateChange = { action: "defaults"; defaults: AgentDefaults } | { action: "archive"; archived: boolean };
+export interface AgentPreferenceEdit { version: number; defaults: AgentDefaults }
+export interface AgentProvider { id: string; label: string; local: boolean }
 export interface AgentSkill { id: string; revision: number; title: string; content: string }
 
 export interface AgentProfile {
+  github?: AgentGithubGrant;
   built_in: boolean;
   id: string;
   revision: number;
@@ -507,11 +517,16 @@ export interface AgentProfile {
   skills: AgentSkill[];
   skill_catalog: AgentSkill[];
   access: ChatAccess;
+  state?: AgentProfileState;
+  providers?: AgentProvider[];
 }
 
 export const Bridge = {
   agentProfiles: () => invoke<AgentProfile[]>("agent_profiles"),
-  agentProfileSave: (edit: AgentProfileEdit) => invoke<AgentProfile>("agent_profile_save", { edit }),
+  agentProfileSave: (edit: AgentProfileEdit, preferences?: AgentPreferenceEdit) => invoke<AgentProfile>("agent_profile_save", { edit, preferences: preferences ?? null }),
+  agentProfileStateSet: (profile: string, version: number, change: AgentStateChange) => invoke<AgentProfileState>("agent_profile_state_set", { profile, version, change }),
+  onAgentProfileState(cb: (event: {profile: string; state: AgentProfileState}) => void): void { void listen<{profile: string; state: AgentProfileState}>("agent-profile-state", e => cb(e.payload)); },
+  setSpecialistGithub: (profile:string,version:number,enabled:boolean,repository:string) => invoke<AgentGithubGrant>("set_specialist_github",{profile,version,enabled,repository}),
   setSpecialistChatAccess: (profile: string, access: ChatAccess) => invoke<void>("set_specialist_chat_access", { profile, access }),
   onView(cb: (v: ViewModel) => void): void {
     void listen<ViewModel>("view", (e) => cb(e.payload));
@@ -761,7 +776,7 @@ export const Bridge = {
   chatSend: (text: string, files: string[], folder: string | null, mentions: ChatMention[] = [], generation?: number) => invoke<void>("chat_send", { text, files, folder, mentions, generation }),
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
-  chatReset: (provider: ChatProvider | null) => invoke<{ provider: ChatProvider; generation: number }>("chat_reset", { provider }),
+  chatReset: (provider: ChatProvider | null, generation?: number) => invoke<{ provider: ChatProvider; generation: number }>("chat_reset", { provider, generation }),
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
   chatDraft: () => invoke<ChatDraft>("chat_draft"),
   chatPrepareZeca: (generation?: number) => invoke<void>("chat_prepare_zeca", { generation }),
@@ -817,12 +832,14 @@ export const Bridge = {
   chatConversations: () => invoke<ConversationView[]>("chat_conversations"),
   specialistChatConversations: (profile: string) => invoke<SpecialistConversationView[]>("specialist_chat_conversations", { profile }),
   specialistChatCurrent: (profile: string) => invoke<SpecialistCurrent>("specialist_chat_current", { profile }),
-  specialistChatSend: (profile: string, text: string, generation: number) => invoke<void>("specialist_chat_send", { profile, text, generation }),
-  specialistChatOpen: (profile: string, id: number) => invoke<OpenedConversation>("specialist_chat_open", { profile, id }),
-  specialistChatReset: (profile: string) => invoke<SpecialistCurrent & { provider: ChatProvider }>("specialist_chat_reset", { profile }),
+  specialistChatSend: (profile: string, text: string, generation: number, folder?: string | null, files: string[] = []) => invoke<void>("specialist_chat_send", { profile, text, generation, folder: folder ?? null, files }),
+  specialistChatOpen: (profile: string, id: number, generation: number) => invoke<OpenedConversation>("specialist_chat_open", { profile, id, generation }),
+  specialistChatPickFiles: (profile: string, generation: number, title: string) => invoke<SpecialistFiles>("specialist_chat_pick_files", { profile, generation, title }),
+  specialistChatChoiceSet: (profile: string, choice: AgentDefaults | null, generation: number) => invoke<SpecialistCurrent>("specialist_chat_choice_set", { profile, choice, generation }),
+  specialistChatReset: (profile: string, generation: number) => invoke<SpecialistCurrent & { provider: ChatProvider }>("specialist_chat_reset", { profile, generation }),
   specialistChatDraftSet: (profile: string, draft: ChatDraft, generation: number) => invoke<void>("specialist_chat_draft_set", { profile, draft, generation }),
   specialistChatRename: (profile: string, id: number, title: string) => invoke<void>("specialist_chat_rename", { profile, id, title }),
-  specialistChatDelete: (profile: string, id: number) => invoke<boolean>("specialist_chat_delete", { profile, id }),
+  specialistChatDelete: (profile: string, id: number) => invoke<{ current: boolean; reset: (SpecialistCurrent & { provider: ChatProvider }) | null }>("specialist_chat_delete", { profile, id }),
   specialistChatStop: (profile: string) => invoke<void>("specialist_chat_stop", { profile }),
   specialistChatDecide: (profile: string, id: string, answer: ChatAnswer) => invoke<void>("specialist_chat_decide", { profile, id, answer }),
   roosts: () => invoke<RoostView[]>("roosts"),
@@ -849,7 +866,7 @@ export const Bridge = {
   onMemory(cb: () => void): void {
     void listen("memory", () => cb());
   },
-  chatOpen: (id: number) => invoke<OpenedConversation>("chat_open", { id }),
+  chatOpen: (id: number, generation?: number) => invoke<OpenedConversation>("chat_open", { id, generation }),
   chatRename: (id: number, title: string) => invoke<void>("chat_rename", { id, title }),
   chatDelete: (id: number) => invoke<boolean>("chat_delete", { id }),
   chatModels: (provider: ChatProvider) => invoke<ModelChoice[]>("chat_models", { provider }),
