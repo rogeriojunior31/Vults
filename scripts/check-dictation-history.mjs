@@ -21,9 +21,7 @@ class Element {
 }
 const all = n => [n, ...n.children.flatMap(all)];
 globalThis.document = { createElement: tag => new Element(tag), createElementNS: (_, tag) => new Element(tag), documentElement: {} };
-const metricListeners = [];
-const metricsMedia = { matches: true, addEventListener: (_event, callback) => metricListeners.push(callback) };
-globalThis.window = { matchMedia: () => metricsMedia, clearTimeout() {}, setTimeout() { return 0; } };
+globalThis.window = { clearTimeout() {}, setTimeout() { return 0; } };
 let copied = [], copyFails = false;
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { clipboard: { async writeText(text) { if (copyFails) throw Error("No clipboard"); copied.push(text); } } } });
 const root = fileURLToPath(new URL("../ui/", import.meta.url));
@@ -34,21 +32,27 @@ const { createDictationHistory, setLang } = await import(`data:text/javascript;b
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const row = (id, text) => ({ id, at: 2_000_000_000 - (id === 2 ? 86_400 : 0), app: "<img src=x>", session: "codex:api", heard: `heard ${text}`, text, words: 2, secs: 2.5, style: "polished", outputLanguage: "es", language: "en", fixes: null, outcome: "copied" });
 let data = { retention: "30", rows: [row(1, "<script>inert text</script>"), row(2, "Other words")], today: { words: 4, secs: 5, count: 2 } };
-let loads = 0, removals = [], clears = 0, again = [], failRead = false, failAction = false, settings = 0, deferred;
+let loads = 0, removals = [], clears = 0, again = [], failRead = false, failAction = false, settings = 0, deferred, pendingAction;
 const view = createDictationHistory({
   load: async () => { loads++; if (deferred) return deferred; if (failRead) throw Error("Database unavailable"); return structuredClone(data); },
   remove: async id => { if (failAction) throw Error("Not erased"); removals.push(id); data.rows = data.rows.filter(r => r.id !== id); },
   clear: async () => { clears++; data.rows = []; },
-  again: async id => { if (failAction) throw Error("Busy"); again.push(id); },
+  again: async id => { if (pendingAction) await pendingAction; if (failAction) throw Error("Busy"); again.push(id); },
 }, () => settings++);
 const nodes = () => all(view.element);
-const named = text => nodes().find(n => n.tag === "button" && n.textContent === text);
+const named = text => nodes().find(n => n.tag === "button" && (n.textContent === text || n.title === text));
 const entries = () => nodes().filter(n => n.className === "dictation-entry");
 const input = view.element.querySelector("input");
 const search = value => { input.value = value; input.listeners.input(); };
 assert.equal(loads, 0, "Constructing a hidden page never reads history");
 assert.ok(view.element.textContent.includes("Reading dictation history"));
 view.refresh(); await tick();
+const loadsBeforeKeys = loads;
+view.setKeys({ talk: "Meta+F8" });
+assert.equal(loads, loadsBeforeKeys, "Reading shortcut display never reloads history");
+assert.equal(nodes().find(n => n.className === "dictation-keycaps").textContent, "MetaF8", "The hero uses the actual binding, not a hardcoded default");
+view.setKeys({});
+assert.equal(nodes().find(n => n.className === "dictation-keycaps").textContent, "Not bound");
 assert.equal(entries().length, 2);
 assert.ok(entries()[0].textContent.includes("Polished"));
 assert.ok(entries()[0].textContent.includes("In Spanish"));
@@ -60,7 +64,15 @@ search(" HEARD OTHER "); assert.equal(entries().length, 1);
 assert.equal(loads, 1, "Filtering never reopens the database");
 search("missing"); assert.equal(entries().length, 0);
 assert.ok(view.element.textContent.includes("No dictations match"));
-search("");
+assert.equal(nodes().find(n => n.className === "dictation-results").textContent, "0 entries");
+named("Clear search").click();
+assert.equal(input.value, ""); assert.equal(document.activeElement, input);
+assert.equal(entries().length, 2);
+search("missing");
+input.listeners.keydown({ key: "Escape", preventDefault() {}, stopPropagation() {} });
+assert.equal(input.value, ""); assert.equal(entries().length, 2);
+assert.equal(nodes().find(n => n.className === "dictation-results").textContent, "2 entries");
+assert.equal(nodes().find(n => n.className === "dictation-maintenance").open, undefined, "Bulk deletion starts in a closed maintenance disclosure");
 const heard = nodes().find(n => n.className === "dictation-heard");
 heard.open = true; heard.listeners.toggle();
 heard.querySelector("summary").focus();
@@ -75,14 +87,34 @@ assert.deepEqual(copied, [data.rows[0].text]);
 copyFails = true; named("Copy").click(); await tick();
 assert.ok(view.element.textContent.includes("Copy failed. Try again."));
 copyFails = false;
-named("Use again").click(); await tick();
+named("Use again").focus(); named("Use again").click(); await tick();
+assert.equal(document.activeElement.dataset.historyAction, "0-1", "A completed action retains its row focus");
 assert.deepEqual(again, [1]);
+
+
 assert.ok(view.element.textContent.includes("Nothing is submitted"));
 assert.equal(copied.length, 1, "Use again routes through the worker, not a second UI clipboard owner");
+for (const failed of [false, true]) {
+  let finishAction;
+  pendingAction = new Promise(resolve => { finishAction = resolve; });
+  failAction = failed;
+  named("Use again").focus(); named("Use again").click();
+  input.focus(); search("Other");
+  finishAction(); await tick(); pendingAction = null;
+  assert.equal(document.activeElement, input, "Pending history actions preserve a newer search focus on success and failure");
+  assert.equal(input.value, "Other");
+  search("");
+}
+failAction = false;
+named("Delete…").focus(); named("Delete…").click();
+assert.equal(document.activeElement.textContent, "Cancel", "Deletion starts with the safe alternative focused");
+named("Cancel").click();
+assert.equal(document.activeElement.dataset.historyAction, "2-1", "Cancelling returns to the originating row");
 named("Delete…").click(); assert.deepEqual(removals, []);
 assert.ok(view.element.textContent.includes("Erase this dictation?"));
 failAction = true; named("Erase").click(); await tick();
 assert.equal(entries().length, 2); assert.ok(view.element.textContent.includes("Could not complete"));
+assert.equal(document.activeElement.textContent, "Cancel", "Failed deletion keeps a usable confirmation with safe focus");
 failAction = false; named("Erase").click(); await tick();
 assert.deepEqual(removals, [1]); assert.equal(entries().length, 1);
 named("Erase dictation history…").click(); named("Cancel").click();
@@ -120,15 +152,14 @@ assert.ok(!view.element.textContent.includes("Unknown app"));
 assert.ok(nodes().some(node=>node.tag==="button" && node.textContent==="Copy"),"Copying the result stays an explicit text action");
 
 const metrics = nodes().find(n => n.className === "dictation-summary");
-assert.equal(metrics.open, true, "Wide history shows its figures");
-metricsMedia.matches = false; metricListeners.forEach(fn => fn());
-assert.equal(metrics.open, false, "Compact history starts with figures folded");
-assert.ok(view.element.children.indexOf(nodes().find(n => n.className === "dictation-toolbar")) < view.element.children.indexOf(metrics), "Search precedes optional figures");
+assert.equal(metrics.open, false, "Small or unqualified layouts start with optional figures folded");
+assert.ok(view.element.children.indexOf(nodes().find(n => n.className === "dictation-toolbar")) > view.element.children.indexOf(nodes().find(n => n.className === "dictation-hero")), "Shortcut and figures follow the prototype header");
 metrics.open = true; metrics.listeners.toggle();
-view.relabel(); assert.equal(metrics.open,true,"Refreshing labels retains the compact disclosure choice");
-metricsMedia.matches = true; metricListeners.forEach(fn => fn());
-metricsMedia.matches = false; metricListeners.forEach(fn => fn());
-assert.equal(metrics.open,true,"Room/compact transitions retain an explicitly opened summary");
+view.refresh(); await tick();
+assert.equal(metrics.open, true, "Refresh retains the explicit statistics disclosure choice");
+metrics.open = false; metrics.listeners.toggle();
+view.relabel();
+assert.equal(metrics.open, false, "Relabel retains explicitly closed figures");
 
 const commandView = createDictationHistory({
   load: async () => structuredClone(data), remove: async id => { data.rows = data.rows.filter(r => r.id !== id); },
@@ -142,14 +173,14 @@ assert.equal(commandNodes().filter(n => n.className === "dictation-entry").lengt
 assert.ok(!commandView.element.textContent.includes("ordinary dictation"));
 assert.ok(commandNodes().find(n => n.className === "dictation-figures").hidden, "Command page has no dictation figures");
 assert.ok(commandNodes().find(n => n.tag === "button" && n.textContent === "Erase dictation history…").hidden, "No bulk erasure from a filtered page");
-assert.ok(!commandNodes().some(n => n.tag === "button" && n.textContent === "Use again"));
+assert.ok(!commandNodes().some(n => n.tag === "button" && (n.textContent === "Use again" || n.title === "Use again")));
 const commandSearch = commandView.element.querySelector("input");
 commandSearch.value = "mute api"; commandSearch.listeners.input();
 assert.equal(commandNodes().filter(n => n.className === "dictation-entry").length, 1, "Heard text is searchable");
 commandSearch.value = "missing"; commandSearch.listeners.input();
 assert.ok(commandView.element.textContent.includes("No commands match your search"));
 commandSearch.value = ""; commandSearch.listeners.input();
-commandNodes().find(n => n.tag === "button" && n.textContent === "Delete…").click();
+commandNodes().find(n => n.tag === "button" && (n.textContent === "Delete…" || n.title === "Delete…")).click();
 commandNodes().find(n => n.tag === "button" && n.textContent === "Erase").click(); await tick();
 assert.deepEqual(data.rows.map(r => r.id), [10], "Individual erase preserves ordinary history");
 assert.ok(commandView.element.textContent.includes("No voice commands yet"));
@@ -158,6 +189,11 @@ for (const language of ["pt-BR", "es", "zh"]) {
   assert.ok(!commandView.element.textContent.includes("No voice commands yet"));
 }
 setLang("en");
+window.matchMedia = () => ({ matches: true });
+const measured = createDictationHistory({ load: async () => ({ retention: "30", rows: [], today: { words: 45, secs: 10, count: 1 } }), remove: async () => {}, clear: async () => {}, again: async () => {} }, () => {});
+measured.refresh(); await tick();
+assert.equal(all(measured.element).find(n => n.className === "dictation-summary").open, true, "Wide history presents measured figures beside the shortcut");
+delete window.matchMedia;
 const css = readFileSync(`${root}src/surfaces/nest/nest.css`, "utf8");
 assert.match(css, /#nest\s*>\s*\[role="tabpanel"\]\[hidden\][^{]*\{[^}]*display:\s*none/,
   "The tab owner's hidden rule must outrank class-based flex/grid pane styles, independent of source order");

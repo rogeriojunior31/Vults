@@ -14,3 +14,10 @@ button.dictation-style-card:focus-visible { outline: 2px solid var(--accent); ou
 .dictation-styles .dictation-note { overflow-wrap: anywhere; }
 
 #settings .dictation-cleanup-settings .row > select.field { width: 240px; max-width: 100%; }
+.dictation-style-preview h3 { margin: 0; font-size: var(--text-l); }
+.dictation-style-preview .hint { margin: 0; }
+.dictation-style-cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.dictation-style-card { min-height: 108px; gap: 8px; transition: background-color var(--motion-fast), border-color var(--motion-fast); }
+button.dictation-style-card:hover:not(:disabled) { background: var(--raised); border-color: var(--border-hover); }
+.dictation-style-card[aria-pressed="true"] { box-shadow: inset 0 2px var(--mark); }
+.dictation-style-card span { line-height: 1.6; }

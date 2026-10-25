@@ -30,8 +30,13 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   const people = el("details", {}, speakerTitle, speakerNote, speakers);
   const detail = el("div", {}, detailHeader, tabList, sources, content, people);
   const confirmText = el("p"), confirmDelete = el("button"), keep = el("button");
-  const confirmation = el("div", { class: "meeting-delete-confirmation" }, confirmText, confirmDelete, keep);
-  const body = el("div", { class: "meeting-body" }, feedback, notice, search, list, confirmation, detail);
+  confirmDelete.className = "dictation-danger";
+  const confirmation = el("div", { class: "meeting-delete-confirmation" }, confirmText, keep, confirmDelete);
+  const results = el("p", { class: "meeting-archive-results" }); results.setAttribute("role", "status");
+  const clearSearch = el("button", { onclick: () => { search.value = ""; draw(); search.focus(); } });
+  const sidebar = el("div", { class: "meeting-archive-sidebar" }, search, results, list);
+  const browser = el("div", { class: "meeting-archive-browser" }, sidebar, el("div", { class: "meeting-archive-detail" }, confirmation, detail));
+  const body = el("div", { class: "meeting-body" }, feedback, notice, browser);
   body.tabIndex = 0; body.setAttribute("role", "region");
   const format = el("select"), exportSource = el("select"), exportButton = el("button"), remove = el("button");
   const formatText = el("span"), sourceText = el("span");
@@ -47,6 +52,8 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   let mode: keyof typeof tabs = "transcript", source: MeetingSource = "microphone", confirming = false;
   let contentKey = "", speakerKey = "", listKey = "";
   const drafts = new Map<string, string>();
+  const wide = window.matchMedia?.("(min-width: 1100px) and (min-height: 561px)");
+  wide?.addEventListener("change", () => draw());
   const live = () => active && !document.hidden;
   const voice = (id: number) => t("Voice {number}", { number: id + 1 });
   const sourceName = (key: MeetingSource) => key === "microphone" ? t("Microphone") : t("System audio");
@@ -56,7 +63,10 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   function draw() {
     heading.textContent = t("Saved meetings"); back.textContent = t("Back to saved meetings"); reload.textContent = t("Reload");
     back.hidden = selected === null; back.disabled = busy; reload.disabled = reading || busy;
-    search.hidden = selected !== null; search.placeholder = t("Search saved meetings"); search.setAttribute("aria-label", t("Search saved meetings"));
+    const split = !!wide?.matches && selected !== null;
+    element.classList.toggle("meeting-archive-split", split);
+    sidebar.hidden = selected !== null && !split;
+    search.hidden = selected !== null && !split; search.placeholder = t("Search saved meetings"); search.setAttribute("aria-label", t("Search saved meetings"));
     body.setAttribute("aria-label", t("Saved meetings")); element.setAttribute("aria-busy", String(reading || busy));
     feedback.textContent = actionError || (failed ? t("Could not load saved meetings. The last view is kept. Reload to try again.") : "");
     feedback.hidden = !feedback.textContent;
@@ -66,16 +76,23 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
       : selected && !meeting && !reading && !failed ? t("This saved meeting no longer exists.")
       : selected ? t("This is the saved text snapshot. Notes never execute tasks.")
       : t("Only explicitly saved text is kept here. Clear all history also removes these meetings. Search covers the newest 500 meetings.");
-    list.hidden = selected !== null; detail.hidden = !meeting || selected === null;
-    const nextList = JSON.stringify([rows, search.value, locale()]);
+    list.hidden = selected !== null && !split; detail.hidden = !meeting || selected === null;
+    const nextList = JSON.stringify([rows, search.value, locale(), selected, busy]);
     if (nextList !== listKey) {
       listKey = nextList; list.replaceChildren();
       const query = search.value.trim().toLocaleLowerCase(locale());
       const matches = rows?.filter(row => row.title.toLocaleLowerCase(locale()).includes(query)) ?? [];
-      if (rows && !matches.length) list.append(el("p", { text: query ? t("No saved meetings match your search.") : t("No saved meetings yet.") }));
+      results.hidden = rows === null;
+      results.textContent = matches.length === 1 ? t("1 entry") : t("{count} entries", { count: matches.length });
+      clearSearch.textContent = t("Clear search");
+      if (rows && !matches.length) {
+        list.append(el("p", { text: query ? t("No saved meetings match your search.") : t("No saved meetings yet.") }));
+        if (query) list.append(clearSearch);
+      }
       for (const row of matches) {
         const button = el("button", { class: "meeting-archive-row", onclick: () => open(row.id) },
           el("strong", { text: row.title }), el("span", { text: dated(row.recorded_ms) }));
+        button.disabled = busy; button.setAttribute("aria-pressed", String(row.id === selected));
         button.setAttribute("aria-label", t("Open {title}, recorded {date}", { title: row.title, date: dated(row.recorded_ms) }));
         list.append(button);
       }
@@ -189,6 +206,9 @@ export function createMeetingArchive(api: MeetingArchiveBackend) {
   }
   back.addEventListener("click", () => { open(null); search.focus(); });
   reload.addEventListener("click", () => { actionError = ""; void load(); });
+  search.addEventListener("keydown", event => {
+    if (event.key === "Escape" && search.value) { event.preventDefault(); event.stopPropagation(); search.value = ""; draw(); }
+  });
   search.addEventListener("input", draw); format.addEventListener("change", draw); exportSource.addEventListener("change", draw);
   microphone.addEventListener("click", () => { if (!busy) { source = "microphone"; draw(); } });
   system.addEventListener("click", () => { if (!busy) { source = "system"; draw(); } });

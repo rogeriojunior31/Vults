@@ -157,10 +157,20 @@ const archiveApi={
  remove:id=>{const call={...deferred(),id};deleteRequests.push(call);return call.promise;},
  export:async(...args)=>{exportRequests.push(args);return false;},
 };
+const archiveMedia = { matches: false, addEventListener(_name, callback) { this.changed = callback; } };
+window.matchMedia = () => archiveMedia;
 const archive=createMeetingArchive(archiveApi);document.body.append(archive.element);archive.setActive(true);await tick();
 assert.ok(archive.element.textContent.includes(saved.title));assert.equal(renameRequests.length+exportRequests.length+deleteRequests.length,0,'Reading never mutates or exports');
 const search=nodes(archive.element).find(n=>n.tagName==='INPUT'&&n.type==='search');search.value='absent';search.fire('input');assert.ok(archive.element.textContent.includes('No saved meetings match'));
-search.value='';search.fire('input');named(archive.element,saved.title+new Date(saved.recorded_ms).toLocaleString('en',{dateStyle:'medium',timeStyle:'short'})).fire('click');await tick();
+click(archive.element,'Clear search');assert.equal(search.value,'');assert.equal(document.activeElement,search);
+search.value='absent';search.fire('input');search.fire('keydown',{key:'Escape',preventDefault(){},stopPropagation(){}});assert.equal(search.value,'');
+named(archive.element,saved.title+new Date(saved.recorded_ms).toLocaleString('en',{dateStyle:'medium',timeStyle:'short'})).fire('click');await tick();
+assert.equal(search.hidden,true,'Narrow detail keeps its existing return path');
+archiveMedia.matches=true;archiveMedia.changed();
+assert.equal(search.hidden,false,'Wide detail preserves the searchable meeting list');
+assert.equal(archive.element.querySelector('.meeting-archive-list').hidden,false);
+assert.equal(archive.element.querySelector('.meeting-archive-row').getAttribute('aria-pressed'),'true');
+archiveMedia.matches=false;archiveMedia.changed();assert.equal(search.hidden,true,'Narrow resize preserves the current detail');
 assert.ok(archive.element.textContent.includes('Private microphone <script> text'));assert.ok(!archive.element.textContent.includes('Independent system clock'));
 assert.ok(archive.element.textContent.includes('Unknown voice'));assert.equal(nodes(archive.element).filter(n=>['IMG','SCRIPT'].includes(n.tagName)).length,0);
 click(archive.element,'System audio');assert.ok(archive.element.textContent.includes('Different person'));assert.ok(archive.element.textContent.includes('00:00:02.000'));
