@@ -73,7 +73,7 @@ vults/
 ├── design/               # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
 ├── docs/                 # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
 │   ├── adr/              # decision records
-│   └── dev/              # internal plans (plan-zeca.md is the roadmap), not published
+│   └── dev/              # internal plans (ROADMAP.md is the roadmap), not published
 ├── tests/                # automated checks
 ├── packaging/            # AUR PKGBUILDs (vults, vults-git), .desktop entry
 ├── scripts/              # CI checks (brand, English, layers, network, version), perf
@@ -112,7 +112,7 @@ it works, the UI, the docs; distribution after.
 Read [DESIGN.md](DESIGN.md) before changing UI or creating a prototype. Reuse the
 production theme, components, sprites and interaction owners; preserve accessible
 actions and state across layouts. The implementation order is in
-[Plan Zeca](docs/dev/plan-zeca.md#ui-delivery-sequence), detailed in
+[the roadmap](docs/dev/ROADMAP.md), detailed in
 [UI implementation sequence](docs/dev/plan-ui.md): repair existing views and
 deliver larger UI changes with their features. Validate UI changes in the running
 application.
