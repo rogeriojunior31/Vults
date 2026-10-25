@@ -14,6 +14,7 @@ class Element {
   setAttribute(name, value) { this.attributes[name] = value; }
   getAttribute(name) { return this.attributes[name] ?? null; }
   querySelector(selector) { return all(this).slice(1).find(n => selector.startsWith("[data-history-action=") ? n.dataset.historyAction === selector.slice(22, -2) : selector.startsWith(".") ? n.className === selector.slice(1) : n.tag === selector) ?? null; }
+  querySelectorAll(selector) { return all(this).slice(1).filter(node => selector === "[data-word-action]" ? node.dataset.wordAction !== undefined : node.tag === selector); }
   contains(node) { return all(this).includes(node); }
   closest() { return null; }
   focus() { document.activeElement = this; }
@@ -45,12 +46,50 @@ const field=(text,page=view.dictionary)=>all(page).find(n=>n.tag==='label'&&n.ch
 const type=(input,value)=>{input.value=value;input.listeners.input?.();};
 assert.equal(reads,0,'Hidden construction never reads user data');
 view.refresh();await tick();assert.equal(reads,1);
-const word=field('New word');type(word,'Zeca');failure=true;named('Add word').click();await tick();
+const dictionarySearch = view.dictionary.querySelector("input");
+const beforeSearch = { reads, writes: writes.length };
+type(dictionarySearch, 'v\u00falt');
+assert.ok(view.dictionary.textContent.includes('Vults'), 'Local search ignores case and accents');
+type(dictionarySearch, 'missing-entry');
+assert.ok(view.dictionary.textContent.includes('No entries match your search.'));
+assert.equal(all(view.dictionary).find(node => node.className === 'words-count').textContent, '0');
+assert.equal(reads, beforeSearch.reads); assert.equal(writes.length, beforeSearch.writes);
+named('Clear search').click();
+assert.equal(dictionarySearch.value, ''); assert.equal(document.activeElement, dictionarySearch);
+type(dictionarySearch, 'missing-entry');
+for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+  dictionarySearch.listeners.keydown({ key: 'Escape', ...composing, preventDefault() { assert.fail('Composition belongs to the input method'); } });
+  assert.equal(dictionarySearch.value, 'missing-entry');
+}
+dictionarySearch.listeners.keydown({ key: 'Escape', preventDefault() {}, stopPropagation() {} });
+assert.equal(dictionarySearch.value, '');
+assert.equal(!!all(view.dictionary).find(n => n.className === 'words-try').open, false, 'Sentence testing starts folded');
+let prevented = false;
+all(view.dictionary).find(n => n.tag === 'form').listeners.submit({ preventDefault() { prevented = true; } });
+assert.ok(prevented, 'Native form submission never reloads the page');
+const word=field('New word');type(word,'Zeca');failure=true;named('Add word').focus();named('Add word').click();dictionarySearch.focus();await tick();
+assert.equal(document.activeElement, dictionarySearch, 'A failed save preserves newer search focus');
 assert.equal(word.value,'Zeca','Failed save retains the draft');assert.ok(view.dictionary.textContent.includes('Could not save'));
 failure=false;let release;pending=new Promise(r=>release=r);named('Add word').click();await tick();const count=writes.length;named('Add word').click();assert.equal(writes.length,count,'Pending action cannot duplicate writes');
-release();pending=null;await tick();assert.equal(word.value,'');assert.ok(view.dictionary.textContent.includes('Zeca'));
+dictionarySearch.focus();release();pending=null;await tick();
+assert.equal(document.activeElement, dictionarySearch, 'A successful save preserves newer search focus');
+assert.equal(word.value,'');assert.ok(view.dictionary.textContent.includes('Zeca'));
 const from=field('When I say'),to=field('Write');type(from,'cloud code');type(to,'Claude Code');named('Save replacement').click();await tick();assert.deepEqual(writes.at(-1),{action:'setReplacement',from:'cloud code',to:'Claude Code'});
-const body=field('Paste',view.snippets),trigger=field('When I say',view.snippets);type(trigger,'signature');type(body,'  <script>inert</script>\n$literal  ');named('Add snippet',view.snippets).click();await tick();assert.equal(writes.at(-1).text,'  <script>inert</script>\n$literal  ');
+const body=field('Paste',view.snippets),trigger=field('When I say',view.snippets);type(trigger,'signature');type(body,'  <script>inert</script>\n$literal  ');pending=new Promise(r=>release=r);named('Add snippet',view.snippets).focus();named('Add snippet',view.snippets).click();
+const pendingSnippetSearch = view.snippets.querySelector('input');pendingSnippetSearch.focus();
+release();pending=null;await tick();
+assert.equal(document.activeElement, pendingSnippetSearch, 'Snippet saves preserve newer search focus');
+assert.equal(writes.at(-1).text,'  <script>inert</script>\n$literal  ');
+const snippetSearch = view.snippets.querySelector('input');
+type(snippetSearch, '$literal');
+assert.ok(view.snippets.textContent.includes('<script>inert</script>'), 'Snippet search includes the saved body');
+type(snippetSearch, 'missing-entry');
+assert.ok(view.snippets.textContent.includes('No entries match your search.'));
+assert.equal(dictionarySearch.value, '', 'Searches remain independent');
+type(trigger, 'kept trigger'); type(body, 'kept body');
+named('Clear search', view.snippets).click();
+assert.equal(trigger.value, 'kept trigger'); assert.equal(body.value, 'kept body');
+assert.deepEqual(all(view.snippets).filter(node => node.tag === 'th').map(node => node.textContent), ['When I say', 'Paste', 'Delete']);
 assert.ok(view.snippets.textContent.includes('<script>inert</script>'));const text=all(view.snippets).find(n=>n.tag==='p'&&n.textContent.includes('<script>'));assert.equal(text.children.length,0,'User markup is inert');
 const remove=all(view.dictionary).find(n=>n.attributes['aria-label']==='Delete Vults');const before=writes.length;remove.click();assert.equal(writes.length,before);named('Cancel').click();assert.equal(writes.length,before);all(view.dictionary).find(n=>n.attributes['aria-label']==='Delete Vults').click();named('Delete').click();await tick();assert.ok(!data.words.includes('Vults'));
 const sentence=field('Try a sentence');type(sentence,'old');named('Test sentence').click();await tick();type(sentence,'new');resolveTry({text:'stale',cancelled:false,segments:[{text:'stale',kind:null,rule:null}]});await tick();assert.ok(!view.dictionary.textContent.includes('stale'),'Typing invalidates an old preview');
@@ -58,4 +97,4 @@ named('Test sentence').click();await tick();resolveTry({text:'literal',cancelled
 type(from,'kept draft');view.dictionary.scrollTop=120;view.relabel();assert.equal(view.dictionary.scrollTop,120);assert.equal(from.value,'kept draft');
 failRead=true;named('Refresh').click();await tick();assert.ok(view.dictionary.textContent.includes('Zeca'));assert.ok(view.dictionary.textContent.includes('Could not load'));failRead=false;named('Refresh').click();await tick();
 for(const language of ['pt-BR','es','zh']){setLang(language);view.relabel();assert.ok(!view.dictionary.textContent.includes('Names, spelling and replacements'));assert.equal(from.value,'kept draft');}
-console.log('check-dictation-words: CRUD, explicit deletion, literal bodies, pending/failure/retry, retained drafts/scroll, stale previews, inert text and three translations');
+console.log('check-dictation-words: CRUD, explicit deletion, literal bodies, pending/failure/retry, retained drafts/scroll and newer search focus, stale previews, inert text and three translations');

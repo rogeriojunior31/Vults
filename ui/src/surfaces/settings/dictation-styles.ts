@@ -109,6 +109,12 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
       ...(!available || providerFailed ? [el("p", { class: "note error", text: providerFailed ? t("Could not read the selected provider. Reload to try again.") : t("Save an API key or choose a local provider in Chat & voice.") }), el("div", { class: "actions" }, providerLink)] : on ? [el("div", { class: "actions" }, providerLink)] : []),
       notice, ...(!loading && (failed || providerFailed || appsFailed || message === "failed" || message === "budget" || message === "refresh") ? [reload] : [])),
     );
+    if (!on) {
+      const preview = el("section", { class: "card dictation-style-preview" }, el("h3", { text: t("Styles") }),
+        el("p", { class: "hint", text: t("Clean-up is off. Every line keeps its local text.") }), styleCards(true));
+      preview.setAttribute("aria-label", t("Styles"));
+      element.append(preview);
+    }
     if (on && data) {
       const choices = el("section", { class: "card rows" },
         row(t("Write in"), t("Keep the spoken language or translate the final text. As spoken never calls a model or translates."), select([{ value: null, label: t("The spoken language") }, ...OUTPUT_LANGUAGES.map(l => ({ value: l.id as DictationOutputLanguage | null, label: t(l.name) }))], data.dictationWriteIn, "language", value => options({ dictationWriteIn: value }))),

@@ -2,6 +2,7 @@ import type { VoiceConversation, VoiceRoutes, VoiceRouteSelection } from "../../
 import { createVoiceRoute } from "./voice-route";
 import { el } from "../../../dom";
 import { t } from "../../../i18n";
+import { icon } from "../../../island/icons";
 
 export interface ConversationBackend {
   options?(): Promise<{ semantic: boolean }>;
@@ -13,11 +14,11 @@ export interface ConversationBackend {
 }
 const running = (view: VoiceConversation | null) => !!view && ["preparing", "starting", "recording", "transcribing", "responding", "speaking", "interrupting", "waiting"].includes(view.phase);
 export function createVoiceConversation(api: ConversationBackend | undefined, configure: () => void, changed: () => void = () => {}) {
-  const title = el("h2"), about = el("p"), privacy = el("p", { class: "dictation-note" });
-  const status = el("p"), error = el("p", { class: "meeting-feedback" });
+  const title = el("span"), about = el("p"), privacy = el("p", { class: "dictation-note" });
+  const status = el("p", { class: "voice-conversation-state" }), error = el("p", { class: "meeting-feedback" });
   status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); error.setAttribute("role", "alert");
   const start = el("button"), finish = el("button"), cancel = el("button"), settings = el("button", { onclick: configure });
-  const actions = el("div", { class: "voice-conversation-actions" }, start, finish, cancel, settings);
+  const actions = el("div", { class: "voice-conversation-actions" }, start, finish, cancel);
   const reply = el("p", { class: "voice-conversation-text" });
   const draftTitle = el("span"), draft = el("textarea"), copy = el("button"), copied = el("p");
   draft.maxLength = 4096; draft.rows = 5;
@@ -33,11 +34,13 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   followUp.type = "checkbox"; followUp.checked = false; followUp.dataset.voiceFollowUp = "";
   const followUpChoice = el("label", { class: "voice-conversation-automatic" }, followUp, followUpTitle);
   const route = createVoiceRoute(api?.routes, () => { if (!route.manual()) { automatic.checked = false; semantic.checked = false; followUp.checked = false; } draw(); });
-  const content = el("div", { class: "voice-conversation-content" }, privacy, semanticFeedback, reply, review, route.element, automaticChoice, automaticNote, followUpChoice, followUpNote, semanticChoice, semanticNote);
+  const optionsTitle = el("h3");
+  const options = el("section", { class: "voice-conversation-options" }, optionsTitle, route.element, automaticChoice, automaticNote, followUpChoice, followUpNote, semanticChoice, semanticNote);
+  const content = el("div", { class: "voice-conversation-content" }, privacy, semanticFeedback, reply, review, options);
   content.tabIndex = 0; content.setAttribute("role", "region");
   const perch = el("span", { class: "voice-conversation-character" });
   perch.setAttribute("aria-hidden", "true"); perch.hidden = true;
-  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, title, about), perch), status, error, actions, content);
+  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, el("h2", { class: "dictation-title" }, icon("chat", 18), title), about), el("div", { class: "voice-conversation-header-actions" }, perch, settings)), status, error, actions, content);
   let view: VoiceConversation | null = null, active = false, pending = false, epoch = 0;
   let semanticAvailable = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -47,6 +50,8 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     route.update(active, pending || running(view));
     title.textContent = t("Voice conversation");
     content.setAttribute("aria-label", t("Voice conversation"));
+    optionsTitle.textContent = t("Conversation options");
+    status.dataset.voicePhase = view?.phase ?? "idle";
     about.textContent = t("Finish each recording to hear Zeca. Record another turn to continue the same conversation.");
     privacy.textContent = t("Microphone audio and cached flock context may go to OpenAI. API charges apply. Voice never answers permission cards.");
     start.textContent = view?.phase === "waiting" ? t("Record another turn") : t("Start recording"); finish.textContent = view?.phase === "speaking" || view?.phase === "interrupting" ? t("Stop response") : t("Finish recording"); cancel.textContent = view?.phase === "waiting" ? t("End conversation") : t("Cancel"); settings.textContent = t("Voice conversation settings");
@@ -54,6 +59,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     finish.disabled = !active || pending || (view?.phase !== "recording" && view?.phase !== "speaking");
     cancel.disabled = !active || !running(view);
     settings.disabled = pending || running(view);
+    start.classList.toggle("primary", !start.disabled); finish.classList.toggle("primary", !finish.disabled);
     automatic.disabled = !active || pending || running(view) || !route.manual();
     automaticChoice.hidden = automaticNote.hidden = !route.manual();
     followUpChoice.hidden = followUpNote.hidden = !automatic.checked || !route.manual();

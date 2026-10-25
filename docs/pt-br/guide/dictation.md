@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 74f22689a7ad -->
+<!-- source: 9071cc71fe3b -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -9,6 +9,48 @@ não estão habilitados aqui.
 
 As fontes dos modelos, as licenças e o instalador experimental de reuniões estão documentados em
 [Artefatos dos modelos de reuniões](../reference/meeting-models.md).
+
+<a id="finding-pages-and-settings"></a>
+## Encontrar páginas e configurações
+
+A navegação do Ditado segue os grupos do protótipo: Voz, Suas palavras e Sistema.
+Expanda **Configurações do ditado** para acessar as páginas de configuração; selecionar uma
+configuração ou buscar revela os controles relevantes. Estilos continua em Suas palavras e abre
+o editor de configurações existente.
+Use **Buscar página** para pesquisar nomes de páginas e descrições das configurações sem mudar a
+página atual nem salvar uma configuração. As buscas do Ditado ignoram maiúsculas e acentos,
+incluindo Histórico, palavras e títulos de reuniões salvas, mantendo o texto original na tela.
+Pressione Escape na busca para limpá-la; o Escape usado por um método de entrada para compor
+caracteres preserva a consulta. A navegação
+mantém a busca e o estado recolhido do grupo de configurações durante atualizações. Uma busca
+revela temporariamente as páginas de configuração correspondentes; limpá-la restaura sua escolha. Reabrir o Nest durante a mesma execução do
+app restaura a página de trabalho do Ditado escolhida, como Dicionário, Trechos ou Comandos de voz.
+Trocar entre Sala e Tela cheia mantém esse destino pelo fluxo existente de fechamento salvo. As setas para cima/baixo e Home/End movem
+o foco entre as ações visíveis da barra lateral; Enter abre a página em foco. Janelas estreitas
+usam o mesmo seletor de páginas agrupadas.
+Concluir uma ação no Histórico ou salvar entradas no Dicionário/Trechos preserva o foco de uma
+busca ou controle usado depois. Se você continuar na ação, o retorno de teclado existente permanece.
+As páginas de configuração do Ditado mantêm posições de leitura independentes enquanto esta janela
+de Configurações existir. Voltar a uma página restaura sua posição; atualizar as configurações
+também mantém o foco de teclado no controle do grupo de navegação. Essas posições não são salvas
+entre reinícios do app ou da janela.
+
+Atalhos de teclado separa as teclas globais dos controles de gravação. Mostra o atalho independente
+de comandos de voz junto com ditado, copiar último e cancelar; as teclas de gravação específicas
+do X11 ficam num detalhe próprio. Colagem começa com o modo de entrega configurado e o estado do
+acesso ao teclado. Isso não confirma uma entrega: confira sempre o resultado final, inclusive falhas
+de cópia. O resumo não solicita acesso ao teclado; isso continua exigindo a ação explícita existente.
+
+A página Voz separa modelo/idioma, microfone e som/feedback. As opções menos comuns de remoção de
+repetições e nova tentativa de resultado vazio ficam em **Processamento avançado**. As configurações
+continuam usando os controles existentes; falhas ao salvar restauram a escolha anterior.
+
+As páginas de trabalho e as configurações do Ditado compartilham uma coluna de leitura limitada,
+títulos compactos e controles na mesma escala. Ações do Histórico, formulários de palavras,
+controles de salvar/exportar reuniões e linhas de configuração se adaptam à largura restante ao
+lado da navegação. Janelas baixas reduzem os espaços enquanto transcrições e configurações mantêm
+suas áreas de rolagem. Os controles de gravação ficam fora da rolagem da transcrição; os avisos
+de consentimento e entrega continuam nos fluxos existentes.
 
 <a id="voice-available-today"></a>
 
@@ -57,6 +99,12 @@ permissão, e a consulta ao Codex continua indisponível. Veja
 
 <a id="manual-voice-turns"></a>
 ## Falas manuais por voz
+
+A página de conversa por voz separa as configurações no cabeçalho, o estado atual, os controles
+do turno e as **Opções da conversa**. A ação disponível de Iniciar ou Finalizar/Parar recebe destaque
+conforme a etapa. Mudar uma opção não inicia a captura; as autorizações de microfone e resposta
+sem a tecla continuam explícitas.
+
 
 No Linux, abra **Ditado > Trabalho > Conversa por voz** depois de ativar a voz e instalar um modelo
 local em **Voz**. Use **Iniciar gravação**, fale e clique em **Finalizar gravação** para parar o
@@ -379,6 +427,14 @@ nem baixa modelos.
 
 ## Processamento das suas palavras
 
+Dicionário e Trechos têm buscas locais independentes, incluindo os resultados das substituições e
+os textos dos trechos. A busca ignora maiúsculas e acentos, preserva os rascunhos dos formulários e
+não consulta o banco nem um modelo. Escape ou **Limpar busca** restaura a lista. Os formulários de
+criação vêm antes das listas salvas; textos com várias linhas recebem mais espaço em janelas largas.
+**Testar uma frase** começa recolhido e mantém o rascunho ao abrir ou fechar. Cancelar uma exclusão
+devolve o foco ao registro de origem.
+
+
 O ditado independente agora aplica as entradas locais de Suas palavras após a transcrição final.
 Abra **Ditado > Dicionário** para adicionar/remover palavras e salvar regras de substituição.
 Salvar a mesma origem atualiza seu texto sem mudar a ordem. **Trechos** adiciona gatilhos curtos
@@ -538,7 +594,7 @@ Aplicativos de prosa, destinos desconhecidos e o microfone do Chat mantêm seu t
 opção vale para a próxima gravação. O fallback de um terminal para a área de transferência mantém
 o texto convertido; a formatação nunca autoriza inserção, envia Enter ou contorna uma sessão
 aguardando. Copiar novamente e o Histórico reutilizam o texto já entregue sem formatá-lo outra vez.
-Quando há retenção, **Mostrar o que foi ouvido** no Histórico mantém a transcrição anterior à
+Quando há retenção, **Detalhes** no Histórico mantém a transcrição anterior à
 conversão de código falado junto do resultado escrito. Não acrescenta áudio nem conteúdo anterior
 da área de transferência ao histórico.
 
@@ -669,6 +725,11 @@ são recriados.
 
 ## Estilos e limpeza de texto
 
+A página Estilos explica os quatro modos mesmo com a limpeza desligada. Os cards de prévia são
+somente leitura: não ativam a limpeza nem mudam o estilo salvo. Ative a limpeza explicitamente,
+com um provedor disponível, antes de escolher o estilo padrão ou por aplicativo.
+
+
 Abra **Ditado > Estilos** para configurar a limpeza opcional do texto final. Ela usa o provedor de API
 selecionado em **Configurações > Chat e voz**, incluindo Ollama/LM Studio locais. É separada do modelo
 de fala local em **Ditado > Voz** e nunca usa uma CLI de chat, ferramentas ou a conversa do Zeca.
@@ -739,7 +800,7 @@ de agente; veja as [regras de inserção](../adr/0032-dictation-into-other-apps.
    para exercitar um modelo. Dite uma pergunta como "Pode explicar a próxima etapa?" Ela deve continuar
    como pergunta, sem resposta, ação de ferramenta nem envio. A redação exata pode variar entre provedores.
 3. Confira Polido e Prompt com texto descartável; depois escolha outro idioma em Escrever em. Confira
-   sentido, nomes e trechos literais; compare **Mostrar o que foi ouvido** com o texto escrito. Separe
+   sentido, nomes e trechos literais; compare **Detalhes** com o texto escrito. Separe
    idioma de entrada e de saída. Com Como falado selecionado, Escrever em não deve fazer requisição.
 4. Desligue a limpeza durante o processamento. O texto local deve continuar disponível, a menos que
    você também cancele o ditado. Provedor lento/indisponível deve manter o resultado local. Confira a
@@ -762,10 +823,20 @@ resultado real da entrega e etapa que falhou; não precisa de transcrição pess
 Abra **Ditado** no cabeçalho do Nest ou escolha **Abrir Ditado** na paleta. A página continua
 disponível com o Zeca desligado. Ela agrupa os 500 ditados guardados mais recentes por dia local e
 busca nos textos ouvido/escrito, aplicativo e sessão sem reler o banco. Textos e valores longos
-quebram linha dentro da coluna rolável. **Mostrar o que foi ouvido** expande a transcrição
-original. Ela pode diferir do texto escrito quando há aplicação de Suas palavras ou conversão
+quebram linha dentro da coluna rolável. **Detalhes** expande a transcrição
+original, o estilo, o idioma e as medidas. Ela pode diferir do texto escrito quando há aplicação de Suas palavras ou conversão
 de código falado.
 
+A contagem de resultados acompanha a busca local. Escape limpa o campo; uma busca sem resultados
+também oferece **Limpar busca**. **Opções do histórico** contém a exclusão geral; cada registro mantém
+suas ações Copiar, Usar novamente e Excluir. A confirmação de exclusão começa com Cancelar em foco;
+cancelar retorna à ação de origem. Nenhum registro é removido sem sua confirmação explícita.
+
+**Ditado de hoje** fica ao lado do atalho. Medidas disponíveis abrem inicialmente em uma janela
+larga; sem medidas ou em janela pequena, o resumo começa recolhido. Sua escolha explícita é mantida
+nas atualizações. As teclas mostram o atalho real do desktop; atalhos indisponíveis mostram
+**Não vinculado**. Cada registro tem um marcador de destino e ações com ícones nomeados; Copiar
+continua anunciando seu resultado.
 Os números de hoje usam a duração medida do áudio e o total de palavras entregue. Um dia sem
 registro mostra **Desconhecido**, em vez de um zero medido. A velocidade é desconhecida abaixo de
 um segundo de áudio. O tempo economizado estima digitação a 45 palavras por minuto e desconta
@@ -817,6 +888,11 @@ mantêm as escolhas capturadas no início.
 <a id="diagnostics"></a>
 
 ## Diagnóstico
+
+Diagnóstico agrupa o teste explícito do microfone, as durações medidas das etapas e as leituras
+atuais do sistema. Os contadores técnicos começam recolhidos e mantêm essa escolha nas atualizações.
+Atualizar as leituras devolve o foco ao botão de atualização sem iniciar o microfone.
+
 
 Abra **Ditado > Diagnóstico** na navegação do Ditado. **Atualizar diagnóstico** lê o estado
 atual do áudio, desktop e modelos locais sem iniciar captura nem pedir uma permissão ao desktop.
@@ -889,6 +965,15 @@ que falharam. Não é preciso compartilhar o texto ditado. Essas verificações 
 <a id="voice-commands-development-status"></a>
 
 ## Estado do desenvolvimento dos comandos de voz
+
+Configurações dos comandos separa os controles locais do encaminhamento opcional ao Chat.
+O resumo somente leitura distingue comandos desligados, frases não reconhecidas mantidas no
+computador e frases que podem ser enviadas ao Chat atual nas condições existentes. O guia
+compartilhado de frases continua sem executar ações. Privacidade separa retenção e exclusão.
+A exclusão começa com Cancelar em foco; Escape/Cancelar retorna ao botão de solicitação. Uma falha
+preserva a nova tentativa com foco seguro, e concluir a operação não tira o foco de outro campo
+que você selecionou enquanto aguardava.
+
 
 A V8.1 acrescenta uma gramática pura de comandos em inglês, português brasileiro e espanhol.
 Ela reconhece navegação, preferências de projetos e consultas, além de sequências explícitas como
@@ -1106,6 +1191,15 @@ e notas não salvas. Uma cópia salva anteriormente permanece em **Reuniões sal
 
 <a id="saved-meetings-and-export"></a>
 ### Reuniões salvas e exportação
+
+Em uma janela larga e alta, selecionar uma reunião salva mantém a lista com busca ao lado do detalhe.
+Janelas menores mostram o detalhe com **Voltar às reuniões salvas**, preservando a seleção ao mudar
+o tamanho. A lista mostra a contagem de resultados; Escape e **Limpar busca** restauram uma lista
+filtrada. Exportação e exclusão continuam explícitas. A exclusão começa com **Manter reunião** em foco.
+Voltar de uma transcrição restaura a posição da lista e o foco na reunião aberta quando ela ainda
+está listada. Atualizar a lista ou mudar o idioma preserva sua rolagem e foco de teclado; uma busca
+focada depois continua com o foco.
+
 
 Quando uma transcrição estiver pronta, preencha o **Título da reunião** e escolha **Salvar reunião**.
 Conclua um resumo primeiro se quiser incluir suas notas. Salvar fixa a transcrição atual e as notas

@@ -1,0 +1,75 @@
+/* Work pages and privileged Settings keep the same reading width and control scale. */
+.dictation-area, #settings.dictation-workspace { --dictation-reading-width: 960px; --dictation-page-padding: clamp(16px, 3vw, 28px); }
+.dictation-area > :is(.dictation-history, .voice-conversation, .meetings-workspace),
+#settings.dictation-workspace .page { container: dictation-page / inline-size; }
+.dictation-area > :is(.dictation-history, .voice-conversation),
+.dictation-area :is(.meeting-check, .meeting-archive),
+#settings.dictation-workspace .page { padding: 20px var(--dictation-page-padding) 28px; box-sizing: border-box; }
+.dictation-area :is(.dictation-history, .voice-conversation, .meeting-check, .meeting-archive) > *,
+#settings.dictation-workspace .page > * { width: 100%; max-width: var(--dictation-reading-width); box-sizing: border-box; margin-inline: auto; }
+.dictation-area :is(.dictation-history, .meeting-body, .voice-conversation-content),
+#settings.dictation-workspace .page { scrollbar-width: thin; overscroll-behavior: contain; scroll-padding-block: 16px; }
+.dictation-area .dictation-heading, #settings.dictation-workspace .settings-heading { flex-shrink: 0; align-items: flex-start; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.dictation-area .dictation-heading h2, #settings.dictation-workspace h1 { margin: 0; color: var(--fg); font: 600 var(--text-xl)/1.4 var(--font); letter-spacing: 0; overflow-wrap: anywhere; }
+.dictation-area .dictation-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dictation-area .dictation-title > svg, #settings.dictation-workspace .settings-title-line > svg { flex: none; color: var(--fg-dim); width: 18px; height: 18px; }
+.dictation-area .dictation-title > span { min-width: 0; }
+.dictation-area .dictation-heading p, #settings.dictation-workspace .settings-heading .lede { max-width: 70ch; margin: 6px 0 0; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); }
+.dictation-area .dictation-heading > button,
+.dictation-area .voice-conversation-header-actions > button { border-color: transparent; background: transparent; color: var(--fg-dim); }
+.dictation-area .dictation-heading > button:hover,
+.dictation-area .voice-conversation-header-actions > button:hover { background: var(--raised); color: var(--fg); }
+.dictation-area .dictation-toolbar { gap: 8px; margin-block: 16px; }
+.dictation-area .dictation-search { min-width: min(180px, 100%); min-height: 36px; font: var(--text-m)/1.4 var(--font); }
+.dictation-area :is(.meeting-check, .meeting-archive, .voice-conversation) :is(input:not([type="checkbox"]), select, textarea) { box-sizing: border-box; max-width: 100%; min-height: 36px; border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 7px 10px; color: var(--fg); background: var(--input); font: var(--text-m)/1.5 var(--font); }
+.dictation-area :is(input, select, textarea, button, summary, [tabindex="0"]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dictation-area .voice-conversation-content { flex: 1; padding-inline: 2px; }
+.dictation-area .voice-conversation-actions { flex-shrink: 0; padding-block: 4px 8px; }
+.dictation-area .meeting-state:not([hidden]) { padding: 12px 16px; background: var(--panel); border-radius: var(--radius-card); }
+.dictation-area .meeting-state output { margin-inline-start: auto; font-size: 20px; font-variant-numeric: tabular-nums; }
+.dictation-area .meeting-feedback:empty { display: none; }
+.dictation-area .meeting-footer { border-top: 1px solid var(--border); padding-top: 8px; }
+.dictation-area .meeting-workspace-navigation { box-sizing: border-box; width: 100%; max-width: calc(var(--dictation-reading-width) + 2 * var(--dictation-page-padding)); margin-inline: auto; padding-inline: var(--dictation-page-padding); }
+#settings.dictation-workspace .settings-heading { gap: 0; }
+#settings.dictation-workspace .settings-title-line { gap: 10px; }
+#settings.dictation-workspace .card { padding: 16px 20px; }
+#settings.dictation-workspace .card.rows { padding-block: 0; }
+#settings.dictation-workspace .row { gap: 16px; }
+@container dictation-page (max-width: 700px) {
+  .dictation-area .dictation-hero { display: flex; align-items: flex-start; gap: 8px; }
+  .dictation-area .dictation-shortcut { flex: 1; min-width: 0; min-height: 0; padding: 12px; }
+  .dictation-area .dictation-shortcut p, .dictation-shortcut-wave { display: none; }
+  .dictation-area .dictation-hero .dictation-summary { flex: 1; }
+  .dictation-area .dictation-hero .dictation-figures > div { flex-direction: column; gap: 4px; }
+  .dictation-area .dictation-entry { grid-template-columns: 28px minmax(0, 1fr); gap: 4px 8px; }
+  .dictation-area .dictation-entry > .dictation-actions { grid-column: 2; grid-row: auto; }
+  .dictation-area .dictation-destination { width: 26px; height: 26px; }
+}
+@container dictation-page (max-width: 600px) {
+  .dictation-area .words-form > label { flex-basis: 100%; }
+  .dictation-area .words-form > button { margin-inline-start: auto; }
+  .dictation-area .meeting-footer { flex-wrap: wrap; }
+  .dictation-area .meeting-footer > .meeting-save-region { flex-basis: 100%; }
+  .dictation-area .meeting-save { flex-wrap: wrap; }
+  .dictation-area .meeting-save > label { flex-basis: 100%; }
+  .dictation-area .meeting-export { align-items: stretch; }
+  .dictation-area .meeting-export > label { flex: 1 1 120px; }
+  .dictation-area .meeting-segment { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  #settings.dictation-workspace .row:not(:has(> .toggle)) { flex-direction: column; align-items: stretch; gap: 8px; }
+  #settings.dictation-workspace .row > .row-text + :last-child { max-width: 100%; align-self: flex-start; }
+  #settings.dictation-workspace .inline { flex-wrap: wrap; max-width: 100%; }
+  #settings.dictation-workspace .inline .field { min-width: 0; }
+}
+@media (max-height: 560px) {
+  .dictation-area > :is(.dictation-history, .voice-conversation),
+  .dictation-area :is(.meeting-check, .meeting-archive),
+  #settings.dictation-workspace .page { padding-block: 12px 16px; }
+  .dictation-area .dictation-heading, #settings.dictation-workspace .settings-heading { padding-bottom: 8px; gap: 8px; }
+  .dictation-area .dictation-toolbar { margin-block: 8px; }
+  .dictation-area .meeting-state:not([hidden]) { padding: 8px 12px; }
+}
+@media (max-height: 440px) {
+  .dictation-area > :is(.dictation-history, .voice-conversation),
+  .dictation-area :is(.meeting-check, .meeting-archive),
+  #settings.dictation-workspace .page { padding-block: 8px; }
+}

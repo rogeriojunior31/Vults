@@ -22,7 +22,9 @@ const VERDICTS = { ok: tk("Input level looks usable."), "no-signal": tk("No usab
 /** Kept across Settings repaints. Meter polling never replaces the focused action. */
 export function createDictationDoctor(api: Backend) {
   const element = el("section", { class: "dictation-diagnostics" });
-  const reportBody = el("div");
+  const reportBody = el("div", { class: "diagnostic-report" });
+  let countersExpanded = false;
+  let reportRefresh: HTMLButtonElement;
   const micBody = el("div", { class: "card" });
   let visible = false, report: DictationDiagnostics | null = null, loading = false, failed = false, reportEpoch = 0;
   let id: number | null = null, starting = false, micEpoch = 0, mic: DictationMicTest | null = null, micFailed = false;
@@ -95,26 +97,30 @@ export function createDictationDoctor(api: Backend) {
   }
   function drawReport() {
     const refresh = button(t("Refresh diagnostics"), () => void load()) as HTMLButtonElement;
+    reportRefresh = refresh;
     refresh.dataset.setting = "diagnostic-refresh";
     refresh.disabled = loading;
     const info = el("p", { class: `note${failed ? " error" : ""}`, text: loading ? t("Reading dictation diagnostics…")
       : failed ? report ? t("Could not refresh diagnostics. The last readings may be out of date.") : t("Could not read diagnostics. Try again.") : "" });
-    info.setAttribute("role", failed ? "alert" : "status");
+    info.setAttribute("role", failed ? "alert" : "status"); info.hidden = !info.textContent;
     const children: HTMLElement[] = [el("div", { class: "actions" }, refresh), info];
     if (report) {
       const s = report.system;
       const state = (key: string) => STATES[key] ? t(STATES[key]) : t("Unknown");
       const yes = (value: boolean) => value ? t("Ready") : t("Unavailable");
-      children.push(el("h3", { text: t("System") }), el("dl", { class: "diagnostic-facts" },
+      const system = el("section", { class: "card diagnostic-system" }, el("h3", { text: t("System") }), el("dl", { class: "diagnostic-facts" },
         fact(t("Audio host"), s.host ?? t("Unavailable")), fact(t("Active input"), s.device ?? t("Unavailable")),
         fact(t("Native input rate"), number(s.rate, " Hz")), fact(t("Desktop session"), s.session === "unknown" ? t("Unknown") : s.session),
         fact(t("GlobalShortcuts portal"), state(s.shortcuts)), fact(t("RemoteDesktop keyboard access"), state(s.keyboard)),
         fact(t("KWin focus script"), state(s.kwin)), fact(t("GPU transcription"), yes(s.gpu)), fact(t("Local VAD model"), yes(s.vad))),
-        el("p", { class: "hint", text: t("Checks read current state without requesting permissions. Missing input uses the same fallback as dictation. GPU readiness does not measure speed.") }),
-        el("h3", { text: t("Counters since app start") }), el("dl", { class: "diagnostic-facts" },
-          fact(t("Repetitive runs cut"), String(report.counters.loops)), fact(t("Base retries"), String(report.counters.retries)), fact(t("Copied outcomes"), String(report.counters.copied))),
-        el("p", { class: "hint", text: t("Final dictation decodes only. Preview and Chat are excluded; Copy again can add a Copied outcome. Counters reset when Vults exits.") }),
-        el("h3", { text: t("Stage timings") }), el("p", { class: "hint", text: t("Latest 50 retained, delivered dictations. Missing or unused stages stay unknown; erasing text erases its timings.") }));
+        el("p", { class: "hint", text: t("Checks read current state without requesting permissions. Missing input uses the same fallback as dictation. GPU readiness does not measure speed.") }));
+      const counters = el("details", { class: "diagnostic-counters" }, el("summary", { text: t("Counters since app start") }), el("dl", { class: "diagnostic-facts" },
+        fact(t("Repetitive runs cut"), String(report.counters.loops)), fact(t("Base retries"), String(report.counters.retries)), fact(t("Copied outcomes"), String(report.counters.copied))),
+        el("p", { class: "hint", text: t("Final dictation decodes only. Preview and Chat are excluded; Copy again can add a Copied outcome. Counters reset when Vults exits.") }));
+      counters.dataset.setting = "diagnostic-counters"; counters.open = countersExpanded;
+      counters.addEventListener("toggle", () => { countersExpanded = counters.open; });
+      const timings = el("section", { class: "card diagnostic-timing-card" }, el("h3", { text: t("Stage timings") }),
+        el("p", { class: "hint", text: t("Latest 50 retained, delivered dictations. Missing or unused stages stay unknown; erasing text erases its timings.") }));
       if (report.timings) {
         const table = el("table", { class: "diagnostic-timings" }, el("caption", { text: t("Measured durations in milliseconds") }),
           el("thead", {}, el("tr", {}, ...[t("Stage"), t("Samples"), "p50", "p95"].map(text => { const th = el("th", { text }); th.scope = "col"; return th; }))),
@@ -123,17 +129,20 @@ export function createDictationDoctor(api: Backend) {
             return el("tr", {}, th, ...[String(d.count), number(d.p50_ms), number(d.p95_ms)].map(text => el("td", { text })));
           })));
         const scroll = el("div", { class: "diagnostic-table-scroll" }, table); scroll.tabIndex = 0;
-        scroll.setAttribute("role", "region"); scroll.setAttribute("aria-label", t("Stage timings")); children.push(scroll);
-      } else children.push(el("p", { class: "note error", text: t("Could not read timing history. Refresh diagnostics to try again.") }));
+        scroll.setAttribute("role", "region"); scroll.setAttribute("aria-label", t("Stage timings")); timings.append(scroll);
+      } else timings.append(el("p", { class: "note error", text: t("Could not read timing history. Refresh diagnostics to try again.") }));
+      children.push(timings, system, counters);
     }
     reportBody.replaceChildren(...children);
   }
   async function load() {
     if (loading || !visible) return;
+    const origin = document.activeElement;
+    const focused = reportBody.contains(origin);
     const epoch = ++reportEpoch; loading = true; failed = false; drawReport();
     try { const next = await api.report(); if (epoch === reportEpoch) report = next; }
     catch { if (epoch === reportEpoch) failed = true; }
-    finally { if (epoch === reportEpoch) { loading = false; drawReport(); } }
+    finally { if (epoch === reportEpoch) { loading = false; drawReport(); if (visible && focused && (document.activeElement === origin || document.activeElement === document.body)) reportRefresh.focus({ preventScroll: true }); } }
   }
   function relabel() {
     drawMic(); drawReport();

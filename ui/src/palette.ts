@@ -47,9 +47,9 @@ export function paletteItems(c: PaletteContext): PaletteItem[] {
   const tabs: [string, string][] = [
     ["flock", t("Open the Flock")],
     ...(run ? ([["chat", t("Open the Chat")]] as [string, string][]) : []),
-    ["activity", t("Open Activity")],
-    ["connections", t("Open Connections")],
     ["dictation", t("Open Dictation")],
+    ["connections", t("Open Connections")],
+    ["activity", t("Open Activity")],
   ];
   return [...sessions, ...commands, ...tabs.map(([id, label]) => ({ label, hint: t("In the Nest"), run: () => c.tab(id) }))];
 }

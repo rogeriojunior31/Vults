@@ -9,6 +9,41 @@ approved prototype are not enabled here.
 Model sources, licenses and the experimental meeting installer are documented in
 [Meeting model artifacts](../reference/meeting-models.md).
 
+## Finding pages and settings
+
+The Dictation navigation follows the prototype groups: Voice, Your words and System.
+Expand **Dictation settings** for configuration pages; selecting a setting or searching reveals
+the relevant controls. Styles remains under Your words and opens its existing settings editor. Use **Find a page** to search page names and setting descriptions without changing the
+current page or saving a setting. Dictation page searches ignore case and accents, including
+History, words and saved meeting titles, while displaying the original text. Press Escape in the
+search field to clear it; Escape used by an input method to compose characters keeps the query. The navigation
+keeps your search and the configuration group's folded state when settings refresh. A search
+temporarily reveals matching configuration pages; clearing it restores your fold choice. Reopening the Nest during the same app run restores
+its selected Dictation work page, such as Dictionary, Snippets or Voice commands. Room/Full size
+changes keep that destination through the existing saved-close flow. Arrow Up/Down and Home/End move between the visible
+sidebar actions; Enter opens the focused page. Narrow windows use the same grouped page picker.
+Finishing a History action or saving Dictionary/Snippets entries keeps a newer search or control
+focus. If you stay on the action, its existing keyboard return remains available.
+Dictation configuration pages keep independent reading positions while this Settings window
+exists. Returning to a page restores its position; refreshing settings also keeps keyboard focus
+on the navigation group toggle. These positions are not saved across app or window restarts.
+
+Keyboard shortcuts separates global bindings from recording controls. It shows the independent
+voice-command key alongside dictation, copy-last and cancel; X11-specific recording keys live
+in their own disclosure. Paste begins with the configured delivery mode and keyboard readiness.
+This is not a delivery receipt: always check the final outcome, including clipboard failures.
+No overview requests keyboard access; that still requires the existing explicit action.
+
+The Voice settings page separates model/language, microphone, and sound/feedback. Less common
+loop removal and empty-result retry options live under **Advanced processing**. Settings still
+apply through their existing controls, with save failures restoring the previous choice.
+
+Work pages and Dictation settings share a bounded reading column, compact titles and the same
+control scale. History actions, word forms, meeting save/export controls and configuration rows
+adapt to the page width remaining beside the navigation. Short windows reduce spacing while
+transcripts and configuration content keep their scroll regions. Recording controls stay outside
+the transcript scroll region; consent and delivery notices remain part of their existing flows.
+
 ## Voice available today
 
 Use [Chat's voice input](chat.md#speaking-instead-of-typing) after choosing a local model in **Dictation > Voice**.
@@ -48,6 +83,11 @@ Voice never answers a permission card, and Codex consultation remains unavailabl
 [Realtime accounting](../reference/realtime-accounting.md#runtime-transport).
 
 ## Manual voice turns
+
+The voice work page separates settings in the heading, current status, turn controls and
+**Conversation options**. The available Start or Finish/Stop action is emphasized for the current
+phase. Changing an option does not start capture; microphone and follow-up consent remain explicit.
+
 
 On Linux, open **Dictation > Work > Voice conversation** after enabling voice and installing a
 local model under **Voice**. Use **Start recording**, speak, then **Finish recording** to stop the
@@ -338,6 +378,13 @@ spoken-command listener or model download is added.
 
 ## Your words processing
 
+Dictionary and Snippets each have an independent local search, including replacement outputs and
+snippet bodies. Search ignores case and accents, keeps your form drafts and makes no database or
+model request. Escape or **Clear search** restores the list. Creation forms precede their saved
+lists; multiline outputs retain more space in wide windows. **Try a sentence** starts folded and
+keeps its draft when opened or closed. Cancelling deletion returns focus to the originating entry.
+
+
 Independent dictation now applies the local Your words entries after final transcription.
 Open **Dictation > Dictionary** to add/remove word chips and save replacement rules. Saving
 the same replacement source updates its text without changing its order. **Snippets** adds short
@@ -594,6 +641,11 @@ The former Lab/Quick task-run composers were removed in N0 and are not recreated
 
 ## Styles and text clean-up
 
+The Styles page explains all four styles even while clean-up is off. These preview cards are
+read-only: they neither enable clean-up nor change the saved style. Enable clean-up explicitly
+with an available provider before choosing a default or per-app style.
+
+
 Open **Dictation > Styles** to configure optional final-text clean-up. It uses the API provider
 selected in **Settings > Chat & voice**, including local Ollama/LM Studio. It is separate from the
 local speech model in **Dictation > Voice** and never uses a chat CLI, tools or Zeca's conversation.
@@ -660,7 +712,7 @@ and [voice and recording rules](../adr/0028-spoken-replies-through-a-realtime-mo
    Dictate a question such as "Can you explain the next step?" It should remain a question, with no
    answer, tool action or submission. Exact wording may differ between providers.
 3. Check Polished and Prompt with disposable text, then a different Write in language. Verify meaning,
-   names and literal snippets, and compare **Show what was heard** with the written text. Keep input
+   names and literal snippets, and compare **Details** with the written text. Keep input
    language and output language distinct. With As spoken selected, Write in should make no request.
 4. Turn clean-up off during filtering. Local text should remain available unless you also cancel the
    dictation. A slow/unavailable provider should keep the local result. Check the delivery outcome
@@ -680,10 +732,19 @@ desktop, actual delivery result and the failed step; no personal transcript or A
 Open **Dictation** in the Nest header, or choose **Open Dictation** in the palette. It remains
 available with Zeca off. The page groups the newest 500 retained dictations by local day and
 searches their heard/written text, application and session without another database read.
-Text and long values wrap within the scrolling history column. **Show what was heard** expands
-the original transcript. It can differ from the written text when Your words or spoken-code
+Text and long values wrap within the scrolling history column. **Details** expands
+the original transcript, style, language and measurements. It can differ from the written text when Your words or spoken-code
 conversion applies.
 
+The result count follows your local search. Escape clears the search field; a filtered empty
+state also offers **Clear search**. **History options** contains bulk erasure, while each record
+keeps its own Copy, Use again and Delete actions. Deletion starts with Cancel focused; cancelling
+returns to the originating action. No record is removed until you explicitly confirm.
+
+**Today’s dictation** sits beside the shortcut. Measured figures open initially in a wide window;
+missing measurements and small windows start folded. Your explicit choice survives refreshes.
+The keycaps show the actual desktop binding; unavailable bindings say **Not bound**.
+Each history row has a destination mark and named icon actions; Copy still announces its outcome.
 Today's figures use measured audio duration and committed word totals. No recorded day shows
 **Unknown**, rather than a measured zero. Speed is unknown below one second of audio. Estimated
 time saved compares dictation time against typing at 45 words per minute, floored at zero.
@@ -730,6 +791,11 @@ music and vocabulary choices are working controls. Additional delivery options r
 later steps. Active recordings retain their captured choices.
 
 ## Diagnostics
+
+Diagnostics groups the explicit microphone test, measured stage timings and current system
+readings. Technical counters start folded and retain their disclosure choice through refresh.
+Refreshing readings returns keyboard focus to the refresh action without starting the microphone.
+
 
 Open **Dictation > Diagnostics**. **Refresh diagnostics** reads
 current audio, desktop and local model state without starting capture or requesting a desktop grant.
@@ -793,6 +859,14 @@ model/language, actual delivery outcome, the relevant timing sample counts and t
 There is no need to share the dictated text. These checks cover the V4 screens; the commands checklist below covers V8. Physical long-meeting acceptance and continuous realtime voice remain separate checks.
 
 ## Voice commands development status
+
+Command settings separates local controls from the optional Chat handoff. Its read-only routing
+summary distinguishes commands off, unrecognized phrases kept local, and phrases that may be
+sent to the current Chat under the existing conditions. The shared phrase guide remains inert.
+Privacy separates retention from erasure. Erasure focuses Cancel first; Escape/Cancel returns
+to its request button. A failed erasure preserves retry with safe focus, and completing it does
+not move focus away from another field you selected while waiting.
+
 
 V8.1 adds a pure command grammar in English, Brazilian Portuguese and Spanish. It recognizes
 navigation, project preferences and read requests, plus explicit sequences such as `next session
@@ -987,6 +1061,15 @@ hiding/closing the window, locking or reviewing another recording discards unsav
 notes. A previously saved copy remains in **Saved meetings**.
 
 ### Saved meetings and export
+
+In a wide, tall window, selecting a saved meeting keeps the searchable list beside its detail.
+Smaller windows show the detail with **Back to saved meetings**, preserving the selection when
+resizing. The list shows a result count; Escape and **Clear search** restore a filtered list.
+Export and deletion remain explicit actions. Deletion focuses **Keep meeting** first.
+Returning from a transcript restores the list position and focuses the meeting you opened when
+it is still listed. A refreshed list or language change preserves its scroll and keyboard focus;
+a newer search focus remains yours.
+
 
 When a transcript is ready, enter a **Meeting title** and choose **Save meeting**. Finish a summary
 first if you want its notes included. Saving freezes the current transcript and completed notes;

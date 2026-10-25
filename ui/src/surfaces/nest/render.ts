@@ -224,7 +224,13 @@ export function createNest(
           }
         : null,
   });
-  const dictationArea = createDictationArea(backend.dictation, section => backend.settings(section ?? "dictation"), () => open("dictation-statistics"), () => { if (mounted) paintPortrait(); });
+  const dictationArea = createDictationArea(
+    backend.dictation,
+    section => backend.settings(section ?? "dictation"),
+    () => open("dictation-statistics"),
+    () => { if (mounted) paintPortrait(); },
+    () => { if (mounted && tab === "dictation") rememberPlace(); },
+  );
   // Activity's parts, each read again when its sub-tab opens.
   const parts: Record<Sub, { element: HTMLElement; refresh: () => void; flush?: () => Promise<void> }> = {
     week: createWeek(backend.week),
@@ -521,7 +527,7 @@ export function createNest(
   let tab: Tab = "flock";
   let last: ViewModel | null = null;
   let sub: Sub = "week";
-  const currentPlace = () => tab === "activity" ? sub : tab === "flock" && profilesShown ? "flock-profiles" : tab;
+  const currentPlace = () => tab === "activity" ? sub : tab === "dictation" ? `dictation-${dictationArea.current()}` : tab === "flock" && profilesShown ? "flock-profiles" : tab;
   const portraitSpace = window.matchMedia("(min-height: 561px)");
   const portraitNarrow = window.matchMedia("(max-width: 600px)");
   function paintPortrait(): void {
@@ -868,6 +874,7 @@ export function createNest(
       companionChat.setKeys(keys);
       for (const panel of profilePanels.values()) panel.setKeys(keys);
       flock.setKeys(keys);
+      dictationArea.setKeys(keys);
     },
     shortcut: (id) => {
       if (id === "talk-cancel") {

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 6e110a5a59a7 -->
+<!-- source: 52113b519dc4 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -55,8 +55,8 @@ mantendo os controles do cabeçalho e o rodapé acessíveis.
 Quando há espaço, o cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
 dura (um clique o encerra), o som, a busca (a paleta, como **Ctrl+K**), o seletor de tamanho e o
-botão de tela cheia. O mesmo cabeçalho traz cinco abas com os seus
-ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
+botão de tela cheia. O mesmo cabeçalho traz cinco abas nesta ordem: **Bando**, **Chat**, **Ditado**,
+**Conexões** e **Atividade**. Elas mostram seus ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
 traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa
 de você (ou que falhou); um clique abre **Flock** com ela na frente (um card que espera vem
@@ -64,7 +64,7 @@ primeiro ali), onde você o responde. As Configurações continuam uma página p
 config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
 seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
-**Alt+1** a **Alt+5** escolhem uma aba. Embaixo, **Zeca on · optional** / **Zeca off** liga e
+**Alt+1** a **Alt+5** escolhem uma aba nessa ordem (Chat oculto é ignorado). Embaixo, **Zeca on · optional** / **Zeca off** liga e
 desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.

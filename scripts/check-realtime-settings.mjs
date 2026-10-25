@@ -89,7 +89,7 @@ class Element {
 }
 
 globalThis.document = { body: new Element("body"), documentElement: new Element("html"),
-  createElement: tag => new Element(tag), createTextNode: text => { const n = new Element("text"); n.textContent = text; return n; },
+  createElement: tag => new Element(tag), createElementNS: (_ns, tag) => new Element(tag), createTextNode: text => { const n = new Element("text"); n.textContent = text; return n; },
   dispatchEvent() {}, addEventListener() {} };
 globalThis.window = { addEventListener() {} };
 const pageBundles = await build({ configFile: false, root, logLevel: "silent", plugins: [{
@@ -175,6 +175,8 @@ try {
   const state = (id, phase, extra = {}) => ({ id, phase, reason: null, draft: null, reply: null, ...extra });
   const refresh = async () => { const entry = timers.entries().next().value; assert.ok(entry, "An active session needs a heartbeat"); timers.delete(entry[0]); entry[1](); await tick(); };
   assert.equal(starts.length, 0);
+  assert.ok(work.element.querySelector('.voice-conversation-options').textContent.includes('Conversation options'));
+  assert.equal(work.element.querySelector('.voice-conversation-actions').contains(button('Voice conversation settings')),false,'Settings belongs to the heading, separate from turn controls');
   work.setActive(true); await click("Voice conversation settings"); assert.equal(configured, 1);
   const automatic = nodes(work.element).find(n => n.tagName === "INPUT" && "voiceAutomatic" in n.dataset);
   assert.ok(!automatic.checked, "Automatic completion must start off");
@@ -190,6 +192,8 @@ try {
   const second = click("Start recording"); starts[1].resolve(state("2", "recording")); await second;
   assert.equal(button("Start recording").disabled, true);
   assert.equal(button("Finish recording").disabled, false);
+  assert.equal(button("Finish recording").classList.contains("primary"), true);
+  assert.equal(button("Start recording").classList.contains("primary"), false);
   assert.equal(automatic.disabled, true);
   assert.ok(work.element.textContent.includes("Pause to finish automatically"));
   await click("Finish recording"); assert.deepEqual(controls.pop(), { id: "2", action: "finish" });
