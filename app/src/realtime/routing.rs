@@ -166,6 +166,7 @@ fn route(
         commands.cancel();
         let feedback = match command::parse(text) {
             Parsed::NotCommand => return None,
+            Parsed::InvalidVolume => Feedback::InvalidVolume,
             Parsed::Refused => Feedback::NotByVoice,
             Parsed::Commands(_) => Feedback::Unavailable,
         };
@@ -175,12 +176,14 @@ fn route(
             choices: Vec::new(),
             effects: Vec::new(),
             media: Vec::new(),
+            output: Vec::new(),
             application: None,
         }
     };
-    if !report.media.is_empty() || report.application.is_some() {
+    if !report.media.is_empty() || report.application.is_some() || !report.output.is_empty() {
         // Realtime has no independent desktop-action admission yet.
         report.media.clear();
+        report.output.clear();
         report.application = None;
         report.feedback = Feedback::Unavailable;
         report.text = vults_core::i18n::voice_feedback(state.lang, Feedback::Unavailable).into();

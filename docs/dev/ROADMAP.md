@@ -461,14 +461,14 @@ or desktop action was enabled by this documentation change.
 ### VC2 · Execute typed local desktop actions
 `P0 · M · Needs: VC1`
 
-- [ ] Extend the pure `crates/dictation/src/command.rs` contract with explicit typed desktop actions;
+- [x] Extend the pure `crates/dictation/src/command.rs` contract with explicit typed desktop actions;
   keep parsing/name resolution free of IO. Dispatch from the existing runtime owner in
   `app/src/voice_commands.rs`/`runtime.rs`, through app-owned executors, never guessed shell text.
 - [x] Extend `crates/media` MPRIS controls with explicit Pause/Play and checked player volume;
   pause/resume must not use the current PlayPause toggle. Reuse `app/src/media.rs`, respecting the
   media switch. Select the known player or clarify among live players; unsupported/no player is a
   visible failure. Pin its bus identity and revalidate before acting; never silently switch players.
-- [ ] Implement system-output control in `crates/platform` with a fixed native interface or fixed
+- [x] Implement system-output control in `crates/platform` with a fixed native interface or fixed
   argument-vector adapter to an available desktop audio tool; never interpolate transcript text.
   Missing backends report unavailable. Pin the default output identity, read the actual current
   mute/volume, clamp absolute values to 0..100 percent and use 10-percentage-point relative steps.
@@ -501,7 +501,7 @@ feature-enabled evals, reviewed translation source hashes and repository/version
 Tests cover private-bus playback/volume/capabilities, cancellation after property reads, a departed
 player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
 separate consent and realtime non-upload. No personal playback, settings or provider was changed.
-Pending for VC2: system output and generalized mixed-batch execution.
+Pending for VC2: generalized mixed-batch execution.
 Application integration (2026-10-26): installed visible GTK/GIO desktop entries join the existing
 project/agent resolver under a separate default-off `dictation_command_apps` switch. Bare Open
 resolves both namespaces; explicit app/project phrases select one; aliases and original 90-second
@@ -520,6 +520,26 @@ Firefox follow-up: local retained command evidence shows the media switch was in
 after the owner enabled it, Pause the music received native completion. Informal resume utterances
 were not recognized by the local grammar. The owner was given the supported Resume music phrase;
 VC3 semantic interpretation remains necessary. No setting or playback was changed by the assistant.
+
+System-output integration (2026-10-26): separate default-off `dictation_command_output` consent
+connects typed computer-output mute/unmute and bounded absolute/ten-point relative volume actions
+to a fixed-argument pactl JSON adapter. Only local Unix endpoints are accepted. Pinned server
+cookie/address, sink name/index, channel map/serial/port are revalidated; writes use a fixed numeric
+sink index, never @DEFAULT_SINK@. Channel balance is retained when nonzero, volume never unmutes,
+and readback must confirm the resulting state. Cancellation, lock, one-use tickets and admission
+before the absolute deadline are shared with the other native commands; temporary playback
+restoration finishes before output changes. Literal invalid volumes are a known local rejection,
+not an opportunity to enter Chat fallback. Realtime consumes the new commands without uploading.
+Fakes cover route/server/index/port/serial changes, malformed channels, cancellation, confirmation
+failure, mute idempotence and volume bounds/balance. Private executable fixtures cover exact pactl
+arguments, missing/failing binaries, oversized output and process timeout; no personal audio or
+settings are accessed. Separate pactl calls cannot provide atomic routing across concurrent server
+changes; observed changes fail confirmation without automatic retry or rollback. EN/pt-BR guides
+and README plus the four-language command/settings feedback are updated.
+Muting preserves the existing level and reports it accurately even above 100%; relative steps
+are applied to the actual measured level before the adjustment is clamped. Local validation passes:
+UI build, 19 renderer checks, formatting, workspace Clippy/tests, feature-enabled evals, reviewed
+translation marks and repository guards. Native output and visual acceptance remain pending.
 
 Pending native acceptance: visually inspect Command settings and exercise actual playback/dictation
 restoration/cancellation in the running application (VC6); native UI capture/control is unavailable

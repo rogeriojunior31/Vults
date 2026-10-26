@@ -3,6 +3,8 @@
 mod applications;
 #[cfg(target_os = "linux")]
 mod media;
+#[cfg(target_os = "linux")]
+mod output;
 mod targets;
 #[cfg(test)]
 mod tests;
@@ -30,6 +32,7 @@ pub struct Report {
     /// Executed by the existing runtime effect loop only after the entire batch succeeds.
     pub effects: Vec<Effect>,
     pub media: Vec<command::MediaAction>,
+    pub output: Vec<command::OutputAction>,
     pub application: Option<vults_platform::applications::Application>,
 }
 
@@ -41,6 +44,7 @@ impl Report {
             && self.effects.is_empty()
             && self.media.is_empty()
             && self.application.is_none()
+            && self.output.is_empty()
     }
 }
 
@@ -135,6 +139,10 @@ impl Commands {
         }
         let elapsed = now.checked_duration_since(self.epoch).unwrap_or(Duration::MAX);
         let (commands, mut selected) = match command::parse(transcript) {
+            Parsed::InvalidVolume => {
+                self.pending = None;
+                return report(lang, Feedback::InvalidVolume);
+            }
             Parsed::Refused => {
                 self.pending = None;
                 return report(lang, Feedback::NotByVoice);
@@ -190,6 +198,28 @@ impl Commands {
                 }
             }
         };
+        if commands
+            .iter()
+            .any(|command| matches!(command, Command::Output(_)))
+        {
+            self.last = None;
+            let mut out = report(lang, Feedback::Unavailable);
+            if commands
+                .iter()
+                .all(|command| matches!(command, Command::Output(_)))
+            {
+                out.feedback = Feedback::Requested;
+                out.text = i18n::voice_feedback(lang, Feedback::Requested).into();
+                out.output = commands
+                    .iter()
+                    .filter_map(|command| match command {
+                        Command::Output(action) => Some(*action),
+                        _ => None,
+                    })
+                    .collect();
+            }
+            return out;
+        }
         if commands
             .iter()
             .any(|command| matches!(command, Command::Media(_)))
@@ -314,7 +344,9 @@ impl Commands {
             let previous = shadow.front().cloned();
             let mut undo = None;
             let intent = match &command {
-                Command::Media(_) | Command::Application(_) => return report(lang, Feedback::Unavailable),
+                Command::Media(_) | Command::Application(_) | Command::Output(_) => {
+                    return report(lang, Feedback::Unavailable);
+                }
                 Command::Next if !shadow.ordered().is_empty() => Some(Intent::FocusNext),
                 Command::Previous if !shadow.ordered().is_empty() => Some(Intent::FocusPrevious),
                 Command::Focus(_) | Command::Open(_) => Some(Intent::Focus {
@@ -456,6 +488,7 @@ fn report(lang: i18n::Lang, feedback: Feedback) -> Report {
         choices: Vec::new(),
         effects: Vec::new(),
         media: Vec::new(),
+        output: Vec::new(),
         application: None,
     }
 }
@@ -608,3 +641,6 @@ fn application_report(lang: i18n::Lang, feedback: i18n::ApplicationFeedback) -> 
 }
 #[cfg(target_os = "linux")]
 pub(crate) use applications::start as start_application;
+
+#[cfg(target_os = "linux")]
+pub(crate) use output::start as start_output;

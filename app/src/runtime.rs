@@ -496,6 +496,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     crate::chat::voice_command(app.clone(), text, ticket);
                     continue;
                 }
+                if !report.output.is_empty() {
+                    crate::voice_commands::start_output(app.clone(), text, ticket, report, state.lang);
+                    continue;
+                }
                 if report.application.is_some() {
                     crate::voice_commands::start_application(app.clone(), text, ticket, report, state.lang);
                     continue;

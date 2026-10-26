@@ -1,5 +1,7 @@
 //! Pure voice-command grammar. Names remain unresolved; no action or permission is executed.
 mod media;
+mod output;
+pub use output::OutputAction;
 pub mod names;
 pub use media::MediaAction;
 mod phrases;
@@ -21,6 +23,7 @@ pub enum Preference {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     Media(MediaAction),
+    Output(OutputAction),
     Next,
     Previous,
     Focus(String),
@@ -47,6 +50,7 @@ pub enum Parsed {
     /// A permission/card answer was requested; none of this utterance may run.
     Refused,
     NotCommand,
+    InvalidVolume,
 }
 
 /// Lexical key shared with later name matching: accent/case/punctuation/space folding only.
@@ -102,25 +106,29 @@ pub fn parse(text: &str) -> Parsed {
     if clauses.iter().any(|clause| refused(clause)) {
         return Parsed::Refused;
     }
+    // Invalid literal volume requests stay local instead of reaching the optional Chat fallback.
+    let signed = text.char_indices().any(|(index, ch)| {
+        matches!(ch, '-' | '+' | '\u{2212}' | '\u{ff0b}' | '\u{ff0d}')
+            && text[index + ch.len_utf8()..]
+                .trim_start()
+                .starts_with(|ch: char| ch.is_ascii_digit())
+    });
+    if clauses
+        .iter()
+        .filter_map(|clause| media::volume_argument(clause).or_else(|| output::volume_argument(clause)))
+        .any(|value| {
+            let value = volume_number(value);
+            !value.is_empty()
+                && value
+                    .split_whitespace()
+                    .all(|part| part.bytes().all(|ch| ch.is_ascii_digit()))
+                && (signed || percentage(value).is_none())
+        })
+    {
+        return Parsed::InvalidVolume;
+    }
     let commands: Option<Vec<_>> = clauses.iter().map(|clause| single(clause)).collect();
-    commands.map_or(Parsed::NotCommand, |commands| {
-        // Folding punctuation must not turn a signed volume into a different positive value.
-        let signed = text.char_indices().any(|(index, ch)| {
-            matches!(ch, '-' | '+' | '\u{2212}' | '\u{ff0b}' | '\u{ff0d}')
-                && text[index + ch.len_utf8()..]
-                    .trim_start()
-                    .starts_with(|ch: char| ch.is_ascii_digit())
-        });
-        if signed
-            && commands
-                .iter()
-                .any(|command| matches!(command, Command::Media(MediaAction::Volume(_))))
-        {
-            Parsed::NotCommand
-        } else {
-            Parsed::Commands(commands)
-        }
-    })
+    commands.map_or(Parsed::NotCommand, Parsed::Commands)
 }
 
 fn head<'a>(text: &'a str, phrase: &str) -> Option<&'a str> {
@@ -169,6 +177,9 @@ fn refused(text: &str) -> bool {
         .is_some_and(|word| phrases::ANSWERS.contains(&word))
 }
 fn single(text: &str) -> Option<Command> {
+    if let Some(action) = output::parse(text) {
+        return Some(Command::Output(action));
+    }
     if let Some(action) = media::parse(text) {
         return Some(Command::Media(action));
     }
@@ -241,4 +252,19 @@ impl Target {
             },
         }
     }
+}
+
+fn volume_number(value: &str) -> &str {
+    value
+        .strip_suffix(" percent")
+        .or_else(|| value.strip_suffix(" por cento"))
+        .or_else(|| value.strip_suffix(" por ciento"))
+        .unwrap_or(value)
+}
+
+fn percentage(value: &str) -> Option<u8> {
+    volume_number(value)
+        .parse::<u8>()
+        .ok()
+        .filter(|value| *value <= 100)
 }

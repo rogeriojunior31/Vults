@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 99921043783e -->
+<!-- source: fca8370e90dd -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1050,7 +1050,7 @@ aceitam cancelamento após a transcrição e só informam conclusão após a res
 Um lote com falha ou tempo excedido informa quantas operações tiveram resposta; confira a reprodução
 antes de tentar novamente. Lotes apenas de mídia são suportados; misturar mídia e comandos do bando
 é recusado sem aplicar nenhuma parte. Comandos de reprodução ainda não permitem repetir ou desfazer. A conversa por voz em tempo real ainda não executa esses novos
-comandos. Áudio do sistema e interpretação natural por modelo continuam pendentes; transcrever a fala não fornece essa interpretação. Um comando de mídia não faz requisição
+comandos. A interpretação natural por modelo continua pendente; transcrever a fala não fornece essa interpretação. Um comando de mídia não faz requisição
 a provedor nem é encaminhado automaticamente ao Chat.
 
 A VC2 também acrescenta **Comandos de voz de aplicativos**, uma escolha separada desligada por
@@ -1069,6 +1069,32 @@ cancelamento, bloqueio, prazo original e consentimento atual. O sucesso informa 
 solicitada**, não que a janela esteja pronta. Abrir um app não permite repetir nem desfazer. Um app
 por pedido é suportado; lotes contendo aberturas são recusados antes de alterar projetos. O Zeca
 pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
+
+A VC2 acrescenta **Comandos de voz do áudio do sistema**, uma opção própria desligada por padrão
+nas configurações dos comandos. Ao ativar, segure Ctrl+Alt+Z e diga `silenciar o computador`,
+`reativar o som do computador`, `volume do computador 40`, `aumente o volume do computador` ou
+`abaixe o volume do computador`. Em inglês, exemplos incluem `mute computer` e `computer volume
+40`; em espanhol, `silenciar el ordenador` e `volumen del ordenador 40`. Um pedido sem escopo,
+como `abaixe o volume`, ainda precisa indicar o destino; a interpretação natural por modelo
+continua pendente. Silenciar notificações de projeto e controlar o player mantêm seus próprios escopos.
+
+Isso controla apenas a saída padrão, nunca microfone, ganho de entrada ou estado de reprodução.
+Passos relativos são de dez pontos percentuais e os ajustes de volume ficam entre 0 e 100 por cento. O balanço
+entre canais é preservado quando os níveis atuais não nulos o definem. Mudar o volume não reativa
+a saída; use o comando explícito de reativar o som. Silenciar preserva o nível atual, inclusive um nível já acima de 100%; o resultado informa esse nível medido sem limitá-lo. Uma leitura posterior confirma volume e silêncio
+reais antes de informar sucesso. Pedidos literais com sinal ou fora do intervalo ficam locais e
+nunca entram no encaminhamento opcional ao Chat.
+
+O backend opcional exige `pactl` com saída JSON e um socket Unix local compatível com PulseAudio.
+Um `PULSE_SERVER` remoto é recusado. Identidade do servidor, índice/nome da saída, mapa de canais e
+porta ativa são capturados e conferidos antes e depois de escritas pelo índice fixado; nenhum
+apelido de saída padrão redireciona uma escrita enfileirada para uma saída recém-selecionada. Essas
+chamadas nativas separadas não formam uma transação atômica de roteamento: mudanças concorrentes de
+rota ou servidor podem impedir a confirmação. Falha ou tempo excedido informa o trecho confirmado,
+sem repetir nem reverter automaticamente. Só lotes exclusivos de saída são aceitos nesta etapa;
+lotes mistos continuam indisponíveis. Voz em tempo real não executa esses comandos. Os testes usam
+estado simulado e processos privados, não áudio pessoal; a validação real de saída/cancelamento
+no desktop continua pendente.
 
 A V8.5 acrescenta **Ditado > Comandos de voz**: uma visão pesquisável dos comandos/resultados retidos,
 com Copiar/Excluir explícitos e sem repetição. Compartilha o prazo do Histórico e sua confirmação de
@@ -1089,7 +1115,7 @@ mais antigos podem ficar fora dessa janela.
   estar livre, sem texto, arquivos ou referências por enviar. Nada é acrescentado ou enviado a partir
   do rascunho existente. Chat ocupado ou indisponível informa falha local, sem enfileirar um turno para
   depois. Uma conversa nova mantém a pasta/provedor selecionados; trocar esse destino durante a
-  preparação cancela o envio. Recusas, nomes sem resolução e esclarecimentos expirados ou desatualizados nunca entram
+  preparação cancela o envio. Recusas, pedidos literais de volume inválido, nomes sem resolução e esclarecimentos expirados ou desatualizados nunca entram
   nesse envio. Alterar qualquer uma das escolhas invalida os tickets antigos de comandos.
 - **O que você pode dizer**, o mesmo guia somente de leitura da página de trabalho. A UI chinesa explica
   a gramática compatível em inglês/português/espanhol; não afirma aceitar comandos falados em chinês.

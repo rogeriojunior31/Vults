@@ -934,7 +934,7 @@ They wait for dictation's temporary duck/pause restoration, support cancellation
 and report completion only after the player acknowledges the operation. A failed or timed-out batch
 reports how many operations were acknowledged; check playback before trying again. Media-only batches
 are supported; combining media and flock commands is currently refused without applying either part.
-Playback commands do not support repeat or undo yet. Realtime voice does not execute these new desktop commands yet. System-output controls and natural intent interpretation by a model remain pending; transcription alone does not
+Playback commands do not support repeat or undo yet. Realtime voice does not execute these new desktop commands yet. Natural intent interpretation by a model remains pending; transcription alone does not
 supply that interpretation. No provider request or automatic Chat fallback is made for a media command.
 
 VC2 also adds **Application voice commands**, a separate default-off choice under Command
@@ -954,6 +954,30 @@ not that a window is ready. Opening an app cannot be repeated or undone. One app
 supported; batches containing app launches are refused before changing project state. Zeca may be
 off; realtime voice does not launch apps. Native desktop acceptance remains pending.
 
+VC2 adds **System audio voice commands**, a separate default-off option under Command settings.
+With it on, hold Ctrl+Alt+Z and say `mute computer`, `unmute computer`, `computer volume 40`,
+`raise computer volume` or `lower computer volume`. Portuguese examples include `silenciar o
+computador`, `reativar o som do computador`, `volume do computador 40` and `abaixe o volume do
+computador`; Spanish supports `silenciar el ordenador` and `volumen del ordenador 40`. An
+unspecified request such as `lower the volume` still needs a scope; natural model interpretation
+remains pending. Project notification mute and selected-player playback keep their own scopes.
+
+This controls only the default output, never a microphone, input gain or playback state. Relative
+steps are ten percentage points and volume adjustments stay within 0..100 percent. Existing channel balance
+is preserved when the current nonzero levels define it. Changing volume does not unmute output;
+use the explicit unmute command. Muting preserves the current level, including an existing level above 100%; the status reports that measured level without capping it. Readback confirms the actual mute/volume before reporting success.
+Literal signed or out-of-range volume requests stay local and never enter optional Chat fallback.
+
+The optional backend needs `pactl` with JSON output and a local PulseAudio-compatible Unix socket.
+A remote `PULSE_SERVER` is refused. Server identity, sink index/name, channel map and active port
+are captured and rechecked before and after fixed-index writes; no default-output alias can redirect
+a queued write to a newly selected output. These separate native calls are not an atomic routing
+transaction: concurrent routing or server changes may prevent confirmation. A failed or timed-out
+operation reports the confirmed prefix and is never retried or rolled back automatically. Only
+output-only batches are accepted in this slice; mixed batches remain unavailable. Realtime voice
+does not execute these commands. Backend tests use simulated state/private process fixtures, not
+personal audio; real desktop output/cancellation acceptance remains pending.
+
 V8.5 adds **Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its
 **What you can say** guide lists supported phrases; **Dictionary** opens the same names/replacements
@@ -971,7 +995,7 @@ The page filters the newest 500 retained dictations, so older commands may be ou
   access rules, network gate, budget and traces. Zeca must be on; Chat must be idle with no unsent text,
   files or references. Nothing is added to or sent from the existing draft. A busy or unavailable Chat
   reports failure locally rather than queuing a later turn. A new conversation keeps its selected
-  folder/provider; changing that source during preparation cancels the handoff. Refusal, unresolved names and expired or
+  folder/provider; changing that source during preparation cancels the handoff. Refusal, invalid literal volume requests, unresolved names and expired or
   stale clarifications never enter this fallback. Changing either choice invalidates old command tickets.
 - **What you can say**, the same read-only phrase guide as the work page. Chinese UI explains the supported
   English/Portuguese/Spanish grammar; it does not claim Chinese speech commands.

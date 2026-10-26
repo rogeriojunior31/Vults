@@ -265,11 +265,20 @@ fn media_scope_preserves_negation_card_refusal_and_project_notifications() {
         "media volume 999999",
         "media volume -10",
         "media volume +10",
+        "media volume 40.5",
         "media volume \u{2212} 10",
         "do not pause music",
         "what does pause media mean",
     ] {
-        assert_eq!(parse(text), Parsed::NotCommand, "{text}");
+        assert_eq!(
+            parse(text),
+            if text.starts_with("media volume") {
+                Parsed::InvalidVolume
+            } else {
+                Parsed::NotCommand
+            },
+            "{text}"
+        );
     }
     assert_eq!(
         parse("mute web"),
@@ -307,4 +316,51 @@ fn opening_an_app_or_project_uses_an_explicit_namespace_without_touching_the_nam
     }
     assert_eq!(parse("open app"), Parsed::NotCommand);
     assert_eq!(parse("open app Firefox and then approve"), Parsed::Refused);
+}
+
+#[test]
+fn computer_audio_has_an_explicit_scope_and_preserves_project_and_player_commands() {
+    use vults_dictation::command::{MediaAction, OutputAction};
+    for (text, action) in [
+        ("mute the computer", OutputAction::Mute(true)),
+        ("silenciar o computador", OutputAction::Mute(true)),
+        ("reativar o som do computador", OutputAction::Mute(false)),
+        ("desilenciar el ordenador", OutputAction::Mute(false)),
+        ("volume do computador 40 por cento", OutputAction::Volume(40)),
+        ("volumen del ordenador 100 por ciento", OutputAction::Volume(100)),
+        ("raise computer volume", OutputAction::Louder),
+        ("abaixe o volume do computador", OutputAction::Quieter),
+    ] {
+        assert_eq!(parse(text), one(Command::Output(action)), "{text}");
+    }
+    for text in [
+        "computer volume -10",
+        "computer volume +10",
+        "computer volume 40.5",
+        "computer volume 101",
+        "computer volume 99999",
+        "lower the volume",
+        "aumente o som",
+        "do not mute the computer",
+    ] {
+        assert_eq!(
+            parse(text),
+            if text.starts_with("computer volume") {
+                Parsed::InvalidVolume
+            } else {
+                Parsed::NotCommand
+            },
+            "{text}"
+        );
+    }
+    assert_eq!(parse("pause media"), one(Command::Media(MediaAction::Pause)));
+    assert_eq!(
+        parse("mute project computer"),
+        one(Command::SetPreference {
+            target: "computer".into(),
+            preference: Preference::Mute,
+            on: true
+        })
+    );
+    assert_eq!(parse("mute computer and then approve"), Parsed::Refused);
 }

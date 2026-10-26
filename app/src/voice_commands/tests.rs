@@ -687,3 +687,53 @@ fn app_clarification_preserves_original_definitions_and_never_applies_a_batch_pr
     assert_eq!(out.feedback, Feedback::Locked);
     assert!(out.application.is_none());
 }
+
+#[test]
+fn computer_audio_is_only_requested_and_mixed_batches_do_not_change_project_state() {
+    use vults_dictation::command::OutputAction;
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let out = say(&mut commands, &mut state, "mute computer", now);
+    assert_eq!(out.feedback, Feedback::Requested);
+    assert_eq!(out.output, vec![OutputAction::Mute(true)]);
+    assert!(out.effects.is_empty() && out.media.is_empty() && out.application.is_none());
+    assert!(!out.chat_fallback(true));
+    let before = format!("{state:?}");
+    for text in [
+        "mute web and then mute computer",
+        "mute computer and then pause media",
+        "mute computer and then open app Firefox",
+    ] {
+        let out = say(&mut commands, &mut state, text, now);
+        assert_eq!(out.feedback, Feedback::Unavailable);
+        assert!(
+            out.effects.is_empty()
+                && out.output.is_empty()
+                && out.media.is_empty()
+                && out.application.is_none()
+        );
+        assert_eq!(format!("{state:?}"), before);
+    }
+    state.locked = true;
+    let out = say(&mut commands, &mut state, "mute computer", now);
+    assert_eq!(out.feedback, Feedback::Locked);
+    assert!(out.output.is_empty());
+}
+
+#[test]
+fn invalid_native_volume_is_never_sent_to_chat_or_executed() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    for text in [
+        "media volume -10",
+        "computer volume 101",
+        "pause media and then computer volume 200",
+    ] {
+        let out = say(&mut commands, &mut state, text, now);
+        assert_eq!(out.feedback, Feedback::InvalidVolume);
+        assert!(!out.chat_fallback(true));
+        assert!(out.effects.is_empty() && out.output.is_empty() && out.media.is_empty());
+    }
+}

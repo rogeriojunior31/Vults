@@ -739,6 +739,85 @@ pub fn voice_application(lang: Lang, status: ApplicationFeedback) -> &'static st
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum OutputFeedback {
+    Disabled,
+    Unavailable,
+    Changed,
+    Failed,
+}
+
+pub fn voice_output_status(lang: Lang, muted: bool, percent: u32) -> String {
+    match (lang, muted) {
+        (Lang::En, true) => format!("Computer output is muted at {percent}% volume."),
+        (Lang::PtBr, true) => format!("A saída do computador está silenciada, com volume em {percent}%."),
+        (Lang::Es, true) => format!("La salida del equipo está silenciada, con volumen al {percent}%."),
+        (Lang::Zh, true) => format!("电脑输出已静音，音量为 {percent}%。"),
+        (Lang::En, false) => format!("Computer output is unmuted at {percent}% volume."),
+        (Lang::PtBr, false) => {
+            format!("A saída do computador está com som ativado, com volume em {percent}%.")
+        }
+        (Lang::Es, false) => {
+            format!("La salida del equipo tiene sonido activado, con volumen al {percent}%.")
+        }
+        (Lang::Zh, false) => format!("电脑输出已取消静音，音量为 {percent}%。"),
+    }
+}
+
+pub fn voice_output_failure(lang: Lang, feedback: OutputFeedback, completed: usize, total: usize) -> String {
+    use OutputFeedback::*;
+    match (lang, feedback) {
+        (Lang::En, Disabled) => {
+            "Enable System audio voice commands in Dictation > Command settings first.".into()
+        }
+        (Lang::PtBr, Disabled) => {
+            "Ative Comandos de voz do áudio do sistema em Ditado > Configurações dos comandos primeiro."
+                .into()
+        }
+        (Lang::Es, Disabled) => {
+            "Activa Comandos de voz del audio del sistema en Dictado > Configuración de comandos primero."
+                .into()
+        }
+        (Lang::Zh, Disabled) => "请先在听写 > 命令设置中启用系统音频语音命令。".into(),
+        (Lang::En, Unavailable) => format!(
+            "Computer audio is unavailable; {completed} of {total} actions confirmed. Check pactl and your local audio service."
+        ),
+        (Lang::PtBr, Unavailable) => format!(
+            "Áudio do computador indisponível; {completed} de {total} ações confirmadas. Confira o pactl e o serviço de áudio local."
+        ),
+        (Lang::Es, Unavailable) => format!(
+            "Audio del equipo no disponible; {completed} de {total} acciones confirmadas. Revisa pactl y el servicio de audio local."
+        ),
+        (Lang::Zh, Unavailable) => {
+            format!("电脑音频不可用；已确认 {total} 个操作中的 {completed} 个。请检查 pactl 和本地音频服务。")
+        }
+        (Lang::En, Changed) => format!(
+            "The default output changed; {completed} of {total} actions confirmed. Check the output before speaking again."
+        ),
+        (Lang::PtBr, Changed) => format!(
+            "A saída padrão mudou; {completed} de {total} ações confirmadas. Confira a saída antes de falar novamente."
+        ),
+        (Lang::Es, Changed) => format!(
+            "La salida predeterminada cambió; {completed} de {total} acciones confirmadas. Revísala antes de hablar de nuevo."
+        ),
+        (Lang::Zh, Changed) => {
+            format!("默认输出已更改；已确认 {total} 个操作中的 {completed} 个。请先检查输出再重新说话。")
+        }
+        (Lang::En, Failed) => format!(
+            "Could not confirm computer audio; {completed} of {total} actions confirmed. Check the output before trying again."
+        ),
+        (Lang::PtBr, Failed) => format!(
+            "Não foi possível confirmar o áudio do computador; {completed} de {total} ações confirmadas. Confira a saída antes de tentar novamente."
+        ),
+        (Lang::Es, Failed) => format!(
+            "No se pudo confirmar el audio del equipo; {completed} de {total} acciones confirmadas. Revisa la salida antes de reintentar."
+        ),
+        (Lang::Zh, Failed) => {
+            format!("无法确认电脑音频；已确认 {total} 个操作中的 {completed} 个。请先检查输出再重试。")
+        }
+    }
+}
+
 pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
     match (lang, disabled) {
         (Lang::En, true) => {
@@ -785,6 +864,7 @@ pub enum VoiceFeedback {
     Done,
     Requested,
     ExecutionFailed,
+    InvalidVolume,
     Consulting,
     SentToChat,
     ChatUnavailable,
@@ -807,6 +887,12 @@ pub enum VoiceFeedback {
 pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
     use VoiceFeedback::*;
     match (lang, feedback) {
+        (Lang::En, InvalidVolume) => {
+            "Use a whole number from 0 to 100 percent, without a plus or minus sign."
+        }
+        (Lang::PtBr, InvalidVolume) => "Use um volume inteiro entre 0 e 100 por cento, sem sinal.",
+        (Lang::Es, InvalidVolume) => "Usa un volumen entero entre 0 y 100 por ciento, sin signo.",
+        (Lang::Zh, InvalidVolume) => "请使用 0 到 100 之间不带符号的整数音量百分比。",
         (Lang::En, SentToChat) => "Sent to Zeca. Follow the reply in Chat.",
         (Lang::PtBr, SentToChat) => "Enviado ao Zeca. Acompanhe a resposta no Chat.",
         (Lang::Es, SentToChat) => "Enviado a Zeca. Sigue la respuesta en Chat.",

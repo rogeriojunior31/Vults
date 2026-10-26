@@ -83,6 +83,8 @@ pub struct Settings {
     #[serde(default)]
     pub dictation_command_apps: bool,
     #[serde(default)]
+    pub dictation_command_output: bool,
+    #[serde(default)]
     pub dictation_cleanup: bool,
     /// A lost ledger cannot silently renew an already authorized request budget.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -385,6 +387,7 @@ impl Default for Settings {
             dictation_commands: true,
             dictation_command_media: false,
             dictation_command_apps: false,
+            dictation_command_output: false,
             dictation_cleanup: false,
             dictation_cleanup_budget: None,
             meeting_summary: false,
@@ -467,6 +470,8 @@ pub struct Public {
     pub dictation_command_media: bool,
     #[serde(rename = "dictationCommandApps")]
     pub dictation_command_apps: bool,
+    #[serde(rename = "dictationCommandOutput")]
+    pub dictation_command_output: bool,
     #[serde(rename = "dictationCleanup")]
     pub dictation_cleanup: bool,
     #[serde(rename = "meetingSummary")]
@@ -572,6 +577,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         dictation_commands: s.dictation_commands,
         dictation_command_media: s.dictation_command_media,
         dictation_command_apps: s.dictation_command_apps,
+        dictation_command_output: s.dictation_command_output,
         dictation_cleanup: s.dictation_cleanup,
         meeting_summary: s.meeting_summary,
         dictation_style: s.dictation_style,
@@ -1441,6 +1447,10 @@ pub fn set_dictation_commands<R: tauri::Runtime>(
         "enabled" => {
             next.dictation_commands = on;
             "dictationCommands"
+        }
+        "output" => {
+            next.dictation_command_output = on;
+            "dictationCommandOutput"
         }
         "applications" => {
             next.dictation_command_apps = on;
@@ -2350,6 +2360,17 @@ mod tests {
     }
 
     #[test]
+    fn output_commands_need_independent_consent_without_zeca_or_playback() {
+        let (old, clean) =
+            parse(r#"{"version":36,"dictation_command_media":true,"dictation_command_apps":true}"#);
+        assert!(clean && !old.dictation_command_output);
+        let (enabled, clean) = parse(r#"{"version":36,"zeca":false,"dictation_command_output":true}"#);
+        assert!(clean && enabled.dictation_command_output && !enabled.zeca && !enabled.now_playing);
+        let (invalid, clean) = parse(r#"{"version":36,"dictation_command_output":"true"}"#);
+        assert!(!clean && !invalid.dictation_command_output);
+    }
+
+    #[test]
     fn application_commands_are_independent_and_default_off() {
         let (old, clean) =
             parse(r#"{"version":36,"dictation_commands":true,"dictation_command_media":true}"#);
@@ -2426,6 +2447,7 @@ mod tests {
             dictation_commands: true,
             dictation_command_media: false,
             dictation_command_apps: false,
+            dictation_command_output: false,
             dictation_cleanup: false,
             dictation_cleanup_budget: None,
             meeting_summary: false,

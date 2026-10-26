@@ -92,22 +92,18 @@ pub(super) fn parse(text: &str) -> Option<MediaAction> {
             return Some(action);
         }
     }
-    for prefix in [
+    volume_argument(text).and_then(super::percentage).map(Volume)
+}
+
+pub(super) fn volume_argument(text: &str) -> Option<&str> {
+    [
         "media volume ",
         "set media volume to ",
         "volume da midia ",
         "volume da musica ",
         "defina o volume da midia para ",
         "volumen de la musica ",
-    ] {
-        if let Some(value) = text.strip_prefix(prefix) {
-            let value = value
-                .strip_suffix(" percent")
-                .or_else(|| value.strip_suffix(" por cento"))
-                .or_else(|| value.strip_suffix(" por ciento"))
-                .unwrap_or(value);
-            return value.parse::<u8>().ok().filter(|value| *value <= 100).map(Volume);
-        }
-    }
-    None
+    ]
+    .iter()
+    .find_map(|prefix| text.strip_prefix(prefix))
 }

@@ -228,3 +228,13 @@ fn app_open_requests_are_consumed_without_upload_or_a_native_launch() {
     assert_eq!(report.feedback, Feedback::Unavailable);
     assert!(report.application.is_none() && report.effects.is_empty());
 }
+
+#[test]
+fn output_control_speech_never_uploads_or_executes_through_realtime() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let out = route(&mut commands, &mut state, "mute computer", true, now, json!([])).unwrap();
+    assert_eq!(out.feedback, Feedback::Unavailable);
+    assert!(out.output.is_empty() && out.effects.is_empty());
+}

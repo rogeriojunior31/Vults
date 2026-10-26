@@ -1,5 +1,9 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "System audio voice commands": "系统音频语音命令",
+  "Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate.": "允许静音和调整电脑默认输出音量。使用本地 pactl，保留声道平衡并将音量调整限制为 100%。播放器控制与项目通知保持独立。",
+  "Enable system audio voice commands first. Say: mute computer; unmute computer; computer volume 40; raise computer volume; lower computer volume. Changes use the default output, not the microphone. Volume changes do not unmute it.": "请先启用系统音频语音命令。可用英语说：mute computer、unmute computer、computer volume 40、raise computer volume、lower computer volume。操作针对默认输出，不影响麦克风。更改音量不会取消静音。",
+
   "Application voice commands": "应用语音命令",
   "Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run.": "允许按名称打开已安装的桌面应用。名称保留在本机。同名项目和应用需要先选择。不会执行口述的命令行、网址或文件参数。",
   "Enable application voice commands first. Say: open Obsidian; open app Firefox; open project api. Use an installed desktop name. Ambiguous names need a choice. Application launches cannot be repeated or undone.": "请先启用应用语音命令。可用英语说：open Obsidian、open app Firefox、open project api。使用已安装的桌面名称。名称有歧义时需先选择。应用启动不支持重复或撤销。",
