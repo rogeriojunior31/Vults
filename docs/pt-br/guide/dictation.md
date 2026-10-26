@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 9071cc71fe3b -->
+<!-- source: e2be75e63a2b -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -341,6 +341,12 @@ superfície ou alternar a opção de legendas não renova esse prazo. O texto fi
 **Copiado** significa que o texto foi relido e conferido na área de transferência; use o
 comando Colar do aplicativo de destino (geralmente Ctrl+V, ou Ctrl+Shift+V em terminais).
 Nada é enviado automaticamente.
+
+No Linux, o ditado copiado solicita exclusão do histórico da área de transferência no X11 e no
+Wayland pela convenção `x-kde-passwordManagerHint`. Gerenciadores compatíveis recebem o pedido
+para não guardar o texto; outros ainda podem mantê-lo. A colagem de texto simples e a confirmação
+por releitura permanecem iguais. Isso não muda o Histórico de Ditado do próprio Vults nem sua
+configuração de retenção.
 
 A entrega confirmada também mostra o total de palavras do texto final, com rótulo localizado
 no singular ou plural. A contagem usa limites Unicode entre palavras: pontuação e emojis não

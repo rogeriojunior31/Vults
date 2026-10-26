@@ -402,7 +402,20 @@ gates*).
 
 ### FF5 · Keep *Copied* dictation out of clipboard history
 `P1 · S · Needs: —` · [Spec](plan-field-fixes.md#ff5--dictation-keep-dictated-text-out-of-clipboard-history)
-- [ ] In `crates/platform/src/clipboard.rs` `copy()`, offer `x-kde-passwordManagerHint` as the paste
+
+Implementation status (2026-10-26, branch `fix/release-019-stabilization`): X11 uses arboard's
+existing `exclude_from_history` setter; Wayland offers the same KDE hint and `secret` metadata as
+the paste leases alongside the unchanged text payload. `confirm()` still reads plain text and
+checks it byte-for-byte. No dependency, insertion/restore behavior or Vults history setting changes.
+The regression check first failed because the hint was absent; pure tests cover the MIME set,
+unchanged Unicode/whitespace bytes and NUL rejection before clipboard access. The ignored native
+Wayland smoke also checks the independent client's hint read before verifying ordinary text.
+Local validation passes: UI build, all 19 renderer checks, workspace formatting and Clippy,
+1602 workspace tests, 10 feature-enabled evals and repository guards.
+Pending: run the consented native smoke and check Klipper exclusion plus normal paste on a real
+Plasma desktop. No personal clipboard was changed during automated tests; keep FF5 open until
+that acceptance passes.
+- [x] In `crates/platform/src/clipboard.rs` `copy()`, offer `x-kde-passwordManagerHint` as the paste
   leases already do (`insert/lease.rs`, `insert/wayland_lease.rs`); reuse their code.
 - [ ] `confirm()` read-back still matches.
 

@@ -304,6 +304,11 @@ stays in memory. Dictation has its own Settings category.
 **Copied** means the clipboard was read back and matched the text; use your destination
 app's Paste command (often Ctrl+V, or Ctrl+Shift+V in terminals). Nothing is submitted automatically.
 
+On Linux, copied dictation requests clipboard-history exclusion on X11 and Wayland using the
+`x-kde-passwordManagerHint` convention. Managers that honor it are asked not to retain the text;
+other managers may still keep it. Plain-text paste and read-back confirmation remain unchanged.
+This does not change Vults' own Dictation history or its retention setting.
+
 Confirmed delivery also shows a word total from the final text, with a localized singular or
 plural label. It uses Unicode word boundaries: punctuation and emoji do not count, and Chinese
 ideographs count individually. The total stays with the delivery line after its caption clears.

@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Request clipboard-history exclusion for copied dictation on Linux using the existing KDE hint, while keeping plain-text paste and read-back confirmation. Clipboard managers must support the hint; Vults history retention is unchanged.
+
 - Refresh Scene and Sky canvas resolution and sprite caches when the display scale changes, including successive and fractional monitor transitions. Keep CSS layout and zoom unchanged and avoid starting hidden animation.
 
 - Check Zeca as the recipient before preparing questions from Flock, Connections or the command palette. Preserve drafts and running replies on rejection, and cancel preparation after a conversation switch without sending or resetting.
