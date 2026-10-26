@@ -17,13 +17,19 @@ the tasks:
 | [plan-github-luna.md](plan-github-luna.md) | GH0 to GH9 delivery sequence |
 | [plan-field-fixes.md](plan-field-fixes.md) | FF1 to FF11: fixes and ideas taken from a sibling app |
 
-## Where we are (2026-10-25)
+## Where we are (2026-10-26)
 
-- Released: 0.1.8 (tag `v0.1.8`). `main` (at `fd7c12b3`) also carries N0 to N3, UX7, UX8 (agent
+- Released: 0.1.8 (tag `v0.1.8`). `main` (at `22a2e68b`, including the roadmap consolidation) also carries N0 to N3, UX7, UX8 (agent
   profiles, specialist Chat, Codex, scoped GitHub), GH0 to GH8 and the Dictation workspace refinement
   (#385), all under *Unreleased* in the changelog.
-- The 2026-10-16 plan (one release per stage: 0.1.9 = N0 + N1, 0.2.0 = N2, 0.2.1 = N3, 0.2.2 = N4) no
-  longer fits, because a tag from `main` now ships all of it. **REL-1** below decides the new plan.
+- Next target: **0.1.9**, selected by the owner on 2026-10-26 and recorded in
+  [ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md). It ships the validated current-main
+  snapshot plus accepted stabilization fixes. Fixed stage-to-version numbers are superseded;
+  later versions are decided at their release gate. This decision remains local on
+  `fix/release-019-stabilization` until review and merge.
+- Package versions remain **0.1.8** until REL-2. Security must pass after the local fix is merged;
+  FF1 and FF5 still need their native desktop acceptance, as do the required R3/ACC gates. Choosing
+  0.1.9 does not close those gates or authorize tagging/publication.
 - Many tasks are implemented with automated evidence and wait only for a person at the desktop: they
   are the **ACC** tasks of Phase 0.
 
@@ -43,7 +49,7 @@ The queue, in order. Take the first task whose *Needs* are met.
 
 | # | Task | P | Size | Why first |
 | --- | --- | --- | --- | --- |
-| 1 | REL-1 Choose the release plan | P0 | S | Everything else ships through it |
+| 1 | REL-1 Review and merge the 0.1.9 release plan | P0 | S | Decision recorded locally; merge pending |
 | 2 | FF1 Canvas follows the monitor's scale | P0 | S | Certain bug, small fix |
 | 3 | FF5 Keep *Copied* dictation out of clipboard history | P1 | S | Privacy, small fix |
 | 4 | R3 Release smoke | P0 | S | Gates the next tag |
@@ -60,11 +66,17 @@ The queue, in order. Take the first task whose *Needs* are met.
 
 ### REL-1 · Choose the release plan
 `P0 · S · Needs: —`
-- [ ] Decide the version of the next tag from `main` (0.1.9 or 0.2.0) and whether later releases follow
-  phases of this roadmap. Recommendation: **0.2.0 now** (it already holds N2's Flock and Chat, which
-  ADR 0020 tied to 0.2.0), then a minor release per one or two phases.
-- [ ] Record it: a dated line in [ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md)'s *History*
-  (and its pt-BR twin with a new source mark), and update *Where we are* here.
+- [x] 2026-10-26: the owner selected **0.1.9** as the next stabilization release from current main,
+  including its already-merged N0-to-N3 work. Later versions follow bounded release candidates and
+  their acceptance gates, rather than reserving a number for each phase.
+- [x] Record the dated decision in [ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md), align
+  ADR 0031's release clause and both reviewed pt-BR translations, and update *Where we are*.
+- [ ] Review and merge the decision with the stabilization branch. On merge, move REL-1 to
+  `changelog-dev.md`. R3, native acceptance, Security and REL-2 remain separate pending work.
+
+Local validation (2026-10-26): ADR links, History anchors and reviewed translation source hashes
+pass. UI build, all 19 renderer checks, workspace formatting/Clippy/tests, feature-enabled evals
+and repository guards pass. Package/version files and lockfiles are unchanged at 0.1.8.
 
 **Done when:** the ADR records the plan and this section matches it.
 
@@ -82,7 +94,7 @@ The queue, in order. Take the first task whose *Needs* are met.
   click, a question card.
 - [ ] Chat: one CLI turn and one API turn; voice input into the draft.
 - [ ] GitHub: Connections loads, one row opens.
-- [ ] Nest: Flock, Chat, Connections, Activity, Dictation tabs; Settings; `/continue` and its owned Stop;
+- [ ] Nest: Flock, Chat, Dictation, Connections, Activity tabs; Settings; `/continue` and its owned Stop;
   spend and budget.
 - [ ] Zeca off: flock, cards, connectors and the Nest work without Chat.
 - [ ] Record the date, desktop (KDE Wayland, X11) and result in the release PR.
@@ -585,7 +597,7 @@ Each settles a conflict between earlier plans, a review and the code.
 | Layers | Zeca's brain is the `zeca` crate (Connect), never depending on `vults-core`; his body stays in Experience; `check-layers.sh` reads `cargo metadata` |
 | Agent drivers | The `AgentDriver` trait in `agents` (Core, no tokio), implemented in `chat`, injected by `app` |
 | Zeca's own work | Never a session: his CLI carries `VULTS_ZECA=1`, the hook marks the event, `core` routes it to the chat |
-| Surfaces | One Nest window, built when opened (D6): Flock, Chat, Connections, Activity (Tasks left in N0); Dictation is the fifth tab as N3 phases land. Settings keeps its own webview ([0021](../adr/0021-four-sizes-one-nest.md)) |
+| Surfaces | One Nest window, built when opened (D6): Flock, Chat, Dictation, Connections, Activity (Tasks left in N0). Settings keeps its own webview ([0021](../adr/0021-four-sizes-one-nest.md)) |
 | Dictation | A pure Connect crate for key/text logic, capture in `audio`, insertion in `platform`, orchestration in `app`; no text into a waiting session; Settings owns values and Activity the figures ([0032](../adr/0032-dictation-into-other-apps.md), [0021](../adr/0021-four-sizes-one-nest.md)) |
 | Permissions | Zeca never answers one; only a policy the user wrote may allow or deny (ADR 0004); destructive always asks (ADR 0004) |
 | Requests nobody asked for | ADR 0019: each off by default, its own switch, budget and local trace, through one gate in `app` |

@@ -15,10 +15,10 @@ the context it was made in and what it costs. Code and guides say *what* the app
 | Actions | [0011](0011-only-actions-that-work.md) Offer only the actions the agents allow | Accepted | |
 | Zeca | [0018](0018-zeca-as-an-agent.md) Zeca: optional, apart from the flock, rules before models | Accepted | 0010, 0012 |
 | Network and secrets | [0019](0019-requests-on-the-users-behalf.md) Network, secrets and telemetry | Accepted | 0006, 0016 |
-| Releases | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) Releases: small and often, 0.2.0 at the N2 gate | Accepted | 0007, 0015 |
+| Releases | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) Releases: small and frequent | Accepted | 0007, 0015 |
 | Surfaces | [0021](0021-four-sizes-one-nest.md) Surfaces: one core, four sizes, a card answered where you are | Accepted | 0008, 0009, 0022, 0023, 0024, 0030 |
 | Voice | [0028](0028-spoken-replies-through-a-realtime-model.md) Voice: local listening, opt-in spoken replies | Accepted | 0013 |
-| Tasks removal | [0031](0031-tasks-leave-vults.md) Tasks leave Vults; releases follow N0 to N4 | Accepted | |
+| Tasks removal | [0031](0031-tasks-leave-vults.md) Tasks leave Vults | Accepted | |
 | Dictation | [0032](0032-dictation-into-other-apps.md) Dictation into other apps | Accepted | |
 
 A number in the last column was a record of its own until 2026-10-12; an old commit or PR that

@@ -1,8 +1,9 @@
-# 0031. Tasks sai do Vults; releases seguem N0 a N4
-<!-- source: 9563e4a6e634 -->
+# 0031. Tasks sai do Vults
+<!-- source: 2ff0f3aaffcd -->
 
 **Status:** Aceita, 2026-10-16. Implementa a ordem de trabalho do dono no
 [Plan Zeca](../../dev/plan-zeca.md#order-of-work-2026-10-16).
+Numeração das releases alterada em 2026-10-26 pela [0020](0020-0.2.0-at-wave-4-then-0.2.x.md).
 
 <a id="context"></a>
 
@@ -45,11 +46,10 @@ decisão não significa que o código já foi removido ou que o teste no desktop
   protocolo/core e, por fim, guias e referências. Preservar o comportamento mantido em cada
   etapa. Remover um ponto de entrada antes da implementação não autoriza essa implementação
   por outra superfície.
-- **Os portões de release seguem as fases.** N0 e N1 saem juntas como **0.1.9**, N2 (Flock e Chat)
-  como **0.2.0**, N3 (ditado) como **0.2.1**, e N4 como **0.2.2**. Uma correção entre fases usa o
-  próximo patch e desloca os números das fases seguintes em um. O portão da onda 4 é substituído;
-  releases pequenas e frequentes e Linux primeiro continuam sendo a regra
-  ([0020](0020-0.2.0-at-wave-4-then-0.2.x.md)).
+- **A numeração das releases segue a [0020](0020-0.2.0-at-wave-4-then-0.2.x.md).** Sua alteração
+  de 2026-10-26 escolhe a 0.1.9 a partir da main atual e substitui a relação fixa entre N0 a N4 e
+  versões. O portão da onda 4 continua substituído; releases pequenas e frequentes e Linux primeiro
+  continuam sendo a regra.
 - **R3 continua sendo um teste humano no app real, no desktop, antes de cada tag de release.**
   Ele cobre a ilha, um card pendente, o Chat, a voz, o GitHub e o Nest na interface refinada pela
   N1. Conferir as áreas restantes do Nest, `/continue` e seu Stop de execução própria, gastos e
@@ -70,3 +70,10 @@ decisão não significa que o código já foi removido ou que o teste no desktop
   [0021](0021-four-sizes-one-nest.md) mantêm as regras atualizadas no próprio registro. Plan Zeca
   preserva os ids de passos concluídos como histórico e acompanha a remoção da N0 separadamente
   da aceitação da release.
+
+<a id="history"></a>
+
+## Histórico
+
+- 2026-10-26, REL-1: a numeração das releases segue a decisão de estabilização 0.1.9 da ADR 0020.
+  O contrato de remoção de Tasks e os requisitos de R3 humano permanecem iguais.
