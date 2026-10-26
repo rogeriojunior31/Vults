@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: aed9851bbf89 -->
+<!-- source: 37c6145d17b5 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1069,16 +1069,25 @@ visíveis instalados no desktop em conjunto. Use `abrir aplicativo Firefox` para
 ou `abrir projeto api` para escolher o bando. Equivalentes em inglês incluem `open app Firefox`;
 em espanhol, `abrir aplicacion Firefox`. Apelidos do Dicionário valem para nomes conhecidos completos.
 Se um projeto e um app tiverem o mesmo nome, ou vários apps compartilharem um nome, o Vults pergunta
-qual usar; diga o escopo explícito ou a escolha completa exibida. O esclarecimento vence após 90
-segundos e definições de aplicativos alteradas ou removidas o invalidam.
+qual usar; diga o escopo explícito ou a escolha completa exibida. Todas as perguntas do lote compartilham o prazo original de 90
+segundos; definições de aplicativos alteradas ou removidas o invalidam, inclusive aplicativos
+escolhidos antes de uma pergunta posterior.
 
 Só são usadas entradas executáveis registradas do desktop. Entradas ocultas/não exibidas ficam de
 fora; caminhos, texto de executável, URLs e argumentos de arquivo falados nunca são repassados ao
 inicializador. A identidade e a definição são conferidas novamente antes da abertura, junto com
 cancelamento, bloqueio, prazo original e consentimento atual. O sucesso informa **Abertura do aplicativo
-solicitada**, não que a janela esteja pronta. Abrir um app não permite repetir nem desfazer. Um app
-por pedido é suportado; lotes contendo aberturas são recusados antes de alterar projetos. O Zeca
-pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
+solicitada**, não que a janela esteja pronta. Abrir um app não permite repetir nem desfazer.
+Lotes nativos podem combinar aplicativos instalados, controles do reprodutor e da saída do
+computador na ordem falada. Por exemplo: `pause a mídia e depois abrir aplicativo Obsidian e depois
+volume do computador 40`. Ative Comandos de voz de aplicativos e cada escopo de áudio usado pelo
+lote primeiro. Todas as identidades de aplicativos são verificadas antes do primeiro efeito e
+novamente antes de cada abertura. Aplicativos sem resolução ou uma verificação de identidade
+que falha na validação prévia impedem todos os efeitos. Todas as etapas compartilham um único cancelamento e prazo de
+execução. Uma falha posterior interrompe o lote e informa apenas operações confirmadas, sem
+repetição nem reversão automática; confirmações de aplicativos são pedidos de abertura. Confira o
+resultado antes de repetir um pedido que excedeu o tempo. Lotes que misturam ações nativas com
+ações do bando continuam recusados antes de alterar projetos. O Zeca pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
 
 A VC2 acrescenta **Comandos de voz do áudio do sistema**, uma opção própria desligada por padrão
 nas configurações dos comandos. Ao ativar, segure Ctrl+Alt+Z e diga `silenciar o computador`,
@@ -1101,8 +1110,8 @@ porta ativa são capturados e conferidos antes e depois de escritas pelo índice
 apelido de saída padrão redireciona uma escrita enfileirada para uma saída recém-selecionada. Essas
 chamadas nativas separadas não formam uma transação atômica de roteamento: mudanças concorrentes de
 rota ou servidor podem impedir a confirmação. Falha ou tempo excedido informa o trecho confirmado,
-sem repetir nem reverter automaticamente. Lotes de áudio podem combinar ações do reprodutor e da saída do computador na ordem falada;
-lotes com ações do bando ou abertura de aplicativos continuam indisponíveis. Voz em tempo real não executa esses comandos. Os testes usam
+sem repetir nem reverter automaticamente. Lotes nativos podem combinar ações do reprodutor, da saída do computador e de aplicativos
+instalados na ordem falada; lotes com ações do bando continuam indisponíveis. Voz em tempo real não executa esses comandos. Os testes usam
 estado simulado e processos privados, não áudio pessoal; a validação real de saída/cancelamento
 no desktop continua pendente.
 

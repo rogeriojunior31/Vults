@@ -1,12 +1,12 @@
-//! One admission and ordered execution for player and computer-output commands.
-use super::{AudioAction, Feedback, Report};
+//! One admission and ordered execution for local desktop commands.
+use super::{DesktopAction, Feedback, Report};
 use crate::dictation::worker::Ticket;
 use std::{
     future::Future,
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Manager};
-use vults_core::i18n::{self, Lang, OutputFeedback};
+use vults_core::i18n::{self, ApplicationFeedback, Lang, OutputFeedback};
 use vults_dictation::command::{MediaAction, OutputAction};
 use vults_platform::system_audio::{self, Error as OutputError};
 
@@ -15,18 +15,19 @@ enum Error {
     Disabled,
     NoPlayer,
     Media,
+    Application,
     Output(OutputError),
 }
 
 trait Io {
-    fn prepare(&mut self, actions: &[AudioAction]) -> impl Future<Output = Result<(), Error>> + Send;
-    fn apply(&mut self, action: AudioAction) -> impl Future<Output = Result<(), Error>> + Send;
+    fn prepare(&mut self, actions: &[DesktopAction]) -> impl Future<Output = Result<(), Error>> + Send;
+    fn apply(&mut self, action: DesktopAction) -> impl Future<Output = Result<(), Error>> + Send;
 }
 
-async fn execute(io: &mut impl Io, actions: &[AudioAction], completed: &mut usize) -> Result<(), Error> {
+async fn execute(io: &mut impl Io, actions: &[DesktopAction], completed: &mut usize) -> Result<(), Error> {
     io.prepare(actions).await?;
     for action in actions {
-        io.apply(*action).await?;
+        io.apply(action.clone()).await?;
         *completed += 1;
     }
     Ok(())
@@ -38,29 +39,48 @@ struct Backend<'a> {
     deadline: Instant,
     media: bool,
     output: bool,
+    applications: bool,
     player: Option<String>,
     playback: Option<vults_media::Target>,
     computer: Option<system_audio::Target>,
     status: Option<system_audio::Status>,
 }
 
-fn consent(saved: &crate::settings::Settings, media: bool, output: bool) -> bool {
+fn consent(saved: &crate::settings::Settings, media: bool, output: bool, applications: bool) -> bool {
     saved.dictation_commands
         && (!media || saved.dictation_command_media && saved.now_playing)
         && (!output || saved.dictation_command_output)
+        && (!applications || saved.dictation_command_apps)
+}
+
+fn enabled(
+    app: &AppHandle,
+    ticket: &Ticket,
+    deadline: Instant,
+    media: bool,
+    output: bool,
+    applications: bool,
+) -> bool {
+    ticket.valid()
+        && Instant::now() < deadline
+        && !crate::lock::locked(app)
+        && app
+            .state::<crate::settings::SettingsState>()
+            .0
+            .lock()
+            .is_ok_and(|s| consent(&s, media, output, applications))
 }
 
 impl Backend<'_> {
     fn enabled(&self) -> bool {
-        self.ticket.valid()
-            && Instant::now() < self.deadline
-            && !crate::lock::locked(self.app)
-            && self
-                .app
-                .state::<crate::settings::SettingsState>()
-                .0
-                .lock()
-                .is_ok_and(|s| consent(&s, self.media, self.output))
+        enabled(
+            self.app,
+            self.ticket,
+            self.deadline,
+            self.media,
+            self.output,
+            self.applications,
+        )
     }
 
     fn media_allowed(&self) -> bool {
@@ -71,10 +91,24 @@ impl Backend<'_> {
 }
 
 impl Io for Backend<'_> {
-    async fn prepare(&mut self, actions: &[AudioAction]) -> Result<(), Error> {
+    async fn prepare(&mut self, actions: &[DesktopAction]) -> Result<(), Error> {
         // Check every required consent before any native connection or effect.
         if !self.enabled() {
             return Err(Error::Disabled);
+        }
+        for action in actions {
+            if let DesktopAction::Application(application) = action {
+                let application = application.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    vults_platform::applications::validate(&application)
+                })
+                .await
+                .map_err(|_| Error::Application)?
+                .map_err(|_| Error::Application)?;
+                if !self.enabled() {
+                    return Err(Error::Disabled);
+                }
+            }
         }
         if self.media {
             self.player = crate::media::media_now(self.app.clone()).map(|now| now.player);
@@ -88,14 +122,16 @@ impl Io for Backend<'_> {
                     .map_err(Error::Output)?,
             );
         }
-        tauri::async_runtime::spawn_blocking(vults_platform::music::wait_for_restore)
-            .await
-            .map_err(|_| Error::Media)?;
+        if self.media || self.output {
+            tauri::async_runtime::spawn_blocking(vults_platform::music::wait_for_restore)
+                .await
+                .map_err(|_| Error::Media)?;
+        }
         if let Some(target) = &self.playback {
             let controls: Vec<_> = actions
                 .iter()
                 .filter_map(|action| match action {
-                    AudioAction::Media(action) => Some(media_control(*action)),
+                    DesktopAction::Media(action) => Some(media_control(*action)),
                     _ => None,
                 })
                 .collect();
@@ -110,19 +146,33 @@ impl Io for Backend<'_> {
         Ok(())
     }
 
-    async fn apply(&mut self, action: AudioAction) -> Result<(), Error> {
+    async fn apply(&mut self, action: DesktopAction) -> Result<(), Error> {
         if !self.enabled() {
             return Err(Error::Disabled);
         }
         match action {
-            AudioAction::Media(action) => self
+            DesktopAction::Application(application) => {
+                let app = self.app.clone();
+                let ticket = self.ticket.clone();
+                let (deadline, media, output, applications) =
+                    (self.deadline, self.media, self.output, self.applications);
+                tauri::async_runtime::spawn_blocking(move || {
+                    vults_platform::applications::launch(&application, || {
+                        enabled(&app, &ticket, deadline, media, output, applications)
+                    })
+                })
+                .await
+                .map_err(|_| Error::Application)?
+                .map_err(|_| Error::Application)
+            }
+            DesktopAction::Media(action) => self
                 .playback
                 .as_ref()
                 .ok_or(Error::NoPlayer)?
                 .control(media_control(action), || self.media_allowed())
                 .await
                 .map_err(|_| Error::Media),
-            AudioAction::Output(action) => {
+            DesktopAction::Output(action) => {
                 let status = self
                     .computer
                     .as_ref()
@@ -138,16 +188,19 @@ impl Io for Backend<'_> {
 }
 
 pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: Report, lang: Lang) {
-    let actions = std::mem::take(&mut report.audio);
+    let actions = std::mem::take(&mut report.desktop);
     if actions.is_empty() || !ticket.claim_native() {
         return;
     }
     let media = actions
         .iter()
-        .any(|action| matches!(action, AudioAction::Media(_)));
+        .any(|action| matches!(action, DesktopAction::Media(_)));
     let output = actions
         .iter()
-        .any(|action| matches!(action, AudioAction::Output(_)));
+        .any(|action| matches!(action, DesktopAction::Output(_)));
+    let applications = actions
+        .iter()
+        .any(|action| matches!(action, DesktopAction::Application(_)));
     let deadline = Instant::now() + Duration::from_secs(4);
     tauri::async_runtime::spawn(async move {
         let mut backend = Backend {
@@ -156,6 +209,7 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
             deadline,
             media,
             output,
+            applications,
             player: None,
             playback: None,
             computer: None,
@@ -173,7 +227,19 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
         } else {
             Feedback::ExecutionFailed
         };
-        report.text = if media && output {
+        report.text = if applications && actions.len() > 1 {
+            i18n::voice_desktop_batch(lang, success, completed, actions.len())
+        } else if applications {
+            i18n::voice_application(
+                lang,
+                match result {
+                    Ok(Ok(())) => ApplicationFeedback::Requested,
+                    Ok(Err(Error::Disabled)) => ApplicationFeedback::Disabled,
+                    _ => ApplicationFeedback::Failed,
+                },
+            )
+            .into()
+        } else if media && output {
             i18n::voice_audio_batch(lang, success, completed, actions.len())
         } else if output {
             match result {
@@ -235,34 +301,36 @@ mod tests {
 
     #[test]
     fn every_required_audio_consent_must_be_enabled() {
-        for mask in 0..16 {
+        for mask in 0..32 {
             let saved = crate::settings::Settings {
                 dictation_commands: mask & 1 != 0,
                 dictation_command_media: mask & 2 != 0,
                 now_playing: mask & 4 != 0,
                 dictation_command_output: mask & 8 != 0,
+                dictation_command_apps: mask & 16 != 0,
                 ..crate::settings::Settings::default()
             };
-            assert_eq!(consent(&saved, true, true), mask == 15);
-            assert_eq!(consent(&saved, true, false), mask & 7 == 7);
-            assert_eq!(consent(&saved, false, true), mask & 9 == 9);
+            assert_eq!(consent(&saved, true, true, true), mask == 31);
+            assert_eq!(consent(&saved, true, false, false), mask & 7 == 7);
+            assert_eq!(consent(&saved, false, true, false), mask & 9 == 9);
+            assert_eq!(consent(&saved, false, false, true), mask & 17 == 17);
         }
     }
 
     #[derive(Default)]
     struct Fake {
         prepared: bool,
-        seen: Vec<AudioAction>,
+        seen: Vec<DesktopAction>,
         fail: Option<usize>,
         reject: bool,
         hang: Option<usize>,
     }
     impl Io for Fake {
-        async fn prepare(&mut self, _: &[AudioAction]) -> Result<(), Error> {
+        async fn prepare(&mut self, _: &[DesktopAction]) -> Result<(), Error> {
             self.prepared = true;
             if self.reject { Err(Error::Disabled) } else { Ok(()) }
         }
-        async fn apply(&mut self, action: AudioAction) -> Result<(), Error> {
+        async fn apply(&mut self, action: DesktopAction) -> Result<(), Error> {
             assert!(self.prepared, "all targets must be prepared before effects");
             if self.hang == Some(self.seen.len()) {
                 std::future::pending::<()>().await;
@@ -278,15 +346,16 @@ mod tests {
     #[tokio::test]
     async fn preflight_order_failure_and_timeout_preserve_the_confirmed_prefix_without_retry() {
         let actions = [
-            AudioAction::Media(MediaAction::Pause),
-            AudioAction::Output(OutputAction::Mute(true)),
-            AudioAction::Media(MediaAction::Resume),
+            DesktopAction::Media(MediaAction::Pause),
+            DesktopAction::Output(OutputAction::Mute(true)),
+            DesktopAction::Application(super::super::tests::installed_app("editor.desktop", "Editor")),
+            DesktopAction::Media(MediaAction::Resume),
         ];
         let mut fake = Fake::default();
         let mut completed = 0;
         execute(&mut fake, &actions, &mut completed).await.unwrap();
         assert_eq!(fake.seen, actions);
-        assert_eq!(completed, 3);
+        assert_eq!(completed, actions.len());
         let mut fake = Fake {
             reject: true,
             ..Fake::default()

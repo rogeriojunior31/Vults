@@ -952,15 +952,22 @@ applications together. Use `open app Firefox` to choose applications or `open pr
 choose the flock. Portuguese equivalents include `abrir aplicativo Firefox` and `abrir projeto api`;
 Spanish supports `abrir aplicacion Firefox`. Dictionary aliases apply to complete known names.
 If a project and app share a name, or several apps share it, Vults asks which one; use the explicit
-namespace or the full displayed choice. Clarification expires after 90 seconds, and changed or
-removed app definitions invalidate it.
+namespace or the full displayed choice. All questions in a batch share the original 90-second clarification window, and changed or
+removed app definitions invalidate it, including apps selected before a later question.
 
 Only registered launchable desktop entries are used. Hidden/non-displayed entries are excluded;
 spoken paths, executable text, URLs and file arguments are never passed to the launcher. The
 entry's identity and definition are checked again before launch, together with cancellation, lock,
 the original deadline and current consent. A successful result says **Application launch requested**,
-not that a window is ready. Opening an app cannot be repeated or undone. One app per request is
-supported; batches containing app launches are refused before changing project state. Zeca may be
+not that a window is ready. Opening an app cannot be repeated or undone.
+Native batches can combine installed apps, player controls and computer-output controls in spoken
+order. For example: `pause media and then open app Obsidian and then computer volume 40`. Enable
+Application voice commands and each audio scope used by the batch first. Every app identity is
+checked before the first effect and again before its launch. Unresolved apps or an identity
+check that fails during preflight prevent every effect. All steps share one cancellation ticket and execution deadline. A later
+failure stops the batch and reports only confirmed operations, without retry or rollback; app
+confirmations are launch requests. Check the result before repeating a timed-out request.
+Batches mixing native actions with flock actions are still refused before changing project state. Zeca may be
 off; realtime voice does not launch apps. Native desktop acceptance remains pending.
 
 VC2 adds **System audio voice commands**, a separate default-off option under Command settings.
@@ -983,8 +990,8 @@ are captured and rechecked before and after fixed-index writes; no default-outpu
 a queued write to a newly selected output. These separate native calls are not an atomic routing
 transaction: concurrent routing or server changes may prevent confirmation. A failed or timed-out
 operation reports the confirmed prefix and is never retried or rolled back automatically.
-Audio batches can combine player and computer-output actions in spoken order; batches with flock
-actions or app launches remain unavailable. Realtime voice
+Native batches can combine player, computer-output and installed-app actions in spoken order;
+batches with flock actions remain unavailable. Realtime voice
 does not execute these commands. Backend tests use simulated state/private process fixtures, not
 personal audio; real desktop output/cancellation acceptance remains pending.
 

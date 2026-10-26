@@ -1,8 +1,6 @@
 //! V8: the runtime owner's local command dispatcher. No microphone, model, paste or card answer.
 #[cfg(target_os = "linux")]
-mod applications;
-#[cfg(target_os = "linux")]
-mod audio;
+mod desktop;
 mod targets;
 #[cfg(test)]
 mod tests;
@@ -22,10 +20,11 @@ use vults_dictation::command::{
 pub use i18n::VoiceFeedback as Feedback;
 const CONTEXT_WINDOW: Duration = Duration::from_secs(90);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AudioAction {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DesktopAction {
     Media(command::MediaAction),
     Output(command::OutputAction),
+    Application(vults_platform::applications::Application),
 }
 
 #[derive(Debug)]
@@ -35,8 +34,7 @@ pub struct Report {
     pub choices: Vec<Name>,
     /// Executed by the existing runtime effect loop only after the entire batch succeeds.
     pub effects: Vec<Effect>,
-    pub audio: Vec<AudioAction>,
-    pub application: Option<vults_platform::applications::Application>,
+    pub desktop: Vec<DesktopAction>,
 }
 
 impl Report {
@@ -45,8 +43,7 @@ impl Report {
             && self.feedback == Feedback::NotCommand
             && self.choices.is_empty()
             && self.effects.is_empty()
-            && self.audio.is_empty()
-            && self.application.is_none()
+            && self.desktop.is_empty()
     }
 }
 
@@ -76,6 +73,7 @@ enum Undo {
 struct Pending {
     #[cfg(target_os = "linux")]
     deadline: Instant,
+    started: Duration,
     commands: Vec<Command>,
     selected: BTreeMap<usize, Name>,
     index: usize,
@@ -140,7 +138,7 @@ impl Commands {
             self.last = None;
         }
         let elapsed = now.checked_duration_since(self.epoch).unwrap_or(Duration::MAX);
-        let (commands, mut selected) = match command::parse(transcript) {
+        let (commands, mut selected, question_started) = match command::parse(transcript) {
             Parsed::InvalidVolume => {
                 self.pending = None;
                 return report(lang, Feedback::InvalidVolume);
@@ -151,14 +149,14 @@ impl Commands {
             }
             Parsed::Commands(commands) => {
                 self.pending = None;
-                (commands, BTreeMap::new())
+                (commands, BTreeMap::new(), None)
             }
             Parsed::NotCommand => {
                 let Some(mut pending) = self.pending.take() else {
                     return report(lang, Feedback::NotCommand);
                 };
                 let candidates = pending.question.candidates(elapsed);
-                if candidates.iter().any(|name| {
+                if candidates.iter().chain(pending.selected.values()).any(|name| {
                     name.kind == command::names::NameKind::Application
                         && !pending
                             .applications
@@ -180,7 +178,7 @@ impl Commands {
                 match pending.question.answer(transcript, elapsed, &catalog.resolver) {
                     Reply::Resolution(Resolution::Found(name)) => {
                         pending.selected.insert(pending.index, name);
-                        (pending.commands, pending.selected)
+                        (pending.commands, pending.selected, Some(pending.started))
                     }
                     Reply::Resolution(result) => {
                         let mut out = report(
@@ -200,32 +198,24 @@ impl Commands {
                 }
             }
         };
-        if commands
-            .iter()
-            .any(|command| matches!(command, Command::Media(_) | Command::Output(_)))
-        {
-            self.last = None;
-            let mut out = report(lang, Feedback::Unavailable);
-            let audio: Option<Vec<_>> = commands
-                .iter()
-                .map(|command| match command {
-                    Command::Media(action) => Some(AudioAction::Media(*action)),
-                    Command::Output(action) => Some(AudioAction::Output(*action)),
-                    _ => None,
-                })
-                .collect();
-            if let Some(audio) = audio {
-                out.feedback = Feedback::Requested;
-                out.text = i18n::voice_feedback(lang, Feedback::Requested).into();
-                out.audio = audio;
-            }
-            return out;
-        }
         let mut shadow = state.clone();
         let mut context = self.last.clone();
         let mut effects = Vec::new();
         let mut answers = Vec::new();
+        let mut desktop = Vec::new();
+        let mut core_seen = false;
         for (index, original) in commands.iter().enumerate() {
+            match original {
+                Command::Media(action) => {
+                    desktop.push(DesktopAction::Media(*action));
+                    continue;
+                }
+                Command::Output(action) => {
+                    desktop.push(DesktopAction::Output(*action));
+                    continue;
+                }
+                _ => {}
+            }
             let command = if let Command::Repeat(target) = original {
                 let Some(last) = context.as_ref().filter(|last| recent(last.at, now)) else {
                     return report(lang, Feedback::NoContext);
@@ -264,13 +254,9 @@ impl Commands {
                 match resolution {
                     Resolution::Found(name) => {
                         if let Some(app) = catalog.application(&name) {
-                            if commands.len() != 1 {
-                                return report(lang, Feedback::Unavailable);
-                            }
-                            self.last = None;
-                            let mut out = report(lang, Feedback::Requested);
-                            out.application = Some(app);
-                            return out;
+                            selected.insert(index, name);
+                            desktop.push(DesktopAction::Application(app));
+                            continue;
                         }
                         let session = catalog.session(&name);
                         // A later question must not rebind an earlier target after the flock changes.
@@ -298,12 +284,15 @@ impl Commands {
                         return out;
                     }
                     Resolution::Ambiguous(choices) => {
-                        let Some(question) = Clarification::new(choices.clone(), elapsed) else {
+                        let Some(question) =
+                            Clarification::new(choices.clone(), question_started.unwrap_or(elapsed))
+                        else {
                             return report(lang, Feedback::Stale);
                         };
                         self.pending = Some(Pending {
                             #[cfg(target_os = "linux")]
-                            deadline: now + CONTEXT_WINDOW,
+                            deadline: self.epoch + question_started.unwrap_or(elapsed) + CONTEXT_WINDOW,
+                            started: question_started.unwrap_or(elapsed),
                             commands,
                             selected,
                             index,
@@ -319,6 +308,7 @@ impl Commands {
             } else {
                 None
             };
+            core_seen = true;
             let previous = shadow.front().cloned();
             let mut undo = None;
             let intent = match &command {
@@ -401,6 +391,15 @@ impl Commands {
                 });
             }
         }
+        if !desktop.is_empty() {
+            self.last = None;
+            if core_seen {
+                return report(lang, Feedback::Unavailable);
+            }
+            let mut out = report(lang, Feedback::Requested);
+            out.desktop = desktop;
+            return out;
+        }
         *state = shadow;
         self.last = context;
         let mut out = report(
@@ -465,8 +464,7 @@ fn report(lang: i18n::Lang, feedback: Feedback) -> Report {
         text: i18n::voice_feedback(lang, feedback).into(),
         choices: Vec::new(),
         effects: Vec::new(),
-        audio: Vec::new(),
-        application: None,
+        desktop: Vec::new(),
     }
 }
 fn project_pref(pref: Preference) -> ProjectPref {
@@ -609,12 +607,10 @@ fn read(state: &State, command: &Command, session: Option<&SessionKey>, usage: V
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) use audio::start as start_audio;
+pub(crate) use desktop::start as start_desktop;
 
 fn application_report(lang: i18n::Lang, feedback: i18n::ApplicationFeedback) -> Report {
     let mut out = report(lang, Feedback::Unavailable);
     out.text = i18n::voice_application(lang, feedback).into();
     out
 }
-#[cfg(target_os = "linux")]
-pub(crate) use applications::start as start_application;

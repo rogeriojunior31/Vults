@@ -89,6 +89,13 @@ mod linux {
         (snapshot(&entry).as_ref() == Some(app)).then_some(entry)
     }
 
+    /// Read-only preflight; launch repeats this check immediately before its effect.
+    pub fn validate(app: &Application) -> Result<(), String> {
+        current(app)
+            .map(|_| ())
+            .ok_or_else(|| "The installed application changed or is unavailable.".into())
+    }
+
     pub fn launch(app: &Application, allowed: impl FnOnce() -> bool) -> Result<(), String> {
         let entry = current(app).ok_or("The installed application changed or is unavailable.")?;
         if !allowed() {
@@ -133,21 +140,21 @@ mod linux {
             assert_eq!(apps.len(), 1);
             let app = &apps[0];
             assert_eq!(app.id, "fixture.desktop");
-            assert!(current(app).is_some());
+            assert!(validate(app).is_ok());
             assert!(launch(app, || false).is_err());
             let mut forged = app.clone();
             forged.id = "/tmp/fixture.desktop".into();
-            assert!(current(&forged).is_none());
+            assert!(validate(&forged).is_err());
             std::fs::write(
                 &app.source,
                 "[Desktop Entry]\nType=Application\nName=Fixture editor\nExec=/usr/bin/false\n",
             )
             .unwrap();
-            assert!(current(app).is_none());
+            assert!(validate(app).is_err());
             assert!(launch(app, || panic!("changed definition must fail before admission")).is_err());
         }
     }
 }
 
 #[cfg(target_os = "linux")]
-pub use linux::{installed, launch};
+pub use linux::{installed, launch, validate};

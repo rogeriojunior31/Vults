@@ -562,24 +562,24 @@ fn playback_is_only_a_request_and_mixed_batches_never_apply_a_flock_prefix() {
     let mut commands = Commands::new(now);
     let report = say(&mut commands, &mut state, "pause media", now);
     assert_eq!(report.feedback, Feedback::Requested);
-    assert_eq!(report.audio, vec![AudioAction::Media(MediaAction::Pause)]);
+    assert_eq!(report.desktop, vec![DesktopAction::Media(MediaAction::Pause)]);
     assert!(report.effects.is_empty());
     assert!(!report.chat_fallback(true));
     let before = format!("{state:?}");
     for text in ["mute web and then pause media", "pause media and then open api"] {
         let report = say(&mut commands, &mut state, text, now);
         assert_eq!(report.feedback, Feedback::Unavailable);
-        assert!(report.effects.is_empty() && report.audio.is_empty());
+        assert!(report.effects.is_empty() && report.desktop.is_empty());
         assert!(!report.chat_fallback(true));
         assert_eq!(format!("{state:?}"), before);
     }
     state.locked = true;
     let report = say(&mut commands, &mut state, "pause media", now);
     assert_eq!(report.feedback, Feedback::Locked);
-    assert!(report.audio.is_empty());
+    assert!(report.desktop.is_empty());
 }
 
-fn installed_app(id: &str, name: &str) -> vults_platform::applications::Application {
+pub(super) fn installed_app(id: &str, name: &str) -> vults_platform::applications::Application {
     vults_platform::applications::Application {
         id: id.into(),
         name: name.into(),
@@ -601,19 +601,19 @@ fn installed_apps_and_live_projects_share_open_but_keep_explicit_namespaces() {
     let out =
         commands.execute_with_applications(&mut state, "open Obsidian", &[], json!([]), now, Some(&apps));
     assert_eq!(out.feedback, Feedback::Requested);
-    assert_eq!(out.application.unwrap().id, "notes.desktop");
-    assert!(out.effects.is_empty() && out.audio.is_empty());
+    assert_eq!(application_id(&out).unwrap(), "notes.desktop");
+    assert!(out.effects.is_empty());
     let out = commands.execute_with_applications(&mut state, "open web", &[], json!([]), now, Some(&apps));
     assert_eq!(out.feedback, Feedback::WhichOne);
-    assert!(out.application.is_none() && out.effects.is_empty());
+    assert!(application_id(&out).is_none() && out.effects.is_empty());
     assert_eq!(out.choices.len(), 2);
     let out =
         commands.execute_with_applications(&mut state, "open app web", &[], json!([]), now, Some(&apps));
-    assert_eq!(out.application.unwrap().id, "web.desktop");
+    assert_eq!(application_id(&out).unwrap(), "web.desktop");
     let out =
         commands.execute_with_applications(&mut state, "open project web", &[], json!([]), now, Some(&apps));
     assert_eq!(out.feedback, Feedback::Done);
-    assert!(out.application.is_none());
+    assert!(application_id(&out).is_none());
     assert_eq!(state.focus, Some(key("b")));
     let out = commands.execute_with_applications(
         &mut state,
@@ -624,10 +624,10 @@ fn installed_apps_and_live_projects_share_open_but_keep_explicit_namespaces() {
         Some(&apps),
     );
     assert_eq!(out.feedback, Feedback::UnknownName);
-    assert!(out.application.is_none());
+    assert!(application_id(&out).is_none());
     let out = commands.execute_with_applications(&mut state, "open app Obsidian", &[], json!([]), now, None);
     assert_eq!(out.feedback, Feedback::Unavailable);
-    assert!(out.application.is_none() && !out.chat_fallback(true));
+    assert!(application_id(&out).is_none() && !out.chat_fallback(true));
     assert!(out.text.contains("Enable application"));
 }
 
@@ -654,7 +654,7 @@ fn app_clarification_preserves_original_definitions_and_never_applies_a_batch_pr
         Some(&changed),
     );
     assert_eq!(out.feedback, Feedback::Stale);
-    assert!(out.application.is_none());
+    assert!(application_id(&out).is_none());
     commands.execute_with_applications(&mut state, "open app Editor", &[], json!([]), now, Some(&apps));
     let out = commands.execute_with_applications(
         &mut state,
@@ -664,7 +664,7 @@ fn app_clarification_preserves_original_definitions_and_never_applies_a_batch_pr
         now,
         Some(&apps),
     );
-    assert_eq!(out.application.unwrap().id, "two.desktop");
+    assert_eq!(application_id(&out).unwrap(), "two.desktop");
     let before = format!("{state:?}");
     for text in [
         "mute api and then open app Editor",
@@ -673,19 +673,19 @@ fn app_clarification_preserves_original_definitions_and_never_applies_a_batch_pr
         let single = [installed_app("one.desktop", "Editor")];
         let out = commands.execute_with_applications(&mut state, text, &[], json!([]), now, Some(&single));
         assert_eq!(out.feedback, Feedback::Unavailable);
-        assert!(out.application.is_none() && out.effects.is_empty());
+        assert!(application_id(&out).is_none() && out.effects.is_empty());
         assert_eq!(format!("{state:?}"), before);
     }
     let aliases = [("notes".into(), "Editor".into())];
     let one = [apps[0].clone()];
     let out =
         commands.execute_with_applications(&mut state, "open notes", &aliases, json!([]), now, Some(&one));
-    assert_eq!(out.application.unwrap().id, "one.desktop");
+    assert_eq!(application_id(&out).unwrap(), "one.desktop");
     state.locked = true;
     let out =
         commands.execute_with_applications(&mut state, "open app Editor", &[], json!([]), now, Some(&one));
     assert_eq!(out.feedback, Feedback::Locked);
-    assert!(out.application.is_none());
+    assert!(application_id(&out).is_none());
 }
 
 #[test]
@@ -696,23 +696,23 @@ fn computer_audio_is_only_requested_and_mixed_batches_do_not_change_project_stat
     let mut commands = Commands::new(now);
     let out = say(&mut commands, &mut state, "mute computer", now);
     assert_eq!(out.feedback, Feedback::Requested);
-    assert_eq!(out.audio, vec![AudioAction::Output(OutputAction::Mute(true))]);
-    assert!(out.effects.is_empty() && out.application.is_none());
+    assert_eq!(out.desktop, vec![DesktopAction::Output(OutputAction::Mute(true))]);
+    assert!(out.effects.is_empty() && application_id(&out).is_none());
     assert!(!out.chat_fallback(true));
     let before = format!("{state:?}");
     for text in [
         "mute web and then mute computer",
-        "mute computer and then open app Firefox",
+        "mute computer and then mute web",
     ] {
         let out = say(&mut commands, &mut state, text, now);
         assert_eq!(out.feedback, Feedback::Unavailable);
-        assert!(out.effects.is_empty() && out.audio.is_empty() && out.application.is_none());
+        assert!(out.effects.is_empty() && out.desktop.is_empty() && application_id(&out).is_none());
         assert_eq!(format!("{state:?}"), before);
     }
     state.locked = true;
     let out = say(&mut commands, &mut state, "mute computer", now);
     assert_eq!(out.feedback, Feedback::Locked);
-    assert!(out.audio.is_empty());
+    assert!(out.desktop.is_empty());
 }
 
 #[test]
@@ -728,7 +728,7 @@ fn invalid_native_volume_is_never_sent_to_chat_or_executed() {
         let out = say(&mut commands, &mut state, text, now);
         assert_eq!(out.feedback, Feedback::InvalidVolume);
         assert!(!out.chat_fallback(true));
-        assert!(out.effects.is_empty() && out.audio.is_empty());
+        assert!(out.effects.is_empty() && out.desktop.is_empty());
     }
 }
 
@@ -747,15 +747,15 @@ fn mixed_audio_batches_preserve_order_without_mutating_flock_or_falling_back() {
     );
     assert_eq!(out.feedback, Feedback::Requested);
     assert_eq!(
-        out.audio,
+        out.desktop,
         vec![
-            AudioAction::Media(MediaAction::Pause),
-            AudioAction::Output(OutputAction::Volume(40)),
-            AudioAction::Media(MediaAction::Resume),
-            AudioAction::Output(OutputAction::Mute(true)),
+            DesktopAction::Media(MediaAction::Pause),
+            DesktopAction::Output(OutputAction::Volume(40)),
+            DesktopAction::Media(MediaAction::Resume),
+            DesktopAction::Output(OutputAction::Mute(true)),
         ]
     );
-    assert!(out.effects.is_empty() && out.application.is_none());
+    assert!(out.effects.is_empty() && application_id(&out).is_none());
     assert!(!out.chat_fallback(true));
     assert_eq!(format!("{state:?}"), before);
     for text in [
@@ -765,9 +765,203 @@ fn mixed_audio_batches_preserve_order_without_mutating_flock_or_falling_back() {
         "mute computer and then tell me a joke",
     ] {
         let out = say(&mut commands, &mut state, text, now);
-        assert!(out.audio.is_empty() && out.effects.is_empty());
+        assert!(out.desktop.is_empty() && out.effects.is_empty());
         assert_eq!(format!("{state:?}"), before);
     }
     let out = say(&mut commands, &mut state, "repeat", now);
-    assert!(out.audio.is_empty(), "native batches never enter repeat context");
+    assert!(
+        out.desktop.is_empty(),
+        "native batches never enter repeat context"
+    );
+}
+
+fn application_id(report: &Report) -> Option<&str> {
+    report.desktop.iter().find_map(|action| match action {
+        DesktopAction::Application(app) => Some(app.id.as_str()),
+        _ => None,
+    })
+}
+
+#[test]
+fn native_app_batches_resolve_every_target_before_admission_and_keep_spoken_order() {
+    use vults_dictation::command::{MediaAction, OutputAction};
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    let apps = [
+        installed_app("notes.desktop", "Obsidian"),
+        installed_app("web.desktop", "web"),
+    ];
+    let out = commands.execute_with_applications(
+        &mut state,
+        "pause media and then open app Obsidian and then computer volume 40 and then open app web",
+        &[],
+        json!([]),
+        now,
+        Some(&apps),
+    );
+    assert_eq!(out.feedback, Feedback::Requested);
+    assert_eq!(
+        out.desktop,
+        vec![
+            DesktopAction::Media(MediaAction::Pause),
+            DesktopAction::Application(apps[0].clone()),
+            DesktopAction::Output(OutputAction::Volume(40)),
+            DesktopAction::Application(apps[1].clone())
+        ]
+    );
+    assert!(out.effects.is_empty() && !out.chat_fallback(true));
+    assert_eq!(format!("{state:?}"), before);
+    let out = commands.execute_with_applications(
+        &mut state,
+        "open app Obsidian and then open app web",
+        &[],
+        json!([]),
+        now,
+        Some(&apps),
+    );
+    assert_eq!(
+        out.desktop,
+        vec![
+            DesktopAction::Application(apps[0].clone()),
+            DesktopAction::Application(apps[1].clone())
+        ]
+    );
+    for text in [
+        "pause media and then open app Missing",
+        "open app Obsidian and then mute api",
+        "mute api and then open app Obsidian",
+        "open app Obsidian and then approve all cards",
+    ] {
+        let out = commands.execute_with_applications(&mut state, text, &[], json!([]), now, Some(&apps));
+        assert!(out.desktop.is_empty() && out.effects.is_empty(), "{text}");
+        assert!(!out.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+    let out = commands.execute_with_applications(
+        &mut state,
+        "pause media and then open app Obsidian",
+        &[],
+        json!([]),
+        now,
+        None,
+    );
+    assert_eq!(out.feedback, Feedback::Unavailable);
+    assert!(out.desktop.is_empty() && !out.chat_fallback(true));
+    let out = commands.execute_with_applications(
+        &mut state,
+        "pause media and then open web",
+        &[],
+        json!([]),
+        now,
+        Some(&apps),
+    );
+    assert_eq!(out.feedback, Feedback::WhichOne);
+    assert!(out.desktop.is_empty() && out.effects.is_empty());
+    let choice = out
+        .choices
+        .iter()
+        .find(|name| name.kind == command::names::NameKind::Application)
+        .unwrap()
+        .name
+        .clone();
+    let out = commands.execute_with_applications(&mut state, &choice, &[], json!([]), now, Some(&apps));
+    assert_eq!(
+        out.desktop,
+        vec![
+            DesktopAction::Media(MediaAction::Pause),
+            DesktopAction::Application(apps[1].clone())
+        ]
+    );
+    assert_eq!(format!("{state:?}"), before);
+}
+
+#[test]
+fn later_app_questions_preserve_earlier_definitions_and_the_original_deadline() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let apps = [
+        installed_app("one.desktop", "Editor"),
+        installed_app("two.desktop", "Editor"),
+        installed_app("three.desktop", "Viewer"),
+        installed_app("four.desktop", "Viewer"),
+    ];
+    for stale in [false, true] {
+        let mut commands = Commands::new(now);
+        let out = commands.execute_with_applications(
+            &mut state,
+            "open app Editor and then open app Viewer",
+            &[],
+            json!([]),
+            now,
+            Some(&apps),
+        );
+        assert_eq!(out.feedback, Feedback::WhichOne);
+        assert!(out.desktop.is_empty());
+        let out = commands.execute_with_applications(
+            &mut state,
+            "Editor / one.desktop",
+            &[],
+            json!([]),
+            now + Duration::from_secs(80),
+            Some(&apps),
+        );
+        assert_eq!(out.feedback, Feedback::WhichOne);
+        assert!(out.desktop.is_empty());
+        #[cfg(target_os = "linux")]
+        assert_eq!(commands.question_deadline(), Some(now + Duration::from_secs(90)));
+        let mut current = apps.clone();
+        if stale {
+            current[0].definition = std::sync::Arc::from(&b"changed"[..]);
+        }
+        let out = commands.execute_with_applications(
+            &mut state,
+            "Viewer / four.desktop",
+            &[],
+            json!([]),
+            now + Duration::from_secs(if stale { 85 } else { 91 }),
+            Some(&current),
+        );
+        assert_eq!(
+            out.feedback,
+            if stale { Feedback::Stale } else { Feedback::Expired }
+        );
+        assert!(out.desktop.is_empty() && out.effects.is_empty() && !out.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+    let mut commands = Commands::new(now);
+    commands.execute_with_applications(
+        &mut state,
+        "open app Editor and then open app Viewer",
+        &[],
+        json!([]),
+        now,
+        Some(&apps),
+    );
+    commands.execute_with_applications(
+        &mut state,
+        "Editor / one.desktop",
+        &[],
+        json!([]),
+        now + Duration::from_secs(30),
+        Some(&apps),
+    );
+    let out = commands.execute_with_applications(
+        &mut state,
+        "Viewer / four.desktop",
+        &[],
+        json!([]),
+        now + Duration::from_secs(60),
+        Some(&apps),
+    );
+    assert_eq!(
+        out.desktop,
+        vec![
+            DesktopAction::Application(apps[0].clone()),
+            DesktopAction::Application(apps[3].clone())
+        ]
+    );
+    assert_eq!(format!("{state:?}"), before);
 }

@@ -841,6 +841,35 @@ pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
     }
 }
 
+pub fn voice_desktop_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
+    match (lang, success) {
+        (Lang::En, true) => format!(
+            "Confirmed {completed} of {total} desktop actions. Application confirmations mean launch requests, not ready windows."
+        ),
+        (Lang::PtBr, true) => format!(
+            "{completed} de {total} ações do computador confirmadas. A confirmação de um aplicativo indica o pedido de abertura, não uma janela pronta."
+        ),
+        (Lang::Es, true) => format!(
+            "{completed} de {total} acciones del equipo confirmadas. La confirmación de una aplicación indica la solicitud de apertura, no una ventana lista."
+        ),
+        (Lang::Zh, true) => {
+            format!("已确认 {total} 个桌面操作中的 {completed} 个。应用确认表示已请求启动，并非窗口已就绪。")
+        }
+        (Lang::En, false) => format!(
+            "Confirmed {completed} of {total} desktop actions before the batch stopped. Check command settings and targets before trying again; no actions were retried. Application confirmations mean launch requests."
+        ),
+        (Lang::PtBr, false) => format!(
+            "{completed} de {total} ações do computador confirmadas antes da interrupção do lote. Confira as configurações dos comandos e os destinos antes de tentar novamente; nenhuma ação foi repetida. A confirmação de um aplicativo indica o pedido de abertura."
+        ),
+        (Lang::Es, false) => format!(
+            "{completed} de {total} acciones del equipo confirmadas antes de detener el lote. Revisa la configuración de comandos y los destinos antes de reintentar; no se repitió ninguna acción. La confirmación de una aplicación indica la solicitud de apertura."
+        ),
+        (Lang::Zh, false) => format!(
+            "批次停止前已确认 {total} 个桌面操作中的 {completed} 个。请检查命令设置和目标后再试；未重试任何操作。应用确认表示已请求启动。"
+        ),
+    }
+}
+
 pub fn voice_audio_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
     match (lang, success) {
         (Lang::En, true) => format!("Confirmed {completed} of {total} player and computer audio actions."),

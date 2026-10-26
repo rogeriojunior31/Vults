@@ -483,6 +483,9 @@ or desktop action was enabled by this documentation change.
 - [x] Execute ordered audio batches across selected-player and computer-output scopes with all
   required consents checked before native IO, target/capability preflight, a single recording ticket
   and deadline, and confirmed-prefix feedback without retry or rollback.
+- [x] Include registered application launches in the ordered native batch executor; validate all
+  app definitions before effects and revalidate at launch, preserve resolved choices through
+  subsequent questions and keep one original 90-second clarification deadline for the whole batch.
 - [ ] Keep cancellation tickets, lock checks, clarification deadlines and context ownership.
   Validate every batch before effects; execute each action at most once. External side effects
   cannot be promised atomic: stop on failure and report the actual completed prefix without retry.
@@ -504,14 +507,30 @@ feature-enabled evals, reviewed translation source hashes and repository/version
 Tests cover private-bus playback/volume/capabilities, cancellation after property reads, a departed
 player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
 separate consent and realtime non-upload. No personal playback, settings or provider was changed.
-Pending for VC2: batches combining audio, application launches and flock actions.
+Pending for VC2: batches combining native actions with flock actions.
+Native application batches (2026-10-26): one typed ordered desktop request/executor now covers
+player controls, computer output and registered application launches, including multiple apps.
+Every required consent is checked before native IO; application definitions and audio targets
+are preflighted before effects, and each native effect rechecks identity, cancellation, lock,
+all batch consents and one admission deadline. Blocking launches retain the deadline/consent
+guard even after an outer timeout. Confirmation means launch requested, never a ready window.
+There is no automatic retry, rollback or repeat/undo context. Multiple clarification questions
+now keep the original 90-second deadline, and changes to earlier resolved apps invalidate later
+questions. Flock/native mixtures still discard the shadow state and emit no native request.
+Tests cover ordered apps/audio, all required consent combinations, missing/disabled/ambiguous
+apps, selected-definition changes, the shared expiry, prefix failures/timeouts and realtime
+non-upload. Registered-entry tests use a private XDG fixture without launching applications.
+EN/pt-BR guides and four-language batch feedback are current. UI build, all 19 renderer checks,
+workspace formatting/Clippy/tests, feature-enabled evals, reviewed translation marks and repository
+guards pass. Real desktop acceptance remains VC6.
 Mixed-audio integration (2026-10-26): one typed ordered audio request replaces the independent
 player/output queues and executors. Mixed audio is admitted only when every required switch is
 on; pin both targets and preflight all requested player capabilities before effects. Wait for
 dictation restoration once, use one recording admission/deadline, revalidate at each effect,
 stop on failure/cancellation and report the confirmed prefix in all four languages. No automatic
 retry, rollback, repeat/undo context or Chat fallback is introduced. Realtime consumes mixed audio
-locally as unavailable. Audio mixed with flock actions or launches is still rejected before effects.
+locally as unavailable. That initial slice rejected audio mixed with flock actions or launches;
+the shared native executor above now includes launches.
 Fake executor tests cover spoken order, preflight rejection, each partial-failure/timeout boundary
 and no replay; consent tests cover all switch combinations, and resolver/realtime tests protect
 unchanged flock state and non-upload. EN/pt-BR guides describe the bounded capability. Native audio
@@ -530,7 +549,8 @@ resolves both namespaces; explicit app/project phrases select one; aliases and o
 clarifications are preserved. App definitions/identities are revalidated before launch; definitions
 also invalidate pending choices. Launching is one-use, cancellation/lock/deadline/consent checked,
 without spoken shell text, URIs or file arguments; only launch-request acknowledgement is reported.
-Mixed batches containing a launch are rejected before core mutation. Realtime never launches apps.
+The initial launch slice rejected mixed batches before core mutation; native app/audio batches
+now use the shared executor described above. Realtime never launches apps.
 Private-XDG fixtures test registered/hidden/changed entries without launching any application;
 resolver tests cover collisions, definitions changing during clarification, aliases, namespaces,
 locked/disabled states and rejected batch prefixes. EN/pt-BR docs and the four-language UI are current.
