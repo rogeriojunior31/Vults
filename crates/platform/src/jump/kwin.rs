@@ -21,14 +21,17 @@ const TIMEOUT: Duration = Duration::from_secs(2);
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 
 /// True when KWin said it activated a window of `pids`.
-pub fn activate(pids: &[u32], folder: &str) -> bool {
+pub fn activate(pids: &[u32], folder: &str, allowed: &dyn Fn() -> bool) -> bool {
+    if !allowed() {
+        return false;
+    }
     // A runtime of our own: jump runs on a blocking thread, and zbus's tasks only need to live
     // as long as this call.
     let Ok(rt) = tokio::runtime::Builder::new_current_thread().enable_all().build() else {
         return false;
     };
     rt.block_on(async {
-        tokio::time::timeout(TIMEOUT * 2, try_activate(pids, folder))
+        tokio::time::timeout(TIMEOUT * 2, try_activate(pids, folder, allowed))
             .await
             .ok()
             .and_then(Result::ok)
@@ -143,7 +146,7 @@ pub(crate) fn write_script(dir: &Path, name: &str, text: &str) -> Option<ScriptF
     Some(file_guard)
 }
 
-async fn try_activate(pids: &[u32], folder: &str) -> zbus::Result<bool> {
+async fn try_activate(pids: &[u32], folder: &str, allowed: &dyn Fn() -> bool) -> zbus::Result<bool> {
     let Some(dir) = script_dir() else {
         return Ok(false);
     };
@@ -172,6 +175,9 @@ async fn try_activate(pids: &[u32], folder: &str) -> zbus::Result<bool> {
     };
 
     let scripting = zbus::Proxy::new(&conn, KWIN, "/Scripting", "org.kde.kwin.Scripting").await?;
+    if !allowed() {
+        return Ok(false);
+    }
     let id: i32 = scripting.call("loadScript", &(path, name.as_str())).await?;
     let found = if id < 0 {
         false
@@ -182,6 +188,9 @@ async fn try_activate(pids: &[u32], folder: &str) -> zbus::Result<bool> {
             let Ok(script) = zbus::Proxy::new(&conn, KWIN, at, "org.kde.kwin.Script").await else {
                 continue;
             };
+            if !allowed() {
+                break;
+            }
             if script.call::<_, _, ()>("run", &()).await.is_ok() {
                 ran = true;
                 break;

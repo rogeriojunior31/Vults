@@ -841,6 +841,44 @@ pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
     }
 }
 
+pub fn voice_external_unavailable(lang: Lang, folder: bool) -> &'static str {
+    match (lang, folder) {
+        (Lang::En, true) => {
+            "The session folder is unavailable; the batch did not run. Check that its absolute path exists."
+        }
+        (Lang::PtBr, true) => {
+            "A pasta da sessão está indisponível; o lote não foi executado. Confira se o caminho absoluto existe."
+        }
+        (Lang::Es, true) => {
+            "La carpeta de la sesión no está disponible; el lote no se ejecutó. Comprueba que la ruta absoluta exista."
+        }
+        (Lang::Zh, true) => "会话文件夹不可用，批次未执行。请检查其绝对路径是否存在。",
+        (Lang::En, false) => {
+            "No supported terminal target is available for this session; the batch did not run. Check its terminal integration."
+        }
+        (Lang::PtBr, false) => {
+            "Não há um terminal compatível disponível para esta sessão; o lote não foi executado. Confira a integração do terminal."
+        }
+        (Lang::Es, false) => {
+            "No hay un terminal compatible disponible para esta sesión; el lote no se ejecutó. Revisa la integración del terminal."
+        }
+        (Lang::Zh, false) => "此会话没有可用的受支持终端，批次未执行。请检查终端集成。",
+    }
+}
+
+pub fn voice_external_requested(lang: Lang, folder: bool) -> &'static str {
+    match (lang, folder) {
+        (Lang::En, true) => "Folder open requested. Window readiness is not confirmed.",
+        (Lang::PtBr, true) => "Abertura da pasta solicitada. A janela pronta não foi confirmada.",
+        (Lang::Es, true) => "Apertura de carpeta solicitada. No se confirmó que la ventana esté lista.",
+        (Lang::Zh, true) => "已请求打开文件夹，尚未确认窗口已就绪。",
+        (Lang::En, false) => "Terminal focus requested. Window readiness is not confirmed.",
+        (Lang::PtBr, false) => "Foco no terminal solicitado. A janela pronta não foi confirmada.",
+        (Lang::Es, false) => "Enfoque del terminal solicitado. No se confirmó que la ventana esté lista.",
+        (Lang::Zh, false) => "已请求聚焦终端，尚未确认窗口已就绪。",
+    }
+}
+
 pub fn voice_flock_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
     match (lang, success) {
         (Lang::En, true) => format!("Confirmed {completed} of {total} flock and desktop actions."),

@@ -489,10 +489,10 @@ or desktop action was enabled by this documentation change.
 - [x] Combine runtime-owned flock navigation, project preferences and local reads with native
   actions: shadow planning/preflight, relevant-state guards, ordered owner-loop acknowledgements,
   settings-save confirmation and actual read results, with no context replay or unsafe card action.
-- [ ] Keep cancellation tickets, lock checks, clarification deadlines and context ownership.
+- [x] Keep cancellation tickets, lock checks, clarification deadlines and context ownership.
   Validate every batch before effects; execute each action at most once. External side effects
   cannot be promised atomic: stop on failure and report the actual completed prefix without retry.
-- [ ] Coordinate user media/volume actions with dictation's temporary duck/pause restoration in
+- [x] Coordinate user media/volume actions with dictation's temporary duck/pause restoration in
   `platform::music`: restoration must not reverse an intentional voice command. Advertise undo only
   for state that can be restored conditionally; launching an app is not undone by killing it.
 
@@ -510,8 +510,26 @@ feature-enabled evals, reviewed translation source hashes and repository/version
 Tests cover private-bus playback/volume/capabilities, cancellation after property reads, a departed
 player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
 separate consent and realtime non-upload. No personal playback, settings or provider was changed.
-Pending for VC2: terminal/folder submission receipts in mixed batches and final restoration/context
-acceptance. Mixed repeat/undo remains unavailable until its conditional semantics cover native effects.
+VC2 local implementation is complete; real desktop restoration/cancellation/context acceptance
+remains release-blocking under VC6. Native repeat/undo is deliberately unavailable, not advertised
+as reversible; existing conditional flock-only undo keeps its contract.
+External flock receipts (2026-10-26): command-key terminal/folder actions, alone or combined with
+other scopes, now use ordered native receipts. Preflight checks absolute existing folders and
+supported terminal routes without opening anything. Steps pin exact session terminal metadata,
+then a queued worker obtains a fresh owner-loop Check before acting. Check is read-only and never
+emits a second effect. Worker admission retains all batch consents, ticket, deadline and its live
+receipt; final reply closure/timeout drops pending receipts. The owner loop never waits on native
+IO. Confirmation means a native open/focus request was accepted, never a ready window.
+Cancellation checks precede folder/editor launches, each multiplexer child and KWin/X11 activation
+requests; a cancelled child is killed/reaped and later requests are refused. Already submitted
+desktop requests may still complete after timeout and are never retried or rolled back. Realtime's
+legacy flock dispatch remains isolated from command-key native receipts. Tests use channel/fake
+receipts and read-only folder/capability checks; they cover deferred/failing/dropped/expired replies,
+closed/cancelled workers, terminal metadata changes, queued owner checks, cancelled child cleanup
+and all ordered failure boundaries without launching a user app or changing the desktop. EN/pt-BR
+guides and four-language unavailable/submission messages are current. UI build, all 19 renderer
+checks, workspace formatting/Clippy/tests, feature-enabled evals, reviewed translation source
+marks and repository/version guards pass. Native acceptance remains VC6.
 Flock/native integration (2026-10-26): the ordered executor now includes prepared focus/next/previous,
 project mute/pin/hide and local query steps. The runtime owner preflights them on a shadow state
 before effects and applies each step only after checking target session start/folder, navigation
@@ -521,8 +539,9 @@ readiness/lock checks run inside ticket admission. The worker never mutates core
 Views publish before acknowledgement; SaveProjects must succeed before a preference is confirmed.
 A failed save/timeout can leave an unconfirmed step in memory; stop with confirmed-prefix feedback
 in all four languages and never retry/rollback. Reads use live redacted templates and their actual
-answers accompany the status. Mixed batches clear repeat/undo context. Terminal/folder and explicit
-repeat/undo combinations remain rejected without effects; flock-only behavior is preserved. Tests
+answers accompany the status. Mixed batches clear repeat/undo context. The initial flock slice
+rejected terminal/folder combinations; the external-receipt integration above now supports them.
+Explicit repeat/undo combinations remain unavailable. Tests
 cover pure planning/preflight, all ordered boundaries, target restart/move, preference/focus/order
 edits, unrelated progress, cancelled/expired/closed/locked queued work and realtime non-upload.
 EN/pt-BR guides are current. UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
@@ -605,7 +624,8 @@ translation marks and repository guards. Native output and visual acceptance rem
 
 Pending native acceptance: visually inspect Command settings and exercise actual playback/dictation
 restoration/cancellation in the running application (VC6); native UI capture/control is unavailable
-in this session. Keep VC2 and VC6 incomplete until those remaining actions and gates are finished.
+in this session. VC2's local implementation is complete; VC6 native acceptance remains open and
+release-blocking. Proceed to VC3 without declaring the desktop or 0.1.9 accepted.
 
 **Done when:** fake native adapters prove action selection, exact arguments/identities, failure and
 cancellation; existing flock commands still work; real desktop effects await VC6.

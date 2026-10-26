@@ -91,6 +91,11 @@ pub struct Commands {
     pending: Option<Pending>,
 }
 
+enum Scope<'a> {
+    Flock,
+    Desktop(Option<&'a [vults_platform::applications::Application]>),
+}
+
 impl Commands {
     #[cfg(target_os = "linux")]
     pub(crate) fn question_deadline(&self) -> Option<Instant> {
@@ -119,7 +124,7 @@ impl Commands {
         usage: Value,
         now: Instant,
     ) -> Report {
-        self.execute_with_applications(state, transcript, replacements, usage, now, Some(&[]))
+        self.execute_scoped(state, transcript, replacements, usage, now, Scope::Flock)
     }
 
     pub fn execute_with_applications(
@@ -131,6 +136,22 @@ impl Commands {
         now: Instant,
         apps: Option<&[vults_platform::applications::Application]>,
     ) -> Report {
+        self.execute_scoped(state, transcript, replacements, usage, now, Scope::Desktop(apps))
+    }
+
+    fn execute_scoped(
+        &mut self,
+        state: &mut State,
+        transcript: &str,
+        replacements: &[(String, String)],
+        usage: Value,
+        now: Instant,
+        scope: Scope<'_>,
+    ) -> Report {
+        let (apps, native_external) = match scope {
+            Scope::Flock => (Some(&[][..]), false),
+            Scope::Desktop(apps) => (apps, true),
+        };
         let lang = state.lang;
         if state.locked {
             self.cancel();
@@ -232,6 +253,7 @@ impl Commands {
             } else {
                 original.clone()
             };
+            has_native |= native_external && matches!(command, Command::Terminal(_) | Command::Folder(_));
             let target = target(&command);
             let session = if let Some(text) = target {
                 let project = matches!(command, Command::SetPreference { .. });

@@ -471,7 +471,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let _ = request.reply.send(Err(()));
                     continue;
                 }
-                let preflight = matches!(request.kind, crate::voice_commands::flock::Kind::Preflight(_));
+                let preflight = !matches!(request.kind, crate::voice_commands::flock::Kind::Apply(_));
                 let usage = serde_json::to_value(crate::usage::usage(app.clone())).unwrap_or_default();
                 let settings = app.state::<crate::settings::SettingsState>();
                 let Ok(saved) = settings.0.lock() else {
@@ -488,7 +488,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     Ok((effects, text)) if !preflight => {
                         command_effects = Some(effects);
                         flock_text = text;
-                        flock_reply = Some(request.reply);
+                        flock_reply = Some(crate::voice_commands::flock::Completion::new(request));
                     }
                     Ok(_) => {
                         let _ = request.reply.send(Ok(String::new()));
@@ -873,13 +873,15 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let app = app.clone();
                     #[cfg(target_os = "linux")]
                     let work = command_reply.as_mut().map(|completion| completion.work());
+                    #[cfg(target_os = "linux")]
+                    let flock_work = flock_reply.as_mut().map(|completion| completion.work());
                     tauri::async_runtime::spawn_blocking(move || {
-                        let jump = || {
+                        let jump = |allowed: &dyn Fn() -> bool| {
                             #[cfg(target_os = "linux")]
-                            let found = vults_platform::jump::jump(&terminal);
+                            let found = vults_platform::jump::jump_if(&terminal, allowed);
                             #[cfg(not(target_os = "linux"))]
                             let found = {
-                                let _ = terminal;
+                                let _ = (&terminal, allowed);
                                 false
                             };
                             if !found {
@@ -889,13 +891,17 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                             found
                         };
                         #[cfg(target_os = "linux")]
-                        if let Some(work) = work {
-                            work.run(&app, || crate::realtime::routing::Receipt::submitted(jump()));
+                        if let Some(work) = flock_work {
+                            work.run(&app, |allowed| jump(allowed));
+                        } else if let Some(work) = work {
+                            work.run(&app, || {
+                                crate::realtime::routing::Receipt::submitted(jump(&|| true))
+                            });
                         } else {
-                            jump();
+                            jump(&|| true);
                         }
                         #[cfg(not(target_os = "linux"))]
-                        jump();
+                        jump(&|| true);
                     });
                 }
                 // Checks the disk and may start the editor: off the loop.
@@ -903,16 +909,23 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let app = app.clone();
                     #[cfg(target_os = "linux")]
                     let work = command_reply.as_mut().map(|completion| completion.work());
+                    #[cfg(target_os = "linux")]
+                    let flock_work = flock_reply.as_mut().map(|completion| completion.work());
                     tauri::async_runtime::spawn_blocking(move || {
-                        let open = || crate::open::folder(&app, &path);
                         #[cfg(target_os = "linux")]
-                        if let Some(work) = work {
-                            work.run(&app, || crate::realtime::routing::Receipt::submitted(open()));
+                        let open = |allowed: &dyn Fn() -> bool| crate::open::folder_if(&app, &path, allowed);
+                        #[cfg(target_os = "linux")]
+                        if let Some(work) = flock_work {
+                            work.run(&app, |allowed| open(allowed));
+                        } else if let Some(work) = work {
+                            work.run(&app, || {
+                                crate::realtime::routing::Receipt::submitted(open(&|| true))
+                            });
                         } else {
-                            open();
+                            crate::open::folder(&app, &path);
                         }
                         #[cfg(not(target_os = "linux"))]
-                        open();
+                        crate::open::folder(&app, &path);
                     });
                 }
                 Effect::OpenFile { path, line } => {
@@ -951,7 +964,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
         #[cfg(target_os = "linux")]
         if let Some(reply) = flock_reply {
-            let _ = reply.send(if flock_ok { Ok(flock_text) } else { Err(()) });
+            reply.finish(flock_text, flock_ok, state.lang);
         }
         let prefs = core::notify::Prefs {
             on: crate::settings::notifications(&app),

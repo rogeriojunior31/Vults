@@ -17,6 +17,8 @@ enum Error {
     Media,
     Application,
     Flock,
+    FolderUnavailable,
+    TerminalUnavailable,
     Output(OutputError),
 }
 
@@ -60,7 +62,7 @@ pub(super) fn consent(
         && (!applications || saved.dictation_command_apps)
 }
 
-fn enabled(
+pub(super) fn enabled(
     app: &AppHandle,
     ticket: &Ticket,
     deadline: Instant,
@@ -109,6 +111,22 @@ impl Backend<'_> {
     }
 }
 
+fn external_available(step: &super::flock::Step) -> Result<(), Error> {
+    if step
+        .folder_path()
+        .is_some_and(|path| !crate::open::folder_available(path))
+    {
+        return Err(Error::FolderUnavailable);
+    }
+    if step
+        .terminal()
+        .is_some_and(|terminal| !vults_platform::jump::available(terminal))
+    {
+        return Err(Error::TerminalUnavailable);
+    }
+    Ok(())
+}
+
 impl Io for Backend<'_> {
     async fn prepare(&mut self, actions: &[DesktopAction]) -> Result<(), Error> {
         // Check every required consent before any native connection or effect.
@@ -124,6 +142,17 @@ impl Io for Backend<'_> {
                 .await
                 .map_err(|_| Error::Application)?
                 .map_err(|_| Error::Application)?;
+                if !self.enabled() {
+                    return Err(Error::Disabled);
+                }
+            }
+        }
+        for action in actions {
+            if let DesktopAction::Flock(step) = action {
+                let step = step.as_ref().clone();
+                tauri::async_runtime::spawn_blocking(move || external_available(&step))
+                    .await
+                    .map_err(|_| Error::Flock)??;
                 if !self.enabled() {
                     return Err(Error::Disabled);
                 }
@@ -267,7 +296,9 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
         } else {
             Feedback::ExecutionFailed
         };
-        report.text = if flock {
+        report.text = if let Ok(Err(Error::FolderUnavailable | Error::TerminalUnavailable)) = &result {
+            i18n::voice_external_unavailable(lang, matches!(result, Ok(Err(Error::FolderUnavailable)))).into()
+        } else if flock {
             i18n::voice_flock_batch(lang, success, completed, actions.len())
         } else if applications && actions.len() > 1 {
             i18n::voice_desktop_batch(lang, success, completed, actions.len())
@@ -307,7 +338,14 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
                 _ => i18n::voice_media_failed(lang, completed, actions.len()),
             }
         };
-        if matches!(result, Ok(Err(Error::Disabled | Error::NoPlayer))) && completed == 0 {
+        if matches!(
+            result,
+            Ok(Err(Error::Disabled
+                | Error::NoPlayer
+                | Error::FolderUnavailable
+                | Error::TerminalUnavailable))
+        ) && completed == 0
+        {
             report.feedback = Feedback::Unavailable;
         }
         if !backend.answers.is_empty() {
@@ -361,6 +399,52 @@ mod tests {
             assert_eq!(consent(&saved, false, true, false), mask & 9 == 9);
             assert_eq!(consent(&saved, false, false, true), mask & 17 == 17);
         }
+    }
+
+    #[test]
+    fn external_preflight_checks_real_paths_and_missing_terminal_metadata_without_opening_anything() {
+        use vults_core::{Intent, State};
+        use vults_dictation::command::Command;
+        let now = Instant::now();
+        let mut state = super::super::tests::fixture(now);
+        let key = state.sessions.keys().next().unwrap().clone();
+        state.sessions.get_mut(&key).unwrap().cwd = Some(std::env::temp_dir().to_string_lossy().into_owned());
+        let intent = Intent::OpenFolder { session: key.clone() };
+        let folder = super::super::flock::Step::plan(
+            &state,
+            &Command::Folder("api".into()),
+            Some(key.clone()),
+            Some(&intent),
+        )
+        .unwrap();
+        assert_eq!(external_available(&folder), Ok(()));
+        let missing = std::env::temp_dir().join(format!(
+            "vults-missing-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        state.sessions.get_mut(&key).unwrap().cwd = Some(missing.to_string_lossy().into_owned());
+        let folder = super::super::flock::Step::plan(
+            &state,
+            &Command::Folder("api".into()),
+            Some(key.clone()),
+            Some(&intent),
+        )
+        .unwrap();
+        assert_eq!(external_available(&folder), Err(Error::FolderUnavailable));
+        let terminal = super::super::flock::Step::plan(
+            &state,
+            &Command::Terminal("api".into()),
+            Some(key.clone()),
+            Some(&Intent::Jump { session: key }),
+        )
+        .unwrap();
+        assert_eq!(external_available(&terminal), Err(Error::TerminalUnavailable));
+        let read = super::super::flock::Step::plan(&State::default(), &Command::Waiting, None, None).unwrap();
+        assert_eq!(external_available(&read), Ok(()));
     }
 
     #[derive(Default)]

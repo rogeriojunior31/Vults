@@ -977,8 +977,18 @@ Core state changes remain owned by the runtime, which publishes the new view bef
 them; project preference steps require a successful settings save for confirmation. A failed save
 or timeout may leave that step applied in memory, so check the result before retrying. Confirmed
 prefixes are never replayed or rolled back automatically. Mixed batches do not establish repeat/undo
-context. Mixing terminal/folder requests or repeat/undo with native actions remains unavailable
-until those steps have external submission receipts; existing flock-only commands keep their behavior. Zeca may be
+context. Terminal/folder requests are also supported, including requests containing only those
+actions: `open terminal api and then open folder web`. The command-key path waits for each native
+submission receipt before proceeding. It rechecks the session identity, folder and exact terminal
+metadata when a blocking worker starts, along with consent, cancellation and the original deadline.
+Preflight rejects a missing absolute folder or unsupported terminal route before any effect, with
+a local explanation. Folder/editor opens and terminal-focus requests confirm submission, not a
+ready window. A queued worker loses admission when its reply closes; cancellation interrupts a
+running multiplexer child and prevents later native requests. An already submitted desktop request
+can still take effect after a timeout; check its window before trying again. Terminal focus uses
+existing registered pane/window routes, never transcript-supplied commands or file arguments.
+Explicit repeat/undo combined with native actions remains unavailable. Realtime's existing flock
+dispatch is preserved; these command-key receipts do not grant it new desktop capabilities. Zeca may be
 off; realtime voice does not launch apps. Native desktop acceptance remains pending.
 
 VC2 adds **System audio voice commands**, a separate default-off option under Command settings.

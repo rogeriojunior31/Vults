@@ -23,9 +23,31 @@ use vults_protocol::Terminal;
 
 /// False when nothing worked: no multiplexer answered and no window was raised.
 pub fn jump(t: &Terminal) -> bool {
-    let pane = multiplexer(&t.env);
-    let window = t.pid.is_some_and(|pid| raise_window(t, pid));
+    jump_if(t, &|| true)
+}
+
+pub fn jump_if(t: &Terminal, allowed: &dyn Fn() -> bool) -> bool {
+    if !allowed() {
+        return false;
+    }
+    let pane = multiplexer(&t.env, allowed);
+    let window = allowed() && t.pid.is_some_and(|pid| raise_window(t, pid, allowed));
     pane || window
+}
+
+/// Read-only capability check; an available route still needs a native acknowledgement.
+pub fn available(t: &Terminal) -> bool {
+    !multiplexer_commands(&t.env).is_empty()
+        || t.pid.is_some_and(|pid| {
+            !ancestors(pid).is_empty()
+                && !methods(
+                    t.env.get("XDG_SESSION_TYPE").map_or("", String::as_str),
+                    t.env.get("WAYLAND_DISPLAY").map_or("", String::as_str),
+                    t.env.get("DISPLAY").map_or("", String::as_str),
+                    t.env.get("XDG_CURRENT_DESKTOP").map_or("", String::as_str),
+                )
+                .is_empty()
+        })
 }
 
 /// A way to activate another program's window.
@@ -56,7 +78,7 @@ fn methods(session_type: &str, wayland_display: &str, display: &str, desktop: &s
     out
 }
 
-fn raise_window(t: &Terminal, pid: u32) -> bool {
+fn raise_window(t: &Terminal, pid: u32, allowed: &dyn Fn() -> bool) -> bool {
     let chain = ancestors(pid);
     if chain.is_empty() {
         return false;
@@ -75,9 +97,12 @@ fn raise_window(t: &Terminal, pid: u32) -> bool {
         env("XDG_CURRENT_DESKTOP"),
     )
     .into_iter()
-    .any(|method| match method {
-        Method::KWin => kwin::activate(&chain, &folder),
-        Method::X11 => x11::activate(&chain, &folder),
+    .any(|method| {
+        allowed()
+            && match method {
+                Method::KWin => kwin::activate(&chain, &folder, allowed),
+                Method::X11 => x11::activate(&chain, &folder, allowed),
+            }
     })
 }
 
@@ -173,21 +198,49 @@ fn multiplexer_commands(env: &BTreeMap<String, String>) -> Vec<Vec<String>> {
 }
 
 /// True when at least one multiplexer command succeeded.
-fn multiplexer(env: &BTreeMap<String, String>) -> bool {
+fn multiplexer(env: &BTreeMap<String, String>, allowed: &dyn Fn() -> bool) -> bool {
     let mut any = false;
     for argv in multiplexer_commands(env) {
+        if !allowed() {
+            break;
+        }
         let Some(mut command) = multiplexer_command(&argv, env) else {
             continue;
         };
-        let ok = command
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_ok_and(|s| s.success());
+        let ok = command_if(&mut command, allowed);
         any |= ok;
     }
     any
+}
+
+fn command_if(command: &mut Command, allowed: &dyn Fn() -> bool) -> bool {
+    if !allowed() {
+        return false;
+    }
+    let Ok(mut child) = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+    loop {
+        if !allowed() {
+            let _ = child.kill();
+            let _ = child.wait();
+            return false;
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => return status.success(),
+            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(10)),
+            Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return false;
+            }
+        }
+    }
 }
 
 fn wezterm_socket(env: &BTreeMap<String, String>) -> Option<&str> {
@@ -430,5 +483,28 @@ mod tests {
         assert_eq!(chain.first(), Some(&std::process::id()));
         assert!(!chain.contains(&1), "{chain:?}");
         assert!(ancestors(u32::MAX - 1).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod cancellation_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    #[test]
+    fn closed_admission_never_connects_and_a_cancelled_child_is_reaped() {
+        let target = Terminal::default();
+        assert!(!available(&target));
+        assert!(!jump_if(&target, &|| false));
+        assert!(!kwin::activate(&[std::process::id()], "", &|| false));
+        assert!(!x11::activate(&[std::process::id()], "", &|| false));
+        let checks = AtomicUsize::new(0);
+        let started = std::time::Instant::now();
+        assert!(!command_if(Command::new("/bin/sleep").arg("2"), &|| checks
+            .fetch_add(1, Ordering::SeqCst)
+            < 3));
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
+        assert!(checks.load(Ordering::SeqCst) >= 3);
+        assert!(command_if(&mut Command::new("/bin/true"), &|| true));
+        assert!(!command_if(&mut Command::new("/bin/false"), &|| true));
     }
 }

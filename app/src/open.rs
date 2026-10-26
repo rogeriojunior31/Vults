@@ -29,14 +29,33 @@ fn runnable(p: &Path) -> bool {
 
 /// The session's folder, in the editor or the file manager.
 pub fn folder(app: &AppHandle, path: &str) -> bool {
+    folder_if(app, path, &|| true)
+}
+
+#[cfg(any(target_os = "linux", test))]
+pub(crate) fn folder_available(path: &str) -> bool {
+    existing(path, Path::is_dir).is_some()
+}
+
+pub(crate) fn folder_if(app: &AppHandle, path: &str, allowed: &dyn Fn() -> bool) -> bool {
+    if !allowed() {
+        return false;
+    }
     let Some(dir) = existing(path, Path::is_dir) else {
         tracing::info!("quick action: no such folder");
         return false;
     };
-    if spawn(editor(), [dir.as_os_str()]) {
+    let program = editor();
+    if !allowed() {
+        return false;
+    }
+    if spawn(program, [dir.as_os_str()]) {
         return true;
     }
     use tauri_plugin_opener::OpenerExt;
+    if !allowed() {
+        return false;
+    }
     app.opener()
         .open_path(dir.to_string_lossy(), None::<&str>)
         .is_ok()
@@ -94,6 +113,9 @@ mod tests {
         let dir = std::env::temp_dir();
         let dir = dir.to_str().unwrap();
         assert!(existing(dir, Path::is_dir).is_some());
+        assert!(folder_available(dir));
+        assert!(!folder_available("relative/dir"));
+        assert!(!folder_available("/surely/not/here/at/all"));
         assert!(existing(dir, Path::is_file).is_none(), "a folder is not a file");
         assert!(existing("relative/dir", |_| true).is_none());
         assert!(existing("--new-window", |_| true).is_none());

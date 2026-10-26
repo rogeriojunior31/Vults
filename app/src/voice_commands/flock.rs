@@ -10,6 +10,7 @@ pub struct Step {
     focus: Option<(Option<SessionKey>, Option<SessionKey>)>,
     order: Option<Vec<SessionKey>>,
     pref: Option<(SessionKey, ProjectPref, bool)>,
+    terminal: Option<vults_protocol::Terminal>,
 }
 
 impl Step {
@@ -26,7 +27,9 @@ impl Step {
         if !navigation
             && !matches!(
                 command,
-                Command::SetPreference { .. }
+                Command::Terminal(_)
+                    | Command::Folder(_)
+                    | Command::SetPreference { .. }
                     | Command::Waiting
                     | Command::Session(_)
                     | Command::Usage
@@ -50,6 +53,11 @@ impl Step {
         } else {
             None
         };
+        let terminal = if matches!(command, Command::Terminal(_)) {
+            Some(state.sessions.get(session.as_ref()?)?.terminal.clone())
+        } else {
+            None
+        };
         Some(Self {
             command: command.clone(),
             session,
@@ -58,16 +66,24 @@ impl Step {
             focus: navigation.then(|| (state.focus.clone(), state.front().cloned())),
             order,
             pref,
+            terminal,
         })
     }
 
+    #[cfg(target_os = "linux")]
+    pub(super) fn folder_path(&self) -> Option<&str> {
+        matches!(self.command, Command::Folder(_))
+            .then(|| self.targets.first()?.2.as_deref())
+            .flatten()
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(super) fn terminal(&self) -> Option<&vults_protocol::Terminal> {
+        self.terminal.as_ref()
+    }
+
     #[cfg(any(target_os = "linux", test))]
-    pub(crate) fn apply(
-        &self,
-        state: &mut State,
-        usage: Value,
-        now: Instant,
-    ) -> Result<(Vec<Effect>, String), ()> {
+    fn check(&self, state: &State) -> Result<(), ()> {
         if state.locked
             || self.targets.iter().any(|(key, started, cwd)| {
                 !state
@@ -90,6 +106,25 @@ impl Step {
         {
             return Err(());
         }
+        if self.terminal.as_ref().is_some_and(|expected| {
+            self.session
+                .as_ref()
+                .and_then(|key| state.sessions.get(key))
+                .is_none_or(|s| &s.terminal != expected)
+        }) {
+            return Err(());
+        }
+        Ok(())
+    }
+
+    #[cfg(any(target_os = "linux", test))]
+    pub(crate) fn apply(
+        &self,
+        state: &mut State,
+        usage: Value,
+        now: Instant,
+    ) -> Result<(Vec<Effect>, String), ()> {
+        self.check(state)?;
         if let Some(intent) = &self.intent {
             if !matches!(
                 intent,
@@ -97,14 +132,17 @@ impl Step {
                     | Intent::FocusNext
                     | Intent::FocusPrevious
                     | Intent::SetProjectPref { .. }
+                    | Intent::Jump { .. }
+                    | Intent::OpenFolder { .. }
             ) || !intent.voice_command_allowed()
             {
                 return Err(());
             }
-            Ok((
-                core::reduce(state, Input::User(intent.clone()), now),
-                String::new(),
-            ))
+            let effects = core::reduce(state, Input::User(intent.clone()), now);
+            if matches!(self.command, Command::Terminal(_) | Command::Folder(_)) && effects.is_empty() {
+                return Err(());
+            }
+            Ok((effects, String::new()))
         } else {
             read(state, &self.command, self.session.as_ref(), usage)
                 .map(|text| (vec![], text))
@@ -118,6 +156,7 @@ impl Step {
 pub(crate) enum Kind {
     Preflight(Vec<Step>),
     Apply(Box<Step>),
+    Check(Box<Step>),
 }
 
 #[cfg(target_os = "linux")]
@@ -137,6 +176,7 @@ impl Kind {
                 Ok((vec![], String::new()))
             }
             Self::Apply(step) => step.apply(state, usage, now),
+            Self::Check(step) => step.check(state).map(|_| (vec![], String::new())),
         }
     }
 }
@@ -176,6 +216,118 @@ impl Request {
 
     pub(crate) fn consent(&self, saved: &crate::settings::Settings) -> bool {
         super::desktop::consent(saved, self.scopes.0, self.scopes.1, self.scopes.2)
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) struct Completion {
+    request: Request,
+    receipts: Vec<tokio::sync::oneshot::Receiver<bool>>,
+}
+
+#[cfg(target_os = "linux")]
+impl Completion {
+    pub(crate) fn new(request: Request) -> Self {
+        Self {
+            request,
+            receipts: vec![],
+        }
+    }
+
+    pub(crate) fn work(&mut self) -> Work {
+        let (reply, receive) = tokio::sync::oneshot::channel();
+        self.receipts.push(receive);
+        let Kind::Apply(step) = &self.request.kind else {
+            unreachable!("only applied steps execute effects")
+        };
+        Work {
+            step: step.clone(),
+            ticket: self.request.ticket.clone(),
+            deadline: self.request.deadline,
+            scopes: self.request.scopes,
+            reply,
+        }
+    }
+
+    pub(crate) fn finish(self, text: String, saved: bool, lang: i18n::Lang) {
+        tauri::async_runtime::spawn(async move {
+            let Self { request, receipts } = self;
+            let external = match &request.kind {
+                Kind::Apply(step) if matches!(step.command, Command::Terminal(_) | Command::Folder(_)) => {
+                    Some(matches!(step.command, Command::Folder(_)))
+                }
+                _ => None,
+            };
+            let Request {
+                mut reply, deadline, ..
+            } = request;
+            let result = tokio::select! {
+                biased;
+                _ = reply.closed() => return,
+                result = tokio::time::timeout_at(deadline.into(), receipts_ok(receipts)) => saved && matches!(result, Ok(true)),
+            };
+            let text = external.map_or(text, |folder| i18n::voice_external_requested(lang, folder).into());
+            let _ = reply.send(if result { Ok(text) } else { Err(()) });
+        });
+    }
+}
+
+#[cfg(target_os = "linux")]
+async fn receipts_ok(receipts: Vec<tokio::sync::oneshot::Receiver<bool>>) -> bool {
+    for receipt in receipts {
+        if !matches!(receipt.await, Ok(true)) {
+            return false;
+        }
+    }
+    true
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) struct Work {
+    step: Box<Step>,
+    ticket: crate::dictation::worker::Ticket,
+    deadline: Instant,
+    scopes: (bool, bool, bool),
+    reply: tokio::sync::oneshot::Sender<bool>,
+}
+
+#[cfg(target_os = "linux")]
+impl Work {
+    fn ready(&self, now: Instant) -> bool {
+        !self.reply.is_closed() && self.ticket.valid() && now < self.deadline
+    }
+
+    pub(crate) fn run(self, app: &tauri::AppHandle, action: impl FnOnce(&dyn Fn() -> bool) -> bool) {
+        let allowed = || {
+            self.ready(Instant::now())
+                && super::desktop::enabled(
+                    app,
+                    &self.ticket,
+                    self.deadline,
+                    self.scopes.0,
+                    self.scopes.1,
+                    self.scopes.2,
+                )
+        };
+        let checked = allowed()
+            && tauri::async_runtime::block_on(async {
+                matches!(
+                    tokio::time::timeout_at(
+                        self.deadline.into(),
+                        crate::runtime::flock_command(
+                            app,
+                            Kind::Check(self.step.clone()),
+                            self.ticket.clone(),
+                            self.deadline,
+                            self.scopes
+                        )
+                    )
+                    .await,
+                    Ok(Ok(_))
+                )
+            });
+        let result = checked && allowed() && action(&allowed);
+        let _ = self.reply.send(result);
     }
 }
 
@@ -299,5 +451,103 @@ mod tests {
                 assert_eq!(format!("{live:?}"), before);
             }
         }
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn terminal_metadata_is_pinned_and_worker_checks_do_not_emit_effects() {
+        let now = Instant::now();
+        let (mut state, steps) = planned(
+            now,
+            "pause media and then open terminal api and then open folder web",
+        );
+        let before = format!("{state:?}");
+        Kind::Check(Box::new(steps[0].clone()))
+            .run(&mut state, json!([]), now)
+            .unwrap();
+        assert_eq!(format!("{state:?}"), before);
+        let key = steps[0].session.clone().unwrap();
+        state
+            .sessions
+            .get_mut(&key)
+            .unwrap()
+            .terminal
+            .env
+            .insert("TMUX_PANE".into(), "%123".into());
+        assert!(steps[0].check(&state).is_err());
+        let before = format!("{state:?}");
+        assert!(Kind::Preflight(steps).run(&mut state, json!([]), now).is_err());
+        assert_eq!(format!("{state:?}"), before);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn external_receipts_confirm_submission_and_close_late_workers_without_native_calls() {
+        for mode in 0..6 {
+            let now = Instant::now();
+            let (_, steps) = planned(now, "pause media and then open folder api");
+            let (reply, mut receive) = tokio::sync::oneshot::channel();
+            let request = Request {
+                kind: Kind::Apply(Box::new(steps[0].clone())),
+                ticket: crate::dictation::worker::Ticket::test_command(),
+                deadline: now + Duration::from_millis(if mode == 3 { 20 } else { 1000 }),
+                scopes: (true, false, false),
+                reply,
+            };
+            let mut completion = Completion::new(request);
+            let work = completion.work();
+            assert!(work.ready(now));
+            completion.finish(String::new(), true, i18n::Lang::En);
+            match mode {
+                0 => {
+                    work.reply.send(true).unwrap();
+                    let result = receive.await.unwrap().unwrap();
+                    assert_eq!(result, i18n::voice_external_requested(i18n::Lang::En, true));
+                }
+                1 => {
+                    work.reply.send(false).unwrap();
+                    assert!(receive.await.unwrap().is_err());
+                }
+                2 => {
+                    drop(work);
+                    assert!(receive.await.unwrap().is_err());
+                }
+                3 => {
+                    assert!(receive.await.unwrap().is_err());
+                    assert!(!work.ready(Instant::now()));
+                }
+                4 => {
+                    drop(receive);
+                    let mut work = work;
+                    tokio::time::timeout(Duration::from_secs(1), work.reply.closed())
+                        .await
+                        .unwrap();
+                    assert!(!work.ready(Instant::now()));
+                }
+                _ => {
+                    assert!(
+                        tokio::time::timeout(Duration::from_millis(10), &mut receive)
+                            .await
+                            .is_err(),
+                        "submission cannot be confirmed before its receipt"
+                    );
+                    work.reply.send(true).unwrap();
+                    assert!(receive.await.unwrap().is_ok());
+                }
+            }
+        }
+        let now = Instant::now();
+        let (_, steps) = planned(now, "pause media and then open terminal api");
+        let (reply, _receive) = tokio::sync::oneshot::channel();
+        let ticket = crate::dictation::worker::Ticket::test_command();
+        let mut completion = Completion::new(Request {
+            kind: Kind::Apply(Box::new(steps[0].clone())),
+            ticket: ticket.clone(),
+            deadline: now + Duration::from_secs(1),
+            scopes: (true, false, false),
+            reply,
+        });
+        let work = completion.work();
+        ticket.test_cancel();
+        assert!(!work.ready(now));
     }
 }

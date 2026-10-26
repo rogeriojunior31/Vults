@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: edf3461d992d -->
+<!-- source: cfd80380cf1b -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1097,9 +1097,19 @@ continuam no fluxo principal, que publica a nova tela antes de confirmá-las; pr
 projeto exigem salvar as configurações com sucesso para haver confirmação. Uma falha ao salvar
 ou tempo excedido pode deixar a etapa aplicada na memória; confira o resultado antes de repetir.
 Etapas confirmadas nunca são repetidas ou revertidas automaticamente. Lotes mistos não criam
-contexto de repetir/desfazer. Misturar pedidos de terminal/pasta ou repetir/desfazer com ações
-nativas continua indisponível até haver confirmação dos pedidos externos; os comandos exclusivos
-do bando mantêm o comportamento atual. O Zeca pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
+contexto de repetir/desfazer. Pedidos de terminal/pasta também são aceitos, inclusive quando são
+as únicas ações: `abrir o terminal do api e depois abrir a pasta do web`. O caminho do atalho de
+comandos aguarda a confirmação de cada pedido nativo antes de avançar. Quando a tarefa de abertura
+começa, confere novamente a identidade da sessão, a pasta e os dados exatos do terminal, além de
+consentimento, cancelamento e prazo original. A validação prévia recusa pasta absoluta ausente ou
+rota de terminal incompatível antes de qualquer efeito, com uma explicação local. Abrir pasta/editor
+e focar terminal confirmam o pedido, não uma janela pronta. Uma tarefa na fila perde a autorização
+quando sua resposta é encerrada; o cancelamento interrompe um processo filho do multiplexador em
+execução e impede novos pedidos nativos. Um pedido já enviado ao desktop ainda pode ter efeito
+após o tempo esgotar; confira a janela antes de repetir. O foco usa rotas existentes de painel/janela,
+nunca comandos ou argumentos de arquivo vindos da transcrição. Repetir/desfazer explícitos junto
+a ações nativas continuam indisponíveis. O fluxo existente do bando na voz em tempo real é
+preservado; essas confirmações do atalho não lhe concedem novas capacidades no desktop. O Zeca pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
 
 A VC2 acrescenta **Comandos de voz do áudio do sistema**, uma opção própria desligada por padrão
 nas configurações dos comandos. Ao ativar, segure Ctrl+Alt+Z e diga `silenciar o computador`,

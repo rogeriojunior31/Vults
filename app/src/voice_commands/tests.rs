@@ -996,14 +996,55 @@ fn flock_and_native_batches_prepare_all_steps_without_changing_state() {
     assert!(state.prefs(&state.sessions[&key("a")]).mute);
     assert_eq!(state.focus, Some(key("b")));
     assert!(!answers.is_empty());
-    for text in [
-        "pause media and then terminal api",
-        "folder api and then mute computer",
-        "pause media and then undo",
-    ] {
+    for text in ["pause media and then repeat", "pause media and then undo"] {
         let before = format!("{state:?}");
         let out = say(&mut commands, &mut state, text, now);
         assert!(out.desktop.is_empty() && out.effects.is_empty(), "{text}");
         assert_eq!(format!("{state:?}"), before);
     }
+}
+
+#[test]
+fn terminal_and_folder_steps_mix_in_order_without_running_external_effects_during_planning() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    let out = say(
+        &mut commands,
+        &mut state,
+        "pause media and then open terminal api and then open folder web and then mute computer",
+        now,
+    );
+    assert_eq!(out.feedback, Feedback::Requested);
+    assert_eq!(out.desktop.len(), 4);
+    assert!(out.effects.is_empty() && !out.chat_fallback(true));
+    assert_eq!(format!("{state:?}"), before);
+    let DesktopAction::Flock(terminal) = &out.desktop[1] else {
+        panic!("terminal step");
+    };
+    let (effects, _) = terminal.apply(&mut state, json!([]), now).unwrap();
+    assert!(matches!(effects.as_slice(), [Effect::JumpToTerminal(_)]));
+    let DesktopAction::Flock(folder) = &out.desktop[2] else {
+        panic!("folder step");
+    };
+    let (effects, _) = folder.apply(&mut state, json!([]), now).unwrap();
+    assert!(matches!(effects.as_slice(), [Effect::OpenFolder(path)] if path == "/work/web"));
+}
+
+#[test]
+fn command_key_external_only_batches_use_native_receipts_while_legacy_flock_dispatch_is_preserved() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    for text in ["open folder api", "open terminal api and then open folder web"] {
+        let before = format!("{state:?}");
+        let out = commands.execute_with_applications(&mut state, text, &[], json!([]), now, None);
+        assert_eq!(out.feedback, Feedback::Requested);
+        assert!(!out.desktop.is_empty() && out.effects.is_empty() && !out.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+    let out = say(&mut commands, &mut state, "open folder api", now);
+    assert!(out.desktop.is_empty());
+    assert!(matches!(out.effects.as_slice(), [Effect::OpenFolder(_)]));
 }
