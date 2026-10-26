@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 37c6145d17b5 -->
+<!-- source: edf3461d992d -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1051,8 +1051,7 @@ as anteriores. Os recursos, a seleção e o consentimento são verificados novam
 uma mudança posterior ainda pode interromper o lote. Eles aguardam a restauração da redução/pausa temporária do ditado,
 aceitam cancelamento após a transcrição e só informam conclusão após a resposta do reprodutor.
 Um lote com falha ou tempo excedido informa quantas operações tiveram resposta; confira a reprodução
-antes de tentar novamente. Lotes apenas de mídia são suportados; misturar mídia e comandos do bando
-é recusado sem aplicar nenhuma parte. Para combinar os dois escopos, ative **Comandos de voz de mídia** (e os controles de mídia) e
+antes de tentar novamente. Lotes de mídia também podem incluir navegação do bando, preferências de projeto e consultas locais de estado. Para combinar os dois escopos, ative **Comandos de voz de mídia** (e os controles de mídia) e
 **Comandos de voz do áudio do sistema**. Por exemplo: `pause a mídia e depois volume do computador 40
 e depois retome a música`. O lote verifica todas as opções necessárias, o reprodutor selecionado,
 os recursos do reprodutor e a saída do computador antes do primeiro efeito. Uma única gravação e
@@ -1086,8 +1085,21 @@ novamente antes de cada abertura. Aplicativos sem resolução ou uma verificaç�
 que falha na validação prévia impedem todos os efeitos. Todas as etapas compartilham um único cancelamento e prazo de
 execução. Uma falha posterior interrompe o lote e informa apenas operações confirmadas, sem
 repetição nem reversão automática; confirmações de aplicativos são pedidos de abertura. Confira o
-resultado antes de repetir um pedido que excedeu o tempo. Lotes que misturam ações nativas com
-ações do bando continuam recusados antes de alterar projetos. O Zeca pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
+resultado antes de repetir um pedido que excedeu o tempo. Lotes mistos também aceitam navegação do bando, silenciar/fixar/ocultar projetos e consultas locais.
+Por exemplo: `silenciar projeto api e depois pause a mídia e depois abrir projeto web e depois quem está esperando?`.
+O planejamento resolve todos os destinos em um estado simulado. Antes do primeiro efeito, o fluxo
+principal valida todas as etapas do bando com o estado atual; cada etapa é conferida novamente
+quando chega sua vez. Mudanças de identidade/pasta da sessão, da ordem de navegação ou uma edição
+de foco/preferência feita pelo usuário interrompem a etapa afetada. O progresso comum de outro
+agente não invalida um destino explícito. Consultas leem o estado atual com dados sensíveis
+ocultados na execução, e as respostas aparecem junto ao retorno do lote. Alterações do estado
+continuam no fluxo principal, que publica a nova tela antes de confirmá-las; preferências de
+projeto exigem salvar as configurações com sucesso para haver confirmação. Uma falha ao salvar
+ou tempo excedido pode deixar a etapa aplicada na memória; confira o resultado antes de repetir.
+Etapas confirmadas nunca são repetidas ou revertidas automaticamente. Lotes mistos não criam
+contexto de repetir/desfazer. Misturar pedidos de terminal/pasta ou repetir/desfazer com ações
+nativas continua indisponível até haver confirmação dos pedidos externos; os comandos exclusivos
+do bando mantêm o comportamento atual. O Zeca pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
 
 A VC2 acrescenta **Comandos de voz do áudio do sistema**, uma opção própria desligada por padrão
 nas configurações dos comandos. Ao ativar, segure Ctrl+Alt+Z e diga `silenciar o computador`,
@@ -1111,7 +1123,7 @@ apelido de saída padrão redireciona uma escrita enfileirada para uma saída re
 chamadas nativas separadas não formam uma transação atômica de roteamento: mudanças concorrentes de
 rota ou servidor podem impedir a confirmação. Falha ou tempo excedido informa o trecho confirmado,
 sem repetir nem reverter automaticamente. Lotes nativos podem combinar ações do reprodutor, da saída do computador e de aplicativos
-instalados na ordem falada; lotes com ações do bando continuam indisponíveis. Voz em tempo real não executa esses comandos. Os testes usam
+instalados na ordem falada; navegação, preferências e consultas do bando também são aceitas, com os limites acima. Voz em tempo real não executa esses comandos. Os testes usam
 estado simulado e processos privados, não áudio pessoal; a validação real de saída/cancelamento
 no desktop continua pendente.
 

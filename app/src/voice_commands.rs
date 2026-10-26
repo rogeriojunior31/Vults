@@ -1,6 +1,7 @@
 //! V8: the runtime owner's local command dispatcher. No microphone, model, paste or card answer.
 #[cfg(target_os = "linux")]
 mod desktop;
+pub(crate) mod flock;
 mod targets;
 #[cfg(test)]
 mod tests;
@@ -20,11 +21,12 @@ use vults_dictation::command::{
 pub use i18n::VoiceFeedback as Feedback;
 const CONTEXT_WINDOW: Duration = Duration::from_secs(90);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DesktopAction {
     Media(command::MediaAction),
     Output(command::OutputAction),
     Application(vults_platform::applications::Application),
+    Flock(Box<flock::Step>),
 }
 
 #[derive(Debug)]
@@ -203,14 +205,17 @@ impl Commands {
         let mut effects = Vec::new();
         let mut answers = Vec::new();
         let mut desktop = Vec::new();
-        let mut core_seen = false;
+        let mut has_native = false;
+        let mut mixed_supported = true;
         for (index, original) in commands.iter().enumerate() {
             match original {
                 Command::Media(action) => {
+                    has_native = true;
                     desktop.push(DesktopAction::Media(*action));
                     continue;
                 }
                 Command::Output(action) => {
+                    has_native = true;
                     desktop.push(DesktopAction::Output(*action));
                     continue;
                 }
@@ -255,6 +260,7 @@ impl Commands {
                     Resolution::Found(name) => {
                         if let Some(app) = catalog.application(&name) {
                             selected.insert(index, name);
+                            has_native = true;
                             desktop.push(DesktopAction::Application(app));
                             continue;
                         }
@@ -308,7 +314,6 @@ impl Commands {
             } else {
                 None
             };
-            core_seen = true;
             let previous = shadow.front().cloned();
             let mut undo = None;
             let intent = match &command {
@@ -364,6 +369,14 @@ impl Commands {
                 Command::Repeat(_) => unreachable!("Repeat is expanded before dispatch"),
                 Command::Next | Command::Previous => return report(lang, Feedback::Unavailable),
             };
+            let step = (!matches!(original, Command::Repeat(_) | Command::Undo))
+                .then(|| flock::Step::plan(&shadow, &command, session.clone(), intent.as_ref()))
+                .flatten();
+            if let Some(step) = step {
+                desktop.push(DesktopAction::Flock(Box::new(step)));
+            } else {
+                mixed_supported = false;
+            }
             if let Some(intent) = intent {
                 if !intent.voice_command_allowed() {
                     return report(lang, Feedback::NotByVoice);
@@ -391,9 +404,9 @@ impl Commands {
                 });
             }
         }
-        if !desktop.is_empty() {
+        if has_native {
             self.last = None;
-            if core_seen {
+            if !mixed_supported {
                 return report(lang, Feedback::Unavailable);
             }
             let mut out = report(lang, Feedback::Requested);

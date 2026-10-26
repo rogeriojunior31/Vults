@@ -486,6 +486,9 @@ or desktop action was enabled by this documentation change.
 - [x] Include registered application launches in the ordered native batch executor; validate all
   app definitions before effects and revalidate at launch, preserve resolved choices through
   subsequent questions and keep one original 90-second clarification deadline for the whole batch.
+- [x] Combine runtime-owned flock navigation, project preferences and local reads with native
+  actions: shadow planning/preflight, relevant-state guards, ordered owner-loop acknowledgements,
+  settings-save confirmation and actual read results, with no context replay or unsafe card action.
 - [ ] Keep cancellation tickets, lock checks, clarification deadlines and context ownership.
   Validate every batch before effects; execute each action at most once. External side effects
   cannot be promised atomic: stop on failure and report the actual completed prefix without retry.
@@ -499,15 +502,32 @@ consent and the existing media switch. Explicit play/pause/skip and absolute/rel
 supported. The native task rechecks settings, lock, cancellation, selection and bus ownership;
 uses one admission per recording; waits for temporary duck/pause restoration; and reports actual
 completion or the acknowledged prefix on failure/timeout. Signed-volume punctuation cannot turn
-a negative input into a positive setting. Mixed flock/media batches are rejected before any core
-mutation. Realtime consumes these phrases locally as unavailable rather than uploading/executing.
+a negative input into a positive setting. The original media slice rejected flock/media batches;
+the guarded runtime integration below now supports the stated flock operations. Realtime consumes these phrases locally as unavailable rather than uploading/executing.
 Settings and the shared phrase guide include all four languages; EN/pt-BR guides/README are current.
 Local validation passes: UI build, all 19 renderer checks, formatting, workspace Clippy/tests,
 feature-enabled evals, reviewed translation source hashes and repository/version guards.
 Tests cover private-bus playback/volume/capabilities, cancellation after property reads, a departed
 player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
 separate consent and realtime non-upload. No personal playback, settings or provider was changed.
-Pending for VC2: batches combining native actions with flock actions.
+Pending for VC2: terminal/folder submission receipts in mixed batches and final restoration/context
+acceptance. Mixed repeat/undo remains unavailable until its conditional semantics cover native effects.
+Flock/native integration (2026-10-26): the ordered executor now includes prepared focus/next/previous,
+project mute/pin/hide and local query steps. The runtime owner preflights them on a shadow state
+before effects and applies each step only after checking target session start/folder, navigation
+focus/front/order and the affected preference. Unrelated progress is not a whole-state fingerprint.
+Runtime messages retain all batch consents, recording generation, absolute deadline and live reply;
+readiness/lock checks run inside ticket admission. The worker never mutates core or blocks its owner.
+Views publish before acknowledgement; SaveProjects must succeed before a preference is confirmed.
+A failed save/timeout can leave an unconfirmed step in memory; stop with confirmed-prefix feedback
+in all four languages and never retry/rollback. Reads use live redacted templates and their actual
+answers accompany the status. Mixed batches clear repeat/undo context. Terminal/folder and explicit
+repeat/undo combinations remain rejected without effects; flock-only behavior is preserved. Tests
+cover pure planning/preflight, all ordered boundaries, target restart/move, preference/focus/order
+edits, unrelated progress, cancelled/expired/closed/locked queued work and realtime non-upload.
+EN/pt-BR guides are current. UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals, reviewed translation source marks and repository/version guards pass.
+Native desktop acceptance remains VC6.
 Native application batches (2026-10-26): one typed ordered desktop request/executor now covers
 player controls, computer output and registered application launches, including multiple apps.
 Every required consent is checked before native IO; application definitions and audio targets
@@ -516,7 +536,7 @@ all batch consents and one admission deadline. Blocking launches retain the dead
 guard even after an outer timeout. Confirmation means launch requested, never a ready window.
 There is no automatic retry, rollback or repeat/undo context. Multiple clarification questions
 now keep the original 90-second deadline, and changes to earlier resolved apps invalidate later
-questions. Flock/native mixtures still discard the shadow state and emit no native request.
+questions. The original app slice rejected flock/native mixtures; guarded flock steps now use the integration above.
 Tests cover ordered apps/audio, all required consent combinations, missing/disabled/ambiguous
 apps, selected-definition changes, the shared expiry, prefix failures/timeouts and realtime
 non-upload. Registered-entry tests use a private XDG fixture without launching applications.

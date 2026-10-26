@@ -272,3 +272,21 @@ fn batches_containing_native_launches_are_never_uploaded_by_realtime() {
         assert!(!out.chat_fallback(true));
     }
 }
+
+#[test]
+fn realtime_consumes_mixed_flock_batches_without_applying_their_prefix() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    for text in [
+        "mute api and then pause media",
+        "mute computer and then open web and then who is waiting",
+    ] {
+        let out =
+            route(&mut commands, &mut state, text, true, now, json!([])).expect("recognized local batch");
+        assert_eq!(out.feedback, Feedback::Unavailable);
+        assert!(out.desktop.is_empty() && out.effects.is_empty() && !out.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+}

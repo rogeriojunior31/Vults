@@ -841,6 +841,27 @@ pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
     }
 }
 
+pub fn voice_flock_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
+    match (lang, success) {
+        (Lang::En, true) => format!("Confirmed {completed} of {total} flock and desktop actions."),
+        (Lang::PtBr, true) => format!("{completed} de {total} ações do bando e do computador confirmadas."),
+        (Lang::Es, true) => format!("{completed} de {total} acciones del grupo y del equipo confirmadas."),
+        (Lang::Zh, true) => format!("已确认 {total} 个群组和桌面操作中的 {completed} 个。"),
+        (Lang::En, false) => format!(
+            "Confirmed {completed} of {total} flock and desktop actions before the batch stopped. Check the result before trying again; the failed action may already have taken effect. No actions were retried or rolled back."
+        ),
+        (Lang::PtBr, false) => format!(
+            "{completed} de {total} ações do bando e do computador confirmadas antes da interrupção do lote. Confira o resultado antes de tentar novamente; a ação com falha pode já ter sido aplicada. Nenhuma ação foi repetida ou revertida."
+        ),
+        (Lang::Es, false) => format!(
+            "{completed} de {total} acciones del grupo y del equipo confirmadas antes de detener el lote. Revisa el resultado antes de reintentar; la acción fallida puede haberse aplicado. No se repitió ni revirtió ninguna acción."
+        ),
+        (Lang::Zh, false) => format!(
+            "批次停止前已确认 {total} 个群组和桌面操作中的 {completed} 个。请检查结果后再试；失败的操作可能已生效。未重试或回滚任何操作。"
+        ),
+    }
+}
+
 pub fn voice_desktop_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
     match (lang, success) {
         (Lang::En, true) => format!(

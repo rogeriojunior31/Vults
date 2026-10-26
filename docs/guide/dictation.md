@@ -935,8 +935,7 @@ An unsupported suffix rejects the batch without executing its prefix. Capabiliti
 consent are checked again at each effect; a later change can still interrupt the batch.
 They wait for dictation's temporary duck/pause restoration, support cancellation after transcription,
 and report completion only after the player acknowledges the operation. A failed or timed-out batch
-reports how many operations were acknowledged; check playback before trying again. Media-only batches
-are supported; combining media and flock commands is currently refused without applying either part.
+reports how many operations were acknowledged; check playback before trying again. Media batches can also include flock navigation, project preferences and local status queries.
 To combine scopes, enable both **Media voice commands** (and media controls) and **System audio
 voice commands**. For example: `pause media and then computer volume 40 and then resume music`.
 The entire batch checks its required switches, selected player, player capabilities and computer
@@ -967,7 +966,19 @@ checked before the first effect and again before its launch. Unresolved apps or 
 check that fails during preflight prevent every effect. All steps share one cancellation ticket and execution deadline. A later
 failure stops the batch and reports only confirmed operations, without retry or rollback; app
 confirmations are launch requests. Check the result before repeating a timed-out request.
-Batches mixing native actions with flock actions are still refused before changing project state. Zeca may be
+Mixed batches also support flock navigation, project mute/pin/hide and local status queries.
+For example: `mute project api and then pause media and then open project web and then who is waiting?`.
+Planning resolves every target on a shadow state. Before the first effect, the runtime preflights
+all flock steps against current state; each step is checked again when its turn arrives. Session
+identity/folder changes, changed navigation order or an intervening user preference/focus edit
+stop the affected step. Ordinary unrelated agent progress does not invalidate an explicit target.
+Queries read current redacted state at execution, and their answers appear with batch feedback.
+Core state changes remain owned by the runtime, which publishes the new view before acknowledging
+them; project preference steps require a successful settings save for confirmation. A failed save
+or timeout may leave that step applied in memory, so check the result before retrying. Confirmed
+prefixes are never replayed or rolled back automatically. Mixed batches do not establish repeat/undo
+context. Mixing terminal/folder requests or repeat/undo with native actions remains unavailable
+until those steps have external submission receipts; existing flock-only commands keep their behavior. Zeca may be
 off; realtime voice does not launch apps. Native desktop acceptance remains pending.
 
 VC2 adds **System audio voice commands**, a separate default-off option under Command settings.
@@ -991,7 +1002,7 @@ a queued write to a newly selected output. These separate native calls are not a
 transaction: concurrent routing or server changes may prevent confirmation. A failed or timed-out
 operation reports the confirmed prefix and is never retried or rolled back automatically.
 Native batches can combine player, computer-output and installed-app actions in spoken order;
-batches with flock actions remain unavailable. Realtime voice
+flock navigation, preferences and queries are also supported, with the limits above. Realtime voice
 does not execute these commands. Backend tests use simulated state/private process fixtures, not
 personal audio; real desktop output/cancellation acceptance remains pending.
 

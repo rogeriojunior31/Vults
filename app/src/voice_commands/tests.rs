@@ -22,7 +22,7 @@ fn session(state: &mut State, id: &str, cwd: &str, now: Instant) {
         now,
     );
 }
-fn fixture(now: Instant) -> State {
+pub(super) fn fixture(now: Instant) -> State {
     let mut state = State::default();
     session(&mut state, "a", "/work/api", now);
     session(&mut state, "b", "/work/web", now);
@@ -555,7 +555,7 @@ fn only_unrecognized_speech_can_opt_into_chat_fallback() {
 }
 
 #[test]
-fn playback_is_only_a_request_and_mixed_batches_never_apply_a_flock_prefix() {
+fn playback_and_flock_batches_only_plan_before_native_admission() {
     use vults_dictation::command::MediaAction;
     let now = Instant::now();
     let mut state = fixture(now);
@@ -568,8 +568,8 @@ fn playback_is_only_a_request_and_mixed_batches_never_apply_a_flock_prefix() {
     let before = format!("{state:?}");
     for text in ["mute web and then pause media", "pause media and then open api"] {
         let report = say(&mut commands, &mut state, text, now);
-        assert_eq!(report.feedback, Feedback::Unavailable);
-        assert!(report.effects.is_empty() && report.desktop.is_empty());
+        assert_eq!(report.feedback, Feedback::Requested);
+        assert!(report.effects.is_empty() && report.desktop.len() == 2);
         assert!(!report.chat_fallback(true));
         assert_eq!(format!("{state:?}"), before);
     }
@@ -672,8 +672,8 @@ fn app_clarification_preserves_original_definitions_and_never_applies_a_batch_pr
     ] {
         let single = [installed_app("one.desktop", "Editor")];
         let out = commands.execute_with_applications(&mut state, text, &[], json!([]), now, Some(&single));
-        assert_eq!(out.feedback, Feedback::Unavailable);
-        assert!(application_id(&out).is_none() && out.effects.is_empty());
+        assert_eq!(out.feedback, Feedback::Requested);
+        assert!(out.desktop.len() == 2 && out.effects.is_empty());
         assert_eq!(format!("{state:?}"), before);
     }
     let aliases = [("notes".into(), "Editor".into())];
@@ -705,8 +705,8 @@ fn computer_audio_is_only_requested_and_mixed_batches_do_not_change_project_stat
         "mute computer and then mute web",
     ] {
         let out = say(&mut commands, &mut state, text, now);
-        assert_eq!(out.feedback, Feedback::Unavailable);
-        assert!(out.effects.is_empty() && out.desktop.is_empty() && application_id(&out).is_none());
+        assert_eq!(out.feedback, Feedback::Requested);
+        assert!(out.effects.is_empty() && out.desktop.len() == 2);
         assert_eq!(format!("{state:?}"), before);
     }
     state.locked = true;
@@ -759,7 +759,6 @@ fn mixed_audio_batches_preserve_order_without_mutating_flock_or_falling_back() {
     assert!(!out.chat_fallback(true));
     assert_eq!(format!("{state:?}"), before);
     for text in [
-        "pause media and then mute computer and then mute web",
         "mute computer and then pause media and then approve all cards",
         "pause media and then computer volume 101",
         "mute computer and then tell me a joke",
@@ -830,8 +829,6 @@ fn native_app_batches_resolve_every_target_before_admission_and_keep_spoken_orde
     );
     for text in [
         "pause media and then open app Missing",
-        "open app Obsidian and then mute api",
-        "mute api and then open app Obsidian",
         "open app Obsidian and then approve all cards",
     ] {
         let out = commands.execute_with_applications(&mut state, text, &[], json!([]), now, Some(&apps));
@@ -964,4 +961,49 @@ fn later_app_questions_preserve_earlier_definitions_and_the_original_deadline() 
         ]
     );
     assert_eq!(format!("{state:?}"), before);
+}
+
+#[test]
+fn flock_and_native_batches_prepare_all_steps_without_changing_state() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    let out = say(
+        &mut commands,
+        &mut state,
+        "mute api and then pause media and then open web and then computer volume 40 and then who is waiting",
+        now,
+    );
+    assert_eq!(out.feedback, Feedback::Requested);
+    assert_eq!(out.desktop.len(), 5);
+    assert!(out.effects.is_empty() && !out.chat_fallback(true));
+    assert_eq!(format!("{state:?}"), before);
+    let mut answers = vec![];
+    for action in &out.desktop {
+        if let DesktopAction::Flock(step) = action {
+            let (effects, text) = step.apply(&mut state, json!([]), now).unwrap();
+            assert!(
+                effects
+                    .iter()
+                    .all(|effect| matches!(effect, Effect::SaveProjects(_)))
+            );
+            if !text.is_empty() {
+                answers.push(text);
+            }
+        }
+    }
+    assert!(state.prefs(&state.sessions[&key("a")]).mute);
+    assert_eq!(state.focus, Some(key("b")));
+    assert!(!answers.is_empty());
+    for text in [
+        "pause media and then terminal api",
+        "folder api and then mute computer",
+        "pause media and then undo",
+    ] {
+        let before = format!("{state:?}");
+        let out = say(&mut commands, &mut state, text, now);
+        assert!(out.desktop.is_empty() && out.effects.is_empty(), "{text}");
+        assert_eq!(format!("{state:?}"), before);
+    }
 }

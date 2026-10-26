@@ -48,6 +48,8 @@ pub struct Inbox(mpsc::Sender<Msg>);
 #[derive(Debug)]
 enum Msg {
     #[cfg(target_os = "linux")]
+    FlockCommand(crate::voice_commands::flock::Request),
+    #[cfg(target_os = "linux")]
     Question(crate::questions::Command),
     #[cfg(target_os = "linux")]
     RealtimeCommand(crate::realtime::routing::Request),
@@ -407,6 +409,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         #[cfg(target_os = "linux")]
         let mut command_reply = None;
         #[cfg(target_os = "linux")]
+        let mut flock_reply = None;
+        #[cfg(target_os = "linux")]
+        let mut flock_text = String::new();
+        #[cfg(target_os = "linux")]
+        let mut flock_ok = true;
+        #[cfg(target_os = "linux")]
         if questions.active() || matches!(msg, Msg::Question(_)) {
             let surface = if state.view().approval.is_some()
                 && matches!(msg, Msg::Question(crate::questions::Command::Open { .. }))
@@ -455,6 +463,42 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 };
                 command_effects = Some(std::mem::take(&mut completion.report.effects));
                 command_reply = Some(completion);
+                None
+            }
+            #[cfg(target_os = "linux")]
+            Msg::FlockCommand(request) => {
+                if state.locked || crate::lock::locked(&app) {
+                    let _ = request.reply.send(Err(()));
+                    continue;
+                }
+                let preflight = matches!(request.kind, crate::voice_commands::flock::Kind::Preflight(_));
+                let usage = serde_json::to_value(crate::usage::usage(app.clone())).unwrap_or_default();
+                let settings = app.state::<crate::settings::SettingsState>();
+                let Ok(saved) = settings.0.lock() else {
+                    let _ = request.reply.send(Err(()));
+                    continue;
+                };
+                if !request.consent(&saved) {
+                    let _ = request.reply.send(Err(()));
+                    continue;
+                }
+                let result = request.dispatch(&mut state, usage, now, || crate::lock::locked(&app));
+                drop(saved);
+                match result {
+                    Ok((effects, text)) if !preflight => {
+                        command_effects = Some(effects);
+                        flock_text = text;
+                        flock_reply = Some(request.reply);
+                    }
+                    Ok(_) => {
+                        let _ = request.reply.send(Ok(String::new()));
+                        continue;
+                    }
+                    _ => {
+                        let _ = request.reply.send(Err(()));
+                        continue;
+                    }
+                }
                 None
             }
             #[cfg(target_os = "linux")]
@@ -793,7 +837,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if let Some(completion) = &mut command_reply {
                         completion.work().run(&app, || save().into());
                     } else {
-                        save();
+                        let saved = save();
+                        if flock_reply.is_some() {
+                            flock_ok &= saved;
+                        }
                     }
                     #[cfg(not(target_os = "linux"))]
                     save();
@@ -901,6 +948,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             publish_view(&app, &view);
             crate::tray::show(&app, &view);
             last_view = Some(view);
+        }
+        #[cfg(target_os = "linux")]
+        if let Some(reply) = flock_reply {
+            let _ = reply.send(if flock_ok { Ok(flock_text) } else { Err(()) });
         }
         let prefs = core::notify::Prefs {
             on: crate::settings::notifications(&app),
@@ -1821,6 +1872,29 @@ pub(crate) fn voice_command(
             applications,
         })
         .map_err(|_| "The voice command worker is unavailable.".into())
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) async fn flock_command(
+    app: &AppHandle,
+    kind: crate::voice_commands::flock::Kind,
+    ticket: crate::dictation::worker::Ticket,
+    deadline: Instant,
+    scopes: (bool, bool, bool),
+) -> Result<String, ()> {
+    let (reply, receive) = tokio::sync::oneshot::channel();
+    app.state::<Inbox>()
+        .0
+        .send(Msg::FlockCommand(crate::voice_commands::flock::Request {
+            kind,
+            ticket,
+            deadline,
+            scopes,
+            reply,
+        }))
+        .await
+        .map_err(|_| ())?;
+    receive.await.map_err(|_| ())?
 }
 
 #[cfg(target_os = "linux")]

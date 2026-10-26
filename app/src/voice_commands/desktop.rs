@@ -16,6 +16,7 @@ enum Error {
     NoPlayer,
     Media,
     Application,
+    Flock,
     Output(OutputError),
 }
 
@@ -44,9 +45,15 @@ struct Backend<'a> {
     playback: Option<vults_media::Target>,
     computer: Option<system_audio::Target>,
     status: Option<system_audio::Status>,
+    answers: Vec<String>,
 }
 
-fn consent(saved: &crate::settings::Settings, media: bool, output: bool, applications: bool) -> bool {
+pub(super) fn consent(
+    saved: &crate::settings::Settings,
+    media: bool,
+    output: bool,
+    applications: bool,
+) -> bool {
     saved.dictation_commands
         && (!media || saved.dictation_command_media && saved.now_playing)
         && (!output || saved.dictation_command_output)
@@ -81,6 +88,18 @@ impl Backend<'_> {
             self.output,
             self.applications,
         )
+    }
+
+    async fn flock(&self, kind: super::flock::Kind) -> Result<String, Error> {
+        crate::runtime::flock_command(
+            self.app,
+            kind,
+            self.ticket.clone(),
+            self.deadline,
+            (self.media, self.output, self.applications),
+        )
+        .await
+        .map_err(|_| Error::Flock)
     }
 
     fn media_allowed(&self) -> bool {
@@ -140,6 +159,16 @@ impl Io for Backend<'_> {
                 .await
                 .map_err(|_| Error::Media)?;
         }
+        let steps = actions
+            .iter()
+            .filter_map(|action| match action {
+                DesktopAction::Flock(step) => Some(step.as_ref().clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        if !steps.is_empty() {
+            self.flock(super::flock::Kind::Preflight(steps)).await?;
+        }
         if !self.enabled() {
             return Err(Error::Disabled);
         }
@@ -151,6 +180,13 @@ impl Io for Backend<'_> {
             return Err(Error::Disabled);
         }
         match action {
+            DesktopAction::Flock(step) => {
+                let text = self.flock(super::flock::Kind::Apply(step)).await?;
+                if !text.is_empty() {
+                    self.answers.push(text);
+                }
+                Ok(())
+            }
             DesktopAction::Application(application) => {
                 let app = self.app.clone();
                 let ticket = self.ticket.clone();
@@ -201,6 +237,9 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
     let applications = actions
         .iter()
         .any(|action| matches!(action, DesktopAction::Application(_)));
+    let flock = actions
+        .iter()
+        .any(|action| matches!(action, DesktopAction::Flock(_)));
     let deadline = Instant::now() + Duration::from_secs(4);
     tauri::async_runtime::spawn(async move {
         let mut backend = Backend {
@@ -214,6 +253,7 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
             playback: None,
             computer: None,
             status: None,
+            answers: vec![],
         };
         let mut completed = 0;
         let result = tokio::time::timeout_at(
@@ -227,7 +267,9 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
         } else {
             Feedback::ExecutionFailed
         };
-        report.text = if applications && actions.len() > 1 {
+        report.text = if flock {
+            i18n::voice_flock_batch(lang, success, completed, actions.len())
+        } else if applications && actions.len() > 1 {
             i18n::voice_desktop_batch(lang, success, completed, actions.len())
         } else if applications {
             i18n::voice_application(
@@ -267,6 +309,10 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
         };
         if matches!(result, Ok(Err(Error::Disabled | Error::NoPlayer))) && completed == 0 {
             report.feedback = Feedback::Unavailable;
+        }
+        if !backend.answers.is_empty() {
+            report.text.push('\n');
+            report.text.push_str(&backend.answers.join("\n"));
         }
         crate::dictation::command_result(&app, &ticket, &heard, report, None);
     });
@@ -349,6 +395,15 @@ mod tests {
             DesktopAction::Media(MediaAction::Pause),
             DesktopAction::Output(OutputAction::Mute(true)),
             DesktopAction::Application(super::super::tests::installed_app("editor.desktop", "Editor")),
+            DesktopAction::Flock(Box::new(
+                super::super::flock::Step::plan(
+                    &vults_core::State::default(),
+                    &vults_dictation::command::Command::Waiting,
+                    None,
+                    None,
+                )
+                .unwrap(),
+            )),
             DesktopAction::Media(MediaAction::Resume),
         ];
         let mut fake = Fake::default();
