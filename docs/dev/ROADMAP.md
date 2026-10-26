@@ -502,6 +502,13 @@ Tests cover private-bus playback/volume/capabilities, cancellation after propert
 player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
 separate consent and realtime non-upload. No personal playback, settings or provider was changed.
 Pending for VC2: generalized mixed-batch execution.
+Batch preflight follow-up (2026-10-26): selected-player batches now read every requested capability
+before their first native write, then recheck capability, consent, selection and pinned owner for
+each effect. An unsupported suffix cannot execute an earlier supported action. Private-bus tests
+cover read-only preflight, invalid suffixes, cancellation, departed owners and capability loss; no
+personal playback is touched. Relative player-volume steps now use the measured level before
+clamping, including levels already above 100%. This is preparatory hardening for mixed batches,
+not completion of their execution or of VC2/VC6 native acceptance.
 Application integration (2026-10-26): installed visible GTK/GIO desktop entries join the existing
 project/agent resolver under a separate default-off `dictation_command_apps` switch. Bare Open
 resolves both namespaces; explicit app/project phrases select one; aliases and original 90-second

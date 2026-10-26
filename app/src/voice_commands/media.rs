@@ -47,6 +47,12 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
             tauri::async_runtime::spawn_blocking(vults_platform::music::wait_for_restore)
                 .await
                 .map_err(|_| ())?;
+            target
+                .validate_batch(&actions.iter().copied().map(control).collect::<Vec<_>>(), || {
+                    Instant::now() < deadline && enabled(&app, &ticket, &player)
+                })
+                .await
+                .map_err(|_| ())?;
             for action in &actions {
                 target
                     .control(control(*action), || {

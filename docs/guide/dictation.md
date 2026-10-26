@@ -930,6 +930,9 @@ Relative volume changes use ten percentage points and stay within 0..100 percent
 
 Project `mute` still affects notifications, not playback or computer audio. Commands target only
 the selected player, pin its process and stop if the selection, consent or process changes.
+Before the first effect, media batches check every requested capability on the pinned player.
+An unsupported suffix rejects the batch without executing its prefix. Capabilities, selection and
+consent are checked again at each effect; a later change can still interrupt the batch.
 They wait for dictation's temporary duck/pause restoration, support cancellation after transcription,
 and report completion only after the player acknowledges the operation. A failed or timed-out batch
 reports how many operations were acknowledged; check playback before trying again. Media-only batches

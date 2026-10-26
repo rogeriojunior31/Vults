@@ -99,8 +99,23 @@ pub async fn control(player: &str, what: Control) -> Result<(), String> {
 }
 
 impl Target {
-    /// Recheck cancellation/consent after property reads and immediately before a native write.
-    pub async fn control(&self, what: Control, allowed: impl Fn() -> bool) -> Result<(), String> {
+    /// Read every requested capability before the first effect; execution still rechecks it.
+    pub async fn validate_batch(
+        &self,
+        actions: &[Control],
+        allowed: impl Fn() -> bool,
+    ) -> Result<(), String> {
+        for action in actions {
+            self.prepare(*action, &allowed).await?;
+        }
+        self.check_owner(&allowed).await
+    }
+
+    async fn prepare(
+        &self,
+        what: Control,
+        allowed: &impl Fn() -> bool,
+    ) -> Result<(Proxy<'_>, Option<f64>), String> {
         what.validate()?;
         if !allowed() {
             return Err("Media command cancelled.".into());
@@ -137,10 +152,14 @@ impl Target {
                     return Err("Invalid player volume.".into());
                 }
                 let step = if what == Control::VolumeUp { 0.1 } else { -0.1 };
-                Some((current.min(1.0) + step).clamp(0.0, 1.0))
+                Some((current + step).clamp(0.0, 1.0))
             }
             _ => None,
         };
+        Ok((proxy, volume))
+    }
+
+    async fn check_owner(&self, allowed: &impl Fn() -> bool) -> Result<(), String> {
         let bus = DBusProxy::new(&self.conn).await.map_err(text)?;
         let owner = bus
             .get_name_owner(self.service.as_str().try_into().map_err(text)?)
@@ -149,6 +168,13 @@ impl Target {
         if owner.as_str() != self.owner || !allowed() {
             return Err("Media command cancelled or player changed.".into());
         }
+        Ok(())
+    }
+
+    /// Recheck cancellation/consent after property reads and immediately before a native write.
+    pub async fn control(&self, what: Control, allowed: impl Fn() -> bool) -> Result<(), String> {
+        let (proxy, volume) = self.prepare(what, &allowed).await?;
+        self.check_owner(&allowed).await?;
         if let Some(volume) = volume {
             proxy.set_property("Volume", volume).await.map_err(text)?;
         } else {
@@ -252,6 +278,11 @@ mod tests {
         #[zbus(property)]
         fn can_pause(&self) -> bool {
             self.can_control()
+        }
+
+        #[zbus(property)]
+        fn can_go_next(&self) -> bool {
+            false
         }
 
         #[zbus(property)]
@@ -378,6 +409,36 @@ mod tests {
             .expect("relative volume down");
         assert!((*volume.lock().unwrap() - 0.3).abs() < 1e-9);
         let target = pin(&name).await.expect("capture player identity");
+        target
+            .validate_batch(&[Control::Play, Control::Volume(40)], || true)
+            .await
+            .expect("supported batch preflight");
+        assert!(!*playing.lock().unwrap(), "preflight must not play");
+        assert!((*volume.lock().unwrap() - 0.3).abs() < 1e-9);
+        assert!(
+            target
+                .validate_batch(&[Control::Play, Control::Next], || true)
+                .await
+                .is_err()
+        );
+        assert!(
+            !*playing.lock().unwrap(),
+            "unsupported suffix cannot execute its prefix"
+        );
+        assert!(
+            target
+                .validate_batch(&[Control::Play, Control::Volume(101)], || true)
+                .await
+                .is_err()
+        );
+        assert!(target.validate_batch(&[Control::Play], || false).await.is_err());
+        *volume.lock().unwrap() = 2.0;
+        target
+            .control(Control::VolumeDown, || true)
+            .await
+            .expect("clamp after measured step");
+        assert_eq!(*volume.lock().unwrap(), 1.0);
+        *volume.lock().unwrap() = 0.3;
         let checks = AtomicUsize::new(0);
         assert!(
             target
@@ -397,6 +458,7 @@ mod tests {
         assert!((*volume.lock().unwrap() - 0.3).abs() < 1e-9);
         controllable.store(true, Ordering::SeqCst);
         bus.release_name(name.as_str()).await.expect("player departs");
+        assert!(target.validate_batch(&[Control::Play], || true).await.is_err());
         assert!(target.control(Control::Play, || true).await.is_err());
         assert!(!*playing.lock().unwrap());
     }
