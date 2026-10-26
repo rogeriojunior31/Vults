@@ -1,5 +1,5 @@
 # 0019. Rede, segredos e telemetria
-<!-- source: b5a691d2d957 -->
+<!-- source: 65945568df0c -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0006 e da 0016.
 Alterada em 2026-10-17 para a N3 V0.4: requisições a modelos no ditado, limites de loopback e
@@ -56,7 +56,7 @@ importa ao usuário, custa dinheiro ou cota, e poderia virar telemetria por acid
 
 ## Requisições a modelos no ditado
 
-Transcrição local, processamento pelo dicionário e comandos de voz não chamam um modelo remoto.
+Transcrição local, processamento pelo dicionário e comandos de voz determinísticos não chamam um modelo remoto.
 Os recursos opcionais de modelos da N3 abaixo são requisições separadas em nome do usuário, não
 permissão para enviar uma transcrição só porque a gravação ou o Chat está ligado. Cada interruptor
 fica desligado por padrão e é alterado na webview das Configurações, com provedor, dados e limite
@@ -106,6 +106,34 @@ outro recurso.
   limpeza por modelo; a [0028](0028-spoken-replies-through-a-realtime-model.md) continua regendo
   a escuta e o áudio.
 
+<a id="semantic-command-requests-vc1"></a>
+## Requisições de comandos semânticos (VC1)
+
+`voice-command-intent` é um recurso separado desligado por padrão, independente do Chat, voz em
+tempo real e envio de fala desconhecida ao Chat. Antes de ativar, as configurações mostram o
+provedor/modelo, o envio de transcrição e rótulos mínimos/IDs opacos dos destinos e o limite móvel
+de **200 tentativas por 24 horas**, incluindo falhas. Registrar a admissão de forma persistente
+antes de cada tentativa, inclusive para endpoints locais. Cada fala permite uma requisição,
+sem repetição automática, com prazo de dez segundos. Transcrição bruta, rótulos dos destinos,
+credenciais e resposta do modelo não entram no registro de rede.
+
+O transporte inicial suportado é o cliente qualificado só de texto do Claude Code, usando a escolha
+explícita do login da CLI e os limites da assinatura. Ter um provedor configurado no Chat não é
+consentimento para este recurso. API/modelos locais exigem o mesmo contrato de isolamento/saída
+antes de serem oferecidos; preços de API devem ser explicados ao selecionar. A consulta só de texto
+pela assinatura Codex continua indisponível enquanto a qualificação de autenticação/isolamento
+for falsa. Nunca recorrer silenciosamente a chave de API, outro provedor/conta ou turno comum do
+Chat em caso de falha.
+
+Com a opção desligada, cota esgotada, provedor ausente/não suportado ou estado do orçamento
+indisponível, não enviar nada e explicar o motivo localmente. Desativação, cancelamento, bloqueio
+ou troca de provedor/conta invalida a saída pendente antes de qualquer ação. Opções locais próprias,
+desligadas por padrão, autorizam apenas as ações tipadas da
+[0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1); consentimento de rede não
+concede execução no desktop. Planejar este contrato não ativa requisições; a implementação deve
+adicionar o ponto de chamada ao inventário de rede e guia de segurança e testar cota, reinício e
+cancelamento antes da entrega.
+
 <a id="consequences"></a>
 
 ## Consequências
@@ -128,6 +156,8 @@ outro recurso.
 <a id="history"></a>
 
 ## Histórico
+
+- 2026-10-26: a VC1 define ações limitadas de comandos naturais e consentimento independente de modelo antes da 0.1.9.
 
 - 2026-10-17: a N3 V0.4 nomeia os três recursos de modelos com adesões independentes e seus
   limites móveis. A Q3 mantém chamadas de loopback sob interruptor, cota e registro; só a

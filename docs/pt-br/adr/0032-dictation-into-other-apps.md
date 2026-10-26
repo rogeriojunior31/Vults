@@ -1,5 +1,5 @@
 # 0032. Ditado em outros aplicativos
-<!-- source: ced45b70bf84 -->
+<!-- source: 94627ed0fdf1 -->
 
 **Status:** Aceita, 2026-10-17, sob a instrução do mantenedor para continuar a N3 com os padrões
 planejados. Este é o contrato da V0.2; captura, inserção e validação nativa chegam separadamente.
@@ -73,6 +73,52 @@ de permissão deve continuar com o humano sob a [0004](0004-a-human-answers-perm
   por modelo e voz remota continuam sendo adesões separadas sob a
   [0019](0019-requests-on-the-users-behalf.md) e a [0028](0028-spoken-replies-through-a-realtime-model.md).
 
+<a id="natural-voice-commands-vc1"></a>
+## Comandos de voz naturais (VC1)
+
+A tecla separada de comando solicita uma ação, não inserção de texto. O catálogo da 0.1.9 é limitado:
+
+| Escopo | Pedidos suportados | Destino e execução |
+|---|---|---|
+| Bando | Navegação existente, consultas de sessão/uso/GitHub, silenciar notificações/fixar/ocultar projeto, repetir e desfazer condicionalmente | Identidade atual da sessão/projeto; nunca uma resposta de permissão |
+| Mídia | Pausar, retomar, próxima, anterior e volume do reprodutor | Reprodutor MPRIS ativo explícito; respeitar a opção de mídia e esclarecer múltiplos destinos |
+| Áudio do computador | Silenciar/reativar saída padrão, definir volume, aumentar/reduzir em 10 pontos percentuais | Capturar e revalidar a identidade da saída; limitar volume a 0..100 por cento |
+| Aplicativos | Abrir um aplicativo instalado | Identidade validada de entrada desktop executável; sem programa, URI, arquivo ou argumentos fornecidos |
+
+- Ações locais de mídia, saída do computador e abertura de aplicativos têm, cada uma, uma opção
+  própria desligada por padrão nas configurações de comandos. Funcionam com o Zeca desligado.
+  Silenciar projeto significa silenciar notificações, nunca o navegador ou sistema. `Abrir <nome>`
+  resolve projetos e aplicativos instalados; colisões perguntam qual escopo o usuário quis.
+  Aplicativo ausente é informado como não instalado.
+- Manter a gramática determinística para pedidos locais suportados. Interpretação semântica é
+  uma escolha separada desligada por padrão, com provedor/modelo e consentimento de rede próprios
+  `voice-command-intent` na [0019](0019-requests-on-the-users-behalf.md). Ligar Chat, transcrição
+  ou envio de fala desconhecida ao Chat não a habilita. Com o modo semântico ligado, fala
+  desconhecida tem esse único destino; uma falha nunca inicia o Chat silenciosamente.
+- O modelo recebe apenas o texto ouvido limitado e os rótulos mínimos de ações/destinos disponíveis
+  com IDs opacos. Não recebe áudio, caminhos, arquivos de projeto, metadados de mídia, chat salvo,
+  memória ou ferramentas. Reutilizar transportes qualificados só de texto: inicialmente Claude
+  Code; API/modelos locais só após verificar o mesmo contrato. A consulta não qualificada pela
+  assinatura Codex continua indisponível; nunca trocar conta, provedor ou cobrança silenciosamente.
+- A saída do modelo é um esquema fechado não confiável: ações tipadas validadas, esclarecimento,
+  não suportado ou recusa. Aplicar limites de 4096 bytes de entrada, 8 KiB de saída, oito ações e
+  dez segundos. Rejeitar verbos/campos desconhecidos, valores numéricos inválidos e destinos fora
+  do catálogo capturado. Revalidar destino, opções, bloqueio e cancelamento antes de cada efeito.
+  Resposta atrasada ou duplicada nunca executa. Sem repetição automática, shell ou argumentos de
+  programa escolhidos pelo modelo.
+- Fala negada, citada, informativa ou ambígua não pode virar ação adivinhada. Esclarecer destino ou
+  escopo de áudio incerto. Voz nunca aprova, nega, libera ou modifica cartões de permissão, edita
+  configurações de agentes, faz merge, fecha aplicativos ou executa operações destrutivas.
+- Validar o lote antes dos efeitos. Se um efeito externo falhar, parar e informar o trecho realmente
+  concluído; não prometer reversão nem repetir ações já feitas. Não restaurar redução/pausa
+  temporária do ditado sobre uma mudança deliberada por voz. Desfazer depende de estado anterior
+  conhecido e restaurável; nunca encerra um aplicativo aberto pelo comando.
+- Mostrar texto ouvido, destino, esclarecimento e resultado real no feedback/histórico existente,
+  respeitando retenção. Nunca informar Concluído antes da execução nativa. Ações desligadas,
+  ausência de destino, CLI/backend ausente, provedor não suportado, consentimento vencido, cota
+  esgotada, tempo excedido e falhas nativas geram explicação local e nenhum efeito. São resultados
+  distintos, não um genérico Isso não é um comando. Transcrição e ditado comum continuam usáveis.
+
 <a id="consequences"></a>
 
 ## Consequências
@@ -93,6 +139,8 @@ de permissão deve continuar com o humano sob a [0004](0004-a-human-answers-perm
 <a id="history"></a>
 
 ## Histórico
+
+- 2026-10-26: a VC1 define ações limitadas de comandos naturais e consentimento independente de modelo antes da 0.1.9.
 
 - 2026-10-17: definir os limites da N3 V0.2 para destino, área de transferência, capacidade de
   teclado e permissões. Usar 0032 porque a [0031](0031-tasks-leave-vults.md) já registra a remoção

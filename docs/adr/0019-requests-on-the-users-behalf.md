@@ -44,7 +44,7 @@ become telemetry by accident.
 
 ## Dictation model requests
 
-Local speech-to-text, dictionary passes and voice commands do not call a remote model.
+Local speech-to-text, dictionary passes and deterministic voice commands do not call a remote model.
 The optional N3 model features below are separate requests on the user's behalf, not permission
 to send a transcript merely because recording or Chat is enabled. Each switch is off by default
 and changed in the Settings webview, with the provider, data and limit explained before enabling
@@ -88,6 +88,30 @@ it. Reusing Chat's provider does not reuse consent to a different feature.
   consent. Remote voice consent does not enable follow-up listening or model clean-up;
   [0028](0028-spoken-replies-through-a-realtime-model.md) still governs listening and audio.
 
+## Semantic command requests (VC1)
+
+`voice-command-intent` is a separate default-off feature, independent of Chat, realtime voice and
+unknown-speech Chat handoff. Before enabling it, Settings shows the selected provider/model,
+transcript and minimal target-label/opaque-ID disclosure, and a rolling limit of **200 attempted
+requests per 24 hours**, including failures. Count admission durably before every attempt, local
+endpoints included. One utterance permits one request, no automatic retries; enforce a ten-second
+deadline. No raw transcript, target labels, credentials or model reply enters the network trace.
+
+The initial supported transport is the qualified tool-free Claude Code text client, using the
+user's explicit CLI login choice and subscription limits. A provider being configured in Chat is
+not consent for this feature. API/local transports require the same isolation/output contract
+before being offered; API pricing must be disclosed when selected. Codex subscription text
+consultation stays unavailable while its authentication/isolation qualification is false.
+Never fall back to an API key, another provider/account or an ordinary Chat turn on failure.
+
+With the switch off, quota spent, unsupported/missing provider or unavailable budget state, send
+nothing and report the reason locally. Disablement, cancellation, lock or provider/account change
+invalidates pending output before any action. Separate default-off local action switches authorize
+only the typed actions in [0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1);
+network consent itself grants no desktop execution capability. Planning this contract activates
+no request path; the implementation must add its call site to the network inventory and safety
+guide and cover quota/restart/cancellation in tests before shipping.
+
 ## Consequences
 
 - A test runs a day with every feature off and counts zero requests.
@@ -104,6 +128,8 @@ it. Reusing Chat's provider does not reuse consent to a different feature.
   id suffix, so they install beside stable without sharing settings or the keyring.
 
 ## History
+
+- 2026-10-26: VC1 defines bounded natural-command actions and independent model consent before 0.1.9.
 
 - 2026-10-17: N3 V0.4 names the three independently opted-in model features and their rolling
   limits. Q3 keeps loopback calls behind the switch, quota and trace; only remote monetary

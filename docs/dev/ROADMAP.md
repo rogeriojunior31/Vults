@@ -27,6 +27,8 @@ the tasks:
   snapshot plus accepted stabilization fixes. Fixed stage-to-version numbers are superseded;
   later versions are decided at their release gate. This decision remains local on
   `fix/release-019-stabilization` until review and merge.
+- On 2026-10-26 the owner added **VC1 to VC6** (natural voice commands, media and app actions)
+  to the 0.1.9 scope before publication. These are planned work, not completed V8 acceptance.
 - Package versions remain **0.1.8** until REL-2. Security must pass after the local fix is merged;
   FF1 and FF5 still need their native desktop acceptance, as do the required R3/ACC gates. Choosing
   0.1.9 does not close those gates or authorize tagging/publication.
@@ -52,13 +54,14 @@ The queue, in order. Take the first task whose *Needs* are met.
 | 1 | REL-1 Review and merge the 0.1.9 release plan | P0 | S | Decision recorded locally; merge pending |
 | 2 | FF1 Canvas follows the monitor's scale | P0 | S | Certain bug, small fix |
 | 3 | FF5 Keep *Copied* dictation out of clipboard history | P1 | S | Privacy, small fix |
-| 4 | R3 Release smoke | P0 | S | Gates the next tag |
-| 5 | ACC-UX6 to ACC-DICTUI Acceptance passes | P0 | M | Finished work waiting for a person |
-| 6 | REL-2 Tag and publish | P0 | S | Ships N0 to N3 and UX7/UX8 |
-| 7 | S14 Release a card whose hook is already gone | P1 | S | Correctness of cards |
-| 8 | FF3 Quiet finish when the terminal is in front | P1 | M | Daily annoyance |
-| 9 | FF4.1 to FF4.4 Update notice | P1 | M | Users miss releases |
-| 10 | GH9 GitHub release readiness | P1 | L | Closes the GitHub board |
+| 4 | VC1 to VC6 Natural voice commands | P0 | S/M each | Owner requested this before 0.1.9; execute in order |
+| 5 | R3 Release smoke | P0 | S | Repeat against the candidate including VC changes |
+| 6 | ACC-UX6 to ACC-DICTUI Acceptance passes | P0 | M | Finished work waiting for a person |
+| 7 | REL-2 Tag and publish | P0 | S | Requires VC6 and the existing release gates |
+| 8 | S14 Release a card whose hook is already gone | P1 | S | Correctness of cards |
+| 9 | FF3 Quiet finish when the terminal is in front | P1 | M | Daily annoyance |
+| 10 | FF4.1 to FF4.4 Update notice | P1 | M | Users miss releases |
+| 11 | GH9 GitHub release readiness | P1 | L | Closes the GitHub board |
 
 ---
 
@@ -81,7 +84,7 @@ and repository guards pass. Package/version files and lockfiles are unchanged at
 **Done when:** the ADR records the plan and this section matches it.
 
 ### R3 · Release smoke
-`P0 · S · Needs: REL-1`
+`P0 · S · Needs: REL-1, VC6`
 - [x] 2026-10-26 local Security triage: all 16 Gitleaks findings are synthetic redaction fixtures
   or non-secret UI labels/identifiers. Exact commit/path/rule/line fingerprints suppress only those
   historical occurrences; a full-history scan passes with Gitleaks 8.24.3. New same-path PAT and
@@ -122,7 +125,7 @@ and repository guards pass. Package/version files and lockfiles are unchanged at
 **Done when:** every line passes on one Linux desktop; a failure becomes its own task before the tag.
 
 ### REL-2 · Tag and publish
-`P0 · S · Needs: R3, ACC-UX6`
+`P0 · S · Needs: VC6, R3, ACC-UX6`
 - [ ] Follow [releasing.md](releasing.md): versions in the four files, CHANGELOG *Unreleased* renamed,
   pt-BR docs current, `scripts/check-version.sh`.
 - [ ] Tag, review the draft (install one package), publish, push the AUR PKGBUILD.
@@ -418,9 +421,153 @@ Each K task ships its own UI slice; the acceptance per slice is in
 
 ## Phase 4 — Dictation
 
-V1 to V8 are implemented. What is left is human acceptance, then small fixes and new capability. Spec
-and the full gate list: [plan-dictation.md](plan-dictation.md) (*Remaining human and external
+The original V1 to V8 implementation exists, with human acceptance pending. Runtime evidence on
+2026-10-26 exposed a scope gap: transcription succeeds, but commands use a closed phrase grammar
+and project/agent targets, not semantic desktop control. The owner requires VC1 to VC6 below before
+0.1.9 publication. Historical implementation evidence is not acceptance of this new scope. Spec
+and the original gate list: [plan-dictation.md](plan-dictation.md) (*Remaining human and external
 gates*).
+
+### VC1 · Define the command contract and consent
+`P0 · S · Needs: —`
+
+- [x] Amend ADR 0032 and ADR 0019, with dated History and reviewed pt-BR counterparts: the local
+  grammar stays offline; semantic interpretation is a separate optional text-model request. Keep
+  rule 2 intact: no spoken approvals, config writes, destructive operations or arbitrary shell.
+- [x] Freeze the 0.1.9 catalog: existing flock navigation/reads/preferences; media pause/resume,
+  next/previous and player volume; default system-output mute/unmute/volume; open an installed app.
+  Distinguish project notification mute, player volume and system output. No browser tab control,
+  URL navigation, keyboard macros, file arguments, arbitrary commands or app closing in this slice.
+- [x] Interpretation defaults off with a separate provider/model choice and `voice-command-intent`
+  gate, 200 attempted requests per rolling 24 hours, one attempt per utterance and no automatic
+  retry. Reuse qualified tool-free text transports, not a regular Chat agent with tools/context.
+  Start with the qualified Claude CLI transport; offer existing API/local transports only when
+  they meet the same bounded text contract. Provider failures never silently change provider,
+  billing method or account. Codex subscription consultation remains unavailable until its existing
+  authentication/isolation qualification passes; these tasks must not bypass that block.
+- [x] Local desktop actions work with Zeca off. Semantic mode needs its own consent independent of
+  Zeca/Chat and of the existing unknown-speech-to-Chat fallback. Each utterance has one destination.
+
+**Done when:** the action matrix, provider limits, disabled behavior and failure messages are
+explicit in the living ADRs; no runtime feature or provider is activated merely by planning it.
+
+Implementation record (2026-10-26): ADR 0032 now freezes the typed action scopes, target
+resolution, cancellation, completion and unavailable behavior. ADR 0019 records independent
+`voice-command-intent` consent, 200 attempts/24 hours and qualified text-only provider restrictions.
+Both pt-BR counterparts were reviewed and their source hashes updated. This closes the VC1
+contract only; VC2 to VC6 remain incomplete and release-blocking. No switch, provider request
+or desktop action was enabled by this documentation change.
+
+### VC2 · Execute typed local desktop actions
+`P0 · M · Needs: VC1`
+
+- [ ] Extend the pure `crates/dictation/src/command.rs` contract with explicit typed desktop actions;
+  keep parsing/name resolution free of IO. Dispatch from the existing runtime owner in
+  `app/src/voice_commands.rs`/`runtime.rs`, through app-owned executors, never guessed shell text.
+- [ ] Extend `crates/media` MPRIS controls with explicit Pause/Play and checked player volume;
+  pause/resume must not use the current PlayPause toggle. Reuse `app/src/media.rs`, respecting the
+  media switch. Select the known player or clarify among live players; unsupported/no player is a
+  visible failure. Pin its bus identity and revalidate before acting; never silently switch players.
+- [ ] Implement system-output control in `crates/platform` with a fixed native interface or fixed
+  argument-vector adapter to an available desktop audio tool; never interpolate transcript text.
+  Missing backends report unavailable. Pin the default output identity, read the actual current
+  mute/volume, clamp absolute values to 0..100 percent and use 10-percentage-point relative steps.
+  System output and media control have separate default-off local-action switches in Command settings.
+- [ ] Enumerate launchable installed applications through existing GTK/GIO desktop entries in
+  `crates/platform`; match display names and aliases, then launch a validated desktop-entry identity.
+  No model-supplied Exec, executable path, URI or arguments. Ignore hidden/nonlaunchable entries;
+  duplicate names require a choice. Missing Obsidian reports not installed rather than guessing.
+  Route bare Open <name> through a unified live-project/app catalog: an installed app must not
+  get trapped as an unknown project by the existing generic Focus parser. A project/app collision
+  asks which target was intended; explicit Open app / Open project wording selects the namespace.
+- [ ] Keep cancellation tickets, lock checks, clarification deadlines and context ownership.
+  Validate every batch before effects; execute each action at most once. External side effects
+  cannot be promised atomic: stop on failure and report the actual completed prefix without retry.
+- [ ] Coordinate user media/volume actions with dictation's temporary duck/pause restoration in
+  `platform::music`: restoration must not reverse an intentional voice command. Advertise undo only
+  for state that can be restored conditionally; launching an app is not undone by killing it.
+
+**Done when:** fake native adapters prove action selection, exact arguments/identities, failure and
+cancellation; existing flock commands still work; real desktop effects await VC6.
+
+### VC3 · Resolve natural intent without giving the model execution access
+`P0 · M · Needs: VC2`
+
+- [ ] Local recognized commands and clarification replies take the existing fast path. On unknown
+  speech, semantic mode takes precedence over the separate Chat fallback when explicitly enabled;
+  a failed semantic request never becomes a Chat turn or a second attempt. Permission refusals
+  and unresolved/expired local clarifications never reach the model.
+- [ ] Reuse existing chat text transport and gate patterns, with an isolated scratch directory and
+  no tools, transcript history, memory, project files or implicit CLI context. Send only the heard
+  text and the minimal available action/target labels and opaque IDs disclosed in Settings; no
+  paths or media metadata. A local endpoint is also an explicit choice through the gate.
+- [ ] Limit input to the existing 4096-byte command bound, output to 8 KiB, at most 8 actions and a
+  10-second app-owned deadline. Strictly deserialize a closed result schema: actions, clarification,
+  unsupported or refusal. Reject unknown fields/verbs, invalid numbers and IDs outside the frozen
+  catalog. Validate again against current state before dispatch; model output is untrusted data.
+- [ ] Prompt for intent and negation, not word spotting: equivalent pause requests map to the same
+  action; questions, quoted commands, negated requests, unclear scopes and unsupported actions
+  never become guessed side effects. Clarify media versus computer volume and ambiguous apps.
+  Preserve the existing no-permission-answer invariant independently of model output.
+- [ ] Settings/provider/account changes, cancellation, screen lock, a new utterance or ticket expiry
+  invalidate pending results. Deduplicate completion; no late launch, playback or hidden execution.
+  Record actual gate attempts and outcomes without raw transcript/credentials in network traces.
+
+**Done when:** deterministic model cassettes cover valid, malformed, injected, ambiguous, cancelled,
+late and unsupported results; one available qualified provider is ready for the consented VC6 test.
+
+### VC4 · Explain commands where people use them
+`P0 · S · Needs: VC3`
+
+- [ ] Refine the existing Dictation > Voice commands / Command settings views, not a new screen:
+  show the actual shortcut, local versus AI interpretation, selected provider and availability,
+  consent/data/budget, local-action switches and searchable examples by flock/media/computer/apps.
+- [ ] Replace misleading project-mute examples with explicit notification wording. Show what was
+  heard, interpretation/target, pending clarification, completion or actionable error through the
+  existing caption/history. Never show Done on queued or failed native work. Keep Mini height fixed,
+  avoid duplicate feedback between surfaces and preserve draft/history retention choices.
+- [ ] Translate every new sentence to pt-BR/es/zh. Update both Dictation guides, settings/safety
+  references and README feature rows to describe the actual supported providers/actions and gates.
+
+**Done when:** native light/dark review shows readable Command/clarification/failure states and
+clear scope at minimum and wide sizes; no Settings redirect is needed merely to read a result.
+
+### VC5 · Verify intent, execution and regressions
+`P0 · S · Needs: VC4`
+
+- [ ] Test equivalent PT/EN/ES phrases for each action, using escaped accents in English-only tests.
+  Include real failure classes: pause media; mute computer versus project notifications; open an
+  installed app versus a live agent project; no player/app/agent; multiple players and app names.
+  Add negation, questions, compound partial failures, spoofed IDs, injection and permission requests.
+- [ ] Test model off/budget exhausted/no CLI/no auth/provider failure, cancellation/late replies,
+  changed catalog, ticket reuse and restore-after-duck; assert no unintended network or desktop IO.
+  Keep native adapters/model replies fake; do not manipulate personal playback or spend by tests.
+- [ ] Run required renderer/build, workspace formatting/Clippy/tests, evals and repository guards;
+  dependency changes additionally require cargo deny. Review the diff against rules 1 to 4 and
+  fix all actionable findings before native acceptance. CI follows the consolidated release PR.
+
+**Done when:** automated evidence matches the candidate revision and all failures are fixed; this
+line alone does not complete VC6, DG-4 or R3.
+
+### VC6 · Accept natural commands in the running Linux app
+`P0 · S · Needs: VC5`
+
+- [ ] With Ctrl+Alt+Z, speak three phrasings of each supported action in PT and EN. Include actual
+  playback pause/resume, next/previous, player volume, system mute/volume, opening installed
+  Obsidian (or another explicitly identified installed app), flock navigation and project mute.
+  Check no Ctrl+Alt+V dictation regression and no effect from mere quoted/negated phrases.
+- [ ] Exercise one explicitly enabled qualified semantic provider, budget/off/failure feedback,
+  ambiguous target choice, cancellation and Zeca off. Native/provider tests require the owner's
+  separate consent; paid APIs are not exercised as part of automated validation.
+- [ ] Test KDE Wayland and X11, light/dark, Mini/Quick/Nest, capture duck/restore and desktop lock.
+  Record provider/model, desktop, candidate revision, requested action and observed effect here;
+  erase test history only on explicit request. Never mark an unavailable provider validated.
+- [ ] Refresh relevant README captures and record VC6 acceptance against its source revision,
+  then hand that revision to R3 for production rebuild/smoke. Keep VC6 and DG-4 unchecked until
+  native evidence exists; REL-2 additionally waits for R3 and the other existing release gates.
+
+**Done when:** the owner validates the expected effects and understandable failures on the current
+candidate; release publication stays blocked until this and the other release gates pass.
 
 ### DG · Human acceptance gates
 `P0 · S each · Needs: —` · Record each in plan-dictation.
@@ -428,7 +575,7 @@ gates*).
 - [ ] DG-2 physical shortcuts, portal grants, focus change, editor and terminal insertion, and the
   question card filled by voice and confirmed by a click (V1, V7); voice never answers a permission
 - [ ] DG-3 release-to-delivery p95 with Small on Vulkan, target under 2 s (V4)
-- [ ] DG-4 voice commands spoken for real: targets, effect and undo (V8)
+- [ ] DG-4 voice commands spoken for real: targets, effect and undo (V8), including VC6 evidence
 - [ ] DG-5 paid providers, only after separate consent: cleanup, summary, realtime, spoken flock reads,
   interruption and eight-second capture (V3, V6)
 
