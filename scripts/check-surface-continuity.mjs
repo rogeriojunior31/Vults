@@ -983,6 +983,56 @@ themedScene.setActive(false); themedSky.update([], false); paintedThemes.length 
 themedScene.colors = themedSky.colors = { wire: "old-theme" }; applyTheme("light");
 assert.equal(themedScene.colors, null); assert.equal(themedSky.colors, null);
 assert.ok(!paintedThemes.includes(themedScene.canvas) && !paintedThemes.includes(themedSky.canvas), "Hidden canvases invalidate without starting animation");
+// Moving between outputs must re-arm resolution observation, including fractional changes.
+const originalMedia = window.matchMedia, originalRatio = window.devicePixelRatio;
+const resolutionQueries = [];
+window.devicePixelRatio = 1;
+window.matchMedia = query => {
+  if (!query.startsWith("(resolution:")) return originalMedia(query);
+  const media = { query, listener: null,
+    addEventListener(_event, listener, options) { assert.equal(options.once, true); this.listener = listener; },
+    fire() { const listener = this.listener; this.listener = null; listener?.(); },
+  };
+  resolutionQueries.push(media); return media;
+};
+const scaleScene = new Scene({ width: 100, height: 40, wire: 30, zeca: null, vults: { max: 0, scale: 1, at: () => ({ x: 0, wire: 30 }) } }, undefined, 1.14);
+const scaleSky = new Sky(() => {});
+const originalRefresh = Scene.prototype.refresh, scaleRefreshes = [];
+Scene.prototype.refresh = function () { scaleRefreshes.push(this.canvas); originalRefresh.call(this); };
+const sceneSize = [scaleScene.canvas.width, scaleScene.canvas.height];
+const skySize = [scaleSky.canvas.width, scaleSky.canvas.height];
+const cssSize = [scaleScene.canvas.style.width, scaleScene.canvas.style.height];
+const changeRatio = ratio => { window.devicePixelRatio = ratio; for (const query of [...resolutionQueries]) query.fire(); };
+for (const ratio of [2, 3, 1.25]) {
+  scaleScene.caches.set("old-scale", {}); scaleSky.caches.set("old-scale", {});
+  const refreshCount = scaleRefreshes.length, skyPaintCount = paintedThemes.filter(canvas => canvas === scaleSky.canvas).length;
+  changeRatio(ratio);
+  assert.equal(scaleRefreshes.length, refreshCount + 1, "An active idle Scene requests a repaint at the new scale");
+  assert.equal(paintedThemes.filter(canvas => canvas === scaleSky.canvas).length, skyPaintCount + 1, "Active Sky repaints immediately");
+  const pixels = Math.max(1, Math.round(ratio));
+  assert.deepEqual([scaleScene.canvas.width, scaleScene.canvas.height], sceneSize.map(size => size * pixels), "Scene bitmap follows each monitor scale");
+  assert.deepEqual([scaleSky.canvas.width, scaleSky.canvas.height], skySize.map(size => size * pixels), "Sky bitmap follows each monitor scale");
+  assert.deepEqual([scaleScene.canvas.style.width, scaleScene.canvas.style.height], cssSize, "DPR never changes CSS zoom or placement");
+  assert.equal(scaleScene.caches.size + scaleSky.caches.size, 0, "Old-scale sprite caches are discarded");
+  assert.equal(resolutionQueries.filter(query => query.listener).length, 2, "Only the current resolution remains observed per canvas");
+}
+scaleScene.caches.set("current-scale", {});
+const stableRefreshCount = scaleRefreshes.length;
+changeRatio(1.3);
+assert.equal(scaleRefreshes.length, stableRefreshCount, "The same rounded scale does not request another frame");
+assert.equal(scaleScene.caches.size, 1, "The same rounded pixel scale keeps its cache");
+assert.ok(resolutionQueries.filter(query => query.listener).every(query => query.query.includes("1.3dppx")), "A fractional change still re-arms the raw resolution query");
+changeRatio(1.5);
+assert.equal(scaleScene.canvas.width, sceneSize[0] * 2);
+scaleScene.setActive(false); scaleSky.update([], false); paintedThemes.length = 0;
+const hiddenRefreshCount = scaleRefreshes.length;
+changeRatio(2.5);
+assert.equal(scaleRefreshes.length, hiddenRefreshCount, "An inactive Scene never schedules a scale repaint");
+assert.equal(scaleScene.canvas.width, sceneSize[0] * 3, "Inactive canvas dimensions are ready before reopening");
+assert.equal(paintedThemes.length, 0, "A scale change never starts hidden animation");
+Scene.prototype.refresh = originalRefresh;
+window.matchMedia = originalMedia;
+if (originalRatio === undefined) delete window.devicePixelRatio; else window.devicePixelRatio = originalRatio;
 Scene.prototype.draw = scenePaint; Sky.prototype.draw = skyPaint;
 console.log("check-surface-continuity: shared theme events win over late startup reads");
 

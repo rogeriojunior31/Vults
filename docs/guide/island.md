@@ -12,6 +12,9 @@ island moves to another one and comes back when it returns.
 On Windows (a preview build) there are no global shortcuts, desktop notifications, **Open terminal**
 or tray presets yet.
 
+The bird canvases rebuild their bitmap and sprite caches when the display scale changes.
+Their layout size and selected session stay the same, including when animation is paused.
+
 ## The flock
 
 Each agent session is one bird, a vulture. A project is a species: all its sessions share it, and it

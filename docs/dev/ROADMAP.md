@@ -151,15 +151,24 @@ The queue, in order. Take the first task whose *Needs* are met.
 ### FF1 · Canvas follows the monitor's scale
 `P0 · S · Needs: —` · [Spec](plan-field-fixes.md#ff1--canvas-follows-the-monitors-scale)
 
-`dpr` is `private readonly` in `ui/src/island/scene.ts` and `ui/src/island/sky.ts`. A monitor change
-only moves the surface (`place_surfaces` from `on_monitors_changed` in `app/src/lib.rs`); the page is
-not reloaded, so the bitmap keeps the first monitor's ratio.
-- [ ] A small watcher in `ui/src/` (for example `ui/src/pixel-ratio.ts`) that re-arms a
+Implementation status (2026-10-26, branch `fix/release-019-stabilization`): mutable Scene/Sky
+bitmap scale and one shared resolution watcher are implemented. The watcher re-arms the raw
+resolution query after every change, including fractional changes within the same integer pixel
+scale. Existing layout zoom and bird state remain unchanged; old-scale sprite caches are cleared.
+Active idle canvases repaint and hidden canvases do not start animation. Regression checks first
+failed on a 1x-to-2x transition and now cover repeated transitions, fractional re-arming, preserved
+CSS dimensions, cache invalidation and hidden-frame suppression. Native two-monitor KDE acceptance
+is still pending; keep FF1 open until the Done-when criterion is recorded.
+
+Before the fix, `dpr` was `private readonly` in `ui/src/island/scene.ts` and `ui/src/island/sky.ts`. A monitor change
+only moved the surface (`place_surfaces` from `on_monitors_changed` in `app/src/lib.rs`); the page was
+not reloaded, so the bitmap kept the first monitor's ratio.
+- [x] A small watcher in `ui/src/` (`ui/src/pixel-ratio.ts`) that re-arms a
   `matchMedia("(resolution: <n>dppx)")` query after every change and calls its listeners.
-- [ ] `Scene` and `Sky`: make `dpr` mutable; on change, resize the bitmap (`size()`), drop the sprite
+- [x] `Scene` and `Sky`: make `dpr` mutable; on change, resize the bitmap (`size()`), drop the sprite
   caches keyed by scale, and `refresh()` even while idle.
-- [ ] Any other canvas: `git grep -n devicePixelRatio ui/src` and apply the same watcher.
-- [ ] Test: a stubbed `matchMedia` fires two changes in a row and the canvas is resized twice.
+- [x] Canvas audit: Scene and Sky are the only DPR owners; both use the shared watcher.
+- [x] Test: stubbed `matchMedia` fires repeated and fractional changes; both canvases resize.
 
 **Done when:** moving the island between a 1× and a 2× output on KDE leaves the birds whole and sharp,
 noted in the PR; the test passes.

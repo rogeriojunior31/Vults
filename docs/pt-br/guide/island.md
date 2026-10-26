@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 7017f4a0a288 -->
+<!-- source: 28f2b81f469c -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -12,6 +12,9 @@ outra e volta quando ela retornar.
 
 No Windows (uma versão de prévia) ainda não há atalhos globais, notificações do desktop, **Open
 terminal** nem predefinições na bandeja.
+
+Os canvases das aves recriam o bitmap e os caches de sprites quando a escala da tela muda.
+O tamanho do layout e a sessão selecionada permanecem iguais, inclusive com a animação pausada.
 
 <a id="the-flock"></a>
 
