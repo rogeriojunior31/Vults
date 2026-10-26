@@ -937,6 +937,12 @@ They wait for dictation's temporary duck/pause restoration, support cancellation
 and report completion only after the player acknowledges the operation. A failed or timed-out batch
 reports how many operations were acknowledged; check playback before trying again. Media-only batches
 are supported; combining media and flock commands is currently refused without applying either part.
+To combine scopes, enable both **Media voice commands** (and media controls) and **System audio
+voice commands**. For example: `pause media and then computer volume 40 and then resume music`.
+The entire batch checks its required switches, selected player, player capabilities and computer
+output before the first effect. A single recording/deadline owns the batch; cancellation or any
+failure stops the remaining actions. Feedback counts only confirmed operations, with no retry
+or rollback. A timeout may leave the current operation unconfirmed; check audio before repeating.
 Playback commands do not support repeat or undo yet. Realtime voice does not execute these new desktop commands yet. Natural intent interpretation by a model remains pending; transcription alone does not
 supply that interpretation. No provider request or automatic Chat fallback is made for a media command.
 
@@ -976,8 +982,9 @@ A remote `PULSE_SERVER` is refused. Server identity, sink index/name, channel ma
 are captured and rechecked before and after fixed-index writes; no default-output alias can redirect
 a queued write to a newly selected output. These separate native calls are not an atomic routing
 transaction: concurrent routing or server changes may prevent confirmation. A failed or timed-out
-operation reports the confirmed prefix and is never retried or rolled back automatically. Only
-output-only batches are accepted in this slice; mixed batches remain unavailable. Realtime voice
+operation reports the confirmed prefix and is never retried or rolled back automatically.
+Audio batches can combine player and computer-output actions in spoken order; batches with flock
+actions or app launches remain unavailable. Realtime voice
 does not execute these commands. Backend tests use simulated state/private process fixtures, not
 personal audio; real desktop output/cancellation acceptance remains pending.
 

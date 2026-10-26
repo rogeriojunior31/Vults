@@ -1093,8 +1093,7 @@ async fn unresolved_effect_receipt_publishes_requested_before_the_native_waiter_
                         text: String::new(),
                         choices: vec![],
                         effects: vec![],
-                        media: vec![],
-                        output: vec![],
+                        audio: vec![],
                         application: None,
                     };
                     let mut completion = Completion::new(

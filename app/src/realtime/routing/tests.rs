@@ -208,7 +208,7 @@ fn playback_commands_are_consumed_without_upload_or_unadmitted_execution() {
     let report = route(&mut commands, &mut state, "pause media", true, now, json!([]));
     let report = report.expect("known local command must not reach the provider");
     assert_eq!(report.feedback, Feedback::Unavailable);
-    assert!(report.media.is_empty() && report.effects.is_empty());
+    assert!(report.audio.is_empty() && report.effects.is_empty());
 }
 
 #[test]
@@ -236,5 +236,24 @@ fn output_control_speech_never_uploads_or_executes_through_realtime() {
     let mut commands = Commands::new(now);
     let out = route(&mut commands, &mut state, "mute computer", true, now, json!([])).unwrap();
     assert_eq!(out.feedback, Feedback::Unavailable);
-    assert!(out.output.is_empty() && out.effects.is_empty());
+    assert!(out.audio.is_empty() && out.effects.is_empty());
+}
+
+#[test]
+fn mixed_audio_commands_stay_local_and_unavailable_in_realtime() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = crate::voice_commands::Commands::new(now);
+    let out = route(
+        &mut commands,
+        &mut state,
+        "pause media and then mute computer",
+        true,
+        now,
+        serde_json::json!([]),
+    )
+    .expect("recognized local batch");
+    assert_eq!(out.feedback, crate::voice_commands::Feedback::Unavailable);
+    assert!(out.audio.is_empty() && out.effects.is_empty());
+    assert!(!out.chat_fallback(true));
 }

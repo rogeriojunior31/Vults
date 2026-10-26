@@ -364,3 +364,23 @@ fn computer_audio_has_an_explicit_scope_and_preserves_project_and_player_command
     );
     assert_eq!(parse("mute computer and then approve"), Parsed::Refused);
 }
+
+#[test]
+fn mixed_audio_examples_keep_their_spoken_order_in_each_supported_grammar() {
+    use vults_dictation::command::{MediaAction, OutputAction};
+    for text in [
+        "pause media and then computer volume 40 and then resume music",
+        "pause a midia e depois volume do computador 40 e depois retome a musica",
+        "pausa la musica y luego volumen del ordenador 40 y luego reanuda la musica",
+    ] {
+        assert_eq!(
+            parse(text),
+            Parsed::Commands(vec![
+                Command::Media(MediaAction::Pause),
+                Command::Output(OutputAction::Volume(40)),
+                Command::Media(MediaAction::Resume),
+            ]),
+            "{text}"
+        );
+    }
+}

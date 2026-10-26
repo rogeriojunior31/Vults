@@ -480,6 +480,9 @@ or desktop action was enabled by this documentation change.
   Route bare Open <name> through a unified live-project/app catalog: an installed app must not
   get trapped as an unknown project by the existing generic Focus parser. A project/app collision
   asks which target was intended; explicit Open app / Open project wording selects the namespace.
+- [x] Execute ordered audio batches across selected-player and computer-output scopes with all
+  required consents checked before native IO, target/capability preflight, a single recording ticket
+  and deadline, and confirmed-prefix feedback without retry or rollback.
 - [ ] Keep cancellation tickets, lock checks, clarification deadlines and context ownership.
   Validate every batch before effects; execute each action at most once. External side effects
   cannot be promised atomic: stop on failure and report the actual completed prefix without retry.
@@ -501,7 +504,19 @@ feature-enabled evals, reviewed translation source hashes and repository/version
 Tests cover private-bus playback/volume/capabilities, cancellation after property reads, a departed
 player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
 separate consent and realtime non-upload. No personal playback, settings or provider was changed.
-Pending for VC2: generalized mixed-batch execution.
+Pending for VC2: batches combining audio, application launches and flock actions.
+Mixed-audio integration (2026-10-26): one typed ordered audio request replaces the independent
+player/output queues and executors. Mixed audio is admitted only when every required switch is
+on; pin both targets and preflight all requested player capabilities before effects. Wait for
+dictation restoration once, use one recording admission/deadline, revalidate at each effect,
+stop on failure/cancellation and report the confirmed prefix in all four languages. No automatic
+retry, rollback, repeat/undo context or Chat fallback is introduced. Realtime consumes mixed audio
+locally as unavailable. Audio mixed with flock actions or launches is still rejected before effects.
+Fake executor tests cover spoken order, preflight rejection, each partial-failure/timeout boundary
+and no replay; consent tests cover all switch combinations, and resolver/realtime tests protect
+unchanged flock state and non-upload. EN/pt-BR guides describe the bounded capability. Native audio
+acceptance remains pending under VC6. UI build, 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals, translation source marks and repository/version guards pass.
 Batch preflight follow-up (2026-10-26): selected-player batches now read every requested capability
 before their first native write, then recheck capability, consent, selection and pinned owner for
 each effect. An unsupported suffix cannot execute an earlier supported action. Private-bus tests

@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 9c321bb45a41 -->
+<!-- source: aed9851bbf89 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1052,7 +1052,14 @@ uma mudança posterior ainda pode interromper o lote. Eles aguardam a restauraç
 aceitam cancelamento após a transcrição e só informam conclusão após a resposta do reprodutor.
 Um lote com falha ou tempo excedido informa quantas operações tiveram resposta; confira a reprodução
 antes de tentar novamente. Lotes apenas de mídia são suportados; misturar mídia e comandos do bando
-é recusado sem aplicar nenhuma parte. Comandos de reprodução ainda não permitem repetir ou desfazer. A conversa por voz em tempo real ainda não executa esses novos
+é recusado sem aplicar nenhuma parte. Para combinar os dois escopos, ative **Comandos de voz de mídia** (e os controles de mídia) e
+**Comandos de voz do áudio do sistema**. Por exemplo: `pause a mídia e depois volume do computador 40
+e depois retome a música`. O lote verifica todas as opções necessárias, o reprodutor selecionado,
+os recursos do reprodutor e a saída do computador antes do primeiro efeito. Uma única gravação e
+um único prazo controlam o lote; cancelamento ou falha interrompe as ações restantes. O retorno
+conta apenas operações confirmadas, sem repetição nem reversão automática. Um tempo excedido pode
+deixar a operação atual sem confirmação; confira o áudio antes de repetir.
+Comandos de reprodução ainda não permitem repetir ou desfazer. A conversa por voz em tempo real ainda não executa esses novos
 comandos. A interpretação natural por modelo continua pendente; transcrever a fala não fornece essa interpretação. Um comando de mídia não faz requisição
 a provedor nem é encaminhado automaticamente ao Chat.
 
@@ -1094,8 +1101,8 @@ porta ativa são capturados e conferidos antes e depois de escritas pelo índice
 apelido de saída padrão redireciona uma escrita enfileirada para uma saída recém-selecionada. Essas
 chamadas nativas separadas não formam uma transação atômica de roteamento: mudanças concorrentes de
 rota ou servidor podem impedir a confirmação. Falha ou tempo excedido informa o trecho confirmado,
-sem repetir nem reverter automaticamente. Só lotes exclusivos de saída são aceitos nesta etapa;
-lotes mistos continuam indisponíveis. Voz em tempo real não executa esses comandos. Os testes usam
+sem repetir nem reverter automaticamente. Lotes de áudio podem combinar ações do reprodutor e da saída do computador na ordem falada;
+lotes com ações do bando ou abertura de aplicativos continuam indisponíveis. Voz em tempo real não executa esses comandos. Os testes usam
 estado simulado e processos privados, não áudio pessoal; a validação real de saída/cancelamento
 no desktop continua pendente.
 

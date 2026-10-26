@@ -841,6 +841,31 @@ pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
     }
 }
 
+pub fn voice_audio_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
+    match (lang, success) {
+        (Lang::En, true) => format!("Confirmed {completed} of {total} player and computer audio actions."),
+        (Lang::PtBr, true) => {
+            format!("{completed} de {total} ações de áudio do reprodutor e do computador confirmadas.")
+        }
+        (Lang::Es, true) => {
+            format!("{completed} de {total} acciones de audio del reproductor y del equipo confirmadas.")
+        }
+        (Lang::Zh, true) => format!("已确认 {total} 个播放器和电脑音频操作中的 {completed} 个。"),
+        (Lang::En, false) => format!(
+            "Confirmed {completed} of {total} audio actions. The batch stopped because a control is disabled, unavailable, changed or timed out. Check Command settings, the player and computer output before trying again; no actions were retried."
+        ),
+        (Lang::PtBr, false) => format!(
+            "{completed} de {total} ações de áudio confirmadas. O lote parou porque um controle está desligado, indisponível, mudou ou excedeu o tempo. Confira as configurações dos comandos, o reprodutor e a saída do computador antes de tentar novamente; nenhuma ação foi repetida."
+        ),
+        (Lang::Es, false) => format!(
+            "{completed} de {total} acciones de audio confirmadas. El lote se detuvo porque un control está desactivado, no está disponible, cambió o agotó el tiempo. Revisa la configuración de comandos, el reproductor y la salida del equipo antes de reintentar; no se repitió ninguna acción."
+        ),
+        (Lang::Zh, false) => format!(
+            "已确认 {total} 个音频操作中的 {completed} 个。某个控制已关闭、不可用、已更改或超时，因此批次已停止。请检查命令设置、播放器和电脑输出后再试；未重试任何操作。"
+        ),
+    }
+}
+
 pub fn voice_media_failed(lang: Lang, completed: usize, total: usize) -> String {
     match lang {
         Lang::En => format!(

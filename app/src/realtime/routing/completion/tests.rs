@@ -121,8 +121,7 @@ async fn queued_work_rechecks_authority_deadline_and_waiter_while_retaining_its_
             text: String::new(),
             choices: vec![],
             effects: vec![],
-            media: vec![],
-            output: vec![],
+            audio: vec![],
             application: None,
         };
         let deadline = if mode == 2 {

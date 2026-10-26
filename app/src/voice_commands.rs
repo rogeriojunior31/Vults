@@ -2,9 +2,7 @@
 #[cfg(target_os = "linux")]
 mod applications;
 #[cfg(target_os = "linux")]
-mod media;
-#[cfg(target_os = "linux")]
-mod output;
+mod audio;
 mod targets;
 #[cfg(test)]
 mod tests;
@@ -24,6 +22,12 @@ use vults_dictation::command::{
 pub use i18n::VoiceFeedback as Feedback;
 const CONTEXT_WINDOW: Duration = Duration::from_secs(90);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AudioAction {
+    Media(command::MediaAction),
+    Output(command::OutputAction),
+}
+
 #[derive(Debug)]
 pub struct Report {
     pub feedback: Feedback,
@@ -31,8 +35,7 @@ pub struct Report {
     pub choices: Vec<Name>,
     /// Executed by the existing runtime effect loop only after the entire batch succeeds.
     pub effects: Vec<Effect>,
-    pub media: Vec<command::MediaAction>,
-    pub output: Vec<command::OutputAction>,
+    pub audio: Vec<AudioAction>,
     pub application: Option<vults_platform::applications::Application>,
 }
 
@@ -42,9 +45,8 @@ impl Report {
             && self.feedback == Feedback::NotCommand
             && self.choices.is_empty()
             && self.effects.is_empty()
-            && self.media.is_empty()
+            && self.audio.is_empty()
             && self.application.is_none()
-            && self.output.is_empty()
     }
 }
 
@@ -200,46 +202,22 @@ impl Commands {
         };
         if commands
             .iter()
-            .any(|command| matches!(command, Command::Output(_)))
+            .any(|command| matches!(command, Command::Media(_) | Command::Output(_)))
         {
             self.last = None;
             let mut out = report(lang, Feedback::Unavailable);
-            if commands
+            let audio: Option<Vec<_>> = commands
                 .iter()
-                .all(|command| matches!(command, Command::Output(_)))
-            {
+                .map(|command| match command {
+                    Command::Media(action) => Some(AudioAction::Media(*action)),
+                    Command::Output(action) => Some(AudioAction::Output(*action)),
+                    _ => None,
+                })
+                .collect();
+            if let Some(audio) = audio {
                 out.feedback = Feedback::Requested;
                 out.text = i18n::voice_feedback(lang, Feedback::Requested).into();
-                out.output = commands
-                    .iter()
-                    .filter_map(|command| match command {
-                        Command::Output(action) => Some(*action),
-                        _ => None,
-                    })
-                    .collect();
-            }
-            return out;
-        }
-        if commands
-            .iter()
-            .any(|command| matches!(command, Command::Media(_)))
-        {
-            self.last = None;
-            let mut out = report(lang, Feedback::Unavailable);
-            // Mixed batches need an executor that can report partial external completion.
-            if commands
-                .iter()
-                .all(|command| matches!(command, Command::Media(_)))
-            {
-                out.feedback = Feedback::Requested;
-                out.text = i18n::voice_feedback(lang, Feedback::Requested).into();
-                out.media = commands
-                    .iter()
-                    .filter_map(|command| match command {
-                        Command::Media(action) => Some(*action),
-                        _ => None,
-                    })
-                    .collect();
+                out.audio = audio;
             }
             return out;
         }
@@ -487,8 +465,7 @@ fn report(lang: i18n::Lang, feedback: Feedback) -> Report {
         text: i18n::voice_feedback(lang, feedback).into(),
         choices: Vec::new(),
         effects: Vec::new(),
-        media: Vec::new(),
-        output: Vec::new(),
+        audio: Vec::new(),
         application: None,
     }
 }
@@ -632,7 +609,7 @@ fn read(state: &State, command: &Command, session: Option<&SessionKey>, usage: V
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) use media::start as start_media;
+pub(crate) use audio::start as start_audio;
 
 fn application_report(lang: i18n::Lang, feedback: i18n::ApplicationFeedback) -> Report {
     let mut out = report(lang, Feedback::Unavailable);
@@ -641,6 +618,3 @@ fn application_report(lang: i18n::Lang, feedback: i18n::ApplicationFeedback) -> 
 }
 #[cfg(target_os = "linux")]
 pub(crate) use applications::start as start_application;
-
-#[cfg(target_os = "linux")]
-pub(crate) use output::start as start_output;

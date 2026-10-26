@@ -562,21 +562,21 @@ fn playback_is_only_a_request_and_mixed_batches_never_apply_a_flock_prefix() {
     let mut commands = Commands::new(now);
     let report = say(&mut commands, &mut state, "pause media", now);
     assert_eq!(report.feedback, Feedback::Requested);
-    assert_eq!(report.media, vec![MediaAction::Pause]);
+    assert_eq!(report.audio, vec![AudioAction::Media(MediaAction::Pause)]);
     assert!(report.effects.is_empty());
     assert!(!report.chat_fallback(true));
     let before = format!("{state:?}");
     for text in ["mute web and then pause media", "pause media and then open api"] {
         let report = say(&mut commands, &mut state, text, now);
         assert_eq!(report.feedback, Feedback::Unavailable);
-        assert!(report.effects.is_empty() && report.media.is_empty());
+        assert!(report.effects.is_empty() && report.audio.is_empty());
         assert!(!report.chat_fallback(true));
         assert_eq!(format!("{state:?}"), before);
     }
     state.locked = true;
     let report = say(&mut commands, &mut state, "pause media", now);
     assert_eq!(report.feedback, Feedback::Locked);
-    assert!(report.media.is_empty());
+    assert!(report.audio.is_empty());
 }
 
 fn installed_app(id: &str, name: &str) -> vults_platform::applications::Application {
@@ -602,7 +602,7 @@ fn installed_apps_and_live_projects_share_open_but_keep_explicit_namespaces() {
         commands.execute_with_applications(&mut state, "open Obsidian", &[], json!([]), now, Some(&apps));
     assert_eq!(out.feedback, Feedback::Requested);
     assert_eq!(out.application.unwrap().id, "notes.desktop");
-    assert!(out.effects.is_empty() && out.media.is_empty());
+    assert!(out.effects.is_empty() && out.audio.is_empty());
     let out = commands.execute_with_applications(&mut state, "open web", &[], json!([]), now, Some(&apps));
     assert_eq!(out.feedback, Feedback::WhichOne);
     assert!(out.application.is_none() && out.effects.is_empty());
@@ -696,29 +696,23 @@ fn computer_audio_is_only_requested_and_mixed_batches_do_not_change_project_stat
     let mut commands = Commands::new(now);
     let out = say(&mut commands, &mut state, "mute computer", now);
     assert_eq!(out.feedback, Feedback::Requested);
-    assert_eq!(out.output, vec![OutputAction::Mute(true)]);
-    assert!(out.effects.is_empty() && out.media.is_empty() && out.application.is_none());
+    assert_eq!(out.audio, vec![AudioAction::Output(OutputAction::Mute(true))]);
+    assert!(out.effects.is_empty() && out.application.is_none());
     assert!(!out.chat_fallback(true));
     let before = format!("{state:?}");
     for text in [
         "mute web and then mute computer",
-        "mute computer and then pause media",
         "mute computer and then open app Firefox",
     ] {
         let out = say(&mut commands, &mut state, text, now);
         assert_eq!(out.feedback, Feedback::Unavailable);
-        assert!(
-            out.effects.is_empty()
-                && out.output.is_empty()
-                && out.media.is_empty()
-                && out.application.is_none()
-        );
+        assert!(out.effects.is_empty() && out.audio.is_empty() && out.application.is_none());
         assert_eq!(format!("{state:?}"), before);
     }
     state.locked = true;
     let out = say(&mut commands, &mut state, "mute computer", now);
     assert_eq!(out.feedback, Feedback::Locked);
-    assert!(out.output.is_empty());
+    assert!(out.audio.is_empty());
 }
 
 #[test]
@@ -734,6 +728,46 @@ fn invalid_native_volume_is_never_sent_to_chat_or_executed() {
         let out = say(&mut commands, &mut state, text, now);
         assert_eq!(out.feedback, Feedback::InvalidVolume);
         assert!(!out.chat_fallback(true));
-        assert!(out.effects.is_empty() && out.output.is_empty() && out.media.is_empty());
+        assert!(out.effects.is_empty() && out.audio.is_empty());
     }
+}
+
+#[test]
+fn mixed_audio_batches_preserve_order_without_mutating_flock_or_falling_back() {
+    use vults_dictation::command::{MediaAction, OutputAction};
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let before = format!("{state:?}");
+    let out = say(
+        &mut commands,
+        &mut state,
+        "pause media and then computer volume 40 and then resume music and then mute computer",
+        now,
+    );
+    assert_eq!(out.feedback, Feedback::Requested);
+    assert_eq!(
+        out.audio,
+        vec![
+            AudioAction::Media(MediaAction::Pause),
+            AudioAction::Output(OutputAction::Volume(40)),
+            AudioAction::Media(MediaAction::Resume),
+            AudioAction::Output(OutputAction::Mute(true)),
+        ]
+    );
+    assert!(out.effects.is_empty() && out.application.is_none());
+    assert!(!out.chat_fallback(true));
+    assert_eq!(format!("{state:?}"), before);
+    for text in [
+        "pause media and then mute computer and then mute web",
+        "mute computer and then pause media and then approve all cards",
+        "pause media and then computer volume 101",
+        "mute computer and then tell me a joke",
+    ] {
+        let out = say(&mut commands, &mut state, text, now);
+        assert!(out.audio.is_empty() && out.effects.is_empty());
+        assert_eq!(format!("{state:?}"), before);
+    }
+    let out = say(&mut commands, &mut state, "repeat", now);
+    assert!(out.audio.is_empty(), "native batches never enter repeat context");
 }
