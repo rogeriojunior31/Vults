@@ -1,0 +1,18 @@
+# Reviewed historical fixtures only; new commits and new findings still fail the scan.
+# Redaction tests use synthetic values; the UI matches are non-secret labels/identifiers.
+7c3a9ea36265f4ae03914eb9d7d47b2f56041c0c:crates/core/src/redact.rs:stripe-access-token:357
+7c3a9ea36265f4ae03914eb9d7d47b2f56041c0c:crates/core/src/redact.rs:slack-legacy-workspace-token:359
+7c3a9ea36265f4ae03914eb9d7d47b2f56041c0c:crates/core/src/redact.rs:pypi-upload-token:363
+877228590c63f3a0cf76b25c53b71685aa5685b3:crates/core/src/redact.rs:github-pat:430
+b235454f4d58333816738b384437538140db30f5:crates/core/src/redact.rs:github-pat:164
+b235454f4d58333816738b384437538140db30f5:crates/core/src/redact.rs:curl-auth-header:190
+e105a64443251977f9ae69bd802e0a5929da1597:crates/core/src/redact.rs:github-pat:313
+e105a64443251977f9ae69bd802e0a5929da1597:crates/core/src/redact.rs:private-key:326
+e105a64443251977f9ae69bd802e0a5929da1597:crates/core/src/redact.rs:curl-auth-header:355
+e105a64443251977f9ae69bd802e0a5929da1597:crates/core/src/redact.rs:curl-auth-header:356
+b8aedfde8af9ad911c95b03016296811d0a1a17a:crates/store/src/journal.rs:github-pat:163
+94a0ccaa8a091dbcc40e1adf33712d93e446e1b3:crates/store/src/proposals.rs:github-pat:216
+52264ed9165dd2ff3d6e64e77836d038fd34739e:crates/store/src/sleep.rs:github-pat:103
+2860fec440da6d24d1722d807281f881afc4e9f4:crates/zeca/src/facts.rs:github-pat:766
+55f25b044d47cd31c5f7c2633ba655e284979f8c:ui/lab/nest.ts:generic-api-key:31
+c7863fb8fe27e1e94ee2a799baf6db96bf52eb80:ui/src/surfaces/settings/main.ts:generic-api-key:1171

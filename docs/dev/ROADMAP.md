@@ -70,6 +70,13 @@ The queue, in order. Take the first task whose *Needs* are met.
 
 ### R3 · Release smoke
 `P0 · S · Needs: REL-1`
+- [x] 2026-10-26 local Security triage: all 16 Gitleaks findings are synthetic redaction fixtures
+  or non-secret UI labels/identifiers. Exact commit/path/rule/line fingerprints suppress only those
+  historical occurrences; a full-history scan passes with Gitleaks 8.24.3. New same-path PAT and
+  generic-key canaries still fail detection. `scripts/check-secret-fixtures.sh` runs after Gitleaks
+  in Security, and PR changes to scanner configuration, exceptions or this check trigger it.
+  Pending: merge this fix and confirm Security on main. No real credential was identified among
+  these 16 findings; no credential validation request or history rewrite was performed.
 - [ ] Install the build as a user would (the `.deb` or `.rpm` from the draft release, not `tauri dev`).
 - [ ] Island: Mini and Quick, a session arriving, finishing and failing, a permission card answered by
   click, a question card.
