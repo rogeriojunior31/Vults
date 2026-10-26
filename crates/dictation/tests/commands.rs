@@ -7,7 +7,7 @@ fn one(command: Command) -> Parsed {
 #[test]
 fn english_phrases_normalize_politeness_without_executing_or_resolving_names() {
     for (text, command) in [
-        ("Uh, could you please OPEN API?!", Command::Focus("api".into())),
+        ("Uh, could you please OPEN API?!", Command::Open("api".into())),
         ("next session", Command::Next),
         ("previous", Command::Previous),
         ("go to the api terminal", Command::Terminal("api".into())),
@@ -30,7 +30,7 @@ fn portuguese_infinitives_accents_articles_and_fillers_have_the_same_commands() 
     for (text, command) in [
         (
             "Ent\u{e3}o, voc\u{ea} pode, por favor, abrir o API?",
-            Command::Focus("api".into()),
+            Command::Open("api".into()),
         ),
         ("pr\u{f3}xima sess\u{e3}o", Command::Next),
         ("sess\u{e3}o anterior", Command::Previous),
@@ -120,7 +120,7 @@ fn compound_commands_are_atomic_and_only_split_explicit_whole_connectors() {
         assert_eq!(
             parse(&format!("open api {connector} mute web")),
             Parsed::Commands(vec![
-                Command::Focus("api".into()),
+                Command::Open("api".into()),
                 Command::SetPreference {
                     target: "web".into(),
                     preference: Preference::Mute,
@@ -138,7 +138,7 @@ fn compound_commands_are_atomic_and_only_split_explicit_whole_connectors() {
             assert_eq!(parse(&text), Parsed::NotCommand, "{text}");
         }
     }
-    assert_eq!(parse("open andthen"), one(Command::Focus("andthen".into())));
+    assert_eq!(parse("open andthen"), one(Command::Open("andthen".into())));
     assert_eq!(parse("open research and then development"), Parsed::NotCommand);
     assert_eq!(
         parse("next session and then please undo and then previous"),
@@ -181,7 +181,7 @@ fn permission_answers_are_refused_in_every_part_without_partial_commands() {
         );
         assert_eq!(parse(&format!("write a poem and then {answer}")), Parsed::Refused);
     }
-    assert_eq!(parse("open approve"), one(Command::Focus("approve".into())));
+    assert_eq!(parse("open approve"), one(Command::Open("approve".into())));
     assert_eq!(
         parse("mute yes"),
         one(Command::SetPreference {
@@ -239,8 +239,8 @@ fn lexical_normalization_is_idempotent_and_does_not_strip_name_words() {
         assert_eq!(normalize(input), expected);
         assert_eq!(normalize(&normalize(input)), expected);
     }
-    assert_eq!(parse("open please api"), one(Command::Focus("please api".into())));
-    assert_eq!(parse("open cafe\u{301}"), one(Command::Focus("cafe".into())));
+    assert_eq!(parse("open please api"), one(Command::Open("please api".into())));
+    assert_eq!(parse("open cafe\u{301}"), one(Command::Open("cafe".into())));
 }
 
 #[test]
@@ -280,4 +280,31 @@ fn media_scope_preserves_negation_card_refusal_and_project_notifications() {
         })
     );
     assert_eq!(parse("pause media and then approve"), Parsed::Refused);
+}
+
+#[test]
+fn opening_an_app_or_project_uses_an_explicit_namespace_without_touching_the_name() {
+    for (text, expected) in [
+        ("open Obsidian", Command::Open("obsidian".into())),
+        ("abrir aplicativo Firefox", Command::Application("firefox".into())),
+        (
+            "abrir la aplicacion Firefox",
+            Command::Application("firefox".into()),
+        ),
+        ("open app Session", Command::Application("session".into())),
+        ("open app Project", Command::Application("project".into())),
+        ("abrir projeto Firefox", Command::Focus("firefox".into())),
+        ("focus Firefox", Command::Focus("firefox".into())),
+        ("open a session api", Command::Focus("api".into())),
+        ("abrir sess\u{e3}o api", Command::Focus("api".into())),
+        ("abrir proyecto api", Command::Focus("api".into())),
+        (
+            "open the application Firefox",
+            Command::Application("firefox".into()),
+        ),
+    ] {
+        assert_eq!(parse(text), one(expected), "{text}");
+    }
+    assert_eq!(parse("open app"), Parsed::NotCommand);
+    assert_eq!(parse("open app Firefox and then approve"), Parsed::Refused);
 }

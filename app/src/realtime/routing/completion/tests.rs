@@ -122,6 +122,7 @@ async fn queued_work_rechecks_authority_deadline_and_waiter_while_retaining_its_
             choices: vec![],
             effects: vec![],
             media: vec![],
+            application: None,
         };
         let deadline = if mode == 2 {
             Instant::now()

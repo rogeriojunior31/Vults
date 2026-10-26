@@ -24,6 +24,8 @@ pub enum Command {
     Next,
     Previous,
     Focus(String),
+    Open(String),
+    Application(String),
     Terminal(String),
     Folder(String),
     SetPreference {
@@ -175,26 +177,47 @@ fn single(text: &str) -> Option<Command> {
     }
     for (prefix, suffix, kind) in phrases::TARGETS {
         if let Some(name) = head(text, prefix).and_then(|rest| tail(rest, suffix)) {
-            return target(name).map(|target| kind.command(target));
+            if matches!(*kind, Target::Open)
+                && SESSION_LABELS
+                    .iter()
+                    .any(|word| head(without_article(name), word).is_some())
+            {
+                return target(name).map(Command::Focus);
+            }
+            let name = if matches!(*kind, Target::Application) {
+                let name = without_article(name);
+                (!name.is_empty()).then(|| name.to_owned())
+            } else {
+                target(name)
+            };
+            return name.map(|target| kind.command(target));
         }
     }
     None
 }
+const SESSION_LABELS: &[&str] = &["session", "sessao", "sesion", "project", "projeto", "proyecto"];
+
+fn without_article(name: &str) -> &str {
+    ["the", "o", "a", "os", "as", "el", "la", "los", "las"]
+        .iter()
+        .find_map(|word| head(name, word))
+        .unwrap_or(name)
+}
+
 fn target(name: &str) -> Option<String> {
-    let mut name = name;
-    // The target may have one article and a project/session qualifier.
-    for words in [
-        &["the", "o", "a", "os", "as", "el", "la", "los", "las"][..],
-        &["session", "sessao", "sesion", "project", "projeto", "proyecto"][..],
-    ] {
-        name = words.iter().find_map(|word| head(name, word)).unwrap_or(name);
-    }
+    let name = without_article(name);
+    let name = SESSION_LABELS
+        .iter()
+        .find_map(|word| head(name, word))
+        .unwrap_or(name);
     (!name.is_empty()).then(|| name.to_owned())
 }
 
 #[derive(Clone, Copy)]
 enum Target {
     Focus,
+    Open,
+    Application,
     Terminal,
     Folder,
     Session,
@@ -205,6 +228,8 @@ impl Target {
     fn command(self, name: String) -> Command {
         match self {
             Self::Focus => Command::Focus(name),
+            Self::Open => Command::Open(name),
+            Self::Application => Command::Application(name),
             Self::Terminal => Command::Terminal(name),
             Self::Folder => Command::Folder(name),
             Self::Session => Command::Session(name),

@@ -14,6 +14,8 @@ export function voiceCommandHelp(): HTMLElement {
       el("dd", { text: t("Say: mute web; unmute web; pin api; unpin api; hide docs; unhide docs.") }),
       el("dt", { text: t("Media voice commands") }),
       el("dd", { text: t("Enable media voice commands and media controls first. Say: pause media; resume music; next track; previous track; media volume 30; lower media volume. Uses the selected player. Project mute only silences notifications.") }),
+      el("dt", { text: t("Application voice commands") }),
+      el("dd", { text: t("Enable application voice commands first. Say: open Obsidian; open app Firefox; open project api. Use an installed desktop name. Ambiguous names need a choice. Application launches cannot be repeated or undone.") }),
       el("dt", { text: t("Again and undo") }),
       el("dd", { text: t("Say: and docs too; same for web; undo. Only flock commands support repeat and undo, with 90 seconds of context. Opening a terminal or folder and reading a snapshot cannot be undone.") }),
       el("dt", { text: t("Never answers a card") }),

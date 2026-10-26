@@ -1,5 +1,9 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "Application voice commands": "Comandos de voz de aplicativos",
+  "Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run.": "Permita abrir aplicativos instalados pelo nome. Os nomes ficam neste computador. Um projeto e um aplicativo com o mesmo nome exigem uma escolha. Nenhuma linha de comando, URL ou argumento de arquivo falado é executado.",
+  "Enable application voice commands first. Say: open Obsidian; open app Firefox; open project api. Use an installed desktop name. Ambiguous names need a choice. Application launches cannot be repeated or undone.": "Ative comandos de voz de aplicativos primeiro. Diga: abrir Obsidian; abrir aplicativo Firefox; abrir projeto api. Use o nome instalado no desktop. Nomes ambíguos exigem uma escolha. Aberturas de aplicativos não podem ser repetidas nem desfeitas.",
+
   "Media voice commands": "Comandos de voz de mídia",
   "Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications.": "Permita comandos locais de pausa, retomada, troca de faixa e volume para o reprodutor selecionado. Os controles de mídia também precisam estar ligados. Silenciar projeto afeta apenas suas notificações.",
   "Enable media voice commands and media controls first. Say: pause media; resume music; next track; previous track; media volume 30; lower media volume. Uses the selected player. Project mute only silences notifications.": "Ative os comandos de voz e controles de mídia primeiro. Diga: pause a mídia; retome a música; próxima faixa; faixa anterior; volume da mídia 30; abaixe a música. Usa o reprodutor selecionado. Silenciar projeto afeta apenas notificações.",

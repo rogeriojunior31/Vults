@@ -1,5 +1,9 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Application voice commands": "应用语音命令",
+  "Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run.": "允许按名称打开已安装的桌面应用。名称保留在本机。同名项目和应用需要先选择。不会执行口述的命令行、网址或文件参数。",
+  "Enable application voice commands first. Say: open Obsidian; open app Firefox; open project api. Use an installed desktop name. Ambiguous names need a choice. Application launches cannot be repeated or undone.": "请先启用应用语音命令。可用英语说：open Obsidian、open app Firefox、open project api。使用已安装的桌面名称。名称有歧义时需先选择。应用启动不支持重复或撤销。",
+
   "Media voice commands": "媒体语音命令",
   "Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications.": "允许对所选播放器执行本地暂停、继续播放、切换曲目和音量命令。还需开启媒体控制。项目静音只关闭项目通知。",
   "Enable media voice commands and media controls first. Say: pause media; resume music; next track; previous track; media volume 30; lower media volume. Uses the selected player. Project mute only silences notifications.": "请先启用媒体语音命令和媒体控制。可以用英语说：pause media、resume music、next track、previous track、media volume 30、lower media volume。命令作用于所选播放器。项目静音只关闭通知。",

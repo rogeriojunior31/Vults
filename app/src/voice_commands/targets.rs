@@ -9,10 +9,20 @@ use vults_dictation::command::{
 pub(super) struct Catalog {
     pub resolver: NameResolver,
     entries: Vec<(Name, SessionKey)>,
+    applications: Vec<(Name, vults_platform::applications::Application)>,
 }
 
 impl Catalog {
     pub fn new(state: &State, project: bool, replacements: &[(String, String)]) -> Self {
+        Self::with_applications(state, project, replacements, &[])
+    }
+
+    pub fn with_applications(
+        state: &State,
+        project: bool,
+        replacements: &[(String, String)],
+        apps: &[vults_platform::applications::Application],
+    ) -> Self {
         let mut groups: BTreeMap<String, Vec<_>> = BTreeMap::new();
         for session in state.sessions.values() {
             let id = if project {
@@ -62,6 +72,20 @@ impl Catalog {
             }
             entries.push((name, session.key.clone()));
         }
+        let applications: Vec<_> = apps
+            .iter()
+            .map(|app| {
+                let name = Name {
+                    id: app.id.clone(),
+                    name: format!("{} / {}", app.name, app.id),
+                    kind: NameKind::Application,
+                };
+                for label in std::iter::once(&app.name).chain(app.aliases.iter()) {
+                    labels.push((normalize(label), name.name.clone()));
+                }
+                (name, app.clone())
+            })
+            .collect();
         // Expand only full known labels, not another replacement or an arbitrary word in a name.
         let saved: Vec<_> = replacements
             .iter()
@@ -75,8 +99,26 @@ impl Catalog {
             .collect();
         labels.retain(|(label, _)| !saved.iter().any(|(from, _)| normalize(from) == *label));
         labels.extend(saved);
-        let resolver = NameResolver::new(entries.iter().map(|(name, _)| name.clone()).collect(), &labels);
-        Self { resolver, entries }
+        let resolver = NameResolver::new(
+            entries
+                .iter()
+                .map(|(name, _)| name.clone())
+                .chain(applications.iter().map(|(name, _)| name.clone()))
+                .collect(),
+            &labels,
+        );
+        Self {
+            resolver,
+            entries,
+            applications,
+        }
+    }
+
+    pub fn application(&self, name: &Name) -> Option<vults_platform::applications::Application> {
+        self.applications
+            .iter()
+            .find(|(current, _)| current == name)
+            .map(|(_, app)| app.clone())
     }
 
     pub fn session(&self, name: &Name) -> Option<SessionKey> {

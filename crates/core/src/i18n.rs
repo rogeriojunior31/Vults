@@ -678,14 +678,79 @@ pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
     })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum ApplicationFeedback {
+    Disabled,
+    Missing,
+    NoTarget,
+    Requested,
+    Failed,
+}
+
+pub fn voice_application(lang: Lang, status: ApplicationFeedback) -> &'static str {
+    use ApplicationFeedback::*;
+    match (lang, status) {
+        (Lang::En, Disabled) => "Enable application voice commands in Dictation > Command settings first.",
+        (Lang::PtBr, Disabled) => {
+            "Ative comandos de voz de aplicativos em Ditado > Configurações dos comandos primeiro."
+        }
+        (Lang::Es, Disabled) => {
+            "Activa los comandos de voz de aplicaciones en Dictado > Configuración de comandos primero."
+        }
+        (Lang::Zh, Disabled) => "请先在听写 > 命令设置中启用应用语音命令。",
+        (Lang::En, Missing) => {
+            "No installed application matches that name. Use its desktop name or a Dictionary alias."
+        }
+        (Lang::PtBr, Missing) => {
+            "Nenhum aplicativo instalado corresponde a esse nome. Use o nome do desktop ou um apelido do Dicionário."
+        }
+        (Lang::Es, Missing) => {
+            "Ninguna aplicación instalada coincide con ese nombre. Usa su nombre del escritorio o un alias del Diccionario."
+        }
+        (Lang::Zh, Missing) => "没有匹配此名称的已安装应用。请使用桌面名称或词典别名。",
+        (Lang::En, NoTarget) => {
+            "No current project or installed application matches that name. Use a desktop name or a Dictionary alias."
+        }
+        (Lang::PtBr, NoTarget) => {
+            "Nenhum projeto atual ou aplicativo instalado corresponde a esse nome. Use o nome do desktop ou um apelido do Dicionário."
+        }
+        (Lang::Es, NoTarget) => {
+            "Ningún proyecto actual o aplicación instalada coincide con ese nombre. Usa un nombre del escritorio o un alias del Diccionario."
+        }
+        (Lang::Zh, NoTarget) => "没有匹配此名称的当前项目或已安装应用。请使用桌面名称或词典别名。",
+        (Lang::En, Requested) => "Application launch requested. Check its window before trying again.",
+        (Lang::PtBr, Requested) => {
+            "Abertura do aplicativo solicitada. Confira a janela antes de tentar novamente."
+        }
+        (Lang::Es, Requested) => {
+            "Apertura de la aplicación solicitada. Revisa su ventana antes de reintentar."
+        }
+        (Lang::Zh, Requested) => "已请求启动应用。请先检查应用窗口再重试。",
+        (Lang::En, Failed) => {
+            "Could not confirm the application launch. It may have changed or timed out; check its window before trying again."
+        }
+        (Lang::PtBr, Failed) => {
+            "Não foi possível confirmar a abertura. O aplicativo pode ter mudado ou excedido o tempo; confira a janela antes de tentar novamente."
+        }
+        (Lang::Es, Failed) => {
+            "No se pudo confirmar la apertura. La aplicación pudo cambiar o agotar el tiempo; revisa su ventana antes de reintentar."
+        }
+        (Lang::Zh, Failed) => "无法确认应用启动。应用可能已更改或请求超时；请先检查窗口再重试。",
+    }
+}
+
 pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
     match (lang, disabled) {
-        (Lang::En, true) => "Enable media voice commands and media controls in Settings first.",
-        (Lang::PtBr, true) => {
-            "Ative comandos de voz de mídia e controles de mídia nas Configurações primeiro."
+        (Lang::En, true) => {
+            "Enable Media voice commands in Dictation > Command settings, and turn on Media controls."
         }
-        (Lang::Es, true) => "Activa los comandos de voz y controles multimedia en Configuración primero.",
-        (Lang::Zh, true) => "请先在设置中启用媒体语音命令和媒体控制。",
+        (Lang::PtBr, true) => {
+            "Ative Comandos de voz de mídia em Ditado > Configurações dos comandos e ligue os controles de mídia."
+        }
+        (Lang::Es, true) => {
+            "Activa Comandos de voz multimedia en Dictado > Configuración de comandos y los controles multimedia."
+        }
+        (Lang::Zh, true) => "请在听写 > 命令设置中启用媒体语音命令，并开启媒体控制。",
         (Lang::En, false) => "No selected media player. Start playback and check the media controls.",
         (Lang::PtBr, false) => {
             "Nenhum reprodutor selecionado. Inicie a reprodução e confira os controles de mídia."

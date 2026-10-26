@@ -781,6 +781,7 @@ fn voice_result(
             choices: Vec::new(),
             effects: Vec::new(),
             media: Vec::new(),
+            application: None,
         },
         None,
     );

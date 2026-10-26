@@ -1,7 +1,7 @@
 //! Explicit command-key playback. Admission never opens Chat or bypasses the media switches.
 use super::{Feedback, Report};
 use crate::dictation::worker::Ticket;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use vults_core::i18n::{self, Lang};
 use vults_dictation::command::MediaAction;
@@ -35,10 +35,11 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
         return;
     }
     let player = player.expect("selected player checked");
+    let deadline = Instant::now() + Duration::from_secs(4);
     tauri::async_runtime::spawn(async move {
         let mut completed = 0;
-        let result = tokio::time::timeout(Duration::from_secs(4), async {
-            if !enabled(&app, &ticket, &player) {
+        let result = tokio::time::timeout_at(tokio::time::Instant::from_std(deadline), async {
+            if Instant::now() >= deadline || !enabled(&app, &ticket, &player) {
                 return Err(());
             }
             let target = vults_media::pin(&player).await.map_err(|_| ())?;
@@ -48,7 +49,9 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
                 .map_err(|_| ())?;
             for action in &actions {
                 target
-                    .control(control(*action), || enabled(&app, &ticket, &player))
+                    .control(control(*action), || {
+                        Instant::now() < deadline && enabled(&app, &ticket, &player)
+                    })
                     .await
                     .map_err(|_| ())?;
                 completed += 1;

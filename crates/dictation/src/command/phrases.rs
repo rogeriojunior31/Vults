@@ -169,6 +169,24 @@ pub(super) const EXACT: &[(&str, Command)] = &[
 
 // Structural terminal/folder clauses precede general focus, including incomplete structural input.
 pub(super) const TARGETS: &[(&str, &str, Target)] = &[
+    ("open the application", "", Target::Application),
+    ("open the app", "", Target::Application),
+    ("open application", "", Target::Application),
+    ("open app", "", Target::Application),
+    ("open o aplicativo", "", Target::Application),
+    ("open aplicativo", "", Target::Application),
+    ("open a aplicacao", "", Target::Application),
+    ("open la aplicacion", "", Target::Application),
+    ("open aplicacion", "", Target::Application),
+    ("open the project", "", Target::Focus),
+    ("open session", "", Target::Focus),
+    ("open the session", "", Target::Focus),
+    ("open a sessao", "", Target::Focus),
+    ("open la sesion", "", Target::Focus),
+    ("open project", "", Target::Focus),
+    ("open o projeto", "", Target::Focus),
+    ("open projeto", "", Target::Focus),
+    ("open el proyecto", "", Target::Focus),
     ("go to the terminal of", "", Target::Terminal),
     ("go to the terminal", "", Target::Terminal),
     ("go to terminal", "", Target::Terminal),
@@ -220,5 +238,5 @@ pub(super) const TARGETS: &[(&str, &str, Target)] = &[
     ("go to", "", Target::Focus),
     ("go para", "", Target::Focus),
     ("go a", "", Target::Focus),
-    ("open", "", Target::Focus),
+    ("open", "", Target::Open),
 ];

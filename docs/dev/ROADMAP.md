@@ -473,7 +473,7 @@ or desktop action was enabled by this documentation change.
   Missing backends report unavailable. Pin the default output identity, read the actual current
   mute/volume, clamp absolute values to 0..100 percent and use 10-percentage-point relative steps.
   System output and media control have separate default-off local-action switches in Command settings.
-- [ ] Enumerate launchable installed applications through existing GTK/GIO desktop entries in
+- [x] Enumerate launchable installed applications through existing GTK/GIO desktop entries in
   `crates/platform`; match display names and aliases, then launch a validated desktop-entry identity.
   No model-supplied Exec, executable path, URI or arguments. Ignore hidden/nonlaunchable entries;
   duplicate names require a choice. Missing Obsidian reports not installed rather than guessing.
@@ -501,7 +501,26 @@ feature-enabled evals, reviewed translation source hashes and repository/version
 Tests cover private-bus playback/volume/capabilities, cancellation after property reads, a departed
 player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
 separate consent and realtime non-upload. No personal playback, settings or provider was changed.
-Pending for VC2: system output, installed apps/unified names, and generalized mixed-batch execution.
+Pending for VC2: system output and generalized mixed-batch execution.
+Application integration (2026-10-26): installed visible GTK/GIO desktop entries join the existing
+project/agent resolver under a separate default-off `dictation_command_apps` switch. Bare Open
+resolves both namespaces; explicit app/project phrases select one; aliases and original 90-second
+clarifications are preserved. App definitions/identities are revalidated before launch; definitions
+also invalidate pending choices. Launching is one-use, cancellation/lock/deadline/consent checked,
+without spoken shell text, URIs or file arguments; only launch-request acknowledgement is reported.
+Mixed batches containing a launch are rejected before core mutation. Realtime never launches apps.
+Private-XDG fixtures test registered/hidden/changed entries without launching any application;
+resolver tests cover collisions, definitions changing during clarification, aliases, namespaces,
+locked/disabled states and rejected batch prefixes. EN/pt-BR docs and the four-language UI are current.
+Session/project qualifiers remain flock-only, including articles and PT/ES forms. Native deadlines
+start at admission, before async scheduling, so a queued launch or media task cannot acquire a
+later execution window. Local validation passes: UI build, 19 renderer checks, workspace formatting,
+Clippy/tests, feature-enabled evals, reviewed translation source hashes and repository guards.
+Firefox follow-up: local retained command evidence shows the media switch was initially off;
+after the owner enabled it, Pause the music received native completion. Informal resume utterances
+were not recognized by the local grammar. The owner was given the supported Resume music phrase;
+VC3 semantic interpretation remains necessary. No setting or playback was changed by the assistant.
+
 Pending native acceptance: visually inspect Command settings and exercise actual playback/dictation
 restoration/cancellation in the running application (VC6); native UI capture/control is unavailable
 in this session. Keep VC2 and VC6 incomplete until those remaining actions and gates are finished.

@@ -1,5 +1,7 @@
 //! V8: the runtime owner's local command dispatcher. No microphone, model, paste or card answer.
 #[cfg(target_os = "linux")]
+mod applications;
+#[cfg(target_os = "linux")]
 mod media;
 mod targets;
 #[cfg(test)]
@@ -28,6 +30,7 @@ pub struct Report {
     /// Executed by the existing runtime effect loop only after the entire batch succeeds.
     pub effects: Vec<Effect>,
     pub media: Vec<command::MediaAction>,
+    pub application: Option<vults_platform::applications::Application>,
 }
 
 impl Report {
@@ -37,6 +40,7 @@ impl Report {
             && self.choices.is_empty()
             && self.effects.is_empty()
             && self.media.is_empty()
+            && self.application.is_none()
     }
 }
 
@@ -71,6 +75,7 @@ struct Pending {
     index: usize,
     project: bool,
     question: Clarification,
+    applications: Vec<vults_platform::applications::Application>,
 }
 
 #[derive(Debug)]
@@ -108,6 +113,18 @@ impl Commands {
         usage: Value,
         now: Instant,
     ) -> Report {
+        self.execute_with_applications(state, transcript, replacements, usage, now, Some(&[]))
+    }
+
+    pub fn execute_with_applications(
+        &mut self,
+        state: &mut State,
+        transcript: &str,
+        replacements: &[(String, String)],
+        usage: Value,
+        now: Instant,
+        apps: Option<&[vults_platform::applications::Application]>,
+    ) -> Report {
         let lang = state.lang;
         if state.locked {
             self.cancel();
@@ -130,7 +147,26 @@ impl Commands {
                 let Some(mut pending) = self.pending.take() else {
                     return report(lang, Feedback::NotCommand);
                 };
-                let catalog = Catalog::new(state, pending.project, replacements);
+                let candidates = pending.question.candidates(elapsed);
+                if candidates.iter().any(|name| {
+                    name.kind == command::names::NameKind::Application
+                        && !pending
+                            .applications
+                            .iter()
+                            .any(|original| original.id == name.id && apps.unwrap_or(&[]).contains(original))
+                }) {
+                    return report(lang, Feedback::Stale);
+                }
+                let include_apps = matches!(
+                    pending.commands[pending.index],
+                    Command::Open(_) | Command::Application(_)
+                );
+                let catalog = Catalog::with_applications(
+                    state,
+                    pending.project,
+                    replacements,
+                    if include_apps { apps.unwrap_or(&[]) } else { &[] },
+                );
                 match pending.question.answer(transcript, elapsed, &catalog.resolver) {
                     Reply::Resolution(Resolution::Found(name)) => {
                         pending.selected.insert(pending.index, name);
@@ -196,23 +232,63 @@ impl Commands {
             let target = target(&command);
             let session = if let Some(text) = target {
                 let project = matches!(command, Command::SetPreference { .. });
-                let catalog = Catalog::new(&shadow, project, replacements);
+                let include_apps = matches!(command, Command::Open(_) | Command::Application(_));
+                let catalog = if include_apps {
+                    Catalog::with_applications(&shadow, project, replacements, apps.unwrap_or(&[]))
+                } else {
+                    Catalog::new(&shadow, project, replacements)
+                };
+                if matches!(command, Command::Application(_)) && apps.is_none() {
+                    return application_report(lang, i18n::ApplicationFeedback::Disabled);
+                }
                 let resolution = if let Some(name) = selected.get(&index) {
-                    if catalog.session(name).is_none() {
+                    if catalog.session(name).is_none() && catalog.application(name).is_none() {
                         return report(lang, Feedback::Stale);
                     }
                     Resolution::Found(name.clone())
                 } else {
-                    catalog.resolver.resolve(text, None)
+                    catalog.resolver.resolve(
+                        text,
+                        matches!(command, Command::Application(_))
+                            .then_some(command::names::NameKind::Application),
+                    )
                 };
                 match resolution {
                     Resolution::Found(name) => {
+                        if let Some(app) = catalog.application(&name) {
+                            if commands.len() != 1 {
+                                return report(lang, Feedback::Unavailable);
+                            }
+                            self.last = None;
+                            let mut out = report(lang, Feedback::Requested);
+                            out.application = Some(app);
+                            return out;
+                        }
                         let session = catalog.session(&name);
                         // A later question must not rebind an earlier target after the flock changes.
                         selected.insert(index, name);
                         session
                     }
-                    Resolution::Unknown => return report(lang, Feedback::UnknownName),
+                    Resolution::Unknown => {
+                        if matches!(command, Command::Application(_))
+                            || matches!(command, Command::Open(_)) && apps.is_none()
+                        {
+                            return application_report(
+                                lang,
+                                if apps.is_none() {
+                                    i18n::ApplicationFeedback::Disabled
+                                } else {
+                                    i18n::ApplicationFeedback::Missing
+                                },
+                            );
+                        }
+                        let mut out = report(lang, Feedback::UnknownName);
+                        if matches!(command, Command::Open(_)) {
+                            out.text =
+                                i18n::voice_application(lang, i18n::ApplicationFeedback::NoTarget).into();
+                        }
+                        return out;
+                    }
                     Resolution::Ambiguous(choices) => {
                         let Some(question) = Clarification::new(choices.clone(), elapsed) else {
                             return report(lang, Feedback::Stale);
@@ -225,6 +301,7 @@ impl Commands {
                             index,
                             project,
                             question,
+                            applications: apps.unwrap_or(&[]).to_vec(),
                         });
                         let mut out = report(lang, Feedback::WhichOne);
                         out.choices = choices;
@@ -237,10 +314,10 @@ impl Commands {
             let previous = shadow.front().cloned();
             let mut undo = None;
             let intent = match &command {
-                Command::Media(_) => return report(lang, Feedback::Unavailable),
+                Command::Media(_) | Command::Application(_) => return report(lang, Feedback::Unavailable),
                 Command::Next if !shadow.ordered().is_empty() => Some(Intent::FocusNext),
                 Command::Previous if !shadow.ordered().is_empty() => Some(Intent::FocusPrevious),
-                Command::Focus(_) => Some(Intent::Focus {
+                Command::Focus(_) | Command::Open(_) => Some(Intent::Focus {
                     session: session.clone(),
                 }),
                 Command::Terminal(_) => session.clone().map(|session| Intent::Jump { session }),
@@ -296,7 +373,10 @@ impl Commands {
                     return report(lang, Feedback::Unavailable);
                 }
                 effects.extend(planned);
-                if matches!(command, Command::Focus(_) | Command::Next | Command::Previous) {
+                if matches!(
+                    command,
+                    Command::Focus(_) | Command::Open(_) | Command::Next | Command::Previous
+                ) {
                     undo = Some(Undo::Focus {
                         previous,
                         expected: shadow.focus.clone(),
@@ -376,6 +456,7 @@ fn report(lang: i18n::Lang, feedback: Feedback) -> Report {
         choices: Vec::new(),
         effects: Vec::new(),
         media: Vec::new(),
+        application: None,
     }
 }
 fn project_pref(pref: Preference) -> ProjectPref {
@@ -400,6 +481,8 @@ fn preference(state: &State, key: &SessionKey, pref: ProjectPref) -> bool {
 fn target(command: &Command) -> Option<&str> {
     match command {
         Command::Focus(t)
+        | Command::Open(t)
+        | Command::Application(t)
         | Command::Terminal(t)
         | Command::Folder(t)
         | Command::Session(t)
@@ -409,7 +492,7 @@ fn target(command: &Command) -> Option<&str> {
 }
 fn retarget(command: &Command, target: String) -> Option<Command> {
     Some(match command {
-        Command::Focus(_) | Command::Next | Command::Previous => Command::Focus(target),
+        Command::Focus(_) | Command::Open(_) | Command::Next | Command::Previous => Command::Focus(target),
         Command::Terminal(_) => Command::Terminal(target),
         Command::Folder(_) => Command::Folder(target),
         Command::Session(_) => Command::Session(target),
@@ -517,3 +600,11 @@ fn read(state: &State, command: &Command, session: Option<&SessionKey>, usage: V
 
 #[cfg(target_os = "linux")]
 pub(crate) use media::start as start_media;
+
+fn application_report(lang: i18n::Lang, feedback: i18n::ApplicationFeedback) -> Report {
+    let mut out = report(lang, Feedback::Unavailable);
+    out.text = i18n::voice_application(lang, feedback).into();
+    out
+}
+#[cfg(target_os = "linux")]
+pub(crate) use applications::start as start_application;

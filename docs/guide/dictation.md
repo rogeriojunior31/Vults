@@ -934,9 +934,25 @@ They wait for dictation's temporary duck/pause restoration, support cancellation
 and report completion only after the player acknowledges the operation. A failed or timed-out batch
 reports how many operations were acknowledged; check playback before trying again. Media-only batches
 are supported; combining media and flock commands is currently refused without applying either part.
-Playback commands do not support repeat or undo yet. Realtime voice does not execute these new desktop commands yet. Installed-app launching, system-output
-controls and natural intent interpretation by a model remain pending; transcription alone does not
+Playback commands do not support repeat or undo yet. Realtime voice does not execute these new desktop commands yet. System-output controls and natural intent interpretation by a model remain pending; transcription alone does not
 supply that interpretation. No provider request or automatic Chat fallback is made for a media command.
+
+VC2 also adds **Application voice commands**, a separate default-off choice under Command
+settings. With it on, `open Obsidian` searches current projects and visible installed desktop
+applications together. Use `open app Firefox` to choose applications or `open project api` to
+choose the flock. Portuguese equivalents include `abrir aplicativo Firefox` and `abrir projeto api`;
+Spanish supports `abrir aplicacion Firefox`. Dictionary aliases apply to complete known names.
+If a project and app share a name, or several apps share it, Vults asks which one; use the explicit
+namespace or the full displayed choice. Clarification expires after 90 seconds, and changed or
+removed app definitions invalidate it.
+
+Only registered launchable desktop entries are used. Hidden/non-displayed entries are excluded;
+spoken paths, executable text, URLs and file arguments are never passed to the launcher. The
+entry's identity and definition are checked again before launch, together with cancellation, lock,
+the original deadline and current consent. A successful result says **Application launch requested**,
+not that a window is ready. Opening an app cannot be repeated or undone. One app per request is
+supported; batches containing app launches are refused before changing project state. Zeca may be
+off; realtime voice does not launch apps. Native desktop acceptance remains pending.
 
 V8.5 adds **Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its

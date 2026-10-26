@@ -578,3 +578,112 @@ fn playback_is_only_a_request_and_mixed_batches_never_apply_a_flock_prefix() {
     assert_eq!(report.feedback, Feedback::Locked);
     assert!(report.media.is_empty());
 }
+
+fn installed_app(id: &str, name: &str) -> vults_platform::applications::Application {
+    vults_platform::applications::Application {
+        id: id.into(),
+        name: name.into(),
+        aliases: vec![],
+        source: format!("/fixtures/{id}").into(),
+        definition: std::sync::Arc::from(&b"original"[..]),
+    }
+}
+
+#[test]
+fn installed_apps_and_live_projects_share_open_but_keep_explicit_namespaces() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let apps = [
+        installed_app("notes.desktop", "Obsidian"),
+        installed_app("web.desktop", "web"),
+    ];
+    let out =
+        commands.execute_with_applications(&mut state, "open Obsidian", &[], json!([]), now, Some(&apps));
+    assert_eq!(out.feedback, Feedback::Requested);
+    assert_eq!(out.application.unwrap().id, "notes.desktop");
+    assert!(out.effects.is_empty() && out.media.is_empty());
+    let out = commands.execute_with_applications(&mut state, "open web", &[], json!([]), now, Some(&apps));
+    assert_eq!(out.feedback, Feedback::WhichOne);
+    assert!(out.application.is_none() && out.effects.is_empty());
+    assert_eq!(out.choices.len(), 2);
+    let out =
+        commands.execute_with_applications(&mut state, "open app web", &[], json!([]), now, Some(&apps));
+    assert_eq!(out.application.unwrap().id, "web.desktop");
+    let out =
+        commands.execute_with_applications(&mut state, "open project web", &[], json!([]), now, Some(&apps));
+    assert_eq!(out.feedback, Feedback::Done);
+    assert!(out.application.is_none());
+    assert_eq!(state.focus, Some(key("b")));
+    let out = commands.execute_with_applications(
+        &mut state,
+        "open a session Obsidian",
+        &[],
+        json!([]),
+        now,
+        Some(&apps),
+    );
+    assert_eq!(out.feedback, Feedback::UnknownName);
+    assert!(out.application.is_none());
+    let out = commands.execute_with_applications(&mut state, "open app Obsidian", &[], json!([]), now, None);
+    assert_eq!(out.feedback, Feedback::Unavailable);
+    assert!(out.application.is_none() && !out.chat_fallback(true));
+    assert!(out.text.contains("Enable application"));
+}
+
+#[test]
+fn app_clarification_preserves_original_definitions_and_never_applies_a_batch_prefix() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let apps = [
+        installed_app("one.desktop", "Editor"),
+        installed_app("two.desktop", "Editor"),
+    ];
+    let out =
+        commands.execute_with_applications(&mut state, "open app Editor", &[], json!([]), now, Some(&apps));
+    assert_eq!(out.feedback, Feedback::WhichOne);
+    let mut changed = apps.clone();
+    changed[1].definition = std::sync::Arc::from(&b"changed"[..]);
+    let out = commands.execute_with_applications(
+        &mut state,
+        "Editor / one.desktop",
+        &[],
+        json!([]),
+        now,
+        Some(&changed),
+    );
+    assert_eq!(out.feedback, Feedback::Stale);
+    assert!(out.application.is_none());
+    commands.execute_with_applications(&mut state, "open app Editor", &[], json!([]), now, Some(&apps));
+    let out = commands.execute_with_applications(
+        &mut state,
+        "Editor / two.desktop",
+        &[],
+        json!([]),
+        now,
+        Some(&apps),
+    );
+    assert_eq!(out.application.unwrap().id, "two.desktop");
+    let before = format!("{state:?}");
+    for text in [
+        "mute api and then open app Editor",
+        "open app Editor and then mute api",
+    ] {
+        let single = [installed_app("one.desktop", "Editor")];
+        let out = commands.execute_with_applications(&mut state, text, &[], json!([]), now, Some(&single));
+        assert_eq!(out.feedback, Feedback::Unavailable);
+        assert!(out.application.is_none() && out.effects.is_empty());
+        assert_eq!(format!("{state:?}"), before);
+    }
+    let aliases = [("notes".into(), "Editor".into())];
+    let one = [apps[0].clone()];
+    let out =
+        commands.execute_with_applications(&mut state, "open notes", &aliases, json!([]), now, Some(&one));
+    assert_eq!(out.application.unwrap().id, "one.desktop");
+    state.locked = true;
+    let out =
+        commands.execute_with_applications(&mut state, "open app Editor", &[], json!([]), now, Some(&one));
+    assert_eq!(out.feedback, Feedback::Locked);
+    assert!(out.application.is_none());
+}

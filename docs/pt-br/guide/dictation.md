@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: d708fb6560f7 -->
+<!-- source: 99921043783e -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1050,9 +1050,25 @@ aceitam cancelamento após a transcrição e só informam conclusão após a res
 Um lote com falha ou tempo excedido informa quantas operações tiveram resposta; confira a reprodução
 antes de tentar novamente. Lotes apenas de mídia são suportados; misturar mídia e comandos do bando
 é recusado sem aplicar nenhuma parte. Comandos de reprodução ainda não permitem repetir ou desfazer. A conversa por voz em tempo real ainda não executa esses novos
-comandos. Abertura de aplicativos, áudio do sistema e interpretação natural por modelo continuam
-pendentes; transcrever a fala não fornece essa interpretação. Um comando de mídia não faz requisição
+comandos. Áudio do sistema e interpretação natural por modelo continuam pendentes; transcrever a fala não fornece essa interpretação. Um comando de mídia não faz requisição
 a provedor nem é encaminhado automaticamente ao Chat.
+
+A VC2 também acrescenta **Comandos de voz de aplicativos**, uma escolha separada desligada por
+padrão nas configurações dos comandos. Ao ativar, `abrir Obsidian` busca projetos atuais e aplicativos
+visíveis instalados no desktop em conjunto. Use `abrir aplicativo Firefox` para escolher aplicativos
+ou `abrir projeto api` para escolher o bando. Equivalentes em inglês incluem `open app Firefox`;
+em espanhol, `abrir aplicacion Firefox`. Apelidos do Dicionário valem para nomes conhecidos completos.
+Se um projeto e um app tiverem o mesmo nome, ou vários apps compartilharem um nome, o Vults pergunta
+qual usar; diga o escopo explícito ou a escolha completa exibida. O esclarecimento vence após 90
+segundos e definições de aplicativos alteradas ou removidas o invalidam.
+
+Só são usadas entradas executáveis registradas do desktop. Entradas ocultas/não exibidas ficam de
+fora; caminhos, texto de executável, URLs e argumentos de arquivo falados nunca são repassados ao
+inicializador. A identidade e a definição são conferidas novamente antes da abertura, junto com
+cancelamento, bloqueio, prazo original e consentimento atual. O sucesso informa **Abertura do aplicativo
+solicitada**, não que a janela esteja pronta. Abrir um app não permite repetir nem desfazer. Um app
+por pedido é suportado; lotes contendo aberturas são recusados antes de alterar projetos. O Zeca
+pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
 
 A V8.5 acrescenta **Ditado > Comandos de voz**: uma visão pesquisável dos comandos/resultados retidos,
 com Copiar/Excluir explícitos e sem repetição. Compartilha o prazo do Histórico e sua confirmação de

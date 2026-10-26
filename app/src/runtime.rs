@@ -56,6 +56,7 @@ enum Msg {
         text: String,
         ticket: crate::dictation::worker::Ticket,
         replacements: Vec<(String, String)>,
+        applications: Option<Vec<vults_platform::applications::Application>>,
     },
     #[cfg(target_os = "linux")]
     CancelVoiceCommands,
@@ -461,6 +462,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 text,
                 ticket,
                 replacements,
+                applications,
             } => {
                 if crate::lock::locked(&app) {
                     voice_commands.cancel();
@@ -475,8 +477,16 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     voice_commands.cancel();
                     continue;
                 }
-                let report =
-                    ticket.dispatch(|| voice_commands.execute(&mut state, &text, &replacements, usage, now));
+                let report = ticket.dispatch(|| {
+                    voice_commands.execute_with_applications(
+                        &mut state,
+                        &text,
+                        &replacements,
+                        usage,
+                        now,
+                        applications.as_deref(),
+                    )
+                });
                 let fallback = saved.dictation_command_chat;
                 drop(saved);
                 let Some(mut report) = report else {
@@ -484,6 +494,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 };
                 if report.chat_fallback(fallback) {
                     crate::chat::voice_command(app.clone(), text, ticket);
+                    continue;
+                }
+                if report.application.is_some() {
+                    crate::voice_commands::start_application(app.clone(), text, ticket, report, state.lang);
                     continue;
                 }
                 if !report.media.is_empty() {
@@ -1796,12 +1810,19 @@ pub(crate) fn voice_command(
     ticket: crate::dictation::worker::Ticket,
     replacements: Vec<(String, String)>,
 ) -> Result<(), String> {
+    let enabled = app
+        .state::<crate::settings::SettingsState>()
+        .0
+        .lock()
+        .is_ok_and(|saved| saved.dictation_command_apps);
+    let applications = enabled.then(vults_platform::applications::installed);
     app.state::<Inbox>()
         .0
         .try_send(Msg::VoiceCommand {
             text,
             ticket,
             replacements,
+            applications,
         })
         .map_err(|_| "The voice command worker is unavailable.".into())
 }

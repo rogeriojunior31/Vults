@@ -175,11 +175,13 @@ fn route(
             choices: Vec::new(),
             effects: Vec::new(),
             media: Vec::new(),
+            application: None,
         }
     };
-    if !report.media.is_empty() {
+    if !report.media.is_empty() || report.application.is_some() {
         // Realtime has no independent desktop-action admission yet.
         report.media.clear();
+        report.application = None;
         report.feedback = Feedback::Unavailable;
         report.text = vults_core::i18n::voice_feedback(state.lang, Feedback::Unavailable).into();
     }
