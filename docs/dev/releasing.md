@@ -10,6 +10,15 @@ Pending preview/paid-provider gates are not completed by choosing this version; 
 status and opt-ins remain. Keep package versions and Unreleased unchanged until that release step.
 
 
+For R3 before a tag, `npm run bundle:linux` builds local production candidates without publishing.
+Keep their actual package version and source revision explicit; changing the release target alone
+still leaves package metadata at the current development version. Archive inspection must find the
+app, bundled hook, LICENSE, NOTICE, desktop entry and icons, with the notices matching the checkout.
+Store package checksums and preflight results with the candidate. Headless entry-point checks and
+archive extraction do not count as package installation or native desktop acceptance. The
+release workflow's Ubuntu 22.04 builds remain the Linux distribution artifacts; local packages
+only establish preflight on their build host.
+
 1. **On a branch, before the tag:**
    - set the version in `Cargo.toml` (`[workspace.package]`), `package.json`, `app/tauri.conf.json`
      and `packaging/aur/vults/PKGBUILD` (`pkgver`, `pkgrel=1`); `scripts/check-version.sh` checks

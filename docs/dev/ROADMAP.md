@@ -89,7 +89,19 @@ and repository guards pass. Package/version files and lockfiles are unchanged at
   in Security, and PR changes to scanner configuration, exceptions or this check trigger it.
   Pending: merge this fix and confirm Security on main. No real credential was identified among
   these 16 findings; no credential validation request or history rewrite was performed.
-- [ ] Install the build as a user would (the `.deb` or `.rpm` from the draft release, not `tauri dev`).
+- [x] 2026-10-26 local production-package preflight: built Debian and RPM candidates with
+  `npm run bundle:linux`. The first archive checks found LICENSE/NOTICE absent from both; the Linux
+  resource map now includes exact copies beside `vults-hook`, matching the AUR package's notice
+  coverage. Rebuilt archives pass executable/hook/content, desktop-file/icon and host-library
+  checks. Each extracted app completes headless MCP initialize/ping; each hook exits zero and
+  silent on malformed input. No GUI, microphone, clipboard or provider call was exercised.
+  Candidate metadata remains 0.1.8 until REL-2; receipts and SHA256SUMS live under
+  `target/r3/<source-commit>/`. Built on CachyOS (glibc 2.44); this is local preflight, not an
+  installed-package acceptance or Ubuntu 22.04 distribution qualification. UI build, all 19
+  renderer checks, workspace formatting/Clippy/tests, feature-enabled evals, version and repository
+  guards also pass; Debian control architecture/version/runtime dependency checks pass.
+- [ ] Install a production candidate package for its recorded source revision (local/CI `.deb` or
+  `.rpm`, not `tauri dev`). Recheck the final draft package before publication in REL-2.
 - [ ] Island: Mini and Quick, a session arriving, finishing and failing, a permission card answered by
   click, a question card.
 - [ ] Chat: one CLI turn and one API turn; voice input into the draft.
