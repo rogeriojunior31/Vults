@@ -487,6 +487,15 @@ or desktop action was enabled by this documentation change.
   `platform::music`: restoration must not reverse an intentional voice command. Advertise undo only
   for state that can be restored conditionally; launching an app is not undone by killing it.
 
+Backend slice (2026-10-26): `crates/media` now exposes explicit Play/Pause (never toggle) and
+bounded 0..100 player volume. Each control resolves a unique D-Bus owner for the request; new
+controls check player capabilities and reject unrelated bus names and invalid volume before IO.
+A private-bus fake player verifies repeated Play/Pause, actual volume property writes and denied
+capabilities without touching desktop playback. The existing header toggle/skip API is retained.
+Pending for VC2: typed spoken actions/runtime integration, captured-target selection/clarification,
+relative player volume, system output, installed apps, per-action settings and duck restoration.
+These backend primitives alone do not make spoken desktop commands available.
+
 **Done when:** fake native adapters prove action selection, exact arguments/identities, failure and
 cancellation; existing flock commands still work; real desktop effects await VC6.
 
