@@ -486,6 +486,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     crate::chat::voice_command(app.clone(), text, ticket);
                     continue;
                 }
+                if !report.media.is_empty() {
+                    crate::voice_commands::start_media(app.clone(), text, ticket, report, state.lang);
+                    continue;
+                }
                 command_effects = Some(std::mem::take(&mut report.effects));
                 crate::dictation::command_result(
                     &app,

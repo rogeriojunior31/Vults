@@ -464,7 +464,7 @@ or desktop action was enabled by this documentation change.
 - [ ] Extend the pure `crates/dictation/src/command.rs` contract with explicit typed desktop actions;
   keep parsing/name resolution free of IO. Dispatch from the existing runtime owner in
   `app/src/voice_commands.rs`/`runtime.rs`, through app-owned executors, never guessed shell text.
-- [ ] Extend `crates/media` MPRIS controls with explicit Pause/Play and checked player volume;
+- [x] Extend `crates/media` MPRIS controls with explicit Pause/Play and checked player volume;
   pause/resume must not use the current PlayPause toggle. Reuse `app/src/media.rs`, respecting the
   media switch. Select the known player or clarify among live players; unsupported/no player is a
   visible failure. Pin its bus identity and revalidate before acting; never silently switch players.
@@ -487,14 +487,24 @@ or desktop action was enabled by this documentation change.
   `platform::music`: restoration must not reverse an intentional voice command. Advertise undo only
   for state that can be restored conditionally; launching an app is not undone by killing it.
 
-Backend slice (2026-10-26): `crates/media` now exposes explicit Play/Pause (never toggle) and
-bounded 0..100 player volume. Each control resolves a unique D-Bus owner for the request; new
-controls check player capabilities and reject unrelated bus names and invalid volume before IO.
-A private-bus fake player verifies repeated Play/Pause, actual volume property writes and denied
-capabilities without touching desktop playback. The existing header toggle/skip API is retained.
-Pending for VC2: typed spoken actions/runtime integration, captured-target selection/clarification,
-relative player volume, system output, installed apps, per-action settings and duck restoration.
-These backend primitives alone do not make spoken desktop commands available.
+Media integration (2026-10-26): typed local phrases now reach the selected player's unique
+process through the command-key runtime, with separate default-off `dictation_command_media`
+consent and the existing media switch. Explicit play/pause/skip and absolute/relative volume are
+supported. The native task rechecks settings, lock, cancellation, selection and bus ownership;
+uses one admission per recording; waits for temporary duck/pause restoration; and reports actual
+completion or the acknowledged prefix on failure/timeout. Signed-volume punctuation cannot turn
+a negative input into a positive setting. Mixed flock/media batches are rejected before any core
+mutation. Realtime consumes these phrases locally as unavailable rather than uploading/executing.
+Settings and the shared phrase guide include all four languages; EN/pt-BR guides/README are current.
+Local validation passes: UI build, all 19 renderer checks, formatting, workspace Clippy/tests,
+feature-enabled evals, reviewed translation source hashes and repository/version guards.
+Tests cover private-bus playback/volume/capabilities, cancellation after property reads, a departed
+player, duplicate tickets, cancel-after-transcription, grammar, locked state, rejected mixed batches,
+separate consent and realtime non-upload. No personal playback, settings or provider was changed.
+Pending for VC2: system output, installed apps/unified names, and generalized mixed-batch execution.
+Pending native acceptance: visually inspect Command settings and exercise actual playback/dictation
+restoration/cancellation in the running application (VC6); native UI capture/control is unavailable
+in this session. Keep VC2 and VC6 incomplete until those remaining actions and gates are finished.
 
 **Done when:** fake native adapters prove action selection, exact arguments/identities, failure and
 cancellation; existing flock commands still work; real desktop effects await VC6.

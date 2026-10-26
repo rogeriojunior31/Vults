@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(target_os = "linux")]
 mod mpris;
 #[cfg(target_os = "linux")]
-pub use mpris::{control, watch};
+pub use mpris::{Target, control, pin, watch};
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct NowPlaying {
@@ -28,6 +28,8 @@ pub enum Control {
     Play,
     Pause,
     Volume(u8),
+    VolumeUp,
+    VolumeDown,
 }
 
 #[cfg(any(target_os = "linux", test))]
@@ -46,7 +48,7 @@ impl Control {
             Self::Previous => Some("Previous"),
             Self::Play => Some("Play"),
             Self::Pause => Some("Pause"),
-            Self::Volume(_) => None,
+            Self::Volume(_) | Self::VolumeUp | Self::VolumeDown => None,
         }
     }
 }

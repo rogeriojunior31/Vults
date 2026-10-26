@@ -678,6 +678,42 @@ pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
     })
 }
 
+pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
+    match (lang, disabled) {
+        (Lang::En, true) => "Enable media voice commands and media controls in Settings first.",
+        (Lang::PtBr, true) => {
+            "Ative comandos de voz de mídia e controles de mídia nas Configurações primeiro."
+        }
+        (Lang::Es, true) => "Activa los comandos de voz y controles multimedia en Configuración primero.",
+        (Lang::Zh, true) => "请先在设置中启用媒体语音命令和媒体控制。",
+        (Lang::En, false) => "No selected media player. Start playback and check the media controls.",
+        (Lang::PtBr, false) => {
+            "Nenhum reprodutor selecionado. Inicie a reprodução e confira os controles de mídia."
+        }
+        (Lang::Es, false) => {
+            "No hay reproductor seleccionado. Inicia la reproducción y revisa los controles multimedia."
+        }
+        (Lang::Zh, false) => "未选择媒体播放器。请开始播放并检查媒体控制。",
+    }
+}
+
+pub fn voice_media_failed(lang: Lang, completed: usize, total: usize) -> String {
+    match lang {
+        Lang::En => format!(
+            "Completed {completed} of {total} media actions; the next action failed or timed out. Check the player before trying again."
+        ),
+        Lang::PtBr => format!(
+            "{completed} de {total} ações de mídia concluídas; a próxima falhou ou excedeu o tempo. Confira o reprodutor antes de tentar novamente."
+        ),
+        Lang::Es => format!(
+            "{completed} de {total} acciones multimedia completadas; la siguiente falló o agotó el tiempo. Revisa el reproductor antes de reintentar."
+        ),
+        Lang::Zh => {
+            format!("已完成 {total} 个媒体操作中的 {completed} 个；下一操作失败或超时。请检查播放器后再试。")
+        }
+    }
+}
+
 /// Local command feedback, shared by the dispatcher and its future island presentation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VoiceFeedback {

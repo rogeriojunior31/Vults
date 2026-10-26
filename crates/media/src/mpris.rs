@@ -67,9 +67,15 @@ pub async fn watch(on_change: impl Fn(Option<NowPlaying>)) -> Result<(), String>
     }
 }
 
-/// Explicit playback and bounded volume target the current process, never a replacement player.
-pub async fn control(player: &str, what: Control) -> Result<(), String> {
-    what.validate()?;
+/// A unique process identity captured before an asynchronous command can be delayed.
+#[derive(Debug)]
+pub struct Target {
+    conn: Connection,
+    owner: String,
+    service: String,
+}
+
+pub async fn pin(player: &str) -> Result<Target, String> {
     if !player.starts_with(PREFIX) {
         return Err("The target is not an MPRIS player.".into());
     }
@@ -78,52 +84,81 @@ pub async fn control(player: &str, what: Control) -> Result<(), String> {
     let owner = bus
         .get_name_owner(player.try_into().map_err(text)?)
         .await
-        .map_err(text)?;
-    let proxy: Proxy<'_> = zbus::proxy::Builder::new(&conn)
-        .destination(owner.to_string())
         .map_err(text)?
-        .path(PATH)
-        .map_err(text)?
-        .interface(PLAYER)
-        .map_err(text)?
-        .cache_properties(zbus::proxy::CacheProperties::No)
-        .build()
-        .await
-        .map_err(text)?;
-    if matches!(what, Control::Play | Control::Pause | Control::Volume(_))
-        && !proxy.get_property::<bool>("CanControl").await.map_err(text)?
-    {
-        return Err("This player does not allow the requested control.".into());
-    }
-    match what {
-        Control::Volume(percent) => {
-            proxy
-                .set_property("Volume", f64::from(percent) / 100.0)
-                .await
-                .map_err(text)?;
+        .to_string();
+    Ok(Target {
+        conn,
+        owner,
+        service: player.into(),
+    })
+}
+
+pub async fn control(player: &str, what: Control) -> Result<(), String> {
+    what.validate()?;
+    pin(player).await?.control(what, || true).await
+}
+
+impl Target {
+    /// Recheck cancellation/consent after property reads and immediately before a native write.
+    pub async fn control(&self, what: Control, allowed: impl Fn() -> bool) -> Result<(), String> {
+        what.validate()?;
+        if !allowed() {
+            return Err("Media command cancelled.".into());
         }
-        Control::Play | Control::Pause => {
-            let capability = if what == Control::Play {
-                "CanPlay"
-            } else {
-                "CanPause"
-            };
-            if !proxy.get_property::<bool>(capability).await.map_err(text)? {
-                return Err("This player does not support the requested playback action.".into());
+        let proxy: Proxy<'_> = zbus::proxy::Builder::new(&self.conn)
+            .destination(self.owner.clone())
+            .map_err(text)?
+            .path(PATH)
+            .map_err(text)?
+            .interface(PLAYER)
+            .map_err(text)?
+            .cache_properties(zbus::proxy::CacheProperties::No)
+            .build()
+            .await
+            .map_err(text)?;
+        let capability = match what {
+            Control::Play => "CanPlay",
+            Control::Pause => "CanPause",
+            Control::Next => "CanGoNext",
+            Control::Previous => "CanGoPrevious",
+            _ => "CanControl",
+        };
+        if what != Control::PlayPause
+            && (!proxy.get_property::<bool>("CanControl").await.map_err(text)?
+                || !proxy.get_property::<bool>(capability).await.map_err(text)?)
+        {
+            return Err("This player does not support the requested control.".into());
+        }
+        let volume = match what {
+            Control::Volume(percent) => Some(f64::from(percent) / 100.0),
+            Control::VolumeUp | Control::VolumeDown => {
+                let current = proxy.get_property::<f64>("Volume").await.map_err(text)?;
+                if !current.is_finite() || current < 0.0 {
+                    return Err("Invalid player volume.".into());
+                }
+                let step = if what == Control::VolumeUp { 0.1 } else { -0.1 };
+                Some((current.min(1.0) + step).clamp(0.0, 1.0))
             }
+            _ => None,
+        };
+        let bus = DBusProxy::new(&self.conn).await.map_err(text)?;
+        let owner = bus
+            .get_name_owner(self.service.as_str().try_into().map_err(text)?)
+            .await
+            .map_err(text)?;
+        if owner.as_str() != self.owner || !allowed() {
+            return Err("Media command cancelled or player changed.".into());
+        }
+        if let Some(volume) = volume {
+            proxy.set_property("Volume", volume).await.map_err(text)?;
+        } else {
             proxy
                 .call_method(what.method().expect("Playback has a method"), &())
                 .await
                 .map_err(text)?;
         }
-        _ => {
-            proxy
-                .call_method(what.method().expect("Playback has a method"), &())
-                .await
-                .map_err(text)?;
-        }
+        Ok(())
     }
-    Ok(())
 }
 
 async fn players(conn: &Connection) -> Vec<Player> {
@@ -178,7 +213,7 @@ fn text(e: impl std::fmt::Display) -> String {
 mod tests {
     use std::sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     };
 
     use zbus::interface;
@@ -334,11 +369,35 @@ mod tests {
         assert_eq!(*volume.lock().unwrap(), 0.3);
         assert!(control(&name, Control::Volume(101)).await.is_err());
         assert_eq!(*volume.lock().unwrap(), 0.3);
+        control(&name, Control::VolumeUp)
+            .await
+            .expect("relative volume up");
+        assert!((*volume.lock().unwrap() - 0.4).abs() < 1e-9);
+        control(&name, Control::VolumeDown)
+            .await
+            .expect("relative volume down");
+        assert!((*volume.lock().unwrap() - 0.3).abs() < 1e-9);
+        let target = pin(&name).await.expect("capture player identity");
+        let checks = AtomicUsize::new(0);
+        assert!(
+            target
+                .control(Control::Play, || checks.fetch_add(1, Ordering::SeqCst) == 0)
+                .await
+                .is_err()
+        );
+        assert!(
+            !*playing.lock().unwrap(),
+            "cancellation after property reads prevents execution"
+        );
         controllable.store(false, Ordering::SeqCst);
         assert!(control(&name, Control::Play).await.is_err());
         assert!(control(&name, Control::Pause).await.is_err());
         assert!(control(&name, Control::Volume(40)).await.is_err());
         assert!(!*playing.lock().unwrap());
-        assert_eq!(*volume.lock().unwrap(), 0.3);
+        assert!((*volume.lock().unwrap() - 0.3).abs() < 1e-9);
+        controllable.store(true, Ordering::SeqCst);
+        bus.release_name(name.as_str()).await.expect("player departs");
+        assert!(target.control(Control::Play, || true).await.is_err());
+        assert!(!*playing.lock().unwrap());
     }
 }

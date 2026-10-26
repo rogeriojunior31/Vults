@@ -186,6 +186,7 @@ let nativeChat = true;
 let dictationInsert = false;
 let dictationCaption = true;
 let dictationCommands = true, dictationCommandChat = false;
+let dictationCommandMedia = false, dictationCommandMediaChanged = false;
 let dictationCommandsChanged = false, dictationCommandChatChanged = false;
 let dictationSound = true;
 let dictationKeep = "30";
@@ -1179,6 +1180,10 @@ function dictationPage(): HTMLElement[] {
           dictationCommands = on; dictationCommandsChanged = true;
           if (page === "dictation") render();
         })),
+        row(t("Media voice commands"), t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
+          await Bridge.setDictationCommands("media", on);
+          dictationCommandMedia = on; dictationCommandMediaChanged = true;
+        })),
         row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
         row(t("Names it understands"), t("Uses current project and agent names, plus replacements in Dictionary. Small spelling differences can match; when names tie, Vults asks which one."), button(t("Dictionary"), () => void Bridge.openNest("dictation-dictionary"))),
       ),
@@ -2075,6 +2080,7 @@ watchWidth(() => { if (page === "general") render(); });
 void Bridge.appSettings().then((s) => {
   dictationCaption = dictation.captions(s.dictationCaption, true);
   dictationSound = dictation.startSound(s.dictationSound, true);
+  if (!dictationCommandMediaChanged) dictationCommandMedia = s.dictationCommandMedia ?? false;
   if (!dictationCommandsChanged) dictationCommands = s.dictationCommands;
   if (!dictationCommandChatChanged) dictationCommandChat = s.dictationCommandChat;
   if (!dictationKeepChanged) dictationKeep = s.dictationKeep;
@@ -2168,6 +2174,7 @@ Bridge.onSettings((s) => {
   if (s.dictationMicrophone !== undefined) { dictationMicrophone = s.dictationMicrophone; dictationMicrophoneChanged = true; if (page === "dictation") render(); }
   if (s.dictationDoubleTap !== undefined) { dictationDoubleTap = s.dictationDoubleTap; dictationDoubleTapChanged = true; if (page === "dictation") render(); }
   if (s.dictationSpaceLock !== undefined) { dictationSpaceLock = s.dictationSpaceLock; dictationSpaceLockChanged = true; if (page === "dictation") render(); }
+  if (s.dictationCommandMedia !== undefined) { dictationCommandMedia = s.dictationCommandMedia; dictationCommandMediaChanged = true; if (page === "dictation") render(); }
   if (s.dictationCommands !== undefined) { dictationCommands = s.dictationCommands; dictationCommandsChanged = true; if (page === "dictation") render(); }
   if (s.dictationCommandChat !== undefined) { dictationCommandChat = s.dictationCommandChat; dictationCommandChatChanged = true; if (page === "dictation") render(); }
   if (s.dictationEscapeCancel !== undefined) { dictationEscapeCancel = s.dictationEscapeCancel; dictationEscapeCancelChanged = true; if (page === "dictation") render(); }

@@ -199,3 +199,14 @@ fn an_expired_admission_is_checked_after_lock_acquisition() {
     );
     assert!(state.focus.is_none());
 }
+
+#[test]
+fn playback_commands_are_consumed_without_upload_or_unadmitted_execution() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let report = route(&mut commands, &mut state, "pause media", true, now, json!([]));
+    let report = report.expect("known local command must not reach the provider");
+    assert_eq!(report.feedback, Feedback::Unavailable);
+    assert!(report.media.is_empty() && report.effects.is_empty());
+}

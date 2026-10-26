@@ -1,5 +1,9 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Media voice commands": "Comandos de voz multimedia",
+  "Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications.": "Permite comandos locales de pausa, reproducción, cambio de pista y volumen para el reproductor seleccionado. Los controles multimedia también deben estar activos. Silenciar un proyecto solo silencia sus notificaciones.",
+  "Enable media voice commands and media controls first. Say: pause media; resume music; next track; previous track; media volume 30; lower media volume. Uses the selected player. Project mute only silences notifications.": "Activa los comandos de voz y controles multimedia primero. Di: pausa la música; reanuda la música; siguiente canción; canción anterior; volumen de la música 30; baja el volumen de la música. Usa el reproductor seleccionado. Silenciar un proyecto solo silencia sus notificaciones.",
+
   "Voice commands are off. Dictation keeps its own shortcut.": "Los comandos de voz están desactivados. El dictado conserva su propio atajo.",
   "Unrecognized phrases may be sent to the current Chat.": "Las frases no reconocidas pueden enviarse al Chat actual.",
   "Unrecognized phrases stay local.": "Las frases no reconocidas permanecen en este equipo.",
@@ -1758,7 +1762,7 @@ export default {
   "Quiet a project": "Silenciar un proyecto",
   "Say: mute web; unmute web; pin api; unpin api; hide docs; unhide docs.": "Di: silenciar web; desilenciar web; fijar api; desfijar api; ocultar docs; mostrar docs.",
   "Again and undo": "Repetir y deshacer",
-  "Say: and docs too; same for web; undo. The last successful command is remembered for 90 seconds. Opening a terminal or folder and reading a snapshot cannot be undone.": "Di: y docs también; lo mismo para web; deshacer. El último comando completado se recuerda durante 90 segundos. Abrir un terminal o carpeta y leer una instantánea no puede deshacerse.",
+  "Say: and docs too; same for web; undo. Only flock commands support repeat and undo, with 90 seconds of context. Opening a terminal or folder and reading a snapshot cannot be undone.": "Di: y docs también; lo mismo para web; deshacer. Solo los comandos del grupo permiten repetir y deshacer, con 90 segundos de contexto. Abrir un terminal o carpeta y leer una instantánea no se pueden deshacer.",
   "Never answers a card": "Nunca responde una tarjeta",
   "Approve, allow, yes and other card answers are refused, even with Chat fallback on. Answer the card with a click or an authorized shortcut.": "Aprobar, permitir, sí y otras respuestas a tarjetas se rechazan, incluso con el envío a Chat activado. Responde a la tarjeta con un clic o un atajo autorizado.",
   "Local answers use the latest snapshot Vults already has. They do not refresh a connector or call a model.": "Las respuestas locales usan la última instantánea que Vults ya tiene. No actualizan conectores ni llaman a un modelo.",

@@ -921,6 +921,23 @@ also rejects replay. Commands do not add dictated words, typing time or delivery
 Copy last dictation still uses the last successful ordinary dictation, including after a command.
 An unrecognized utterance reports that it is not a command by default.
 
+VC2 adds opt-in local playback commands for the player selected in Vults' media controls.
+Enable **Dictation > Command settings > Media voice commands** and turn on media controls too.
+Hold Ctrl+Alt+Z and try `pause media`, `resume music`, `next track`, `previous track`,
+`media volume 30`, `lower media volume` or `raise media volume`. Portuguese examples include
+`pause a midia`, `retome a musica`, `proxima faixa` and `volume da midia 30`; accents are accepted.
+Relative volume changes use ten percentage points and stay within 0..100 percent.
+
+Project `mute` still affects notifications, not playback or computer audio. Commands target only
+the selected player, pin its process and stop if the selection, consent or process changes.
+They wait for dictation's temporary duck/pause restoration, support cancellation after transcription,
+and report completion only after the player acknowledges the operation. A failed or timed-out batch
+reports how many operations were acknowledged; check playback before trying again. Media-only batches
+are supported; combining media and flock commands is currently refused without applying either part.
+Playback commands do not support repeat or undo yet. Realtime voice does not execute these new desktop commands yet. Installed-app launching, system-output
+controls and natural intent interpretation by a model remain pending; transcription alone does not
+supply that interpretation. No provider request or automatic Chat fallback is made for a media command.
+
 V8.5 adds **Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its
 **What you can say** guide lists supported phrases; **Dictionary** opens the same names/replacements

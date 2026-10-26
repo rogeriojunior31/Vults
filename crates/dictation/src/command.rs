@@ -1,5 +1,7 @@
 //! Pure voice-command grammar. Names remain unresolved; no action or permission is executed.
+mod media;
 pub mod names;
+pub use media::MediaAction;
 mod phrases;
 
 use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
@@ -18,6 +20,7 @@ pub enum Preference {
 /// A description for the later name resolver and dispatcher, never a core Intent or capability.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
+    Media(MediaAction),
     Next,
     Previous,
     Focus(String),
@@ -98,7 +101,24 @@ pub fn parse(text: &str) -> Parsed {
         return Parsed::Refused;
     }
     let commands: Option<Vec<_>> = clauses.iter().map(|clause| single(clause)).collect();
-    commands.map_or(Parsed::NotCommand, Parsed::Commands)
+    commands.map_or(Parsed::NotCommand, |commands| {
+        // Folding punctuation must not turn a signed volume into a different positive value.
+        let signed = text.char_indices().any(|(index, ch)| {
+            matches!(ch, '-' | '+' | '\u{2212}' | '\u{ff0b}' | '\u{ff0d}')
+                && text[index + ch.len_utf8()..]
+                    .trim_start()
+                    .starts_with(|ch: char| ch.is_ascii_digit())
+        });
+        if signed
+            && commands
+                .iter()
+                .any(|command| matches!(command, Command::Media(MediaAction::Volume(_))))
+        {
+            Parsed::NotCommand
+        } else {
+            Parsed::Commands(commands)
+        }
+    })
 }
 
 fn head<'a>(text: &'a str, phrase: &str) -> Option<&'a str> {
@@ -147,6 +167,9 @@ fn refused(text: &str) -> bool {
         .is_some_and(|word| phrases::ANSWERS.contains(&word))
 }
 fn single(text: &str) -> Option<Command> {
+    if let Some(action) = media::parse(text) {
+        return Some(Command::Media(action));
+    }
     if let Some((_, command)) = phrases::EXACT.iter().find(|(phrase, _)| text == *phrase) {
         return Some(command.clone());
     }

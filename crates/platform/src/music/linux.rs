@@ -15,6 +15,11 @@ const TIMEOUT: Duration = Duration::from_millis(250);
 // Restoration must finish before the next recording snapshots the same players.
 static SERIAL: Mutex<()> = Mutex::new(());
 
+/// Wait off the UI thread until a previous capture has finished conditional restoration.
+pub fn wait_for_restore() {
+    drop(SERIAL.lock().unwrap_or_else(|e| e.into_inner()));
+}
+
 /// Dropping this guard restores untouched players, including on cancellation or capture failure.
 #[derive(Debug)]
 pub struct Listening(Option<oneshot::Sender<()>>);

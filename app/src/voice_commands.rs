@@ -1,4 +1,6 @@
 //! V8: the runtime owner's local command dispatcher. No microphone, model, paste or card answer.
+#[cfg(target_os = "linux")]
+mod media;
 mod targets;
 #[cfg(test)]
 mod tests;
@@ -25,11 +27,16 @@ pub struct Report {
     pub choices: Vec<Name>,
     /// Executed by the existing runtime effect loop only after the entire batch succeeds.
     pub effects: Vec<Effect>,
+    pub media: Vec<command::MediaAction>,
 }
 
 impl Report {
     pub fn chat_fallback(&self, enabled: bool) -> bool {
-        enabled && self.feedback == Feedback::NotCommand && self.choices.is_empty() && self.effects.is_empty()
+        enabled
+            && self.feedback == Feedback::NotCommand
+            && self.choices.is_empty()
+            && self.effects.is_empty()
+            && self.media.is_empty()
     }
 }
 
@@ -147,6 +154,29 @@ impl Commands {
                 }
             }
         };
+        if commands
+            .iter()
+            .any(|command| matches!(command, Command::Media(_)))
+        {
+            self.last = None;
+            let mut out = report(lang, Feedback::Unavailable);
+            // Mixed batches need an executor that can report partial external completion.
+            if commands
+                .iter()
+                .all(|command| matches!(command, Command::Media(_)))
+            {
+                out.feedback = Feedback::Requested;
+                out.text = i18n::voice_feedback(lang, Feedback::Requested).into();
+                out.media = commands
+                    .iter()
+                    .filter_map(|command| match command {
+                        Command::Media(action) => Some(*action),
+                        _ => None,
+                    })
+                    .collect();
+            }
+            return out;
+        }
         let mut shadow = state.clone();
         let mut context = self.last.clone();
         let mut effects = Vec::new();
@@ -207,6 +237,7 @@ impl Commands {
             let previous = shadow.front().cloned();
             let mut undo = None;
             let intent = match &command {
+                Command::Media(_) => return report(lang, Feedback::Unavailable),
                 Command::Next if !shadow.ordered().is_empty() => Some(Intent::FocusNext),
                 Command::Previous if !shadow.ordered().is_empty() => Some(Intent::FocusPrevious),
                 Command::Focus(_) => Some(Intent::Focus {
@@ -344,6 +375,7 @@ fn report(lang: i18n::Lang, feedback: Feedback) -> Report {
         text: i18n::voice_feedback(lang, feedback).into(),
         choices: Vec::new(),
         effects: Vec::new(),
+        media: Vec::new(),
     }
 }
 fn project_pref(pref: Preference) -> ProjectPref {
@@ -482,3 +514,6 @@ fn read(state: &State, command: &Command, session: Option<&SessionKey>, usage: V
         _ => None,
     }
 }
+
+#[cfg(target_os = "linux")]
+pub(crate) use media::start as start_media;

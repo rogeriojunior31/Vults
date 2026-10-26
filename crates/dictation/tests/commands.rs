@@ -242,3 +242,42 @@ fn lexical_normalization_is_idempotent_and_does_not_strip_name_words() {
     assert_eq!(parse("open please api"), one(Command::Focus("please api".into())));
     assert_eq!(parse("open cafe\u{301}"), one(Command::Focus("cafe".into())));
 }
+
+#[test]
+fn media_scope_preserves_negation_card_refusal_and_project_notifications() {
+    use vults_dictation::command::MediaAction;
+    for (text, action) in [
+        ("Pause the music, please.", MediaAction::Pause),
+        ("pare a m\u{ed}dia", MediaAction::Pause),
+        ("retome a m\u{fa}sica", MediaAction::Resume),
+        ("pausa la m\u{fa}sica", MediaAction::Pause),
+        ("next track", MediaAction::Next),
+        ("faixa anterior", MediaAction::Previous),
+        ("volume da m\u{ed}dia 30 por cento", MediaAction::Volume(30)),
+        ("volumen de la musica 100", MediaAction::Volume(100)),
+        ("abaixe a m\u{fa}sica", MediaAction::Quieter),
+        ("raise media volume", MediaAction::Louder),
+    ] {
+        assert_eq!(parse(text), one(Command::Media(action)), "{text}");
+    }
+    for text in [
+        "media volume 101",
+        "media volume 999999",
+        "media volume -10",
+        "media volume +10",
+        "media volume \u{2212} 10",
+        "do not pause music",
+        "what does pause media mean",
+    ] {
+        assert_eq!(parse(text), Parsed::NotCommand, "{text}");
+    }
+    assert_eq!(
+        parse("mute web"),
+        one(Command::SetPreference {
+            target: "web".into(),
+            preference: Preference::Mute,
+            on: true
+        })
+    );
+    assert_eq!(parse("pause media and then approve"), Parsed::Refused);
+}

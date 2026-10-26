@@ -553,3 +553,28 @@ fn only_unrecognized_speech_can_opt_into_chat_fallback() {
     let expired = say(&mut commands, &mut state, "api", now + Duration::from_secs(91));
     assert!(!expired.chat_fallback(true));
 }
+
+#[test]
+fn playback_is_only_a_request_and_mixed_batches_never_apply_a_flock_prefix() {
+    use vults_dictation::command::MediaAction;
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let report = say(&mut commands, &mut state, "pause media", now);
+    assert_eq!(report.feedback, Feedback::Requested);
+    assert_eq!(report.media, vec![MediaAction::Pause]);
+    assert!(report.effects.is_empty());
+    assert!(!report.chat_fallback(true));
+    let before = format!("{state:?}");
+    for text in ["mute web and then pause media", "pause media and then open api"] {
+        let report = say(&mut commands, &mut state, text, now);
+        assert_eq!(report.feedback, Feedback::Unavailable);
+        assert!(report.effects.is_empty() && report.media.is_empty());
+        assert!(!report.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+    state.locked = true;
+    let report = say(&mut commands, &mut state, "pause media", now);
+    assert_eq!(report.feedback, Feedback::Locked);
+    assert!(report.media.is_empty());
+}

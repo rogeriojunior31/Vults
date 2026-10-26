@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: e2be75e63a2b -->
+<!-- source: d708fb6560f7 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1035,6 +1035,24 @@ Com o Histórico ligado, guarda o que foi ouvido e o resultado como **Comando de
 novamente**; o backend também rejeita a repetição. Comandos não somam palavras ditadas, tempo de
 digitação ou amostras de latência de entrega. Copiar o último ditado continua usando o último ditado
 comum bem-sucedido, inclusive depois de um comando. Uma fala não reconhecida informa que não é um comando por padrão.
+
+A VC2 acrescenta comandos locais opcionais de reprodução para o reprodutor selecionado nos
+controles de mídia do Vults. Ative **Ditado > Configurações dos comandos > Comandos de voz de mídia**
+e também ligue os controles de mídia. Segure Ctrl+Alt+Z e tente `pause a mídia`, `retome a música`,
+`próxima faixa`, `faixa anterior`, `volume da mídia 30`, `abaixe a música` ou `aumente a música`.
+Também são aceitos exemplos em inglês como `pause media` e `resume music`. Variações relativas
+alteram o volume em dez pontos percentuais, sempre entre 0 e 100 por cento.
+
+Silenciar um projeto continua afetando suas notificações, não a reprodução ou o áudio do computador.
+Os comandos atuam apenas no reprodutor selecionado, fixam seu processo e param se a seleção, o
+consentimento ou o processo mudar. Eles aguardam a restauração da redução/pausa temporária do ditado,
+aceitam cancelamento após a transcrição e só informam conclusão após a resposta do reprodutor.
+Um lote com falha ou tempo excedido informa quantas operações tiveram resposta; confira a reprodução
+antes de tentar novamente. Lotes apenas de mídia são suportados; misturar mídia e comandos do bando
+é recusado sem aplicar nenhuma parte. Comandos de reprodução ainda não permitem repetir ou desfazer. A conversa por voz em tempo real ainda não executa esses novos
+comandos. Abertura de aplicativos, áudio do sistema e interpretação natural por modelo continuam
+pendentes; transcrever a fala não fornece essa interpretação. Um comando de mídia não faz requisição
+a provedor nem é encaminhado automaticamente ao Chat.
 
 A V8.5 acrescenta **Ditado > Comandos de voz**: uma visão pesquisável dos comandos/resultados retidos,
 com Copiar/Excluir explícitos e sem repetição. Compartilha o prazo do Histórico e sua confirmação de

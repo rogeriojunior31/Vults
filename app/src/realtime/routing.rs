@@ -174,8 +174,15 @@ fn route(
             text: vults_core::i18n::voice_feedback(state.lang, feedback).into(),
             choices: Vec::new(),
             effects: Vec::new(),
+            media: Vec::new(),
         }
     };
+    if !report.media.is_empty() {
+        // Realtime has no independent desktop-action admission yet.
+        report.media.clear();
+        report.feedback = Feedback::Unavailable;
+        report.text = vults_core::i18n::voice_feedback(state.lang, Feedback::Unavailable).into();
+    }
     if report.chat_fallback(true) {
         return None;
     }
