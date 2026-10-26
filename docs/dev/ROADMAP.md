@@ -100,6 +100,14 @@ and repository guards pass. Package/version files and lockfiles are unchanged at
   installed-package acceptance or Ubuntu 22.04 distribution qualification. UI build, all 19
   renderer checks, workspace formatting/Clippy/tests, feature-enabled evals, version and repository
   guards also pass; Debian control architecture/version/runtime dependency checks pass.
+- [x] 2026-10-26: refresh both READMEs around use cases, a linked feature map, installation and
+  an expandable gallery. Distinguish published 0.1.8 from the 0.1.9 development target and correct
+  the global-dictation shortcut and current tab order. Existing captures are explicitly labeled
+  as earlier builds; this documentation refresh does not close desktop acceptance.
+- [ ] Replace earlier-build README captures with native release-candidate screenshots: current
+  Flock/session diff, Chat permission in light/dark, Dictation history/settings and GitHub checks.
+  Use consented sample data with no personal paths, secrets or private repository details; record
+  the candidate revision and desktop. Native capture access is unavailable in this session.
 - [ ] Install a production candidate package for its recorded source revision (local/CI `.deb` or
   `.rpm`, not `tauri dev`). Recheck the final draft package before publication in REL-2.
 - [ ] Island: Mini and Quick, a session arriving, finishing and failing, a permission card answered by
