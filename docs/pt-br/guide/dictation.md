@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: cfd80380cf1b -->
+<!-- source: 30df0bc1e097 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -989,6 +989,9 @@ parte desconhecida não produz lote de comandos, e um pedido para responder a um
 cortesia são normalizados. Os nomes de destino continuam como descrições não resolvidas, incluindo
 nomes com pontuação normalizada, como `api-gateway` -> `api gateway`. O parser não executa essas
 descrições, grava áudio nem envia texto.
+Fala entre aspas é tratada como dado: falar ou digitar um comando entre aspas não o executa nem
+aciona o encaminhamento opcional ao Chat. Uma mensagem local explica isso no idioma selecionado.
+Recusas de permissão e volumes literais inválidos mantêm sua prioridade, mesmo dentro de aspas.
 
 A V8.2 acrescenta o resolvedor de nomes sobre uma cópia local dos nomes de projetos/agentes e das
 substituições de Suas palavras. Aliases só se aplicam quando o destino é um nome conhecido completo.

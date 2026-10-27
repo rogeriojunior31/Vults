@@ -1048,3 +1048,17 @@ fn command_key_external_only_batches_use_native_receipts_while_legacy_flock_disp
     assert!(out.desktop.is_empty());
     assert!(matches!(out.effects.as_slice(), [Effect::OpenFolder(_)]));
 }
+
+#[test]
+fn quoted_commands_do_not_execute_or_enter_optional_chat_fallback() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    for text in ["\"mute api\"", "'pause media'", "open app `Editor`"] {
+        let out = say(&mut commands, &mut state, text, now);
+        assert_eq!(out.feedback, Feedback::Quoted);
+        assert!(out.effects.is_empty() && out.desktop.is_empty() && !out.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+}

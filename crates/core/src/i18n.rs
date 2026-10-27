@@ -978,6 +978,7 @@ pub enum VoiceFeedback {
     Requested,
     ExecutionFailed,
     InvalidVolume,
+    Quoted,
     Consulting,
     SentToChat,
     ChatUnavailable,
@@ -1000,6 +1001,10 @@ pub enum VoiceFeedback {
 pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
     use VoiceFeedback::*;
     match (lang, feedback) {
+        (Lang::En, Quoted) => "Quoted speech is not executed as a voice command.",
+        (Lang::PtBr, Quoted) => "Uma fala entre aspas não é executada como comando de voz.",
+        (Lang::Es, Quoted) => "El texto entre comillas no se ejecuta como comando de voz.",
+        (Lang::Zh, Quoted) => "引述内容不会作为语音命令执行。",
         (Lang::En, InvalidVolume) => {
             "Use a whole number from 0 to 100 percent, without a plus or minus sign."
         }

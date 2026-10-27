@@ -880,6 +880,9 @@ and a card-answer request such as `next session and then approve` refuses the wh
 Case, accents, punctuation, opening fillers and polite phrasing are normalized. Target names remain
 unresolved descriptions, including punctuation-folded names such as `api-gateway` -> `api gateway`.
 The parser does not execute those descriptions, record audio or submit text.
+Quoted speech is treated as data: saying or typing a quoted command does not execute it or enter
+the optional Chat fallback. A local message explains this in the selected language. Permission
+refusals and invalid literal volumes keep their existing priority, even inside quotations.
 
 V8.2 adds the name resolver over a local snapshot of project/agent names and Your words replacements.
 Aliases apply only when their target is a complete known name. Matching tries aliases, exact names,

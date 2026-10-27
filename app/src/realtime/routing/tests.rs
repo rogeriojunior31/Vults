@@ -290,3 +290,23 @@ fn realtime_consumes_mixed_flock_batches_without_applying_their_prefix() {
         assert_eq!(format!("{state:?}"), before);
     }
 }
+
+#[test]
+fn quoted_commands_are_consumed_locally_even_when_commands_are_disabled() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    for enabled in [true, false] {
+        let out = route(
+            &mut commands,
+            &mut state,
+            "\"pause media\"",
+            enabled,
+            now,
+            json!([]),
+        )
+        .expect("quoted input stays local");
+        assert_eq!(out.feedback, Feedback::Quoted);
+        assert!(out.effects.is_empty() && out.desktop.is_empty() && !out.chat_fallback(true));
+    }
+}

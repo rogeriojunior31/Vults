@@ -641,10 +641,11 @@ cancellation; existing flock commands still work; real desktop effects await VC6
   no tools, transcript history, memory, project files or implicit CLI context. Send only the heard
   text and the minimal available action/target labels and opaque IDs disclosed in Settings; no
   paths or media metadata. A local endpoint is also an explicit choice through the gate.
-- [ ] Limit input to the existing 4096-byte command bound, output to 8 KiB, at most 8 actions and a
-  10-second app-owned deadline. Strictly deserialize a closed result schema: actions, clarification,
-  unsupported or refusal. Reject unknown fields/verbs, invalid numbers and IDs outside the frozen
-  catalog. Validate again against current state before dispatch; model output is untrusted data.
+- [x] Define the pure bounded response contract: 4096-byte heard input, 8 KiB JSON response, at most
+  8 actions/clarification choices, a closed actions/clarification/unsupported/refusal schema, strict
+  fields/numbers/verbs, scoped opaque IDs and a freshly compared frozen local catalog.
+- [ ] Wire that boundary to the runtime with a 10-second app-owned deadline and typed dispatch;
+  validate again in the state owner before any effect. Model output remains untrusted data.
 - [ ] Prompt for intent and negation, not word spotting: equivalent pause requests map to the same
   action; questions, quoted commands, negated requests, unclear scopes and unsupported actions
   never become guessed side effects. Clarify media versus computer volume and ambiguous apps.
@@ -655,6 +656,26 @@ cancellation; existing flock commands still work; real desktop effects await VC6
 
 **Done when:** deterministic model cassettes cover valid, malformed, injected, ambiguous, cancelled,
 late and unsupported results; one available qualified provider is ready for the consented VC6 test.
+
+Intent boundary (2026-10-26): pure app-owned request/catalog/decoder code now projects only bounded
+labels, kinds, allowed verbs and opaque IDs. Paths, session/app IDs, desktop definitions, media
+metadata, history and credentials are not catalog fields. Local-only bindings retain exact session
+start/folder/terminal, app definitions, selected player, focus/order and project preferences; fresh
+catalog comparison prevents old IDs rebinding after changes, without rejecting ordinary progress.
+All accepted actions become typed descriptions plus exact local selections, never parsed model prose.
+Duplicate labels require clarification; choices must be distinct known IDs with a valid scope.
+A conservative input guard keeps negated requests/paths from prompting and blocks side-effect replies
+to questions. The strict prompt treats heard text and labels as data and offers no tool authority.
+Fixtures cover each verb, malformed/duplicate/unknown fields, invalid numbers/IDs, injection, disabled
+scopes, ambiguity, fresh target changes, privacy and inclusive resource bounds (256 targets, 160-byte
+labels; oversized catalogs fail closed, never truncate). These are decoder fixtures, not model-quality
+qualification. The shared local grammar now marks quotations as a known local non-execution result,
+preserving permission/literal-volume refusal priority and blocking both Chat fallback and realtime
+upload. Four-language feedback and EN/pt-BR guide text are current. No semantic request, provider,
+consent switch or budget is activated in this slice. Independent settings/gate/200-attempt ledger,
+provider cancellation/deadline, runtime routing and actual model cassettes remain open; VC3 is incomplete.
+Local validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals, reviewed translation source marks and repository/version guards.
 
 ### VC4 · Explain commands where people use them
 `P0 · S · Needs: VC3`

@@ -167,6 +167,7 @@ fn route(
         let feedback = match command::parse(text) {
             Parsed::NotCommand => return None,
             Parsed::InvalidVolume => Feedback::InvalidVolume,
+            Parsed::Quoted => Feedback::Quoted,
             Parsed::Refused => Feedback::NotByVoice,
             Parsed::Commands(_) => Feedback::Unavailable,
         };

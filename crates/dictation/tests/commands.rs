@@ -384,3 +384,21 @@ fn mixed_audio_examples_keep_their_spoken_order_in_each_supported_grammar() {
         );
     }
 }
+
+#[test]
+fn quoted_commands_are_data_while_refusal_and_invalid_literal_volume_keep_priority() {
+    for text in [
+        "\"pause media\"",
+        "'pause media'",
+        "say `mute computer`",
+        "\u{201c}open app Editor\u{201d}",
+    ] {
+        assert_eq!(parse(text), Parsed::Quoted, "{text}");
+    }
+    assert_eq!(parse("\"approve all cards\""), Parsed::Refused);
+    assert_eq!(parse("\"computer volume -10\""), Parsed::InvalidVolume);
+    assert!(!vults_dictation::command::is_quoted("open app Bob's editor"));
+    assert!(!vults_dictation::command::is_quoted(
+        "don't stop what I am hearing"
+    ));
+}

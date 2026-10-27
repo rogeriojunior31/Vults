@@ -51,6 +51,7 @@ pub enum Parsed {
     Refused,
     NotCommand,
     InvalidVolume,
+    Quoted,
 }
 
 /// Lexical key shared with later name matching: accent/case/punctuation/space folding only.
@@ -127,8 +128,23 @@ pub fn parse(text: &str) -> Parsed {
     {
         return Parsed::InvalidVolume;
     }
+    if is_quoted(text) {
+        return Parsed::Quoted;
+    }
     let commands: Option<Vec<_>> = clauses.iter().map(|clause| single(clause)).collect();
     commands.map_or(Parsed::NotCommand, Parsed::Commands)
+}
+
+/// Quotations are data; an apostrophe inside a word is not a quotation boundary.
+pub fn is_quoted(text: &str) -> bool {
+    text.char_indices().any(|(index, ch)| {
+        matches!(ch, '"' | '`' | '\u{201c}' | '\u{201d}' | '\u{300c}' | '\u{300d}')
+            || matches!(ch, '\'' | '\u{2018}' | '\u{2019}')
+                && text[..index]
+                    .chars()
+                    .last()
+                    .is_none_or(|previous| !previous.is_alphanumeric())
+    })
 }
 
 fn head<'a>(text: &'a str, phrase: &str) -> Option<&'a str> {

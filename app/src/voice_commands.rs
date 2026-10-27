@@ -2,6 +2,7 @@
 #[cfg(target_os = "linux")]
 mod desktop;
 pub(crate) mod flock;
+pub mod intent;
 mod targets;
 #[cfg(test)]
 mod tests;
@@ -162,6 +163,10 @@ impl Commands {
         }
         let elapsed = now.checked_duration_since(self.epoch).unwrap_or(Duration::MAX);
         let (commands, mut selected, question_started) = match command::parse(transcript) {
+            Parsed::Quoted => {
+                self.pending = None;
+                return report(lang, Feedback::Quoted);
+            }
             Parsed::InvalidVolume => {
                 self.pending = None;
                 return report(lang, Feedback::InvalidVolume);
