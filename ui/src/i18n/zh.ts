@@ -1,5 +1,17 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "System audio voice commands": "系统音频语音命令",
+  "Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate.": "允许静音和调整电脑默认输出音量。使用本地 pactl，保留声道平衡并将音量调整限制为 100%。播放器控制与项目通知保持独立。",
+  "Enable system audio voice commands first. Say: mute computer; unmute computer; computer volume 40; raise computer volume; lower computer volume. Changes use the default output, not the microphone. Volume changes do not unmute it.": "请先启用系统音频语音命令。可用英语说：mute computer、unmute computer、computer volume 40、raise computer volume、lower computer volume。操作针对默认输出，不影响麦克风。更改音量不会取消静音。",
+
+  "Application voice commands": "应用语音命令",
+  "Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run.": "允许按名称打开已安装的桌面应用。名称保留在本机。同名项目和应用需要先选择。不会执行口述的命令行、网址或文件参数。",
+  "Enable application voice commands first. Say: open Obsidian; open app Firefox; open project api. Use an installed desktop name. Ambiguous names need a choice. Application launches cannot be repeated or undone.": "请先启用应用语音命令。可用英语说：open Obsidian、open app Firefox、open project api。使用已安装的桌面名称。名称有歧义时需先选择。应用启动不支持重复或撤销。",
+
+  "Media voice commands": "媒体语音命令",
+  "Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications.": "允许对所选播放器执行本地暂停、继续播放、切换曲目和音量命令。还需开启媒体控制。项目静音只关闭项目通知。",
+  "Enable media voice commands and media controls first. Say: pause media; resume music; next track; previous track; media volume 30; lower media volume. Uses the selected player. Project mute only silences notifications.": "请先启用媒体语音命令和媒体控制。可以用英语说：pause media、resume music、next track、previous track、media volume 30、lower media volume。命令作用于所选播放器。项目静音只关闭通知。",
+
   "Voice commands are off. Dictation keeps its own shortcut.": "语音命令已关闭。听写仍使用独立快捷键。",
   "Unrecognized phrases may be sent to the current Chat.": "未识别的短语可能会发送到当前聊天。",
   "Unrecognized phrases stay local.": "未识别的短语保留在本机。",
@@ -1758,7 +1770,7 @@ export default {
   "Quiet a project": "静音项目",
   "Say: mute web; unmute web; pin api; unpin api; hide docs; unhide docs.": "可以说（英语）：mute web; unmute web; pin api; unpin api; hide docs; unhide docs.",
   "Again and undo": "重复与撤销",
-  "Say: and docs too; same for web; undo. The last successful command is remembered for 90 seconds. Opening a terminal or folder and reading a snapshot cannot be undone.": "可以说（英语）：and docs too; same for web; undo。上次成功命令会保留 90 秒。打开终端、文件夹及读取快照的操作无法撤销。",
+  "Say: and docs too; same for web; undo. Only flock commands support repeat and undo, with 90 seconds of context. Opening a terminal or folder and reading a snapshot cannot be undone.": "可以说：and docs too、same for web、undo。只有鸟群命令支持重复和撤销，上下文保留 90 秒。打开终端或文件夹以及读取快照无法撤销。",
   "Never answers a card": "绝不回答卡片",
   "Approve, allow, yes and other card answers are refused, even with Chat fallback on. Answer the card with a click or an authorized shortcut.": "即使启用聊天回退，批准、允许、是等卡片回答也会被拒绝。请点击卡片或使用已授权的快捷键回答。",
   "Local answers use the latest snapshot Vults already has. They do not refresh a connector or call a model.": "本地回答使用 Vults 已有的最新快照，不刷新连接器，也不调用模型。",

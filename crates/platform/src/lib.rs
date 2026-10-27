@@ -1,7 +1,9 @@
 //! Where the app's surfaces live on each OS. Takes the toolkit's window, never Tauri itself.
 
+pub mod applications;
 #[cfg(target_os = "linux")]
 pub mod linux;
+pub mod system_audio;
 
 #[cfg(target_os = "linux")]
 pub mod jump;

@@ -4,6 +4,7 @@
 // flying in and leave by flying off where there is room; idle ones doze. A scene redraws only when
 // a frame changes, and not at all while it is off screen. The shared sky owns idle flights. Timers,
 // not requestAnimationFrame: WebKit pauses rAF while it believes the layer-shell surface is hidden.
+import { pixelRatio, watchPixelRatio } from "../pixel-ratio";
 import { Clock } from "../clock";
 import type { SessionView } from "../bridge";
 import { Bird, type Shot } from "../character/director";
@@ -218,7 +219,7 @@ type Vult = Flock & { slot: number; leaving: boolean };
 export class Scene {
   readonly canvas = document.createElement("canvas");
   private readonly ctx: CanvasRenderingContext2D;
-  private readonly dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
+  private dpr = pixelRatio();
   private readonly layout: SceneLayout;
   private zeca: Flock | null = null;
   private readonly vults = new Map<string, Vult>();
@@ -245,6 +246,13 @@ export class Scene {
     this.canvas.className = "scene";
     this.ctx = this.canvas.getContext("2d")!;
     this.size(this.layout.height);
+    watchPixelRatio(ratio => {
+      if (ratio === this.dpr) return;
+      this.dpr = ratio;
+      this.caches.clear();
+      this.size(this.layout.height);
+      if (this.active) this.refresh();
+    });
     window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", () => this.refresh());
     document.addEventListener("themechange", () => {
       this.colors = null;

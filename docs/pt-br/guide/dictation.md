@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 9071cc71fe3b -->
+<!-- source: b47e6cb1d170 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -341,6 +341,12 @@ superfície ou alternar a opção de legendas não renova esse prazo. O texto fi
 **Copiado** significa que o texto foi relido e conferido na área de transferência; use o
 comando Colar do aplicativo de destino (geralmente Ctrl+V, ou Ctrl+Shift+V em terminais).
 Nada é enviado automaticamente.
+
+No Linux, o ditado copiado solicita exclusão do histórico da área de transferência no X11 e no
+Wayland pela convenção `x-kde-passwordManagerHint`. Gerenciadores compatíveis recebem o pedido
+para não guardar o texto; outros ainda podem mantê-lo. A colagem de texto simples e a confirmação
+por releitura permanecem iguais. Isso não muda o Histórico de Ditado do próprio Vults nem sua
+configuração de retenção.
 
 A entrega confirmada também mostra o total de palavras do texto final, com rótulo localizado
 no singular ou plural. A contagem usa limites Unicode entre palavras: pontuação e emojis não
@@ -984,6 +990,39 @@ cortesia são normalizados. Os nomes de destino continuam como descrições não
 nomes com pontuação normalizada, como `api-gateway` -> `api gateway`. O parser não executa essas
 descrições, grava áudio nem envia texto.
 
+Os prefixos locais também incluem `consegue`, `você consegue`, `quero que você`,
+`gostaria que você`, `por gentileza`, `I want you to`, `I would like you to` e `quiero que`.
+Acentos são aceitos. Só palavras iniciais do pedido são removidas; nomes preservam suas palavras
+próprias e a negação nunca é descartada. Por exemplo, `consegue abrir aplicativo Firefox` ainda
+resolve um aplicativo instalado, enquanto `quero que você não abra o Firefox` nunca o abre.
+Variações de áudio incluem `increase music volume`, `turn down computer volume`,
+`aumenta o volume da música`, `reduza o volume do computador`, `subir el volumen de la musica`
+e `bajar el volumen del ordenador`. Pedidos numéricos como `set system volume to 35`,
+`ajuste o volume da música para 35` e `pon el volumen del ordenador a 35` mantêm o limite 0..100.
+Música/reprodutor e computador/saída continuam separados; `turn up volume` sozinho não escolhe um.
+Pedidos reconhecidos sem escopo, como `lower volume`, `abaixa o volume` ou `volume 30`, ficam
+no computador e pedem que você especifique música ou computador e repita o comando completo.
+Eles nunca entram no encaminhamento opcional ao Chat. Um comando de mídia conhecido com destino
+ou condição adicional, como `pause a música no Firefox` ou `pause music in five minutes`, também
+para localmente com uma explicação: os controles de mídia por voz usam apenas o reprodutor mostrado
+no Vults. Esses pedidos não escolhem reprodutor nem agendam ação. Nenhum trecho inicial do lote
+é executado, e o retorno limpa perguntas antigas sobre destinos; faça um novo pedido completo
+em vez de responder à pergunta antiga.
+`mute audio` continua sendo o pedido existente para silenciar notificações de um projeto chamado audio.
+Essas variações não ativam opções de ação, chamam o Chat nem ignoram verificações nativas de destino.
+Fala entre aspas é tratada como dado: falar ou digitar um comando entre aspas não o executa nem
+aciona o encaminhamento opcional ao Chat. Uma mensagem local explica isso no idioma selecionado.
+Recusas de permissão e volumes literais inválidos mantêm sua prioridade, mesmo dentro de aspas.
+Negações iniciais reconhecidas, como `do not pause music`, `don't open app Firefox`,
+`could you not pause music`, `não pause a música` e `no abras la aplicacion Firefox`, também ficam
+no computador, mesmo com envio ao Chat ativado. O lote inteiro é recusado sem executar seu início,
+e perguntas pendentes sobre destinos são limpas. Nomes como `No Music` ou `Do Not Disturb` continuam
+sendo nomes em `open app ...`; palavras dentro do nome não são removidas. Respostas isoladas a
+cartões, como `não`, e pedidos para responder permissões, mesmo negados, mantêm a recusa existente.
+O ditado comum continua transcrevendo frases negativas como texto; essa proteção vale para a
+interpretação de comandos, não para a entrega de texto. É reconhecimento limitado de frases,
+não compreensão semântica geral.
+
 A V8.2 acrescenta o resolvedor de nomes sobre uma cópia local dos nomes de projetos/agentes e das
 substituições de Suas palavras. Aliases só se aplicam quando o destino é um nome conhecido completo.
 A correspondência tenta aliases, nomes exatos, uma palavra inteira isolada e, depois, a menor distância
@@ -999,7 +1038,11 @@ pendentes, detalhes de sessões, uso do plano em cache e card atual do GitHub. C
 prontas nos quatro idiomas do app, sem modelo nem nova requisição de rede. Uma sequência só é
 aplicada quando todos os comandos e destinos estão prontos; uma etapa posterior ambígua ou
 indisponível deixa as anteriores sem aplicação. Uma resposta de esclarecimento revalida as opções
-originais e os destinos já resolvidos antes de executar o lote. Várias sessões na mesma pasta
+originais e os destinos já resolvidos antes de executar o lote.
+Uma sessão reiniciada com o mesmo nome/ID ou movida para outra pasta invalida sua escolha pendente.
+Um comando de terminal também mantém a identidade original do terminal; uma troca exige iniciar
+outro pedido. Progresso normal do agente e sessões novas sem relação não invalidam uma escolha
+que continua igual. Várias sessões na mesma pasta
 compartilham preferências do projeto; navegação exige uma sessão exata.
 
 O dispatcher mantém contexto de repetir/desfazer por 90 segundos. `o mesmo para web` repete a última
@@ -1030,6 +1073,115 @@ novamente**; o backend também rejeita a repetição. Comandos não somam palavr
 digitação ou amostras de latência de entrega. Copiar o último ditado continua usando o último ditado
 comum bem-sucedido, inclusive depois de um comando. Uma fala não reconhecida informa que não é um comando por padrão.
 
+A VC2 acrescenta comandos locais opcionais de reprodução para o reprodutor selecionado nos
+controles de mídia do Vults. Ative **Ditado > Configurações dos comandos > Comandos de voz de mídia**
+e também ligue os controles de mídia. Segure Ctrl+Alt+Z e tente `pause a mídia`, `retome a música`,
+`próxima faixa`, `faixa anterior`, `volume da mídia 30`, `abaixe a música` ou `aumente a música`.
+Também são aceitos exemplos em inglês como `pause media` e `resume music`. Variações relativas
+alteram o volume em dez pontos percentuais, sempre entre 0 e 100 por cento.
+
+Silenciar um projeto continua afetando suas notificações, não a reprodução ou o áudio do computador.
+Os comandos atuam apenas no reprodutor selecionado, fixam seu processo e param se a seleção, o
+consentimento ou o processo mudar. O reprodutor mostrado é capturado na admissão do comando,
+antes de agendar seu processamento. Se outro reprodutor for selecionado enquanto o comando espera,
+ou nenhum estiver disponível na admissão, o comando não adota um reprodutor posterior. Confira o
+reprodutor mostrado no Vults e repita o pedido. Essa verificação ocorre na preparação inicial do
+lote, antes de qualquer efeito. Antes do primeiro efeito, lotes de mídia verificam todos os
+recursos pedidos no reprodutor fixado. Uma etapa posterior sem suporte recusa o lote sem executar
+as anteriores. Os recursos, a seleção e o consentimento são verificados novamente a cada efeito;
+uma mudança posterior ainda pode interromper o lote. Eles aguardam a restauração da redução/pausa temporária do ditado,
+aceitam cancelamento após a transcrição e só informam conclusão após a resposta do reprodutor.
+Um lote com falha ou tempo excedido informa quantas operações tiveram resposta; confira a reprodução
+antes de tentar novamente. Lotes de mídia também podem incluir navegação do bando, preferências de projeto e consultas locais de estado. Para combinar os dois escopos, ative **Comandos de voz de mídia** (e os controles de mídia) e
+**Comandos de voz do áudio do sistema**. Por exemplo: `pause a mídia e depois volume do computador 40
+e depois retome a música`. O lote verifica todas as opções necessárias, o reprodutor selecionado,
+os recursos do reprodutor e a saída do computador antes do primeiro efeito. Uma única gravação e
+um único prazo controlam o lote; cancelamento ou falha interrompe as ações restantes. O retorno
+conta apenas operações confirmadas, sem repetição nem reversão automática. Um tempo excedido pode
+deixar a operação atual sem confirmação; confira o áudio antes de repetir.
+Comandos de reprodução ainda não permitem repetir ou desfazer. A conversa por voz em tempo real ainda não executa esses novos
+comandos. O modelo de voz existente fornece a transcrição; o Vults interpreta frases suportadas localmente,
+sem modelo de texto adicional ou integração com Claude. Variações como `stop what I am listening to`,
+`para o que estou escutando` e `continua o que eu estava ouvindo` usam o reprodutor selecionado.
+Um destino nomeado no fim da frase não é ignorado nem redirecionado para outro reprodutor.
+Isso é reconhecimento local limitado, não compreensão irrestrita da linguagem. Um comando de mídia
+reconhecido não faz requisição a provedor nem é encaminhado automaticamente ao Chat.
+
+A VC2 também acrescenta **Comandos de voz de aplicativos**, uma escolha separada desligada por
+padrão nas configurações dos comandos. Ao ativar, `abrir Obsidian` busca projetos atuais e aplicativos
+visíveis instalados no desktop em conjunto. Use `abrir aplicativo Firefox` para escolher aplicativos
+ou `abrir projeto api` para escolher o bando. Equivalentes em inglês incluem `open app Firefox`;
+em espanhol, `abrir aplicacion Firefox`. Apelidos do Dicionário valem para nomes conhecidos completos.
+Se um projeto e um app tiverem o mesmo nome, ou vários apps compartilharem um nome, o Vults pergunta
+qual usar; diga o escopo explícito ou a escolha completa exibida. Todas as perguntas do lote compartilham o prazo original de 90
+segundos; definições de aplicativos alteradas ou removidas o invalidam, inclusive aplicativos
+escolhidos antes de uma pergunta posterior.
+
+Só são usadas entradas executáveis registradas do desktop. Entradas ocultas/não exibidas ficam de
+fora; caminhos, texto de executável, URLs e argumentos de arquivo falados nunca são repassados ao
+inicializador. A identidade e a definição são conferidas novamente antes da abertura, junto com
+cancelamento, bloqueio, prazo original e consentimento atual. O sucesso informa **Abertura do aplicativo
+solicitada**, não que a janela esteja pronta. Abrir um app não permite repetir nem desfazer.
+Lotes nativos podem combinar aplicativos instalados, controles do reprodutor e da saída do
+computador na ordem falada. Por exemplo: `pause a mídia e depois abrir aplicativo Obsidian e depois
+volume do computador 40`. Ative Comandos de voz de aplicativos e cada escopo de áudio usado pelo
+lote primeiro. Todas as identidades de aplicativos são verificadas antes do primeiro efeito e
+novamente antes de cada abertura. Aplicativos sem resolução ou uma verificação de identidade
+que falha na validação prévia impedem todos os efeitos. Todas as etapas compartilham um único cancelamento e prazo de
+execução. Uma falha posterior interrompe o lote e informa apenas operações confirmadas, sem
+repetição nem reversão automática; confirmações de aplicativos são pedidos de abertura. Confira o
+resultado antes de repetir um pedido que excedeu o tempo. Lotes mistos também aceitam navegação do bando, silenciar/fixar/ocultar projetos e consultas locais.
+Por exemplo: `silenciar projeto api e depois pause a mídia e depois abrir projeto web e depois quem está esperando?`.
+O planejamento resolve todos os destinos em um estado simulado. Antes do primeiro efeito, o fluxo
+principal valida todas as etapas do bando com o estado atual; cada etapa é conferida novamente
+quando chega sua vez. Mudanças de identidade/pasta da sessão, da ordem de navegação ou uma edição
+de foco/preferência feita pelo usuário interrompem a etapa afetada. O progresso comum de outro
+agente não invalida um destino explícito. Consultas leem o estado atual com dados sensíveis
+ocultados na execução, e as respostas aparecem junto ao retorno do lote. Alterações do estado
+continuam no fluxo principal, que publica a nova tela antes de confirmá-las; preferências de
+projeto exigem salvar as configurações com sucesso para haver confirmação. Uma falha ao salvar
+ou tempo excedido pode deixar a etapa aplicada na memória; confira o resultado antes de repetir.
+Etapas confirmadas nunca são repetidas ou revertidas automaticamente. Lotes mistos não criam
+contexto de repetir/desfazer. Pedidos de terminal/pasta também são aceitos, inclusive quando são
+as únicas ações: `abrir o terminal do api e depois abrir a pasta do web`. O caminho do atalho de
+comandos aguarda a confirmação de cada pedido nativo antes de avançar. Quando a tarefa de abertura
+começa, confere novamente a identidade da sessão, a pasta e os dados exatos do terminal, além de
+consentimento, cancelamento e prazo original. A validação prévia recusa pasta absoluta ausente ou
+rota de terminal incompatível antes de qualquer efeito, com uma explicação local. Abrir pasta/editor
+e focar terminal confirmam o pedido, não uma janela pronta. Uma tarefa na fila perde a autorização
+quando sua resposta é encerrada; o cancelamento interrompe um processo filho do multiplexador em
+execução e impede novos pedidos nativos. Um pedido já enviado ao desktop ainda pode ter efeito
+após o tempo esgotar; confira a janela antes de repetir. O foco usa rotas existentes de painel/janela,
+nunca comandos ou argumentos de arquivo vindos da transcrição. Repetir/desfazer explícitos junto
+a ações nativas continuam indisponíveis. O fluxo existente do bando na voz em tempo real é
+preservado; essas confirmações do atalho não lhe concedem novas capacidades no desktop. O Zeca pode estar desligado; conversa por voz em tempo real não abre apps. A validação nativa ainda está pendente.
+
+A VC2 acrescenta **Comandos de voz do áudio do sistema**, uma opção própria desligada por padrão
+nas configurações dos comandos. Ao ativar, segure Ctrl+Alt+Z e diga `silenciar o computador`,
+`reativar o som do computador`, `volume do computador 40`, `aumente o volume do computador` ou
+`abaixe o volume do computador`. Em inglês, exemplos incluem `mute computer` e `computer volume
+40`; em espanhol, `silenciar el ordenador` e `volumen del ordenador 40`. Um pedido sem escopo,
+como `abaixe o volume`, ainda precisa indicar o destino; a interpretação natural por modelo
+continua pendente. Silenciar notificações de projeto e controlar o player mantêm seus próprios escopos.
+
+Isso controla apenas a saída padrão, nunca microfone, ganho de entrada ou estado de reprodução.
+Passos relativos são de dez pontos percentuais e os ajustes de volume ficam entre 0 e 100 por cento. O balanço
+entre canais é preservado quando os níveis atuais não nulos o definem. Mudar o volume não reativa
+a saída; use o comando explícito de reativar o som. Silenciar preserva o nível atual, inclusive um nível já acima de 100%; o resultado informa esse nível medido sem limitá-lo. Uma leitura posterior confirma volume e silêncio
+reais antes de informar sucesso. Pedidos literais com sinal ou fora do intervalo ficam locais e
+nunca entram no encaminhamento opcional ao Chat.
+
+O backend opcional exige `pactl` com saída JSON e um socket Unix local compatível com PulseAudio.
+Um `PULSE_SERVER` remoto é recusado. Identidade do servidor, índice/nome da saída, mapa de canais e
+porta ativa são capturados e conferidos antes e depois de escritas pelo índice fixado; nenhum
+apelido de saída padrão redireciona uma escrita enfileirada para uma saída recém-selecionada. Essas
+chamadas nativas separadas não formam uma transação atômica de roteamento: mudanças concorrentes de
+rota ou servidor podem impedir a confirmação. Falha ou tempo excedido informa o trecho confirmado,
+sem repetir nem reverter automaticamente. Lotes nativos podem combinar ações do reprodutor, da saída do computador e de aplicativos
+instalados na ordem falada; navegação, preferências e consultas do bando também são aceitas, com os limites acima. Voz em tempo real não executa esses comandos. Os testes usam
+estado simulado e processos privados, não áudio pessoal; a validação real de saída/cancelamento
+no desktop continua pendente.
+
 A V8.5 acrescenta **Ditado > Comandos de voz**: uma visão pesquisável dos comandos/resultados retidos,
 com Copiar/Excluir explícitos e sem repetição. Compartilha o prazo do Histórico e sua confirmação de
 exclusão individual. **O que você pode dizer** lista as frases compatíveis; **Dicionário** abre o mesmo
@@ -1049,7 +1201,7 @@ mais antigos podem ficar fora dessa janela.
   estar livre, sem texto, arquivos ou referências por enviar. Nada é acrescentado ou enviado a partir
   do rascunho existente. Chat ocupado ou indisponível informa falha local, sem enfileirar um turno para
   depois. Uma conversa nova mantém a pasta/provedor selecionados; trocar esse destino durante a
-  preparação cancela o envio. Recusas, nomes sem resolução e esclarecimentos expirados ou desatualizados nunca entram
+  preparação cancela o envio. Recusas, pedidos literais de volume inválido, nomes sem resolução e esclarecimentos expirados ou desatualizados nunca entram
   nesse envio. Alterar qualquer uma das escolhas invalida os tickets antigos de comandos.
 - **O que você pode dizer**, o mesmo guia somente de leitura da página de trabalho. A UI chinesa explica
   a gramática compatível em inglês/português/espanhol; não afirma aceitar comandos falados em chinês.

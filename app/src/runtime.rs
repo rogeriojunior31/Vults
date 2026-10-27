@@ -48,6 +48,8 @@ pub struct Inbox(mpsc::Sender<Msg>);
 #[derive(Debug)]
 enum Msg {
     #[cfg(target_os = "linux")]
+    FlockCommand(crate::voice_commands::flock::Request),
+    #[cfg(target_os = "linux")]
     Question(crate::questions::Command),
     #[cfg(target_os = "linux")]
     RealtimeCommand(crate::realtime::routing::Request),
@@ -56,6 +58,7 @@ enum Msg {
         text: String,
         ticket: crate::dictation::worker::Ticket,
         replacements: Vec<(String, String)>,
+        applications: Option<Vec<vults_platform::applications::Application>>,
     },
     #[cfg(target_os = "linux")]
     CancelVoiceCommands,
@@ -406,6 +409,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         #[cfg(target_os = "linux")]
         let mut command_reply = None;
         #[cfg(target_os = "linux")]
+        let mut flock_reply = None;
+        #[cfg(target_os = "linux")]
+        let mut flock_text = String::new();
+        #[cfg(target_os = "linux")]
+        let mut flock_ok = true;
+        #[cfg(target_os = "linux")]
         if questions.active() || matches!(msg, Msg::Question(_)) {
             let surface = if state.view().approval.is_some()
                 && matches!(msg, Msg::Question(crate::questions::Command::Open { .. }))
@@ -457,10 +466,47 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 None
             }
             #[cfg(target_os = "linux")]
+            Msg::FlockCommand(request) => {
+                if state.locked || crate::lock::locked(&app) {
+                    let _ = request.reply.send(Err(()));
+                    continue;
+                }
+                let preflight = !matches!(request.kind, crate::voice_commands::flock::Kind::Apply(_));
+                let usage = serde_json::to_value(crate::usage::usage(app.clone())).unwrap_or_default();
+                let settings = app.state::<crate::settings::SettingsState>();
+                let Ok(saved) = settings.0.lock() else {
+                    let _ = request.reply.send(Err(()));
+                    continue;
+                };
+                if !request.consent(&saved) {
+                    let _ = request.reply.send(Err(()));
+                    continue;
+                }
+                let result = request.dispatch(&mut state, usage, now, || crate::lock::locked(&app));
+                drop(saved);
+                match result {
+                    Ok((effects, text)) if !preflight => {
+                        command_effects = Some(effects);
+                        flock_text = text;
+                        flock_reply = Some(crate::voice_commands::flock::Completion::new(request));
+                    }
+                    Ok(_) => {
+                        let _ = request.reply.send(Ok(String::new()));
+                        continue;
+                    }
+                    _ => {
+                        let _ = request.reply.send(Err(()));
+                        continue;
+                    }
+                }
+                None
+            }
+            #[cfg(target_os = "linux")]
             Msg::VoiceCommand {
                 text,
                 ticket,
                 replacements,
+                applications,
             } => {
                 if crate::lock::locked(&app) {
                     voice_commands.cancel();
@@ -475,8 +521,16 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     voice_commands.cancel();
                     continue;
                 }
-                let report =
-                    ticket.dispatch(|| voice_commands.execute(&mut state, &text, &replacements, usage, now));
+                let report = ticket.dispatch(|| {
+                    voice_commands.execute_with_applications(
+                        &mut state,
+                        &text,
+                        &replacements,
+                        usage,
+                        now,
+                        applications.as_deref(),
+                    )
+                });
                 let fallback = saved.dictation_command_chat;
                 drop(saved);
                 let Some(mut report) = report else {
@@ -484,6 +538,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 };
                 if report.chat_fallback(fallback) {
                     crate::chat::voice_command(app.clone(), text, ticket);
+                    continue;
+                }
+                if !report.desktop.is_empty() {
+                    crate::voice_commands::start_desktop(app.clone(), text, ticket, report, state.lang);
                     continue;
                 }
                 command_effects = Some(std::mem::take(&mut report.effects));
@@ -779,7 +837,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if let Some(completion) = &mut command_reply {
                         completion.work().run(&app, || save().into());
                     } else {
-                        save();
+                        let saved = save();
+                        if flock_reply.is_some() {
+                            flock_ok &= saved;
+                        }
                     }
                     #[cfg(not(target_os = "linux"))]
                     save();
@@ -812,13 +873,15 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let app = app.clone();
                     #[cfg(target_os = "linux")]
                     let work = command_reply.as_mut().map(|completion| completion.work());
+                    #[cfg(target_os = "linux")]
+                    let flock_work = flock_reply.as_mut().map(|completion| completion.work());
                     tauri::async_runtime::spawn_blocking(move || {
-                        let jump = || {
+                        let jump = |allowed: &dyn Fn() -> bool| {
                             #[cfg(target_os = "linux")]
-                            let found = vults_platform::jump::jump(&terminal);
+                            let found = vults_platform::jump::jump_if(&terminal, allowed);
                             #[cfg(not(target_os = "linux"))]
                             let found = {
-                                let _ = terminal;
+                                let _ = (&terminal, allowed);
                                 false
                             };
                             if !found {
@@ -828,13 +891,17 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                             found
                         };
                         #[cfg(target_os = "linux")]
-                        if let Some(work) = work {
-                            work.run(&app, || crate::realtime::routing::Receipt::submitted(jump()));
+                        if let Some(work) = flock_work {
+                            work.run(&app, |allowed| jump(allowed));
+                        } else if let Some(work) = work {
+                            work.run(&app, || {
+                                crate::realtime::routing::Receipt::submitted(jump(&|| true))
+                            });
                         } else {
-                            jump();
+                            jump(&|| true);
                         }
                         #[cfg(not(target_os = "linux"))]
-                        jump();
+                        jump(&|| true);
                     });
                 }
                 // Checks the disk and may start the editor: off the loop.
@@ -842,16 +909,23 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let app = app.clone();
                     #[cfg(target_os = "linux")]
                     let work = command_reply.as_mut().map(|completion| completion.work());
+                    #[cfg(target_os = "linux")]
+                    let flock_work = flock_reply.as_mut().map(|completion| completion.work());
                     tauri::async_runtime::spawn_blocking(move || {
-                        let open = || crate::open::folder(&app, &path);
                         #[cfg(target_os = "linux")]
-                        if let Some(work) = work {
-                            work.run(&app, || crate::realtime::routing::Receipt::submitted(open()));
+                        let open = |allowed: &dyn Fn() -> bool| crate::open::folder_if(&app, &path, allowed);
+                        #[cfg(target_os = "linux")]
+                        if let Some(work) = flock_work {
+                            work.run(&app, |allowed| open(allowed));
+                        } else if let Some(work) = work {
+                            work.run(&app, || {
+                                crate::realtime::routing::Receipt::submitted(open(&|| true))
+                            });
                         } else {
-                            open();
+                            crate::open::folder(&app, &path);
                         }
                         #[cfg(not(target_os = "linux"))]
-                        open();
+                        crate::open::folder(&app, &path);
                     });
                 }
                 Effect::OpenFile { path, line } => {
@@ -887,6 +961,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             publish_view(&app, &view);
             crate::tray::show(&app, &view);
             last_view = Some(view);
+        }
+        #[cfg(target_os = "linux")]
+        if let Some(reply) = flock_reply {
+            reply.finish(flock_text, flock_ok, state.lang);
         }
         let prefs = core::notify::Prefs {
             on: crate::settings::notifications(&app),
@@ -1792,14 +1870,44 @@ pub(crate) fn voice_command(
     ticket: crate::dictation::worker::Ticket,
     replacements: Vec<(String, String)>,
 ) -> Result<(), String> {
+    let enabled = app
+        .state::<crate::settings::SettingsState>()
+        .0
+        .lock()
+        .is_ok_and(|saved| saved.dictation_command_apps);
+    let applications = enabled.then(vults_platform::applications::installed);
     app.state::<Inbox>()
         .0
         .try_send(Msg::VoiceCommand {
             text,
             ticket,
             replacements,
+            applications,
         })
         .map_err(|_| "The voice command worker is unavailable.".into())
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) async fn flock_command(
+    app: &AppHandle,
+    kind: crate::voice_commands::flock::Kind,
+    ticket: crate::dictation::worker::Ticket,
+    deadline: Instant,
+    scopes: (bool, bool, bool),
+) -> Result<String, ()> {
+    let (reply, receive) = tokio::sync::oneshot::channel();
+    app.state::<Inbox>()
+        .0
+        .send(Msg::FlockCommand(crate::voice_commands::flock::Request {
+            kind,
+            ticket,
+            deadline,
+            scopes,
+            reply,
+        }))
+        .await
+        .map_err(|_| ())?;
+    receive.await.map_err(|_| ())?
 }
 
 #[cfg(target_os = "linux")]

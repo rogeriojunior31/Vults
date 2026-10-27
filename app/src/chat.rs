@@ -780,6 +780,7 @@ fn voice_result(
             text: vults_core::i18n::voice_feedback(lang, feedback).into(),
             choices: Vec::new(),
             effects: Vec::new(),
+            desktop: Vec::new(),
         },
         None,
     );

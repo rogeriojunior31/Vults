@@ -678,12 +678,310 @@ pub fn dictation_shortcut(lang: Lang, id: &str) -> Option<&'static str> {
     })
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum ApplicationFeedback {
+    Disabled,
+    Missing,
+    NoTarget,
+    Requested,
+    Failed,
+}
+
+pub fn voice_application(lang: Lang, status: ApplicationFeedback) -> &'static str {
+    use ApplicationFeedback::*;
+    match (lang, status) {
+        (Lang::En, Disabled) => "Enable application voice commands in Dictation > Command settings first.",
+        (Lang::PtBr, Disabled) => {
+            "Ative comandos de voz de aplicativos em Ditado > Configurações dos comandos primeiro."
+        }
+        (Lang::Es, Disabled) => {
+            "Activa los comandos de voz de aplicaciones en Dictado > Configuración de comandos primero."
+        }
+        (Lang::Zh, Disabled) => "请先在听写 > 命令设置中启用应用语音命令。",
+        (Lang::En, Missing) => {
+            "No installed application matches that name. Use its desktop name or a Dictionary alias."
+        }
+        (Lang::PtBr, Missing) => {
+            "Nenhum aplicativo instalado corresponde a esse nome. Use o nome do desktop ou um apelido do Dicionário."
+        }
+        (Lang::Es, Missing) => {
+            "Ninguna aplicación instalada coincide con ese nombre. Usa su nombre del escritorio o un alias del Diccionario."
+        }
+        (Lang::Zh, Missing) => "没有匹配此名称的已安装应用。请使用桌面名称或词典别名。",
+        (Lang::En, NoTarget) => {
+            "No current project or installed application matches that name. Use a desktop name or a Dictionary alias."
+        }
+        (Lang::PtBr, NoTarget) => {
+            "Nenhum projeto atual ou aplicativo instalado corresponde a esse nome. Use o nome do desktop ou um apelido do Dicionário."
+        }
+        (Lang::Es, NoTarget) => {
+            "Ningún proyecto actual o aplicación instalada coincide con ese nombre. Usa un nombre del escritorio o un alias del Diccionario."
+        }
+        (Lang::Zh, NoTarget) => "没有匹配此名称的当前项目或已安装应用。请使用桌面名称或词典别名。",
+        (Lang::En, Requested) => "Application launch requested. Check its window before trying again.",
+        (Lang::PtBr, Requested) => {
+            "Abertura do aplicativo solicitada. Confira a janela antes de tentar novamente."
+        }
+        (Lang::Es, Requested) => {
+            "Apertura de la aplicación solicitada. Revisa su ventana antes de reintentar."
+        }
+        (Lang::Zh, Requested) => "已请求启动应用。请先检查应用窗口再重试。",
+        (Lang::En, Failed) => {
+            "Could not confirm the application launch. It may have changed or timed out; check its window before trying again."
+        }
+        (Lang::PtBr, Failed) => {
+            "Não foi possível confirmar a abertura. O aplicativo pode ter mudado ou excedido o tempo; confira a janela antes de tentar novamente."
+        }
+        (Lang::Es, Failed) => {
+            "No se pudo confirmar la apertura. La aplicación pudo cambiar o agotar el tiempo; revisa su ventana antes de reintentar."
+        }
+        (Lang::Zh, Failed) => "无法确认应用启动。应用可能已更改或请求超时；请先检查窗口再重试。",
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum OutputFeedback {
+    Disabled,
+    Unavailable,
+    Changed,
+    Failed,
+}
+
+pub fn voice_output_status(lang: Lang, muted: bool, percent: u32) -> String {
+    match (lang, muted) {
+        (Lang::En, true) => format!("Computer output is muted at {percent}% volume."),
+        (Lang::PtBr, true) => format!("A saída do computador está silenciada, com volume em {percent}%."),
+        (Lang::Es, true) => format!("La salida del equipo está silenciada, con volumen al {percent}%."),
+        (Lang::Zh, true) => format!("电脑输出已静音，音量为 {percent}%。"),
+        (Lang::En, false) => format!("Computer output is unmuted at {percent}% volume."),
+        (Lang::PtBr, false) => {
+            format!("A saída do computador está com som ativado, com volume em {percent}%.")
+        }
+        (Lang::Es, false) => {
+            format!("La salida del equipo tiene sonido activado, con volumen al {percent}%.")
+        }
+        (Lang::Zh, false) => format!("电脑输出已取消静音，音量为 {percent}%。"),
+    }
+}
+
+pub fn voice_output_failure(lang: Lang, feedback: OutputFeedback, completed: usize, total: usize) -> String {
+    use OutputFeedback::*;
+    match (lang, feedback) {
+        (Lang::En, Disabled) => {
+            "Enable System audio voice commands in Dictation > Command settings first.".into()
+        }
+        (Lang::PtBr, Disabled) => {
+            "Ative Comandos de voz do áudio do sistema em Ditado > Configurações dos comandos primeiro."
+                .into()
+        }
+        (Lang::Es, Disabled) => {
+            "Activa Comandos de voz del audio del sistema en Dictado > Configuración de comandos primero."
+                .into()
+        }
+        (Lang::Zh, Disabled) => "请先在听写 > 命令设置中启用系统音频语音命令。".into(),
+        (Lang::En, Unavailable) => format!(
+            "Computer audio is unavailable; {completed} of {total} actions confirmed. Check pactl and your local audio service."
+        ),
+        (Lang::PtBr, Unavailable) => format!(
+            "Áudio do computador indisponível; {completed} de {total} ações confirmadas. Confira o pactl e o serviço de áudio local."
+        ),
+        (Lang::Es, Unavailable) => format!(
+            "Audio del equipo no disponible; {completed} de {total} acciones confirmadas. Revisa pactl y el servicio de audio local."
+        ),
+        (Lang::Zh, Unavailable) => {
+            format!("电脑音频不可用；已确认 {total} 个操作中的 {completed} 个。请检查 pactl 和本地音频服务。")
+        }
+        (Lang::En, Changed) => format!(
+            "The default output changed; {completed} of {total} actions confirmed. Check the output before speaking again."
+        ),
+        (Lang::PtBr, Changed) => format!(
+            "A saída padrão mudou; {completed} de {total} ações confirmadas. Confira a saída antes de falar novamente."
+        ),
+        (Lang::Es, Changed) => format!(
+            "La salida predeterminada cambió; {completed} de {total} acciones confirmadas. Revísala antes de hablar de nuevo."
+        ),
+        (Lang::Zh, Changed) => {
+            format!("默认输出已更改；已确认 {total} 个操作中的 {completed} 个。请先检查输出再重新说话。")
+        }
+        (Lang::En, Failed) => format!(
+            "Could not confirm computer audio; {completed} of {total} actions confirmed. Check the output before trying again."
+        ),
+        (Lang::PtBr, Failed) => format!(
+            "Não foi possível confirmar o áudio do computador; {completed} de {total} ações confirmadas. Confira a saída antes de tentar novamente."
+        ),
+        (Lang::Es, Failed) => format!(
+            "No se pudo confirmar el audio del equipo; {completed} de {total} acciones confirmadas. Revisa la salida antes de reintentar."
+        ),
+        (Lang::Zh, Failed) => {
+            format!("无法确认电脑音频；已确认 {total} 个操作中的 {completed} 个。请先检查输出再重试。")
+        }
+    }
+}
+
+pub fn voice_media_unavailable(lang: Lang, disabled: bool) -> &'static str {
+    match (lang, disabled) {
+        (Lang::En, true) => {
+            "Enable Media voice commands in Dictation > Command settings, and turn on Media controls."
+        }
+        (Lang::PtBr, true) => {
+            "Ative Comandos de voz de mídia em Ditado > Configurações dos comandos e ligue os controles de mídia."
+        }
+        (Lang::Es, true) => {
+            "Activa Comandos de voz multimedia en Dictado > Configuración de comandos y los controles multimedia."
+        }
+        (Lang::Zh, true) => "请在听写 > 命令设置中启用媒体语音命令，并开启媒体控制。",
+        (Lang::En, false) => "No selected media player. Start playback and check the media controls.",
+        (Lang::PtBr, false) => {
+            "Nenhum reprodutor selecionado. Inicie a reprodução e confira os controles de mídia."
+        }
+        (Lang::Es, false) => {
+            "No hay reproductor seleccionado. Inicia la reproducción y revisa los controles multimedia."
+        }
+        (Lang::Zh, false) => "未选择媒体播放器。请开始播放并检查媒体控制。",
+    }
+}
+
+pub fn voice_external_unavailable(lang: Lang, folder: bool) -> &'static str {
+    match (lang, folder) {
+        (Lang::En, true) => {
+            "The session folder is unavailable; the batch did not run. Check that its absolute path exists."
+        }
+        (Lang::PtBr, true) => {
+            "A pasta da sessão está indisponível; o lote não foi executado. Confira se o caminho absoluto existe."
+        }
+        (Lang::Es, true) => {
+            "La carpeta de la sesión no está disponible; el lote no se ejecutó. Comprueba que la ruta absoluta exista."
+        }
+        (Lang::Zh, true) => "会话文件夹不可用，批次未执行。请检查其绝对路径是否存在。",
+        (Lang::En, false) => {
+            "No supported terminal target is available for this session; the batch did not run. Check its terminal integration."
+        }
+        (Lang::PtBr, false) => {
+            "Não há um terminal compatível disponível para esta sessão; o lote não foi executado. Confira a integração do terminal."
+        }
+        (Lang::Es, false) => {
+            "No hay un terminal compatible disponible para esta sesión; el lote no se ejecutó. Revisa la integración del terminal."
+        }
+        (Lang::Zh, false) => "此会话没有可用的受支持终端，批次未执行。请检查终端集成。",
+    }
+}
+
+pub fn voice_external_requested(lang: Lang, folder: bool) -> &'static str {
+    match (lang, folder) {
+        (Lang::En, true) => "Folder open requested. Window readiness is not confirmed.",
+        (Lang::PtBr, true) => "Abertura da pasta solicitada. A janela pronta não foi confirmada.",
+        (Lang::Es, true) => "Apertura de carpeta solicitada. No se confirmó que la ventana esté lista.",
+        (Lang::Zh, true) => "已请求打开文件夹，尚未确认窗口已就绪。",
+        (Lang::En, false) => "Terminal focus requested. Window readiness is not confirmed.",
+        (Lang::PtBr, false) => "Foco no terminal solicitado. A janela pronta não foi confirmada.",
+        (Lang::Es, false) => "Enfoque del terminal solicitado. No se confirmó que la ventana esté lista.",
+        (Lang::Zh, false) => "已请求聚焦终端，尚未确认窗口已就绪。",
+    }
+}
+
+pub fn voice_flock_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
+    match (lang, success) {
+        (Lang::En, true) => format!("Confirmed {completed} of {total} flock and desktop actions."),
+        (Lang::PtBr, true) => format!("{completed} de {total} ações do bando e do computador confirmadas."),
+        (Lang::Es, true) => format!("{completed} de {total} acciones del grupo y del equipo confirmadas."),
+        (Lang::Zh, true) => format!("已确认 {total} 个群组和桌面操作中的 {completed} 个。"),
+        (Lang::En, false) => format!(
+            "Confirmed {completed} of {total} flock and desktop actions before the batch stopped. Check the result before trying again; the failed action may already have taken effect. No actions were retried or rolled back."
+        ),
+        (Lang::PtBr, false) => format!(
+            "{completed} de {total} ações do bando e do computador confirmadas antes da interrupção do lote. Confira o resultado antes de tentar novamente; a ação com falha pode já ter sido aplicada. Nenhuma ação foi repetida ou revertida."
+        ),
+        (Lang::Es, false) => format!(
+            "{completed} de {total} acciones del grupo y del equipo confirmadas antes de detener el lote. Revisa el resultado antes de reintentar; la acción fallida puede haberse aplicado. No se repitió ni revirtió ninguna acción."
+        ),
+        (Lang::Zh, false) => format!(
+            "批次停止前已确认 {total} 个群组和桌面操作中的 {completed} 个。请检查结果后再试；失败的操作可能已生效。未重试或回滚任何操作。"
+        ),
+    }
+}
+
+pub fn voice_desktop_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
+    match (lang, success) {
+        (Lang::En, true) => format!(
+            "Confirmed {completed} of {total} desktop actions. Application confirmations mean launch requests, not ready windows."
+        ),
+        (Lang::PtBr, true) => format!(
+            "{completed} de {total} ações do computador confirmadas. A confirmação de um aplicativo indica o pedido de abertura, não uma janela pronta."
+        ),
+        (Lang::Es, true) => format!(
+            "{completed} de {total} acciones del equipo confirmadas. La confirmación de una aplicación indica la solicitud de apertura, no una ventana lista."
+        ),
+        (Lang::Zh, true) => {
+            format!("已确认 {total} 个桌面操作中的 {completed} 个。应用确认表示已请求启动，并非窗口已就绪。")
+        }
+        (Lang::En, false) => format!(
+            "Confirmed {completed} of {total} desktop actions before the batch stopped. Check command settings and targets before trying again; no actions were retried. Application confirmations mean launch requests."
+        ),
+        (Lang::PtBr, false) => format!(
+            "{completed} de {total} ações do computador confirmadas antes da interrupção do lote. Confira as configurações dos comandos e os destinos antes de tentar novamente; nenhuma ação foi repetida. A confirmação de um aplicativo indica o pedido de abertura."
+        ),
+        (Lang::Es, false) => format!(
+            "{completed} de {total} acciones del equipo confirmadas antes de detener el lote. Revisa la configuración de comandos y los destinos antes de reintentar; no se repitió ninguna acción. La confirmación de una aplicación indica la solicitud de apertura."
+        ),
+        (Lang::Zh, false) => format!(
+            "批次停止前已确认 {total} 个桌面操作中的 {completed} 个。请检查命令设置和目标后再试；未重试任何操作。应用确认表示已请求启动。"
+        ),
+    }
+}
+
+pub fn voice_audio_batch(lang: Lang, success: bool, completed: usize, total: usize) -> String {
+    match (lang, success) {
+        (Lang::En, true) => format!("Confirmed {completed} of {total} player and computer audio actions."),
+        (Lang::PtBr, true) => {
+            format!("{completed} de {total} ações de áudio do reprodutor e do computador confirmadas.")
+        }
+        (Lang::Es, true) => {
+            format!("{completed} de {total} acciones de audio del reproductor y del equipo confirmadas.")
+        }
+        (Lang::Zh, true) => format!("已确认 {total} 个播放器和电脑音频操作中的 {completed} 个。"),
+        (Lang::En, false) => format!(
+            "Confirmed {completed} of {total} audio actions. The batch stopped because a control is disabled, unavailable, changed or timed out. Check Command settings, the player and computer output before trying again; no actions were retried."
+        ),
+        (Lang::PtBr, false) => format!(
+            "{completed} de {total} ações de áudio confirmadas. O lote parou porque um controle está desligado, indisponível, mudou ou excedeu o tempo. Confira as configurações dos comandos, o reprodutor e a saída do computador antes de tentar novamente; nenhuma ação foi repetida."
+        ),
+        (Lang::Es, false) => format!(
+            "{completed} de {total} acciones de audio confirmadas. El lote se detuvo porque un control está desactivado, no está disponible, cambió o agotó el tiempo. Revisa la configuración de comandos, el reproductor y la salida del equipo antes de reintentar; no se repitió ninguna acción."
+        ),
+        (Lang::Zh, false) => format!(
+            "已确认 {total} 个音频操作中的 {completed} 个。某个控制已关闭、不可用、已更改或超时，因此批次已停止。请检查命令设置、播放器和电脑输出后再试；未重试任何操作。"
+        ),
+    }
+}
+
+pub fn voice_media_failed(lang: Lang, completed: usize, total: usize) -> String {
+    match lang {
+        Lang::En => format!(
+            "Completed {completed} of {total} media actions; the next action failed or timed out. Check the player before trying again."
+        ),
+        Lang::PtBr => format!(
+            "{completed} de {total} ações de mídia concluídas; a próxima falhou ou excedeu o tempo. Confira o reprodutor antes de tentar novamente."
+        ),
+        Lang::Es => format!(
+            "{completed} de {total} acciones multimedia completadas; la siguiente falló o agotó el tiempo. Revisa el reproductor antes de reintentar."
+        ),
+        Lang::Zh => {
+            format!("已完成 {total} 个媒体操作中的 {completed} 个；下一操作失败或超时。请检查播放器后再试。")
+        }
+    }
+}
+
 /// Local command feedback, shared by the dispatcher and its future island presentation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VoiceFeedback {
     Done,
     Requested,
     ExecutionFailed,
+    InvalidVolume,
+    Quoted,
+    Negated,
+    AudioScopeRequired,
+    UnsupportedMediaTarget,
     Consulting,
     SentToChat,
     ChatUnavailable,
@@ -706,6 +1004,42 @@ pub enum VoiceFeedback {
 pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
     use VoiceFeedback::*;
     match (lang, feedback) {
+        (Lang::En, AudioScopeRequired) => "Specify music or computer volume, then repeat the full command.",
+        (Lang::PtBr, AudioScopeRequired) => {
+            "Especifique o volume da música ou do computador e repita o comando completo."
+        }
+        (Lang::Es, AudioScopeRequired) => {
+            "Indica el volumen de la música o del ordenador y repite el comando completo."
+        }
+        (Lang::Zh, AudioScopeRequired) => "请明确要调整音乐音量还是电脑音量，然后重新说出完整指令。",
+        (Lang::En, UnsupportedMediaTarget) => {
+            "Voice media commands use the player shown in Vults. Repeat without a player name or extra condition."
+        }
+        (Lang::PtBr, UnsupportedMediaTarget) => {
+            "Comandos de mídia usam o reprodutor mostrado no Vults. Repita sem nomear um reprodutor ou acrescentar condições."
+        }
+        (Lang::Es, UnsupportedMediaTarget) => {
+            "Los comandos de multimedia usan el reproductor mostrado en Vults. Repite sin nombrar un reproductor ni añadir condiciones."
+        }
+        (Lang::Zh, UnsupportedMediaTarget) => {
+            "媒体语音指令使用 Vults 中显示的播放器。请重新说出指令，不要指定播放器名称或附加条件。"
+        }
+        (Lang::En, Negated) => "Negated requests stay local and do not run voice commands.",
+        (Lang::PtBr, Negated) => "Pedidos negados ficam neste computador e não executam comandos de voz.",
+        (Lang::Es, Negated) => {
+            "Las peticiones negadas permanecen en este equipo y no ejecutan comandos de voz."
+        }
+        (Lang::Zh, Negated) => "否定请求仅在本机处理，不会执行语音指令。",
+        (Lang::En, Quoted) => "Quoted speech is not executed as a voice command.",
+        (Lang::PtBr, Quoted) => "Uma fala entre aspas não é executada como comando de voz.",
+        (Lang::Es, Quoted) => "El texto entre comillas no se ejecuta como comando de voz.",
+        (Lang::Zh, Quoted) => "引述内容不会作为语音命令执行。",
+        (Lang::En, InvalidVolume) => {
+            "Use a whole number from 0 to 100 percent, without a plus or minus sign."
+        }
+        (Lang::PtBr, InvalidVolume) => "Use um volume inteiro entre 0 e 100 por cento, sem sinal.",
+        (Lang::Es, InvalidVolume) => "Usa un volumen entero entre 0 y 100 por ciento, sin signo.",
+        (Lang::Zh, InvalidVolume) => "请使用 0 到 100 之间不带符号的整数音量百分比。",
         (Lang::En, SentToChat) => "Sent to Zeca. Follow the reply in Chat.",
         (Lang::PtBr, SentToChat) => "Enviado ao Zeca. Acompanhe a resposta no Chat.",
         (Lang::Es, SentToChat) => "Enviado a Zeca. Sigue la respuesta en Chat.",

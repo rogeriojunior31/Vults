@@ -1,5 +1,6 @@
 // One persistent bird per resting session (idle, or finished and waiting for the next prompt),
 // shared by the compact and open island.
+import { pixelRatio, watchPixelRatio } from "../pixel-ratio";
 import { Bird, type Perch, type Thermal } from "../character/director";
 import { FrameCache, frameWidth, type SpriteSet } from "../character/sprites";
 import { Clock } from "../clock";
@@ -91,7 +92,7 @@ export class Sky {
   private visitors = true;
   /** When the next visit is due; set once there are sessions to visit. */
   private nextVisit: number | null = null;
-  private readonly dpr = Math.max(1, Math.round(devicePixelRatio || 1));
+  private dpr = pixelRatio();
   private timer: number | undefined;
   /** Where the last frame drew (the island's box then), or null when it drew nothing. */
   private painted: SkyBox | null = null;
@@ -110,6 +111,15 @@ export class Sky {
     this.canvas.width = WIDTH * this.dpr;
     this.canvas.height = HEIGHT * this.dpr;
     this.ctx = this.canvas.getContext("2d")!;
+    watchPixelRatio(ratio => {
+      if (ratio === this.dpr) return;
+      this.dpr = ratio;
+      this.caches.clear();
+      this.canvas.width = WIDTH * ratio;
+      this.canvas.height = HEIGHT * ratio;
+      this.painted = null;
+      if (this.active) this.draw();
+    });
     document.addEventListener("themechange", () => {
       this.colors = null;
       if (this.active) this.draw();

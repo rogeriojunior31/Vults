@@ -1574,3 +1574,28 @@ fn cleanup_keeps_typed_local_edits_and_retained_heard_text_with_measured_outcome
         assert!(ticket.history_entry("copied").is_none());
     }
 }
+
+#[test]
+fn a_native_ticket_is_claimed_once_and_cancelled_tickets_never_admit_work() {
+    let ticket = Ticket::test_command();
+    assert!(ticket.claim_native());
+    assert!(!ticket.clone().claim_native());
+    let cancelled = Ticket::test_command();
+    cancelled.test_cancel();
+    assert!(!cancelled.claim_native());
+}
+
+#[test]
+fn cancel_key_invalidates_native_work_after_transcription_has_finished() {
+    let h = Harness::new();
+    let ticket = {
+        let mut control = h.state.control.lock().unwrap();
+        control.command = true;
+        control.busy = false;
+        Ticket::new(&h.state.control, &control)
+    };
+    assert!(ticket.claim_native());
+    h.state.key("talk-cancel", true);
+    assert!(!ticket.valid());
+    assert!(!ticket.claim_native());
+}

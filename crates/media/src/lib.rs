@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(target_os = "linux")]
 mod mpris;
 #[cfg(target_os = "linux")]
-pub use mpris::{control, watch};
+pub use mpris::{Target, control, pin, watch};
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct NowPlaying {
@@ -25,6 +25,32 @@ pub enum Control {
     PlayPause,
     Next,
     Previous,
+    Play,
+    Pause,
+    Volume(u8),
+    VolumeUp,
+    VolumeDown,
+}
+
+#[cfg(any(target_os = "linux", test))]
+impl Control {
+    fn validate(self) -> Result<(), String> {
+        if matches!(self, Self::Volume(percent) if percent > 100) {
+            return Err("Player volume must be between 0 and 100 percent.".into());
+        }
+        Ok(())
+    }
+
+    fn method(self) -> Option<&'static str> {
+        match self {
+            Self::PlayPause => Some("PlayPause"),
+            Self::Next => Some("Next"),
+            Self::Previous => Some("Previous"),
+            Self::Play => Some("Play"),
+            Self::Pause => Some("Pause"),
+            Self::Volume(_) | Self::VolumeUp | Self::VolumeDown => None,
+        }
+    }
 }
 
 /// One player as read from the bus.
@@ -115,6 +141,22 @@ pub fn clean_artist(raw: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explicit_playback_never_uses_a_toggle_and_volume_stays_bounded() {
+        assert_eq!(Control::Play.method(), Some("Play"));
+        assert_eq!(Control::Pause.method(), Some("Pause"));
+        assert_eq!(Control::PlayPause.method(), Some("PlayPause"));
+        assert_eq!(Control::Next.method(), Some("Next"));
+        assert_eq!(Control::Previous.method(), Some("Previous"));
+        for percent in 0..=100 {
+            assert!(Control::Volume(percent).validate().is_ok());
+            assert_eq!(Control::Volume(percent).method(), None);
+        }
+        for percent in 101..=u8::MAX {
+            assert!(Control::Volume(percent).validate().is_err());
+        }
+    }
 
     fn player(name: &str, status: Status, title: &str) -> Player {
         Player {

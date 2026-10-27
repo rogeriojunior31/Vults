@@ -166,6 +166,11 @@ fn route(
         commands.cancel();
         let feedback = match command::parse(text) {
             Parsed::NotCommand => return None,
+            Parsed::InvalidVolume => Feedback::InvalidVolume,
+            Parsed::Quoted => Feedback::Quoted,
+            Parsed::Negated => Feedback::Negated,
+            Parsed::AudioScopeRequired => Feedback::AudioScopeRequired,
+            Parsed::UnsupportedMediaTarget => Feedback::UnsupportedMediaTarget,
             Parsed::Refused => Feedback::NotByVoice,
             Parsed::Commands(_) => Feedback::Unavailable,
         };
@@ -174,8 +179,15 @@ fn route(
             text: vults_core::i18n::voice_feedback(state.lang, feedback).into(),
             choices: Vec::new(),
             effects: Vec::new(),
+            desktop: Vec::new(),
         }
     };
+    if !report.desktop.is_empty() {
+        // Realtime has no independent desktop-action admission yet.
+        report.desktop.clear();
+        report.feedback = Feedback::Unavailable;
+        report.text = vults_core::i18n::voice_feedback(state.lang, Feedback::Unavailable).into();
+    }
     if report.chat_fallback(true) {
         return None;
     }

@@ -199,3 +199,135 @@ fn an_expired_admission_is_checked_after_lock_acquisition() {
     );
     assert!(state.focus.is_none());
 }
+
+#[test]
+fn playback_commands_are_consumed_without_upload_or_unadmitted_execution() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let report = route(&mut commands, &mut state, "pause media", true, now, json!([]));
+    let report = report.expect("known local command must not reach the provider");
+    assert_eq!(report.feedback, Feedback::Unavailable);
+    assert!(report.desktop.is_empty() && report.effects.is_empty());
+}
+
+#[test]
+fn app_open_requests_are_consumed_without_upload_or_a_native_launch() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let report = route(
+        &mut commands,
+        &mut state,
+        "open app Obsidian",
+        true,
+        now,
+        json!([]),
+    )
+    .unwrap();
+    assert_eq!(report.feedback, Feedback::Unavailable);
+    assert!(report.desktop.is_empty() && report.effects.is_empty());
+}
+
+#[test]
+fn output_control_speech_never_uploads_or_executes_through_realtime() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let out = route(&mut commands, &mut state, "mute computer", true, now, json!([])).unwrap();
+    assert_eq!(out.feedback, Feedback::Unavailable);
+    assert!(out.desktop.is_empty() && out.effects.is_empty());
+}
+
+#[test]
+fn mixed_audio_commands_stay_local_and_unavailable_in_realtime() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = crate::voice_commands::Commands::new(now);
+    let out = route(
+        &mut commands,
+        &mut state,
+        "pause media and then mute computer",
+        true,
+        now,
+        serde_json::json!([]),
+    )
+    .expect("recognized local batch");
+    assert_eq!(out.feedback, crate::voice_commands::Feedback::Unavailable);
+    assert!(out.desktop.is_empty() && out.effects.is_empty());
+    assert!(!out.chat_fallback(true));
+}
+
+#[test]
+fn batches_containing_native_launches_are_never_uploaded_by_realtime() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    for text in [
+        "pause media and then open app Editor",
+        "open app Editor and then mute computer",
+    ] {
+        let out = route(&mut commands, &mut state, text, true, now, json!([])).expect("local command");
+        assert!(out.desktop.is_empty() && out.effects.is_empty());
+        assert!(!out.chat_fallback(true));
+    }
+}
+
+#[test]
+fn realtime_consumes_mixed_flock_batches_without_applying_their_prefix() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    for text in [
+        "mute api and then pause media",
+        "mute computer and then open web and then who is waiting",
+    ] {
+        let out =
+            route(&mut commands, &mut state, text, true, now, json!([])).expect("recognized local batch");
+        assert_eq!(out.feedback, Feedback::Unavailable);
+        assert!(out.desktop.is_empty() && out.effects.is_empty() && !out.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+}
+
+#[test]
+fn quoted_commands_are_consumed_locally_even_when_commands_are_disabled() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    for enabled in [true, false] {
+        let out = route(
+            &mut commands,
+            &mut state,
+            "\"pause media\"",
+            enabled,
+            now,
+            json!([]),
+        )
+        .expect("quoted input stays local");
+        assert_eq!(out.feedback, Feedback::Quoted);
+        assert!(out.effects.is_empty() && out.desktop.is_empty() && !out.chat_fallback(true));
+    }
+}
+
+#[test]
+fn local_audio_and_negation_guards_never_reach_realtime_even_when_commands_are_off() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    for enabled in [true, false] {
+        for (text, feedback) in [
+            ("do not pause music", Feedback::Negated),
+            ("lower volume", Feedback::AudioScopeRequired),
+            ("pause music in Firefox", Feedback::UnsupportedMediaTarget),
+        ] {
+            let out = route(&mut commands, &mut state, text, enabled, now, json!([]))
+                .expect("known audio limitations stay local");
+            assert_eq!(out.feedback, feedback);
+            assert!(out.effects.is_empty() && out.desktop.is_empty() && !out.chat_fallback(true));
+            assert_eq!(format!("{state:?}"), before);
+        }
+    }
+}

@@ -44,7 +44,7 @@ become telemetry by accident.
 
 ## Dictation model requests
 
-Local speech-to-text, dictionary passes and voice commands do not call a remote model.
+Local speech-to-text, dictionary passes and deterministic voice commands do not call a remote model.
 The optional N3 model features below are separate requests on the user's behalf, not permission
 to send a transcript merely because recording or Chat is enabled. Each switch is off by default
 and changed in the Settings webview, with the provider, data and limit explained before enabling
@@ -88,6 +88,19 @@ it. Reusing Chat's provider does not reuse consent to a different feature.
   consent. Remote voice consent does not enable follow-up listening or model clean-up;
   [0028](0028-spoken-replies-through-a-realtime-model.md) still governs listening and audio.
 
+## Local voice commands (VC1)
+
+Dictation and commands reuse the existing speech transcription model. The app interprets command
+text locally using supported phrases and current targets. This needs no additional text-model
+provider, Claude integration, intent request budget or network feature. The separate default-off
+local action switches authorize only the typed actions in
+[0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1).
+
+The earlier `voice-command-intent` proposal is withdrawn before activation following the owner's
+scope correction. Existing optional transcript clean-up and unknown-speech Chat handoff retain
+their own consent and network gates; neither is required to run local commands. This correction
+creates no exemption for other network requests and changes none of the general consent rules.
+
 ## Consequences
 
 - A test runs a day with every feature off and counts zero requests.
@@ -104,6 +117,12 @@ it. Reusing Chat's provider does not reuse consent to a different feature.
   id suffix, so they install beside stable without sharing settings or the keyring.
 
 ## History
+
+- 2026-10-26: owner correction withdraws the unactivated command-intent network proposal;
+  existing speech transcription plus local command matching needs no separate text provider.
+
+- 2026-10-26: VC1 initially proposed independent command-model consent; superseded by the owner
+  correction above before activation.
 
 - 2026-10-17: N3 V0.4 names the three independently opted-in model features and their rolling
   limits. Q3 keeps loopback calls behind the switch, quota and trace; only remote monetary

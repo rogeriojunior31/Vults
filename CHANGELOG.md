@@ -4,6 +4,14 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Add opt-in local voice commands for selected-player playback, default computer audio and installed applications, including ordered batches with flock navigation and terminal/folder submission receipts. Keep ambiguous, quoted, negated and unsupported player-specific requests local, revalidate targets and cancellation, and report only confirmed completion. Native desktop acceptance remains pending before 0.1.9 publication.
+
+- Include LICENSE and NOTICE in the Linux Debian/RPM package resources alongside the bundled hook.
+
+- Request clipboard-history exclusion for copied dictation on Linux using the existing KDE hint, while keeping plain-text paste and read-back confirmation. Clipboard managers must support the hint; Vults history retention is unchanged.
+
+- Refresh Scene and Sky canvas resolution and sprite caches when the display scale changes, including successive and fractional monitor transitions. Keep CSS layout and zoom unchanged and avoid starting hidden animation.
+
 - Check Zeca as the recipient before preparing questions from Flock, Connections or the command palette. Preserve drafts and running replies on rejection, and cancel preparation after a conversation switch without sending or resetting.
 
 - Bind local memory/continuation commands and chat transcription to Zeca and their originating conversation. Keep rejected or newer drafts editable and cancel obsolete recordings on conversation changes.

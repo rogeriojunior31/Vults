@@ -304,6 +304,11 @@ stays in memory. Dictation has its own Settings category.
 **Copied** means the clipboard was read back and matched the text; use your destination
 app's Paste command (often Ctrl+V, or Ctrl+Shift+V in terminals). Nothing is submitted automatically.
 
+On Linux, copied dictation requests clipboard-history exclusion on X11 and Wayland using the
+`x-kde-passwordManagerHint` convention. Managers that honor it are asked not to retain the text;
+other managers may still keep it. Plain-text paste and read-back confirmation remain unchanged.
+This does not change Vults' own Dictation history or its retention setting.
+
 Confirmed delivery also shows a word total from the final text, with a localized singular or
 plural label. It uses Unicode word boundaries: punctuation and emoji do not count, and Chinese
 ideographs count individually. The total stays with the delivery line after its caption clears.
@@ -876,6 +881,37 @@ Case, accents, punctuation, opening fillers and polite phrasing are normalized. 
 unresolved descriptions, including punctuation-folded names such as `api-gateway` -> `api gateway`.
 The parser does not execute those descriptions, record audio or submit text.
 
+Local request prefixes also include `consegue`, `voce consegue`, `quero que voce`,
+`gostaria que voce`, `por gentileza`, `I want you to`, `I would like you to` and `quiero que`.
+Accents are accepted. Only leading request words are removed; names keep their own words and
+negation is never discarded. For example, `consegue abrir aplicativo Firefox` still resolves an
+installed app, while `quero que voce nao abra o Firefox` never launches it.
+Audio variations include `increase music volume`, `turn down computer volume`,
+`aumenta o volume da musica`, `reduza o volume do computador`, `subir el volumen de la musica`
+and `bajar el volumen del ordenador`. Numeric requests such as `set system volume to 35`,
+`ajuste o volume da musica para 35` and `pon el volumen del ordenador a 35` keep the 0..100 limit.
+Music/player and computer/output scopes stay separate; a bare `turn up volume` does not select one.
+Recognized unscoped requests such as `lower volume`, `abaixa o volume` or `volume 30` stay local
+and ask you to specify music or computer volume and repeat the full command. They never enter the
+optional Chat handoff. A known media command with an extra destination or condition, such as
+`pause music in Firefox` or `pause music in five minutes`, also stops locally with an explanation:
+voice media controls use only the player shown in Vults. Such requests do not select a player or
+schedule an action. An affected batch executes no prefix, and the feedback clears any old target
+question; reply with a new complete command rather than an answer to that old question.
+`mute audio` remains the existing project-notification request for a project named audio.
+These variations do not enable an action switch, call Chat or bypass native target checks.
+Quoted speech is treated as data: saying or typing a quoted command does not execute it or enter
+the optional Chat fallback. A local message explains this in the selected language. Permission
+refusals and invalid literal volumes keep their existing priority, even inside quotations.
+Recognized leading negations such as `do not pause music`, `don't open app Firefox`,
+`could you not pause music`, `nao pause a musica` and `no abras la aplicacion Firefox` also stay
+local, even with Chat handoff enabled. The whole batch is rejected without executing a prefix,
+and any pending target question is cleared. Names such as `No Music` or `Do Not Disturb` remain
+names in `open app ...`; words inside a name are not stripped. Standalone card answers such as
+`no`, and permission-answer requests even when negated, retain the existing refusal behavior.
+Ordinary dictation still transcribes negative sentences as text; this guard applies to command
+interpretation, not text delivery. This is bounded phrase recognition, not general semantic understanding.
+
 V8.2 adds the name resolver over a local snapshot of project/agent names and Your words replacements.
 Aliases apply only when their target is a complete known name. Matching tries aliases, exact names,
 a single whole word, then the closest Unicode edit distance: one edit for queries up to four normalized
@@ -888,7 +924,11 @@ V8.3 adds a local dispatcher for navigation, mute/pin/hide and reads of pending 
 cached plan usage and the current GitHub card. Reads use templates in all four app languages, without
 a model or a fresh network request. A sequence is applied only after every command and target is ready;
 an ambiguous or unavailable later step leaves earlier steps unapplied. A reply to a clarification
-revalidates the original choices and previously resolved targets before the batch can run. Multiple
+revalidates the original choices and previously resolved targets before the batch can run.
+A session restarting under the same name/ID or moving to another folder invalidates its pending
+choice. A terminal command also keeps its original terminal identity; a changed terminal requires
+starting the request again. Ordinary agent progress and unrelated new sessions do not invalidate
+an otherwise unchanged choice. Multiple
 sessions in the same folder share project preferences, while navigation requires an exact session.
 
 The dispatcher keeps repeat/undo context for 90 seconds. `same for web` repeats the last supported action
@@ -916,6 +956,110 @@ also rejects replay. Commands do not add dictated words, typing time or delivery
 Copy last dictation still uses the last successful ordinary dictation, including after a command.
 An unrecognized utterance reports that it is not a command by default.
 
+VC2 adds opt-in local playback commands for the player selected in Vults' media controls.
+Enable **Dictation > Command settings > Media voice commands** and turn on media controls too.
+Hold Ctrl+Alt+Z and try `pause media`, `resume music`, `next track`, `previous track`,
+`media volume 30`, `lower media volume` or `raise media volume`. Portuguese examples include
+`pause a midia`, `retome a musica`, `proxima faixa` and `volume da midia 30`; accents are accepted.
+Relative volume changes use ten percentage points and stay within 0..100 percent.
+
+Project `mute` still affects notifications, not playback or computer audio. Commands target only
+the selected player, pin its process and stop if the selection, consent or process changes.
+The displayed player is captured when the command is admitted, before its worker is scheduled.
+If another player becomes selected while the command waits, or no player was available at admission,
+the queued command does not adopt a later player. Repeat the command after checking the player
+shown in Vults. This check precedes every effect in the initial batch preflight.
+Before the first effect, media batches check every requested capability on the pinned player.
+An unsupported suffix rejects the batch without executing its prefix. Capabilities, selection and
+consent are checked again at each effect; a later change can still interrupt the batch.
+They wait for dictation's temporary duck/pause restoration, support cancellation after transcription,
+and report completion only after the player acknowledges the operation. A failed or timed-out batch
+reports how many operations were acknowledged; check playback before trying again. Media batches can also include flock navigation, project preferences and local status queries.
+To combine scopes, enable both **Media voice commands** (and media controls) and **System audio
+voice commands**. For example: `pause media and then computer volume 40 and then resume music`.
+The entire batch checks its required switches, selected player, player capabilities and computer
+output before the first effect. A single recording/deadline owns the batch; cancellation or any
+failure stops the remaining actions. Feedback counts only confirmed operations, with no retry
+or rollback. A timeout may leave the current operation unconfirmed; check audio before repeating.
+Playback commands do not support repeat or undo yet. Realtime voice does not execute these new
+desktop commands yet. The existing speech model supplies the transcript; Vults interprets supported
+command phrases locally, without an additional text model or Claude integration. Variations such as `stop what I am
+listening to`, `para o que estou escutando` and `continua o que eu estava ouvindo` target the selected
+player. A named-player suffix is not ignored or redirected to another player. This is bounded local
+matching, not unrestricted language understanding. No provider request or automatic Chat fallback
+is made for a recognized media command.
+
+VC2 also adds **Application voice commands**, a separate default-off choice under Command
+settings. With it on, `open Obsidian` searches current projects and visible installed desktop
+applications together. Use `open app Firefox` to choose applications or `open project api` to
+choose the flock. Portuguese equivalents include `abrir aplicativo Firefox` and `abrir projeto api`;
+Spanish supports `abrir aplicacion Firefox`. Dictionary aliases apply to complete known names.
+If a project and app share a name, or several apps share it, Vults asks which one; use the explicit
+namespace or the full displayed choice. All questions in a batch share the original 90-second clarification window, and changed or
+removed app definitions invalidate it, including apps selected before a later question.
+
+Only registered launchable desktop entries are used. Hidden/non-displayed entries are excluded;
+spoken paths, executable text, URLs and file arguments are never passed to the launcher. The
+entry's identity and definition are checked again before launch, together with cancellation, lock,
+the original deadline and current consent. A successful result says **Application launch requested**,
+not that a window is ready. Opening an app cannot be repeated or undone.
+Native batches can combine installed apps, player controls and computer-output controls in spoken
+order. For example: `pause media and then open app Obsidian and then computer volume 40`. Enable
+Application voice commands and each audio scope used by the batch first. Every app identity is
+checked before the first effect and again before its launch. Unresolved apps or an identity
+check that fails during preflight prevent every effect. All steps share one cancellation ticket and execution deadline. A later
+failure stops the batch and reports only confirmed operations, without retry or rollback; app
+confirmations are launch requests. Check the result before repeating a timed-out request.
+Mixed batches also support flock navigation, project mute/pin/hide and local status queries.
+For example: `mute project api and then pause media and then open project web and then who is waiting?`.
+Planning resolves every target on a shadow state. Before the first effect, the runtime preflights
+all flock steps against current state; each step is checked again when its turn arrives. Session
+identity/folder changes, changed navigation order or an intervening user preference/focus edit
+stop the affected step. Ordinary unrelated agent progress does not invalidate an explicit target.
+Queries read current redacted state at execution, and their answers appear with batch feedback.
+Core state changes remain owned by the runtime, which publishes the new view before acknowledging
+them; project preference steps require a successful settings save for confirmation. A failed save
+or timeout may leave that step applied in memory, so check the result before retrying. Confirmed
+prefixes are never replayed or rolled back automatically. Mixed batches do not establish repeat/undo
+context. Terminal/folder requests are also supported, including requests containing only those
+actions: `open terminal api and then open folder web`. The command-key path waits for each native
+submission receipt before proceeding. It rechecks the session identity, folder and exact terminal
+metadata when a blocking worker starts, along with consent, cancellation and the original deadline.
+Preflight rejects a missing absolute folder or unsupported terminal route before any effect, with
+a local explanation. Folder/editor opens and terminal-focus requests confirm submission, not a
+ready window. A queued worker loses admission when its reply closes; cancellation interrupts a
+running multiplexer child and prevents later native requests. An already submitted desktop request
+can still take effect after a timeout; check its window before trying again. Terminal focus uses
+existing registered pane/window routes, never transcript-supplied commands or file arguments.
+Explicit repeat/undo combined with native actions remains unavailable. Realtime's existing flock
+dispatch is preserved; these command-key receipts do not grant it new desktop capabilities. Zeca may be
+off; realtime voice does not launch apps. Native desktop acceptance remains pending.
+
+VC2 adds **System audio voice commands**, a separate default-off option under Command settings.
+With it on, hold Ctrl+Alt+Z and say `mute computer`, `unmute computer`, `computer volume 40`,
+`raise computer volume` or `lower computer volume`. Portuguese examples include `silenciar o
+computador`, `reativar o som do computador`, `volume do computador 40` and `abaixe o volume do
+computador`; Spanish supports `silenciar el ordenador` and `volumen del ordenador 40`. An
+unspecified request such as `lower the volume` still needs a scope; natural model interpretation
+remains pending. Project notification mute and selected-player playback keep their own scopes.
+
+This controls only the default output, never a microphone, input gain or playback state. Relative
+steps are ten percentage points and volume adjustments stay within 0..100 percent. Existing channel balance
+is preserved when the current nonzero levels define it. Changing volume does not unmute output;
+use the explicit unmute command. Muting preserves the current level, including an existing level above 100%; the status reports that measured level without capping it. Readback confirms the actual mute/volume before reporting success.
+Literal signed or out-of-range volume requests stay local and never enter optional Chat fallback.
+
+The optional backend needs `pactl` with JSON output and a local PulseAudio-compatible Unix socket.
+A remote `PULSE_SERVER` is refused. Server identity, sink index/name, channel map and active port
+are captured and rechecked before and after fixed-index writes; no default-output alias can redirect
+a queued write to a newly selected output. These separate native calls are not an atomic routing
+transaction: concurrent routing or server changes may prevent confirmation. A failed or timed-out
+operation reports the confirmed prefix and is never retried or rolled back automatically.
+Native batches can combine player, computer-output and installed-app actions in spoken order;
+flock navigation, preferences and queries are also supported, with the limits above. Realtime voice
+does not execute these commands. Backend tests use simulated state/private process fixtures, not
+personal audio; real desktop output/cancellation acceptance remains pending.
+
 V8.5 adds **Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its
 **What you can say** guide lists supported phrases; **Dictionary** opens the same names/replacements
@@ -933,7 +1077,7 @@ The page filters the newest 500 retained dictations, so older commands may be ou
   access rules, network gate, budget and traces. Zeca must be on; Chat must be idle with no unsent text,
   files or references. Nothing is added to or sent from the existing draft. A busy or unavailable Chat
   reports failure locally rather than queuing a later turn. A new conversation keeps its selected
-  folder/provider; changing that source during preparation cancels the handoff. Refusal, unresolved names and expired or
+  folder/provider; changing that source during preparation cancels the handoff. Refusal, invalid literal volume requests, unresolved names and expired or
   stale clarifications never enter this fallback. Changing either choice invalidates old command tickets.
 - **What you can say**, the same read-only phrase guide as the work page. Chinese UI explains the supported
   English/Portuguese/Spanish grammar; it does not claim Chinese speech commands.

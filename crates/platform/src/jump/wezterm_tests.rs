@@ -143,7 +143,7 @@ fn private_wezterm_navigation_selects_the_exact_server_and_never_discovers_a_rep
         ("WEZTERM_UNIX_SOCKET".into(), first_socket.into()),
     ]
     .into();
-    assert!(multiplexer(&target));
+    assert!(multiplexer(&target, &|| true));
     assert_eq!(active(first_socket), 0);
     assert_eq!(
         active(second_socket),
@@ -151,12 +151,12 @@ fn private_wezterm_navigation_selects_the_exact_server_and_never_discovers_a_rep
         "identical pane ids in another instance must not move it"
     );
     let no_instance: BTreeMap<_, _> = [("WEZTERM_PANE".into(), "0".into())].into();
-    assert!(!multiplexer(&no_instance));
+    assert!(!multiplexer(&no_instance, &|| true));
     assert_eq!(active(second_socket), 1);
     first.0.kill().expect("stop first GUI");
     first.0.wait().expect("first GUI stopped");
     let _ = std::fs::remove_file(first_socket);
-    assert!(!multiplexer(&target));
+    assert!(!multiplexer(&target, &|| true));
     assert_eq!(
         active(second_socket),
         1,

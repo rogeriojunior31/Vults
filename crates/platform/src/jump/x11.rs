@@ -9,8 +9,11 @@ use x11rb::rust_connection::RustConnection;
 type Fallible<T> = Result<T, Box<dyn std::error::Error>>;
 
 /// True when a window of `ancestors` was found and asked to come forward.
-pub fn activate(ancestors: &[u32], folder: &str) -> bool {
-    try_activate(ancestors, folder).unwrap_or(false)
+pub fn activate(ancestors: &[u32], folder: &str, allowed: &dyn Fn() -> bool) -> bool {
+    if !allowed() {
+        return false;
+    }
+    try_activate(ancestors, folder, allowed).unwrap_or(false)
 }
 
 pub(crate) fn atom(conn: &RustConnection, name: &str) -> Fallible<u32> {
@@ -40,7 +43,7 @@ pub(crate) fn title(conn: &RustConnection, window: Window, net_wm_name: u32, utf
         .unwrap_or_default()
 }
 
-fn try_activate(ancestors: &[u32], folder: &str) -> Fallible<bool> {
+fn try_activate(ancestors: &[u32], folder: &str, allowed: &dyn Fn() -> bool) -> Fallible<bool> {
     let (conn, screen) = x11rb::connect(None)?;
     let root = conn.setup().roots.get(screen).ok_or("no screen")?.root;
     let client_list = atom(&conn, "_NET_CLIENT_LIST")?;
@@ -80,11 +83,17 @@ fn try_activate(ancestors: &[u32], folder: &str) -> Fallible<bool> {
     // Its workspace first, for the window managers that don't switch on their own.
     if let Some(desktop) = cardinal(&conn, target, wm_desktop).filter(|d| *d != u32::MAX) {
         let ev = ClientMessageEvent::new(32, root, current_desktop, [desktop, 0, 0, 0, 0]);
+        if !allowed() {
+            return Ok(false);
+        }
         conn.send_event(false, root, to_root, ev)?;
     }
     // Source 2: a pager acting for the user, which window managers honour over their
     // focus-stealing prevention. Timestamp 0: now.
     let ev = ClientMessageEvent::new(32, target, active, [2, 0, 0, 0, 0]);
+    if !allowed() {
+        return Ok(false);
+    }
     conn.send_event(false, root, to_root, ev)?;
     conn.flush()?;
     Ok(true)

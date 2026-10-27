@@ -1,5 +1,17 @@
 // pt-BR: English sentence → translation (see index.ts).
 export default {
+  "System audio voice commands": "Comandos de voz do áudio do sistema",
+  "Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate.": "Permita silenciar e ajustar o volume da saída padrão do computador. Usa pactl local, preserva o balanço entre canais e limita os ajustes de volume a 100%. Controles do player e notificações de projetos continuam separados.",
+  "Enable system audio voice commands first. Say: mute computer; unmute computer; computer volume 40; raise computer volume; lower computer volume. Changes use the default output, not the microphone. Volume changes do not unmute it.": "Ative os comandos de voz do áudio do sistema primeiro. Diga: silenciar o computador; reativar o som do computador; volume do computador 40; aumente o volume do computador; abaixe o volume do computador. Usa a saída padrão, não o microfone. Mudar o volume não reativa o som.",
+
+  "Application voice commands": "Comandos de voz de aplicativos",
+  "Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run.": "Permita abrir aplicativos instalados pelo nome. Os nomes ficam neste computador. Um projeto e um aplicativo com o mesmo nome exigem uma escolha. Nenhuma linha de comando, URL ou argumento de arquivo falado é executado.",
+  "Enable application voice commands first. Say: open Obsidian; open app Firefox; open project api. Use an installed desktop name. Ambiguous names need a choice. Application launches cannot be repeated or undone.": "Ative comandos de voz de aplicativos primeiro. Diga: abrir Obsidian; abrir aplicativo Firefox; abrir projeto api. Use o nome instalado no desktop. Nomes ambíguos exigem uma escolha. Aberturas de aplicativos não podem ser repetidas nem desfeitas.",
+
+  "Media voice commands": "Comandos de voz de mídia",
+  "Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications.": "Permita comandos locais de pausa, retomada, troca de faixa e volume para o reprodutor selecionado. Os controles de mídia também precisam estar ligados. Silenciar projeto afeta apenas suas notificações.",
+  "Enable media voice commands and media controls first. Say: pause media; resume music; next track; previous track; media volume 30; lower media volume. Uses the selected player. Project mute only silences notifications.": "Ative os comandos de voz e controles de mídia primeiro. Diga: pause a mídia; retome a música; próxima faixa; faixa anterior; volume da mídia 30; abaixe a música. Usa o reprodutor selecionado. Silenciar projeto afeta apenas notificações.",
+
   "Voice commands are off. Dictation keeps its own shortcut.": "Os comandos de voz estão desligados. O Ditado mantém seu próprio atalho.",
   "Unrecognized phrases may be sent to the current Chat.": "Frases não reconhecidas podem ser enviadas ao Chat atual.",
   "Unrecognized phrases stay local.": "Frases não reconhecidas ficam neste computador.",
@@ -1758,7 +1770,7 @@ export default {
   "Quiet a project": "Silenciar um projeto",
   "Say: mute web; unmute web; pin api; unpin api; hide docs; unhide docs.": "Diga: silenciar web; dessilenciar web; fixar api; desafixar api; ocultar docs; mostrar docs.",
   "Again and undo": "Repetir e desfazer",
-  "Say: and docs too; same for web; undo. The last successful command is remembered for 90 seconds. Opening a terminal or folder and reading a snapshot cannot be undone.": "Diga: e docs também; o mesmo para web; desfazer. O último comando concluído é lembrado por 90 segundos. Abrir um terminal ou pasta e ler um retrato não pode ser desfeito.",
+  "Say: and docs too; same for web; undo. Only flock commands support repeat and undo, with 90 seconds of context. Opening a terminal or folder and reading a snapshot cannot be undone.": "Diga: e docs também; o mesmo para web; desfazer. Só comandos do bando permitem repetir e desfazer, com 90 segundos de contexto. Abrir terminal ou pasta e ler um retrato não podem ser desfeitos.",
   "Never answers a card": "Nunca responde a um card",
   "Approve, allow, yes and other card answers are refused, even with Chat fallback on. Answer the card with a click or an authorized shortcut.": "Aprovar, permitir, sim e outras respostas a cards são recusadas, mesmo com o envio ao Chat ativado. Responda ao card com um clique ou atalho autorizado.",
   "Local answers use the latest snapshot Vults already has. They do not refresh a connector or call a model.": "As respostas locais usam o retrato mais recente que o Vults já tem. Elas não atualizam conectores nem chamam um modelo.",

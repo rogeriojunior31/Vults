@@ -50,6 +50,8 @@ struct Control {
     released: Option<Duration>,
     project_words: Arc<OnceLock<Vec<String>>>,
     command: bool,
+    native_started: bool,
+    native_pending: bool,
     held: Option<bool>,
     cleanup: Arc<OnceLock<Option<super::cleanup::Choice>>>,
 }
@@ -100,6 +102,8 @@ impl Control {
         self.released = None;
         self.project_words = Arc::default();
         self.cleanup = Arc::default();
+        self.native_started = false;
+        self.native_pending = false;
         self.target = None;
         self.insertion = None;
         self.session = None;
@@ -169,6 +173,16 @@ impl Ticket {
         (state.generation == self.generation).then(run)
     }
 
+    pub(crate) fn claim_native(&self) -> bool {
+        let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
+        if !self.command || state.generation != self.generation || state.native_started {
+            return false;
+        }
+        state.native_started = true;
+        state.native_pending = true;
+        true
+    }
+
     pub fn command_result(
         &self,
         phase: &str,
@@ -181,6 +195,7 @@ impl Ticket {
             if state.generation != self.generation {
                 return None;
             }
+            state.native_pending = false;
             if let Some(history) = &mut state.history {
                 history.heard = Some(heard.into());
                 history.style = "command";
@@ -738,7 +753,7 @@ impl State {
         if commands_only && !control.command {
             return;
         }
-        let active = control.busy || control.keys.phase() != Phase::Idle;
+        let active = control.busy || control.native_pending || control.keys.phase() != Phase::Idle;
         if !active && !forget && !commands_only {
             return;
         }

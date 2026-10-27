@@ -1,7 +1,8 @@
-# 0031. Tasks leave Vults; releases follow N0 to N4
+# 0031. Tasks leave Vults
 
 **Status:** Accepted, 2026-10-16. Implements the owner's order of work in
 [Plan Zeca](../dev/plan-zeca.md#order-of-work-2026-10-16).
+Release numbering amended on 2026-10-26 by [0020](0020-0.2.0-at-wave-4-then-0.2.x.md).
 
 ## Context
 
@@ -36,10 +37,9 @@ decision does not mean the code has already been removed or the desktop smoke ha
   protocol/core, then guides and references. Preserve the kept behavior at every slice. Removing
   an entry point before its implementation does not authorize that implementation through a
   different surface.
-- **Release gates follow the stages.** N0 and N1 ship together as **0.1.9**, N2 (Flock and Chat)
-  as **0.2.0**, N3 (dictation) as **0.2.1**, and N4 as **0.2.2**. An intervening fix takes the next
-  patch and shifts the later stage numbers by one. The wave 4 gate is superseded; small, frequent
-  releases and Linux first remain the rule ([0020](0020-0.2.0-at-wave-4-then-0.2.x.md)).
+- **Release numbering follows [0020](0020-0.2.0-at-wave-4-then-0.2.x.md).** Its 2026-10-26
+  amendment selects 0.1.9 from current main and supersedes the fixed N0-to-N4 version mapping.
+  The wave 4 gate remains superseded; small, frequent releases and Linux first remain the rule.
 - **R3 remains a human smoke in the real desktop app before each release tag.** It covers the
   island, a pending card, Chat, voice, GitHub and the Nest on the UI refined by N1. Check the
   remaining Nest areas, `/continue` and its owned Stop, spend and budget, and operation with Zeca
@@ -56,3 +56,8 @@ decision does not mean the code has already been removed or the desktop smoke ha
 - [0018](0018-zeca-as-an-agent.md), [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) and
   [0021](0021-four-sizes-one-nest.md) carry the amended rules in place. Plan Zeca retains completed
   step ids as history and tracks N0's removal separately from release acceptance.
+
+## History
+
+- 2026-10-26, REL-1: release numbering follows ADR 0020's 0.1.9 stabilization decision. The
+  Tasks-removal contract and human R3 requirements remain unchanged.

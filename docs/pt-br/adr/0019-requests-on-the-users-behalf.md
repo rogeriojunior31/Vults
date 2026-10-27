@@ -1,5 +1,5 @@
 # 0019. Rede, segredos e telemetria
-<!-- source: b5a691d2d957 -->
+<!-- source: 4aaed2ce3dd3 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0006 e da 0016.
 Alterada em 2026-10-17 para a N3 V0.4: requisições a modelos no ditado, limites de loopback e
@@ -56,7 +56,7 @@ importa ao usuário, custa dinheiro ou cota, e poderia virar telemetria por acid
 
 ## Requisições a modelos no ditado
 
-Transcrição local, processamento pelo dicionário e comandos de voz não chamam um modelo remoto.
+Transcrição local, processamento pelo dicionário e comandos de voz determinísticos não chamam um modelo remoto.
 Os recursos opcionais de modelos da N3 abaixo são requisições separadas em nome do usuário, não
 permissão para enviar uma transcrição só porque a gravação ou o Chat está ligado. Cada interruptor
 fica desligado por padrão e é alterado na webview das Configurações, com provedor, dados e limite
@@ -106,6 +106,20 @@ outro recurso.
   limpeza por modelo; a [0028](0028-spoken-replies-through-a-realtime-model.md) continua regendo
   a escuta e o áudio.
 
+<a id="local-voice-commands-vc1"></a>
+## Comandos de voz locais (VC1)
+
+Ditado e comandos reutilizam o modelo de transcrição de voz existente. O aplicativo interpreta
+comandos localmente usando frases suportadas e destinos atuais. Isso não exige provedor de texto
+adicional, integração com Claude, orçamento de intenção ou recurso de rede. As opções locais
+separadas, desligadas por padrão, autorizam apenas as ações tipadas da
+[0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1).
+
+A proposta anterior `voice-command-intent` foi retirada antes da ativação após a correção de escopo
+do responsável. Limpeza opcional de transcrição e envio de fala desconhecida ao Chat mantêm seus
+consentimentos e portões próprios; nenhum é necessário para comandos locais. A correção não cria
+exceção para outras requisições de rede nem altera as regras gerais de consentimento.
+
 <a id="consequences"></a>
 
 ## Consequências
@@ -128,6 +142,12 @@ outro recurso.
 <a id="history"></a>
 
 ## Histórico
+
+- 2026-10-26: correção do responsável retira a proposta de rede para intenção antes da ativação;
+  transcrição de voz existente e reconhecimento local não precisam de provedor de texto separado.
+
+- 2026-10-26: a VC1 propôs inicialmente consentimento independente para comandos; substituído pela correção
+  acima antes da ativação.
 
 - 2026-10-17: a N3 V0.4 nomeia os três recursos de modelos com adesões independentes e seus
   limites móveis. A Q3 mantém chamadas de loopback sob interruptor, cota e registro; só a

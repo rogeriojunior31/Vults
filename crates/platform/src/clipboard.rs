@@ -1,5 +1,6 @@
 //! Background text copying without moving focus. Keep the X11 owner alive until app exit.
 
+use arboard::SetExtLinux;
 use std::io::Read;
 use wl_clipboard_rs::{copy, paste};
 
@@ -40,10 +41,12 @@ impl Clipboard {
         }
         match self {
             Self::Wayland => copy::Options::new()
-                .copy(copy::Source::Bytes(text.as_bytes().into()), copy::MimeType::Text)
+                .copy_multi(text_sources(text))
                 .map_err(|_| "The Wayland clipboard refused the text.".to_string())?,
             Self::X11(clipboard) => clipboard
-                .set_text(text)
+                .set()
+                .exclude_from_history()
+                .text(text)
                 .map_err(|_| "The X11 clipboard refused the text.".to_string())?,
         }
         self.confirm(text)
@@ -95,11 +98,47 @@ impl Clipboard {
     }
 }
 
+fn text_sources(text: &str) -> Vec<copy::MimeSource> {
+    vec![
+        copy::MimeSource {
+            source: copy::Source::Bytes(text.as_bytes().into()),
+            mime_type: copy::MimeType::Text,
+        },
+        copy::MimeSource {
+            source: copy::Source::Bytes(b"secret".as_slice().into()),
+            mime_type: copy::MimeType::Specific("x-kde-passwordManagerHint".into()),
+        },
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write;
     use std::process::{Command, Stdio};
+
+    #[test]
+    fn copied_text_offers_history_exclusion_separately_from_plain_text() {
+        let text = "  unchanged\nUnicode: \u{4e2d}\u{6587}  ";
+        let sources = text_sources(text);
+        let plain = sources
+            .iter()
+            .find(|source| source.mime_type == copy::MimeType::Text)
+            .expect("plain text must remain offered");
+        assert_eq!(plain.source, copy::Source::Bytes(text.as_bytes().into()));
+        let hint = sources
+            .iter()
+            .find(|source| source.mime_type == copy::MimeType::Specific("x-kde-passwordManagerHint".into()))
+            .expect("clipboard managers need the exclusion MIME type");
+        assert_eq!(hint.source, copy::Source::Bytes(b"secret".as_slice().into()));
+        assert_eq!(sources.len(), 2, "metadata must not become a text representation");
+    }
+
+    #[test]
+    fn nul_input_is_rejected_before_clipboard_access() {
+        let mut clipboard = Clipboard::Wayland;
+        assert!(clipboard.copy("invalid\0text").is_err());
+    }
 
     fn pasted() -> Vec<u8> {
         let output = Command::new("wl-paste")
@@ -145,6 +184,12 @@ mod tests {
         assert!(matches!(clipboard, Clipboard::Wayland));
         let _restore = Restore(pasted());
         clipboard.copy(FIRST).expect("first copy");
+        let hint = Command::new("wl-paste")
+            .args(["--no-newline", "--type", "x-kde-passwordManagerHint"])
+            .output()
+            .expect("read history exclusion hint");
+        assert!(hint.status.success(), "the exclusion hint must be offered");
+        assert_eq!(hint.stdout, b"secret");
         assert!(
             pasted() == FIRST.as_bytes(),
             "the independent client must receive the first copy"

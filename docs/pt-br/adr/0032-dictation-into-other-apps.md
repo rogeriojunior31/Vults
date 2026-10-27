@@ -1,5 +1,5 @@
 # 0032. Ditado em outros aplicativos
-<!-- source: ced45b70bf84 -->
+<!-- source: 37d3afdb8881 -->
 
 **Status:** Aceita, 2026-10-17, sob a instrução do mantenedor para continuar a N3 com os padrões
 planejados. Este é o contrato da V0.2; captura, inserção e validação nativa chegam separadamente.
@@ -73,6 +73,47 @@ de permissão deve continuar com o humano sob a [0004](0004-a-human-answers-perm
   por modelo e voz remota continuam sendo adesões separadas sob a
   [0019](0019-requests-on-the-users-behalf.md) e a [0028](0028-spoken-replies-through-a-realtime-model.md).
 
+<a id="natural-voice-commands-vc1"></a>
+## Comandos de voz naturais (VC1)
+
+A tecla separada de comando solicita uma ação, não inserção de texto. O catálogo da 0.1.9 é limitado:
+
+| Escopo | Pedidos suportados | Destino e execução |
+|---|---|---|
+| Bando | Navegação existente, consultas de sessão/uso/GitHub, silenciar notificações/fixar/ocultar projeto, repetir e desfazer condicionalmente | Identidade atual da sessão/projeto; nunca uma resposta de permissão |
+| Mídia | Pausar, retomar, próxima, anterior e volume do reprodutor | Reprodutor MPRIS ativo explícito; respeitar a opção de mídia e esclarecer múltiplos destinos |
+| Áudio do computador | Silenciar/reativar saída padrão, definir volume, aumentar/reduzir em 10 pontos percentuais | Capturar e revalidar a identidade da saída; limitar volume a 0..100 por cento |
+| Aplicativos | Abrir um aplicativo instalado | Identidade validada de entrada desktop executável; sem programa, URI, arquivo ou argumentos fornecidos |
+
+- Ações locais de mídia, saída do computador e abertura de aplicativos têm, cada uma, uma opção
+  própria desligada por padrão nas configurações de comandos. Funcionam com o Zeca desligado.
+  Silenciar projeto significa silenciar notificações, nunca o navegador ou sistema. `Abrir <nome>`
+  resolve projetos e aplicativos instalados; colisões perguntam qual escopo o usuário quis.
+  Aplicativo ausente é informado como não instalado.
+- Usar o modelo de transcrição de voz existente para ditado e comandos. O ditado entrega texto;
+  comandos interpretam essa transcrição localmente com frases limitadas e resolução de destinos.
+  Não é necessária integração adicional com Claude, provedor de texto ou consentimento de rede
+  para intenção. O envio opcional de fala desconhecida ao Chat continua separado sob a
+  [0019](0019-requests-on-the-users-behalf.md), nunca obrigatório para ações locais.
+- Aceitar variações completas de pedidos suportados, sem procurar palavras soltas. Limitar entrada
+  a 4096 bytes e lotes a oito ações. Frases desconhecidas e nomes não resolvidos não viram efeitos
+  adivinhados. O modelo de voz transcreve; não concede autoridade de execução nem garante compreensão
+  semântica geral. Manter ações tipadas e identidades resolvidas localmente no aplicativo.
+- Revalidar destino, opções, bloqueio e cancelamento antes de cada efeito. Resultado atrasado ou
+  duplicado nunca executa. Sem repetição automática, shell ou argumentos de programa falados.
+- Fala negada, citada, informativa ou ambígua não pode virar ação adivinhada. Esclarecer destino ou
+  escopo de áudio incerto. Voz nunca aprova, nega, libera ou modifica cartões de permissão, edita
+  configurações de agentes, faz merge, fecha aplicativos ou executa operações destrutivas.
+- Validar o lote antes dos efeitos. Se um efeito externo falhar, parar e informar o trecho realmente
+  concluído; não prometer reversão nem repetir ações já feitas. Não restaurar redução/pausa
+  temporária do ditado sobre uma mudança deliberada por voz. Desfazer depende de estado anterior
+  conhecido e restaurável; nunca encerra um aplicativo aberto pelo comando.
+- Mostrar texto ouvido, destino, esclarecimento e resultado real no feedback/histórico existente,
+  respeitando retenção. Nunca informar Concluído antes da execução nativa. Ações desligadas,
+  ausência de destino, backend nativo ausente, destinos desatualizados, cancelamento,
+  tempo excedido e falhas nativas geram explicação local e nenhum efeito. São resultados
+  distintos, não um genérico Isso não é um comando. Transcrição e ditado comum continuam usáveis.
+
 <a id="consequences"></a>
 
 ## Consequências
@@ -93,6 +134,12 @@ de permissão deve continuar com o humano sob a [0004](0004-a-human-answers-perm
 <a id="history"></a>
 
 ## Histórico
+
+- 2026-10-26: correção do responsável substitui a proposta de modelo de texto separado pela
+  transcrição de voz existente e interpretação local; retira consentimento e transporte não ativados.
+
+- 2026-10-26: a VC1 propôs inicialmente ações limitadas e consentimento independente de modelo; a correção
+  acima substitui o escopo de modelo de texto separado.
 
 - 2026-10-17: definir os limites da N3 V0.2 para destino, área de transferência, capacidade de
   teclado e permissões. Usar 0032 porque a [0031](0031-tasks-leave-vults.md) já registra a remoção

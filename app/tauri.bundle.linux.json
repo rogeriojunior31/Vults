@@ -2,7 +2,11 @@
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
     "targets": ["deb", "rpm"],
-    "resources": { "../target/release/vults-hook": "vults-hook" },
+    "resources": {
+      "../target/release/vults-hook": "vults-hook",
+      "../LICENSE": "LICENSE",
+      "../NOTICE": "NOTICE"
+    },
     "linux": {
       "deb": { "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libgtk-layer-shell0 (>= 0.6)", "libasound2", "libpulse0 (>= 8.0)", "libvulkan1", "gstreamer1.0-plugins-good"],
                "provides": ["vultures-ai"], "conflicts": ["vultures-ai"], "replaces": ["vultures-ai"] },

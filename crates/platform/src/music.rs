@@ -12,4 +12,4 @@ pub enum Mode {
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "linux")]
-pub use linux::Listening;
+pub use linux::{Listening, wait_for_restore};

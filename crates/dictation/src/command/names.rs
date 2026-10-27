@@ -7,6 +7,7 @@ use super::{MAX_INPUT_BYTES, normalize};
 pub enum NameKind {
     Project,
     Agent,
+    Application,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

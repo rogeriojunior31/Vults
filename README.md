@@ -5,7 +5,7 @@
 <h1 align="center">Vults</h1>
 
 <p align="center">
-  <strong>Your coding agents, alive on your desktop. And a vulture who helps.</strong>
+  <strong>Your coding agents on one wire. Dictation, chat and GitHub within reach.</strong>
 </p>
 
 <p align="center">
@@ -19,122 +19,166 @@
 
 <p align="center"><b>English</b> · <a href="README.pt-br.md">Português</a></p> <!-- check-english:allow (language name) -->
 
-<p align="center">
-  <img src="docs/assets/island-flock.png" width="500" alt="The open island at rest: vults of different species on one wire, each with its project's name, and a chip for each session that needs a look">
-</p>
+Watch your coding agents without switching terminals. Each session becomes an animated 8-bit
+vulture: see who is working, who finished and who needs you. Dictate into other apps, talk to
+**Zeca**, and follow your GitHub work from the same desktop companion. Zeca is optional.
 
-Vults is for people who run several coding agents at once. Every **Claude Code, Codex, Antigravity,
-OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid and Kimi Code** session becomes an 8-bit vulture at the top of your screen,
-doing what its session does. You see who is working, who finished and who needs you, and you
-answer from one place. **Zeca**, a black vulture, sits on top as a companion you can chat with; he
-is optional.
-
-> **0.1.7, early.** Linux first (KDE Plasma and other layer-shell compositors); Windows and macOS
-> later. Install the `.deb` or `.rpm` from the
-> [latest release](https://github.com/rogeriojunior31/Vults/releases/latest), the Arch package
-> with `makepkg`, or build from source: [Getting started](docs/getting-started.md).
-
-## One surface, from a pill to the whole screen
-
-The size switch at the top changes how much you see, in the same place:
-
-- **Mini**: a thin pill with the flock on its wire. A colored badge marks who finished, failed or
-  waits on you, and the edge glows amber while someone does.
-- **Quick**: the island open. At rest, every session is on the wire with its name, and a chip
-  marks each one that needs a look. Click a bird to open its session; **‹ Flock** goes back.
-- **Room** and **full screen**: the Nest, Vults' own window, in the island's place.
+[Features](#features) · [Screenshots](#screenshots) · [Installation](#installation) ·
+[Quick start](#quick-start) · [Support](#support) · [Documentation](#documentation)
 
 <p align="center">
-  <img src="docs/assets/island-compact-flock.png" width="440" alt="Mini: a thin pill with five vults on its wire and their badges">
-</p>
-<p align="center">
-  <img src="docs/assets/island-quick.png" width="880" alt="Quick: the flock at rest with each session's name and the need chips, and a session opened from it with Flock to go back">
+  <a href="docs/assets/island-flock.png"><img src="docs/assets/island-flock.png" width="760" alt="Five animated vultures represent coding sessions; badges highlight a failed session and one waiting for attention"></a>
 </p>
 
-Quick has five tabs: **Flock**, **Chat** (Zeca, with a paperclip for files and the microphone),
-**Activity** (your week), **Connections** (GitHub's pull requests and checks) and the gear (the
-island's settings, and the rest of Settings in the Nest).
+> **Release status:** the latest published version is **0.1.8**. This checkout includes
+> **Unreleased** work targeting **0.1.9**, subject to desktop acceptance and release checks.
+> The feature map describes this checkout; consult the [changelog](CHANGELOG.md) for shipped changes.
+> Screenshots below are existing captures from earlier builds; navigation and spacing have since changed.
 
-<p align="center">
-  <img src="docs/assets/island-tabs.png" width="880" alt="Quick's other tabs: the chat, this week's activity, GitHub's rows in Connections, and the gear's settings">
-</p>
+## Features
 
-**Room** opens the Nest in the island's place: the flock across the window over a card per session,
-the one picked below with its changes, activity and context. Pull its edges to any size.
+| When you want to… | What Vults provides | Guide |
+| --- | --- | --- |
+| Follow several agents at once | A bird per session, project species, working/finished/failed/waiting states, session details and live diffs | [Flock](docs/guide/island.md) |
+| Handle interruptions from one place | Permission and question cards where supported, keyboard answers, exact Always rules, reviewed policies and an audit trail | [Approvals](docs/guide/approvals.md) |
+| Return to the right terminal | Jump to a session's pane or window; continue supported sessions in Chat with an owned Stop action | [Sessions and Chat](docs/guide/chat.md#continuing-a-session) |
+| Speak instead of typing in another app | Local global dictation, copy by default, optional supported insertion routes, cancel and copy-last shortcuts | [Dictation](docs/guide/dictation.md#global-dictation-first-slice) |
+| Make dictation fit your vocabulary | Dictionary, snippets, spoken code, per-app choices, optional model cleanup and translation styles | [Your words](docs/guide/dictation.md#your-words-processing) |
+| Control the flock and playback by voice | Separate command key, local phrase matching and opt-in selected-player playback, computer output volume/mute and installed-app opening; natural AI interpretation remains planned | [Voice commands](docs/guide/dictation.md#voice-commands-development-status) |
+| Find and manage what you dictated | Searchable local history, retention controls, usage statistics, microphone/model setup and diagnostics | [Dictation history](docs/guide/dictation.md#dictation-history) |
+| Ask for help without leaving your desktop | Zeca Chat through an existing Claude Code/Codex CLI login, an API or a local model; Markdown, files, saved conversations and access choices | [Chat](docs/guide/chat.md) |
+| Give a specialist a consistent role | Create or copy profiles with instructions, species, accessories and pinned skills; Claude Code or Codex specialist conversations inside Chat | [Agent profiles](docs/guide/chat.md#agent-profiles) |
+| Keep useful context across conversations | Optional local journal, recall and proposed facts that you review before keeping | [Memory](docs/guide/memory.md) |
+| Follow and act on GitHub work | Repository connections through your gh login, PRs, checks, reviews and explicitly confirmed write actions; scoped access for Developer/Reviewer profiles | [GitHub](docs/guide/connectors.md) |
+| Turn a meeting into searchable notes | Consented microphone/system-audio capture, local transcription, saved text, speaker labels, search and Markdown/SRT/VTT export; optional model summaries | [Meetings](docs/guide/dictation.md#meeting-recording) |
+| Talk with Zeca aloud | Separate voice conversation setup, manual turns and optional continuous microphone routes, with explicit API consent and budget | [Voice conversation](docs/guide/dictation.md#voice-conversation-settings) |
+| Review your week and spending | Project activity, available plan usage, costs, budgets and a shareable recap with project-name hiding | [Activity](docs/guide/activity.md) |
+| Fit Vults around your work | Mini, Quick, Room and full screen; light/dark themes, four languages, notifications, optional media controls and Zeca on/off | [The Nest](docs/guide/nest.md) · [Settings](docs/reference/settings.md) |
+| Answer away from the desktop | Paired-phone approval protocol and relay, in preview; the Android companion remains unfinished | [Phone preview](docs/guide/phone.md) |
 
-<p align="center">
-  <img src="docs/assets/nest-room.png" width="880" alt="Room: the Nest's Flock, four vults over their session cards, and the picked session's diff below">
-</p>
+## Screenshots
 
-## The flock
+Click a capture to open its original resolution. These illustrate individual workflows rather than
+the final 0.1.9 layout. Fresh release captures are still pending.
 
-- **A bird per session.** It reads, pecks the wire while editing, tugs at it while a command runs,
-  and spreads its wings when something waits for you. Each project keeps its own species.
-- **Approvals in one place.** The card shows the whole command, file or diff: **Allow**, **Deny**,
-  or the keyboard from any window. Nothing is approved without you: besides your click, only an
-  exact command you allowed with **Always**, a policy you wrote and accepted, or your paired phone
-  answers (a destructive action always asks).
-- **Jump to the terminal.** One click focuses the session's tmux, kitty, wezterm or herdr pane, or
-  raises its window.
-- **Around it:** live diffs, GitHub checks and reviews through your `gh`, plan usage for Claude and
-  Codex, a weekly recap of your work with the agents, and, in preview, answering cards from a
-  paired phone.
+<details>
+<summary>See the flock and inspect a session</summary>
 
-<p align="center">
-  <img src="docs/assets/island-approval.png" width="500" alt="A permission card: the whole command, Deny, Allow and Always allow">
-</p>
+[![Room view with four vultures, session activity and a selected file diff](docs/assets/nest-room.png)](docs/assets/nest-room.png)
 
-## Zeca
+[Guide: the Nest](docs/guide/nest.md). Earlier Room layout, including its former Tasks tab.
 
-- **Chat** through the `claude` or `codex` you are already logged into, with your own setup (every
-  command and edit still asks first), or an API key, or a local model. Drop files on him, or hold
-  **Ctrl+Alt+V** and speak: the audio is transcribed on your computer.
-- **The Nest**, Vults' own window (it opens with Zeca off too): the conversation in full Markdown, your saved conversations, and
-  (next release) his memory and your projects with their branch, pull requests and checks.
-- **Memory** (next release), off until you turn it on: a local journal of your days, recall of earlier ones in
-  front of each message, and facts he proposes and only keeps with your yes. Through Claude Code he
-  gets the same tools from his own MCP server.
+</details>
 
-<p align="center">
-  <img src="docs/assets/island-chat-permission.png" width="500" alt="The chat: Zeca asks before running a command">
-</p>
+<details>
+<summary>Review a Chat permission in the light theme</summary>
 
-## Safe by design
+<p align="center"><a href="docs/assets/nest-chat-approval.png"><img src="docs/assets/nest-chat-approval.png" width="480" alt="Light-theme Chat permission card showing git status, Deny and Allow, above the message composer"></a></p>
 
-- **Your agents never wait on Vults.** If the app is closed or slow, the hook exits at once and the
-  agent asks in its terminal.
-- **Only you answer.** A card is answered by your click, an exact **Always** rule you made, a policy
-  you saw as a diff and accepted, or your paired phone with its biometrics; in Zeca's chat, also by
-  the access you chose for its cards. A destructive action always asks, and Zeca never answers a
-  card.
-- **Your files, with a backup and a diff.** An agent's config, or a project's `CLAUDE.md`, changes
-  only after a dated backup and a diff you approve; other tools' hooks are kept.
-- **Nothing leaves without your switch.** No telemetry. Every request the app makes on its own
-  (GitHub's checks, the web, daily summaries, the phone's relay) is off until you turn it on (the
-  speech detector's one-time download aside), has a
-  daily budget and a local trace. Secrets live only in the OS keyring. See [Safety](docs/safety.md).
+[Guide: Chat access](docs/guide/chat.md#what-it-may-do). Earlier compact Chat layout.
+
+</details>
+
+<details>
+<summary>Understand dictation usage</summary>
+
+[![Dictation statistics with word count, estimated time saved, speaking rate and a daily chart](docs/assets/dictation-statistics.png)](docs/assets/dictation-statistics.png)
+
+[Guide: dictation](docs/guide/dictation.md). Statistics now live in the Dictation workspace.
+
+</details>
+
+## Installation
+
+**Linux first.** Download the `.deb` or `.rpm` from the
+[latest release](https://github.com/rogeriojunior31/Vults/releases/latest).
+Verify the archive with `sha256sum -c SHA256SUMS --ignore-missing` in your download folder.
+KDE Plasma and other layer-shell compositors host the island at the screen edge; GNOME uses a
+regular always-on-top window. Windows builds are previews; macOS work comes later.
+
+Arch source packages are in `packaging/aur/` and are not yet published to the AUR.
+For dependencies, package verification and installation instructions, see [Getting started](docs/getting-started.md).
+
+To run the current development checkout, after installing the documented Linux dependencies:
+
+```sh
+git clone https://github.com/rogeriojunior31/Vults
+cd Vults
+npm install
+npm run tauri dev
+```
+
+Coding-agent CLIs are installed separately. GitHub uses `gh`; local speech requires a checked model
+download. API-backed chat, cleanup and voice features can incur provider charges.
+
+## Quick start
+
+1. **Connect an agent.** Open **Set up agents…** from the tray. Review its hook diff, then approve
+   the write. Vults keeps a dated backup and preserves third-party hooks. Codex also requires
+   trusting the installed hooks in its CLI.
+2. **Start working.** Run your agent as usual. Select its bird to inspect activity, changes and any
+   supported cards. Start in **Mini**; open **Quick** for a short interaction or **Room** for the Nest.
+3. **Enable only what you need.** Set up local speech under **Dictation**, choose a Chat provider,
+   or add a repository under **Connections**. The Nest's tabs are **Flock**, **Chat**, **Dictation**,
+   **Connections** and **Activity**; Chat is hidden when Zeca is off.
+
+| Default shortcut on Linux | Action |
+| --- | --- |
+| Ctrl+Alt+Space | Open the island with keyboard focus |
+| Ctrl+Alt+Y / Ctrl+Alt+N | Allow / deny the card in front |
+| Hold Ctrl+Alt+V | Global dictation into copied text or an explicitly enabled destination |
+| Ctrl+Alt+X | Cancel dictation or Chat voice |
+| Ctrl+Alt+B | Copy the last successful dictation again |
+| Hold Ctrl+Alt+Z | Voice command mode, separate from dictation |
+| Ctrl+K, while Vults is focused | Open the command palette |
+
+The Chat microphone records into Chat; **Ctrl+Alt+V is global dictation**. Insertion support depends
+on the desktop and destination, and never submits a message automatically.
+
+## Support
+
+Built-in integrations: **Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor,
+Factory Droid and Kimi Code**. Watching a session, answering its cards and driving it are different
+capabilities: some agents keep approvals in their own terminal. See the
+[per-agent capability table](docs/guide/other-agents.md#what-each-agent-can-do).
+
+Specialist profiles currently run through Claude Code or Codex. Voice conversation uses its own
+API setup and budget; Codex voice consultation is unavailable. GitHub workflows, voice routes and
+new UI still have native acceptance gates in the [active roadmap](docs/dev/ROADMAP.md).
+
+### Safety and control
+
+- **Hooks fail open.** On failure, the hook exits successfully without an answer, leaving the agent
+  to ask in its own terminal.
+- **You choose access.** Cards are answered by a human, an exact Always rule, an accepted policy or
+  a signed paired-phone answer. Chat also respects the access you selected; destructive actions
+  still ask and policy denies/asks still apply. Zeca never answers flock approvals.
+- **Review config changes.** Agent config writes require a dated backup, a diff and your click.
+- **Keep control of data.** No telemetry; secrets stay in the OS keyring. Network features require
+  their own opt-in and use the network gate, budgets and local traces. Local transcription and
+  optional provider processing are separate choices. See [Safety](docs/safety.md).
 
 ## Documentation
 
-Online at [rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/),
-updated on each release, or here: [Getting started](docs/getting-started.md) ·
-[The island](docs/guide/island.md) · [The Nest](docs/guide/nest.md) · [Approvals](docs/guide/approvals.md) ·
-[Chat](docs/guide/chat.md) · [Zeca's memory](docs/guide/memory.md) ·
-[Connectors](docs/guide/connectors.md) · [Activity](docs/guide/activity.md) ·
-[Other agents](docs/guide/other-agents.md) · [The phone](docs/guide/phone.md) ·
-[Settings and files](docs/reference/settings.md) · [Architecture](docs/architecture.md) ·
-[Decisions](docs/adr/README.md).
+| Your goal | Start here |
+| --- | --- |
+| Install and connect an agent | [Getting started](docs/getting-started.md) · [Agent support](docs/guide/other-agents.md) |
+| Understand desktop workflows | [Island](docs/guide/island.md) · [Nest](docs/guide/nest.md) · [Approvals](docs/guide/approvals.md) |
+| Set up speech or meetings | [Dictation and voice](docs/guide/dictation.md) |
+| Work with Zeca and specialists | [Chat](docs/guide/chat.md) · [Memory](docs/guide/memory.md) |
+| Connect GitHub or review activity | [Connections](docs/guide/connectors.md) · [Activity](docs/guide/activity.md) |
+| Configure or troubleshoot | [Settings and files](docs/reference/settings.md) · [Safety](docs/safety.md) |
+| Follow development | [Changelog](CHANGELOG.md) · [Roadmap](docs/dev/ROADMAP.md) · [Architecture](docs/architecture.md) |
 
-**What's next:** 0.1.9 refines the pages and theme; 0.2.0 brings the new Flock and Chat workflows.
-See [Plan Zeca](docs/dev/plan-zeca.md) for the stages and the [changelog](CHANGELOG.md) for released changes.
+[Read the published documentation online](https://rogeriojunior31.github.io/en/docs/vults/).
+It follows releases; guides in this checkout include development changes.
 
 ## Contributing
 
-Bug reports, agents, connectors and docs fixes are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md)
-and the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go privately, as in
-[SECURITY.md](SECURITY.md). Built with Rust and Tauri; not to be confused with *Vulture*, the
-Python dead-code finder.
+Bug reports, agent integrations, connectors and documentation improvements are welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md) and
+[SECURITY.md](SECURITY.md) for private vulnerability reports. Built with Rust and Tauri.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Third-party attributions in [NOTICE](NOTICE).
+MIT. See [LICENSE](LICENSE) and third-party attributions in [NOTICE](NOTICE).

@@ -60,6 +60,45 @@ under [0004](0004-a-human-answers-permissions.md).
   into history, logs or network traces. Model clean-up and remote voice remain separate opt-ins
   under [0019](0019-requests-on-the-users-behalf.md) and [0028](0028-spoken-replies-through-a-realtime-model.md).
 
+## Natural voice commands (VC1)
+
+The separate command key requests an action, not text insertion. The 0.1.9 catalog is bounded:
+
+| Scope | Supported requests | Target and execution |
+|---|---|---|
+| Flock | Existing navigation, session/usage/GitHub reads, project notification mute/pin/hide, repeat and conditional undo | Current live session/project identity; never a permission answer |
+| Media | Pause, resume, next, previous and player volume | Explicit live MPRIS player; respect the media switch and clarify multiple targets |
+| Computer audio | Mute/unmute default output, set volume, raise/lower by 10 percentage points | Capture and revalidate the output identity; clamp volume to 0..100 percent |
+| Applications | Open an installed application | Validated launchable desktop-entry identity; no supplied executable, URI, file or arguments |
+
+- Local media, computer-output and application-launch actions each have their own default-off
+  switch in Command settings. They work with Zeca off. Project mute means notification mute,
+  never browser or system sound. Bare `Open <name>` resolves across projects and installed apps;
+  collisions ask which scope the user intended. An absent app reports not installed.
+- Use the existing speech transcription model for both dictation and commands. Dictation delivers
+  text; commands interpret that transcript locally through bounded phrases and target resolution.
+  No additional Claude integration, text-model provider or intent network consent is required.
+  Existing optional unknown-speech Chat handoff remains a separate choice under
+  [0019](0019-requests-on-the-users-behalf.md), never a prerequisite for local actions.
+- Accept complete supported request variations, not arbitrary word spotting. Bound heard input
+  to 4096 bytes and batches to eight actions. Unknown phrases and unresolved names are not guessed
+  effects. The speech model transcribes; it does not grant execution authority or guarantee general
+  semantic understanding. Keep typed actions and locally resolved identities in the app.
+- Revalidate the live target, switches, lock and cancellation ticket before each effect. A late or
+  duplicate result never executes. No automatic retry, shell execution or spoken program arguments.
+- Negated, quoted, informational or ambiguous speech must not turn into guessed actions. Clarify
+  an unclear target or audio scope. Voice never approves, denies, releases or modifies a permission
+  card, edits agent configuration, merges a PR, closes an app or runs a destructive operation.
+- Validate a batch before effects. If an external effect fails, stop and report the actual completed
+  prefix; do not promise rollback or retry actions already performed. Do not restore temporary
+  dictation duck/pause state over a deliberate voice media change. Undo is conditional on a known
+  restorable prior state; it never kills an application that a command launched.
+- Show the heard text, target, clarification and actual outcome in existing command feedback/history,
+  respecting retention. Never report Done before native completion. Disabled actions, no target,
+  missing native backend, stale targets, cancellation, timeout and native
+  failures produce actionable local feedback and no side effect. These are separate outcomes,
+  not a generic Not a command result. Transcription and ordinary dictation remain usable.
+
 ## Consequences
 
 - *Copied* is a supported result when focus, permissions or a terminal's safety cannot be
@@ -73,6 +112,12 @@ under [0004](0004-a-human-answers-permissions.md).
   size; only its input region changes. Automated checks do not replace that desktop validation.
 
 ## History
+
+- 2026-10-26: owner correction replaces the separate text-model proposal with existing speech
+  transcription and local interpretation; withdraw the unactivated intent consent and transport.
+
+- 2026-10-26: VC1 initially proposed bounded natural-command actions and independent model consent; the
+  owner correction above supersedes the separate text-model scope.
 
 - 2026-10-17: define N3 V0.2's target, clipboard, keyboard capability and permission boundaries.
   Use 0032 because [0031](0031-tasks-leave-vults.md) already records Tasks removal.
