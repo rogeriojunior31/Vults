@@ -98,6 +98,8 @@ pub struct Settings {
     pub voice_realtime: crate::realtime::Consent,
     #[serde(default)]
     pub voice_consultation: bool,
+    #[serde(default)]
+    pub voice_command_intent: crate::voice_commands::intent::Consent,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_consultation_budget: Option<String>,
     #[serde(default)]
@@ -394,6 +396,7 @@ impl Default for Settings {
             meeting_summary_budget: None,
             voice_realtime: crate::realtime::Consent::default(),
             voice_consultation: false,
+            voice_command_intent: crate::voice_commands::intent::Consent::default(),
             voice_consultation_budget: None,
             voice_codex_consultation: false,
             voice_codex_consultation_budget: None,
@@ -2331,6 +2334,48 @@ mod tests {
     }
 
     #[test]
+    fn command_intent_consent_stays_off_and_preserves_its_budget_without_borrowing_other_features() {
+        let (old, clean) = parse(
+            r#"{"version":42,"zeca":true,"voice_consultation":true,"dictation_cleanup":true,"dictation_commands":true}"#,
+        );
+        assert!(clean && !old.voice_command_intent.enabled());
+        assert_eq!(
+            old.voice_command_intent,
+            crate::voice_commands::intent::Consent::default()
+        );
+        for text in [
+            r#"{"on":"yes"}"#,
+            r#"{"on":true,"provider":"codex"}"#,
+            r#"{"model":"other"}"#,
+            r#"{"on":true,"api_key":"forbidden"}"#,
+        ] {
+            assert!(serde_json::from_str::<crate::voice_commands::intent::Consent>(text).is_err());
+        }
+        let directory =
+            std::env::temp_dir().join(format!("vults-intent-consent-{}", crate::traces::new_id()));
+        let store = vults_store::Store::open(&directory).unwrap();
+        let mut settings = Settings::default();
+        bind_request_budget(&mut settings.voice_command_intent.ledger, &store).unwrap();
+        settings.voice_command_intent.on = true;
+        let (mut restored, clean) = parse(&serde_json::to_string(&settings).unwrap());
+        assert!(clean && restored.voice_command_intent.enabled());
+        let identity = restored.voice_command_intent.ledger.clone();
+        restored.voice_command_intent.on = false;
+        bind_request_budget(&mut restored.voice_command_intent.ledger, &store).unwrap();
+        restored.voice_command_intent.on = true;
+        assert_eq!(restored.voice_command_intent.ledger, identity);
+        assert!(
+            !restored.voice_consultation && !restored.dictation_cleanup && !restored.dictation_command_chat
+        );
+        drop(store);
+        std::fs::remove_dir_all(&directory).unwrap();
+        let replacement = vults_store::Store::open(&directory).unwrap();
+        assert!(bind_request_budget(&mut restored.voice_command_intent.ledger, &replacement).is_err());
+        drop(replacement);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
     fn dictation_cleanup_is_a_separate_explicit_opt_in() {
         let (old, clean) = parse(r#"{"version":36,"zeca":true,"dictation_commands":true}"#);
         assert!(clean && !old.dictation_cleanup);
@@ -2454,6 +2499,7 @@ mod tests {
             meeting_summary_budget: None,
             voice_realtime: crate::realtime::Consent::default(),
             voice_consultation: false,
+            voice_command_intent: crate::voice_commands::intent::Consent::default(),
             voice_consultation_budget: None,
             voice_codex_consultation: false,
             voice_codex_consultation_budget: None,

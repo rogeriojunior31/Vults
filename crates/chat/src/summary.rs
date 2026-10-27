@@ -71,6 +71,30 @@ pub async fn question(
     dir: &Path,
     cancel: &mut watch::Receiver<bool>,
 ) -> Result<String, String> {
+    question_bounded(
+        system,
+        text,
+        dir,
+        cancel,
+        tokio::time::Instant::now() + TIMEOUT,
+        MAX_REPLY - 1,
+    )
+    .await
+}
+
+/// One absolute deadline covers version qualification, stdin, output and exit acknowledgement.
+/// Budget admission belongs to the app; this transport never retries or changes provider/model.
+pub async fn question_bounded(
+    system: &str,
+    text: &str,
+    dir: &Path,
+    cancel: &mut watch::Receiver<bool>,
+    deadline: tokio::time::Instant,
+    max_reply: u64,
+) -> Result<String, String> {
+    if max_reply == 0 || max_reply >= MAX_REPLY {
+        return Err("Invalid text reply limit.".into());
+    }
     // Older clients silently ignore the switches that stop @file expansion and memory loading.
     let mut version = Command::new("claude");
     version
@@ -80,12 +104,12 @@ pub async fn question(
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
     crate::dies_with_app(&mut version);
-    if !supported(&run(version, "", cancel).await?) {
+    if !supported(&run_bounded(version, "", cancel, deadline, max_reply).await?) {
         return Err(
             "Tool-free text questions require Claude Code 2.1.299 or later in the 2.1 series.".into(),
         );
     }
-    run(command(system, dir), text, cancel).await
+    run_bounded(command(system, dir), text, cancel, deadline, max_reply).await
 }
 fn supported(version: &str) -> bool {
     let Some(version) = version.split_whitespace().next() else {
@@ -96,20 +120,58 @@ fn supported(version: &str) -> bool {
 }
 
 pub(crate) async fn run(
+    cmd: Command,
+    text: &str,
+    cancel: &mut watch::Receiver<bool>,
+) -> Result<String, String> {
+    run_bounded(
+        cmd,
+        text,
+        cancel,
+        tokio::time::Instant::now() + TIMEOUT,
+        MAX_REPLY - 1,
+    )
+    .await
+}
+
+async fn run_bounded(
     mut cmd: Command,
     text: &str,
     cancel: &mut watch::Receiver<bool>,
+    deadline: tokio::time::Instant,
+    max_reply: u64,
 ) -> Result<String, String> {
     if *cancel.borrow() || cancel.has_changed().is_err() {
         return Err("Text consultation cancelled.".into());
     }
+    if tokio::time::Instant::now() >= deadline {
+        return Err("The text client took too long to answer.".into());
+    }
     let child = cmd.spawn().map_err(|e| format!("Can't start text client: {e}"))?;
-    run_child(child, text, cancel).await
+    run_child_bounded(child, text, cancel, deadline, max_reply).await
 }
+#[cfg(test)]
 async fn run_child(
+    child: tokio::process::Child,
+    text: &str,
+    cancel: &mut watch::Receiver<bool>,
+) -> Result<String, String> {
+    run_child_bounded(
+        child,
+        text,
+        cancel,
+        tokio::time::Instant::now() + TIMEOUT,
+        MAX_REPLY - 1,
+    )
+    .await
+}
+
+async fn run_child_bounded(
     mut child: tokio::process::Child,
     text: &str,
     cancel: &mut watch::Receiver<bool>,
+    deadline: tokio::time::Instant,
+    max_reply: u64,
 ) -> Result<String, String> {
     let run = async {
         let mut stdin = child.stdin.take().ok_or("no stdin")?;
@@ -123,12 +185,12 @@ async fn run_child(
             .stdout
             .take()
             .ok_or("no stdout")?
-            .take(MAX_REPLY)
+            .take(max_reply + 1)
             .read_to_end(&mut out)
             .await
             .map_err(|e| e.to_string())?;
         // Past the cap the rest is never read: end it rather than wait on a full pipe.
-        if out.len() as u64 >= MAX_REPLY {
+        if out.len() as u64 > max_reply {
             return Err("The text client's answer was too long.".into());
         }
         let status = child.wait().await.map_err(|e| e.to_string())?;
@@ -140,11 +202,12 @@ async fn run_child(
     };
     let result = tokio::select! { biased;
         _ = cancel.changed() => Err("Text consultation cancelled.".into()),
-        result = tokio::time::timeout(TIMEOUT, run) => result.unwrap_or_else(|_| Err("The text client took too long to answer.".into())),
+        result = tokio::time::timeout_at(deadline, run) => result.unwrap_or_else(|_| Err("The text client took too long to answer.".into())),
     };
     // The caller retains native ownership until the child has actually exited.
     if result.is_err() {
         let _ = child.kill().await;
+        let _ = child.wait().await;
     }
     result
 }
@@ -233,5 +296,78 @@ mod tests {
             .stderr(Stdio::null());
         let (_stop, mut cancel) = watch::channel(false);
         assert!(run(cmd, "", &mut cancel).await.unwrap_err().contains("too long"));
+    }
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn bounded_questions_enforce_inclusive_reply_limits_and_one_deadline_without_starting_expired_work()
+    {
+        let (_stop, mut cancel) = watch::channel(false);
+        for bytes in [8192, 8193] {
+            let mut cmd = Command::new("/usr/bin/head");
+            cmd.args(["-c", &bytes.to_string(), "/dev/zero"])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null());
+            let result = run_bounded(
+                cmd,
+                "",
+                &mut cancel,
+                tokio::time::Instant::now() + Duration::from_secs(2),
+                8192,
+            )
+            .await;
+            if bytes == 8192 {
+                assert_eq!(result.unwrap().len(), 8192);
+            } else {
+                assert!(result.unwrap_err().contains("too long"));
+            }
+        }
+        let mut cmd = Command::new("/bin/sleep");
+        cmd.arg("600")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        let child = cmd.spawn().unwrap();
+        let pid = child.id().unwrap();
+        assert!(
+            run_child_bounded(
+                child,
+                "",
+                &mut cancel,
+                tokio::time::Instant::now() + Duration::from_millis(20),
+                8192
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            !Path::new(&format!("/proc/{pid}")).exists(),
+            "deadline completion requires child exit"
+        );
+        let expired = tokio::time::Instant::now() - Duration::from_secs(1);
+        assert!(
+            run_bounded(
+                Command::new("/binary-that-must-never-start"),
+                "",
+                &mut cancel,
+                expired,
+                8192
+            )
+            .await
+            .unwrap_err()
+            .contains("too long")
+        );
+        assert!(
+            question_bounded("system", "text", Path::new("/unused"), &mut cancel, expired, 8192)
+                .await
+                .unwrap_err()
+                .contains("too long")
+        );
+        assert!(
+            question_bounded("system", "text", Path::new("/unused"), &mut cancel, expired, 0)
+                .await
+                .unwrap_err()
+                .contains("Invalid")
+        );
     }
 }

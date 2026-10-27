@@ -3,7 +3,7 @@
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
 //! polls, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
 //! summary, the memory's suggestions, Zeca's sleep, opted-in dictation clean-up, meeting summaries
-//! and tool-free voice consultations.
+//! tool-free voice consultations and optional command interpretation.
 //! Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
 //! way out from appearing unlisted. Explicit meeting installation uses its own one-use review
 //! adapter below, with durable admission for every HTTP attempt.
@@ -54,6 +54,8 @@ pub const VOICE_CONSULTATION: &str = "voice-consultation";
 pub const VOICE_CONSULTATION_BUDGET: usize = 20;
 pub const VOICE_CODEX_CONSULTATION: &str = "voice-codex-consultation";
 pub const VOICE_CODEX_CONSULTATION_BUDGET: usize = 20;
+pub const VOICE_COMMAND_INTENT: &str = "voice-command-intent";
+pub const VOICE_COMMAND_INTENT_BUDGET: usize = 200;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -103,6 +105,7 @@ pub fn budget(feature: &str) -> usize {
         CLEANUP => CLEANUP_BUDGET,
         MEETING_SUMMARY => MEETING_SUMMARY_BUDGET,
         VOICE_CONSULTATION => VOICE_CONSULTATION_BUDGET,
+        VOICE_COMMAND_INTENT => VOICE_COMMAND_INTENT_BUDGET,
         VOICE_CODEX_CONSULTATION => VOICE_CODEX_CONSULTATION_BUDGET,
         meeting_assets::FEATURE => meeting_assets::BUDGET,
         "github" => CONNECTOR_BUDGET,
@@ -112,7 +115,9 @@ pub fn budget(feature: &str) -> usize {
 
 /// Is `feature` switched on in these settings? The gate asks before every request.
 pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
-    if feature == VOICE_CODEX_CONSULTATION {
+    if feature == VOICE_COMMAND_INTENT {
+        s.dictation_commands && s.voice_command_intent.enabled()
+    } else if feature == VOICE_CODEX_CONSULTATION {
         vults_chat::consult_codex::SUBSCRIPTION_AUTH_QUALIFIED
             && s.voice_codex_consultation
             && s.voice_codex_consultation_budget.is_some()
@@ -203,6 +208,7 @@ impl vults_connectors::Gate for NetGate {
             && connector != VOICE_REALTIME
             && connector != VOICE_CONSULTATION
             && connector != VOICE_CODEX_CONSULTATION
+            && connector != VOICE_COMMAND_INTENT
             && connector != meeting_assets::FEATURE
             && self.allow_at(connector, Instant::now())
     }
@@ -262,6 +268,21 @@ impl NetGate {
         )
     }
 
+    pub fn reserve_voice_command_intent(
+        &self,
+        store: &mut vults_store::Store,
+        identity: &str,
+    ) -> Option<Span> {
+        self.reserve_text(
+            store,
+            identity,
+            VOICE_COMMAND_INTENT,
+            "claude",
+            vults_chat::summary::MODEL,
+            false,
+        )
+    }
+
     fn reserve_text(
         &self,
         store: &mut vults_store::Store,
@@ -303,6 +324,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(MEETING_SUMMARY);
         features.push(VOICE_CONSULTATION);
         features.push(VOICE_CODEX_CONSULTATION);
+        features.push(VOICE_COMMAND_INTENT);
         let handle = app.clone();
         Arc::new(NetGate::new(
             move |feature| {
@@ -384,6 +406,7 @@ fn feature(key: &str) -> &'static str {
         CLEANUP => "dictation-cleanup",
         MEETING_SUMMARY => "meeting-summary",
         VOICE_CONSULTATION => "voice-consultation",
+        VOICE_COMMAND_INTENT => "voice-command-intent",
         VOICE_CODEX_CONSULTATION => "voice-codex-consultation",
         meeting_assets::FEATURE => "meeting-assets",
         _ => "connectors",
@@ -400,7 +423,11 @@ pub fn seed(features: &[&str]) -> BTreeMap<String, Vec<i64>> {
         .map(|c| {
             let times = if matches!(
                 *c,
-                CLEANUP | MEETING_SUMMARY | VOICE_CONSULTATION | VOICE_CODEX_CONSULTATION
+                CLEANUP
+                    | MEETING_SUMMARY
+                    | VOICE_CONSULTATION
+                    | VOICE_CODEX_CONSULTATION
+                    | VOICE_COMMAND_INTENT
             ) {
                 store
                     .as_ref()
@@ -959,5 +986,62 @@ mod tests {
         assert_eq!(spans[0].status, "error");
         assert_eq!(spans[0].attrs["vults.feature"], "connectors");
         assert_eq!(spans[0].attrs["vults.target"], "github");
+    }
+    #[test]
+    fn intent_requires_its_own_consent_and_durable_200_attempt_budget_across_restarts_and_cleanup() {
+        use vults_connectors::Gate;
+        let mut settings = crate::settings::Settings {
+            voice_consultation: true,
+            voice_consultation_budget: Some("other".into()),
+            dictation_cleanup: true,
+            dictation_cleanup_budget: Some("other".into()),
+            zeca: true,
+            ..Default::default()
+        };
+        settings.connectors.insert(VOICE_COMMAND_INTENT.into(), true);
+        assert!(!switched_on(&settings, VOICE_COMMAND_INTENT));
+        settings.voice_command_intent.on = true;
+        assert!(!switched_on(&settings, VOICE_COMMAND_INTENT));
+        settings.voice_command_intent.ledger = Some("fixture".into());
+        assert!(switched_on(&settings, VOICE_COMMAND_INTENT));
+        settings.dictation_commands = false;
+        assert!(!switched_on(&settings, VOICE_COMMAND_INTENT));
+        assert_eq!(budget(VOICE_COMMAND_INTENT), 200);
+        let directory = std::env::temp_dir().join(format!("vults-intent-gate-{}", crate::traces::new_id()));
+        let mut store = vults_store::Store::open(&directory).unwrap();
+        let identity = store.request_budget_id().unwrap();
+        let off = NetGate::new(|_| false, budget, BTreeMap::new(), |_| {});
+        assert!(off.reserve_voice_command_intent(&mut store, &identity).is_none());
+        for _ in 0..VOICE_COMMAND_INTENT_BUDGET {
+            let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+            assert!(
+                !gate.allow(VOICE_COMMAND_INTENT),
+                "generic admission cannot bypass the durable ledger"
+            );
+            assert!(
+                gate.reserve_voice_command_intent(&mut store, "wrong-ledger")
+                    .is_none()
+            );
+            let span = gate.reserve_voice_command_intent(&mut store, &identity).unwrap();
+            assert_eq!(
+                span.attrs,
+                json!({"vults.feature":"voice-command-intent","vults.target":"voice-command-intent","vults.provider":"claude","gen_ai.request.model":vults_chat::summary::MODEL,"vults.local":false})
+            );
+        }
+        store.clear_all(&directory).unwrap();
+        drop(store);
+        let mut store = vults_store::Store::open_current(&directory).unwrap();
+        let gate = NetGate::new(|_| true, budget, BTreeMap::new(), |_| {});
+        assert!(gate.reserve_voice_command_intent(&mut store, &identity).is_none());
+        assert!(gate.reserve_voice_consultation(&mut store, &identity).is_some());
+        assert_eq!(
+            store
+                .request_attempt_starts(VOICE_COMMAND_INTENT, 0)
+                .unwrap()
+                .len(),
+            200
+        );
+        drop(store);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

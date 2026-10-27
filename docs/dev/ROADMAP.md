@@ -637,6 +637,9 @@ cancellation; existing flock commands still work; real desktop effects await VC6
   speech, semantic mode takes precedence over the separate Chat fallback when explicitly enabled;
   a failed semantic request never becomes a Chat turn or a second attempt. Permission refusals
   and unresolved/expired local clarifications never reach the model.
+- [x] Add independent default-off persisted consent/provider/model/ledger data and non-bypassable
+  durable admission for `voice-command-intent` (200 attempts/rolling day); expose one bounded text
+  transport deadline across CLI qualification, stdin, output and child-exit acknowledgement.
 - [ ] Reuse existing chat text transport and gate patterns, with an isolated scratch directory and
   no tools, transcript history, memory, project files or implicit CLI context. Send only the heard
   text and the minimal available action/target labels and opaque IDs disclosed in Settings; no
@@ -674,6 +677,25 @@ preserving permission/literal-volume refusal priority and blocking both Chat fal
 upload. Four-language feedback and EN/pt-BR guide text are current. No semantic request, provider,
 consent switch or budget is activated in this slice. Independent settings/gate/200-attempt ledger,
 provider cancellation/deadline, runtime routing and actual model cassettes remain open; VC3 is incomplete.
+Local validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals, reviewed translation source marks and repository/version guards.
+
+Admission/transport foundation (2026-10-26): `voice_command_intent` consent defaults off and accepts
+only the qualified Claude CLI/Haiku pair, independently of Chat/cleanup/consultation choices. The
+feature has its own 200-attempt durable gate and strict ledger identity; generic admission is
+refused. Restart, on/off data round-trips and transcript/history clearing cannot renew attempts,
+and a replacement database cannot inherit the old consent. The public admission adapter validates
+input/current consent/CLI presence before reserving, retains cancelled-attempt tracing and exposes
+an absolute 10-second deadline; it does not authorize execution. Trace outcomes are closed metadata,
+never raw heard/model text or credentials. The shared tool-free text transport now accepts an
+inclusive output cap and one absolute deadline for version qualification plus the actual request;
+expired work does not start, oversized replies are rejected, and cancellation/error kills and
+awaits child exit. Existing default text callers retain their original output cap and 120-second
+bound. Process fixtures use only head/sleep, never a real provider or personal account. Tests prove
+independent switches, unknown provider/model rejection, durable exhaustion after restart/cleanup,
+wrong/missing ledgers, metadata-only traces, exact 8 KiB acceptance, overflow and child teardown.
+The renderer switch, scratch/worker ownership, account/provider change cancellation, active routing,
+clarifications and typed runtime dispatch remain pending; no automatic semantic request is enabled.
 Local validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
 feature-enabled evals, reviewed translation source marks and repository/version guards.
 

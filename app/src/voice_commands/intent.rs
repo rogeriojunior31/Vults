@@ -1,9 +1,12 @@
-//! Pure, bounded interpretation boundary. Model text never becomes executable command text.
+//! Bounded interpretation and independent admission. Model text never becomes executable text.
+mod access;
 use super::{targets, *};
+pub use access::{Admission, Consent, Error as AdmissionError, Model, Outcome, Provider};
 use serde::{Deserialize, Serialize};
 use vults_dictation::command::{MediaAction, OutputAction, names::NameKind};
 
 pub const MAX_REPLY_BYTES: usize = 8192;
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_TARGETS: usize = 256;
 const MAX_LABEL_BYTES: usize = 160;
 

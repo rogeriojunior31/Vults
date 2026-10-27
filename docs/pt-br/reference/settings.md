@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 12c1b93e274e -->
+<!-- source: 1782d75e3e7d -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -135,6 +135,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 | `dictation_write_in` | ausente | Idioma de saída opcional: `"en"`, `"pt-BR"`, `"es"`, `"zh"`; ausente mantém o idioma falado. Como falado não faz requisição nem traduz. Capturado ao pressionar a tecla, com idioma de saída aplicado guardado separado do idioma ouvido (a partir da versão 38) |
 | `dictation_sessions_english` | `false` | Usa inglês na saída apenas em sessões reconhecidas do bando, com Prompt. Outros aplicativos mantêm Escrever em; contexto ambíguo de sessão nunca ativa inglês. Requer o consentimento separado da limpeza (a partir da versão 38) |
 | `dictation_commands` | `true` | Ativa a tecla separada de comandos, apenas segurando. Desligar cancela captura/envios e contexto de comandos, preservando ditado comum e Copiar novamente (a partir da versão 36) |
+| `voice_command_intent` | `{on:false,provider:"claude-cli",model:"haiku"}` | Consentimento do backend da VC3, separado do encaminhamento ao Chat, da limpeza do ditado e das consultas por voz. Reserva no máximo 200 tentativas por janela móvel de 24 horas pelo gate durável próprio `voice-command-intent`. A identidade opcional `ledger` é preservada ao desligar ou limpar o histórico e deve corresponder ao banco existente; registro indisponível ou substituído recusa a autorização. Só aceita a opção qualificada Claude CLI/Haiku. Essa base do backend ainda não tem controle na interface nem encaminhamento automático de pedidos |
 | `dictation_command_media` | `false` | Consentimento independente para comandos locais de reprodução. Exige comandos de voz e controles de mídia ligados; atua só no reprodutor selecionado, sem alterar notificações de projetos. Desativar cancela comandos pendentes. Configure em **Ditado > Configurações dos comandos** |
 | `dictation_command_apps` | `false` | Consentimento independente para ler nomes de aplicativos visíveis instalados e abrir uma entrada registrada validada por voz. Abrir sem escopo resolve aplicativos e projetos juntos; indicar aplicativo/projeto desambigua. Executável, URL e argumentos de arquivo não vêm da fala. Configure em **Ditado > Configurações dos comandos**; alterar cancela comandos pendentes |
 | `dictation_command_output` | `false` | Ativação independente de comandos locais de silêncio/volume da saída padrão por pactl JSON e servidor Unix de áudio. Fixa/confere identidade, preserva balanço, limita a 0..100%, confirma estado e rejeita pedidos antigos/cancelados. Alterar volume não reativa o som nem controla microfone/player. Configure em **Ditado > Configurações dos comandos**; alterar cancela comandos pendentes |
