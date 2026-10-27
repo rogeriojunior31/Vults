@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: c1a70ffaa41b -->
+<!-- source: f5673859c7f6 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1000,6 +1000,14 @@ Variações de áudio incluem `increase music volume`, `turn down computer volum
 e `bajar el volumen del ordenador`. Pedidos numéricos como `set system volume to 35`,
 `ajuste o volume da música para 35` e `pon el volumen del ordenador a 35` mantêm o limite 0..100.
 Música/reprodutor e computador/saída continuam separados; `turn up volume` sozinho não escolhe um.
+Pedidos reconhecidos sem escopo, como `lower volume`, `abaixa o volume` ou `volume 30`, ficam
+no computador e pedem que você especifique música ou computador e repita o comando completo.
+Eles nunca entram no encaminhamento opcional ao Chat. Um comando de mídia conhecido com destino
+ou condição adicional, como `pause a música no Firefox` ou `pause music in five minutes`, também
+para localmente com uma explicação: os controles de mídia por voz usam apenas o reprodutor mostrado
+no Vults. Esses pedidos não escolhem reprodutor nem agendam ação. Nenhum trecho inicial do lote
+é executado, e o retorno limpa perguntas antigas sobre destinos; faça um novo pedido completo
+em vez de responder à pergunta antiga.
 `mute audio` continua sendo o pedido existente para silenciar notificações de um projeto chamado audio.
 Essas variações não ativam opções de ação, chamam o Chat nem ignoram verificações nativas de destino.
 Fala entre aspas é tratada como dado: falar ou digitar um comando entre aspas não o executa nem

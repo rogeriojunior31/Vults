@@ -347,6 +347,8 @@ fn computer_audio_has_an_explicit_scope_and_preserves_project_and_player_command
             parse(text),
             if text.starts_with("computer volume") {
                 Parsed::InvalidVolume
+            } else if ["lower the volume", "aumente o som"].contains(&text) {
+                Parsed::AudioScopeRequired
             } else {
                 Parsed::NotCommand
             },
@@ -571,4 +573,62 @@ fn audio_request_variations_keep_player_and_computer_scopes_distinct() {
     ] {
         assert_eq!(parse(text), Parsed::InvalidVolume, "{text}");
     }
+}
+
+#[test]
+fn unclear_audio_and_qualified_media_requests_have_local_non_execution_results() {
+    for text in [
+        "Lower volume",
+        "Could you turn down the volume?",
+        "consegue abaixar o volume",
+        "aumente o som",
+        "puedes subir el volumen",
+        "volume 30",
+        "set volume to 40 percent",
+        "volume para 35 por cento",
+        "pon el volumen a 40 por ciento",
+        "open api and then lower volume",
+    ] {
+        assert_eq!(parse(text), Parsed::AudioScopeRequired, "{text}");
+    }
+    for text in [
+        "Pause music in Firefox",
+        "pause what is playing on Firefox",
+        "pare o que estou escutando no Firefox",
+        "pause a musica na TV",
+        "pausa la musica en Firefox",
+        "next track on Spotify",
+        "set music volume to 30 in Firefox",
+        "pause music in five minutes",
+        "open api and then pause music in Firefox",
+    ] {
+        assert_eq!(parse(text), Parsed::UnsupportedMediaTarget, "{text}");
+    }
+    for text in [
+        "what does lower volume mean",
+        "do not lower volume",
+        "explain pause music in Firefox",
+        "do not pause music in Firefox",
+    ] {
+        assert_eq!(parse(text), Parsed::NotCommand, "{text}");
+    }
+    assert_eq!(parse("approve and then lower volume"), Parsed::Refused);
+    assert_eq!(
+        parse("lower volume and then computer volume -10"),
+        Parsed::InvalidVolume
+    );
+    assert_eq!(parse("\"pause music in Firefox\""), Parsed::Quoted);
+    assert_eq!(parse("\"lower volume\""), Parsed::Quoted);
+    assert_eq!(
+        parse("open app Lower Volume"),
+        one(Command::Application("lower volume".into()))
+    );
+    assert_eq!(
+        parse("mute project volume"),
+        one(Command::SetPreference {
+            target: "volume".into(),
+            preference: Preference::Mute,
+            on: true
+        })
+    );
 }

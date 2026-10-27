@@ -1167,3 +1167,61 @@ fn clarification_keeps_ordinary_progress_and_unrelated_sessions_valid() {
     no_answers(&reply.effects);
     assert!(!reply.chat_fallback(true));
 }
+
+#[test]
+fn unclear_audio_and_extra_media_targets_stay_local_without_a_batch_prefix() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    for text in [
+        "lower volume",
+        "abaixa o volume",
+        "baja el volumen",
+        "volume 30",
+        "pause music in Firefox",
+        "pare o que estou escutando no Firefox",
+        "pausa la musica en Firefox",
+        "mute web and then lower volume",
+        "mute web and then pause music in Firefox",
+    ] {
+        let out = say(&mut commands, &mut state, text, now);
+        assert_eq!(
+            out.feedback,
+            if text.contains("Firefox") {
+                Feedback::UnsupportedMediaTarget
+            } else {
+                Feedback::AudioScopeRequired
+            }
+        );
+        assert!(!out.text.is_empty() && !out.chat_fallback(true), "{text}");
+        assert!(out.effects.is_empty() && out.desktop.is_empty(), "{text}");
+        assert_eq!(format!("{state:?}"), before);
+    }
+}
+
+#[test]
+fn audio_scope_feedback_clears_pending_choices_and_is_available_in_every_language() {
+    let now = Instant::now();
+    for lang in [i18n::Lang::En, i18n::Lang::PtBr, i18n::Lang::Es, i18n::Lang::Zh] {
+        for text in ["lower volume", "pause music in Firefox"] {
+            let mut state = fixture(now);
+            state.lang = lang;
+            session(&mut state, "c", "/work/api-gateway", now);
+            let mut commands = Commands::new(now);
+            assert_eq!(
+                say(&mut commands, &mut state, "open apy", now).feedback,
+                Feedback::WhichOne
+            );
+            let report = say(&mut commands, &mut state, text, now);
+            assert_eq!(report.text, i18n::voice_feedback(lang, report.feedback));
+            assert!(report.choices.is_empty() && !report.chat_fallback(true));
+            assert!(commands.pending.is_none());
+            assert_eq!(
+                say(&mut commands, &mut state, "api", now).feedback,
+                Feedback::NotCommand
+            );
+            assert!(state.focus.is_none());
+        }
+    }
+}

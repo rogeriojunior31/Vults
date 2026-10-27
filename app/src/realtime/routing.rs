@@ -168,6 +168,8 @@ fn route(
             Parsed::NotCommand => return None,
             Parsed::InvalidVolume => Feedback::InvalidVolume,
             Parsed::Quoted => Feedback::Quoted,
+            Parsed::AudioScopeRequired => Feedback::AudioScopeRequired,
+            Parsed::UnsupportedMediaTarget => Feedback::UnsupportedMediaTarget,
             Parsed::Refused => Feedback::NotByVoice,
             Parsed::Commands(_) => Feedback::Unavailable,
         };

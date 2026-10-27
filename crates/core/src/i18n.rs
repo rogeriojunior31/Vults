@@ -979,6 +979,8 @@ pub enum VoiceFeedback {
     ExecutionFailed,
     InvalidVolume,
     Quoted,
+    AudioScopeRequired,
+    UnsupportedMediaTarget,
     Consulting,
     SentToChat,
     ChatUnavailable,
@@ -1001,6 +1003,26 @@ pub enum VoiceFeedback {
 pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
     use VoiceFeedback::*;
     match (lang, feedback) {
+        (Lang::En, AudioScopeRequired) => "Specify music or computer volume, then repeat the full command.",
+        (Lang::PtBr, AudioScopeRequired) => {
+            "Especifique o volume da música ou do computador e repita o comando completo."
+        }
+        (Lang::Es, AudioScopeRequired) => {
+            "Indica el volumen de la música o del ordenador y repite el comando completo."
+        }
+        (Lang::Zh, AudioScopeRequired) => "请明确要调整音乐音量还是电脑音量，然后重新说出完整指令。",
+        (Lang::En, UnsupportedMediaTarget) => {
+            "Voice media commands use the player shown in Vults. Repeat without a player name or extra condition."
+        }
+        (Lang::PtBr, UnsupportedMediaTarget) => {
+            "Comandos de mídia usam o reprodutor mostrado no Vults. Repita sem nomear um reprodutor ou acrescentar condições."
+        }
+        (Lang::Es, UnsupportedMediaTarget) => {
+            "Los comandos de multimedia usan el reproductor mostrado en Vults. Repite sin nombrar un reproductor ni añadir condiciones."
+        }
+        (Lang::Zh, UnsupportedMediaTarget) => {
+            "媒体语音指令使用 Vults 中显示的播放器。请重新说出指令，不要指定播放器名称或附加条件。"
+        }
         (Lang::En, Quoted) => "Quoted speech is not executed as a voice command.",
         (Lang::PtBr, Quoted) => "Uma fala entre aspas não é executada como comando de voz.",
         (Lang::Es, Quoted) => "El texto entre comillas no se ejecuta como comando de voz.",

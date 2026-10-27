@@ -206,3 +206,14 @@ fn playback(text: &str) -> Option<MediaAction> {
     }
     None
 }
+
+// Recognize only a complete known media request before a destination/condition boundary.
+pub(super) fn has_extra_target(text: &str) -> bool {
+    [" in ", " on ", " no ", " na ", " en ", " pelo "]
+        .iter()
+        .any(|separator| {
+            text.match_indices(separator).any(|(index, separator)| {
+                !text[index + separator.len()..].is_empty() && parse(&text[..index]).is_some()
+            })
+        })
+}

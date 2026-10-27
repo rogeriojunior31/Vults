@@ -52,6 +52,8 @@ pub enum Parsed {
     NotCommand,
     InvalidVolume,
     Quoted,
+    AudioScopeRequired,
+    UnsupportedMediaTarget,
 }
 
 /// Lexical key shared with later name matching: accent/case/punctuation/space folding only.
@@ -130,6 +132,12 @@ pub fn parse(text: &str) -> Parsed {
     }
     if is_quoted(text) {
         return Parsed::Quoted;
+    }
+    if clauses.iter().any(|clause| output::needs_scope(clause)) {
+        return Parsed::AudioScopeRequired;
+    }
+    if clauses.iter().any(|clause| media::has_extra_target(clause)) {
+        return Parsed::UnsupportedMediaTarget;
     }
     let commands: Option<Vec<_>> = clauses.iter().map(|clause| single(clause)).collect();
     commands.map_or(Parsed::NotCommand, Parsed::Commands)

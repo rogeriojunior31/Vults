@@ -94,3 +94,49 @@ pub(super) fn volume_argument(text: &str) -> Option<&str> {
     .iter()
     .find_map(|prefix| text.strip_prefix(prefix))
 }
+
+// Unscoped volume requests must not guess between player and computer audio or reach Chat.
+pub(super) fn needs_scope(text: &str) -> bool {
+    [
+        "lower volume",
+        "lower the volume",
+        "raise volume",
+        "raise the volume",
+        "increase volume",
+        "increase the volume",
+        "decrease volume",
+        "decrease the volume",
+        "turn up volume",
+        "turn up the volume",
+        "turn down volume",
+        "turn down the volume",
+        "abaixar o volume",
+        "reduzir o volume",
+        "abaixa o volume",
+        "abaixe o volume",
+        "baixar o volume",
+        "diminua o volume",
+        "diminuir o volume",
+        "reduza o volume",
+        "aumenta o volume",
+        "aumente o volume",
+        "aumentar o volume",
+        "aumente o som",
+        "abaixe o som",
+        "baja el volumen",
+        "bajar el volumen",
+        "sube el volumen",
+        "subir el volumen",
+    ]
+    .contains(&text)
+        || ["volume ", "set volume to ", "volume para ", "pon el volumen a "]
+            .iter()
+            .filter_map(|prefix| text.strip_prefix(prefix))
+            .any(|value| {
+                let value = super::volume_number(value);
+                !value.is_empty()
+                    && value
+                        .split_whitespace()
+                        .all(|part| part.bytes().all(|ch| ch.is_ascii_digit()))
+            })
+}

@@ -310,3 +310,23 @@ fn quoted_commands_are_consumed_locally_even_when_commands_are_disabled() {
         assert!(out.effects.is_empty() && out.desktop.is_empty() && !out.chat_fallback(true));
     }
 }
+
+#[test]
+fn unclear_audio_and_qualified_media_never_reach_realtime_even_when_commands_are_off() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    for enabled in [true, false] {
+        for (text, feedback) in [
+            ("lower volume", Feedback::AudioScopeRequired),
+            ("pause music in Firefox", Feedback::UnsupportedMediaTarget),
+        ] {
+            let out = route(&mut commands, &mut state, text, enabled, now, json!([]))
+                .expect("known audio limitations stay local");
+            assert_eq!(out.feedback, feedback);
+            assert!(out.effects.is_empty() && out.desktop.is_empty() && !out.chat_fallback(true));
+            assert_eq!(format!("{state:?}"), before);
+        }
+    }
+}

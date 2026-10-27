@@ -891,6 +891,13 @@ Audio variations include `increase music volume`, `turn down computer volume`,
 and `bajar el volumen del ordenador`. Numeric requests such as `set system volume to 35`,
 `ajuste o volume da musica para 35` and `pon el volumen del ordenador a 35` keep the 0..100 limit.
 Music/player and computer/output scopes stay separate; a bare `turn up volume` does not select one.
+Recognized unscoped requests such as `lower volume`, `abaixa o volume` or `volume 30` stay local
+and ask you to specify music or computer volume and repeat the full command. They never enter the
+optional Chat handoff. A known media command with an extra destination or condition, such as
+`pause music in Firefox` or `pause music in five minutes`, also stops locally with an explanation:
+voice media controls use only the player shown in Vults. Such requests do not select a player or
+schedule an action. An affected batch executes no prefix, and the feedback clears any old target
+question; reply with a new complete command rather than an answer to that old question.
 `mute audio` remains the existing project-notification request for a project named audio.
 These variations do not enable an action switch, call Chat or bypass native target checks.
 Quoted speech is treated as data: saying or typing a quoted command does not execute it or enter

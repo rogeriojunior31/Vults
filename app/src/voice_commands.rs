@@ -163,6 +163,14 @@ impl Commands {
         }
         let elapsed = now.checked_duration_since(self.epoch).unwrap_or(Duration::MAX);
         let (commands, mut selected, question_started) = match command::parse(transcript) {
+            Parsed::AudioScopeRequired => {
+                self.pending = None;
+                return report(lang, Feedback::AudioScopeRequired);
+            }
+            Parsed::UnsupportedMediaTarget => {
+                self.pending = None;
+                return report(lang, Feedback::UnsupportedMediaTarget);
+            }
             Parsed::Quoted => {
                 self.pending = None;
                 return report(lang, Feedback::Quoted);

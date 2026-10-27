@@ -641,6 +641,9 @@ cancellation; existing flock commands still work; real desktop effects await VC6
 - [x] Keep pending session choices bound to the original start/folder identity; terminal requests
   also retain their terminal binding. Reject a restarted same-key session or changed terminal
   before resolving a reply, without rejecting ordinary progress or unrelated sessions.
+- [x] Keep recognized unscoped volume and qualified media requests local, with four-language
+  feedback asking for a complete explicit request or explaining the selected-player limitation.
+  Do not select another player, schedule a condition or route these known limitations to Chat.
 - [ ] Verify existing target clarification across project/app collisions and expired selections.
   Clarify unclear scopes; never use media volume for a bare computer-volume request or vice versa.
 - [ ] Keep local command handling independent of Chat. Preserve explicit optional Chat handoff
@@ -686,6 +689,22 @@ Validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy
 feature-enabled evals and repository/version guards; the reviewed EN/pt-BR guide source mark
 matches. Regression evidence covers restarted earlier/candidate sessions, changed earlier/candidate
 terminals and retained ordinary progress. No personal playback, microphone or provider was used.
+
+Audio-scope feedback (2026-10-26): regression evidence showed `lower volume` reaching the optional
+Chat fallback. The shared parser now returns explicit local non-execution outcomes for bounded
+unscoped-volume phrases/numbers and complete known media commands with destination/condition
+suffixes. App dispatch and realtime routing consume both outcomes, including when realtime command
+handling is disabled; no batch prefix executes and old target clarification is cleared. Refusal,
+invalid explicit numeric volume and quotation retain priority. Names inside application/project
+commands remain untouched; ordinary unknown speech retains its separate opt-in Chat behavior.
+Four-language core feedback requests a new full command; it does not create a pending audio-scope
+choice or re-open the microphone. EN/pt-BR guides explain the behavior. This closes explicit local
+feedback for the reported named-player phrase, not native named-player selection or scheduling.
+Validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals and repository/version guards. Parser/dispatcher/realtime fixtures cover
+PT/EN/ES examples, all four feedback languages, no prefix effect or Chat handoff, old-question
+invalidation and refusal/invalid-volume/quotation priority. Reviewed EN/pt-BR source marks match.
+No microphone, personal playback or provider was used; VC6 native acceptance remains pending.
 
 Reference review (2026-10-26; read-only local snapshots):
 
