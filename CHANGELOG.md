@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Add opt-in local voice commands for selected-player playback, default computer audio and installed applications, including ordered batches with flock navigation and terminal/folder submission receipts. Keep ambiguous, quoted, negated and unsupported player-specific requests local, revalidate targets and cancellation, and report only confirmed completion. Native desktop acceptance remains pending before 0.1.9 publication.
+
 - Include LICENSE and NOTICE in the Linux Debian/RPM package resources alongside the bundled hook.
 
 - Request clipboard-history exclusion for copied dictation on Linux using the existing KDE hint, while keeping plain-text paste and read-back confirmation. Clipboard managers must support the hint; Vults history retention is unchanged.
