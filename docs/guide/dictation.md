@@ -945,8 +945,13 @@ The entire batch checks its required switches, selected player, player capabilit
 output before the first effect. A single recording/deadline owns the batch; cancellation or any
 failure stops the remaining actions. Feedback counts only confirmed operations, with no retry
 or rollback. A timeout may leave the current operation unconfirmed; check audio before repeating.
-Playback commands do not support repeat or undo yet. Realtime voice does not execute these new desktop commands yet. Natural intent interpretation by a model remains pending; transcription alone does not
-supply that interpretation. No provider request or automatic Chat fallback is made for a media command.
+Playback commands do not support repeat or undo yet. Realtime voice does not execute these new
+desktop commands yet. The existing speech model supplies the transcript; Vults interprets supported
+command phrases locally, without an additional text model or Claude integration. Variations such as `stop what I am
+listening to`, `para o que estou escutando` and `continua o que eu estava ouvindo` target the selected
+player. A named-player suffix is not ignored or redirected to another player. This is bounded local
+matching, not unrestricted language understanding. No provider request or automatic Chat fallback
+is made for a recognized media command.
 
 VC2 also adds **Application voice commands**, a separate default-off choice under Command
 settings. With it on, `open Obsidian` searches current projects and visible installed desktop

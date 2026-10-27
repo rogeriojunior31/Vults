@@ -1,5 +1,5 @@
 # 0032. Ditado em outros aplicativos
-<!-- source: 94627ed0fdf1 -->
+<!-- source: 37d3afdb8881 -->
 
 **Status:** Aceita, 2026-10-17, sob a instrução do mantenedor para continuar a N3 com os padrões
 planejados. Este é o contrato da V0.2; captura, inserção e validação nativa chegam separadamente.
@@ -90,22 +90,17 @@ A tecla separada de comando solicita uma ação, não inserção de texto. O cat
   Silenciar projeto significa silenciar notificações, nunca o navegador ou sistema. `Abrir <nome>`
   resolve projetos e aplicativos instalados; colisões perguntam qual escopo o usuário quis.
   Aplicativo ausente é informado como não instalado.
-- Manter a gramática determinística para pedidos locais suportados. Interpretação semântica é
-  uma escolha separada desligada por padrão, com provedor/modelo e consentimento de rede próprios
-  `voice-command-intent` na [0019](0019-requests-on-the-users-behalf.md). Ligar Chat, transcrição
-  ou envio de fala desconhecida ao Chat não a habilita. Com o modo semântico ligado, fala
-  desconhecida tem esse único destino; uma falha nunca inicia o Chat silenciosamente.
-- O modelo recebe apenas o texto ouvido limitado e os rótulos mínimos de ações/destinos disponíveis
-  com IDs opacos. Não recebe áudio, caminhos, arquivos de projeto, metadados de mídia, chat salvo,
-  memória ou ferramentas. Reutilizar transportes qualificados só de texto: inicialmente Claude
-  Code; API/modelos locais só após verificar o mesmo contrato. A consulta não qualificada pela
-  assinatura Codex continua indisponível; nunca trocar conta, provedor ou cobrança silenciosamente.
-- A saída do modelo é um esquema fechado não confiável: ações tipadas validadas, esclarecimento,
-  não suportado ou recusa. Aplicar limites de 4096 bytes de entrada, 8 KiB de saída, oito ações e
-  dez segundos. Rejeitar verbos/campos desconhecidos, valores numéricos inválidos e destinos fora
-  do catálogo capturado. Revalidar destino, opções, bloqueio e cancelamento antes de cada efeito.
-  Resposta atrasada ou duplicada nunca executa. Sem repetição automática, shell ou argumentos de
-  programa escolhidos pelo modelo.
+- Usar o modelo de transcrição de voz existente para ditado e comandos. O ditado entrega texto;
+  comandos interpretam essa transcrição localmente com frases limitadas e resolução de destinos.
+  Não é necessária integração adicional com Claude, provedor de texto ou consentimento de rede
+  para intenção. O envio opcional de fala desconhecida ao Chat continua separado sob a
+  [0019](0019-requests-on-the-users-behalf.md), nunca obrigatório para ações locais.
+- Aceitar variações completas de pedidos suportados, sem procurar palavras soltas. Limitar entrada
+  a 4096 bytes e lotes a oito ações. Frases desconhecidas e nomes não resolvidos não viram efeitos
+  adivinhados. O modelo de voz transcreve; não concede autoridade de execução nem garante compreensão
+  semântica geral. Manter ações tipadas e identidades resolvidas localmente no aplicativo.
+- Revalidar destino, opções, bloqueio e cancelamento antes de cada efeito. Resultado atrasado ou
+  duplicado nunca executa. Sem repetição automática, shell ou argumentos de programa falados.
 - Fala negada, citada, informativa ou ambígua não pode virar ação adivinhada. Esclarecer destino ou
   escopo de áudio incerto. Voz nunca aprova, nega, libera ou modifica cartões de permissão, edita
   configurações de agentes, faz merge, fecha aplicativos ou executa operações destrutivas.
@@ -115,8 +110,8 @@ A tecla separada de comando solicita uma ação, não inserção de texto. O cat
   conhecido e restaurável; nunca encerra um aplicativo aberto pelo comando.
 - Mostrar texto ouvido, destino, esclarecimento e resultado real no feedback/histórico existente,
   respeitando retenção. Nunca informar Concluído antes da execução nativa. Ações desligadas,
-  ausência de destino, CLI/backend ausente, provedor não suportado, consentimento vencido, cota
-  esgotada, tempo excedido e falhas nativas geram explicação local e nenhum efeito. São resultados
+  ausência de destino, backend nativo ausente, destinos desatualizados, cancelamento,
+  tempo excedido e falhas nativas geram explicação local e nenhum efeito. São resultados
   distintos, não um genérico Isso não é um comando. Transcrição e ditado comum continuam usáveis.
 
 <a id="consequences"></a>
@@ -140,7 +135,11 @@ A tecla separada de comando solicita uma ação, não inserção de texto. O cat
 
 ## Histórico
 
-- 2026-10-26: a VC1 define ações limitadas de comandos naturais e consentimento independente de modelo antes da 0.1.9.
+- 2026-10-26: correção do responsável substitui a proposta de modelo de texto separado pela
+  transcrição de voz existente e interpretação local; retira consentimento e transporte não ativados.
+
+- 2026-10-26: a VC1 propôs inicialmente ações limitadas e consentimento independente de modelo; a correção
+  acima substitui o escopo de modelo de texto separado.
 
 - 2026-10-17: definir os limites da N3 V0.2 para destino, área de transferência, capacidade de
   teclado e permissões. Usar 0032 porque a [0031](0031-tasks-leave-vults.md) já registra a remoção

@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 30df0bc1e097 -->
+<!-- source: 221229fe3620 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1062,8 +1062,12 @@ um único prazo controlam o lote; cancelamento ou falha interrompe as ações re
 conta apenas operações confirmadas, sem repetição nem reversão automática. Um tempo excedido pode
 deixar a operação atual sem confirmação; confira o áudio antes de repetir.
 Comandos de reprodução ainda não permitem repetir ou desfazer. A conversa por voz em tempo real ainda não executa esses novos
-comandos. A interpretação natural por modelo continua pendente; transcrever a fala não fornece essa interpretação. Um comando de mídia não faz requisição
-a provedor nem é encaminhado automaticamente ao Chat.
+comandos. O modelo de voz existente fornece a transcrição; o Vults interpreta frases suportadas localmente,
+sem modelo de texto adicional ou integração com Claude. Variações como `stop what I am listening to`,
+`para o que estou escutando` e `continua o que eu estava ouvindo` usam o reprodutor selecionado.
+Um destino nomeado no fim da frase não é ignorado nem redirecionado para outro reprodutor.
+Isso é reconhecimento local limitado, não compreensão irrestrita da linguagem. Um comando de mídia
+reconhecido não faz requisição a provedor nem é encaminhado automaticamente ao Chat.
 
 A VC2 também acrescenta **Comandos de voz de aplicativos**, uma escolha separada desligada por
 padrão nas configurações dos comandos. Ao ativar, `abrir Obsidian` busca projetos atuais e aplicativos

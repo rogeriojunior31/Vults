@@ -75,21 +75,17 @@ The separate command key requests an action, not text insertion. The 0.1.9 catal
   switch in Command settings. They work with Zeca off. Project mute means notification mute,
   never browser or system sound. Bare `Open <name>` resolves across projects and installed apps;
   collisions ask which scope the user intended. An absent app reports not installed.
-- Keep the deterministic grammar for supported local requests. Semantic interpretation is a
-  separate default-off choice with its own provider/model and the `voice-command-intent` network
-  consent in [0019](0019-requests-on-the-users-behalf.md). It is not enabled by turning on Chat,
-  speech transcription or the existing unknown-speech-to-Chat option. When semantic mode is on,
-  unknown speech has that one destination; a failed interpretation never silently starts Chat.
-- The model receives only the bounded heard text and the minimum available action/target labels
-  and opaque IDs. It receives no audio, file paths, project files, media metadata, saved chat,
-  memory or tools. Reuse qualified tool-free transports: initially Claude Code, with API/local
-  transports offered only after the same contract is verified. Unsupported Codex subscription
-  consultation stays unavailable; never silently switch account, provider or billing method.
-- Model output is an untrusted closed schema: validated typed actions, clarification, unsupported
-  or refusal. Enforce the 4096-byte input, 8 KiB output, eight-action and ten-second bounds. Reject
-  unknown verbs/fields, invalid numeric values and targets outside the captured catalog. Revalidate
-  the live target, switches, lock and cancellation ticket before each effect. A late or duplicate
-  reply never executes. No automatic retry, shell execution or model-selected program arguments.
+- Use the existing speech transcription model for both dictation and commands. Dictation delivers
+  text; commands interpret that transcript locally through bounded phrases and target resolution.
+  No additional Claude integration, text-model provider or intent network consent is required.
+  Existing optional unknown-speech Chat handoff remains a separate choice under
+  [0019](0019-requests-on-the-users-behalf.md), never a prerequisite for local actions.
+- Accept complete supported request variations, not arbitrary word spotting. Bound heard input
+  to 4096 bytes and batches to eight actions. Unknown phrases and unresolved names are not guessed
+  effects. The speech model transcribes; it does not grant execution authority or guarantee general
+  semantic understanding. Keep typed actions and locally resolved identities in the app.
+- Revalidate the live target, switches, lock and cancellation ticket before each effect. A late or
+  duplicate result never executes. No automatic retry, shell execution or spoken program arguments.
 - Negated, quoted, informational or ambiguous speech must not turn into guessed actions. Clarify
   an unclear target or audio scope. Voice never approves, denies, releases or modifies a permission
   card, edits agent configuration, merges a PR, closes an app or runs a destructive operation.
@@ -99,7 +95,7 @@ The separate command key requests an action, not text insertion. The 0.1.9 catal
   restorable prior state; it never kills an application that a command launched.
 - Show the heard text, target, clarification and actual outcome in existing command feedback/history,
   respecting retention. Never report Done before native completion. Disabled actions, no target,
-  missing CLI/backend, unsupported provider, expired consent, exhausted quota, timeout and native
+  missing native backend, stale targets, cancellation, timeout and native
   failures produce actionable local feedback and no side effect. These are separate outcomes,
   not a generic Not a command result. Transcription and ordinary dictation remain usable.
 
@@ -117,7 +113,11 @@ The separate command key requests an action, not text insertion. The 0.1.9 catal
 
 ## History
 
-- 2026-10-26: VC1 defines bounded natural-command actions and independent model consent before 0.1.9.
+- 2026-10-26: owner correction replaces the separate text-model proposal with existing speech
+  transcription and local interpretation; withdraw the unactivated intent consent and transport.
+
+- 2026-10-26: VC1 initially proposed bounded natural-command actions and independent model consent; the
+  owner correction above supersedes the separate text-model scope.
 
 - 2026-10-17: define N3 V0.2's target, clipboard, keyboard capability and permission boundaries.
   Use 0032 because [0031](0031-tasks-leave-vults.md) already records Tasks removal.

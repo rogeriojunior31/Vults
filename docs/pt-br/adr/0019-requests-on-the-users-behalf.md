@@ -1,5 +1,5 @@
 # 0019. Rede, segredos e telemetria
-<!-- source: 65945568df0c -->
+<!-- source: 4aaed2ce3dd3 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0006 e da 0016.
 Alterada em 2026-10-17 para a N3 V0.4: requisições a modelos no ditado, limites de loopback e
@@ -106,33 +106,19 @@ outro recurso.
   limpeza por modelo; a [0028](0028-spoken-replies-through-a-realtime-model.md) continua regendo
   a escuta e o áudio.
 
-<a id="semantic-command-requests-vc1"></a>
-## Requisições de comandos semânticos (VC1)
+<a id="local-voice-commands-vc1"></a>
+## Comandos de voz locais (VC1)
 
-`voice-command-intent` é um recurso separado desligado por padrão, independente do Chat, voz em
-tempo real e envio de fala desconhecida ao Chat. Antes de ativar, as configurações mostram o
-provedor/modelo, o envio de transcrição e rótulos mínimos/IDs opacos dos destinos e o limite móvel
-de **200 tentativas por 24 horas**, incluindo falhas. Registrar a admissão de forma persistente
-antes de cada tentativa, inclusive para endpoints locais. Cada fala permite uma requisição,
-sem repetição automática, com prazo de dez segundos. Transcrição bruta, rótulos dos destinos,
-credenciais e resposta do modelo não entram no registro de rede.
+Ditado e comandos reutilizam o modelo de transcrição de voz existente. O aplicativo interpreta
+comandos localmente usando frases suportadas e destinos atuais. Isso não exige provedor de texto
+adicional, integração com Claude, orçamento de intenção ou recurso de rede. As opções locais
+separadas, desligadas por padrão, autorizam apenas as ações tipadas da
+[0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1).
 
-O transporte inicial suportado é o cliente qualificado só de texto do Claude Code, usando a escolha
-explícita do login da CLI e os limites da assinatura. Ter um provedor configurado no Chat não é
-consentimento para este recurso. API/modelos locais exigem o mesmo contrato de isolamento/saída
-antes de serem oferecidos; preços de API devem ser explicados ao selecionar. A consulta só de texto
-pela assinatura Codex continua indisponível enquanto a qualificação de autenticação/isolamento
-for falsa. Nunca recorrer silenciosamente a chave de API, outro provedor/conta ou turno comum do
-Chat em caso de falha.
-
-Com a opção desligada, cota esgotada, provedor ausente/não suportado ou estado do orçamento
-indisponível, não enviar nada e explicar o motivo localmente. Desativação, cancelamento, bloqueio
-ou troca de provedor/conta invalida a saída pendente antes de qualquer ação. Opções locais próprias,
-desligadas por padrão, autorizam apenas as ações tipadas da
-[0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1); consentimento de rede não
-concede execução no desktop. Planejar este contrato não ativa requisições; a implementação deve
-adicionar o ponto de chamada ao inventário de rede e guia de segurança e testar cota, reinício e
-cancelamento antes da entrega.
+A proposta anterior `voice-command-intent` foi retirada antes da ativação após a correção de escopo
+do responsável. Limpeza opcional de transcrição e envio de fala desconhecida ao Chat mantêm seus
+consentimentos e portões próprios; nenhum é necessário para comandos locais. A correção não cria
+exceção para outras requisições de rede nem altera as regras gerais de consentimento.
 
 <a id="consequences"></a>
 
@@ -157,7 +143,11 @@ cancelamento antes da entrega.
 
 ## Histórico
 
-- 2026-10-26: a VC1 define ações limitadas de comandos naturais e consentimento independente de modelo antes da 0.1.9.
+- 2026-10-26: correção do responsável retira a proposta de rede para intenção antes da ativação;
+  transcrição de voz existente e reconhecimento local não precisam de provedor de texto separado.
+
+- 2026-10-26: a VC1 propôs inicialmente consentimento independente para comandos; substituído pela correção
+  acima antes da ativação.
 
 - 2026-10-17: a N3 V0.4 nomeia os três recursos de modelos com adesões independentes e seus
   limites móveis. A Q3 mantém chamadas de loopback sob interruptor, cota e registro; só a

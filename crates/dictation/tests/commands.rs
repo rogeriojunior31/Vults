@@ -402,3 +402,35 @@ fn quoted_commands_are_data_while_refusal_and_invalid_literal_volume_keep_priori
         "don't stop what I am hearing"
     ));
 }
+
+#[test]
+fn playback_paraphrases_use_the_selected_player_without_guessing_suffixes() {
+    use vults_dictation::command::MediaAction::{Pause, Resume};
+    for (phrase, action) in [
+        ("Para o que estou escutando", Pause),
+        ("Por favor, pare o que eu estou ouvindo", Pause),
+        ("Pause o que est\u{e1} tocando", Pause),
+        ("Stop what I am listening to", Pause),
+        ("Pause what is playing", Pause),
+        ("Pausa lo que estoy escuchando", Pause),
+        ("Continua o que eu estava ouvindo", Resume),
+        ("Retome o que estava escutando", Resume),
+        ("Continue what I was listening to", Resume),
+        ("Reanuda lo que estaba sonando", Resume),
+    ] {
+        assert_eq!(parse(phrase), one(Command::Media(action)), "{phrase}");
+    }
+    for phrase in [
+        "do not pause what is playing",
+        "nao pare o que estou ouvindo",
+        "what does pause what is playing mean",
+        "stop the api project",
+        "pare o que estou ouvindo no Firefox",
+        "continua o que eu estava ouvindo no Firefox",
+        "pause what is playing and then delete files",
+        "pause what is playing tomorrow",
+    ] {
+        assert!(!matches!(parse(phrase), Parsed::Commands(_)), "{phrase}");
+    }
+    assert_eq!(parse("say \"pause what is playing\""), Parsed::Quoted);
+}

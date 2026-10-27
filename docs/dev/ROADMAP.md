@@ -423,7 +423,7 @@ Each K task ships its own UI slice; the acceptance per slice is in
 
 The original V1 to V8 implementation exists, with human acceptance pending. Runtime evidence on
 2026-10-26 exposed a scope gap: transcription succeeds, but commands use a closed phrase grammar
-and project/agent targets, not semantic desktop control. The owner requires VC1 to VC6 below before
+and need broader local phrasing for desktop control. The owner requires VC1 to VC6 below before
 0.1.9 publication. Historical implementation evidence is not acceptance of this new scope. Spec
 and the original gate list: [plan-dictation.md](plan-dictation.md) (*Remaining human and external
 gates*).
@@ -431,32 +431,23 @@ gates*).
 ### VC1 · Define the command contract and consent
 `P0 · S · Needs: —`
 
-- [x] Amend ADR 0032 and ADR 0019, with dated History and reviewed pt-BR counterparts: the local
-  grammar stays offline; semantic interpretation is a separate optional text-model request. Keep
-  rule 2 intact: no spoken approvals, config writes, destructive operations or arbitrary shell.
+- [x] Amend ADR 0032 and ADR 0019 with dated History and reviewed pt-BR counterparts:
+  use the existing speech transcription model and local command interpretation. No additional
+  Claude, text-model provider, intent network consent or request budget is needed.
 - [x] Freeze the 0.1.9 catalog: existing flock navigation/reads/preferences; media pause/resume,
   next/previous and player volume; default system-output mute/unmute/volume; open an installed app.
   Distinguish project notification mute, player volume and system output. No browser tab control,
-  URL navigation, keyboard macros, file arguments, arbitrary commands or app closing in this slice.
-- [x] Interpretation defaults off with a separate provider/model choice and `voice-command-intent`
-  gate, 200 attempted requests per rolling 24 hours, one attempt per utterance and no automatic
-  retry. Reuse qualified tool-free text transports, not a regular Chat agent with tools/context.
-  Start with the qualified Claude CLI transport; offer existing API/local transports only when
-  they meet the same bounded text contract. Provider failures never silently change provider,
-  billing method or account. Codex subscription consultation remains unavailable until its existing
-  authentication/isolation qualification passes; these tasks must not bypass that block.
-- [x] Local desktop actions work with Zeca off. Semantic mode needs its own consent independent of
-  Zeca/Chat and of the existing unknown-speech-to-Chat fallback. Each utterance has one destination.
+  URL navigation, keyboard macros, arbitrary shell, app closing or spoken permission answers.
+- [x] Keep separate default-off local desktop-action switches. Commands work with Zeca off;
+  dictation remains audio-to-text delivery. Existing optional Chat handoff keeps its separate consent.
 
-**Done when:** the action matrix, provider limits, disabled behavior and failure messages are
-explicit in the living ADRs; no runtime feature or provider is activated merely by planning it.
+**Done when:** local action scopes, disabled behavior and failure messages are explicit in the
+living ADRs. Transcription alone is not arbitrary language understanding or execution authority.
 
-Implementation record (2026-10-26): ADR 0032 now freezes the typed action scopes, target
-resolution, cancellation, completion and unavailable behavior. ADR 0019 records independent
-`voice-command-intent` consent, 200 attempts/24 hours and qualified text-only provider restrictions.
-Both pt-BR counterparts were reviewed and their source hashes updated. This closes the VC1
-contract only; VC2 to VC6 remain incomplete and release-blocking. No switch, provider request
-or desktop action was enabled by this documentation change.
+Scope correction (2026-10-26): the owner clarified that AI means the existing voice model, not a
+second text model. The unactivated Claude intent decoder, consent, gate and bounded transport
+additions from bcb264e2/ef31bc23 are withdrawn. Keep their shared quotation guard and all typed
+native execution from VC2. Local phrasing and target resolution are the remaining VC3 work.
 
 ### VC2 · Execute typed local desktop actions
 `P0 · M · Needs: VC1`
@@ -600,7 +591,7 @@ Clippy/tests, feature-enabled evals, reviewed translation source hashes and repo
 Firefox follow-up: local retained command evidence shows the media switch was initially off;
 after the owner enabled it, Pause the music received native completion. Informal resume utterances
 were not recognized by the local grammar. The owner was given the supported Resume music phrase;
-VC3 semantic interpretation remains necessary. No setting or playback was changed by the assistant.
+VC3 local phrasing improvements remain necessary. No setting or playback was changed by the assistant.
 
 System-output integration (2026-10-26): separate default-off `dictation_command_output` consent
 connects typed computer-output mute/unmute and bounded absolute/ten-point relative volume actions
@@ -630,87 +621,45 @@ release-blocking. Proceed to VC3 without declaring the desktop or 0.1.9 accepted
 **Done when:** fake native adapters prove action selection, exact arguments/identities, failure and
 cancellation; existing flock commands still work; real desktop effects await VC6.
 
-### VC3 · Resolve natural intent without giving the model execution access
+### VC3 · Broaden local command phrasing and resolve targets
 `P0 · M · Needs: VC2`
 
-- [ ] Local recognized commands and clarification replies take the existing fast path. On unknown
-  speech, semantic mode takes precedence over the separate Chat fallback when explicitly enabled;
-  a failed semantic request never becomes a Chat turn or a second attempt. Permission refusals
-  and unresolved/expired local clarifications never reach the model.
-- [x] Add independent default-off persisted consent/provider/model/ledger data and non-bypassable
-  durable admission for `voice-command-intent` (200 attempts/rolling day); expose one bounded text
-  transport deadline across CLI qualification, stdin, output and child-exit acknowledgement.
-- [ ] Reuse existing chat text transport and gate patterns, with an isolated scratch directory and
-  no tools, transcript history, memory, project files or implicit CLI context. Send only the heard
-  text and the minimal available action/target labels and opaque IDs disclosed in Settings; no
-  paths or media metadata. A local endpoint is also an explicit choice through the gate.
-- [x] Define the pure bounded response contract: 4096-byte heard input, 8 KiB JSON response, at most
-  8 actions/clarification choices, a closed actions/clarification/unsupported/refusal schema, strict
-  fields/numbers/verbs, scoped opaque IDs and a freshly compared frozen local catalog.
-- [ ] Wire that boundary to the runtime with a 10-second app-owned deadline and typed dispatch;
-  validate again in the state owner before any effect. Model output remains untrusted data.
-- [ ] Prompt for intent and negation, not word spotting: equivalent pause requests map to the same
-  action; questions, quoted commands, negated requests, unclear scopes and unsupported actions
-  never become guessed side effects. Clarify media versus computer volume and ambiguous apps.
-  Preserve the existing no-permission-answer invariant independently of model output.
-- [ ] Settings/provider/account changes, cancellation, screen lock, a new utterance or ticket expiry
-  invalidate pending results. Deduplicate completion; no late launch, playback or hidden execution.
-  Record actual gate attempts and outcomes without raw transcript/credentials in network traces.
+- [x] Preserve the shared quotation guard: quoted commands stay local and never trigger desktop
+  execution, Chat fallback or realtime upload. Permission and invalid-volume refusal keep priority.
+- [x] Recognize bounded PT/EN/ES playback paraphrases, including requests to pause what is playing
+  or resume what the user was listening to. Match a complete verb/object clause, never arbitrary
+  word spotting or an ignored suffix. Use the selected player; never guess a named player.
+- [ ] Extend equivalent local phrases across the remaining supported actions with fixture evidence.
+  Unknown or unsupported phrases remain unsupported; do not claim unrestricted semantic understanding.
+- [ ] Verify existing target clarification across project/app collisions and expired selections.
+  Clarify unclear scopes; never use media volume for a bare computer-volume request or vice versa.
+- [ ] Keep local command handling independent of Chat. Preserve explicit optional Chat handoff
+  behavior for unknown speech without introducing a new provider or activating any user setting.
+- [ ] Recheck current switches, identity, lock and cancellation ticket before every effect. Keep
+  existing batch limits, typed dispatch, native acknowledgements and confirmed-prefix feedback.
 
-**Done when:** deterministic model cassettes cover valid, malformed, injected, ambiguous, cancelled,
-late and unsupported results; one available qualified provider is ready for the consented VC6 test.
+**Done when:** deterministic parser/resolver/executor fixtures cover supported variations, unknown
+phrases, quotations, negation, ambiguity, cancellation and changed targets with no provider request.
 
-Intent boundary (2026-10-26): pure app-owned request/catalog/decoder code now projects only bounded
-labels, kinds, allowed verbs and opaque IDs. Paths, session/app IDs, desktop definitions, media
-metadata, history and credentials are not catalog fields. Local-only bindings retain exact session
-start/folder/terminal, app definitions, selected player, focus/order and project preferences; fresh
-catalog comparison prevents old IDs rebinding after changes, without rejecting ordinary progress.
-All accepted actions become typed descriptions plus exact local selections, never parsed model prose.
-Duplicate labels require clarification; choices must be distinct known IDs with a valid scope.
-A conservative input guard keeps negated requests/paths from prompting and blocks side-effect replies
-to questions. The strict prompt treats heard text and labels as data and offers no tool authority.
-Fixtures cover each verb, malformed/duplicate/unknown fields, invalid numbers/IDs, injection, disabled
-scopes, ambiguity, fresh target changes, privacy and inclusive resource bounds (256 targets, 160-byte
-labels; oversized catalogs fail closed, never truncate). These are decoder fixtures, not model-quality
-qualification. The shared local grammar now marks quotations as a known local non-execution result,
-preserving permission/literal-volume refusal priority and blocking both Chat fallback and realtime
-upload. Four-language feedback and EN/pt-BR guide text are current. No semantic request, provider,
-consent switch or budget is activated in this slice. Independent settings/gate/200-attempt ledger,
-provider cancellation/deadline, runtime routing and actual model cassettes remain open; VC3 is incomplete.
-Local validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
-feature-enabled evals, reviewed translation source marks and repository/version guards.
-
-Admission/transport foundation (2026-10-26): `voice_command_intent` consent defaults off and accepts
-only the qualified Claude CLI/Haiku pair, independently of Chat/cleanup/consultation choices. The
-feature has its own 200-attempt durable gate and strict ledger identity; generic admission is
-refused. Restart, on/off data round-trips and transcript/history clearing cannot renew attempts,
-and a replacement database cannot inherit the old consent. The public admission adapter validates
-input/current consent/CLI presence before reserving, retains cancelled-attempt tracing and exposes
-an absolute 10-second deadline; it does not authorize execution. Trace outcomes are closed metadata,
-never raw heard/model text or credentials. The shared tool-free text transport now accepts an
-inclusive output cap and one absolute deadline for version qualification plus the actual request;
-expired work does not start, oversized replies are rejected, and cancellation/error kills and
-awaits child exit. Existing default text callers retain their original output cap and 120-second
-bound. Process fixtures use only head/sleep, never a real provider or personal account. Tests prove
-independent switches, unknown provider/model rejection, durable exhaustion after restart/cleanup,
-wrong/missing ledgers, metadata-only traces, exact 8 KiB acceptance, overflow and child teardown.
-The renderer switch, scratch/worker ownership, account/provider change cancellation, active routing,
-clarifications and typed runtime dispatch remain pending; no automatic semantic request is enabled.
-Local validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
-feature-enabled evals, reviewed translation source marks and repository/version guards.
+Local correction validation (2026-10-26): build and all 19 renderer checks, workspace formatting,
+Clippy/tests, feature-enabled evals and repository/version guards pass. Changed EN/pt-BR source
+marks and ADR anchors match. Parser fixtures cover playback variations plus negation, quotations,
+named-player suffixes and unsupported batch tails. No provider calls or personal playback/settings
+changes were used in validation. VC3 remains incomplete for the other action variations; VC6
+native acceptance is still pending.
 
 ### VC4 · Explain commands where people use them
 `P0 · S · Needs: VC3`
 
 - [ ] Refine the existing Dictation > Voice commands / Command settings views, not a new screen:
-  show the actual shortcut, local versus AI interpretation, selected provider and availability,
-  consent/data/budget, local-action switches and searchable examples by flock/media/computer/apps.
+  show the actual shortcut, speech transcription followed by local interpretation, availability,
+  local-action switches and searchable examples by flock/media/computer/apps.
 - [ ] Replace misleading project-mute examples with explicit notification wording. Show what was
   heard, interpretation/target, pending clarification, completion or actionable error through the
   existing caption/history. Never show Done on queued or failed native work. Keep Mini height fixed,
   avoid duplicate feedback between surfaces and preserve draft/history retention choices.
 - [ ] Translate every new sentence to pt-BR/es/zh. Update both Dictation guides, settings/safety
-  references and README feature rows to describe the actual supported providers/actions and gates.
+  references and README feature rows to describe the actual supported local actions and their limits.
 
 **Done when:** native light/dark review shows readable Command/clarification/failure states and
 clear scope at minimum and wide sizes; no Settings redirect is needed merely to read a result.
@@ -721,10 +670,10 @@ clear scope at minimum and wide sizes; no Settings redirect is needed merely to 
 - [ ] Test equivalent PT/EN/ES phrases for each action, using escaped accents in English-only tests.
   Include real failure classes: pause media; mute computer versus project notifications; open an
   installed app versus a live agent project; no player/app/agent; multiple players and app names.
-  Add negation, questions, compound partial failures, spoofed IDs, injection and permission requests.
-- [ ] Test model off/budget exhausted/no CLI/no auth/provider failure, cancellation/late replies,
-  changed catalog, ticket reuse and restore-after-duck; assert no unintended network or desktop IO.
-  Keep native adapters/model replies fake; do not manipulate personal playback or spend by tests.
+  Add negation, questions, compound partial failures, stale identities, unrelated suffixes and permission requests.
+- [ ] Test action switches off/missing native backend, cancellation/late replies,
+  changed targets, ticket reuse and restore-after-duck; assert no unintended network or desktop IO.
+  Keep native adapters fake; do not manipulate personal playback or spend by tests.
 - [ ] Run required renderer/build, workspace formatting/Clippy/tests, evals and repository guards;
   dependency changes additionally require cargo deny. Review the diff against rules 1 to 4 and
   fix all actionable findings before native acceptance. CI follows the consolidated release PR.
@@ -739,12 +688,11 @@ line alone does not complete VC6, DG-4 or R3.
   playback pause/resume, next/previous, player volume, system mute/volume, opening installed
   Obsidian (or another explicitly identified installed app), flock navigation and project mute.
   Check no Ctrl+Alt+V dictation regression and no effect from mere quoted/negated phrases.
-- [ ] Exercise one explicitly enabled qualified semantic provider, budget/off/failure feedback,
-  ambiguous target choice, cancellation and Zeca off. Native/provider tests require the owner's
-  separate consent; paid APIs are not exercised as part of automated validation.
+- [ ] Exercise local action off/failure feedback, ambiguous target choice, cancellation and Zeca
+  off. Verify that commands do not require a Claude login, API key or additional text-model request.
 - [ ] Test KDE Wayland and X11, light/dark, Mini/Quick/Nest, capture duck/restore and desktop lock.
-  Record provider/model, desktop, candidate revision, requested action and observed effect here;
-  erase test history only on explicit request. Never mark an unavailable provider validated.
+  Record speech model, desktop, candidate revision, requested action and observed effect here;
+  erase test history only on explicit request. Never mark an unavailable backend validated.
 - [ ] Refresh relevant README captures and record VC6 acceptance against its source revision,
   then hand that revision to R3 for production rebuild/smoke. Keep VC6 and DG-4 unchecked until
   native evidence exists; REL-2 additionally waits for R3 and the other existing release gates.

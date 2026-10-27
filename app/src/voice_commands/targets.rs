@@ -114,10 +114,6 @@ impl Catalog {
         }
     }
 
-    pub(super) fn sessions(&self) -> impl Iterator<Item = (&Name, &SessionKey)> {
-        self.entries.iter().map(|(name, session)| (name, session))
-    }
-
     pub fn application(&self, name: &Name) -> Option<vults_platform::applications::Application> {
         self.applications
             .iter()
