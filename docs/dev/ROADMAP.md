@@ -638,6 +638,9 @@ cancellation; existing flock commands still work; real desktop effects await VC6
   Named-player requests must resolve the live player explicitly or report unsupported/ambiguous,
   rather than silently use a different selected player.
   Unknown or unsupported phrases remain unsupported; do not claim unrestricted semantic understanding.
+- [x] Keep pending session choices bound to the original start/folder identity; terminal requests
+  also retain their terminal binding. Reject a restarted same-key session or changed terminal
+  before resolving a reply, without rejecting ordinary progress or unrelated sessions.
 - [ ] Verify existing target clarification across project/app collisions and expired selections.
   Clarify unclear scopes; never use media volume for a bare computer-volume request or vice versa.
 - [ ] Keep local command handling independent of Chat. Preserve explicit optional Chat handoff
@@ -669,6 +672,20 @@ Validation: UI build and all 19 renderer checks, workspace formatting/Clippy/tes
 evals and repository/version guards pass; the EN/pt-BR guide source mark matches. No personal
 settings, microphone, playback or provider were used for automated verification. Native acceptance
 remains pending under VC6.
+
+Clarification binding correction (2026-10-26): a regression fixture demonstrated a pending batch
+returning Done after an earlier session restarted with the same key/name. Pending questions now
+retain bindings for all candidate sessions and already selected sessions. Every clarification reply
+checks the original start/folder and, for terminal commands, exact terminal metadata before any
+shadow planning or effect. Stale replies produce no prefix effect, native request or Chat fallback.
+Fresh questions recapture current bindings only after the preceding question has been validated;
+normal step/activity progress and unrelated new sessions remain valid. App definitions and the
+original 90-second clarification deadline retain their existing checks. EN/pt-BR guides describe
+when the user must start the command again. Native acceptance is still pending under VC6.
+Validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals and repository/version guards; the reviewed EN/pt-BR guide source mark
+matches. Regression evidence covers restarted earlier/candidate sessions, changed earlier/candidate
+terminals and retained ordinary progress. No personal playback, microphone or provider was used.
 
 Reference review (2026-10-26; read-only local snapshots):
 

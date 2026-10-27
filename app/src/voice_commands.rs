@@ -82,6 +82,7 @@ struct Pending {
     project: bool,
     question: Clarification,
     applications: Vec<vults_platform::applications::Application>,
+    sessions: Vec<targets::SessionBinding>,
 }
 
 #[derive(Debug)]
@@ -182,6 +183,9 @@ impl Commands {
                 let Some(mut pending) = self.pending.take() else {
                     return report(lang, Feedback::NotCommand);
                 };
+                if pending.sessions.iter().any(|binding| !binding.current(state)) {
+                    return report(lang, Feedback::Stale);
+                }
                 let candidates = pending.question.candidates(elapsed);
                 if candidates.iter().chain(pending.selected.values()).any(|name| {
                     name.kind == command::names::NameKind::Application
@@ -321,6 +325,30 @@ impl Commands {
                         else {
                             return report(lang, Feedback::Stale);
                         };
+                        let other_catalog = Catalog::new(state, !project, &[]);
+                        let Some(sessions) = choices
+                            .iter()
+                            .map(|name| (index, name))
+                            .chain(selected.iter().map(|(index, name)| (*index, name)))
+                            .filter(|(_, name)| name.kind != command::names::NameKind::Application)
+                            .map(|(index, name)| {
+                                let binding_catalog =
+                                    if (name.kind == command::names::NameKind::Project) == project {
+                                        &catalog
+                                    } else {
+                                        &other_catalog
+                                    };
+                                targets::SessionBinding::capture(
+                                    binding_catalog,
+                                    state,
+                                    name,
+                                    matches!(commands[index], Command::Terminal(_) | Command::Repeat(_)),
+                                )
+                            })
+                            .collect::<Option<Vec<_>>>()
+                        else {
+                            return report(lang, Feedback::Stale);
+                        };
                         self.pending = Some(Pending {
                             #[cfg(target_os = "linux")]
                             deadline: self.epoch + question_started.unwrap_or(elapsed) + CONTEXT_WINDOW,
@@ -331,6 +359,7 @@ impl Commands {
                             project,
                             question,
                             applications: apps.unwrap_or(&[]).to_vec(),
+                            sessions,
                         });
                         let mut out = report(lang, Feedback::WhichOne);
                         out.choices = choices;

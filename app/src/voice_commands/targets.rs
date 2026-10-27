@@ -149,3 +149,36 @@ fn agent_name(key: &SessionKey) -> String {
     }
     .into()
 }
+
+/// A clarification must not authorize a replacement session using the same visible name and key.
+#[derive(Debug)]
+pub(super) struct SessionBinding {
+    key: SessionKey,
+    started: std::time::Instant,
+    cwd: Option<String>,
+    terminal: Option<vults_protocol::Terminal>,
+}
+
+impl SessionBinding {
+    pub fn capture(catalog: &Catalog, state: &State, name: &Name, terminal: bool) -> Option<Self> {
+        let key = catalog.session(name)?;
+        let session = state.sessions.get(&key)?;
+        Some(Self {
+            key,
+            started: session.started,
+            cwd: session.cwd.clone(),
+            terminal: terminal.then(|| session.terminal.clone()),
+        })
+    }
+
+    pub fn current(&self, state: &State) -> bool {
+        state.sessions.get(&self.key).is_some_and(|session| {
+            session.started == self.started
+                && session.cwd == self.cwd
+                && self
+                    .terminal
+                    .as_ref()
+                    .is_none_or(|terminal| &session.terminal == terminal)
+        })
+    }
+}

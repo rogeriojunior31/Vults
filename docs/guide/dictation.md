@@ -909,7 +909,11 @@ V8.3 adds a local dispatcher for navigation, mute/pin/hide and reads of pending 
 cached plan usage and the current GitHub card. Reads use templates in all four app languages, without
 a model or a fresh network request. A sequence is applied only after every command and target is ready;
 an ambiguous or unavailable later step leaves earlier steps unapplied. A reply to a clarification
-revalidates the original choices and previously resolved targets before the batch can run. Multiple
+revalidates the original choices and previously resolved targets before the batch can run.
+A session restarting under the same name/ID or moving to another folder invalidates its pending
+choice. A terminal command also keeps its original terminal identity; a changed terminal requires
+starting the request again. Ordinary agent progress and unrelated new sessions do not invalidate
+an otherwise unchanged choice. Multiple
 sessions in the same folder share project preferences, while navigation requires an exact session.
 
 The dispatcher keeps repeat/undo context for 90 seconds. `same for web` repeats the last supported action

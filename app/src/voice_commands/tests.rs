@@ -1100,3 +1100,70 @@ fn request_variations_plan_native_actions_without_chat_or_premature_effects() {
     assert_eq!(report.feedback, Feedback::Locked);
     assert!(report.desktop.is_empty() && report.effects.is_empty() && !report.chat_fallback(true));
 }
+
+#[test]
+fn clarification_never_rebinds_a_restarted_session_or_changed_terminal() {
+    let now = Instant::now();
+    for (target, restart, request) in [
+        ("b", true, "open the web terminal and then open apy"),
+        ("a", true, "open the web terminal and then open apy"),
+        ("c", true, "open the web terminal and then open apy"),
+        ("b", false, "open the web terminal and then open apy"),
+        ("a", false, "open the apy terminal"),
+    ] {
+        let mut state = fixture(now);
+        session(&mut state, "c", "/work/api-gateway", now);
+        let mut commands = Commands::new(now);
+        let asked = say(&mut commands, &mut state, request, now);
+        assert_eq!(asked.feedback, Feedback::WhichOne);
+        assert!(asked.effects.is_empty());
+        let changed = state.sessions.get_mut(&key(target)).unwrap();
+        if restart {
+            changed.started += Duration::from_secs(1);
+        } else {
+            changed.terminal.pid = Some(99);
+        }
+        let before = format!("{state:?}");
+        let reply = say(&mut commands, &mut state, "api", now + Duration::from_secs(2));
+        assert_eq!(
+            reply.feedback,
+            Feedback::Stale,
+            "target={target} restart={restart}"
+        );
+        assert!(reply.effects.is_empty() && reply.desktop.is_empty() && !reply.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+}
+
+#[test]
+fn clarification_keeps_ordinary_progress_and_unrelated_sessions_valid() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    session(&mut state, "c", "/work/api-gateway", now);
+    let mut commands = Commands::new(now);
+    assert_eq!(
+        say(
+            &mut commands,
+            &mut state,
+            "open the web terminal and then open apy",
+            now
+        )
+        .feedback,
+        Feedback::WhichOne
+    );
+    for value in state.sessions.values_mut() {
+        value.updated += Duration::from_secs(1);
+        value.step_count += 1;
+    }
+    session(
+        &mut state,
+        "unrelated",
+        "/work/docs",
+        now + Duration::from_secs(1),
+    );
+    let reply = say(&mut commands, &mut state, "api", now + Duration::from_secs(2));
+    assert_eq!(reply.feedback, Feedback::Done);
+    assert_eq!(state.focus, Some(key("a")));
+    no_answers(&reply.effects);
+    assert!(!reply.chat_fallback(true));
+}

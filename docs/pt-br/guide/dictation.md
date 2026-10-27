@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 944d0542d81d -->
+<!-- source: c1a70ffaa41b -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1021,7 +1021,11 @@ pendentes, detalhes de sessões, uso do plano em cache e card atual do GitHub. C
 prontas nos quatro idiomas do app, sem modelo nem nova requisição de rede. Uma sequência só é
 aplicada quando todos os comandos e destinos estão prontos; uma etapa posterior ambígua ou
 indisponível deixa as anteriores sem aplicação. Uma resposta de esclarecimento revalida as opções
-originais e os destinos já resolvidos antes de executar o lote. Várias sessões na mesma pasta
+originais e os destinos já resolvidos antes de executar o lote.
+Uma sessão reiniciada com o mesmo nome/ID ou movida para outra pasta invalida sua escolha pendente.
+Um comando de terminal também mantém a identidade original do terminal; uma troca exige iniciar
+outro pedido. Progresso normal do agente e sessões novas sem relação não invalidam uma escolha
+que continua igual. Várias sessões na mesma pasta
 compartilham preferências do projeto; navegação exige uma sessão exata.
 
 O dispatcher mantém contexto de repetir/desfazer por 90 segundos. `o mesmo para web` repete a última
