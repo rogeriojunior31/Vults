@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 221229fe3620 -->
+<!-- source: 944d0542d81d -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -989,6 +989,19 @@ parte desconhecida não produz lote de comandos, e um pedido para responder a um
 cortesia são normalizados. Os nomes de destino continuam como descrições não resolvidas, incluindo
 nomes com pontuação normalizada, como `api-gateway` -> `api gateway`. O parser não executa essas
 descrições, grava áudio nem envia texto.
+
+Os prefixos locais também incluem `consegue`, `você consegue`, `quero que você`,
+`gostaria que você`, `por gentileza`, `I want you to`, `I would like you to` e `quiero que`.
+Acentos são aceitos. Só palavras iniciais do pedido são removidas; nomes preservam suas palavras
+próprias e a negação nunca é descartada. Por exemplo, `consegue abrir aplicativo Firefox` ainda
+resolve um aplicativo instalado, enquanto `quero que você não abra o Firefox` nunca o abre.
+Variações de áudio incluem `increase music volume`, `turn down computer volume`,
+`aumenta o volume da música`, `reduza o volume do computador`, `subir el volumen de la musica`
+e `bajar el volumen del ordenador`. Pedidos numéricos como `set system volume to 35`,
+`ajuste o volume da música para 35` e `pon el volumen del ordenador a 35` mantêm o limite 0..100.
+Música/reprodutor e computador/saída continuam separados; `turn up volume` sozinho não escolhe um.
+`mute audio` continua sendo o pedido existente para silenciar notificações de um projeto chamado audio.
+Essas variações não ativam opções de ação, chamam o Chat nem ignoram verificações nativas de destino.
 Fala entre aspas é tratada como dado: falar ou digitar um comando entre aspas não o executa nem
 aciona o encaminhamento opcional ao Chat. Uma mensagem local explica isso no idioma selecionado.
 Recusas de permissão e volumes literais inválidos mantêm sua prioridade, mesmo dentro de aspas.

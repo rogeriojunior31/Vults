@@ -629,7 +629,14 @@ cancellation; existing flock commands still work; real desktop effects await VC6
 - [x] Recognize bounded PT/EN/ES playback paraphrases, including requests to pause what is playing
   or resume what the user was listening to. Match a complete verb/object clause, never arbitrary
   word spotting or an ignored suffix. Use the selected player; never guess a named player.
+- [x] Expand bounded request prefixes and leading verb forms for PT/EN/ES, plus explicit
+  player/computer volume and playback variations. Keep app/project name words intact, preserve
+  negation/quotation/refusal priority, reject invalid percentages and preserve whole-batch order.
 - [ ] Extend equivalent local phrases across the remaining supported actions with fixture evidence.
+  Start from reported PT phrases and supported request prefixes, then EN/ES equivalents. Normalize
+  only the request prefix; never rewrite words inside an app/project name or discard negation.
+  Named-player requests must resolve the live player explicitly or report unsupported/ambiguous,
+  rather than silently use a different selected player.
   Unknown or unsupported phrases remain unsupported; do not claim unrestricted semantic understanding.
 - [ ] Verify existing target clarification across project/app collisions and expired selections.
   Clarify unclear scopes; never use media volume for a bare computer-volume request or vice versa.
@@ -648,12 +655,48 @@ named-player suffixes and unsupported batch tails. No provider calls or personal
 changes were used in validation. VC3 remains incomplete for the other action variations; VC6
 native acceptance is still pending.
 
+Request-variation implementation (2026-10-26): shared local grammar now accepts request forms
+such as `consegue`, `quero que voce`, `gostaria que voce`, `I would like you to` and `quiero que`,
+including tested leading subjunctive verbs. Explicit player versus computer scope is retained for
+relative/numeric volume; new numeric aliases share the existing invalid-volume guard. Playback
+adds next/previous and resume variants. Names are not rewritten internally; no action switch,
+provider, shell adapter or network route was added. Regression fixtures first failed on the missing
+forms, then passed with full-clause, negative, quoted, refused, invalid-volume and batch-tail checks.
+Dispatcher fixtures verify typed ordered planning, unchanged state, lock refusal and no Chat fallback
+for recognized/invalid requests. Named-player routing and broader remaining phrases stay open;
+VC3 and VC6 are not marked complete by this slice.
+Validation: UI build and all 19 renderer checks, workspace formatting/Clippy/tests, feature-enabled
+evals and repository/version guards pass; the EN/pt-BR guide source mark matches. No personal
+settings, microphone, playback or provider were used for automated verification. Native acceptance
+remains pending under VC6.
+
+Reference review (2026-10-26; read-only local snapshots):
+
+| Evidence | Existing Vults coverage | Decision for 0.1.9 |
+| --- | --- | --- |
+| Desktop reference, revision 47d1c2d: typed local phrase parser, aliases/exact/whole-word/edit-distance resolution, listening/result/clarification states; optional Claude API brain or macOS 26 Apple Intelligence language-model fallback supplies broader interpretation | Pure grammar and typed dispatch; the same name-resolution stages plus time-bound clarification; separate command and dictation shortcuts; floating feedback | Expand complete PT/EN/ES request forms in VC3 and expose actual recognition/outcome in VC4. Do not copy its optional text-model path, subsequence action matching without whole-clause validation or reordering of spoken actions. The inspected voice UI/runner is macOS Swift, not Linux acceptance evidence. |
+| Voxtype, revision dc499ad: direct MPRIS control, pause/resume accounting, disjoint eager audio chunks cut inside sustained quiet, ordered join, one beam-search recovery for degenerate text | Selected-player identity checks and temporary restoration; GPU-only partial preview; final decode, repeat filtering and installed-Base recovery; diagnostics already record p50/p95 | Keep existing ownership/restore guards. Measure release-to-delivery in VC6/DG-3 before changing the transcription pipeline. Eager chunking is a candidate only if measured latency fails; no new streaming engine is required for this release. External shell post-processing is not a desktop intent interpreter. |
+| VoiceStudio, revision 58f6960af: model readiness/setup with explicit downloads, recorder receipt/start acknowledgement, session-scoped delivery, clipboard generations, distinct Copied/Inserted, multiline live text, language-aware deterministic cleanup | Explicit checked model installation, recording tickets, native delivery receipts/clipboard leases, floating captions and diagnostics | Surface readiness and actionable recovery in VC4 using existing owners. Verify complete text/controls at narrow sizes in VC6. Keep spoken-punctuation/text-cleanup behavior separate from command verbs; do not strip Portuguese articles or intentional repetitions. |
+
+Validation scope: 17 original Voxtype eager tests pass through a temporary standalone Rust wrapper
+with only its config/result types stubbed. Nine isolated VoiceStudio cleanup/join assertions pass
+without settings, model loads or network calls; pytest is absent, so its full suite was not run.
+Swift is absent, so the desktop reference parser/UI received source review only. All 24 Vults
+command/name integration tests pass. These results do not certify any reference app's native UI,
+real microphone, Firefox playback, transcription accuracy or latency. No reference files were changed.
+
 ### VC4 · Explain commands where people use them
 `P0 · S · Needs: VC3`
 
 - [ ] Refine the existing Dictation > Voice commands / Command settings views, not a new screen:
   show the actual shortcut, speech transcription followed by local interpretation, availability,
   local-action switches and searchable examples by flock/media/computer/apps.
+- [ ] Put a compact readiness summary beside command usage: active speech model/language, actual
+  command versus dictation shortcut, microphone availability and required local-action switches.
+  Link to the existing Voice/Keyboard shortcuts/Diagnostics owners; do not duplicate editors.
+- [ ] Provide a local command check using the same parser/resolver with no execution or Chat
+  handoff: show heard/typed phrase, recognized action and target, ambiguity or unsupported reason.
+  Keep examples searchable by existing scope and treat examples as read-only, never execution.
 - [ ] Replace misleading project-mute examples with explicit notification wording. Show what was
   heard, interpretation/target, pending clarification, completion or actionable error through the
   existing caption/history. Never show Done on queued or failed native work. Keep Mini height fixed,
@@ -663,6 +706,8 @@ native acceptance is still pending.
 
 **Done when:** native light/dark review shows readable Command/clarification/failure states and
 clear scope at minimum and wide sizes; no Settings redirect is needed merely to read a result.
+The command check performs no native effect or provider call. Copied/Inserted and queued/completed
+states remain distinct, and long heard text does not displace Finish/Cancel or target choices.
 
 ### VC5 · Verify intent, execution and regressions
 `P0 · S · Needs: VC4`
@@ -674,6 +719,9 @@ clear scope at minimum and wide sizes; no Settings redirect is needed merely to 
 - [ ] Test action switches off/missing native backend, cancellation/late replies,
   changed targets, ticket reuse and restore-after-duck; assert no unintended network or desktop IO.
   Keep native adapters fake; do not manipulate personal playback or spend by tests.
+- [ ] Verify every displayed PT/EN/ES command example against the shared parser and expected scope.
+  Include Portuguese articles, intentional repetitions and dictation/command separation; a cleanup
+  rule must not mutate a name or turn ordinary dictated text into an action.
 - [ ] Run required renderer/build, workspace formatting/Clippy/tests, evals and repository guards;
   dependency changes additionally require cargo deny. Review the diff against rules 1 to 4 and
   fix all actionable findings before native acceptance. CI follows the consolidated release PR.

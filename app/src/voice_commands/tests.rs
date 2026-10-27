@@ -724,6 +724,9 @@ fn invalid_native_volume_is_never_sent_to_chat_or_executed() {
         "media volume -10",
         "computer volume 101",
         "pause media and then computer volume 200",
+        "consegue set music volume to -1",
+        "quero que voce ajuste o volume do computador para 101",
+        "pon el volumen de la musica a 200",
     ] {
         let out = say(&mut commands, &mut state, text, now);
         assert_eq!(out.feedback, Feedback::InvalidVolume);
@@ -1061,4 +1064,39 @@ fn quoted_commands_do_not_execute_or_enter_optional_chat_fallback() {
         assert!(out.effects.is_empty() && out.desktop.is_empty() && !out.chat_fallback(true));
         assert_eq!(format!("{state:?}"), before);
     }
+}
+
+#[test]
+fn request_variations_plan_native_actions_without_chat_or_premature_effects() {
+    use vults_dictation::command::{MediaAction, OutputAction};
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let mut commands = Commands::new(now);
+    let before = format!("{state:?}");
+    for text in [
+        "consegue aumentar o volume da musica e depois ajuste o volume do computador para 35",
+        "i would like you to increase music volume and then set system volume to 35",
+        "puedes subir el volumen de la musica y luego pon el volumen del ordenador a 35",
+    ] {
+        let report = say(&mut commands, &mut state, text, now);
+        assert_eq!(report.feedback, Feedback::Requested, "{text}");
+        assert_eq!(
+            report.desktop,
+            vec![
+                DesktopAction::Media(MediaAction::Louder),
+                DesktopAction::Output(OutputAction::Volume(35)),
+            ]
+        );
+        assert!(report.effects.is_empty() && !report.chat_fallback(true));
+        assert_eq!(format!("{state:?}"), before);
+    }
+    state.locked = true;
+    let report = say(
+        &mut commands,
+        &mut state,
+        "consegue aumentar o volume da musica",
+        now,
+    );
+    assert_eq!(report.feedback, Feedback::Locked);
+    assert!(report.desktop.is_empty() && report.effects.is_empty() && !report.chat_fallback(true));
 }

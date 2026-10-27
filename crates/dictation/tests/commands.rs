@@ -434,3 +434,141 @@ fn playback_paraphrases_use_the_selected_player_without_guessing_suffixes() {
     }
     assert_eq!(parse("say \"pause what is playing\""), Parsed::Quoted);
 }
+
+#[test]
+fn request_prefixes_preserve_scope_names_and_refusals() {
+    for prefix in [
+        "Consegue",
+        "Voc\u{ea} consegue",
+        "Por gentileza",
+        "Quero que voc\u{ea}",
+        "Gostaria que voc\u{ea}",
+        "I want you to",
+        "I would like you to",
+        "Quiero que",
+    ] {
+        assert_eq!(
+            parse(&format!("{prefix} open app Please Music")),
+            one(Command::Application("please music".into())),
+            "{prefix}"
+        );
+        assert_eq!(
+            parse(&format!("{prefix} pause media and then open project api")),
+            Parsed::Commands(vec![
+                Command::Media(vults_dictation::command::MediaAction::Pause),
+                Command::Focus("api".into())
+            ]),
+            "{prefix}"
+        );
+        assert_eq!(
+            parse(&format!("{prefix} approve the card")),
+            Parsed::Refused,
+            "{prefix}"
+        );
+        assert!(
+            !matches!(
+                parse(&format!("{prefix} do not pause media")),
+                Parsed::Commands(_)
+            ),
+            "{prefix}"
+        );
+        assert!(
+            !matches!(
+                parse(&format!("{prefix} pause media and then delete files")),
+                Parsed::Commands(_)
+            ),
+            "{prefix}"
+        );
+    }
+    assert_eq!(
+        parse("consegue abrir aplicativo Consegue Music"),
+        one(Command::Application("consegue music".into()))
+    );
+    for text in [
+        "gostaria que voce abrisse aplicativo Firefox",
+        "quiero que abras la aplicacion Firefox",
+    ] {
+        assert_eq!(parse(text), one(Command::Application("firefox".into())));
+    }
+    assert_eq!(parse("quero que voce nao abra o Firefox"), Parsed::Refused);
+    assert_eq!(parse("quero que voce diga \"pause media\""), Parsed::Quoted);
+}
+
+#[test]
+fn audio_request_variations_keep_player_and_computer_scopes_distinct() {
+    use vults_dictation::command::{MediaAction as M, OutputAction as O};
+    for (text, action) in [
+        ("gostaria que voce diminuisse o volume do computador", O::Quieter),
+        ("quiero que bajes el volumen del ordenador", O::Quieter),
+        ("increase computer volume", O::Louder),
+        ("turn up computer volume", O::Louder),
+        ("decrease system volume", O::Quieter),
+        ("turn down computer volume", O::Quieter),
+        ("aumenta o volume do computador", O::Louder),
+        ("reduza o volume do computador", O::Quieter),
+        ("subir el volumen del ordenador", O::Louder),
+        ("bajar el volumen del ordenador", O::Quieter),
+        ("mute system audio", O::Mute(true)),
+        ("silenciar o som do computador", O::Mute(true)),
+        ("unmute system audio", O::Mute(false)),
+        ("set system volume to 35 percent", O::Volume(35)),
+        ("ajuste o volume do computador para 35 por cento", O::Volume(35)),
+        ("pon el volumen del ordenador a 35 por ciento", O::Volume(35)),
+    ] {
+        assert_eq!(parse(text), one(Command::Output(action)), "{text}");
+    }
+    for (text, action) in [
+        ("gostaria que voce aumentasse o volume da musica", M::Louder),
+        ("quiero que subas el volumen de la musica", M::Louder),
+        ("increase music volume", M::Louder),
+        ("turn up music volume", M::Louder),
+        ("decrease media volume", M::Quieter),
+        ("turn down music volume", M::Quieter),
+        ("aumenta o volume da musica", M::Louder),
+        ("abaixa o volume da musica", M::Quieter),
+        ("subir el volumen de la musica", M::Louder),
+        ("bajar el volumen de la musica", M::Quieter),
+        ("set music volume to 35 percent", M::Volume(35)),
+        ("ajuste o volume da musica para 35 por cento", M::Volume(35)),
+        ("pon el volumen de la musica a 35 por ciento", M::Volume(35)),
+        ("retomar musica", M::Resume),
+        ("continua a musica", M::Resume),
+        ("pular a musica", M::Next),
+        ("volte a musica", M::Previous),
+        ("skip to the next track", M::Next),
+        ("go to the previous track", M::Previous),
+    ] {
+        assert_eq!(parse(text), one(Command::Media(action)), "{text}");
+    }
+    for text in [
+        "turn up volume",
+        "abaixa o volume",
+        "increase microphone volume",
+        "turn down music volume in Firefox",
+        "do not increase music volume",
+    ] {
+        assert!(!matches!(parse(text), Parsed::Commands(_)), "{text}");
+    }
+    // The existing project-notification command is not promoted to computer/player audio.
+    for (phrase, target) in [
+        ("mute audio", "audio"),
+        ("mute project system audio", "system audio"),
+    ] {
+        assert_eq!(
+            parse(phrase),
+            one(Command::SetPreference {
+                target: target.into(),
+                preference: Preference::Mute,
+                on: true,
+            })
+        );
+    }
+    for text in [
+        "set system volume to 101",
+        "set music volume to -1",
+        "ajuste o volume da musica para 150",
+        "pon el volumen del ordenador a 200",
+    ] {
+        assert_eq!(parse(text), Parsed::InvalidVolume, "{text}");
+    }
+}

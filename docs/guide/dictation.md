@@ -880,6 +880,19 @@ and a card-answer request such as `next session and then approve` refuses the wh
 Case, accents, punctuation, opening fillers and polite phrasing are normalized. Target names remain
 unresolved descriptions, including punctuation-folded names such as `api-gateway` -> `api gateway`.
 The parser does not execute those descriptions, record audio or submit text.
+
+Local request prefixes also include `consegue`, `voce consegue`, `quero que voce`,
+`gostaria que voce`, `por gentileza`, `I want you to`, `I would like you to` and `quiero que`.
+Accents are accepted. Only leading request words are removed; names keep their own words and
+negation is never discarded. For example, `consegue abrir aplicativo Firefox` still resolves an
+installed app, while `quero que voce nao abra o Firefox` never launches it.
+Audio variations include `increase music volume`, `turn down computer volume`,
+`aumenta o volume da musica`, `reduza o volume do computador`, `subir el volumen de la musica`
+and `bajar el volumen del ordenador`. Numeric requests such as `set system volume to 35`,
+`ajuste o volume da musica para 35` and `pon el volumen del ordenador a 35` keep the 0..100 limit.
+Music/player and computer/output scopes stay separate; a bare `turn up volume` does not select one.
+`mute audio` remains the existing project-notification request for a project named audio.
+These variations do not enable an action switch, call Chat or bypass native target checks.
 Quoted speech is treated as data: saying or typing a quoted command does not execute it or enter
 the optional Chat fallback. A local message explains this in the selected language. Permission
 refusals and invalid literal volumes keep their existing priority, even inside quotations.
