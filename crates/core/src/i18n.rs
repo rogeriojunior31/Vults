@@ -979,6 +979,7 @@ pub enum VoiceFeedback {
     ExecutionFailed,
     InvalidVolume,
     Quoted,
+    Negated,
     AudioScopeRequired,
     UnsupportedMediaTarget,
     Consulting,
@@ -1023,6 +1024,12 @@ pub fn voice_feedback(lang: Lang, feedback: VoiceFeedback) -> &'static str {
         (Lang::Zh, UnsupportedMediaTarget) => {
             "媒体语音指令使用 Vults 中显示的播放器。请重新说出指令，不要指定播放器名称或附加条件。"
         }
+        (Lang::En, Negated) => "Negated requests stay local and do not run voice commands.",
+        (Lang::PtBr, Negated) => "Pedidos negados ficam neste computador e não executam comandos de voz.",
+        (Lang::Es, Negated) => {
+            "Las peticiones negadas permanecen en este equipo y no ejecutan comandos de voz."
+        }
+        (Lang::Zh, Negated) => "否定请求仅在本机处理，不会执行语音指令。",
         (Lang::En, Quoted) => "Quoted speech is not executed as a voice command.",
         (Lang::PtBr, Quoted) => "Uma fala entre aspas não é executada como comando de voz.",
         (Lang::Es, Quoted) => "El texto entre comillas no se ejecuta como comando de voz.",

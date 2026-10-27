@@ -171,6 +171,10 @@ impl Commands {
                 self.pending = None;
                 return report(lang, Feedback::UnsupportedMediaTarget);
             }
+            Parsed::Negated => {
+                self.pending = None;
+                return report(lang, Feedback::Negated);
+            }
             Parsed::Quoted => {
                 self.pending = None;
                 return report(lang, Feedback::Quoted);

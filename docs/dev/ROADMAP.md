@@ -632,7 +632,7 @@ cancellation; existing flock commands still work; real desktop effects await VC6
 - [x] Expand bounded request prefixes and leading verb forms for PT/EN/ES, plus explicit
   player/computer volume and playback variations. Keep app/project name words intact, preserve
   negation/quotation/refusal priority, reject invalid percentages and preserve whole-batch order.
-- [ ] Extend equivalent local phrases across the remaining supported actions with fixture evidence.
+- [x] Extend equivalent local phrases across the remaining supported actions with fixture evidence.
   Start from reported PT phrases and supported request prefixes, then EN/ES equivalents. Normalize
   only the request prefix; never rewrite words inside an app/project name or discard negation.
   Named-player requests must resolve the live player explicitly or report unsupported/ambiguous,
@@ -728,6 +728,26 @@ Validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy
 feature-enabled evals and repository/version guards; reviewed guide translation source marks match.
 The remaining VC3 phrase-coverage row and VC6 native acceptance stay open. No user settings,
 real microphone, playback or provider were exercised by these automated checks.
+
+Leading-negation correction / VC3 bounded implementation complete (2026-10-26): a dispatcher
+regression fixture first demonstrated `do not pause music` entering optional Chat handoff. The pure
+shared parser now classifies bounded leading PT/EN/ES negative requests as local non-execution,
+including contractions, polite request forms and known-command `not` clauses. Bare card answers
+and negated permission requests retain refusal priority; explicit invalid-volume and quotation
+outcomes keep priority. Words inside target names are untouched. Ordinary informational unknown
+speech retains its existing explicit Chat opt-in; no new provider or request path was added.
+App and realtime routes consume negation locally even when realtime command handling is off;
+no batch prefix executes and pending target choices are cleared. Core feedback covers all four
+languages. Existing fixtures cover the frozen flock/media/output/app catalog, request variations,
+names/ambiguity, expiry, native guards and failures. With this last phrase-coverage row implemented,
+VC3 is ready for VC4's explanation/command-check UI; it does not promise unrestricted language,
+native named-player selection, conditions or scheduling. Earlier partial records describe their own
+revisions. VC6, DG-4 and release/native acceptance remain unchecked.
+Validation passes: UI build and all 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals and repository/version guards. Fixtures cover negation contractions/politeness,
+permission/invalid-volume/quotation priority, names, unchanged state, no prefix effects or Chat
+handoff, pending-question clearing and all four feedback languages, including realtime commands off.
+Reviewed EN/pt-BR guide source marks match. No microphone, personal playback or provider was used.
 
 Reference review (2026-10-26; read-only local snapshots):
 

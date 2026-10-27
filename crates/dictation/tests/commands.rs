@@ -211,8 +211,6 @@ fn unknown_empty_missing_and_control_bearing_inputs_never_produce_partial_action
         "open api\0",
         "next\u{1b}",
         "go to the terminal",
-        "please do not mute web",
-        "do not open api",
         "openapi",
     ] {
         assert_eq!(parse(text), Parsed::NotCommand, "{text:?}");
@@ -274,6 +272,8 @@ fn media_scope_preserves_negation_card_refusal_and_project_notifications() {
             parse(text),
             if text.starts_with("media volume") {
                 Parsed::InvalidVolume
+            } else if text.starts_with("do not") {
+                Parsed::Negated
             } else {
                 Parsed::NotCommand
             },
@@ -349,6 +349,8 @@ fn computer_audio_has_an_explicit_scope_and_preserves_project_and_player_command
                 Parsed::InvalidVolume
             } else if ["lower the volume", "aumente o som"].contains(&text) {
                 Parsed::AudioScopeRequired
+            } else if text.starts_with("do not") {
+                Parsed::Negated
             } else {
                 Parsed::NotCommand
             },
@@ -492,7 +494,7 @@ fn request_prefixes_preserve_scope_names_and_refusals() {
     ] {
         assert_eq!(parse(text), one(Command::Application("firefox".into())));
     }
-    assert_eq!(parse("quero que voce nao abra o Firefox"), Parsed::Refused);
+    assert_eq!(parse("quero que voce nao abra o Firefox"), Parsed::Negated);
     assert_eq!(parse("quero que voce diga \"pause media\""), Parsed::Quoted);
 }
 
@@ -610,7 +612,15 @@ fn unclear_audio_and_qualified_media_requests_have_local_non_execution_results()
         "explain pause music in Firefox",
         "do not pause music in Firefox",
     ] {
-        assert_eq!(parse(text), Parsed::NotCommand, "{text}");
+        assert_eq!(
+            parse(text),
+            if text.starts_with("do not") {
+                Parsed::Negated
+            } else {
+                Parsed::NotCommand
+            },
+            "{text}"
+        );
     }
     assert_eq!(parse("approve and then lower volume"), Parsed::Refused);
     assert_eq!(
@@ -631,4 +641,54 @@ fn unclear_audio_and_qualified_media_requests_have_local_non_execution_results()
             on: true
         })
     );
+}
+
+#[test]
+fn leading_negations_never_become_commands_but_names_keep_their_words() {
+    for text in [
+        "do not pause music",
+        "could you not pause music",
+        "I don't want you to open app Firefox",
+        "I do not want to mute web",
+        "don't pause music",
+        "don\u{2019}t pause music",
+        "dont open app Firefox",
+        "never mute web",
+        "consegue nao abrir aplicativo Firefox",
+        "n\u{e3}o pause a m\u{fa}sica",
+        "no abras la aplicacion Firefox",
+        "nunca abras Firefox",
+        "please do not mute web",
+        "do not open api",
+        "do not pause music in Firefox",
+        "mute web and then don't open api",
+        "no pause media",
+        "do not",
+    ] {
+        assert_eq!(parse(text), Parsed::Negated, "{text}");
+    }
+    for text in [
+        "no",
+        "nao",
+        "no approve",
+        "don't approve",
+        "do not please allow",
+        "never always approve",
+        "do not pause music and then approve",
+    ] {
+        assert_eq!(parse(text), Parsed::Refused, "{text}");
+    }
+    assert_eq!(parse("\"do not pause music\""), Parsed::Quoted);
+    assert_eq!(
+        parse("do not pause music and then computer volume 101"),
+        Parsed::InvalidVolume
+    );
+    for name in ["No Music", "Never Mind", "Do Not Disturb", "Nobody"] {
+        assert_eq!(
+            parse(&format!("open app {name}")),
+            one(Command::Application(normalize(name)))
+        );
+    }
+    assert_eq!(parse("not sure what api is doing"), Parsed::NotCommand);
+    assert_eq!(parse("what does do not pause music mean"), Parsed::NotCommand);
 }

@@ -52,6 +52,7 @@ pub enum Parsed {
     NotCommand,
     InvalidVolume,
     Quoted,
+    Negated,
     AudioScopeRequired,
     UnsupportedMediaTarget,
 }
@@ -133,6 +134,9 @@ pub fn parse(text: &str) -> Parsed {
     if is_quoted(text) {
         return Parsed::Quoted;
     }
+    if clauses.iter().any(|clause| negated_request(clause).is_some()) {
+        return Parsed::Negated;
+    }
     if clauses.iter().any(|clause| output::needs_scope(clause)) {
         return Parsed::AudioScopeRequired;
     }
@@ -191,7 +195,44 @@ fn prepare(text: &str) -> String {
     }
     text.into()
 }
+// Only a leading negation is recognized; words inside names are never inspected or removed.
+fn negated_request(text: &str) -> Option<&str> {
+    [
+        "i do not want you to",
+        "i don t want you to",
+        "i dont want you to",
+        "i do not want to",
+        "i don t want to",
+        "i dont want to",
+        "do not",
+        "don t",
+        "dont",
+        "never",
+        "nao",
+        "no",
+        "nunca",
+    ]
+    .iter()
+    .find_map(|prefix| head(text, prefix))
+    .or_else(|| {
+        head(text, "not").filter(|rest| {
+            let rest = prepare(rest);
+            single(&rest).is_some()
+                || card_answer(&rest)
+                || output::needs_scope(&rest)
+                || media::has_extra_target(&rest)
+                || output::volume_argument(&rest).is_some()
+                || media::volume_argument(&rest).is_some()
+        })
+    })
+}
 fn refused(text: &str) -> bool {
+    match negated_request(text) {
+        Some(rest) if !rest.is_empty() => card_answer(&prepare(rest)),
+        _ => card_answer(text),
+    }
+}
+fn card_answer(text: &str) -> bool {
     let text = ["always", "sempre", "siempre"]
         .iter()
         .find_map(|word| head(text, word))

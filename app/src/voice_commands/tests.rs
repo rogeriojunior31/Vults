@@ -1201,10 +1201,10 @@ fn unclear_audio_and_extra_media_targets_stay_local_without_a_batch_prefix() {
 }
 
 #[test]
-fn audio_scope_feedback_clears_pending_choices_and_is_available_in_every_language() {
+fn local_non_execution_feedback_clears_pending_choices_and_is_available_in_every_language() {
     let now = Instant::now();
     for lang in [i18n::Lang::En, i18n::Lang::PtBr, i18n::Lang::Es, i18n::Lang::Zh] {
-        for text in ["lower volume", "pause music in Firefox"] {
+        for text in ["lower volume", "pause music in Firefox", "do not pause music"] {
             let mut state = fixture(now);
             state.lang = lang;
             session(&mut state, "c", "/work/api-gateway", now);
@@ -1223,5 +1223,27 @@ fn audio_scope_feedback_clears_pending_choices_and_is_available_in_every_languag
             );
             assert!(state.focus.is_none());
         }
+    }
+}
+
+#[test]
+fn negated_requests_never_enter_chat_or_apply_a_batch_prefix() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    let before = format!("{state:?}");
+    let mut commands = Commands::new(now);
+    for text in [
+        "do not pause music",
+        "don't open app Firefox",
+        "never mute web",
+        "nao pause a musica",
+        "no abras la aplicacion Firefox",
+        "mute web and then do not open api",
+    ] {
+        let out = say(&mut commands, &mut state, text, now);
+        assert_eq!(out.feedback, Feedback::Negated, "{text}");
+        assert!(!out.chat_fallback(true), "{text}");
+        assert!(out.effects.is_empty() && out.desktop.is_empty(), "{text}");
+        assert_eq!(format!("{state:?}"), before);
     }
 }

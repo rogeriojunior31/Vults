@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 3c4124172fee -->
+<!-- source: b47e6cb1d170 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1013,6 +1013,15 @@ Essas variações não ativam opções de ação, chamam o Chat nem ignoram veri
 Fala entre aspas é tratada como dado: falar ou digitar um comando entre aspas não o executa nem
 aciona o encaminhamento opcional ao Chat. Uma mensagem local explica isso no idioma selecionado.
 Recusas de permissão e volumes literais inválidos mantêm sua prioridade, mesmo dentro de aspas.
+Negações iniciais reconhecidas, como `do not pause music`, `don't open app Firefox`,
+`could you not pause music`, `não pause a música` e `no abras la aplicacion Firefox`, também ficam
+no computador, mesmo com envio ao Chat ativado. O lote inteiro é recusado sem executar seu início,
+e perguntas pendentes sobre destinos são limpas. Nomes como `No Music` ou `Do Not Disturb` continuam
+sendo nomes em `open app ...`; palavras dentro do nome não são removidas. Respostas isoladas a
+cartões, como `não`, e pedidos para responder permissões, mesmo negados, mantêm a recusa existente.
+O ditado comum continua transcrevendo frases negativas como texto; essa proteção vale para a
+interpretação de comandos, não para a entrega de texto. É reconhecimento limitado de frases,
+não compreensão semântica geral.
 
 A V8.2 acrescenta o resolvedor de nomes sobre uma cópia local dos nomes de projetos/agentes e das
 substituições de Suas palavras. Aliases só se aplicam quando o destino é um nome conhecido completo.

@@ -312,13 +312,14 @@ fn quoted_commands_are_consumed_locally_even_when_commands_are_disabled() {
 }
 
 #[test]
-fn unclear_audio_and_qualified_media_never_reach_realtime_even_when_commands_are_off() {
+fn local_audio_and_negation_guards_never_reach_realtime_even_when_commands_are_off() {
     let now = Instant::now();
     let mut state = fixture(now);
     let before = format!("{state:?}");
     let mut commands = Commands::new(now);
     for enabled in [true, false] {
         for (text, feedback) in [
+            ("do not pause music", Feedback::Negated),
             ("lower volume", Feedback::AudioScopeRequired),
             ("pause music in Firefox", Feedback::UnsupportedMediaTarget),
         ] {

@@ -903,6 +903,14 @@ These variations do not enable an action switch, call Chat or bypass native targ
 Quoted speech is treated as data: saying or typing a quoted command does not execute it or enter
 the optional Chat fallback. A local message explains this in the selected language. Permission
 refusals and invalid literal volumes keep their existing priority, even inside quotations.
+Recognized leading negations such as `do not pause music`, `don't open app Firefox`,
+`could you not pause music`, `nao pause a musica` and `no abras la aplicacion Firefox` also stay
+local, even with Chat handoff enabled. The whole batch is rejected without executing a prefix,
+and any pending target question is cleared. Names such as `No Music` or `Do Not Disturb` remain
+names in `open app ...`; words inside a name are not stripped. Standalone card answers such as
+`no`, and permission-answer requests even when negated, retain the existing refusal behavior.
+Ordinary dictation still transcribes negative sentences as text; this guard applies to command
+interpretation, not text delivery. This is bounded phrase recognition, not general semantic understanding.
 
 V8.2 adds the name resolver over a local snapshot of project/agent names and Your words replacements.
 Aliases apply only when their target is a complete known name. Matching tries aliases, exact names,
