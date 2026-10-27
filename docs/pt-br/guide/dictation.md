@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: f5673859c7f6 -->
+<!-- source: 3c4124172fee -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -1073,7 +1073,11 @@ alteram o volume em dez pontos percentuais, sempre entre 0 e 100 por cento.
 
 Silenciar um projeto continua afetando suas notificações, não a reprodução ou o áudio do computador.
 Os comandos atuam apenas no reprodutor selecionado, fixam seu processo e param se a seleção, o
-consentimento ou o processo mudar. Antes do primeiro efeito, lotes de mídia verificam todos os
+consentimento ou o processo mudar. O reprodutor mostrado é capturado na admissão do comando,
+antes de agendar seu processamento. Se outro reprodutor for selecionado enquanto o comando espera,
+ou nenhum estiver disponível na admissão, o comando não adota um reprodutor posterior. Confira o
+reprodutor mostrado no Vults e repita o pedido. Essa verificação ocorre na preparação inicial do
+lote, antes de qualquer efeito. Antes do primeiro efeito, lotes de mídia verificam todos os
 recursos pedidos no reprodutor fixado. Uma etapa posterior sem suporte recusa o lote sem executar
 as anteriores. Os recursos, a seleção e o consentimento são verificados novamente a cada efeito;
 uma mudança posterior ainda pode interromper o lote. Eles aguardam a restauração da redução/pausa temporária do ditado,

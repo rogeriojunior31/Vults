@@ -80,6 +80,15 @@ pub(super) fn enabled(
             .is_ok_and(|s| consent(&s, media, output, applications))
 }
 
+// The cached player is captured before scheduling; never adopt a later selection in preflight.
+fn selected_player<'a>(admitted: Option<&'a str>, shown: Option<&str>) -> Result<&'a str, Error> {
+    let admitted = admitted.ok_or(Error::NoPlayer)?;
+    if shown != Some(admitted) {
+        return Err(Error::Media);
+    }
+    Ok(admitted)
+}
+
 impl Backend<'_> {
     fn enabled(&self) -> bool {
         enabled(
@@ -105,9 +114,13 @@ impl Backend<'_> {
     }
 
     fn media_allowed(&self) -> bool {
+        let shown = crate::media::media_now(self.app.clone());
         self.enabled()
-            && crate::media::media_now(self.app.clone())
-                .is_some_and(|now| self.player.as_deref() == Some(now.player.as_str()))
+            && selected_player(
+                self.player.as_deref(),
+                shown.as_ref().map(|now| now.player.as_str()),
+            )
+            .is_ok()
     }
 }
 
@@ -159,8 +172,14 @@ impl Io for Backend<'_> {
             }
         }
         if self.media {
-            self.player = crate::media::media_now(self.app.clone()).map(|now| now.player);
-            let player = self.player.as_deref().ok_or(Error::NoPlayer)?;
+            let shown = crate::media::media_now(self.app.clone());
+            let player = selected_player(
+                self.player.as_deref(),
+                shown.as_ref().map(|now| now.player.as_str()),
+            )?;
+            if !self.enabled() {
+                return Err(Error::Disabled);
+            }
             self.playback = Some(vults_media::pin(player).await.map_err(|_| Error::Media)?);
         }
         if self.output {
@@ -270,6 +289,11 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
         .iter()
         .any(|action| matches!(action, DesktopAction::Flock(_)));
     let deadline = Instant::now() + Duration::from_secs(4);
+    let player = if media {
+        crate::media::media_now(app.clone()).map(|now| now.player)
+    } else {
+        None
+    };
     tauri::async_runtime::spawn(async move {
         let mut backend = Backend {
             app: &app,
@@ -278,7 +302,7 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
             media,
             output,
             applications,
-            player: None,
+            player,
             playback: None,
             computer: None,
             status: None,
@@ -470,6 +494,21 @@ mod tests {
             }
             self.seen.push(action);
             Ok(())
+        }
+    }
+
+    #[test]
+    fn media_admission_keeps_the_original_player_even_if_none_was_available() {
+        let player = "org.mpris.MediaPlayer2.firefox";
+        let admitted = Some(player);
+        assert_eq!(selected_player(admitted, admitted), Ok(player));
+        for (original, shown, expected) in [
+            (admitted, Some("org.mpris.MediaPlayer2.spotify"), Error::Media),
+            (admitted, None, Error::Media),
+            (None, admitted, Error::NoPlayer),
+            (None, None, Error::NoPlayer),
+        ] {
+            assert_eq!(selected_player(original, shown), Err(expected));
         }
     }
 

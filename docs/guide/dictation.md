@@ -957,6 +957,10 @@ Relative volume changes use ten percentage points and stay within 0..100 percent
 
 Project `mute` still affects notifications, not playback or computer audio. Commands target only
 the selected player, pin its process and stop if the selection, consent or process changes.
+The displayed player is captured when the command is admitted, before its worker is scheduled.
+If another player becomes selected while the command waits, or no player was available at admission,
+the queued command does not adopt a later player. Repeat the command after checking the player
+shown in Vults. This check precedes every effect in the initial batch preflight.
 Before the first effect, media batches check every requested capability on the pinned player.
 An unsupported suffix rejects the batch without executing its prefix. Capabilities, selection and
 consent are checked again at each effect; a later change can still interrupt the batch.

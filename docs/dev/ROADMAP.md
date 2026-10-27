@@ -644,11 +644,11 @@ cancellation; existing flock commands still work; real desktop effects await VC6
 - [x] Keep recognized unscoped volume and qualified media requests local, with four-language
   feedback asking for a complete explicit request or explaining the selected-player limitation.
   Do not select another player, schedule a condition or route these known limitations to Chat.
-- [ ] Verify existing target clarification across project/app collisions and expired selections.
+- [x] Verify existing target clarification across project/app collisions and expired selections.
   Clarify unclear scopes; never use media volume for a bare computer-volume request or vice versa.
-- [ ] Keep local command handling independent of Chat. Preserve explicit optional Chat handoff
+- [x] Keep local command handling independent of Chat. Preserve explicit optional Chat handoff
   behavior for unknown speech without introducing a new provider or activating any user setting.
-- [ ] Recheck current switches, identity, lock and cancellation ticket before every effect. Keep
+- [x] Recheck current switches, identity, lock and cancellation ticket before every effect. Keep
   existing batch limits, typed dispatch, native acknowledgements and confirmed-prefix feedback.
 
 **Done when:** deterministic parser/resolver/executor fixtures cover supported variations, unknown
@@ -705,6 +705,29 @@ feature-enabled evals and repository/version guards. Parser/dispatcher/realtime 
 PT/EN/ES examples, all four feedback languages, no prefix effect or Chat handoff, old-question
 invalidation and refusal/invalid-volume/quotation priority. Reviewed EN/pt-BR source marks match.
 No microphone, personal playback or provider was used; VC6 native acceptance remains pending.
+
+Media admission correction (2026-10-26): source audit found the displayed player being read only
+inside asynchronous preflight, after queued work or app validation could delay it. Native command
+admission now captures the cached player service synchronously before spawning the worker. Preflight
+compares that original selection before pinning its MPRIS owner and before any batch effect. A missing
+player at admission stays missing for that command; a later or changed player is never adopted.
+The same selection guard is reused for capability checks and each media effect. Existing live
+consent, ticket/deadline, lock, unique-owner and output/app/flock target guards remain in force.
+EN/pt-BR guides explain when to repeat. Pure selection fixtures cover stable, switched, disappeared
+and newly available players without D-Bus calls or personal playback. VC6 native acceptance remains open.
+Audit evidence for VC3's checked rows: existing project/app collision and expiry fixtures retain
+original choices/definitions and deadlines; the pending-session correction covers start/folder/terminal
+changes. Recognized outcomes never enter the optional Chat handoff; actual unknown handoff also
+rechecks master/Chat/Zeca settings, ticket and conversation generation in `chat::Origin::check`.
+Desktop preflight/each step rechecks current consents, ticket, deadline and lock, with native
+player/output/application identity guards and owner-loop flock/external receipts. Settings changes
+cancel old command generations even when re-enabling a switch. Fake preflight/failure/timeout tests
+retain the actually confirmed prefix without retry. These are automated/source checks, not desktop
+acceptance or a claim of unrestricted phrase understanding.
+Validation passes: UI build, all 19 renderer checks, workspace formatting/Clippy/tests,
+feature-enabled evals and repository/version guards; reviewed guide translation source marks match.
+The remaining VC3 phrase-coverage row and VC6 native acceptance stay open. No user settings,
+real microphone, playback or provider were exercised by these automated checks.
 
 Reference review (2026-10-26; read-only local snapshots):
 
