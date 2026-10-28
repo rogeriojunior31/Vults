@@ -449,9 +449,10 @@ mod tests {
             .map(|n| {
                 let (dir, id) = (dir.clone(), id.clone());
                 std::thread::spawn(move || {
-                    Store::open_current(&dir)
-                        .unwrap()
-                        .reserve_cost(&id, FEATURE, 1, Some(1), &span(DAY_MS, &n.to_string()))
+                    let mut db = Store::open_current(&dir).unwrap();
+                    // Concurrent migration tests can saturate Windows CI disk writes.
+                    db.conn.busy_timeout(std::time::Duration::from_secs(30)).unwrap();
+                    db.reserve_cost(&id, FEATURE, 1, Some(1), &span(DAY_MS, &n.to_string()))
                         .unwrap()
                 })
             })
@@ -464,6 +465,9 @@ mod tests {
                 .count(),
             1
         );
+        let db = Store::open_current(&dir).unwrap();
+        assert_eq!(charged(&db.conn, FEATURE, DAY_MS).unwrap(), 1);
+        assert_eq!(db.spans(10).unwrap().len(), 1);
     }
 
     #[test]
