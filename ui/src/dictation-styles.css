@@ -4,7 +4,7 @@
 .dictation-style-card span { color: var(--fg-dim); font-size: var(--text-s); }
 button.dictation-style-card { cursor: pointer; }
 .dictation-style-card[aria-pressed="true"], .dictation-style-card[data-selected="true"] { background: var(--raised); border-color: var(--mark); }
-button.dictation-style-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button.dictation-style-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .dictation-cleanup-settings { display: grid; gap: 16px; min-width: 0; }
 .dictation-cleanup-settings > h2 { margin-bottom: 0; }
 .dictation-cleanup-settings .note, .dictation-cleanup-settings .hint { overflow-wrap: anywhere; }

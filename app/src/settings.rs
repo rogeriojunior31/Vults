@@ -10,15 +10,20 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 44;
+const VERSION: u32 = 45;
 
+/// The `data-theme` of every window. The three SP Night themes come from the sp-night palette.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum Theme {
     Light,
+    SpNightPaulista,
+    SpNightGaroa,
+    SpNightJaragua,
+    /// Named `black` before version 45.
     #[default]
-    #[serde(other)]
-    Black,
+    #[serde(alias = "black", other)]
+    Dark,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -426,7 +431,7 @@ impl Default for Settings {
             history: true,
             recap_shown_week: None,
             language: None,
-            theme: Theme::Black,
+            theme: Theme::Dark,
             codex_usage: None,
             native_chat: true,
             chat_access: ChatAccess::Ask,
@@ -2486,7 +2491,7 @@ mod tests {
             history: true,
             recap_shown_week: None,
             language: None,
-            theme: Theme::Black,
+            theme: Theme::Dark,
             codex_usage: None,
             native_chat: true,
             chat_access: ChatAccess::Ask,
@@ -2686,15 +2691,26 @@ mod tests {
     }
 
     #[test]
-    fn theme_defaults_to_black_and_keeps_a_light_choice() {
-        assert_eq!(Settings::default().theme, Theme::Black);
+    fn theme_defaults_to_dark_and_keeps_a_choice() {
+        assert_eq!(Settings::default().theme, Theme::Dark);
         let (light, clean) = parse(r#"{ "version": 23, "theme": "light" }"#);
         assert!(clean && light.theme == Theme::Light);
         let encoded = serde_json::to_string(&light).unwrap();
         assert_eq!(parse(&encoded).0.theme, Theme::Light);
         assert_eq!(
             parse(r#"{ "version": 23, "theme": "unknown" }"#).0.theme,
-            Theme::Black
+            Theme::Dark
+        );
+        let garoa = serde_json::to_string(&Theme::SpNightGaroa).unwrap();
+        assert_eq!(garoa, r#""sp-night-garoa""#);
+        // Black, the name before version 45, reads as Dark.
+        assert_eq!(
+            parse(r#"{ "version": 44, "theme": "black" }"#).0.theme,
+            Theme::Dark
+        );
+        assert_eq!(
+            parse(r#"{ "version": 45, "theme": "sp-night-jaragua" }"#).0.theme,
+            Theme::SpNightJaragua
         );
     }
 

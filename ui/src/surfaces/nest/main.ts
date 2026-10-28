@@ -1,6 +1,6 @@
 import { connectQuestions } from "../../question-bridge";
 import { dictationStatus } from "../../island/dictation";
-import { applyTheme } from "../../theme";
+import { applyTheme, DEFAULT_THEME } from "../../theme";
 // The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
 // (ADR 0021, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
 // conversation in full Markdown: the same chat, so a message sent in either shows in both. Its
@@ -251,7 +251,7 @@ Bridge.onView((v) => {
 });
 void Bridge.appSettings().then((s) => {
   dictation.captions(s.dictationCaption, true);
-  applyTheme(s.theme ?? "black", true);
+  applyTheme(s.theme ?? DEFAULT_THEME, true);
   setLang(s.lang);
   questions.relabel();
   dictation.relabel();

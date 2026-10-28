@@ -468,7 +468,7 @@ export interface Dropped {
 }
 
 /** A setting that changed somewhere (the island, the tray, Settings); only those present changed. */
-export type Theme = "black" | "light";
+export type Theme = "sp-night-paulista" | "sp-night-garoa" | "sp-night-jaragua" | "dark" | "light";
 export type DictationWords = {
   words: string[];
   replacements: { id: number; from: string; to: string }[];

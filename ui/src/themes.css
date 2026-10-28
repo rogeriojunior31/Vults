@@ -1,7 +1,8 @@
 /* Color roles, shared by every window. Names follow the sp-night role layer (ui.*, diagnostic.*),
-   so a theme is one block of values and nothing else changes. Agent colors are identity, not theme. */
+   so a theme is one block of values and nothing else changes. Agent colors are identity, not theme.
+   This first block is Dark and holds every role; the other themes override only their values. */
 :root,
-[data-theme="black"] {
+[data-theme="dark"] {
   --bg: #000000; /* the island itself */
   --bg-deep: #000000;
   --panel: #141518; /* cards inside the island, settings panels */
@@ -15,6 +16,8 @@
   --fg-muted: #7a7f88; /* 4.5:1 on a card, the floor for text */
   --accent: #f5f6f8;
   --on-accent: #000000;
+  --selection: #2c2f35;
+  --caret: var(--fg);
   --error: #f4505e;
   --error-text: #ff8d97;
   --ok: #22c55e;
@@ -34,14 +37,16 @@
   --chrome-line: #202127;
   --raised: #1c1e22;
   --soft: #a3a6af; /* tabs and footer words on the chrome */
-  --mark: #e2e6da; /* the pressed size, the chosen tab's underline */
+  --mark: #e2e6da; /* the chosen tab's underline, the active item's edge */
+  --mark-fill: var(--mark); /* a pressed segment, a checked toggle, a meter */
   --chrome-icon: #adb2bb; /* the header's icon buttons */
 
   --input: #0f1013;
   --control-border: #2c2f35;
   --border-hover: #3a3d44;
-  --focus-border: color-mix(in srgb, var(--accent) 45%, var(--control-border));
-  --focus-shadow: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
+  --focus: var(--accent); /* the keyboard focus ring */
+  --focus-border: color-mix(in srgb, var(--focus) 45%, var(--control-border));
+  --focus-shadow: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--focus) 24%, transparent);
   --radius-control: 7px;
   --radius-card: 10px;
   --radius-code: 12px;
@@ -79,8 +84,78 @@
   --ok: #137333; --warn: #885400; --error: #ba2537; --error-text: #af2034; --info: #006b82;
   --agent-claude: #a5482d; --agent-codex: #087d60; --agent-opencode: #a53072;
   --agent-qwen: #5044c1; --agent-copilot: #2268a9; --agent-other: #7750b0; --zeca: #137333; --wire: #858b94;
+  --selection: #c9d3e0;
   color-scheme: light;
 }
+
+/* SP Night (sp-night palette/sp_night.json, mapped by its roles.json): laje is the ground, concreto
+   the card, vidro the raised part, fiacao the wire the flock perches on. Sodium marks the chosen
+   item's line and the caret, never a fill: a sodium pill or meter reads as a warning (and as
+   Claude's color), so --mark-fill stays on the text ramp. Focus takes the system accent
+   (marginal), as the spec asks of app widgets.
+   The palette's fg_muted is a 3:1 ornament, under this app's 4.5:1 text floor, so fg_dim takes
+   --fg-muted and --fg-dim sits a quarter of the way to fg. */
+[data-theme="sp-night-paulista"] {
+  --bg: #151723; --bg-deep: #0f101a; --panel: #1d1f2d; --float: #0f101a;
+  --chrome: #0f101a; --raised: #272937; --border: #272937; --chrome-line: #272937;
+  --fg-bright: #e7ebff; --fg: #d3d7eb; --fg-dim: #999cae; --fg-muted: #868999;
+  --soft: #a1a4b6; --chrome-icon: #a9acbe; --mark: #f2984a; --caret: #f2984a; --accent-alt: #6e92de;
+  --accent: #e7ebff; --on-accent: #0f101a;
+  --input: #0f101a; --control-border: #373943; --border-hover: #484a55; --selection: #373943;
+  --error: #ea5d5d; --error-text: #ff716f; --ok: #89d093; --warn: #f5c66b; --info: #6e92de;
+  --wire: #373943;
+}
+
+[data-theme="sp-night-garoa"] {
+  --bg: #1c1e20; --bg-deep: #151719; --panel: #26282a; --float: #151719;
+  --chrome: #151719; --raised: #313436; --border: #313436; --chrome-line: #313436;
+  --fg-bright: #dae1ea; --fg: #c7cdd6; --fg-dim: #9ca2ad; --fg-muted: #8d949f;
+  --soft: #a1a8b2; --chrome-icon: #a7aeb8; --mark: #e3a068; --caret: #e3a068; --accent-alt: #7993cb;
+  --accent: #dae1ea; --on-accent: #151719;
+  --input: #151719; --control-border: #414346; --border-hover: #51545a; --selection: #414346;
+  --error: #d87676; --error-text: #ed8988; --ok: #9acaa2; --warn: #e7cb8a; --info: #7993cb;
+  --wire: #414346;
+}
+
+[data-theme="sp-night-jaragua"] {
+  --bg: #0c100d; --bg-deep: #050806; --panel: #151a17; --float: #050806;
+  --chrome: #050806; --raised: #202622; --border: #202622; --chrome-line: #202622;
+  --fg-bright: #e7eee9; --fg: #d3dad5; --fg-dim: #999f9a; --fg-muted: #868b87;
+  --soft: #a1a7a2; --chrome-icon: #a9afaa; --mark: #f2984a; --caret: #f2984a; --accent-alt: #6e92de;
+  --accent: #e7eee9; --on-accent: #050806;
+  --input: #050806; --control-border: #323733; --border-hover: #454946; --selection: #323733;
+  --error: #ea5d5d; --error-text: #ff716f; --ok: #79d488; --warn: #f5c66b; --info: #6e92de;
+  --wire: #323733;
+}
+
+[data-theme^="sp-night-"] {
+  --focus: var(--accent-alt);
+  --focus-border: color-mix(in srgb, var(--focus) 60%, var(--control-border));
+  --focus-shadow: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--focus) 45%, transparent);
+  --mark-fill: var(--fg);
+  color-scheme: dark;
+}
+
+::selection { background: var(--selection); color: var(--fg-bright); }
+html { caret-color: var(--caret); scrollbar-color: var(--control-border) transparent; }
+:where(input, progress) { accent-color: var(--accent); }
+/* A select left to the platform gets GTK's own gray button in WebKitGTK, in no theme's colors.
+   Zero specificity: every styled select keeps its own look. */
+:where(select:not([multiple]):not([size])) {
+  appearance: none;
+  padding: 4px 28px 4px 8px;
+  font: inherit;
+  color: var(--fg);
+  background-color: var(--input);
+  background-image: linear-gradient(45deg, transparent 50%, var(--fg-dim) 50%),
+    linear-gradient(135deg, var(--fg-dim) 50%, transparent 50%);
+  background-position: right 15px center, right 10px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+}
+:where(select) option { background: var(--float); color: var(--fg-bright); }
 
 input::placeholder, textarea::placeholder { color: var(--fg-muted); opacity: 1; }
 
@@ -89,10 +164,11 @@ input::placeholder, textarea::placeholder { color: var(--fg-muted); opacity: 1; 
 .voice-command-help dd { margin: 4px 0 0; }
 
 .voice-command-search { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
-.voice-command-search input, .voice-command-search select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 32px; padding: 6px 8px; color: var(--fg); background: var(--input); border: 1px solid var(--control-border); border-radius: var(--radius-control); font: inherit; }
+.voice-command-search input, .voice-command-search select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 32px; padding: 6px 8px; color: var(--fg); background-color: var(--input); border: 1px solid var(--control-border); border-radius: var(--radius-control); font: inherit; }
+.voice-command-search select { padding-right: 28px; }
 .voice-command-search input { flex: 1 1 180px; }
 .voice-command-search select { flex: 1 1 160px; }
-.voice-command-search :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.voice-command-search :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .voice-command-readiness { margin-block: 12px; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); overflow-wrap: anywhere; }
 .voice-command-readiness summary { min-height: 32px; color: var(--fg); cursor: pointer; }

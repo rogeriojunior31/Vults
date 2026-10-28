@@ -7,7 +7,7 @@
 .view-state-body > button { margin-top: 12px; min-height: 32px; padding: 6px 12px; border: 0; border-radius: var(--radius-control); background: var(--raised); color: var(--fg); font: 500 12px/1.4 var(--font); }
 .view-state-body > button:hover:not(:disabled) { background: var(--border-hover); }
 .view-state-body > button:disabled { opacity: 0.5; cursor: default; }
-.view-state :is(button, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.view-state :is(button, summary):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .view-state-detail { margin-top: 12px; color: var(--fg-dim); font: 12px/1.6 var(--font); }
 .view-state-detail summary { width: fit-content; min-height: 28px; cursor: pointer; }
 .view-state-detail p { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }

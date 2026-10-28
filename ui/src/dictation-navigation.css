@@ -5,10 +5,10 @@
 .dictation-nav .dictation-groups button { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 10px; text-align: left; border: 0; border-radius: var(--radius-control); color: var(--fg-dim); background: transparent; font: 500 var(--text-m)/1.4 var(--font); cursor: pointer; }
 .dictation-nav .dictation-groups button svg { flex: none; }
 .dictation-nav .dictation-groups button:hover, .dictation-nav .dictation-groups button[aria-current] { background: var(--raised); color: var(--fg); }
-.dictation-nav .dictation-groups button:focus-visible, .dictation-page-picker:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dictation-nav .dictation-groups button:focus-visible, .dictation-page-picker:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .dictation-nav-controls { display: flex; flex: none; gap: 8px; margin: 4px 0 8px; min-width: 0; }
 .dictation-page-search { box-sizing: border-box; width: 100%; min-width: 0; min-height: 36px; padding: 7px 10px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--input); color: var(--fg); font: var(--text-m)/1.4 var(--font); }
-.dictation-page-search:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.dictation-page-search:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .dictation-nav-empty { margin: 8px 4px; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); overflow-wrap: anywhere; }
 .dictation-nav-empty[hidden] { display: none; }
 .dictation-page-picker { display: none; }
@@ -24,5 +24,5 @@
 .dictation-nav-config { flex: none; }
 .dictation-nav-config > summary { box-sizing: border-box; min-height: 34px; padding: 7px 10px; border-radius: var(--radius-control); color: var(--fg-dim); font: 500 var(--text-m)/1.4 var(--font); cursor: pointer; }
 .dictation-nav-config > summary:hover { background: var(--raised); color: var(--fg); }
-.dictation-nav-config > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.dictation-nav-config > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .dictation-nav-config[open] { padding-bottom: 4px; border-bottom: 1px solid var(--border); }
