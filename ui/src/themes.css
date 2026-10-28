@@ -87,3 +87,26 @@ input::placeholder, textarea::placeholder { color: var(--fg-muted); opacity: 1; 
 .voice-command-help { color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); overflow-wrap: anywhere; }
 .voice-command-help dt { margin-top: 12px; color: var(--fg); font-weight: 600; }
 .voice-command-help dd { margin: 4px 0 0; }
+
+.voice-command-search { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.voice-command-search input, .voice-command-search select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 32px; padding: 6px 8px; color: var(--fg); background: var(--input); border: 1px solid var(--control-border); border-radius: var(--radius-control); font: inherit; }
+.voice-command-search input { flex: 1 1 180px; }
+.voice-command-search select { flex: 1 1 160px; }
+.voice-command-search :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.voice-command-readiness { margin-block: 12px; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); overflow-wrap: anywhere; }
+.voice-command-readiness summary { min-height: 32px; color: var(--fg); cursor: pointer; }
+.voice-command-readiness dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 6px 12px; }
+.voice-command-readiness dt { color: var(--fg); }
+.voice-command-readiness dd { margin: 0; }
+.voice-command-readiness button { min-height: 32px; }
+
+.voice-command-check { margin-block: 12px; font: var(--text-m)/1.6 var(--font); overflow-wrap: anywhere; }
+.voice-command-check summary { min-height: 32px; cursor: pointer; }
+.voice-command-check textarea { box-sizing: border-box; width: 100%; min-height: 64px; max-height: 180px; resize: vertical; color: var(--fg); background: var(--input); border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 8px; font: inherit; }
+.voice-command-check button { min-height: 32px; }
+.voice-command-check li { margin-block: 8px; }
+.voice-command-check li > span { margin-inline-start: 8px; }
+
+.voice-command-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.voice-command-readiness [hidden], .voice-command-check [hidden] { display: none; }

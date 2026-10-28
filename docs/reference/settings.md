@@ -77,7 +77,7 @@ immediately, and turning insertion off immediately revokes pending insertion cap
 | Group | Available controls |
 | --- | --- |
 | Keyboard shortcuts | Current desktop bindings, KDE shortcut editor, hold/double tap, X11 Space/Esc and spoken cancellation |
-| Command settings | Enabled by default, actual command binding, names/aliases, local unknown feedback or explicit Chat fallback, supported phrases |
+| Command settings | Enabled by default, actual command binding, names/aliases, local unknown feedback or explicit Chat fallback, searchable phrases, a read-only setup snapshot and a non-executing phrase check |
 | Voice | Shared model/language editor, microphone and refresh, repetition removal, Base retry, music, start cue and captions |
 | Vocabulary | Opt-in dictionary context and project vocabulary; both off by default, limited to qualified Turbo/fixed English |
 | Paste | Spoken-code punctuation, opt-in editor/tmux insertion, actual keyboard permission and explicit retry |

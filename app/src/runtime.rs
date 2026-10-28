@@ -47,6 +47,12 @@ pub struct Inbox(mpsc::Sender<Msg>);
 
 #[derive(Debug)]
 enum Msg {
+    VoicePreview {
+        text: String,
+        replacements: Vec<(String, String)>,
+        applications: Option<Vec<vults_platform::applications::Application>>,
+        reply: tokio::sync::oneshot::Sender<crate::voice_commands::preview::Preview>,
+    },
     #[cfg(target_os = "linux")]
     FlockCommand(crate::voice_commands::flock::Request),
     #[cfg(target_os = "linux")]
@@ -449,6 +455,20 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             crate::questions::publish(&app, &mut questions);
         }
         let input = match msg {
+            Msg::VoicePreview {
+                text,
+                replacements,
+                applications,
+                reply,
+            } => {
+                let _ = reply.send(crate::voice_commands::preview::interpret(
+                    &state,
+                    &text,
+                    &replacements,
+                    applications.as_deref(),
+                ));
+                continue;
+            }
             #[cfg(target_os = "linux")]
             Msg::Question(_) => unreachable!("handled before domain input"),
             #[cfg(target_os = "linux")]
@@ -1941,6 +1961,29 @@ pub(crate) fn realtime_command(
         .0
         .try_send(Msg::RealtimeCommand(request))
         .map_err(|_| vults_chat::realtime::transport::Failure::Busy)
+}
+
+/// Read-only parser/resolver query; never enters the voice dispatcher or effect loop.
+pub(crate) async fn voice_command_preview(
+    app: &AppHandle,
+    text: String,
+    replacements: Vec<(String, String)>,
+    applications: Option<Vec<vults_platform::applications::Application>>,
+) -> Result<crate::voice_commands::preview::Preview, String> {
+    let (reply, answer) = tokio::sync::oneshot::channel();
+    app.state::<Inbox>()
+        .0
+        .try_send(Msg::VoicePreview {
+            text,
+            replacements,
+            applications,
+            reply,
+        })
+        .map_err(|_| "The command check is unavailable.")?;
+    tokio::time::timeout(Duration::from_secs(2), answer)
+        .await
+        .map_err(|_| "The command check timed out.")?
+        .map_err(|_| "The command check is unavailable.".into())
 }
 
 #[cfg(test)]

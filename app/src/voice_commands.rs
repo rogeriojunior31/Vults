@@ -2,6 +2,7 @@
 #[cfg(target_os = "linux")]
 mod desktop;
 pub(crate) mod flock;
+pub(crate) mod preview;
 mod targets;
 #[cfg(test)]
 mod tests;

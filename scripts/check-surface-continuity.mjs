@@ -173,7 +173,7 @@ for (const width of [480, 760, 900, 1180]) {
     let realtimePhase = "recording", realtimeStarts = 0;
     const realtimeControls = [];
     const backend = {
-      dictation: { conversation: {
+      dictation: { commandCheck: async () => ({ status: "parsed", actions: [{ action: "focus", target: "Alpha", value: null, status: "recognized", candidates: [] }] }), conversation: {
         start: async () => { realtimeStarts++; return { id: "voice-fixture", phase: realtimePhase, response: "reply-token", capture: "capture-token", reason: null, draft: null, reply: null }; },
         status: async () => { throw Error("Unexpected heartbeat in synchronous scene checks"); },
         control: async (...args) => { realtimeControls.push(args); }, copy: async () => {},
@@ -573,16 +573,31 @@ for (const width of [480, 760, 900, 1180]) {
     assert.equal(workPage().querySelector("h2").textContent, "Voice commands");
     workPage().querySelectorAll("button").find(button=>button.textContent==="Command settings").click();
     assert.equal(settingsRoutes.at(-1),"dictationcommands","Command settings opens its own configuration directly");
-    const commandSearch = workPage().querySelector("input");
+    const commandSearch = workPage().querySelector(".dictation-search");
+    const examplesQuery = workPage().querySelector('[data-setting="command-example-search"]');
+    examplesQuery.value = "Obsidian"; examplesQuery.fire("input");
+    const examplesScope = workPage().querySelector('[data-setting="command-example-scope"]');
+    examplesScope.value = "apps"; examplesScope.fire("change");
     commandSearch.value = "Keep this command search"; commandSearch.fire("input");
     workPage().querySelector("details").open = true;
     page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Dictionary").click();
     commandNav().click(); await tick();
     nest.open("chat"); nest.open("dictation"); await tick();
     assert.equal(workPage().querySelector("h2").textContent, "Voice commands", "Tab handoffs retain the command work page");
-    assert.equal(workPage().querySelector("input"), commandSearch);
+    assert.equal(workPage().querySelector(".dictation-search"), commandSearch);
+    assert.equal(workPage().querySelector('[data-setting="command-example-search"]').value, "Obsidian", "Examples retain their query across navigation");
+    assert.equal(workPage().querySelector('[data-setting="command-example-scope"]').value, "apps", "Examples retain their own scope independently of command history");
     assert.equal(commandSearch.value, "Keep this command search");
     assert.equal(workPage().querySelector("details").open, true);
+    const commandPhrase = workPage().querySelector('[data-setting="command-check-phrase"]');
+    commandPhrase.value = "open project Alpha"; commandPhrase.fire("input");
+    workPage().querySelector('[data-setting="command-check-submit"]').click(); await tick();
+    nest.view({ ...view, sessions: [{ ...session, step: "More progress" }] });
+    assert.ok(workPage().querySelector('.voice-command-check').textContent.includes("Focus session"), "Nest keeps results through ordinary progress");
+    nest.view({ ...view, sessions: [] });
+    assert.ok(workPage().querySelector('.voice-command-check').textContent.includes("Command targets changed"), "Nest view events invalidate departed targets");
+    assert.equal(commandPhrase.value, "open project Alpha");
+    nest.view(view);
     assert.ok(!actions.includes("dictation:again") && !actions.includes("dictation:clear"));
     await nest.flushState();
     assert.equal(place, "dictation-commands", "Native navigation keeps the exact selected work page");

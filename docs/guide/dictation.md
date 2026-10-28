@@ -264,8 +264,10 @@ preference. The choice is saved on this computer and used by the next recording;
 recording keeps its input. Opening the page or refreshing never starts a recording.
 
 **Dictation > Voice** also owns **Remove repeated loops** and **Retry empty
-dictation with Base**; both start on. Turning loop removal off keeps repetitions in both the
-preview and final text. Known sound annotations and standalone silence phrases are still removed.
+dictation with Base**; both start on. Loop removal applies to ordinary dictation only.
+Command preview and final decoding preserve repeated words so an application/project name is not
+silently shortened; the shared sound-annotation/silence filter still applies. Turning loop removal
+off keeps repetitions in both the preview and final text. Known sound annotations and standalone silence phrases are still removed.
 Turning Base retry off skips the extra speech check and second decode for an empty result.
 Choices are saved locally and captured when a new independent recording starts; changing them
 never changes an active turn or Chat's processing. Neither choice downloads or contacts a model.
@@ -1062,9 +1064,60 @@ personal audio; real desktop output/cancellation acceptance remains pending.
 
 V8.5 adds **Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its
-**What you can say** guide lists supported phrases; **Dictionary** opens the same names/replacements
+**What you can say** guide lists supported phrases. Search its translated examples or filter by
+flock, media, computer audio, applications or card safety. Search and scope combine; examples
+never execute a command. Each view retains its filters while navigating within the app; **Dictionary** opens the same names/replacements
 editor used by dictation. The settings link opens the privileged **Dictation** destination.
 The page filters the newest 500 retained dictations, so older commands may be outside that window.
+
+Open **Command setup** on either command page to compare the actual command/dictation shortcuts.
+**Check command setup** reads the selected local speech model/language and action switches without
+recording or executing a command. The Settings version can also enumerate input devices; the Nest
+keeps microphone availability unknown and links to the existing Voice and Diagnostics pages.
+Finding an input is not a successful capture test, and enabling an action does not verify its native
+backend. Missing or unreadable information stays unknown. These are manual snapshots; check again
+after changing setup. Leaving the page discards the snapshot and ignores late replies.
+
+**Check a command** accepts a typed phrase on either existing command page and calls the same
+bounded parser and project/agent/application name resolver as spoken commands. Results list the
+recognized actions in spoken order, target matches or ambiguity, invalid volume, negation, quoted
+requests and unsupported scopes. The check never records audio, dispatches effects, answers cards,
+sends to Chat or writes command history. It uses the saved dictionary aliases and current flock
+snapshot; application names are read only when application voice commands are enabled. With application matching off, bare
+Open resolves live projects only; with it on, matching projects and installed apps need clarification. Player/computer rows describe the
+intended audio scope, not a verified player, device or native backend. Repeat/undo context is not
+read or changed. Changing the phrase or leaving the page invalidates pending results; the local
+unsent phrase stays in its view until that window is closed. Phrases are limited to 4,096 UTF-8 bytes. Overlong phrases and non-whitespace control
+characters are rejected in the field before a query starts, with an associated validation message.
+Permitted whitespace is sent unchanged; validation never silently rewrites the phrase.
+Recognition is an explanation, not evidence that a real action is enabled or can complete.
+The check loads dictionary aliases only when it needs target resolution. Playback-only phrases and
+local refusal/unsupported explanations skip that lookup. Installed applications are consulted only
+for supported Open/application phrases under their existing opt-in. With application matching off,
+an explicit app query reports the unavailable scope without reading aliases. If a required lookup
+fails, the check reports failure instead of guessing a target.
+For names beginning with articles or reserved words, use an explicit namespace: `open app The Editor`
+and `open project The Editor` retain the full target name. Put grammatical articles before the
+namespace (`open the app Firefox`), not between the namespace and its literal name. The same rule
+applies to the supported Portuguese and Spanish namespace phrases, and explicit notification targets
+such as `mute notifications for The Editor`.
+Reported changes to the speech model, microphone or command action switches clear displayed setup
+and phrase-check results, invalidate pending replies and ask for a new check. The typed phrase stays
+in its view. This invalidation never performs another check automatically.
+While a setup or phrase check is pending, use its **Cancel setup check** or **Cancel phrase check**
+action to stop waiting and retry explicitly. Cancellation preserves the typed phrase and discards
+that check's late replies, including replies arriving after a new check starts. Local inventory or
+parser work already admitted may finish in the background; cancellation never executes an action.
+If Cancel has keyboard focus, completion/cancellation returns focus to that check's start button.
+Live changes to session identities, project names or folders also clear the phrase interpretation in
+both command views and reject replies for the older target list. Ordinary activity/progress updates
+and list reordering keep the result readable. This covers the flock snapshot; installed-application
+inventory remains a manual check and recognition still does not verify native availability.
+
+Use explicit scopes when speaking about sound: `mute notifications for web` affects project
+notifications; `pause media` affects the selected player; `mute computer` affects the default
+computer output. The older short `mute web` form still means project notifications. Notification
+phrases are also supported in Portuguese and Spanish; project names stay unchanged.
 
 **Dictation > Command settings** owns:
 
@@ -1086,7 +1139,7 @@ A successful handoff says **Sent to Zeca. Follow the reply in Chat.** The transc
 the current Chat, using its ordinary tool cards and Stop action. Command history retains the handoff
 status, not a duplicate of the streamed reply. Cancelling an admitted Chat turn uses Chat's Stop action.
 
-For local validation, try `next session`, `who is waiting?`, `mute web`, `same for docs` and `undo` with
+For local validation, try `next session`, `who is waiting?`, `mute notifications for web`, `same for docs` and `undo` with
 matching active projects. Try an ambiguous name and answer one offered choice; wait 90 seconds and
 check expiry. `approve` and `next session and then approve` must refuse without answering a waiting
 card, with either fallback setting. With fallback off, an unknown sentence stays local. With it on,

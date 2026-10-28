@@ -260,8 +260,11 @@ fn single(text: &str) -> Option<Command> {
             {
                 return target(name).map(Command::Focus);
             }
-            let name = if matches!(*kind, Target::Application) {
-                let name = without_article(name);
+            let name = if matches!(
+                *kind,
+                Target::Application | Target::NamedFocus | Target::Notifications(_)
+            ) {
+                // A consumed namespace ends the grammar; leading articles now belong to the name.
                 (!name.is_empty()).then(|| name.to_owned())
             } else {
                 target(name)
@@ -292,6 +295,8 @@ fn target(name: &str) -> Option<String> {
 #[derive(Clone, Copy)]
 enum Target {
     Focus,
+    NamedFocus,
+    Notifications(bool),
     Open,
     Application,
     Terminal,
@@ -303,7 +308,12 @@ enum Target {
 impl Target {
     fn command(self, name: String) -> Command {
         match self {
-            Self::Focus => Command::Focus(name),
+            Self::Focus | Self::NamedFocus => Command::Focus(name),
+            Self::Notifications(on) => Command::SetPreference {
+                target: name,
+                preference: Preference::Mute,
+                on,
+            },
             Self::Open => Command::Open(name),
             Self::Application => Command::Application(name),
             Self::Terminal => Command::Terminal(name),

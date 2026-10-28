@@ -74,6 +74,8 @@ const nest = createNest(
       undo: (id) => Bridge.memoryUndo(id),
     },
     dictation: {
+      commandCheck: Bridge.commandCheck,
+      commandReadiness: () => Bridge.commandReadiness(),
       conversation: { options: Bridge.voiceConversationOptions, routes: Bridge.voiceConversationRoutes, start: Bridge.voiceConversationStart, status: Bridge.voiceConversationStatus, control: Bridge.voiceConversationControl, copy: text => navigator.clipboard.writeText(text) },
       meetings: {
         archive: { save: Bridge.meetingSave, list: Bridge.meetingArchiveList, read: Bridge.meetingArchiveRead,
@@ -264,6 +266,7 @@ void Bridge.appSettings().then((s) => {
 });
 void Bridge.apiKeyStatus().then((api) => nest.chat.setApi(api));
 Bridge.onSettings((s) => {
+  if (s.voice !== undefined || s.dictationCommands !== undefined || s.dictationCommandMedia !== undefined || s.dictationCommandApps !== undefined || s.dictationCommandOutput !== undefined || s.dictationMicrophone !== undefined) nest.commandContextChanged();
   if (s.meetingSummary !== undefined || s.api !== undefined || s.dictationCleanup !== undefined || s.dictationStyle !== undefined || s.dictationWriteIn !== undefined || s.dictationSessionsEnglish !== undefined) nest.dictationChanged();
   if (s.dictationKeep !== undefined) nest.dictationChanged(true);
   if (s.dictationCaption !== undefined) dictation.captions(s.dictationCaption);

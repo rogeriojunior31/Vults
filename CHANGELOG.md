@@ -4,6 +4,10 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Add shared command setup checks, searchable examples and a non-executing phrase check in Dictation. Preserve drafts, support cancellation/retry, reject invalid input and discard stale results without running actions or sending to Chat. Recognition does not certify native availability.
+
+- Preserve repeated words and leading articles in explicit application, project and notification targets. Keep dictation text processing separate from command dispatch.
+
 - Add opt-in local voice commands for selected-player playback, default computer audio and installed applications, including ordered batches with flock navigation and terminal/folder submission receipts. Keep ambiguous, quoted, negated and unsupported player-specific requests local, revalidate targets and cancellation, and report only confirmed completion. Native desktop acceptance remains pending before 0.1.9 publication.
 
 - Include LICENSE and NOTICE in the Linux Debian/RPM package resources alongside the bundled hook.

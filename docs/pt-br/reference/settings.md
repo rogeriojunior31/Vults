@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 12c1b93e274e -->
+<!-- source: 8fa71fc60a09 -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -86,7 +86,7 @@ o prazo entra em vigor imediatamente e desligar a inserção revoga as capacidad
 | Grupo | Controles disponíveis |
 | --- | --- |
 | Atalhos de teclado | Atalhos atuais do desktop, editor de atalhos do KDE, segurar/toque duplo, Espaço/Esc no X11 e cancelamento falado |
-| Configurações dos comandos | Ligado por padrão, combinação real, nomes/aliases, aviso local ou envio explícito ao Chat, frases compatíveis |
+| Configurações dos comandos | Ligado por padrão, combinação real, nomes/aliases, aviso local ou envio explícito ao Chat, exemplos pesquisáveis, retrato de leitura das configurações e checagem de frases sem execução |
 | Voz | Editor de modelo/idioma compartilhados, microfone e atualização, remoção de repetições, nova tentativa com Base, música, aviso inicial e legendas |
 | Vocabulário | Contexto opcional do dicionário e vocabulário do projeto; ambos desligados por padrão, limitados à combinação qualificada Turbo/inglês fixo |
 | Colagem | Pontuação de código falado, inserção opcional em editores/tmux, permissão real de teclado e nova tentativa explícita |

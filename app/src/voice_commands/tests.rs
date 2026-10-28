@@ -1247,3 +1247,143 @@ fn negated_requests_never_enter_chat_or_apply_a_batch_prefix() {
         assert_eq!(format!("{state:?}"), before);
     }
 }
+
+#[test]
+fn explicit_notification_requests_change_only_project_preferences() {
+    for text in [
+        "mute notifications for web",
+        "silenciar as notifica\u{e7}\u{f5}es do web",
+        "silenciar las notificaciones de web",
+    ] {
+        let now = Instant::now();
+        let mut state = fixture(now);
+        let out = say(&mut Commands::new(now), &mut state, text, now);
+        assert_eq!(out.feedback, Feedback::Done, "{text}");
+        assert!(out.desktop.is_empty(), "{text}");
+        assert!(!out.chat_fallback(true), "{text}");
+        assert!(state.prefs(&state.sessions[&key("b")]).mute, "{text}");
+        assert!(!state.prefs(&state.sessions[&key("a")]).mute, "{text}");
+        assert!(
+            out.effects
+                .iter()
+                .all(|effect| matches!(effect, Effect::SaveProjects(_)))
+        );
+    }
+}
+
+#[test]
+fn every_displayed_command_example_keeps_its_meaning_in_each_spoken_language() {
+    fn first_string(text: &str) -> (String, usize) {
+        let mut values = serde_json::Deserializer::from_str(text).into_iter::<String>();
+        let value = values.next().unwrap().unwrap();
+        (value, values.byte_offset())
+    }
+    fn catalog(source: &str) -> BTreeMap<String, String> {
+        source
+            .lines()
+            .filter_map(|line| {
+                let line = line.trim();
+                if !line.starts_with('"') {
+                    return None;
+                }
+                let (key, offset) = first_string(line);
+                let rest = line[offset..].trim_start().strip_prefix(':')?.trim_start();
+                if !rest.starts_with('"') {
+                    return None;
+                }
+                Some((key, first_string(rest).0))
+            })
+            .collect()
+    }
+    fn phrases<'a>(sentence: &'a str, marker: &str) -> Vec<&'a str> {
+        let examples = sentence
+            .split_once(marker)
+            .expect("The translated guide must retain its example marker")
+            .1;
+        let examples = examples.split(['.', '\u{3002}']).next().unwrap();
+        examples
+            .split([';', '\u{3001}'])
+            .map(str::trim)
+            .filter(|part| !part.is_empty())
+            .collect()
+    }
+    let languages = [
+        (
+            "pt-BR",
+            "Diga: ",
+            catalog(include_str!("../../../ui/src/i18n/pt-BR.ts")),
+        ),
+        ("es", "Di: ", catalog(include_str!("../../../ui/src/i18n/es.ts"))),
+        (
+            "zh",
+            "\u{ff1a}",
+            catalog(include_str!("../../../ui/src/i18n/zh.ts")),
+        ),
+    ];
+    let mut checked = 0;
+    for line in include_str!("../../../ui/src/voice-command-help.ts").lines() {
+        let Some((_, text)) = line.split_once("text: t(") else {
+            continue;
+        };
+        let (sentence, _) = first_string(text);
+        if !sentence.contains("Say: ") {
+            continue;
+        }
+        let english = phrases(&sentence, "Say: ");
+        for (language, marker, catalog) in &languages {
+            let localized = phrases(&catalog[&sentence], marker);
+            assert_eq!(localized.len(), english.len(), "{language}: {sentence}");
+            for (expected, actual) in english.iter().zip(localized) {
+                let original = command::parse(expected);
+                assert!(
+                    matches!(&original, Parsed::Commands(commands) if commands.len() == 1),
+                    "English example: {expected}"
+                );
+                assert_eq!(
+                    command::parse(actual),
+                    original,
+                    "{language}: {actual} (English: {expected})"
+                );
+                checked += 1;
+            }
+        }
+    }
+    assert!(checked >= 90, "All displayed example groups must be exercised");
+}
+
+#[test]
+fn explicit_article_names_never_rebind_to_the_article_free_app_or_project() {
+    let now = Instant::now();
+    let mut state = fixture(now);
+    state.sessions.get_mut(&key("a")).unwrap().project = "The Editor".into();
+    state.sessions.get_mut(&key("b")).unwrap().project = "Editor".into();
+    let mut commands = Commands::new(now);
+    let out = say(&mut commands, &mut state, "open project The Editor", now);
+    assert_eq!(out.feedback, Feedback::Done);
+    assert_eq!(state.focus, Some(key("a")));
+    assert!(out.desktop.is_empty() && out.effects.is_empty());
+    let out = say(
+        &mut commands,
+        &mut state,
+        "mute notifications for The Editor",
+        now,
+    );
+    assert_eq!(out.feedback, Feedback::Done);
+    assert!(state.prefs(&state.sessions[&key("a")]).mute);
+    assert!(!state.prefs(&state.sessions[&key("b")]).mute);
+    assert!(out.desktop.is_empty());
+    let apps = [
+        installed_app("the-editor.desktop", "The Editor"),
+        installed_app("editor.desktop", "Editor"),
+    ];
+    let out = commands.execute_with_applications(
+        &mut state,
+        "open app The Editor",
+        &[],
+        json!([]),
+        now,
+        Some(&apps),
+    );
+    assert_eq!(application_id(&out), Some("the-editor.desktop"));
+    assert!(out.effects.is_empty());
+}

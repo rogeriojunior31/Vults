@@ -441,6 +441,7 @@ console.log("check-chat-models: both companions retain streaming thought, decisi
 // Load Room's real entry point: a working ChatPanel alone cannot catch missing native wiring.
 const voiceEvents = {}, voiceCalls = [], voiceDrafts = [], voiceViewActions = [];
 let voiceSaveFails = false, pendingVoiceStop = false, resolveVoiceStop;
+let commandContextInvalidations = 0;
 const voiceRoot = new Element("main");
 document.getElementById = () => voiceRoot;
 document.documentElement = new Element("html");
@@ -450,6 +451,7 @@ globalThis.voiceTestCreateNest = (_root, backend) => {
   const noop = () => {};
   return globalThis.voiceTestNest = { chat, current: () => "chat", open: tab => voiceViewActions.push(tab), flushState: () => chat.flushDraft(), setFull: noop,
     setZeca: on => chat.setEnabled(on), setSound: noop, setSpecies: noop, setKeys: noop, setMedia: noop,
+    commandContextChanged: () => { commandContextInvalidations++; },
     memoryChanged: noop, usageChanged: noop, spendChanged: noop, relabel: noop, view: noop, shortcut: noop };
 };
 globalThis.voiceTestBridge = new Proxy({}, { get: (_target, name) => {
@@ -503,9 +505,13 @@ await roomChat.flushDraft();
 assert.equal(voiceDrafts.at(-1).text, roomInput.value, "Transcription remains a saved editable draft");
 roomMic.listeners.click(); await tick();
 voiceEvents.onSettings({ voice: false });
+assert.equal(commandContextInvalidations, 1, "The real Nest entry invalidates command readouts when speech setup changes");
 assert.equal(roomMic.hidden, true);
 assert.deepEqual(voiceCalls.at(-1), ["cancel"], "Turning voice off cancels Room's recording");
 voiceEvents.onSettings({ voice: true });
+assert.equal(commandContextInvalidations, 2);
+voiceEvents.onSettings({ volume: 25 });
+assert.equal(commandContextInvalidations, 2, "Unrelated sound-volume changes do not discard command explanations");
 assert.equal(roomMic.hidden, false);
 voiceEvents.onDictation({ sequence: 1, generation: 1, phase: "listening", error: null });
 const roomDictation = nodes(document.body).find(node => node.classList.contains("dictation-status"));

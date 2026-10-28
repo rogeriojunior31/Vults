@@ -46,6 +46,7 @@ export interface Nest {
   /** The memory changed: its panel reads it again, when open. */
   memoryChanged: () => void;
   dictationChanged: (erased?: boolean) => void;
+  commandContextChanged: () => void;
   meetingsErased: () => void;
   /** Spend or its budget changed: refresh the open records. */
   spendChanged: () => void;
@@ -703,6 +704,7 @@ export function createNest(
   });
   let waiting: number | null = null;
   const view = (v: ViewModel) => {
+    dictationArea.commandTargetsChanged(v.sessions);
     last = v;
     for (const panel of profilePanels.values()) panel.setFolders(v.sessions.flatMap(s => s.cwd ? [{cwd:s.cwd,project:s.project}] : []), null);
     dictationArea.setActive(tab === "dictation" && !v.locked);
@@ -852,6 +854,7 @@ export function createNest(
       if (tab === "dictation") dictationArea.refresh();
       if (tab === "activity" && (sub === "dictation-statistics" || sub === "week")) parts[sub].refresh();
     },
+    commandContextChanged: dictationArea.commandContextChanged,
     meetingsErased: dictationArea.meetingsErased,
     spendChanged,
     setZeca,
