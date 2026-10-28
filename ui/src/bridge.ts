@@ -810,7 +810,6 @@ export const Bridge = {
   closeNest: () => invoke<void>("nest_close"),
   onNestClose: (handler: (event: { preventDefault(): void }) => Promise<void>) => getCurrentWindow().onCloseRequested(handler),
   /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */
-  rememberDictationSection: (section: string) => invoke<void>("dictation_section_set", { section }),
   openNest: (tab?: string, full?: boolean) => invoke<void>("open_nest_window", { tab: tab ?? null, full: full ?? null }),
   /** The size switch (ADR 0021); `tab` keeps the place across it. */
   setSize: (size: Size, tab?: string) => invoke<void>("set_size", { size, tab: tab ?? null }),

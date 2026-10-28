@@ -1,8 +1,5 @@
 import { createDictationNavigation, DICTATION_SETTINGS, dictationSetting, dictationSettingAbout, type DictationSetting } from "../nest/dictation/navigation";
-import { createCommandCheck } from "../../voice-command-check";
-import { createCommandReadiness, VOICE_MODEL_LABELS } from "../../voice-command-readiness";
-import { voiceCommandHelp } from "../../voice-command-help";
-const commandHelpState = { query: "", scope: "all" };
+import { VOICE_MODEL_LABELS } from "../../voice-command-readiness";
 import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
 import { applyTheme, DEFAULT_THEME } from "../../theme";
@@ -48,6 +45,7 @@ const GROUPS = [
 
 const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; icon: IconName }[] = [
   { id: "general", label: tk("General"), group: "experience", icon: "gear" },
+  { id: "dictation", label: tk("Dictation"), group: "experience", icon: "mic" },
   { id: "chat", label: tk("Chat & voice"), group: "experience", icon: "chat" },
   { id: "flock", label: tk("Flock & Zeca"), group: "experience", icon: "flock" },
   { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
@@ -102,7 +100,7 @@ Bridge.onSpend(() => { if (page === "activity") budget.refresh(); });
 // back to the Nest's webview, the size switch keeps Settings in front.
 let nestFull = false;
 const head = createNestHead({
-  tab: (id) => { if (id !== "dictation" || page !== "dictation") void Bridge.openNest(id); },
+  tab: (id) => { void Bridge.openNest(id); },
   gear: () => choosePage("general"),
   size: (s) => void Bridge.setSize(s, "settings"),
   // The palette lists sessions and their steps: the Nest's, not Settings'.
@@ -138,7 +136,6 @@ const foot = createNestFoot({
 });
 root.after(foot.element);
 Bridge.onView((v) => {
-  commandCheck.targets(v.sessions);
   dictation.context(v);
   const f = v.focus;
   const s = f ? v.sessions.find((x) => x.agent === f.agent && x.id === f.id) : undefined;
@@ -162,7 +159,7 @@ window.addEventListener("keydown", (e) => {
   const pick = tabByKey(e, zeca);
   if (pick) {
     e.preventDefault();
-    if (pick !== "dictation" || page !== "dictation") void Bridge.openNest(pick);
+    void Bridge.openNest(pick);
   } else if (e.key === "Escape" && nestFull && !e.defaultPrevented && !e.isComposing && !(e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]")) {
     e.preventDefault();
     void Bridge.setSize("room", "settings");
@@ -1008,9 +1005,9 @@ function generalPage(): HTMLElement[] {
       "section",
       { class: "card rows" },
       row(t("Allow / Deny from anywhere"), t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
-      row(t("Dictation"), t("Choose a local model in Dictation > Voice. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
+      row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
       row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
-      row(t("Dictation settings"), t("Configure dictation keys, feedback, insertion and history in its own page."), button(t("Dictation settings"), () => choosePage("dictation"))),
+      row(t("Dictation settings"), t("Configure dictation keys, feedback, insertion and history in its own page."), button(t("Dictation settings"), () => chooseDictation("voice"))),
       row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
       row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
       row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
@@ -1035,10 +1032,7 @@ async function refreshMicrophones(): Promise<void> {
   }
 }
 
-const commandCheck = createCommandCheck(Bridge.commandCheck);
-const commandReadiness = createCommandReadiness(() => Bridge.commandReadiness(true), section => chooseDictation(dictationSetting(section)!));
-
-function dictationPage(): HTMLElement[] {
+function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[] {
   if (dictationSection === "conversation") return [el("h1", { text: t("Talk with Zeca") }), realtimeSettings.element];
   if (dictationSection === "agents") return [el("h1", { text: t("Agents") }), questionAgents.element];
   if (dictationSection === "meetings") return [el("h1", { text: t("Meeting settings") }), meetingSettings.element, meetingAssets.element];
@@ -1146,7 +1140,7 @@ function dictationPage(): HTMLElement[] {
       el("h2", { text: t("Global shortcuts") }),
       el("p", { class: "hint", text: t("Dictation and voice commands have separate shortcuts.") }),
       el("section", { class: "card rows" },
-        row(t("Dictation"), t("Choose a local model in Dictation > Voice. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
+        row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
         row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
         row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), el("span", { class: "kbd", text: boundKeys("talk-again") })),
         row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), el("span", { class: "kbd", text: boundKeys("talk-cancel") })),
@@ -1191,27 +1185,22 @@ function dictationPage(): HTMLElement[] {
       })(),
     ] : []),
     ...(dictationSection === "commands" ? [
-      commandReadiness.element, commandCheck.element,
       el("section", { class: "card rows" },
         row(t("Enable voice commands"), t("Hold the command key, speak and release to control Vults. Transcription and command matching stay on this computer."), toggle(dictationCommands, async on => {
           await Bridge.setDictationCommands("enabled", on);
-          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommands = on; dictationCommandsChanged = true;
           if (page === "dictation") render();
         })),
         row(t("Media voice commands"), t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
           await Bridge.setDictationCommands("media", on);
-          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommandMedia = on; dictationCommandMediaChanged = true;
         })),
         row(t("Application voice commands"), t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
           await Bridge.setDictationCommands("applications", on);
-          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommandApps = on; dictationCommandAppsChanged = true;
         })),
         row(t("System audio voice commands"), t("Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate."), toggle(dictationCommandOutput, async on => {
           await Bridge.setDictationCommands("output", on);
-          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
         })),
         row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
@@ -1229,12 +1218,6 @@ function dictationPage(): HTMLElement[] {
           return control;
         })()),
       ),
-      (() => {
-        const guide = disclosure(t("What you can say"), voiceCommandHelp(commandHelpState));
-        guide.dataset.setting = "dictation-command-help";
-        guide.querySelector<HTMLElement>("summary")!.dataset.setting = "dictation-command-help-summary";
-        return guide;
-      })(),
     ] : []),
     ...(dictationSection === "words" ? [
       el("section", { class: "card rows" },
@@ -1355,6 +1338,35 @@ function dictationPage(): HTMLElement[] {
         ...(dictationErasing || dictationEraseFailed || dictationErased ? [feedback] : []),
       ),
     ] : []),
+  ];
+}
+
+const dictationTool = () => dictationSection === "styles" || dictationSection === "diagnostics";
+function dictationPage(): HTMLElement[] {
+  if (dictationTool()) return dictationSectionPage(dictationSection);
+  const body = (id: DictationSetting) => dictationSectionPage(id).filter(node => node.tagName !== "H1" && !node.classList.contains("lede")).map(node => node.tagName === "H2" ? el("h3", { text: node.textContent ?? "" }) : node);
+  const group = (id: string, title: string, children: HTMLElement[], folded = false) => {
+    const node = folded ? disclosure(title, ...children) : el("section", { class: "dictation-preference-group" }, el("h2", { text: title }), ...children);
+    node.dataset.dictationSection = id;
+    node.dataset.setting = `dictation-group-${id}`;
+    return node;
+  };
+  const voice = body("voice");
+  const feedback = voice.findIndex(node => node.tagName === "H2" && node.textContent === t("Sound and feedback"));
+  const sound = feedback >= 0 ? voice.splice(feedback, 2) : [];
+  const processing = voice.pop()!;
+  return [el("h1", { text: t("Dictation") }),
+    el("p", { class: "lede", text: t("Set up your voice, recording controls and text delivery. Your writing tools stay in Dictation.") }),
+    group("voice", t("Voice input"), voice),
+    group("keys", t("Recording"), [...body("keys"), ...sound]),
+    group("paste", t("Text delivery"), body("paste")),
+    group("privacy", t("History and privacy"), body("privacy")),
+    el("h2", { text: t("Additional features") }),
+    group("words", t("Recognition and vocabulary"), [processing, ...body("words")], true),
+    group("commands", t("Voice commands"), body("commands"), true),
+    group("conversation", t("Talk with Zeca"), body("conversation"), true),
+    group("meetings", t("Meetings"), body("meetings"), true),
+    group("agents", t("Spoken answers for agents"), body("agents"), true),
   ];
 }
 
@@ -1500,7 +1512,7 @@ function chatPage(): HTMLElement[] {
     ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
     el("h2", { text: t("Voice") }),
     el("section", { class: "card rows" },
-      row(t("Voice model and language"), t("Dictation and Chat share one local model and spoken language. Manage both in Dictation > Voice."), button(t("Dictation settings"), () => chooseDictation("voice")))),
+      row(t("Voice model and language"), t("Dictation and Chat share one local model and spoken language. Manage both in Settings > Dictation > Voice input."), button(t("Dictation settings"), () => chooseDictation("voice")))),
   ];
 }
 
@@ -1947,6 +1959,7 @@ function renderPhone(): void {
 }
 
 function chooseDictation(section: DictationSetting): void {
+  focusDestination = true;
   dictationSection = section;
   choosePage("dictation");
 }
@@ -1955,7 +1968,6 @@ function choosePage(next: Page): void {
   page = next;
   navigated = true;
   location.hash = next === "dictation" ? `dictation${dictationSection}` : next;
-  if (next === "dictation") void Bridge.rememberDictationSection(`dictation${dictationSection}`).catch(() => {});
   apiMessage = null;
   if (next === "agents") doctorAsked = false;
   if (next === "approvals") {
@@ -1970,30 +1982,30 @@ function choosePage(next: Page): void {
   }
   if (next === "chat") void refreshApi();
   if (next === "phone") void refreshPhone(renderPhone);
-  if (next === "dictation" && dictationSection === "voice" && microphones === null && !microphonesFailed) void refreshMicrophones();
+  if (next === "dictation" && !dictationTool() && microphones === null && !microphonesFailed) void refreshMicrophones();
   render();
 }
 
-const dictationNavigation = createDictationNavigation("dictationvoice", id => void Bridge.openNest(`dictation-${id}`), chooseDictation, () => void Bridge.openNest("dictation-statistics"));
+const dictationNavigation = createDictationNavigation("dictationstyles", id => void Bridge.openNest(`dictation-${id}`), chooseDictation, () => chooseDictation("voice"));
 
 function render(): void {
-  commandCheck.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
-  commandReadiness.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
-  commandReadiness.setKeys(boundShortcuts); commandCheck.relabel();
-  const place = page === "dictation" ? `dictation${dictationSection}` : page;
+  const tool = page === "dictation" && dictationTool();
+  const preferences = page === "dictation" && !tool;
+  const place = tool ? `dictation${dictationSection}` : page;
   if (page === "activity") budget.relabel();
   const currentScroll = root.querySelector("main.page")?.scrollTop ?? 0;
+  const sidebarScroll = root.querySelector(".sidebar")?.scrollTop ?? 0;
   if (drawn?.startsWith("dictation")) dictationScroll.set(drawn, currentScroll);
   const scroll = place === drawn ? currentScroll : dictationScroll.get(place) ?? 0;
   if (drawn) expanded.set(drawn, new Set([...root.querySelectorAll<HTMLDetailsElement>("details")].filter(node => node.open).map(node => node.dataset.setting ?? "")));
   const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
   const focus = drawn === place && active && root.contains(active) && active.dataset.setting ? active : null;
   const editable = focus && (focus.tagName === "TEXTAREA" || (focus.tagName === "INPUT" && !["checkbox", "range"].includes(focus.type))) && !focus.readOnly;
-  questionAgents.visible(page === "dictation" && dictationSection === "agents" && !document.hidden);
+  questionAgents.visible(page === "dictation" && !dictationTool() && !document.hidden);
   questionAgents.relabel();
-  meetingAssets.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
-  realtimeSettings.visible(page === "dictation" && dictationSection === "conversation" && !document.hidden);
-  meetingSettings.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
+  meetingAssets.visible(page === "dictation" && !dictationTool() && !document.hidden);
+  realtimeSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);
+  meetingSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);
   meetingSettings.relabel();
   realtimeSettings.relabel();
   cleanupSettings.visible(page === "dictation" && dictationSection === "styles" && !document.hidden);
@@ -2001,7 +2013,7 @@ function render(): void {
   meetingAssets.relabel();
   dictationDoctor.visible(page === "dictation" && dictationSection === "diagnostics" && !document.hidden);
   dictationDoctor.relabel();
-  head.set(page === "dictation" ? "dictation" : "settings");
+  head.set(tool ? "dictation" : "settings");
   head.setZeca(zeca);
   head.setSound(sounds);
   foot.setZeca(zeca);
@@ -2038,7 +2050,7 @@ function render(): void {
       "button",
       {
         class: `nav${p.id === page ? " on" : ""}`,
-        onclick: () => choosePage(p.id),
+        onclick: () => p.id === "dictation" ? chooseDictation("voice") : choosePage(p.id),
       },
       icon(p.icon, 14, 1.6),
       el("span", { text: t(p.label) }),
@@ -2062,22 +2074,31 @@ function render(): void {
     option.selected = p.id === page;
     picker.append(option);
   }
-  picker.addEventListener("change", () => choosePage(picker.value as Page));
+  picker.addEventListener("change", () => picker.value === "dictation" ? chooseDictation("voice") : choosePage(picker.value as Page));
   const title = content.find(node => node.tagName === "H1");
   const intro = content.find(node => node.classList.contains("lede"));
   const main = el("main", { class: `page${place !== drawn ? " page-enter" : ""}` },
-    el("header", { class: "settings-heading" }, el("div", { class: "settings-title-line" }, icon(page === "dictation" ? DICTATION_SETTINGS.find(p => p.id === dictationSection)!.icon : PAGES.find(p => p.id === page)!.icon, 20, 1.6), title ?? null), intro ?? (page === "dictation" ? el("p", { class: "lede", text: dictationSettingAbout(dictationSection) }) : null)),
+    el("header", { class: "settings-heading" }, el("div", { class: "settings-title-line" }, icon(tool ? DICTATION_SETTINGS.find(p => p.id === dictationSection)!.icon : PAGES.find(p => p.id === page)!.icon, 20, 1.6), title ?? null), intro ?? (tool ? el("p", { class: "lede", text: dictationSettingAbout(dictationSection) }) : null)),
     ...content.filter(node => node !== title && node !== intro));
-  for (const node of main.querySelectorAll<HTMLDetailsElement>("details")) node.open = expanded.get(place)?.has(node.dataset.setting ?? "") ?? false;
-  root.classList.toggle("dictation-workspace", page === "dictation");
-  if (page === "dictation") {
-    dictationNavigation.select(`dictation${dictationSection}`);
+  main.tabIndex = -1;
+  for (const node of main.querySelectorAll<HTMLDetailsElement>("details")) node.open = expanded.get(place)?.has(node.dataset.setting ?? "") ?? node.open;
+  root.classList.toggle("dictation-workspace", tool);
+  root.classList.toggle("dictation-preferences", preferences);
+  if (tool) {
     main.id = "nest-pane-dictation";
     main.setAttribute("role", "tabpanel"); main.setAttribute("aria-labelledby", "nest-tab-dictation");
-    main.tabIndex = -1;
+    dictationNavigation.select(`dictation${dictationSection}`);
     root.replaceChildren(dictationNavigation.element, main);
+    dictationNavigation.relabel();
   } else root.replaceChildren(picker, nav, main);
+  if (preferences) {
+    const target = main.querySelector<HTMLElement>(`[data-dictation-section="${dictationSection}"]`);
+    if (target?.tagName === "DETAILS" && focusDestination) (target as HTMLDetailsElement).open = true;
+  }
+  nav.scrollTop = sidebarScroll;
+  if (place !== drawn) nav.querySelector<HTMLElement>(page === "dictation" ? `[data-dictation-page="dictation${dictationSection}"]` : "[aria-current=page]")?.scrollIntoView?.({ block: "nearest" });
   main.scrollTop = scroll;
+  if (preferences && focusDestination) main.querySelector<HTMLElement>(`[data-dictation-section="${dictationSection}"]`)?.scrollIntoView?.({ block: "start" });
   if (focus) {
     const next = [...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-setting]")].find(node => node.dataset.setting === focus.dataset.setting && node.tagName === focus.tagName);
     if (next) {
@@ -2093,10 +2114,7 @@ function render(): void {
 }
 
 render();
-if (page === "dictation") {
-  void Bridge.rememberDictationSection(`dictation${dictationSection}`).catch(() => {});
-  if (dictationSection === "voice") void refreshMicrophones();
-}
+if (page === "dictation" && !dictationTool()) void refreshMicrophones();
 // By the panel the open island may cover this window's corner: a click here folds it, as a click
 // outside a panel's popup closes it (the island keeps a waiting card).
 window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}), { capture: true });
@@ -2190,9 +2208,6 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
-  if (s.voice !== undefined || s.dictationCommands !== undefined || s.dictationCommandMedia !== undefined || s.dictationCommandApps !== undefined || s.dictationCommandOutput !== undefined || s.dictationMicrophone !== undefined) {
-    commandReadiness.invalidate(); commandCheck.invalidate();
-  }
   if (s.questionAgents !== undefined) questionAgents.changed(s.questionAgents);
   cleanupSettings.update(s);
   meetingSettings.update(s);
@@ -2286,14 +2301,12 @@ void getVersion()
 window.setInterval(() => {
   if (!document.hidden) void refreshConnectors();
 }, 15_000);
-window.addEventListener("pagehide", () => { commandCheck.visible(false); commandReadiness.visible(false); realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
+window.addEventListener("pagehide", () => { realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
 document.addEventListener("visibilitychange", () => {
-  commandCheck.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
-  commandReadiness.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
-  questionAgents.visible(page === "dictation" && dictationSection === "agents" && !document.hidden);
-  meetingAssets.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
-  realtimeSettings.visible(page === "dictation" && dictationSection === "conversation" && !document.hidden);
-  meetingSettings.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
+  questionAgents.visible(page === "dictation" && !dictationTool() && !document.hidden);
+  meetingAssets.visible(page === "dictation" && !dictationTool() && !document.hidden);
+  realtimeSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);
+  meetingSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);
   cleanupSettings.visible(page === "dictation" && dictationSection === "styles" && !document.hidden);
   dictationDoctor.visible(page === "dictation" && dictationSection === "diagnostics" && !document.hidden);
   if (!document.hidden) void refreshConnectors();

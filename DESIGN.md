@@ -100,12 +100,59 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   a 48 px rail. Arrow keys resize, Home/End reach the bounds and Enter folds;
   folding keeps selection and drafts. Below 900 px, each page keeps its existing
   narrow navigation instead of showing a rail.
-- General configuration stays behind the gear. Dictation configuration lives under
-  the Dictation tab, alongside its work pages, using one shared navigation.
-- Dictation has separate Voice, Talk with Zeca, Keyboard shortcuts, Command settings, Vocabulary,
-  Styles, Meeting settings, Agents, Paste, Privacy and Diagnostics pages. Voice owns the shared Chat/dictation
-  transcription model and spoken language; Chat & voice links there. Statistics
-  links to Activity > Dictation. Do not duplicate editors.
+- Permanent preferences stay behind the gear. Settings > Dictation is one page
+  using the existing global Settings navigation, with Voice input, Recording, Text
+  delivery, and History and privacy sections. Recognition and optional command,
+  conversation, meeting and agent features use labeled disclosures on that page.
+  Deep links open and scroll to the section; they never create a second sidebar.
+- The Dictation work area contains History, Voice commands, Voice conversation,
+  Meetings, Dictionary, Snippets, Styles and Diagnostics. Styles and Diagnostics
+  keep this same work navigation and active Dictation tab while their existing
+  privileged webview continues to own changes and microphone tests. Contextual
+  preference links go to the matching section of the single Settings page.
+- History keeps its characteristic actual keycaps and static waveform. The delivered
+  text leads each row; destination, time and applied style support it. Short windows
+  keep a miniature key-and-wave composition and show record actions. Usage figures
+  live only in Activity > Dictation.
+- Styles is a writing tool: activation and provider appear before a four-mode gallery
+  with illustrative examples, followed by output options and per-app rules. Explain
+  the scope of the default beside the gallery and label the effective style on
+  each app row; preserve session/app/built-in/default priority. Examples
+  demonstrate the modes; they do not claim a model has processed the user's text.
+  Diagnostics leads with the microphone test and its verdict, then system evidence;
+  timing detail and counters use disclosures. Unknown readings remain unknown.
+- Voice commands show their actual key before a browse/check workbench. The command
+  catalog reveals one category at a time; search spans categories. Selecting an
+  example fills and focuses the editable checker without starting validation or
+  execution. Requirements and longer explanations stay beside that category in a
+  disclosure, retaining its expanded state through ordinary updates. Readiness
+  checks follow the workbench. Recent outcomes are the default view; an adjacent
+  Explore and test control reveals the catalog and checker without losing search drafts.
+- Voice conversation leads with the actual phase and explicit microphone state,
+  followed by stable turn controls. Keep the latest reply separate from session
+  setup; fold setup only after the user starts, and reopen it after the session.
+  Routed waiting can retain an open microphone: never imply silence means capture
+  stopped. Narrow active layouts prioritize the reply over setup.
+- Meetings show audio sources, recording, transcription, and review as a factual
+  sequence. Before capture, show sources and explicit participant consent; keep
+  detailed storage explanations and optional speaker identification in disclosures.
+  During capture, compact preparation and keep Stop visible outside scrolling.
+  Transcript, summary and to-do tabs appear when a transcript exists; the save
+  footer remains outside the scrolling transcript. Browsing saved meetings retains
+  the current transcript, title and notes in memory; capture/transcription must finish
+  before opening the archive. Explicit departures with an unsaved transcript offer
+  Save and leave, Discard and leave, or Continue reviewing, including work tabs,
+  Settings, compact size changes, return to island and native close requests.
+  A pending/failed save cannot continue navigation. Forced hiding/locking still
+  revokes capture and clears temporary work. Saving remains explicit.
+  In short review windows, show the current stage and keep the title/Save on one
+  row so the transcript has room to read. In active short conversations, put the
+  reply before collapsible audio/processing details; keep microphone state and
+  End conversation visible. Empty command results show the actual bound key and
+  a path to examples or shortcut configuration, even when history is off.
+- Voice input owns the shared Chat/dictation transcription model and spoken language;
+  Chat & voice links there. Do not duplicate preference editors. Returning to the
+  Dictation tab restores work, never a preference page.
 - Configuration pages still run in the privileged Settings webview. Work pages with
   transcripts remain in Nest; a visual tab never grants powers to another webview.
 

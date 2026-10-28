@@ -76,13 +76,14 @@ export function createYourWords(backend: WordsBackend, settings: () => void) {
     table.setAttribute("aria-label", name()); region.setAttribute("aria-label", name());
     return region;
   };
-  dictionary.append(
+  dictionary.append(el("div", { class: "words-workbench" },
     el("section", { class: "words-section" }, el("h3", {}, label(el("span"), () => t("Words")), wordCount),
-      form(word.element, save(() => t("Add word"), [[word.control, true]], () => ({ action: "addWord", word: word.control.value.trim() }))), wordList),
+      wordList, form(word.element, save(() => t("Add word"), [[word.control, true]], () => ({ action: "addWord", word: word.control.value.trim() })))),
     el("section", { class: "words-section" }, el("h3", {}, label(el("span"), () => t("Replacements")), replacementCount),
       label(el("p", { class: "dictation-note" }), () => t("Saving the same source updates its replacement without changing its order.")),
+      pairsTable(replacements, () => t("Write"), () => t("Replacements")),
       form(from.element, to.element,
-        save(() => t("Save replacement"), [[from.control, true], [to.control, false]], () => ({ action: "setReplacement", from: from.control.value.trim(), to: to.control.value }))), pairsTable(replacements, () => t("Write"), () => t("Replacements"))));
+        save(() => t("Save replacement"), [[from.control, true], [to.control, false]], () => ({ action: "setReplacement", from: from.control.value.trim(), to: to.control.value }))))));
   const explanation = el("details", {}, label(el("summary"), () => t("How it is applied")),
     label(el("p", { class: "dictation-note" }), () => t("Whole words, any case; spaces and hyphens match alike. Snippets stay literal. Replacements run in saved order, then dictionary spelling and terminal spoken code. Nothing is learned automatically.")),
     label(el("p", { class: "dictation-note" }), () => t("Short phrases allow up to 1024 UTF-8 bytes; replacement and snippet text allow up to 64 KiB. Line breaks and spaces in saved text are preserved.")));
@@ -91,8 +92,8 @@ export function createYourWords(backend: WordsBackend, settings: () => void) {
     el("label", { class: "words-terminal" }, terminal, label(el("span"), () => t("Terminal context"))), tryButton,
     label(el("p", { class: "dictation-note" }), () => t("Uses saved local rules and current spoken-code/cancellation choices. No microphone, model, clipboard or history is used.")), result));
   snippets.append(el("section", { class: "words-section" },
-    el("h3", {}, label(el("span"), () => t("Snippets")), snippetCount), form(trigger.element, body.element,
-    save(() => t("Add snippet"), [[trigger.control, true], [body.control, false]], () => ({ action: "addSnippet", trigger: trigger.control.value.trim(), text: body.control.value }))), pairsTable(snippetList, () => t("Paste"), () => t("Snippets"))));
+    el("h3", {}, label(el("span"), () => t("Snippets")), snippetCount), pairsTable(snippetList, () => t("Paste"), () => t("Snippets")), form(trigger.element, body.element,
+    save(() => t("Add snippet"), [[trigger.control, true], [body.control, false]], () => ({ action: "addSnippet", trigger: trigger.control.value.trim(), text: body.control.value })))));
   let data: DictationWords | null = null;
   let loading = false, busy = false, failed = false, actionFailed = false, saved = false;
   let readId = 0, trialId = 0, trying = false;

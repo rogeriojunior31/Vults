@@ -92,18 +92,18 @@ assert.deepEqual(copied, [data.rows[0].text]);
 copyFails = true; named("Copy").click(); await tick();
 assert.ok(view.element.textContent.includes("Copy failed. Try again."));
 copyFails = false;
-named("Use again").focus(); named("Use again").click(); await tick();
+named("Prepare to paste").focus(); named("Prepare to paste").click(); await tick();
 assert.equal(document.activeElement.dataset.historyAction, "0-1", "A completed action retains its row focus");
 assert.deepEqual(again, [1]);
 
 
-assert.ok(view.element.textContent.includes("Nothing is submitted"));
-assert.equal(copied.length, 1, "Use again routes through the worker, not a second UI clipboard owner");
+assert.ok(view.element.textContent.includes("Nothing is pasted automatically"));
+assert.equal(copied.length, 1, "Prepare to paste routes through the worker, not a second UI clipboard owner");
 for (const failed of [false, true]) {
   let finishAction;
   pendingAction = new Promise(resolve => { finishAction = resolve; });
   failAction = failed;
-  named("Use again").focus(); named("Use again").click();
+  named("Prepare to paste").focus(); named("Prepare to paste").click();
   input.focus(); search("Other");
   finishAction(); await tick(); pendingAction = null;
   assert.equal(document.activeElement, input, "Pending history actions preserve a newer search focus on success and failure");
@@ -130,7 +130,7 @@ assert.ok(view.element.textContent.includes("Nothing dictated yet"));
 assert.ok(!view.element.textContent.includes("Unknown"), "Usage totals survive erasure");
 data = { retention: "0", rows: [], today: { words: 10, secs: .5, count: 1 } };
 view.refresh(); await tick(); assert.ok(view.element.textContent.includes("history is not kept"));
-assert.ok(view.element.textContent.includes("Unknown"), "A sub-second sample has no speed measurement");
+assert.ok(!nodes().some(n => n.className === "dictation-figures"), "Short samples do not introduce statistics in history");
 failRead = true; view.refresh(); await tick();
 assert.ok(view.element.textContent.includes("Could not load"));
 assert.ok(view.element.textContent.includes("last loaded view"));
@@ -152,33 +152,29 @@ data.rows = [{...row(9,"Command completed."),outcome:"command",style:"command",h
 view.refresh();await tick();
 assert.equal(entries().length,1);
 assert.ok(view.element.textContent.includes("Voice command"));
-assert.ok(!nodes().some(node=>node.tag==="button" && node.textContent==="Use again"),"Command history never offers replay or paste");
+assert.ok(!nodes().some(node=>node.tag==="button" && node.textContent==="Prepare to paste"),"Command history never offers replay or paste");
 assert.ok(!view.element.textContent.includes("Unknown app"));
 assert.ok(nodes().some(node=>node.tag==="button" && node.textContent==="Copy"),"Copying the result stays an explicit text action");
 
-const metrics = nodes().find(n => n.className === "dictation-summary");
-assert.equal(metrics.open, false, "Small or unqualified layouts start with optional figures folded");
-assert.ok(view.element.children.indexOf(nodes().find(n => n.className === "dictation-toolbar")) > view.element.children.indexOf(nodes().find(n => n.className === "dictation-hero")), "Shortcut and figures follow the prototype header");
-metrics.open = true; metrics.listeners.toggle();
-view.refresh(); await tick();
-assert.equal(metrics.open, true, "Refresh retains the explicit statistics disclosure choice");
-metrics.open = false; metrics.listeners.toggle();
-view.relabel();
-assert.equal(metrics.open, false, "Relabel retains explicitly closed figures");
+assert.ok(!nodes().some(n => n.className === "dictation-summary" || n.className === "dictation-figures"), "Usage statistics live only in Activity");
+assert.ok(view.element.children.indexOf(nodes().find(n => n.className === "dictation-toolbar")) > view.element.children.indexOf(nodes().find(n => n.className === "dictation-hero")), "The compact shortcut precedes history search");
 
+let explored=0;
 const commandView = createDictationHistory({
   load: async () => structuredClone(data), remove: async id => { data.rows = data.rows.filter(r => r.id !== id); },
   clear: async () => { throw Error("The filtered command page cannot clear all dictations"); },
   again: async () => { throw Error("Commands cannot replay"); },
-}, () => settings++, true);
+}, () => settings++, true, () => explored++);
 data.rows.push(row(10, "ordinary dictation"));
+commandView.setKeys({ "talk-command": "Meta+Z", talk: "Meta+V" });
 commandView.refresh(); await tick();
+assert.equal(all(commandView.element).find(n => n.className === "dictation-keycaps").textContent, "MetaZ", "The command page displays its independent command shortcut");
 const commandNodes = () => all(commandView.element);
 assert.equal(commandNodes().filter(n => n.className === "dictation-entry").length, 1);
 assert.ok(!commandView.element.textContent.includes("ordinary dictation"));
-assert.ok(commandNodes().find(n => n.className === "dictation-figures").hidden, "Command page has no dictation figures");
+assert.ok(!commandNodes().some(n => n.className === "dictation-figures"), "Command page has no dictation figures");
 assert.ok(commandNodes().find(n => n.tag === "button" && n.textContent === "Erase dictation history…").hidden, "No bulk erasure from a filtered page");
-assert.ok(!commandNodes().some(n => n.tag === "button" && (n.textContent === "Use again" || n.title === "Use again")));
+assert.ok(!commandNodes().some(n => n.tag === "button" && (n.textContent === "Prepare to paste" || n.title === "Prepare to paste")));
 const commandSearch = commandView.element.querySelector("input");
 commandSearch.value = "mute api"; commandSearch.listeners.input();
 assert.equal(commandNodes().filter(n => n.className === "dictation-entry").length, 1, "Heard text is searchable");
@@ -189,6 +185,14 @@ commandNodes().find(n => n.tag === "button" && (n.textContent === "Delete…" ||
 commandNodes().find(n => n.tag === "button" && n.textContent === "Erase").click(); await tick();
 assert.deepEqual(data.rows.map(r => r.id), [10], "Individual erase preserves ordinary history");
 assert.ok(commandView.element.textContent.includes("No voice commands yet"));
+assert.equal(commandNodes().find(n=>n.className==='dictation-keycaps command-empty-keys').textContent,'MetaZ','Empty Recent commands shows the actual shortcut without opening the catalog');
+commandNodes().find(n=>n.tag==='button'&&n.textContent==='Explore and test').click();assert.equal(explored,1);
+const beforeShortcutSettings=settings;commandView.setKeys({});
+assert.ok(commandNodes().find(n=>n.className==='dictation-keycaps command-empty-keys').textContent.includes('Not bound'));
+commandNodes().find(n=>n.tag==='button'&&n.textContent==='Command settings').click();assert.equal(settings,beforeShortcutSettings+1);
+commandView.setKeys({'talk-command':'Meta+Z'});data.retention='0';commandView.refresh();await tick();
+assert.ok(commandNodes().find(n=>n.className==='dictation-keycaps command-empty-keys').textContent.includes('MetaZ'),'History-off still teaches how to use commands');data.retention='30';
+
 for (const language of ["pt-BR", "es", "zh"]) {
   setLang(language); commandView.relabel();
   assert.ok(!commandView.element.textContent.includes("No voice commands yet"));
@@ -197,7 +201,7 @@ setLang("en");
 window.matchMedia = () => ({ matches: true });
 const measured = createDictationHistory({ load: async () => ({ retention: "30", rows: [], today: { words: 45, secs: 10, count: 1 } }), remove: async () => {}, clear: async () => {}, again: async () => {} }, () => {});
 measured.refresh(); await tick();
-assert.equal(all(measured.element).find(n => n.className === "dictation-summary").open, true, "Wide history presents measured figures beside the shortcut");
+assert.ok(!all(measured.element).some(n => n.className === "dictation-summary"), "Wide history does not duplicate Activity statistics");
 delete window.matchMedia;
 const css = readFileSync(`${root}src/surfaces/nest/nest.css`, "utf8");
 assert.match(css, /#nest\s*>\s*\[role="tabpanel"\]\[hidden\][^{]*\{[^}]*display:\s*none/,
@@ -205,4 +209,4 @@ assert.match(css, /#nest\s*>\s*\[role="tabpanel"\]\[hidden\][^{]*\{[^}]*display:
 assert.match(css, /\.nest-pane\.nest-dictation-pane\s*\{[^}]*overflow:\s*hidden/);
 assert.match(css, /\.dictation-history\s*\{[^}]*min-height:\s*0[^}]*overflow-y:\s*auto/);
 assert.match(css, /\.dictation-text[^}]*overflow-wrap:\s*anywhere/);
-console.log("check-dictation-history: ok (states, measured/unknown totals, inert text, grouped/local search, explicit mutations, clipboard failure, stale reads, erase invalidation, translations, bounded scrolling)");
+console.log("check-dictation-history: ok (states, Activity-only statistics, inert text, grouped/local search, explicit mutations, clipboard failure, stale reads, erase invalidation, translations, bounded scrolling)");

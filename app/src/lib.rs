@@ -198,7 +198,6 @@ pub fn run() {
             nest_connections_place_set,
             nest_tab_set,
             nest_tab_ready,
-            dictation_section_set,
             nest_record_query,
             nest_flock_place,
             nest_close,
@@ -798,6 +797,10 @@ mod tests {
         assert_eq!(super::restored_tab(None, Some("chat"), false), "flock");
         assert_eq!(super::restored_tab(None, Some("dictation"), false), "dictation");
         assert_eq!(
+            super::restored_tab(Some("dictation"), Some("settings"), true),
+            "dictation"
+        );
+        assert_eq!(
             super::restored_tab(None, Some("flock-profiles"), false),
             "flock-profiles"
         );
@@ -854,50 +857,6 @@ mod tests {
             acknowledged,
             "A request does not grant voice-page authority"
         );
-    }
-
-    #[test]
-    fn dictation_restores_only_a_known_configuration_for_its_own_tab() {
-        for section in [
-            "dictationvoice",
-            "dictationconversation",
-            "dictationkeys",
-            "dictationcommands",
-            "dictationwords",
-            "dictationstyles",
-            "dictationmeetings",
-            "dictationagents",
-            "dictationpaste",
-            "dictationprivacy",
-            "dictationdiagnostics",
-        ] {
-            assert_eq!(
-                super::restored_dictation_section(Some("dictation"), Some(section)),
-                Some(section)
-            );
-            for tab in [
-                None,
-                Some("chat"),
-                Some("settings"),
-                Some("dictation-history"),
-                Some("dictation-dictionary"),
-            ] {
-                assert_eq!(super::restored_dictation_section(tab, Some(section)), None);
-            }
-        }
-        for invalid in [
-            "",
-            "agents",
-            "dictation",
-            "dictation-history",
-            "dictationstyles<script>",
-        ] {
-            assert_eq!(
-                super::restored_dictation_section(Some("dictation"), Some(invalid)),
-                None
-            );
-        }
-        assert_eq!(super::restored_dictation_section(Some("dictation"), None), None);
     }
 
     #[test]
@@ -1168,25 +1127,6 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
         nest_window(app, None, None, full);
         return;
     }
-    let section = DICTATION_SECTION.lock().ok().and_then(|s| s.clone());
-    if let Some(section) = restored_dictation_section(tab, section.as_deref()) {
-        nest_window(app, None, Some(section), full);
-        return;
-    }
-    if matches!(
-        tab,
-        Some(
-            "dictation-history"
-                | "dictation-commands"
-                | "dictation-dictionary"
-                | "dictation-snippets"
-                | "dictation-meetings"
-                | "dictation-conversation"
-        )
-    ) && let Ok(mut section) = DICTATION_SECTION.lock()
-    {
-        *section = None;
-    }
     // An existing webview already owns its current tab; restore only after recreation.
     if tab.is_none() && app.get_webview(NEST).is_some() {
         nest_window(app, Some(""), None, full);
@@ -1206,40 +1146,6 @@ pub(crate) fn open_nest(app: &AppHandle, tab: Option<&str>, full: Option<bool>) 
 static NEST_TAB: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 // Requested presentation is separate from the renderer's acknowledged tab and capture authority.
 static NEST_REQUEST: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
-// Only presentation survives tab changes; configuration stays in its own webview.
-static DICTATION_SECTION: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
-
-fn valid_dictation_section(section: &str) -> bool {
-    matches!(
-        section,
-        "dictationvoice"
-            | "dictationconversation"
-            | "dictationkeys"
-            | "dictationcommands"
-            | "dictationwords"
-            | "dictationstyles"
-            | "dictationmeetings"
-            | "dictationagents"
-            | "dictationpaste"
-            | "dictationprivacy"
-            | "dictationdiagnostics"
-    )
-}
-
-fn restored_dictation_section<'a>(tab: Option<&str>, section: Option<&'a str>) -> Option<&'a str> {
-    section.filter(|section| tab == Some("dictation") && valid_dictation_section(section))
-}
-
-#[tauri::command]
-fn dictation_section_set(window: tauri::Webview, section: String) -> Result<(), String> {
-    settings_page(&window)?;
-    if !valid_dictation_section(&section) {
-        return Err("Invalid Dictation navigation state.".into());
-    }
-    *DICTATION_SECTION.lock().map_err(|e| e.to_string())? = Some(section);
-    Ok(())
-}
-
 #[derive(Default)]
 struct RecordQueries {
     history: String,

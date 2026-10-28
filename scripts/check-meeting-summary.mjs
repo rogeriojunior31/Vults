@@ -21,6 +21,9 @@ class Element {
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(n => n !== this); }
   before(...children) { this.parentElement?.append(...children); }
   after(...children) { this.parentElement?.append(...children); }
+  insertBefore(node, reference) { node.remove(); node.parentElement = this; const index = this.children.indexOf(reference); this.children.splice(index < 0 ? this.children.length : index, 0, node); }
+  showModal() { this.returnFocus = document.activeElement; this.open = true; }
+  close() { this.open = false; this.returnFocus?.focus(); }
   contains(node) { return nodes(this).includes(node); }
   matches(selector) {
     return selector.split(",").some(part => {
@@ -122,6 +125,7 @@ assert.equal(tabs().length,3);assert.deepEqual(tabs().map(n=>n.tabIndex),[0,-1,-
 tabs()[0].fire('keydown',{key:'ArrowRight',preventDefault(){}});assert.equal(tabs()[1].attributes['aria-selected'],'true');
 assert.ok(meeting.element.textContent.includes('Meeting summaries are off'));
 tabs()[1].fire('keydown',{key:'End',preventDefault(){}});assert.equal(tabs()[2].tabIndex,0);
+assert.ok(!meeting.element.classList.contains('meeting-before-transcript'), 'A completed transcript exposes review navigation');
 meeting.setActive(false);await tick();assert.ok(end.some(([id,cancel])=>id===7&&cancel));assert.equal(timers.size,0);
 console.log('Meeting summaries: explicit consent, late settings/save races, single start, cancellation, inert notes, fallback, translations, tabs and departure pass');
 let longStatus={id:12,phase:'recording',elapsedMs:75*60*1000,maxSeconds:14400,microphone:'fixture mic',monitor:'fixture monitor',hasTranscript:false,modelId:'base',language:'en',error:null};
@@ -129,7 +133,7 @@ const longMeeting=createMeetings({status:async()=>longStatus,end:async()=>({...l
 document.body.append(longMeeting.element);longMeeting.setActive(true);await tick();await tick();
 assert.ok(longMeeting.element.textContent.includes('Record up to four hours.'));
 assert.ok(longMeeting.element.classList.contains('meeting-before-transcript'));
-assert.ok(!meeting.element.classList.contains('meeting-before-transcript'));
+assert.ok(!meeting.element.textContent.includes('Original words.'), 'Leaving discards the temporary transcript');
 const longClock=nodes(longMeeting.element).find(n=>n.attributes['aria-label']==='Recording time');
 assert.equal(longClock.textContent,'1:15:00');
 longStatus={...longStatus,phase:'transcribing',progress:{track:'system',completedMs:75*60*1000,totalMs:4*60*60*1000,stage:'transcription'}};
@@ -231,7 +235,58 @@ archive.setActive(false);
 const full=createMeetings({archive:archiveApi,summary:api,transcript:async()=>({id:7,microphone:{durationMs:1000,segments:[{startMs:0,endMs:500,text:'Current text'}]},system:{durationMs:0,segments:[]}}),
  status:async()=>({id:7,phase:'finished',hasTranscript:true,elapsedMs:1000}),prepare:async()=>{throw Error('No implicit review');},begin:async()=>{throw Error('No implicit recording');},end:async(id,cancel)=>({id,phase:'cancelled',hasTranscript:false}),recover:async()=>{throw Error('No implicit recovery');}});
 document.body.append(full.element);full.setActive(true);await tick();await tick();
-const titleInput=nodes(full.element).find(n=>n.attributes['aria-label']==='Meeting title');titleInput.value='Explicit title';titleInput.fire('input');click(full.element,'Save meeting');named(full.element,'Saving meeting…').fire('click');assert.equal(saveRequests.length,1);assert.equal(saveRequests[0].title,'Explicit title');
+const titleInput=nodes(full.element).find(n=>n.attributes['aria-label']==='Meeting title');
+titleInput.value='Draft before browsing'; titleInput.fire('input');
+click(full.element,'Saved meetings'); await tick();
+assert.ok(full.element.querySelector('.meeting-check').hidden, 'Archive opens inside Meetings');
+assert.ok(full.element.textContent.includes('Your current transcript stays in memory'));
+click(full.element,'New recording'); await tick();
+assert.equal(titleInput.value,'Draft before browsing','Browsing saved meetings preserves the unsaved title');
+assert.ok(full.element.querySelector('.meeting-check').textContent.includes('Current text'),'Browsing saved meetings preserves the unsaved transcript');
+titleInput.value='Explicit title';titleInput.fire('input');click(full.element,'Save meeting');named(full.element,'Saving meeting…').fire('click');assert.equal(saveRequests.length,1);assert.equal(saveRequests[0].title,'Explicit title');
 saveRequests[0].resolve('meeting-1');await tick();assert.ok(full.element.textContent.includes('Further changes on this recording do not update'));
 click(full.element,'View saved meeting');await tick();assert.ok(full.element.textContent.includes(saved.title));full.setActive(false);assert.equal(timers.size,0);
 console.log('Meeting archive: explicit snapshot/save, inert source-local detail/notes, name drafts and failures, export source/cancellation, confirmed single delete, stale reads/global erase and translations pass');
+
+let guardedEnds=0;
+const guarded=createMeetings({archive:archiveApi,status:async()=>({id:19,phase:'recording',hasTranscript:false,elapsedMs:1000}),end:async()=>{guardedEnds++;return {id:19,phase:'cancelled',hasTranscript:false};}});
+document.body.append(guarded.element);guarded.setActive(true);await tick();
+click(guarded.element,'Saved meetings');
+assert.ok(!guarded.element.querySelector('.meeting-check').hidden,'Archive navigation cannot silently cancel a live recording');
+assert.equal(guardedEnds,0);assert.ok(guarded.element.textContent.includes('Stop recording and wait for transcription'));
+guarded.setActive(false);assert.equal(guardedEnds,1,'Leaving Meetings still revokes live capture');
+
+// Leaving a draft is a decision; a failed or pending save never continues navigation.
+const leaveSaves=[];let leaveEnds=0;
+const leaveBackend={archive:{...archiveApi,save:async(id,title)=>{const r=deferred();leaveSaves.push({id,title,...r});return r.promise;}},
+ status:async()=>({id:51,phase:'finished',hasTranscript:true,elapsedMs:1000}),transcript:async()=>({id:51,microphone:{durationMs:1000,segments:[{startMs:0,endMs:1000,text:'Unsaved work'}]},system:{durationMs:0,segments:[]}}),end:async()=>{leaveEnds++;return {id:51,phase:'cancelled',hasTranscript:false};}};
+const leaving=createMeetings(leaveBackend);document.body.append(leaving.element);leaving.setActive(true);await tick();await tick();
+let left=0;leaving.beforeLeave(()=>{left++;leaving.setActive(false);});
+const popup=()=>nodes(document.body).find(n=>n.tagName==='DIALOG'&&n.open);
+assert.ok(popup());assert.equal(named(popup(),'Save and leave').disabled,true,'A missing title cannot silently discard the draft');
+assert.equal(document.activeElement.textContent,'Continue reviewing','The initial focus preserves user work');
+click(popup(),'Continue reviewing');assert.equal(left,0);assert.ok(leaving.element.textContent.includes('Unsaved work'));
+leaving.beforeLeave(()=>{left++;leaving.setActive(false);});
+popup().fire('cancel',{preventDefault(){}});assert.equal(left,0);assert.ok(!popup(),'Escape stays in the meeting');
+leaving.beforeLeave(()=>{left++;leaving.setActive(false);});
+const leaveTitle=nodes(popup()).find(n=>n.tagName==='INPUT');leaveTitle.value='Keep my transcript';leaveTitle.fire('input');
+click(popup(),'Save and leave');await tick();assert.equal(leaveSaves.length,1);assert.equal(left,0);
+assert.ok(named(popup(),'Discard and leave').disabled);popup().fire('cancel',{preventDefault(){}});assert.ok(popup(),'A pending save keeps its navigation decision owned');
+leaveSaves[0].reject(Error('private write failure'));await tick();assert.equal(left,0);assert.ok(popup().textContent.includes('Could not save this meeting'));assert.ok(!popup().textContent.includes('private write failure'));
+click(popup(),'Save and leave');await tick();leaveSaves[1].resolve('saved-51');await tick();assert.equal(left,1);assert.equal(leaveEnds,1);assert.ok(!popup());
+const discarding=createMeetings(leaveBackend);document.body.append(discarding.element);discarding.setActive(true);await tick();await tick();
+let nestedDeparture=0;discarding.beforeLeave(()=>{left++;discarding.beforeLeave(()=>nestedDeparture++);discarding.setActive(false);});click(popup(),'Discard and leave');await tick();assert.equal(left,2);assert.equal(nestedDeparture,1,'A confirmed discard also authorizes a nested native window close');assert.equal(leaveSaves.length,2,'Discard never saves implicitly');
+console.log('Meeting departure: continue/Escape, missing title, pending/failure/retry/save, explicit discard and single navigation pass');
+
+const delayedTranscript=deferred();
+const fetching=createMeetings({...leaveBackend,transcript:()=>delayedTranscript.promise});document.body.append(fetching.element);fetching.setActive(true);await tick();
+let departedDuringRead=0;fetching.beforeLeave(()=>departedDuringRead++);assert.ok(popup(),'A native transcript is protected even before the renderer finishes reading it');
+const fetchingTitle=nodes(popup()).find(n=>n.tagName==='INPUT');fetchingTitle.value='Loading draft';fetchingTitle.fire('input');assert.ok(named(popup(),'Save and leave').disabled);
+delayedTranscript.resolve({id:51,microphone:{durationMs:1000,segments:[{startMs:0,endMs:1000,text:'Late readable words'}]},system:{durationMs:0,segments:[]}});await tick();assert.equal(named(popup(),'Save and leave').disabled,false);
+click(popup(),'Continue reviewing');assert.equal(departedDuringRead,0);fetching.setActive(false);fetching.beforeLeave(()=>departedDuringRead++);assert.equal(departedDuringRead,1);assert.ok(!popup(),'Revoked hidden/closed work cannot resurrect a phantom draft prompt');
+
+let discardFails=true,discardedDeparture=0;
+const discardRetry=createMeetings({...leaveBackend,end:async()=>{if(discardFails)throw Error('private discard failure');return {id:51,phase:'cancelled',hasTranscript:false};}});
+document.body.append(discardRetry.element);discardRetry.setActive(true);await tick();await tick();discardRetry.beforeLeave(()=>{discardedDeparture++;discardRetry.setActive(false);});
+click(popup(),'Discard and leave');await tick();assert.equal(discardedDeparture,0);assert.ok(popup().textContent.includes('Could not discard this meeting'));assert.ok(!popup().textContent.includes('private discard failure'));
+discardFails=false;click(popup(),'Discard and leave');await tick();assert.equal(discardedDeparture,1);assert.ok(!popup());

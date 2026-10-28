@@ -14,26 +14,27 @@ export interface DictationBackend {
   again(id: number): Promise<void>;
 }
 
-export function createDictationHistory(backend: DictationBackend, settings: () => void, commandsOnly = false) {
-  const element = el("section", { class: "dictation-history" });
+export function createDictationHistory(backend: DictationBackend, settings: () => void, commandsOnly = false, explore?: () => void) {
+  const element = el("section", { class: `dictation-history${commandsOnly ? " dictation-command-history" : ""}` });
   const title = el("span");
   const titleLine = el("h2", { class: "dictation-title" }, icon(commandsOnly ? "flock" : "mic", 18), title);
   const about = el("p");
   const configure = el("button", { onclick: settings });
-  const figures = el("div", { class: "dictation-figures" });
-  const summary = el("summary");
-  const metrics = el("details", { class: "dictation-summary" }, summary, figures);
   const shortcutKeys = el("div", { class: "dictation-keycaps" });
   const shortcutAbout = el("p");
-  const wave = el("span", { class: "dictation-shortcut-wave" });
+  const heroTitle = el("h3");
+  const wave = el("div", { class: "dictation-shortcut-wave" });
   wave.setAttribute("aria-hidden", "true");
-  for (let i = 0; i < 30; i++) { const bar = el("i"); bar.style.height = `${18 + Math.round(Math.abs(Math.sin(i * 1.7) * Math.cos(i * .45)) * 70)}%`; wave.append(bar); }
-  const hero = el("section", { class: "dictation-hero" }, el("div", { class: "dictation-shortcut" }, shortcutKeys, shortcutAbout, wave), metrics);
+  for (let i = 0; i < 48; i++) {
+    const bar = el("i");
+    bar.style.height = `${16 + Math.round(Math.abs(Math.sin(i * .79) * Math.cos(i * .19)) * 84)}%`;
+    wave.append(bar);
+  }
+  const hero = el("section", { class: "dictation-hero" }, el("div", { class: "dictation-shortcut" }, el("div", { class: "dictation-shortcut-copy" }, heroTitle, shortcutKeys, shortcutAbout), wave));
   let boundKeys: Record<string, string> = {};
-  let metricsExpanded = false, metricsChanged = false;
-  metrics.addEventListener("toggle", () => { metricsExpanded = metrics.open; metricsChanged = true; });
   const search = el("input", { class: "dictation-search" });
   search.type = "search";
+  const retained = el("span", { class: "dictation-retained" });
   const refresh = el("button", { onclick: () => { if (!loading && !busy) void read(); } });
   const erase = el("button", { onclick: () => { returnTo = null; confirming = "all"; draw(); focusConfirmation(); } });
   const maintenanceTitle = el("summary");
@@ -46,7 +47,8 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
   list.tabIndex = -1;
   const limit = el("p", { class: "dictation-note" });
   element.append(el("header", { class: "dictation-heading" }, el("div", {}, titleLine, about), configure),
-    hero, el("div", { class: "dictation-toolbar" }, search, refresh, maintenance), results, feedback, confirmation, list, limit);
+    hero, el("div", { class: "dictation-toolbar" }, search, retained, refresh, maintenance), results, feedback, confirmation, list, limit);
+  let recentCommands = false;
   let data: DictationHistory | null = null;
   let asked = 0, loading = false, busy = false;
   let failed = false, actionError = false, requested = false;
@@ -62,48 +64,47 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
     (returnTo ? element.querySelector<HTMLElement>(`[data-history-action="${returnTo}"]`) ?? list : erase).focus({ preventScroll: true });
   };
   const clearSearch = el("button", { onclick: () => { search.value = ""; draw(); search.focus(); } });
+  const appendCommandGuide = (prompt: HTMLElement) => {
+    const binding = boundKeys["talk-command"]?.trim();
+    const keys = el("div", { class: "dictation-keycaps command-empty-keys" });
+    keys.setAttribute("aria-label", binding || t("Not bound"));
+    keys.append(...(binding ? binding.split("+").map(key => el("kbd", { text: key })) : [el("span", { text: t("Not bound") }), el("button", { text: t("Command settings"), onclick: settings })]));
+    prompt.append(keys);
+    if (explore) prompt.append(el("button", { text: t("Explore and test"), onclick: explore }));
+  };
   const paint = () => {
     title.textContent = commandsOnly ? t("Voice commands") : t("Dictation history");
-    about.textContent = commandsOnly ? t("Hold the command key to control Vults. Recent commands and their results stay on this computer under Dictation history retention.") : t("Your recent dictations, kept on this computer.");
-    hero.hidden = commandsOnly;
-    shortcutAbout.textContent = t("Hold the shortcut in your destination app, speak and release.");
-    const binding = boundKeys["talk"]?.trim();
+    about.textContent = commandsOnly ? (recentCommands ? t("Your recent voice commands and their results, kept on this computer.") : t("Explore supported commands and test a phrase without executing it.")) : t("Your recent dictations, kept on this computer.");
+    hero.hidden = false;
+    heroTitle.textContent = commandsOnly ? t("Say what Vults should do.") : t("Hold. Speak. Release.");
+    shortcutAbout.textContent = commandsOnly ? t("Hold to control Vults, then release. Nothing is typed into another app.") : t("Hold the shortcut in your destination app, speak and release.");
+    const binding = boundKeys[commandsOnly ? "talk-command" : "talk"]?.trim();
     shortcutKeys.replaceChildren(...(binding ? binding.split("+").map(key => el("kbd", { text: key })) : [el("span", { text: t("Not bound") })]));
     shortcutKeys.setAttribute("aria-label", binding || t("Not bound"));
     configure.textContent = commandsOnly ? t("Command settings") : t("Dictation settings");
-    summary.textContent = t("Today’s dictation");
     maintenanceTitle.textContent = t("History options");
     maintenance.hidden = commandsOnly;
     clearSearch.textContent = t("Clear search");
     results.hidden = true;
+    retained.hidden = commandsOnly || !data;
+    retained.textContent = data ? t("Stored locally") : "";
     list.setAttribute("role", "region");
     confirmation.setAttribute("role", "region");
     confirmation.setAttribute("aria-label", t("Confirm history deletion"));
-    metrics.hidden = commandsOnly;
-    metrics.open = metricsExpanded;
     search.placeholder = commandsOnly ? t("Search voice commands") : t("Search what you dictated");
     search.setAttribute("aria-label", search.placeholder);
     refresh.textContent = loading ? t("Loading") : t("Refresh");
     refresh.disabled = loading || busy;
     erase.hidden = commandsOnly;
-    figures.hidden = commandsOnly;
     erase.textContent = t("Erase dictation history…");
     erase.disabled = !data?.rows.length || loading || busy;
     retry.textContent = t("Try again"); retry.disabled = loading || busy;
     list.setAttribute("aria-busy", String(loading || busy));
     list.setAttribute("aria-label", commandsOnly ? t("Recent commands") : t("Dictation history"));
-    const stats = data?.today;
-    const known = stats && stats.count > 0;
-    const tile = (value: string, label: string) => el("div", {}, el("strong", { text: value }), el("span", { text: label }));
-    figures.replaceChildren(
-      tile(known ? number(stats.words) : t("Unknown"), t("Words today")),
-      tile(known ? t("{n} min", { n: number(Math.max(0, stats.words / 45 - stats.secs / 60)) }) : t("Unknown"), t("Estimated time saved today")),
-      tile(known && stats.secs >= 1 ? number(stats.words * 60 / stats.secs) : t("Unknown"), t("Words per minute")),
-    );
     feedback.replaceChildren(...(failed ? [viewState("error", t("Could not load dictation history."),
       data ? t("The last loaded view is kept and may be out of date.") : t("Try again to read the data saved on this computer."), retry)] : []),
       ...(actionError ? [viewState("error", t("Could not complete this history action. Try again."))] : []),
-      ...(requested ? [viewState("empty", t("Copy requested. Follow the island's delivery status."), t("Return to your destination app to paste. Nothing is submitted."))] : []));
+      ...(requested ? [viewState("empty", t("Text prepared for the paste shortcut."), t("Return to your destination app and use the paste shortcut. Nothing is pasted automatically."))] : []));
     confirmation.replaceChildren();
     if (confirming !== null) {
       const accept = el("button", { class: "dictation-danger", text: t("Erase"), onclick: () => {
@@ -123,13 +124,14 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
       confirmation.append(el("p", { text: confirming === "all" ? t("Erase every retained dictation? Usage totals stay.") : t("Erase this dictation? Usage totals stay.") }), cancel, accept);
     }
     list.replaceChildren();
-    limit.textContent = commandsOnly ? t("Search covers commands among the newest 500 retained dictations.") : t("Search covers the newest 500 retained dictations. Time saved estimates typing at 45 words per minute.");
+    limit.textContent = commandsOnly ? t("Search covers commands among the newest 500 retained dictations.") : t("Search covers the newest 500 retained dictations.");
     if (!data) {
       if (!failed) list.append(viewState("loading", t("Reading dictation history…")));
       return;
     }
     if (data.retention === "0") {
       list.append(viewState("empty", t("Dictation history is not kept."), commandsOnly ? t("Commands still work; no transcript or result is saved.") : t("Usage totals still update. Copy again keeps the last successful text in memory only.")));
+      if (commandsOnly) appendCommandGuide(list.querySelector(".view-state-body")!);
       return;
     }
     const query = searchText(search.value.trim());
@@ -139,6 +141,7 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
     if (results.textContent !== resultText) results.textContent = resultText;
     if (!rows.length) {
       list.append(viewState("empty", query ? (commandsOnly ? t("No commands match your search.") : t("No dictations match your search.")) : (commandsOnly ? t("No voice commands yet.") : t("Nothing dictated yet.")), query ? t("Try another search or clear it.") : commandsOnly ? t("Hold the command key, say a supported phrase and release.") : t("Use the dictation key outside Vults to add your first entry."), query ? clearSearch : null));
+      if (commandsOnly && !query) appendCommandGuide(list.querySelector(".view-state-body")!);
       return;
     }
     let group: string | undefined;
@@ -172,19 +175,19 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
     const language = command ? null : appliedLanguage(row.outputLanguage);
     const metadata = el("div", { class: "dictation-meta" }, time,
       el("span", { text: command ? outcome : t("{outcome} · {app}", { outcome, app: row.app || t("Unknown app") }) }),
-      row.session ? el("bdi", { text: row.session }) : null);
+      row.session ? el("bdi", { text: row.session }) : null,
+      style ? el("span", { class: "dictation-applied", text: style }) : null,
+      language ? el("span", { class: "dictation-applied", text: language }) : null);
     heard.append(el("div", { class: "dictation-meta" },
-      style ? el("span", { text: style }) : null,
-      language ? el("span", { text: language }) : null,
       el("span", { text: row.words === 1 ? t("1 word") : t("{count} words", { count: number(row.words) }) }),
       el("span", { text: t("{s} s", { s: number(row.secs) }) }),
       row.fixes === null ? null : el("span", { text: row.fixes === 1 ? t("1 correction") : t("{count} corrections", { count: number(row.fixes) }) })));
     const again = el("button", { text: t("Use again"), onclick: () => void act(async () => { await backend.again(row.id); requested = true; }, false) });
     again.setAttribute("aria-label", t("Use dictation from {time} again", { time: day(row.at) + " " + time.textContent }));
     const copy = copyTextButton(row.text, "", t("Copy dictation from {time}", { time: day(row.at) + " " + time.textContent }));
-    again.title = t("Use again"); again.replaceChildren(icon("retry", 15));
+    again.title = t("Prepare this text for the paste shortcut. Nothing is pasted automatically."); again.setAttribute("aria-label", again.title); again.replaceChildren(icon("retry", 15), el("span", { text: t("Prepare to paste") }));
     const copyLabel = copy.querySelector("span");
-    if (copyLabel) copyLabel.className = "dictation-action-label";
+    if (copyLabel) copyLabel.className = "dictation-copy-label";
     copy.append(icon("copy", 15));
     const remove = el("button", { text: t("Delete…"), onclick: () => { returnTo = `2-${row.id}`; confirming = row.id; draw(); focusConfirmation(); } });
     remove.setAttribute("aria-label", t("Delete dictation from {time}", { time: day(row.at) + " " + time.textContent }));
@@ -196,12 +199,12 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
     const mark = el("span", { class: "dictation-destination" }); mark.setAttribute("aria-hidden", "true");
     if (command || row.session) mark.append(icon(command ? "flock" : "terminal", 15));
     else mark.textContent = row.app?.slice(0, 1).toLocaleUpperCase(locale()) || "?";
-    return el("article", { class: "dictation-entry" }, transcript, metadata, heard, el("div", { class: "dictation-actions" }, command ? null : again, copy, remove), mark);
+    return el("article", { class: "dictation-entry" }, transcript, metadata, el("div", { class: "dictation-actions" }, copy, command ? null : again, remove), heard, mark);
   };
   const read = async () => {
     const mine = ++asked;
     loading = true; draw();
-    try { const next = await backend.load(); if (mine === asked) { if (!data && !metricsChanged && next.today?.count && window.matchMedia?.("(min-width: 900px) and (min-height: 561px)").matches) metricsExpanded = true; data = next; failed = false; } }
+    try { const next = await backend.load(); if (mine === asked) { data = next; failed = false; } }
     catch { if (mine === asked) failed = true; }
     finally { if (mine === asked) { loading = false; draw(); } }
   };
@@ -232,7 +235,7 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
   confirmation.addEventListener("keydown", e => { if (e.key === "Escape" && !busy) { e.preventDefault(); e.stopPropagation(); cancelConfirmation(); } });
   draw();
   return {
-    element, setKeys(keys: Record<string, string>) { boundKeys = keys; draw(); }, refresh: () => void read(), relabel: draw,
+    element, setRecent(on: boolean) { if (recentCommands !== on) { recentCommands = on; draw(); } }, setKeys(keys: Record<string, string>) { boundKeys = keys; draw(); }, refresh: () => void read(), relabel: draw,
     invalidate: () => { asked++; loading = false; data = null; confirming = null; requested = false; expanded.clear(); draw(); },
   };
 }

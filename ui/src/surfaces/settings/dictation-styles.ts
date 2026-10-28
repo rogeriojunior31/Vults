@@ -24,7 +24,8 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
   let message: "saved" | "failed" | "budget" | "refresh" | null = null;
   let messageScope = "settings";
   let returnFocus: string | null = null;
-  let expanded = false, draft = "", draftStyle: DictationStyle = "natural";
+  let processingExpanded = false;
+  let expanded = true, draft = "", draftStyle: DictationStyle = "natural";
   const select = <T extends string | null>(choices: { value: T; label: string }[], value: T, key: string, change: (value: T) => void) => {
     const control = el("select", { class: "field" }); control.dataset.styleControl = key;
     choices.forEach((choice, i) => { const option = el("option", { text: choice.label }); option.value = String(i); option.selected = choice.value === value; control.append(option); });
@@ -102,15 +103,19 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
     const reload = button(t("Reload clean-up settings"), () => void refresh()); reload.dataset.styleControl = "reload"; (reload as HTMLButtonElement).disabled = loading || saving;
     const destination = provider ? t("Text and spelling/style context go to {provider} ({model}). No audio is sent.", { provider: provider.label, model: provider.model }) : t("Choose an API provider in Chat & voice before enabling clean-up.");
     const providerLink = button(t("Chat & voice"), providerSettings); providerLink.dataset.styleControl = "provider";
-    element.replaceChildren(el("section", { class: "card rows" },
-      row(t("Clean up with a model"), t("Off by default. Up to 2,000 attempts in any rolling 24 hours, including local calls. Provider charges may apply. Failure keeps your local text."), toggle),
-      el("p", { class: "note", text: destination }),
-      el("p", { class: "hint", text: provider?.local ? t("The selected provider uses a local endpoint on this computer.") : t("With a cloud provider, dictated text leaves this computer when clean-up is enabled.") }),
-      ...(!available || providerFailed ? [el("p", { class: "note error", text: providerFailed ? t("Could not read the selected provider. Reload to try again.") : t("Save an API key or choose a local provider in Chat & voice.") }), el("div", { class: "actions" }, providerLink)] : on ? [el("div", { class: "actions" }, providerLink)] : []),
-      notice, ...(!loading && (failed || providerFailed || appsFailed || message === "failed" || message === "budget" || message === "refresh") ? [reload] : [])),
+    const processing = el("details", { class: "cleanup-processing" }, el("summary", { text: t("Processing and costs") }),
+      el("p", { class: "hint", text: t("Off by default. Up to 2,000 attempts in any rolling 24 hours, including local calls. Provider charges may apply. Failure keeps your local text.") }),
+      el("p", { class: "hint", text: provider?.local ? t("The selected provider uses a local endpoint on this computer.") : t("With a cloud provider, dictated text leaves this computer when clean-up is enabled.") }));
+    processing.dataset.setting = "cleanup-processing"; processing.open = processingExpanded;
+    processing.addEventListener("toggle", () => { processingExpanded = processing.open; });
+    element.replaceChildren(el("section", { class: "card rows cleanup-activation" },
+      row(t("Clean up with a model"), t("Apply your chosen writing style after local transcription."), toggle),
+      el("div", { class: "cleanup-provider" }, el("p", { class: "note", text: destination }), providerLink),
+      ...(!available || providerFailed ? [el("p", { class: "note error", text: providerFailed ? t("Could not read the selected provider. Reload to try again.") : t("Save an API key or choose a local provider in Chat & voice.") })] : []),
+      processing, notice, ...(!loading && (failed || providerFailed || appsFailed || message === "failed" || message === "budget" || message === "refresh") ? [reload] : [])),
     );
     if (!on) {
-      const preview = el("section", { class: "card dictation-style-preview" }, el("h3", { text: t("Styles") }),
+      const preview = el("section", { class: "dictation-style-preview" }, el("h3", { text: t("Styles") }),
         el("p", { class: "hint", text: t("Clean-up is off. Every line keeps its local text.") }), styleCards(true));
       preview.setAttribute("aria-label", t("Styles"));
       element.append(preview);
@@ -121,9 +126,9 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
         row(t("Agent sessions in English"), t("Use English and Prompt only for recognized flock sessions. Other apps keep your Write in choice."), check(data.dictationSessionsEnglish, "english", value => options({ dictationSessionsEnglish: value }))),
         el("p", { class: "hint", text: t("Choices apply to the next recording. Questions stay questions; the model never answers or runs your words.") }),
         el("p", { class: "hint", text: t("Timeouts keep local text: four seconds normally, eight for translation, twelve for Prompt. Turning clean-up off cancels filtering.") }));
-      const defaults = el("section", { class: "card" }, el("h3", { text: t("Default style") }), styleCards(true, data.dictationStyle, style => options({ dictationStyle: style })));
+      const defaults = el("section", { class: "dictation-style-defaults" }, el("h3", { text: t("Default style") }), el("p", { class: "hint style-default-scope", text: t("Used only for apps without an app rule or built-in default. Recognized agent sessions always use Prompt.") }), styleCards(true, data.dictationStyle, style => options({ dictationStyle: style })), el("p", { class: "hint", text: t("The examples illustrate each style; they are not generated previews.") }));
       defaults.setAttribute("aria-label", t("Default style"));
-      const details = el("details", { class: "settings-disclosure" }, el("summary", { text: t("Style per app") }));
+      const details = el("details", { class: "settings-disclosure dictation-app-styles" }, el("summary", { text: t("Style per app") }));
       details.dataset.setting = "Style per app"; details.dataset.styleControl = "apps"; details.open = expanded;
       details.addEventListener("toggle", () => { expanded = details.open; });
       const body = el("div", { class: "disclosure-body" }, el("p", { class: "hint", text: t("Terminals and editors default to As spoken, mail to Polished and chats to Natural. App choices override these defaults; recognized flock sessions keep Prompt. Missing focus keeps local text.") }));
@@ -134,7 +139,8 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
         const selected = STYLES.find(s => s.id === apps?.[id])?.id ?? null;
         const control = select(appChoices, selected, `app-${id}`, value => app(id, value));
         control.disabled = saving || appsFailed || !apps;
-        const appRow = row(PRESETS[id] ?? id, "", control);
+        const effective = selected ?? (id === "konsole" || id === "code" || id === "obsidian" ? "verbatim" : id === "thunderbird" ? "polished" : id === "slack" ? "natural" : data.dictationStyle);
+        const appRow = row(PRESETS[id] ?? id, t("Effective style: {style}", { style: t(STYLES.find(style => style.id === effective)!.name) }), control);
         if (messageScope === `app-${id}` && notice.textContent) {
           const feedback = el("p", { class: notice.className, text: notice.textContent }); feedback.setAttribute("role", error ? "alert" : "status");
           appRow.querySelector(".row-text")!.append(feedback);
@@ -154,9 +160,10 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
       }
       if (appsFailed || messageScope !== "settings" && error) body.append(button(t("Reload clean-up settings"), () => void refresh()));
       details.append(body);
-      element.append(choices, defaults, details);
+      element.append(defaults, choices, details);
       if (saving || failed) element.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, button").forEach(control => { if (control !== toggle || saving) control.disabled = true; });
     }
+
     element.querySelectorAll<HTMLElement>("[data-style-control]").forEach(control => { control.dataset.setting = `cleanup-${encodeURIComponent(control.dataset.styleControl!)}`; });
     if (parent && scroll !== undefined) parent.scrollTop = scroll;
     if (key && element.isConnected) [...element.querySelectorAll<HTMLElement>("[data-style-control]")].find(n => n.dataset.styleControl === key)?.focus({ preventScroll: true });
