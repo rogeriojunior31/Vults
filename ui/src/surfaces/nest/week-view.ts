@@ -20,7 +20,7 @@ export const WEEK_CSS = `
 .day-column:hover, .day-column[aria-pressed="true"] { background: var(--raised); }
 .bar-track { display: flex; align-items: flex-end; flex: 1; width: 100%; max-width: 28px; min-height: 0; border-radius: 6px; background: var(--raised); }
 .bar-fill { width: 100%; border-radius: 6px; background: var(--fg-muted); transition: height var(--motion-enter) var(--ease-out), background-color var(--motion-fast) var(--ease-out); }
-.day-column:hover .bar-fill, .day-column[aria-pressed="true"] .bar-fill { background: var(--mark); }
+.day-column:hover .bar-fill, .day-column[aria-pressed="true"] .bar-fill { background: var(--mark-fill); }
 .day-column span { font-size: 11px; font-variant-numeric: tabular-nums; }
 .day-column .day-total { font: 11px var(--mono); white-space: nowrap; }
 .day-column[aria-pressed="true"] span { color: var(--fg); }
@@ -31,7 +31,7 @@ export const WEEK_CSS = `
 .recap-card .share-row strong { display: block; font-size: 12px; font-weight: 550; }
 .recap-card .share-row small { color: var(--fg-dim); font-size: 11px; }
 .recap-card > .btn { width: 100%; min-height: 36px; margin-top: 8px; border: 0; border-radius: var(--radius-control); background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 600; }
-.recap-card > .btn:hover { background: var(--mark); }
+.recap-card > .btn:hover { background: var(--mark-fill); }
 .recap-card .note { margin-top: 12px; }
 .card-head .card-title { font-size: 14px; font-weight: 600; }
 @media (max-width: 760px) {

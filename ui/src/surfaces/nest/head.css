@@ -14,7 +14,7 @@
   display: none !important;
 }
 :where(.app-header, .suite-nav, .app-footer) button:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 .app-header {
@@ -87,7 +87,7 @@
   color: var(--fg-bright);
 }
 .app-header .size-switch .size.on {
-  background: var(--mark);
+  background: var(--mark-fill);
   color: var(--on-accent);
 }
 .suite-nav {

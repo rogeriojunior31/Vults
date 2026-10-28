@@ -12,14 +12,14 @@ export function createDictationStatistics(load: (period: DictationPeriod) => Pro
   const page = settingsPage(element, activityCss + WEEK_CSS + stateCss + `
     .stats-periods { display: flex; flex-wrap: wrap; gap: 6px; }
     .stats-periods button, .stats-actions button { min-height: var(--control); padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--raised); color: var(--fg); cursor: pointer; font: inherit; }
-    .stats-periods button[aria-pressed="true"] { background: var(--mark); color: var(--on-accent); }
+    .stats-periods button[aria-pressed="true"] { background: var(--mark-fill); color: var(--on-accent); }
     .stats-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .chart-scroll { overflow-x: auto; }
     .chart-scroll .week-chart { margin-top: 8px; }
     .stats-apps { display: grid; gap: 12px; }
     .stats-apps .agent-turn { margin: 0; }
     .stats-apps bdi { overflow-wrap: anywhere; }
-    .stats-periods button:focus-visible, .stats-actions button:focus-visible, .chart-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .stats-periods button:focus-visible, .stats-actions button:focus-visible, .chart-scroll:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   `);
   page.tabIndex = -1;
   const title = el("h2"), about = el("p"), feedback = el("div");

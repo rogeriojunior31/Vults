@@ -5,12 +5,12 @@ import { voiceCommandHelp } from "../../voice-command-help";
 const commandHelpState = { query: "", scope: "all" };
 import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
-import { applyTheme } from "../../theme";
+import { applyTheme, DEFAULT_THEME } from "../../theme";
 import { ISLAND_WIDTHS, restoreWidth, saveWidth, watchWidth } from "../../island/geometry";
 // Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess, type DictationPermission, type DictationMusic } from "../../bridge";
+import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess, type DictationPermission, type DictationMusic, type Theme } from "../../bridge";
 import { SPECIES, speciesSet } from "../../character/flock";
 import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
@@ -269,7 +269,15 @@ let foldAfter = 15;
 let openOnHover = false;
 /** The language chosen, or null to follow the system. */
 let language: string | null = null;
-let theme: "black" | "light" = "black";
+let theme: Theme = DEFAULT_THEME;
+/** SP Night's flavors keep their names in every language. */
+const THEMES: [Theme, string][] = [
+  ["dark", tk("Dark")],
+  ["light", tk("Light")],
+  ["sp-night-paulista", "SP Night: Noite Paulista"],
+  ["sp-night-garoa", "SP Night: Garoa"],
+  ["sp-night-jaragua", "SP Night: Pico do Jaraguá"], // check-english:allow
+];
 /** Seconds the open island waits before folding, as the settings offer them. */
 const FOLD_CHOICES = [5, 10, 15, 30, 60];
 let zecaSpecies = "atratus";
@@ -838,8 +846,8 @@ function generalPage(): HTMLElement[] {
         dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
           if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
         })),
-      row(t("Theme"), t("Black or a neutral light theme, across every window."),
-        dropdown([{ value: "black" as const, label: t("Black") }, { value: "light" as const, label: t("Light") }], theme, async value => { await Bridge.setTheme(value); theme = value; })),
+      row(t("Theme"), t("Dark, a neutral light theme, or SP Night: three views of the city at night. Every window follows it."),
+        dropdown(THEMES.map(([value, label]) => ({ value, label: t(label) })), theme, async value => { await Bridge.setTheme(value); theme = value; })),
       row(
         t("Language"),
         t("The language of the island, these settings, the tray and the notifications. System follows your desktop's."),
@@ -2124,7 +2132,7 @@ void Bridge.appSettings().then((s) => {
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   openOnHover = s.openOnHover;
   language = s.language;
-  theme = applyTheme(s.theme ?? "black", true);
+  theme = applyTheme(s.theme ?? DEFAULT_THEME, true);
   setLang(s.lang);
   dictation.relabel();
   head.relabel();

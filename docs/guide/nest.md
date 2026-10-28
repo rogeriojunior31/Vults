@@ -11,7 +11,9 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
 Activity, Connections and Settings share neutral controls, page headings, cards and view states.
-**Settings → General → Theme** chooses **Black** (the default) or **Light** across every window.
+**Settings → General → Theme** chooses **Dark** (the default), the neutral **Light**, or one of
+three SP Night themes, three views of the city at night (**Noite Paulista**; **Garoa**, the flat
+grey of drizzle; **Pico do Jaraguá**, the dark of the forest), across every window. <!-- check-english:allow -->
 Activity and Connections use underlined view tabs; status colors keep their meaning. The Flock stage,
 diffs and Compact controls follow the same theme, including live changes to the birds'
 agent colors and wire.

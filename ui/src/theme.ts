@@ -1,6 +1,8 @@
 import type { Theme } from "./bridge";
 
-let current: Theme = "black";
+export const DEFAULT_THEME: Theme = "dark";
+
+let current: Theme = DEFAULT_THEME;
 let changed = false;
 
 /** A late startup read must not undo a theme event already received. */

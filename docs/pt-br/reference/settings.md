@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 8fa71fc60a09 -->
+<!-- source: 089d6369cd95 -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -187,7 +187,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 | `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som (e, no *Panel*, a sua notificação). Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
 | `history` | `true` | Guardar um histórico local dos turnos dos agentes para **Settings → Activity**: as contagens de cada turno terminado (12 semanas) e os totais de cada dia (um ano), no `vults.sqlite` da pasta de dados. Desligado, nada novo é guardado e o que existe fica; **Clear history** apaga tudo (a partir da versão 13), e o log de auditoria junto |
 | `recap_shown_week` | ausente | A segunda-feira da última semana cujo card de resumo você leu na ilha, para que ele venha uma vez só (a partir da versão 14) |
-| `theme` | `"black"` | **Settings → General → Theme**: `black` ou o tema neutro `light`, compartilhado por todas as janelas. Um valor desconhecido usa Black (a partir da versão 23) |
+| `theme` | `"dark"` | **Settings → General → Theme**, compartilhado por todas as janelas: `dark`, o neutro `light`, ou os temas SP Night `sp-night-paulista` (Noite Paulista), `sp-night-garoa` (Garoa) e `sp-night-jaragua` (Pico do Jaraguá). Um valor desconhecido usa Dark, e `black`, o nome dele antes da versão 45, é lido como `dark` (a partir da versão 23) |
 | `language` | ausente | O idioma do app: `en`, `pt-BR`, `es` ou `zh` (chinês simplificado), definido em **Settings → General**. Ausente segue o sistema (`LC_ALL`, `LC_MESSAGES` ou `LANG`; o locale do usuário no Windows), e um idioma que o Vults não fala vira inglês (a partir da versão 15) |
 | `notifications` | `true` | Notificações do desktop, só em *Panel* (no topo da tela a ilha já mostra tudo): uma sessão terminou, falhou ou ficou quieta, e um card esperando, na hora. A única ação delas abre a ilha |
 | `visitors` | `true` | De vez em quando, enquanto há sessões abertas, um urubu de fora do bando cruza o céu uma vez, sem nunca pousar |

@@ -33,11 +33,11 @@ body {
   pointer-events: none;
 }
 .widget:hover::before {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
 }
 /* A card waits: an amber rim, like Zeca's mark in the tray. */
 .widget.needs-you::before {
-  box-shadow: inset 0 0 0 1px rgba(245, 165, 36, 0.55);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 55%, transparent);
 }
 .widget .scene {
   flex: none;
