@@ -45,9 +45,9 @@ export function createVoiceRoute(load: (() => Promise<VoiceRoutes>) | undefined,
     for (const control of [mode, source, sink, pair, confirmed, refresh]) control.disabled = !active || locked || pending;
     if (!load) { for (const option of [...mode.options].slice(1)) option.disabled = true; refresh.disabled = true; }
   }
-  for (const control of [mode, source, sink, pair]) control.addEventListener("change", () => { if (locked || pending) return; confirmed.checked = false; draw(); changed(); });
+  for (const control of [mode, source, sink, pair]) control.addEventListener("change", () => { if (locked || pending) return; confirmed.checked = false; draw(); changed(); if (control === mode && mode.value !== "manual" && !inventory) void reload(); });
   confirmed.addEventListener("change", () => { draw(); changed(); });
-  refresh.onclick = async () => {
+  async function reload() {
     if (!load || refresh.disabled) return;
     const mine = ++epoch; pending = true; failed = false; inventory = null; confirmed.checked = false; draw(); changed();
     try {
@@ -58,10 +58,16 @@ export function createVoiceRoute(load: (() => Promise<VoiceRoutes>) | undefined,
       fill(pair, value.pairs.map((p, i) => ({ name: String(i), label: `${p.source} → ${p.sink}` })), t("Choose an installed pair"));
     } catch { if (mine === epoch) failed = true; }
     finally { if (mine === epoch) { pending = false; draw(); changed(); } }
-  };
+  }
+  refresh.onclick = reload;
   fill(source, [], t("Choose a microphone")); fill(sink, [], t("Choose an audio output")); fill(pair, [], t("Choose an installed pair")); draw();
   return {
-    element, selection, manual: () => mode.value === "manual",
+    element, selection, summary: () => {
+      if (mode.value === "manual") return t("Microphone and audio output follow the system defaults.");
+      const chosen = selection();
+      if (!chosen) return t("Choose a microphone and audio output before starting.");
+      return t("Microphone: {microphone} · Output: {output}", { microphone: inventory?.sources.find(device => device.name === chosen.source)?.label ?? chosen.source, output: inventory?.sinks.find(device => device.name === chosen.sink)?.label ?? chosen.sink });
+    }, manual: () => mode.value === "manual",
     ready: () => !pending && (mode.value === "manual" || !!selection()?.confirmed),
     clearConsent() { confirmed.checked = false; draw(); },
     expire() { inventory = null; confirmed.checked = false; failed = false; draw(); },

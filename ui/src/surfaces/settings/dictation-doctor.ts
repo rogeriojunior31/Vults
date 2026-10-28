@@ -23,9 +23,9 @@ const VERDICTS = { ok: tk("Input level looks usable."), "no-signal": tk("No usab
 export function createDictationDoctor(api: Backend) {
   const element = el("section", { class: "dictation-diagnostics" });
   const reportBody = el("div", { class: "diagnostic-report" });
-  let countersExpanded = false;
+  let countersExpanded = false, timingsExpanded = false;
   let reportRefresh: HTMLButtonElement;
-  const micBody = el("div", { class: "card" });
+  const micBody = el("div", { class: "card diagnostic-microphone" });
   let visible = false, report: DictationDiagnostics | null = null, loading = false, failed = false, reportEpoch = 0;
   let id: number | null = null, starting = false, micEpoch = 0, mic: DictationMicTest | null = null, micFailed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -56,7 +56,7 @@ export function createDictationDoctor(api: Backend) {
     const cancel = button(t("Stop test"), stop) as HTMLButtonElement;
     cancel.dataset.setting = "diagnostic-mic-stop";
     cancel.disabled = !running;
-    instruction = el("p", { class: "note" }); instruction.setAttribute("role", "status");
+    instruction = el("p", { class: "note diagnostic-verdict" }); instruction.setAttribute("role", "status");
     bars = Array.from({ length: 9 }, () => {
       const bar = el("progress"); bar.max = 1; bar.value = 0; bar.setAttribute("aria-hidden", "true"); return bar;
     });
@@ -111,15 +111,15 @@ export function createDictationDoctor(api: Backend) {
       const system = el("section", { class: "card diagnostic-system" }, el("h3", { text: t("System") }), el("dl", { class: "diagnostic-facts" },
         fact(t("Audio host"), s.host ?? t("Unavailable")), fact(t("Active input"), s.device ?? t("Unavailable")),
         fact(t("Native input rate"), number(s.rate, " Hz")), fact(t("Desktop session"), s.session === "unknown" ? t("Unknown") : s.session),
-        fact(t("GlobalShortcuts portal"), state(s.shortcuts)), fact(t("RemoteDesktop keyboard access"), state(s.keyboard)),
-        fact(t("KWin focus script"), state(s.kwin)), fact(t("GPU transcription"), yes(s.gpu)), fact(t("Local VAD model"), yes(s.vad))),
+        fact(`${t("Recording shortcut")} · ${t("GlobalShortcuts portal")}`, state(s.shortcuts)), fact(`${t("Text delivery")} · ${t("RemoteDesktop keyboard access")}`, state(s.keyboard)),
+        fact(`${t("Text delivery")} · ${t("KWin focus script")}`, state(s.kwin)), fact(t("GPU transcription"), yes(s.gpu)), fact(`${t("Speech detection")} · ${t("Local VAD model")}`, yes(s.vad))),
         el("p", { class: "hint", text: t("Checks read current state without requesting permissions. Missing input uses the same fallback as dictation. GPU readiness does not measure speed.") }));
       const counters = el("details", { class: "diagnostic-counters" }, el("summary", { text: t("Counters since app start") }), el("dl", { class: "diagnostic-facts" },
         fact(t("Repetitive runs cut"), String(report.counters.loops)), fact(t("Base retries"), String(report.counters.retries)), fact(t("Copied outcomes"), String(report.counters.copied))),
         el("p", { class: "hint", text: t("Final dictation decodes only. Preview and Chat are excluded; Copy again can add a Copied outcome. Counters reset when Vults exits.") }));
       counters.dataset.setting = "diagnostic-counters"; counters.open = countersExpanded;
       counters.addEventListener("toggle", () => { countersExpanded = counters.open; });
-      const timings = el("section", { class: "card diagnostic-timing-card" }, el("h3", { text: t("Stage timings") }),
+      const timings = el("details", { class: "diagnostic-timing-card" }, el("summary", { text: t("Stage timings") }),
         el("p", { class: "hint", text: t("Latest 50 retained, delivered dictations. Missing or unused stages stay unknown; erasing text erases its timings.") }));
       if (report.timings) {
         const table = el("table", { class: "diagnostic-timings" }, el("caption", { text: t("Measured durations in milliseconds") }),
@@ -131,7 +131,10 @@ export function createDictationDoctor(api: Backend) {
         const scroll = el("div", { class: "diagnostic-table-scroll" }, table); scroll.tabIndex = 0;
         scroll.setAttribute("role", "region"); scroll.setAttribute("aria-label", t("Stage timings")); timings.append(scroll);
       } else timings.append(el("p", { class: "note error", text: t("Could not read timing history. Refresh diagnostics to try again.") }));
-      children.push(timings, system, counters);
+      timings.dataset.setting = "diagnostic-timings";
+      timings.open = timingsExpanded;
+      timings.addEventListener("toggle", () => { timingsExpanded = timings.open; });
+      children.push(system, timings, counters);
     }
     reportBody.replaceChildren(...children);
   }

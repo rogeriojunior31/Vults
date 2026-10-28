@@ -8,7 +8,7 @@ import { applyTheme, DEFAULT_THEME } from "../../theme";
 import { Bridge } from "../../bridge";
 import { setLang, t } from "../../i18n";
 import { el } from "../../dom";
-import { savedClose, savedTransition } from "./close";
+import { savedTransition } from "./close";
 import { createNest } from "./render";
 import { restoreNavigation } from "./navigation";
 import { shownKeys } from "../../island/views";
@@ -196,11 +196,12 @@ const changeSize = savedTransition(flush, () => {
   closeError.textContent = t("Could not change the view. Your draft stays here; try again.");
   closeError.hidden = false;
 });
-void Bridge.onNestClose(savedClose(
-  flush,
-  Bridge.closeNest,
-  closingFailed,
-)).catch(closingFailed);
+const closeNest = savedTransition(flush, closingFailed);
+void Bridge.onNestClose(async event => {
+  // Native close must be prevented before the asynchronous draft decision.
+  event.preventDefault();
+  nest.beforeLeave(() => { void closeNest(Bridge.closeNest); });
+}).catch(closingFailed);
 Bridge.onNestFull((full) => nest.setFull(full));
 void Bridge.nestIsFull().then((full) => nest.setFull(full), () => {});
 void restoreNavigation(Bridge.onNestTab, Bridge.nestTabReady, tab => {

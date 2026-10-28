@@ -37,6 +37,8 @@ import { createRoosts, type RoostsBackend } from "./roosts";
 import { createWeek, type WeekBackend } from "./week";
 
 export interface Nest {
+  /** Resolve an unsaved meeting before an explicit surface departure. */
+  beforeLeave: (proceed: () => void) => void;
   flushState: () => Promise<void>;
   chat: ChatPanel;
   /** The flock's view, as each surface gets it. */
@@ -228,7 +230,6 @@ export function createNest(
   const dictationArea = createDictationArea(
     backend.dictation,
     section => backend.settings(section ?? "dictation"),
-    () => open("dictation-statistics"),
     () => { if (mounted) paintPortrait(); },
     () => { if (mounted && tab === "dictation") rememberPlace(); },
   );
@@ -501,8 +502,8 @@ export function createNest(
   }
   const head = createNestHead({
     tab: (id) => chooseTab(id),
-    gear: () => backend.settings(),
-    size: (s) => backend.size(s, currentPlace()),
+    gear: () => { if (tab === "dictation") dictationArea.beforeLeave(() => backend.settings()); else backend.settings(); },
+    size: (s) => { if (s === "mini" || s === "quick") dictationArea.beforeLeave(() => backend.size(s, currentPlace())); else backend.size(s, currentPlace()); },
     search: () => openPalette(),
     sound: backend.sound,
     media: backend.media,
@@ -516,12 +517,12 @@ export function createNest(
   };
   const foot = createNestFoot({
     zeca: (on) => backend.setZeca(on),
-    look: backend.look,
+    look: () => dictationArea.beforeLeave(backend.look),
     terminal: () => {
       const s = front();
       if (s) backend.flock.jump(s);
     },
-    island: backend.island,
+    island: () => dictationArea.beforeLeave(backend.island),
   });
   let full = startFull;
 
@@ -575,7 +576,8 @@ export function createNest(
     if (id === "dictation" && backend.openDictation) backend.openDictation();
     else show(id);
   }
-  function show(id: Tab): void {
+  function show(id: Tab, confirmed = false): void {
+    if (!confirmed && tab === "dictation" && id !== "dictation") { dictationArea.beforeLeave(() => show(id, true)); return; }
     if (id === "chat" && !zecaOn && !activeProfile) id = "flock";
     tab = id;
     if (id !== "activity") rememberPlace();
@@ -836,6 +838,7 @@ export function createNest(
   };
   setFull(startFull);
   return {
+    beforeLeave: dictationArea.beforeLeave,
     flushState: async () => {
       chat.cancelVoice();
       await chat.flushDraft();

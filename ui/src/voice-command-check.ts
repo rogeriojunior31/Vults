@@ -79,7 +79,8 @@ export function createCommandCheck(check: (text: string) => Promise<CommandPrevi
       return item;
     }));
   };
-  input.addEventListener("input", () => { epoch++; pending = false; failed = false; changed = null; cancelled = false; preview = null; paint(); });
+  const edit = () => { epoch++; pending = false; failed = false; changed = null; cancelled = false; preview = null; paint(); };
+  input.addEventListener("input", edit);
   async function run() {
     if (!active || pending || !valid()) return;
     const generation = ++epoch;
@@ -102,6 +103,7 @@ export function createCommandCheck(check: (text: string) => Promise<CommandPrevi
     paint();
   };
   return { element, relabel: paint, invalidate,
+    fill(phrase: string) { input.value = phrase; edit(); element.open = true; input.focus(); },
     targets(sessions: SessionView[]) {
       // Activity and list order change often; only the resolver's names/identities invalidate results.
       const snapshot = sessions.map(session => JSON.stringify([session.agent, session.id, session.project, session.cwd, session.agent_name ?? null])).sort().join("\n");

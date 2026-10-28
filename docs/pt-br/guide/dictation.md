@@ -1,5 +1,7 @@
 # Ditado
-<!-- source: bc97df6f5df9 -->
+<!-- source: 83d1fc26e520 -->
+
+As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -13,27 +15,23 @@ As fontes dos modelos, as licenças e o instalador experimental de reuniões est
 <a id="finding-pages-and-settings"></a>
 ## Encontrar páginas e configurações
 
-A navegação do Ditado segue os grupos do protótipo: Voz, Suas palavras e Sistema.
-Expanda **Configurações do ditado** para acessar as páginas de configuração; selecionar uma
-configuração ou buscar revela os controles relevantes. Estilos continua em Suas palavras e abre
-o editor de configurações existente.
-Use **Buscar página** para pesquisar nomes de páginas e descrições das configurações sem mudar a
-página atual nem salvar uma configuração. As buscas do Ditado ignoram maiúsculas e acentos,
-incluindo Histórico, palavras e títulos de reuniões salvas, mantendo o texto original na tela.
-Pressione Escape na busca para limpá-la; o Escape usado por um método de entrada para compor
-caracteres preserva a consulta. A navegação
-mantém a busca e o estado recolhido do grupo de configurações durante atualizações. Uma busca
-revela temporariamente as páginas de configuração correspondentes; limpá-la restaura sua escolha. Reabrir o Nest durante a mesma execução do
-app restaura a página de trabalho do Ditado escolhida, como Dicionário, Trechos ou Comandos de voz.
-Trocar entre Sala e Tela cheia mantém esse destino pelo fluxo existente de fechamento salvo. As setas para cima/baixo e Home/End movem
-o foco entre as ações visíveis da barra lateral; Enter abre a página em foco. Janelas estreitas
-usam o mesmo seletor de páginas agrupadas.
-Concluir uma ação no Histórico ou salvar entradas no Dicionário/Trechos preserva o foco de uma
-busca ou controle usado depois. Se você continuar na ação, o retorno de teclado existente permanece.
-As páginas de configuração do Ditado mantêm posições de leitura independentes enquanto esta janela
-de Configurações existir. Voltar a uma página restaura sua posição; atualizar as configurações
-também mantém o foco de teclado no controle do grupo de navegação. Essas posições não são salvas
-entre reinícios do app ou da janela.
+A navegação do Ditado separa Voz, Suas palavras e Suporte. O Histórico mantém o atalho real
+e a forma de onda característica, seguidos do texto entregue com busca. Estilos oferece quatro
+modos de escrita com exemplos ilustrativos, idioma de saída e regras por aplicativo. A ativação
+e o provedor aparecem antes das escolhas. Diagnóstico começa pelo teste explícito do microfone;
+as leituras do sistema vêm depois, com tempos detalhados e contadores disponíveis sob demanda.
+
+A engrenagem abre **Configurações > Ditado**, com a barra lateral global normal. Entrada de voz,
+Gravação, Entrega do texto e Histórico e privacidade são seções dessa única página. Reconhecimento,
+comandos, conversas, reuniões e integração com agentes ficam em detalhes identificados.
+Links contextuais abrem e rolam até a seção correspondente, sem trocar de página.
+
+Setas para cima/baixo e Home/End movem o foco entre as ações; Enter abre a página em foco.
+Janelas estreitas usam um único seletor de páginas de trabalho. Voltar ao Ditado restaura o uso;
+Estilos e Diagnóstico mantêm a mesma navegação. Mudanças entre Sala/Tela cheia preservam a página
+selecionada. Atualizações mantêm rascunhos, foco, detalhes abertos e posição de leitura durante
+a vida da janela. Captura, processamento remoto e acesso ao desktop preservam os consentimentos
+e o tratamento de falhas existentes.
 
 Atalhos de teclado separa as teclas globais dos controles de gravação. Mostra o atalho independente
 de comandos de voz junto com ditado, copiar último e cancelar; as teclas de gravação específicas
@@ -52,12 +50,14 @@ lado da navegação. Janelas baixas reduzem os espaços enquanto transcrições 
 suas áreas de rolagem. Os controles de gravação ficam fora da rolagem da transcrição; os avisos
 de consentimento e entrega continuam nos fluxos existentes.
 
+Comandos de voz usa um catálogo por categoria com busca, ao lado do teste local de frases. Escolher um exemplo preenche e foca a frase editável; nunca verifica nem executa automaticamente. Use **Verificar frase** para inspecionar a interpretação. Os requisitos e exemplos adicionais ficam em um detalhe da categoria; o link de configuração abre a seção de preferências existente.
+
 <a id="voice-available-today"></a>
 
 ## Voz disponível hoje
 
 Use a [entrada de voz do Chat](chat.md#speaking-instead-of-typing) depois de escolher um modelo local em
-**Ditado > Voz**. Cada gravação do Chat guarda até um minuto de áudio na memória.
+**Configurações > Ditado > Voz**. Cada gravação do Chat guarda até um minuto de áudio na memória.
 A prévia e a transcrição final usam o mesmo modelo local; você revisa o rascunho antes de enviar.
 
 A captura de áudio compartilhada agora converte a entrada para mono a 16 kHz, mantém um buffer
@@ -80,7 +80,7 @@ rascunho antes de enviar. Esse filtro não usa modelo nem faz requisições de r
 
 ## Configurações da conversa por voz
 
-Abra **Ditado > Conversar com o Zeca** para preparar a voz em tempo real. O modelo e o orçamento
+Abra **Configurações > Ditado > Conversar com o Zeca** para preparar a voz em tempo real. O modelo e o orçamento
 são separados do Chat e da assinatura da CLI. **Configurar chave da OpenAI** abre as configurações
 compartilhadas da chave; as chaves permanecem no chaveiro do sistema. Esta página de configuração
 não grava nem envia áudio.
@@ -244,8 +244,8 @@ Para o primeiro ditado, escolha um modelo, coloque o foco no destino, segure o a
 fale e solte. Aguarde **Copiado** e cole ali. A inserção automática é uma escolha separada e
 só funciona nos destinos abaixo; nunca envia Enter.
 
-Escolha e instale um modelo local de voz em **Ditado > Voz**. O desktop pede os novos
-vínculos de atalhos globais; **Dictation > Keyboard shortcuts** mostra as teclas reais e
+Escolha e instale um modelo local de voz em **Configurações > Ditado > Voz**. O desktop pede os novos
+vínculos de atalhos globais; **Settings > Dictation > Keyboard shortcuts** mostra as teclas reais e
 é atualizado quando você as altera nas configurações do desktop. **Alterar no KDE…** abre
 Configurações do sistema do KDE > Atalhos pela entrada instalada do desktop. Se ela estiver
 ausente ou não puder iniciar, a página permite tentar novamente; outros desktops usam suas
@@ -261,7 +261,7 @@ próprias configurações de atalhos. O Vults não edita os vínculos por conta 
 O atalho sempre inicia o ditado independente, inclusive com uma janela do Vults em foco. Nunca
 abre o Chat nem inicia seu microfone. Use o botão de microfone no Chat para ditar no rascunho.
 Um ditado ativo mantém seu dono se o foco mudar. O diagnóstico separado de microfone só começa
-com **Testar microfone**. O ditado independente funciona com o Zeca ligado ou desligado. Em **Dictation > Keyboard shortcuts**, escolha **Segurar +
+com **Testar microfone**. O ditado independente funciona com o Zeca ligado ou desligado. Em **Settings > Dictation > Keyboard shortcuts**, escolha **Segurar +
 duplo toque** (o padrão) ou **Só segurar**. Só segurar descarta toques curtos imediatamente;
 um segundo toque inicia uma nova gravação segurada. A trava por Espaço continua sendo uma
 escolha independente mesmo nesse modo. **Espaço mantém a gravação** e **Esc cancela o ditado**
@@ -286,7 +286,7 @@ atalho real não puder ser reconhecido, os controles do portal para segurar, toq
 continuam funcionando. A observação de teclas termina com a gravação e seu processamento, sem
 guardar texto digitado nem histórico de teclas.
 
-**Dictation > Voice > Microfone do ditado** escolhe uma entrada para o ditado local
+**Settings > Dictation > Voice > Microfone do ditado** escolhe uma entrada para o ditado local
 independente; o Chat continua usando o padrão do sistema. A página lista as entradas sem gravar,
 e **Atualizar microfones** atualiza essa lista explicitamente. Carregamento, falhas de leitura,
 listas desatualizadas e ausência de entradas têm feedback separado. Um microfone salvo que foi
@@ -296,7 +296,7 @@ salva. Uma entrada listada que não puder ser aberta mostra um erro. Escolha **M
 sistema** para limpar a preferência. A escolha fica salva neste computador e é usada pela próxima
 gravação; uma gravação ativa mantém sua entrada. Abrir a página ou atualizar nunca inicia uma gravação.
 
-**Dictation > Voice** também reúne **Remover repetições em sequência** e **Tentar
+**Settings > Dictation > Voice** também reúne **Remover repetições em sequência** e **Tentar
 com Base quando o ditado vier vazio**; as duas opções vêm ligadas. A remoção de repetições vale
 apenas para ditado comum. A prévia e a decodificação final dos comandos preservam palavras repetidas
 para não encurtar silenciosamente nomes de aplicativos/projetos; o filtro compartilhado de marcações
@@ -325,12 +325,12 @@ para o log ou histórico do aplicativo. Cancelar ou iniciar outro ditado rejeita
 atrasadas de áudio e prévia. O movimento reduzido oculta as bandas móveis e mantém o estado e as
 palavras.
 
-**Dictation > Voice > Som de início do ditado** controla um aviso curto;
+**Settings > Dictation > Voice > Som de início do ditado** controla um aviso curto;
 ele começa ligado e acompanha a opção de sons, o volume e o Não Perturbe do aplicativo. Somente
 uma nova gravação toca o aviso. Abrir outra superfície, mudar essa opção ou sair do silêncio
 não repete o som. Falhas e cancelamentos ficam silenciosos.
 
-**Dictation > Voice > Legendas do ditado** controla a legenda opcional;
+**Settings > Dictation > Voice > Legendas do ditado** controla a legenda opcional;
 ela começa ligada. A legenda expande uma linha cortada ou mostra o texto final depois de uma
 cópia ou entrega confirmada, em até duas linhas. Ela usa o espaço livre abaixo da ilha ancorada
 no topo ou acima da ilha ancorada na parte inferior; um Quick que ocupa toda a altura deixa a
@@ -406,7 +406,7 @@ dono original quando o foco muda; voltar o foco nunca restaura uma autorização
 
 ## Cancelar por voz
 
-**Dictation > Keyboard shortcuts > Cancelar por voz** vem ligado e funciona no X11
+**Settings > Dictation > Keyboard shortcuts > Cancelar por voz** vem ligado e funciona no X11
 e no Wayland. Encerre a gravação normalmente; a transcrição final é verificada antes da conversão
 de código falado e de qualquer cópia ou inserção. Estas frases inteiras cancelam quando ditas
 sozinhas ou no final da transcrição:
@@ -449,7 +449,7 @@ Salvar a mesma origem atualiza seu texto sem mudar a ordem. **Trechos** adiciona
 e conteúdo literal, inclusive espaços e quebras de linha. Excluir exige confirmação; falhas ao
 salvar preservam o rascunho para tentar novamente. Essas páginas não alteram a voz do Chat.
 
-**Ditado > Vocabulário > Ajudar o modelo com estas palavras** fica desligado
+**Configurações > Ditado > Vocabulário > Ajudar o modelo com estas palavras** fica desligado
 por padrão. Quando ativado, só o Turbo com inglês
 fixo recebe o contexto de programação mais as palavras do dicionário, limitado a 224 tokens
 do modelo com entradas inteiras. O inglês pode ser escolhido diretamente ou resolvido pelo idioma
@@ -464,7 +464,7 @@ As regras locais após a transcrição abaixo funcionam com qualquer idioma de t
 independentemente do vocabulário do modelo. Nenhuma das opções de vocabulário precisa estar
 ligada para usar substituições ou trechos.
 
-**Ditado > Vocabulário > Vocabulário do projeto** fica desligado por padrão,
+**Configurações > Ditado > Vocabulário > Vocabulário do projeto** fica desligado por padrão,
 independentemente da outra opção. Quando ativado, o Vults mantém em cache nomes de projetos Git conhecidos: pacotes e dependências Cargo/npm, membros próximos do
 workspace, nomes de módulos, arquivos da raiz e branch. Lê manifests pequenos e nomes de arquivos
 localmente; não lê o conteúdo do código, executa scripts de pacotes nem baixa nada. A atualização
@@ -561,7 +561,7 @@ que alterou para o teste.
 
 ## Música enquanto você fala
 
-**Ditado > Voz > Música enquanto você fala** oferece **Baixar para 25%** (o padrão),
+**Configurações > Ditado > Voz > Música enquanto você fala** oferece **Baixar para 25%** (o padrão),
 **Pausar** e **Não alterar**. A próxima gravação independente mantém essa escolha até parar,
 inclusive no cancelamento. A voz do Chat e a captura de reuniões não usam esse controle.
 
@@ -582,7 +582,7 @@ A restauração ocorre em segundo plano; a captura do microfone não espera por 
 
 ## Código falado
 
-**Dictation > Terminais e sessões > Código falado** vem ligado. Para um terminal
+**Settings > Dictation > Terminais e sessões > Código falado** vem ligado. Para um terminal
 ou sessão reconhecido e capturado para o ditado, une partes de identificadores em torno destes termos:
 
 | Idioma | Termos falados para `.`, `/`, `_`, `-`, `:` |
@@ -610,7 +610,7 @@ da área de transferência ao histórico.
 
 ## Inserção opcional no X11
 
-Em **Dictation > Paste**, ative **Inserir ditado em editores e painéis tmux compatíveis** apenas
+Em **Settings > Dictation > Paste**, ative **Inserir ditado em editores e painéis tmux compatíveis** apenas
 se quiser que o Vults insira texto. A opção começa desligada, inclusive após atualizar.
 Esta primeira implementação aceita KWrite, GNOME Text Editor, Mousepad e Leafpad. Outros aplicativos e
 IDEs mantêm o caminho de cópia; a entrega no terminal exige as verificações exatas de tmux abaixo. O X11 nativo é descrito abaixo; o Plasma Wayland usa
@@ -740,7 +740,7 @@ com um provedor disponível, antes de escolher o estilo padrão ou por aplicativ
 
 Abra **Ditado > Estilos** para configurar a limpeza opcional do texto final. Ela usa o provedor de API
 selecionado em **Configurações > Chat e voz**, incluindo Ollama/LM Studio locais. É separada do modelo
-de fala local em **Ditado > Voz** e nunca usa uma CLI de chat, ferramentas ou a conversa do Zeca.
+de fala local em **Configurações > Ditado > Voz** e nunca usa uma CLI de chat, ferramentas ou a conversa do Zeca.
 
 **Limpar com um modelo** começa desligado. Antes de ativar, confira provedor/modelo, o texto e o
 contexto de grafia/estilo enviados, a cota móvel e possíveis cobranças do provedor. Provedores na nuvem
@@ -800,7 +800,7 @@ de agente; veja as [regras de inserção](../adr/0032-dictation-into-other-apps.
 
 ### Confira os estilos localmente
 
-1. Use uma frase descartável e o idioma que você realmente fala em **Ditado > Voz**. Com a limpeza
+1. Use uma frase descartável e o idioma que você realmente fala em **Configurações > Ditado > Voz**. Com a limpeza
    desligada, dite no editor habitual, confira o resultado real da entrega e cole manualmente após
    **Copiado**. Trechos/substituições locais continuam valendo; nenhuma requisição de filtro deve aparecer.
 2. Se escolher testar um provedor, confira a divulgação e ative a limpeza explicitamente. Editores
@@ -1076,7 +1076,7 @@ digitação ou amostras de latência de entrega. Copiar o último ditado continu
 comum bem-sucedido, inclusive depois de um comando. Uma fala não reconhecida informa que não é um comando por padrão.
 
 A VC2 acrescenta comandos locais opcionais de reprodução para o reprodutor selecionado nos
-controles de mídia do Vults. Ative **Ditado > Configurações dos comandos > Comandos de voz de mídia**
+controles de mídia do Vults. Ative **Configurações > Ditado > Configurações dos comandos > Comandos de voz de mídia**
 e também ligue os controles de mídia. Segure Ctrl+Alt+Z e tente `pause a mídia`, `retome a música`,
 `próxima faixa`, `faixa anterior`, `volume da mídia 30`, `abaixe a música` ou `aumente a música`.
 Também são aceitos exemplos em inglês como `pause media` e `resume music`. Variações relativas
@@ -1285,7 +1285,7 @@ próxima fase não significa aceitá-los.
 <a id="meeting-recording"></a>
 ## Gravação de reuniões
 
-Os arquivos opcionais de análise de falantes podem ser preparados em **Ditado > Configurações de reuniões > Modelos de
+Os arquivos opcionais de análise de falantes podem ser preparados em **Configurações > Ditado > Configurações de reuniões > Modelos de
 falantes para reuniões (experimental)**. Revise o pacote, confirme o consentimento do download e
 instale em até um minuto. O instalador mostra progresso e cancelamento e preserva versões
 existentes em caso de falha. A instalação continua ao navegar para outra página; uma revisão não
@@ -1293,8 +1293,10 @@ confirmada é descartada. Ela nunca ativa identificação de falantes nem grava�
 [Artefatos dos modelos de reuniões](../reference/meeting-models.md) para licenças, verificação
 e o limite persistente de requisições.
 
+A tela acompanha quatro etapas: fontes de áudio, gravação, transcrição e revisão. Confira as fontes e confirme o aviso aos participantes antes de gravar. Os detalhes de privacidade e a identificação opcional de vozes podem ser expandidos; durante a gravação, **Parar gravação** continua acessível. As abas de transcrição, resumo e pendências aparecem após a transcrição.
+
 No Linux, **Ditado > Reuniões** oferece gravação de até **quatro horas**, seguida de transcrição
-local. Primeiro escolha um modelo local instalado em **Ditado > Voz**. Funciona com o Zeca
+local. Primeiro escolha um modelo local instalado em **Configurações > Ditado > Voz**. Funciona com o Zeca
 desligado. Gravar/transcrever sozinho não faz requisições à rede nem baixa modelos automaticamente.
 **Nova gravação** controla a gravação temporária; **Reuniões salvas** abre textos salvos explicitamente sem gravar nem consultar um modelo.
 
@@ -1371,7 +1373,7 @@ qualidade de fala durante quatro horas.
 <a id="summary-and-to-dos"></a>
 ### Resumo e pendências
 
-Antes de gravar, abra **Ditado > Configurações de reuniões** e confira **Ativar resumos de reuniões**.
+Antes de gravar, abra **Configurações > Ditado > Configurações de reuniões** e confira **Ativar resumos de reuniões**.
 A opção vem desligada e é independente da limpeza do ditado. A página identifica o provedor e o
 modelo do chat por API que receberão o texto da transcrição, nunca o áudio. Escolha esse destino e,
 para um provedor na nuvem, salve sua chave em **Chat e voz** primeiro. Ollama/LM Studio devem usar IP
@@ -1397,12 +1399,13 @@ na janela mínima; **Detalhes do resumo** mantém o provedor e os termos das req
 Com resumos desligados ou falha de leitura, a mesma seção mantém Configurações de reuniões e
 Recarregar; uma falha a abre automaticamente.
 Enquanto os resumos estão desligados, a aba explica o motivo e leva a **Configurações de reuniões**.
-Abrir essa configuração sai de Reuniões e descarta a transcrição temporária, portanto ative os resumos
-antes de gravar. Sair, ocultar/fechar a janela, bloquear ou conferir outra gravação descarta transcrição
-e notas não salvas. Uma cópia salva anteriormente permanece em **Reuniões salvas**.
+Ao abrir configurações com uma transcrição não salva, escolha **Salvar e sair**, **Descartar e sair** ou **Continuar revisando**. A mesma decisão protege trocas de ferramenta, voltar à ilha, Mini/Rápido e o fechamento normal da janela. Um salvamento pendente ou com falha mantém a reunião atual. Ocultação forçada ou bloqueio ainda encerra a captura e limpa o texto temporário. Uma cópia salva anteriormente permanece em **Reuniões salvas**.
 
 <a id="saved-meetings-and-export"></a>
 ### Reuniões salvas e exportação
+
+Consultar **Reuniões salvas** mantém a transcrição, o título e as notas atuais na memória. Volte a **Nova gravação** para continuar a revisão ou salvar. Durante captura ou transcrição, conclua ou cancele a operação antes de consultar o arquivo. Sair de Reuniões exige uma decisão explícita de salvar ou descartar quando há uma transcrição não salva.
+
 
 Em uma janela larga e alta, selecionar uma reunião salva mantém a lista com busca ao lado do detalhe.
 Janelas menores mostram o detalhe com **Voltar às reuniões salvas**, preservando a seleção ao mudar
@@ -1479,7 +1482,7 @@ pedido tipado e a auditoria `ask_user` sem conteúdo.
 <a id="external-agent-setup"></a>
 ### Configuração de agentes externos
 
-No Linux, abra **Ditado > Agentes** e ative **Agentes podem pedir uma resposta falada**. A opção vem
+No Linux, abra **Configurações > Ditado > Agentes** e ative **Agentes podem pedir uma resposta falada**. A opção vem
 desligada em instalações novas e atualizações sem uma escolha salva. Uma configuração MCP sozinha
 não habilita o acesso. Desativar cancela perguntas externas, incluindo gravação ou entrega auditada
 pendentes; reativar exige uma nova pergunta. Uma resposta já entregue ao relay não pode ser recolhida:

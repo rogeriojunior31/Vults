@@ -2,7 +2,8 @@ import { createMeetingSummary, type MeetingSummaryBackend } from "./summary";
 import { createMeetingArchive, type MeetingArchiveBackend } from "./archive";
 import type { MeetingStatus, MeetingTranscript, MeetingTrack } from "../../../bridge";
 import { el } from "../../../dom";
-import { t, tk } from "../../../i18n";
+import { locale, t, tk } from "../../../i18n";
+import { VOICE_MODEL_LABELS } from "../../../voice-command-readiness";
 import { icon } from "../../../island/icons";
 
 export interface MeetingBackend {
@@ -28,7 +29,7 @@ const phases: Record<MeetingStatus["phase"], string> = {
 const errors = {
   recovery: tk("Could not clean interrupted recording files. Retry cleanup before recording."),
   sources: tk("Could not read a microphone and system-audio monitor. Check your audio devices and try again."),
-  model: tk("Choose an installed local model in Dictation > Voice before recording."),
+  model: tk("Choose an installed local model in Settings > Dictation > Voice input before recording."),
   transcription: tk("Local transcription failed. Temporary audio cleanup was attempted; review the sources before recording again."),
   capture: tk("Could not complete the recording check. Review the sources again; audio cleanup will be retried before the next recording."),
 };
@@ -50,6 +51,16 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   const notes = createMeetingSummary(backend?.summary, summarySettings);
   let selected: "transcript" | "summary" | "todos" = "transcript";
   const heading = el("span"), about = el("p"), disclosure = el("p");
+  const sourceTitle = el("h3"), sourceHint = el("p", { class: "meeting-source-hint" });
+  const privacyTitle = el("summary"), privacyBrief = el("p", { class: "meeting-privacy-brief" });
+  const privacyDetails = el("details", { class: "meeting-privacy-details" }, privacyTitle, disclosure);
+  const workflow = el("ol", { class: "meeting-workflow" });
+  workflow.setAttribute("aria-label", t("Meeting workflow"));
+  const steps = ["sources", "recording", "transcription", "review"].map(id => {
+    const label = el("span");
+    const step = el("li", {}, icon(id === "sources" ? "mic" : id === "recording" ? "sound" : id === "transcription" ? "file" : "check", 16), label);
+    step.dataset.meetingStep = id; workflow.append(step); return { step, label };
+  });
   const phase = el("p");
   const timer = el("output");
   const line = el("div", { class: "meeting-recording-line" });
@@ -66,7 +77,8 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   const consent = el("label", { class: "meeting-consent" }, checkbox, consentText);
   const identify = el("input"); identify.type = "checkbox";
   const identifyText = el("span"), identifyNote = el("p");
-  const identification = el("div", {}, el("label", { class: "meeting-consent" }, identify, identifyText), identifyNote);
+  const identifyTitle = el("summary");
+  const identification = el("details", { class: "meeting-identification" }, identifyTitle, el("label", { class: "meeting-consent" }, identify, identifyText), identifyNote);
   const attributionNote = el("p");
   transcriptPanel.append(attributionNote);
   const feedback = el("p", { class: "meeting-feedback" });
@@ -76,10 +88,32 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   const saveLabel = el("span"), save = el("button"), viewSaved = el("button"), saveNote = el("p"), saveError = el("p", { class: "meeting-feedback" });
   const saveStatus = el("p"), saveDetailsTitle = el("summary"), saveDetails = el("details", { class: "meeting-recording-options" }, saveDetailsTitle, saveNote);
   saveError.setAttribute("role", "alert"); saveStatus.setAttribute("role", "status");
-  const savingControls = el("div", { class: "meeting-actions meeting-save" }, el("label", {}, saveLabel, saveTitle), save, viewSaved);
+  const saveField = el("label", {}, saveLabel, saveTitle);
+  const savingControls = el("div", { class: "meeting-actions meeting-save" }, saveField, save, viewSaved);
+  const leaveTitle = el("h2"), leaveAbout = el("p"), leaveError = el("p");
+  leaveTitle.id = "meeting-leave-title"; leaveAbout.id = "meeting-leave-about";
+  leaveError.setAttribute("role", "alert");
+  const leaveSave = el("button", { class: "meeting-primary" }), leaveDiscard = el("button", { class: "dictation-danger" }), leaveContinue = el("button");
+  const leaveDialog = el("dialog", { class: "meeting-leave-dialog" }, leaveTitle, leaveAbout, leaveError,
+    el("div", { class: "meeting-actions" }, leaveSave, leaveDiscard, leaveContinue));
+  leaveDialog.setAttribute("aria-labelledby", leaveTitle.id); leaveDialog.setAttribute("aria-describedby", leaveAbout.id);
+  let pendingLeave: (() => void) | null = null, leaveFailed = false;
+  function closeLeave() { pendingLeave = null; leaveFailed = false; leaveDialog.close(); savingControls.prepend(saveField); element.append(leaveDialog); }
+  function beforeLeave(proceed: () => void) {
+    if (!active || !value?.hasTranscript || savedId) { proceed(); return; }
+    pendingLeave = proceed;
+    if (leaveDialog.open) return;
+    leaveFailed = false;
+    leaveDialog.insertBefore(saveField, leaveError); document.body.append(leaveDialog); draw();
+    leaveDialog.showModal(); leaveContinue.focus();
+  }
   const saveRegion = el("div", { class: "meeting-save-region" }, savingControls);
   const recordingOptionsTitle = el("summary"), recordingOptions = el("details", { class: "meeting-recording-options" }, recordingOptionsTitle);
-  const transcriptPage = el("div", {}, about, disclosure, sources, model, fallback, consent, identification, transcriptPanel);
+  const preparation = el("div", { class: "meeting-preparation" },
+    el("section", { class: "meeting-inputs" }, sourceTitle, sourceHint, sources, model, fallback),
+    el("section", { class: "meeting-capture-consent" }, privacyBrief, privacyDetails, consent, identification));
+  const liveNote = el("p", { class: "meeting-live-note" });
+  const transcriptPage = el("div", {}, about, preparation, liveNote, transcriptPanel);
   const summaryPage = el("div"), todosPage = el("div");
   const panels = { transcript: transcriptPage, summary: summaryPage, todos: todosPage };
   for (const [key, panel] of Object.entries(panels)) panel.id = `meeting-panel-${key}`;
@@ -101,7 +135,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   const body = el("div", { class: "meeting-body" }, feedback, saveError, saveStatus, transcriptPage, summaryPage, todosPage, saveDetails, recordingOptions);
   const stateRegion = el("div", { class: "meeting-state" }, line, phase, timer, progress);
   const footer = el("div", { class: "meeting-footer" }, saveRegion, notes.actions);
-  const element = el("section", { class: "meeting-check" }, el("header", { class: "dictation-heading" }, el("h2", { class: "dictation-title" }, icon("mic", 18), heading)), stateRegion, tabList, body, footer, actions);
+  const element = el("section", { class: "meeting-check" }, el("header", { class: "dictation-heading" }, el("h2", { class: "dictation-title" }, icon("mic", 18), heading)), workflow, stateRegion, tabList, body, footer, actions, leaveDialog);
   body.tabIndex = 0;
   phase.setAttribute("role", "status"); phase.setAttribute("aria-live", "polite");
   feedback.setAttribute("role", "alert"); timer.setAttribute("aria-live", "off"); line.setAttribute("aria-hidden", "true");
@@ -127,7 +161,29 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   let saving = false, savedId: string | null = null, saveFailed = false;
   const visible = () => active && !document.hidden;
   const draw = () => {
-    element.classList.toggle("meeting-before-transcript", selected === "transcript" && !transcript);
+    if (!transcript) selected = "transcript";
+    element.classList.toggle("meeting-before-transcript", !transcript);
+    element.dataset.meetingPhase = value?.phase ?? "idle";
+    const captureActive = ["starting", "recording", "stopping", "transcribing", "cancelling"].includes(value?.phase ?? "");
+    element.classList.toggle("meeting-capture-active", captureActive);
+    liveNote.hidden = !captureActive;
+    liveNote.textContent = value?.phase === "transcribing" ? t("Keep this page open while the local transcript is prepared.") : t("Keep this page open. Stop recording when you are ready to transcribe.");
+    const stage = transcript || value?.hasTranscript ? 3 : value?.phase === "transcribing" ? 2 : ["starting", "recording", "stopping", "cancelling"].includes(value?.phase ?? "") ? 1 : 0;
+    const stageNames = [t("Audio sources"), t("Recording"), t("Transcription"), t("Review and save")];
+    steps.forEach(({ step, label }, index) => {
+      label.textContent = stageNames[index] + (index === 3 && transcript && !savedId ? ` · ${t("Not saved")}` : "");
+      step.setAttribute("aria-current", index === stage ? "step" : "false");
+      step.classList.toggle("complete", index < stage);
+    });
+    workflow.setAttribute("aria-label", t("Meeting workflow"));
+    tabList.hidden = !transcript;
+    preparation.hidden = !!transcript;
+    sourceTitle.textContent = t("Audio sources");
+    sourceHint.textContent = t("Review the microphone and system audio before you start. Nothing records during this check.");
+    sourceHint.hidden = !!value?.microphone && !!value?.monitor;
+    privacyTitle.textContent = t("Audio, storage and privacy");
+    privacyBrief.textContent = t("Audio stays on this computer. Saving a meeting keeps text, not audio.");
+    identifyTitle.textContent = t("Speaker identification (optional)");
     heading.textContent = t("Meetings");
     tabList.setAttribute("aria-label", t("Meeting content"));
     tabs.transcript.textContent = t("Transcript"); tabs.summary.textContent = t("Summary"); tabs.todos.textContent = t("To-dos");
@@ -138,7 +194,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     if (selected !== "transcript" && notes.element.parentElement !== panels[selected]) panels[selected].append(notes.element);
     body.setAttribute("role", "region"); body.setAttribute("aria-label", selected === "transcript" ? t("Recording details") : t("Meeting content"));
     about.textContent = t("Record up to four hours. Both audio sources are transcribed locally after you stop.");
-    disclosure.textContent = t("Tell everyone before recording. Temporary audio uses up to 1 GiB and is deleted after transcription or cancellation. Unsaved text and notes are discarded when you leave or review another recording. Summaries require separate consent. Save meeting keeps a text-only snapshot on this computer.");
+    disclosure.textContent = t("Tell everyone before recording. Temporary audio uses up to 1 GiB and is deleted after transcription or cancellation. Browsing saved meetings keeps your current text in memory. Leaving Meetings discards unsaved text and notes. Summaries require separate consent. Save meeting keeps a text-only snapshot on this computer.");
     const label = value?.phase === "transcribing" && value.progress?.stage === "speakers" ? t("Identifying voices locally; dictation has priority…") : value ? t(phases[value.phase]) : t("Reading recording status…");
     if (phase.textContent !== label) phase.textContent = label;
     timer.textContent = clock(value?.elapsedMs ?? 0);
@@ -153,11 +209,13 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     }
     }
     sources.hidden = !value?.microphone || !!transcript;
-    about.hidden = !!transcript; disclosure.hidden = !!transcript;
+    about.hidden = !!transcript || captureActive; disclosure.hidden = !!transcript;
     fallback.hidden = !value?.fallback || !!transcript;
     fallback.textContent = t("The default output monitor was unavailable. Review the fallback monitor shown above.");
     model.hidden = !value?.modelId || !!transcript;
-    model.textContent = t("Local model: {model}. Spoken language: {language}.", { model: value?.modelId ?? "", language: value?.language ?? t("Auto-detect language") });
+    let language = value?.language ?? t("Auto-detect language");
+    if (value?.language) { try { language = new Intl.DisplayNames([locale()], { type: "language" }).of(value.language) ?? language; } catch { /* Keep an unrecognized native language identifier readable. */ } }
+    model.textContent = t("Local model: {model}. Spoken language: {language}.", { model: value?.modelId ? t(VOICE_MODEL_LABELS[value.modelId] ?? value.modelId) : "", language });
     progress.hidden = value?.phase !== "transcribing";
     progress.textContent = value?.progress ? t("{source}: {completed} of {total} processed", {
       source: value.progress.track === "microphone" ? t("Microphone") : t("System audio"),
@@ -224,9 +282,15 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     saveRegion.hidden = !backend?.archive || !transcript || value?.phase !== "finished";
     saveDetails.hidden = saveRegion.hidden; saveError.hidden = saveRegion.hidden || !saveFailed;
     saveStatus.hidden = saveRegion.hidden || !savedId; saveDetailsTitle.textContent = t("Saving details");
-    saveLabel.textContent = t("Meeting title"); saveTitle.placeholder = t("Meeting title"); saveTitle.setAttribute("aria-label", t("Meeting title")); saveTitle.disabled = saving || !!savedId;
+    saveLabel.textContent = t("Meeting title") + (transcript && !savedId ? ` · ${t("Not saved")}` : ""); saveTitle.placeholder = t("Meeting title"); saveTitle.setAttribute("aria-label", t("Meeting title")); saveTitle.disabled = saving || !!savedId;
     save.textContent = saving ? t("Saving meeting…") : t("Save meeting"); save.classList.toggle("meeting-primary", selected === "transcript");
-    save.disabled = saving || busy || !!savedId || !saveTitle.value.trim();
+    save.disabled = saving || busy || !transcript || !!savedId || !saveTitle.value.trim();
+    leaveTitle.textContent = t("Leave this meeting without saving?");
+    leaveAbout.textContent = t("Your transcript and notes have not been saved. Save them before leaving, discard them, or continue reviewing.");
+    leaveSave.textContent = saving ? t("Saving meeting…") : t("Save and leave");
+    leaveDiscard.textContent = busy ? t("Discarding meeting…") : t("Discard and leave"); leaveContinue.textContent = t("Continue reviewing");
+    leaveSave.hidden = !backend?.archive; leaveSave.disabled = save.disabled; leaveDiscard.disabled = saving || busy; leaveContinue.disabled = saving || busy;
+    leaveError.hidden = !saveFailed && !leaveFailed; leaveError.textContent = leaveFailed ? t("Could not discard this meeting. Your text is kept. Try again or continue reviewing.") : t("Could not save this meeting. Finish any summary, check the title and try again while staying on this page.");
     viewSaved.textContent = t("View saved meeting"); viewSaved.hidden = !savedId;
     saveStatus.textContent = t("Saved. Further changes on this recording do not update the saved copy.");
     saveNote.textContent = t("Save freezes the current transcript and completed notes. Audio is never kept. Clear all history also removes saved meetings.");
@@ -254,7 +318,8 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
       const result = await backend.transcript(id);
       if (visible() && current === generation && value?.id === id && value.hasTranscript) {
         if (!result || result.id !== id) throw new Error("Transcript unavailable");
-        transcript = result; transcriptFailed = false; transcriptKey = ""; notes.meeting(id, true); draw();
+        transcript = result; transcriptFailed = false; transcriptKey = ""; notes.meeting(id, true); draw(); body.scrollTop = 0;
+        if (actions.contains(document.activeElement)) body.focus({ preventScroll: true });
       }
     } catch { if (current === generation && visible()) { transcriptFailed = true; draw(); } }
     finally { transcriptReading = false; }
@@ -277,7 +342,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     finally { busy = false; draw(); }
   };
   checkbox.addEventListener("change", draw);
-  review.addEventListener("click", () => { select("transcript"); if (backend) void act(backend.prepare); });
+  review.addEventListener("click", () => beforeLeave(() => { select("transcript"); if (backend) void act(backend.prepare); }));
   begin.addEventListener("click", () => { if (backend && value && checkbox.checked) void act(() => backend.begin(value!.id, true, identify.checked)); });
   stop.addEventListener("click", () => { if (backend && value) void act(() => backend.end(value!.id, false)); });
   cancel.addEventListener("click", () => { if (backend && value) void act(() => backend.end(value!.id, true)); });
@@ -287,22 +352,45 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   microphone.addEventListener("click", () => { track = "microphone"; draw(); });
   system.addEventListener("click", () => { track = "system"; draw(); });
   saveTitle.addEventListener("input", draw);
-  save.addEventListener("click", async () => {
+  async function saveMeeting() {
     if (!visible() || !backend?.archive || !transcript || !value || save.disabled) return;
-    const current = generation, id = value.id; saving = true; saveFailed = false; draw();
+    const current = generation, id = value.id; saving = true; saveFailed = false; leaveFailed = false; draw();
     try {
       const saved = await backend.archive.save(id, saveTitle.value.trim());
       if (current === generation && visible() && value?.id === id) savedId = saved;
     } catch { if (current === generation && visible()) saveFailed = true; }
     finally { saving = false; if (current === generation && visible()) draw(); }
+  }
+  save.addEventListener("click", () => void saveMeeting());
+  leaveSave.addEventListener("click", async () => { await saveMeeting(); if (savedId && pendingLeave) { const next = pendingLeave; closeLeave(); next(); } });
+  leaveDiscard.addEventListener("click", async () => {
+    if (saving || busy || !backend || !value) return;
+    const current = ++generation, id = value.id;
+    busy = true; leaveFailed = false; draw();
+    let proceed: (() => void) | null = null;
+    try {
+      const result = await backend.end(id, true);
+      if (current !== generation || !visible()) return;
+      if (result.id !== id || result.hasTranscript) throw new Error("Discard not confirmed");
+      proceed = pendingLeave; closeLeave(); accept(result);
+    } catch { if (current === generation && visible()) { leaveFailed = true; draw(); } }
+    finally { busy = false; if (current === generation) draw(); }
+    proceed?.();
   });
+  leaveContinue.addEventListener("click", closeLeave);
+  leaveDialog.addEventListener("cancel", event => { event.preventDefault(); if (!saving && !busy) closeLeave(); });
   viewSaved.addEventListener("click", () => { if (savedId && !saving) openSaved(savedId); });
   const suspend = () => {
+    if (leaveDialog.open) closeLeave();
     notes.setActive(false); notes.meeting(null, false);
     generation++; checkbox.checked = false; identify.checked = false; transcript = null; transcriptKey = ""; transcriptFailed = false;
-    savedId = null; saveTitle.value = ""; saveFailed = false; draw();
+    savedId = null; saveTitle.value = ""; saveFailed = false;
     if (interval) window.clearInterval(interval); interval = 0;
-    if (value && (pending(value.phase) || value.hasTranscript || value.phase === "ready") && backend) void backend.end(value.id, true).catch(() => {});
+    if (value && (pending(value.phase) || value.hasTranscript || value.phase === "ready")) {
+      if (backend) void backend.end(value.id, true).catch(() => {});
+      value = { ...value, phase: "cancelled", hasTranscript: false };
+    }
+    draw();
   };
   const follow = () => {
     if (!visible()) { suspend(); return; }
@@ -314,7 +402,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
   window.addEventListener("pagehide", suspend);
   if (!backend) value = { id: 0, phase: "unsupported", elapsedMs: 0, maxSeconds: 14400, microphone: null, monitor: null, fallback: false, error: null, modelId: null, language: null, hasTranscript: false };
   draw();
-  return { element, relabel() { draw(); notes.relabel(); }, refresh() { notes.refresh(); }, setActive(on: boolean) { if (active === on) return; active = on; follow(); } };
+  return { element, beforeLeave, hasDraft: () => !!transcript && !savedId, canBrowse: () => !!value && !reading && !busy && !saving && !pending(value.phase), relabel() { draw(); notes.relabel(); }, refresh() { notes.refresh(); }, setActive(on: boolean) { if (active === on) return; active = on; follow(); } };
 }
 
 export function createMeetings(backend?: MeetingBackend, configure: () => void = () => {}, summarySettings: () => void = configure) {
@@ -323,7 +411,9 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
   const recording = createRecording(backend, configure, summarySettings, id => { choose(true); archive?.open(id); });
   if (!archive) return { ...recording, invalidate() {} };
   const current = el("button"), retained = el("button");
-  const navigation = el("nav", { class: "meeting-workspace-navigation" }, current, retained);
+  const browseNote = el("p", { class: "meeting-browse-note" });
+  browseNote.setAttribute("role", "status"); browseNote.hidden = true;
+  const navigation = el("nav", { class: "meeting-workspace-navigation" }, current, retained, browseNote);
   const element = el("div", { class: "meetings-workspace" }, navigation, recording.element, archive.element);
   function draw() {
     navigation.setAttribute("aria-label", t("Meetings")); current.textContent = t("New recording"); retained.textContent = t("Saved meetings");
@@ -331,15 +421,18 @@ export function createMeetings(backend?: MeetingBackend, configure: () => void =
     recording.element.hidden = saved; archive!.element.hidden = !saved;
   }
   function choose(next: boolean) {
-    saved = next; recording.setActive(active && !saved); archive!.setActive(active && saved); draw();
+    if (next && !recording.canBrowse()) { browseNote.textContent = t("Stop recording and wait for transcription before opening saved meetings."); browseNote.hidden = false; return; }
+    browseNote.hidden = !next || !recording.hasDraft();
+    if (!browseNote.hidden) browseNote.textContent = t("Your current transcript stays in memory while you browse saved meetings. Return to New recording to save it.");
+    saved = next; recording.setActive(active); archive!.setActive(active && saved); draw();
   }
   current.addEventListener("click", () => choose(false)); retained.addEventListener("click", () => choose(true));
   document.addEventListener("visibilitychange", () => archive.setActive(active && saved && !document.hidden));
   window.addEventListener("pagehide", () => archive.setActive(false));
   draw();
-  return { element, relabel() { draw(); recording.relabel(); archive.relabel(); },
+  return { element, beforeLeave: recording.beforeLeave, relabel() { draw(); recording.relabel(); archive.relabel(); },
     refresh() { if (saved) void archive.refresh(); else recording.refresh(); },
-    invalidate() { archive.invalidate(); recording.setActive(false); recording.setActive(active && !saved); if (active && saved) void archive.refresh(); },
-    setActive(on: boolean) { active = on; recording.setActive(on && !saved); archive.setActive(on && saved && !document.hidden); },
+    invalidate() { archive.invalidate(); recording.setActive(false); recording.setActive(active); if (active && saved) void archive.refresh(); },
+    setActive(on: boolean) { active = on; recording.setActive(on); archive.setActive(on && saved && !document.hidden); },
   };
 }

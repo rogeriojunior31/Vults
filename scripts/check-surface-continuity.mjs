@@ -27,6 +27,9 @@ class Element {
   prepend(...children) { this.append(...children); this.children = [...children, ...this.children.filter(node => !children.includes(node))]; }
   replaceChildren(...children) { this.text = ""; for (const node of this.children) node.parentElement = null; this.children = []; this.append(...children); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(node => node !== this); this.parentElement = null; }
+  insertBefore(node, reference) { node.remove(); node.parentElement = this; const index = this.children.indexOf(reference); this.children.splice(index < 0 ? this.children.length : index, 0, node); }
+  showModal() { this.returnFocus = document.activeElement; this.open = true; }
+  close() { this.open = false; this.returnFocus?.focus(); }
   contains(node) { return nodes(this).includes(node); }
   get options() { return this.children.filter(node => node.tagName === "OPTION"); }
   get firstElementChild() { return this.children[0] ?? null; }
@@ -173,7 +176,7 @@ for (const width of [480, 760, 900, 1180]) {
     let realtimePhase = "recording", realtimeStarts = 0;
     const realtimeControls = [];
     const backend = {
-      dictation: { commandCheck: async () => ({ status: "parsed", actions: [{ action: "focus", target: "Alpha", value: null, status: "recognized", candidates: [] }] }), conversation: {
+      dictation: { meetings: {status:async()=>({id:91,phase:'finished',hasTranscript:true,elapsedMs:1000}),transcript:async()=>({id:91,microphone:{durationMs:1000,segments:[{startMs:0,endMs:1000,text:'Keep this meeting'}]},system:{durationMs:0,segments:[]}}),end:async()=>({id:91,phase:'cancelled',hasTranscript:false}),archive:{list:async()=>({epoch:0,rows:[]}),save:async()=>"kept-meeting"}}, commandCheck: async () => ({ status: "parsed", actions: [{ action: "focus", target: "Alpha", value: null, status: "recognized", candidates: [] }] }), conversation: {
         start: async () => { realtimeStarts++; return { id: "voice-fixture", phase: realtimePhase, response: "reply-token", capture: "capture-token", reason: null, draft: null, reply: null }; },
         status: async () => { throw Error("Unexpected heartbeat in synchronous scene checks"); },
         control: async (...args) => { realtimeControls.push(args); }, copy: async () => {},
@@ -452,8 +455,9 @@ for (const width of [480, 760, 900, 1180]) {
         Clock.freeze(null);
       }
       stopRealtime(work);
-      assert.equal(active.get(canvas), false);
-      assert.equal(nest.chat.perchSlot.querySelector("canvas"), canvas);
+      assert.equal(active.get(canvas), true);
+      assert.equal(portrait.playing("zeca"), "idle", "Ending capture returns the visible portrait to idle");
+      assert.equal(work.querySelector("canvas"), canvas);
     }
     let voiceWork = await startRealtime("speaking");
     nest.setZeca(false);
@@ -467,10 +471,10 @@ for (const width of [480, 760, 900, 1180]) {
     assert.equal(active.get(canvas), true);
     visibility(true); assert.equal(active.get(canvas), false);
     assert.equal(realtimeControls.at(-1)[1], "cancel", "Hiding revokes the conversation and its animated feedback");
-    visibility(false); assert.equal(active.get(canvas), false, "Showing again cannot replay stale speaking");
+    visibility(false); assert.equal(portrait.playing("zeca"), "idle", "Showing again cannot replay stale speaking");
     voiceWork = await startRealtime("recording");
     nest.view({ ...view, locked: true }); assert.equal(active.get(canvas), false);
-    nest.view(view); assert.equal(active.get(canvas), false, "Unlocking cannot replay cancelled recording");
+    nest.view(view); assert.equal(portrait.playing("zeca"), "idle", "Unlocking cannot replay cancelled recording");
     voiceWork = await startRealtime("speaking");
     nest.open("chat");
     assert.equal(nest.chat.perchSlot.querySelector("canvas"), canvas);
@@ -559,10 +563,24 @@ for (const width of [480, 760, 900, 1180]) {
     }
     assert.equal(dictationReads, readsBefore + 1, "History loads when its own tab opens, not while Chat is selected");
     assert.ok(!page.querySelector(".dictation-history").textContent.includes("Reading dictation history"), "Opening Dictation settles its loading state");
+    nest.open("dictation-meetings");await tick();await tick();
+    const meetingPopup=()=>nodes(document.body).find(n=>n.tagName==='DIALOG'&&n.open);
+    let windowDeparture=0;nest.beforeLeave(()=>windowDeparture++);assert.ok(meetingPopup());nodes(meetingPopup()).find(n=>n.tagName==='BUTTON'&&n.textContent==='Continue reviewing').click();assert.equal(windowDeparture,0,'An explicit window departure uses the same meeting decision');
+    nest.open("connections");assert.equal(nest.current(),"dictation-meetings");assert.ok(meetingPopup());
+    nodes(meetingPopup()).find(n=>n.tagName==='BUTTON'&&n.textContent==='Continue reviewing').click();
+    nest.open("dictation-history");assert.equal(nest.current(),"dictation-meetings");
+    nodes(meetingPopup()).find(n=>n.tagName==='BUTTON'&&n.textContent==='Continue reviewing').click();
+    const beforeMeetingSettings=settingsRoutes.length;
+    page.querySelector('.dictation-groups').querySelectorAll('button').find(n=>n.textContent==='Styles').click();
+    assert.equal(settingsRoutes.length,beforeMeetingSettings,'Tool settings cannot bypass the draft decision');assert.ok(meetingPopup());
+    nodes(meetingPopup()).find(n=>n.tagName==='BUTTON'&&n.textContent==='Continue reviewing').click();
+    nest.open("connections");nodes(meetingPopup()).find(n=>n.tagName==='BUTTON'&&n.textContent==='Discard and leave').click();await tick();assert.equal(nest.current(),"connections");
+    nest.open("dictation-history");await tick();
     nest.open("dictation"); await tick();
-    page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Styles").click(); await tick();
-    assert.equal(settingsRoutes.at(-1), "dictationstyles", "Styles opens the single privileged editor inside the Dictation workspace");
-    assert.equal(page.querySelector(".dictation-styles"),null,"No second read-only settings page remains");
+    assert.deepEqual(page.querySelector(".dictation-groups").querySelectorAll("button").map(button => button.textContent),
+      ["History", "Voice commands", "Voice conversation", "Meetings", "Dictionary", "Snippets", "Styles", "Diagnostics"],
+      "Dictation keeps its writing and diagnostic tools; statistics stay in Activity");
+    assert.equal(page.querySelector(".dictation-styles"), null, "No duplicate settings editor remains");
     nest.open("dictation-dictionary");await tick();
     assert.equal(page.querySelector(".your-words").hidden,false,"Settings can return to an exact Dictation work page");
     page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "History").click(); await tick();
@@ -574,6 +592,10 @@ for (const width of [480, 760, 900, 1180]) {
     workPage().querySelectorAll("button").find(button=>button.textContent==="Command settings").click();
     assert.equal(settingsRoutes.at(-1),"dictationcommands","Command settings opens its own configuration directly");
     const commandSearch = workPage().querySelector(".dictation-search");
+    assert.ok(workPage().classList.contains("command-view-recent"), "Commands opens with recent outcomes");
+    assert.ok(workPage().querySelector('.command-explore').hidden);
+    workPage().querySelectorAll('button').find(button=>button.textContent==='Explore and test').click();
+    assert.ok(!workPage().querySelector('.command-explore').hidden);
     const examplesQuery = workPage().querySelector('[data-setting="command-example-search"]');
     examplesQuery.value = "Obsidian"; examplesQuery.fire("input");
     const examplesScope = workPage().querySelector('[data-setting="command-example-scope"]');
@@ -618,8 +640,8 @@ for (const width of [480, 760, 900, 1180]) {
     assert.equal(nest.current(), "dictation-dictionary");
     assert.equal(page.querySelectorAll(".your-words")[0].hidden, false);
     assert.equal(page.querySelectorAll(".your-words")[1].hidden, true);
-    page.querySelector(".dictation-groups").querySelectorAll("button").find(button => button.textContent === "Statistics").fire("click"); await tick();
-    assert.equal(nest.current(), "dictation-statistics", "The area links to Activity's single statistics owner");
+    nest.open("dictation-statistics"); await tick();
+    assert.equal(nest.current(), "dictation-statistics", "Activity keeps the single statistics owner");
     await nest.flushState();
     assert.equal(place, "dictation-statistics", "Statistics navigation survives the Room/Full handoff");
     nest.open("connections"); await nest.flushState();

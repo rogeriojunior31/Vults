@@ -778,3 +778,52 @@ fn explicit_namespaces_preserve_articles_and_reserved_words_inside_names() {
     );
     assert_eq!(parse("open the project api"), one(Command::Focus("api".into())));
 }
+
+#[test]
+fn ui_catalog_examples_keep_their_native_meaning_in_each_language() {
+    let guide = include_str!("../../../ui/src/voice-command-help.ts");
+    let catalogs = [
+        ("pt-BR", include_str!("../../../ui/src/i18n/pt-BR.ts")),
+        ("es", include_str!("../../../ui/src/i18n/es.ts")),
+        ("zh", include_str!("../../../ui/src/i18n/zh.ts")),
+    ];
+    let mut failures = Vec::new();
+    let mut checked = 0;
+    for examples in guide
+        .split("examples: [")
+        .skip(1)
+        .filter_map(|section| section.split_once(']').map(|(examples, _)| examples))
+    {
+        for example in examples
+            .split("tk(\"")
+            .skip(1)
+            .filter_map(|part| part.split_once("\")").map(|(example, _)| example))
+        {
+            checked += 1;
+            let expected = parse(example);
+            if !matches!(expected, Parsed::Commands(_)) {
+                failures.push(format!("en: {example}: {expected:?}"));
+            }
+            for (lang, catalog) in catalogs {
+                let prefix = format!("  \"{example}\": \"");
+                let translated = catalog.lines().find_map(|line| {
+                    line.strip_prefix(&prefix)
+                        .and_then(|value| value.strip_suffix("\","))
+                });
+                let Some(translated) = translated else {
+                    failures.push(format!("{lang}: missing catalog example {example}"));
+                    continue;
+                };
+                let actual = parse(translated);
+                if actual != expected {
+                    failures.push(format!("{lang}: {translated}: {actual:?}, expected {expected:?}"));
+                }
+            }
+        }
+    }
+    assert!(
+        checked >= 20,
+        "The test must inspect the real catalog, not an empty extraction."
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}

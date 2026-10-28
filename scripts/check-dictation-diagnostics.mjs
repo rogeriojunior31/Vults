@@ -45,7 +45,8 @@ assert.equal(document.activeElement.dataset.setting,"diagnostic-refresh","Explic
 const reportView = nodes().find(node => node.className === "diagnostic-report");
 const timingIndex = reportView.children.findIndex(node => node.className.includes("diagnostic-timing-card"));
 const systemIndex = reportView.children.findIndex(node => node.className.includes("diagnostic-system"));
-assert.ok(timingIndex >= 0 && timingIndex < systemIndex,"Measured delivery comes before technical system details");
+assert.ok(systemIndex >= 0 && systemIndex < timingIndex,"The input and system overview precedes detailed stage timings");
+assert.equal(reportView.children[timingIndex].tag,"details","Detailed timings use progressive disclosure");
 const counters = nodes().find(node => node.className === "diagnostic-counters");
 assert.equal(counters.open,false,"Technical counters start folded");
 counters.open=true; counters.listeners.toggle();

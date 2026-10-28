@@ -3,11 +3,11 @@ import { el } from "./dom";
 import { t, tk } from "./i18n";
 
 export type CleanupSettings = { dictationCleanup: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean };
-export const STYLES: { id: DictationStyle; name: string; about: string }[] = [
-  { id: "verbatim", name: tk("As spoken"), about: tk("No model request. Keep local words, snippets and spoken-code processing.") },
-  { id: "natural", name: tk("Natural"), about: tk("Remove hesitations and repetitions while keeping your voice.") },
-  { id: "polished", name: tk("Polished"), about: tk("Use full sentences and written punctuation.") },
-  { id: "prompt", name: tk("Prompt"), about: tk("Organize an instruction for the agent. Never answer or run it.") },
+export const STYLES: { id: DictationStyle; name: string; about: string; example: string }[] = [
+  { id: "verbatim", name: tk("As spoken"), about: tk("No model request. Keep local words, snippets and spoken-code processing."), example: tk("um, send the team an update about the release") },
+  { id: "natural", name: tk("Natural"), about: tk("Remove hesitations and repetitions while keeping your voice."), example: tk("send the team an update about the release") },
+  { id: "polished", name: tk("Polished"), about: tk("Use full sentences and written punctuation."), example: tk("Send the team an update about the release.") },
+  { id: "prompt", name: tk("Prompt"), about: tk("Organize an instruction for the agent. Never answer or run it."), example: tk("Write a release update for the team.") },
 ];
 export const OUTPUT_LANGUAGES: { id: DictationOutputLanguage; name: string; applied: string }[] = [
   { id: "en", name: tk("English"), applied: tk("In English") },
@@ -21,7 +21,9 @@ export function styleCards(on: boolean, selected?: DictationStyle, choose?: (sty
     const card = choose ? el("button", { class: "dictation-style-card", onclick: () => choose(style.id) }) : el("article", { class: "dictation-style-card" });
     if (choose) { card.setAttribute("aria-pressed", String(style.id === selected)); card.dataset.styleControl = `style-${style.id}`; }
     else if (selected === style.id) card.dataset.selected = "true";
-    card.append(el("strong", { text: t(style.name) }), el("span", { text: on ? t(style.about) : t("Clean-up is off. Every line keeps its local text.") }));
+    card.append(el("strong", { text: t(style.name) }), el("span", { text: t(style.about) }),
+      el("span", { class: "dictation-style-example", text: t(style.example) }));
+    card.dataset.cleanup = String(on);
     cards.append(card);
   }
   return cards;

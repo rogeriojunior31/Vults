@@ -154,7 +154,7 @@ body.still #settings .page-enter { animation: none; }
 #settings .diagnostic-timings th, #settings .diagnostic-timings td { text-align: end; padding: 8px; border-bottom: 1px solid var(--border); }
 #settings .diagnostic-timings th:first-child { text-align: start; }
 
-@media (max-width: 899px) {
+@media (max-width: 650px) {
   #settings.dictation-workspace { flex-direction: column; }
 }
 
@@ -209,3 +209,29 @@ body.still #settings .page-enter { animation: none; }
 #settings .dictation-command-routing { margin: 0; padding: 14px 0; border-bottom: 1px solid var(--border); color: var(--fg); font: 600 var(--text-m)/1.5 var(--font); }
 #settings .dictation-erasure-confirmation { padding: 12px; border: 1px solid var(--control-border); border-radius: var(--radius-control); margin-bottom: 16px; }
 #settings .dictation-erasure-confirmation .dictation-danger { color: var(--error-text); }
+
+/* Diagnostics starts with the user's test, then the evidence behind the result. */
+#settings .diagnostic-microphone { display: grid; grid-template-columns: 1fr auto; gap: 12px 24px; padding: 24px; }
+#settings .diagnostic-microphone h3 { margin: 0; font-size: var(--text-xl); }
+#settings .diagnostic-microphone > .hint { grid-column: 1; max-width: 65ch; margin: 0; }
+#settings .diagnostic-microphone > .actions { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+#settings .diagnostic-microphone .diagnostic-bands { grid-column: 1 / -1; height: 56px; gap: 6px; margin-top: 8px; }
+#settings .diagnostic-bands progress { height: 16px; accent-color: var(--mark-fill); }
+#settings .diagnostic-microphone .diagnostic-verdict { grid-column: 1 / -1; margin: 0; color: var(--fg); font: 500 var(--text-l)/1.6 var(--font); }
+#settings .diagnostic-system h3 { margin: 0 0 12px; font-size: var(--text-l); }
+#settings .diagnostic-facts { font-size: var(--text-m); font-variant-numeric: tabular-nums; }
+#settings .diagnostic-fact { padding-block: 12px; }
+#settings .diagnostic-report { display: grid; gap: 16px; }
+#settings .diagnostic-timing-card, #settings .diagnostic-counters { border-top: 1px solid var(--border); padding-block: 12px; }
+#settings .diagnostic-report summary { width: fit-content; min-height: 32px; align-content: center; color: var(--fg-dim); cursor: pointer; font-size: var(--text-m); }
+#settings .diagnostic-report summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@container dictation-page (max-width: 600px) {
+  #settings .diagnostic-microphone { grid-template-columns: 1fr; gap: 12px; padding: 16px; }
+  #settings .diagnostic-microphone > .actions { grid-column: 1; grid-row: auto; }
+}
+
+#settings .page:focus { outline: none; }
+#settings .diagnostic-bands progress { appearance: none; border: 0; border-radius: 4px; background: var(--raised); overflow: hidden; }
+#settings .diagnostic-bands progress::-webkit-progress-bar { background: var(--raised); }
+#settings .diagnostic-bands progress::-webkit-progress-value { background: var(--mark-fill); border-radius: 4px; }
+#settings .diagnostic-bands progress::-moz-progress-bar { background: var(--mark-fill); border-radius: 4px; }

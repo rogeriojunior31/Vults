@@ -1,5 +1,7 @@
 # Dictation
 
+Permanent preferences live on one **Settings > Dictation** page. The **Dictation** work area keeps History, Voice commands, Voice conversation, Meetings, Dictionary, Snippets, Styles and Diagnostics. Usage statistics are in **Activity > Dictation**.
+
 The N3 development build provides local dictation to the clipboard, with optional paste into
 supported native X11 or Plasma Wayland text editors and exact tmux flock panes. It includes
 measured island feedback, searchable History, Dictionary/Snippets, Activity statistics and
@@ -11,22 +13,23 @@ Model sources, licenses and the experimental meeting installer are documented in
 
 ## Finding pages and settings
 
-The Dictation navigation follows the prototype groups: Voice, Your words and System.
-Expand **Dictation settings** for configuration pages; selecting a setting or searching reveals
-the relevant controls. Styles remains under Your words and opens its existing settings editor. Use **Find a page** to search page names and setting descriptions without changing the
-current page or saving a setting. Dictation page searches ignore case and accents, including
-History, words and saved meeting titles, while displaying the original text. Press Escape in the
-search field to clear it; Escape used by an input method to compose characters keeps the query. The navigation
-keeps your search and the configuration group's folded state when settings refresh. A search
-temporarily reveals matching configuration pages; clearing it restores your fold choice. Reopening the Nest during the same app run restores
-its selected Dictation work page, such as Dictionary, Snippets or Voice commands. Room/Full size
-changes keep that destination through the existing saved-close flow. Arrow Up/Down and Home/End move between the visible
-sidebar actions; Enter opens the focused page. Narrow windows use the same grouped page picker.
-Finishing a History action or saving Dictionary/Snippets entries keeps a newer search or control
-focus. If you stay on the action, its existing keyboard return remains available.
-Dictation configuration pages keep independent reading positions while this Settings window
-exists. Returning to a page restores its position; refreshing settings also keeps keyboard focus
-on the navigation group toggle. These positions are not saved across app or window restarts.
+The Dictation navigation separates Voice, Your words and Support. History retains the actual
+shortcut and characteristic waveform, followed by searchable delivered text. Styles offers
+four writing modes with illustrative examples, output options and per-app rules. Its activation
+and provider appear before the choices. Diagnostics starts with an explicit microphone test;
+system readings follow, with detailed timings and counters available on demand.
+
+The gear opens **Settings > Dictation**, using the normal global Settings sidebar. Voice input,
+Recording, Text delivery, and History and privacy are sections of this single page. Recognition,
+commands, conversations, meetings and agent setup remain available in labeled disclosures.
+Contextual links open and scroll to the relevant section rather than replacing the page.
+
+Arrow Up/Down and Home/End move between sidebar actions; Enter opens the focused page.
+Narrow windows use a single work-page picker. Returning to Dictation restores work; the separate
+Styles and Diagnostics tools keep the same navigation. Room/Full changes preserve the selected
+work page. Refreshes keep drafts, keyboard focus, disclosure state and reading position during
+this window's lifetime. Explicit capture, remote processing and desktop-access choices retain
+their existing consent and failure behavior.
 
 Keyboard shortcuts separates global bindings from recording controls. It shows the independent
 voice-command key alongside dictation, copy-last and cancel; X11-specific recording keys live
@@ -44,9 +47,11 @@ adapt to the page width remaining beside the navigation. Short windows reduce sp
 transcripts and configuration content keep their scroll regions. Recording controls stay outside
 the transcript scroll region; consent and delivery notices remain part of their existing flows.
 
+Voice commands use a searchable category catalog next to the local phrase checker. Choosing an example fills and focuses the editable phrase; it never checks or runs automatically. Choose **Check phrase** to inspect the interpretation. Category requirements and additional examples stay in a disclosure, and the command-settings link opens the existing preference section.
+
 ## Voice available today
 
-Use [Chat's voice input](chat.md#speaking-instead-of-typing) after choosing a local model in **Dictation > Voice**.
+Use [Chat's voice input](chat.md#speaking-instead-of-typing) after choosing a local model in **Settings > Dictation > Voice**.
 Each Chat recording keeps up to one minute of audio in memory. The preview and final transcript
 use the same local model; you review the draft before sending it.
 
@@ -67,7 +72,7 @@ the draft before sending it. This filter uses no model or network request.
 
 ## Voice conversation settings
 
-Open **Dictation > Talk with Zeca** to prepare realtime voice. The model and budget are separate
+Open **Settings > Dictation > Talk with Zeca** to prepare realtime voice. The model and budget are separate
 from Chat and your CLI subscription. **Configure OpenAI key** opens the shared key settings; keys
 stay in the system keyring. This configuration page does not record or send audio.
 
@@ -213,8 +218,8 @@ For a first dictation, choose a model, focus your destination, hold the talk sho
 release. Wait for **Copied**, then paste there. Automatic insertion is a separate choice and
 only supports the destinations below; it never sends Enter.
 
-Choose and install a local voice model in **Dictation > Voice**. The desktop asks for the
-new global shortcut bindings; **Dictation > Keyboard shortcuts** shows the actual
+Choose and install a local voice model in **Settings > Dictation > Voice**. The desktop asks for the
+new global shortcut bindings; **Settings > Dictation > Keyboard shortcuts** shows the actual
 bindings and updates when you change them in the desktop settings. **Change in KDE…** opens
 KDE System Settings > Shortcuts through its installed desktop entry. If that entry is missing
 or cannot launch, the page offers retry; other desktops use their own shortcut settings. Vults
@@ -230,7 +235,7 @@ The shortcut always starts independent dictation, including with a Vults window 
 opens Chat or starts its microphone. Use the microphone button in Chat to dictate into its draft.
 An active dictation keeps its owner if focus moves. The separate microphone diagnostic starts only
 with **Test microphone**. Independent dictation works with Zeca on or off.
-In **Dictation > Keyboard shortcuts**, choose **Hold + double tap** (the default)
+In **Settings > Dictation > Keyboard shortcuts**, choose **Hold + double tap** (the default)
 or **Hold only**. Hold only discards short taps immediately; a second tap starts a fresh hold.
 Space-lock remains an independent choice even in Hold only mode. **Space locks recording** and
 **Esc cancels dictation** default on and can be changed on X11; their controls are unavailable
@@ -253,7 +258,7 @@ available. No raw keys are observed through XWayland. If an X11 listener or its 
 cannot be recognized, the portal's hold, double-tap and cancel controls still work. Key observation
 ends with the turn and keeps no typed text or key history.
 
-**Dictation > Voice > Dictation microphone** chooses an input for independent
+**Settings > Dictation > Voice > Dictation microphone** chooses an input for independent
 local dictation; Chat keeps using its system default. The page lists inputs without recording,
 and **Refresh microphones** updates that list explicitly. Loading, failed reads, stale lists
 and no inputs have separate feedback. A disconnected saved microphone stays selected as
@@ -263,7 +268,7 @@ listed but cannot open reports an error. Choose **System default microphone** to
 preference. The choice is saved on this computer and used by the next recording; an active
 recording keeps its input. Opening the page or refreshing never starts a recording.
 
-**Dictation > Voice** also owns **Remove repeated loops** and **Retry empty
+**Settings > Dictation > Voice** also owns **Remove repeated loops** and **Retry empty
 dictation with Base**; both start on. Loop removal applies to ordinary dictation only.
 Command preview and final decoding preserve repeated words so an application/project name is not
 silently shortened; the shared sound-annotation/silence filter still applies. Turning loop removal
@@ -288,12 +293,12 @@ stays in memory, is discarded when capture ends and is never written to the app 
 Cancelling or starting another dictation rejects late audio and preview updates. Reduced motion
 hides the moving bands while retaining the state and words.
 
-**Dictation > Voice > Dictation start sound** controls a short start cue;
+**Settings > Dictation > Voice > Dictation start sound** controls a short start cue;
 it starts on and follows the app's sound switch, volume and Do Not Disturb. Only a new recording
 plays it. Opening another surface, changing this setting or returning from mute never replays
 a cue. Failures and cancellations stay silent.
 
-**Dictation > Voice > Dictation captions** controls the optional caption;
+**Settings > Dictation > Voice > Dictation captions** controls the optional caption;
 it starts on. The caption expands a clipped line or shows the final text after a confirmed copy
 or delivery, in at most two rows. It uses free space below a top-docked island or above a
 bottom-docked island; a full-height Quick view leaves it hidden. In the Nest or Settings it sits
@@ -359,7 +364,7 @@ when focus moves; returning focus never restores an insertion capability.
 
 ## Cancel by voice
 
-**Dictation > Keyboard shortcuts > Cancel by voice** starts on and works on X11
+**Settings > Dictation > Keyboard shortcuts > Cancel by voice** starts on and works on X11
 and Wayland. End the recording normally; the final transcript is checked before spoken-code
 conversion and before any clipboard write or insertion. These whole phrases cancel when said
 alone or at the end of the transcript:
@@ -398,7 +403,7 @@ the same replacement source updates its text without changing its order. **Snipp
 triggers and literal bodies, including spaces and line breaks. Deletion asks for confirmation;
 failed saves retain the draft and offer another attempt. These pages do not change Chat voice.
 
-**Dictation > Vocabulary > Help the model with these words** is off by default.
+**Settings > Dictation > Vocabulary > Help the model with these words** is off by default.
 When enabled, only Turbo with fixed English receives the coding seed plus dictionary words,
 limited to 224 model tokens with whole entries. English may be chosen
 directly or resolved from the system language; automatic detection is excluded. Preview and final
@@ -411,7 +416,7 @@ do not establish human-speech accuracy; real microphone validation remains pendi
 post-transcription rules below still work with every transcription language, independently of
 model vocabulary. You do not need either vocabulary switch to use replacements or snippets.
 
-**Dictation > Vocabulary > Project vocabulary** is independently off by default.
+**Settings > Dictation > Vocabulary > Project vocabulary** is independently off by default.
 When enabled, Vults caches names from known Git projects:
 Cargo/npm packages and dependencies, shallow workspace members, module names, root file names
 and the branch. It reads small manifests and file names locally; it does not read source bodies,
@@ -497,7 +502,7 @@ name or a microphone recording will improve. Restore any preferences you changed
 
 ## Music while you speak
 
-**Dictation > Voice > Music while you speak** offers **Lower to 25%** (the default),
+**Settings > Dictation > Voice > Music while you speak** offers **Lower to 25%** (the default),
 **Pause it** and **Leave it**. The next independent recording keeps this choice until it stops,
 including cancellation. Chat voice and meeting capture do not use this control.
 
@@ -515,7 +520,7 @@ Restoration runs in the background; microphone capture does not wait for a media
 
 ## Spoken code
 
-**Dictation > Paste > Terminals & sessions > Spoken code** starts on. For a recognized
+**Settings > Dictation > Paste > Terminals & sessions > Spoken code** starts on. For a recognized
 terminal or session captured for the dictation, it joins identifier chunks around these terms:
 
 | Language | Spoken terms for `.`, `/`, `_`, `-`, `:` |
@@ -539,7 +544,7 @@ or previous clipboard contents are added to history.
 
 ## Opt-in X11 insertion
 
-In **Dictation > Paste**, enable **Insert dictation in supported editors and tmux panes** only
+In **Settings > Dictation > Paste**, enable **Insert dictation in supported editors and tmux panes** only
 if you want Vults to insert text. It starts off, including after upgrading. This first
 implementation supports KWrite, GNOME Text Editor, Mousepad and Leafpad. Other apps and IDEs keep the clipboard path;
 terminal delivery requires the exact tmux checks below. Native X11 is described below; Plasma Wayland uses the separate
@@ -655,7 +660,7 @@ with an available provider before choosing a default or per-app style.
 
 Open **Dictation > Styles** to configure optional final-text clean-up. It uses the API provider
 selected in **Settings > Chat & voice**, including local Ollama/LM Studio. It is separate from the
-local speech model in **Dictation > Voice** and never uses a chat CLI, tools or Zeca's conversation.
+local speech model in **Settings > Dictation > Voice** and never uses a chat CLI, tools or Zeca's conversation.
 
 **Clean up with a model** starts off. Before enabling it, review the provider/model, the text and
 spelling/style context it receives, the rolling quota and possible provider charges. Cloud providers
@@ -711,7 +716,7 @@ and [voice and recording rules](../adr/0028-spoken-replies-through-a-realtime-mo
 
 ### Check styles locally
 
-1. Use a disposable sentence and the spoken language you actually use in **Dictation > Voice**.
+1. Use a disposable sentence and the spoken language you actually use in **Settings > Dictation > Voice**.
    With clean-up off, dictate into your usual editor, check the actual delivery result, and paste
    manually after **Copied**. Local snippets/replacements still apply; no filter request should appear.
 2. If you choose to test a provider, review the disclosure and enable clean-up explicitly. Editors
@@ -941,7 +946,7 @@ the context. Card answers, release/skip/review and merges cannot be dispatched b
 
 V8.4 connects the command key to the shared local capture/transcription worker and the runtime's
 dispatcher. Hold **Ctrl+Alt+Z** for at least 300 ms, speak and release; the desktop may bind a different
-key, shown under **Dictation > Command settings > Command key**. It works with Zeca
+key, shown under **Settings > Dictation > Command settings > Command key**. It works with Zeca
 off and never fills Chat's draft. This mode uses hold only, with the same microphone tail; dictation's
 double-tap/Space lock and spoken text transformations do not apply. **Ctrl+Alt+X** cancels capture and
 command context. On X11, Esc/typing cancellation also invalidates the recording.
@@ -959,7 +964,7 @@ Copy last dictation still uses the last successful ordinary dictation, including
 An unrecognized utterance reports that it is not a command by default.
 
 VC2 adds opt-in local playback commands for the player selected in Vults' media controls.
-Enable **Dictation > Command settings > Media voice commands** and turn on media controls too.
+Enable **Settings > Dictation > Command settings > Media voice commands** and turn on media controls too.
 Hold Ctrl+Alt+Z and try `pause media`, `resume music`, `next track`, `previous track`,
 `media volume 30`, `lower media volume` or `raise media volume`. Portuguese examples include
 `pause a midia`, `retome a musica`, `proxima faixa` and `volume da midia 30`; accents are accepted.
@@ -1062,7 +1067,7 @@ flock navigation, preferences and queries are also supported, with the limits ab
 does not execute these commands. Backend tests use simulated state/private process fixtures, not
 personal audio; real desktop output/cancellation acceptance remains pending.
 
-V8.5 adds **Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
+V8.5 adds **Settings > Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its
 **What you can say** guide lists supported phrases. Search its translated examples or filter by
 flock, media, computer audio, applications or card safety. Search and scope combine; examples
@@ -1119,7 +1124,7 @@ notifications; `pause media` affects the selected player; `mute computer` affect
 computer output. The older short `mute web` form still means project notifications. Notification
 phrases are also supported in Portuguese and Spanish; project names stay unchanged.
 
-**Dictation > Command settings** owns:
+**Settings > Dictation > Command settings** owns:
 
 - **Enable voice commands**, on by default. Turning it off stops a command recording or pending handoff
   and clears clarification/repeat/undo context. Ordinary dictation and Copy last dictation keep working.
@@ -1151,15 +1156,17 @@ UI fixtures and automated checks; continuing to the next phase does not sign the
 <a id="meeting-recording-check"></a>
 ## Meeting recording
 
-Optional speaker-analysis files can be prepared in **Dictation > Meeting settings > Meeting speaker models
+Optional speaker-analysis files can be prepared in **Settings > Dictation > Meeting settings > Meeting speaker models
 (experimental)**. Review the package, confirm the download consent and install within one minute.
 The installer shows progress and cancellation, and preserves existing versions on failure.
 Installation continues when navigating away; an unconfirmed review is discarded. It never
 activates speaker labels or recording. See [Meeting model artifacts](../reference/meeting-models.md)
 for licenses, verification and the persistent request limit.
 
+The page follows four stages: audio sources, recording, transcription, and review. Check the sources and confirm participant notification before recording. Expand privacy details and optional speaker identification when needed; **Stop recording** stays accessible during capture. Transcript, summary, and to-do tabs appear after transcription.
+
 On Linux, **Dictation > Meetings** offers recording for up to **four hours**, followed by local
-transcription. Choose an installed local model in **Dictation > Voice** first. This works with Zeca
+transcription. Choose an installed local model in **Settings > Dictation > Voice** first. This works with Zeca
 off. Recording/transcribing alone makes no network request or automatic model download.
 **New recording** owns the temporary recording; **Saved meetings** opens explicitly saved text without recording or making a model request.
 
@@ -1230,7 +1237,7 @@ resource bound, not a claim of four hours of physical-device or speech-quality a
 
 ### Summary and to-dos
 
-Before recording, open **Dictation > Meeting settings** and review **Enable meeting summaries**.
+Before recording, open **Settings > Dictation > Meeting settings** and review **Enable meeting summaries**.
 It is off by default and independent of dictation cleanup. The page identifies the API chat provider
 and model that will receive transcript text, never audio. Choose that destination and, for a cloud
 provider, save its key in **Chat & voice** first. Ollama/LM Studio must use literal loopback; their
@@ -1253,11 +1260,12 @@ in the minimum window; **Summary details** keeps provider and request terms avai
 Meeting settings and Reload before recording or after a read failure; failures open the disclosure.
 While summaries
 are off, the tab explains why and links to **Meeting settings**. Opening that configuration leaves
-Meetings and discards the temporary transcript, so enable summaries before recording. Leaving,
-hiding/closing the window, locking or reviewing another recording discards unsaved transcript and
-notes. A previously saved copy remains in **Saved meetings**.
+Meetings; with an unsaved transcript, navigation first offers **Save and leave**, **Discard and leave**, or **Continue reviewing**. The same decision protects work-tab changes, return to the island, Mini/Quick and normal window-close requests. A pending or failed save keeps the current meeting. Forced hiding or locking still revokes capture and clears temporary text. A previously saved copy remains in **Saved meetings**.
 
 ### Saved meetings and export
+
+Browsing **Saved meetings** keeps the current transcript, title and notes in memory. Return to **New recording** to continue reviewing or save. Finish or cancel capture/transcription before browsing the archive. Leaving Meetings requires an explicit save or discard decision when a transcript is unsaved.
+
 
 In a wide, tall window, selecting a saved meeting keeps the searchable list beside its detail.
 Smaller windows show the detail with **Back to saved meetings**, preserving the selection when
@@ -1328,7 +1336,7 @@ agent session. Both question tool names use the same typed request and content-f
 
 ### External agent setup
 
-On Linux, open **Dictation > Agents** and turn on **Agents may ask for a spoken answer**. It is off
+On Linux, open **Settings > Dictation > Agents** and turn on **Agents may ask for a spoken answer**. It is off
 on a new install and when upgrading without a saved choice. An MCP configuration alone cannot enable
 access. Turning it off cancels external questions, including pending recording or audited delivery;
 turning it on again requires a new question. A reply already handed off cannot be recalled: uncertain

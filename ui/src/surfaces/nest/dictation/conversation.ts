@@ -34,13 +34,28 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   followUp.type = "checkbox"; followUp.checked = false; followUp.dataset.voiceFollowUp = "";
   const followUpChoice = el("label", { class: "voice-conversation-automatic" }, followUp, followUpTitle);
   const route = createVoiceRoute(api?.routes, () => { if (!route.manual()) { automatic.checked = false; semantic.checked = false; followUp.checked = false; } draw(); });
-  const optionsTitle = el("h3");
-  const options = el("section", { class: "voice-conversation-options" }, optionsTitle, route.element, automaticChoice, automaticNote, followUpChoice, followUpNote, semanticChoice, semanticNote);
-  const content = el("div", { class: "voice-conversation-content" }, privacy, semanticFeedback, reply, review, options);
+  const optionsTitle = el("summary");
+  const options = el("details", { class: "voice-conversation-options" }, optionsTitle, automaticChoice, automaticNote, followUpChoice, followUpNote, semanticChoice, semanticNote);
+  const replyTitle = el("h3"), emptyReply = el("p", { class: "voice-conversation-empty" });
+  const exchange = el("section", { class: "voice-conversation-exchange" }, replyTitle, emptyReply, reply, review);
+  const setupTitle = el("summary");
+  const setup = el("details", { class: "voice-conversation-setup" }, setupTitle, route.element, options);
+  setup.open = true;
+  const processingTitle = el("summary");
+  const processing = el("details", { class: "voice-processing-details" }, processingTitle, privacy);
+  processing.open = true;
+  const content = el("div", { class: "voice-conversation-content" }, processing, semanticFeedback, el("div", { class: "voice-conversation-workbench" }, exchange, setup));
   content.tabIndex = 0; content.setAttribute("role", "region");
   const perch = el("span", { class: "voice-conversation-character" });
   perch.setAttribute("aria-hidden", "true"); perch.hidden = true;
-  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, el("h2", { class: "dictation-title" }, icon("chat", 18), title), about), el("div", { class: "voice-conversation-header-actions" }, perch, settings)), status, error, actions, content);
+  const routeSummary = el("p", { class: "voice-route-summary" });
+  processing.append(routeSummary);
+  const stageTitle = el("h3"), microphoneState = el("span", { class: "voice-microphone-state" });
+  const microphoneIcon = el("span", { class: "voice-conversation-mic" }, icon("mic", 28));
+  const scene = el("div", { class: "voice-conversation-scene" }, perch, microphoneIcon);
+  scene.setAttribute("aria-hidden", "true");
+  const stage = el("div", { class: "voice-conversation-stage" }, scene, el("div", { class: "voice-conversation-stage-copy" }, el("div", { class: "voice-conversation-stage-title" }, stageTitle, microphoneState), status, error));
+  const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, el("h2", { class: "dictation-title" }, icon("chat", 18), title), about), el("div", { class: "voice-conversation-header-actions" }, settings)), stage, actions, content);
   let view: VoiceConversation | null = null, active = false, pending = false, epoch = 0;
   let semanticAvailable = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -49,9 +64,30 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   function draw() {
     route.update(active, pending || running(view));
     title.textContent = t("Voice conversation");
+    routeSummary.textContent = route.summary();
+    processingTitle.textContent = t("Audio and processing details");
     content.setAttribute("aria-label", t("Voice conversation"));
     optionsTitle.textContent = t("Conversation options");
     status.dataset.voicePhase = view?.phase ?? "idle";
+    stage.dataset.voicePhase = failed ? "failed" : view?.phase ?? "idle";
+    const startingTurn = pending && (!view || !running(view) || view.phase === "waiting");
+    const microphoneOpen = view?.phase === "recording" || !!view?.routed && ["transcribing", "responding", "speaking", "interrupting", "waiting"].includes(view.phase);
+    stage.dataset.microphoneOpen = String(microphoneOpen);
+    microphoneState.textContent = microphoneOpen ? t("Microphone open") : startingTurn || view?.phase === "starting" ? t("Starting microphone…") : t("Microphone off");
+    microphoneIcon.replaceChildren(icon(view?.phase === "speaking" ? "sound" : view?.phase === "responding" || view?.phase === "transcribing" ? "chat" : "mic", 28));
+    stageTitle.textContent = !api ? t("Voice is unavailable")
+      : failed || view?.phase === "failed" ? t("Check voice setup")
+      : startingTurn ? t("Getting ready")
+      : view?.phase === "recording" ? t("Listening to you")
+      : view?.phase === "speaking" ? t("Zeca is speaking")
+      : view?.phase === "starting" || view?.phase === "preparing" ? t("Getting ready")
+      : view?.phase === "transcribing" || view?.phase === "responding" ? t("Preparing a reply")
+      : view?.phase === "recovery" ? t("Review recovered text")
+      : view?.phase === "waiting" || view?.phase === "finished" ? t("Your turn")
+      : view?.phase === "interrupting" ? t("Stopping the response") : t("Talk with Zeca");
+    replyTitle.textContent = t("Zeca's latest reply");
+    emptyReply.textContent = running(view) ? t("The reply appears here when it is ready.") : t("Start a turn when you are ready. Zeca's reply appears here.");
+    setupTitle.textContent = t("For this conversation");
     about.textContent = t("Finish each recording to hear Zeca. Record another turn to continue the same conversation.");
     privacy.textContent = t("Microphone audio and cached flock context may go to OpenAI. API charges apply. Voice never answers permission cards.");
     start.textContent = view?.phase === "waiting" ? t("Record another turn") : t("Start recording"); finish.textContent = view?.phase === "speaking" || view?.phase === "interrupting" ? t("Stop response") : t("Finish recording"); cancel.textContent = view?.phase === "waiting" ? t("End conversation") : t("Cancel"); settings.textContent = t("Voice conversation settings");
@@ -59,6 +95,14 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     finish.disabled = !active || pending || (view?.phase !== "recording" && view?.phase !== "speaking");
     cancel.disabled = !active || !running(view);
     settings.disabled = pending || running(view);
+    start.hidden = running(view) && view?.phase !== "waiting";
+    finish.hidden = !view || !["recording", "speaking", "interrupting"].includes(view.phase);
+    cancel.hidden = !running(view);
+    const focused = document.activeElement;
+    if ([start, finish, cancel].includes(focused as HTMLButtonElement) && (focused as HTMLElement).hidden) {
+      const next = !finish.hidden && !finish.disabled ? finish : !cancel.hidden && !cancel.disabled ? cancel : start;
+      next.focus({ preventScroll: true });
+    }
     start.classList.toggle("primary", !start.disabled); finish.classList.toggle("primary", !finish.disabled);
     automatic.disabled = !active || pending || running(view) || !route.manual();
     automaticChoice.hidden = automaticNote.hidden = !route.manual();
@@ -75,6 +119,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     automaticTitle.textContent = t("Finish automatically after a pause");
     automaticNote.textContent = t("Off by default for each app run. Uses local GPU preview and the installed speech detector. If unavailable, use Finish recording. Each new turn still needs your click.");
     status.textContent = !api ? t("Voice conversation is unavailable.")
+      : startingTurn ? t("Starting microphone…")
       : view?.phase === "preparing" ? t("Preparing local semantic detection. Microphone is off.")
       : view?.phase === "starting" ? t("Starting microphone…")
       : view?.phase === "recording" && view.followUp && view.reason === "auto-unavailable" ? t("Answer microphone open for up to eight seconds. Automatic finish is unavailable. Use Finish recording before expiry, or cancel.")
@@ -103,6 +148,8 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     error.hidden = !failed;
     reply.textContent = view?.reply ?? ""; reply.hidden = !reply.textContent;
     review.hidden = !draft.value;
+    emptyReply.hidden = !!reply.textContent || !!draft.value;
+    element.classList.toggle("voice-has-content", !!reply.textContent || !!draft.value || running(view));
     draftTitle.textContent = t("Review recovered text");
     copy.textContent = t("Copy text"); copy.disabled = !draft.value.trim();
     copied.textContent = copyState === "done" ? t("Copied") : copyState === "failed" ? t("Could not copy the text. Select and copy it manually.") : "";
@@ -114,7 +161,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     if (active && running(view)) timer = setTimeout(() => void poll(), 500);
   }
   function accept(value: VoiceConversation) {
-    if (running(view) && !running(value)) { route.clearConsent(); semantic.checked = false; followUp.checked = false; }
+    if (running(view) && !running(value)) { setup.open = true; processing.open = true; route.clearConsent(); semantic.checked = false; followUp.checked = false; }
     view = value;
     if (value.draft !== null) draft.value = value.draft;
     draw(); schedule();
@@ -138,7 +185,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       const id = view?.phase === "waiting" ? view.id : null;
       const value = id ? await api.control(id, "next").then(() => api.status(id)) : await api.start(automatic.checked, route.selection(), semantic.checked, followUp.checked);
       if (!active || mine !== epoch) { stop(value.id); return; }
-      draft.value = ""; accept(value);
+      draft.value = ""; setup.open = false; processing.open = false; accept(value);
     } catch { if (mine === epoch) { if (view && running(view)) stop(view.id); view = null; route.expire(); semantic.checked = false; followUp.checked = false; failed = "start"; } }
     finally { if (mine === epoch) { pending = false; draw(); } }
   };
@@ -156,7 +203,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   };
   cancel.onclick = () => {
     if (cancel.disabled || !view) return;
-    ++epoch; clearTimeout(timer); stop(view.id); route.clearConsent(); semantic.checked = false; followUp.checked = false; view = { ...view, phase: "cancelled", draft: null, reply: null }; pending = false; draw();
+    ++epoch; clearTimeout(timer); setup.open = true; stop(view.id); route.clearConsent(); semantic.checked = false; followUp.checked = false; view = { ...view, phase: "cancelled", draft: null, reply: null }; pending = false; draw();
   };
   copy.onclick = async () => {
     if (!api || copy.disabled) return;
@@ -177,16 +224,16 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
       void api.options().then(value => { if (active && mine === epoch) { semanticAvailable = value.semantic; draw(); } }).catch(() => {});
     }
     if (!on) {
-      ++epoch; clearTimeout(timer); pending = false; route.leave(); semantic.checked = false; followUp.checked = false;
+      ++epoch; clearTimeout(timer); setup.open = true; pending = false; route.leave(); semantic.checked = false; followUp.checked = false;
       if (view) { stop(view.id); if (running(view)) view = { ...view, phase: "cancelled", draft: null, reply: null }; }
     }
     draw();
   }
   draw();
   return { element, relabel: draw, setActive, perch, character: () => {
-    if (!active || !running(view)) return null;
+    if (!active || !api) return null;
     return { element: perch, clip: view?.phase === "speaking" ? "speak"
       : view?.phase === "recording" ? "listen"
-      : view?.phase === "waiting" || view?.phase === "interrupting" ? "idle" : "think" };
+      : view && ["starting", "preparing", "transcribing", "responding"].includes(view.phase) ? "think" : "idle" };
   } };
 }

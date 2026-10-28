@@ -176,6 +176,9 @@ try {
   const refresh = async () => { const entry = timers.entries().next().value; assert.ok(entry, "An active session needs a heartbeat"); timers.delete(entry[0]); entry[1](); await tick(); };
   assert.equal(starts.length, 0);
   assert.ok(work.element.querySelector('.voice-conversation-options').textContent.includes('Conversation options'));
+  assert.equal(work.element.querySelector('.voice-conversation-options').tagName, 'DETAILS', 'Per-conversation options use progressive disclosure');
+  assert.ok(!work.element.querySelector('.voice-conversation-options').open, 'Conversation options start folded');
+  assert.ok(!work.element.querySelector('.voice-conversation-options').contains(work.element.querySelector('.voice-route')), 'Microphone routing and required consent remain visible');
   assert.equal(work.element.querySelector('.voice-conversation-actions').contains(button('Voice conversation settings')),false,'Settings belongs to the heading, separate from turn controls');
   work.setActive(true); await click("Voice conversation settings"); assert.equal(configured, 1);
   const automatic = nodes(work.element).find(n => n.tagName === "INPUT" && "voiceAutomatic" in n.dataset);
@@ -191,6 +194,8 @@ try {
   work.setActive(true);
   const second = click("Start recording"); starts[1].resolve(state("2", "recording")); await second;
   assert.equal(button("Start recording").disabled, true);
+  assert.equal(work.element.querySelector(".voice-microphone-state").textContent, "Microphone open");
+  assert.equal(work.element.querySelector(".voice-conversation-setup").open, false, "Session setup folds after explicit start");
   assert.equal(button("Finish recording").disabled, false);
   assert.equal(button("Finish recording").classList.contains("primary"), true);
   assert.equal(button("Start recording").classList.contains("primary"), false);
@@ -221,6 +226,7 @@ try {
   assert.equal(button("Finish recording").disabled, true);
   assert.equal(button("End conversation").disabled, false);
   assert.ok(work.element.textContent.includes("Microphone off."));
+  assert.equal(work.element.querySelector(".voice-microphone-state").textContent, "Microphone off");
   assert.ok(timers.size > 0, "Waiting retains the page lease without reopening capture");
   const following = click("Record another turn"); await tick();
   assert.deepEqual(controls.at(-1), { id: "6", action: "next" });
@@ -241,6 +247,7 @@ try {
   assert.ok(work.element.textContent.includes("Response stopped. Microphone off."));
   await refresh(); polls.at(-1).resolve(state("6", "waiting", { routed: true, reason: "interrupted" })); await tick();
   assert.ok(work.element.textContent.includes("Response stopped. Your microphone remains open."));
+  assert.equal(work.element.querySelector(".voice-microphone-state").textContent, "Microphone open", "Routed waiting must still advertise the open microphone");
   assert.ok(!work.element.textContent.includes("Response stopped. Microphone off."));
   assert.equal(starts.length, 6, "Stopping output cannot open another microphone/session");
   await click("End conversation");
@@ -268,9 +275,10 @@ console.log("check-realtime-settings: explicit work-page controls, duplicate sta
   const choose = (field, value) => { const e = nodes(work.element).find(n => n.dataset.voiceRoute === field); if (e.type === "checkbox") e.checked = value; else e.value = value; e.fire("change"); return e; };
   const click = async text => { const b = button(text); assert.ok(b, text); if (!b.disabled) await b.onclick?.(); };
   choose("mode", "headphones");
-  assert.equal(lists, 0, "Changing mode cannot inspect devices or open audio");
+  assert.equal(lists, 1, "Choosing a continuous mode lists devices without opening audio");
+  assert.equal(starts.length, 0, "Listing devices cannot start capture");
   assert.equal(button("Start recording").disabled, true);
-  const loading = click("Refresh audio devices"); listing.resolve(inventory); await loading;
+  listing.resolve(inventory); await tick();
   choose("consent", true); assert.equal(button("Start recording").disabled, true, "Device selection is explicit too");
   choose("source", "mic"); choose("sink", "out");
   assert.equal(button("Start recording").disabled, true, "Changing devices revokes previous consent");
