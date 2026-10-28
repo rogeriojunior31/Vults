@@ -1,5 +1,10 @@
 # Plan: Dictation
 
+The standalone UI prototype was removed on 2026-10-27 at the maintainer's request.
+Its acceptance records below are historical, not a current visual acceptance
+target. Current UI work follows [DESIGN.md](../../DESIGN.md), the production
+components and running-app review.
+
 Drafted on 2026-10-16; V0 decisions are being recorded during N3. V0.9 accepted the prototype;
 production desktop acceptance remains separate. One plan for the Dictation area: dictation into any app, your words
 (dictionary, replacements, snippets), styles, statistics and diagnostics, meetings, talking with Zeca
@@ -11,9 +16,8 @@ context, guarded X11/Plasma Wayland insertion and exact tmux delivery, measured 
 History, Settings, spoken code/cancellation and music control. The maintainer reported validation
 of V1.18 on 2026-10-17. V1.19 reconciles the guide, settings reference and architecture with the
 runtime and records regression evidence; unreported cells of its full desktop matrix remain
-open rather than inferred from that acceptance. The larger later-phase UI still lives in the
-single accepted prototype (`design/ui-motion-proposal/dictation.js`): Talk with Zeca remains a later
-work page; Meetings has its bounded recording/transcript check, Voice commands its retained-history
+open rather than inferred from that acceptance. The removed prototype illustrated the larger
+later-phase UI: Talk with Zeca remains a later work page; Meetings has its bounded recording/transcript check, Voice commands its retained-history
 page, and Styles its configuration editor.
 V2.1/V2.2 now provide local Your words storage and the final-text pipeline. V2.3 adds optional
 dictionary context, qualified only for Turbo/fixed English by synthetic WER and silence fixtures,
@@ -381,12 +385,9 @@ remain separate. The backend follows each substep's prerequisites.
     audio from in-memory dictation, and summary copy states that a transcript reaches the model;
   - clipboard caveats, rolling quotas and bounded follow-up copy match the accepted ADRs,
     with pt-BR/es/zh translations. The coverage manifest follows each control's actual owner.
-- Local review: run `npm ci`, `node design/ui-motion-proposal/build.mjs`, then
-  `node design/ui-motion-proposal/verify.mjs --missing`. Serve the existing prototype with
-  `node node_modules/vite/bin/vite.js design/ui-motion-proposal --host 127.0.0.1 --port 4173 --strictPort`
-  and open `http://127.0.0.1:4173/vults-ui-proposal.html`. Choose Lab, then Dictation. Prototype
-  controls expose Light/Black, narrow/short sizes and island states. This is sample data: no
-  microphone, paste, portal or provider is exercised by a simulation.
+- Historical local review used the standalone prototype with sample data and controls for
+  themes, narrow/short sizes and island states. It did not exercise a microphone, paste,
+  portal or provider. The prototype and its build/verifier were removed on 2026-10-27.
 - Automated evidence: the UI build and existing prototype verifier pass, including all 150
   features, 134 screen placements, new navigation/consent/Settings-owner checks, retained focus
   and translations. The maintainer reviewed the served prototype and approved it. P12 moved

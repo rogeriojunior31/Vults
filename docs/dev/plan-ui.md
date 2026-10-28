@@ -1,5 +1,10 @@
 # UI implementation sequence
 
+The standalone UI prototype was removed on 2026-10-27 at the maintainer's request.
+Prototype references below record earlier implementation and review work; they are
+not a current visual acceptance target. Use [DESIGN.md](../../DESIGN.md), the
+production components and running-app review for current UI changes.
+
 Reviewed 2026-10-13 against `a03187f6`, the current production surfaces, and the
 Compact/Nest proposal. This is the delivery breakdown of the UI rows in
 [Plan Zeca](plan-zeca.md#ui-delivery-sequence); Plan Zeca remains the roadmap.
