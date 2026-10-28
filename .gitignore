@@ -10,3 +10,7 @@ app/gen/
 test-results/
 playwright-report/
 __pycache__/
+
+# Local design-tool consent and review snapshots.
+.impeccable/config.local.json
+.impeccable/critique/
