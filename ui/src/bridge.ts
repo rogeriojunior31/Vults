@@ -92,7 +92,12 @@ export interface NowPlaying {
   artist: string | null;
   playing: boolean;
 }
-/** Speech to text in the chat: the models, and whether one is ready. */
+/** Read-only command interpretation; recognition never grants execution. */
+export interface CommandPreview {
+  status: string;
+  actions: { action: string; target: string | null; value: number | null; status: string; candidates: string[] }[];
+}
+/** Shared local speech model/language inventory; readiness does not verify microphone capture. */
 export interface VoiceStatus {
   models: { id: string; label: string; size: number; installed: boolean }[];
   selected: string | null;
@@ -719,6 +724,20 @@ export const Bridge = {
   mediaControl: (action: MediaAction) => invoke<void>("media_control", { action }),
   /** The song on screen now, for an island that loads after it was sent. */
   mediaNow: () => invoke<NowPlaying | null>("media_now"),
+  commandCheck: (text: string) => invoke<CommandPreview>("voice_command_check", { text }),
+  commandReadiness: async (includeMicrophones = false) => {
+    const [voice, settings, microphones] = await Promise.allSettled([
+      Bridge.voiceStatus(), Bridge.appSettings(), includeMicrophones ? Bridge.dictationMicrophones() : Promise.resolve(null),
+    ]);
+    if (voice.status === "rejected" && settings.status === "rejected" && (!includeMicrophones || microphones.status === "rejected")) {
+      throw new Error("Could not read command setup.");
+    }
+    return {
+      voice: voice.status === "fulfilled" ? voice.value : null,
+      settings: settings.status === "fulfilled" ? settings.value : null,
+      microphones: microphones.status === "fulfilled" ? microphones.value : null,
+    };
+  },
   voiceStatus: () => invoke<VoiceStatus>("voice_status"),
   voiceDownload: (id: string) => invoke<void>("voice_download", { id }),
   voiceSelect: (id: string) => invoke<void>("voice_select", { id }),

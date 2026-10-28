@@ -46,6 +46,9 @@ jobs:
           node scripts/check-dictation-words.mjs
           node scripts/check-dictation-statistics.mjs
           node scripts/check-dictation-diagnostics.mjs
+          node scripts/check-voice-command-help.mjs
+          node scripts/check-voice-command-readiness.mjs
+          node scripts/check-voice-command-check.mjs
           node scripts/check-dictation-history.mjs
           node scripts/check-dictation-island.mjs
           node scripts/check-dictation-status.mjs

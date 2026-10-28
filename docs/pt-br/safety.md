@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 8839804dc5af -->
+<!-- source: e881ed5c40ac -->
 
 O que o Vults promete:
 
@@ -74,6 +74,12 @@ O que o Vults promete:
   depois escolha explicitamente Gerar resumo na aba Resumo; gravar/transcrever sozinho nunca pede
   um resumo. Cancelar as notas ou
   uma falha na requisição preserva a transcrição local.
+- **Verificar uma frase de voz nunca a executa.** A checagem digitada do Ditado usa o mesmo parser
+  local e resolvedor de nomes dos comandos falados. Não grava áudio, responde cards, executa ações,
+  escreve no histórico de comandos nem envia ao Chat. A busca de aplicativos exige a opção já
+  existente. Reconhecimento não verifica disponibilidade nativa. Silenciar notificações do projeto,
+  áudio do reprodutor selecionado e saída padrão do computador são escopos separados
+  ([Comandos de voz](guide/dictation.md#voice-commands-development-status)).
 - **O Now playing fica desligado até você ligar.** Aí o app lê seus players de mídia pelo
   session bus (MPRIS no Linux) para mostrar a música; isso nunca é guardado nem enviado para lugar nenhum.
 - **O que o app pede por conta própria passa por um portão só.** Uma requisição feita sem um

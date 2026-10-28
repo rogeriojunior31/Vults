@@ -1599,3 +1599,59 @@ fn cancel_key_invalidates_native_work_after_transcription_has_finished() {
     assert!(!ticket.valid());
     assert!(!ticket.claim_native());
 }
+
+#[test]
+fn command_and_dictation_routes_preserve_their_own_text_processing_contract() {
+    for heard in [
+        "pause media",
+        "mute notifications for web",
+        "open app Go Go Go Go Go Go",
+        "open project O Boticario",
+        "abrir aplicativo A Vida",
+        "abrir proyecto La Casa",
+        "open app status slash bar",
+    ] {
+        for key in ["talk", "talk-command"] {
+            for replace in [false, true] {
+                let mut h = Harness::new();
+                *h.fake.0.transcript.lock().unwrap() = heard.into();
+                if replace {
+                    h.fake.0.config.lock().unwrap().words.replacements =
+                        vec![(heard.into(), "approve".into())];
+                }
+                let ticket = h.state.key_at(key, true, h.state.origin).expect("Capture starts");
+                let config = h.fake.0.config.lock().unwrap().clone();
+                assert_eq!(config.cut_repeats_for(&ticket), key == "talk", "{heard}");
+                h.next();
+                h.state
+                    .key_at(key, false, h.state.origin + Duration::from_millis(300));
+                h.next();
+                h.worker.advance(Duration::from_millis(900));
+                h.next();
+                if key == "talk-command" {
+                    assert_eq!(*h.fake.0.commands.lock().unwrap(), [heard], "{heard}");
+                    assert!(h.fake.0.copies.lock().unwrap().is_empty());
+                    assert!(h.state.control.lock().unwrap().last.is_none());
+                } else {
+                    let expected = if replace { "approve" } else { heard };
+                    assert_eq!(*h.fake.0.copies.lock().unwrap(), [expected], "{heard}");
+                    assert!(
+                        h.fake.0.commands.lock().unwrap().is_empty(),
+                        "Dictation never dispatches a command, even when a user replacement produces one"
+                    );
+                    assert_eq!(h.state.control.lock().unwrap().last.as_deref(), Some(expected));
+                }
+                assert!(!h.state.active());
+            }
+        }
+    }
+    let h = Harness::new();
+    let dictation = h.state.key("talk", true).unwrap();
+    assert!(
+        !Config {
+            cut_repeats: false,
+            ..Default::default()
+        }
+        .cut_repeats_for(&dictation)
+    );
+}

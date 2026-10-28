@@ -296,6 +296,13 @@ impl Default for Config {
     }
 }
 
+impl Config {
+    fn cut_repeats_for(&self, ticket: &Ticket) -> bool {
+        // Repeated words can identify a different app/project; command names must not be shortened.
+        self.cut_repeats && !ticket.is_command()
+    }
+}
+
 impl Backend for Native {
     type Recording = Recording;
     type Keys = vults_platform::raw_keys::Listener;
@@ -416,7 +423,7 @@ impl Backend for Native {
             capture.audio(),
             move || crate::voice::transcriber(&loader, &model),
             config.language.clone(),
-            config.cut_repeats,
+            config.cut_repeats_for(ticket),
             move || {
                 if qualified {
                     prompt_words(&words, project.as_deref())
@@ -474,7 +481,7 @@ impl Backend for Native {
                         config.language.as_deref(),
                         config.vad.as_deref(),
                         ticket.stop(),
-                        config.cut_repeats,
+                        config.cut_repeats_for(ticket),
                         &vocabulary_words(&config, id),
                     )
                     .map(|text| {

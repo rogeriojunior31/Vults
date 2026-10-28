@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: b47e6cb1d170 -->
+<!-- source: 8e36c822fe7c -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -297,8 +297,10 @@ sistema** para limpar a preferência. A escolha fica salva neste computador e é
 gravação; uma gravação ativa mantém sua entrada. Abrir a página ou atualizar nunca inicia uma gravação.
 
 **Dictation > Voice** também reúne **Remover repetições em sequência** e **Tentar
-com Base quando o ditado vier vazio**; as duas opções vêm ligadas. Desligar a remoção mantém as
-repetições na prévia e no texto final. Marcações de som conhecidas e frases isoladas associadas
+com Base quando o ditado vier vazio**; as duas opções vêm ligadas. A remoção de repetições vale
+apenas para ditado comum. A prévia e a decodificação final dos comandos preservam palavras repetidas
+para não encurtar silenciosamente nomes de aplicativos/projetos; o filtro compartilhado de marcações
+de som e silêncio continua ativo. Desligar a remoção mantém as repetições na prévia e no texto final. Marcações de som conhecidas e frases isoladas associadas
 a silêncio continuam sendo removidas. Desligar a nova tentativa com Base pula a verificação extra
 de fala e a segunda transcrição de um resultado vazio. As escolhas ficam salvas localmente e são
 capturadas ao iniciar uma nova gravação independente; alterá-las nunca muda um ditado ativo nem
@@ -1184,10 +1186,68 @@ no desktop continua pendente.
 
 A V8.5 acrescenta **Ditado > Comandos de voz**: uma visão pesquisável dos comandos/resultados retidos,
 com Copiar/Excluir explícitos e sem repetição. Compartilha o prazo do Histórico e sua confirmação de
-exclusão individual. **O que você pode dizer** lista as frases compatíveis; **Dicionário** abre o mesmo
+exclusão individual. **O que você pode dizer** lista as frases compatíveis. Busque os exemplos
+traduzidos ou filtre por bando, mídia, áudio do computador, aplicativos ou segurança dos cards.
+A busca e o escopo se combinam; os exemplos nunca executam um comando. Cada tela preserva seus
+filtros ao navegar dentro do app. **Dicionário** abre o mesmo
 editor de nomes/substituições do ditado. O link de configurações abre **Ditado**, o destino
 com autoridade para alterar as escolhas. A página filtra os 500 ditados retidos mais recentes; comandos
 mais antigos podem ficar fora dessa janela.
+
+Abra **Preparo dos comandos** em qualquer uma das telas de comandos para comparar os atalhos reais
+de comandos e ditado. **Verificar preparo dos comandos** consulta o modelo/idioma de voz local e as
+opções de ações sem gravar ou executar comandos. A versão em Configurações também pode listar as
+entradas; o Nest mantém a disponibilidade do microfone como desconhecida e oferece links para as
+páginas existentes de Voz e Diagnóstico. Encontrar uma entrada não comprova a captura, e ativar uma
+ação não verifica seu backend nativo. Dados ausentes ou ilegíveis continuam desconhecidos. São
+retratos manuais; verifique novamente após mudar a configuração. Sair da página descarta o retrato
+e ignora respostas tardias.
+
+**Verificar um comando** aceita uma frase digitada nas duas telas existentes de comandos e usa o
+mesmo parser limitado e resolvedor de nomes de projetos/agentes/aplicativos dos comandos falados.
+Os resultados mostram as ações na ordem falada, destinos ou ambiguidades, volume inválido,
+negações, pedidos entre aspas e escopos incompatíveis. A checagem nunca grava áudio, executa
+efeitos, responde cards, envia ao Chat ou escreve no histórico de comandos. Usa os aliases salvos
+do dicionário e o retrato atual do bando; nomes de aplicativos só são consultados quando os comandos
+de voz de aplicativos estão ativos. Com a busca de aplicativos desligada, Abrir resolve apenas projetos ativos; com ela ligada,
+projetos e aplicativos com nomes correspondentes exigem esclarecimento.
+As linhas de áudio descrevem o escopo pretendido, não um reprodutor, dispositivo ou backend nativo
+verificado. O contexto de repetir/desfazer não é lido nem alterado. Alterar a frase ou sair da página
+invalida resultados pendentes; a frase local permanece na sua tela até a janela fechar. O limite é
+4.096 bytes UTF-8. Frases muito longas e caracteres de controle que não são espaços em branco
+são rejeitados no campo antes da consulta, com uma mensagem de validação associada. Espaços em
+branco permitidos são enviados sem alteração; a validação nunca reescreve a frase silenciosamente. Reconhecimento é uma explicação, não comprovação de que uma ação está ativa ou
+pode terminar.
+A checagem lê aliases do dicionário apenas quando precisa resolver destinos. Frases só de reprodução
+e explicações locais de recusa ou incompatibilidade pulam essa leitura. Aplicativos instalados só
+são consultados em frases compatíveis de Abrir/aplicativo com a opção existente ativada. Com essa
+busca desligada, um pedido explícito de aplicativo informa o escopo indisponível sem ler aliases.
+Se uma leitura necessária falhar, a checagem informa falha em vez de adivinhar um destino.
+Para nomes que começam com artigos ou palavras reservadas, diga o escopo explicitamente:
+`abrir aplicativo A Vida` e `abrir projeto A Vida` preservam o nome completo. Coloque artigos
+gramaticais antes do escopo (`abrir o aplicativo Firefox`), não entre o escopo e o nome literal.
+A mesma regra vale nas formas compatíveis em inglês e espanhol e para destinos explícitos de
+notificações, como `silenciar as notificações do The Editor`.
+Mudanças notificadas no modelo de voz, microfone ou opções de ações limpam os resultados de preparo
+e checagem de frases, invalidam respostas pendentes e pedem uma nova verificação. A frase digitada
+permanece na sua tela. Essa invalidação nunca inicia outra checagem automaticamente.
+Enquanto uma consulta estiver pendente, use **Cancelar verificação de preparo** ou **Cancelar
+verificação da frase** para parar de esperar e tentar novamente de forma explícita. O cancelamento
+preserva a frase digitada e descarta respostas tardias daquela consulta, inclusive depois que uma
+nova já começou. Leituras locais ou trabalho do parser já admitidos podem terminar em segundo
+plano; cancelar nunca executa uma ação. Se Cancelar estiver com foco do teclado, concluir/cancelar
+devolve o foco ao botão que inicia aquela checagem.
+Mudanças ao vivo nas identidades das sessões, nomes de projetos ou pastas também limpam a
+interpretação nas duas telas e rejeitam respostas para a lista antiga de destinos. Atualizações
+comuns de atividade/progresso e reordenação da lista preservam a leitura. Isso cobre o retrato do
+bando; o inventário de aplicativos instalados continua sendo uma consulta manual, e reconhecimento
+não comprova disponibilidade nativa.
+
+Diga o escopo explicitamente ao falar de som: `silenciar as notificações do web` afeta notificações
+do projeto; `pausar a música` afeta o reprodutor selecionado; `silenciar o computador` afeta a saída
+padrão do computador. A forma curta antiga `silenciar web` continua significando notificações do
+projeto. As frases explícitas funcionam em português, inglês e espanhol, preservando os nomes dos
+projetos.
 
 **Ditado > Comandos de voz** reúne:
 
@@ -1211,7 +1271,7 @@ aparecem no Chat atual, com seus cards de ferramentas e ação Parar normais. O 
 guarda o estado do envio, sem duplicar a resposta transmitida. Para cancelar um turno do Chat já
 admitido, use Parar no próprio Chat.
 
-Para validar localmente, teste `próxima sessão`, `quem está esperando?`, `silenciar web`, `o mesmo para
+Para validar localmente, teste `próxima sessão`, `quem está esperando?`, `silenciar as notificações do web`, `o mesmo para
 docs` e `desfazer` com projetos ativos correspondentes. Teste um nome ambíguo e responda uma opção
 oferecida; aguarde 90 segundos e confira a expiração. `aprovar` e `próxima sessão e depois aprovar`
 devem recusar sem responder a um card pendente, com qualquer escolha de envio. Com o envio desligado,

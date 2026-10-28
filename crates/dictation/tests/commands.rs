@@ -692,3 +692,89 @@ fn leading_negations_never_become_commands_but_names_keep_their_words() {
     assert_eq!(parse("not sure what api is doing"), Parsed::NotCommand);
     assert_eq!(parse("what does do not pause music mean"), Parsed::NotCommand);
 }
+
+#[test]
+fn explicit_project_notification_phrases_do_not_control_audio() {
+    for (phrase, on) in [
+        ("mute notifications for web", true),
+        ("unmute notifications for web", false),
+        ("silenciar as notificacoes do web", true),
+        ("silenciar as notifica\u{e7}\u{f5}es do web", true),
+        ("dessilenciar as notificacoes do web", false),
+        ("silenciar las notificaciones de web", true),
+        ("desilenciar las notificaciones de web", false),
+    ] {
+        assert_eq!(
+            parse(phrase),
+            Parsed::Commands(vec![Command::SetPreference {
+                target: "web".into(),
+                preference: Preference::Mute,
+                on,
+            }]),
+            "{phrase}"
+        );
+    }
+    assert_eq!(parse("mute notifications for"), Parsed::NotCommand);
+    assert_eq!(
+        parse("mute project notifications for sale"),
+        Parsed::Commands(vec![Command::SetPreference {
+            target: "notifications for sale".into(),
+            preference: Preference::Mute,
+            on: true,
+        }])
+    );
+    assert_eq!(parse("do not mute notifications for web"), Parsed::Negated);
+    assert_eq!(
+        parse("mute notifications for web and then approve"),
+        Parsed::Refused
+    );
+}
+
+#[test]
+fn explicit_namespaces_preserve_articles_and_reserved_words_inside_names() {
+    for name in [
+        "The Editor",
+        "O Boticario",
+        "A Vida",
+        "La Casa",
+        "Project Alpha",
+        "Session One",
+    ] {
+        for prefix in ["open app", "abrir aplicativo", "abrir la aplicacion"] {
+            assert_eq!(
+                parse(&format!("{prefix} {name}")),
+                one(Command::Application(normalize(name)))
+            );
+        }
+        for prefix in [
+            "mute notifications for",
+            "silenciar as notificacoes do",
+            "silenciar las notificaciones de",
+        ] {
+            assert_eq!(
+                parse(&format!("{prefix} {name}")),
+                one(Command::SetPreference {
+                    target: normalize(name),
+                    preference: Preference::Mute,
+                    on: true,
+                })
+            );
+        }
+        for prefix in [
+            "open project",
+            "abrir projeto",
+            "abrir el proyecto",
+            "open session",
+        ] {
+            assert_eq!(
+                parse(&format!("{prefix} {name}")),
+                one(Command::Focus(normalize(name)))
+            );
+        }
+    }
+    assert_eq!(
+        parse("open the app Firefox"),
+        one(Command::Application("firefox".into()))
+    );
+    assert_eq!(parse("open the project api"), one(Command::Focus("api".into())));
+}

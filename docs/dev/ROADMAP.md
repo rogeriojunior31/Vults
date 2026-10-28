@@ -17,19 +17,19 @@ the tasks:
 | [plan-github-luna.md](plan-github-luna.md) | GH0 to GH9 delivery sequence |
 | [plan-field-fixes.md](plan-field-fixes.md) | FF1 to FF11: fixes and ideas taken from a sibling app |
 
-## Where we are (2026-10-26)
+## Where we are (2026-10-27)
 
-- Released: 0.1.8 (tag `v0.1.8`). `main` (at `22a2e68b`, including the roadmap consolidation) also carries N0 to N3, UX7, UX8 (agent
+- Released: 0.1.8 (tag `v0.1.8`). `main` (at `dae212de`, including stabilization PR #387) also carries N0 to N3, UX7, UX8 (agent
   profiles, specialist Chat, Codex, scoped GitHub), GH0 to GH8 and the Dictation workspace refinement
   (#385), all under *Unreleased* in the changelog.
 - Next target: **0.1.9**, selected by the owner on 2026-10-26 and recorded in
   [ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md). It ships the validated current-main
   snapshot plus accepted stabilization fixes. Fixed stage-to-version numbers are superseded;
-  later versions are decided at their release gate. This decision remains local on
-  `fix/release-019-stabilization` until review and merge.
+  later versions are decided at their release gate. The decision and stabilization changes merged
+  in PR #387; main CI and Security passed.
 - On 2026-10-26 the owner added **VC1 to VC6** (natural voice commands, media and app actions)
   to the 0.1.9 scope before publication. These are planned work, not completed V8 acceptance.
-- Package versions remain **0.1.8** until REL-2. Security must pass after the local fix is merged;
+- Package versions remain **0.1.8** until REL-2. Security passed on the merged main;
   FF1 and FF5 still need their native desktop acceptance, as do the required R3/ACC gates. Choosing
   0.1.9 does not close those gates or authorize tagging/publication.
 - Many tasks are implemented with automated evidence and wait only for a person at the desktop: they
@@ -51,7 +51,6 @@ The queue, in order. Take the first task whose *Needs* are met.
 
 | # | Task | P | Size | Why first |
 | --- | --- | --- | --- | --- |
-| 1 | REL-1 Review and merge the 0.1.9 release plan | P0 | S | Decision recorded locally; merge pending |
 | 2 | FF1 Canvas follows the monitor's scale | P0 | S | Certain bug, small fix |
 | 3 | FF5 Keep *Copied* dictation out of clipboard history | P1 | S | Privacy, small fix |
 | 4 | VC1 to VC6 Natural voice commands | P0 | S/M each | Owner requested this before 0.1.9; execute in order |
@@ -67,22 +66,6 @@ The queue, in order. Take the first task whose *Needs* are met.
 
 ## Phase 0 — Release gate
 
-### REL-1 · Choose the release plan
-`P0 · S · Needs: —`
-- [x] 2026-10-26: the owner selected **0.1.9** as the next stabilization release from current main,
-  including its already-merged N0-to-N3 work. Later versions follow bounded release candidates and
-  their acceptance gates, rather than reserving a number for each phase.
-- [x] Record the dated decision in [ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md), align
-  ADR 0031's release clause and both reviewed pt-BR translations, and update *Where we are*.
-- [ ] Review and merge the decision with the stabilization branch. On merge, move REL-1 to
-  `changelog-dev.md`. R3, native acceptance, Security and REL-2 remain separate pending work.
-
-Local validation (2026-10-26): ADR links, History anchors and reviewed translation source hashes
-pass. UI build, all 19 renderer checks, workspace formatting/Clippy/tests, feature-enabled evals
-and repository guards pass. Package/version files and lockfiles are unchanged at 0.1.8.
-
-**Done when:** the ADR records the plan and this section matches it.
-
 ### R3 · Release smoke
 `P0 · S · Needs: REL-1, VC6`
 - [x] 2026-10-26 local Security triage: all 16 Gitleaks findings are synthetic redaction fixtures
@@ -90,7 +73,7 @@ and repository guards pass. Package/version files and lockfiles are unchanged at
   historical occurrences; a full-history scan passes with Gitleaks 8.24.3. New same-path PAT and
   generic-key canaries still fail detection. `scripts/check-secret-fixtures.sh` runs after Gitleaks
   in Security, and PR changes to scanner configuration, exceptions or this check trigger it.
-  Pending: merge this fix and confirm Security on main. No real credential was identified among
+  Merged in PR #387; Security passed on main at `dae212de`. No real credential was identified among
   these 16 findings; no credential validation request or history rewrite was performed.
 - [x] 2026-10-26 local production-package preflight: built Debian and RPM candidates with
   `npm run bundle:linux`. The first archive checks found LICENSE/NOTICE absent from both; the Linux
@@ -767,46 +750,98 @@ real microphone, Firefox playback, transcription accuracy or latency. No referen
 ### VC4 · Explain commands where people use them
 `P0 · S · Needs: VC3`
 
-- [ ] Refine the existing Dictation > Voice commands / Command settings views, not a new screen:
+**Current status (2026-10-27):** the five implementation items below are present locally with
+recorded automated evidence. VC4 is **not accepted or closed**: running-app light/dark/narrow and
+keyboard review is still unavailable. Do not extend the check UI with further discretionary
+refinements. Consolidate the existing VC4/VC5 diff and validation evidence, fix demonstrated defects
+as one bounded batch, then deliver that candidate for native acceptance.
+
+- [x] Refine the existing Dictation > Voice commands / Command settings views, not a new screen:
   show the actual shortcut, speech transcription followed by local interpretation, availability,
   local-action switches and searchable examples by flock/media/computer/apps.
-- [ ] Put a compact readiness summary beside command usage: active speech model/language, actual
+- [x] Put a compact readiness summary beside command usage: active speech model/language, actual
   command versus dictation shortcut, microphone availability and required local-action switches.
   Link to the existing Voice/Keyboard shortcuts/Diagnostics owners; do not duplicate editors.
-- [ ] Provide a local command check using the same parser/resolver with no execution or Chat
+- [x] Provide a local command check using the same parser/resolver with no execution or Chat
   handoff: show heard/typed phrase, recognized action and target, ambiguity or unsupported reason.
   Keep examples searchable by existing scope and treat examples as read-only, never execution.
-- [ ] Replace misleading project-mute examples with explicit notification wording. Show what was
+- [x] Replace misleading project-mute examples with explicit notification wording. Show what was
   heard, interpretation/target, pending clarification, completion or actionable error through the
   existing caption/history. Never show Done on queued or failed native work. Keep Mini height fixed,
   avoid duplicate feedback between surfaces and preserve draft/history retention choices.
-- [ ] Translate every new sentence to pt-BR/es/zh. Update both Dictation guides, settings/safety
+- [x] Translate every new sentence to pt-BR/es/zh. Update both Dictation guides, settings/safety
   references and README feature rows to describe the actual supported local actions and their limits.
+
+- [ ] Accept the implementation in the running Linux app: light/dark, minimum/wide layouts,
+  keyboard focus, long results and clarification/failure readability. Automated implementation
+  checks above do not complete this gate or certify microphone/native action behavior.
 
 **Done when:** native light/dark review shows readable Command/clarification/failure states and
 clear scope at minimum and wide sizes; no Settings redirect is needed merely to read a result.
 The command check performs no native effect or provider call. Copied/Inserted and queued/completed
 states remain distinct, and long heard text does not displace Finish/Cancel or target choices.
 
+Consolidated implementation/review evidence (2026-10-27):
+
+- Both existing command views share scope/search examples, actual shortcuts, a read-only setup
+  snapshot and the same bounded parser/Catalog resolver for typed checks. Only Settings enumerates
+  microphones. Unknown capture/backend availability is never presented as verified readiness.
+- Checks preserve drafts, support explicit cancellation/retry, reject invalid control/overlong input
+  before RPC, invalidate late replies after departure/setup/target changes and retain focused controls.
+  Ordinary progress/reordering does not erase results. No execution ticket, effect, Chat handoff,
+  history write, recording or provider request is produced by the check.
+- Source reads are limited to required target resolution under the existing app opt-in. Project
+  matching stays available with app matching off, exactly as in the spoken dispatcher. Total setup
+  read failures reach the existing error/retry state; useful partial readings stay available.
+- New UI sentences use all four catalogs; Dictation, Settings, Safety and README descriptions are
+  reviewed with matching pt-BR source marks. Unreleased notes describe the user-visible changes.
+- Production renderer regressions cover search, state/focus retention, cancellation/retry races,
+  input boundaries, source-read isolation and both Settings/Nest entry points. Native visual review
+  remains the unchecked gate above. The owner explicitly deferred their manual validation until
+  this implementation/review batch was ready; no additional UI scope is queued here.
+
 ### VC5 · Verify intent, execution and regressions
-`P0 · S · Needs: VC4`
+`P0 · S · Needs: VC4 implementation; native acceptance remains VC4/VC6`
 
-- [ ] Test equivalent PT/EN/ES phrases for each action, using escaped accents in English-only tests.
-  Include real failure classes: pause media; mute computer versus project notifications; open an
-  installed app versus a live agent project; no player/app/agent; multiple players and app names.
-  Add negation, questions, compound partial failures, stale identities, unrelated suffixes and permission requests.
-- [ ] Test action switches off/missing native backend, cancellation/late replies,
-  changed targets, ticket reuse and restore-after-duck; assert no unintended network or desktop IO.
-  Keep native adapters fake; do not manipulate personal playback or spend by tests.
-- [ ] Verify every displayed PT/EN/ES command example against the shared parser and expected scope.
-  Include Portuguese articles, intentional repetitions and dictation/command separation; a cleanup
-  rule must not mutate a name or turn ordinary dictated text into an action.
-- [ ] Run required renderer/build, workspace formatting/Clippy/tests, evals and repository guards;
-  dependency changes additionally require cargo deny. Review the diff against rules 1 to 4 and
-  fix all actionable findings before native acceptance. CI follows the consolidated release PR.
+**Current status (2026-10-27):** local implementation, consolidated review and automated checks
+are complete for this worktree on `feat/voice-command-readiness` (base `dae212de`). The owner has
+deferred manual desktop validation. This is not native acceptance, a merge or release publication.
 
-**Done when:** automated evidence matches the candidate revision and all failures are fixed; this
-line alone does not complete VC6, DG-4 or R3.
+- [x] Verify PT/EN/ES action variations, scope separation and failure classes: selected-player
+  playback, computer output, project notifications, installed apps versus live projects, missing
+  and ambiguous targets, negation, quoted text, unsupported suffixes and permission requests.
+- [x] Verify action switches/backend failures, cancellation/late replies, changed target identities,
+  one-use tickets, ordered partial failure and restore-after-duck. Native adapters/private fixtures
+  keep tests away from personal playback, capture and paid providers.
+- [x] Compare every displayed command example against the real parser and full typed result:
+  32 English examples and 96 pt-BR/es/zh catalog equivalents. Verify literal names/articles,
+  intentional repetition and independent command/dictation routes, including user replacements
+  that produce command-like text without dispatching it.
+- [x] Review the accumulated implementation against rules 1 to 4 and resolve demonstrated defects.
+  UI build, all 22 renderer checks, workspace formatting/Clippy/tests, feature-enabled evals and
+  repository/version/translation guards pass. Dependencies are unchanged. Hosted CI follows a
+  future owner-authorized PR; no hosted-CI result is claimed for this local worktree.
+
+Reviewed fixes and durable evidence:
+
+- `app/src/voice_commands/preview.rs`: pure interpretation and lazy metadata reads; project matching
+  with app consent off now agrees with the real dispatcher. A failing preview/dispatcher regression
+  reproduced the wrong disabled-scope status before correction. Unknown/ambiguous/disabled scopes
+  remain explicit; a failed required name lookup never becomes a guessed target.
+- `ui/src/bridge.ts` and `scripts/check-voice-command-readiness.mjs`: a failing regression reproduced
+  total native-read failure being displayed as an unknown snapshot. It now reaches error/retry;
+  partial usable results and the privileged microphone boundary remain intact.
+- `crates/dictation/tests/commands.rs` and `app/src/voice_commands/tests.rs`: explicit notification
+  phrasing and literal namespaces retain complete article-bearing names, with The Editor/Editor
+  collision tests. Preview and final speech decoding preserve repetitions in command names.
+- `app/src/dictation/worker/tests.rs`: 28 mode/phrase/word-rule combinations verify that dictation
+  never dispatches commands and command capture bypasses dictation text replacements/clipboard.
+- `scripts/check-voice-command-{help,check,readiness}.mjs`, `check-settings-ui.mjs`,
+  `check-surface-continuity.mjs` and `check-chat-models.mjs`: shared guide/state behavior, exact
+  source boundaries, all C0/C1 characters/UTF-8 limits, cancellation, stale replies and real entry wiring.
+
+**Done when:** automated evidence matches the candidate and all actionable review findings are
+fixed. That local gate passes; native VC4/VC6, DG-4, R3 and release gates remain open.
 
 ### VC6 · Accept natural commands in the running Linux app
 `P0 · S · Needs: VC5`

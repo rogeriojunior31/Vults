@@ -7,6 +7,23 @@ what shipped to users is in [CHANGELOG.md](../../CHANGELOG.md).
 
 Moved verbatim on 2026-10-25. Where a paragraph says "below" or "above", read it against this file.
 
+# Release planning
+
+### REL-1 · Choose the release plan
+`P0 · S · Needs: —`
+- [x] 2026-10-26: the owner selected **0.1.9** as the next stabilization release from current main,
+  including its already-merged N0-to-N3 work. Later versions follow bounded release candidates and
+  their acceptance gates, rather than reserving a number for each phase.
+- [x] Record the dated decision in [ADR 0020](../adr/0020-0.2.0-at-wave-4-then-0.2.x.md), align
+  ADR 0031's release clause and both reviewed pt-BR translations, and update *Where we are*.
+- [x] Merged in PR #387 at `dae212de`; main CI and Security passed. R3, native acceptance, Security and REL-2 remain separate pending work.
+
+Local validation (2026-10-26): ADR links, History anchors and reviewed translation source hashes
+pass. UI build, all 19 renderer checks, workspace formatting/Clippy/tests, feature-enabled evals
+and repository guards pass. Package/version files and lockfiles are unchanged at 0.1.8.
+
+**Done when:** the ADR records the plan and this section matches it.
+
 # Stage delivery records
 
 #### N0 Remove Tasks

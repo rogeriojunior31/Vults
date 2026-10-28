@@ -339,6 +339,7 @@ pub fn run() {
             runtime::set_zeca_look,
             media::media_control,
             media::media_now,
+            voice_commands::preview::voice_command_check,
             voice::voice_status,
             voice::voice_download,
             voice::voice_select,

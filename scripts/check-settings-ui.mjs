@@ -110,6 +110,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "installStatus": return { installed: false, hookReady: true, statusLine: "ours", configPath: "/home/example/agent.json" };
       case "apiProviders": return { selected: "example", providers: [{ id: "example", label: "Example", local: false, hasKey: false }] };
       case "webSettings": return { on: false, engine: "brave", hasKey: false };
+      case "commandCheck": return { status: "parsed", actions: [{ action: "focus", target: "api", value: null, status: "recognized", candidates: [] }] };
       case "voiceStatus": return { ready: false, models: [
         {id:"base",label:"Base: fast, but weak outside English",size:60000000,installed:false},
         {id:"small",label:"Small: good in Portuguese and other languages",size:190000000,installed:false},
@@ -488,6 +489,27 @@ x11Keys().open = true; events.onSettings({ volume: 80 });
 assert.equal(x11Keys().open, true, "A settings repaint keeps the keyboard disclosure choice");
 await dictationPage("commands");
 assert.ok(rowNamed("Command key").textContent.includes("Meta+Z"), "Dictation shows the command key's actual desktop binding");
+const setup = page().querySelector('[data-setting="command-readiness"]');
+setup.open = true;
+const setupRefresh = setup.querySelector('[data-setting="command-readiness-refresh"]');
+setupRefresh.focus(); events.onSettings({ volume: 80 });
+assert.equal(page().querySelector('[data-setting="command-readiness"]').open, true, "Settings repaint retains the setup disclosure");
+assert.equal(document.activeElement, setupRefresh, "Settings repaint restores setup action focus");
+const commandPhrase = page().querySelector('[data-setting="command-check-phrase"]');
+commandPhrase.value = "open project api"; commandPhrase.fire("input");
+page().querySelector('[data-setting="command-check-submit"]').fire("click"); await tick();
+assert.ok(page().querySelector('.voice-command-check').textContent.includes("Focus session"));
+events.onSettings({ dictationCommandApps: false });
+assert.ok(page().querySelector('.voice-command-check').textContent.includes("Command setup changed"), "Live Settings changes invalidate command explanations");
+assert.equal(commandPhrase.value, "open project api", "Settings invalidation preserves the local phrase");
+const commandTargetView = { sessions: [{ id: "a", agent: "codex", project: "api", cwd: "/work/api", status: "working" }], focus: null, approval: null, inbox: [], boards: [], locked: false };
+events.onView(commandTargetView);
+page().querySelector('[data-setting="command-check-submit"]').fire("click"); await tick();
+events.onView({ ...commandTargetView, sessions: commandTargetView.sessions.map(session => ({ ...session, step: "More progress" })) });
+assert.ok(page().querySelector('.voice-command-check').textContent.includes("Focus session"), "Progress-only views retain Settings results");
+events.onView({ ...commandTargetView, sessions: [] });
+assert.ok(page().querySelector('.voice-command-check').textContent.includes("Command targets changed"), "Settings view events invalidate departed targets");
+assert.equal(commandPhrase.value, "open project api");
 assert.ok(page().textContent.includes("Hold to control Vults"), "The command key stays in its documented Dictation owner");
 await dictationPage("keys");
 assert.equal(pendingShortcutOpens.length, 0, "Entering Settings never launches a desktop editor");

@@ -1,4 +1,4 @@
-<!-- source: e9399e08a991 -->
+<!-- source: f577c9666944 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-preto em 8 bits">
 </p>
@@ -48,7 +48,7 @@ O Zeca é opcional.
 | Voltar ao terminal certo | Ir ao painel ou à janela da sessão; continuar sessões compatíveis no Chat com controle de parada próprio | [Sessões e Chat](docs/pt-br/guide/chat.md#continuing-a-session) |
 | Falar em vez de digitar em outro app | Ditado global local, cópia por padrão, rotas opcionais de inserção compatíveis, atalhos para cancelar e copiar o último texto | [Ditado](docs/pt-br/guide/dictation.md#global-dictation-first-slice) |
 | Adaptar o ditado ao seu vocabulário | Dicionário, trechos, código falado, escolhas por app e estilos opcionais de revisão e tradução por modelo | [Suas palavras](docs/pt-br/guide/dictation.md#your-words-processing) |
-| Controlar o bando e a reprodução por voz | Tecla separada de comando, reconhecimento local de frases e controles opcionais do reprodutor, volume/silêncio do computador e abertura de aplicativos instalados; interpretação natural por IA ainda planejada | [Comandos de voz](docs/pt-br/guide/dictation.md#voice-commands-development-status) |
+| Controlar o bando e a reprodução por voz | Tecla separada, exemplos pesquisáveis, checagem de frases sem execução e controles opcionais do reprodutor, áudio do computador e abertura de aplicativos instalados; gramática local limitada, com validação no desktop ainda pendente | [Comandos de voz](docs/pt-br/guide/dictation.md#voice-commands-development-status) |
 | Encontrar e gerenciar o que ditou | Histórico local com busca, retenção, estatísticas de uso, configuração de microfone/modelo e diagnóstico | [Histórico de ditado](docs/pt-br/guide/dictation.md#dictation-history) |
 | Pedir ajuda sem sair do desktop | Chat do Zeca pelo login existente da CLI Claude Code/Codex, API ou modelo local; Markdown, arquivos, conversas salvas e escolhas de acesso | [Chat](docs/pt-br/guide/chat.md) |
 | Dar um papel consistente a um especialista | Criar ou copiar perfis com instruções, espécies, acessórios e skills fixadas; conversas de especialistas Claude Code ou Codex dentro do Chat | [Perfis de agentes](docs/pt-br/guide/chat.md#agent-profiles) |

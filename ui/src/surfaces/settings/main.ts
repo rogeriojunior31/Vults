@@ -1,5 +1,8 @@
 import { createDictationNavigation, DICTATION_SETTINGS, dictationSetting, dictationSettingAbout, type DictationSetting } from "../nest/dictation/navigation";
+import { createCommandCheck } from "../../voice-command-check";
+import { createCommandReadiness, VOICE_MODEL_LABELS } from "../../voice-command-readiness";
 import { voiceCommandHelp } from "../../voice-command-help";
+const commandHelpState = { query: "", scope: "all" };
 import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
 import { applyTheme } from "../../theme";
@@ -135,6 +138,7 @@ const foot = createNestFoot({
 });
 root.after(foot.element);
 Bridge.onView((v) => {
+  commandCheck.targets(v.sessions);
   dictation.context(v);
   const f = v.focus;
   const s = f ? v.sessions.find((x) => x.agent === f.agent && x.id === f.id) : undefined;
@@ -1023,6 +1027,9 @@ async function refreshMicrophones(): Promise<void> {
   }
 }
 
+const commandCheck = createCommandCheck(Bridge.commandCheck);
+const commandReadiness = createCommandReadiness(() => Bridge.commandReadiness(true), section => chooseDictation(dictationSetting(section)!));
+
 function dictationPage(): HTMLElement[] {
   if (dictationSection === "conversation") return [el("h1", { text: t("Talk with Zeca") }), realtimeSettings.element];
   if (dictationSection === "agents") return [el("h1", { text: t("Agents") }), questionAgents.element];
@@ -1176,22 +1183,27 @@ function dictationPage(): HTMLElement[] {
       })(),
     ] : []),
     ...(dictationSection === "commands" ? [
+      commandReadiness.element, commandCheck.element,
       el("section", { class: "card rows" },
         row(t("Enable voice commands"), t("Hold the command key, speak and release to control Vults. Transcription and command matching stay on this computer."), toggle(dictationCommands, async on => {
           await Bridge.setDictationCommands("enabled", on);
+          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommands = on; dictationCommandsChanged = true;
           if (page === "dictation") render();
         })),
         row(t("Media voice commands"), t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
           await Bridge.setDictationCommands("media", on);
+          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommandMedia = on; dictationCommandMediaChanged = true;
         })),
         row(t("Application voice commands"), t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
           await Bridge.setDictationCommands("applications", on);
+          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommandApps = on; dictationCommandAppsChanged = true;
         })),
         row(t("System audio voice commands"), t("Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate."), toggle(dictationCommandOutput, async on => {
           await Bridge.setDictationCommands("output", on);
+          commandReadiness.invalidate(); commandCheck.invalidate();
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
         })),
         row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
@@ -1210,7 +1222,7 @@ function dictationPage(): HTMLElement[] {
         })()),
       ),
       (() => {
-        const guide = disclosure(t("What you can say"), voiceCommandHelp());
+        const guide = disclosure(t("What you can say"), voiceCommandHelp(commandHelpState));
         guide.dataset.setting = "dictation-command-help";
         guide.querySelector<HTMLElement>("summary")!.dataset.setting = "dictation-command-help-summary";
         return guide;
@@ -1259,7 +1271,7 @@ function dictationPage(): HTMLElement[] {
         })),
       ),
       disclosure(t("Advanced processing"), el("section", { class: "card rows" },
-        row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in the preview and final text. Sound annotations and standalone silence phrases are still removed when this is off."), toggle(dictationCutRepeats, async on => {
+        row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in dictation preview and final text. Voice commands preserve repetitions in names. Sound annotations and standalone silence phrases are still removed when this is off."), toggle(dictationCutRepeats, async on => {
           await Bridge.setDictationProcessing("cutRepeats", on);
           dictationCutRepeats = on; dictationCutRepeatsChanged = true;
         })),
@@ -1484,11 +1496,6 @@ function chatPage(): HTMLElement[] {
   ];
 }
 
-const VOICE_MODEL_LABELS: Record<string, string> = {
-  base: tk("Base: fast, but weak outside English"),
-  small: tk("Small: good in Portuguese and other languages"),
-  turbo: tk("Large v3 Turbo: the most accurate; best with a GPU"),
-};
 
 function voiceRows(): HTMLElement[] {
   if (!voice) return [];
@@ -1962,6 +1969,9 @@ function choosePage(next: Page): void {
 const dictationNavigation = createDictationNavigation("dictationvoice", id => void Bridge.openNest(`dictation-${id}`), chooseDictation, () => void Bridge.openNest("dictation-statistics"));
 
 function render(): void {
+  commandCheck.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
+  commandReadiness.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
+  commandReadiness.setKeys(boundShortcuts); commandCheck.relabel();
   const place = page === "dictation" ? `dictation${dictationSection}` : page;
   if (page === "activity") budget.relabel();
   const currentScroll = root.querySelector("main.page")?.scrollTop ?? 0;
@@ -2172,6 +2182,9 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  if (s.voice !== undefined || s.dictationCommands !== undefined || s.dictationCommandMedia !== undefined || s.dictationCommandApps !== undefined || s.dictationCommandOutput !== undefined || s.dictationMicrophone !== undefined) {
+    commandReadiness.invalidate(); commandCheck.invalidate();
+  }
   if (s.questionAgents !== undefined) questionAgents.changed(s.questionAgents);
   cleanupSettings.update(s);
   meetingSettings.update(s);
@@ -2265,8 +2278,10 @@ void getVersion()
 window.setInterval(() => {
   if (!document.hidden) void refreshConnectors();
 }, 15_000);
-window.addEventListener("pagehide", () => { realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
+window.addEventListener("pagehide", () => { commandCheck.visible(false); commandReadiness.visible(false); realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
 document.addEventListener("visibilitychange", () => {
+  commandCheck.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
+  commandReadiness.visible(page === "dictation" && dictationSection === "commands" && !document.hidden);
   questionAgents.visible(page === "dictation" && dictationSection === "agents" && !document.hidden);
   meetingAssets.visible(page === "dictation" && dictationSection === "meetings" && !document.hidden);
   realtimeSettings.visible(page === "dictation" && dictationSection === "conversation" && !document.hidden);

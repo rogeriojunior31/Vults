@@ -67,6 +67,11 @@ What Vults promises:
   transcript text through the selected API chat model, with no tools and a 120-second deadline.
   Enable it in Dictation > Meeting settings, then explicitly choose Generate summary on the
   Summary tab; recording/transcribing alone never requests a summary. Canceling notes or a failed request leaves the local transcript intact.
+- **Checking a voice phrase never executes it.** Dictation's typed command check uses the same local
+  parser and name resolver as spoken commands. It does not record audio, answer cards, run actions,
+  write command history or send to Chat. Application-name matching requires its existing opt-in.
+  Recognition does not verify native availability. Project notification mute, selected-player audio
+  and default computer output are separate scopes ([Voice commands](guide/dictation.md#voice-commands-development-status)).
 - **Now playing is off until you turn it on.** Then the app reads your media players over the
   session bus (MPRIS on Linux) to show the song; it is never stored or sent anywhere.
 - **What the app asks on its own goes through one gate.** A request made without a click at that
