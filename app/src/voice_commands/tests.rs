@@ -1322,7 +1322,7 @@ fn every_displayed_command_example_keeps_its_meaning_in_each_spoken_language() {
     ];
     let mut checked = 0;
     for line in include_str!("../../../ui/src/voice-command-help.ts").lines() {
-        let Some((_, text)) = line.split_once("text: t(") else {
+        let Some((_, text)) = line.split_once("detail: tk(") else {
             continue;
         };
         let (sentence, _) = first_string(text);
