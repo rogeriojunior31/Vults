@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 8e36c822fe7c -->
+<!-- source: bc97df6f5df9 -->
 
 A versão de desenvolvimento da N3 oferece ditado local para a área de transferência, com colagem
 opcional em editores de texto compatíveis no X11 nativo ou Plasma Wayland e painéis tmux exatos
@@ -307,7 +307,7 @@ capturadas ao iniciar uma nova gravação independente; alterá-las nunca muda u
 o processamento do Chat. Nenhuma dessas escolhas baixa ou contata um modelo.
 
 No Linux, o status temporário aparece numa cápsula separada, centralizada na parte inferior da
-tela selecionada e acima dos painéis do desktop. Usa o tema Black/Light de produção e nunca recebe
+tela selecionada e acima dos painéis do desktop. Usa o tema de produção e nunca recebe
 foco nem cliques. A escuta mostra um microfone e nove bandas de áudio medido; a captura com mãos
 livres acrescenta uma borda âmbar. Finalização, transcrição, nova tentativa e resultados de entrega
 mostram seus textos existentes. A cápsula desaparece quando o resultado expira, sem dica em repouso

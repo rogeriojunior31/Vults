@@ -53,7 +53,7 @@ vulture: see who is working, who finished and who needs you. Dictate into other 
 | Turn a meeting into searchable notes | Consented microphone/system-audio capture, local transcription, saved text, speaker labels, search and Markdown/SRT/VTT export; optional model summaries | [Meetings](docs/guide/dictation.md#meeting-recording) |
 | Talk with Zeca aloud | Separate voice conversation setup, manual turns and optional continuous microphone routes, with explicit API consent and budget | [Voice conversation](docs/guide/dictation.md#voice-conversation-settings) |
 | Review your week and spending | Project activity, available plan usage, costs, budgets and a shareable recap with project-name hiding | [Activity](docs/guide/activity.md) |
-| Fit Vults around your work | Mini, Quick, Room and full screen; light/dark themes, four languages, notifications, optional media controls and Zeca on/off | [The Nest](docs/guide/nest.md) · [Settings](docs/reference/settings.md) |
+| Fit Vults around your work | Mini, Quick, Room and full screen; dark (the default), light and three SP Night themes, four languages, notifications, optional media controls and Zeca on/off | [The Nest](docs/guide/nest.md) · [Settings](docs/reference/settings.md) |
 | Answer away from the desktop | Paired-phone approval protocol and relay, in preview; the Android companion remains unfinished | [Phone preview](docs/guide/phone.md) |
 
 ## Screenshots

@@ -1,4 +1,4 @@
-<!-- source: f577c9666944 -->
+<!-- source: 85db2f425eaa -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-preto em 8 bits">
 </p>
@@ -57,7 +57,7 @@ O Zeca é opcional.
 | Transformar reuniões em notas pesquisáveis | Captura consentida de microfone/áudio do sistema, transcrição local, texto salvo, identificação manual de falantes, busca e exportação Markdown/SRT/VTT; resumos opcionais por modelo | [Reuniões](docs/pt-br/guide/dictation.md#meeting-recording) |
 | Conversar em voz alta com o Zeca | Configuração separada, turnos manuais e rotas opcionais de microfone contínuo, com consentimento explícito e orçamento de API | [Conversa por voz](docs/pt-br/guide/dictation.md#voice-conversation-settings) |
 | Rever sua semana e seus gastos | Atividade por projeto, uso disponível dos planos, custos, orçamentos e resumo compartilhável com opção de ocultar nomes de projetos | [Atividade](docs/pt-br/guide/activity.md) |
-| Adaptar o Vults ao seu trabalho | Mini, Rápido, Sala e tela cheia; temas claro/escuro, quatro idiomas, notificações, controles de mídia opcionais e Zeca ligado/desligado | [Ninho](docs/pt-br/guide/nest.md) · [Configurações](docs/pt-br/reference/settings.md) |
+| Adaptar o Vults ao seu trabalho | Mini, Rápido, Sala e tela cheia; tema escuro (o padrão), claro e três temas SP Night, quatro idiomas, notificações, controles de mídia opcionais e Zeca ligado/desligado | [Ninho](docs/pt-br/guide/nest.md) · [Configurações](docs/pt-br/reference/settings.md) |
 | Responder longe do desktop | Protocolo de aprovação por celular pareado e relay, em prévia; o aplicativo Android ainda não está concluído | [Prévia do celular](docs/pt-br/guide/phone.md) |
 
 <a id="screenshots"></a>

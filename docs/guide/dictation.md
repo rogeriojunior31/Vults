@@ -273,7 +273,7 @@ Choices are saved locally and captured when a new independent recording starts; 
 never changes an active turn or Chat's processing. Neither choice downloads or contacts a model.
 
 On Linux, temporary status appears in a separate capsule at the bottom center of the selected
-screen, clear of desktop panels. It uses the production Black/Light theme and never takes focus
+screen, clear of desktop panels. It uses the production theme and never takes focus
 or mouse input. Listening shows a microphone and nine measured audio bands; hands-free capture
 adds an amber border. Finishing, transcription, retry and delivery outcomes show their existing
 text. The capsule disappears after the result expires and has no idle hint or new controls.

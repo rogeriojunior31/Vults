@@ -8,9 +8,21 @@ this document defines how the UI presents them.
 
 - Read `ui/src/themes.css` before choosing colors. Reuse its roles in every surface,
   including prototypes, dialogs, settings and embedded workspaces.
-- Black is the default. The optional neutral Light theme uses the same roles and
-  hierarchy across windows. Color communicates status or agent identity; it does
-  not create a separate navigation or page theme.
+- Dark (pure black) is the default. The neutral Light theme and the three SP Night
+  themes (Noite Paulista, Garoa, Pico do Jaragua) are optional. All five use the same
+  roles and hierarchy across windows. Color communicates status or agent identity; it
+  does not create a separate navigation or page theme.
+- The SP Night themes map the sp-night palette through its role layer: `laje` is the
+  ground, `vao` the chrome, input and floating surfaces, `concreto` the card, `vidro` the raised
+  control and `fiacao` the control border and the flock's wire. Sodium (`--mark`,
+  `--caret`) is the chosen item's line and the caret, never a fill: pressed segments,
+  checked toggles and meters use `--mark-fill`, which stays on the text ramp. Focus rings
+  use `--focus`, the system accent `--accent-alt` (`marginal`), never sodium. The palette's `fg_muted` is ornament
+  (3:1), so `fg_dim` becomes `--fg-muted` to keep the 4.5:1 text floor.
+- Text selection, the caret and scrollbars take `--selection`, `--caret` and
+  `--control-border` in every theme. A focus rule uses `--focus`, a filled selection or
+  meter `--mark-fill`, and a select without its own style gets the themed field and chevron
+  from `themes.css`; never leave a control to GTK's own paint.
 - Scene backgrounds, diffs, selections and popovers use theme roles too. A theme
   change refreshes canvas colors without restarting the birds or their motion.
 - Keep species, accessories, palettes and sprite proportions from the existing
@@ -31,11 +43,13 @@ this document defines how the UI presents them.
 | Primary / selected mark | `--accent` / `--mark` | `#f5f6f8` / `#e2e6da` |
 | Success / warning / error text | `--ok` / `--warn` / `--error-text` | `#22c55e` / `#f5a524` / `#ff8d97` |
 
-The values above describe Black. Light uses `#fafafa` for ground, `#f0f1f2` for
+The values above describe Dark, the default. Noite Paulista uses `#151723` for ground,
+`#1d1f2d` for cards, `#272937` for raised controls, `#d3d7eb` for text and
+`#f2984a` for the selected mark. Light uses `#fafafa` for ground, `#f0f1f2` for
 chrome/cards, `#e3e5e8` for raised controls and `#1b2028` for text and the primary
 action. Its status and agent colors are darker for contrast.
 
-The values above describe the default theme. The CSS tokens remain the source of
+The CSS tokens remain the source of
 truth when that theme changes. Keep `--agent-*` colors as agent identity.
 
 ## Scale and spacing
