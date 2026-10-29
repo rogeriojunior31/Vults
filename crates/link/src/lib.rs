@@ -85,7 +85,7 @@ impl std::fmt::Debug for SealKey {
 
 impl SealKey {
     pub fn generate() -> Self {
-        Self(StaticSecret::random_from_rng(rand_core::OsRng))
+        Self(StaticSecret::from(random::<32>()))
     }
 
     /// From the 32 bytes [`SealKey::secret`] gave, read back from the keyring.
