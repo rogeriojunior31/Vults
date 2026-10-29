@@ -73,6 +73,7 @@ async fn read_command(cmd: &mut Command) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
     use super::*;
 
     #[cfg(unix)]

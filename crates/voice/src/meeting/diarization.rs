@@ -46,7 +46,7 @@ pub struct Analysis {
 /// Session construction cannot abort; cancellation discards it before further work/publication.
 /// Real-meeting quality and hardware acceptance remain release gates.
 pub fn analyze_wav(
-    _runtime: &Runtime,
+    runtime: &Runtime,
     artifacts: VerifiedModels,
     input: impl Read + Seek,
     stop: &AtomicBool,
@@ -71,7 +71,7 @@ pub fn analyze_wav(
         completed_ms: 0,
         total_ms: duration_ms,
     });
-    let Some(mut models) = inference::Models::load(&artifacts, stop)? else {
+    let Some(mut models) = inference::Models::load(runtime, &artifacts, stop)? else {
         return Ok(None);
     };
     drop(artifacts);

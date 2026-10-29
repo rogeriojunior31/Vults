@@ -8,7 +8,13 @@ use std::time::Duration;
 
 use sha2::{Digest, Sha256};
 
-static LOADED: Mutex<Option<(PathBuf, String)>> = Mutex::new(None);
+struct Loaded {
+    path: PathBuf,
+    fingerprint: String,
+    environment: ort::environment::Environment,
+}
+
+static LOADED: Mutex<Option<Loaded>> = Mutex::new(None);
 
 /// Explicit native runtime admission for the optional backend. Not an app distribution policy.
 /// Only this module may initialize ort in a process. A loaded runtime cannot be switched/unloaded.
@@ -21,6 +27,14 @@ impl Runtime {
     /// The bytes admitted by the process-wide native owner, for backend-specific qualification.
     pub fn fingerprint(&self) -> &str {
         &self.fingerprint
+    }
+    pub(crate) fn environment(&self) -> Result<ort::environment::Environment, String> {
+        let state = LOADED.lock().map_err(|_| "speech runtime ownership failed")?;
+        state
+            .as_ref()
+            .filter(|loaded| loaded.fingerprint == self.fingerprint)
+            .map(|loaded| loaded.environment.clone())
+            .ok_or_else(|| "speech runtime was not admitted".into())
     }
     /// Blocking. The caller must supply a trusted, immutable native library and independent hash.
     /// A matching hash identifies bytes, not whether executing a caller-supplied library is safe.
@@ -57,18 +71,20 @@ impl Runtime {
             }
         };
         if let Some(previous) = state.as_ref() {
-            if previous != &(path, hash) {
+            if previous.path != path || previous.fingerprint != hash {
                 return Err("speech runtime is already pinned for this process".into());
             }
         } else {
-            if !ort::init_from(&path)
+            let environment = ort::init_from(&path)
                 .map_err(|e| e.to_string())?
                 .with_telemetry(false)
-                .commit()
-            {
-                return Err("speech runtime was initialized outside its owner".into());
-            }
-            *state = Some((path, hash));
+                .build()
+                .map_err(|e| e.to_string())?;
+            *state = Some(Loaded {
+                path,
+                fingerprint: hash,
+                environment,
+            });
         }
         Ok((!stop.load(Ordering::SeqCst)).then_some(Self {
             fingerprint: admitted,
@@ -135,6 +151,7 @@ fn semantic_backend_refuses_an_unqualified_runtime_before_opening_a_model() {
     let runtime = Runtime {
         fingerprint: "unqualified".into(),
     };
+    assert!(runtime.environment().is_err());
     let path = Path::new("/missing/model");
     let error = crate::turn::semantic::Detector::load(&runtime, path, &AtomicBool::new(false)).unwrap_err();
     assert!(error.contains("qualified ONNX runtime"));

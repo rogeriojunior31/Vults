@@ -1,5 +1,5 @@
 use crate::meeting::{speaker_models::VerifiedModels, speakers::Turn};
-use crate::onnx::NativeSession;
+use crate::onnx::{NativeSession, Runtime};
 use ort::session::Session;
 use ort::value::Tensor;
 use std::collections::BTreeSet;
@@ -39,11 +39,11 @@ struct Frame {
     observation: Option<usize>,
 }
 
-fn session(bytes: &[u8], stop: &AtomicBool) -> Result<Option<NativeSession>, String> {
+fn session(runtime: &Runtime, bytes: &[u8], stop: &AtomicBool) -> Result<Option<NativeSession>, String> {
     let Some(_busy) = crate::WHISPER.background(stop) else {
         return Ok(None);
     };
-    let session = Session::builder()
+    let session = Session::builder(&runtime.environment()?)
         .map_err(|e| e.to_string())?
         .with_intra_threads(1)
         .map_err(|e| e.to_string())?
@@ -60,11 +60,15 @@ fn session(bytes: &[u8], stop: &AtomicBool) -> Result<Option<NativeSession>, Str
 }
 
 impl Models {
-    pub fn load(artifacts: &VerifiedModels, stop: &AtomicBool) -> Result<Option<Self>, String> {
-        let Some(segmentation) = session(artifacts.segmentation(), stop)? else {
+    pub fn load(
+        runtime: &Runtime,
+        artifacts: &VerifiedModels,
+        stop: &AtomicBool,
+    ) -> Result<Option<Self>, String> {
+        let Some(segmentation) = session(runtime, artifacts.segmentation(), stop)? else {
             return Ok(None);
         };
-        let Some(embedding) = session(artifacts.embedding(), stop)? else {
+        let Some(embedding) = session(runtime, artifacts.embedding(), stop)? else {
             return Ok(None);
         };
         for (key, expected) in [

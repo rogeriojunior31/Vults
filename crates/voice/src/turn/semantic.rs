@@ -50,7 +50,7 @@ impl Detector {
             if stop.load(Ordering::SeqCst) {
                 return Ok(None);
             }
-            let session = Session::builder()
+            let session = Session::builder(&runtime.environment()?)
                 .map_err(|e| e.to_string())?
                 .with_optimization_level(GraphOptimizationLevel::All)
                 .map_err(|e| e.to_string())?

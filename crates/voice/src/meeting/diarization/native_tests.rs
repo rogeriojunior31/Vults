@@ -27,9 +27,9 @@ fn artifacts() -> VerifiedModels {
     .expect("pinned models")
     .expect("not cancelled")
 }
-fn segmentation() -> Session {
+fn segmentation(runtime: &Runtime) -> Session {
     let artifacts = artifacts();
-    Session::builder()
+    Session::builder(&runtime.environment().expect("admitted environment"))
         .expect("builder")
         .with_intra_threads(1)
         .expect("CPU thread")
@@ -124,8 +124,8 @@ fn native_pipeline_completes_or_discards_late_cancellation() {
 #[test]
 #[ignore = "requires explicitly supplied trusted native runtime and pinned public models"]
 fn native_termination_discards_an_active_operation() {
-    let _runtime = runtime();
-    let mut session = segmentation();
+    let runtime = runtime();
+    let mut session = segmentation(&runtime);
     let stop = AtomicBool::new(false);
     let terminated = AtomicBool::new(false);
     let saw_native_abort = AtomicBool::new(false);
@@ -178,8 +178,8 @@ fn native_termination_discards_an_active_operation() {
 #[test]
 #[ignore = "requires explicitly supplied trusted native runtime and pinned public models"]
 fn native_preemption_runs_interactive_first_and_retries_cleanly() {
-    let _runtime = runtime();
-    let mut session = segmentation();
+    let runtime = runtime();
+    let mut session = segmentation(&runtime);
     let stop = AtomicBool::new(false);
     let attempts = AtomicUsize::new(0);
     let (enter, entered) = mpsc::channel();
