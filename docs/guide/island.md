@@ -190,7 +190,7 @@ so you are never told twice; *Paused* shows none.
 They say when a session **finished** (with the first line of its reply), **failed** (with the error),
 **needs you** (a card waits), or [**has gone quiet**](#a-quiet-bird). Each session has at most one,
 titled with its project; it goes away once the card is answered, the session works again, or it
-leaves (a finished session leaves the wire after 10 minutes, a silent one after 30). What happened while they were off is not raised later.
+leaves when its session closes; finishing a response or staying silent does not remove it. What happened while they were off is not raised later.
 
 **Open** (or a click) brings up the island with that session in front. A notification never has Allow
 or Deny. Turn them off in **Settings → General → Notifications**.
@@ -375,8 +375,7 @@ The card offers three answers, and none touches the agent:
   minutes later.
 - **Dismiss**: no flag again until its next prompt.
 
-Each answer counts as news, so the bird stays on the wire (a silent one leaves after 30 minutes);
-after *Keep going* it stays until its flag could come back.
+Each answer changes only its silence watch. An open session stays in the flock and can fly or rest, including after the flag returns. Finishing a response and inactivity do not close it. An explicit session-end signal, or a confirmed exit of a previously observed local owner on Linux, removes it; unknown liveness keeps it visible.
 
 ### Per project: mute, pin, hide
 

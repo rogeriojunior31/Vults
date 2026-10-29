@@ -1,7 +1,7 @@
 # Approving from the island
 
 When Claude Code, Codex, OpenCode, Qwen Code or Copilot CLI asks permission for a tool call, the island opens on a
-card that shows exactly what **Allow** authorizes (Antigravity, Cursor, Factory Droid and Kimi Code are the exceptions,
+card that shows exactly what **Allow** authorizes (Antigravity, Cursor, Factory Droid, Hermes Agent and Kimi Code are the exceptions,
 [below](#agents-that-ask-in-their-own-prompt)):
 
 - the agent's own words for it, when it gives them (*Run the test suite, then the linter*);
@@ -57,10 +57,10 @@ the request to its terminal. On timeout, the normal terminal fallback still appl
 A policy answers cards for you: you write it in **Settings → Approvals → Policies**, see it as a
 diff against the one in place, and accept it with a click. One policy per project folder, plus one
 for everywhere; a newer one replaces the older. **Revoke** turns it off at once, and its cards ask
-again. For now a policy **allows** only Claude Code's calls, the one agent whose cards show the
-whole call (the others' shells run in a folder the card leaves out); for Codex, OpenCode, Qwen
-Code and Copilot CLI it can deny or ask. Agents whose permissions get no card (Antigravity, Cursor,
-Factory Droid, Kimi Code) are not answered by one. Zeca's chat follows them only when you choose **Your policies** or **Full access**
+again. Policy **allow** remains limited to Claude Code. Other agents now show their operation
+folder when provided; widening automatic allows still requires separate per-agent verification.
+For Codex, OpenCode, Qwen Code and Copilot CLI a policy can deny or ask. Agents whose permissions
+get no card (Antigravity, Cursor, Factory Droid, Hermes Agent, Kimi Code) are not answered by one. Zeca's chat follows them only when you choose **Your policies** or **Full access**
 for it ([Who answers Zeca's cards](chat.md#who-answers-zecas-cards)).
 
 ```
@@ -223,6 +223,6 @@ is never touched.
 
 ## Agents that ask in their own prompt
 
-Antigravity, Cursor, Factory Droid and Kimi Code ask their permissions in their own terminal or
+Antigravity, Cursor, Factory Droid, Hermes Agent and Kimi Code ask their permissions in their own terminal or
 prompt, and the island never answers them: their birds show the steps. [What each agent can do](other-agents.md#what-each-agent-can-do)
 sums them up, and each one's section there says why it has no card.

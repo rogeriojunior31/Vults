@@ -1,4 +1,4 @@
-<!-- source: 85db2f425eaa -->
+<!-- source: 04d8311740ae -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-preto em 8 bits">
 </p>
@@ -146,7 +146,7 @@ do destino e nunca envia uma mensagem automaticamente.
 <a id="support"></a>
 ## Suporte
 
-Integrações incluídas: **Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor,
+Integrações incluídas: **Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI, Cursor,
 Factory Droid e Kimi Code**. Observar uma sessão, responder aos cartões e controlá-la são
 capacidades diferentes: alguns agentes mantêm as aprovações no próprio terminal. Veja a
 [tabela de capacidades por agente](docs/pt-br/guide/other-agents.md#what-each-agent-can-do).

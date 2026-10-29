@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 8218a07eba21 -->
+<!-- source: 4b6bd29dcea5 -->
 
 <a id="install"></a>
 
@@ -53,6 +53,7 @@ adicionou.
 | Codex | `~/.codex/hooks.json` | Abra o Codex, digite `/hooks` e confie nos hooks do Vults (o Codex só roda um hook quando ele é confiável e está ligado); as configurações mostram quantos ainda esperam. Uma reinstalação pede de novo |
 | Antigravity | `~/.gemini/config/hooks.json` | Nada ([ele pergunta no próprio terminal](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, um plugin nosso | Reinicie o OpenCode ([os cards dele](guide/approvals.md#opencode)) |
+| Hermes Agent | `~/.hermes/plugins/vults/` (ou `HERMES_HOME`) | Ative com `hermes plugins enable vults` e abra uma nova sessão ([detalhes](guide/other-agents.md#hermes-agent)) |
 | Qwen Code | `~/.qwen/settings.json` | Reinicie o Qwen Code ([os cards dele](guide/approvals.md#qwen-code)) |
 | Copilot CLI | `~/.copilot/hooks/vults.json`, um arquivo nosso | Reinicie o Copilot CLI ([os cards dele](guide/approvals.md#copilot-cli)) |
 | Cursor | `~/.cursor/hooks.json` | Reinicie o Cursor ([ele pergunta no próprio prompt](guide/other-agents.md#cursor)) |

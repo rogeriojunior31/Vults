@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 142815567f9a -->
+<!-- source: 75b349dac1a6 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -130,13 +130,66 @@ going** e **Dismiss** continuam numa sessão sinalizada por silêncio. Abaixo do
 - **Context** lista projeto, repositório, branch, pasta, agente, editor, estado e métricas informadas.
 - Com o Zeca ligado, **Zeca** abre o Chat com uma pergunta sobre aquela sessão pronta para enviar.
 
-Tempo em execução e contexto são a última leitura informada pela CLI, hoje pela
-[status line](https://code.claude.com/docs/en/statusline) do Claude Code. O tempo inclui execuções
-retomadas; não é deduzido da contagem de passos ou do tempo aberto do Vults. Contexto é a ocupação
-atual e pode cair após uma compactação. Custo é uma estimativa a preços de API, não uma cobrança
-da assinatura. Agentes que não informam esses valores, incluindo os hooks do Codex, mostram
-**Not reported**. Ler o resumo não faz requisição de rede nem muda configuração de agente. No
-Full, o uso dos planos continua embaixo, âmbar a partir de 70% e vermelho a partir de 90%.
+As métricas separam contexto atual, consumo acumulado e o tempo que cada agente informa. **Context** mostra modelo/provedor, origem do custo e a idade de leitura independente de custo, tempo e contexto. Relatórios parciais preservam os outros canais; um reset explícito do contexto do Claude limpa o medidor antigo.
+
+| Agente | Fonte numérica e limites |
+| --- | --- |
+| Claude Code | Linha de status nativa: tempo de execução, custo equivalente de API e contexto recente. A instalação mantém o intervalo existente ou configura dois segundos. Os totais de contexto não são consumo acumulado. |
+| Codex | Índice e rollout incremental da sessão conhecida: duração dos turnos, contexto recente, tokens acumulados informados e estimativa pelos preços atuais de API. Exclui intervalos entre turnos. |
+| OpenCode | Banco local somente leitura: custo nativo, tempo de respostas concluídas, contexto recente e consumo acumulado dessas respostas. |
+| Hermes CLI/Desktop | Hooks de API fornecem tokens da entrada mais recente e tempo de respostas observadas desde o carregamento do plugin. O banco local fornece custo informado/estimado e consumo acumulado. Exclui ferramentas e intervalos ociosos. |
+| Qwen Code | Registro mensal nativo de uso: duração da API, tokens acumulados e estimativa de custo por chamada. O JSONL da conversa conhecida serve de alternativa para contexto/consumo. O consumo de subagentes não substitui o contexto principal. Sem limite nativo, não há porcentagem inventada. |
+| Copilot CLI | Registro persistido `session.shutdown`: tokens acumulados, duração da API, último contexto e créditos de solicitações premium. Totais novos substituem os anteriores ao retomar. Créditos não viram dólares; a estimativa exige preço sem ambiguidade e sem faixa de contexto desconhecida. |
+| Kimi Code | Registros `usage.record` do agente principal da sessão conhecida. Cache lido/gravado fica separado; registros herdados antes do marcador de fork são excluídos. Sem duração inventada; o preço exige modelo exato e sem ambiguidade. |
+| Factory Droid | Resumo numérico acumulado da sessão conhecida. Tokens acumulados não são usados para inventar custo, contexto atual ou duração. |
+| Cursor | Hook nativo `preCompact`: contexto antes da compactação. Os hooks documentados não fornecem o conjunto completo de custo/tempo da sessão. |
+| Antigravity | Linha de status do CLI, instalada junto dos hooks compartilhados, com backups e encadeamento separado do comando anterior. O CLI informa contexto e custo estimado; hooks do desktop/IDE sozinhos não fornecem esses números. |
+
+As leituras locais ocorrem a cada dois segundos para sessões já conhecidas, fora da interface. **Consumo da sessão** separa entrada/saída/cache acumulados do contexto atual. Dados ausentes continuam **Não informado**, nunca zero. A cobertura depende da versão: Codex instalado e bancos numéricos foram inspecionados localmente; os outros leitores têm testes isolados e ainda exigem validação real quando o CLI não está instalado.
+
+As estimativas consultam o [models.dev](https://models.dev) a cada 15 minutos quando **Preços dos modelos atualizados automaticamente** está ativo, ou por atualização manual. Nenhum dado de sessão é enviado. O cache expira após 24 horas sem verificação, inclusive para logs inalterados do Copilot/Kimi. Modelos ambíguos, tarifas ausentes e totais sem a faixa de contexto por chamada não recebem preços inventados. Custos nativos mantêm a própria origem.
+
+**Uso do Claude** permite consultar separadamente o limite da conta a cada cinco
+minutos, sem enviar um prompt ao modelo. Ler o resumo não faz
+requisições de rede nem altera a configuração do agente. Em Full, o uso dos planos continua
+embaixo, âmbar a partir de 70% e vermelho a partir de 90%.
+
+O resumo da sessão informa quando as métricas foram lidas e distingue espera, falha de leitura e
+verificação atrasada. Contexto mostra o último evento do agente, a última leitura bem-sucedida,
+a última verificação e a fonte local. Ler métricas não reinicia o relógio de atividade. Agentes
+quietos não são considerados desconectados só por deixarem de enviar eventos. Uma falha de
+leitura preserva os valores anteriores, com a indisponibilidade indicada. O **Tempo de resposta
+do modelo** do OpenCode mede respostas concluídas sem contar sobreposições, intervalos ou
+execução de ferramentas. A duração de resposta do Qwen só aparece quando vem do registro nativo de uso.
+
+Mudanças também mostra **Mudanças do repositório**: uma comparação local, somente leitura,
+dos arquivos atuais com HEAD. Inclui arquivos novos, excluídos e edições feitas por comandos ou
+scripts. É o estado do repositório, sem atribuição a um único agente, e pode incluir trabalho
+anterior. Escolha um arquivo para ver linhas adicionadas e removidas com numeração. A atualização
+ocorre a cada quatro segundos apenas com esta aba visível, com atualização manual e opção de
+focar no diff; permissões sempre trazem o card de volta. Arquivos binários/grandes e limites de
+prévia são indicados. O Git lê objetos brutos sem executar filtros, conversores, programas de
+diff externos ou hooks. Nada é escrito nem adicionado ao stage. As edições informadas pelo
+agente continuam disponíveis separadamente.
+
+Cards de permissão mostram a pasta de trabalho da operação, que pode ser diferente da pasta da
+sessão. Os campos de pasta do Codex, Qwen e OpenCode são preservados pelos adaptadores e pelo
+plugin. A pasta faz parte do vínculo assinado da aprovação e do escopo de uma regra Sempre
+permitir; uma pasta relativa não resolvida não pode criar essa regra. Quando o hook desconecta,
+o card expira sem receber uma resposta. Um pedido que já perdeu o prazo de confirmação não é
+oferecido. As mesmas verificações valem para canais de aprovação iniciados pelo Vults; um clique
+antigo não responde a uma oferta expirada.
+
+Contexto e Configurações → Agentes mostram suporte a acompanhar, responder e iniciar, vindo do
+cadastro dos agentes. Execução planejada não aparece como habilitada; instalação é uma verificação
+separada.
+
+Contexto também explica os limites da integração. Perguntas do Codex e do OpenCode 2 ficam no
+terminal; só turnos de Claude/Codex iniciados pelo Vults podem ser interrompidos aqui. Em
+Configurações → Agentes, o diagnóstico verifica a versão principal do OpenCode antes de indicar
+perguntas respondíveis por cards. O teste `cargo test -p vults-chat installed_acp_clients_initialize_without_a_model_turn -- --ignored --nocapture`
+inicializa OpenCode e Qwen sem criar sessões ou enviar prompts ao modelo e pode ser repetido após
+atualizar os CLIs.
 
 Se uma permissão ou pergunta chegar enquanto o **Focus diff** estiver expandido,
 o card volta. A expansão fica indisponível enquanto a solicitação espera. Os

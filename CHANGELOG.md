@@ -4,6 +4,14 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Keep idle and completed-response sessions in Flock instead of expiring them after 10/30 minutes. Confirm local owner exits separately from activity, preserve pending cards, and distinguish Hermes Desktop runtime cleanup/reset from durable conversation closure.
+
+
+- Flock metrics now distinguish context from cumulative consumption, model-response from execution time, native from catalog cost, and independent reading ages. Added Qwen usage-ledger, Copilot shutdown, Kimi wire, Droid summary, Cursor preCompact and Antigravity CLI status-line collection, with explicit source limits and expiring estimates.
+
+
+- Add Hermes Agent session/tool/subagent observation, patch and repository diffs, numeric context/API-response timing, and read-only native session costs. Permissions remain in Hermes; plugin installation previews and checks all owned files.
+
 - Add shared command setup checks, searchable examples and a non-executing phrase check in Dictation. Preserve drafts, support cancellation/retry, reject invalid input and discard stale results without running actions or sending to Chat. Recognition does not certify native availability.
 
 - Preserve repeated words and leading articles in explicit application, project and notification targets. Keep dictation text processing separate from command dispatch.

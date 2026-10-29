@@ -1,9 +1,9 @@
 # Aprovando pela ilha
-<!-- source: c92e920f2e3c -->
+<!-- source: 74c3c2fdec2f -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
-Antigravity, o Cursor, o Factory Droid e o Kimi Code são as exceções, [abaixo](#agents-that-ask-in-their-own-prompt)):
+Antigravity, o Cursor, o Factory Droid, o Hermes Agent e o Kimi Code são as exceções, [abaixo](#agents-that-ask-in-their-own-prompt)):
 
 - as próprias palavras do agente sobre ela, quando ele as dá (*Run the test suite, then the linter*);
 - o comando inteiro, o arquivo ou a URL, não só o nome da ferramenta. Um comando longo aparece
@@ -65,10 +65,11 @@ o retorno normal ao terminal continua valendo.
 Uma política responde cards por você: você a escreve em **Settings → Approvals → Policies**, vê como
 um diff contra a que está em vigor e aceita com um clique. Uma política por pasta de projeto, mais
 uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na hora, e os cards
-dela voltam a perguntar. Por enquanto uma política só **permite** chamadas do Claude Code, o único
-agente cujos cards mostram a chamada inteira (os shells dos outros rodam numa pasta que o card
-omite); para Codex, OpenCode, Qwen Code e Copilot CLI ela pode negar ou perguntar. Agentes cujas
-permissões não viram card (Antigravity, Cursor, Factory Droid, Kimi Code) não são respondidos por ela. O chat do Zeca só as segue quando
+dela voltam a perguntar. O **allow** de políticas continua limitado ao Claude Code. Os outros
+agentes agora mostram a pasta da operação quando ela é informada; ampliar permissões automáticas
+ainda exige validação separada por agente. Para Codex, OpenCode, Qwen Code e Copilot CLI uma política
+pode negar ou perguntar. Agentes cujas
+permissões não viram card (Antigravity, Cursor, Factory Droid, Hermes Agent, Kimi Code) não são respondidos por ela. O chat do Zeca só as segue quando
 você escolhe **Your policies** ou **Full access** para ele ([Quem responde os cards do
 Zeca](chat.md#who-answers-zecas-cards)).
 
@@ -244,7 +245,7 @@ que o Vults não escreveu nunca é tocado.
 
 ## Agentes que perguntam no próprio prompt
 
-Antigravity, Cursor, Factory Droid e Kimi Code pedem as permissões no próprio terminal ou prompt, e
+Antigravity, Cursor, Factory Droid, Hermes Agent e Kimi Code pedem as permissões no próprio terminal ou prompt, e
 a ilha nunca as responde: os pássaros deles mostram os passos. [O que cada agente consegue
 fazer](other-agents.md#what-each-agent-can-do) os resume, e a seção de cada um ali diz por que ele
 não tem card.

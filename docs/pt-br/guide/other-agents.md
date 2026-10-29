@@ -1,7 +1,7 @@
 # Outros agentes
-<!-- source: beabc48e6065 -->
+<!-- source: 2ca88fac1a77 -->
 
-Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
 comando nos seus eventos e mandar o JSON de hook do Claude Code pelo stdin (o formato que a maioria
 das ferramentas de agente copia). Para ferramentas que rodam plugins em vez disso (Pi), um plugin
@@ -18,7 +18,7 @@ Aponte os hooks da ferramenta para o relay, com um nome à sua escolha (no Windo
   tipo (`claude`, `codex`, `copilot`, `opencode`, `qwen` e `other`), nem `gemini`: o fio não tem mais
   um tipo para ele, mas os hooks antigos do Gemini CLI podem continuar instalados, então o nome
   segue reservado e eles não mandam nada. Os integrados que o
-  Vults manda por nome (`antigravity`, `cursor`, `droid`, `kimi`) usam esses nomes eles mesmos, então
+  Vults manda por nome (`antigravity`, `hermes`, `cursor`, `droid`, `kimi`) usam esses nomes eles mesmos, então
   não ficam reservados; uma ferramenta com qualquer nome não ganha card, inclusive um integrado
   mandado por nome. Com um nome que quebra essas regras, o hook não manda nada e sai na hora.
 - O nome do evento vem de `hook_event_name` no JSON, ou do último argumento. Os nomes de evento do
@@ -45,6 +45,7 @@ Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minuto
 | Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o modo de sandbox dele | sim |
 | Antigravity | o terminal dele | o terminal dele | linhas | pelo Vults, ainda não | nenhum | ainda não |
 | OpenCode | um card | um card (OpenCode 1) | linhas | não pelo Vults | nenhum | não |
+| Hermes Agent | no terminal dele | no terminal dele | linhas do patch e prévia do repositório | não pelo Vults | gerenciado pelo agente | não |
 | Qwen Code | um card | o terminal dele | linhas | não pelo Vults | um contêiner, se ligado | não |
 | Copilot CLI | um card | nenhuma | linhas | não pelo Vults | nenhum | não |
 | Cursor | o terminal dele | o terminal dele | linhas | não pelo Vults | nenhum | não |
@@ -75,8 +76,7 @@ nada. As sessões dele aparecem como `antigravity`.
 A ilha mostra o Antigravity pensando, cada passo (`view_file`, `run_command`…) e quando ele para,
 e o diff de cada edição, refeito a partir do texto que ela trocou (sem números de linha). O
 Antigravity não manda a resposta dele, então uma sessão terminada não tem linha de resumo, e não há
-início nem fim de sessão: uma sessão sai do fio depois de um tempo em silêncio (10 minutos depois de
-terminar, 30 nos outros casos). O hook dele roda antes de toda ferramenta e não diz se o Antigravity
+início nem fim de sessão. O silêncio não a remove mais: uma sessão aberta pode descansar ou voar, e a limpeza exige confirmar a saída de um processo local antes observado. O hook dele roda antes de toda ferramenta e não diz se o Antigravity
 teria perguntado, então o Antigravity pede as permissões ele mesmo
 ([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)).
 
@@ -225,3 +225,33 @@ echo '{"hook_event_name":"SessionEnd","session_id":"s1"}' \
 ```
 
 O protocolo por trás disso está em [Protocolo do hook](../reference/protocol.md).
+
+## Hermes Agent
+
+Instale em **Configurações → Agentes → Hermes Agent**, execute
+`hermes plugins enable vults --no-allow-tool-override` e abra uma nova sessão no CLI. O gateway
+em execução pode recarregar o plugin imediatamente. Os arquivos ficam em
+`~/.hermes/plugins/vults/{__init__.py,plugin.yaml}`; `HERMES_HOME` permite outra pasta. O instalador
+mostra o diff, verifica os dois arquivos antes de escrever, mantém backups datados e preserva
+arquivos de terceiros. Antes de remover, use `hermes plugins disable vults`.
+
+O plugin acompanha sessões, turnos, ferramentas, falhas, identificadores nativos e subagentes.
+Edições por `patch` mantêm seus diffs; a prévia do repositório também cobre scripts e escritas.
+Permissões, perguntas e interrupção ficam no Hermes. Nenhum argumento ou resultado de ferramenta
+é alterado.
+
+As métricas usam os números de `post_api_request` e uma consulta somente leitura à sessão
+conhecida em `HERMES_HOME/state.db`. Contexto significa os tokens da chamada mais recente,
+incluindo cache, sem somar toda a conversa. A porcentagem exige um limite informado pelo Hermes.
+O tempo de resposta soma durações de chamadas concluídas observadas desde o carregamento do
+plugin, sem duplicar IDs repetidos; não inclui ferramentas nem intervalos ociosos. O custo usa
+o valor real informado pelo Hermes ou sua estimativa explícita. Ausência de dados continua
+desconhecida; assinatura incluída só vira zero quando o Hermes informa isso. Custos menores que
+um centavo permanecem visíveis. Nenhuma chave, conversa ou resposta bruta é lida ou encaminhada,
+e consultar as métricas não faz uma chamada ao modelo.
+
+Validação no Hermes 0.22.2 instalado: o diagnóstico nativo aceitou o plugin e o dispatcher real
+entregou sessão, métricas controladas de contexto/tempo e patch de +1/−1 ao Flock em execução,
+sem inferência. A seleção de custo nativo é verificada com um banco isolado.
+
+No Hermes Desktop, finalizar ou descarregar um runtime significa repouso: a conversa persistida pode continuar aberta. Um reset encerra apenas a sessão antiga explicitamente identificada e inicia/retoma a atual. O campo persistido `ended_at` no banco local ou um evento explícito de exclusão encerra a ave; dados de ciclo de vida ausentes/ilegíveis não a removem.

@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 28f2b81f469c -->
+<!-- source: 1c26b49d42fc -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -213,7 +213,7 @@ então você nunca é avisado duas vezes; *Paused* não mostra nenhuma.
 Elas avisam quando uma sessão **terminou** (com a primeira linha da resposta), **falhou** (com o
 erro), **precisa de você** (um card espera) ou [**ficou quieta**](#a-quiet-bird). Cada sessão tem no
 máximo uma, com o nome do projeto no título; ela some quando o card é respondido, a sessão volta a
-trabalhar ou sai (uma sessão concluída sai do fio depois de 10 minutos, uma calada depois de 30). O que aconteceu enquanto elas estavam desligadas não é avisado depois.
+trabalhar ou a sessão é encerrada; terminar uma resposta ou ficar em silêncio não remove a ave. O que aconteceu enquanto elas estavam desligadas não é avisado depois.
 
 **Open** (ou um clique) traz a ilha com aquela sessão na frente. Uma notificação nunca tem Allow nem
 Deny. Desligue-as em **Settings → General → Notifications**.
@@ -417,8 +417,7 @@ O card oferece três respostas, e nenhuma mexe no agente:
   depois.
 - **Dismiss**: nenhum sinal de novo até a próxima pergunta dela.
 
-Cada resposta conta como novidade, então a ave fica no fio (uma calada sai depois de 30 minutos);
-depois de *Keep going* ela fica até o sinal poder voltar.
+Cada resposta muda apenas o acompanhamento do silêncio. Uma sessão aberta continua no bando e pode voar ou descansar, inclusive quando o sinal volta. Terminar uma resposta e ficar inativa não a encerram. Um sinal explícito de encerramento, ou a saída confirmada de um processo local antes observado no Linux, remove a ave; uma presença desconhecida a mantém visível.
 
 <a id="per-project-mute-pin-hide"></a>
 

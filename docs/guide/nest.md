@@ -175,13 +175,62 @@ actions. A finished or failed turn shows its last reply or error. **Snooze**, **
 - **Context** lists the project, repository, branch, folder, agent, editor, state and reported metrics.
 - With Zeca on, **Zeca** opens Chat with a question about that session ready to send.
 
-Running time and context are the CLI's last reported snapshot, currently from Claude Code's
-[status line](https://code.claude.com/docs/en/statusline). Running time includes resumed runs;
-it is not inferred from step count or Vults uptime. Context is current occupancy and may fall
-after compaction. Cost is an API-price estimate, not a subscription charge. Agents that do not
-report these values, including Codex hooks, show **Not reported**. Reading the summary makes no
-network request and changes no agent configuration. In Full, the plans' usage remains below,
-amber from 70% and red from 90%.
+Metrics distinguish current context, cumulative session consumption and the time each agent actually reports. **Context** shows model/provider metadata, native versus catalog cost provenance, and independent reading ages for cost, time and context. Partial reports preserve other channels; an explicit Claude context reset clears its old gauge.
+
+| Agent | Numeric source and limits |
+| --- | --- |
+| Claude Code | Native status line: reported execution time, API-equivalent cost and latest context. Installing/updating keeps an existing refresh interval, otherwise uses two seconds. The status line's context totals are not cumulative session consumption. |
+| Codex | Known session's local index and incremental rollout: native turn durations, latest context, reported cumulative tokens and current standard API-price estimate. Idle time between turns is excluded. |
+| OpenCode | Read-only local database: native cost, completed model-response duration, latest context tokens and cumulative completed-response usage. |
+| Hermes CLI/Desktop | Observer API hooks for latest prompt tokens and response time observed since plugin load; local database for reported/estimated cost and cumulative usage. Tool/idle time is excluded; CLI sessions need the enabled plugin. |
+| Qwen Code | Native monthly usage ledger for API duration, cumulative tokens and per-call API-price estimates. Known chat JSONL is the fallback for context/usage. Subagent consumption never replaces the main context. No context percentage without a native limit. |
+| Copilot CLI | Persisted `session.shutdown` ledger: cumulative tokens, API duration, last context and premium-request credits. Shutdown snapshots replace older totals across resumes. Credits are never converted to USD; an API equivalent requires unambiguous prices and no unknown per-call context tier. |
+| Kimi Code | Known session's main-agent `usage.record` wire stream. Cache reads/writes remain separate and inherited records before a fork marker are excluded. No invented duration; API pricing requires an exact, unambiguous model. |
+| Factory Droid | Known session's cumulative numeric settings summary. No cost, current context or duration is inferred from cumulative tokens. |
+| Cursor | Native `preCompact` hook reports context before compaction. The documented hooks do not expose the complete session cost/time metrics. |
+| Antigravity | CLI numeric status line, installed alongside the shared hooks with separate backups and previous-command chaining. The native CLI supplies context and estimated USD; desktop/IDE hooks alone do not supply these numbers. |
+
+Local readers run every two seconds for sessions already in the flock, off the UI thread. **Session consumption** keeps cumulative input/output/cache counters separate from current context. Unknown remains **Not reported**, never zero. Source/version coverage differs: installed Codex and numeric databases were inspected locally; additional adapters have isolated contract checks and still require live CLI acceptance where the CLI is not installed.
+
+Catalog estimates use [models.dev](https://models.dev) every 15 minutes when **Automatic model prices** is enabled, or on manual refresh. No session data is sent. After 24 hours without successful verification, cached estimates become unavailable, including unchanged Copilot/Kimi logs. Unknown/ambiguous models, missing cache tariffs and aggregate usage with unknown context tiers are not assigned guessed prices. Native cost reports retain their own provenance.
+
+**Claude usage** separately enables a native account-allowance check every five minutes without
+sending a model prompt.
+Reading the summary makes no network request and changes no agent configuration. In Full, the
+plans' usage remains below, amber from 70% and red from 90%.
+
+The Session summary reports when metrics were last read and distinguishes waiting, failed reads
+and delayed checks. Context adds the last agent event, last successful read, last check and the
+local source. Reading metrics never refreshes the activity clock. Quiet agents are not marked as
+disconnected just because they stop sending events. A failed local read retains the last values
+and marks them unavailable. OpenCode's **Model response time** measures completed response
+intervals without counting overlaps, gaps or tool execution. Qwen response duration appears only
+when the native usage ledger supplies it.
+
+Changes also shows **Repository changes**: a read-only comparison of current local files with
+HEAD, including new/deleted files and edits made by commands or scripts. This is the repository's
+working state, not attribution to one agent; it can include earlier work. Choose a file to see
+numbered added/removed lines. Refresh runs every four seconds only while this tab is visible,
+with manual retry and an expanded diff view; approvals always restore their card. Binary/large
+files and previews above the size budget are explicitly omitted. Git reads raw objects without
+running worktree clean filters, text converters, external diff programs or hooks. No files are
+staged or written. Agent-reported edits remain available separately.
+
+Permission cards show the operation's working folder, which may differ from the session's folder.
+Codex, Qwen and OpenCode folder fields survive parsing and plugin forwarding. That folder is
+included in the signed approval binding and scopes an Always rule; an unresolved relative folder
+cannot create one. A disconnected hook expires its card without answering it, and a request that
+has already missed the acknowledgement deadline is never offered. The same checks apply to
+Vults-owned approval channels. A stale click cannot answer an expired offer.
+
+Context and Settings → Agents also show registry-backed Watch, Answer and Start support.
+Execution marked planned is not advertised as enabled; installation remains a separate check.
+
+Context also explains integration limits. Questions from Codex and OpenCode 2 remain in their
+terminals, and only Claude/Codex turns started by Vults can be interrupted here. Settings → Agents
+checks OpenCode's installed major version before advertising question cards. The read-only
+installed-client upgrade canary is `cargo test -p vults-chat installed_acp_clients_initialize_without_a_model_turn -- --ignored --nocapture`;
+it initializes OpenCode and Qwen without creating sessions or sending model prompts.
 
 If a permission or question arrives while **Focus diff** is expanded, the card
 comes back. Expansion stays unavailable while the request waits. Permission

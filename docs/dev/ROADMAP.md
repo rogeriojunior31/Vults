@@ -194,6 +194,20 @@ noted in the PR; the test passes.
 ### S14 · Release a card whose hook is already gone
 `P1 · S · Needs: —`
 
+Implementation (2026-10-29, local working tree): closed-handle detection and event-driven
+transport cancellation now expire offers without user decisions. EOF is observed before and after
+acknowledgement; late arrivals are refused before entering core, and ack races expire only that
+connection's offer. Request-id reuse cannot let an old close notification expire a newer handle.
+IPC, core and runtime regression checks pass. Native transport acceptance is recorded below after
+the running-app check; this is not release-package acceptance.
+
+Native check (2026-10-29, KDE Wayland, current debug working tree): a temporary local IPC hook
+received Waiting; Room showed its explicit operation folder. Closing the client removed the card
+without a decision; SessionEnd removed the test session. The test sent no model prompt and ran no
+agent command. Before-ack EOF and expired acknowledgement budgets are covered by runnable IPC and
+runtime tests. The running Room also displayed 64 real changed repository files with numbered
+added/removed lines, including script-written files that emitted no native patch event.
+
 `ipc` waits `ACK_TIMEOUT` (800 ms) for the ack, then the hook gives up; `runtime.rs` acks on
 `Effect::AckPermission` without checking whether that is already too late, so a card can show for a
 hook that left.
@@ -204,6 +218,25 @@ hook that left.
 - [ ] Core test: a late request yields no card left on screen; an on-time one still shows.
 
 **Done when:** the test passes and a hook killed before the ack leaves no card in the running app.
+
+### MF · Agent metrics completion
+
+2026-10-29 local implementation: typed time/cost provenance, model/pricing-provider metadata,
+separate context versus cumulative usage, per-metric reading ages and partial-update/reset
+semantics. Readers cover Codex/OpenCode/Hermes, Qwen monthly ledgers with chat fallback,
+Copilot cumulative shutdown totals, Kimi main-agent wire usage and Droid numeric summaries;
+Cursor preCompact and Antigravity CLI status-line channels expose only documented fields.
+Antigravity installation reviews shared hooks, CLI settings and its separately chained prior
+status command together. Estimates use exact catalog models and expire even for unchanged logs;
+credits never become USD and unknown context tiers do not receive guessed aggregate prices.
+
+- [x] Numeric adapter, ownership, partial-report and renderer regression checks.
+- [x] Native Codex session: execution time, estimated API-equivalent USD and context observed.
+- [ ] Live Claude/OpenCode/Qwen conversations after the latest relay update.
+- [ ] Live Hermes Desktop/CLI conversation; numeric dispatcher/DB checks are controlled/read-only.
+- [ ] Copilot/Kimi/Droid live acceptance where those CLIs are available; current checks use isolated contracts.
+- [ ] Cursor compact / Antigravity CLI status-line live acceptance. Desktop-only Antigravity hooks
+  and Cursor hooks do not provide every session metric; the UI must retain these explicit limits.
 
 ### FF3 · Quiet finish when the session's terminal is in front
 `P1 · M · Needs: —` · [Spec](plan-field-fixes.md#ff3--quiet-finish-when-the-sessions-terminal-is-in-front)
@@ -287,6 +320,14 @@ write follows rule 3 (backup, diff, click).
 
 ### W2 · Show the working folder on every card
 `P1 · M · Needs: —`
+
+2026-10-29 implementation: explicit operation folders now survive Codex/Qwen/OpenCode parsing
+and OpenCode plugin forwarding and appear in island/Room approvals. The operation folder is
+signed in the approval binding and scopes Always rules independently of the session's folder.
+Relative unresolved folders cannot persist rules; policy allows reject outside/parent-climbing
+folders. Policy allow coverage remains restricted to Claude pending each agent's live qualification;
+this does not silently widen automatic permissions.
+
 - [ ] Parse the folder other agents send with a shell call (`workdir`, `directory`) and a search's path,
   per driver in `crates/agents/src/*.rs`.
 - [ ] Carry it in `ApprovalView` (`crates/core/src/view.rs`) and show it on the card in island and Nest.
@@ -313,7 +354,13 @@ write follows rule 3 (backup, diff, click).
   terminal brings the wrapper forward
 
 ### UX12 · Agent availability in the UI
-`P2 · M · Needs: —` · [Spec](plan-ui.md#ux12---ui-delivered-with-coverage-and-mobile-features)
+`P2 · M · Needs: —`
+
+2026-10-29 implementation: Watch/Answer/Start fields are generated from the Rust registry and
+shown in Flock Context and Settings → Agents. Available, planned/not enabled and unsupported
+execution are distinct, without inferring installation from protocol support. Native visual
+acceptance is recorded with the current working-tree verification.
+ · [Spec](plan-ui.md#ux12---ui-delivered-with-coverage-and-mobile-features)
 - [ ] Settings › Agents and Flock show Watch / Answer / Drive from `crates/agents/src/registry.rs`, with
   verified versus planned; planned agents never appear installed.
 
@@ -322,8 +369,8 @@ write follows rule 3 (backup, diff, click).
 (`other-agents.md`, `approvals.md`, README list, both languages), CHANGELOG.
 - [ ] B4-CLINE Cline CLI · [ ] B4-KIRO Kiro CLI (Claude-style hooks) — P2
 - [ ] C1 a recorded session from a real Cursor — P2
-- [ ] C5-AMP Amp (TS plugin) · [ ] C5-PI Pi (TS extension) · [ ] C5-HERMES Hermes (Python plugin;
-  enabling stays the user's) — P2
+- [ ] C5-AMP Amp (TS plugin) · [ ] C5-PI Pi (TS extension) · [ ] C5-HERMES Hermes (Python observer and metrics implemented; installed 0.22.2 plugin doctor and
+  native dispatcher verified; live model-turn acceptance pending) — P2
 - [ ] F3 YAML writer (lossless, comments kept), then C6-GOOSE Goose — P3
 - [ ] C6-CRUSH Crush · [ ] C6-GROK Grok Build · [ ] C6-MUSE Muse Code — P3
 - [ ] R2 ACP rows where the ACP mode passes a spike: Goose, Auggie, Cline, Hermes (Droid waits for a

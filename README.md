@@ -137,7 +137,7 @@ on the desktop and destination, and never submits a message automatically.
 
 ## Support
 
-Built-in integrations: **Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor,
+Built-in integrations: **Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI, Cursor,
 Factory Droid and Kimi Code**. Watching a session, answering its cards and driving it are different
 capabilities: some agents keep approvals in their own terminal. See the
 [per-agent capability table](docs/guide/other-agents.md#what-each-agent-can-do).

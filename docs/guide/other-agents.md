@@ -1,6 +1,6 @@
 # Other agents
 
-Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid and Kimi Code are built in (**Settings →
+Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI, Cursor, Factory Droid and Kimi Code are built in (**Settings →
 Agents**). Any other tool can put its sessions on the wire too, if it runs a command on its events
 and sends Claude Code's hook JSON on stdin (the format most agent tools copy). For tools that run
 plugins instead (Pi), a short plugin does the same; recipes are below.
@@ -16,7 +16,7 @@ Point the tool's hooks at the relay with a name of your choice (on Windows the r
   (`claude`, `codex`, `copilot`, `opencode`, `qwen` and `other`), nor `gemini`: the wire has no kind
   for it any more, but Gemini CLI's old hooks may still be installed, so the name stays taken and
   they send nothing. The built-ins Vults sends
-  by name (`antigravity`, `cursor`, `droid`, `kimi`) use those names themselves, so they are not
+  by name (`antigravity`, `hermes`, `cursor`, `droid`, `kimi`) use those names themselves, so they are not
   reserved; a tool by any name gets no card, a built-in sent by name included. With a name that
   breaks these rules the hook sends nothing and exits at once.
 - The event name comes from `hook_event_name` in the JSON, or from the last argument. Claude Code's
@@ -41,6 +41,7 @@ Vults. **Check again** asks anew; the answer is kept ten minutes.
 | Codex | a card | its terminal | lines | at once, when Vults started it | its sandbox mode | yes |
 | Antigravity | its terminal | its terminal | lines | not from Vults yet | none | not yet |
 | OpenCode | a card | a card (OpenCode 1) | lines | not from Vults | none | no |
+| Hermes Agent | its terminal | its terminal | patch lines and repository preview | not from Vults | agent-managed | no |
 | Qwen Code | a card | its terminal | lines | not from Vults | a container, if on | no |
 | Copilot CLI | a card | none | lines | not from Vults | none | no |
 | Cursor | its terminal | its terminal | lines | not from Vults | none | no |
@@ -69,8 +70,7 @@ nothing. Its sessions show as `antigravity`.
 The island shows Antigravity thinking, each step (`view_file`, `run_command`…) and when it stops,
 and each edit's diff, rebuilt from the text it replaced (without line numbers).
 Antigravity does not send its reply, so a finished session has no summary line, and it has no
-session start or end: a session leaves the wire once quiet (10 minutes after it finished, 30
-otherwise). Its hook runs before every tool and does not say whether Antigravity would have asked,
+session start or end. Silence no longer removes it: an open session can rest or fly, and a previously observed local process must be confirmed gone before cleanup. Its hook runs before every tool and does not say whether Antigravity would have asked,
 so Antigravity asks its permissions itself ([Approving](approvals.md#agents-that-ask-in-their-own-prompt)).
 
 ## Cursor
@@ -212,3 +212,31 @@ echo '{"hook_event_name":"SessionEnd","session_id":"s1"}' \
 ```
 
 The protocol behind it is in [Hook protocol](../reference/protocol.md).
+
+## Hermes Agent
+
+Install the observer in **Settings → Agents → Hermes Agent**, then run
+`hermes plugins enable vults --no-allow-tool-override` and start a new CLI session. A running
+Hermes gateway may reload the plugin immediately. Files live in
+`~/.hermes/plugins/vults/{__init__.py,plugin.yaml}`; `HERMES_HOME` selects another home.
+The installer previews and checks both owned files before writing, keeps dated backups and
+refuses to overwrite foreign files. Disable it with `hermes plugins disable vults` before removal.
+
+The observer relays session/turn lifecycle, tool calls, failures, native call IDs and subagents.
+`patch` edits keep their diffs; repository changes also cover scripts and writes. Permissions,
+questions and stopping stay in Hermes. No tool arguments or tool outputs are modified.
+
+Metrics use numeric `post_api_request` reports and a read-only lookup of the known session in
+`HERMES_HOME/state.db`. Context is the latest request's tokens including cache, not cumulative
+session usage; percentage is shown only with a reported context limit. Model response time sums
+completed API durations observed since the plugin loaded, with repeated request IDs deduplicated.
+It excludes tool execution and idle time. Cost prefers Hermes' actual reported value, then an
+explicit native estimate; unknown remains unknown and an included subscription is zero only when
+Hermes explicitly reports it. Sub-cent amounts stay visible. No account key, conversation text or
+raw response is read or forwarded, and no model request is needed to read these metrics.
+
+Validated on installed Hermes 0.22.2: the native Plugin Doctor accepts the plugin, and the actual
+runtime dispatcher delivered a session, controlled context/time metrics and a +1/−1 patch to the
+running Flock without inference. Native cost selection is checked against an isolated database.
+
+Hermes Desktop runtime eviction/finalization is treated as rest, because it can leave the durable conversation open. Reset ends only an explicitly named old session and starts/resumes the current one. A durable `ended_at` in the local session database or an explicit deletion closes the bird; missing/unreadable lifecycle data does not.

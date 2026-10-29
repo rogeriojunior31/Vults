@@ -19,13 +19,14 @@ starts it over ACP or a native driver, so every permission comes to us).
 | Claude Code | Yes | Yes (+ questions) | Native |
 | Codex | Yes | Yes | Native |
 | Antigravity | Yes | No: answers "ask" | No |
-| OpenCode | Yes (plugin) | Yes (+ questions) | ACP |
+| OpenCode | Yes (plugin) | Yes; question cards on v1, terminal questions on v2 | ACP adapter; Flock drive still planned |
 | Qwen Code | Yes | Yes | ACP |
 | Copilot CLI | Yes | Yes | ACP |
 | Cursor | Yes | No: asks in its prompt | No |
 | Factory Droid | Yes | No: asks in its prompt | No (its ACP needs a Factory login) |
 | Kimi Code | Yes | No: asks in its prompt; a card in a task | ACP |
-| Amp, Hermes, Crush, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
+| Hermes Agent | Yes (Python observer plugin; context, API response time and native cost) | No: asks in its terminal | No |
+| Amp, Crush, Pi, Goose, Grok Build, Cline, Auggie, Kiro | Recipe in `other-agents.md`, or nothing | No | No |
 
 `AgentKind` is `Claude | Codex | OpenCode | Qwen | Copilot | Other`, protocol `VERSION` 9. An
 answerable agent needs its own kind (*Always* rules and policies are keyed by it); an observe-only
@@ -57,7 +58,7 @@ F4's checklist, R1; A0 not needed.
 | F4 | Public issues per agent (`good first issue` where observe-only), on the maintainer's go. The checklist is [Adding an agent](../contributing/agents.md) | Issues open |
 | B4 | Cline CLI, Kiro CLI: Claude-style hook clones, one PR each after its spike | Fixture; answers where answerable, "waiting in the terminal" otherwise |
 | C1 | A recorded session from a real Cursor (installed from its docs; no spike possible here) | A session's steps and stop seen live |
-| C5 | Amp (TS plugin), Pi (TS extension), Hermes (Python plugin; enabling stays the user's), with the C2 writer | Installed and seen working with the real CLI |
+| C5 | Amp (TS plugin), Pi (TS extension), Hermes (Python observer implemented; native 0.22.2 plugin doctor and dispatcher verified; live model-turn acceptance pending), with the C2 writer | Installed and seen working with the real CLI |
 | C6 | Crush, Goose (YAML, F3), Grok Build, Muse Code | Same |
 | R2 | ACP rows for agents whose ACP mode passes a spike (Goose, Auggie, Cline, Hermes; Droid's `exec --output-format acp` refuses a session without a Factory login, even with its own models, so it waits for a real account): args forcing the agent's own prompts. Kimi Code done (`kimi acp`, `Acp.mode` sets its asking mode) | A task runs from the Nest; a permission reaches a card; deny stops the tool |
 | G1 | [ADR 0027](../adr/0027-an-open-reply-for-any-tool.md) (proposed): a named tool opts in with `--reply vults`, sends Claude Code's hook JSON, reads `{"decision":"allow"\|"deny"}`; rules keyed by its name; destructive calls always ask | ADR accepted by the user |
@@ -84,6 +85,10 @@ Docs in each step's PR: `other-agents.md`, `approvals.md`, the README agent list
   OpenCode's `always`. The race with its TUI prompt is still to watch by hand.
 - **Codex**: `codex exec` forces `approval: never`, and its TUI hangs in a headless pty, so the card
   round trip is unchecked live. Hooks need trust (`hooks/list` on the app-server gives key and hash).
+- **2026-10-29 refinement:** operation working folders survive hook/plugin parsing and appear
+  before permission decisions; their exact scope is bound to one-time approvals and Always rules.
+  Registry-backed UI distinguishes observing, answering and enabled versus planned drive.
+  Transport disconnect/ack deadline now withdraws stale cards without answering them.
 - **A written file's diff** stays out for OpenCode and Qwen on purpose: an overwrite rebuilt from
   its content would count every line as added.
 - **Unverified hook shapes** (research 2026-10-02): Crush has `hooks.PreToolUse` only in
