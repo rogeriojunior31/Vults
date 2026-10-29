@@ -25,7 +25,7 @@ pub mod traces;
 pub mod words;
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use rusqlite::{Connection, ErrorCode, TransactionBehavior};
 
@@ -186,9 +186,21 @@ impl Store {
     /// Opens (or creates) `vults.sqlite` in `dir` and brings it to the latest schema. A database
     /// from a newer version is refused rather than written with an older schema.
     pub fn open(dir: &Path) -> Result<Self, Error> {
-        let mut store = Self::connect(dir)?;
-        store.migrate()?;
-        Ok(store)
+        // A new database can remain locked beyond SQLite's per-statement busy timeout while
+        // another process migrates it. Retry the whole admission after its transaction rolls back.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            let result = Self::connect(dir).and_then(|mut store| {
+                store.migrate()?;
+                Ok(store)
+            });
+            match result {
+                Err(Error::Sqlite(ref error)) if busy(error) && Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+                other => return other,
+            }
+        }
     }
 
     /// Opens a database the running app already brought to this schema, never migrating it: a
@@ -400,6 +412,19 @@ mod tests {
                 assert_eq!(o.join().unwrap().unwrap(), MIGRATIONS.len() as i64);
             }
         }
+    }
+
+    #[test]
+    fn opening_retries_when_another_migration_outlasts_the_busy_timeout() {
+        let dir = temp("migration-busy");
+        std::fs::create_dir_all(&dir).unwrap();
+        let owner = Connection::open(path(&dir)).unwrap();
+        owner.pragma_update(None, "journal_mode", "WAL").unwrap();
+        owner.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let opener = std::thread::spawn(move || Store::open(&dir).map(|s| s.schema_version().unwrap()));
+        std::thread::sleep(Duration::from_millis(2300));
+        owner.execute_batch("COMMIT").unwrap();
+        assert_eq!(opener.join().unwrap().unwrap(), MIGRATIONS.len() as i64);
     }
 
     #[cfg(unix)]
