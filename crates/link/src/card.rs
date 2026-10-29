@@ -157,6 +157,7 @@ mod tests {
                 cwd: Some("/home/me/vults".into()),
                 terminal: Terminal::default(),
                 agent_id: None,
+                call_id: None,
                 event: AgentEvent::PermissionRequested {
                     request: RequestId("r1".into()),
                     tool: "apply_patch".into(),

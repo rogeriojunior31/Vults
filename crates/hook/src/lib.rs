@@ -97,7 +97,7 @@ impl Args {
 pub fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, Value>> {
     let limits = payload.get("rate_limits").filter(|v| v.is_object());
     let mut cost = Map::new();
-    for field in ["total_cost_usd", "total_duration_ms"] {
+    for field in ["total_cost_usd", "total_usd", "total_duration_ms"] {
         if let Some(value) = payload.get("cost").and_then(|c| c.get(field)).filter(|v| {
             if field == "total_duration_ms" {
                 v.as_u64().is_some()
@@ -112,9 +112,6 @@ pub fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, V
         .get("context_window")
         .and_then(|c| c.get("used_percentage"))
         .filter(|v| v.as_f64().is_some_and(|n| (0.0..=100.0).contains(&n)));
-    if limits.is_none() && cost.is_empty() && context.is_none() {
-        return None;
-    }
     let mut kept = Map::new();
     if let Some(limits) = limits {
         kept.insert("rate_limits".into(), limits.clone());
@@ -128,8 +125,54 @@ pub fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, V
             serde_json::json!({ "used_percentage": used }),
         );
     }
-    if let Some(id) = payload.get("session_id") {
-        kept.insert("session_id".into(), id.clone());
+    if let Some(id) = payload
+        .get("model")
+        .and_then(|m| m.get("id"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty() && s.len() <= 256)
+    {
+        kept.insert("model".into(), serde_json::json!({"id":id}));
+    }
+    // Only numeric usage and a model identifier, never account or transcript contents.
+    let mut current = Map::new();
+    for field in [
+        "input_tokens",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+    ] {
+        if let Some(value) = payload
+            .get("context_window")
+            .and_then(|c| c.get("current_usage"))
+            .and_then(|u| u.get(field))
+            .filter(|v| v.as_u64().is_some())
+        {
+            current.insert(field.into(), value.clone());
+        }
+    }
+    if payload
+        .get("context_window")
+        .and_then(|c| c.get("current_usage"))
+        .is_some_and(Value::is_null)
+    {
+        kept.entry("context_window")
+            .or_insert_with(|| serde_json::json!({}))["current_usage"] = Value::Null;
+    }
+    if !current.is_empty() {
+        let context = kept
+            .entry("context_window")
+            .or_insert_with(|| serde_json::json!({}));
+        context["current_usage"] = Value::Object(current);
+    }
+    if kept.is_empty() {
+        return None;
+    }
+    if let Some(id) = payload
+        .get("session_id")
+        .or_else(|| payload.get("conversation_id"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty() && s.len() <= 256)
+    {
+        kept.insert("session_id".into(), id.into());
     }
     Some(kept)
 }

@@ -12,22 +12,26 @@ export interface AgentEntry {
   kind: AgentKind;
   setup: Setup;
   run: Run;
+  watch: boolean;
+  answer: boolean;
+  drive: "available" | "planned" | "none";
 }
 
 export const AGENTS: readonly AgentEntry[] = [
-  { id: "claude", name: "Claude Code", kind: "claude", setup: "hooks", run: "native" },
-  { id: "codex", name: "Codex", kind: "codex", setup: "hooks", run: "native" },
-  { id: "antigravity", name: "Antigravity", kind: "other", setup: "hooks", run: "no" },
-  { id: "opencode", name: "OpenCode", kind: "opencode", setup: "plugin", run: "acp" },
-  { id: "qwen", name: "Qwen Code", kind: "qwen", setup: "hooks", run: "acp" },
-  { id: "copilot", name: "Copilot CLI", kind: "copilot", setup: "hooks", run: "acp" },
-  { id: "cursor", name: "Cursor", kind: "other", setup: "hooks", run: "no" },
-  { id: "droid", name: "Factory Droid", kind: "other", setup: "hooks", run: "no" },
-  { id: "kimi", name: "Kimi Code", kind: "other", setup: "hooks", run: "acp" },
-  { id: "gemini", name: "Gemini CLI", kind: "other", setup: "remove-only", run: "no" },
+  { id: "claude", name: "Claude Code", kind: "claude", setup: "hooks", run: "native", watch: true, answer: true, drive: "available" },
+  { id: "codex", name: "Codex", kind: "codex", setup: "hooks", run: "native", watch: true, answer: true, drive: "available" },
+  { id: "antigravity", name: "Antigravity", kind: "other", setup: "hooks", run: "no", watch: true, answer: false, drive: "none" },
+  { id: "opencode", name: "OpenCode", kind: "opencode", setup: "plugin", run: "acp", watch: true, answer: true, drive: "planned" },
+  { id: "hermes", name: "Hermes Agent", kind: "other", setup: "plugin", run: "no", watch: true, answer: false, drive: "none" },
+  { id: "qwen", name: "Qwen Code", kind: "qwen", setup: "hooks", run: "acp", watch: true, answer: true, drive: "planned" },
+  { id: "copilot", name: "Copilot CLI", kind: "copilot", setup: "hooks", run: "acp", watch: true, answer: true, drive: "planned" },
+  { id: "cursor", name: "Cursor", kind: "other", setup: "hooks", run: "no", watch: true, answer: false, drive: "none" },
+  { id: "droid", name: "Factory Droid", kind: "other", setup: "hooks", run: "no", watch: true, answer: false, drive: "none" },
+  { id: "kimi", name: "Kimi Code", kind: "other", setup: "hooks", run: "acp", watch: true, answer: false, drive: "planned" },
+  { id: "gemini", name: "Gemini CLI", kind: "other", setup: "remove-only", run: "no", watch: false, answer: false, drive: "none" },
 ];
 
 /** An agent the installer knows, by the name its hooks run with. */
-export type InstallAgent = "claude" | "codex" | "antigravity" | "opencode" | "qwen" | "copilot" | "cursor" | "droid" | "kimi" | "gemini";
+export type InstallAgent = "claude" | "codex" | "antigravity" | "opencode" | "hermes" | "qwen" | "copilot" | "cursor" | "droid" | "kimi" | "gemini";
 /** An agent with a supported CLI execution mode. */
 export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot" | "kimi";

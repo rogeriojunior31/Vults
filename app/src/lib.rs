@@ -33,6 +33,7 @@ mod panel;
 mod paths;
 mod phone;
 mod policies;
+mod pricing;
 mod profiles;
 #[cfg(target_os = "linux")]
 mod questions;
@@ -41,6 +42,7 @@ mod recall;
 mod records;
 mod roosts;
 mod runtime;
+mod session_presence;
 mod settings;
 mod sleep;
 mod specialist_github;
@@ -159,6 +161,7 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             questions::text_question_depart,
             runtime::step_diff,
+            runtime::workspace_diff,
             runtime::decide,
             runtime::layout,
             runtime::surface_keyboard,
@@ -278,6 +281,10 @@ pub fn run() {
             settings::set_monitor,
             settings::set_now_playing,
             settings::set_codex_usage,
+            settings::set_claude_usage,
+            settings::set_price_updates,
+            pricing::model_price_status,
+            pricing::refresh_model_prices,
             settings::set_native_chat,
             settings::set_dictation_insert,
             settings::set_dictation_caption,
@@ -491,6 +498,7 @@ pub fn run() {
             // After the runtime: a lock already on at start reaches its inbox.
             lock::start(&handle);
             // After the runtime too: its first read asks whether the screen is locked.
+            pricing::start(&handle);
             usage::start(&handle);
             journal::start(handle.clone());
             sleep::start(handle.clone());

@@ -22,10 +22,12 @@ pub mod acp;
 pub mod activity;
 mod api;
 mod claude;
+mod claude_account;
 mod codex;
 mod codex_isolation;
 #[cfg(target_os = "linux")]
 mod mcp_tools;
+pub mod model_prices;
 #[cfg(target_os = "linux")]
 pub use mcp_tools::stdio as specialist_mcp_main;
 mod codex_server;
@@ -105,6 +107,21 @@ pub async fn codex_usage(dir: &Path) -> Result<Vec<vults_agents::usage::Window>,
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs() as i64);
     Ok(vults_agents::usage::codex(&read, now))
+}
+
+/// Only the CLI's native allowance request, never a prompt or a credential read by Vults.
+pub async fn claude_usage(dir: &Path) -> Result<Vec<vults_agents::usage::Window>, String> {
+    let read = tokio::time::timeout(USAGE_TIMEOUT, claude_account::read(dir))
+        .await
+        .map_err(|_| "Claude usage: timed out".to_string())??;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64);
+    let windows = vults_agents::usage::claude_account(&read, now);
+    if windows.is_empty() {
+        return Err("Claude usage: allowance unavailable".into());
+    }
+    Ok(windows)
 }
 
 /// A file sent earlier, as a saved conversation keeps it.

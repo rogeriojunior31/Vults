@@ -36,7 +36,7 @@ pub fn owner(existing: &Value, marker: &str) -> Owner {
 /// ([`install`] does).
 pub fn with_ours(existing: &Value, command: &str, marker: &str) -> Value {
     let mut root = existing.as_object().cloned().unwrap_or_default();
-    let line = match root.get("statusLine") {
+    let mut line = match root.get("statusLine") {
         Some(Value::Object(old)) if owner(existing, marker) != Owner::None => {
             let mut line = old.clone();
             // Replacing an existing key keeps its place.
@@ -46,6 +46,12 @@ pub fn with_ours(existing: &Value, command: &str, marker: &str) -> Value {
         }
         _ => json!({ "type": "command", "command": command }),
     };
+    // Claude Code's event-driven line goes quiet while waiting on tools/subagents. Its native
+    // timer refreshes duration/usage without an API request. Preserve an existing preference.
+    // https://code.claude.com/docs/en/statusline#manually-configure-a-status-line
+    if let Some(line) = line.as_object_mut() {
+        line.entry("refreshInterval").or_insert(json!(2));
+    }
     root.insert("statusLine".into(), line);
     Value::Object(root)
 }
@@ -203,6 +209,7 @@ mod tests {
         let with = with_ours(&empty, OURS, M);
         assert_eq!(owner(&with, M), Owner::Ours);
         assert_eq!(with["model"], "opus");
+        assert_eq!(with["statusLine"]["refreshInterval"], 2);
         assert_eq!(remove_ours(&with, M), empty);
         // Again is the same.
         assert_eq!(with_ours(&with, OURS, M), with);
@@ -221,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn their_status_line_is_saved_and_only_its_command_changes() {
+    fn their_status_line_is_saved_and_restored_with_its_refresh_preference() {
         let line = json!({ "type": "command", "command": "~/bin/my-line.sh", "padding": 1 });
         let theirs = json!({ "a": 1, "statusLine": line, "b": 2 });
         assert_eq!(owner(&theirs, M), Owner::Theirs);
@@ -229,8 +236,11 @@ mod tests {
         assert_eq!(saved.as_ref(), Some(&line));
         assert_eq!(
             next,
-            json!({ "a": 1, "statusLine": { "type": "command", "command": OURS, "padding": 1 }, "b": 2 })
+            json!({ "a": 1, "statusLine": { "type": "command", "command": OURS, "padding": 1, "refreshInterval": 2 }, "b": 2 })
         );
+        let preferred =
+            json!({ "statusLine": { "type": "command", "command": "mine", "refreshInterval": 5 } });
+        assert_eq!(with_ours(&preferred, OURS, M)["statusLine"]["refreshInterval"], 5);
         // Reinstalling keeps what was saved, and the padding.
         let (again, kept) = install(&next, saved.as_ref(), OURS, M);
         assert_eq!((&again, &kept), (&next, &saved));

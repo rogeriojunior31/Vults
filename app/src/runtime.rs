@@ -45,8 +45,39 @@ pub fn publish_view<R: tauri::Runtime>(app: &AppHandle<R>, view: &ViewModel) {
 #[derive(Debug)]
 pub struct Inbox(mpsc::Sender<Msg>);
 
+#[derive(Default)]
+struct EarlyMetrics(HashMap<core::SessionKey, (Instant, vults_agents::metrics::Snapshot)>);
+
+impl EarlyMetrics {
+    fn remember(&mut self, key: core::SessionKey, report: vults_agents::metrics::Snapshot, now: Instant) {
+        self.0
+            .retain(|_, (at, _)| now.saturating_duration_since(*at) < Duration::from_secs(60));
+        if self.0.len() < 128 || self.0.contains_key(&key) {
+            self.0.insert(key, (now, report));
+        }
+    }
+
+    fn take(&mut self, key: &core::SessionKey, now: Instant) -> Option<vults_agents::metrics::Snapshot> {
+        let (at, report) = self.0.remove(key)?;
+        (now.saturating_duration_since(at) < Duration::from_secs(60)).then_some(report)
+    }
+}
+
 #[derive(Debug)]
 enum Msg {
+    RefreshMetrics,
+    RequestGone {
+        id: RequestId,
+        reply: ReplyHandle,
+    },
+    MetricsRead(
+        Vec<(
+            core::SessionKey,
+            Instant,
+            Instant,
+            Option<vults_agents::metrics::Snapshot>,
+        )>,
+    ),
     VoicePreview {
         text: String,
         replacements: Vec<(String, String)>,
@@ -98,6 +129,7 @@ enum Msg {
     Phone(vults_link::answer::Verified),
     User(Intent),
     Tick,
+    SessionProcesses(Vec<crate::session_presence::Report>),
     /// `/continue` asks which sessions in a folder may be continued (W7); only the loop knows.
     Continuable {
         cwd: String,
@@ -115,6 +147,10 @@ enum Msg {
         turn: u64,
         end: bool,
         look: Option<crate::folder::Look>,
+    },
+    WorkspaceDiff {
+        session: core::SessionKey,
+        reply: tokio::sync::oneshot::Sender<Result<core::Diff, String>>,
     },
     /// The island asks for a step's whole diff; only the loop holds it.
     Diff {
@@ -290,7 +326,7 @@ pub fn start(app: AppHandle) {
             }
         }
     });
-    // Once a minute, so silent sessions and stale cards age out. One message a minute is
+    // Once a minute, check closed processes and expire stale cards. Silence is not closure. One message a minute is
     // all it costs when nothing is going on.
     let ticker = tx.clone();
     let memory_app = app.clone();
@@ -300,6 +336,17 @@ pub fn start(app: AppHandle) {
             every.tick().await;
             crate::memory::refresh_attention(&memory_app);
             if ticker.send(Msg::Tick).await.is_err() {
+                break;
+            }
+        }
+    });
+    let metrics = tx.clone();
+    tauri::async_runtime::spawn(async move {
+        let mut every = tokio::time::interval(Duration::from_secs(2));
+        every.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            every.tick().await;
+            if metrics.send(Msg::RefreshMetrics).await.is_err() {
                 break;
             }
         }
@@ -385,6 +432,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     let mut repos = Readings::new();
     // The turns whose folder is being looked at.
     let mut folders = Folders::default();
+    let reader = std::sync::Arc::new(Mutex::new(vults_agents::metrics::Reader::default()));
+    let mut metrics_reading = false;
+    let process_watcher = std::sync::Arc::new(Mutex::new(crate::session_presence::Watcher::default()));
+    let mut processes_reading = false;
+    // A statusLine may beat SessionStart through the socket. Keep only a short, bounded
+    // buffer; metrics alone must never create a session or resurrect an ended one.
+    let mut early_metrics = EarlyMetrics::default();
 
     while let Some(msg) = {
         #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
@@ -455,6 +509,122 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             crate::questions::publish(&app, &mut questions);
         }
         let input = match msg {
+            Msg::RequestGone { id, reply } => {
+                if !waiting
+                    .get(&id)
+                    .is_some_and(|current| current.same_request(&reply))
+                {
+                    continue;
+                }
+                Some(Input::RequestGone { request: id })
+            }
+            Msg::RefreshMetrics => {
+                if metrics_reading || state.locked || crate::lock::locked(&app) {
+                    continue;
+                }
+                let sessions: Vec<_> = state
+                    .sessions
+                    .iter()
+                    .filter(|(key, _)| vults_agents::metrics::readable(key))
+                    .map(|(key, session)| (key.clone(), session.started, session.event_at))
+                    .collect();
+                if sessions.is_empty() {
+                    continue;
+                }
+                metrics_reading = true;
+                let reader = reader.clone();
+                let metrics_app = app.clone();
+                let tx = tx.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let keys: Vec<_> = sessions.iter().map(|(key, _, _)| key.clone()).collect();
+                    let data = crate::paths::agent_data_home();
+                    let prices = crate::pricing::book(&metrics_app);
+                    let mut reader = reader.lock().unwrap_or_else(|e| e.into_inner());
+                    reader.set_prices(prices);
+                    let reports = reader.read(&crate::paths::agent_dirs(), &data, &keys);
+                    // Include failed reads: silence must not look like a healthy source.
+                    let mut reports: HashMap<_, _> = reports.into_iter().collect();
+                    let reports = sessions
+                        .into_iter()
+                        .map(|(key, started, event)| {
+                            let report = reports.remove(&key);
+                            (key, started, event, report)
+                        })
+                        .collect();
+                    let _ = tx.blocking_send(Msg::MetricsRead(reports));
+                });
+                continue;
+            }
+            Msg::MetricsRead(reports) => {
+                metrics_reading = false;
+                if state.locked || crate::lock::locked(&app) {
+                    continue;
+                }
+                let mut lifecycle_effects = Vec::new();
+                for (key, started, event, report) in reports {
+                    if let Some(session) = state.sessions.get(&key).filter(|s| s.started == started) {
+                        let Some(report) = report else {
+                            // The CLI can register the session before creating its local log/index.
+                            if now.saturating_duration_since(started) < Duration::from_secs(10) {
+                                continue;
+                            }
+                            core::reduce(
+                                &mut state,
+                                if vults_agents::metrics::is_hermes(&key) {
+                                    core::Input::SessionCostUnavailable { session: key }
+                                } else {
+                                    core::Input::SessionMetricsUnavailable { session: key }
+                                },
+                                now,
+                            );
+                            continue;
+                        };
+                        // A resumed native event wins over an older database close report.
+                        let closed = report.session_closed.then(|| key.clone());
+                        if closed.is_some() && session.event_at != event {
+                            continue;
+                        }
+                        if let Some(usd) = report.cost_usd.filter(|usd| session.cost_usd != Some(*usd)) {
+                            crate::spend::watched(
+                                &app,
+                                key.agent,
+                                key.session_id.clone(),
+                                session.cwd.clone(),
+                                "",
+                                usd,
+                            );
+                        }
+                        let metrics = if vults_agents::metrics::is_hermes(&key) {
+                            Input::SessionCost {
+                                info: report.info,
+                                session: key,
+                                cost_usd: report.cost_usd,
+                            }
+                        } else {
+                            report.input(key)
+                        };
+                        core::reduce(&mut state, metrics, now);
+                        if let Some(session) = closed {
+                            // Keep the last native cost before retiring its durable conversation.
+                            lifecycle_effects.extend(core::reduce(
+                                &mut state,
+                                Input::Agent(core::AgentUpdate {
+                                    session,
+                                    cwd: None,
+                                    terminal: Default::default(),
+                                    agent_id: None,
+                                    call_id: None,
+                                    received: None,
+                                    event: core::AgentEvent::SessionEnded,
+                                }),
+                                now,
+                            ));
+                        }
+                    }
+                }
+                command_effects = Some(lifecycle_effects);
+                None
+            }
             Msg::VoicePreview {
                 text,
                 replacements,
@@ -598,7 +768,54 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 tracing::debug!(agent = ?event.agent, event = %event.event, "hook");
                 // The plan's usage, not a session's: it goes to the header, never to the core. The
                 // session's cost goes to its card.
-                if event.agent == vults_protocol::AgentKind::Claude
+                if event.agent == vults_protocol::AgentKind::Other
+                    && event.agent_name.as_deref() == Some("hermes")
+                    && event.event == "SessionMetrics"
+                {
+                    let Some(id) = event.payload["session_id"].as_str().filter(|id| !id.is_empty()) else {
+                        continue;
+                    };
+                    let Some(report) = vults_agents::metrics::Snapshot::hermes(&event.payload) else {
+                        continue;
+                    };
+                    let session = core::SessionKey {
+                        agent: event.agent,
+                        session_id: format!("hermes/{id}"),
+                    };
+                    if !state.sessions.contains_key(&session) {
+                        early_metrics.remember(session.clone(), report.clone(), now);
+                    }
+                    Some(report.input(session))
+                } else if event.agent == vults_protocol::AgentKind::Other
+                    && ((event.agent_name.as_deref() == Some("antigravity")
+                        && event.event == vults_protocol::STATUS_LINE_EVENT)
+                        || (event.agent_name.as_deref() == Some("cursor") && event.event == "preCompact"))
+                {
+                    let agent = event.agent_name.as_deref().unwrap_or_default();
+                    let Some(id) = event.payload["session_id"]
+                        .as_str()
+                        .or_else(|| event.payload["conversation_id"].as_str())
+                        .filter(|s| !s.is_empty())
+                    else {
+                        continue;
+                    };
+                    let report = if agent == "antigravity" {
+                        vults_agents::metrics::Snapshot::antigravity(&event.payload)
+                    } else {
+                        let Some(report) = vults_agents::metrics::Snapshot::cursor(&event.payload) else {
+                            continue;
+                        };
+                        report
+                    };
+                    let session = core::SessionKey {
+                        agent: event.agent,
+                        session_id: format!("{agent}/{id}"),
+                    };
+                    if !state.sessions.contains_key(&session) {
+                        early_metrics.remember(session.clone(), report.clone(), now);
+                    }
+                    Some(report.input(session))
+                } else if event.agent == vults_protocol::AgentKind::Claude
                     && event.event == vults_protocol::STATUS_LINE_EVENT
                 {
                     let windows = vults_agents::usage::claude(&event.payload, crate::usage::epoch_now());
@@ -626,12 +843,11 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         let cwd = state.sessions.get(&session).and_then(|s| s.cwd.clone());
                         crate::spend::watched(&app, event.agent, id.to_string(), cwd, plan, usd);
                     }
-                    Some(Input::SessionMetrics {
-                        session,
-                        cost_usd: usd,
-                        elapsed_ms: vults_agents::usage::claude_elapsed(&event.payload),
-                        context_percent: vults_agents::usage::claude_context(&event.payload),
-                    })
+                    let report = vults_agents::metrics::Snapshot::claude(&event.payload);
+                    if !state.sessions.contains_key(&session) {
+                        early_metrics.remember(session.clone(), report.clone(), now);
+                    }
+                    Some(report.input(session))
                 } else {
                     parse(&event)
                 }
@@ -641,13 +857,26 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 reply,
                 received,
             }) => {
+                if !request_live(&reply, received, now) {
+                    reply.decline();
+                    continue;
+                }
                 tracing::info!(agent = ?event.agent, event = %event.event, "request for a human");
                 let mut input = parse(&event);
                 if let Some(Input::Agent(update)) = &mut input {
                     update.received = Some(received);
                 }
                 if is_card(&input) {
-                    waiting.insert(RequestId(event.id.clone()), reply);
+                    let id = RequestId(event.id.clone());
+                    let monitor = reply.clone();
+                    if let Some(old) = waiting.insert(id.clone(), reply) {
+                        old.decline();
+                    }
+                    let gone = tx.clone();
+                    tauri::async_runtime::spawn(async move {
+                        monitor.closed().await;
+                        let _ = gone.send(Msg::RequestGone { id, reply: monitor }).await;
+                    });
                 } else {
                     // Nothing here can decide it (a question, an unknown event): the terminal asks now.
                     reply.decline();
@@ -690,7 +919,50 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 missed: if locked { Vec::new() } else { notifier.missed() },
             }),
             Msg::Project { cwd, prefs } => Some(Input::SetProject { cwd, prefs }),
+            Msg::SessionProcesses(reports) => {
+                processes_reading = false;
+                for (key, event, pid, alive) in reports {
+                    if state
+                        .sessions
+                        .get(&key)
+                        .is_some_and(|s| s.event_at == event && s.terminal.pid == Some(pid))
+                    {
+                        core::reduce(
+                            &mut state,
+                            Input::SessionPresence {
+                                session: key,
+                                pid,
+                                alive,
+                            },
+                            now,
+                        );
+                    }
+                }
+                Some(Input::Tick)
+            }
             Msg::Tick => {
+                if !processes_reading {
+                    // Hermes conversations can outlive/reconnect to a gateway worker; their
+                    // explicit session lifecycle remains authoritative, not that worker's PID.
+                    let candidates: Vec<_> = state
+                        .sessions
+                        .iter()
+                        .filter(|(key, _)| !vults_agents::metrics::is_hermes(key))
+                        .filter_map(|(key, s)| Some((key.clone(), s.event_at, s.terminal.pid?)))
+                        .collect();
+                    if !candidates.is_empty() {
+                        processes_reading = true;
+                        let watcher = process_watcher.clone();
+                        let tx = tx.clone();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            let reports = watcher
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .read(&candidates);
+                            let _ = tx.blocking_send(Msg::SessionProcesses(reports));
+                        });
+                    }
+                }
                 // A new day may bring a new look: the date rides on the minute's tick.
                 if let Some(date) = today() {
                     core::reduce(&mut state, Input::Today(date), now);
@@ -705,6 +977,25 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     let _ = app.emit("settings", serde_json::json!({ "dndUntil": null }));
                 }
                 Some(Input::Tick)
+            }
+            Msg::WorkspaceDiff { session, reply } => {
+                let cwd = state.sessions.get(&session).and_then(|s| s.cwd.clone());
+                if state.locked || crate::lock::locked(&app) || cwd.is_none() {
+                    let _ = reply.send(Err("The session folder is unavailable".into()));
+                    continue;
+                }
+                let app = app.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let result =
+                        crate::folder::workspace_diff(std::path::Path::new(&cwd.unwrap_or_default()))
+                            .ok_or_else(|| "Could not read repository changes".to_string());
+                    let _ = reply.send(if crate::lock::locked(&app) {
+                        Err("The screen is locked".into())
+                    } else {
+                        result
+                    });
+                });
+                continue;
             }
             Msg::Diff { session, step, reply } => {
                 let _ = reply.send(state.diff(&session, step).cloned());
@@ -773,6 +1064,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
 
             let effects = core::reduce(&mut state, input, now);
             if let Some((key, started)) = heard {
+                if let Some(report) = early_metrics.take(&key, now) {
+                    core::reduce(&mut state, report.input(key.clone()), now);
+                }
                 read_repo(&app, &state, &mut repos, key, now, &tx, started);
             }
             effects
@@ -787,11 +1081,23 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             questions.handle(crate::questions::Command::Depart(surface), "", false, true);
             crate::questions::publish(&app, &mut questions);
         }
-        for effect in effects {
+        let mut effects: std::collections::VecDeque<_> = effects.into();
+        while let Some(effect) = effects.pop_front() {
             match effect {
                 Effect::AckPermission(id) => {
-                    if let Some(h) = waiting.get(&id) {
-                        h.ack();
+                    let expired = state.pending.iter().find(|p| p.request == id).is_some_and(|p| {
+                        now.saturating_duration_since(p.since) >= vults_protocol::limits::ACK_TIMEOUT
+                    });
+                    if expired || !waiting.get(&id).is_some_and(ReplyHandle::ack) {
+                        effects.extend(core::reduce(
+                            &mut state,
+                            Input::RequestGone { request: id.clone() },
+                            now,
+                        ));
+                        if let Some(h) = waiting.remove(&id) {
+                            h.decline();
+                        }
+                        continue;
                     }
                     // A tick at each step of the card's attention ladder (each reminder); and one when
                     // its offer ends, so the core drops it then. Both count from the card's `since`:
@@ -991,6 +1297,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         };
         crate::notify::send(&app, notifier.update(&state, prefs));
     }
+}
+
+fn request_live(reply: &ReplyHandle, received: Instant, now: Instant) -> bool {
+    !reply.is_gone() && now.saturating_duration_since(received) < vults_protocol::limits::ACK_TIMEOUT
 }
 
 /// Weighs the notifications again now (a setting changed), rather than at the next event.
@@ -1758,6 +2068,32 @@ pub async fn session_open_file(
         .map_err(|_| ())
 }
 
+/// Local read-only working-tree preview for a session the core actually knows.
+#[tauri::command]
+pub async fn workspace_diff(
+    agent: vults_protocol::AgentKind,
+    id: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<core::Diff, String> {
+    static READ: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(1);
+    let _permit = READ
+        .try_acquire()
+        .map_err(|_| "Repository changes are already being read")?;
+    let (reply, answer) = tokio::sync::oneshot::channel();
+    inbox
+        .0
+        .send(Msg::WorkspaceDiff {
+            session: core::SessionKey {
+                agent,
+                session_id: id,
+            },
+            reply,
+        })
+        .await
+        .map_err(|_| "The app is unavailable")?;
+    answer.await.map_err(|_| "The app is unavailable")?
+}
+
 /// A step's whole diff, for the island's diff card; `None` once the step is gone.
 #[tauri::command]
 pub async fn step_diff(
@@ -1994,6 +2330,49 @@ mod tests {
     use tauri::{Listener, Manager, WebviewUrl, WebviewWindowBuilder};
 
     use super::*;
+
+    #[test]
+    fn requests_must_still_have_a_live_transport_and_ack_budget() {
+        let now = Instant::now();
+        let (reply, held) = ReplyHandle::local();
+        assert!(request_live(&reply, now, now));
+        assert!(!request_live(
+            &reply,
+            now,
+            now + vults_protocol::limits::ACK_TIMEOUT
+        ));
+        drop(held);
+        assert!(!request_live(&reply, now, now));
+    }
+
+    #[test]
+    fn early_metrics_wait_for_their_session_and_expire_without_creating_one() {
+        let mut early = EarlyMetrics::default();
+        let now = Instant::now();
+        let key = |id: &str| core::SessionKey {
+            agent: vults_protocol::AgentKind::Claude,
+            session_id: id.into(),
+        };
+        let report = vults_agents::metrics::Snapshot {
+            context_percent: Some(42.0),
+            ..Default::default()
+        };
+        early.remember(key("first"), report.clone(), now);
+        assert_eq!(early.take(&key("other"), now), None);
+        assert_eq!(early.take(&key("first"), now), Some(report.clone()));
+        assert_eq!(early.take(&key("first"), now), None);
+        for id in 0..129 {
+            early.remember(key(&id.to_string()), report.clone(), now);
+        }
+        assert_eq!(early.0.len(), 128);
+        assert_eq!(early.take(&key("0"), now + Duration::from_secs(60)), None);
+        early.remember(key("fresh"), report.clone(), now + Duration::from_secs(61));
+        assert_eq!(early.0.len(), 1);
+        assert_eq!(
+            early.take(&key("fresh"), now + Duration::from_secs(62)),
+            Some(report)
+        );
+    }
 
     /// What each window heard, as (event, payload).
     type Heard = Arc<Mutex<Vec<(String, String)>>>;

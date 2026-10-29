@@ -17,8 +17,7 @@ pub const NAME: &str = "opencode";
 
 pub static OPENCODE: PluginAgent = PluginAgent {
     name: NAME,
-    file,
-    text,
+    files: |_, config, hook| vec![(file(config), text(hook))],
 };
 
 /// Reads the plugin's events in Claude Code's words, with OpenCode's tool names turned into
@@ -42,7 +41,8 @@ fn claude_tool(name: &str) -> Option<&'static str> {
         "bash" | "shell" => "Bash",
         "read" => "Read",
         "write" => "Write",
-        "edit" | "patch" | "multiedit" => "Edit",
+        "edit" | "patch" => "Edit",
+        "multiedit" => "MultiEdit",
         "list" => "LS",
         "glob" => "Glob",
         "grep" => "Grep",
@@ -97,6 +97,9 @@ function toolInput(args, tool) {{
   const a = args ?? {{}};
   const out = {{}};
   if (typeof a.command === "string") out.command = a.command;
+  for (const key of ["workdir", "cwd", "directory", "dir_path"]) {{
+    if (typeof a[key] === "string" && a[key].trim()) {{ out.workdir = a[key]; break; }}
+  }}
   if (typeof a.filePath === "string") out.file_path = a.filePath;
   if (typeof a.filepath === "string") out.file_path = a.filepath;
   if (typeof a.path === "string") {{
@@ -109,6 +112,7 @@ function toolInput(args, tool) {{
   if (typeof a.oldString === "string") out.old_string = a.oldString;
   if (typeof a.newString === "string") out.new_string = a.newString;
   if (typeof a.content === "string") out.content = a.content;
+  if (Array.isArray(a.edits)) out.edits = a.edits.map((e) => ({{ old_string: e.oldString, new_string: e.newString }}));
   return out;
 }}
 
@@ -200,7 +204,7 @@ async function server({{ client, directory }}) {{
     const tool = call?.tool ?? p.permission;
     const input = toolInput(call?.input ?? m, tool);
     if (!Object.keys(input).length && Array.isArray(p.patterns)) input.pattern = p.patterns.join(" ");
-    const payload = payloadOf("PermissionRequest", p.sessionID, {{ tool_name: tool, tool_input: input }});
+    const payload = payloadOf("PermissionRequest", p.sessionID, {{ tool_use_id: p.tool?.callID, tool_name: tool, tool_input: input }});
     waitFor(p.id, ["PermissionRequest"], payload, async ({{ reply }}) => {{
       if (reply !== "once" && reply !== "reject") return;
       await client.postSessionIdPermissionsPermissionId({{ path: {{ id: p.sessionID, permissionID: p.id }}, body: {{ response: reply }} }});
@@ -240,7 +244,7 @@ async function server({{ client, directory }}) {{
             // A tool that throws skips tool.execute.after: its failure shows here.
             const part = p.part;
             if (part?.type === "tool" && part.state?.status === "error")
-              send("PostToolUseFailure", part.sessionID, {{ tool_name: part.tool, tool_input: toolInput(part.state.input, part.tool), error: part.state.error }});
+              send("PostToolUseFailure", part.sessionID, {{ tool_use_id: part.callID, tool_name: part.tool, tool_input: toolInput(part.state.input, part.tool), error: part.state.error }});
             break;
           }}
         }}
@@ -251,13 +255,14 @@ async function server({{ client, directory }}) {{
       try {{
         if (tools.size > 256) tools.clear();
         if (input.callID) tools.set(input.callID, {{ tool: input.tool, input: output?.args }});
-        send("PreToolUse", input.sessionID, {{ tool_name: input.tool, tool_input: toolInput(output?.args, input.tool) }});
+        send("PreToolUse", input.sessionID, {{ tool_use_id: input.callID, tool_name: input.tool, tool_input: toolInput(output?.args, input.tool) }});
       }} catch {{}}
     }},
     "tool.execute.after": async (input) => {{
       try {{
+        const args = input.args ?? tools.get(input.callID)?.input;
         tools.delete(input.callID);
-        send("PostToolUse", input.sessionID, {{ tool_name: input.tool, tool_input: toolInput(input.args, input.tool) }});
+        send("PostToolUse", input.sessionID, {{ tool_use_id: input.callID, tool_name: input.tool, tool_input: toolInput(args, input.tool) }});
       }} catch {{}}
     }},
   }};
@@ -285,7 +290,7 @@ async function setup(ctx) {{
     const tool = call?.tool ?? p.action;
     const input = toolInput(call?.input ?? p.metadata, tool);
     if (!Object.keys(input).length && Array.isArray(p.resources)) input.pattern = p.resources.join(" ");
-    const payload = payloadOf("PermissionRequest", p.sessionID, {{ ...where, tool_name: tool, tool_input: input }});
+    const payload = payloadOf("PermissionRequest", p.sessionID, {{ ...where, tool_use_id: p.source?.id, tool_name: tool, tool_input: input }});
     waitFor(p.id, ["PermissionRequest"], payload, async ({{ reply }}) => {{
       if (reply !== "once" && reply !== "reject") return;
       await ctx.permission.reply({{ sessionID: p.sessionID, requestID: p.id, decision: reply }});
@@ -331,11 +336,12 @@ async function setup(ctx) {{
   await hook(ctx.tool, "execute.before", (e) => {{
     if (calls.size > 256) calls.clear();
     if (e.id) calls.set(e.id, {{ tool: e.tool, input: e.input }});
-    send("PreToolUse", e.sessionID, {{ tool_name: e.tool, tool_input: toolInput(e.input, e.tool) }});
+    send("PreToolUse", e.sessionID, {{ tool_use_id: e.id, tool_name: e.tool, tool_input: toolInput(e.input, e.tool) }});
   }});
   await hook(ctx.tool, "execute.after", (e) => {{
+    const input = e.input ?? calls.get(e.id)?.input;
     calls.delete(e.id);
-    const step = {{ tool_name: e.tool, tool_input: toolInput(e.input, e.tool) }};
+    const step = {{ tool_use_id: e.id, tool_name: e.tool, tool_input: toolInput(input, e.tool) }};
     if (e.status === "error") send("PostToolUseFailure", e.sessionID, {{ ...step, error: e.error?.message }});
     else send("PostToolUse", e.sessionID, step);
   }});
@@ -351,6 +357,35 @@ export default {{ id: "{SLUG}", server, setup }};
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn both_plugin_apis_keep_edit_arguments_until_the_finished_event() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("vults-plugin-inputs-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let hook = root.join("vults-hook");
+        std::fs::write(
+            &hook,
+            "#!/bin/sh\ncat >> \"$VULTS_PLUGIN_EVENTS\"\nprintf '\\n' >> \"$VULTS_PLUGIN_EVENTS\"\nprintf '%s\\n' '{\"reply\":\"once\"}'\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let module = root.join("plugin.mjs");
+        std::fs::write(&module, text(&hook)).unwrap();
+        let result = std::process::Command::new("node")
+            .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/opencode-plugin.mjs"))
+            .env("VULTS_PLUGIN_MODULE", module)
+            .env("VULTS_PLUGIN_EVENTS", root.join("events.jsonl"))
+            .output()
+            .expect("Node.js (the UI build's runtime)");
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn the_plugin_lives_in_opencodes_config_folder() {

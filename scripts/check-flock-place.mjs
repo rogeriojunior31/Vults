@@ -93,6 +93,17 @@ await off.flush();
 assert.equal(selectedDetail(off), "Session");
 assert.equal(kept.detail, "session");
 assert.deepEqual(actions, [], "Restoration and saving must never select a session, answer a permission or start a run");
+const folderCard = createFlock({ ...backend, loadPlace: async () => null });
+folderCard.update({ ...view, sessions: [{ ...session, cwd: '/w/session' }], approval: { ...view.approval, cwd: '/w/actual-command' } });
+assert.ok(folderCard.element.textContent.includes('Working folder: /w/actual-command'));
+assert.ok(button(folderCard, 'Always allow').title.includes('/w/actual-command'));
+folderCard.update({ ...view, approval: { ...view.approval, cwd: '../relative' } });
+assert.ok(!button(folderCard, 'Always allow'), 'An unresolved folder cannot create a persistent rule');
+folderCard.update({ ...view, approval: null, sessions: [{ ...session, status: 'working', attention: 'info', card: false, agent: 'opencode' }], front: { agent: 'opencode', id: 'one' } });
+button(folderCard, 'Context').listeners.click();
+assert.ok(folderCard.element.textContent.includes('Watch sessions'));
+assert.ok(folderCard.element.textContent.includes('Answer permissions'));
+assert.ok(folderCard.element.textContent.includes('Planned; not enabled here'), 'ACP metadata must not advertise a finished drive feature');
 const decisions = [];
 const keptDiff = { files: [{ path: "app.rs", hunks: [{ old_start: 1, new_start: 1, lines: ["-old", "+new"] }] }], cut: false };
 const guarded = createFlock({ ...backend, loadPlace: async () => null, diff: async () => keptDiff, decide: (...args) => decisions.push(args) });
@@ -285,6 +296,39 @@ summaryUI.update({ ...summaryView, sessions: [{ ...reported, elapsed_ms: 0, cont
 metrics = summaryUI.element.querySelector('.session-metrics');
 assert.ok(metrics.textContent.includes('0 s') && metrics.textContent.includes('≈$0.00') && metrics.textContent.includes('0%'));
 assert.equal(metrics.querySelector('.session-context-meter').attributes.value, '0');
+const codexReport = { ...unknown, context_percent: 19.077684, context_tokens: 90619 };
+summaryUI.update({ ...summaryView, front: { agent: 'codex', id: 'unknown' }, sessions: [reported, codexReport] });
+assert.ok(summaryUI.element.querySelector('.session-metrics').textContent.includes('19%'));
+button(summaryUI, 'Context').listeners.click();
+assert.ok(summaryUI.element.querySelector('.context-dl').textContent.includes('90619'));
+const opencodeReport = { ...unknown, agent: 'opencode', context_tokens: 11948, cost_usd: 0.125 };
+summaryUI.update({ ...summaryView, front: { agent: 'opencode', id: 'unknown' }, sessions: [reported, opencodeReport] });
+button(summaryUI, 'Session').listeners.click();
+metrics = summaryUI.element.querySelector('.session-metrics');
+assert.ok(metrics.textContent.includes('11948 tokens') && metrics.textContent.includes('≈$0.13'));
+assert.equal(metrics.querySelector('.session-context-meter'), undefined, 'Tokens alone do not invent a model limit');
+const healthy = { ...opencodeReport, metrics_age_secs: 2, metrics_checked_age_secs: 0, event_age_secs: 60, elapsed_ms: 2500 };
+const withHealth = session => ({ ...summaryView, front: { agent: session.agent, id: session.id }, sessions: [session] });
+summaryUI.update(withHealth(healthy));
+assert.ok(summaryUI.element.textContent.includes('Metrics read 2 s ago.'));
+assert.ok(summaryUI.element.querySelector('.session-metrics').textContent.includes('Model response time'));
+summaryUI.update(withHealth({ ...healthy, metrics_failed: true }));
+assert.ok(summaryUI.element.textContent.includes('Local session metrics could not be read.'));
+assert.ok(summaryUI.element.querySelector('.session-metrics').textContent.includes('≈$0.13'), 'Failed reads retain the last value, visibly marked');
+summaryUI.update(withHealth({ ...healthy, metrics_checked_age_secs: 16 }));
+assert.ok(summaryUI.element.textContent.includes('Metrics checks are delayed.'));
+summaryUI.update(withHealth({ ...reported, status: 'working', metrics_checked_age_secs: 31 }));
+assert.ok(summaryUI.element.textContent.includes('No recent metrics. Check the Claude status line'));
+summaryUI.update(withHealth({ ...reported, status: 'idle', metrics_age_secs: 31, metrics_checked_age_secs: 31 }));
+assert.ok(!summaryUI.element.textContent.includes('No recent metrics.'), 'A quiet agent is not a disconnected agent');
+summaryUI.update(withHealth({ ...healthy, metrics_age_secs: null }));
+assert.ok(summaryUI.element.textContent.includes('Waiting for the first metrics report.'));
+summaryUI.update(withHealth(healthy));
+button(summaryUI, 'Context').listeners.click();
+assert.ok(summaryUI.element.querySelector('.context-dl').textContent.includes('Local OpenCode database'));
+assert.ok(summaryUI.element.textContent.includes('In OpenCode 2, answer questions in its terminal.'));
+button(summaryUI, 'Session').listeners.click();
+summaryUI.update(summaryView);
 summaryUI.element.querySelector('[data-fid="filter:failed"]').listeners.click();
 assert.equal(summaryUI.element.querySelectorAll('.roost-card').length, 0);
 assert.equal(summaryUI.element.querySelector('.card-name').textContent, 'Alpha', 'A filter does not replace the selected owner');
@@ -313,3 +357,69 @@ assert.equal(summaryUI.element.classList.contains('choosing-session'), false, 'A
 assert.ok(summaryUI.element.textContent.includes('Review this permission'));
 assert.deepEqual(overviewActions, [], 'Metrics, filters, overview links and navigation never answer, focus or start a session');
 console.log('check-flock-place: reported/unknown/zero metrics, selected ownership, diff-derived files, read-only overview, retained scroll/status, tab Home/End and narrow permission priority');
+
+// Command/script edits are visible from the repository even when the agent sent no patch events.
+const repoRequests = [];
+const repoUI = createFlock({ ...backend, loadPlace: async () => ({ query: '', onlyNeeds: false, status: null, detail: 'diff' }),
+  workspaceDiff: s => new Promise((resolve, reject) => repoRequests.push({ id: s.id, resolve, reject })),
+});
+const repoSession = { ...unknown, id: 'repo', agent: 'codex', changes: [], touched: [] };
+const repoView = s => ({ ...summaryView, approval: null, sessions: [s], front: { agent: s.agent, id: s.id } });
+repoUI.update(repoView(repoSession)); await tick();
+assert.equal(repoRequests.length, 1);
+assert.ok(repoUI.element.textContent.includes('Repository changes'));
+repoRequests[0].resolve({ files: [{ path: 'script-edited.rs', added: 1, removed: 1, hunks: [{ old_start: 1, new_start: 1, lines: ['-before', '+after-script'] }] }], cut: false });
+await tick();
+assert.ok(repoUI.element.textContent.includes('+after-script'));
+repoUI.element.querySelector('[data-fid="act:workspace-focus"]').listeners.click();
+assert.equal(repoUI.element.querySelector('.app-body').classList.contains('details-focus'), true, 'Command-only diffs can expand');
+repoUI.element.querySelector('[data-fid="act:workspace-focus"]').listeners.click();
+assert.ok(repoUI.element.textContent.includes('including command edits and pre-existing changes'));
+button(repoUI, 'Refresh changes').listeners.click(); await tick();
+assert.equal(repoRequests.length, 2);
+repoRequests[1].reject(Error('read failed')); await tick();
+assert.ok(repoUI.element.textContent.includes('Could not read repository changes.'));
+assert.ok(repoUI.element.textContent.includes('+after-script'), 'Failure keeps the last preview with its error');
+button(repoUI, 'Refresh changes').listeners.click(); await tick();
+repoUI.update(repoView({ ...repoSession, id: 'other-repo', cwd: '/other' })); await tick();
+assert.equal(repoRequests.length, 4);
+repoRequests[2].resolve({ files: [{ path: 'stale-owner.rs', added: 1, removed: 0, hunks: [{ old_start: 1, new_start: 1, lines: ['+stale-owner'] }] }], cut: false });
+repoRequests[3].resolve({ files: [], cut: false }); await tick();
+assert.ok(!repoUI.element.textContent.includes('+stale-owner'), 'An old result cannot overwrite the selected session');
+assert.ok(repoUI.element.textContent.includes('No local text changes found.'));
+repoUI.setActive(false);
+console.log('check-flock-place: repository command edits, explicit provenance, refresh/failure retention and stale-owner fencing');
+
+const hermesUI = createFlock({ ...backend, loadPlace: async () => null });
+const hermesSession = { ...reported, agent: 'other', agent_name: 'hermes', id: 'hermes/sample',
+  status: 'working', card: false, cost_usd: 0.0042, elapsed_ms: 1250, context_tokens: 420, context_percent: 42,
+  metrics_age_secs: 1, metrics_checked_age_secs: 100 };
+hermesUI.update(repoView(hermesSession)); await tick();
+const hermesMetrics = hermesUI.element.querySelector('.session-metrics');
+assert.ok(hermesMetrics.textContent.includes('Model response time'));
+assert.ok(hermesMetrics.textContent.includes('≈$0.0042'), 'A nonzero sub-cent cost must not look like zero');
+assert.ok(hermesMetrics.textContent.includes('42%'));
+assert.ok(hermesUI.element.textContent.includes('Hermes Agent'));
+assert.ok(!hermesUI.element.textContent.includes('Metrics checks are delayed.'), 'Hermes emits metrics on completed calls, not periodic status-line ticks');
+button(hermesUI, 'Context').listeners.click();
+assert.ok(hermesUI.element.textContent.includes('Hermes plugin and local cost database'));
+
+const nativeMetricsUI = createFlock({ ...backend, loadPlace: async () => null });
+const nativeMetrics = { ...hermesSession, metric_info: { model: 'unit', provider: 'native-provider',
+  time_kind: 'model-response', cost_source: 'agent-estimate', input_tokens: 12000, output_tokens: 40,
+  cached_tokens: 8000, cache_write_tokens: 10 }, cost_age_secs: 1, elapsed_age_secs: 30, context_age_secs: 50 };
+nativeMetricsUI.update(repoView(nativeMetrics)); await tick();
+assert.ok(nativeMetricsUI.element.textContent.includes('Session consumption'));
+assert.ok(nativeMetricsUI.element.textContent.includes('Session input tokens'));
+button(nativeMetricsUI, 'Context').listeners.click();
+assert.ok(nativeMetricsUI.element.textContent.includes('Estimated by agent'));
+assert.ok(nativeMetricsUI.element.textContent.includes('unit'));
+assert.ok(nativeMetricsUI.element.textContent.includes('Cost last read1 s ago'));
+assert.ok(nativeMetricsUI.element.textContent.includes('Context last read50 s ago'));
+assert.ok(!nativeMetricsUI.element.textContent.includes('models.dev'), 'A native estimate must not be attributed to our catalog');
+const tokenOnly = createFlock({ ...backend, loadPlace: async () => null });
+tokenOnly.update(repoView({ ...nativeMetrics, id: 'droid/native', agent_name:'droid', elapsed_ms:null,
+  context_tokens:null, context_percent:null, cost_usd:null, metric_info:{input_tokens:35, output_tokens:3, cached_tokens:20} })); await tick();
+assert.ok(tokenOnly.element.textContent.includes('Session consumption'), 'Native consumption is visible even without cost/time/context');
+assert.ok(!tokenOnly.element.textContent.includes('Metrics are not available for this agent yet.'));
+console.log('check-flock-place: metric provenance, separate read ages and cumulative consumption without invented context');

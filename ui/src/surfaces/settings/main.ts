@@ -183,6 +183,9 @@ let volume = 50;
 let savedVolume = 50;
 let nowPlaying = false;
 let codexUsage = false;
+let claudeUsage = false;
+let priceUpdates = false;
+let priceStatus: import("../../bridge").ModelPriceStatus | null = null;
 let nativeChat = true;
 let dictationInsert = false;
 let dictationCaption = true;
@@ -693,13 +696,15 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
       : kind === "antigravity"
         ? el("p", {
             class: "note",
-            text: t("One hooks file for the agy CLI, the app and the IDE. Antigravity asks its permissions itself, and the island shows its sessions as antigravity."),
+            text: t("Shared Antigravity hooks watch CLI, desktop and IDE sessions. CLI metrics also install a status line, preserving your previous command. Desktop and IDE hooks alone do not report cost or context."),
           })
         : kind === "opencode"
           ? el("p", {
               class: "note",
-              text: t("OpenCode loads a plugin file instead of hooks: restart it after installing. Its permissions and questions show on the island too: answer there or in OpenCode, whichever comes first."),
+              text: t("OpenCode loads a plugin file instead of hooks: restart it after installing. Permissions can be answered on the island or in OpenCode. In OpenCode 2, questions are answered only in its terminal."),
             })
+          : kind === "hermes"
+            ? el("p", { class: "note", text: t("Hermes uses a Python observer plugin. After installing, enable it with hermes plugins enable vults and open a new Hermes session. Sessions, tools and repository changes appear in Flock; permissions and questions stay in Hermes.") })
           : kind === "qwen"
             ? el("p", {
                 class: "note",
@@ -833,6 +838,22 @@ function connectorsPage(): HTMLElement[] {
 }
 
 // ── General ──────────────────────────────────────────────────────────────────
+
+function priceCatalogRow(): HTMLElement {
+  const checked = priceStatus?.checkedAt;
+  const text = checked == null ? t("No price catalog yet.") : `models.dev · ${t("Prices checked: {time}", { time: new Date(checked * 1000).toLocaleString(locale()) })}`;
+  const state = priceStatus?.failed ? t("Price refresh failed.") : priceStatus?.stale && checked != null ? t("Cached prices have expired.") : "";
+  const refresh = button(priceStatus?.updating ? t("Updating prices…") : t("Refresh prices"), () => {
+    refresh.disabled = true;
+    void Bridge.refreshModelPrices().then(status => { priceStatus = status; render(); }, () => {
+      priceStatus = { enabled: priceUpdates, checkedAt: checked ?? null, stale: priceStatus?.stale ?? true, updating: false, failed: true }; render();
+    });
+  });
+  refresh.disabled = !priceUpdates || !!priceStatus?.updating;
+  return row(t("Price catalog"), [text, state].filter(Boolean).join(" · "), refresh);
+}
+
+Bridge.onModelPrices(status => { priceStatus = status; priceUpdates = status.enabled; if (page === "general") render(); });
 
 function generalPage(): HTMLElement[] {
   return [
@@ -1000,6 +1021,20 @@ function generalPage(): HTMLElement[] {
           codexUsage = on;
         }),
       ),
+      row(
+        t("Claude usage"),
+        t("Reads your Claude plan's usage through Claude Code every 5 minutes and may contact Anthropic; no prompt is sent. Session reports still work when off."),
+        toggle(claudeUsage, async (on) => {
+          await Bridge.setClaudeUsage(on);
+          claudeUsage = on;
+        }),
+      ),
+      row(
+        t("Automatic model prices"),
+        t("Checks models.dev every 15 minutes without sending session data. Estimates use current standard API prices; cached prices expire after 24 hours."),
+        toggle(priceUpdates, async on => { await Bridge.setPriceUpdates(on); priceUpdates = on; render(); }),
+      ),
+      priceCatalogRow(),
     ),
     disclosure(t("Keyboard shortcuts"), el(
       "section",
@@ -2158,6 +2193,9 @@ void Bridge.appSettings().then((s) => {
   monitor = s.monitor;
   nowPlaying = s.nowPlaying;
   codexUsage = s.codexUsage;
+  claudeUsage = s.claudeUsage ?? false;
+  priceUpdates = s.priceUpdates ?? false;
+  void Bridge.modelPriceStatus().then(status => { priceStatus = status; if (page === "general") render(); }, () => {});
   nativeChat = s.nativeChat;
   if (!dictationInsertChanged) dictationInsert = s.dictationInsert;
   dictationInsertAvailable = s.dictationInsertAvailable;

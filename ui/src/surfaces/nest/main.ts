@@ -140,6 +140,7 @@ const nest = createNest(
       release: (request) => void Bridge.questionRelease(request),
       skip: (request) => void Bridge.cardSkip(request),
       diff: (s, step) => Bridge.stepDiff(s.agent, s.id, step),
+      workspaceDiff: s => Bridge.workspaceDiff(s.agent, s.id),
       usage: () => Bridge.usage(),
       hush: (s, hush) => void Bridge.sessionHush(s.agent, s.id, hush),
       openFolder: (s) => void Bridge.sessionOpenFolder(s.agent, s.id),

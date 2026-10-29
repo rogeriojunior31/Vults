@@ -13,6 +13,7 @@ pub const DIR_VARS: &[&str] = &[
     "CODEX_HOME",
     "GEMINI_CLI_HOME",
     "QWEN_HOME",
+    "HERMES_HOME",
     "COPILOT_HOME",
     // Factory Droid's: a home of its own, its `.factory` inside.
     "FACTORY_HOME_OVERRIDE",

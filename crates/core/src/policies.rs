@@ -384,7 +384,8 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
         && root != "/"
         && !root.is_empty()
         && !homes.iter().any(|h| h.trim_end_matches('/') == root)
-        && call.cwd.is_some_and(|c| inside(c.trim_end_matches('/'), root))
+        && call.cwd.is_some_and(|c| c.starts_with('/') && !c.split('/').any(|part| part == "..")
+            && inside(c.trim_end_matches('/'), root))
         && match command {
             // Plain spaces only: a tab, a carriage return or a wide space reads otherwise.
             Some(c) => {
@@ -619,6 +620,7 @@ mod tests {
 
     fn whole() -> Ask {
         Ask {
+            workdir: None,
             description: None,
             full: None,
             cut: false,

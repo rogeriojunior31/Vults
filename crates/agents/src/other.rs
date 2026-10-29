@@ -19,6 +19,9 @@ const SESSION_FIELDS: &[&str] = &["session_id", "conversation_id", "sessionId", 
 pub(crate) fn parse(e: &Event) -> Option<AgentUpdate> {
     let name = e.agent_name.as_deref().filter(|n| valid_agent_name(n))?;
     // A tool whose hooks have their own shape.
+    if name == crate::hermes::NAME {
+        return crate::hermes::parse(e);
+    }
     if name == crate::antigravity::NAME {
         return crate::Antigravity.parse(e);
     }

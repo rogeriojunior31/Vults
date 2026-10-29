@@ -69,6 +69,12 @@ export type AttentionItem = { level: Attention, source: AttentionSource, };
 
 export type AttentionSource = { "kind": "request", request: string, session: SessionRef, tool: string, target: string, description: string | null, question: boolean, skipped: boolean, } | { "kind": "session", session: SessionRef, } | { "kind": "connection", connector: string, item: string, } | { "kind": "alert", key: string, } | { "kind": "chat", count: number, } | { "kind": "memory", count: number | null, };
 
+export type TimeKind = "execution" | "model-response";
+
+export type CostSource = "agent" | "agent-estimate" | "catalog";
+
+export type MetricInfo = { model: string | null, provider: string | null, price_provider: string | null, time_kind: TimeKind | null, cost_source: CostSource | null, input_tokens: number | null, output_tokens: number | null, cached_tokens: number | null, cache_write_tokens: number | null, premium_requests: number | null, service_credits: number | null, };
+
 export type SessionView = { id: string, agent: AgentKind,
 /**
  * Another tool's name (`AgentKind::Other`), taken from its session id: `<name>/<id>`.
@@ -149,7 +155,11 @@ step_count: number, subagents: number,
 /**
  * What it has cost so far at API prices, when its agent says: a subscription is not charged it.
  */
-cost_usd?: number | null,
+cost_usd?: number | null, cost_estimated?: boolean, metric_info?: MetricInfo, cost_age_secs?: number | null, elapsed_age_secs?: number | null, context_age_secs?: number | null, price_checked_at?: number | null,
+/**
+ * Monotonic ages: telemetry never pretends to be an activity event.
+ */
+event_age_secs?: number, metrics_age_secs?: number | null, metrics_checked_age_secs?: number | null, metrics_failed?: boolean, cost_failed?: boolean,
 /**
  * Running time in the CLI's last report, including resumed runs; not app uptime.
  */
@@ -158,6 +168,10 @@ elapsed_ms?: number | null,
  * Current context occupancy in the CLI's last report; unknown is never zero.
  */
 context_percent?: number | null,
+/**
+ * Tokens in the CLI's last context report, including cache; not cumulative usage.
+ */
+context_tokens?: number | null,
 /**
  * The question, the last reply or the error that goes with the status.
  */
@@ -202,7 +216,11 @@ file?: number | null,
  */
 outside?: boolean, };
 
-export type ApprovalView = { request: string, agent: AgentKind,
+export type ApprovalView = { request: string,
+/**
+ * The operation folder shown on this card and included in its signed binding.
+ */
+cwd?: string | null, agent: AgentKind,
 /**
  * The session that asked, to put it in front.
  */

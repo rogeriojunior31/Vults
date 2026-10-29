@@ -3,7 +3,7 @@
 // ticker.
 import type { Answer, ApprovalView, Hush, ProjectPref, Diff, Hunk, SessionView, UsageWindow } from "../bridge";
 import type { AgentKind } from "../view.gen";
-import { NAME_BY_KIND } from "../agents";
+import { NAME_BY_KIND, NAME_BY_ID } from "../agents";
 import { el } from "../dom";
 import { locale, t, tk } from "../i18n";
 import { icon, type IconName } from "./icons";
@@ -13,7 +13,9 @@ import { type Ticker, tickerSteps } from "./ticker";
 
 export const AGENT_NAME: Readonly<Record<AgentKind, string>> = { ...NAME_BY_KIND, other: "Agent" };
 /** What a session's agent is called: another tool goes by its own name. */
-export const agentName = (s: SessionView): string => s.agent_name ?? (s.agent === "other" ? t("Agent") : AGENT_NAME[s.agent]);
+export const agentName = (s: SessionView): string => s.agent_name
+  ? (Object.hasOwn(NAME_BY_ID, s.agent_name) ? NAME_BY_ID[s.agent_name] : s.agent_name)
+  : s.agent === "other" ? t("Agent") : AGENT_NAME[s.agent];
 
 /** A status in a few words, for the pill's label and the habitat's names. */
 const STATUS_TEXT: Record<SessionView["status"], string> = {
@@ -25,6 +27,13 @@ const STATUS_TEXT: Record<SessionView["status"], string> = {
   finished: tk("Done"),
   failed: tk("Failed"),
   ratelimited: tk("Rate limited"),
+};
+
+/** The folder the offered action uses, shared by island and Room approvals. */
+export const approvalFolder = (s: SessionView, ask: ApprovalView): string | null => ask.cwd === undefined ? s.cwd : ask.cwd;
+export const approvalRuleFolder = (s: SessionView, ask: ApprovalView): boolean => {
+  const folder = approvalFolder(s, ask);
+  return folder != null && (folder.startsWith("/") || /^[A-Za-z]:[\\/]/.test(folder));
 };
 
 /** A status in a few words, by its name (the Nest's roosts list sessions by it). */
@@ -329,12 +338,15 @@ function sessionBody(
         else actions.decide(approval.request, d);
       };
       const always = el("button", { class: "btn ghost-btn", onclick: answer("always") }, el("span", { text: t("Always allow") }));
-      always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: approval.tool, project: s.project || t("this folder") });
+
       const diff =
         approval.added || approval.removed
           ? el("span", { class: "diff" }, el("span", { class: "add", text: `+${approval.added}` }), el("span", { class: "del", text: `−${approval.removed}` }))
           : null;
       const destructive = approval.why === "destructive";
+      const operationFolder = approvalFolder(s, approval);
+      always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: approval.tool, project: operationFolder || t("this folder") });
+      const ruleFolder = approvalRuleFolder(s, approval);
       const queue = approval.queue > 1 ? el("span", { class: "queue", text: `1 of ${approval.queue}` }) : null;
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
@@ -342,6 +354,7 @@ function sessionBody(
         el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, skipButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
+        el("div", { class: "ask-what", text: t("Working folder: {path}", { path: operationFolder ?? t("Not reported") }) }),
         // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
         approval.why
           ? el("div", {
@@ -356,7 +369,7 @@ function sessionBody(
           // keep their places. It offers no Always: no rule ever answers it (ADR 0004).
           button(t("Deny"), destructive ? "primary" : "secondary", answer("deny"), kbd(actions.keys.deny)),
           button(t("Allow"), destructive ? "secondary danger" : "primary", answer("allow"), kbd(actions.keys.allow)),
-          s.cwd && !approval.cut && !destructive ? always : null,
+          ruleFolder && !approval.cut && !destructive ? always : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
       ];

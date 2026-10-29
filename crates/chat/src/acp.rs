@@ -551,6 +551,12 @@ impl Conn {
                 }),
             )
             .await?;
+        if init["protocolVersion"].as_u64() != Some(1) {
+            return Err(format!(
+                "{} uses an unsupported ACP protocol version.",
+                agent.title
+            ));
+        }
         conn.load = init["agentCapabilities"]["loadSession"] == true;
         Ok(conn)
     }
@@ -935,6 +941,44 @@ pub fn inside(dir: &Path, path: &str) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn incompatible_acp_version_is_rejected_before_a_session_is_started() {
+        let agent = Agent {
+            name: "fake",
+            title: "Fake",
+            program: "sh",
+            args: &[
+                "-c",
+                r#"read request; printf '%s\n' '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":2}}'; cat > /dev/null"#,
+            ],
+            env: &[],
+            mode: None,
+        };
+        let spec = Spec::in_dir(std::env::temp_dir());
+        let error = Conn::spawn(&agent, &spec).await.unwrap_err();
+        assert!(error.contains("unsupported ACP protocol version"));
+    }
+
+    /// Upgrade check: initialize only. No session/new, prompt, tool, or model turn is sent.
+    #[tokio::test]
+    #[ignore = "Requires installed OpenCode and Qwen CLIs; initializes ACP without a model turn"]
+    async fn installed_acp_clients_initialize_without_a_model_turn() {
+        let dir = std::env::temp_dir().join(format!("vults-acp-probe-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in ["opencode", "qwen"] {
+            let agent = agents().iter().find(|a| a.name == name).unwrap();
+            let spec = Spec::in_dir(dir.clone());
+            let conn = tokio::time::timeout(Duration::from_secs(20), Conn::spawn(agent, &spec))
+                .await
+                .expect("Installed ACP initialization timed out")
+                .expect("Installed ACP initialization failed");
+            eprintln!("{}: ACP initialize accepted, no model turn", agent.title);
+            drop(conn);
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 
     // Recorded from OpenCode 1.18.35 over ACP, with its permissions set to ask (trimmed).
     #[cfg(unix)]

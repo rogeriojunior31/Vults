@@ -1969,6 +1969,7 @@ mod tests {
                 cwd: Some(format!("/home/me/{session}")),
                 terminal: Terminal::default(),
                 agent_id: None,
+                call_id: None,
                 event,
                 received: None,
             })

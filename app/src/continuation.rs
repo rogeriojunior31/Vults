@@ -237,6 +237,7 @@ fn ended(agent: AgentKind, session: &str, failure: Option<&str>) -> vults_core::
         cwd: None,
         terminal: vults_protocol::Terminal::default(),
         agent_id: None,
+        call_id: None,
         received: None,
         event: match failure {
             Some(error) => vults_core::AgentEvent::StopFailed {

@@ -2373,6 +2373,8 @@ button.touched-row:hover,
 .session-metric dd { margin: 6px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .session-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 8px; }
 .session-section-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.workspace-head .outline { flex: none; white-space: nowrap; }
+.workspace-head h3 { min-width: 0; }
 .session-files .touched { margin-top: 0; }
 .session-recent .activity-row { min-width: 0; }
 .session-recent .activity-row strong { overflow-wrap: anywhere; }

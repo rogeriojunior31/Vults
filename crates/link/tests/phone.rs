@@ -69,6 +69,7 @@ impl Desk {
             cwd: Some(cwd.into()),
             terminal: Terminal::default(),
             agent_id: None,
+            call_id: None,
             event,
             received: Some(now),
         };

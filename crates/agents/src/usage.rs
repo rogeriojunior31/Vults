@@ -39,7 +39,12 @@ fn window(agent: AgentKind, minutes: u32, used: f64, resets_at: Option<i64>, now
 /// From the result of `account/rateLimits/read` (`codex app-server`), shortest window first.
 /// `now` is epoch seconds.
 pub fn codex(result: &Value, now: i64) -> Vec<Window> {
-    let limits = &result["rateLimits"];
+    // New servers identify the authoritative quota by bucket. Do not substitute another
+    // model's allowance when a legacy top-level snapshot disagrees with it.
+    let limits = result
+        .get("rateLimitsByLimitId")
+        .and_then(|all| all.get("codex"))
+        .unwrap_or(&result["rateLimits"]);
     let mut windows: Vec<Window> = ["primary", "secondary"]
         .iter()
         .filter_map(|slot| {
@@ -95,6 +100,48 @@ pub fn claude(payload: &Value, now: i64) -> Vec<Window> {
         .collect()
 }
 
+/// Claude Code's read-only `get_usage` control response. Unlike statusLine, percentages are
+/// named `utilization` and reset times are RFC 3339. Missing windows remain unknown.
+pub fn claude_account(payload: &Value, now: i64) -> Vec<Window> {
+    if payload["rate_limits_available"] != true {
+        return Vec::new();
+    }
+    [("five_hour", 300), ("seven_day", 10080)]
+        .into_iter()
+        .filter_map(|(key, minutes)| {
+            let value = &payload["rate_limits"][key];
+            window(
+                AgentKind::Claude,
+                minutes,
+                value["utilization"].as_f64()?,
+                value["resets_at"].as_str().and_then(reset_seconds),
+                now,
+            )
+        })
+        .collect()
+}
+
+pub(crate) fn reset_seconds(raw: &str) -> Option<i64> {
+    let value: toml::value::Datetime = raw.parse().ok()?;
+    let date = value.date?;
+    let time = value.time?;
+    let day = vults_core::looks::Date::new(i32::from(date.year), date.month, date.day);
+    if vults_core::looks::Date::from_days(day.days()) != day {
+        return None;
+    }
+    let offset = match value.offset? {
+        toml::value::Offset::Z => 0,
+        toml::value::Offset::Custom { minutes } => i64::from(minutes) * 60,
+    };
+    Some(
+        day.days() * 86400
+            + i64::from(time.hour) * 3600
+            + i64::from(time.minute) * 60
+            + i64::from(time.second?)
+            - offset,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,6 +149,47 @@ mod tests {
 
     /// 2026-10-02, when the fixtures were recorded.
     const NOW: i64 = 1790900000;
+
+    #[test]
+    fn native_claude_allowance_requires_explicit_availability_and_preserves_units() {
+        let report = json!({"rate_limits_available":true,"rate_limits":{
+            "five_hour":{"utilization":0,"resets_at":null},
+            "seven_day":{"utilization":12.4,"resets_at":"2026-10-10T13:30:00.123+01:30"},
+            "seven_day_opus":{"utilization":99}
+        }});
+        let got = claude_account(&report, NOW);
+        assert_eq!(
+            got.len(),
+            2,
+            "Do not mix a model-scoped allowance into the general plan"
+        );
+        assert_eq!((got[0].used_percent, got[0].resets_at), (0, None));
+        assert_eq!(got[1].used_percent, 12);
+        assert_eq!(got[1].resets_at, reset_seconds("2026-10-10T12:00:00Z"));
+        assert!(got[1].resets_at.is_some());
+        assert!(
+            claude_account(
+                &json!({"rate_limits_available":false,"rate_limits":report["rate_limits"]}),
+                NOW
+            )
+            .is_empty()
+        );
+        for invalid in [json!(null), json!(-1), json!("12"), json!(250)] {
+            assert!(claude_account(&json!({"rate_limits_available":true,"rate_limits":{"five_hour":{"utilization":invalid}}}),NOW).is_empty());
+        }
+        for invalid in ["2026-02-30T12:00:00Z", "2026-10-10T12:00:00", "not a date"] {
+            assert_eq!(reset_seconds(invalid), None);
+        }
+        let bucket = json!({"primary":{"usedPercent":0,"windowDurationMins":300}});
+        let codex = codex(
+            &json!({"rateLimitsByLimitId":{"codex":bucket},"rateLimits":{"primary":{"usedPercent":99,"windowDurationMins":300}}}),
+            NOW,
+        );
+        assert_eq!(
+            codex[0].used_percent, 0,
+            "The keyed bucket outranks the legacy copy"
+        );
+    }
 
     #[test]
     fn implausible_values_show_nothing() {

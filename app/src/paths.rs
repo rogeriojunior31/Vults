@@ -43,6 +43,14 @@ pub fn data_dir() -> PathBuf {
         .join(vults_brand::SLUG)
 }
 
+/// The shared XDG data folder used by local agent CLIs, independent of Vults' own folder.
+pub fn agent_data_home() -> PathBuf {
+    std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .unwrap_or_else(|| home().join(".local").join("share"))
+}
+
 /// The hook relay the agents' configs point at: a stable path, whatever rebuilds the app.
 pub fn hook_exe() -> PathBuf {
     data_dir().join("bin").join(vults_brand::HOOK_EXE)

@@ -20,8 +20,13 @@ pub const TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_OUTPUT: u64 = 64 * 1024;
 
 /// The sidecar beside this binary.
-pub fn previous_file() -> Option<PathBuf> {
-    Some(std::env::current_exe().ok()?.with_file_name(PREVIOUS_FILE))
+pub fn previous_file(agent: Option<&str>) -> Option<PathBuf> {
+    let name = if agent == Some("antigravity") {
+        "statusline-antigravity-previous.json"
+    } else {
+        PREVIOUS_FILE
+    };
+    Some(std::env::current_exe().ok()?.with_file_name(name))
 }
 
 pub struct Running {

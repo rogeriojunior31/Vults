@@ -125,6 +125,23 @@ fn hooks(id: &str) -> &'static str {
     "ok"
 }
 
+/// A version-specific capability must never be promised from a different installed version.
+fn installed_caps(id: &str, mut caps: Caps, version: Option<&str>) -> Caps {
+    if id == "opencode" {
+        let version = version
+            .unwrap_or("")
+            .trim()
+            .trim_start_matches("opencode ")
+            .trim_start_matches('v');
+        caps.questions = if version.split('.').next() == Some("1") {
+            vults_agents::caps::Questions::Card
+        } else {
+            vults_agents::caps::Questions::Terminal
+        };
+    }
+    caps
+}
+
 /// Every row; the CLIs answer side by side, so the slowest sets the wait, not their sum.
 fn rows() -> Vec<Row> {
     std::thread::scope(|scope| {
@@ -132,13 +149,14 @@ fn rows() -> Vec<Row> {
             .map(|(e, caps)| {
                 scope.spawn(move || {
                     let exe = find(e.command);
+                    let version = exe.as_deref().and_then(version);
                     Row {
                         id: e.id,
                         name: e.name,
                         command: e.command,
-                        caps,
+                        caps: installed_caps(e.id, caps, version.as_deref()),
                         path: exe.as_deref().map(crate::paths::shown),
-                        version: exe.as_deref().and_then(version),
+                        version,
                         hooks: hooks(e.id),
                     }
                 })
@@ -183,6 +201,27 @@ pub async fn agents_doctor(fresh: bool) -> Vec<Row> {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn opencode_questions_follow_the_installed_major_version() {
+        let caps = vults_agents::registry::of("opencode").unwrap().caps.unwrap();
+        for version in [
+            Some("2.2.1"),
+            Some("opencode v2.2.1"),
+            Some("3.0.0"),
+            Some("unknown"),
+            None,
+        ] {
+            assert_eq!(
+                installed_caps("opencode", caps, version).questions,
+                vults_agents::caps::Questions::Terminal
+            );
+        }
+        assert_eq!(
+            installed_caps("opencode", caps, Some("1.18.35")).questions,
+            vults_agents::caps::Questions::Card
+        );
+    }
 
     #[test]
     fn a_version_is_its_first_line_and_a_slow_cli_is_none() {

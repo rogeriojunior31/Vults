@@ -16,6 +16,7 @@ fn session(state: &mut State, id: &str, cwd: &str, now: Instant) {
             cwd: Some(cwd.into()),
             terminal: Terminal::default(),
             agent_id: None,
+            call_id: None,
             event: AgentEvent::SessionStarted,
             received: None,
         }),
@@ -310,6 +311,7 @@ fn all_transcripts_leave_waiting_cards_unanswered_and_unknown_batches_untouched(
             cwd: None,
             terminal: Terminal::default(),
             agent_id: None,
+            call_id: None,
             event: AgentEvent::PermissionRequested {
                 request: RequestId("permission".into()),
                 tool: "Bash".into(),
@@ -327,6 +329,7 @@ fn all_transcripts_leave_waiting_cards_unanswered_and_unknown_batches_untouched(
             cwd: None,
             terminal: Terminal::default(),
             agent_id: None,
+            call_id: None,
             event: AgentEvent::QuestionAsked {
                 request: RequestId("question".into()),
                 target: "AskUserQuestion".into(),

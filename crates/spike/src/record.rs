@@ -13,9 +13,15 @@ pub fn install(agent: &str, home: &Path, hook_exe: &Path) -> Result<(), String> 
     let entry = registry::of(agent).ok_or_else(|| format!("unknown agent {agent}"))?;
     let file = match entry.setup {
         Setup::Plugin(p) => {
-            let file = (p.file)(&home.join(".config"));
-            write(&file, (p.text)(hook_exe).as_bytes())?;
-            file
+            let files = (p.files)(
+                &vults_agents::Dirs::home_only(home),
+                &home.join(".config"),
+                hook_exe,
+            );
+            for (path, text) in &files {
+                write(path, text.as_bytes())?;
+            }
+            files.first().ok_or("empty plugin")?.0.clone()
         }
         Setup::Hooks(a) | Setup::RemoveOnly(a) => {
             let file = a.config_file(&vults_agents::Dirs::home_only(home));

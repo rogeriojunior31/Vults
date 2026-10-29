@@ -1,7 +1,7 @@
 //! The subscriptions' usage on the island, each from the CLI itself. Codex is asked every few
 //! minutes, read-only, through the `codex` the user logged into, and only through the network
-//! gate (the read reaches OpenAI: ADR 0019); Claude Code hands it to our statusLine command, which
-//! the hook relays. A failed read keeps the last answer (the island drops a window once its reset
+//! gate (the read reaches OpenAI: ADR 0019). Claude has a separately gated native account read;
+//! its statusLine also relays usage when available. A failed read keeps the last answer (the island drops a window once its reset
 //! time passes).
 
 use std::collections::BTreeMap;
@@ -53,12 +53,15 @@ pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
 
 /// Wakes the read loop: the switch just changed, so it need not wait out its sleep.
 static WAKE: tokio::sync::Notify = tokio::sync::Notify::const_new();
+static CLAUDE_WAKE: tokio::sync::Notify = tokio::sync::Notify::const_new();
 
 pub fn wake() {
     WAKE.notify_one();
+    CLAUDE_WAKE.notify_one();
 }
 
 pub fn start(app: &AppHandle) {
+    start_claude(app);
     let app = app.clone();
     let gate = crate::gate::shared(&app);
     tauri::async_runtime::spawn(async move {
@@ -74,7 +77,33 @@ pub fn start(app: &AppHandle) {
                 set(&a, AgentKind::Codex, w);
             }
         };
-        run(&*gate, || locked(&app), read, keep, &WAKE).await;
+        run(&*gate, crate::gate::USAGE, || locked(&app), read, keep, &WAKE).await;
+    });
+}
+
+fn start_claude(app: &AppHandle) {
+    let app = app.clone();
+    let gate = crate::gate::shared(&app);
+    tauri::async_runtime::spawn(async move {
+        let read = || async {
+            let dir = paths::chat_dir();
+            let _ = std::fs::create_dir_all(&dir);
+            vults_chat::claude_usage(&dir).await
+        };
+        let keep = |windows| {
+            if crate::settings::claude_usage(&app) {
+                set(&app, AgentKind::Claude, windows);
+            }
+        };
+        run(
+            &*gate,
+            crate::gate::CLAUDE_USAGE,
+            || locked(&app),
+            read,
+            keep,
+            &CLAUDE_WAKE,
+        )
+        .await;
     });
 }
 
@@ -96,6 +125,7 @@ pub(crate) fn after_read(windows: &[Window], now: i64) -> Duration {
 /// The read loop, forever: a read only when the screen is unlocked and the gate lets it out.
 pub(crate) async fn run<R, F>(
     gate: &dyn vults_connectors::Gate,
+    feature: &str,
     locked: impl Fn() -> bool,
     mut read: R,
     mut set: impl FnMut(Vec<Window>),
@@ -107,10 +137,10 @@ pub(crate) async fn run<R, F>(
     let mut wait = EVERY;
     loop {
         // Locked, nobody reads the meters: no process started for them.
-        if !locked() && gate.allow(crate::gate::USAGE) {
+        if !locked() && gate.allow(feature) {
             let started = Instant::now();
             let got = read().await;
-            gate.done(crate::gate::USAGE, got.is_ok(), started.elapsed());
+            gate.done(feature, got.is_ok(), started.elapsed());
             wait = match got {
                 Ok(windows) => {
                     let next = after_read(&windows, epoch_now());
@@ -119,7 +149,7 @@ pub(crate) async fn run<R, F>(
                 }
                 // No Codex, or not logged in: nothing to show, and nothing worth a warning.
                 Err(e) => {
-                    tracing::debug!("codex usage: {e}");
+                    tracing::debug!(feature, "usage: {e}");
                     (wait * 2).min(MAX_WAIT)
                 }
             };

@@ -84,6 +84,7 @@ async fn a_phone_pairs_and_answers_a_card_through_the_relay() {
             cwd: Some("/home/me/vults".into()),
             terminal: Terminal::default(),
             agent_id: None,
+            call_id: None,
             event: AgentEvent::PermissionRequested {
                 request: RequestId("r1".into()),
                 tool: "Bash".into(),

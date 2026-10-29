@@ -33,7 +33,7 @@ fn main() {
     let read = std::io::stdin().read_to_end(&mut raw).is_ok();
     // The user's own status line starts first and runs while we relay the usage.
     let previous = (args.event.as_deref() == Some(protocol::STATUS_LINE_EVENT))
-        .then(chain::previous_file)
+        .then(|| chain::previous_file(args.agent_name.as_deref()))
         .flatten()
         .and_then(|file| chain::start(&file, &raw));
     let event = read
@@ -48,7 +48,12 @@ fn main() {
         let _ = writeln!(out, "{json}");
     }
     if let Some(previous) = previous {
-        let _ = out.write_all(&previous.finish(chain::TIMEOUT));
+        let timeout = if args.agent_name.as_deref() == Some("antigravity") {
+            std::time::Duration::from_secs(2)
+        } else {
+            chain::TIMEOUT
+        };
+        let _ = out.write_all(&previous.finish(timeout));
     }
     let _ = out.flush();
     std::process::exit(0);
@@ -234,7 +239,22 @@ mod tests {
     }
 
     #[test]
-    fn a_status_line_forwards_only_numeric_metrics_and_plan_usage() {
+    fn antigravity_statusline_forwards_numeric_cost_context_and_model_without_account_fields() {
+        let args = Args::parse(
+            ["--agent", "antigravity", "--statusline"]
+                .map(str::to_string)
+                .into_iter(),
+        );
+        let event=build_event(&args,br#"{"conversation_id":"c1","email":"private@example.test","cost":{"total_usd":0.0042},"model":{"id":"native-model"},"context_window":{"used_percentage":50,"current_usage":{"input_tokens":10}},"transcript_path":"/private"}"#,None,|_|None).unwrap();
+        assert_eq!(event.agent_name.as_deref(), Some("antigravity"));
+        assert_eq!(event.payload["session_id"], "c1");
+        assert_eq!(event.payload["cost"]["total_usd"], 0.0042);
+        assert!(event.payload.get("email").is_none());
+        assert!(event.payload.get("transcript_path").is_none());
+    }
+
+    #[test]
+    fn a_status_line_forwards_metrics_plan_usage_and_a_bounded_model_id() {
         let a = Args::parse(
             ["--agent", "claude", "--statusline"]
                 .map(String::from)
@@ -244,7 +264,13 @@ mod tests {
         // Recorded from Claude Code 2.1.286: before the first reply, then after it.
         let mut lines = include_str!("../../agents/tests/fixtures/claude-statusline.jsonl").lines();
         let before = lines.next().unwrap().as_bytes();
-        assert!(build_event(&a, before, None, |_| None).is_none());
+        assert!(
+            build_event(&a, before, None, |_| None)
+                .unwrap()
+                .payload
+                .get("model")
+                .is_some()
+        );
         let raw = br#"{"session_id":"s1","cwd":"/home/me/secret","transcript_path":"/t.jsonl","cost":{"total_cost_usd":1.5},"rate_limits":{"five_hour":{"used_percentage":23,"resets_at":1790993400}}}"#;
         let e = build_event(&a, raw, None, |_| None).unwrap();
         assert_eq!(e.event, protocol::STATUS_LINE_EVENT);
@@ -257,18 +283,21 @@ mod tests {
         assert!(build_event(&a, after, None, |_| None).is_some());
 
         // Recorded from Claude Code 2.1.295 as it starts: the cost is there before any usage, and
-        // no paths, repository or model data go out.
+        // no paths or repository data go out; only the bounded model identifier is retained.
         let start = include_str!("../../agents/tests/fixtures/claude-statusline-start.json");
         let e = build_event(&a, start.as_bytes(), None, |_| None).unwrap();
         assert_eq!(
-            e.payload,
-            serde_json::json!({ "session_id": "session-redacted", "cost": { "total_cost_usd": 0, "total_duration_ms": 705 } })
+            e.payload["cost"],
+            serde_json::json!({"total_cost_usd":0,"total_duration_ms":705})
         );
+        assert_eq!(e.payload["session_id"], "session-redacted");
+        assert!(e.payload.get("cwd").is_none());
+        assert!(e.payload.get("transcript_path").is_none());
         let metrics = br#"{"session_id":"s1","cwd":"/private","model":{"id":"private"},"cost":{"total_duration_ms":30000,"total_api_duration_ms":1},"context_window":{"used_percentage":42.5,"current_usage":{"input_tokens":99},"context_window_size":200000}}"#;
         let e = build_event(&a, metrics, None, |_| None).unwrap();
         assert_eq!(
             e.payload,
-            serde_json::json!({"session_id":"s1","cost":{"total_duration_ms":30000},"context_window":{"used_percentage":42.5}})
+            serde_json::json!({"session_id":"s1","model":{"id":"private"},"cost":{"total_duration_ms":30000},"context_window":{"used_percentage":42.5,"current_usage":{"input_tokens":99}}})
         );
         assert!(!e.wants_reply);
         assert!(

@@ -56,6 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cwd: Some("/home/me/vults".into()),
             terminal: Terminal::default(),
             agent_id: None,
+            call_id: None,
             event: AgentEvent::PermissionRequested {
                 request: RequestId("demo-1".into()),
                 tool: "Bash".into(),

@@ -123,23 +123,25 @@ fn refuse_overwrite(t: &Target, install: bool) -> Result<(), String> {
 }
 
 /// A plugin agent's file, and what this version writes there.
-fn plugin_target(p: &PluginAgent) -> (PathBuf, String) {
-    ((p.file)(&config_home()), (p.text)(&hook_exe()))
+fn plugin_target(p: &PluginAgent) -> Vec<(PathBuf, String)> {
+    (p.files)(&agent_dirs(), &config_home(), &hook_exe())
 }
 
 fn plugin_status(p: &PluginAgent, agent: String) -> Status {
-    let (path, text) = plugin_target(p);
+    let files = plugin_target(p);
+    let path = files.first().map(|f| f.0.clone()).unwrap_or_default();
     let marker = plugin_marker();
-    let installed = plugin::installed(&path, &marker);
+    let installed = files.iter().all(|(path, _)| plugin::installed(path, &marker));
     Status {
         config_path: path.display().to_string(),
         hook_path: hook_exe().display().to_string(),
         hook_ready: hook_exe().exists(),
         installed,
-        outdated: installed && !plugin::up_to_date(&path, &text),
+        outdated: files.iter().any(|(path, _)| plugin::installed(path, &marker))
+            && files.iter().any(|(path, text)| !plugin::up_to_date(path, text)),
         other_hook_path: None,
         error: None,
-        install_blocked: plugin::blocked(&path, &marker),
+        install_blocked: files.iter().find_map(|(path, _)| plugin::blocked(path, &marker)),
         codex: None,
         status_line: None,
         agent,
@@ -229,11 +231,28 @@ pub fn install_status(agent: String) -> Result<Status, String> {
         Ok(v) => (t.agent.installed(&v), None, v),
         Err(e) => (false, Some(e.to_string()), serde_json::Value::Null),
     };
-    let install_blocked = sidecar(&t, true)
-        .err()
+    let auxiliary_error = (agent == "antigravity")
+        .then(|| {
+            vults_agents::antigravity_metrics_files(&agent_dirs(), &hook_exe(), true)
+                .err()
+                .map(|e| e.to_string())
+        })
+        .flatten();
+    let error = error.or_else(|| auxiliary_error.clone());
+    let install_blocked = auxiliary_error
+        .or_else(|| sidecar(&t, true).err())
         .or_else(|| t.agent.install_blocked(&current));
-    // Only the hooks count: a missing statusLine of ours has its own note, and theirs stays.
-    let outdated = installed && !t.agent.up_to_date(&current, &hook_exe());
+    // A missing or someone else's statusLine has its own note. Ours may need the periodic
+    // refresh added by newer versions, just as the hooks may need another event.
+    let outdated = installed
+        && ((agent == "antigravity"
+            && vults_agents::antigravity_metrics_files(&agent_dirs(), &hook_exe(), true)
+                .is_ok_and(|files| files.iter().any(|(_, before, next)| before != next)))
+            || !t.agent.up_to_date(&current, &hook_exe())
+            || t.status_line.as_ref().is_some_and(|command| {
+                status_line::owner(&current, MARKER) == status_line::Owner::Ours
+                    && status_line::with_ours(&current, command, MARKER) != current
+            }));
     // Read-only: trust lives in Codex's config.toml, which only Codex writes.
     let codex = (agent == "codex").then(|| codex_trust(&current, path));
     Ok(Status {
@@ -258,10 +277,19 @@ pub fn install_status(agent: String) -> Result<Status, String> {
 
 #[tauri::command]
 pub fn install_preview(agent: String, install: bool) -> Result<Preview, String> {
+    if agent == "antigravity" {
+        let files = vults_agents::antigravity_metrics_files(&agent_dirs(), &hook_exe(), install)
+            .map_err(|e| e.to_string())?;
+        let p = config::json_bundle::preview(&files).map_err(|e| e.to_string())?;
+        return Ok(Preview {
+            diff: p.diff,
+            fingerprint: p.fingerprint,
+        });
+    }
+
     if let Some(p) = vults_agents::plugin(&agent) {
-        let (path, text) = plugin_target(p);
-        let next = install.then_some(text.as_str());
-        let p = plugin::preview(&path, next, &plugin_marker()).map_err(|e| e.to_string())?;
+        let files = plugin_target(p);
+        let p = plugin::preview_files(&files, install, &plugin_marker()).map_err(|e| e.to_string())?;
         return Ok(Preview {
             diff: p.diff,
             fingerprint: p.fingerprint,
@@ -314,10 +342,17 @@ pub fn install_apply(
 ) -> Result<Option<String>, String> {
     crate::settings_page(&window)?;
     let now = SystemTime::now();
+    if agent == "antigravity" {
+        let files = vults_agents::antigravity_metrics_files(&agent_dirs(), &hook_exe(), install)
+            .map_err(|e| e.to_string())?;
+        let backup = config::json_bundle::apply(&files, &fingerprint, now).map_err(|e| e.to_string())?;
+        audit_config(&agent, install, &files[0].0);
+        return Ok(backup.map(|p| p.display().to_string()));
+    }
     if let Some(p) = vults_agents::plugin(&agent) {
-        let (path, text) = plugin_target(p);
-        let next = install.then_some(text.as_str());
-        let result = plugin::apply(&path, &fingerprint, next, &plugin_marker(), now);
+        let files = plugin_target(p);
+        let path = files.first().map(|f| f.0.clone()).unwrap_or_default();
+        let result = plugin::apply_files(&files, &fingerprint, install, &plugin_marker(), now);
         match &result {
             Ok(_) => {
                 tracing::info!(agent, install, "agent plugin written");

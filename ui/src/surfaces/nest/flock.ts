@@ -2,11 +2,12 @@
 import type { Answer, Diff, FlockPlace, Hush, ProjectPref, UsageWindow } from "../../bridge";
 import type { AgentKind, SessionView, TouchedView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
-import { t } from "../../i18n";
+import { t, locale } from "../../i18n";
+import { AGENTS } from "../../agents.gen";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { agentName, badgeOf, lastDiff, needsYou, questionBody, skipButton, statusText } from "../../island/views";
+import { approvalFolder, approvalRuleFolder, agentName, badgeOf, lastDiff, needsYou, questionBody, skipButton, statusText } from "../../island/views";
 import { usageLabel, usageLevel } from "../../cost";
 
 export interface FlockActions {
@@ -29,6 +30,8 @@ export interface FlockActions {
   skip: (request: string) => void;
   /** A finished step's diff; null once the session no longer keeps it. */
   diff: (s: SessionView, step: number) => Promise<Diff | null>;
+  /** Read-only working tree against HEAD; includes changes made by shell commands. */
+  workspaceDiff?: (s: SessionView) => Promise<Diff>;
   /** The plans' usage windows, for Full's strip. */
   usage: () => Promise<UsageWindow[]>;
   /** The answer to a quiet bird's flag: none of them reaches the agent. */
@@ -74,10 +77,75 @@ function costChip(s: SessionView): HTMLElement | null {
   return span;
 }
 
+const isHermes = (s: SessionView): boolean => s.agent === "other" && s.agent_name === "hermes";
+const responseTime = (s: SessionView): boolean => s.metric_info?.time_kind === "model-response" || ["opencode","qwen","copilot"].includes(s.agent) || isHermes(s);
+
 function runningTime(s: SessionView): string {
   if (s.elapsed_ms == null) return t("Not reported");
   const seconds = Math.floor(s.elapsed_ms / 1000);
   return seconds < 60 ? t("{n} s", { n: seconds }) : t("{n} min", { n: Math.floor(seconds / 60) });
+}
+
+function contextUsed(s: SessionView): string {
+  if (s.context_percent != null) return `${Math.round(s.context_percent)}%`;
+  return s.context_tokens == null ? t("Not reported") : t("{n} tokens", { n: s.context_tokens });
+}
+
+function sessionCost(s: SessionView): string {
+  if (s.cost_usd == null) return s.cost_estimated ? t("Price unavailable") : t("Not reported");
+  const value = s.cost_usd;
+  return `≈$${value > 0 && value < 0.01 ? value < 0.0001 ? "<0.0001" : value.toFixed(4) : value.toFixed(2)}`;
+}
+
+function ageLabel(seconds: number | null | undefined): string {
+  if (seconds == null) return t("Not received yet");
+  return seconds < 60 ? t("{n} s ago", { n: Math.floor(seconds) }) : t("{n} min ago", { n: Math.floor(seconds / 60) });
+}
+
+function metricsHealth(s: SessionView): string {
+  if (!isHermes(s) && !["claude", "codex", "opencode", "qwen", "copilot"].includes(s.agent) && !["kimi","droid","cursor","antigravity"].includes(s.agent_name ?? "")) return t("Metrics are not available for this agent yet.");
+  if (s.cost_failed) return t("The local cost could not be read. Context and time retain their last reports.");
+  if (s.metrics_failed) return t("Local session metrics could not be read. Check Settings → Agents.");
+  const busy = s.status === "working" || s.status === "thinking";
+  if (s.agent === "claude" && busy && (s.metrics_checked_age_secs ?? s.event_age_secs ?? 0) > 30)
+    return t("No recent metrics. Check the Claude status line in Settings → Agents.");
+  if (!["hermes","cursor","antigravity"].includes(s.agent_name ?? "") && s.agent !== "claude" && (s.metrics_checked_age_secs ?? 0) > 15)
+    return t("Metrics checks are delayed. The last readings are shown.");
+  if (s.metrics_age_secs == null) return t("Waiting for the first metrics report.");
+  return t("Metrics read {age}.", { age: ageLabel(s.metrics_age_secs) });
+}
+
+function metricSource(s: SessionView): string {
+  if (isHermes(s)) return t("Hermes plugin and local cost database");
+  if (s.agent_name === "kimi") return t("Local Kimi usage records");
+  if (s.agent_name === "droid") return t("Local Droid session summary");
+  if (s.agent_name === "cursor") return t("Cursor context before compaction");
+  if (s.agent_name === "antigravity") return t("Antigravity CLI status line");
+  switch (s.agent) {
+    case "copilot": return t("Local Copilot shutdown ledger");
+    case "claude": return t("Claude status line");
+    case "codex": return t("Local Codex session log");
+    case "opencode": return t("Local OpenCode database");
+    case "qwen": return t("Local Qwen chat log");
+    default: return t("Not reported");
+  }
+}
+
+function integrationLimits(s: SessionView): string[] {
+  const limits: string[] = [];
+  if (s.agent === "opencode") limits.push(t("In OpenCode 2, answer questions in its terminal."));
+  else if (s.agent !== "claude") limits.push(t("Answer questions in the agent's terminal."));
+  limits.push(s.agent === "claude" || s.agent === "codex"
+    ? t("Only turns started by Vults can be interrupted here.")
+    : t("Stopping this agent from Flock is not supported yet."));
+  if (s.agent === "qwen") limits.push(t("Qwen response time comes from its local usage ledger. API cost requires an unambiguous model price."));
+  if (s.agent === "opencode") limits.push(t("Response time counts completed model responses, excluding gaps and tool execution."));
+  if (s.agent === "copilot") limits.push(t("Copilot persists these totals at session shutdown. Premium requests are credits, not US dollars."));
+  if (s.agent_name === "droid") limits.push(t("Droid reports cumulative tokens. Its summary does not report current context or execution time."));
+  if (s.agent_name === "kimi") limits.push(t("Kimi usage covers the main agent wire records. Missing API duration stays unknown."));
+  if (s.agent_name === "cursor") limits.push(t("Cursor reports context before compaction. These hooks do not provide session cost or execution time."));
+  if (s.agent_name === "antigravity") limits.push(t("Antigravity metrics require its CLI status line. Desktop and IDE hooks alone do not report these numbers."));
+  return limits;
 }
 
 const inStatus = (s: SessionView, status: FlockPlace["status"]) =>
@@ -326,6 +394,79 @@ export function createFlock(on: FlockActions & FlockAsk): {
   let shownDiff: { owner: string; step: number; diff: Diff | null | undefined } | null = null;
   let focusDiff = false;
   let restoredChange: FlockPlace["change"] = null;
+  let workspaceRead: { owner: string; cwd: string | null; data: Diff | null; loaded: boolean; pending: boolean; failed: boolean; file: string | null } | null = null;
+  let workspaceTimer: number | undefined;
+  let workspaceAbout = false;
+
+  function armWorkspace(): void {
+    if (!on.workspaceDiff || !active || document.hidden || detail !== "diff" || !view || !frontOf(view)) {
+      window.clearTimeout(workspaceTimer); workspaceTimer = undefined; return;
+    }
+    if (workspaceTimer !== undefined) return;
+    workspaceTimer = window.setTimeout(() => {
+      workspaceTimer = undefined;
+      const s = view && frontOf(view);
+      if (s && active && !document.hidden && detail === "diff") { readWorkspace(s); draw(); }
+    }, 4000);
+  }
+
+  function readWorkspace(s: SessionView): void {
+    if (!on.workspaceDiff) return;
+    if (!workspaceRead || workspaceRead.owner !== key(s) || workspaceRead.cwd !== s.cwd)
+      workspaceRead = { owner: key(s), cwd: s.cwd, data: null, loaded: false, pending: false, failed: false, file: null };
+    const reading = workspaceRead;
+    if (reading.pending) return;
+    reading.pending = true; reading.loaded = true;
+    void Promise.resolve().then(() => on.workspaceDiff!(s)).then(data => {
+      if (workspaceRead !== reading) return;
+      reading.data = data; reading.failed = false;
+      if (!data.files.some(f => f.path === reading.file)) reading.file = data.files[0]?.path ?? null;
+    }, () => { if (workspaceRead === reading) reading.failed = true; }).finally(() => {
+      if (workspaceRead !== reading) return;
+      reading.pending = false;
+      if (active) draw();
+      armWorkspace();
+    });
+  }
+
+  function workspaceChanges(s: SessionView): HTMLElement[] {
+    if (!on.workspaceDiff || !active || document.hidden) return [];
+    if (!workspaceRead || workspaceRead.owner !== key(s) || workspaceRead.cwd !== s.cwd || !workspaceRead.loaded) readWorkspace(s);
+    const current = workspaceRead!;
+    const refresh = fid(el("button", { class: "outline", text: current.pending ? t("Loading the changes…") : t("Refresh changes"), onclick: () => { readWorkspace(s); draw(); } }), "act:workspace-refresh");
+    refresh.disabled = current.pending;
+    const focus = fid(el("button", { class: "outline", text: focusDiff ? t("Back to the card") : t("Focus diff ↗"), onclick: () => {
+      if (!view || key(frontOf(view) ?? s) !== key(s) || waits(s) || view.approval || !current.data?.files.length) return;
+      focusDiff = !focusDiff; draw();
+    } }), "act:workspace-focus");
+    focus.disabled = waits(s) || !!view?.approval || !current.data?.files.length;
+    focus.setAttribute("aria-pressed", String(focusDiff));
+    const about = el("details", {}, el("summary", { text: t("About these changes") }),
+      el("p", { class: "detail-footnote", text: t("Current local files compared with HEAD, including command edits and pre-existing changes. This is not an attribution to one agent. Refreshes while this tab is open.") }));
+    about.open = workspaceAbout;
+    about.addEventListener("toggle", () => { workspaceAbout = about.open; });
+    const out = [el("header", { class: "session-section-head workspace-head" }, el("h3", { text: t("Repository changes") }), refresh, focus),
+      el("p", { class: "detail-footnote", text: t("Local changes against HEAD, including command edits.") }), about];
+    if (current.failed) out.push(el("p", { class: "detail-footnote", text: t("Could not read repository changes. Check the session folder and try again.") }));
+    const data = current.data;
+    if (!data) return out;
+    if (!data.files.length) out.push(el("p", { class: "detail-footnote", text: t("No local text changes found.") }));
+    else {
+      const pick = fid(el("select", { class: "form-select" }), "act:workspace-file");
+      pick.setAttribute("aria-label", t("Changed file"));
+      for (const file of data.files) {
+        const option = el("option", { text: `${file.path} · +${file.added} −${file.removed}` });
+        option.value = file.path; option.selected = file.path === current.file; pick.append(option);
+      }
+      pick.addEventListener("change", () => { current.file = pick.value; draw(); });
+      const file = data.files.find(f => f.path === current.file) ?? data.files[0];
+      out.push(pick, el("div", { class: "diff-caption", text: file.path }),
+        el("div", { class: "diff-block" }, ...diffRows({ files: [file], cut: data.cut })));
+    }
+    if (data.cut) out.push(el("p", { class: "detail-footnote", text: t("This preview skips binary or large files and may be truncated.") }));
+    return out;
+  }
+
   /** Whose card is shown: Focus diff ends when another session comes in front. */
   let shownFront: string | null = null;
   /** The front session keeps edits to show: without them there is no diff to focus on. */
@@ -413,7 +554,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
       el("div", { class: `roost-sub ${tone(s)}`, text: statusText(s) }),
       el("div", { class: "roost-agent", text: t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
-      el("div", { class: "roost-context", text: s.context_percent == null ? t("Context not reported") : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) }),
+      el("div", { class: "roost-context", text: s.context_percent == null && s.context_tokens == null ? t("Context not reported") : s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) }),
     );
     const meter = contextMeter(s);
     if (meter) b.append(meter);
@@ -566,10 +707,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
     };
     const kbd = (k: string | undefined) => (k ? el("span", { class: "kbd", text: k }) : null);
     const destructive = ask.why === "destructive";
-    const always = s.cwd && !ask.cut && !destructive
+    const always = approvalRuleFolder(s, ask) && !ask.cut && !destructive
       ? fid(el("button", { class: "outline", text: t("Always allow"), onclick: answer("always") }), "act:always")
       : null;
-    if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: s.project || t("this folder") });
+    if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: approvalFolder(s, ask) || t("this folder") });
     return el(
       "div",
       { class: "app-card-actions" },
@@ -625,6 +766,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
             fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), "act:copy"),
           )
         : null,
+      permission ? el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ?? t("Not reported") }) }) : null,
       permission?.why
         ? el("p", {
             class: `ask-why ${permission.why}`,
@@ -664,15 +806,18 @@ export function createFlock(on: FlockActions & FlockAsk): {
 
   /** Changes: the session's kept edits, one at a time, over every file it changed. */
   const changes = (s: SessionView): HTMLElement[] => {
+    const local = workspaceChanges(s);
     const edits = (s.changes ?? []).map((c) => ({ text: c.text, diff: c }));
     const files = s.touched ?? [];
-    hasEdits = edits.length > 0;
+    const localEdits = workspaceRead?.owner === key(s) && !!workspaceRead.data?.files.length;
+    hasEdits = edits.length > 0 || localEdits;
     if (!edits.length) {
       shownDiff = null;
       restoredChange = null;
-      focusDiff = false;
+      if (!localEdits) focusDiff = false;
       return [
-        el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }),
+        ...local,
+        !on.workspaceDiff ? el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }) : null,
         files.length ? touchedList(s, files) : null,
       ].filter((e): e is HTMLElement => e !== null);
     }
@@ -722,6 +867,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const d = now.diff;
     const where = d && d.files.length === 1 ? d.files[0].path : t("{n} files", { n: sum.files });
     const out: HTMLElement[] = [
+      ...local,
+      ...(on.workspaceDiff ? [el("h3", { text: t("Agent-reported edits") })] : []),
       el("div", { class: "diff-toolbar" }, pick, focusButton),
       el("div", { class: "diff-caption" }, el("span", { text: t("Modified · +{added} −{removed}", { added: sum.added, removed: sum.removed }) }), el("span", { text: where })),
       d === undefined
@@ -761,19 +908,45 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
 
   const context = (s: SessionView): HTMLElement[] => {
+    const entry = AGENTS.find(a => a.id === (s.agent === "other" ? s.agent_name : s.agent));
     const rows: [string, string | null | undefined][] = [
       [t("Project"), s.project],
       [t("Repository"), s.roost],
       [t("Branch"), s.branch],
       [t("Folder"), s.cwd],
       [t("Agent"), agentName(s)],
+      [t("Model"), s.metric_info?.model],
+      [t("Provider"), s.metric_info?.provider],
+      [t("Pricing provider"), s.metric_info?.price_provider],
       [t("Editor"), s.editor],
       [t("Status"), statusText(s)],
-      [t("Cost so far"), s.cost_usd == null ? t("Not reported") : `≈$${s.cost_usd.toFixed(2)}`],
-      [t("Running time"), runningTime(s)],
-      [t("Context used"), s.context_percent == null ? t("Not reported") : `${Math.round(s.context_percent)}%`],
+      [t("Cost so far"), sessionCost(s)],
+      [responseTime(s) ? t("Model response time") : t("Running time"), runningTime(s)],
+      [t("Cost source"), s.metric_info?.cost_source === "catalog" ? t("API price estimate") : s.metric_info?.cost_source === "agent-estimate" ? t("Estimated by agent") : s.metric_info?.cost_source === "agent" ? t("Reported by agent") : null],
+      [t("Price catalog"), s.cost_estimated ? "models.dev" : null],
+      [t("Prices checked"), s.price_checked_at == null ? null : new Date(s.price_checked_at * 1000).toLocaleString(locale())],
+      [t("Context used"), contextUsed(s)],
+      [t("Context tokens"), s.context_tokens == null ? null : String(s.context_tokens)],
+      [t("Session input tokens"), s.metric_info?.input_tokens == null ? null : s.metric_info.input_tokens.toLocaleString(locale())],
+      [t("Session output tokens"), s.metric_info?.output_tokens == null ? null : s.metric_info.output_tokens.toLocaleString(locale())],
+      [t("Session cached tokens"), s.metric_info?.cached_tokens == null ? null : s.metric_info.cached_tokens.toLocaleString(locale())],
+      [t("Session cache write tokens"), s.metric_info?.cache_write_tokens == null ? null : s.metric_info.cache_write_tokens.toLocaleString(locale())],
+      [t("Premium requests"), s.metric_info?.premium_requests == null ? null : s.metric_info.premium_requests.toLocaleString(locale())],
+      [t("Service credits"), s.metric_info?.service_credits == null ? null : s.metric_info.service_credits.toLocaleString(locale())],
+      [t("Cost last read"), ageLabel(s.cost_age_secs)],
+      [t("Time last read"), ageLabel(s.elapsed_age_secs)],
+      [t("Context last read"), ageLabel(s.context_age_secs)],
+      [t("Integration status"), metricsHealth(s)],
+      [t("Last agent event"), ageLabel(s.event_age_secs)],
+      [t("Last metrics read"), ageLabel(s.metrics_age_secs)],
+      [t("Last metrics check"), ageLabel(s.metrics_checked_age_secs)],
+      [t("Metrics source"), metricSource(s)],
+      [t("Watch sessions"), entry ? (entry.watch ? t("Yes") : t("Not supported here")) : t("External integration")],
+      [t("Answer permissions"), entry?.answer ? t("A card on the island") : t("Its own terminal")],
+      [t("Start from Vults"), entry?.drive === "available" ? t("Yes") : entry?.drive === "planned" ? t("Planned; not enabled here") : t("Not supported here")],
     ];
-    return [el("dl", { class: "context-dl" }, ...rows.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : [])))];
+    return [el("dl", { class: "context-dl" }, ...rows.flatMap(([k, v]) => (v ? [el("dt", { text: k }), el("dd", { text: v })] : []))),
+      ...integrationLimits(s).map(text => el("p", { class: "detail-footnote", text }))];
   };
 
   function contextMeter(s: SessionView): HTMLElement | null {
@@ -790,10 +963,17 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const metric = (label: string, value: string, extra: HTMLElement | null = null) =>
       el("div", { class: "session-metric" }, el("dt", { text: label }), el("dd", { text: value }), extra);
     const metrics = el("dl", { class: "session-metrics" },
-      metric(t("Running time"), runningTime(s)),
-      metric(t("Cost so far"), s.cost_usd == null ? t("Not reported") : `≈$${s.cost_usd.toFixed(2)}`),
-      metric(t("Context used"), s.context_percent == null ? t("Not reported") : `${Math.round(s.context_percent)}%`, contextMeter(s)));
-    metrics.title = t("The CLI's last reported metrics. Cost is estimated at API prices; a subscription is not charged this.");
+      metric(responseTime(s) ? t("Model response time") : t("Running time"), runningTime(s)),
+      metric(t("Cost so far"), sessionCost(s)),
+      metric(t("Context used"), contextUsed(s), contextMeter(s)));
+    metrics.title = isHermes(s)
+      ? t("Hermes time counts completed API calls observed since its plugin loaded. Context is its latest report; cost comes from the local session database.")
+      : s.agent === "codex"
+      ? t("Codex time adds reported turn durations and the active turn. Cost is an estimate at current standard API prices, not a subscription charge.")
+      : s.cost_estimated
+      ? t("Cost is an estimate from reported tokens and current API prices. Missing model or provider prices remain unavailable.")
+      : t("The CLI's last reported metrics. Cost is estimated at API prices; a subscription is not charged this.");
+    if (s.price_checked_at != null) metrics.title += ` ${t("Prices checked: {time}", { time: new Date(s.price_checked_at * 1000).toLocaleString(locale()) })}`;
     const allSteps = fid(el("button", { class: "outline", text: t("All steps"), onclick: () => go("activity") }), "act:all-steps");
     const recent = el("section", { class: "session-recent" },
       el("header", { class: "session-section-head" }, el("h3", { text: t("Recent steps") }), allSteps), ...activity(s).slice(0, 4));
@@ -802,7 +982,21 @@ export function createFlock(on: FlockActions & FlockAsk): {
       el("header", { class: "session-section-head" }, el("h3", { text: t("Changed files") }),
         fid(el("button", { class: "outline", text: t("See the changes"), onclick: () => go("diff") }), "act:overview-changes")),
       files.length ? touchedList(s, files, 4) : el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }));
-    return [metrics, recent, changes];
+    const health = el("p", { class: "detail-footnote", text: metricsHealth(s) });
+    const consumption: HTMLElement[] = [];
+    const info = s.metric_info;
+    if (info && [info.input_tokens, info.output_tokens, info.cached_tokens].some(n => n != null)) {
+      const amount = (n: number | null | undefined) => n == null ? t("Not reported") : n.toLocaleString(locale());
+      const totals = el("dl", { class: "session-metrics session-consumption" },
+        metric(t("Session input tokens"), amount(info.input_tokens)),
+        metric(t("Session output tokens"), amount(info.output_tokens)),
+        metric(t("Session cached tokens"), amount(info.cached_tokens)));
+      if (info.premium_requests != null) totals.append(metric(t("Premium requests"), amount(info.premium_requests)));
+      if (info.service_credits != null) totals.append(metric(t("Service credits"), amount(info.service_credits)));
+      totals.title = t("Session input includes cached tokens; this is cumulative consumption, separate from current context.");
+      consumption.push(el("section", {}, el("header", { class: "session-section-head" }, el("h3", { text: t("Session consumption") })), totals));
+    }
+    return [metrics, health, ...consumption, recent, changes];
   };
 
   const zecaPane = (s: SessionView): HTMLElement[] => [
@@ -813,6 +1007,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const draw = () => {
     if (!view) return;
     const v = view;
+    armWorkspace();
     // A view redraws the tab: the control that had the keyboard gets it back after.
     const listScroll = roosts.scrollTop, detailScroll = detailBody.scrollTop;
     let selectedScroll = selected.scrollTop;
@@ -867,7 +1062,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
       ];
       if (zeca) tabs.push(["zeca", t("Zeca")]);
       // The tab sums every file the session changed, as its card does, not just the ticker's edits.
-      const sums = (front.touched ?? []).reduce((n, f) => ({ added: n.added + f.added, removed: n.removed + f.removed }), { added: 0, removed: 0 });
+      const counts = workspaceRead?.owner === key(front) && workspaceRead.data ? workspaceRead.data.files : (front.touched ?? []);
+      const sums = counts.reduce((n, f) => ({ added: n.added + f.added, removed: n.removed + f.removed }), { added: 0, removed: 0 });
       detailTabs.replaceChildren(
         ...tabs.map(([id, word]) => {
           const b = fid(
@@ -988,6 +1184,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   // Up and down walk the sessions shown, from the one in front, as on the island. On the window: a
   // redraw takes the focused control away, and the keys must still arrive.
   let active = true;
+  document.addEventListener("visibilitychange", armWorkspace);
   window.addEventListener("keydown", (e) => {
     if (!active || !view || (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable], .detail-tabs")) return;
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -1047,8 +1244,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     setActive: (shown) => {
       if (!shown) closeMenu(false);
       active = shown;
+      armWorkspace();
       scene.setActive(shown);
-      if (shown) layout();
+      if (shown) { layout(); if (on.workspaceDiff && detail === "diff") draw(); }
     },
     setFull: (f) => {
       if (f === full) return;

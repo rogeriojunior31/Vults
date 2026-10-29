@@ -20,7 +20,7 @@ PATTERN='\b(reqwest|ureq|hyper|isahc|attohttpc|tungstenite)\b|TcpStream|UdpSocke
 
 rust_files() {
   if git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git -C "$1" ls-files '*.rs'
+    git -C "$1" ls-files --cached --others --exclude-standard '*.rs' | sort -u
   else
     (cd "$1" && find . -name '*.rs' -not -path './target/*' | sed 's|^\./||')
   fi

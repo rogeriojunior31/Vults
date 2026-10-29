@@ -25,6 +25,10 @@ use vults_store::traces::Span;
 pub const CONNECTOR_BUDGET: usize = 3000;
 /// The Codex usage read, every 5 minutes at most: 288 a day.
 pub const USAGE: &str = "codex-usage";
+/// Claude's independent CLI allowance probe, at most 400 reads per day.
+pub const CLAUDE_USAGE: &str = "claude-usage";
+/// Conditional public metadata refresh every 15 minutes, with room for manual refreshes.
+pub const MODEL_PRICES: &str = "model-prices";
 pub const USAGE_BUDGET: usize = 400;
 /// Zeca's web tools (Z7): searches and page reads the model asks for in a chat turn.
 pub const WEB: &str = "web";
@@ -94,7 +98,8 @@ impl Drop for Reservation {
 /// choose its budget before its first request.
 pub fn budget(feature: &str) -> usize {
     match feature {
-        USAGE => USAGE_BUDGET,
+        USAGE | CLAUDE_USAGE => USAGE_BUDGET,
+        MODEL_PRICES => 120,
         WEB => WEB_BUDGET,
         PHONE => PHONE_BUDGET,
         JOURNAL => JOURNAL_BUDGET,
@@ -126,6 +131,10 @@ pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
         s.meeting_summary && s.meeting_summary_budget.is_some()
     } else if feature == CLEANUP {
         s.dictation_cleanup && s.dictation_cleanup_budget.is_some()
+    } else if feature == MODEL_PRICES {
+        s.price_updates
+    } else if feature == CLAUDE_USAGE {
+        s.claude_usage
     } else if feature == USAGE {
         s.codex_usage.unwrap_or(false)
     } else if feature == WEB {
@@ -294,6 +303,8 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
     GATE.get_or_init(|| {
         let mut features: Vec<&str> = vults_connectors::all().iter().map(|c| c.id()).collect();
         features.push(USAGE);
+        features.push(CLAUDE_USAGE);
+        features.push(MODEL_PRICES);
         features.push(WEB);
         features.push(PHONE);
         features.push(JOURNAL);
@@ -375,7 +386,7 @@ fn request_span(connector: &str, ok: bool, start_ms: i64, end_ms: i64) -> Span {
 
 fn feature(key: &str) -> &'static str {
     match key {
-        USAGE => "usage",
+        USAGE | CLAUDE_USAGE | MODEL_PRICES => "usage",
         WEB => "web",
         PHONE => "phone",
         JOURNAL => "journal",
@@ -622,7 +633,7 @@ mod tests {
             async { Ok(Vec::new()) }
         };
         let wake = tokio::sync::Notify::new();
-        let usage = crate::usage::run(&*g, || false, read, |_| {}, &wake);
+        let usage = crate::usage::run(&*g, USAGE, || false, read, |_| {}, &wake);
         assert!(
             tokio::time::timeout(DAY, usage).await.is_err(),
             "the loop runs all day"
@@ -653,7 +664,7 @@ mod tests {
             async { Ok(Vec::new()) }
         };
         let wake = tokio::sync::Notify::new();
-        let _ = tokio::time::timeout(DAY, crate::usage::run(&g, || false, read, |_| {}, &wake)).await;
+        let _ = tokio::time::timeout(DAY, crate::usage::run(&g, USAGE, || false, read, |_| {}, &wake)).await;
         let n = reads.load(Ordering::SeqCst);
         assert_eq!(n, 24 * 12 + 1, "one at the start, then one every 5 minutes");
         assert!(n <= USAGE_BUDGET);
@@ -682,7 +693,7 @@ mod tests {
             async { Ok(Vec::new()) }
         };
         let wake = tokio::sync::Notify::new();
-        let run = crate::usage::run(&g, || false, read, |_| {}, &wake);
+        let run = crate::usage::run(&g, USAGE, || false, read, |_| {}, &wake);
         tokio::pin!(run);
         let _ = tokio::time::timeout(Duration::from_secs(3600), &mut run).await;
         assert_eq!(reads.load(Ordering::SeqCst), 0, "off: no read in an hour");
@@ -695,6 +706,18 @@ mod tests {
     #[test]
     fn each_switch_opens_only_its_feature() {
         let mut s = crate::settings::Settings::default();
+        assert!(!switched_on(&s, CLAUDE_USAGE) && !switched_on(&s, MODEL_PRICES));
+        s.codex_usage = Some(true);
+        s.connectors.insert(CLAUDE_USAGE.into(), true);
+        s.connectors.insert(MODEL_PRICES.into(), true);
+        assert!(!switched_on(&s, CLAUDE_USAGE) && !switched_on(&s, MODEL_PRICES));
+        s.claude_usage = true;
+        assert!(switched_on(&s, CLAUDE_USAGE));
+        assert!(!switched_on(&s, MODEL_PRICES));
+        s.price_updates = true;
+        assert!(switched_on(&s, MODEL_PRICES));
+        assert_eq!(budget(MODEL_PRICES), 120);
+        s.codex_usage = Some(false);
         assert!(!switched_on(&s, USAGE) && !switched_on(&s, "github"));
         s.codex_usage = Some(true);
         assert!(switched_on(&s, USAGE) && !switched_on(&s, "github"));

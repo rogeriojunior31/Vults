@@ -118,6 +118,7 @@ impl Agent for Claude {
         Some(AgentUpdate {
             terminal: e.terminal.clone(),
             agent_id: crate::filled(text("agent_id")),
+            call_id: crate::call_id(p),
             session: SessionKey {
                 agent: AgentKind::Claude,
                 session_id: text("session_id").to_string(),

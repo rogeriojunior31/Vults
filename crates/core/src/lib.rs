@@ -18,6 +18,7 @@ pub mod handoff;
 pub mod i18n;
 pub mod ledger;
 pub mod looks;
+pub mod metrics;
 pub mod notify;
 pub mod policies;
 pub mod policy;
@@ -63,10 +64,10 @@ const MAX_ALERTS: usize = 5;
 /// A pending card is dropped once the hook gives up, less a grace for the answer's way back.
 pub const PENDING_TTL: Duration =
     vults_protocol::limits::SERVER_DECISION_TIMEOUT.saturating_sub(ledger::GRACE);
-/// A session that sends nothing for this long has most likely died without a SessionEnd
-/// (terminal closed, crash): its bird leaves the wire.
+// Old expiry intervals remain only as regression checkpoints: silence is not a closed session.
+#[cfg(test)]
 const SESSION_TTL: Duration = Duration::from_secs(30 * 60);
-/// A finished session lingers this long before leaving.
+#[cfg(test)]
 const FINISHED_TTL: Duration = Duration::from_secs(10 * 60);
 /// A resting session keeps its recent green mark before it may take to the sky.
 pub const REST_AFTER: Duration = Duration::from_secs(30);
@@ -217,6 +218,15 @@ pub struct Step {
     pub detail: Option<String>,
 }
 
+/// A started edit awaiting the result of its own tool call.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpenEdit {
+    pub step: u32,
+    pub of: Step,
+    pub agent_id: Option<String>,
+    pub call_id: Option<String>,
+}
+
 /// An agent event, normalized by the `agents` crate.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AgentUpdate {
@@ -227,6 +237,8 @@ pub struct AgentUpdate {
     /// The subagent that sent it; `None` for the session's main agent. Parallel agents' events
     /// must not settle each other's pending permissions.
     pub agent_id: Option<String>,
+    /// Native tool-call identity, distinct from a permission request or subagent identity.
+    pub call_id: Option<String>,
     pub event: AgentEvent,
     /// When the hook's line was read, for a request it waits on (`ipc`); `None` counts as now. A
     /// card's offer lives from it, so a busy app never answers for a hook that already gave up.
@@ -237,6 +249,8 @@ pub struct AgentUpdate {
 /// whole command when the target had to cut it, and for an edit the lines it adds and removes.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Ask {
+    /// An explicit operation folder, as reported by the tool; separate from the session's folder.
+    pub workdir: Option<String>,
     pub description: Option<String>,
     pub full: Option<String>,
     /// The target is only the start of what the call acts on (first line, 300 characters): an
@@ -581,6 +595,12 @@ impl Intent {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Input {
+    /// Observed process state, never an activity event or a permission decision.
+    SessionPresence {
+        session: SessionKey,
+        pid: u32,
+        alive: bool,
+    },
     /// An owned driver's whole turn ended, including any still-waiting subagent cards.
     RunEnded(AgentUpdate),
     Agent(AgentUpdate),
@@ -588,12 +608,35 @@ pub enum Input {
     /// a session, a card or a bird.
     Chat(AgentUpdate),
     Connector(Alert),
+    /// Its reply transport left. Expire the offer without a user decision.
+    RequestGone {
+        request: RequestId,
+    },
+    /// A known local session's metrics source could not be read. Keep its last values, marked old.
+    SessionMetricsUnavailable {
+        session: SessionKey,
+    },
+    /// Native cost-only refresh; cannot erase context/time received on a separate hook channel.
+    SessionCost {
+        session: SessionKey,
+        cost_usd: Option<f64>,
+        info: metrics::MetricInfo,
+    },
+    SessionCostUnavailable {
+        session: SessionKey,
+    },
     /// A CLI's session metrics snapshot. Missing context stays unknown, not zero; no new session.
     SessionMetrics {
         session: SessionKey,
+        info: metrics::MetricInfo,
+        partial: bool,
+        reset_context: bool,
         cost_usd: Option<f64>,
+        cost_estimated: bool,
+        price_checked_at: Option<i64>,
         elapsed_ms: Option<u64>,
         context_percent: Option<f64>,
+        context_tokens: Option<u64>,
     },
     /// The repository a session's folder is in, read by the app from its `.git` (no network) for
     /// that `cwd`: dropped if the session has moved since. `None` when the folder is in none.
@@ -744,6 +787,17 @@ pub struct Session {
     pub step_count: u32,
     pub subagents: u32,
     pub updated: Instant,
+    /// Last actual agent event; status changes and metric reads never advance it.
+    pub event_at: Instant,
+    pub process_gone: bool,
+    pub metrics_at: Option<Instant>,
+    pub cost_at: Option<Instant>,
+    pub elapsed_at: Option<Instant>,
+    pub context_at: Option<Instant>,
+    pub metric_info: metrics::MetricInfo,
+    pub metrics_checked_at: Option<Instant>,
+    pub metrics_failed: bool,
+    pub cost_failed: bool,
     /// Idle and successful completion share one rest; metadata and navigation never restart it.
     pub rest_since: Option<Instant>,
     /// When the session first showed up: the oldest of a project is its king.
@@ -761,7 +815,7 @@ pub struct Session {
     pub root: Option<String>,
     /// Edit steps whose diff has not come yet, by number: a call may finish after its step left
     /// the ticker.
-    pub open_edits: VecDeque<(u32, Step)>,
+    pub open_edits: VecDeque<OpenEdit>,
     /// The latest finished edits with their diff, oldest first, by step number (counted like
     /// `step_count`).
     pub diffs: VecDeque<Change>,
@@ -773,10 +827,15 @@ pub struct Session {
     pub turn: Option<turns::Draft>,
     /// What it has cost so far at API prices, when its agent says (`Input::SessionMetrics`).
     pub cost_usd: Option<f64>,
+    /// A current public API-price equivalent rather than a native charge.
+    pub cost_estimated: bool,
+    pub price_checked_at: Option<i64>,
     /// The CLI's reported running time; never inferred from steps or app uptime.
     pub elapsed_ms: Option<u64>,
     /// The current context occupancy; absent until the CLI reports it.
     pub context_percent: Option<f64>,
+    /// Tokens in the last reported context, including cached tokens; never cumulative usage.
+    pub context_tokens: Option<u64>,
     /// The repository its folder is in (`Input::Repo`).
     pub repo: Option<Repo>,
 }
@@ -833,6 +892,8 @@ pub struct Pending {
     pub session: SessionKey,
     /// The subagent that asked, if any.
     pub agent_id: Option<String>,
+    /// Native tool-call identity, distinct from a permission request or subagent identity.
+    pub call_id: Option<String>,
     pub tool: String,
     pub target: String,
     pub ask: Ask,
@@ -986,18 +1047,124 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             board::set(state, connector, rows);
             Vec::new()
         }
-        Input::SessionMetrics {
+        Input::SessionPresence { session, pid, alive } => {
+            if let Some(s) = state.sessions.get_mut(&session)
+                && s.terminal.pid == Some(pid)
+            {
+                s.process_gone = !alive;
+            }
+            Vec::new()
+        }
+        Input::SessionCost {
             session,
             cost_usd,
-            elapsed_ms,
-            context_percent,
+            info,
         } => {
             if let Some(s) = state.sessions.get_mut(&session) {
-                if let Some(usd) = cost_usd.filter(|n| n.is_finite() && *n >= 0.0) {
-                    s.cost_usd = Some(usd);
+                s.cost_usd = cost_usd.filter(|n| n.is_finite() && *n >= 0.0);
+                s.cost_estimated = false;
+                let source = info.cost_source;
+                s.metric_info.merge(info);
+                s.metric_info.cost_source = source;
+                s.cost_failed = false;
+                s.cost_at = s.cost_usd.map(|_| now);
+                s.price_checked_at = None;
+                s.metrics_checked_at = Some(now);
+                if s.cost_usd.is_some() {
+                    s.metrics_at = Some(now);
                 }
-                s.elapsed_ms = elapsed_ms;
-                s.context_percent = context_percent.filter(|n| (0.0..=100.0).contains(n));
+            }
+            Vec::new()
+        }
+        Input::SessionCostUnavailable { session } => {
+            if let Some(s) = state.sessions.get_mut(&session) {
+                s.cost_failed = true;
+            }
+            Vec::new()
+        }
+        Input::SessionMetrics {
+            session,
+            info,
+            partial,
+            reset_context,
+            cost_usd,
+            cost_estimated,
+            price_checked_at,
+            elapsed_ms,
+            context_percent,
+            context_tokens,
+        } => {
+            if let Some(s) = state.sessions.get_mut(&session) {
+                s.metrics_checked_at = Some(now);
+                s.metrics_failed = false;
+                let cost = cost_usd.filter(|n| n.is_finite() && *n >= 0.0);
+                if cost.is_some()
+                    || info.input_tokens.is_some()
+                    || info.output_tokens.is_some()
+                    || info.premium_requests.is_some()
+                    || info.service_credits.is_some()
+                    || elapsed_ms.is_some()
+                    || context_tokens.is_some()
+                    || context_percent.is_some_and(|n| (0.0..=100.0).contains(&n))
+                {
+                    s.metrics_at = Some(now);
+                }
+                if cost_estimated || cost.is_some() {
+                    s.cost_usd = cost;
+                    s.cost_estimated = cost_estimated;
+                    s.price_checked_at = price_checked_at;
+                }
+                if partial {
+                    s.metric_info.merge(info);
+                } else {
+                    s.metric_info = info;
+                }
+                if cost.is_some() {
+                    s.cost_at = Some(now);
+                }
+                if elapsed_ms.is_some() {
+                    s.elapsed_at = Some(now);
+                }
+                if context_tokens.is_some() || context_percent.is_some() {
+                    s.context_at = Some(now);
+                }
+                if reset_context {
+                    s.context_at = Some(now);
+                }
+                if !partial || elapsed_ms.is_some() {
+                    s.elapsed_ms = elapsed_ms;
+                }
+                if reset_context || !partial || context_percent.is_some() {
+                    s.context_percent = if reset_context {
+                        None
+                    } else {
+                        context_percent.filter(|n| (0.0..=100.0).contains(n))
+                    };
+                }
+                if reset_context || !partial || context_tokens.is_some() {
+                    s.context_tokens = if reset_context { None } else { context_tokens };
+                }
+                if cost.is_some() {
+                    s.cost_failed = false;
+                }
+            }
+            Vec::new()
+        }
+        Input::RequestGone { request } => {
+            let Some(p) = take_pending(state, |p| p.request == request) else {
+                return Vec::new();
+            };
+            record_end(state, &p, Outcome::Expired);
+            settle(state, &p.session, now);
+            vec![
+                audited(state, &p, audit::Actor::System, audit::Act::Expire),
+                Effect::ReleasePermission(p.request),
+            ]
+        }
+        Input::SessionMetricsUnavailable { session } => {
+            if let Some(s) = state.sessions.get_mut(&session) {
+                s.metrics_checked_at = Some(now);
+                s.metrics_failed = true;
             }
             Vec::new()
         }
@@ -1337,20 +1504,9 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             }
             let waiting: Vec<SessionKey> = state.pending.iter().map(|p| p.session.clone()).collect();
             // A session that leaves, or a turn gone silent for good, ends its turn at its last event.
-            let keeps = |key: &SessionKey, s: &Session| {
-                // A quiet bird the user said to watch counts from their answer.
-                let heard = [s.watch.touched, s.watch.armed]
-                    .into_iter()
-                    .flatten()
-                    .fold(s.updated, Instant::max);
-                let quiet = now.saturating_duration_since(heard);
-                let ttl = if s.status == Status::Finished {
-                    FINISHED_TTL
-                } else {
-                    SESSION_TTL
-                };
-                waiting.contains(key) || quiet < ttl
-            };
+            // Finishing a response or falling silent is not closing the conversation. Idle
+            // birds keep their identity and can fly/rest; only confirmed disappearance removes them.
+            let keeps = |key: &SessionKey, s: &Session| waiting.contains(key) || !s.process_gone;
             let gone: Vec<SessionKey> = state
                 .sessions
                 .iter()
@@ -1386,6 +1542,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         cwd,
         terminal,
         agent_id,
+        call_id,
         event,
         received,
     } = update;
@@ -1420,7 +1577,13 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                 && (ended
                     || p.agent_id == agent_id
                         && match &event {
-                            AgentEvent::ToolFinished { target: Some(t), .. } => &p.target == t,
+                            AgentEvent::ToolFinished { target, .. } => {
+                                if call_id.is_some() || p.call_id.is_some() {
+                                    call_id == p.call_id
+                                } else {
+                                    target.as_ref().is_none_or(|target| &p.target == target)
+                                }
+                            }
                             AgentEvent::ToolStarted(_)
                             | AgentEvent::Edited { .. }
                             | AgentEvent::SubagentStarted
@@ -1449,6 +1612,16 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         step_count: 0,
         subagents: 0,
         updated: now,
+        event_at: since,
+        process_gone: false,
+        metrics_at: None,
+        cost_at: None,
+        elapsed_at: None,
+        context_at: None,
+        metric_info: Default::default(),
+        metrics_checked_at: None,
+        metrics_failed: false,
+        cost_failed: false,
         rest_since: None,
         started: now,
         terminal: Terminal::default(),
@@ -1462,10 +1635,14 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         watch: silence::Watch::default(),
         turn: None,
         cost_usd: None,
+        cost_estimated: false,
+        price_checked_at: None,
         elapsed_ms: None,
         context_percent: None,
+        context_tokens: None,
         repo: None,
     });
+    session.process_gone = false;
     // The latest event knows best where the agent runs (it may have moved to another pane).
     if terminal != Terminal::default() {
         session.terminal = terminal;
@@ -1484,6 +1661,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         session.cwd = cwd;
     }
     session.updated = now;
+    session.event_at = session.event_at.max(since);
     silence::heard(session, &event);
     let idle = session.turn.is_none();
     turns::heard(session, &event, now);
@@ -1505,15 +1683,15 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         AgentEvent::ToolStarted(step) => {
             session.status = Status::Working;
             session.activity = Some(step.activity);
-            push_step(session, step, wall);
+            push_step(session, step, wall, agent_id.as_deref(), call_id.as_deref());
         }
         AgentEvent::Edited { step, diff } => {
             if !state.pending.iter().any(|p| p.session == key) {
                 session.status = Status::Working;
             }
             session.activity = Some(Activity::Edit);
-            push_step(session, step, wall);
-            attach(session, diff);
+            push_step(session, step, wall, agent_id.as_deref(), call_id.as_deref());
+            attach(session, diff, agent_id.as_deref(), call_id.as_deref());
         }
         // A parallel call may still wait for its answer: its card stays only while the session
         // says it needs approval.
@@ -1522,7 +1700,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                 session.status = Status::Working;
             }
             if let Some(diff) = diff.filter(|_| !failed) {
-                attach(session, diff);
+                attach(session, diff, agent_id.as_deref(), call_id.as_deref());
             }
         }
         AgentEvent::PermissionRequested {
@@ -1535,7 +1713,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
             // destructive one, which always asks (a rule saved before that was enforced included).
             let ruled = !ask.cut
                 && !policies::destructive(&tool, &target, &ask)
-                && session.cwd.as_ref().is_some_and(|cwd| {
+                && ask.workdir.as_ref().or(session.cwd.as_ref()).is_some_and(|cwd| {
                     state.rules.iter().any(|r| {
                         r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target
                     })
@@ -1545,7 +1723,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                 &policies::Call {
                     agent: key.agent,
                     root: session.root.as_deref(),
-                    cwd: session.cwd.as_deref(),
+                    cwd: ask.workdir.as_deref().or(session.cwd.as_deref()),
                     tool: &tool,
                     target: &target,
                     ask: &ask,
@@ -1610,13 +1788,14 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
             } else {
                 session.status = Status::Approval;
                 effects.push(Effect::AckPermission(request.clone()));
-                let cwd = session.cwd.clone();
+                let cwd = ask.workdir.clone().or_else(|| session.cwd.clone());
                 enqueue(
                     state,
                     Pending {
                         request,
                         session: key.clone(),
                         agent_id,
+                        call_id,
                         tool,
                         target,
                         ask,
@@ -1649,6 +1828,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                     request,
                     session: key.clone(),
                     agent_id,
+                    call_id,
                     tool: vults_protocol::QUESTION_TOOL.to_string(),
                     target,
                     ask: Ask::default(),
@@ -1732,7 +1912,13 @@ fn folder(session: &Session, end: bool) -> Option<Effect> {
 }
 
 /// A step under way; an edit's waits for its diff in `open_edits`.
-fn push_step(session: &mut Session, step: Step, wall: Option<i64>) {
+fn push_step(
+    session: &mut Session,
+    step: Step,
+    wall: Option<i64>,
+    agent_id: Option<&str>,
+    call_id: Option<&str>,
+) {
     if session.steps.len() == MAX_STEPS {
         session.steps.pop_front();
         session.step_at.pop_front();
@@ -1742,7 +1928,12 @@ fn push_step(session: &mut Session, step: Step, wall: Option<i64>) {
         if session.open_edits.len() == MAX_DIFFS {
             session.open_edits.pop_front();
         }
-        session.open_edits.push_back((session.step_count, step.clone()));
+        session.open_edits.push_back(OpenEdit {
+            step: session.step_count,
+            of: step.clone(),
+            agent_id: agent_id.map(str::to_string),
+            call_id: call_id.map(str::to_string),
+        });
     }
     session.steps.push_back(step);
     session.step_at.push_back(wall);
@@ -1750,22 +1941,30 @@ fn push_step(session: &mut Session, step: Step, wall: Option<i64>) {
 
 /// The diff goes to the latest edit of its file that has none yet: calls may finish out of order.
 /// Its files count in the ledger even when no step of theirs is open (the agent sent none).
-fn attach(session: &mut Session, diff: Diff) {
+fn attach(session: &mut Session, diff: Diff, agent_id: Option<&str>, call_id: Option<&str>) {
     let Some(file) = diff.files.first().map(|f| file_name(&f.path)) else {
         return;
     };
-    let open = session.open_edits.iter().rposition(|(_, st)| {
-        st.detail
-            .as_deref()
-            .is_some_and(|d| d == file || d.starts_with(&format!("{file} +")))
+    let open = session.open_edits.iter().rposition(|edit| {
+        if edit.agent_id.as_deref() != agent_id {
+            return false;
+        }
+        match call_id {
+            Some(id) => edit.call_id.as_deref() == Some(id),
+            None => edit
+                .of
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail == file || detail.starts_with(&format!("{file} +"))),
+        }
     });
     let step = open.and_then(|i| session.open_edits.remove(i));
-    let at = step.as_ref().map_or(0, |(n, _)| *n);
+    let at = step.as_ref().map_or(0, |edit| edit.step);
     for f in &diff.files {
         let path = full_path(session.cwd.as_deref(), &f.path);
         touch(&mut session.touched, path, f, at);
     }
-    if let Some((step, of)) = step {
+    if let Some(OpenEdit { step, of, .. }) = step {
         if session.diffs.len() == MAX_DIFFS {
             session.diffs.pop_front();
         }
@@ -1986,7 +2185,7 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
                 audited(state, &p, by.actor(), act),
             ];
             // The folder the card was offered in, the one the user saw (not where the agent is now).
-            let cwd = p.cwd.clone().filter(|_| !destructive);
+            let cwd = p.cwd.clone().filter(|cwd| !destructive && is_absolute(cwd));
             settle(state, &p.session, now);
             // Without a folder there is nothing to scope the rule to: it is a plain Allow.
             if let Some(cwd) = cwd {

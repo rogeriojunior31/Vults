@@ -12,9 +12,12 @@ mod dirs;
 pub mod driver;
 mod droid;
 mod gemini;
+mod hermes;
 mod kimi;
+pub mod metrics;
 mod opencode;
 mod other;
+pub mod prices;
 mod qwen;
 pub mod registry;
 pub mod usage;
@@ -26,7 +29,7 @@ use vults_agent_config::HookEntry;
 use vults_core::{AgentUpdate, Ask};
 use vults_protocol::{AgentKind, Event};
 
-pub use antigravity::Antigravity;
+pub use antigravity::{Antigravity, metrics_files as antigravity_metrics_files};
 pub use claude::{Claude, state_file as claude_state_file, trusts as claude_trusts};
 pub use codex::{Codex, Trust as CodexTrust, trust as codex_trust};
 pub use copilot::Copilot;
@@ -34,6 +37,7 @@ pub use cursor::Cursor;
 pub use dirs::{DIR_VARS, Dirs, codex_home, set_shell_env, shell_env};
 pub use droid::Droid;
 pub use gemini::Gemini;
+pub use hermes::HERMES;
 pub use kimi::KIMI;
 pub use opencode::OPENCODE;
 pub use qwen::Qwen;
@@ -101,10 +105,8 @@ pub fn installable(name: &str) -> Option<&'static dyn Agent> {
 #[derive(Debug)]
 pub struct PluginAgent {
     pub name: &'static str,
-    /// Where the file goes, from the user's config folder (`$XDG_CONFIG_HOME` or `~/.config`).
-    pub file: fn(&Path) -> PathBuf,
-    /// The file, running `hook_exe`.
-    pub text: fn(&Path) -> String,
+    /// Owned plugin files (entry point and optional manifest), rooted in the agent's own home.
+    pub files: fn(&Dirs, &Path, &Path) -> Vec<(PathBuf, String)>,
 }
 
 /// An agent whose hooks are tables in a TOML config of its own (`[[hooks]]`), shared with
@@ -148,6 +150,13 @@ pub fn parse(event: &Event) -> Option<AgentUpdate> {
         AgentKind::OpenCode => opencode::parse(event),
         kind => agent(kind)?.parse(event),
     }
+}
+
+/// CLI-native call identity survives normalization and never serves as an approval id.
+fn call_id(payload: &Value) -> Option<String> {
+    ["tool_use_id", "tool_call_id", "call_id"]
+        .into_iter()
+        .find_map(|key| payload.get(key)?.as_str().and_then(filled))
 }
 
 /// What the agent shows while a permission waits for a click in Vults (the island or the Nest).
@@ -303,6 +312,8 @@ pub fn ask(tool: &str, input: &Value) -> Ask {
         first_field(input, TARGET_FIELDS).is_some_and(|(_, v)| shorten(v, TARGET_MAX) != v)
     };
     Ask {
+        workdir: first_field(input, &["workdir", "cwd", "directory", "dir_path"])
+            .map(|(_, value)| value.to_owned()),
         description: text("description").and_then(filled),
         full,
         cut,
@@ -425,6 +436,34 @@ fn unbullet(line: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn command_folders_survive_each_answerable_agent_adapter() {
+        for (kind, tool, field) in [
+            (AgentKind::Codex, "Bash", "workdir"),
+            (AgentKind::Qwen, "run_shell_command", "directory"),
+            (AgentKind::OpenCode, "bash", "cwd"),
+        ] {
+            let input = serde_json::json!({"command":"cargo test",field:"/w/child"});
+            let event = Event {
+                v: vults_protocol::VERSION,
+                id: "scope".into(),
+                agent: kind,
+                agent_name: None,
+                event: "PermissionRequest".into(),
+                wants_reply: true,
+                zeca: false,
+                terminal: Default::default(),
+                payload: serde_json::json!({"session_id":"s","cwd":"/w","tool_name":tool,"tool_input":input}),
+            };
+            let update = parse(&event).unwrap();
+            let vults_core::AgentEvent::PermissionRequested { ask, .. } = update.event else {
+                panic!("permission")
+            };
+            assert_eq!(ask.workdir.as_deref(), Some("/w/child"));
+            assert_eq!(update.cwd.as_deref(), Some("/w"));
+        }
+    }
 
     /// Every agent's file follows its own folder variable, and no other agent's.
     #[test]

@@ -44,9 +44,24 @@ enum Signal {
 }
 
 impl ReplyHandle {
+    /// Whether the waiting connection/local driver has already left.
+    pub fn is_gone(&self) -> bool {
+        self.0.is_closed()
+    }
+
+    /// Event-driven cancellation: no polling while a card waits.
+    pub async fn closed(&self) {
+        self.0.closed().await;
+    }
+
+    /// A reused wire id is not the same connection.
+    pub fn same_request(&self, other: &Self) -> bool {
+        self.0.same_channel(&other.0)
+    }
+
     /// The card is on screen and a human can act on it: the long wait may begin.
-    pub fn ack(&self) {
-        let _ = self.0.try_send(Signal::Ack);
+    pub fn ack(&self) -> bool {
+        self.0.try_send(Signal::Ack).is_ok()
     }
 
     /// Only ever called from a human's click (enforced in `core`).
@@ -306,7 +321,16 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
     }
     // No decision: write nothing, the hook prints nothing, the agent asks in its terminal.
     let v = protocol::VERSION;
-    let reply = match wait_for_decision(&mut rx, &mut conn, &id).await {
+    let signal = {
+        let (mut read, mut write) = tokio::io::split(&mut conn);
+        let mut unexpected = [0u8; 1];
+        tokio::select! {
+            signal = wait_for_decision(&mut rx, &mut write, &id) => signal,
+            // The hook sends one event, then only reads. EOF/error or another write ends it.
+            _ = read.read(&mut unexpected) => None,
+        }
+    };
+    let reply = match signal {
         Some(Signal::Decide(decision)) => Reply::Decision {
             v,
             id,
@@ -480,6 +504,36 @@ mod tests {
             protocol::VERSION
         )
         .into_bytes()
+    }
+
+    #[tokio::test]
+    async fn disconnected_hooks_close_the_handle_before_and_after_ack() {
+        for ack in [false, true] {
+            let (path, mut rx) = start(if ack { "gone-after-ack" } else { "gone-before-ack" }).await;
+            let mut client = UnixStream::connect(path).await.unwrap();
+            client
+                .write_all(&[&request_line("PermissionRequest")[..], b"\n"].concat())
+                .await
+                .unwrap();
+            let Some(Incoming::Request { reply, .. }) = rx.recv().await else {
+                panic!("request")
+            };
+            assert!(!reply.is_gone());
+            if ack {
+                assert!(reply.ack());
+                let waiting = read_line(&mut client).await.unwrap();
+                assert!(String::from_utf8(waiting).unwrap().contains("waiting"));
+            }
+            drop(client);
+            timeout(std::time::Duration::from_millis(250), reply.closed())
+                .await
+                .expect("EOF closes promptly");
+            assert!(reply.is_gone());
+            assert!(!reply.ack());
+            let (other, _held) = ReplyHandle::local();
+            assert!(!reply.same_request(&other));
+            assert!(reply.same_request(&reply.clone()));
+        }
     }
 
     #[tokio::test]

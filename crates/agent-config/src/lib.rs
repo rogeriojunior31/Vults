@@ -7,6 +7,7 @@
 
 pub mod flat;
 mod hooks;
+pub mod json_bundle;
 pub mod named;
 pub mod plugin;
 pub mod status_line;

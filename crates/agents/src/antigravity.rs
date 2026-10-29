@@ -105,6 +105,7 @@ impl Agent for Antigravity {
         Some(AgentUpdate {
             terminal: e.terminal.clone(),
             agent_id: None,
+            call_id: None,
             session: SessionKey {
                 agent: AgentKind::Other,
                 session_id: format!("{NAME}/{id}"),
@@ -181,6 +182,53 @@ impl Antigravity {
         }
         Value::Object(events)
     }
+}
+
+/// The CLI's numeric status line lives in settings, separately from the shared hooks file.
+/// One review covers both configs and the separately namespaced previous command.
+pub fn metrics_files(
+    dirs: &Dirs,
+    hook: &Path,
+    install: bool,
+) -> Result<Vec<(PathBuf, Value, Value)>, vults_agent_config::Error> {
+    use vults_agent_config::{read_json, status_line};
+    let hooks = Antigravity.config_file(dirs);
+    let settings = dirs.home().join(".gemini/antigravity-cli/settings.json");
+    let previous = hook.with_file_name("statusline-antigravity-previous.json");
+    let current_hooks = read_json(&hooks)?;
+    if install && Antigravity.install_blocked(&current_hooks).is_some() {
+        return Err(vults_agent_config::Error::Foreign { path: hooks });
+    }
+    let current = read_json(&settings)?;
+    if current
+        .get("statusLine")
+        .is_some_and(|v| !v.is_null() && !v.is_object())
+    {
+        return Err(vults_agent_config::Error::NotAnObject { path: settings });
+    }
+    let saved_value = read_json(&previous)?;
+    let saved = (!saved_value.as_object().is_some_and(|o| o.is_empty())).then_some(&saved_value);
+    let (mut next, line) = if install {
+        status_line::install(&current, saved, &hook_command(hook, NAME, "--statusline"), MARKER)
+    } else {
+        status_line::uninstall(&current, saved, MARKER)
+    };
+    if install && line.is_none() {
+        next["statusLine"]["stack_with_default"] = true.into();
+    }
+    Ok(vec![
+        (
+            hooks,
+            current_hooks.clone(),
+            if install {
+                Antigravity.install(&current_hooks, hook)
+            } else {
+                Antigravity.uninstall(&current_hooks)
+            },
+        ),
+        (settings, current, next),
+        (previous, saved_value, line.unwrap_or_else(|| json!({}))),
+    ])
 }
 
 /// The tool's arguments with agy's names copied to the ones the island reads.
@@ -273,6 +321,38 @@ mod tests {
             .map(|l| serde_json::from_str::<(String, Value)>(l).unwrap())
             .filter_map(|(name, stdin)| crate::parse(&event(&name, stdin)))
             .collect()
+    }
+
+    #[test]
+    fn cli_metric_setup_preserves_and_restores_the_previous_status_command() {
+        let root = std::env::temp_dir().join(format!("vults-agy-metrics-{}", std::process::id()));
+        let settings = root.join(".gemini/antigravity-cli/settings.json");
+        std::fs::create_dir_all(settings.parent().unwrap()).unwrap();
+        let original =
+            json!({"theme":"light","statusLine":{"type":"command","command":"printf mine","padding":2}});
+        std::fs::write(&settings, original.to_string()).unwrap();
+        let dirs = Dirs::home_only(&root);
+        let hook = root.join("bin/vults-hook");
+        let files = metrics_files(&dirs, &hook, true).unwrap();
+        let plan = vults_agent_config::json_bundle::preview(&files).unwrap();
+        assert!(plan.diff.contains("--agent antigravity --statusline"));
+        vults_agent_config::json_bundle::apply(&files, &plan.fingerprint, std::time::SystemTime::now())
+            .unwrap();
+        assert_eq!(
+            vults_agent_config::read_json(&settings).unwrap()["theme"],
+            "light"
+        );
+        assert_eq!(
+            vults_agent_config::read_json(&hook.with_file_name("statusline-antigravity-previous.json"))
+                .unwrap()["command"],
+            "printf mine"
+        );
+        let files = metrics_files(&dirs, &hook, false).unwrap();
+        let plan = vults_agent_config::json_bundle::preview(&files).unwrap();
+        vults_agent_config::json_bundle::apply(&files, &plan.fingerprint, std::time::SystemTime::now())
+            .unwrap();
+        assert_eq!(vults_agent_config::read_json(&settings).unwrap(), original);
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

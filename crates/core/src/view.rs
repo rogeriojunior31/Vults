@@ -162,12 +162,38 @@ pub struct SessionView {
     /// What it has cost so far at API prices, when its agent says: a subscription is not charged it.
     #[cfg_attr(test, ts(optional = nullable))]
     pub cost_usd: Option<f64>,
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub cost_estimated: bool,
+    #[cfg_attr(test, ts(as = "Option<crate::metrics::MetricInfo>", optional))]
+    pub metric_info: crate::metrics::MetricInfo,
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub cost_age_secs: Option<u64>,
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub elapsed_age_secs: Option<u64>,
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub context_age_secs: Option<u64>,
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub price_checked_at: Option<i64>,
+    /// Monotonic ages: telemetry never pretends to be an activity event.
+    #[cfg_attr(test, ts(as = "Option<f64>", optional))]
+    pub event_age_secs: u64,
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub metrics_age_secs: Option<u64>,
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub metrics_checked_age_secs: Option<u64>,
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub metrics_failed: bool,
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub cost_failed: bool,
     /// Running time in the CLI's last report, including resumed runs; not app uptime.
     #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
     pub elapsed_ms: Option<u64>,
     /// Current context occupancy in the CLI's last report; unknown is never zero.
     #[cfg_attr(test, ts(optional = nullable))]
     pub context_percent: Option<f64>,
+    /// Tokens in the CLI's last context report, including cache; not cumulative usage.
+    #[cfg_attr(test, ts(as = "Option<f64>", optional = nullable))]
+    pub context_tokens: Option<u64>,
     /// The question, the last reply or the error that goes with the status.
     pub note: Option<String>,
     /// The editor whose terminal the session runs in ("Cursor", "VS Code").
@@ -231,6 +257,9 @@ pub struct TouchedView {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct ApprovalView {
     pub request: String,
+    /// The operation folder shown on this card and included in its signed binding.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub cwd: Option<String>,
     #[cfg_attr(test, ts(as = "ts::AgentKind"))]
     pub agent: AgentKind,
     /// The session that asked, to put it in front.
@@ -367,8 +396,37 @@ impl State {
                     step_count: s.step_count,
                     subagents: s.subagents,
                     cost_usd: s.cost_usd,
+                    cost_estimated: s.cost_estimated,
+                    metric_info: s.metric_info.clone(),
+                    cost_age_secs: s
+                        .cost_at
+                        .zip(self.now)
+                        .map(|(at, now)| now.saturating_duration_since(at).as_secs()),
+                    elapsed_age_secs: s
+                        .elapsed_at
+                        .zip(self.now)
+                        .map(|(at, now)| now.saturating_duration_since(at).as_secs()),
+                    context_age_secs: s
+                        .context_at
+                        .zip(self.now)
+                        .map(|(at, now)| now.saturating_duration_since(at).as_secs()),
+                    price_checked_at: s.price_checked_at,
+                    event_age_secs: self
+                        .now
+                        .unwrap_or(s.event_at)
+                        .saturating_duration_since(s.event_at)
+                        .as_secs(),
+                    metrics_age_secs: s
+                        .metrics_at
+                        .map(|at| self.now.unwrap_or(at).saturating_duration_since(at).as_secs()),
+                    metrics_checked_age_secs: s
+                        .metrics_checked_at
+                        .map(|at| self.now.unwrap_or(at).saturating_duration_since(at).as_secs()),
+                    metrics_failed: s.metrics_failed,
+                    cost_failed: s.cost_failed,
                     elapsed_ms: s.elapsed_ms,
                     context_percent: s.context_percent,
+                    context_tokens: s.context_tokens,
                     note: s.note.clone(),
                     editor: editor(&s.terminal),
                     species: species[&s.key],
@@ -405,6 +463,7 @@ impl State {
                     .unwrap_or_default(),
                 tool: p.tool.clone(),
                 target: p.target.clone(),
+                cwd: p.cwd.clone(),
                 description: p.ask.description.clone(),
                 full: p.ask.full.clone(),
                 cut: p.ask.cut,
@@ -422,7 +481,7 @@ impl State {
                             &crate::policies::Call {
                                 agent: p.session.agent,
                                 root: s.and_then(|s| s.root.as_deref()),
-                                cwd: s.and_then(|s| s.cwd.as_deref()),
+                                cwd: p.cwd.as_deref(),
                                 tool: &p.tool,
                                 target: &p.target,
                                 ask: &p.ask,
@@ -668,6 +727,9 @@ pub(crate) mod ts {
             crate::chat::ChatFollowup::decl(&cfg),
             crate::AttentionItem::decl(&cfg),
             crate::AttentionSource::decl(&cfg),
+            crate::metrics::TimeKind::decl(&cfg),
+            crate::metrics::CostSource::decl(&cfg),
+            crate::metrics::MetricInfo::decl(&cfg),
             SessionView::decl(&cfg),
             DiffSummary::decl(&cfg),
             ChangeView::decl(&cfg),

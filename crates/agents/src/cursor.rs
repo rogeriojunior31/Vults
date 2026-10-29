@@ -39,6 +39,7 @@ const EVENTS: &[(&str, u64)] = &[
     ("afterFileEdit", 5),
     ("subagentStop", 5),
     ("stop", 5),
+    ("preCompact", 5),
 ];
 
 /// Cursor's tool names under Claude Code's, where the island reads them differently.
@@ -150,6 +151,7 @@ fn edited(e: &Event) -> Option<AgentUpdate> {
         cwd: n.payload.get("cwd").and_then(Value::as_str).map(str::to_string),
         terminal: e.terminal.clone(),
         agent_id: None,
+        call_id: None,
         received: None,
         event: AgentEvent::Edited {
             step: Step {

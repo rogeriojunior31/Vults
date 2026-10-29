@@ -48,6 +48,7 @@ fn agent(session: &str, event: AgentEvent) -> Input {
             ..Default::default()
         },
         agent_id: None,
+        call_id: None,
         received: None,
         event,
     })
@@ -890,10 +891,16 @@ fn a_sessions_cost_is_on_its_card() {
     let mut s = State::default();
     let now = Instant::now();
     let cost = |id: &str, usd| Input::SessionMetrics {
+        info: Default::default(),
+        partial: false,
+        reset_context: false,
         session: key(id),
         cost_usd: Some(usd),
+        cost_estimated: false,
+        price_checked_at: None,
         elapsed_ms: None,
         context_percent: None,
+        context_tokens: None,
     };
     assert!(visible(&mut s, cost("a", 1.0), now).is_empty());
     assert!(s.sessions.is_empty());
@@ -906,14 +913,388 @@ fn a_sessions_cost_is_on_its_card() {
 }
 
 #[test]
+fn a_policy_does_not_treat_an_operations_folder_as_the_sessions_folder() {
+    let now = Instant::now();
+    for dir in ["/home/me/outside", "/home/me/vults/../outside", "relative"] {
+        let mut s = State {
+            policies: vec![policy(9, "project /home/me/vults\nallow command cargo test")],
+            ..Default::default()
+        };
+        visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+        let effects = visible(
+            &mut s,
+            agent(
+                "a",
+                AgentEvent::PermissionRequested {
+                    request: rid("scope"),
+                    tool: "Bash".into(),
+                    target: "Bash · cargo test".into(),
+                    ask: Ask {
+                        workdir: Some(dir.into()),
+                        ..Default::default()
+                    },
+                },
+            ),
+            now,
+        );
+        assert!(
+            !effects.iter().any(|e| matches!(
+                e,
+                Effect::RespondPermission {
+                    decision: Decision::Allow,
+                    ..
+                }
+            )),
+            "{dir}"
+        );
+        assert_eq!(s.view().approval.unwrap().cwd.as_deref(), Some(dir));
+    }
+}
+
+#[test]
+fn a_gone_transport_expires_only_its_card_without_answering_it() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "gone"), now);
+    visible(&mut s, requested("b", "live"), now);
+    let effects = visible(
+        &mut s,
+        Input::RequestGone { request: rid("gone") },
+        now + Duration::from_millis(900),
+    );
+    assert!(!s.ledger.is_open(&rid("gone")));
+    assert!(s.ledger.is_open(&rid("live")));
+    assert_eq!(s.pending.len(), 1);
+    assert_eq!(s.pending[0].request, rid("live"));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::ReleasePermission(r) if r == &rid("gone")))
+    );
+    assert!(!effects.iter().any(|e| matches!(
+        e,
+        Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+    )));
+    let stale = visible(
+        &mut s,
+        Input::User(Intent::Decide {
+            request: rid("gone"),
+            decision: Decision::Allow,
+        }),
+        now + Duration::from_secs(1),
+    );
+    assert!(
+        !stale
+            .iter()
+            .any(|e| matches!(e, Effect::RespondPermission { .. }))
+    );
+}
+
+#[test]
+fn operation_folder_is_shown_bound_and_used_for_rules_without_moving_the_session() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let request = |id: &str, dir: &str| {
+        agent(
+            "a",
+            AgentEvent::PermissionRequested {
+                request: rid(id),
+                tool: "Bash".into(),
+                target: "Bash · cargo test".into(),
+                ask: Ask {
+                    workdir: Some(dir.into()),
+                    ..Default::default()
+                },
+            },
+        )
+    };
+    visible(&mut s, request("first", "/home/me/other"), now);
+    let view = s.view();
+    assert_eq!(
+        view.approval.as_ref().unwrap().cwd.as_deref(),
+        Some("/home/me/other")
+    );
+    assert_eq!(s.sessions[&key("a")].cwd.as_deref(), Some("/home/me/vults"));
+    let binding = ledger::Binding::of(&s.pending[0]);
+    let mut altered = s.pending[0].clone();
+    altered.cwd = Some("/home/me/vults".into());
+    assert_ne!(binding, ledger::Binding::of(&altered));
+    visible(
+        &mut s,
+        Input::User(Intent::DecideAlways {
+            request: rid("first"),
+        }),
+        now,
+    );
+    let different = visible(&mut s, request("different", "/home/me/vults"), now);
+    assert!(!different.iter().any(|e| matches!(
+        e,
+        Effect::RespondPermission {
+            decision: Decision::Allow,
+            ..
+        }
+    )));
+    visible(
+        &mut s,
+        Input::RequestGone {
+            request: rid("different"),
+        },
+        now,
+    );
+    let same = visible(&mut s, request("same", "/home/me/other"), now);
+    assert!(same.iter().any(|e| matches!(
+        e,
+        Effect::RespondPermission {
+            decision: Decision::Allow,
+            ..
+        }
+    )));
+}
+
+#[test]
+fn cost_only_reports_do_not_erase_context_or_elapsed_time() {
+    let mut state = State::default();
+    let now = Instant::now();
+    visible(&mut state, agent("a", AgentEvent::SessionStarted), now);
+    visible(
+        &mut state,
+        Input::SessionMetrics {
+            info: Default::default(),
+            partial: false,
+            reset_context: false,
+            session: key("a"),
+            cost_usd: None,
+            cost_estimated: false,
+            price_checked_at: None,
+            elapsed_ms: Some(1250),
+            context_percent: Some(42.0),
+            context_tokens: Some(420),
+        },
+        now,
+    );
+    visible(
+        &mut state,
+        Input::SessionCost {
+            info: Default::default(),
+            session: key("a"),
+            cost_usd: Some(0.0042),
+        },
+        now + Duration::from_secs(2),
+    );
+    let v = session_view(&state, "a");
+    assert_eq!(v.cost_usd, Some(0.0042));
+    assert_eq!(v.elapsed_ms, Some(1250));
+    assert_eq!(v.context_tokens, Some(420));
+    assert_eq!(state.sessions[&key("a")].updated, now);
+    visible(
+        &mut state,
+        Input::SessionMetrics {
+            info: Default::default(),
+            partial: false,
+            reset_context: false,
+            session: key("a"),
+            cost_usd: None,
+            cost_estimated: false,
+            price_checked_at: None,
+            elapsed_ms: Some(2500),
+            context_percent: Some(45.0),
+            context_tokens: Some(450),
+        },
+        now + Duration::from_secs(3),
+    );
+    let v = session_view(&state, "a");
+    assert_eq!(
+        v.cost_usd,
+        Some(0.0042),
+        "An API report preserves the independently polled native cost"
+    );
+    assert_eq!(v.elapsed_ms, Some(2500));
+}
+
+#[test]
+fn partial_metrics_preserve_other_channels_and_their_reading_ages() {
+    let mut state = State::default();
+    let now = Instant::now();
+    visible(&mut state, agent("a", AgentEvent::SessionStarted), now);
+    visible(
+        &mut state,
+        Input::SessionMetrics {
+            session: key("a"),
+            info: crate::metrics::MetricInfo {
+                model: Some("native-model".into()),
+                ..Default::default()
+            },
+            partial: false,
+            reset_context: false,
+            cost_usd: Some(0.5),
+            cost_estimated: false,
+            price_checked_at: None,
+            elapsed_ms: Some(1250),
+            context_percent: Some(42.0),
+            context_tokens: Some(420),
+        },
+        now,
+    );
+    visible(
+        &mut state,
+        Input::SessionCost {
+            session: key("a"),
+            cost_usd: Some(0.6),
+            info: crate::metrics::MetricInfo {
+                cost_source: Some(crate::metrics::CostSource::AgentEstimate),
+                ..Default::default()
+            },
+        },
+        now + Duration::from_secs(5),
+    );
+    visible(
+        &mut state,
+        Input::SessionMetrics {
+            session: key("a"),
+            info: Default::default(),
+            partial: true,
+            reset_context: false,
+            cost_usd: None,
+            cost_estimated: false,
+            price_checked_at: None,
+            elapsed_ms: Some(2500),
+            context_percent: None,
+            context_tokens: None,
+        },
+        now + Duration::from_secs(8),
+    );
+    let v = session_view(&state, "a");
+    assert_eq!(v.cost_usd, Some(0.6));
+    assert_eq!(v.context_tokens, Some(420));
+    assert_eq!(v.elapsed_ms, Some(2500));
+    assert_eq!(v.metric_info.model.as_deref(), Some("native-model"));
+    assert_eq!(v.cost_age_secs, Some(3));
+    assert_eq!(v.context_age_secs, Some(8));
+    assert_eq!(v.elapsed_age_secs, Some(0));
+    visible(
+        &mut state,
+        Input::SessionCostUnavailable { session: key("a") },
+        now + Duration::from_secs(9),
+    );
+    let v = session_view(&state, "a");
+    assert!(v.cost_failed);
+    assert!(!v.metrics_failed);
+    assert_eq!(v.context_tokens, Some(420));
+    visible(
+        &mut state,
+        Input::SessionMetrics {
+            session: key("a"),
+            info: Default::default(),
+            partial: true,
+            reset_context: true,
+            cost_usd: None,
+            cost_estimated: false,
+            price_checked_at: None,
+            elapsed_ms: None,
+            context_percent: None,
+            context_tokens: None,
+        },
+        now + Duration::from_secs(10),
+    );
+    let v = session_view(&state, "a");
+    assert_eq!(
+        v.context_tokens, None,
+        "Compaction must clear the previous context even in a partial report"
+    );
+    assert_eq!(v.context_percent, None);
+    assert_eq!(v.elapsed_ms, Some(2500));
+    assert_eq!(v.cost_usd, Some(0.6));
+}
+
+#[test]
+fn telemetry_health_keeps_event_read_and_failure_clocks_separate() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let failed = || Input::SessionMetricsUnavailable { session: key("a") };
+    visible(&mut s, failed(), now);
+    assert!(s.sessions.is_empty());
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    let report = || Input::SessionMetrics {
+        info: Default::default(),
+        partial: false,
+        reset_context: false,
+        session: key("a"),
+        cost_usd: Some(0.42),
+        cost_estimated: false,
+        price_checked_at: None,
+        elapsed_ms: Some(500),
+        context_percent: Some(10.0),
+        context_tokens: Some(100),
+    };
+    visible(&mut s, report(), now + Duration::from_secs(2));
+    visible(&mut s, failed(), now + Duration::from_secs(8));
+    let v = session_view(&s, "a");
+    assert_eq!(v.event_age_secs, 8);
+    assert_eq!(v.metrics_age_secs, Some(6));
+    assert_eq!(v.metrics_checked_age_secs, Some(0));
+    assert!(v.metrics_failed);
+    assert_eq!(v.cost_usd, Some(0.42));
+    assert_eq!(
+        s.sessions[&key("a")].updated,
+        now,
+        "Read/failure is not agent activity"
+    );
+    visible(&mut s, report(), now + Duration::from_secs(10));
+    let v = session_view(&s, "a");
+    assert!(!v.metrics_failed);
+    assert_eq!(v.metrics_age_secs, Some(0));
+    assert_eq!(v.event_age_secs, 10);
+    let mut delayed = match agent("a", AgentEvent::PromptSubmitted) {
+        Input::Agent(a) => a,
+        _ => unreachable!(),
+    };
+    delayed.received = Some(now + Duration::from_secs(5));
+    visible(&mut s, Input::Agent(delayed), now + Duration::from_secs(20));
+    assert_eq!(session_view(&s, "a").event_age_secs, 15);
+}
+
+#[test]
+fn an_expired_price_catalog_clears_an_estimate_without_clearing_native_cost() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    let metrics = |cost_usd, cost_estimated| Input::SessionMetrics {
+        info: Default::default(),
+        partial: false,
+        reset_context: false,
+        session: key("a"),
+        cost_usd,
+        cost_estimated,
+        price_checked_at: Some(1000),
+        elapsed_ms: Some(500),
+        context_percent: None,
+        context_tokens: None,
+    };
+    visible(&mut s, metrics(Some(0.42), true), now);
+    assert_eq!(session_view(&s, "a").cost_usd, Some(0.42));
+    visible(&mut s, metrics(None, true), now);
+    assert_eq!(session_view(&s, "a").cost_usd, None);
+    assert!(session_view(&s, "a").cost_estimated);
+    visible(&mut s, metrics(Some(0.5), false), now);
+    visible(&mut s, metrics(None, false), now);
+    assert_eq!(session_view(&s, "a").cost_usd, Some(0.5));
+}
+
+#[test]
 fn session_metrics_are_reported_snapshots_not_activity_or_permissions() {
     let mut s = State::default();
     let now = Instant::now();
     let metrics = |elapsed_ms, context_percent| Input::SessionMetrics {
+        info: Default::default(),
+        partial: false,
+        reset_context: false,
         session: key("a"),
         cost_usd: None,
+        cost_estimated: false,
+        price_checked_at: None,
         elapsed_ms,
         context_percent,
+        context_tokens: Some(1234),
     };
     visible(&mut s, metrics(Some(600_000), Some(42.5)), now);
     assert!(s.sessions.is_empty());
@@ -942,6 +1323,7 @@ fn session_metrics_are_reported_snapshots_not_activity_or_permissions() {
         visible(&mut s, metrics(None, context), now + Duration::from_secs(3));
         assert_eq!(session_view(&s, "a").context_percent, None);
         assert_eq!(session_view(&s, "a").elapsed_ms, None);
+        assert_eq!(session_view(&s, "a").context_tokens, Some(1234));
     }
     assert_eq!(session_view(&s, "a").status, Status::Approval);
     assert!(s.ended.is_empty());
@@ -1385,7 +1767,7 @@ fn a_branch_without_checks_keeps_its_alerts_off_the_card() {
 }
 
 #[test]
-fn silent_sessions_leave_the_wire() {
+fn silence_and_completed_turns_keep_open_sessions() {
     let mut s = State::default();
     let now = Instant::now();
     visible(&mut s, agent("busy", AgentEvent::PromptSubmitted), now);
@@ -1394,8 +1776,8 @@ fn silent_sessions_leave_the_wire() {
 
     visible(&mut s, Input::Tick, now + FINISHED_TTL);
     assert!(
-        !s.sessions.contains_key(&key("done")),
-        "a finished session leaves after a while"
+        s.sessions.contains_key(&key("done")),
+        "finishing a response does not close the session"
     );
     assert!(s.sessions.contains_key(&key("busy")));
 
@@ -1409,7 +1791,64 @@ fn silent_sessions_leave_the_wire() {
     assert!(s.sessions.contains_key(&key("busy")));
     assert!(s.pending.is_empty(), "the card expired with its hook long ago");
     visible(&mut s, Input::Tick, now + SESSION_TTL * 2);
-    assert!(s.sessions.is_empty());
+    assert_eq!(
+        s.sessions.len(),
+        3,
+        "A quiet open session stays in the flock, even without metrics"
+    );
+}
+
+#[test]
+fn process_observations_do_not_fake_activity_and_new_agent_events_clear_old_closure() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::SessionStarted), now);
+    visible(
+        &mut s,
+        Input::SessionPresence {
+            session: key("a"),
+            pid: 42,
+            alive: true,
+        },
+        now + SESSION_TTL,
+    );
+    visible(&mut s, Input::Tick, now + SESSION_TTL);
+    assert_eq!(s.sessions[&key("a")].event_at, now);
+    assert_eq!(s.sessions[&key("a")].updated, now);
+    visible(
+        &mut s,
+        Input::SessionPresence {
+            session: key("a"),
+            pid: 999,
+            alive: false,
+        },
+        now + SESSION_TTL,
+    );
+    visible(&mut s, Input::Tick, now + SESSION_TTL);
+    assert!(
+        s.sessions.contains_key(&key("a")),
+        "A different process cannot close this session"
+    );
+    visible(
+        &mut s,
+        Input::SessionPresence {
+            session: key("a"),
+            pid: 42,
+            alive: false,
+        },
+        now + SESSION_TTL,
+    );
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now + SESSION_TTL);
+    visible(&mut s, Input::Tick, now + SESSION_TTL);
+    assert!(
+        s.sessions.contains_key(&key("a")),
+        "A resumed session survives an older observation"
+    );
+    visible(&mut s, agent("a", AgentEvent::SessionEnded), now + SESSION_TTL);
+    assert!(
+        !s.sessions.contains_key(&key("a")),
+        "An explicit close still removes the bird"
+    );
 }
 
 #[test]
@@ -1467,6 +1906,7 @@ fn always_allows_that_exact_thing_in_that_project_only() {
         cwd: Some("/home/me/vults".into()),
         terminal: Terminal::default(),
         agent_id: None,
+        call_id: None,
         received: None,
         event: AgentEvent::PermissionRequested {
             request: rid("r3"),
@@ -2027,6 +2467,62 @@ fn a_finished_edit_keeps_its_diff_on_its_step() {
     visible(&mut s, agent("a", edited("/w/other.rs", false)), now);
     assert!(s.diff(&key("a"), 2).is_none());
     assert_eq!(s.sessions[&key("a")].diffs.len(), 1);
+}
+
+#[test]
+fn parallel_calls_attach_results_and_release_cards_only_by_their_native_id() {
+    let with_call = |mut input: Input, id: &str| {
+        if let Input::Agent(update) = &mut input {
+            update.call_id = Some(id.into());
+        }
+        input
+    };
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, with_call(agent("a", edit_step("main.rs")), "one"), now);
+    visible(&mut s, with_call(agent("a", edit_step("main.rs")), "two"), now);
+    visible(
+        &mut s,
+        with_call(agent("a", edited("/w/main.rs", false)), "unseen"),
+        now,
+    );
+    assert!(
+        s.sessions[&key("a")].diffs.is_empty(),
+        "An unknown call never borrows another call's step"
+    );
+    visible(
+        &mut s,
+        with_call(agent("a", edited("/w/main.rs", false)), "one"),
+        now,
+    );
+    assert_eq!(s.sessions[&key("a")].diffs.back().unwrap().step, 1);
+    visible(
+        &mut s,
+        with_call(agent("a", edited("/w/main.rs", false)), "two"),
+        now,
+    );
+    assert_eq!(s.sessions[&key("a")].diffs.back().unwrap().step, 2);
+    assert!(s.sessions[&key("a")].open_edits.is_empty());
+    visible(&mut s, with_call(requested("a", "permission-one"), "one"), now);
+    visible(&mut s, with_call(requested("a", "permission-two"), "two"), now);
+    let target = s.pending[0].target.clone();
+    let done = || {
+        agent(
+            "a",
+            AgentEvent::ToolFinished {
+                failed: false,
+                target: Some(target.clone()),
+                diff: None,
+            },
+        )
+    };
+    visible(&mut s, with_call(done(), "one"), now);
+    assert_eq!(s.pending.len(), 1);
+    assert_eq!(s.pending[0].request, rid("permission-two"));
+    visible(&mut s, with_call(done(), "unseen"), now);
+    assert_eq!(s.pending[0].request, rid("permission-two"));
+    visible(&mut s, with_call(done(), "two"), now);
+    assert!(s.pending.is_empty());
 }
 
 #[test]
@@ -2634,11 +3130,25 @@ fn focus_puts_a_session_in_front_until_it_leaves() {
 }
 
 #[test]
-fn focus_is_forgotten_when_its_session_times_out() {
+fn focus_is_forgotten_only_when_its_session_is_confirmed_closed() {
     let mut s = State::default();
     let now = Instant::now();
     visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
     visible(&mut s, focus(Some("a")), now);
+    visible(&mut s, Input::Tick, now + SESSION_TTL);
+    assert!(
+        s.sessions.contains_key(&key("a")),
+        "Inactivity must preserve the focused session"
+    );
+    visible(
+        &mut s,
+        Input::SessionPresence {
+            session: key("a"),
+            pid: 42,
+            alive: false,
+        },
+        now + SESSION_TTL,
+    );
     visible(&mut s, Input::Tick, now + SESSION_TTL);
     assert!(s.sessions.is_empty());
     assert_eq!((s.focus.clone(), front(&s)), (None, None));
@@ -2726,10 +3236,16 @@ fn rest_has_one_monotonic_deadline_across_metadata_navigation_and_wall_clock_cha
     visible(
         &mut s,
         Input::SessionMetrics {
+            info: Default::default(),
+            partial: false,
+            reset_context: false,
             session: key("a"),
             cost_usd: Some(0.4),
+            cost_estimated: false,
+            price_checked_at: None,
             elapsed_ms: Some(10_000),
             context_percent: Some(42.0),
+            context_tokens: None,
         },
         t + Duration::from_secs(10),
     );
@@ -4059,6 +4575,15 @@ fn a_session_that_dies_ends_its_turn_at_its_last_event() {
     visible(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
     visible(&mut s, agent("a", run_step("make")), t0 + Duration::from_secs(30));
     let later = t0 + Duration::from_secs(30) + SESSION_TTL;
+    visible(
+        &mut s,
+        Input::SessionPresence {
+            session: key("a"),
+            pid: 42,
+            alive: false,
+        },
+        later,
+    );
     let effects = visible(&mut s, Input::Tick, later);
     let t = turns_of(&effects);
     assert_eq!(t.len(), 1);
@@ -4508,6 +5033,7 @@ mod properties {
             cwd: FOLDERS[f.folder as usize].map(str::to_owned),
             terminal: Terminal::default(),
             agent_id: f.sub.map(|n| format!("sub-{n}")),
+            call_id: None,
             received: None,
             event,
         })
@@ -4982,6 +5508,7 @@ fn always_answers_the_same_request_only_in_the_same_folder() {
         cwd: Some("/home/me/site".into()),
         terminal: Terminal::default(),
         agent_id: None,
+        call_id: None,
         received: None,
         event: requested_event("r2"),
     });

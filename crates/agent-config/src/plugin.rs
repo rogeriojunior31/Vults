@@ -35,6 +35,66 @@ pub fn preview(path: &Path, next: Option<&str>, marker: &str) -> Result<Preview,
     })
 }
 
+/// Preview all owned files of one plugin before changing any of them.
+pub fn preview_files(files: &[(PathBuf, String)], install: bool, marker: &str) -> Result<Preview, Error> {
+    let plans: Vec<_> = files
+        .iter()
+        .map(|(path, text)| preview(path, install.then_some(text.as_str()), marker))
+        .collect::<Result<_, _>>()?;
+    Ok(bundle(files, &plans))
+}
+
+fn bundle(files: &[(PathBuf, String)], plans: &[Preview]) -> Preview {
+    let mut bytes = Vec::new();
+    for ((path, _), plan) in files.iter().zip(plans) {
+        let path = path.as_os_str().as_encoded_bytes();
+        bytes.extend_from_slice(&(path.len() as u64).to_le_bytes());
+        bytes.extend_from_slice(path);
+        bytes.extend_from_slice(plan.fingerprint.as_bytes());
+    }
+    Preview {
+        diff: plans
+            .iter()
+            .map(|p| p.diff.as_str())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        fingerprint: fingerprint(&bytes),
+    }
+}
+
+/// Preflight every file, then atomically replace each, retaining its original fingerprint check.
+pub fn apply_files(
+    files: &[(PathBuf, String)],
+    seen: &str,
+    install: bool,
+    marker: &str,
+    now: SystemTime,
+) -> Result<Option<PathBuf>, Error> {
+    let plans: Vec<_> = files
+        .iter()
+        .map(|(path, text)| preview(path, install.then_some(text.as_str()), marker))
+        .collect::<Result<_, _>>()?;
+    if bundle(files, &plans).fingerprint != seen {
+        return Err(Error::Changed {
+            path: files.first().map(|f| f.0.clone()).unwrap_or_default(),
+        });
+    }
+    let mut backup = None;
+    for ((path, text), plan) in files.iter().zip(plans) {
+        let saved = apply(
+            path,
+            &plan.fingerprint,
+            install.then_some(text.as_str()),
+            marker,
+            now,
+        )?;
+        if backup.is_none() {
+            backup = saved;
+        }
+    }
+    Ok(backup)
+}
+
 /// Writes `next` (or removes the file) if it still has the bytes `fingerprint_seen` was taken
 /// from. Returns the backup path, or `None` when there was no file to back up.
 pub fn apply(
@@ -102,6 +162,31 @@ mod tests {
 
     fn text(v: u32) -> String {
         format!("{MARK}\nexport const X = {v};\n")
+    }
+
+    #[test]
+    fn bundled_plugin_preflights_all_files_and_rejects_manifest_drift() {
+        let root = temp("bundle").parent().unwrap().to_path_buf();
+        let files = vec![
+            (root.join("vults/__init__.py"), format!("{MARK}\ncode")),
+            (root.join("vults/plugin.yaml"), format!("{MARK}\nname: vults")),
+        ];
+        std::fs::create_dir_all(files[0].0.parent().unwrap()).unwrap();
+        std::fs::write(&files[1].0, "user-owned manifest").unwrap();
+        assert!(preview_files(&files, true, MARK).is_err());
+        assert!(!files[0].0.exists());
+        std::fs::remove_file(&files[1].0).unwrap();
+        let seen = preview_files(&files, true, MARK).unwrap();
+        std::fs::write(&files[1].0, format!("{MARK}\nchanged")).unwrap();
+        assert!(apply_files(&files, &seen.fingerprint, true, MARK, SystemTime::now()).is_err());
+        assert!(!files[0].0.exists());
+        let seen = preview_files(&files, true, MARK).unwrap();
+        apply_files(&files, &seen.fingerprint, true, MARK, SystemTime::now()).unwrap();
+        assert!(files.iter().all(|(p, t)| up_to_date(p, t)));
+        let seen = preview_files(&files, false, MARK).unwrap();
+        apply_files(&files, &seen.fingerprint, false, MARK, SystemTime::now()).unwrap();
+        assert!(files.iter().all(|(p, _)| !p.exists()));
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]

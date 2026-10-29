@@ -323,6 +323,7 @@ mod tests {
                 session_id: "s".into(),
             },
             agent_id: None,
+            call_id: None,
             tool: "AskUserQuestion".into(),
             target: "AskUserQuestion".into(),
             ask: crate::Ask::default(),

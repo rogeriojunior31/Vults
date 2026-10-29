@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 45;
+const VERSION: u32 = 46;
 
 /// The `data-theme` of every window. The three SP Night themes come from the sp-night palette.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
@@ -200,6 +200,12 @@ pub struct Settings {
     /// `codex` is installed, so an upgrade keeps the meters it showed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub codex_usage: Option<bool>,
+    /// Read Claude Code allowance through its native CLI, independently of statusLine.
+    #[serde(default)]
+    pub claude_usage: bool,
+    /// Automatic refresh of the public model-price catalog, never session data.
+    #[serde(default)]
+    pub price_updates: bool,
     /// The chat's Claude Code and Codex read the user's own setup (their `CLAUDE.md`, skills,
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
@@ -433,6 +439,8 @@ impl Default for Settings {
             language: None,
             theme: Theme::Dark,
             codex_usage: None,
+            claude_usage: false,
+            price_updates: false,
             native_chat: true,
             chat_access: ChatAccess::Ask,
             specialist_access: BTreeMap::new(),
@@ -532,6 +540,10 @@ pub struct Public {
     pub now_playing: bool,
     #[serde(rename = "codexUsage")]
     pub codex_usage: bool,
+    #[serde(rename = "claudeUsage")]
+    pub claude_usage: bool,
+    #[serde(rename = "priceUpdates")]
+    pub price_updates: bool,
     #[serde(rename = "nativeChat")]
     pub native_chat: bool,
     #[serde(rename = "chatAccess")]
@@ -609,6 +621,8 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         monitor: s.monitor,
         now_playing: s.now_playing,
         codex_usage: s.codex_usage.unwrap_or(false),
+        claude_usage: s.claude_usage,
+        price_updates: s.price_updates,
         native_chat: s.native_chat,
         chat_access: s.chat_access,
         memory: s.memory,
@@ -879,6 +893,35 @@ pub fn set_codex_usage(app: AppHandle, on: bool) -> Result<(), String> {
         crate::usage::set(&app, vults_protocol::AgentKind::Codex, Vec::new());
     }
     crate::usage::wake();
+    Ok(())
+}
+
+/// Independent opt-in: statusLine stays local and works even with this switch off.
+pub fn claude_usage(app: &AppHandle) -> bool {
+    app.state::<SettingsState>()
+        .0
+        .lock()
+        .is_ok_and(|s| s.claude_usage)
+}
+
+#[tauri::command]
+pub fn set_claude_usage(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.claude_usage = on)?;
+    crate::usage::wake();
+    Ok(())
+}
+
+pub fn price_updates(app: &AppHandle) -> bool {
+    app.state::<SettingsState>()
+        .0
+        .lock()
+        .is_ok_and(|s| s.price_updates)
+}
+
+#[tauri::command]
+pub fn set_price_updates(app: AppHandle, on: bool) -> Result<(), String> {
+    edit(&app, |s| s.price_updates = on)?;
+    crate::pricing::wake();
     Ok(())
 }
 
@@ -2493,6 +2536,8 @@ mod tests {
             language: None,
             theme: Theme::Dark,
             codex_usage: None,
+            claude_usage: false,
+            price_updates: false,
             native_chat: true,
             chat_access: ChatAccess::Ask,
             specialist_access: BTreeMap::new(),

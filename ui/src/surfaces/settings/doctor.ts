@@ -5,6 +5,7 @@
 import type { AgentRow } from "../../bridge";
 import { el } from "../../dom";
 import { t, tk } from "../../i18n";
+import { AGENTS } from "../../agents.gen";
 
 const HOOKS: Record<AgentRow["hooks"], string> = {
   ok: tk("Hooks in"),
@@ -49,6 +50,7 @@ function fact(label: string, value: string): HTMLElement {
 
 function card(a: AgentRow): HTMLElement {
   const installed = a.path !== null;
+  const entry = AGENTS.find(e => e.id === a.id);
   return el(
     "section",
     { class: "card rows" },
@@ -62,12 +64,13 @@ function card(a: AgentRow): HTMLElement {
       }),
     ),
     installed ? el("p", { class: "note", text: t(HOOKS[a.hooks]) }) : null,
+    fact(t("Watch sessions"), entry?.watch ? t("Yes") : t("Not supported here")),
     fact(t("Permissions"), t(PERMISSIONS[a.permissions])),
     fact(t("Questions"), t(QUESTIONS[a.questions])),
     fact(t("Diffs"), t(DIFFS[a.diffs])),
     fact(t("Stopping a turn"), t(STOP[a.stop])),
     fact(t("Sandbox"), t(SANDBOX[a.sandbox])),
-    fact(t("Started from Vults"), a.starts ? t("Yes") : t("Not yet")),
+    fact(t("Started from Vults"), a.starts ? t("Yes") : entry?.drive === "planned" ? t("Planned; not enabled here") : t("Not supported here")),
   );
 }
 

@@ -88,7 +88,7 @@ pub struct Entry {
 const OPENCODE_ASK: &str = r#"{"default_agent":"build","permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"},"agent":{"build":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"plan":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"general":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}},"explore":{"permission":{"edit":"ask","bash":"ask","webfetch":"ask","external_directory":"ask","doom_loop":"ask"}}}}"#;
 
 /// Every agent, in the order Settings lists them.
-pub static ALL: [Entry; 10] = [
+pub static ALL: [Entry; 11] = [
     Entry {
         id: "claude",
         name: "Claude Code",
@@ -152,9 +152,26 @@ pub static ALL: [Entry; 10] = [
         }),
         caps: Some(Caps {
             permissions: Permissions::Card,
-            // OpenCode 1's questions get a card; OpenCode 2's stay in its prompt.
-            questions: Questions::Card,
+            // Current OpenCode 2 cannot answer questions through its plugin.
+            // Settings may advertise the older v1 card only after checking that CLI version.
+            questions: Questions::Terminal,
             // Its edits, rebuilt from their old and new text by the plugin.
+            diffs: Diffs::Lines,
+            stop: Stop::No,
+            sandbox: Sandbox::No,
+            starts: false,
+        }),
+    },
+    Entry {
+        id: crate::hermes::NAME,
+        name: "Hermes Agent",
+        command: "hermes",
+        wire: Wire::Named,
+        setup: Setup::Plugin(&crate::HERMES),
+        run: Run::No,
+        caps: Some(Caps {
+            permissions: Permissions::Terminal,
+            questions: Questions::Terminal,
             diffs: Diffs::Lines,
             stop: Stop::No,
             sandbox: Sandbox::No,
@@ -311,7 +328,7 @@ pub fn typescript() -> String {
          export type Setup = \"hooks\" | \"plugin\" | \"remove-only\" | \"none\";\n\
          /** How Vults starts it: its own driver, the Agent Client Protocol, or not at all. */\n\
          export type Run = \"native\" | \"acp\" | \"no\";\n\n\
-         export interface AgentEntry {\n  id: string;\n  name: string;\n  kind: AgentKind;\n  setup: Setup;\n  run: Run;\n}\n\n\
+         export interface AgentEntry {\n  id: string;\n  name: string;\n  kind: AgentKind;\n  setup: Setup;\n  run: Run;\n  watch: boolean;\n  answer: boolean;\n  drive: \"available\" | \"planned\" | \"none\";\n}\n\n\
          export const AGENTS: readonly AgentEntry[] = [\n",
     );
     for e in &ALL {
@@ -326,8 +343,18 @@ pub fn typescript() -> String {
             Run::Acp(_) => "acp",
             Run::No => "no",
         };
+        let watch =
+            matches!(e.setup, Setup::Hooks(_) | Setup::Plugin(_) | Setup::Toml(_)) && e.caps.is_some();
+        let answer = e.caps.is_some_and(|c| c.permissions == Permissions::Card);
+        let drive = if e.caps.is_some_and(|c| c.starts) {
+            "available"
+        } else if e.run != Run::No {
+            "planned"
+        } else {
+            "none"
+        };
         out += &format!(
-            "  {{ id: {:?}, name: {:?}, kind: {:?}, setup: {setup:?}, run: {run:?} }},\n",
+            "  {{ id: {:?}, name: {:?}, kind: {:?}, setup: {setup:?}, run: {run:?}, watch: {watch}, answer: {answer}, drive: {drive:?} }},\n",
             e.id,
             e.name,
             e.agent().0.name()
@@ -385,6 +412,7 @@ mod tests {
                 "codex",
                 "antigravity",
                 "opencode",
+                "hermes",
                 "qwen",
                 "copilot",
                 "cursor",
@@ -406,7 +434,7 @@ mod tests {
             .filter(|(_, c)| c.permissions == Permissions::Terminal)
             .map(|(e, _)| e.id)
             .collect();
-        assert_eq!(terminal, ["antigravity", "cursor", "droid", "kimi"]);
+        assert_eq!(terminal, ["antigravity", "hermes", "cursor", "droid", "kimi"]);
         // Kimi Code's session is put in its asking mode: its config's own may ask nothing.
         assert!(matches!(
             of("kimi").map(|e| e.run),
