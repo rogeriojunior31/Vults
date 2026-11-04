@@ -14,6 +14,9 @@ pub const DIR_VARS: &[&str] = &[
     "GEMINI_CLI_HOME",
     "QWEN_HOME",
     "HERMES_HOME",
+    // Hermes' native Windows default is under LocalAppData.
+    #[cfg(windows)]
+    "LOCALAPPDATA",
     "COPILOT_HOME",
     // Factory Droid's: a home of its own, its `.factory` inside.
     "FACTORY_HOME_OVERRIDE",

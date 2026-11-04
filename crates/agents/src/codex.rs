@@ -507,6 +507,11 @@ trusted_hash = "x"
         assert_eq!(entries.len(), EVENTS.len());
         let end = entries.iter().find(|e| e.event == "SessionEnd").unwrap();
         assert_eq!(end.timeout, 1, "Codex caps SessionEnd at a few seconds");
+        assert_eq!(
+            crate::hook_exe_of(&end.command),
+            Some(PathBuf::from("/opt/vults-hook"))
+        );
+        #[cfg(not(windows))]
         assert_eq!(end.command, "'/opt/vults-hook' --agent codex SessionEnd");
         assert_eq!(end.status_message, None);
         let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();

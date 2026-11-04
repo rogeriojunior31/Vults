@@ -267,6 +267,20 @@ pub fn start(app: &AppHandle) -> tauri::Result<()> {
     let mut tray = TrayIconBuilder::with_id("main")
         .tooltip(vults_brand::NAME)
         .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            if matches!(
+                event,
+                tauri::tray::TrayIconEvent::Click {
+                    button: tauri::tray::MouseButton::Left,
+                    button_state: tauri::tray::MouseButtonState::Up,
+                    ..
+                }
+            ) {
+                use tauri::Emitter;
+                let _ = tray.app_handle().emit_to(ISLAND, "shortcut", "open");
+            }
+        })
         .on_menu_event(|app, event| pick(app, event.id().as_ref()));
     if let Some(icon) = app.default_window_icon() {
         tray = tray.icon(icon.clone());

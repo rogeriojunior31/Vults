@@ -6,6 +6,11 @@ edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[[bin]]
+name = "vults-eval-claude"
+path = "cases/claude-stand-in.rs"
+required-features = ["evals"]
+
 # `cargo test -p vults-evals --features evals`: off by default, so `cargo test --workspace` stays
 # as it was; CI runs them on their own.
 [features]

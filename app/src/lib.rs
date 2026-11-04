@@ -399,6 +399,10 @@ pub fn run() {
             first_name,
         ])
         .on_window_event(|win, event| {
+            #[cfg(windows)]
+            if let tauri::WindowEvent::ScaleFactorChanged { scale_factor, .. } = event {
+                runtime::refresh_windows_region(win.app_handle(), win.label(), *scale_factor);
+            }
             if matches!(event, tauri::WindowEvent::Destroyed) && win.label() == dictation_overlay::LABEL {
                 dictation_overlay::reset(win.app_handle());
             }
@@ -491,7 +495,7 @@ pub fn run() {
             handle.manage(ShortcutKeys::default());
             #[cfg(target_os = "linux")]
             dictation::start(&handle);
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             listen_shortcuts(&handle);
             notify::start(&handle);
             runtime::start(handle.clone());
@@ -555,6 +559,11 @@ fn init_surface(app: &AppHandle, label: &str) {
 
 /// Puts every surface on the chosen monitor, or lets the compositor choose. From any thread.
 pub fn place_surfaces(app: &AppHandle) {
+    #[cfg(windows)]
+    {
+        panel::apply(app);
+        widget::apply(app);
+    }
     #[cfg(target_os = "linux")]
     for label in SURFACES {
         let Some(win) = app.get_webview_window(label) else {
@@ -569,7 +578,7 @@ pub fn place_surfaces(app: &AppHandle) {
             }
         });
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     let _ = app;
 }
 
@@ -1006,6 +1015,46 @@ fn open_shortcut_settings<R: tauri::Runtime>(window: tauri::Webview<R>) -> Resul
 /// The desktop's global shortcuts (`platform::shortcuts::SHORTCUTS`). Next and previous go to
 /// core; the rest go to the island, which decides whether a card is on screen to answer (a press
 /// with nothing waiting does nothing). Allow and Deny go to the Nest while the user is in it.
+#[cfg(windows)]
+fn listen_shortcuts(app: &AppHandle) {
+    use tauri::Emitter;
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = vults_platform::windows_shortcuts::listen(
+            |bound| {
+                tracing::info!(count = bound.len(), "global shortcuts bound");
+                let map: std::collections::BTreeMap<_, _> = bound.into_iter().collect();
+                if let Ok(mut kept) = app.state::<ShortcutKeys>().0.lock() {
+                    kept.clone_from(&map);
+                }
+                let _ = app.emit("shortcut-keys", map);
+            },
+            |id| match id {
+                "next" => runtime::shortcut_intent(&app, vults_core::Intent::FocusNext),
+                "previous" => runtime::shortcut_intent(&app, vults_core::Intent::FocusPrevious),
+                "mini" | "quick" | "room" => size_to(&app, id, None),
+                "talk-cancel" => {
+                    voice::cancel(&app);
+                    for surface in [ISLAND, NEST] {
+                        let _ = app.emit_to(surface, "shortcut", id);
+                    }
+                }
+                _ => {
+                    let target = if matches!(id, "allow" | "deny") && NEST_HOLDS.load(Ordering::Relaxed) {
+                        NEST
+                    } else {
+                        ISLAND
+                    };
+                    let _ = app.emit_to(target, "shortcut", id);
+                }
+            },
+        );
+        if let Err(error) = result {
+            tracing::warn!("global shortcuts unavailable: {error}");
+        }
+    });
+}
+
 #[cfg(target_os = "linux")]
 fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;
@@ -1342,6 +1391,27 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
 /// webviews: the Nest's (`nest`: Some, its tab or "" for where it was) or Settings' (`nest`: None,
 /// at `section` when given). Only the shown one is in sight and takes the keys.
 fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
+    #[cfg(windows)]
+    {
+        let app = app.clone();
+        let nest = nest.map(str::to_owned);
+        let section = section.map(str::to_owned);
+        // WebView2 creation deadlocks inside synchronous commands and menu callbacks.
+        tauri::async_runtime::spawn_blocking(move || {
+            // Concurrent opening requests must not build the same window twice.
+            static OPEN: std::sync::Mutex<()> = std::sync::Mutex::new(());
+            let Ok(_opening) = OPEN.lock() else {
+                tracing::warn!("the Nest's window opening lock is poisoned");
+                return;
+            };
+            show_nest_window(&app, nest.as_deref(), section.as_deref(), full);
+        });
+    }
+    #[cfg(not(windows))]
+    show_nest_window(app, nest, section, full);
+}
+
+fn show_nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
     #[cfg(target_os = "linux")]
     {
         questions::depart(app, ISLAND);

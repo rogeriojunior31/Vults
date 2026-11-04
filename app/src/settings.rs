@@ -1737,7 +1737,21 @@ pub async fn monitors(app: AppHandle) -> Vec<Monitor> {
         });
         rx.await.unwrap_or_default()
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(windows)]
+    {
+        app.available_monitors()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|m| {
+                let name = m.name()?.to_owned();
+                Some(Monitor {
+                    label: name.clone(),
+                    name,
+                })
+            })
+            .collect()
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = app;
         Vec::new()
@@ -1751,7 +1765,7 @@ pub fn set_monitor(app: AppHandle, name: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn monitor(app: &AppHandle) -> Option<String> {
     let state = app.state::<SettingsState>();
     state.0.lock().ok().and_then(|s| s.monitor.clone())

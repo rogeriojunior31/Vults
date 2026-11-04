@@ -2005,7 +2005,7 @@ pub async fn session_jump(
 
 /// A global shortcut's intent (next or previous session), or a notification's *Open*. Dropped
 /// when the inbox is full: a key press is not worth waiting for.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn shortcut_intent(app: &AppHandle, intent: Intent) {
     if let Some(inbox) = app.try_state::<Inbox>() {
         let _ = inbox.0.try_send(Msg::User(intent));
@@ -2167,6 +2167,28 @@ pub async fn alert_dismiss(key: String, inbox: tauri::State<'_, Inbox>) -> Resul
 /// Tall enough for the open island at its zoom (ui render.ts OPEN_ZOOM: 556 x 1.14).
 pub const ISLAND_SIZE: (i32, i32) = (880, 640);
 
+#[cfg(windows)]
+type SurfaceRect = (i32, i32, i32, i32);
+#[cfg(windows)]
+static WINDOWS_REGIONS: std::sync::LazyLock<std::sync::Mutex<HashMap<String, SurfaceRect>>> =
+    std::sync::LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
+
+/// Native DPI can change without changing the renderer's logical rectangle.
+#[cfg(windows)]
+pub(crate) fn refresh_windows_region(app: &AppHandle, label: &str, scale: f64) {
+    let rect = WINDOWS_REGIONS
+        .lock()
+        .ok()
+        .and_then(|regions| regions.get(label).copied());
+    if let Some(rect) = rect
+        && let Some(window) = app.get_webview_window(label)
+        && let Ok(hwnd) = window.hwnd()
+        && !vults_platform::windows_surface::set_region(hwnd.0 as isize, rect, scale)
+    {
+        tracing::warn!("the desktop surface input region could not follow its display scale");
+    }
+}
+
 /// The page measured what it draws; `width == 0` means nothing is shown. Each window sets its
 /// own surface's region, never another's.
 #[tauri::command]
@@ -2180,7 +2202,16 @@ pub fn layout(app: AppHandle, window: tauri::WebviewWindow, x: i32, y: i32, widt
             use vults_platform::linux::{Rect, set_input_region};
             set_input_region(&gtk, window.label(), Some(Rect { x, y, width, height }));
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(windows)]
+        {
+            if let Ok(mut regions) = WINDOWS_REGIONS.lock() {
+                regions.insert(window.label().to_owned(), (x, y, width, height));
+            }
+            if let Ok(scale) = window.scale_factor() {
+                refresh_windows_region(window.app_handle(), window.label(), scale);
+            }
+        }
+        #[cfg(not(any(target_os = "linux", windows)))]
         let _ = (window, x, y, width, height);
     });
 }
@@ -2200,6 +2231,8 @@ pub fn surface_keyboard(app: AppHandle, window: tauri::WebviewWindow, on: bool, 
         // Only a layer-shell surface has an exclusive mode.
         #[cfg(not(target_os = "linux"))]
         let _ = exclusive;
+        #[cfg(windows)]
+        let _ = window.set_focusable(on);
         if on {
             let _ = window.set_focus();
         }
@@ -2207,15 +2240,36 @@ pub fn surface_keyboard(app: AppHandle, window: tauri::WebviewWindow, on: bool, 
 }
 
 /// Without a compositor to center it: the top center of the current monitor.
+#[cfg(windows)]
+pub(crate) fn surface_monitor(win: &tauri::WebviewWindow) -> Option<tauri::Monitor> {
+    crate::settings::monitor(win.app_handle())
+        .and_then(|name| {
+            win.available_monitors()
+                .ok()?
+                .into_iter()
+                .find(|m| m.name() == Some(&name))
+        })
+        .or_else(|| win.current_monitor().ok().flatten())
+        .or_else(|| win.primary_monitor().ok().flatten())
+}
+
 pub fn place_top_center(win: &tauri::WebviewWindow) {
     let (width, height) = ISLAND_SIZE;
     let _ = win.set_size(tauri::LogicalSize::new(width, height));
-    if let Ok(Some(monitor)) = win.current_monitor() {
+    #[cfg(windows)]
+    let monitor = surface_monitor(win);
+    #[cfg(not(windows))]
+    let monitor = win.current_monitor().ok().flatten();
+    if let Some(monitor) = monitor {
         let scale = monitor.scale_factor();
         let screen = monitor.size().to_logical::<f64>(scale);
         let origin = monitor.position().to_logical::<f64>(scale);
         let x = origin.x + (screen.width - f64::from(width)) / 2.0;
-        let _ = win.set_position(tauri::LogicalPosition::new(x, origin.y));
+        let position = tauri::LogicalPosition::new(x, origin.y);
+        #[cfg(windows)]
+        let _ = win.set_position(position.to_physical::<i32>(scale));
+        #[cfg(not(windows))]
+        let _ = win.set_position(position);
     }
 }
 

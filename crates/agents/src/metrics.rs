@@ -710,7 +710,7 @@ impl Reader {
         let hermes = sessions
             .iter()
             .any(is_hermes)
-            .then(|| database(&dirs.agent("HERMES_HOME", ".hermes").join("state.db")))
+            .then(|| database(&crate::hermes::home(dirs).join("state.db")))
             .flatten();
         sessions.iter().filter_map(|key| {
             if key.agent==AgentKind::Qwen && let Some(report)=self.qwen_ledger(dirs,key) { return Some((key.clone(),report)); }
@@ -1189,7 +1189,7 @@ mod tests {
     #[test]
     fn hermes_cost_is_read_only_and_last_context_is_not_a_cumulative_session_total() {
         let root = std::env::temp_dir().join(format!("vults-hermes-cost-{}", std::process::id()));
-        let home = root.join(".hermes");
+        let home = crate::hermes::home(&crate::Dirs::home_only(&root));
         std::fs::create_dir_all(&home).unwrap();
         let db = Connection::open(home.join("state.db")).unwrap();
         db.execute_batch("CREATE TABLE sessions (id TEXT, actual_cost_usd REAL, estimated_cost_usd REAL, cost_status TEXT);

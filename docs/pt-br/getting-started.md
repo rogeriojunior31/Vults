@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 4b6bd29dcea5 -->
+<!-- source: 24616be2794f -->
 
 <a id="install"></a>
 
@@ -38,6 +38,46 @@ e outros compositores com layer-shell, a ilha fica na borda de cima como um pain
 uma janela comum, sempre por cima. **Settings → General → Start with the desktop** abre o Vults
 quando você entra na sessão.
 
+<a id="windows-development-checkout"></a>
+### Checkout de desenvolvimento no Windows
+
+O instalador publicado para Windows continua sendo uma prévia. Este checkout de desenvolvimento
+acrescenta regiões de entrada nativas, foco do teclado, atalhos globais de navegação, abertura pela
+bandeja, seleção de monitor e a janela compartilhada entre Sala e Configurações. O Linux mantém
+suas integrações existentes com o desktop.
+
+Instale estes pré-requisitos juntos: Node.js 22 ou uma LTS compatível mais nova, Rust para
+`x86_64-pc-windows-msvc`, Visual Studio com **Desenvolvimento para desktop com C++** (MSVC x64/x86,
+SDK do Windows e ferramentas CMake/Ninja), LLVM com `libclang.dll` e Microsoft Edge WebView2 Runtime.
+Defina `LIBCLANG_PATH` para a pasta `bin` do LLVM se ele estiver instalado em outro lugar. O
+inicializador aceita Visual Studio Insiders; o Ninja evita seus problemas de descoberta de
+instância no CMake.
+
+Na raiz do repositório:
+
+```bat
+scripts\dev-windows.cmd --check
+npm ci
+scripts\dev-windows.cmd
+```
+
+A checagem informa as ferramentas ausentes antes de compilar. O inicializador muda apenas seu
+próprio ambiente. Se uma compilação anterior guardou outro gerador CMake no cache, execute
+`cargo clean -p whisper-rs-sys` uma vez.
+
+Os atalhos do Windows usam teclas que não escrevem caracteres para preservar o AltGr:
+**Ctrl+Alt+Space** abre a ilha; **Ctrl+Alt+Left/Right** muda a sessão; **Ctrl+Alt+F1/F2/F3** seleciona
+Mini/Rápido/Sala; **Ctrl+Alt+F8/F9** permite/nega o card visível; **Ctrl+Alt+F10** cancela a voz do
+Chat. Uma tecla já usada por outro aplicativo fica sem vínculo. As Configurações mostram apenas
+os registros bem-sucedidos.
+
+Ditado/inserção global, comandos de voz, notificações do desktop, integração com a mídia do
+sistema, observação do bloqueio de tela e trazer uma janela de terminal existente para a frente
+ainda são exclusivos do Linux. No Windows, a ação de terminal usa a abertura da pasta do projeto
+como alternativa. A captura de microfone e a transcrição local do Chat são separadas do ditado
+global; a aceitação de microfone/modelo ainda exige teste com um dispositivo real. A emulação
+de escala do renderizador não comprova a aceitação de DPI nativo por monitor.
+
 <a id="connecting-your-agents"></a>
 
 ## Conectando seus agentes
@@ -53,7 +93,7 @@ adicionou.
 | Codex | `~/.codex/hooks.json` | Abra o Codex, digite `/hooks` e confie nos hooks do Vults (o Codex só roda um hook quando ele é confiável e está ligado); as configurações mostram quantos ainda esperam. Uma reinstalação pede de novo |
 | Antigravity | `~/.gemini/config/hooks.json` | Nada ([ele pergunta no próprio terminal](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, um plugin nosso | Reinicie o OpenCode ([os cards dele](guide/approvals.md#opencode)) |
-| Hermes Agent | `~/.hermes/plugins/vults/` (ou `HERMES_HOME`) | Ative com `hermes plugins enable vults` e abra uma nova sessão ([detalhes](guide/other-agents.md#hermes-agent)) |
+| Hermes Agent | `~/.hermes/plugins/vults/` no Linux; `%LOCALAPPDATA%\hermes\plugins\vults\` no Windows (`HERMES_HOME` substitui ambos) | Ative com `hermes plugins enable vults` e abra uma nova sessão ([detalhes](guide/other-agents.md#hermes-agent)) |
 | Qwen Code | `~/.qwen/settings.json` | Reinicie o Qwen Code ([os cards dele](guide/approvals.md#qwen-code)) |
 | Copilot CLI | `~/.copilot/hooks/vults.json`, um arquivo nosso | Reinicie o Copilot CLI ([os cards dele](guide/approvals.md#copilot-cli)) |
 | Cursor | `~/.cursor/hooks.json` | Reinicie o Cursor ([ele pergunta no próprio prompt](guide/other-agents.md#cursor)) |

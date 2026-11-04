@@ -12,7 +12,10 @@ fn run_hook(runtime_dir: &std::path::Path, args: &[&str], stdin: &str) -> Output
 }
 
 fn run_hook_with(runtime_dir: &std::path::Path, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
-    let mut child = Command::new(HOOK)
+    let mut command = Command::new(HOOK);
+    #[cfg(all(windows, debug_assertions))]
+    command.env("VULTS_HOOK_TEST_PIPE_SUFFIX", runtime_dir.file_name().unwrap());
+    let mut child = command
         .args(args)
         .env("XDG_RUNTIME_DIR", runtime_dir)
         // Tests run from a chat would otherwise send Zeca's events.
@@ -38,8 +41,15 @@ fn runtime_dir(name: &str) -> std::path::PathBuf {
 }
 
 #[test]
+#[cfg_attr(
+    all(windows, not(debug_assertions)),
+    ignore = "isolated pipe names require a debug hook"
+)]
 fn exits_fast_and_silent_without_the_app() {
     let dir = runtime_dir("absent");
+    // Exclude Windows' first-launch executable scanning from the relay deadline check.
+    #[cfg(windows)]
+    let _ = run_hook(&dir, &[], "not json");
     let start = Instant::now();
     let out = run_hook(
         &dir,
@@ -79,6 +89,101 @@ fn a_panic_exits_zero_and_silent() {
     assert_eq!(out.status.code(), Some(0));
     assert!(out.stdout.is_empty());
     assert!(out.stderr.is_empty(), "{}", String::from_utf8_lossy(&out.stderr));
+}
+
+#[cfg(all(windows, debug_assertions))]
+mod windows_pipe {
+    use super::*;
+    use tokio::sync::mpsc;
+    use vults_ipc::{Endpoint, Incoming};
+
+    async fn start(
+        label: &str,
+    ) -> (
+        std::path::PathBuf,
+        mpsc::Receiver<Incoming>,
+        tokio::task::JoinHandle<std::io::Result<()>>,
+    ) {
+        let dir = runtime_dir(label);
+        let sid = vults_peer::current_user_sid().unwrap();
+        let name = format!(
+            "{}-test-{}",
+            vults_protocol::pipe_name(&sid),
+            dir.file_name().unwrap().to_str().unwrap()
+        );
+        let (tx, rx) = mpsc::channel(8);
+        let server = tokio::spawn(vults_ipc::serve(Endpoint::Pipe(name.clone()), tx));
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            if tokio::net::windows::named_pipe::ClientOptions::new()
+                .open(&name)
+                .is_ok()
+            {
+                break;
+            }
+            assert!(Instant::now() < deadline, "isolated pipe did not start");
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        (dir, rx, server)
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn native_events_reach_the_same_user_pipe_without_waiting() {
+        let (dir, mut rx, server) = start("native-event").await;
+        let output = tokio::task::spawn_blocking(move || {
+            run_hook(
+                &dir,
+                &["--agent", "codex", "PostToolUse"],
+                r#"{"session_id":"isolated","cwd":"C:/work"}"#,
+            )
+        })
+        .await
+        .unwrap();
+        assert!(output.status.success());
+        assert!(output.stdout.is_empty());
+        let event = tokio::time::timeout(Duration::from_secs(5), rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(
+            matches!(event, Incoming::Event(event) if event.event == "PostToolUse" && event.payload["session_id"] == "isolated")
+        );
+        server.abort();
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn native_permission_decisions_round_trip_without_the_desktop_app() {
+        for (label, decision, expected) in [
+            ("native-allow", vults_protocol::Decision::Allow, "allow"),
+            ("native-deny", vults_protocol::Decision::Deny, "deny"),
+        ] {
+            let (dir, mut rx, server) = start(label).await;
+            let hook = tokio::task::spawn_blocking(move || {
+                run_hook(
+                    &dir,
+                    &["--agent", "codex", "PermissionRequest"],
+                    r#"{"session_id":"isolated","tool_name":"Bash"}"#,
+                )
+            });
+            let incoming = tokio::time::timeout(Duration::from_secs(5), rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            let Incoming::Request { reply, .. } = incoming else {
+                panic!("expected a permission request")
+            };
+            reply.ack();
+            reply.decide(decision);
+            let output = tokio::time::timeout(Duration::from_secs(5), hook)
+                .await
+                .unwrap()
+                .unwrap();
+            assert!(output.status.success());
+            let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(value["hookSpecificOutput"]["decision"]["behavior"], expected);
+            server.abort();
+        }
+    }
 }
 
 /// The hook copied into its own folder, with the installer's sidecar beside it.

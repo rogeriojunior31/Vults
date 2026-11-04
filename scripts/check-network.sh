@@ -16,7 +16,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CLIENTS='reqwest|hyper|ureq|isahc|attohttpc|surf|curl|tungstenite|tokio-tungstenite'
-PATTERN='\b(reqwest|ureq|hyper|isahc|attohttpc|tungstenite)\b|TcpStream|UdpSocket|/dev/tcp|Command::new\s*\(\s*"(gh|git|curl|wget|codex|claude|sh|bash|zsh|npx|node|python3?|ssh|scp|rsync|nc)(\.exe|\.cmd)?"'
+PATTERN='\b(reqwest|ureq|hyper|isahc|attohttpc|tungstenite)\b|TcpStream|UdpSocket|/dev/tcp|(Command::new|crate::process::command)\s*\(\s*"(gh|git|curl|wget|codex|claude|sh|bash|zsh|npx|node|python3?|ssh|scp|rsync|nc)(\.exe|\.cmd)?"'
 
 rust_files() {
   if git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -51,7 +51,7 @@ check_crates() {
   allowed=$(grep -E '^crate:' "$list" | awk '{print $1}' | sed 's/^crate://' | sort -u || true)
   found=$(cargo metadata --format-version 1 --no-deps --offline | jq -r --arg re "^($CLIENTS)$" '
     .packages[] | .name as $c | .dependencies[]
-    | select(.kind != "dev" and (.name | test($re))) | $c' | sort -u)
+    | select(.kind != "dev" and (.name | test($re))) | $c' | tr -d '\r' | sort -u)
   for c in $found; do
     if ! grep -qxF "$c" <<<"$allowed"; then
       echo "check-network: crate $c depends on an HTTP or socket client and is not listed as crate:$c" >&2
@@ -69,7 +69,7 @@ check_crates() {
 
 check_csp() {
   local csp
-  csp=$(jq -r '.app.security.csp' app/tauri.conf.json)
+  csp=$(jq -r '.app.security.csp' app/tauri.conf.json | tr -d '\r')
   if ! grep -qE "connect-src 'self' ipc: http://ipc\.localhost(;|$)" <<<"$csp"; then
     echo "check-network: the webview's connect-src must stay 'self' ipc: http://ipc.localhost (app/tauri.conf.json)" >&2
     return 1

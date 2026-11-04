@@ -39,6 +39,7 @@ pub mod meeting_summary;
 #[cfg(test)]
 mod mock;
 mod openai;
+mod process;
 pub mod providers;
 pub mod realtime;
 pub mod summary;

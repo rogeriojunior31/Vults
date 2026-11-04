@@ -34,7 +34,7 @@ pub(crate) fn on_path(program: &str) -> bool {
 }
 
 fn command(system: &str, dir: &Path) -> Command {
-    let mut cmd = Command::new("claude");
+    let mut cmd = crate::process::command("claude");
     cmd.envs(vults_agents::shell_env());
     cmd.args(["-p", "--output-format", "text", "--model", MODEL])
         // No offered built-in/MCP tools or saved session; managed policy remains enforced.
@@ -72,7 +72,7 @@ pub async fn question(
     cancel: &mut watch::Receiver<bool>,
 ) -> Result<String, String> {
     // Older clients silently ignore the switches that stop @file expansion and memory loading.
-    let mut version = Command::new("claude");
+    let mut version = crate::process::command("claude");
     version
         .envs(vults_agents::shell_env())
         .arg("--version")

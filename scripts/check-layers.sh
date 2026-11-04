@@ -24,7 +24,7 @@ edges=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '
   | "\($crate) \($crate)",
     (.dependencies[]
      | select(.kind != "dev" and .path != null)
-     | "\($crate) \(.name | sub("^vults-"; ""))")' | sort -u)
+     | "\($crate) \(.name | sub("^vults-"; ""))")' | tr -d '\r' | sort -u)
 
 failed=0
 while read -r crate dep; do

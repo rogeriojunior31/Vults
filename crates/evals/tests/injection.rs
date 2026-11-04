@@ -40,14 +40,24 @@ fn fresh(name: &str) -> PathBuf {
 #[tokio::test]
 async fn injection_never_skips_a_card() {
     let bin = fresh("bin");
+    #[cfg(windows)]
+    let claude = bin.join("claude.exe");
+    #[cfg(windows)]
+    std::fs::copy(env!("CARGO_BIN_EXE_vults-eval-claude"), &claude).unwrap();
+    #[cfg(not(windows))]
     let claude = bin.join("claude");
+    #[cfg(not(windows))]
     std::fs::copy(cases().join("claude-stand-in.sh"), &claude).unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&claude, std::fs::Permissions::from_mode(0o755)).unwrap();
     }
-    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
+    let mut path = vec![bin];
+    path.extend(std::env::split_paths(
+        &std::env::var_os("PATH").unwrap_or_default(),
+    ));
+    let path = std::env::join_paths(path).unwrap();
     // SAFETY: this binary holds this one test, on tokio's current-thread runtime, and nothing has
     // spawned yet: no other thread exists to read the environment while it is set, once.
     unsafe { std::env::set_var("PATH", path) };

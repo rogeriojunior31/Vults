@@ -91,7 +91,11 @@ pub fn apply(app: &AppHandle) {
 /// work area, so the panel stays clear.
 fn place_corner(win: &tauri::WebviewWindow, dock: Dock) {
     let (width, height) = crate::runtime::ISLAND_SIZE;
-    if let Ok(Some(monitor)) = win.current_monitor() {
+    #[cfg(windows)]
+    let monitor = crate::runtime::surface_monitor(win);
+    #[cfg(not(windows))]
+    let monitor = win.current_monitor().ok().flatten();
+    if let Some(monitor) = monitor {
         let scale = monitor.scale_factor();
         let area = monitor.work_area();
         let size = area.size.to_logical::<f64>(scale);
@@ -102,7 +106,11 @@ fn place_corner(win: &tauri::WebviewWindow, dock: Dock) {
             Dock::Top => origin.y + margin,
             Dock::Bottom => origin.y + size.height - f64::from(height) - margin,
         };
-        let _ = win.set_position(tauri::LogicalPosition::new(x, y));
+        let position = tauri::LogicalPosition::new(x, y);
+        #[cfg(windows)]
+        let _ = win.set_position(position.to_physical::<i32>(scale));
+        #[cfg(not(windows))]
+        let _ = win.set_position(position);
     }
 }
 
