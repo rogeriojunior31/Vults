@@ -23,7 +23,7 @@ fn supported(version: &str) -> bool {
 }
 
 fn subscription_status() -> Command {
-    let mut cmd = Command::new("codex");
+    let mut cmd = crate::process::command("codex");
     // The qualified status subcommand refuses API login without changing its stored auth.
     // Never force this login method on exec: its mismatch path can log the user out.
     cmd.envs(vults_agents::shell_env())
@@ -61,7 +61,7 @@ fn command(system: &str, dir: &Path) -> Result<Command, String> {
     file.write_all(catalog.to_string().as_bytes())
         .map_err(|_| "Cannot prepare the Codex consultation catalog.")?;
     let path = path.to_str().ok_or("Invalid consultation directory.")?;
-    let mut cmd = Command::new("codex");
+    let mut cmd = crate::process::command("codex");
     cmd.envs(vults_agents::shell_env()).args([
         "exec",
         "--ignore-user-config",
@@ -170,7 +170,7 @@ pub async fn question(
     {
         return Err("A short text question is required.".into());
     }
-    let mut version = Command::new("codex");
+    let mut version = crate::process::command("codex");
     version
         .envs(vults_agents::shell_env())
         .arg("--version")

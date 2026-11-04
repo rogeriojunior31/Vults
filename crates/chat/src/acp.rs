@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-use tokio::process::{Child, ChildStdin, ChildStdout, Command};
+use tokio::process::{Child, ChildStdin, ChildStdout};
 use vults_agents::driver::{
     AgentDriver, Ask, BoxFuture, EndReason, Event, Input, Interrupter, Sink, Spec, Usage,
 };
@@ -508,7 +508,7 @@ impl Drop for Conn {
 
 impl Conn {
     async fn spawn(agent: &Agent, spec: &Spec) -> Result<Self, String> {
-        let mut cmd = Command::new(agent.program);
+        let mut cmd = crate::process::command(agent.program);
         // The folders and PATH the user's terminal gives it, when the app was started without.
         cmd.envs(vults_agents::shell_env());
         cmd.args(agent.args);

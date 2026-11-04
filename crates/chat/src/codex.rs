@@ -91,7 +91,7 @@ async fn run(
 }
 
 pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Command {
-    let mut cmd = Command::new("codex");
+    let mut cmd = crate::process::command("codex");
     // The folders the user's terminal gives it (`CODEX_HOME`…), when the app was started without.
     cmd.envs(vults_agents::shell_env());
     cmd.arg("exec");

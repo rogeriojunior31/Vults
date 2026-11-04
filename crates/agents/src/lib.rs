@@ -168,6 +168,9 @@ pub const MARKER: &str = vults_brand::HOOK_BIN;
 /// `'<exe>' --agent <agent> <Event>`, safe for the POSIX shell the agents run hooks with
 /// (Git Bash on Windows, hence forward slashes there).
 pub fn hook_command(hook_exe: &Path, agent: &str, event: &str) -> String {
+    if cfg!(windows) && agent == "codex" {
+        return windows_hook_command(hook_exe, agent, event);
+    }
     let exe = hook_exe.to_string_lossy();
     let exe = if cfg!(windows) {
         exe.replace('\\', "/")
@@ -177,8 +180,31 @@ pub fn hook_command(hook_exe: &Path, agent: &str, event: &str) -> String {
     format!("'{}' --agent {agent} {event}", exe.replace('\'', r"'\''"))
 }
 
+// Codex uses the session's shell, which can be either cmd.exe or PowerShell.
+const WINDOWS_HOOK_PREFIX: &str = "powershell.exe -NoProfile -NonInteractive -Command \"& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('";
+
+fn windows_hook_command(hook_exe: &Path, agent: &str, event: &str) -> String {
+    use base64::Engine;
+    let exe = hook_exe.to_string_lossy().replace('\'', "''");
+    // Encoding keeps shell metacharacters in paths out of both parent shells.
+    let script = format!(
+        "$OutputEncoding = [Text.UTF8Encoding]::new($false); [Console]::InputEncoding = [Text.UTF8Encoding]::new($false); [Console]::In.ReadToEnd() | & '{exe}' --agent {agent} {event}; exit $LASTEXITCODE"
+    );
+    let encoded = base64::engine::general_purpose::STANDARD.encode(script);
+    format!("{WINDOWS_HOOK_PREFIX}{encoded}')))) # {MARKER}\"")
+}
+
 /// The hook binary a command from [`hook_command`] runs, as written there.
 pub fn hook_exe_of(command: &str) -> Option<PathBuf> {
+    if let Some(encoded) = command.strip_prefix(WINDOWS_HOOK_PREFIX) {
+        use base64::Engine;
+        let (encoded, _) = encoded.split_once("')))) # ")?;
+        let script = base64::engine::general_purpose::STANDARD.decode(encoded).ok()?;
+        let script = String::from_utf8(script).ok()?;
+        let (_, quoted) = script.split_once(" | & '")?;
+        let (exe, _) = quoted.rsplit_once("' --agent ")?;
+        return Some(PathBuf::from(exe.replace("''", "'")));
+    }
     let quoted = command.strip_prefix('\'')?;
     let end = quoted.find("' --agent ")?;
     Some(PathBuf::from(quoted[..end].replace(r"'\''", "'")))
@@ -522,6 +548,68 @@ mod tests {
     }
 
     #[test]
+    fn windows_codex_commands_keep_paths_out_of_the_parent_shell() {
+        for exe in [
+            r"C:\Users\First Last\vults-hook.exe",
+            r"C:\Users\O'Brien $env & percent%\vults-hook.exe",
+        ] {
+            let command = windows_hook_command(Path::new(exe), "codex", "PreToolUse");
+            assert_eq!(hook_exe_of(&command), Some(PathBuf::from(exe)));
+            assert!(!command.contains(exe));
+            assert!(vults_agent_config::runs_ours(&command, MARKER));
+            assert!(command.starts_with("powershell.exe -NoProfile -NonInteractive -Command \""));
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "set VULTS_TEST_HOOK to a built vults-hook.exe for native shell execution"]
+    fn windows_codex_hook_runs_in_cmd_and_powershell() {
+        use std::io::Write;
+        use std::os::windows::process::CommandExt;
+        use std::process::{Command, Stdio};
+        let source = std::env::var_os("VULTS_TEST_HOOK").expect("VULTS_TEST_HOOK");
+        let dir = std::env::temp_dir().join(format!(
+            "vults-hook O'Brien $env & percent% {}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let exe = dir.join("vults-hook.exe");
+        std::fs::copy(source, &exe).unwrap();
+        let command = hook_command(&exe, "codex", "Stop");
+        for shell in ["cmd.exe", "powershell.exe"] {
+            let mut process = Command::new(shell);
+            if shell == "cmd.exe" {
+                process.args(["/d", "/s", "/c"]).raw_arg(format!("\"{command}\""));
+            } else {
+                process.args(["-NoProfile", "-NonInteractive", "-Command", &command]);
+            }
+            let mut child = process
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap();
+            // An incomplete event must exit quietly, without sending anything to the app.
+            child.stdin.take().unwrap().write_all(b"{}").unwrap();
+            let output = child.wait_with_output().unwrap();
+            assert!(
+                output.status.success(),
+                "{shell}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(output.stdout.is_empty(), "{shell}: unexpected hook output");
+            assert!(
+                output.stderr.is_empty(),
+                "{shell}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        std::fs::remove_file(exe).unwrap();
+        std::fs::remove_dir(dir).unwrap();
+    }
+
+    #[test]
     fn the_hook_a_command_runs() {
         for exe in ["/home/me/.local/share/vults/vults-hook", "/it's/hook"] {
             for event in ["Stop", "--ask PreToolUse"] {
@@ -659,11 +747,10 @@ mod tests {
                 let ours = a.hook_entries(new).len() + usize::from(a.status_line(new).is_some());
                 assert_eq!(changed.len(), 2 * ours, "{kind:?}:\n{}", plan.diff);
                 for line in changed {
-                    let exe = if line.starts_with('+') { "/new/" } else { "/old/" };
-                    assert!(
-                        line.contains("\"command\"") && line.contains(exe),
-                        "{kind:?}: {line}"
-                    );
+                    let exe = if line.starts_with('+') { new } else { old };
+                    let (_, command) = line.split_once("\"command\": ").expect("only commands change");
+                    let command: String = serde_json::from_str(command.trim_end_matches(',')).unwrap();
+                    assert_eq!(hook_exe_of(&command).as_deref(), Some(exe), "{kind:?}: {line}");
                 }
                 // Reinstalling what is there is no change at all.
                 config::apply(

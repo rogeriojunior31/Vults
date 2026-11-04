@@ -8,7 +8,7 @@ pub const NAME: &str = "hermes";
 pub static HERMES: PluginAgent = PluginAgent { name: NAME, files };
 
 fn files(dirs: &Dirs, _: &Path, hook: &Path) -> Vec<(PathBuf, String)> {
-    let root = dirs.agent("HERMES_HOME", ".hermes").join("plugins/vults");
+    let root = home(dirs).join("plugins/vults");
     let marker = crate::plugin_marker();
     let manifest = format!(
         "# {marker}\nname: vults\nversion: 1.0.0\nrequires_hermes: '>=0.22'\ndescription: Local Vults Flock session observer\nprovides_hooks:\n  - on_session_start\n  - on_session_end\n  - on_session_finalize\n  - on_session_reset\n  - on_session_delete\n  - pre_tool_call\n  - post_tool_call\n  - post_api_request\n  - subagent_start\n  - subagent_stop\n"
@@ -23,6 +23,21 @@ fn files(dirs: &Dirs, _: &Path, hook: &Path) -> Vec<(PathBuf, String)> {
         (root.join("__init__.py"), code),
         (root.join("plugin.yaml"), manifest),
     ]
+}
+
+pub(crate) fn home(dirs: &Dirs) -> PathBuf {
+    if let Some(home) = dirs.var("HERMES_HOME") {
+        return home.to_path_buf();
+    }
+    #[cfg(windows)]
+    {
+        dirs.var("LOCALAPPDATA")
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| dirs.home().join("AppData/Local"))
+            .join("hermes")
+    }
+    #[cfg(not(windows))]
+    dirs.home().join(".hermes")
 }
 
 pub(crate) fn parse(event: &Event) -> Option<AgentUpdate> {
@@ -112,6 +127,26 @@ mod tests {
                 .iter()
                 .all(|(p, _)| p.starts_with(crate::dirs::abs("/profiles/h/plugins/vults")))
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_plugin_uses_local_appdata_unless_hermes_home_is_set() {
+        let account = Path::new(r"C:\Users\me");
+        let local = Path::new(r"D:\Local Data");
+        let dirs = Dirs::new(account, |key| (key == "LOCALAPPDATA").then(|| local.into()));
+        assert_eq!(home(&dirs), local.join("hermes"));
+        assert_eq!(
+            home(&Dirs::home_only(account)),
+            account.join("AppData/Local/hermes")
+        );
+        let override_home = Path::new(r"D:\Profiles\Hermes");
+        let dirs = Dirs::new(account, |key| match key {
+            "LOCALAPPDATA" => Some(local.into()),
+            "HERMES_HOME" => Some(override_home.into()),
+            _ => None,
+        });
+        assert_eq!(home(&dirs), override_home);
     }
 
     #[cfg(unix)]

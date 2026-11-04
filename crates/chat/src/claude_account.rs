@@ -9,7 +9,7 @@ use tokio::{
 };
 
 fn command() -> Command {
-    let mut cmd = Command::new("claude");
+    let mut cmd = crate::process::command("claude");
     cmd.envs(vults_agents::shell_env()).args([
         "--print",
         "--input-format",

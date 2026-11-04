@@ -12,8 +12,19 @@ use tauri::AppHandle;
 pub fn editor() -> Option<PathBuf> {
     let path = std::env::var_os("PATH")?;
     std::env::split_paths(&path)
-        .map(|dir| dir.join("code"))
+        .flat_map(editor_candidates)
         .find(|p| runnable(p))
+}
+
+#[cfg(windows)]
+fn editor_candidates(dir: PathBuf) -> Vec<PathBuf> {
+    // VS Code's bin/code is a shell script; launch the native executable instead.
+    vec![dir.join("code.exe"), dir.join("../Code.exe")]
+}
+
+#[cfg(not(windows))]
+fn editor_candidates(dir: PathBuf) -> Vec<PathBuf> {
+    vec![dir.join("code")]
 }
 
 #[cfg(unix)]
@@ -120,5 +131,18 @@ mod tests {
         assert!(existing("relative/dir", |_| true).is_none());
         assert!(existing("--new-window", |_| true).is_none());
         assert!(existing("/surely/not/here/at/all", Path::is_dir).is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_editor_candidates_never_execute_the_unix_shim() {
+        let dir = PathBuf::from(r"C:\Program Files\Microsoft VS Code\bin");
+        let candidates = editor_candidates(dir.clone());
+        assert!(candidates.contains(&dir.join("../Code.exe")));
+        assert!(
+            candidates
+                .iter()
+                .all(|p| p.extension().is_some_and(|e| e == "exe"))
+        );
     }
 }

@@ -208,6 +208,18 @@ fn connect() -> Option<std::os::unix::net::UnixStream> {
 fn connect() -> Option<std::fs::File> {
     const ERROR_PIPE_BUSY: i32 = 231;
     let name = protocol::pipe_name(&vults_peer::current_user_sid()?);
+    // Debug integration tests must never send synthetic permission cards to the running app.
+    #[cfg(debug_assertions)]
+    let name = match std::env::var("VULTS_HOOK_TEST_PIPE_SUFFIX") {
+        Ok(suffix)
+            if !suffix.is_empty()
+                && suffix.len() <= 128
+                && suffix.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') =>
+        {
+            format!("{name}-test-{suffix}")
+        }
+        _ => name,
+    };
     let deadline = std::time::Instant::now() + limits::CONNECT_TIMEOUT;
     loop {
         match std::fs::OpenOptions::new().read(true).write(true).open(&name) {

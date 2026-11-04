@@ -35,6 +35,40 @@ Hyprland, Sway and other compositors with layer-shell, the island sits on the to
 on GNOME it is a regular always-on-top window. **Settings → General → Start with the desktop** opens
 Vults when you log in.
 
+### Windows development checkout
+
+The Windows release installer remains a preview. This development checkout adds native input
+regions, keyboard focus, global navigation shortcuts, tray opening, monitor selection and the
+shared Room/Settings window. Linux retains its existing desktop integrations.
+
+Install these prerequisites together: Node.js 22 or a newer supported LTS, Rust for
+`x86_64-pc-windows-msvc`, Visual Studio **Desktop development with C++** (MSVC x64/x86,
+Windows SDK and CMake/Ninja tools), LLVM with `libclang.dll`, and Microsoft Edge WebView2 Runtime.
+Set `LIBCLANG_PATH` to LLVM's `bin` directory if it is installed elsewhere. Visual Studio Insiders
+is supported by the launcher; Ninja avoids its CMake instance-discovery issues.
+
+From the repository root:
+
+```bat
+scripts\dev-windows.cmd --check
+npm ci
+scripts\dev-windows.cmd
+```
+
+The check reports missing tools before compiling. The launcher changes only its own environment.
+If a previous build cached a different CMake generator, run `cargo clean -p whisper-rs-sys` once.
+
+Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** opens the island;
+**Ctrl+Alt+Left/Right** changes the session; **Ctrl+Alt+F1/F2/F3** selects Mini/Quick/Room;
+**Ctrl+Alt+F8/F9** allows/denies the visible card; **Ctrl+Alt+F10** cancels Chat voice. A key already
+owned by another application is left unbound. Settings shows only successful registrations.
+
+Global dictation/insertion, voice commands, desktop notifications, system media integration,
+screen-lock observation and raising an existing terminal window are still Linux-only. On Windows,
+the terminal action falls back to opening the project folder. Chat microphone capture and local
+transcription are separate from global dictation; microphone/model acceptance still requires a
+real-device test. Renderer scale emulation does not establish native per-monitor DPI acceptance.
+
 ## Connecting your agents
 
 Open **Set up agents…** from the tray icon and click **Install hooks…** next to an agent. You see the
@@ -47,7 +81,7 @@ first, and hooks from other tools are kept. **Remove hooks…** takes out only w
 | Codex | `~/.codex/hooks.json` | Open Codex, type `/hooks` and trust the Vults hooks (Codex runs a hook only when it is trusted and on); Settings shows how many still wait. A reinstall asks again |
 | Antigravity | `~/.gemini/config/hooks.json` | Nothing ([it asks in its own terminal](guide/other-agents.md#antigravity)) |
 | OpenCode | `~/.config/opencode/plugins/vults.js`, a plugin of ours | Restart OpenCode ([its cards](guide/approvals.md#opencode)) |
-| Hermes Agent | `~/.hermes/plugins/vults/` (`HERMES_HOME` override) | Enable with `hermes plugins enable vults`; open a new CLI session ([details](guide/other-agents.md#hermes-agent)) |
+| Hermes Agent | `~/.hermes/plugins/vults/` on Linux; `%LOCALAPPDATA%\hermes\plugins\vults\` on Windows (`HERMES_HOME` overrides either) | Enable with `hermes plugins enable vults`; open a new CLI session ([details](guide/other-agents.md#hermes-agent)) |
 | Qwen Code | `~/.qwen/settings.json` | Restart Qwen Code ([its cards](guide/approvals.md#qwen-code)) |
 | Copilot CLI | `~/.copilot/hooks/vults.json`, a file of ours | Restart Copilot CLI ([its cards](guide/approvals.md#copilot-cli)) |
 | Cursor | `~/.cursor/hooks.json` | Restart Cursor ([it asks in its own prompt](guide/other-agents.md#cursor)) |

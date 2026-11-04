@@ -2,8 +2,9 @@
 // ui/src/i18n/, or a catalog keeps a sentence no code asks for any more. Run by check-i18n.sh.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const src = join(root, "ui/src");
 const catalogs = ["pt-BR", "es", "zh"];
 

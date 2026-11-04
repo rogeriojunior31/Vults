@@ -32,6 +32,10 @@ pub mod tray;
 pub mod save;
 
 #[cfg(windows)]
+pub mod windows_shortcuts;
+#[cfg(windows)]
+pub mod windows_surface;
+#[cfg(windows)]
 mod windows_time;
 
 /// The local UTC offset at `unix` (seconds east of UTC), from the desktop's time zone; none when

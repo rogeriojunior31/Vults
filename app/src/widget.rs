@@ -70,19 +70,36 @@ pub fn corner(app: &AppHandle) -> Option<Corner> {
 
 /// Builds, moves or removes the widget as the setting says. From any thread.
 pub fn apply(app: &AppHandle) {
-    let corner = corner(app);
-    let app = app.clone();
-    let main = app.clone();
-    let _ = main.run_on_main_thread(move || match (corner, app.get_webview_window(WIDGET)) {
+    #[cfg(windows)]
+    {
+        let app = app.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            static UPDATE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+            let Ok(_update) = UPDATE.lock() else { return };
+            // Read after queued changes: an older request cannot recreate a disabled widget.
+            apply_now(&app, corner(&app));
+        });
+    }
+    #[cfg(not(windows))]
+    {
+        let corner = corner(app);
+        let app = app.clone();
+        let main = app.clone();
+        let _ = main.run_on_main_thread(move || apply_now(&app, corner));
+    }
+}
+
+fn apply_now(app: &AppHandle, corner: Option<Corner>) {
+    match (corner, app.get_webview_window(WIDGET)) {
         (None, Some(win)) => {
             tracing::info!("corner widget off");
             // Not `close`: surfaces refuse it (a closed surface is a lost monitor, brought back).
             let _ = win.destroy();
         }
         (Some(corner), Some(win)) => place(&win, corner),
-        (Some(corner), None) => build(&app, corner),
+        (Some(corner), None) => build(app, corner),
         (None, None) => {}
-    });
+    }
 }
 
 /// Main thread. Hidden until it is a layer surface: the role is chosen before the first map.
@@ -142,7 +159,11 @@ fn place(win: &tauri::WebviewWindow, corner: Corner) {
 /// Without a compositor to anchor it: the corner of its monitor's work area.
 fn place_by_hand(win: &tauri::WebviewWindow, corner: Corner) {
     let (width, height) = WIDGET_SIZE;
-    if let Ok(Some(monitor)) = win.current_monitor() {
+    #[cfg(windows)]
+    let monitor = crate::runtime::surface_monitor(win);
+    #[cfg(not(windows))]
+    let monitor = win.current_monitor().ok().flatten();
+    if let Some(monitor) = monitor {
         let scale = monitor.scale_factor();
         let area = monitor.work_area();
         let size = area.size.to_logical::<f64>(scale);
@@ -158,7 +179,11 @@ fn place_by_hand(win: &tauri::WebviewWindow, corner: Corner) {
         } else {
             origin.y + size.height - f64::from(height) - margin
         };
-        let _ = win.set_position(tauri::LogicalPosition::new(x, y));
+        let position = tauri::LogicalPosition::new(x, y);
+        #[cfg(windows)]
+        let _ = win.set_position(position.to_physical::<i32>(scale));
+        #[cfg(not(windows))]
+        let _ = win.set_position(position);
     }
 }
 

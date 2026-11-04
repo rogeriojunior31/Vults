@@ -7191,6 +7191,7 @@ dependencies = [
 name = "vults-agents"
 version = "0.1.8"
 dependencies = [
+ "base64 0.22.1",
  "rusqlite",
  "serde",
  "serde_json",
