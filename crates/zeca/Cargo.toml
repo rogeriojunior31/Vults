@@ -11,7 +11,7 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 # His memory is a git repository: every write a commit, undone by a revert (plan-zeca S9, M6).
-gix = { version = "0.89", default-features = false, features = ["sha1", "index"] }
+gix = { version = "0.90", default-features = false, features = ["sha1", "index"] }
 
 [lints]
 workspace = true
