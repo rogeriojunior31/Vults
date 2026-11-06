@@ -19,12 +19,25 @@ pub fn start(app: &AppHandle) {
     app.manage(Locked::default());
     #[cfg(target_os = "linux")]
     tauri::async_runtime::spawn(linux::run(app.clone()));
+    #[cfg(windows)]
+    {
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            loop {
+                let state =
+                    tauri::async_runtime::spawn_blocking(vults_platform::windows_session::locked).await;
+                if let Ok(Some(now)) = state {
+                    changed(&app, now).await;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            }
+        });
+    }
 }
 
 /// A change of the lock: kept, the connectors follow, and the core hears it, in order (awaited
 /// here, in the one D-Bus task).
-// Only Linux has the lock signal for now.
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "linux", windows)), allow(dead_code))]
 async fn changed(app: &AppHandle, now: bool) {
     let Some(state) = app.try_state::<Locked>() else {
         return;

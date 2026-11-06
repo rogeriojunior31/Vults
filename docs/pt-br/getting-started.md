@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 24616be2794f -->
+<!-- source: e57d8d1deffc -->
 
 <a id="install"></a>
 
@@ -43,8 +43,9 @@ quando você entra na sessão.
 
 O instalador publicado para Windows continua sendo uma prévia. Este checkout de desenvolvimento
 acrescenta regiões de entrada nativas, foco do teclado, atalhos globais de navegação, abertura pela
-bandeja, seleção de monitor e a janela compartilhada entre Sala e Configurações. O Linux mantém
-suas integrações existentes com o desktop.
+bandeja, seleção de monitor e a janela compartilhada entre Sala e Configurações. Ele também acompanha
+processos de sessão do mesmo usuário, observa o bloqueio da tela e lê/controla sessões de mídia do
+Windows. O Linux mantém suas integrações existentes com o desktop.
 
 Instale estes pré-requisitos juntos: Node.js 22 ou uma LTS compatível mais nova, Rust para
 `x86_64-pc-windows-msvc`, Visual Studio com **Desenvolvimento para desktop com C++** (MSVC x64/x86,
@@ -71,12 +72,36 @@ Mini/Rápido/Sala; **Ctrl+Alt+F8/F9** permite/nega o card visível; **Ctrl+Alt+F
 Chat. Uma tecla já usada por outro aplicativo fica sem vínculo. As Configurações mostram apenas
 os registros bem-sucedidos.
 
-Ditado/inserção global, comandos de voz, notificações do desktop, integração com a mídia do
-sistema, observação do bloqueio de tela e trazer uma janela de terminal existente para a frente
+Ditado/inserção global, comandos de voz, ponte nativa de perguntas MCP, notificações do desktop, captura de reuniões,
+conversa de voz ao vivo e trazer uma janela de terminal existente para a frente
 ainda são exclusivos do Linux. No Windows, a ação de terminal usa a abertura da pasta do projeto
 como alternativa. A captura de microfone e a transcrição local do Chat são separadas do ditado
 global; a aceitação de microfone/modelo ainda exige teste com um dispositivo real. A emulação
 de escala do renderizador não comprova a aceitação de DPI nativo por monitor.
+
+A opção de mídia só consulta o sistema quando está ativada. Reproduzir/pausar e faixa anterior/próxima
+usam o player exibido; sessões duplicadas do aplicativo são recusadas para não controlar outra janela.
+A API de sessões de mídia do Windows não fornece volume por player. O bloqueio da tela é consultado
+a cada 500 ms; um estado ilegível nunca conta como desbloqueio. A presença do processo usa seu horário
+de criação para detectar reutilização de PID e nunca encerra uma sessão cujo dono não tenha sido
+observado antes. As conversas do Hermes mantêm seu ciclo de vida explícito, porque um worker do
+gateway pode terminar enquanto a conversa continua aberta.
+Os backends do Windows usam a [API de sessões de mídia](https://learn.microsoft.com/en-us/uwp/api/windows.media.control.globalsystemmediatransportcontrolssessionmanager)
+e os [indicadores de bloqueio da sessão](https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ns-wtsapi32-wtsinfoex_level1_w) da Microsoft.
+
+A ordem de implementação restante no Windows e os critérios de aceitação são:
+
+| Ordem | Módulo | Aceitação necessária antes de declarar suporte |
+| --- | --- | --- |
+| 1 | Sessões, hooks e métricas | Inicializadores exe/npm, wrappers cmd/PowerShell, caminhos com Unicode e espaços, saída do processo/reutilização de PID, identidade do dono de perguntas MCP nativas, desconhecido versus zero, tokens acumulados versus contexto atual, custo real versus estimado, semântica de tempo e relatórios antigos/reiniciados. Consultas de assinatura mantêm seus interruptores de rede separados. |
+| 2 | Notificações | Identidade registrada do aplicativo nas instalações e no desenvolvimento; substituição por sessão, retirada, ativação apenas para abrir, não perturbe, opção desligada, encerramento e falha do serviço de notificações. |
+| 3 | Foco, clipboard e inserção de texto | Fixar janela/processo exatos em primeiro plano e geração do foco; Unicode/IME, restauração do clipboard, alterações do usuário no clipboard, cancelamento, destinos protegidos/elevados e mudanças de foco nunca devem escrever em outra janela. |
+| 4 | Ditado global e comandos de voz | Atalhos nativos de pressionar/soltar/cancelar, seleção de dispositivo, transcrição local, verificações de inserção acima, interrupção por bloqueio e revogação de consentimento. Manter as regras atuais de aprovação e auditoria. |
+| 5 | Áudio e reuniões | Microfone WASAPI e loopback de saída, identidade/troca/desconexão do dispositivo, cancelamento por bloqueio ou saída da página, buffers limitados, gravação recuperável e transcrição local. Conversa ao vivo também exige testes de cancelamento de eco, interrupção e mudança de rota. |
+| 6 | Conclusão do desktop | Trazer o terminal existente exato, inventário de aplicativos instalados, volume por aplicativo e redução/restauração temporária da música; validar DPI nativo em vários monitores a 100/125/150/175/200%, reconexão, suspensão/retorno, início automático e atualizações instaladas. |
+
+Cada fase preserva o backend Linux e suas verificações de regressão. Testes automáticos com fixtures e
+emulação de escala não substituem a aceitação nativa com dispositivo, compositor, instalador ou vários monitores.
 
 <a id="connecting-your-agents"></a>
 

@@ -32,6 +32,8 @@ pub mod tray;
 pub mod save;
 
 #[cfg(windows)]
+pub mod windows_session;
+#[cfg(windows)]
 pub mod windows_shortcuts;
 #[cfg(windows)]
 pub mod windows_surface;

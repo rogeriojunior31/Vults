@@ -158,7 +158,11 @@ mod tests {
             .clone();
         let module = dir.join("plugin.py");
         std::fs::write(&module, code).unwrap();
-        let result = std::process::Command::new(if cfg!(windows) { "python" } else { "python3" })
+        #[cfg(windows)]
+        let mut command = std::process::Command::new("python");
+        #[cfg(not(windows))]
+        let mut command = std::process::Command::new("python3");
+        let result = command
             .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/hermes-plugin.py"))
             .arg(module)
             .env_remove("VULTS_RUN")

@@ -25,12 +25,13 @@ pub fn apply(app: &AppHandle, on: bool) {
     if !on {
         show(app, None);
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if on {
         let app = app.clone();
         *watcher = Some(tauri::async_runtime::spawn(async move {
             let shown = app.clone();
             if let Err(e) = vults_media::watch(move |now| show(&shown, now)).await {
+                show(&app, None);
                 tracing::warn!("now playing stopped: {e}");
             }
         }));
@@ -56,9 +57,9 @@ pub async fn media_control(app: AppHandle, action: Control) -> Result<(), String
     let Some(player) = player else {
         return Ok(());
     };
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     return vults_media::control(&player, action).await;
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = (player, action);
         Ok(())
