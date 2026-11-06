@@ -10,7 +10,7 @@ publish.workspace = true
 vults-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-base64 = "0.22"
+base64 = "0.23"
 # X25519 between desktop and phone, HKDF-SHA256 over it, and XChaCha20-Poly1305 to seal what goes
 # through the relay (random 24-byte nonces never repeat in practice).
 x25519-dalek = { version = "3", features = ["static_secrets", "zeroize"] }
