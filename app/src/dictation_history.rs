@@ -5,7 +5,7 @@ use std::sync::{
 };
 
 use tauri::{AppHandle, Emitter, Manager};
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(any(target_os = "linux", windows), test))]
 use vults_store::dictations::Entry;
 use vults_store::{Store, dictations::Retention};
 
@@ -14,7 +14,7 @@ static EPOCH: AtomicU64 = AtomicU64::new(0);
 // Explicit meeting saves are independent of dictation retention changes and dictation-only erase.
 static ARCHIVE_EPOCH: AtomicU64 = AtomicU64::new(0);
 
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(any(target_os = "linux", windows), test))]
 pub fn epoch() -> u64 {
     EPOCH.load(Ordering::SeqCst)
 }
@@ -63,7 +63,7 @@ pub(crate) fn retaining_archive<T>(
     write()
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn start(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -77,7 +77,7 @@ pub fn start(app: &AppHandle) {
     });
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn record(app: &AppHandle, entry: Entry, epoch: u64) {
     let Ok(_guard) = HISTORY.lock() else {
         return;
@@ -92,7 +92,7 @@ pub fn record(app: &AppHandle, entry: Entry, epoch: u64) {
     }
 }
 
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(any(target_os = "linux", windows), test))]
 fn save(
     dir: &std::path::Path,
     entry: &Entry,
@@ -245,7 +245,7 @@ pub async fn dictation_paste_again(app: AppHandle, id: i64) -> Result<(), String
             .map_err(|_| "Could not read dictation history.")?
             .ok_or("This dictation is no longer in history.")?;
         let text = replay_text(entry)?;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         {
             if crate::lock::locked(&app) {
                 return Err("Unlock the screen before copying dictation.".into());
@@ -254,7 +254,7 @@ pub async fn dictation_paste_again(app: AppHandle, id: i64) -> Result<(), String
                 .ok_or("The dictation worker is unavailable.")?
                 .copy_again(Some(text))
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "linux", windows)))]
         {
             let _ = text;
             Err("Dictation is available on Linux.".into())

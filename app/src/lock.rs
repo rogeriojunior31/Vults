@@ -53,7 +53,7 @@ async fn changed(app: &AppHandle, now: bool) {
         crate::doctor::dictation::stop_mic(app);
         crate::meetings::cancel(app);
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if now {
         crate::dictation::cancel(app, true);
     }

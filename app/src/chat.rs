@@ -136,7 +136,7 @@ pub struct Draft {
 }
 
 impl Draft {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     fn has_content(&self) -> bool {
         !self.text.trim().is_empty() || !self.files.is_empty() || !self.mentions.is_empty()
     }
@@ -670,7 +670,7 @@ pub async fn chat_send(
 enum Origin {
     Window(String, u32),
     SpecialistWindow(String, u32, String),
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     Voice(crate::dictation::worker::Ticket, u32),
 }
 
@@ -678,7 +678,7 @@ impl Origin {
     fn label(&self) -> &str {
         match self {
             Self::Window(label, _) | Self::SpecialistWindow(label, ..) => label,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             Self::Voice(..) => "voice-command",
         }
     }
@@ -686,7 +686,7 @@ impl Origin {
     fn is_voice(&self) -> bool {
         match self {
             Self::Window(..) | Self::SpecialistWindow(..) => false,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             Self::Voice(..) => true,
         }
     }
@@ -695,7 +695,7 @@ impl Origin {
         match self {
             Self::SpecialistWindow(_, _, profile) => Some(profile),
             Self::Window(..) => None,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             Self::Voice(..) => None,
         }
     }
@@ -720,7 +720,7 @@ impl Origin {
         if !saved.zeca && self.is_voice() {
             return Err("Zeca is off (Settings → Flock & Zeca).".into());
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if let Self::Voice(ticket, generation) = self {
             app.state::<ChatState>().check_companion(*generation)?;
             if !saved.command_chat() || crate::lock::locked(app) || ticket.dispatch(|| ()).is_none() {
@@ -736,7 +736,7 @@ impl Origin {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(crate) fn voice_command(app: AppHandle, text: String, ticket: crate::dictation::worker::Ticket) {
     let generation = app.state::<ChatState>().generation();
     tauri::async_runtime::spawn(async move {
@@ -763,7 +763,7 @@ pub(crate) fn voice_command(app: AppHandle, text: String, ticket: crate::dictati
     });
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn voice_result(
     app: &AppHandle,
     ticket: &crate::dictation::worker::Ticket,
@@ -786,7 +786,7 @@ fn voice_result(
     );
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn check_voice_source(state: &ChatState, expected: &Draft, provider: Provider) -> Result<(), String> {
     let current = state.draft.lock().map_err(|_| "Chat draft is busy.")?;
     if current.folder != expected.folder
@@ -810,7 +810,7 @@ async fn send(
     origin.check(&app)?;
     // Voice never queues behind a turn or a conversation change, including local memory reads.
     let reserved = origin.reserve(&state)?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     let voice_source = if let Some(chat) = &reserved {
         let draft = state.draft.lock().map_err(|_| "Chat draft is busy.")?.clone();
         check_voice_source(&state, &draft, chat.provider())?;
@@ -818,7 +818,7 @@ async fn send(
     } else {
         None
     };
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     let folder = voice_source
         .as_ref()
         .and_then(|draft| draft.folder.clone())
@@ -931,7 +931,7 @@ async fn send(
     match &origin {
         Origin::Window(_, generation) => state.check_generation(*generation)?,
         Origin::SpecialistWindow(_, generation, _) => state.check_generation(*generation)?,
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         Origin::Voice(_, generation) => state.check_companion(*generation)?,
     }
     let (stop_tx, mut stop) = oneshot::channel();
@@ -1095,7 +1095,7 @@ async fn send(
     }
     // Preflight can await local IO; an old recording cannot inherit a later opt-in.
     origin.check(&app)?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if let Some(expected) = &voice_source {
         check_voice_source(&state, expected, chat.provider())?;
     }
@@ -1160,7 +1160,7 @@ async fn send(
     if companion {
         crate::journal::chat(&app, "you", chat.folder(), &text, false);
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if let Origin::Voice(ticket, _) = &origin {
         voice_result(&app, ticket, &text, vults_core::i18n::VoiceFeedback::SentToChat);
     }

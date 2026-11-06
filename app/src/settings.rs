@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 47;
+const VERSION: u32 = 48;
 
 /// The `data-theme` of every window. The three SP Night themes come from the sp-night palette.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
@@ -352,7 +352,7 @@ fn fold_after() -> u32 {
 }
 
 impl Settings {
-    #[cfg(any(target_os = "linux", test))]
+    #[cfg(any(target_os = "linux", windows, test))]
     pub fn command_chat(&self) -> bool {
         self.dictation_commands && self.dictation_command_chat && self.zeca
     }
@@ -364,7 +364,7 @@ impl Settings {
         }
     }
 
-    #[cfg(any(target_os = "linux", test))]
+    #[cfg(any(target_os = "linux", windows, test))]
     pub fn dictation_options(&self) -> vults_dictation::GestureOptions {
         vults_dictation::GestureOptions {
             double_tap: self.dictation_double_tap,
@@ -619,7 +619,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         dictation_keep: s.dictation_keep.clone(),
         dictation_wayland: dictation_wayland(),
         dictation_insert: s.dictation_insert,
-        dictation_insert_available: cfg!(target_os = "linux") && dictation_insert_available(),
+        dictation_insert_available: dictation_insert_available(),
         sounds: s.sounds,
         volume: s.volume.min(VOLUME_MAX),
         monitor: s.monitor,
@@ -802,7 +802,7 @@ pub fn set_zeca_species(app: AppHandle, id: String) -> Result<(), String> {
 #[tauri::command]
 pub fn set_now_playing(app: AppHandle, on: bool) -> Result<(), String> {
     edit(&app, |s| s.now_playing = on)?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if let Some(worker) = app.try_state::<crate::dictation::State>() {
         worker.cancel_commands();
     }
@@ -1059,11 +1059,13 @@ fn dictation_wayland() -> bool {
 fn dictation_insert_available() -> bool {
     #[cfg(target_os = "linux")]
     return vults_platform::insert::available();
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(windows)]
+    return vults_platform::focus::start();
+    #[cfg(not(any(target_os = "linux", windows)))]
     false
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn dictation_insert(app: &AppHandle) -> bool {
     app.state::<SettingsState>()
         .0
@@ -1211,7 +1213,7 @@ pub fn set_dictation_gesture<R: tauri::Runtime>(
     let mut next = saved.clone();
     let field = change_dictation_gesture(&mut next, &key, on)?;
     save(&next).map_err(|_| "Could not save dictation gestures.")?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if let Some(worker) = app.try_state::<crate::dictation::State>() {
         worker.configure(next.dictation_options());
     }
@@ -1408,18 +1410,18 @@ pub fn set_dictation_cleanup<R: tauri::Runtime>(
         }
         .map_err(|_| "Could not read dictation cleanup budget.")?;
         bind_request_budget(&mut next.dictation_cleanup_budget, &store)?;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if let Some(state) = app.try_state::<crate::dictation::cleanup::State>() {
             state.reload_styles(&store);
         }
     }
     next.dictation_cleanup = on;
     save(&next).map_err(|_| "Could not save dictation cleanup choice.")?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cleanup::invalidate(&app);
     *saved = next;
     drop(saved);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cleanup::ensure_focus(&app);
     let _ = app.emit("settings", serde_json::json!({"dictationCleanup":on}));
     Ok(())
@@ -1474,7 +1476,7 @@ pub fn set_dictation_app_style<R: tauri::Runtime>(
     store
         .dictation_style_set(&identity, style.map(|s| s.id()))
         .map_err(|_| "Could not save dictation style.")?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if let Some(state) = app.try_state::<crate::dictation::cleanup::State>() {
         state.reload_styles(&store);
     }
@@ -1520,7 +1522,7 @@ pub fn set_dictation_commands<R: tauri::Runtime>(
     };
     save(&next).map_err(|_| "Could not save voice command choices.")?;
     crate::realtime::invalidate(&app);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         // Cancel even when re-enabled: no ticket may inherit a later grant.
         if let Some(worker) = app.try_state::<crate::dictation::State>() {
@@ -1558,9 +1560,12 @@ pub async fn set_dictation_insert(
         return Err("Dictation insertion is changed in Settings.".into());
     }
     if on && !dictation_insert_available() {
+        #[cfg(windows)]
+        return Err("Windows focus tracking is unavailable.".into());
+        #[cfg(not(windows))]
         return Err("Dictation insertion requires native X11 or Plasma Wayland.".into());
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         if !on {
             crate::dictation::permission::revoke(&app);
@@ -1569,9 +1574,9 @@ pub async fn set_dictation_insert(
     }
     edit(&app, |s| s.dictation_insert = on)?;
     let _ = app.emit("settings", serde_json::json!({ "dictationInsert": on }));
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     return Ok(crate::dictation::permission::configure(app, on, true).await.err());
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     Ok(None)
 }
 

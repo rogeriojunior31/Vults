@@ -8,6 +8,7 @@ use vults_store::dictations::Timings;
 use super::Config;
 
 #[cfg(test)]
+#[path = "worker/tests.rs"]
 mod tests;
 
 pub(super) struct Clip {
@@ -388,6 +389,7 @@ impl Ticket {
         Ok(Some(output))
     }
 
+    #[cfg(target_os = "linux")]
     pub(super) fn pin_session(&self, session: super::SessionTarget) {
         let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
         if state.generation == self.generation && state.busy {
@@ -398,6 +400,7 @@ impl Ticket {
         }
     }
 
+    #[cfg(target_os = "linux")]
     pub(super) fn session(&self) -> Option<Arc<super::SessionTarget>> {
         let state = self.control.lock().unwrap_or_else(|e| e.into_inner());
         (state.generation == self.generation)
@@ -519,6 +522,7 @@ impl Ticket {
         state.notice = Some((status.clone(), since));
         Some(status)
     }
+    #[cfg(any(target_os = "linux", test))]
     pub fn attach_keys(&self, active: Arc<AtomicBool>) -> bool {
         let mut state = self.control.lock().unwrap_or_else(|e| e.into_inner());
         if state.generation != self.generation || !state.busy {

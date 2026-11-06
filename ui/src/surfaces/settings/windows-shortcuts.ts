@@ -7,6 +7,7 @@ const ACTIONS = [
   ["open", tk("Open the island")], ["next", tk("Next session")], ["previous", tk("Previous session")],
   ["mini", tk("Mini")], ["quick", tk("Quick")], ["room", tk("Room")],
   ["allow", tk("Allow")], ["deny", tk("Deny")], ["talk-cancel", tk("Cancel voice")],
+  ["talk", tk("Dictation")], ["talk-command", tk("Voice command")], ["talk-again", tk("Copy last dictation")],
 ] as const;
 const MODIFIERS = ["Ctrl+Alt", "Ctrl+Shift", "Alt+Shift", "Ctrl+Alt+Shift"];
 const KEYS = ["Space", "Left", "Right", "Up", "Down", "Home", "End", "PageUp", "PageDown", "Insert",

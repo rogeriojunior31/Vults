@@ -96,7 +96,7 @@ pub fn dictation_mic_start(app: AppHandle, window: tauri::Webview) -> Result<u64
     if crate::lock::locked(&app) {
         return Err("Unlock the screen before testing the microphone.".into());
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if crate::dictation::active(&app) {
         return Err("Finish dictation before testing the microphone.".into());
     }

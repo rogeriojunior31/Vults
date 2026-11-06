@@ -4,10 +4,12 @@ use std::sync::{Arc, Mutex, mpsc};
 use windows::Win32::Foundation::{LPARAM, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    HOT_KEY_MODIFIERS, MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, MOD_SHIFT, RegisterHotKey, UnregisterHotKey,
+    GetAsyncKeyState, HOT_KEY_MODIFIERS, MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, MOD_SHIFT, RegisterHotKey,
+    UnregisterHotKey,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetMessageW, MSG, PM_NOREMOVE, PM_REMOVE, PeekMessageW, PostThreadMessageW, WM_APP, WM_HOTKEY, WM_QUIT,
+    GetMessageW, KillTimer, MSG, PM_NOREMOVE, PM_REMOVE, PeekMessageW, PostThreadMessageW, SetTimer, WM_APP,
+    WM_HOTKEY, WM_QUIT, WM_TIMER,
 };
 
 const WAKE: u32 = WM_APP + 71;
@@ -20,6 +22,9 @@ const DEFAULTS: &[(&str, &str)] = &[
     ("room", "Ctrl+Alt+F3"),
     ("allow", "Ctrl+Alt+F8"),
     ("deny", "Ctrl+Alt+F9"),
+    ("talk", "Ctrl+Alt+F4"),
+    ("talk-command", "Ctrl+Alt+F5"),
+    ("talk-again", "Ctrl+Alt+F6"),
     ("talk-cancel", "Ctrl+Alt+F10"),
 ];
 pub type Bindings = BTreeMap<String, String>;
@@ -261,10 +266,11 @@ fn replace(
     Ok(snapshot(&request.bindings, active, Vec::new()))
 }
 pub fn start(
-    initial: Bindings,
+    mut initial: Bindings,
     changed: impl Fn(Snapshot) + Send + 'static,
-    on: impl Fn(&str) + Send + 'static,
+    on: impl Fn(&str, bool) + Send + 'static,
 ) -> Result<Controller, String> {
+    preserve_existing_keys(&mut initial);
     let (requests, receive) = mpsc::channel::<Request>();
     let (ready, wait) = mpsc::sync_channel(1);
     let state = Arc::new(Mutex::new(Snapshot::default()));
@@ -300,6 +306,16 @@ pub fn start(
             let status = snapshot(&initial, &active, conflicts);
             *shared.lock().unwrap_or_else(|e| e.into_inner()) = status.clone();
             changed(status);
+            // SAFETY: the thread-owned timer checks only the registered held chord, never text.
+            let timer = unsafe { SetTimer(None, 1, 60_000, None) };
+            if timer == 0 {
+                for entry in active {
+                    unregister(entry.cookie);
+                }
+                let _ = ready.send(0);
+                return;
+            }
+            let mut held: Option<(String, Chord)> = None;
             // SAFETY: current thread id is valid while its message loop lives.
             let _ = ready.send(unsafe { GetCurrentThreadId() });
             loop {
@@ -314,21 +330,49 @@ pub fn start(
                         if let Ok(status) = &result {
                             *shared.lock().unwrap_or_else(|e| e.into_inner()) = status.clone();
                             changed(status.clone());
+                            if let Some((action, _)) = held.take() {
+                                on(&action, false);
+                                let _ = unsafe { SetTimer(None, timer, 60_000, None) };
+                            }
                         }
                         let _ = reply.send(result);
+                    }
+                } else if message.message == WM_TIMER {
+                    if held.as_ref().is_some_and(|(_, chord)| {
+                        !held_down(chord, |key| unsafe { GetAsyncKeyState(key as i32) } < 0)
+                    }) && let Some((action, _)) = held.take()
+                    {
+                        on(&action, false);
+                        let _ = unsafe { SetTimer(None, timer, 60_000, None) };
                     }
                 } else if message.message == WM_HOTKEY
                     && let Some(entry) = active.iter().find(|r| r.cookie == message.wParam.0 as i32)
                 {
-                    on(&entry.action);
+                    if matches!(entry.action.as_str(), "talk" | "talk-command") {
+                        if held.is_none()
+                            && held_down(&entry.chord, |key| unsafe { GetAsyncKeyState(key as i32) } < 0)
+                        {
+                            if unsafe { SetTimer(None, timer, 10, None) } == 0 {
+                                continue;
+                            }
+                            held = Some((entry.action.clone(), entry.chord.clone()));
+                            on(&entry.action, true);
+                        }
+                    } else {
+                        on(&entry.action, true);
+                    }
                 }
             }
             for entry in active {
                 unregister(entry.cookie);
             }
+            let _ = unsafe { KillTimer(None, timer) };
         })
         .map_err(|_| "shortcut-unavailable")?;
     let thread = wait.recv().map_err(|_| "shortcut-unavailable")?;
+    if thread == 0 {
+        return Err("shortcut-unavailable".into());
+    }
     Ok(Controller {
         thread,
         requests,
@@ -336,10 +380,62 @@ pub fn start(
         _lifetime: Arc::new(Lifetime(thread)),
     })
 }
+// A newly introduced default must not invalidate an older saved customization.
+fn preserve_existing_keys(initial: &mut Bindings) {
+    for &(id, default) in DEFAULTS
+        .iter()
+        .filter(|(id, _)| matches!(*id, "talk" | "talk-command" | "talk-again"))
+    {
+        if !initial.contains_key(id) && initial.values().any(|value| value == default) {
+            initial.insert(id.into(), String::new());
+        }
+    }
+}
+
+fn held_down(chord: &Chord, down: impl Fn(u32) -> bool) -> bool {
+    down(chord.key)
+        && [(MOD_CONTROL.0, 0x11), (MOD_ALT.0, 0x12), (MOD_SHIFT.0, 0x10)]
+            .iter()
+            .all(|(flag, key)| chord.modifiers & flag == 0 || down(*key))
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn new_voice_defaults_preserve_saved_navigation_keys_and_explicit_disables() {
+        let mut old = Bindings::from([
+            ("open".into(), "Ctrl+Alt+F4".into()),
+            ("room".into(), "Ctrl+Alt+F5".into()),
+            ("talk-again".into(), String::new()),
+        ]);
+        preserve_existing_keys(&mut old);
+        let bindings = requested(&old).unwrap();
+        assert!(
+            bindings
+                .iter()
+                .any(|(id, key)| id == "open" && key.label == "Ctrl+Alt+F4")
+        );
+        assert!(
+            bindings
+                .iter()
+                .any(|(id, key)| id == "room" && key.label == "Ctrl+Alt+F5")
+        );
+        assert!(
+            !bindings
+                .iter()
+                .any(|(id, _)| matches!(id.as_str(), "talk" | "talk-command" | "talk-again"))
+        );
+    }
+    #[test]
+    fn a_recording_releases_when_either_the_key_or_a_required_modifier_is_released() {
+        let chord = chord("Ctrl+Alt+F4").unwrap();
+        let down = HashSet::from([0x11, 0x12, 0x73]);
+        assert!(held_down(&chord, |key| down.contains(&key)));
+        for released in down.iter() {
+            assert!(!held_down(&chord, |key| key != *released && down.contains(&key)));
+        }
+    }
     #[test]
     fn reserved_typing_keys_duplicates_and_unknown_actions_are_rejected() {
         for key in [
@@ -367,7 +463,7 @@ mod tests {
         let disabled = || Bindings::from_iter(DEFAULTS.iter().map(|(id, _)| (id.to_string(), String::new())));
         let mut initial = disabled();
         initial.insert("open".into(), "Ctrl+Alt+Shift+F22".into());
-        let controller = start(initial, |_| {}, |_| {}).unwrap();
+        let controller = start(initial, |_| {}, |_, _| {}).unwrap();
         let before = controller.snapshot().active;
         assert_eq!(before.get("open").map(String::as_str), Some("Ctrl+Alt+Shift+F22"));
         let mut desired = disabled();
@@ -381,7 +477,7 @@ mod tests {
         let updated = controller.apply(desired, || Ok(())).unwrap();
         let mut other_keys = disabled();
         other_keys.insert("open".into(), "Ctrl+Alt+Shift+F24".into());
-        let other = start(other_keys, |_| {}, |_| {}).unwrap();
+        let other = start(other_keys, |_| {}, |_, _| {}).unwrap();
         let mut conflicting = updated.requested;
         conflicting.insert("open".into(), "Ctrl+Alt+Shift+F24".into());
         assert!(

@@ -78,7 +78,10 @@ pub(crate) fn ensure_focus<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
         .0
         .lock()
         .is_ok_and(|s| s.dictation_cleanup && s.dictation_cleanup_budget.is_some());
-    if !on || state.closing.load(Ordering::SeqCst) || !vults_platform::insert::wayland_available() {
+    if !on
+        || state.closing.load(Ordering::SeqCst)
+        || !(cfg!(windows) || vults_platform::insert::wayland_available())
+    {
         return;
     }
     if state.focus.lock().is_ok_and(|f| f.is_some()) || state.loading.swap(true, Ordering::SeqCst) {
@@ -409,4 +412,5 @@ pub(super) fn apply(
 }
 
 #[cfg(test)]
+#[path = "cleanup/tests.rs"]
 mod tests;

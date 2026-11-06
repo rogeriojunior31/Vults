@@ -61,7 +61,9 @@ If a previous build cached a different CMake generator, run `cargo clean -p whis
 
 Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** opens the island;
 **Ctrl+Alt+Left/Right** changes the session; **Ctrl+Alt+F1/F2/F3** selects Mini/Quick/Room;
-**Ctrl+Alt+F8/F9** allows/denies the visible card; **Ctrl+Alt+F10** cancels Chat voice. A key already
+**Ctrl+Alt+F4** records dictation; **Ctrl+Alt+F5** records a voice command; **Ctrl+Alt+F6** copies
+the last dictation again; **Ctrl+Alt+F8/F9** allows/denies the visible card;
+**Ctrl+Alt+F10** cancels dictation and Chat voice. A key already
 owned by another application is left unbound. Settings shows only successful registrations.
 
 Change Windows keys in **Settings → General → Keyboard shortcuts** (also available in Dictation's
@@ -72,7 +74,17 @@ Windows/typing keys, Escape, Delete and F12 are excluded. The OS can detect othe
 shortcuts; an application's private/local shortcuts cannot be detected. If a choice interferes with
 one of those, disable it or choose another combination here. Linux retains its desktop shortcut editor.
 
-Global dictation/insertion, voice commands, the native MCP question bridge, desktop notifications, meeting capture, live voice
+Select an installed local voice model in **Settings → Chat & voice**. Hold the dictation or command
+shortcut to record, then release to transcribe. Recording starts only from your shortcut; the same
+configurable tap/double-tap gestures apply. Dictation copies text by default. Optional insertion
+supports recognized native Edit/RichEdit fields, pins the process and focus generation, and leaves
+the clipboard unchanged. Password/read-only fields, browsers, terminals and focus changes fall back
+to copying for manual paste. It never presses Enter. Windows voice commands support Vults navigation
+and selected-player play/pause/previous/next, with their existing opt-in settings. Application launch,
+computer/player volume, music ducking and the X11-only Space/Escape gestures remain unavailable.
+Voice never grants an agent permission. Locking or revoking consent cancels the recording.
+
+The native MCP question bridge, desktop notifications, meeting capture, live voice
 conversation and raising an existing terminal window are still Linux-only. On Windows,
 the terminal action falls back to opening the project folder. Chat microphone capture and local
 transcription are separate from global dictation; microphone/model acceptance still requires a
@@ -87,14 +99,14 @@ their explicit lifecycle because a gateway worker can end while its conversation
 The Windows backends use Microsoft's [media-session API](https://learn.microsoft.com/en-us/uwp/api/windows.media.control.globalsystemmediatransportcontrolssessionmanager)
 and [session lock flags](https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ns-wtsapi32-wtsinfoex_level1_w).
 
-The remaining Windows implementation order and acceptance criteria are:
+The Windows roadmap and acceptance criteria are:
 
 | Order | Module | Required acceptance before calling it supported |
 | --- | --- | --- |
 | 1 | Sessions, hooks and metrics | Native exe/npm launchers, cmd/PowerShell wrappers, Unicode and spaced paths, process exit/PID reuse, native MCP question ownership, unknown versus zero, cumulative tokens versus current context, actual versus estimated cost, elapsed-time semantics and stale/reset reports. Subscription reads retain their separate network switches. |
 | 2 | Notifications | Registered application identity for installed and development builds; per-session replacement, withdrawal, Open-only activation, do not disturb, setting off, shutdown and notification-service failure. |
-| 3 | Focus, clipboard and text insertion | Pin the exact foreground window/process and focus generation; Unicode/IME, clipboard restoration, user clipboard changes, cancellation, protected/elevated targets and focus changes must never type into another window. |
-| 4 | Global dictation and voice commands | Native press/release/cancel shortcuts, device selection, local transcription, the insertion checks above, lock interruption and consent revocation. Keep the existing command approval and audit rules. |
+| 3 | Focus, clipboard and text insertion | Native Edit/RichEdit delivery implemented with Unicode selection fixtures and protected-field refusal. Direct insertion preserves the clipboard. Broader editor/IME/elevated-target and native focus-change acceptance remains. |
+| 4 | Global dictation and voice commands | Basic native shortcuts, selected-device capture and local transcription implemented; local Turbo speech/silence fixtures pass. Vults navigation and selected-player commands reuse existing permission rules. Physical microphone, lock interruption and consent-revocation acceptance remains. |
 | 5 | Audio and meetings | WASAPI microphone and output loopback, endpoint identity/change/unplug, cancellation on lock or page loss, bounded buffers, recoverable recording and local transcription. Live conversation additionally needs echo cancellation, interruption and route-change tests. |
 | 6 | Desktop completion | Raise the exact existing terminal, installed application inventory, per-application volume and temporary music ducking/restoration; validate native multi-monitor 100/125/150/175/200% DPI, reconnect, sleep/wake, autostart and installed upgrades. |
 

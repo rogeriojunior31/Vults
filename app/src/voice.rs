@@ -36,11 +36,7 @@ pub(crate) fn language(app: &AppHandle) -> Option<String> {
 }
 
 fn system_language() -> Option<String> {
-    ["LC_ALL", "LC_MESSAGES", "LANG"]
-        .iter()
-        .filter_map(|v| std::env::var(v).ok())
-        .find(|v| !v.is_empty())
-        .and_then(|v| language_of(&v))
+    vults_platform::system_language().and_then(|locale| language_of(&locale))
 }
 
 /// `pt` from `pt_BR.UTF-8`; none for `C` / `POSIX`.

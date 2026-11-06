@@ -64,6 +64,7 @@ fn extracts_manifest_names_modules_files_and_branch_without_source_bodies() {
     tree.write(".env", "PRIVATE_SECRET");
     let outside = Tree::new();
     outside.write("Cargo.toml", "[package]\nname = 'ForbiddenLinkedName'\n");
+    #[cfg(unix)]
     std::os::unix::fs::symlink(&outside.0, tree.0.join("linked")).unwrap();
     let words = extract(&tree.repo());
     for expected in [
@@ -108,6 +109,7 @@ fn malformed_oversized_and_linked_manifests_fall_back_to_names_with_bounded_word
     std::fs::remove_file(tree.0.join("Cargo.toml")).unwrap();
     let outside = Tree::new();
     outside.write("Cargo.toml", "[package]\nname = 'ForbiddenSymlinkName'\n");
+    #[cfg(unix)]
     std::os::unix::fs::symlink(outside.0.join("Cargo.toml"), tree.0.join("Cargo.toml")).unwrap();
     assert!(!extract(&tree.repo()).contains(&"ForbiddenSymlinkName".into()));
     for n in 0..300 {
