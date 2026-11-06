@@ -104,9 +104,16 @@ and selected-player play/pause/previous/next, with their existing opt-in setting
 computer/player volume, music ducking and the X11-only Space/Escape gestures remain unavailable.
 Voice never grants an agent permission. Locking or revoking consent cancels the recording.
 
-The native MCP question bridge, desktop notifications, meeting capture, live voice
-conversation and raising an existing terminal window are still Linux-only. On Windows,
-the terminal action falls back to opening the project folder. Chat microphone capture and local
+Windows session navigation discovers the nearest same-user ancestor that owns a visible window.
+The agent's creation time is pinned when the session is observed and checked again on activation.
+Multiple editor windows require a unique project-folder title match; ambiguous or unreadable targets
+keep the project-folder action. Minimized targets are restored, and Windows must acknowledge the
+foreground change. No keystrokes are sent. A classic console whose window owner is outside the
+agent's ancestry keeps the folder fallback. Native Windows Terminal/editor and foreground-policy
+acceptance still requires a desktop test.
+
+The native MCP question bridge, desktop notifications, meeting capture and live voice
+conversation are still Linux-only. Chat microphone capture and local
 transcription are separate from global dictation; microphone/model acceptance still requires a
 real-device test. Renderer scale emulation does not establish native per-monitor DPI acceptance.
 

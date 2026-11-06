@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 79cf8a439083 -->
+<!-- source: dbef92a4ee11 -->
 
 <a id="install"></a>
 
@@ -114,10 +114,17 @@ de consentimento existentes. Abrir aplicativos, volume do computador/player, red
 gestos de Espaço/Escape exclusivos do X11 continuam indisponíveis. A voz nunca concede permissões
 a um agente. Bloquear a tela ou revogar o consentimento cancela a gravação.
 
-A ponte nativa de perguntas MCP, notificações do desktop, captura de reuniões,
-conversa de voz ao vivo e trazer uma janela de terminal existente para a frente
-ainda são exclusivos do Linux. No Windows, a ação de terminal usa a abertura da pasta do projeto
-como alternativa. A captura de microfone e a transcrição local do Chat são separadas do ditado
+A navegação de sessões no Windows descobre o ancestral mais próximo do mesmo usuário que possui
+uma janela visível. O horário de criação do agente é fixado quando a sessão é observada e conferido
+novamente na ativação. Várias janelas de um editor exigem uma correspondência única com o nome da
+pasta do projeto no título; destinos ambíguos ou ilegíveis mantêm a ação de abrir a pasta. Destinos
+minimizados são restaurados, e o Windows precisa confirmar a mudança do primeiro plano. Nenhuma
+tecla é enviada. Um console clássico cujo dono da janela está fora da ancestralidade do agente
+mantém a alternativa da pasta. A aceitação com Windows Terminal/editores e a política de primeiro
+plano ainda exige teste no desktop.
+
+A ponte nativa de perguntas MCP, notificações do desktop, captura de reuniões e conversa de voz
+ao vivo ainda são exclusivas do Linux. A captura de microfone e a transcrição local do Chat são separadas do ditado
 global; a aceitação de microfone/modelo ainda exige teste com um dispositivo real. A emulação
 de escala do renderizador não comprova a aceitação de DPI nativo por monitor.
 

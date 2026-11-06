@@ -58,6 +58,8 @@ mod voice;
 pub mod voice_commands;
 mod web_tools;
 mod widget;
+#[cfg(windows)]
+mod windows_terminals;
 mod writer;
 
 use std::sync::atomic::{AtomicBool, Ordering};

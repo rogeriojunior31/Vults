@@ -7,6 +7,9 @@ pub mod system_audio;
 
 #[cfg(target_os = "linux")]
 pub mod jump;
+#[cfg(windows)]
+#[path = "windows/jump.rs"]
+pub mod jump;
 
 #[cfg(target_os = "linux")]
 pub mod focus;
