@@ -235,3 +235,8 @@ body.still #settings .page-enter { animation: none; }
 #settings .diagnostic-bands progress::-webkit-progress-bar { background: var(--raised); }
 #settings .diagnostic-bands progress::-webkit-progress-value { background: var(--mark-fill); border-radius: 4px; }
 #settings .diagnostic-bands progress::-moz-progress-bar { background: var(--mark-fill); border-radius: 4px; }
+/* Shortcut drafts stay readable when the settings sidebar narrows the page. */
+.shortcut-controls, .shortcut-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.shortcut-controls select { min-height: 32px; max-width: 100%; }
+.shortcut-actions { padding: 12px 0; }
+.windows-shortcuts { min-width: 0; }

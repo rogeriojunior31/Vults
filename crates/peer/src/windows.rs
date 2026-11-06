@@ -12,6 +12,111 @@ use windows::Win32::System::Threading::{
 };
 use windows::core::PWSTR;
 
+/// A same-user process's creation time; missing/exited is distinct from inaccessible.
+pub fn process_birth(pid: u32) -> Option<Option<u64>> {
+    use windows::Win32::Foundation::{ERROR_INVALID_PARAMETER, FILETIME};
+    use windows::Win32::System::Threading::GetProcessTimes;
+    if pid <= 1 {
+        return None;
+    }
+    let mine = current_user_sid()?;
+    // SAFETY: query-only handle, valid output buffers, and every opened handle is closed.
+    unsafe {
+        let process = match OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) {
+            Ok(process) => process,
+            Err(error) if error.code() == ERROR_INVALID_PARAMETER.to_hresult() => return Some(None),
+            Err(_) => return None,
+        };
+        let result = (|| {
+            if token_sid(process).as_deref() != Some(mine.as_str()) {
+                return None;
+            }
+            let mut creation = FILETIME::default();
+            let mut exit = FILETIME::default();
+            let mut kernel = FILETIME::default();
+            let mut user = FILETIME::default();
+            GetProcessTimes(process, &mut creation, &mut exit, &mut kernel, &mut user).ok()?;
+            if exit.dwLowDateTime != 0 || exit.dwHighDateTime != 0 {
+                return Some(None);
+            }
+            Some(Some(
+                (u64::from(creation.dwHighDateTime) << 32) | u64::from(creation.dwLowDateTime),
+            ))
+        })();
+        let _ = CloseHandle(process);
+        result
+    }
+}
+
+/// Skip hook shells without attributing a session to a recycled or foreign parent PID.
+pub fn agent_pid() -> u32 {
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW, TH32CS_SNAPPROCESS,
+    };
+    // SAFETY: the snapshot is closed after enumeration and the structure has its required size.
+    let processes = unsafe {
+        let Ok(snapshot) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else {
+            return 0;
+        };
+        let mut entry = PROCESSENTRY32W {
+            dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+            ..Default::default()
+        };
+        let mut rows = Vec::new();
+        let mut next = Process32FirstW(snapshot, &mut entry);
+        while next.is_ok() && rows.len() < 65_536 {
+            let end = entry
+                .szExeFile
+                .iter()
+                .position(|ch| *ch == 0)
+                .unwrap_or(entry.szExeFile.len());
+            rows.push((
+                entry.th32ProcessID,
+                entry.th32ParentProcessID,
+                String::from_utf16_lossy(&entry.szExeFile[..end]),
+            ));
+            next = Process32NextW(snapshot, &mut entry);
+        }
+        let _ = CloseHandle(snapshot);
+        rows
+    };
+    let mut pid = std::process::id();
+    let Some(Some(mut birth)) = process_birth(pid) else {
+        return 0;
+    };
+    for _ in 0..8 {
+        let Some((_, parent, _)) = processes.iter().find(|(id, _, _)| *id == pid) else {
+            return 0;
+        };
+        let Some(Some(parent_birth)) = process_birth(*parent) else {
+            return 0;
+        };
+        if parent_birth > birth || *parent == pid {
+            return 0;
+        }
+        pid = *parent;
+        birth = parent_birth;
+        let Some((_, _, name)) = processes.iter().find(|(id, _, _)| *id == pid) else {
+            return 0;
+        };
+        if !matches!(
+            name.to_ascii_lowercase().as_str(),
+            "cmd.exe"
+                | "powershell.exe"
+                | "pwsh.exe"
+                | "sh.exe"
+                | "bash.exe"
+                | "dash.exe"
+                | "zsh.exe"
+                | "fish.exe"
+                | "busybox.exe"
+        ) {
+            return pid;
+        }
+    }
+    0
+}
+
 /// The SID this process runs as, as `S-1-5-21-…`.
 pub fn current_user_sid() -> Option<String> {
     // SAFETY: the pseudo-handle from GetCurrentProcess is always valid and needs no close.
@@ -84,5 +189,65 @@ unsafe fn token_sid(process: HANDLE) -> Option<String> {
         let sid = text.to_string().ok();
         let _ = LocalFree(Some(HLOCAL(text.0.cast())));
         sid
+    }
+}
+
+#[cfg(test)]
+mod process_tests {
+    #[test]
+    fn hook_shells_resolve_to_the_long_lived_owner() {
+        if let Ok(expected) = std::env::var("VULTS_TEST_OWNER_PID") {
+            assert_eq!(super::agent_pid(), expected.parse::<u32>().unwrap());
+            return;
+        }
+        use std::os::windows::process::CommandExt;
+        for (shell, args) in [
+            (
+                "cmd.exe",
+                vec![
+                    "/d",
+                    "/c",
+                    "\"%VULTS_TEST_CHILD_EXE%\" --exact windows::process_tests::hook_shells_resolve_to_the_long_lived_owner",
+                ],
+            ),
+            (
+                "powershell.exe",
+                vec![
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    "& $env:VULTS_TEST_CHILD_EXE --exact windows::process_tests::hook_shells_resolve_to_the_long_lived_owner; exit $LASTEXITCODE",
+                ],
+            ),
+        ] {
+            let mut command = std::process::Command::new(shell);
+            if shell == "cmd.exe" {
+                command.raw_arg(r#"/d /s /c ""%VULTS_TEST_CHILD_EXE%" --exact windows::process_tests::hook_shells_resolve_to_the_long_lived_owner""#);
+            } else {
+                command.args(args);
+            }
+            let output = command
+                .env("VULTS_TEST_OWNER_PID", std::process::id().to_string())
+                .env("VULTS_TEST_CHILD_EXE", std::env::current_exe().unwrap())
+                .creation_flags(0x0800_0000)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{shell}: {} {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+
+    #[test]
+    fn current_process_has_a_stable_birth_and_unknown_pids_are_not_alive() {
+        let birth = super::process_birth(std::process::id());
+        assert!(matches!(birth, Some(Some(_))));
+        assert_eq!(birth, super::process_birth(std::process::id()));
+        assert_eq!(super::process_birth(0), None);
+        assert_eq!(super::process_birth(u32::MAX), Some(None));
+        assert!(super::agent_pid() > 1);
     }
 }

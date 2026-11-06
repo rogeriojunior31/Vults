@@ -84,6 +84,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   return async (...args) => {
     switch (name) {
       case "appSettings": return initialSettings;
+      case "windowsShortcuts": return null;
       case "questionInstallStatus": return [];
       case "dictationMicrophones": return new Promise((resolve, reject) => microphoneReads.push({ resolve, reject }));
       case "dictationClear": writes.push([name]); return new Promise((resolve, reject) => pendingErases.push({ resolve, reject }));

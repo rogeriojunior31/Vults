@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 46;
+const VERSION: u32 = 47;
 
 /// The `data-theme` of every window. The three SP Night themes come from the sp-night palette.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
@@ -29,6 +29,9 @@ pub enum Theme {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Settings {
     pub version: u32,
+    /// Windows-only overrides; an empty chord disables an action, absent keeps its default.
+    #[serde(default)]
+    pub windows_shortcuts: BTreeMap<String, String>,
     /// Connector id → enabled. Off until the user turns one on.
     #[serde(default)]
     pub connectors: BTreeMap<String, bool>,
@@ -374,6 +377,7 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            windows_shortcuts: BTreeMap::new(),
             version: VERSION,
             connectors: BTreeMap::new(),
             zeca_github_snapshot: true,
@@ -2486,6 +2490,7 @@ mod tests {
         // The file becomes this version's, so a save marks the keys an older release would drop.
         let expected = Settings {
             version: VERSION,
+            windows_shortcuts: BTreeMap::new(),
             connectors: BTreeMap::from([("github".into(), true)]),
             zeca_github_snapshot: true,
             zeca_github_work_item: false,

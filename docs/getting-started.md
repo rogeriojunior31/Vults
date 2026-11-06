@@ -39,7 +39,8 @@ Vults when you log in.
 
 The Windows release installer remains a preview. This development checkout adds native input
 regions, keyboard focus, global navigation shortcuts, tray opening, monitor selection and the
-shared Room/Settings window. Linux retains its existing desktop integrations.
+shared Room/Settings window. It also tracks same-user session processes, observes screen locking,
+and reads and controls Windows system media sessions. Linux retains its existing desktop integrations.
 
 Install these prerequisites together: Node.js 22 or a newer supported LTS, Rust for
 `x86_64-pc-windows-msvc`, Visual Studio **Desktop development with C++** (MSVC x64/x86,
@@ -63,11 +64,42 @@ Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** op
 **Ctrl+Alt+F8/F9** allows/denies the visible card; **Ctrl+Alt+F10** cancels Chat voice. A key already
 owned by another application is left unbound. Settings shows only successful registrations.
 
-Global dictation/insertion, voice commands, desktop notifications, system media integration,
-screen-lock observation and raising an existing terminal window are still Linux-only. On Windows,
+Change Windows keys in **Settings → General → Keyboard shortcuts** (also available in Dictation's
+keys section). Choose the modifiers and key for each action, or **Disabled**, then **Apply shortcuts**.
+Changes take effect immediately and persist across restarts. **Restore defaults** stages the original
+combinations; apply them explicitly. A conflict or save failure keeps the previous active bindings.
+Windows/typing keys, Escape, Delete and F12 are excluded. The OS can detect other registered global
+shortcuts; an application's private/local shortcuts cannot be detected. If a choice interferes with
+one of those, disable it or choose another combination here. Linux retains its desktop shortcut editor.
+
+Global dictation/insertion, voice commands, the native MCP question bridge, desktop notifications, meeting capture, live voice
+conversation and raising an existing terminal window are still Linux-only. On Windows,
 the terminal action falls back to opening the project folder. Chat microphone capture and local
 transcription are separate from global dictation; microphone/model acceptance still requires a
 real-device test. Renderer scale emulation does not establish native per-monitor DPI acceptance.
+
+Now Playing runs only with its setting enabled. Play/pause and previous/next target the displayed
+player; duplicate application sessions are refused rather than controlling another window. Per-player
+volume is not provided by the Windows media-session API. Screen locking is observed every 500 ms;
+an unreadable state never counts as an unlock. Process liveness uses the creation time to detect PID
+reuse and never closes a session whose owner was not previously observed. Hermes conversations keep
+their explicit lifecycle because a gateway worker can end while its conversation remains open.
+The Windows backends use Microsoft's [media-session API](https://learn.microsoft.com/en-us/uwp/api/windows.media.control.globalsystemmediatransportcontrolssessionmanager)
+and [session lock flags](https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ns-wtsapi32-wtsinfoex_level1_w).
+
+The remaining Windows implementation order and acceptance criteria are:
+
+| Order | Module | Required acceptance before calling it supported |
+| --- | --- | --- |
+| 1 | Sessions, hooks and metrics | Native exe/npm launchers, cmd/PowerShell wrappers, Unicode and spaced paths, process exit/PID reuse, native MCP question ownership, unknown versus zero, cumulative tokens versus current context, actual versus estimated cost, elapsed-time semantics and stale/reset reports. Subscription reads retain their separate network switches. |
+| 2 | Notifications | Registered application identity for installed and development builds; per-session replacement, withdrawal, Open-only activation, do not disturb, setting off, shutdown and notification-service failure. |
+| 3 | Focus, clipboard and text insertion | Pin the exact foreground window/process and focus generation; Unicode/IME, clipboard restoration, user clipboard changes, cancellation, protected/elevated targets and focus changes must never type into another window. |
+| 4 | Global dictation and voice commands | Native press/release/cancel shortcuts, device selection, local transcription, the insertion checks above, lock interruption and consent revocation. Keep the existing command approval and audit rules. |
+| 5 | Audio and meetings | WASAPI microphone and output loopback, endpoint identity/change/unplug, cancellation on lock or page loss, bounded buffers, recoverable recording and local transcription. Live conversation additionally needs echo cancellation, interruption and route-change tests. |
+| 6 | Desktop completion | Raise the exact existing terminal, installed application inventory, per-application volume and temporary music ducking/restoration; validate native multi-monitor 100/125/150/175/200% DPI, reconnect, sleep/wake, autostart and installed upgrades. |
+
+Every phase retains the Linux backend and its regression checks. Automated fixture tests and renderer
+scale tests do not replace a native device, compositor, installer or multi-monitor acceptance test.
 
 ## Connecting your agents
 

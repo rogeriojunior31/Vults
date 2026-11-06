@@ -84,6 +84,9 @@ try {
     ]) for (const destination of destinations) {
       await island.invoke(command, { [argument]: destination, full: false });
       await pause(50);
+      const shortcutsOpen = group === 'settings' && destination === 'general'
+        ? await page.evaluate(`(() => { const details = document.querySelector('.windows-shortcuts')?.closest('details'); if (!details) return null; const open = details.open; details.open = true; return open; })()`)
+        : null;
       const row = { theme, scale, width, height, page: `${group}/${destination}`, ...await page.evaluate(expression) };
       if (await page.evaluate('document.hidden')) throw new Error(`Requested page remained hidden: ${row.page}`);
       results.push(row);
@@ -91,6 +94,7 @@ try {
       if (failed || (theme === 'dark' && ((scale === 1 && width === 1180) || (scale === 2 && width === 480)))) {
         await page.screenshot(`${group}-${destination}-${theme}-${width}-${scale}`);
       }
+      if (shortcutsOpen !== null) await page.evaluate(`(() => { const details = document.querySelector('.windows-shortcuts')?.closest('details'); if (details) details.open = ${JSON.stringify(shortcutsOpen)}; })()`);
       if (Date.now() - lastUpdate > 15000) {
         console.log(`Checked ${results.length} desktop page/scale combinations.`);
         lastUpdate = Date.now();

@@ -48,14 +48,34 @@ pub struct Row {
 /// `command` on the `PATH`, as the app would run it.
 fn find(command: &str) -> Option<PathBuf> {
     let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|d| d.join(command))
-        .find(|p| p.is_file())
+    find_in(command, &path)
+}
+
+fn find_in(command: &str, path: &std::ffi::OsStr) -> Option<PathBuf> {
+    std::env::split_paths(path)
+        .filter(|dir| dir.is_absolute())
+        .find_map(|dir| {
+            #[cfg(windows)]
+            {
+                ["exe", "cmd", "bat"]
+                    .into_iter()
+                    .map(|ext| dir.join(command).with_extension(ext))
+                    .find(|p| p.is_file())
+            }
+            #[cfg(not(windows))]
+            {
+                let file = dir.join(command);
+                file.is_file().then_some(file)
+            }
+        })
 }
 
 /// The first line `--version` prints, cut; none when it fails or takes too long.
 fn version(exe: &Path) -> Option<String> {
+    let started = Instant::now();
     let mut cmd = Command::new(exe);
+    #[cfg(windows)]
+    std::os::windows::process::CommandExt::creation_flags(&mut cmd, 0x0800_0000);
     cmd.arg("--version")
         .envs(vults_agents::shell_env())
         .stdin(Stdio::null())
@@ -86,8 +106,17 @@ fn version(exe: &Path) -> Option<String> {
         let _ = child.wait();
         return None;
     };
-    if !child.wait().is_ok_and(|s| s.success()) {
-        return None;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => break,
+            Ok(Some(_)) | Err(_) => return None,
+            Ok(None) if started.elapsed() < VERSION_TIMEOUT => std::thread::sleep(Duration::from_millis(10)),
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+        }
     }
     let out = String::from_utf8_lossy(&out);
     let line = out.lines().map(str::trim).find(|l| !l.is_empty())?;
@@ -198,7 +227,7 @@ pub async fn agents_doctor(fresh: bool) -> Vec<Row> {
     .unwrap_or_default()
 }
 
-#[cfg(all(test, unix))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -224,6 +253,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_version_is_its_first_line_and_a_slow_cli_is_none() {
         let dir = std::env::temp_dir().join(format!("vults-doctor-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -256,5 +286,19 @@ mod tests {
         assert_eq!(version(&failing), None);
         assert_eq!(find("surely-not-a-command-vults"), None);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_doctor_finds_native_and_npm_launchers_and_reads_their_version() {
+        let dir = std::env::temp_dir().join(format!("vults-doctor-windows-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let shim = dir.join("fixture.cmd");
+        std::fs::write(&shim, "@echo off\r\necho 1.2.3\r\n").unwrap();
+        assert_eq!(find_in("fixture", dir.as_os_str()), Some(shim.clone()));
+        assert_eq!(version(&shim).as_deref(), Some("1.2.3"));
+        assert_eq!(find_in("fixture", std::ffi::OsStr::new("relative")), None);
+        std::fs::remove_file(shim).unwrap();
+        std::fs::remove_dir(dir).unwrap();
     }
 }

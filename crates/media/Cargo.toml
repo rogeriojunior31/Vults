@@ -14,5 +14,8 @@ tokio.workspace = true
 futures-util = { version = "0.3", default-features = false }
 zbus = { version = "5", default-features = false, features = ["tokio"] }
 
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = ["Media_Control", "Foundation_Collections"] }
+
 [lints]
 workspace = true

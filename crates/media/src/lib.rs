@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 mod mpris;
 #[cfg(target_os = "linux")]
 pub use mpris::{Target, control, pin, watch};
+#[cfg(windows)]
+mod windows_media;
+#[cfg(windows)]
+pub use windows_media::{Target, control, pin, watch};
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct NowPlaying {
@@ -32,7 +36,7 @@ pub enum Control {
     VolumeDown,
 }
 
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(target_os = "linux", windows, test))]
 impl Control {
     fn validate(self) -> Result<(), String> {
         if matches!(self, Self::Volume(percent) if percent > 100) {
@@ -41,6 +45,7 @@ impl Control {
         Ok(())
     }
 
+    #[cfg(any(target_os = "linux", test))]
     fn method(self) -> Option<&'static str> {
         match self {
             Self::PlayPause => Some("PlayPause"),

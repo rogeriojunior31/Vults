@@ -69,6 +69,7 @@ fn system(
         session: match session {
             "wayland" => "Wayland",
             "x11" => "X11",
+            "windows" => "Windows",
             _ => "unknown",
         },
         shortcuts: if shortcuts_bound { "ready" } else { "unavailable" },
@@ -79,7 +80,7 @@ fn system(
         } else {
             "unavailable".into()
         },
-        kwin: if session == "x11" {
+        kwin: if matches!(session, "x11" | "windows") {
             "not-needed"
         } else if focus_ready {
             "ready"
@@ -118,7 +119,11 @@ pub async fn dictation_doctor(app: AppHandle, window: tauri::Webview) -> Result<
         Ok(Report {
             system: system(
                 vults_audio::input_info(device.as_deref()),
-                &std::env::var("XDG_SESSION_TYPE").unwrap_or_default(),
+                &if cfg!(windows) {
+                    String::from("windows")
+                } else {
+                    std::env::var("XDG_SESSION_TYPE").unwrap_or_default()
+                },
                 bound,
                 &keyboard,
                 focus,

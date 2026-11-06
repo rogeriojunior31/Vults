@@ -68,16 +68,33 @@ fn probe(pid: u32) -> Option<Option<u64>> {
         }
         Some(Some(fields.get(19)?.parse().ok()?))
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(windows)]
+    return vults_peer::process_birth(pid);
+    #[cfg(not(any(target_os = "linux", windows)))]
     None
 }
 
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(all(test, any(target_os = "linux", windows)))]
 mod tests {
     use super::*;
     #[test]
     fn a_real_open_process_is_present_and_its_exit_is_confirmed() {
+        #[cfg(target_os = "linux")]
         let mut child = std::process::Command::new("sleep").arg("30").spawn().unwrap();
+        #[cfg(windows)]
+        let mut child = {
+            use std::os::windows::process::CommandExt;
+            std::process::Command::new("powershell.exe")
+                .args([
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    "Start-Sleep -Seconds 30",
+                ])
+                .creation_flags(0x08000000)
+                .spawn()
+                .unwrap()
+        };
         let candidate = (
             SessionKey {
                 agent: vults_core::AgentKind::Claude,

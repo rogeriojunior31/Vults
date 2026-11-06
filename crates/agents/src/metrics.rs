@@ -789,7 +789,8 @@ impl Reader {
                     let Some((actual, estimated, status)) = row else { return Some((key.clone(), Snapshot::default())); };
                     let mut info = hermes_info(hermes.as_ref()?, key.session_id.strip_prefix("hermes/")?);
                     let valid = |n: f64| n.is_finite() && n >= 0.0;
-                    let cost = actual.filter(|n| valid(*n)).or_else(|| {
+                    let actual = actual.filter(|n| valid(*n));
+                    let cost = actual.or_else(|| {
                         match status.as_deref() { Some("estimated") => estimated.filter(|n| valid(*n)), Some("included") => Some(0.0), _ => None }
                     });
                     info.cost_source = cost.map(|_| if actual.is_some() || status.as_deref() == Some("included") { CostSource::Agent } else { CostSource::AgentEstimate });
@@ -1194,19 +1195,21 @@ mod tests {
         let db = Connection::open(home.join("state.db")).unwrap();
         db.execute_batch("CREATE TABLE sessions (id TEXT, actual_cost_usd REAL, estimated_cost_usd REAL, cost_status TEXT);
             INSERT INTO sessions VALUES ('estimated',NULL,0.0042,'estimated'), ('actual',0.25,0.2,'actual'),
-            ('unknown',NULL,99,'unknown'),('included',NULL,NULL,'included');").unwrap();
+            ('unknown',NULL,99,'unknown'),('included',NULL,NULL,'included'),
+            ('invalid-actual',-1,0.125,'estimated');").unwrap();
         db.execute_batch("ALTER TABLE sessions ADD COLUMN ended_at REAL; UPDATE sessions SET ended_at=100 WHERE id='actual';").unwrap();
         drop(db);
         let dirs = crate::Dirs::home_only(&root);
-        let keys: Vec<_> = ["estimated", "actual", "unknown", "included"]
+        let keys: Vec<_> = ["estimated", "actual", "unknown", "included", "invalid-actual"]
             .iter()
             .map(|id| key(AgentKind::Other, &format!("hermes/{id}")))
             .collect();
         let reports = Reader::default().read(&dirs, &root, &keys);
         assert_eq!(
             reports.iter().map(|r| r.1.cost_usd).collect::<Vec<_>>(),
-            vec![Some(0.0042), Some(0.25), None, Some(0.0)]
+            vec![Some(0.0042), Some(0.25), None, Some(0.0), Some(0.125)]
         );
+        assert_eq!(reports[4].1.info.cost_source, Some(CostSource::AgentEstimate));
         assert!(reports[1].1.session_closed);
         assert!(!reports[0].1.session_closed);
         let current =

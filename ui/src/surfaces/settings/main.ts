@@ -24,6 +24,7 @@ import { createMeetingSettings } from "./meeting-summary";
 import { createCleanupSettings } from "./dictation-styles";
 import { createQuestionAgents } from "./question-agents";
 import { createDictationDoctor } from "./dictation-doctor";
+import { createWindowsShortcuts } from "./windows-shortcuts";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { historyCard, type Activity, type ActivityActions } from "./activity";
 import { createBudget } from "./budget";
@@ -93,6 +94,10 @@ const keepShortcuts = (keys: Record<string, string>) => {
 };
 Bridge.onShortcutKeys(keepShortcuts);
 void Bridge.shortcutKeys().then(keepShortcuts, () => {});
+const windowsShortcuts = createWindowsShortcuts({ read: Bridge.windowsShortcuts, save: Bridge.setWindowsShortcuts }, () => {
+  if (page === "general" || page === "dictation") render();
+});
+windowsShortcuts.initialize();
 
 const budget = createBudget({ today: Bridge.spendToday, setBudget: Bridge.budgetSet });
 Bridge.onSpend(() => { if (page === "activity") budget.refresh(); });
@@ -1039,13 +1044,14 @@ function generalPage(): HTMLElement[] {
     disclosure(t("Keyboard shortcuts"), el(
       "section",
       { class: "card rows" },
-      row(t("Allow / Deny from anywhere"), t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: "Ctrl+Alt+Y · Ctrl+Alt+N" })),
+      windowsShortcuts.render(),
+      row(t("Allow / Deny from anywhere"), windowsShortcuts.supported() ? t("Use the Windows shortcut editor above to change these keys.") : t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: boundKeys("allow", "deny") })),
       row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
       row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
       row(t("Dictation settings"), t("Configure dictation keys, feedback, insertion and history in its own page."), button(t("Dictation settings"), () => chooseDictation("voice"))),
-      row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: "Ctrl+Alt+J · Ctrl+Alt+K" })),
-      row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: "Ctrl+Alt+Space" })),
-      row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: "Ctrl+Alt+1 · 2 · 3" })),
+      row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: boundKeys("next", "previous") })),
+      row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: boundKeys("open") })),
+      row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: boundKeys("mini", "quick", "room") })),
       row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
       row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
     )),
@@ -1179,7 +1185,8 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
         row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), el("span", { class: "kbd", text: boundKeys("talk-again") })),
         row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), el("span", { class: "kbd", text: boundKeys("talk-cancel") })),
-        row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops manage global keys in their own settings."), shortcutEditor),
+        windowsShortcuts.render(),
+        ...(windowsShortcuts.desktopEditor() ? [row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops manage global keys in their own settings."), shortcutEditor)] : []),
         ...(shortcutsOpening || shortcutsOpenFailed ? [shortcutFeedback] : []),
       ),
       el("h2", { text: t("Recording controls") }),

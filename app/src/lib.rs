@@ -44,6 +44,7 @@ mod roosts;
 mod runtime;
 mod session_presence;
 mod settings;
+mod shortcut_settings;
 mod sleep;
 mod specialist_github;
 mod spend;
@@ -362,6 +363,8 @@ pub fn run() {
             nest_is_open,
             nest_holds_cards,
             shortcut_keys,
+            shortcut_settings::windows_shortcut_settings,
+            shortcut_settings::set_windows_shortcuts,
             open_shortcut_settings,
             dictation_status,
             dictation_overlay::dictation_overlay_ready,
@@ -1020,23 +1023,37 @@ fn listen_shortcuts(app: &AppHandle) {
     use tauri::Emitter;
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let result = vults_platform::windows_shortcuts::listen(
-            |bound| {
-                tracing::info!(count = bound.len(), "global shortcuts bound");
-                let map: std::collections::BTreeMap<_, _> = bound.into_iter().collect();
-                if let Ok(mut kept) = app.state::<ShortcutKeys>().0.lock() {
+        let initial = app
+            .state::<settings::SettingsState>()
+            .0
+            .lock()
+            .map(|settings| settings.windows_shortcuts.clone())
+            .unwrap_or_default();
+        let keys = app.clone();
+        let events = app.clone();
+        let result = vults_platform::windows_shortcuts::start(
+            initial,
+            move |status| {
+                let map = status.active.clone();
+                tracing::info!(
+                    count = map.len(),
+                    conflicts = status.conflicts.len(),
+                    "global shortcuts bound"
+                );
+                if let Ok(mut kept) = keys.state::<ShortcutKeys>().0.lock() {
                     kept.clone_from(&map);
                 }
-                let _ = app.emit("shortcut-keys", map);
+                let _ = keys.emit("shortcut-keys", map);
+                let _ = keys.emit("windows-shortcuts", status);
             },
-            |id| match id {
-                "next" => runtime::shortcut_intent(&app, vults_core::Intent::FocusNext),
-                "previous" => runtime::shortcut_intent(&app, vults_core::Intent::FocusPrevious),
-                "mini" | "quick" | "room" => size_to(&app, id, None),
+            move |id| match id {
+                "next" => runtime::shortcut_intent(&events, vults_core::Intent::FocusNext),
+                "previous" => runtime::shortcut_intent(&events, vults_core::Intent::FocusPrevious),
+                "mini" | "quick" | "room" => size_to(&events, id, None),
                 "talk-cancel" => {
-                    voice::cancel(&app);
+                    voice::cancel(&events);
                     for surface in [ISLAND, NEST] {
-                        let _ = app.emit_to(surface, "shortcut", id);
+                        let _ = events.emit_to(surface, "shortcut", id);
                     }
                 }
                 _ => {
@@ -1045,12 +1062,15 @@ fn listen_shortcuts(app: &AppHandle) {
                     } else {
                         ISLAND
                     };
-                    let _ = app.emit_to(target, "shortcut", id);
+                    let _ = events.emit_to(target, "shortcut", id);
                 }
             },
         );
-        if let Err(error) = result {
-            tracing::warn!("global shortcuts unavailable: {error}");
+        match result {
+            Ok(controller) => {
+                app.manage(controller);
+            }
+            Err(error) => tracing::warn!("global shortcuts unavailable: {error}"),
         }
     });
 }
