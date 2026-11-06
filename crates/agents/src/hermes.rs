@@ -149,7 +149,6 @@ mod tests {
         assert_eq!(home(&dirs), override_home);
     }
 
-    #[cfg(unix)]
     #[test]
     fn generated_python_observer_preserves_events_and_cannot_answer_or_leak_results() {
         let dir = std::env::temp_dir().join(format!("vults-hermes-plugin-{}", std::process::id()));
@@ -159,7 +158,7 @@ mod tests {
             .clone();
         let module = dir.join("plugin.py");
         std::fs::write(&module, code).unwrap();
-        let result = std::process::Command::new("python3")
+        let result = std::process::Command::new(if cfg!(windows) { "python" } else { "python3" })
             .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/hermes-plugin.py"))
             .arg(module)
             .env_remove("VULTS_RUN")

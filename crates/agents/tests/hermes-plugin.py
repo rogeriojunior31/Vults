@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 import sys
+import threading
 
 spec = importlib.util.spec_from_file_location('vults_hermes_test', sys.argv[1])
 module = importlib.util.module_from_spec(spec)
@@ -10,6 +11,8 @@ spec.loader.exec_module(module)
 records = []
 def relay(command, **kwargs):
     assert command[1:3] == ['--agent', 'hermes']
+    if os.name == 'nt':
+        assert kwargs['creationflags'] == module.subprocess.CREATE_NO_WINDOW
     records.append((command[-1], json.loads(kwargs['input'])))
 module.subprocess.run = relay
 class Context:
@@ -63,7 +66,24 @@ ctx.hooks['on_session_delete'](session_id='desktop')
 module._queue.join()
 assert records[-1][0] == 'SessionEnd' and records[-1][1]['session_id'] == 'desktop'
 
+# Teardown must deliver a queued close even when the previous event is still running.
+entered = threading.Event()
+release = threading.Event()
+def slow_relay(command, **kwargs):
+    if command[-1] == 'Stop':
+        entered.set()
+        assert release.wait(2)
+    relay(command, **kwargs)
+module.subprocess.run = slow_relay
+ctx.hooks['on_session_end'](session_id='closing')
+assert entered.wait(2)
+ctx.hooks['on_session_finalize'](session_id='closing')
+timer = threading.Timer(0.1, release.set)
+timer.start()
 for cleanup in ctx.unloads: cleanup()
+timer.join()
+assert records[-1][0] == 'SessionEnd' and records[-1][1]['session_id'] == 'closing'
+assert not module._worker.is_alive(), 'Unload must drain the old worker before reload'
 replacement = Context()
 module.register(replacement)
 assert len(replacement.hooks) == 10, 'Reload must register the hooks again even if the module is cached'

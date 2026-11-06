@@ -7,7 +7,6 @@ import queue
 import subprocess
 import sys
 import threading
-import time
 
 _RELAY = __VULTS_RELAY__
 _queue = queue.Queue(maxsize=128)
@@ -18,25 +17,26 @@ _seen_api = set()
 
 
 def _drain(pending, stop):
-    while not stop.is_set():
+    while not stop.is_set() or not pending.empty():
         try:
             event, payload = pending.get(timeout=0.2)
         except queue.Empty:
             continue
         try:
+            options = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
             subprocess.run([_RELAY, "--agent", "hermes", event], input=payload,
                            text=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                           timeout=2, check=False)
+                           timeout=2, check=False, **options)
         except Exception:
             pass
         finally:
             pending.task_done()
 
 
-def _flush():
-    deadline = time.monotonic() + 0.4
-    while _queue.unfinished_tasks and time.monotonic() < deadline:
-        time.sleep(0.01)
+def _shutdown(worker, stop):
+    # Drain this registration's queue before teardown; reload may already have a new queue.
+    stop.set()
+    worker.join(timeout=2.4)
 
 
 def _send(event, session_id="", tool_name="", args=None, tool_call_id="", **kwargs):
@@ -124,9 +124,11 @@ def register(ctx):
         stop = threading.Event()
         _worker = threading.Thread(target=_drain, args=(pending, stop), daemon=True, name="vults-hermes-relay")
         _worker.start()
-        atexit.register(_flush)
+        worker = _worker
+        cleanup = lambda: _shutdown(worker, stop)
+        atexit.register(cleanup)
     if callable(getattr(ctx, "on_unload", None)):
-        ctx.on_unload(stop.set)
+        ctx.on_unload(cleanup)
     ctx.register_hook("on_session_start", _start)
     ctx.register_hook("on_session_end", _done)
     ctx.register_hook("on_session_finalize", _finalize)
