@@ -64,6 +64,14 @@ Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** op
 **Ctrl+Alt+F8/F9** allows/denies the visible card; **Ctrl+Alt+F10** cancels Chat voice. A key already
 owned by another application is left unbound. Settings shows only successful registrations.
 
+Change Windows keys in **Settings → General → Keyboard shortcuts** (also available in Dictation's
+keys section). Choose the modifiers and key for each action, or **Disabled**, then **Apply shortcuts**.
+Changes take effect immediately and persist across restarts. **Restore defaults** stages the original
+combinations; apply them explicitly. A conflict or save failure keeps the previous active bindings.
+Windows/typing keys, Escape, Delete and F12 are excluded. The OS can detect other registered global
+shortcuts; an application's private/local shortcuts cannot be detected. If a choice interferes with
+one of those, disable it or choose another combination here. Linux retains its desktop shortcut editor.
+
 Global dictation/insertion, voice commands, the native MCP question bridge, desktop notifications, meeting capture, live voice
 conversation and raising an existing terminal window are still Linux-only. On Windows,
 the terminal action falls back to opening the project folder. Chat microphone capture and local

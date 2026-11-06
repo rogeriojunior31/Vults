@@ -528,6 +528,11 @@ export interface AgentProfile {
   providers?: AgentProvider[];
 }
 
+export type WindowsShortcuts = {
+  requested: Record<string, string>; active: Record<string, string>;
+  defaults: Record<string, string>; conflicts: string[];
+};
+
 export const Bridge = {
   agentProfiles: () => invoke<AgentProfile[]>("agent_profiles"),
   agentProfileSave: (edit: AgentProfileEdit, preferences?: AgentPreferenceEdit) => invoke<AgentProfile>("agent_profile_save", { edit, preferences: preferences ?? null }),
@@ -973,6 +978,8 @@ export const Bridge = {
   },
   /** The keys bound so far (the binding may have happened before this window loaded). */
   shortcutKeys: () => invoke<Record<string, string>>("shortcut_keys"),
+  windowsShortcuts: () => invoke<WindowsShortcuts | null>("windows_shortcut_settings"),
+  setWindowsShortcuts: (bindings: Record<string, string>) => invoke<WindowsShortcuts>("set_windows_shortcuts", { bindings }),
   openShortcutSettings: () => invoke<void>("open_shortcut_settings"),
   /** The keys the desktop bound, by shortcut id, to show on the buttons. */
   onShortcutKeys(cb: (keys: Record<string, string>) => void): void {

@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: e57d8d1deffc -->
+<!-- source: 010f680f48f9 -->
 
 <a id="install"></a>
 
@@ -71,6 +71,15 @@ Os atalhos do Windows usam teclas que não escrevem caracteres para preservar o 
 Mini/Rápido/Sala; **Ctrl+Alt+F8/F9** permite/nega o card visível; **Ctrl+Alt+F10** cancela a voz do
 Chat. Uma tecla já usada por outro aplicativo fica sem vínculo. As Configurações mostram apenas
 os registros bem-sucedidos.
+
+Altere as teclas do Windows em **Configurações → Geral → Atalhos de teclado** (também disponível na
+seção de teclas do Ditado). Escolha os modificadores e a tecla de cada ação, ou **Desativado**, e depois
+**Aplicar atalhos**. As alterações valem imediatamente e persistem entre reinícios. **Restaurar padrões**
+prepara as combinações originais; aplique-as explicitamente. Um conflito ou falha ao salvar mantém os
+vínculos ativos anteriores. Teclas Windows/de digitação, Escape, Delete e F12 ficam de fora. O sistema
+detecta outros atalhos globais registrados; atalhos internos/locais de um aplicativo não podem ser
+detectados. Se uma escolha interferir em um deles, desative-a ou escolha outra combinação aqui.
+O Linux mantém seu editor de atalhos do desktop.
 
 Ditado/inserção global, comandos de voz, ponte nativa de perguntas MCP, notificações do desktop, captura de reuniões,
 conversa de voz ao vivo e trazer uma janela de terminal existente para a frente
