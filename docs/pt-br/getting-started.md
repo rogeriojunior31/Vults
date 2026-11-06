@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 422f81028269 -->
+<!-- source: b3db35af60ec -->
 
 <a id="install"></a>
 
@@ -65,6 +65,16 @@ scripts\dev-windows.cmd
 A checagem informa as ferramentas ausentes antes de compilar. O inicializador muda apenas seu
 próprio ambiente. Se uma compilação anterior guardou outro gerador CMake no cache, execute
 `cargo clean -p whisper-rs-sys` uma vez.
+
+O inicializador ativa o recurso de compilação `voice-vulkan` quando os cabeçalhos do Vulkan SDK,
+`glslc` e `vulkan-1.lib` estão disponíveis por `VULKAN_SDK`, `C:\VulkanSDK` ou
+`target/local-tools/vulkan`. Use `scripts\dev-windows.cmd --gpu` para exigir essa compilação,
+ou `--cpu` como alternativa pela CPU. O SDK é uma dependência de compilação; a execução usa o
+driver Vulkan do fabricante da GPU. O inicializador informa a compilação escolhida antes de abrir.
+Compilações com GPU mapeiam temporariamente uma unidade livre de V a Z para seu cache local no
+checkout, evitando o limite de caminhos do gerador de shaders do MSVC, e removem esse mapeamento
+ao encerrar normalmente o inicializador. Um `CARGO_TARGET_DIR` explícito mantém seu dono e caminho existentes.
+A primeira compilação com GPU pode levar vários minutos; isso é separado da latência de transcrição.
 
 Os atalhos do Windows usam teclas que não escrevem caracteres para preservar o AltGr:
 **Ctrl+Alt+Space** abre a ilha; **Ctrl+Alt+Left/Right** muda a sessão; **Ctrl+Alt+F1/F2/F3** seleciona

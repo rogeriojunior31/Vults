@@ -59,6 +59,15 @@ scripts\dev-windows.cmd
 The check reports missing tools before compiling. The launcher changes only its own environment.
 If a previous build cached a different CMake generator, run `cargo clean -p whisper-rs-sys` once.
 
+The launcher enables the `voice-vulkan` build feature when Vulkan SDK headers, `glslc` and
+`vulkan-1.lib` are available through `VULKAN_SDK`, `C:\VulkanSDK`, or `target/local-tools/vulkan`.
+Use `scripts\dev-windows.cmd --gpu` to require that build, or `--cpu` for the CPU fallback.
+The SDK is a build dependency; execution uses the GPU vendor's Vulkan driver. The launcher reports
+the chosen build before starting. GPU builds temporarily map an unused drive from V through Z to
+their checkout-local build cache to avoid MSVC shader-generator path limits, then remove that mapping
+on normal launcher exit. An explicit `CARGO_TARGET_DIR` keeps its existing owner and path.
+The first GPU compilation can take several minutes; this is separate from transcription latency.
+
 Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** opens the island;
 **Ctrl+Alt+Left/Right** changes the session; **Ctrl+Alt+F1/F2/F3** selects Mini/Quick/Room;
 **Ctrl+Alt+F4** records dictation; **Ctrl+Alt+F5** records a voice command; **Ctrl+Alt+F6** copies
