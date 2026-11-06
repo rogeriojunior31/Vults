@@ -15,6 +15,16 @@ on:
     paths:
       - ".github/workflows/release.yml"
       - "app/tauri.bundle.*.json"
+      - "app/src/main.rs"
+      - "app/Cargo.toml"
+      - "crates/voice/Cargo.toml"
+      - "crates/voice/src/lib.rs"
+      - "Cargo.lock"
+      - "package.json"
+      - "scripts/bundle-windows*"
+      - "scripts/prepare-windows-vulkan.mjs"
+      - "scripts/verify-windows-installer.mjs"
+      - "scripts/windows-build-*.cmd"
 
 permissions:
   contents: read
@@ -95,6 +105,9 @@ jobs:
       - name: Collect them
         shell: bash
         run: mkdir dist-packages && cp ${{ matrix.files }} dist-packages/ && ls -l dist-packages
+      - name: Windows package verification report
+        if: runner.os == 'Windows'
+        run: Get-Content target/windows-vulkan/bundle-report.json
       - uses: actions/upload-artifact@v7
         with:
           name: packages-${{ matrix.name }}

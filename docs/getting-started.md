@@ -68,6 +68,17 @@ their checkout-local build cache to avoid MSVC shader-generator path limits, the
 on normal launcher exit. An explicit `CARGO_TARGET_DIR` keeps its existing owner and path.
 The first GPU compilation can take several minutes; this is separate from transcription latency.
 
+Build the Windows installer with `npm run bundle:windows -- --bundles nsis`. This command always
+enables Vulkan; a missing SDK never silently produces a CPU-only installer. It prepares pinned,
+SHA-256-checked SDK tools and an x64 Vulkan loader locally, without running their installers or
+changing system drivers. The loader and its license ship with Vults, so end users do not need the SDK.
+The app uses CPU transcription when no compatible Vulkan device is available.
+Packaging extracts the NSIS payload, checks its app/hook/loader/license against the build, and probes
+the packaged executable both normally and with driver discovery disabled. The probe
+(`vults.exe --voice-backend-check`) exits before profiles, windows or microphones start.
+The verified installer is copied to `target/release/bundle/nsis`, including when the build cache is
+on another drive. Release CI uses the same command and records the verification report.
+
 Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** opens the island;
 **Ctrl+Alt+Left/Right** changes the session; **Ctrl+Alt+F1/F2/F3** selects Mini/Quick/Room;
 **Ctrl+Alt+F4** records dictation; **Ctrl+Alt+F5** records a voice command; **Ctrl+Alt+F6** copies

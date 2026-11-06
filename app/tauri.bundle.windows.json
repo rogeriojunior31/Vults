@@ -1,8 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
+  "build": { "features": ["voice-vulkan"] },
   "bundle": {
     "targets": ["nsis"],
-    "resources": { "../target/release/vults-hook.exe": "vults-hook.exe" },
+    "resources": {
+      "../target/release/vults-hook.exe": "vults-hook.exe",
+      "../target/windows-vulkan/runtime/vulkan-1.dll": "vulkan-1.dll",
+      "../target/windows-vulkan/runtime/VulkanRT-License.txt": "licenses/VulkanRT-License.txt"
+    },
     "windows": { "nsis": { "installMode": "currentUser" } }
   }
 }

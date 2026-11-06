@@ -269,6 +269,15 @@ pub fn gpu() -> bool {
         // Listing the devices starts ggml's Vulkan state, which guards itself with no lock.
         *GPU.get_or_init(|| {
             let _busy = WHISPER.lock();
+            #[cfg(windows)]
+            // The registry catches Vulkan initialization failures; direct enumeration can unwind
+            // a C++ exception across Rust's FFI boundary when the driver is absent.
+            // SAFETY: registry handles live for the process; null is refused before querying it.
+            unsafe {
+                let reg = whisper_rs::whisper_rs_sys::ggml_backend_reg_by_name(c"Vulkan".as_ptr());
+                !reg.is_null() && whisper_rs::whisper_rs_sys::ggml_backend_reg_dev_count(reg) > 0
+            }
+            #[cfg(not(windows))]
             !whisper_rs::vulkan::list_devices().is_empty()
         })
     }

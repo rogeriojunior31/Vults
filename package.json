@@ -10,7 +10,7 @@
     "predev": "cargo build --release -p vults-hook",
     "pretauri": "cargo build --release -p vults-hook",
     "bundle:linux": "cargo build --release -p vults-hook && tauri build --config app/tauri.bundle.linux.json",
-    "bundle:windows": "cargo build --release -p vults-hook && tauri build --config app/tauri.bundle.windows.json"
+    "bundle:windows": "scripts\\bundle-windows.cmd"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
