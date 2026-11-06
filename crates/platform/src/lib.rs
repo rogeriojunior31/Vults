@@ -10,15 +10,34 @@ pub mod jump;
 
 #[cfg(target_os = "linux")]
 pub mod focus;
+#[cfg(windows)]
+#[path = "windows/focus.rs"]
+pub mod focus;
 
 #[cfg(target_os = "linux")]
+pub mod clipboard;
+#[cfg(windows)]
+#[path = "windows/clipboard.rs"]
 pub mod clipboard;
 
 #[cfg(target_os = "linux")]
 pub mod insert;
+#[cfg(windows)]
+#[path = "windows/insert.rs"]
+pub mod insert;
 
 #[cfg(target_os = "linux")]
 pub mod raw_keys;
+#[cfg(windows)]
+pub mod raw_keys {
+    /// The shared recorder's optional raw-key vocabulary; Windows hold/release uses native hotkeys.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum Key {
+        Escape,
+        Space,
+        Other,
+    }
+}
 
 pub mod music;
 

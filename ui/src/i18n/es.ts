@@ -2259,4 +2259,13 @@ export default {
   "Apply shortcuts": "Aplicar atajos",
   "Restore defaults": "Restaurar valores predeterminados",
   "Use the Windows shortcut editor above to change these keys.": "Usa el editor de atajos de Windows de arriba para cambiar estas teclas.",
+  "Windows global shortcuts": "Atajos globales de Windows",
+  "Windows text fields": "Campos de texto de Windows",
+  "Windows foreground tracking": "Seguimiento del foco de Windows",
+  "Windows focus tracking is unavailable.": "El seguimiento del foco de Windows no está disponible.",
+  "Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.": "El dictado en Windows usa el modelo local seleccionado. Mantén pulsado su atajo para grabar y suéltalo para transcribir. El texto se copia de forma predeterminada; la inserción opcional admite campos de texto de escritorio reconocidos. Los navegadores y terminales requieren pegado manual.",
+  "Windows voice commands support Vults navigation and selected-player playback. Application launching, computer volume and automatic music ducking are not available yet.": "Los comandos de voz en Windows permiten navegar por Vults y controlar la reproducción del reproductor seleccionado. Abrir aplicaciones, ajustar el volumen del equipo y reducir la música automáticamente todavía no están disponibles.",
+  "Allow pause, resume and track changes for the selected player. Now playing must also be on. Per-player volume is not available on Windows.": "Permite pausar, reanudar y cambiar pistas en el reproductor seleccionado. En reproducción también debe estar activado. El volumen por reproductor no está disponible en Windows.",
+  "Insert dictation in supported Windows text fields": "Insertar dictado en campos de texto compatibles de Windows",
+  "Off by default. Inserts only into a recognized, unchanged Windows text field. Password fields, terminals, read-only controls and focus changes keep the text copied. Nothing is submitted, and direct insertion leaves your clipboard unchanged.": "Desactivado de forma predeterminada. Inserta solo en un campo de texto de Windows reconocido y sin cambios. Los campos de contraseña, terminales, controles de solo lectura y cambios de foco mantienen el texto copiado. No se envía nada y la inserción directa conserva el portapapeles.",
 } satisfies Record<string, string>;

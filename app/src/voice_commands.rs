@@ -1,6 +1,10 @@
 //! V8: the runtime owner's local command dispatcher. No microphone, model, paste or card answer.
 #[cfg(target_os = "linux")]
 mod desktop;
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+pub(crate) use windows::start as start_desktop;
 pub(crate) mod flock;
 pub(crate) mod preview;
 mod targets;
@@ -74,7 +78,7 @@ enum Undo {
 
 #[derive(Debug)]
 struct Pending {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     deadline: Instant,
     started: Duration,
     commands: Vec<Command>,
@@ -99,7 +103,7 @@ enum Scope<'a> {
 }
 
 impl Commands {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     pub(crate) fn question_deadline(&self) -> Option<Instant> {
         self.pending.as_ref().map(|pending| pending.deadline)
     }
@@ -363,7 +367,7 @@ impl Commands {
                             return report(lang, Feedback::Stale);
                         };
                         self.pending = Some(Pending {
-                            #[cfg(target_os = "linux")]
+                            #[cfg(any(target_os = "linux", windows))]
                             deadline: self.epoch + question_started.unwrap_or(elapsed) + CONTEXT_WINDOW,
                             started: question_started.unwrap_or(elapsed),
                             commands,

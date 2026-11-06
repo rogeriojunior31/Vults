@@ -90,16 +90,16 @@ enum Msg {
     Question(crate::questions::Command),
     #[cfg(target_os = "linux")]
     RealtimeCommand(crate::realtime::routing::Request),
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     VoiceCommand {
         text: String,
         ticket: crate::dictation::worker::Ticket,
         replacements: Vec<(String, String)>,
         applications: Option<Vec<vults_platform::applications::Application>>,
     },
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     CancelVoiceCommands,
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     DictationSessions {
         reply: std::sync::mpsc::SyncSender<Vec<(core::SessionKey, vults_protocol::Terminal)>>,
     },
@@ -254,13 +254,13 @@ fn read_repo(
     }
     repos.insert(key.clone(), (cwd.clone(), now, true));
     let tx = tx.clone();
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     let app = app.clone();
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     let _ = app;
     tauri::async_runtime::spawn_blocking(move || {
         let repo = crate::roosts::repo_of(std::path::Path::new(&cwd));
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", windows))]
         if let Some(repo) = &repo {
             crate::dictation::project::refresh(&app, repo);
         }
@@ -377,7 +377,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     let mut state = State::default();
     #[cfg(target_os = "linux")]
     let mut questions = crate::questions::Questions::default();
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     let mut voice_commands = crate::voice_commands::Commands::new(Instant::now());
     if let Ok(s) = app.state::<crate::settings::SettingsState>().0.lock() {
         state.rules = s.rules.clone();
@@ -641,7 +641,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             }
             #[cfg(target_os = "linux")]
             Msg::Question(_) => unreachable!("handled before domain input"),
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             Msg::CancelVoiceCommands => {
                 voice_commands.cancel();
                 continue;
@@ -691,14 +691,18 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 None
             }
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             Msg::VoiceCommand {
                 text,
                 ticket,
                 replacements,
                 applications,
             } => {
-                if crate::lock::locked(&app) {
+                #[cfg(windows)]
+                let native_locked = vults_platform::windows_session::locked() != Some(false);
+                #[cfg(not(windows))]
+                let native_locked = false;
+                if native_locked || crate::lock::locked(&app) {
                     voice_commands.cancel();
                     continue;
                 }
@@ -753,7 +757,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 let _ = reply.send(state.dictation_safety(&session, &terminal));
                 continue;
             }
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             Msg::DictationSessions { reply } => {
                 let _ = reply.send(
                     state
@@ -1636,7 +1640,7 @@ pub async fn run_ended(app: &AppHandle, update: core::AgentUpdate) {
 }
 
 /// Request context without doing process IO on the domain loop.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(crate) fn dictation_sessions(
     app: &AppHandle,
 ) -> std::sync::mpsc::Receiver<Vec<(core::SessionKey, vults_protocol::Terminal)>> {
@@ -2273,7 +2277,7 @@ pub fn place_top_center(win: &tauri::WebviewWindow) {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(crate) fn voice_command(
     app: &AppHandle,
     text: String,
@@ -2285,7 +2289,13 @@ pub(crate) fn voice_command(
         .0
         .lock()
         .is_ok_and(|saved| saved.dictation_command_apps);
+    #[cfg(target_os = "linux")]
     let applications = enabled.then(vults_platform::applications::installed);
+    #[cfg(windows)]
+    let applications = {
+        let _ = enabled;
+        None
+    };
     app.state::<Inbox>()
         .0
         .try_send(Msg::VoiceCommand {
@@ -2320,7 +2330,7 @@ pub(crate) async fn flock_command(
     receive.await.map_err(|_| ())?
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(crate) fn cancel_voice_commands<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     if let Some(inbox) = app.try_state::<Inbox>() {
         let _ = inbox.0.try_send(Msg::CancelVoiceCommands);

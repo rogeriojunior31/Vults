@@ -514,10 +514,18 @@ mod tests {
         let mut pcm = vec![0.0; 3 * S];
         pcm.extend(&words);
         pcm.extend(vec![0.0; 3 * S]);
+        let started = std::time::Instant::now();
         let t = crate::Transcriber::load(Path::new(&model), false).expect("model");
+        let load_ms = started.elapsed().as_millis();
+        let decoding = std::time::Instant::now();
         let text = t
             .transcribe(&pcm, Some("en"), Some(Path::new(&vad)))
             .expect("text");
+        eprintln!(
+            "local dictation fixture: gpu={}, load_ms={load_ms}, speech_ms={}",
+            crate::gpu(),
+            decoding.elapsed().as_millis()
+        );
         assert!(text.contains("ask what you can do for your country"), "{text}");
     }
 }

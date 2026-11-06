@@ -7406,6 +7406,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "vults-brand",
+ "vults-peer",
  "vults-protocol",
  "wayland-client",
  "wayland-protocols",

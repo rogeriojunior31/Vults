@@ -49,7 +49,7 @@ serde_json.workspace = true
 toml_edit = "0.25"
 tokio.workspace = true
 
-# Voice on the GPU (Vulkan) on Linux: 6x to 30x faster than the CPU. Windows stays on the CPU for now.
+# Linux enables Vulkan by default; Windows developers can opt in with voice-vulkan.
 [target.'cfg(target_os = "linux")'.dependencies]
 vults-audio = { workspace = true, features = ["meeting-capture"] }
 vults-voice = { workspace = true, features = ["vulkan"] }
@@ -60,6 +60,7 @@ futures-util = { version = "0.3", default-features = false }
 gtk = "0.18"
 
 [features]
+voice-vulkan = ["vults-voice/vulkan"]
 # Developer preview only; normal builds retain the diarization quality gate.
 meeting-speakers = ["vults-voice/diarization"]
 # Explicit conversation preview only; checked files must be provisioned locally.

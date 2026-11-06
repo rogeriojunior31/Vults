@@ -2,6 +2,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // Packaging can probe the shipped backend without opening windows, profiles or microphones.
+    #[cfg(windows)]
+    if std::env::args().nth(1).as_deref() == Some("--voice-backend-check") {
+        println!(
+            "{{\"vulkan_compiled\":{},\"gpu\":{}}}",
+            cfg!(feature = "voice-vulkan"),
+            vults_voice::gpu()
+        );
+        return;
+    }
     #[cfg(target_os = "linux")]
     if std::env::args().nth(1).as_deref() == Some("--specialist-mcp") {
         if let Some(path) = std::env::args_os().nth(2) {

@@ -2259,4 +2259,13 @@ export default {
   "Apply shortcuts": "应用快捷键",
   "Restore defaults": "恢复默认设置",
   "Use the Windows shortcut editor above to change these keys.": "使用上方的 Windows 快捷键编辑器更改这些按键。",
+  "Windows global shortcuts": "Windows 全局快捷键",
+  "Windows text fields": "Windows 文本字段",
+  "Windows foreground tracking": "Windows 前台焦点跟踪",
+  "Windows focus tracking is unavailable.": "Windows 焦点跟踪不可用。",
+  "Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.": "Windows 听写使用所选的本地模型。按住快捷键录音，松开后转写。默认复制文本；可选的插入功能支持已识别的桌面文本字段。浏览器和终端需要手动粘贴。",
+  "Windows voice commands support Vults navigation and selected-player playback. Application launching, computer volume and automatic music ducking are not available yet.": "Windows 语音命令支持 Vults 导航和所选播放器的播放控制。启动应用、电脑音量调节和自动降低音乐音量暂不可用。",
+  "Allow pause, resume and track changes for the selected player. Now playing must also be on. Per-player volume is not available on Windows.": "允许暂停、继续和切换所选播放器的曲目。还需开启“正在播放”。Windows 不支持单独调节播放器音量。",
+  "Insert dictation in supported Windows text fields": "将听写插入支持的 Windows 文本字段",
+  "Off by default. Inserts only into a recognized, unchanged Windows text field. Password fields, terminals, read-only controls and focus changes keep the text copied. Nothing is submitted, and direct insertion leaves your clipboard unchanged.": "默认关闭。仅插入已识别且未发生变化的 Windows 文本字段。密码字段、终端、只读控件或焦点变化时，文本保持为已复制状态。不会提交任何内容，直接插入不会更改剪贴板。",
 } satisfies Record<string, string>;

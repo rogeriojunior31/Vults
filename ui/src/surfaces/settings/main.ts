@@ -244,6 +244,7 @@ const permissionErrors = new Set([
   tk("The keyboard permission worker is unavailable."),
   tk("Enable dictation insertion in Settings first."),
   tk("Dictation insertion is unavailable."),
+  tk("Windows focus tracking is unavailable."),
 ]);
 async function permissionWrite<T>(write: () => Promise<T>): Promise<T> {
   try { return await write(); } catch (error) {
@@ -1177,6 +1178,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
   feedback.setAttribute("role", dictationEraseFailed ? "alert" : "status");
   return [
     el("h1", { text: t(DICTATION_SETTINGS.find(p => p.id === dictationSection)!.label) }),
+    ...(windowsShortcuts.supported() ? [
+      el("p",{class:"hint",text:t("Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.")}),
+      el("p",{class:"hint",text:t("Windows voice commands support Vults navigation and selected-player playback. Application launching, computer volume and automatic music ducking are not available yet.")}),
+    ] : []),
     ...(dictationSection === "keys" ? [
       el("h2", { text: t("Global shortcuts") }),
       el("p", { class: "hint", text: t("Dictation and voice commands have separate shortcuts.") }),
@@ -1233,18 +1238,18 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           dictationCommands = on; dictationCommandsChanged = true;
           if (page === "dictation") render();
         })),
-        row(t("Media voice commands"), t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
+        row(t("Media voice commands"), windowsShortcuts.supported() ? t("Allow pause, resume and track changes for the selected player. Now playing must also be on. Per-player volume is not available on Windows.") : t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
           await Bridge.setDictationCommands("media", on);
           dictationCommandMedia = on; dictationCommandMediaChanged = true;
         })),
-        row(t("Application voice commands"), t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
+        ...(!windowsShortcuts.supported() ? [row(t("Application voice commands"), t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
           await Bridge.setDictationCommands("applications", on);
           dictationCommandApps = on; dictationCommandAppsChanged = true;
         })),
         row(t("System audio voice commands"), t("Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate."), toggle(dictationCommandOutput, async on => {
           await Bridge.setDictationCommands("output", on);
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
-        })),
+        }))] : []),
         row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
         row(t("Names it understands"), t("Uses current project and agent names, plus replacements in Dictionary. Small spelling differences can match; when names tie, Vults asks which one."), button(t("Dictionary"), () => void Bridge.openNest("dictation-dictionary"))),
       ),
@@ -1286,14 +1291,14 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       ),
       el("h2", { text: t("Sound and feedback") }),
       el("section", { class: "card rows" },
-        row(t("Music while you speak"), t("Temporarily lower or pause playing media during independent dictation. Restore each player when recording stops or is cancelled, unless you changed it. Uses local media controls, separately from Now playing; unavailable players are left alone."), dropdown([
+        ...(!windowsShortcuts.supported() ? [row(t("Music while you speak"), t("Temporarily lower or pause playing media during independent dictation. Restore each player when recording stops or is cancelled, unless you changed it. Uses local media controls, separately from Now playing; unavailable players are left alone."), dropdown([
           { value: "lower" as const, label: t("Lower to 25%") },
           { value: "pause" as const, label: t("Pause it") },
           { value: "leave" as const, label: t("Leave it") },
         ], dictationMusic, async mode => {
           await Bridge.setDictationMusic(mode);
           dictationMusic = mode; dictationMusicChanged = true;
-        })),
+        }))] : []),
         row(t("Dictation start sound"), t("Play a short cue when recording starts. Respects sound volume and Do Not Disturb."), toggle(dictationSound, async (on) => {
           await Bridge.setDictationSound(on);
           dictationSound = dictation.startSound(on);
@@ -1327,8 +1332,8 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         return overview;
       })(),
       el("section", { class: "card rows" },
-        el("p", { class: "hint", text: t("App recognition works on X11 and Plasma Wayland. GNOME and wlroots Wayland may leave the app unknown. Background copying requires desktop support; if unavailable, dictation shows an error.") }),
-        row(t("Insert dictation in supported editors and tmux panes"), t("Off by default. Pastes in KWrite, GNOME Text Editor, Mousepad or Leafpad, or inserts one line into an exact tmux flock pane in XTerm or Kitty. Waiting cards, unknown panes and focus changes keep the text copied. Plasma Wayland requires desktop keyboard permission. Nothing is submitted."), (() => {
+        ...(!windowsShortcuts.supported() ? [el("p", { class: "hint", text: t("App recognition works on X11 and Plasma Wayland. GNOME and wlroots Wayland may leave the app unknown. Background copying requires desktop support; if unavailable, dictation shows an error.") })] : []),
+        row(windowsShortcuts.supported() ? t("Insert dictation in supported Windows text fields") : t("Insert dictation in supported editors and tmux panes"), windowsShortcuts.supported() ? t("Off by default. Inserts only into a recognized, unchanged Windows text field. Password fields, terminals, read-only controls and focus changes keep the text copied. Nothing is submitted, and direct insertion leaves your clipboard unchanged.") : t("Off by default. Pastes in KWrite, GNOME Text Editor, Mousepad or Leafpad, or inserts one line into an exact tmux flock pane in XTerm or Kitty. Waiting cards, unknown panes and focus changes keep the text copied. Plasma Wayland requires desktop keyboard permission. Nothing is submitted."), (() => {
           const control = toggle(dictationInsert, async (on) => {
             permissionFailure = await permissionWrite(() => Bridge.setDictationInsert(on));
             dictationInsert = on;
@@ -1338,7 +1343,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           if (!dictationInsertAvailable && !dictationInsert) control.setAttribute("disabled", "");
           return control;
         })()),
-        el("p", { class: "hint", text: t("Insertion temporarily replaces the clipboard and restores only its previous text, up to 64 KiB. Images and rich formats are not restored. A newer copy is kept. Clipboard history exclusion depends on the desktop. Native X11 or Plasma Wayland with ext-data-control is required.") }),
+        ...(!windowsShortcuts.supported() ? [el("p", { class: "hint", text: t("Insertion temporarily replaces the clipboard and restores only its previous text, up to 64 KiB. Images and rich formats are not restored. A newer copy is kept. Clipboard history exclusion depends on the desktop. Native X11 or Plasma Wayland with ext-data-control is required.") })] : []),
         ...(permissionFailure ? [el("p", { class: "note error", text: permissionErrors.has(permissionFailure) ? t(permissionFailure) : permissionFailure }),
           ...(!dictationInsert ? [(() => {
             const control = button(t("Retry token removal"), () => saveSetting(control, async () => {

@@ -117,18 +117,27 @@ pub(crate) fn refresh(app: &AppHandle, repo: &crate::roosts::Repo) {
 }
 
 fn small(path: &Path) -> Option<String> {
+    #[cfg(unix)]
     use std::os::unix::fs::OpenOptionsExt;
+    #[cfg(windows)]
+    use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
     let meta = std::fs::symlink_metadata(path).ok()?;
     if !meta.is_file() || meta.len() > FILE_BYTES {
         return None;
     }
     // A substituted FIFO or final symlink must not block a reader or expose another file.
-    let file = std::fs::OpenOptions::new()
-        .read(true)
-        .custom_flags(0o4000 | 0o400000)
-        .open(path)
-        .ok()?;
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    options.custom_flags(0o4000 | 0o400000);
+    #[cfg(windows)]
+    options.custom_flags(0x0020_0000);
+    let file = options.open(path).ok()?;
     let meta = file.metadata().ok()?;
+    #[cfg(windows)]
+    if meta.file_attributes() & 0x400 != 0 {
+        return None;
+    }
     if !meta.is_file() || meta.len() > FILE_BYTES {
         return None;
     }
@@ -302,4 +311,5 @@ fn extract(repo: &crate::roosts::Repo) -> Vec<String> {
 }
 
 #[cfg(test)]
+#[path = "project/tests.rs"]
 mod tests;

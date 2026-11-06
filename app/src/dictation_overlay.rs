@@ -16,9 +16,9 @@ pub fn reset(app: &AppHandle) {
 }
 
 pub const LABEL: &str = "dictation-overlay";
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 const SIZE: (i32, i32) = (480, 160);
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 const MARGIN: i32 = 12;
 
 #[cfg(target_os = "linux")]
@@ -126,6 +126,62 @@ pub fn dictation_overlay_started(app: AppHandle, window: tauri::Webview) -> Resu
     state.0.store(true, Ordering::SeqCst);
     let _ = app.emit("dictation-overlay-ready", true);
     Ok(())
+}
+
+#[cfg(windows)]
+pub fn build(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let result =
+            tauri::WebviewWindowBuilder::new(&app, LABEL, tauri::WebviewUrl::App("dictation.html".into()))
+                .title(format!("{} dictation", vults_brand::NAME))
+                .inner_size(f64::from(SIZE.0), f64::from(SIZE.1))
+                .resizable(false)
+                .decorations(false)
+                .transparent(true)
+                .shadow(false)
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .focused(false)
+                .focusable(false)
+                .visible(false)
+                .maximizable(false)
+                .minimizable(false)
+                .closable(false)
+                .on_page_load(|window, payload| {
+                    if payload.event() == tauri::webview::PageLoadEvent::Started {
+                        reset(window.app_handle());
+                    }
+                })
+                .build();
+        match result {
+            Ok(window) => {
+                let _ = window.set_ignore_cursor_events(true);
+                place(&window);
+                let _ = window.show();
+            }
+            Err(error) => tracing::warn!(%error,"dictation overlay unavailable; retaining inline feedback"),
+        }
+    });
+}
+
+#[cfg(windows)]
+pub fn place(window: &tauri::WebviewWindow) {
+    let monitor = window
+        .app_handle()
+        .get_window(crate::ISLAND)
+        .and_then(|island| island.current_monitor().ok().flatten())
+        .or_else(|| window.current_monitor().ok().flatten());
+    if let Some(monitor) = monitor {
+        let scale = monitor.scale_factor();
+        let area = monitor.work_area();
+        let _ = window.set_position(tauri::PhysicalPosition::new(
+            (f64::from(area.position.x) + (f64::from(area.size.width) - f64::from(SIZE.0) * scale) / 2.0)
+                .round() as i32,
+            (f64::from(area.position.y) + f64::from(area.size.height) - f64::from(SIZE.1 + MARGIN) * scale)
+                .round() as i32,
+        ));
+    }
 }
 
 #[cfg(all(test, target_os = "linux"))]

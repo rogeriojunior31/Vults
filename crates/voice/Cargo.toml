@@ -37,7 +37,7 @@ diarization = ["dep:ort", "dep:knf-rs"]
 # Explicit offline semantic endpoint checks; no app activation or download.
 semantic-turn = ["dep:ort", "dep:rustfft"]
 # Transcribe on the GPU (AMD, Intel, NVIDIA alike). Building needs the Vulkan headers and glslc.
-vulkan = ["whisper-rs/vulkan"]
+vulkan = ["whisper-rs/vulkan", "whisper-rs/raw-api"]
 
 [lints]
 workspace = true

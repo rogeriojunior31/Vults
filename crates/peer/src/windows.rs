@@ -117,6 +117,26 @@ pub fn agent_pid() -> u32 {
     0
 }
 
+/// A same-user executable path for foreground application identity, never command execution.
+pub fn process_image(pid: u32) -> Option<std::path::PathBuf> {
+    use windows::Win32::System::Threading::{PROCESS_NAME_WIN32, QueryFullProcessImageNameW};
+    if !process_is_same_user(pid) {
+        return None;
+    }
+    // SAFETY: bounded output buffer, query-only handle, closed on every return path.
+    unsafe {
+        let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+        let mut path = vec![0u16; 32_768];
+        let mut length = path.len() as u32;
+        let result =
+            QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, PWSTR(path.as_mut_ptr()), &mut length)
+                .ok()
+                .map(|_| std::path::PathBuf::from(String::from_utf16_lossy(&path[..length as usize])));
+        let _ = CloseHandle(process);
+        result
+    }
+}
+
 /// The SID this process runs as, as `S-1-5-21-…`.
 pub fn current_user_sid() -> Option<String> {
     // SAFETY: the pseudo-handle from GetCurrentProcess is always valid and needs no close.

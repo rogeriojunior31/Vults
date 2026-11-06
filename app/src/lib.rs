@@ -8,6 +8,9 @@ mod context;
 mod continuation;
 #[cfg(target_os = "linux")]
 mod dictation;
+#[cfg(windows)]
+#[path = "dictation_windows.rs"]
+mod dictation;
 mod dictation_history;
 mod dictation_overlay;
 mod dictation_words;
@@ -463,7 +466,7 @@ pub fn run() {
             handle.manage(meeting_assets::AssetsState::default());
             handle.manage(usage::UsageState::default());
             init_surface(&handle, ISLAND);
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             dictation_overlay::build(&handle);
             panel::apply(&handle);
             widget::apply(&handle);
@@ -496,7 +499,7 @@ pub fn run() {
             chat::clean_inbox();
             tray::start(&handle)?;
             handle.manage(ShortcutKeys::default());
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             dictation::start(&handle);
             #[cfg(any(target_os = "linux", windows))]
             listen_shortcuts(&handle);
@@ -519,7 +522,7 @@ pub fn run() {
                     realtime::shutdown(app);
                     meetings::shutdown(app);
                     meeting_assets::shutdown(app);
-                    #[cfg(target_os = "linux")]
+                    #[cfg(any(target_os = "linux", windows))]
                     {
                         dictation::permission::shutdown(app);
                         dictation::cancel(app, true);
@@ -1034,6 +1037,9 @@ fn listen_shortcuts(app: &AppHandle) {
         let result = vults_platform::windows_shortcuts::start(
             initial,
             move |status| {
+                if let Some(state) = keys.try_state::<dictation::State>() {
+                    state.shortcuts_changed();
+                }
                 let map = status.active.clone();
                 tracing::info!(
                     count = map.len(),
@@ -1046,23 +1052,37 @@ fn listen_shortcuts(app: &AppHandle) {
                 let _ = keys.emit("shortcut-keys", map);
                 let _ = keys.emit("windows-shortcuts", status);
             },
-            move |id| match id {
-                "next" => runtime::shortcut_intent(&events, vults_core::Intent::FocusNext),
-                "previous" => runtime::shortcut_intent(&events, vults_core::Intent::FocusPrevious),
-                "mini" | "quick" | "room" => size_to(&events, id, None),
-                "talk-cancel" => {
-                    voice::cancel(&events);
-                    for surface in [ISLAND, NEST] {
-                        let _ = events.emit_to(surface, "shortcut", id);
+            move |id, down| {
+                if matches!(id, "talk" | "talk-command" | "talk-again" | "talk-cancel") {
+                    dictation::key(&events, id, down);
+                    if id != "talk-cancel" {
+                        return;
                     }
                 }
-                _ => {
-                    let target = if matches!(id, "allow" | "deny") && NEST_HOLDS.load(Ordering::Relaxed) {
-                        NEST
-                    } else {
-                        ISLAND
-                    };
-                    let _ = events.emit_to(target, "shortcut", id);
+                if !down {
+                    return;
+                }
+                if id == "open" && dictation::holds_space(&events) {
+                    return;
+                }
+                match id {
+                    "next" => runtime::shortcut_intent(&events, vults_core::Intent::FocusNext),
+                    "previous" => runtime::shortcut_intent(&events, vults_core::Intent::FocusPrevious),
+                    "mini" | "quick" | "room" => size_to(&events, id, None),
+                    "talk-cancel" => {
+                        voice::cancel(&events);
+                        for surface in [ISLAND, NEST] {
+                            let _ = events.emit_to(surface, "shortcut", id);
+                        }
+                    }
+                    _ => {
+                        let target = if matches!(id, "allow" | "deny") && NEST_HOLDS.load(Ordering::Relaxed) {
+                            NEST
+                        } else {
+                            ISLAND
+                        };
+                        let _ = events.emit_to(target, "shortcut", id);
+                    }
                 }
             },
         );
@@ -1846,9 +1866,9 @@ pub(crate) fn open_settings(app: &AppHandle, section: Option<&str>) {
 
 #[tauri::command]
 fn dictation_permission(app: AppHandle) -> String {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     return dictation::permission::status(app);
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = app;
         "unavailable".into()
@@ -1857,9 +1877,9 @@ fn dictation_permission(app: AppHandle) -> String {
 
 #[tauri::command]
 async fn retry_dictation_permission(app: AppHandle, window: tauri::Webview) -> Result<(), String> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     return dictation::permission::retry(app, window).await;
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = (app, window);
         Err("Dictation insertion is unavailable.".into())
@@ -1868,12 +1888,12 @@ async fn retry_dictation_permission(app: AppHandle, window: tauri::Webview) -> R
 
 #[tauri::command]
 fn dictation_status(app: AppHandle) -> Option<serde_json::Value> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     return app
         .try_state::<dictation::State>()
         .and_then(|s| s.status())
         .and_then(|status| serde_json::to_value(status).ok());
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         let _ = app;
         None

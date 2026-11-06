@@ -10,15 +10,15 @@ use vults_store::dictations::TimingSummary;
 static LOOPS: AtomicU64 = AtomicU64::new(0);
 static RETRIES: AtomicU64 = AtomicU64::new(0);
 static COPIED: AtomicU64 = AtomicU64::new(0);
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn loops_cut(count: u64) {
     LOOPS.fetch_add(count, Ordering::Relaxed);
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn retried() {
     RETRIES.fetch_add(1, Ordering::Relaxed);
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub fn copied() {
     COPIED.fetch_add(1, Ordering::Relaxed);
 }
@@ -73,14 +73,14 @@ fn system(
             _ => "unknown",
         },
         shortcuts: if shortcuts_bound { "ready" } else { "unavailable" },
-        keyboard: if session == "wayland" {
+        keyboard: if matches!(session, "wayland" | "windows") {
             keyboard.into()
         } else if session == "x11" {
             "not-needed".into()
         } else {
             "unavailable".into()
         },
-        kwin: if matches!(session, "x11" | "windows") {
+        kwin: if session == "x11" {
             "not-needed"
         } else if focus_ready {
             "ready"
@@ -114,7 +114,12 @@ pub async fn dictation_doctor(app: AppHandle, window: tauri::Webview) -> Result<
             app.try_state::<crate::dictation::permission::Insertion>()
                 .is_some_and(|s| s.portal.focus_ready()),
         );
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(windows)]
+        let (keyboard, focus) = (
+            crate::dictation::permission::status(app.clone()),
+            vults_platform::focus::start(),
+        );
+        #[cfg(not(any(target_os = "linux", windows)))]
         let (keyboard, focus) = (String::from("unavailable"), false);
         Ok(Report {
             system: system(

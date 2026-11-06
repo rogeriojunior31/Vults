@@ -273,7 +273,9 @@ fn local_model_keeps_two_speech_offsets_and_silence_empty() {
     let Some(model) = std::env::var_os("VOICE_TEST_MODEL") else {
         return;
     };
+    let loading = std::time::Instant::now();
     let transcriber = Transcriber::load(std::path::Path::new(&model), false).expect("installed model");
+    let load_ms = loading.elapsed().as_millis();
     let stop = AtomicBool::new(false);
     let mut reader = hound::WavReader::new(Cursor::new(include_bytes!("../../tests/fixtures/speech.wav")))
         .expect("public speech fixture");
@@ -284,9 +286,15 @@ fn local_model_keeps_two_speech_offsets_and_silence_empty() {
     let mut samples = vec![0.0; 40 * S];
     samples[3 * S..3 * S + speech.len()].copy_from_slice(&speech);
     samples[33 * S..33 * S + speech.len()].copy_from_slice(&speech);
+    let decoding = std::time::Instant::now();
     let transcript = transcribe_wav(&transcriber, wav(&samples), Some("en"), &stop, |_| {})
         .expect("local model")
         .expect("not cancelled");
+    eprintln!(
+        "local speech fixture: gpu={}, load_ms={load_ms}, speech_ms={}",
+        crate::gpu(),
+        decoding.elapsed().as_millis()
+    );
     assert_eq!(transcript.duration_ms, 40_000);
     assert!(
         transcript
