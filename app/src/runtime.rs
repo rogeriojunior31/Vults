@@ -130,6 +130,8 @@ enum Msg {
     User(Intent),
     Tick,
     SessionProcesses(Vec<crate::session_presence::Report>),
+    #[cfg(windows)]
+    WindowsTerminals(crate::windows_terminals::Report),
     /// `/continue` asks which sessions in a folder may be continued (W7); only the loop knows.
     Continuable {
         cwd: String,
@@ -436,6 +438,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
     let mut metrics_reading = false;
     let process_watcher = std::sync::Arc::new(Mutex::new(crate::session_presence::Watcher::default()));
     let mut processes_reading = false;
+    #[cfg(windows)]
+    let mut windows_terminals = crate::windows_terminals::Routes::default();
+    #[cfg(windows)]
+    let (mut windows_reading, mut windows_scan) = (false, None::<Instant>);
     // A statusLine may beat SessionStart through the socket. Keep only a short, bounded
     // buffer; metrics alone must never create a session or resurrect an ended one.
     let mut early_metrics = EarlyMetrics::default();
@@ -464,6 +470,22 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
     } {
         let now = Instant::now();
+        #[cfg(windows)]
+        if !windows_reading
+            && !state.locked
+            && windows_scan.is_none_or(|at| now.duration_since(at) >= Duration::from_secs(2))
+        {
+            let candidates = windows_terminals.candidates();
+            if !candidates.is_empty() {
+                windows_reading = true;
+                windows_scan = Some(now);
+                let tx = tx.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let _ =
+                        tx.blocking_send(Msg::WindowsTerminals(crate::windows_terminals::scan(candidates)));
+                });
+            }
+        }
         #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
         let mut command_effects: Option<Vec<Effect>> = None;
         #[cfg(target_os = "linux")]
@@ -923,6 +945,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 missed: if locked { Vec::new() } else { notifier.missed() },
             }),
             Msg::Project { cwd, prefs } => Some(Input::SetProject { cwd, prefs }),
+            #[cfg(windows)]
+            Msg::WindowsTerminals(report) => {
+                windows_reading = false;
+                windows_terminals.apply(report);
+                Some(Input::Tick)
+            }
             Msg::SessionProcesses(reports) => {
                 processes_reading = false;
                 for (key, event, pid, alive) in reports {
@@ -1085,6 +1113,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             questions.handle(crate::questions::Command::Depart(surface), "", false, true);
             crate::questions::publish(&app, &mut questions);
         }
+        #[cfg(windows)]
+        windows_terminals.observe(&state);
         let mut effects: std::collections::VecDeque<_> = effects.into();
         while let Some(effect) = effects.pop_front() {
             match effect {
@@ -1198,8 +1228,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     }
                 }
                 Effect::JumpToTerminal(terminal) => {
-                    // Shells out (herdr, tmux, gdbus…): off the loop. The island says so when
-                    // there was nothing to try.
+                    #[cfg(windows)]
+                    let windows_anchor = windows_terminals.anchor(&terminal);
+                    // Native discovery and activation must not hold up hook delivery.
                     let app = app.clone();
                     #[cfg(target_os = "linux")]
                     let work = command_reply.as_mut().map(|completion| completion.work());
@@ -1209,7 +1240,13 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         let jump = |allowed: &dyn Fn() -> bool| {
                             #[cfg(target_os = "linux")]
                             let found = vults_platform::jump::jump_if(&terminal, allowed);
-                            #[cfg(not(target_os = "linux"))]
+                            #[cfg(windows)]
+                            let found = windows_anchor.is_some_and(|anchor| {
+                                vults_platform::jump::jump_if(anchor, &terminal, &|| {
+                                    allowed() && !crate::lock::locked(&app)
+                                })
+                            });
+                            #[cfg(not(any(target_os = "linux", windows)))]
                             let found = {
                                 let _ = (&terminal, allowed);
                                 false
@@ -1282,6 +1319,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         }
         crate::phone::sync(&app, &state, now);
         let mut view = state.view();
+        #[cfg(windows)]
+        windows_terminals.decorate(&mut view);
         if crate::settings::zeca(&app) {
             view.inbox.extend(crate::chat::attention(&app));
             view.inbox.extend(crate::memory::attention(&app));
