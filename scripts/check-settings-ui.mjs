@@ -2,6 +2,9 @@
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
+import { spawnSync } from "node:child_process";
+const initialRoute = process.env.VULTS_SETTINGS_INITIAL_ROUTE ?? "";
+if (initialRoute) globalThis.settingsTestWindowsBindings = { requested: {}, defaults: {}, active: {}, conflicts: [] };
 const nodes = node => [node, ...node.children.flatMap(nodes)];
 class Element {
   children = []; listeners = {}; attributes = {}; dataset = {}; style = { setProperty() {} };
@@ -72,7 +75,7 @@ const widthStorage = new Map(), windowEvents = {};
 globalThis.localStorage = { getItem: key => widthStorage.get(key) ?? null, setItem: (key, value) => widthStorage.set(key, value) };
 globalThis.window = { setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, addEventListener(name, fn) { (windowEvents[name] ??= []).push(fn); } };
 globalThis.matchMedia = () => ({ matches: true, addEventListener() {} });
-globalThis.location = { hash: "#general" };
+globalThis.location = { hash: initialRoute ? `#${initialRoute}` : "#general" };
 globalThis.Option = class extends Element {
   constructor(label, value, _default, selected) { super("option"); this.textContent = label; this.value = value; this.selected = selected; }
 };
@@ -153,6 +156,13 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 events.onSettings({ dictationCommands: false, dictationCommandChat: true, dictationVocabulary: false, dictationProjectVocabulary: false, dictationMusic: "leave", dictationCancelByVoice: false, dictationSpokenCode: false, dictationCutRepeats: false, dictationRetryBase: false, dictationMicrophone: "Disconnected mic", dictationInsert: true, dictationDoubleTap: false, dictationSpaceLock: false, dictationEscapeCancel: false });
 initialSettingsReady(settings);
 await tick();
+if (initialRoute) {
+  assert.equal(root.querySelector('[data-dictation-section="commands"]')?.open, true,
+    "A cold command-settings link opens its disclosure before any settings event");
+  assert.equal(writes.length, 0, "Opening a linked preference never grants a capability");
+  console.log("check-settings-ui: cold Windows command-settings link opens the requested disclosure without writes");
+  process.exit(0);
+}
 const page = () => root.querySelector("main.page");
 const nav = label => root.querySelectorAll("button.nav").find(n => n.textContent === label);
 const go = async label => {
@@ -687,3 +697,8 @@ pendingSettings.at(-1).resolve(); await tick();
 assert.equal(outputSwitch().checked, true);
 assert.equal(rowNamed("Media voice commands").querySelector("input").checked, false);
 console.log("check-settings-ui: Windows output opt-in is visible, independent, persisted and failure-safe");
+const cold = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+  env: { ...process.env, VULTS_SETTINGS_INITIAL_ROUTE: "dictationcommands" }, windowsHide: true, encoding: "utf8",
+});
+assert.equal(cold.status, 0, cold.stderr || cold.stdout);
+process.stdout.write(cold.stdout);

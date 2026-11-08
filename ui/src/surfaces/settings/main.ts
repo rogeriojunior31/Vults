@@ -173,7 +173,7 @@ window.addEventListener("keydown", (e) => {
 const asked = (section: string): Page | null => dictationSetting(section) ? "dictation" : PAGES.find((p) => p.id === section)?.id ?? null;
 /** The page the app asked for (the tray's Set up agents…), else General until the agents are read:
  *  Agents when one has no hooks yet or older ones (`chooseStart`). */
-let focusDestination = false;
+let focusDestination = dictationSetting(location.hash.slice(1)) !== null;
 let dictationSection: DictationSetting = dictationSetting(location.hash.slice(1)) ?? "voice";
 const linked = asked(location.hash.slice(1));
 let page: Page = linked ?? "general";
