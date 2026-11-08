@@ -7243,6 +7243,8 @@ dependencies = [
  "vults-store",
  "vults-voice",
  "vults-zeca",
+ "webview2-com",
+ "windows-core",
  "zbus 5.19.0",
 ]
 

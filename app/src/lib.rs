@@ -59,6 +59,8 @@ pub mod voice_commands;
 mod web_tools;
 mod widget;
 #[cfg(windows)]
+mod windows_drop;
+#[cfg(windows)]
 mod windows_terminals;
 mod writer;
 
@@ -139,6 +141,13 @@ pub fn run() {
         "{} starting",
         vults_brand::NAME
     );
+    let context = tauri::generate_context!();
+    #[cfg(windows)]
+    let context = {
+        let mut context = context;
+        windows_drop::configure(context.config_mut());
+        context
+    };
     tauri::Builder::default()
         // The socket is removed and rebound on start, so a second instance would steal it.
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
@@ -151,6 +160,10 @@ pub fn run() {
             None,
         ))
         .invoke_handler(tauri::generate_handler![
+            #[cfg(windows)]
+            windows_drop::file_drop_ready,
+            #[cfg(windows)]
+            windows_drop::file_drop_hover,
             runtime::current_view,
             #[cfg(target_os = "linux")]
             questions::text_question_status,
@@ -468,6 +481,8 @@ pub fn run() {
             handle.manage(meeting_assets::AssetsState::default());
             handle.manage(usage::UsageState::default());
             init_surface(&handle, ISLAND);
+            #[cfg(windows)]
+            windows_drop::install(&handle);
             #[cfg(any(target_os = "linux", windows))]
             dictation_overlay::build(&handle);
             panel::apply(&handle);
@@ -516,7 +531,7 @@ pub fn run() {
             sleep::start(handle.clone());
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .map(|app| {
             app.run(|app, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
