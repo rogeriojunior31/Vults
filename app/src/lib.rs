@@ -536,6 +536,7 @@ pub fn run() {
             app.run(|app, event| {
                 // A clean quit leaves no socket behind; a crash's leftover is cleared at the next start.
                 if let tauri::RunEvent::Exit = event {
+                    notify::shutdown(app);
                     realtime::shutdown(app);
                     meetings::shutdown(app);
                     meeting_assets::shutdown(app);

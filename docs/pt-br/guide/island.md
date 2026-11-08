@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 1c26b49d42fc -->
+<!-- source: fc69d3003a6d -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -10,8 +10,8 @@ Com mais de uma tela, o desktop escolhe uma (em geral, a tela em foco na inicial
 ilha numa tela, escolha-a em **Settings → General → Screen**. Se essa tela sumir, a ilha passa para
 outra e volta quando ela retornar.
 
-No Windows (uma versão de prévia) ainda não há atalhos globais, notificações do desktop, **Open
-terminal** nem predefinições na bandeja.
+A prévia para Windows usa uma janela comum do desktop. A configuração de notificações do desktop
+está descrita [abaixo](#desktop-notifications).
 
 Os canvases das aves recriam o bitmap e os caches de sprites quando a escala da tela muda.
 O tamanho do layout e a sessão selecionada permanecem iguais, inclusive com a animação pausada.
@@ -207,7 +207,7 @@ no topo. Custa cerca de 40 MiB de memória enquanto está ligado.
 ## Notificações do desktop
 
 Só no *Panel*, onde a ilha fica fora de vista, o Vults também usa as notificações do desktop
-(qualquer desktop Linux com um servidor de notificações). No topo da tela a ilha já mostra tudo,
+(qualquer desktop Linux com um servidor de notificações, ou Windows com a versão NSIS instalada). No topo da tela a ilha já mostra tudo,
 então você nunca é avisado duas vezes; *Paused* não mostra nenhuma.
 
 Elas avisam quando uma sessão **terminou** (com a primeira linha da resposta), **falhou** (com o
@@ -217,6 +217,12 @@ trabalhar ou a sessão é encerrada; terminar uma resposta ou ficar em silêncio
 
 **Open** (ou um clique) traz a ilha com aquela sessão na frente. Uma notificação nunca tem Allow nem
 Deny. Desligue-as em **Settings → General → Notifications**.
+
+No Windows, instale o pacote NSIS com o atalho no menu Iniciar para o Windows identificar o Vults.
+Um executável de desenvolvimento sem registro pode não exibir notificações. As configurações de
+notificações do Windows e o modo Não incomodar podem impedir a entrega. O clique abre a sessão
+enquanto o Vults estiver rodando; fechar o Vults remove suas notificações. O conteúdo é texto puro,
+e as notificações do Windows são silenciosas porque o Vults já controla a política de som.
 
 <a id="the-open-island"></a>
 

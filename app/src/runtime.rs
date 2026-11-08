@@ -1335,9 +1335,10 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         if let Some(reply) = flock_reply {
             reply.finish(flock_text, flock_ok, state.lang);
         }
-        let prefs = core::notify::Prefs {
-            on: crate::settings::notifications(&app),
-        };
+        let notifications_on = crate::settings::notifications(&app);
+        #[cfg(windows)]
+        let notifications_on = notifications_on && !state.locked;
+        let prefs = core::notify::Prefs { on: notifications_on };
         crate::notify::send(&app, notifier.update(&state, prefs));
     }
 }

@@ -9,8 +9,8 @@ With more than one screen, the desktop picks one (usually the focused screen at 
 island to a screen, choose it in **Settings → General → Screen**. If that screen goes away, the
 island moves to another one and comes back when it returns.
 
-On Windows (a preview build) there are no global shortcuts, desktop notifications, **Open terminal**
-or tray presets yet.
+The Windows preview uses a normal desktop window. Desktop notification setup is described
+[below](#desktop-notifications).
 
 The bird canvases rebuild their bitmap and sprite caches when the display scale changes.
 Their layout size and selected session stay the same, including when animation is paused.
@@ -184,7 +184,7 @@ window. It costs about 40 MiB of memory while it is on.
 ## Desktop notifications
 
 Only in *Panel*, where the island is out of sight, Vults also uses your desktop's notifications (any
-Linux desktop with a notification server). At the top of the screen the island already shows it all,
+Linux desktop with a notification server, or Windows with the NSIS build installed). At the top of the screen the island already shows it all,
 so you are never told twice; *Paused* shows none.
 
 They say when a session **finished** (with the first line of its reply), **failed** (with the error),
@@ -194,6 +194,12 @@ leaves when its session closes; finishing a response or staying silent does not 
 
 **Open** (or a click) brings up the island with that session in front. A notification never has Allow
 or Deny. Turn them off in **Settings → General → Notifications**.
+
+On Windows, install the NSIS package with its Start menu shortcut so Windows can identify Vults.
+An unregistered development executable may not display notifications. Windows notification settings
+and Do not disturb can suppress delivery. Clicking opens the session while Vults is running;
+closing Vults removes its notifications. Notification text is plain text, and Windows toasts are
+silent because Vults already owns the sound policy.
 
 ## The open island
 
