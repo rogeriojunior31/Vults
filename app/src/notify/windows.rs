@@ -17,7 +17,7 @@ struct Entry {
 }
 
 pub(super) fn run(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Note>) {
-    let mut desktop = None;
+    let mut desktop = connect(&app);
     let mut entries = BTreeMap::<SessionKey, Entry>::new();
     let mut plain = None;
     let mut serial = 0_u64;
@@ -42,15 +42,9 @@ pub(super) fn run(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Note>) {
             continue;
         }
         if desktop.is_none() {
-            match Desktop::new(&app.config().identifier) {
-                Ok(native) => desktop = Some(native),
-                Err(error) => {
-                    tracing::warn!(%error, "Windows notifications unavailable");
-                    continue;
-                }
-            }
+            desktop = connect(&app);
         }
-        let native = desktop.as_ref().expect("desktop initialized");
+        let Some(native) = desktop.as_ref() else { continue };
         match note {
             Note::Core(Change::Withdraw { session }) => {
                 if let Some(entry) = entries.remove(&session) {
@@ -129,6 +123,16 @@ pub(super) fn run(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Note>) {
 
 fn failure(code: i32) {
     tracing::warn!(code, "Windows notification delivery failed");
+}
+
+fn connect(app: &AppHandle) -> Option<Desktop> {
+    match Desktop::new(&app.config().identifier) {
+        Ok(desktop) => Some(desktop),
+        Err(error) => {
+            tracing::warn!(%error, "Windows notifications unavailable");
+            None
+        }
+    }
 }
 
 fn enabled(desktop: &Desktop) -> bool {
