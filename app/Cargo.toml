@@ -59,6 +59,10 @@ futures-util = { version = "0.3", default-features = false }
 # The Nest's window: a hidden webview marked no-show-all (the gtk already in the tree).
 gtk = "0.18"
 
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows-core = "0.62"
+
 [features]
 voice-vulkan = ["vults-voice/vulkan"]
 # Developer preview only; normal builds retain the diarization quality gate.

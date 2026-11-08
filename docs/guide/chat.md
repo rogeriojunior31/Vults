@@ -317,6 +317,10 @@ Click the input to write about it. You can send it with no text to ask what it i
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
 deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
 
+On Windows, Explorer drops use WebView2's native file objects and accept up to 256 files at once.
+If the installed WebView2 runtime cannot receive them, the drop cursor stays unavailable; use the
+paperclip instead. Dropping a file attaches it to the draft; it does not send the message.
+
 ## Your subscription, your login
 
 The chat runs the `claude` or `codex` command you already logged into, so it uses your own

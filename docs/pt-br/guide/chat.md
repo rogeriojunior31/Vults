@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: b1e46a7eb7be -->
+<!-- source: e7c89d097dbf -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -356,6 +356,11 @@ dentro do compositor. Clique no campo para escrever sobre ele. Você pode enviá
 que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
 a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; uma pasta, ou um arquivo
 com mais de 20 MB, é recusado com uma linha dizendo por quê.
+
+No Windows, arquivos arrastados do Explorer usam os objetos nativos de arquivo do WebView2 e
+aceitam até 256 arquivos por vez. Se o WebView2 instalado não conseguir recebê-los, o cursor
+continua indicando que o arraste está indisponível; use o clipe. Soltar um arquivo o anexa ao
+rascunho; isso não envia a mensagem.
 
 <a id="your-subscription-your-login"></a>
 

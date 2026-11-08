@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { AgentKind, Diff, RowView, SessionView, ViewModel } from "./view.gen";
 import type { InstallAgent } from "./agents.gen";
 import type { Activity, GithubGrid } from "./surfaces/settings/activity";
+import { installWindowsDrop, type FileDropTransport } from "./windows-drop";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
 /** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
@@ -917,6 +918,21 @@ export const Bridge = {
   /** Something is dragged over the island (true), or it left (false). */
   onDrag(cb: (over: boolean) => void): void {
     void listen<boolean>("drag", (e) => cb(e.payload));
+    const transport = (window as Window & { chrome?: { webview?: Partial<FileDropTransport> } }).chrome?.webview;
+    if (transport) {
+      let ready = false;
+      let changed = false;
+      if (typeof transport.postMessageWithAdditionalObjects === "function") {
+        void listen<boolean>("file-drop-ready", event => { changed = true; ready = event.payload; })
+          .then(() => invoke<boolean>("file_drop_ready"))
+          .then(value => { if (!changed) ready = value; }, () => { ready = false; });
+      }
+      installWindowsDrop(window, transport as FileDropTransport, () => ready,
+        over => { void invoke("file_drop_hover", { over }); },
+        files => { void emitTo("island", "files", {
+          copied: [], refused: files.map(file => ({ name: file.name, reason: "unreadable" })), to: "island",
+        }); });
+    }
   },
   /** A global shortcut was pressed: "allow" or "deny". */
   /** The pointer came onto or left the island's window (GTK's word, in order; see `pointer`). */
