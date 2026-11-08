@@ -48,4 +48,11 @@ drag("drop", Array(257).fill(file));
 assert.equal(sent.length, 1, "An oversized batch is rejected without partial attachment");
 drag("dragenter"); target.dispatchEvent(new Event("blur")); drag("dragleave");
 assert.deepEqual(hover.slice(-2), [true, false], "Cancelled drags release hover state");
+const legacy = new EventTarget();
+installWindowsDrop(legacy, {}, () => false, () => assert.fail("Legacy runtime cannot hover"),
+  () => assert.fail("Legacy runtime cannot attach"));
+const legacyDrop = new Event("drop", { cancelable: true });
+legacyDrop.dataTransfer = { files: [file], types: ["Files"] };
+legacy.dispatchEvent(legacyDrop);
+assert.equal(legacyDrop.defaultPrevented, true, "A runtime without the native API cannot navigate to files");
 console.log("Windows file drop lifecycle checks passed");

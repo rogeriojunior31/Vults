@@ -918,14 +918,16 @@ export const Bridge = {
   /** Something is dragged over the island (true), or it left (false). */
   onDrag(cb: (over: boolean) => void): void {
     void listen<boolean>("drag", (e) => cb(e.payload));
-    const transport = (window as Window & { chrome?: { webview?: FileDropTransport } }).chrome?.webview;
-    if (typeof transport?.postMessageWithAdditionalObjects === "function") {
+    const transport = (window as Window & { chrome?: { webview?: Partial<FileDropTransport> } }).chrome?.webview;
+    if (transport) {
       let ready = false;
       let changed = false;
-      void listen<boolean>("file-drop-ready", event => { changed = true; ready = event.payload; })
-        .then(() => invoke<boolean>("file_drop_ready"))
-        .then(value => { if (!changed) ready = value; }, () => { ready = false; });
-      installWindowsDrop(window, transport, () => ready,
+      if (typeof transport.postMessageWithAdditionalObjects === "function") {
+        void listen<boolean>("file-drop-ready", event => { changed = true; ready = event.payload; })
+          .then(() => invoke<boolean>("file_drop_ready"))
+          .then(value => { if (!changed) ready = value; }, () => { ready = false; });
+      }
+      installWindowsDrop(window, transport as FileDropTransport, () => ready,
         over => { void invoke("file_drop_hover", { over }); },
         files => { void emitTo("island", "files", {
           copied: [], refused: files.map(file => ({ name: file.name, reason: "unreadable" })), to: "island",
