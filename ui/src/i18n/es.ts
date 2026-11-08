@@ -234,7 +234,7 @@ export default {
   "Project notifications and visibility": "Notificaciones y visibilidad del proyecto",
 
   "System audio voice commands": "Comandos de voz del audio del sistema",
-  "Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate.": "Permite silenciar y ajustar el volumen de la salida predeterminada del equipo. Usa pactl local, conserva el balance entre canales y limita los ajustes de volumen al 100%. Los controles del reproductor y notificaciones de proyectos siguen separados.",
+  "Allow mute and volume commands for the default computer output. Preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate.": "Permite silenciar y ajustar el volumen de la salida predeterminada del equipo. Conserva el balance entre canales y limita los ajustes de volumen al 100%. Los controles del reproductor y notificaciones de proyectos siguen separados.",
   "Enable system audio voice commands first. Say: mute computer; unmute computer; computer volume 40; raise computer volume; lower computer volume. Changes use the default output, not the microphone. Volume changes do not unmute it.": "Activa primero los comandos de voz del audio del sistema. Di: silenciar el ordenador; desilenciar el ordenador; volumen del ordenador 40; sube el volumen del ordenador; baja el volumen del ordenador. Usa la salida predeterminada, no el micrófono. Cambiar el volumen no reactiva el sonido.",
 
   "Application voice commands": "Comandos de voz de aplicaciones",

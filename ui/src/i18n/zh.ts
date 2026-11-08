@@ -234,7 +234,7 @@ export default {
   "Project notifications and visibility": "项目通知与可见性",
 
   "System audio voice commands": "系统音频语音命令",
-  "Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate.": "允许静音和调整电脑默认输出音量。使用本地 pactl，保留声道平衡并将音量调整限制为 100%。播放器控制与项目通知保持独立。",
+  "Allow mute and volume commands for the default computer output. Preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate.": "允许静音和调整电脑默认输出音量。保留声道平衡并将音量调整限制为 100%。播放器控制与项目通知保持独立。",
   "Enable system audio voice commands first. Say: mute computer; unmute computer; computer volume 40; raise computer volume; lower computer volume. Changes use the default output, not the microphone. Volume changes do not unmute it.": "请先启用系统音频语音命令。可用英语说：mute computer、unmute computer、computer volume 40、raise computer volume、lower computer volume。操作针对默认输出，不影响麦克风。更改音量不会取消静音。",
 
   "Application voice commands": "应用语音命令",

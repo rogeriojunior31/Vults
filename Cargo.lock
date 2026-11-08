@@ -7413,6 +7413,7 @@ dependencies = [
  "wayland-client",
  "wayland-protocols",
  "windows",
+ "windows-core",
  "wl-clipboard-rs",
  "x11rb",
  "zbus 5.19.0",

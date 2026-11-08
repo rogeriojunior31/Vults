@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 83d1fc26e520 -->
+<!-- source: 6bea728c8feb -->
 
 As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
@@ -1169,11 +1169,11 @@ continua pendente. Silenciar notificações de projeto e controlar o player mant
 Isso controla apenas a saída padrão, nunca microfone, ganho de entrada ou estado de reprodução.
 Passos relativos são de dez pontos percentuais e os ajustes de volume ficam entre 0 e 100 por cento. O balanço
 entre canais é preservado quando os níveis atuais não nulos o definem. Mudar o volume não reativa
-a saída; use o comando explícito de reativar o som. Silenciar preserva o nível atual, inclusive um nível já acima de 100%; o resultado informa esse nível medido sem limitá-lo. Uma leitura posterior confirma volume e silêncio
+a saída; use o comando explícito de reativar o som. Silenciar preserva o nível atual, inclusive um nível já acima de 100% no Linux; o resultado informa esse nível medido sem limitá-lo. Uma leitura posterior confirma volume e silêncio
 reais antes de informar sucesso. Pedidos literais com sinal ou fora do intervalo ficam locais e
 nunca entram no encaminhamento opcional ao Chat.
 
-O backend opcional exige `pactl` com saída JSON e um socket Unix local compatível com PulseAudio.
+No Linux, o backend opcional exige `pactl` com saída JSON e um socket Unix local compatível com PulseAudio.
 Um `PULSE_SERVER` remoto é recusado. Identidade do servidor, índice/nome da saída, mapa de canais e
 porta ativa são capturados e conferidos antes e depois de escritas pelo índice fixado; nenhum
 apelido de saída padrão redireciona uma escrita enfileirada para uma saída recém-selecionada. Essas
@@ -1183,6 +1183,20 @@ sem repetir nem reverter automaticamente. Lotes nativos podem combinar ações d
 instalados na ordem falada; navegação, preferências e consultas do bando também são aceitas, com os limites acima. Voz em tempo real não executa esses comandos. Os testes usam
 estado simulado e processos privados, não áudio pessoal; a validação real de saída/cancelamento
 no desktop continua pendente.
+
+No Windows, a mesma opção **Comandos de voz do áudio do sistema**, desligada por padrão, usa
+Core Audio para a saída multimídia padrão. Use o atalho de comando de voz exibido em
+**Settings > Dictation > Keyboard shortcuts**. Ela permite silenciar, reativar o som, definir o volume
+e usar passos relativos de dez pontos, independentemente de Agora tocando. Uma mudança na saída
+padrão, no estado do dispositivo, na configuração dos canais ou um ajuste manual de volume/silêncio
+invalida um comando enfileirado. Dispositivos de captura nunca são escolhidos. As chamadas nativas
+rodam em uma thread própria; o cancelamento ou o fechamento da resposta impede escritas posteriores.
+Uma falha do driver pode interromper uma atualização de canais; o comando informa a falha e não
+repete nem reverte a operação. Lotes no Windows podem combinar comandos aceitos de pausa, reprodução
+e troca de faixa com comandos da saída do computador; todos os escopos pedidos precisam de
+consentimento antes de qualquer ação. Volume por player e abertura de aplicativos instalados
+continuam indisponíveis no Windows. Alterar a música temporariamente durante a gravação é uma
+opção separada e não é ativada pelos comandos da saída do computador.
 
 A V8.5 acrescenta **Ditado > Comandos de voz**: uma visão pesquisável dos comandos/resultados retidos,
 com Copiar/Excluir explícitos e sem repetição. Compartilha o prazo do Histórico e sua confirmação de

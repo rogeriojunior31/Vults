@@ -84,7 +84,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   return async (...args) => {
     switch (name) {
       case "appSettings": return initialSettings;
-      case "windowsShortcuts": return null;
+      case "windowsShortcuts": return globalThis.settingsTestWindowsBindings ?? null;
       case "questionInstallStatus": return [];
       case "dictationMicrophones": return new Promise((resolve, reject) => microphoneReads.push({ resolve, reject }));
       case "dictationClear": writes.push([name]); return new Promise((resolve, reject) => pendingErases.push({ resolve, reject }));
@@ -127,10 +127,18 @@ const ui = fileURLToPath(new URL("../ui/", import.meta.url));
 const bundle = await build({ configFile: false, root: ui, logLevel: "silent", plugins: [{
   name: "settings-native-mock", enforce: "pre", resolveId(id) {
     if (/\/bridge(?:\.ts)?$/.test(id)) return "\0settings-bridge";
+    if (id.endsWith("/windows-shortcuts")) return "\0settings-windows-shortcuts";
     if (id.endsWith("/nest/head")) return "\0settings-head";
     if (id === "@tauri-apps/api/app") return "\0settings-version";
   }, load(id) {
     if (id === "\0settings-bridge") return "export const Bridge = globalThis.settingsTestBridge;";
+    if (id === "\0settings-windows-shortcuts") return `
+      import { createWindowsShortcuts as production } from ${JSON.stringify(`${ui}src/surfaces/settings/windows-shortcuts.ts`)};
+      export const createWindowsShortcuts = (...args) => {
+        const controller = production(...args);
+        globalThis.settingsTestWindowsController = controller;
+        return controller;
+      };`;
     if (id === "\0settings-version") return 'export const getVersion = async () => "test";';
     if (id === "\0settings-head") return `
       const noop = () => {};
@@ -661,3 +669,21 @@ widthStorage.delete("island-width");
 for (const fn of windowEvents.storage ?? []) fn({ key: "island-width" });
 assert.equal(widthPick().value, "0");
 console.log("check-settings-ui: shared General/Compact width, cross-view refresh, Default and failed-save rollback");
+
+globalThis.settingsTestWindowsBindings = { requested: {}, defaults: {}, active: {}, conflicts: [] };
+await globalThis.settingsTestWindowsController.refresh();
+await go("Dictation");
+await dictationPage("commands");
+events.onSettings({ dictationCommandOutput: false }); await tick();
+assert.ok(rowNamed("System audio voice commands"), "Windows exposes the independent output grant");
+assert.equal(rowNamed("Application voice commands"), undefined, "Unsupported app launching stays hidden");
+assert.equal(outputSwitch().checked, false);
+outputSwitch().checked = true; outputSwitch().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationCommands", "output", true]);
+pendingSettings.at(-1).reject(new Error("Disk unavailable")); await tick();
+assert.equal(outputSwitch().checked, false, "A failed Windows save cannot enable output commands");
+outputSwitch().checked = true; outputSwitch().fire("change"); await tick();
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(outputSwitch().checked, true);
+assert.equal(rowNamed("Media voice commands").querySelector("input").checked, false);
+console.log("check-settings-ui: Windows output opt-in is visible, independent, persisted and failure-safe");

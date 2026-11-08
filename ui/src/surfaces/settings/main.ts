@@ -1245,11 +1245,11 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         ...(!windowsShortcuts.supported() ? [row(t("Application voice commands"), t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
           await Bridge.setDictationCommands("applications", on);
           dictationCommandApps = on; dictationCommandAppsChanged = true;
-        })),
-        row(t("System audio voice commands"), t("Allow mute and volume commands for the default computer output. Uses local pactl, preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate."), toggle(dictationCommandOutput, async on => {
+        }))] : []),
+        row(t("System audio voice commands"), t("Allow mute and volume commands for the default computer output. Preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate."), toggle(dictationCommandOutput, async on => {
           await Bridge.setDictationCommands("output", on);
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
-        }))] : []),
+        })),
         row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
         row(t("Names it understands"), t("Uses current project and agent names, plus replacements in Dictionary. Small spelling differences can match; when names tie, Vults asks which one."), button(t("Dictionary"), () => void Bridge.openNest("dictation-dictionary"))),
       ),

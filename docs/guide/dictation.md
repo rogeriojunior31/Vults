@@ -1053,10 +1053,10 @@ remains pending. Project notification mute and selected-player playback keep the
 This controls only the default output, never a microphone, input gain or playback state. Relative
 steps are ten percentage points and volume adjustments stay within 0..100 percent. Existing channel balance
 is preserved when the current nonzero levels define it. Changing volume does not unmute output;
-use the explicit unmute command. Muting preserves the current level, including an existing level above 100%; the status reports that measured level without capping it. Readback confirms the actual mute/volume before reporting success.
+use the explicit unmute command. Muting preserves the current level, including an existing level above 100% on Linux; the status reports that measured level without capping it. Readback confirms the actual mute/volume before reporting success.
 Literal signed or out-of-range volume requests stay local and never enter optional Chat fallback.
 
-The optional backend needs `pactl` with JSON output and a local PulseAudio-compatible Unix socket.
+On Linux, the optional backend needs `pactl` with JSON output and a local PulseAudio-compatible Unix socket.
 A remote `PULSE_SERVER` is refused. Server identity, sink index/name, channel map and active port
 are captured and rechecked before and after fixed-index writes; no default-output alias can redirect
 a queued write to a newly selected output. These separate native calls are not an atomic routing
@@ -1066,6 +1066,18 @@ Native batches can combine player, computer-output and installed-app actions in 
 flock navigation, preferences and queries are also supported, with the limits above. Realtime voice
 does not execute these commands. Backend tests use simulated state/private process fixtures, not
 personal audio; real desktop output/cancellation acceptance remains pending.
+
+On Windows, the same default-off **System audio voice commands** setting uses Core Audio for the
+default multimedia output. Use the Voice command shortcut shown in **Settings > Dictation > Keyboard shortcuts**.
+It supports mute, unmute, absolute volume and ten-point relative steps,
+independently of Now playing. A changed default output, device state, channel layout or manual
+volume/mute adjustment invalidates a queued command. Capture devices are never targeted. Native
+calls run on a dedicated worker, and cancellation or a closed reply prevents later writes. A driver
+failure can interrupt a channel update; the command reports failure and does not retry or roll back.
+Windows batches can combine supported player pause/resume/track commands with computer-output
+commands; all requested scopes need consent before any action. Per-player volume and installed-app
+launching remain unavailable on Windows. Temporary music changes during recording are a separate
+setting and are not added by enabling computer-output commands.
 
 V8.5 adds **Settings > Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its
