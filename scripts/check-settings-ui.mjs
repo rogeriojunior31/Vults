@@ -2,6 +2,9 @@
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
+import { spawnSync } from "node:child_process";
+const initialRoute = process.env.VULTS_SETTINGS_INITIAL_ROUTE ?? "";
+if (initialRoute) globalThis.settingsTestWindowsBindings = { requested: {}, defaults: {}, active: {}, conflicts: [] };
 const nodes = node => [node, ...node.children.flatMap(nodes)];
 class Element {
   children = []; listeners = {}; attributes = {}; dataset = {}; style = { setProperty() {} };
@@ -72,7 +75,7 @@ const widthStorage = new Map(), windowEvents = {};
 globalThis.localStorage = { getItem: key => widthStorage.get(key) ?? null, setItem: (key, value) => widthStorage.set(key, value) };
 globalThis.window = { setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, addEventListener(name, fn) { (windowEvents[name] ??= []).push(fn); } };
 globalThis.matchMedia = () => ({ matches: true, addEventListener() {} });
-globalThis.location = { hash: "#general" };
+globalThis.location = { hash: initialRoute ? `#${initialRoute}` : "#general" };
 globalThis.Option = class extends Element {
   constructor(label, value, _default, selected) { super("option"); this.textContent = label; this.value = value; this.selected = selected; }
 };
@@ -84,7 +87,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   return async (...args) => {
     switch (name) {
       case "appSettings": return initialSettings;
-      case "windowsShortcuts": return null;
+      case "windowsShortcuts": return globalThis.settingsTestWindowsBindings ?? null;
       case "questionInstallStatus": return [];
       case "dictationMicrophones": return new Promise((resolve, reject) => microphoneReads.push({ resolve, reject }));
       case "dictationClear": writes.push([name]); return new Promise((resolve, reject) => pendingErases.push({ resolve, reject }));
@@ -127,10 +130,18 @@ const ui = fileURLToPath(new URL("../ui/", import.meta.url));
 const bundle = await build({ configFile: false, root: ui, logLevel: "silent", plugins: [{
   name: "settings-native-mock", enforce: "pre", resolveId(id) {
     if (/\/bridge(?:\.ts)?$/.test(id)) return "\0settings-bridge";
+    if (id.endsWith("/windows-shortcuts")) return "\0settings-windows-shortcuts";
     if (id.endsWith("/nest/head")) return "\0settings-head";
     if (id === "@tauri-apps/api/app") return "\0settings-version";
   }, load(id) {
     if (id === "\0settings-bridge") return "export const Bridge = globalThis.settingsTestBridge;";
+    if (id === "\0settings-windows-shortcuts") return `
+      import { createWindowsShortcuts as production } from ${JSON.stringify(`${ui}src/surfaces/settings/windows-shortcuts.ts`)};
+      export const createWindowsShortcuts = (...args) => {
+        const controller = production(...args);
+        globalThis.settingsTestWindowsController = controller;
+        return controller;
+      };`;
     if (id === "\0settings-version") return 'export const getVersion = async () => "test";';
     if (id === "\0settings-head") return `
       const noop = () => {};
@@ -145,6 +156,13 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 events.onSettings({ dictationCommands: false, dictationCommandChat: true, dictationVocabulary: false, dictationProjectVocabulary: false, dictationMusic: "leave", dictationCancelByVoice: false, dictationSpokenCode: false, dictationCutRepeats: false, dictationRetryBase: false, dictationMicrophone: "Disconnected mic", dictationInsert: true, dictationDoubleTap: false, dictationSpaceLock: false, dictationEscapeCancel: false });
 initialSettingsReady(settings);
 await tick();
+if (initialRoute) {
+  assert.equal(root.querySelector('[data-dictation-section="commands"]')?.open, true,
+    "A cold command-settings link opens its disclosure before any settings event");
+  assert.equal(writes.length, 0, "Opening a linked preference never grants a capability");
+  console.log("check-settings-ui: cold Windows command-settings link opens the requested disclosure without writes");
+  process.exit(0);
+}
 const page = () => root.querySelector("main.page");
 const nav = label => root.querySelectorAll("button.nav").find(n => n.textContent === label);
 const go = async label => {
@@ -661,3 +679,26 @@ widthStorage.delete("island-width");
 for (const fn of windowEvents.storage ?? []) fn({ key: "island-width" });
 assert.equal(widthPick().value, "0");
 console.log("check-settings-ui: shared General/Compact width, cross-view refresh, Default and failed-save rollback");
+
+globalThis.settingsTestWindowsBindings = { requested: {}, defaults: {}, active: {}, conflicts: [] };
+await globalThis.settingsTestWindowsController.refresh();
+await go("Dictation");
+await dictationPage("commands");
+events.onSettings({ dictationCommandOutput: false }); await tick();
+assert.ok(rowNamed("System audio voice commands"), "Windows exposes the independent output grant");
+assert.equal(rowNamed("Application voice commands"), undefined, "Unsupported app launching stays hidden");
+assert.equal(outputSwitch().checked, false);
+outputSwitch().checked = true; outputSwitch().fire("change"); await tick();
+assert.deepEqual(writes.at(-1), ["setDictationCommands", "output", true]);
+pendingSettings.at(-1).reject(new Error("Disk unavailable")); await tick();
+assert.equal(outputSwitch().checked, false, "A failed Windows save cannot enable output commands");
+outputSwitch().checked = true; outputSwitch().fire("change"); await tick();
+pendingSettings.at(-1).resolve(); await tick();
+assert.equal(outputSwitch().checked, true);
+assert.equal(rowNamed("Media voice commands").querySelector("input").checked, false);
+console.log("check-settings-ui: Windows output opt-in is visible, independent, persisted and failure-safe");
+const cold = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+  env: { ...process.env, VULTS_SETTINGS_INITIAL_ROUTE: "dictationcommands" }, windowsHide: true, encoding: "utf8",
+});
+assert.equal(cold.status, 0, cold.stderr || cold.stdout);
+process.stdout.write(cold.stdout);

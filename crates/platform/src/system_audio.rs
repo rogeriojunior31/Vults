@@ -1,4 +1,4 @@
-//! Local output controls through fixed pactl arguments; transcripts never become process arguments.
+//! Local output controls through fixed pactl arguments or Windows Core Audio.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
@@ -356,3 +356,9 @@ mod linux {
 
 #[cfg(target_os = "linux")]
 pub use linux::{Target, pin};
+
+#[cfg(windows)]
+#[path = "windows/system_audio.rs"]
+mod windows;
+#[cfg(windows)]
+pub use windows::{Target, pin};
