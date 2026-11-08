@@ -54,6 +54,9 @@ pub mod tray;
 pub mod save;
 
 #[cfg(windows)]
+#[path = "windows/notifications.rs"]
+pub mod notifications;
+#[cfg(windows)]
 pub mod windows_session;
 #[cfg(windows)]
 pub mod windows_shortcuts;

@@ -1,4 +1,4 @@
-//! Desktop notifications over org.freedesktop.Notifications. Core decides what to show
+//! Desktop notifications over D-Bus or Windows WinRT. Core decides what to show
 //! (`core::notify`); this only sends it, one notification per session (replaced in place), and
 //! hears the one action a notification has: *Open*. Never Allow or Deny (rule 2, ADR 0004).
 
@@ -6,23 +6,31 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
 use vults_core::notify::Change;
 
-/// What goes to the D-Bus task: the core's changes, and the app's own news (the budget's), which
-/// belongs to no session and has no action. Read only by the Linux task.
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+/// The desktop worker receives core changes and app news (the budget's), which has no session action.
+#[cfg_attr(not(any(target_os = "linux", windows)), allow(dead_code))]
 enum Note {
     Core(Change),
-    Plain { title: String, body: String },
+    Plain {
+        title: String,
+        body: String,
+    },
+    #[cfg(windows)]
+    Stop(std::sync::mpsc::Sender<()>),
+    #[cfg(windows)]
+    Refresh,
 }
 
-/// The notes, on their way to the D-Bus task.
+/// The notes, on their way to the desktop worker.
 pub struct Notices(mpsc::UnboundedSender<Note>);
 
-/// From the runtime loop: never waits on D-Bus.
+/// From the runtime loop: never waits on the desktop service.
 pub fn send(app: &AppHandle, changes: Vec<Change>) {
     if let Some(n) = app.try_state::<Notices>() {
         for change in changes {
             let _ = n.0.send(Note::Core(change));
         }
+        #[cfg(windows)]
+        let _ = n.0.send(Note::Refresh);
     }
 }
 
@@ -43,9 +51,27 @@ pub fn start(app: &AppHandle) {
     app.manage(Notices(tx));
     #[cfg(target_os = "linux")]
     tauri::async_runtime::spawn(linux::run(app.clone(), rx));
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(windows)]
+    tauri::async_runtime::spawn_blocking({
+        let app = app.clone();
+        move || windows::run(app, rx)
+    });
+    #[cfg(not(any(target_os = "linux", windows)))]
     drop(rx);
 }
+
+pub fn shutdown(_app: &AppHandle) {
+    #[cfg(windows)]
+    if let Some(notices) = _app.try_state::<Notices>() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        if notices.0.send(Note::Stop(tx)).is_ok() {
+            let _ = rx.recv_timeout(std::time::Duration::from_secs(2));
+        }
+    }
+}
+
+#[cfg(windows)]
+mod windows;
 
 /// The body may be read as markup (the spec's `body-markup`): an agent's words must stay words.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
