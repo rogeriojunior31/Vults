@@ -2329,13 +2329,9 @@ pub(crate) fn voice_command(
         .0
         .lock()
         .is_ok_and(|saved| saved.dictation_command_apps);
-    #[cfg(target_os = "linux")]
-    let applications = enabled.then(vults_platform::applications::installed);
     #[cfg(windows)]
-    let applications = {
-        let _ = enabled;
-        None
-    };
+    let enabled = enabled && crate::voice_commands::needs_application_catalog(&text);
+    let applications = enabled.then(vults_platform::applications::installed);
     app.state::<Inbox>()
         .0
         .try_send(Msg::VoiceCommand {

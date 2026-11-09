@@ -208,7 +208,7 @@ pub(crate) async fn voice_command_check(window: tauri::Webview, text: String) ->
             &parsed,
             || crate::dictation_words::rules(&crate::history::dir()).map(|rules| rules.replacements),
             || {
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", windows))]
                 {
                     let enabled = app
                         .state::<crate::settings::SettingsState>()
@@ -218,7 +218,7 @@ pub(crate) async fn voice_command_check(window: tauri::Webview, text: String) ->
                         .dictation_command_apps;
                     Ok(enabled.then(vults_platform::applications::installed))
                 }
-                #[cfg(not(target_os = "linux"))]
+                #[cfg(not(any(target_os = "linux", windows)))]
                 {
                     let _ = app;
                     Ok(None)
