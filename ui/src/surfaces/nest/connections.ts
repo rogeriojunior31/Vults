@@ -5,7 +5,7 @@ import { sidePanel } from "./panels";
 // detail beside them: its facts, each check, a command to copy. Only connectors that exist are
 // offered (ADR 0011), and only what each row holds is shown; turning one on stays in Settings.
 import type { BoardView, ConnectorStatus, ConnectionsPlace, ConnectorZecaTools } from "../../bridge";
-import { CONNECTORS } from "../../connectors";
+import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { copyTextButton } from "../../clipboard";
@@ -547,7 +547,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       if (repo && !repos.includes(repo)) repo = null;
       const mine = board.rows.filter((r) => !repo || r.facts.repo === repo);
       const count = (id: Tab) => mine.filter(TABS[id]).length;
-      const shown: Tab = tab ?? (count("inbox") ? "inbox" : "prs");
+      const selectedTab = board.connector === "gitlab" && (tab === "runs" || tab === "rels") ? null : tab;
+      const shown: Tab = selectedTab ?? (count("inbox") ? "inbox" : "prs");
       const fresh = mine.filter((r) => needs(r) && !isSeen(board.connector, r)).length;
       const failing = mine.filter((r) => r.group === "branches" && r.checks === "failing").length;
       const tabButton = (id: Tab, word: string, badge: string | null, hot = false) => {
@@ -577,9 +578,9 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         .join(" ").toLocaleLowerCase(locale()).includes(query));
       const heads =
         shown === "inbox"
-          ? INBOX.map((g) => ({ label: t(g.label), has: g.has }))
+          ? INBOX.map((g) => ({ label: board.connector === "gitlab" && g.label === "Your pull requests" ? t("Your merge requests") : t(g.label), has: g.has }))
           : shown === "prs"
-            ? GROUPS.filter((g) => g.id !== "branches").map((g) => ({ label: t(g.label), has: (r: RowView) => r.group === g.id }))
+            ? GROUPS.filter((g) => g.id !== "branches").map((g) => ({ label: board.connector === "gitlab" && g.id === "yours" ? t("Your merge requests") : t(g.label), has: (r: RowView) => r.group === g.id }))
             : [{ label: "", has: () => true }];
       // The first row shown is picked, in the sections' order.
       if (!picked || !rows.some((r) => r.item === picked)) {
@@ -657,9 +658,11 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           "nav",
           { class: "nest-subs conn-tabs" },
           tabButton("inbox", t("Inbox"), fresh ? t("{n} new", { n: fresh }) : null),
-          tabButton("prs", t("Pull requests"), String(count("prs"))),
-          tabButton("runs", t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),
-          tabButton("rels", t("Releases"), String(count("rels"))),
+          tabButton("prs", board.connector === "gitlab" ? t("Merge requests") : t("Pull requests"), String(count("prs"))),
+          ...(board.connector === "gitlab" ? [] : [
+            tabButton("runs", t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),
+            tabButton("rels", t("Releases"), String(count("rels"))),
+          ]),
         ),
         el("div", { class: "conn-toolbar" }, el("div", { class: "conn-search-box" }, icon("search", 15, 1.8), search), pickRepo,
           el("span", { class: "conn-results", text: t("Results: {shown} of {total}", { shown: rows.length, total: inTab.length }) })),
@@ -714,7 +717,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       ...(zecaFace ? [] : pending).map(c => el("section", { class: "conn-waiting" },
         el("h3", { text: c.name }),
         el("p", { text: t("{name} is on; its card shows after its first check.", { name: c.name }) }),
-        status.get(c.id)?.error ? el("p", { class: "conn-refused", text: status.get(c.id)!.error! })
+        status.get(c.id)?.error ? el("p", { class: "conn-refused", text: connectorError(status.get(c.id)!.error!) })
           : status.get(c.id)?.overBudget ? el("p", { class: "conn-status stale", text: t("Daily request limit reached. Checks resume when the budget resets.") }) : null,
         el("div", { class: "conn-actions" },
           fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),

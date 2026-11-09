@@ -7,6 +7,7 @@
 //! differences become events. The first poll ever only records a baseline.
 
 pub mod github;
+pub mod gitlab;
 mod runtime;
 
 use std::collections::BTreeMap;
@@ -240,5 +241,5 @@ pub trait Connector: Send + Sync {
 
 /// Every connector the app knows, by id.
 pub fn all() -> Vec<Box<dyn Connector>> {
-    vec![Box::new(github::GitHub)]
+    vec![Box::new(github::GitHub), Box::new(gitlab::GitLab)]
 }

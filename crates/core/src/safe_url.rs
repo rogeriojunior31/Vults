@@ -3,7 +3,7 @@
 use std::fmt;
 
 /// Hosts a connector may link to.
-const HOSTS: &[&str] = &["github.com"];
+const HOSTS: &[&str] = &["github.com", "gitlab.com"];
 const MAX_LEN: usize = 2048;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -51,6 +51,20 @@ mod tests {
             "https://github.com",
         ] {
             assert!(SafeUrl::parse(ok).is_some(), "{ok}");
+        }
+    }
+
+    #[test]
+    fn gitlab_links_accept_subgroups_and_refuse_host_spoofing() {
+        assert!(SafeUrl::parse("https://gitlab.com/team/sub/app/-/merge_requests/7").is_some());
+        for bad in [
+            "http://gitlab.com/a",
+            "https://gitlab.com.evil.example/a",
+            "https://gitlab.com@evil.example/a",
+            "https://gitlab.com:8443/a",
+            "https://gitlab.com\\@evil.example/a",
+        ] {
+            assert!(SafeUrl::parse(bad).is_none(), "{bad}");
         }
     }
 

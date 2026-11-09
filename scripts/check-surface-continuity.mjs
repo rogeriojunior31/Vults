@@ -703,6 +703,16 @@ const connections = createConnections({ status: async () => [], refresh: () => n
   onMerged() {}, merge: async (...args) => { merges.push(args); }, settings() {}, open() {}, zeca: () => null });
 const mergeRow = { ...row, group: "yours", checks: "passing", merge: true,
   facts: { ...row.facts, runs: [{ name: "CI", state: "passed" }] } };
+const gitlabUI = createConnections({ status: async () => [], refresh: async () => {},
+  onMerged() {}, merge: async () => { throw Error("GitLab must stay read only"); }, settings() {}, open() {}, zeca: () => null });
+gitlabUI.update({ boards: [{ connector: "gitlab", rows: [{ ...mergeRow, name: "app!7", item: "mr:alice:team/app!7:item", merge: false }] }] });
+await tick();
+assert.ok(gitlabUI.element.textContent.includes("Merge requests"));
+assert.ok(gitlabUI.element.textContent.includes("Your merge requests"));
+assert.ok(!gitlabUI.element.textContent.includes("Squash and merge"));
+assert.ok(!gitlabUI.element.querySelector('[data-fid="tab:runs"]'));
+assert.ok(!gitlabUI.element.querySelector('[data-fid="tab:rels"]'));
+console.log("check-surface-continuity: GitLab uses merge-request labels and offers no unsupported merge, Actions or Releases tab");
 connections.update({ boards: [{ connector: "github", rows: [mergeRow] }] });
 document.body.replaceChildren(connections.element); await tick();
 connections.element.querySelector(".conn-row").fire("click");
@@ -871,7 +881,8 @@ unknownUI.update({ boards: [] }); unknownReads.at(-1).reject(new Error("Unavaila
 assert.equal(unknownUI.element.querySelector(".nest-add"), null, "An unreadable status never claims the connector is off");
 unknownUI.element.querySelector('[data-fid="act:status-retry"]').fire("click"); unknownReads.at(-1).resolve(healthy); await tick();
 assert.ok(unknownUI.element.querySelector(".conn-waiting"));
-assert.equal(unknownUI.element.querySelector(".nest-add"), null);
+assert.equal(unknownUI.element.querySelector('[data-fid="add:github"]'), null, "The enabled GitHub connector is not offered as off");
+assert.ok(unknownUI.element.querySelector('[data-fid="add:gitlab"]'), "GitLab is independently available in Settings");
 console.log("check-surface-continuity: Connections search/filter/empty states, independent scroll, explicit actions, check priority/disclosures, narrow Escape and stale status ordering without side effects");
 
 

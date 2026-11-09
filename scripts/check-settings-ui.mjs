@@ -107,7 +107,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "budgetSet": writes.push([name, ...args]); return new Promise((resolve, reject) => pendingBudgets.push({ resolve, reject }));
       case "nestIsFull": return false;
       case "monitors": case "rulesList": case "policiesList": case "agentsDoctor": return [];
-      case "connectorsStatus": return [{ id: "github", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "maintainer", host: "github.com" }];
+      case "connectorsStatus": return [{ id: "github", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "maintainer", host: "github.com" }, { id: "gitlab", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "reviewer", host: "gitlab.com" }];
       case "projectPrefs": return {};
       case "installStatus": return { installed: false, hookReady: true, statusLine: "ours", configPath: "/home/example/agent.json" };
       case "apiProviders": return { selected: "example", providers: [{ id: "example", label: "Example", local: false, hasKey: false }] };
@@ -213,6 +213,11 @@ for (const label of ["Dictation", "Approvals", "Projects", "Connectors", "Phone"
 }
 await go("Connectors");
 assert.ok(page().textContent.includes("Last successful GitHub CLI account: maintainer on github.com."), "GitHub settings identify the last successful account and host from the connector poll");
+const gitlabCard = page().querySelectorAll("section.card").find(card => card.querySelector(".card-title")?.textContent === "GitLab");
+assert.ok(gitlabCard, "GitLab is an explicit registered connector");
+assert.equal(gitlabCard.querySelector("input").checked, false);
+assert.ok(gitlabCard.textContent.includes("glab auth login --hostname gitlab.com"));
+assert.ok(gitlabCard.textContent.includes("Last successful GitLab CLI account: reviewer on gitlab.com."));
 assert.deepEqual(writes, []);
 console.log("check-settings-ui: all eleven pages, single headings, disclosed diagnostics/shortcuts, retained scroll/focus/draft, Activity routing and explicit history confirmation");
 

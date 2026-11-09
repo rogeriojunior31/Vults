@@ -13,7 +13,7 @@ import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
-import { CONNECTORS } from "../../connectors";
+import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
 import { button, diff, disclosure, row, saveSetting, toggle } from "./pieces";
 import { policiesSection, refreshPolicies } from "./policies";
@@ -838,8 +838,9 @@ function connectorsPage(): HTMLElement[] {
         ),
         el("p", { class: "row-about", text: t(c.about) }),
         c.id === "github" && st?.account && st.host ? el("p", { class: "note", text: t("Last successful GitHub CLI account: {account} on {host}.", { account: st.account, host: st.host }) }) : null,
+        c.id === "gitlab" && st?.account && st.host ? el("p", { class: "note", text: t("Last successful GitLab CLI account: {account} on {host}.", { account: st.account, host: st.host }) }) : null,
         st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: t("Last checked {when}.", { when: ago(st.lastOk) }) }) : null,
-        st?.enabled && st.error ? el("p", { class: "note error", text: st.error }) : null,
+        st?.enabled && st.error ? el("p", { class: "note error", text: connectorError(st.error) }) : null,
         st?.enabled && st.overBudget
           ? el("p", { class: "note warn", text: t("It made as many checks as it may in a day, so it waits: it checks again once it has room.") })
           : null,
