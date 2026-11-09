@@ -57,6 +57,7 @@ fn native_owned_session_pause_and_resume() {
                                 }
                                 SystemMediaTransportControlsButton::Play => {
                                     play_count.fetch_add(1, Ordering::AcqRel);
+                                    std::thread::sleep(Duration::from_millis(100));
                                     sender.SetPlaybackStatus(MediaPlaybackStatus::Playing)?;
                                 }
                                 _ => {}
@@ -96,11 +97,10 @@ fn native_owned_session_pause_and_resume() {
         tokio::time::sleep(Duration::from_millis(250)).await;
         let end = Instant::now() + Duration::from_millis(700);
         hold_sessions(|| Instant::now() < end, &manager, vec![session.clone()]).await;
-        let deadline = Instant::now() + Duration::from_secs(2);
-        while !playing(&session, Playback::Playing) {
-            assert!(Instant::now() < deadline, "owned session did not resume");
-            tokio::time::sleep(TICK).await;
-        }
+        assert!(
+            playing(&session, Playback::Playing),
+            "restoration returned before the delayed player update"
+        );
         assert_eq!(
             pauses.load(Ordering::Acquire),
             1,

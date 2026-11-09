@@ -248,9 +248,12 @@ async fn hold_sessions(active: impl Fn() -> bool, manager: &Manager, sessions: V
             continue;
         };
         let accepted = matches!(
-            tokio::time::timeout_at(deadline.into(), request).await,
+            tokio::time::timeout_at(deadline.into(), request.clone()).await,
             Ok(Ok(true))
         );
+        if !accepted {
+            let _ = request.Cancel();
+        }
         while accepted
             && Instant::now() < deadline
             && (!playing(&target.session, Playback::Paused)
@@ -290,8 +293,21 @@ async fn hold_sessions(active: impl Fn() -> bool, manager: &Manager, sessions: V
             continue;
         }
         // Never retry an ambiguous write; a late completion cannot authorize another play.
-        if let Ok(request) = target.session.TryPlayAsync() {
-            let _ = tokio::time::timeout_at(deadline.into(), request).await;
+        if Instant::now() < deadline
+            && let Ok(request) = target.session.TryPlayAsync()
+        {
+            if matches!(
+                tokio::time::timeout_at(deadline.into(), request.clone()).await,
+                Ok(Ok(true))
+            ) {
+                // Acceptance precedes the player's state update. Keep explicit voice commands
+                // waiting until that update is visible, within the shared restore budget.
+                while !playing(&target.session, Playback::Playing) && Instant::now() < deadline {
+                    tokio::time::sleep(TICK).await;
+                }
+            } else {
+                let _ = request.Cancel();
+            }
         }
     }
     drop(paused);
