@@ -1,4 +1,5 @@
-//! Local Start Menu launchers. Parse a bounded snapshot, never a spoken command line.
+//! Registered Windows launchers. Speech selects a name, never a command line.
+mod packaged;
 use super::Application;
 use std::{
     fs::{self, File, OpenOptions},
@@ -247,9 +248,14 @@ fn inventory(roots: &[PathBuf], allowed: &dyn Fn() -> bool) -> Vec<Application> 
     apps
 }
 pub fn installed() -> Vec<Application> {
-    worker(|allowed| Ok(inventory(&roots(), allowed))).unwrap_or_default()
+    let mut apps = worker(|allowed| Ok(inventory(&roots(), allowed))).unwrap_or_default();
+    apps.extend(packaged::installed());
+    apps
 }
 pub fn validate(application: &Application) -> Result<(), String> {
+    if packaged::accepts(application) {
+        return packaged::validate(application);
+    }
     let application = application.clone();
     worker(move |_| {
         snapshot(&roots(), &application.source)
@@ -262,6 +268,9 @@ pub async fn launch(
     application: &Application,
     allowed: impl Fn() -> bool + Send + 'static,
 ) -> Result<(), String> {
+    if packaged::accepts(application) {
+        return packaged::launch(application, allowed).await;
+    }
     let application = application.clone();
     let deadline = Instant::now() + BUDGET;
     let (send, receive) = tokio::sync::oneshot::channel();

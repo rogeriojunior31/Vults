@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 7fad1f8321d6 -->
+<!-- source: c2a422d738f5 -->
 
 As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
@@ -1137,7 +1137,7 @@ solicitada**, não que a janela esteja pronta. Abrir um app não permite repetir
 
 No Windows, essa opção desativada por padrão lê atalhos `.lnk` locais nas pastas de programas do
 Menu Iniciar do usuário e de todos os usuários. Apenas destinos `.exe` locais existentes, com
-pasta de trabalho local, são aceitos. Apps exclusivos da Store, atalhos de documentos/URLs,
+pasta de trabalho local, são aceitos como atalhos desktop. Atalhos de documentos/URLs,
 arquivos de atalho redirecionados e caminhos com variáveis de ambiente não resolvidas não são
 suportados. O nome do atalho é o nome falado do aplicativo. Os argumentos instalados e o estado da
 janela são preservados; a fala nunca fornece argumentos adicionais. Os bytes do atalho e a definição
@@ -1147,6 +1147,18 @@ relativo. A descoberta e a execução usam threads nativas com prazo limitado; u
 expirou ou foi cancelada não pode admitir uma abertura posterior. Um pedido já enviado ao Windows
 pode terminar após o prazo, então confira o resultado antes de repetir. Nenhum atalho é instalado ou
 alterado pelo recurso. Comandos de reprodução e volume do computador não consultam o catálogo de aplicativos.
+
+A mesma opção também inclui apps da Microsoft Store e outros apps empacotados registrados para o
+usuário atual do Windows. Os nomes vêm das informações nativas da lista de aplicativos, no idioma
+do sistema. Pacotes de framework/recursos, stubs de instalação e registros inutilizáveis ficam de fora. O nome completo
+do pacote (incluindo versão), a identidade do app e seu nome exibido são conferidos na validação
+prévia e novamente antes de solicitar a ativação da entrada exata. Registros duplicados ficam sem
+resolução. Entradas removidas, renomeadas ou atualizadas invalidam os dados enfileirados. O Windows
+controla a ativação final; uma atualização simultânea de pacote não pode ser fixada atomicamente.
+Nenhum argumento ditado é enviado, o catálogo de outros usuários não é lido, e o Vults não instala
+nem atualiza pacotes. As duas fontes de descoberta têm threads com prazo limitado; uma fonte
+indisponível não impede usar a outra. Como nos atalhos desktop, o sucesso confirma um pedido de
+abertura, e um pedido já enviado nunca é repetido automaticamente.
 Lotes nativos podem combinar aplicativos instalados, controles do reprodutor e da saída do
 computador na ordem falada. Por exemplo: `pause a mídia e depois abrir aplicativo Obsidian e depois
 volume do computador 40`. Ative Comandos de voz de aplicativos e cada escopo de áudio usado pelo
@@ -1217,7 +1229,7 @@ rodam em uma thread própria; o cancelamento ou o fechamento da resposta impede 
 Uma falha do driver pode interromper uma atualização de canais; o comando informa a falha e não
 repete nem reverte a operação. Lotes no Windows podem combinar comandos aceitos de pausa, reprodução
 e troca de faixa com comandos da saída do computador e atalhos desktop validados do Menu Iniciar; todos os escopos pedidos precisam de
-consentimento antes de qualquer ação. Volume por player e apps exclusivos da Store
+consentimento antes de qualquer ação. Apps empacotados usam a mesma permissão de aplicativos; controles de volume por player
 continuam indisponíveis no Windows. Alterar a música temporariamente durante a gravação é uma
 opção separada e não é ativada pelos comandos da saída do computador.
 
