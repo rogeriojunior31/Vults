@@ -1022,7 +1022,7 @@ not that a window is ready. Opening an app cannot be repeated or undone.
 
 On Windows, this default-off setting reads local `.lnk` launchers from the user's and common
 Start Menu Programs folders. Only existing local `.exe` targets with a local working directory
-are eligible. Store-only apps, document/URL shortcuts, redirected shortcut files and unresolved
+are eligible for desktop shortcuts. Document/URL shortcuts, redirected shortcut files and unresolved
 environment-variable paths are not supported. The shortcut name is the spoken application name.
 The installed arguments and window state are preserved; speech never supplies additional arguments.
 The shortcut bytes and resolved launch definition are checked during preflight and again before launch; the shortcut
@@ -1031,6 +1031,17 @@ at the same relative path. Discovery and execution use bounded native workers; a
 cancelled worker cannot admit a later launch. A request already submitted to Windows may still
 complete after a timeout, so inspect the result before repeating it. No launcher is installed or
 changed by this feature. Playback and computer-volume commands do not scan the application catalog.
+
+The same setting also includes Microsoft Store and other packaged apps registered to the current
+Windows user. Names come from the native app-list display information, in the system language.
+Framework/resource packages, installation stubs and unusable registrations are excluded. Package full name (including
+version), app identity and display label are checked at preflight and again before requesting
+activation of that exact app-list entry. Duplicate registrations are left unresolved. Removed,
+renamed or updated entries invalidate queued snapshots. Windows controls final activation; a
+concurrent package update is not atomically pinned. No spoken arguments are passed, no other
+user's catalog is read, and Vults does not install or update packages. Both discovery sources have
+bounded workers; unavailable sources leave the other source usable. As with desktop launchers,
+success confirms a launch request, and an already-submitted request is never retried automatically.
 Native batches can combine installed apps, player controls and computer-output controls in spoken
 order. For example: `pause media and then open app Obsidian and then computer volume 40`. Enable
 Application voice commands and each audio scope used by the batch first. Every app identity is
@@ -1097,7 +1108,7 @@ calls run on a dedicated worker, and cancellation or a closed reply prevents lat
 failure can interrupt a channel update; the command reports failure and does not retry or roll back.
 Windows batches can combine supported player pause/resume/track commands with computer-output
 commands and validated Start Menu desktop launchers; all requested scopes need consent before any
-action. Per-player volume and Store-only apps remain unavailable on Windows. Temporary music changes during recording are a separate
+action. Packaged apps use the same application consent; per-player volume remains unavailable on Windows. Temporary music changes during recording are a separate
 setting and are not added by enabling computer-output commands.
 
 V8.5 adds **Settings > Dictation > Voice commands**: a searchable view of retained commands/results, with explicit

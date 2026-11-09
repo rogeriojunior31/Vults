@@ -701,6 +701,7 @@ await dictationPage("commands");
 events.onSettings({ dictationCommandOutput: false }); await tick();
 assert.ok(rowNamed("System audio voice commands"), "Windows exposes the independent output grant");
 const appSwitch = () => rowNamed("Application voice commands").querySelector("input");
+assert.ok(rowNamed("Application voice commands").textContent.includes("Microsoft Store"), "Windows explains both registered app sources");
 events.onSettings({ dictationCommandApps: false }); await tick();
 assert.equal(appSwitch().checked, false, "Windows app launch has a separate default-off grant");
 appSwitch().checked = true; appSwitch().fire("change"); await tick();
