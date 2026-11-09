@@ -5,9 +5,25 @@ import { button, row } from "./pieces";
 
 type Native = { status(): Promise<AudioChoice | null>; list(): Promise<AudioChoice[]>; select(token: string | null): Promise<void> };
 export function createWindowsPlayerAudio(native: Native, repaint: () => void) {
-  let active = false, enabled = false, revision = 0, busy = false;
+  let active = false, enabled = false, revision = 0, statusRead = 0, busy = false;
   let choices: AudioChoice[] = [], selected = "", message = "";
   function reset() { revision++; busy = false; choices = []; selected = ""; message = ""; }
+  function refreshStatus() {
+    if (!active || !enabled || busy || choices.length > 0 && !selected) return;
+    const own = revision, read = ++statusRead;
+    const current = () => own === revision && read === statusRead && active && enabled && !busy;
+    void native.status().then(choice => {
+      if (!current()) return;
+      const linked = !!selected;
+      choices = choice ? [choice] : []; selected = choice?.token ?? "";
+      message = choice ? t("Audio app linked for this session.") : linked ? t("Audio app changed. Refresh and choose again.") : t("No audio app selected");
+      repaint();
+    }, () => {
+      if (!current()) return;
+      choices = []; selected = "";
+      message = t("Could not verify the audio link. Refresh and choose again."); repaint();
+    });
+  }
   return {
     context(visible: boolean, allowed: boolean) {
       const entering = visible && allowed && (!active || !enabled);
@@ -16,15 +32,10 @@ export function createWindowsPlayerAudio(native: Native, repaint: () => void) {
         if (active) void native.select(null).catch(() => {});
       }
       active = visible; enabled = allowed;
-      if (entering && !busy) {
-        const own = revision;
-        void native.status().then(choice => {
-          if (own !== revision || !active || !enabled || !choice) return;
-          choices = [choice]; selected = choice.token;
-          message = t("Audio app linked for this session."); repaint();
-        }, () => {});
-      }
+      if (!visible) statusRead++;
+      if (entering) refreshStatus();
     },
+    refreshStatus,
     changed() { reset(); if (active) repaint(); },
     render() {
       const refresh = button(t("Refresh audio apps"), async () => {

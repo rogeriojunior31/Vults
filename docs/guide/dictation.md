@@ -1117,7 +1117,9 @@ Refreshing clears the association; it is never saved. Leaving the page cancels a
 use the selected app process and output, including all its streams/browser tabs, preserving stream
 proportions and mute states. They never change the computer master or microphone volume. A process
 restart, changed session membership/output or external volume/mute adjustment refuses further writes;
-refresh and choose again. A failed multi-stream update can leave a confirmed prefix changed; Vults
+refresh and choose again. Returning to or focusing Command settings checks the existing link without
+enumerating apps or changing volume; an invalid link is cleared and requires a new choice. A failed
+multi-stream update can leave a confirmed prefix changed; Vults
 never retries or rolls it back automatically. Native tests use an owned silent audio process; real
 microphone and desktop playback acceptance are still pending.
 
