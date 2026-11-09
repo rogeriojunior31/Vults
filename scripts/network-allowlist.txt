@@ -39,3 +39,6 @@ crates/voice/src/meeting/assets/download.rs  optional meeting installer: fixed r
 crates/chat/src/consult_codex/auth_qualification.rs  ignored installed-client auth qualification only: disposable home and system-policy mounts in an isolated loopback namespace, synthetic credentials, bounded local GET/POST stand-in; no host auth/config or external provider
 
 crates/agents/src/hermes.rs    test-only Python execution of the generated Hermes observer with a fake local relay; no model, agent, provider or network call
+
+crates/connectors/src/gitlab.rs  glab, one bounded read-only GitLab.com GraphQL request per explicitly enabled connector poll through the app network gate; no credential reads or remote mutations
+crates/connectors/src/gitlab_tests.rs  test-only glab argument/environment inspection without spawning it; transport fixtures launch the current test executable offline

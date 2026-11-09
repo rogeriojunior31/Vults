@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: b93065d5c5d3 -->
+<!-- source: afd56354c1e1 -->
 
 O que o Vults promete:
 
@@ -158,6 +158,7 @@ qualquer lugar além do próprio app.
 | Sugestões de memória de uma conversa que você deixou (**Suggest what to remember**, desligado até você ligar) | O app, quando você começa uma conversa nova ou abre outra; pelo portão de rede (20 por dia), só com pelo menos 2 mensagens suas, nunca para uma que leu conteúdo de fora | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; o que ele propõe espera o seu sim | `crates/chat/src/summary.rs`, `app/src/memory.rs` |
 | O sono do Zeca (**Let Zeca sleep on it**, desligado até você ligar): o que ele lembra sobre você e entre projetos, e os resumos dos últimos 7 dias | O app, uma vez por dia a partir das 2h enquanto nada trabalha; pelo portão de rede (4 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações; as junções dele esperam o seu sim | `app/src/sleep.rs`, `crates/chat/src/summary.rs` |
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | O interruptor de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
+| Consulta do conector GitLab.com (pelo `glab`) | O app, na própria agenda | Opção independente do GitLab em **Settings > Connectors**, gate de rede (3.000 por dia), uma consulta limitada e somente leitura; autenticação pela CLI, sem leitura de tokens nem escritas remotas | `crates/connectors/src/gitlab.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → Activity** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | Um squash merge do seu pull request (pelo `gh`), com uma linha no rastro local | Você, ao clicar em **Squash and merge** na linha dele nas Connections da ilha, e depois em **Merge** | O conector do GitHub ligado; só o seu próprio pull request, aprovado, com os checks passando | `crates/connectors/src/github.rs`, `app/src/connectors.rs` |
 | O download de um modelo de voz | Você, com um clique em **Dictation > Voice** | Nada até você clicar; do Hugging Face (`ggerganov/whisper.cpp`), conferido pelo SHA-256 | `crates/voice/src/models.rs` |

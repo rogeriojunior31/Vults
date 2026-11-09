@@ -190,11 +190,15 @@ pub fn connectors_refresh(state: tauri::State<'_, Connectors>) {
 }
 
 #[tauri::command]
-pub fn connector_enable(app: AppHandle, id: String, on: bool) -> Result<(), String> {
+pub fn connector_enable(app: AppHandle, window: tauri::Webview, id: String, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    if !app.state::<Connectors>().runtime.ids().any(|known| known == id) {
+        return Err("Unknown connector.".into());
+    }
     settings::edit(&app, |s| {
         s.connectors.insert(id.clone(), on);
     })?;
-    let paused = crate::panel::presence(&app) == crate::panel::Presence::Paused;
+    let paused = crate::panel::presence(&app) == crate::panel::Presence::Paused || crate::lock::locked(&app);
     app.state::<Connectors>().runtime.set_enabled(&id, on && !paused);
     Ok(())
 }

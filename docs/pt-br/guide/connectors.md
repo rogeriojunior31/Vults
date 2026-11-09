@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: f012e5f747fa -->
+<!-- source: 860d564ca897 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -9,6 +9,30 @@ voltam à linha selecionada. O merge continua exigindo sua própria confirmaçã
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
+
+## GitLab
+
+O conector do GitLab é somente leitura e oferece suporte ao **GitLab.com**. Instale a CLI do GitLab
+(`glab`), entre com `glab auth login --hostname gitlab.com` e ative **GitLab** em
+**Settings > Connectors**. O Vults usa o login da CLI sem ler nem salvar seu token.
+
+Uma consulta verifica seus merge requests abertos, pedidos da sua revisão e o pipeline de cada
+commit atual. Ela roda a cada cinco minutos, ou a cada minuto enquanto um pipeline está rodando.
+A primeira consulta bem-sucedida registra a referência inicial; pedidos de revisão posteriores,
+falhas/recuperações de pipeline e aprovações exigidas geram alertas. As configurações mostram a conta
+da última consulta bem-sucedida. Trocar de conta estabelece uma nova referência e substitui as linhas
+anteriores.
+
+O card de Conexões usa **Merge requests**, com links para o GitLab. Não oferece merge nem outras
+escritas remotas. Pipelines da branch padrão, logs de jobs, releases e instâncias próprias ficam fora
+desta primeira versão. Pipeline ausente, ignorado, cancelado, agendado, manual ou de outro commit é
+desconhecido, não aprovado. A ausência de aprovações obrigatórias não inventa uma aprovação.
+
+Cada grupo tem limite de 50 itens. Se houver outra página, dados ausentes ou erros do GraphQL, o Vults
+mantém o último retrato completo e mostra um erro. Também limita a saída da CLI e o tempo de espera,
+espaça novas tentativas após erros e respeita limites do serviço. Cada consulta usa a opção independente
+do conector, seu orçamento diário de 3.000 consultas e um rastro local; o Vults pausado ou bloqueado não
+inicia novas consultas. Os testes locais não comprovam a aceitação com uma conta ou serviço real.
 
 ## GitHub
 

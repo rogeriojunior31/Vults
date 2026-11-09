@@ -5,6 +5,7 @@ import { el } from "../dom";
 import { t, tk } from "../i18n";
 import { icon } from "./icons";
 import { markSeen, unseen } from "./seen";
+import { connectorError } from "../connectors";
 
 export const GROUPS: { id: RowView["group"]; label: string }[] = [
   { id: "yours", label: tk("Your pull requests") },
@@ -49,8 +50,8 @@ export function ago(then: number, nowSecs: number): string {
 /** What the card says by its name when its last poll failed; seconds since the epoch, like `lastOk`. */
 export function staleNote(status: Pick<ConnectorStatus, "lastOk" | "error">, nowSecs: number): string | null {
   if (!status.error) return null;
-  if (status.lastOk === null) return status.error;
-  return t("Last updated {age} · {error}", { age: ago(status.lastOk, nowSecs), error: status.error });
+  if (status.lastOk === null) return connectorError(status.error);
+  return t("Last updated {age} · {error}", { age: ago(status.lastOk, nowSecs), error: connectorError(status.error) });
 }
 
 export interface ConnectionsActions {
@@ -134,7 +135,7 @@ export function connectionsCard(boards: BoardView[], board: BoardView | null, na
   const note = stale ? el("div", { class: "board-stale", text: stale }) : null;
   if (!board)
     return el("div", { class: "board connections" }, chips, el("div", { class: "board-empty", text: t("No connector has answered yet.") }));
-  const label = (g: RowView["group"]) => t(GROUPS.find((x) => x.id === g)?.label ?? "");
+  const label = (g: RowView["group"]) => board.connector === "gitlab" && g === "yours" ? t("Your merge requests") : t(GROUPS.find((x) => x.id === g)?.label ?? "");
   const left = unseen(board);
   // A merged row left the card: its merge is done with. One the core no longer offers (its checks
   // ran again) got no answer: it may be asked again once it is green.

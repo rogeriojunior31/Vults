@@ -16,7 +16,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CLIENTS='reqwest|hyper|ureq|isahc|attohttpc|surf|curl|tungstenite|tokio-tungstenite'
-PATTERN='\b(reqwest|ureq|hyper|isahc|attohttpc|tungstenite)\b|TcpStream|UdpSocket|/dev/tcp|(Command::new|crate::process::command)\s*\(\s*"(gh|git|curl|wget|codex|claude|sh|bash|zsh|npx|node|python3?|ssh|scp|rsync|nc)(\.exe|\.cmd)?"'
+PATTERN='\b(reqwest|ureq|hyper|isahc|attohttpc|tungstenite)\b|TcpStream|UdpSocket|/dev/tcp|(Command::new|crate::process::command)\s*\(\s*"(gh|glab|git|curl|wget|codex|claude|sh|bash|zsh|npx|node|python3?|ssh|scp|rsync|nc)(\.exe|\.cmd)?"'
 
 rust_files() {
   if git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -86,11 +86,13 @@ if [[ ${1:-} == --self-test ]]; then
     echo "check-network: self-test failed: an unlisted reqwest::get passed" >&2
     exit 1
   fi
-  echo 'fn f() { std::process::Command::new( "gh" ); }' >"$tmp/crates/x/src/lib.rs"
-  if check_files "$tmp" "$tmp/list" 2>/dev/null; then
-    echo "check-network: self-test failed: an unlisted gh passed" >&2
-    exit 1
-  fi
+  for cli in gh glab; do
+    printf 'fn f() { std::process::Command::new( "%s" ); }\n' "$cli" >"$tmp/crates/x/src/lib.rs"
+    if check_files "$tmp" "$tmp/list" 2>/dev/null; then
+      echo "check-network: self-test failed: an unlisted $cli passed" >&2
+      exit 1
+    fi
+  done
   echo "crates/x/src/lib.rs  a listed file passes" >"$tmp/list"
   check_files "$tmp" "$tmp/list" || { echo "check-network: self-test failed: a listed file failed" >&2; exit 1; }
   echo "check-network: self-test ok"
