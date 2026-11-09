@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 6bea728c8feb -->
+<!-- source: b94da45c3ab7 -->
 
 As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
@@ -561,7 +561,7 @@ que alterou para o teste.
 
 ## Música enquanto você fala
 
-**Configurações > Ditado > Voz > Música enquanto você fala** oferece **Baixar para 25%** (o padrão),
+No Linux, **Configurações > Ditado > Voz > Música enquanto você fala** oferece **Baixar para 25%** (o padrão),
 **Pausar** e **Não alterar**. A próxima gravação independente mantém essa escolha até parar,
 inclusive no cancelamento. A voz do Chat e a captura de reuniões não usam esse controle.
 
@@ -577,6 +577,16 @@ Funciona independentemente de **Tocando agora**, que controla a música exibida 
 **Não alterar** não abre uma conexão de controle de mídia. Players ou o barramento de sessão
 indisponíveis nunca impedem o ditado, e a falha de um player não impede restaurar os outros.
 A restauração ocorre em segundo plano; a captura do microfone não espera por um player.
+
+No Windows, escolha **Pausar** ou **Não alterar** (o padrão efetivo). Uma preferência de redução
+salva no Linux permanece inativa até você escolher explicitamente uma opção disponível; o Windows
+não altera o volume do computador. Apenas sessões já em reprodução com suporte a pausar e retomar
+são elegíveis. A retomada exige a mesma sessão, pausa confirmada e nenhuma mudança posterior
+observada de reprodução, faixa ou lista de sessões; mudar a posição pausada também impede a
+retomada. Players com eventos ausentes ou ambíguos ficam pausados por precaução. Mudar para
+**Não alterar**, cancelar e sair normalmente do aplicativo encerram esse controle; o encerramento
+forçado não pode restaurar a reprodução. Comandos de voz de mídia aguardam a restauração automática
+antes de executar. A redução de volume individual por player continua indisponível.
 
 <a id="spoken-code"></a>
 

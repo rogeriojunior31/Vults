@@ -502,7 +502,7 @@ name or a microphone recording will improve. Restore any preferences you changed
 
 ## Music while you speak
 
-**Settings > Dictation > Voice > Music while you speak** offers **Lower to 25%** (the default),
+On Linux, **Settings > Dictation > Voice > Music while you speak** offers **Lower to 25%** (the default),
 **Pause it** and **Leave it**. The next independent recording keeps this choice until it stops,
 including cancellation. Chat voice and meeting capture do not use this control.
 
@@ -517,6 +517,15 @@ It works independently of **Now playing**, which controls the song shown in the 
 **Leave it** does not open a media-control connection. Unavailable players or the session bus
 never prevent dictation, and restoring one failed player does not prevent restoring the others.
 Restoration runs in the background; microphone capture does not wait for a media player.
+
+On Windows, choose **Pause it** or **Leave it** (the effective default). A saved Linux lowering
+preference stays inactive until you explicitly choose an available option; Windows does not change
+computer volume. Only already-playing sessions with pause and play support are eligible. Resume
+requires the same session, a confirmed pause and no observed later playback, track or session-list
+change; a changed paused position also prevents resume. Players with missing or ambiguous events
+are conservatively left paused. Switching to **Leave it**, cancellation and graceful app exit end
+the scope; forced termination cannot restore playback. Explicit media voice commands wait for the
+automatic restoration before execution. Lowering individual player volume remains unavailable.
 
 ## Spoken code
 

@@ -116,6 +116,9 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
             if !gate.allowed() {
                 return Err(Failure::Disabled);
             }
+            if media && !vults_platform::music::wait_for_restore_until(|| gate.allowed()).await {
+                return Err(Failure::Disabled);
+            }
             let playback = if media {
                 Some(
                     vults_media::pin(gate.player.as_deref().ok_or(Failure::Media)?)

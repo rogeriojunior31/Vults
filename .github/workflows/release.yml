@@ -18,6 +18,7 @@ on:
       - "app/src/main.rs"
       - "app/Cargo.toml"
       - "crates/voice/Cargo.toml"
+      - "crates/platform/Cargo.toml"
       - "crates/voice/src/lib.rs"
       - "Cargo.lock"
       - "package.json"
