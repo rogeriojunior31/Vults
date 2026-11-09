@@ -2282,4 +2282,5 @@ export default {
   "Temporarily link the selected player to an app in the Windows mixer. Applies to all audio in that app group, including browser tabs. Refresh clears the link. Choose again after the app or output changes.": "Associe temporariamente o player selecionado a um aplicativo no mixer do Windows. Vale para todo o áudio desse grupo, incluindo abas do navegador. Atualizar remove a associação. Escolha novamente após mudanças no aplicativo ou na saída.",
   "Audio app": "Aplicativo de áudio",
   "Enable voice commands, Media voice commands and Now playing, then refresh while media is playing.": "Ative os comandos de voz, os comandos de mídia por voz e Em reprodução; depois atualize enquanto uma mídia estiver tocando.",
+  "Could not verify the audio link. Refresh and choose again.": "Não foi possível verificar a associação de áudio. Atualize e escolha novamente.",
 } satisfies Record<string, string>;

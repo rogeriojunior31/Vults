@@ -2282,4 +2282,5 @@ export default {
   "Temporarily link the selected player to an app in the Windows mixer. Applies to all audio in that app group, including browser tabs. Refresh clears the link. Choose again after the app or output changes.": "将所选播放器临时关联到 Windows 混音器中的应用。适用于该应用组的全部音频，包括浏览器标签页。刷新会清除关联。应用或输出更改后请重新选择。",
   "Audio app": "音频应用",
   "Enable voice commands, Media voice commands and Now playing, then refresh while media is playing.": "启用语音命令、媒体语音命令和正在播放，然后在媒体播放时刷新。",
+  "Could not verify the audio link. Refresh and choose again.": "无法验证音频关联。请刷新后重新选择。",
 } satisfies Record<string, string>;

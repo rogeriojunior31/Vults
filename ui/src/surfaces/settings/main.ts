@@ -2373,6 +2373,7 @@ document.addEventListener("visibilitychange", () => {
 // An agent's files change outside the app (a relay built, a hook edited by hand): read them again
 // when the window comes back, unless a review is open (it would lose its diff).
 window.addEventListener("focus", () => {
+  playerAudio.refreshStatus();
   for (const a of AGENTS) if (!panels.get(a.kind)?.pending) void refresh(a.kind);
 });
 

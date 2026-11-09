@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 1ebb9839d6c8 -->
+<!-- source: 0008b2aed1c6 -->
 
 As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
@@ -1239,6 +1239,8 @@ da página cancela uma escolha ainda em andamento. Os comandos usam o processo e
 incluindo seus fluxos/abas do navegador, preservando as proporções de volume e estados de silêncio.
 Não alteram o volume geral do computador nem o microfone. Reinício do processo, mudanças nos fluxos
 ou na saída e ajustes externos de volume/silêncio impedem novas escritas; atualize e escolha de novo.
+Voltar ou dar foco às configurações dos comandos verifica a associação existente sem listar aplicativos
+nem alterar o volume; uma associação inválida é removida e exige uma nova escolha.
 Uma falha durante a atualização de vários fluxos pode deixar os primeiros alterados; o Vults não
 repete nem reverte automaticamente. Testes nativos usam um processo próprio de áudio silencioso;
 a aceitação com microfone e reprodução reais ainda está pendente.

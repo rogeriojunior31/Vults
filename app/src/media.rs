@@ -20,10 +20,13 @@ pub struct AudioChoice {
 }
 
 #[tauri::command]
-pub fn media_audio_status(app: AppHandle, window: tauri::Webview) -> Result<Option<AudioChoice>, String> {
+pub async fn media_audio_status(
+    app: AppHandle,
+    window: tauri::Webview,
+) -> Result<Option<AudioChoice>, String> {
     crate::settings_page(&window)?;
     #[cfg(windows)]
-    return Ok(windows_audio::status(&app));
+    return Ok(windows_audio::status(&app).await);
     #[cfg(not(windows))]
     {
         let _ = app;

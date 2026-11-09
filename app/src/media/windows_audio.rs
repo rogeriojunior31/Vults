@@ -49,12 +49,39 @@ pub(crate) fn binding(app: &AppHandle, player: &str) -> Option<Arc<Binding>> {
     let binding = app.state::<MediaState>().audio.lock().ok()?.binding.clone()?;
     (binding.player == player && binding.valid()).then_some(binding)
 }
-pub(super) fn status(app: &AppHandle) -> Option<AudioChoice> {
+pub(super) async fn status(app: &AppHandle) -> Option<AudioChoice> {
     let player = super::media_now(app.clone())?.player;
     if !allowed(app, &player) {
         return None;
     }
-    binding(app, &player).map(|binding| binding.choice.clone())
+    let candidate = app.state::<MediaState>().audio.lock().ok()?.binding.clone()?;
+    let check = candidate.clone();
+    let gate_app = app.clone();
+    let valid = candidate
+        .audio
+        .validate(move || allowed(&gate_app, &player) && check.valid())
+        .await
+        .is_ok();
+    let valid = valid && candidate.valid() && allowed(app, &candidate.player);
+    let state = app.state::<MediaState>();
+    let mut audio = state.audio.lock().ok()?;
+    // An old read must never clear or return a replacement chosen while COM was waiting.
+    if !audio
+        .binding
+        .as_ref()
+        .is_some_and(|current| Arc::ptr_eq(current, &candidate))
+    {
+        return None;
+    }
+    if valid {
+        Some(candidate.choice.clone())
+    } else {
+        candidate.live.store(false, Ordering::Release);
+        audio.binding = None;
+        audio.choices.clear();
+        audio.epoch = audio.epoch.wrapping_add(1);
+        None
+    }
 }
 pub(super) async fn choices(app: AppHandle) -> Result<Vec<AudioChoice>, String> {
     clear(&app);
