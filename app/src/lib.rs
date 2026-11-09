@@ -544,6 +544,8 @@ pub fn run() {
                     {
                         dictation::permission::shutdown(app);
                         dictation::cancel(app, true);
+                        #[cfg(windows)]
+                        vults_platform::music::shutdown();
                         dictation::cleanup::shutdown(app);
                     }
                     save_nest_size(app);

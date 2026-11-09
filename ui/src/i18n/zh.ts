@@ -1,5 +1,6 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Pause compatible playing media during dictation and resume it afterwards only if unchanged. Leave it is the Windows default. Uses local media controls independently of Now playing. Per-player volume reduction is unavailable.": "听写时暂停兼容的正在播放的媒体，仅在状态未改变时恢复播放。Windows 默认不更改播放状态。此功能使用本地媒体控制，不依赖正在播放功能。不支持降低单个播放器的音量。",
   "Service credits": "服务额度",
   "Shared Antigravity hooks watch CLI, desktop and IDE sessions. CLI metrics also install a status line, preserving your previous command. Desktop and IDE hooks alone do not report cost or context.": "Antigravity 共享钩子观察 CLI、桌面和 IDE 会话。CLI 指标还会安装状态栏并保留原有命令。仅桌面和 IDE 钩子不报告费用或上下文。",
   "Session consumption": "会话用量",
@@ -2264,7 +2265,7 @@ export default {
   "Windows foreground tracking": "Windows 前台焦点跟踪",
   "Windows focus tracking is unavailable.": "Windows 焦点跟踪不可用。",
   "Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.": "Windows 听写使用所选的本地模型。按住快捷键录音，松开后转写。默认复制文本；可选的插入功能支持已识别的桌面文本字段。浏览器和终端需要手动粘贴。",
-  "Windows voice commands support Vults navigation and selected-player playback. Application launching, computer volume and automatic music ducking are not available yet.": "Windows 语音命令支持 Vults 导航和所选播放器的播放控制。启动应用、电脑音量调节和自动降低音乐音量暂不可用。",
+  "Windows supports Vults navigation, selected-player playback and optional computer audio commands. Dictation can pause compatible media. Application launching and per-player volume are unavailable.": "Windows 支持 Vults 导航、所选播放器的播放控制以及可选的电脑音频命令。听写可以暂停兼容的媒体。不支持启动应用或控制单个播放器的音量。",
   "Allow pause, resume and track changes for the selected player. Now playing must also be on. Per-player volume is not available on Windows.": "允许暂停、继续和切换所选播放器的曲目。还需开启“正在播放”。Windows 不支持单独调节播放器音量。",
   "Insert dictation in supported Windows text fields": "将听写插入支持的 Windows 文本字段",
   "Off by default. Inserts only into a recognized, unchanged Windows text field. Password fields, terminals, read-only controls and focus changes keep the text copied. Nothing is submitted, and direct insertion leaves your clipboard unchanged.": "默认关闭。仅插入已识别且未发生变化的 Windows 文本字段。密码字段、终端、只读控件或焦点变化时，文本保持为已复制状态。不会提交任何内容，直接插入不会更改剪贴板。",

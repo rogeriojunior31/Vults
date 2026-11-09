@@ -1180,7 +1180,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
     el("h1", { text: t(DICTATION_SETTINGS.find(p => p.id === dictationSection)!.label) }),
     ...(windowsShortcuts.supported() ? [
       el("p",{class:"hint",text:t("Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.")}),
-      el("p",{class:"hint",text:t("Windows voice commands support Vults navigation and selected-player playback. Application launching, computer volume and automatic music ducking are not available yet.")}),
+      el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback and optional computer audio commands. Dictation can pause compatible media. Application launching and per-player volume are unavailable.")}),
     ] : []),
     ...(dictationSection === "keys" ? [
       el("h2", { text: t("Global shortcuts") }),
@@ -1291,14 +1291,14 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       ),
       el("h2", { text: t("Sound and feedback") }),
       el("section", { class: "card rows" },
-        ...(!windowsShortcuts.supported() ? [row(t("Music while you speak"), t("Temporarily lower or pause playing media during independent dictation. Restore each player when recording stops or is cancelled, unless you changed it. Uses local media controls, separately from Now playing; unavailable players are left alone."), dropdown([
-          { value: "lower" as const, label: t("Lower to 25%") },
+        row(t("Music while you speak"), windowsShortcuts.supported() ? t("Pause compatible playing media during dictation and resume it afterwards only if unchanged. Leave it is the Windows default. Uses local media controls independently of Now playing. Per-player volume reduction is unavailable.") : t("Temporarily lower or pause playing media during independent dictation. Restore each player when recording stops or is cancelled, unless you changed it. Uses local media controls, separately from Now playing; unavailable players are left alone."), dropdown([
+          ...(!windowsShortcuts.supported() ? [{ value: "lower" as const, label: t("Lower to 25%") }] : []),
           { value: "pause" as const, label: t("Pause it") },
           { value: "leave" as const, label: t("Leave it") },
-        ], dictationMusic, async mode => {
+        ], windowsShortcuts.supported() && dictationMusic === "lower" ? "leave" : dictationMusic, async mode => {
           await Bridge.setDictationMusic(mode);
           dictationMusic = mode; dictationMusicChanged = true;
-        }))] : []),
+        })),
         row(t("Dictation start sound"), t("Play a short cue when recording starts. Respects sound volume and Do Not Disturb."), toggle(dictationSound, async (on) => {
           await Bridge.setDictationSound(on);
           dictationSound = dictation.startSound(on);

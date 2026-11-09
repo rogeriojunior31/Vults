@@ -157,6 +157,7 @@ struct Native {
 struct Recording {
     capture: vults_audio::Capture,
     config: Config,
+    music: vults_platform::music::Listening,
 }
 impl Backend for Native {
     type Recording = Recording;
@@ -173,6 +174,7 @@ impl Backend for Native {
         let saved = self.app.state::<crate::settings::SettingsState>();
         let saved = saved.0.lock().map_err(|_| "settings are busy")?.clone();
         let options = saved.dictation_capture_options();
+        let music_mode = saved.dictation_music;
         let config = Config {
             cleanup: ticket.cleanup_choice(),
             model,
@@ -200,13 +202,37 @@ impl Backend for Native {
             move || live.valid() && !live.stop().load(std::sync::atomic::Ordering::SeqCst),
             || true,
         )?;
-        Ok(Recording { capture, config })
+        let (app, live) = (self.app.clone(), ticket.clone());
+        let music = vults_platform::music::Listening::start_guarded(music_mode, move || {
+            if !live.valid() || live.stop().load(std::sync::atomic::Ordering::SeqCst) {
+                return false;
+            }
+            let enabled = app
+                .state::<crate::settings::SettingsState>()
+                .0
+                .lock()
+                .is_ok_and(|saved| saved.dictation_music == vults_platform::music::Mode::Pause);
+            enabled
+                && !crate::lock::locked(&app)
+                && vults_platform::windows_session::locked() == Some(false)
+                && live.valid()
+                && !live.stop().load(std::sync::atomic::Ordering::SeqCst)
+        });
+        Ok(Recording {
+            capture,
+            config,
+            music,
+        })
     }
     fn finish(&self, recording: Recording) -> Result<Clip, String> {
-        Ok(Clip {
-            pcm: recording.capture.finish()?,
-            config: recording.config,
-        })
+        let Recording {
+            capture,
+            config,
+            music,
+        } = recording;
+        let pcm = capture.finish();
+        drop(music);
+        Ok(Clip { pcm: pcm?, config })
     }
     fn transcribe(&self, clip: Clip, ticket: &Ticket) -> Result<Option<String>, String> {
         config::transcribe(&self.app, clip, ticket, || self.show(ticket, "retrying", None))
