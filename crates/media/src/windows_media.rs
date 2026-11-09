@@ -86,16 +86,22 @@ pub async fn pin(player: &str) -> Result<Target, String> {
 }
 
 impl Target {
+    pub fn present(&self) -> bool {
+        self.manager.GetSessions().is_ok_and(|sessions| {
+            let Ok(id) = self.session.SourceAppUserModelId() else {
+                return false;
+            };
+            let matching: Vec<_> = sessions
+                .into_iter()
+                .filter(|session| session.SourceAppUserModelId().is_ok_and(|source| source == id))
+                .collect();
+            matching.len() == 1 && matching[0] == self.session
+        })
+    }
+
     fn prepare(&self, action: Control, allowed: &impl Fn() -> bool) -> Result<(), String> {
         action.validate()?;
-        if !allowed()
-            || !self
-                .manager
-                .GetSessions()
-                .map_err(text)?
-                .into_iter()
-                .any(|session| session == self.session)
-        {
+        if !allowed() || !self.present() {
             return Err("Media command cancelled or player changed.".into());
         }
         let controls = self
@@ -125,6 +131,9 @@ impl Target {
         actions: &[Control],
         allowed: impl Fn() -> bool,
     ) -> Result<(), String> {
+        if !allowed() || !self.present() {
+            return Err("Media command cancelled or player changed.".into());
+        }
         for action in actions {
             self.prepare(*action, &allowed)?;
         }

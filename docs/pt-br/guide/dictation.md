@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: c2a422d738f5 -->
+<!-- source: 1ebb9839d6c8 -->
 
 As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
@@ -1229,9 +1229,22 @@ rodam em uma thread própria; o cancelamento ou o fechamento da resposta impede 
 Uma falha do driver pode interromper uma atualização de canais; o comando informa a falha e não
 repete nem reverte a operação. Lotes no Windows podem combinar comandos aceitos de pausa, reprodução
 e troca de faixa com comandos da saída do computador e atalhos desktop validados do Menu Iniciar; todos os escopos pedidos precisam de
-consentimento antes de qualquer ação. Apps empacotados usam a mesma permissão de aplicativos; controles de volume por player
-continuam indisponíveis no Windows. Alterar a música temporariamente durante a gravação é uma
-opção separada e não é ativada pelos comandos da saída do computador.
+consentimento antes de qualquer ação. Apps empacotados usam a mesma permissão de aplicativos.
+
+Comandos de volume do player no Windows exigem uma associação temporária explícita em
+**Configurações dos comandos > Aplicativo de áudio do player**. Ative comandos de voz, comandos de
+mídia por voz e Em reprodução. Com a mídia tocando, escolha **Atualizar aplicativos de áudio** e
+selecione o grupo correspondente de aplicativo/saída no mixer local do Windows. Atualizar remove a associação, que nunca é salva; sair
+da página cancela uma escolha ainda em andamento. Os comandos usam o processo e a saída escolhidos,
+incluindo seus fluxos/abas do navegador, preservando as proporções de volume e estados de silêncio.
+Não alteram o volume geral do computador nem o microfone. Reinício do processo, mudanças nos fluxos
+ou na saída e ajustes externos de volume/silêncio impedem novas escritas; atualize e escolha de novo.
+Uma falha durante a atualização de vários fluxos pode deixar os primeiros alterados; o Vults não
+repete nem reverte automaticamente. Testes nativos usam um processo próprio de áudio silencioso;
+a aceitação com microfone e reprodução reais ainda está pendente.
+
+Mudanças temporárias da música durante a gravação são separadas. A redução automática de volume
+continua indisponível no Windows; essa associação habilita apenas comandos explícitos de volume.
 
 A V8.5 acrescenta **Ditado > Comandos de voz**: uma visão pesquisável dos comandos/resultados retidos,
 com Copiar/Excluir explícitos e sem repetição. Compartilha o prazo do Histórico e sua confirmação de

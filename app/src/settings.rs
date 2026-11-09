@@ -1532,6 +1532,10 @@ pub fn set_dictation_commands<R: tauri::Runtime>(
     }
     *saved = next;
     drop(saved);
+    #[cfg(windows)]
+    if matches!(key.as_str(), "enabled" | "media") {
+        crate::media::windows_audio::clear(&app);
+    }
     let _ = app.emit("settings", serde_json::json!({ field: on }));
     Ok(())
 }

@@ -1108,8 +1108,21 @@ calls run on a dedicated worker, and cancellation or a closed reply prevents lat
 failure can interrupt a channel update; the command reports failure and does not retry or roll back.
 Windows batches can combine supported player pause/resume/track commands with computer-output
 commands and validated Start Menu desktop launchers; all requested scopes need consent before any
-action. Packaged apps use the same application consent; per-player volume remains unavailable on Windows. Temporary music changes during recording are a separate
-setting and are not added by enabling computer-output commands.
+action. Packaged apps use the same application consent.
+
+Windows player-volume commands require an explicit temporary association in **Command settings >
+Player audio app**. Enable voice commands, Media voice commands and Now playing. While playing media,
+choose **Refresh audio apps**, then the corresponding app/output group in the local Windows mixer.
+Refreshing clears the association; it is never saved. Leaving the page cancels an unfinished choice. Volume commands
+use the selected app process and output, including all its streams/browser tabs, preserving stream
+proportions and mute states. They never change the computer master or microphone volume. A process
+restart, changed session membership/output or external volume/mute adjustment refuses further writes;
+refresh and choose again. A failed multi-stream update can leave a confirmed prefix changed; Vults
+never retries or rolls it back automatically. Native tests use an owned silent audio process; real
+microphone and desktop playback acceptance are still pending.
+
+Temporary music changes during recording are separate. Automatic volume reduction remains unavailable
+on Windows; this association enables explicit voice-volume commands only.
 
 V8.5 adds **Settings > Dictation > Voice commands**: a searchable view of retained commands/results, with explicit
 Copy/Delete and no replay. It shares History's retention and individual erase confirmation. Its

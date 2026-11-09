@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use vults_core::i18n::{self, Lang, OutputFeedback};
 use vults_dictation::command::{MediaAction, OutputAction};
-use vults_platform::system_audio;
+use vults_platform::{player_audio, system_audio};
 
 pub(crate) fn needs_application_catalog(text: &str) -> bool {
     use vults_dictation::command::{Command, Parsed, parse};
@@ -24,6 +24,7 @@ pub(crate) fn needs_application_catalog(text: &str) -> bool {
 #[derive(Clone, Debug)]
 enum Step {
     Media(vults_media::Control),
+    PlayerVolume(player_audio::Action),
     Output(system_audio::Action),
     Application(vults_platform::applications::Application),
 }
@@ -41,6 +42,13 @@ fn plan(actions: &[DesktopAction]) -> Result<Vec<Step>, Failure> {
         .iter()
         .map(|action| {
             Ok(match action {
+                DesktopAction::Media(MediaAction::Volume(level)) if *level <= 100 => {
+                    Step::PlayerVolume(player_audio::Action::Volume(*level))
+                }
+                DesktopAction::Media(MediaAction::Louder) => Step::PlayerVolume(player_audio::Action::Louder),
+                DesktopAction::Media(MediaAction::Quieter) => {
+                    Step::PlayerVolume(player_audio::Action::Quieter)
+                }
                 DesktopAction::Media(action) => Step::Media(match action {
                     MediaAction::Resume => vults_media::Control::Play,
                     MediaAction::Pause => vults_media::Control::Pause,
@@ -165,6 +173,23 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
             } else {
                 None
             };
+            let player_volume = if steps.iter().any(|step| matches!(step, Step::PlayerVolume(_))) {
+                Some(
+                    crate::media::windows_audio::binding(&app, gate.player.as_deref().ok_or(Failure::Media)?)
+                        .ok_or(Failure::Media)?,
+                )
+            } else {
+                None
+            };
+            if let Some(binding) = &player_volume {
+                let check = binding.clone();
+                let allowed = gate.owned();
+                binding
+                    .audio
+                    .validate(move || allowed() && check.valid())
+                    .await
+                    .map_err(|_| Failure::Media)?;
+            }
             let computer = if output {
                 Some(system_audio::pin(gate.owned()).await.map_err(Failure::Output)?)
             } else {
@@ -188,6 +213,16 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
                     return Err(Failure::Disabled);
                 }
                 match step {
+                    Step::PlayerVolume(action) => {
+                        let binding = player_volume.as_ref().ok_or(Failure::Media)?.clone();
+                        let check = binding.clone();
+                        let allowed = gate.owned();
+                        binding
+                            .audio
+                            .apply(action, move || allowed() && check.valid())
+                            .await
+                            .map_err(|_| Failure::Media)?;
+                    }
                     Step::Media(control) => playback
                         .as_ref()
                         .ok_or(Failure::Media)?
@@ -323,12 +358,15 @@ mod tests {
         assert!(
             plan(&[
                 DesktopAction::Output(OutputAction::Mute(true)),
-                DesktopAction::Media(MediaAction::Volume(40))
+                DesktopAction::Media(MediaAction::Volume(101))
             ])
             .is_err()
         );
         let steps = plan(&[
             DesktopAction::Media(MediaAction::Pause),
+            DesktopAction::Media(MediaAction::Volume(40)),
+            DesktopAction::Media(MediaAction::Louder),
+            DesktopAction::Media(MediaAction::Quieter),
             DesktopAction::Output(OutputAction::Volume(40)),
             DesktopAction::Output(OutputAction::Mute(false)),
         ])
@@ -337,6 +375,9 @@ mod tests {
             steps.as_slice(),
             [
                 Step::Media(vults_media::Control::Pause),
+                Step::PlayerVolume(player_audio::Action::Volume(40)),
+                Step::PlayerVolume(player_audio::Action::Louder),
+                Step::PlayerVolume(player_audio::Action::Quieter),
                 Step::Output(system_audio::Action::Volume(40)),
                 Step::Output(system_audio::Action::Mute(false))
             ]

@@ -88,6 +88,7 @@ body.dictation-caption-open { padding-bottom: var(--dictation-caption-space); }
 #settings .btn { min-height: 34px; border-color: transparent; }
 #settings .btn:hover { border-color: transparent; }
 #settings .field { min-width: 0; min-height: 34px; border-radius: var(--radius-control); }
+#settings [data-setting="windows-player-audio"] select { width: 220px; max-width: 100%; }
 #settings .segmented { max-width: 100%; flex-wrap: wrap; border: 0; padding: 3px; border-radius: 10px; background: var(--raised); }
 #settings .segmented button { min-height: 30px; padding: 4px 10px; border-radius: var(--radius-control); transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out); }
 #settings .segmented button.on { background: var(--float); }
