@@ -7,16 +7,32 @@ use vults_core::i18n::{self, Lang, OutputFeedback};
 use vults_dictation::command::{MediaAction, OutputAction};
 use vults_platform::system_audio;
 
-#[derive(Clone, Copy, Debug)]
+pub(crate) fn needs_application_catalog(text: &str) -> bool {
+    use vults_dictation::command::{Command, Parsed, parse};
+    match parse(text) {
+        Parsed::Commands(commands) => commands.iter().any(|command| {
+            matches!(
+                command,
+                Command::Open(_) | Command::Application(_) | Command::Repeat(_)
+            )
+        }),
+        Parsed::NotCommand => true, // A reply may choose an application from a pending ambiguity.
+        _ => false,
+    }
+}
+
+#[derive(Clone, Debug)]
 enum Step {
     Media(vults_media::Control),
     Output(system_audio::Action),
+    Application(vults_platform::applications::Application),
 }
 #[derive(Clone, Copy, Debug)]
 enum Failure {
     Disabled,
     Media,
     Unavailable,
+    Application,
     Output(system_audio::Error),
 }
 
@@ -39,16 +55,18 @@ fn plan(actions: &[DesktopAction]) -> Result<Vec<Step>, Failure> {
                     OutputAction::Quieter => system_audio::Action::Quieter,
                     _ => return Err(Failure::Unavailable),
                 }),
+                DesktopAction::Application(application) => Step::Application(application.clone()),
                 _ => return Err(Failure::Unavailable),
             })
         })
         .collect()
 }
 
-fn consent(saved: &crate::settings::Settings, media: bool, output: bool) -> bool {
+fn consent(saved: &crate::settings::Settings, media: bool, output: bool, applications: bool) -> bool {
     saved.dictation_commands
         && (!media || saved.dictation_command_media && saved.now_playing)
         && (!output || saved.dictation_command_output)
+        && (!applications || saved.dictation_command_apps)
 }
 
 #[derive(Clone)]
@@ -58,6 +76,7 @@ struct Gate {
     deadline: Instant,
     media: bool,
     output: bool,
+    applications: bool,
     player: Option<String>,
 }
 impl Gate {
@@ -71,7 +90,7 @@ impl Gate {
                 .state::<crate::settings::SettingsState>()
                 .0
                 .lock()
-                .is_ok_and(|saved| consent(&saved, self.media, self.output))
+                .is_ok_and(|saved| consent(&saved, self.media, self.output, self.applications))
             && (!self.media
                 || crate::media::media_now(self.app.clone())
                     .is_some_and(|now| Some(now.player.as_str()) == self.player.as_deref()))
@@ -98,12 +117,16 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
     let output = actions
         .iter()
         .any(|action| matches!(action, DesktopAction::Output(_)));
+    let applications = actions
+        .iter()
+        .any(|action| matches!(action, DesktopAction::Application(_)));
     let gate = Gate {
         app: app.clone(),
         ticket: ticket.clone(),
         deadline: Instant::now() + Duration::from_secs(10),
         media,
         output,
+        applications,
         player: media
             .then(|| crate::media::media_now(app.clone()).map(|now| now.player))
             .flatten(),
@@ -118,6 +141,20 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
             }
             if media && !vults_platform::music::wait_for_restore_until(|| gate.allowed()).await {
                 return Err(Failure::Disabled);
+            }
+            for step in &steps {
+                if let Step::Application(application) = step {
+                    let application = application.clone();
+                    tauri::async_runtime::spawn_blocking(move || {
+                        vults_platform::applications::validate(&application)
+                    })
+                    .await
+                    .map_err(|_| Failure::Application)?
+                    .map_err(|_| Failure::Application)?;
+                    if !gate.allowed() {
+                        return Err(Failure::Disabled);
+                    }
+                }
             }
             let playback = if media {
                 Some(
@@ -167,6 +204,11 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
                                 .map_err(Failure::Output)?,
                         );
                     }
+                    Step::Application(application) => {
+                        vults_platform::applications::launch(&application, gate.owned())
+                            .await
+                            .map_err(|_| Failure::Application)?;
+                    }
                 }
                 completed += 1;
             }
@@ -178,7 +220,19 @@ pub(crate) fn start(app: AppHandle, heard: String, ticket: Ticket, mut report: R
         } else {
             Feedback::Unavailable
         };
-        report.text = if media && output {
+        report.text = if applications && actions.len() > 1 {
+            i18n::voice_desktop_batch(lang, result.is_ok(), completed, actions.len())
+        } else if applications {
+            i18n::voice_application(
+                lang,
+                match result {
+                    Ok(()) => i18n::ApplicationFeedback::Requested,
+                    Err(Failure::Disabled) => i18n::ApplicationFeedback::Disabled,
+                    _ => i18n::ApplicationFeedback::Failed,
+                },
+            )
+            .into()
+        } else if media && output {
             i18n::voice_audio_batch(lang, result.is_ok(), completed, actions.len())
         } else if output {
             match result {
@@ -216,6 +270,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn unrelated_and_refused_commands_do_not_inventory_the_start_menu() {
+        for phrase in [
+            "computer volume 40",
+            "pause media",
+            "approve all",
+            "do not open app Firefox",
+        ] {
+            assert!(!needs_application_catalog(phrase), "{phrase}");
+        }
+        for phrase in ["open app Firefox", "open Firefox", "the first one"] {
+            assert!(needs_application_catalog(phrase), "{phrase}");
+        }
+    }
+
+    #[test]
     fn output_consent_is_independent_of_media_and_now_playing() {
         for mask in 0_u8..16 {
             let saved = crate::settings::Settings {
@@ -225,9 +294,26 @@ mod tests {
                 dictation_command_output: mask & 8 != 0,
                 ..Default::default()
             };
-            assert_eq!(consent(&saved, false, true), mask & 9 == 9);
-            assert_eq!(consent(&saved, true, false), mask & 7 == 7);
-            assert_eq!(consent(&saved, true, true), mask == 15);
+            assert_eq!(consent(&saved, false, true, false), mask & 9 == 9);
+            assert_eq!(consent(&saved, true, false, false), mask & 7 == 7);
+            assert_eq!(consent(&saved, true, true, false), mask == 15);
+        }
+    }
+
+    #[test]
+    fn applications_have_independent_consent_in_single_and_mixed_batches() {
+        for mask in 0_u8..32 {
+            let saved = crate::settings::Settings {
+                dictation_commands: mask & 1 != 0,
+                dictation_command_media: mask & 2 != 0,
+                now_playing: mask & 4 != 0,
+                dictation_command_output: mask & 8 != 0,
+                dictation_command_apps: mask & 16 != 0,
+                ..Default::default()
+            };
+            assert_eq!(consent(&saved, false, false, true), mask & 17 == 17);
+            assert_eq!(consent(&saved, true, true, true), mask == 31);
+            assert_eq!(consent(&saved, false, true, true), mask & 25 == 25);
         }
     }
 

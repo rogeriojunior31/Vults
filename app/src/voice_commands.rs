@@ -4,6 +4,8 @@ mod desktop;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
+pub(crate) use windows::needs_application_catalog;
+#[cfg(windows)]
 pub(crate) use windows::start as start_desktop;
 pub(crate) mod flock;
 pub(crate) mod preview;

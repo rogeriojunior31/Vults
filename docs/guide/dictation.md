@@ -1014,11 +1014,23 @@ If a project and app share a name, or several apps share it, Vults asks which on
 namespace or the full displayed choice. All questions in a batch share the original 90-second clarification window, and changed or
 removed app definitions invalidate it, including apps selected before a later question.
 
-Only registered launchable desktop entries are used. Hidden/non-displayed entries are excluded;
+On Linux, only registered launchable desktop entries are used. Hidden/non-displayed entries are excluded;
 spoken paths, executable text, URLs and file arguments are never passed to the launcher. The
 entry's identity and definition are checked again before launch, together with cancellation, lock,
 the original deadline and current consent. A successful result says **Application launch requested**,
 not that a window is ready. Opening an app cannot be repeated or undone.
+
+On Windows, this default-off setting reads local `.lnk` launchers from the user's and common
+Start Menu Programs folders. Only existing local `.exe` targets with a local working directory
+are eligible. Store-only apps, document/URL shortcuts, redirected shortcut files and unresolved
+environment-variable paths are not supported. The shortcut name is the spoken application name.
+The installed arguments and window state are preserved; speech never supplies additional arguments.
+The shortcut bytes and resolved launch definition are checked during preflight and again before launch; the shortcut
+is held read-only while its launch is submitted. User-menu entries override common-menu entries
+at the same relative path. Discovery and execution use bounded native workers; a timed-out or
+cancelled worker cannot admit a later launch. A request already submitted to Windows may still
+complete after a timeout, so inspect the result before repeating it. No launcher is installed or
+changed by this feature. Playback and computer-volume commands do not scan the application catalog.
 Native batches can combine installed apps, player controls and computer-output controls in spoken
 order. For example: `pause media and then open app Obsidian and then computer volume 40`. Enable
 Application voice commands and each audio scope used by the batch first. Every app identity is
@@ -1084,8 +1096,8 @@ volume/mute adjustment invalidates a queued command. Capture devices are never t
 calls run on a dedicated worker, and cancellation or a closed reply prevents later writes. A driver
 failure can interrupt a channel update; the command reports failure and does not retry or roll back.
 Windows batches can combine supported player pause/resume/track commands with computer-output
-commands; all requested scopes need consent before any action. Per-player volume and installed-app
-launching remain unavailable on Windows. Temporary music changes during recording are a separate
+commands and validated Start Menu desktop launchers; all requested scopes need consent before any
+action. Per-player volume and Store-only apps remain unavailable on Windows. Temporary music changes during recording are a separate
 setting and are not added by enabling computer-output commands.
 
 V8.5 adds **Settings > Dictation > Voice commands**: a searchable view of retained commands/results, with explicit

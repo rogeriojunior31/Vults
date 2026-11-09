@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: b94da45c3ab7 -->
+<!-- source: 7fad1f8321d6 -->
 
 As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
@@ -1129,11 +1129,24 @@ qual usar; diga o escopo explícito ou a escolha completa exibida. Todas as perg
 segundos; definições de aplicativos alteradas ou removidas o invalidam, inclusive aplicativos
 escolhidos antes de uma pergunta posterior.
 
-Só são usadas entradas executáveis registradas do desktop. Entradas ocultas/não exibidas ficam de
+No Linux, só são usadas entradas executáveis registradas do desktop. Entradas ocultas/não exibidas ficam de
 fora; caminhos, texto de executável, URLs e argumentos de arquivo falados nunca são repassados ao
 inicializador. A identidade e a definição são conferidas novamente antes da abertura, junto com
 cancelamento, bloqueio, prazo original e consentimento atual. O sucesso informa **Abertura do aplicativo
 solicitada**, não que a janela esteja pronta. Abrir um app não permite repetir nem desfazer.
+
+No Windows, essa opção desativada por padrão lê atalhos `.lnk` locais nas pastas de programas do
+Menu Iniciar do usuário e de todos os usuários. Apenas destinos `.exe` locais existentes, com
+pasta de trabalho local, são aceitos. Apps exclusivos da Store, atalhos de documentos/URLs,
+arquivos de atalho redirecionados e caminhos com variáveis de ambiente não resolvidas não são
+suportados. O nome do atalho é o nome falado do aplicativo. Os argumentos instalados e o estado da
+janela são preservados; a fala nunca fornece argumentos adicionais. Os bytes do atalho e a definição
+de abertura resolvida são conferidos na validação prévia e novamente antes da abertura; o atalho fica aberto somente para
+leitura durante o envio do pedido. Entradas do menu do usuário substituem as comuns no mesmo caminho
+relativo. A descoberta e a execução usam threads nativas com prazo limitado; uma thread cujo prazo
+expirou ou foi cancelada não pode admitir uma abertura posterior. Um pedido já enviado ao Windows
+pode terminar após o prazo, então confira o resultado antes de repetir. Nenhum atalho é instalado ou
+alterado pelo recurso. Comandos de reprodução e volume do computador não consultam o catálogo de aplicativos.
 Lotes nativos podem combinar aplicativos instalados, controles do reprodutor e da saída do
 computador na ordem falada. Por exemplo: `pause a mídia e depois abrir aplicativo Obsidian e depois
 volume do computador 40`. Ative Comandos de voz de aplicativos e cada escopo de áudio usado pelo
@@ -1203,8 +1216,8 @@ invalida um comando enfileirado. Dispositivos de captura nunca são escolhidos. 
 rodam em uma thread própria; o cancelamento ou o fechamento da resposta impede escritas posteriores.
 Uma falha do driver pode interromper uma atualização de canais; o comando informa a falha e não
 repete nem reverte a operação. Lotes no Windows podem combinar comandos aceitos de pausa, reprodução
-e troca de faixa com comandos da saída do computador; todos os escopos pedidos precisam de
-consentimento antes de qualquer ação. Volume por player e abertura de aplicativos instalados
+e troca de faixa com comandos da saída do computador e atalhos desktop validados do Menu Iniciar; todos os escopos pedidos precisam de
+consentimento antes de qualquer ação. Volume por player e apps exclusivos da Store
 continuam indisponíveis no Windows. Alterar a música temporariamente durante a gravação é uma
 opção separada e não é ativada pelos comandos da saída do computador.
 

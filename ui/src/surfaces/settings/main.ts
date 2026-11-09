@@ -1180,7 +1180,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
     el("h1", { text: t(DICTATION_SETTINGS.find(p => p.id === dictationSection)!.label) }),
     ...(windowsShortcuts.supported() ? [
       el("p",{class:"hint",text:t("Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.")}),
-      el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback and optional computer audio commands. Dictation can pause compatible media. Application launching and per-player volume are unavailable.")}),
+      el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback, optional computer audio commands and Start Menu desktop apps. Dictation can pause compatible media. Store-only apps and per-player volume are unavailable.")}),
     ] : []),
     ...(dictationSection === "keys" ? [
       el("h2", { text: t("Global shortcuts") }),
@@ -1242,10 +1242,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           await Bridge.setDictationCommands("media", on);
           dictationCommandMedia = on; dictationCommandMediaChanged = true;
         })),
-        ...(!windowsShortcuts.supported() ? [row(t("Application voice commands"), t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
+        row(t("Application voice commands"), windowsShortcuts.supported() ? t("Allow opening local desktop apps from Start Menu shortcuts by name. Uses the installed shortcut arguments only. Names stay local and ambiguous matches require a choice. Store-only apps, URLs and spoken file or command arguments are unsupported.") : t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
           await Bridge.setDictationCommands("applications", on);
           dictationCommandApps = on; dictationCommandAppsChanged = true;
-        }))] : []),
+        })),
         row(t("System audio voice commands"), t("Allow mute and volume commands for the default computer output. Preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate."), toggle(dictationCommandOutput, async on => {
           await Bridge.setDictationCommands("output", on);
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
