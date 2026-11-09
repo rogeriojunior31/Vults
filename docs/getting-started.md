@@ -119,7 +119,10 @@ real-device test. Renderer scale emulation does not establish native per-monitor
 
 Now Playing runs only with its setting enabled. Play/pause and previous/next target the displayed
 player; duplicate application sessions are refused rather than controlling another window. Per-player
-volume is not provided by the Windows media-session API. Screen locking is observed every 500 ms;
+volume uses an explicit temporary link in **Settings > Dictation > Command settings > Player audio app**.
+Enable voice commands, Media voice commands and Now playing; start playback, refresh audio apps and
+choose the matching mixer group. This affects the whole app group (including browser tabs), never the
+computer master volume. The link is not saved and must be refreshed after process/output changes. Screen locking is observed every 500 ms;
 an unreadable state never counts as an unlock. Process liveness uses the creation time to detect PID
 reuse and never closes a session whose owner was not previously observed. Hermes conversations keep
 their explicit lifecycle because a gateway worker can end while its conversation remains open.

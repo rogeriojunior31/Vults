@@ -1,3 +1,4 @@
+export type AudioChoice = { token: string; app: string; output: string | null; pid: number; percent: number };
 // The only file that talks to Tauri: views in, intents out.
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen } from "@tauri-apps/api/event";
@@ -706,6 +707,9 @@ export const Bridge = {
   setDictationAppStyle: (identity: string, style: DictationStyle | null) => invoke<void>("set_dictation_app_style", { identity, style }),
   onDictationStyles: (cb: () => void) => { void listen("dictation-styles", cb); },
   setDictationCleanup: (on: boolean) => invoke<void>("set_dictation_cleanup", { on }),
+  mediaAudioChoices: () => invoke<AudioChoice[]>("media_audio_choices"),
+  mediaAudioStatus: () => invoke<AudioChoice | null>("media_audio_status"),
+  mediaAudioSelect: (token: string | null) => invoke<void>("media_audio_select", { token }),
   setDictationCommands: (key: "enabled" | "chat" | "media" | "applications" | "output", on: boolean) => invoke<void>("set_dictation_commands", { key, on }),
   setDictationSound: (on: boolean) => invoke<void>("set_dictation_sound", { on }),
   setDictationCaption: (on: boolean) => invoke<void>("set_dictation_caption", { on }),
@@ -963,6 +967,7 @@ export const Bridge = {
     void listen<{ id: string; done: number; total: number }>("voice-download", (e) => cb(e.payload));
   },
   /** What is playing, while the setting is on; null when nothing is. */
+  onMediaAudioCleared(cb: () => void): void { void listen("media-audio-cleared", cb); },
   onMedia(cb: (now: NowPlaying | null) => void): void {
     void listen<NowPlaying | null>("media", (e) => cb(e.payload));
   },

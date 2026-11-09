@@ -728,3 +728,61 @@ const cold = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
 });
 assert.equal(cold.status, 0, cold.stderr || cold.stdout);
 process.stdout.write(cold.stdout);
+// The Windows mixer picker never enumerates until the user asks, and drops late replies.
+const audioBundle = await build({ configFile: false, root: ui, logLevel: "silent", build: {
+  write: false, minify: false, lib: { entry: `${ui}src/surfaces/settings/windows-player-audio.ts`, formats: ["es"] },
+} });
+const audioChunk = audioBundle[0].output.find(p => p.type === "chunk");
+const { createWindowsPlayerAudio } = await import(`data:text/javascript;base64,${Buffer.from(audioChunk.code).toString("base64")}`);
+const audioReads = [], audioWrites = [];
+let audioView;
+const audioPicker = createWindowsPlayerAudio({
+  status: async () => null,
+  list: () => new Promise((resolve, reject) => audioReads.push({ resolve, reject })),
+  select: token => new Promise((resolve, reject) => audioWrites.push({ token, resolve, reject })),
+}, () => { audioView = audioPicker.render(); });
+audioPicker.context(true, false); audioView = audioPicker.render();
+assert.equal(audioView.querySelector("button").disabled, true);
+assert.equal(audioReads.length, 0);
+audioPicker.context(true, true); audioView = audioPicker.render();
+audioView.querySelector("button").fire("click"); await tick();
+assert.equal(audioReads.length, 1);
+assert.equal(audioView.querySelector("button").disabled, true);
+const audioCandidate = { token: "1:0", app: "test.exe", output: "Speakers", pid: 42, percent: 50 };
+audioReads[0].resolve([audioCandidate]); await tick();
+assert.equal(audioView.querySelector("select").disabled, false);
+let audioSelect = audioView.querySelector("select"); audioSelect.value = "1:0"; audioSelect.fire("change"); await tick();
+assert.equal(audioWrites.at(-1).token, "1:0");
+audioWrites.at(-1).reject("Session changed"); await tick();
+assert.equal(audioView.querySelector("select").value, "");
+assert.ok(audioView.textContent.includes("Refresh and choose again"));
+audioView.querySelector("button").fire("click"); await tick();
+audioPicker.context(false, true);
+assert.equal(audioWrites.at(-1).token, null, "Leaving cancels native association work");
+audioWrites.at(-1).resolve();
+audioReads[1].resolve([audioCandidate]); await tick();
+audioPicker.context(true, true); audioView = audioPicker.render();
+assert.equal(audioView.querySelector("select").disabled, true, "Late inventory must be discarded");
+audioView.querySelector("button").fire("click"); await tick();
+audioPicker.context(true, false); audioReads[2].resolve([audioCandidate]); await tick();
+audioView = audioPicker.render();
+assert.equal(audioView.querySelector("select").disabled, true, "Revocation discards pending inventory");
+assert.equal(audioWrites.filter(write => write.token !== null).length, 1, "No volume or target action is implicit");
+console.log("check-settings-ui: Windows mixer selection is explicit, gated and rejects stale replies");
+const statusReads = [];
+let restoredView;
+const restoredAudio = createWindowsPlayerAudio({
+  status: () => new Promise(resolve => statusReads.push(resolve)),
+  list: async () => { throw Error('No implicit inventory'); },
+  select: async () => { throw Error('No implicit association'); },
+}, () => { restoredView = restoredAudio.render(); });
+restoredAudio.context(true, true);
+statusReads[0](audioCandidate); await tick();
+assert.equal(restoredView.querySelector('select').value, audioCandidate.token);
+restoredAudio.context(false, true); restoredAudio.context(true, true);
+statusReads[1](audioCandidate); await tick();
+assert.equal(restoredView.querySelector('select').value, audioCandidate.token, 'A completed association survives navigation');
+restoredAudio.context(false, true); restoredAudio.context(true, true);
+restoredAudio.changed(); statusReads[2](audioCandidate); await tick();
+assert.equal(restoredView.querySelector('select').value, '', 'Invalidated status cannot restore an old association');
+console.log('check-settings-ui: completed mixer associations restore without inventory and reject obsolete status');

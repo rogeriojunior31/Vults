@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: dbef92a4ee11 -->
+<!-- source: 08bae6392664 -->
 
 <a id="install"></a>
 
@@ -130,7 +130,11 @@ de escala do renderizador não comprova a aceitação de DPI nativo por monitor.
 
 A opção de mídia só consulta o sistema quando está ativada. Reproduzir/pausar e faixa anterior/próxima
 usam o player exibido; sessões duplicadas do aplicativo são recusadas para não controlar outra janela.
-A API de sessões de mídia do Windows não fornece volume por player. O bloqueio da tela é consultado
+O volume por player usa uma associação temporária explícita em **Configurações > Ditado > Configurações dos comandos > Aplicativo de áudio do player**.
+Ative comandos de voz, comandos de mídia por voz e Em reprodução; inicie a mídia, atualize os
+aplicativos de áudio e escolha o grupo correspondente no mixer. Isso afeta todo o grupo do aplicativo
+(incluindo abas do navegador), sem alterar o volume geral do computador. A associação não é salva;
+atualize e escolha novamente após mudanças no processo ou na saída. O bloqueio da tela é consultado
 a cada 500 ms; um estado ilegível nunca conta como desbloqueio. A presença do processo usa seu horário
 de criação para detectar reutilização de PID e nunca encerra uma sessão cujo dono não tenha sido
 observado antes. As conversas do Hermes mantêm seu ciclo de vida explícito, porque um worker do

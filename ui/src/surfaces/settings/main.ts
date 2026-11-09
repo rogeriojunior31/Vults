@@ -24,6 +24,7 @@ import { createMeetingSettings } from "./meeting-summary";
 import { createCleanupSettings } from "./dictation-styles";
 import { createQuestionAgents } from "./question-agents";
 import { createDictationDoctor } from "./dictation-doctor";
+import { createWindowsPlayerAudio } from "./windows-player-audio";
 import { createWindowsShortcuts } from "./windows-shortcuts";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { historyCard, type Activity, type ActivityActions } from "./activity";
@@ -98,6 +99,10 @@ const windowsShortcuts = createWindowsShortcuts({ read: Bridge.windowsShortcuts,
   if (page === "general" || page === "dictation") render();
 });
 windowsShortcuts.initialize();
+const playerAudio = createWindowsPlayerAudio({ status: Bridge.mediaAudioStatus, list: Bridge.mediaAudioChoices, select: Bridge.mediaAudioSelect }, () => { if (page === "dictation") render(); });
+
+
+Bridge.onMediaAudioCleared(() => playerAudio.changed());
 
 const budget = createBudget({ today: Bridge.spendToday, setBudget: Bridge.budgetSet });
 Bridge.onSpend(() => { if (page === "activity") budget.refresh(); });
@@ -1180,7 +1185,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
     el("h1", { text: t(DICTATION_SETTINGS.find(p => p.id === dictationSection)!.label) }),
     ...(windowsShortcuts.supported() ? [
       el("p",{class:"hint",text:t("Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.")}),
-      el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback, optional computer audio commands and installed desktop or Microsoft Store apps. Dictation can pause compatible media. Per-player volume is unavailable.")}),
+      el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback and linked app volume, optional computer audio commands and installed desktop or Microsoft Store apps. Dictation can pause compatible media.")}),
     ] : []),
     ...(dictationSection === "keys" ? [
       el("h2", { text: t("Global shortcuts") }),
@@ -1238,9 +1243,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           dictationCommands = on; dictationCommandsChanged = true;
           if (page === "dictation") render();
         })),
-        row(t("Media voice commands"), windowsShortcuts.supported() ? t("Allow pause, resume and track changes for the selected player. Now playing must also be on. Per-player volume is not available on Windows.") : t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
+        row(t("Media voice commands"), windowsShortcuts.supported() ? t("Allow pause, resume and track changes for the selected player. Now playing must also be on. For volume commands, choose its audio app below.") : t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
           await Bridge.setDictationCommands("media", on);
           dictationCommandMedia = on; dictationCommandMediaChanged = true;
+          if (page === "dictation") render();
         })),
         row(t("Application voice commands"), windowsShortcuts.supported() ? t("Allow opening registered Start Menu and Microsoft Store apps by name. Names stay local and ambiguous matches require a choice. Windows checks the app registration before opening. Spoken command lines, URLs and file arguments are unsupported.") : t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
           await Bridge.setDictationCommands("applications", on);
@@ -1250,6 +1256,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           await Bridge.setDictationCommands("output", on);
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
         })),
+        ...(windowsShortcuts.supported() ? [playerAudio.render()] : []),
         row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
         row(t("Names it understands"), t("Uses current project and agent names, plus replacements in Dictionary. Small spelling differences can match; when names tie, Vults asks which one."), button(t("Dictionary"), () => void Bridge.openNest("dictation-dictionary"))),
       ),
@@ -2036,6 +2043,7 @@ function choosePage(next: Page): void {
 const dictationNavigation = createDictationNavigation("dictationstyles", id => void Bridge.openNest(`dictation-${id}`), chooseDictation, () => chooseDictation("voice"));
 
 function render(): void {
+  playerAudio.context(page === "dictation" && dictationSection === "commands" && windowsShortcuts.supported() && !document.hidden, dictationCommands && dictationCommandMedia && nowPlaying);
   const tool = page === "dictation" && dictationTool();
   const preferences = page === "dictation" && !tool;
   const place = tool ? `dictation${dictationSection}` : page;
@@ -2351,8 +2359,9 @@ void getVersion()
 window.setInterval(() => {
   if (!document.hidden) void refreshConnectors();
 }, 15_000);
-window.addEventListener("pagehide", () => { realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
+window.addEventListener("pagehide", () => { playerAudio.context(false, dictationCommands && dictationCommandMedia && nowPlaying); realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
 document.addEventListener("visibilitychange", () => {
+  playerAudio.context(page === "dictation" && dictationSection === "commands" && windowsShortcuts.supported() && !document.hidden, dictationCommands && dictationCommandMedia && nowPlaying);
   questionAgents.visible(page === "dictation" && !dictationTool() && !document.hidden);
   meetingAssets.visible(page === "dictation" && !dictationTool() && !document.hidden);
   realtimeSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);
