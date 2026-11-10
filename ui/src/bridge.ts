@@ -607,6 +607,8 @@ export const Bridge = {
   setConnectorZecaSnapshot: (on: boolean) => invoke<void>("set_connector_zeca_snapshot", { on }),
   setConnectorZecaWorkItem: (on: boolean) => invoke<void>("set_connector_zeca_work_item", { on }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
+  giteaConnection: () => invoke<{ baseUrl: string; generation: string }>("gitea_connection"),
+  setGiteaConnection: (baseUrl: string, token: string, generation: string, clear: boolean) => invoke<{ baseUrl: string; generation: string }>("set_gitea_connection", { baseUrl, token, generation, clear }),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),
   connectorsRefresh: () => invoke<void>("connectors_refresh"),
   /** Opens Settings, at one page (`agents`…) when given. */

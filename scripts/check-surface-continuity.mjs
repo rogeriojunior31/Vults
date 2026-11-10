@@ -713,6 +713,15 @@ assert.ok(!gitlabUI.element.textContent.includes("Squash and merge"));
 assert.ok(!gitlabUI.element.querySelector('[data-fid="tab:runs"]'));
 assert.ok(!gitlabUI.element.querySelector('[data-fid="tab:rels"]'));
 console.log("check-surface-continuity: GitLab uses merge-request labels and offers no unsupported merge, Actions or Releases tab");
+const giteaUI = createConnections({ status: async () => [], refresh: async () => {},
+  onMerged() {}, merge: async () => { throw Error("Gitea must stay read only"); }, settings() {}, open() {}, zeca: () => null });
+giteaUI.update({ boards: [{ connector: "gitea", rows: [{ ...mergeRow, name: "app#7", item: "gitea:generation:alice:yours:team/app#7:item", merge: false, checks: null, review: null }] }] });
+await tick();
+assert.ok(giteaUI.element.textContent.includes("Pull requests"));
+assert.ok(!giteaUI.element.textContent.includes("Squash and merge"));
+assert.ok(!giteaUI.element.querySelector('[data-fid="tab:runs"]'));
+assert.ok(!giteaUI.element.querySelector('[data-fid="tab:rels"]'));
+console.log("check-surface-continuity: Gitea offers pull requests without unsupported mutations, Actions or Releases");
 connections.update({ boards: [{ connector: "github", rows: [mergeRow] }] });
 document.body.replaceChildren(connections.element); await tick();
 connections.element.querySelector(".conn-row").fire("click");

@@ -11,6 +11,8 @@ tokio = { workspace = true, features = ["test-util"] }
 
 [dependencies]
 vults-core.workspace = true
+vults-secrets.workspace = true
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "json"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"

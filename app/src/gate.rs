@@ -110,7 +110,7 @@ pub fn budget(feature: &str) -> usize {
         VOICE_CONSULTATION => VOICE_CONSULTATION_BUDGET,
         VOICE_CODEX_CONSULTATION => VOICE_CODEX_CONSULTATION_BUDGET,
         meeting_assets::FEATURE => meeting_assets::BUDGET,
-        "github" | "gitlab" => CONNECTOR_BUDGET,
+        "github" | "gitlab" | "gitea" => CONNECTOR_BUDGET,
         _ => 0,
     }
 }

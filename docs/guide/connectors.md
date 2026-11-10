@@ -8,6 +8,35 @@ detail as a separate view and return to the selected row. Merging still needs it
 Connectors put news from outside services on the island. Each one is off until you switch it on in
 **Settings → Connectors**.
 
+## Gitea
+
+In **Settings > Connectors**, enter your instance's HTTPS base URL (including its port or
+subfolder, for example `https://git.example.com:8443/team/`) and an access token with
+`read:user`, `read:issue` and `read:repository` scopes. Do not append `/api/v1`. Save the
+connection, then switch **Gitea** on separately. No CLI installation is required.
+
+The URL and token are stored together in the OS keyring. The token never enters settings files or snapshots.
+Settings can display the URL but never reads back the token. A blank token retains the saved
+one only for the same URL. Turn Gitea off before editing or removing the connection; changing
+the URL requires a token. HTTP and untrusted TLS certificates are unsupported.
+
+Every five minutes, Vults reads your account, your open pull requests and requests for your
+review. Each GET has its own network admission, daily budget charge and local trace. The first
+complete poll establishes a baseline; later new review requests produce alerts. Changing the
+connection or account starts a new baseline. The Connections page has pull-request links scoped
+to your configured instance. It is read only: no checks, approval status, Actions, releases,
+merges or built-in Gitea chat tools in this version.
+
+Each group is bounded to five pages of at most 50 items. Missing or changing total counts,
+duplicate entries, incomplete data, failed requests and exhausted budgets never replace the last
+complete snapshot with partial results. The client verifies TLS, follows no redirects, ignores
+proxy environment settings, caps each response at 1 MiB and each poll at one minute. Last account,
+sync time and errors appear in Settings. Snapshots in `connectors/gitea.json` contain titles,
+repository names, links and account metadata, without credentials.
+
+Validation uses synthetic local API fixtures and renderer checks. Acceptance against a real
+self-hosted instance remains pending until an instance is available.
+
 ## GitLab
 
 The GitLab connector is read only and supports **GitLab.com**. Install the GitLab CLI (`glab`),

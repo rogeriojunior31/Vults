@@ -6,6 +6,7 @@
 //! last one it saw (saved to disk, so a restart does not replay old news) and only the
 //! differences become events. The first poll ever only records a baseline.
 
+pub mod gitea;
 pub mod github;
 pub mod gitlab;
 mod runtime;
@@ -191,6 +192,8 @@ pub type Snapshot = BTreeMap<String, serde_json::Value>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
+    /// An individual request was refused before network access.
+    Budget,
     /// The tool it relies on is missing (e.g. `gh` not installed).
     Unavailable(String),
     /// Not logged in, or not allowed.
@@ -207,6 +210,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Error::Budget => f.write_str("Connector request was not admitted."),
             Error::Unavailable(m) | Error::Auth(m) | Error::Partial(m) | Error::Other(m) => f.write_str(m),
             Error::RateLimited { retry_after } => {
                 write!(f, "rate limited, retrying in {}s", retry_after.as_secs())
@@ -223,6 +227,18 @@ pub trait Connector: Send + Sync {
     fn interval(&self, last: &Snapshot) -> Duration;
     /// The service's current state.
     fn poll(&self) -> Poll<'_>;
+    /// REST connectors override this to admit each request of a multi-request snapshot.
+    fn poll_admitted(&self, gate: std::sync::Arc<dyn Gate>) -> Poll<'_> {
+        Box::pin(async move {
+            if !gate.allow(self.id()) {
+                return Err(Error::Budget);
+            }
+            let started = std::time::Instant::now();
+            let result = self.poll().await;
+            gate.done(self.id(), result.is_ok(), started.elapsed());
+            result
+        })
+    }
     /// News between two snapshots of this connector.
     fn diff(&self, before: &Snapshot, after: &Snapshot) -> Vec<Event>;
     /// Its card on the island, from the latest snapshot; `None` when it has no card.
@@ -241,5 +257,9 @@ pub trait Connector: Send + Sync {
 
 /// Every connector the app knows, by id.
 pub fn all() -> Vec<Box<dyn Connector>> {
-    vec![Box::new(github::GitHub), Box::new(gitlab::GitLab)]
+    vec![
+        Box::new(github::GitHub),
+        Box::new(gitlab::GitLab),
+        Box::new(gitea::Gitea),
+    ]
 }

@@ -547,7 +547,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       if (repo && !repos.includes(repo)) repo = null;
       const mine = board.rows.filter((r) => !repo || r.facts.repo === repo);
       const count = (id: Tab) => mine.filter(TABS[id]).length;
-      const selectedTab = board.connector === "gitlab" && (tab === "runs" || tab === "rels") ? null : tab;
+      const selectedTab = ["gitlab", "gitea"].includes(board.connector) && (tab === "runs" || tab === "rels") ? null : tab;
       const shown: Tab = selectedTab ?? (count("inbox") ? "inbox" : "prs");
       const fresh = mine.filter((r) => needs(r) && !isSeen(board.connector, r)).length;
       const failing = mine.filter((r) => r.group === "branches" && r.checks === "failing").length;
@@ -659,7 +659,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           { class: "nest-subs conn-tabs" },
           tabButton("inbox", t("Inbox"), fresh ? t("{n} new", { n: fresh }) : null),
           tabButton("prs", board.connector === "gitlab" ? t("Merge requests") : t("Pull requests"), String(count("prs"))),
-          ...(board.connector === "gitlab" ? [] : [
+          ...(["gitlab", "gitea"].includes(board.connector) ? [] : [
             tabButton("runs", t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),
             tabButton("rels", t("Releases"), String(count("rels"))),
           ]),

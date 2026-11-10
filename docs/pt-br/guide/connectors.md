@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 860d564ca897 -->
+<!-- source: b7f27c459c53 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -9,6 +9,35 @@ voltam à linha selecionada. O merge continua exigindo sua própria confirmaçã
 
 Os conectores trazem novidades de serviços externos para a ilha. Cada um fica desligado até você
 ligá-lo em **Settings → Connectors**.
+
+## Gitea
+
+Em **Settings > Connectors**, informe a URL base HTTPS da sua instância (incluindo porta ou
+subpasta, por exemplo `https://git.example.com:8443/team/`) e um token com os escopos
+`read:user`, `read:issue` e `read:repository`. Não acrescente `/api/v1`. Salve a conexão e
+depois ative **Gitea** separadamente. Não é necessário instalar uma CLI.
+
+A URL e o token são armazenados juntos no cofre do sistema. O token nunca entra nas configurações ou snapshots.
+As configurações mostram a URL, mas nunca leem o token de volta. Um token vazio mantém o salvo
+somente para a mesma URL. Desative o Gitea antes de editar ou remover a conexão; alterar a URL
+exige um token. HTTP e certificados TLS não confiáveis não são suportados.
+
+A cada cinco minutos, o Vults lê sua conta, seus pull requests abertos e os pedidos da sua revisão.
+Cada GET passa por uma autorização de rede, contabilização no limite diário e registro local próprios.
+A primeira consulta completa estabelece a referência; novos pedidos de revisão posteriores geram
+alertas. Alterar a conexão ou a conta estabelece uma nova referência. A página Connections mostra
+links de pull requests restritos à instância configurada. Esta versão é somente leitura: não inclui
+checks, estado de aprovações, Actions, releases, merges nem ferramentas Gitea integradas ao chat.
+
+Cada grupo fica limitado a cinco páginas de até 50 itens. Contagens totais ausentes ou variáveis,
+entradas duplicadas, dados incompletos, falhas e limites esgotados nunca substituem o último
+snapshot completo por dados parciais. O cliente verifica TLS, não segue redirecionamentos, ignora
+proxies do ambiente e limita cada resposta a 1 MiB e cada consulta a um minuto. A última conta,
+hora da sincronização e erros aparecem nas configurações. Os snapshots em `connectors/gitea.json`
+contêm títulos, nomes de repositórios, links e metadados da conta, sem credenciais.
+
+A validação usa uma API local simulada e verificações da interface. A aceitação em uma instância
+própria real fica pendente até que uma instância esteja disponível.
 
 ## GitLab
 

@@ -23,9 +23,19 @@ export const CONNECTORS: ConnectorInfo[] = [
     name: "GitLab",
     about: tk("Your open merge requests, review requests and head-pipeline status on GitLab.com. Uses your GitLab CLI (glab) login. Read only; up to 50 items per group. Sign in with glab auth login --hostname gitlab.com."),
   },
+  { id: "gitea", name: "Gitea", about: tk("Your open pull requests and review requests on your Gitea instance. Read only; checks, approvals and merges are not supported. Configure the HTTPS base URL and an access token, then turn it on.") },
 ];
 
 const ERRORS = [
+  tk("Gitea returned incomplete or invalid data. The previous snapshot is kept."),
+  tk("Could not read Gitea. Check the connection and try again."),
+  tk("Check the Gitea URL and token in Settings."),
+  tk("Could not read the Gitea connection."),
+  tk("Could not save the Gitea connection."),
+  tk("The Gitea connection changed. Reload Settings and try again."),
+  tk("Enter a valid HTTPS Gitea base URL without credentials, query or fragment."),
+  tk("Enter a Gitea access token for this URL."),
+  tk("Turn off Gitea before changing its connection."),
   tk("The GitLab CLI (glab) is not installed."),
   tk("Sign in to GitLab.com with glab auth login --hostname gitlab.com."),
   tk("GitLab did not respond in time."),

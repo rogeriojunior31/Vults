@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 vults-protocol.workspace = true
 serde.workspace = true
+url = "2"
 # The ledger's bindings: answers are matched to the exact request by SHA-256.
 sha2 = "0.10"
 
