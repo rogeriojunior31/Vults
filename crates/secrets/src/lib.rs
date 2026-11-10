@@ -12,6 +12,8 @@ pub enum Secret {
     PhoneKey,
     /// Single-use restore token for the dictation keyboard portal.
     DictationKeyboard,
+    /// Atomic Gitea host/token binding; never returned to a renderer.
+    Gitea,
 }
 
 impl Secret {
@@ -21,6 +23,7 @@ impl Secret {
             Secret::WebKey(engine) => format!("web-{engine}-key"),
             Secret::PhoneKey => "phone-seal-key".into(),
             Secret::DictationKeyboard => "dictation-keyboard-restore-token".into(),
+            Secret::Gitea => "gitea-connection".into(),
         }
     }
 }
@@ -36,7 +39,9 @@ fn entry_in(service: &str, secret: Secret) -> Result<keyring::Entry, String> {
 pub fn get(secret: Secret) -> Result<Option<String>, String> {
     match entry(secret)?.get_password() {
         Ok(v) => Ok(Some(v)),
-        Err(keyring::Error::NoEntry) if secret == Secret::DictationKeyboard => Ok(None),
+        Err(keyring::Error::NoEntry) if matches!(secret, Secret::DictationKeyboard | Secret::Gitea) => {
+            Ok(None)
+        }
         Err(keyring::Error::NoEntry) => moved_from_legacy(secret),
         Err(e) => Err(format!("keyring: {e}")),
     }
@@ -153,5 +158,13 @@ mod tests {
         assert!(get(secret).expect("removed token").is_none());
         assert_ne!(secret.account(), Secret::ApiKey("dictation").account());
         assert_ne!(secret.account(), Secret::PhoneKey.account());
+        assert!(get(Secret::Gitea).unwrap().is_none());
+        set(Secret::Gitea, "synthetic-host-token-bundle").unwrap();
+        assert_eq!(
+            get(Secret::Gitea).unwrap().as_deref(),
+            Some("synthetic-host-token-bundle")
+        );
+        delete(Secret::Gitea).unwrap();
+        assert!(get(Secret::Gitea).unwrap().is_none());
     }
 }

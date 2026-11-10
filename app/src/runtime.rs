@@ -910,14 +910,33 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 input
             }
             Msg::Connector(vults_connectors::Update::Event(e)) => {
+                if e.connector == "gitea"
+                    && e.url
+                        .as_deref()
+                        .and_then(|raw| connector_url(&e.connector, &e.key, raw))
+                        .is_none()
+                {
+                    continue;
+                }
                 tracing::info!(connector = %e.connector, level = ?e.level, "connector news");
                 Some(Input::Connector(alert(e, state.lang)))
             }
             Msg::RunEnded(update) => Some(Input::RunEnded(update)),
-            Msg::Connector(vults_connectors::Update::Board { connector, rows }) => Some(Input::Board {
-                connector,
-                rows: rows.map(|rows| rows.into_iter().map(row).collect()),
-            }),
+            Msg::Connector(vults_connectors::Update::Board { connector, rows }) => {
+                let rows = rows.map(|rows| {
+                    rows.into_iter()
+                        .filter(|r| {
+                            connector != "gitea"
+                                || r.url
+                                    .as_deref()
+                                    .and_then(|raw| connector_url(&connector, &r.item, raw))
+                                    .is_some()
+                        })
+                        .map(|r| connector_row(&connector, r))
+                        .collect()
+                });
+                Some(Input::Board { connector, rows })
+            }
             Msg::User(intent) => Some(Input::User(intent)),
             // Its counter is saved before core sees it, so nothing it does (an Always's rule
             // included) can outlive a counter that was not kept. A counter spent on an answer the
@@ -1373,6 +1392,10 @@ fn alert(e: vults_connectors::Event, lang: core::i18n::Lang) -> core::Alert {
         ),
         None => e.title,
     };
+    let url = e
+        .url
+        .as_deref()
+        .and_then(|raw| connector_url(&e.connector, &e.key, raw));
     core::Alert {
         key: e.key,
         topic: e.topic,
@@ -1387,13 +1410,25 @@ fn alert(e: vults_connectors::Event, lang: core::i18n::Lang) -> core::Alert {
         title,
         detail: e.detail,
         // Checked here, once: the UI can only ask to open an alert, never a URL.
-        url: e.url.as_deref().and_then(core::SafeUrl::parse),
+        url,
     }
 }
 
-fn row(r: vults_connectors::Row) -> core::board::Row {
+fn connector_url(connector: &str, item: &str, raw: &str) -> Option<core::SafeUrl> {
+    if connector == "gitea" {
+        vults_connectors::gitea::trusted_link(item, raw)
+    } else {
+        core::SafeUrl::parse(raw)
+    }
+}
+
+fn connector_row(connector: &str, r: vults_connectors::Row) -> core::board::Row {
     use core::board::{Checks, Group, Verdict};
     use vults_connectors as c;
+    let url = r
+        .url
+        .as_deref()
+        .and_then(|raw| connector_url(connector, &r.item, raw));
     core::board::Row {
         item: r.item,
         group: match r.group {
@@ -1414,7 +1449,7 @@ fn row(r: vults_connectors::Row) -> core::board::Row {
             c::Review::Changes => Verdict::Changes,
         }),
         // Checked here, once, as an alert's link.
-        url: r.url.as_deref().and_then(core::SafeUrl::parse),
+        url,
         head: r.head,
         facts: facts(r.facts),
     }

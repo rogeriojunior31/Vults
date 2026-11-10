@@ -25,6 +25,7 @@ import { createCleanupSettings } from "./dictation-styles";
 import { createQuestionAgents } from "./question-agents";
 import { createDictationDoctor } from "./dictation-doctor";
 import { createWindowsPlayerAudio } from "./windows-player-audio";
+import { createGitea } from "./gitea";
 import { createWindowsShortcuts } from "./windows-shortcuts";
 import { LANGUAGES as APP_LANGUAGES, locale, setLang, t, tk } from "../../i18n";
 import { historyCard, type Activity, type ActivityActions } from "./activity";
@@ -87,6 +88,9 @@ const cleanupSettings = createCleanupSettings({ load: Bridge.appSettings, provid
   enable: Bridge.setDictationCleanup, options: Bridge.setDictationStyleOptions, app: Bridge.setDictationAppStyle }, () => choosePage("chat"));
 Bridge.onDictationStyles(() => { if (page === "dictation") cleanupSettings.refresh(); });
 const root = document.getElementById("settings")!;
+const gitea = createGitea({ read: Bridge.giteaConnection, save: Bridge.setGiteaConnection });
+window.addEventListener("pagehide", () => gitea.hide());
+document.addEventListener("visibilitychange", () => gitea.context(page === "connectors" && !document.hidden, connectorStatus.get("gitea")?.enabled ?? false));
 let boundShortcuts: Record<string, string> = {};
 const boundKeys = (...ids: string[]) => ids.map(id => boundShortcuts[id]?.trim() || t("Not bound")).join(" · ");
 const keepShortcuts = (keys: Record<string, string>) => {
@@ -837,6 +841,8 @@ function connectorsPage(): HTMLElement[] {
           ),
         ),
         el("p", { class: "row-about", text: t(c.about) }),
+        c.id === "gitea" ? gitea.element : null,
+        c.id === "gitea" && st?.account && st.host ? el("p", { class: "note", text: t("Last successful Gitea account: {account} on {host}.", { account: st.account, host: st.host }) }) : null,
         c.id === "github" && st?.account && st.host ? el("p", { class: "note", text: t("Last successful GitHub CLI account: {account} on {host}.", { account: st.account, host: st.host }) }) : null,
         c.id === "gitlab" && st?.account && st.host ? el("p", { class: "note", text: t("Last successful GitLab CLI account: {account} on {host}.", { account: st.account, host: st.host }) }) : null,
         st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: t("Last checked {when}.", { when: ago(st.lastOk) }) }) : null,
@@ -2044,6 +2050,7 @@ function choosePage(next: Page): void {
 const dictationNavigation = createDictationNavigation("dictationstyles", id => void Bridge.openNest(`dictation-${id}`), chooseDictation, () => chooseDictation("voice"));
 
 function render(): void {
+  gitea.context(page === "connectors" && !document.hidden, connectorStatus.get("gitea")?.enabled ?? false);
   playerAudio.context(page === "dictation" && dictationSection === "commands" && windowsShortcuts.supported() && !document.hidden, dictationCommands && dictationCommandMedia && nowPlaying);
   const tool = page === "dictation" && dictationTool();
   const preferences = page === "dictation" && !tool;

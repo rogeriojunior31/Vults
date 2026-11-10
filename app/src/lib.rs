@@ -282,6 +282,8 @@ pub fn run() {
             connectors::set_connector_zeca_snapshot,
             connectors::set_connector_zeca_work_item,
             connectors::connector_enable,
+            connectors::gitea_connection,
+            connectors::set_gitea_connection,
             connectors::connectors_refresh,
             connectors::github_calendar,
             settings::app_settings,

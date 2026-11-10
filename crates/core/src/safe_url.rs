@@ -10,6 +10,57 @@ const MAX_LEN: usize = 2048;
 pub struct SafeUrl(String);
 
 impl SafeUrl {
+    /// Canonical base explicitly configured for a self-hosted service, including a subfolder.
+    pub fn service_base(raw: &str) -> Option<String> {
+        if raw.len() > 1024
+            || raw
+                .chars()
+                .any(|c| c.is_control() || c.is_whitespace() || matches!(c, '\\' | '%' | '?' | '#'))
+        {
+            return None;
+        }
+        let url = url::Url::parse(raw).ok()?;
+        if raw.split('/').nth(2)?.contains('@') {
+            return None;
+        }
+        if url.scheme() != "https"
+            || url.host_str().is_none()
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || raw.split('/').any(|part| matches!(part, "." | ".."))
+        {
+            return None;
+        }
+        let path = url.path();
+        if path.split('/').any(|part| {
+            !part
+                .bytes()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
+        }) {
+            return None;
+        }
+        Some(format!("{}/", url.as_str().trim_end_matches('/')))
+    }
+
+    /// Only links under this particular user's service base; no global host allowlist change.
+    pub fn for_service(raw: &str, base: &str) -> Option<Self> {
+        let base = Self::service_base(base)?;
+        let suffix = raw.strip_prefix(&base)?;
+        if raw.len() > MAX_LEN
+            || suffix.is_empty()
+            || suffix.split('/').any(|part| {
+                part.is_empty()
+                    || matches!(part, "." | "..")
+                    || !part
+                        .bytes()
+                        .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
+            })
+        {
+            return None;
+        }
+        Some(Self(raw.into()))
+    }
+
     pub fn parse(raw: &str) -> Option<Self> {
         if raw.len() > MAX_LEN
             || raw
@@ -42,6 +93,33 @@ impl fmt::Display for SafeUrl {
 #[cfg(test)]
 mod tests {
     use super::SafeUrl;
+
+    #[test]
+    fn service_scope_keeps_ports_and_subfolders_without_trusting_other_hosts() {
+        let base = SafeUrl::service_base("https://Git.Example.com:8443/team").unwrap();
+        assert_eq!(base, "https://git.example.com:8443/team/");
+        assert!(SafeUrl::for_service("https://git.example.com:8443/team/me/app/pulls/1", &base).is_some());
+        for bad in [
+            "http://git.example.com/",
+            "https://me:secret@git.example.com/",
+            "https://git.example.com/a/../b",
+            "https://git.example.com/%2e/",
+            "https://git.example.com/?x=1",
+            "https://git.example.com/#fragment",
+        ] {
+            assert!(SafeUrl::service_base(bad).is_none(), "{bad}");
+        }
+        for bad in [
+            "https://git.example.com:8443/teammate/a",
+            "https://git.example.com/team/a",
+            "https://git.example.com:8443/team/../a",
+            "https://git.example.com:8443/team/a?x=1",
+            "https://git.example.com.evil:8443/team/a",
+        ] {
+            assert!(SafeUrl::for_service(bad, &base).is_none(), "{bad}");
+        }
+        assert!(SafeUrl::parse("https://git.example.com:8443/team/a").is_none());
+    }
 
     #[test]
     fn accepts_plain_github_links() {

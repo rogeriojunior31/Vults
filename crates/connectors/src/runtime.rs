@@ -190,7 +190,8 @@ impl Task {
                     return;
                 }
             }
-            if !self.gate.allow(&id) {
+            let result = self.connector.poll_admitted(self.gate.clone()).await;
+            if matches!(result, Err(Error::Budget)) {
                 self.status(&id, |s| s.over_budget = true).await;
                 tokio::select! {
                     () = tokio::time::sleep(NEEDS_USER) => {}
@@ -199,9 +200,6 @@ impl Task {
                 continue;
             }
             self.status(&id, |s| s.over_budget = false).await;
-            let started = Instant::now();
-            let result = self.connector.poll().await;
-            self.gate.done(&id, result.is_ok(), started.elapsed());
             if let Ok(mut p) = self.pace.lock() {
                 p.last_try = Some(Instant::now());
                 p.rate_limited = matches!(result, Err(Error::RateLimited { .. }));
@@ -243,6 +241,7 @@ impl Task {
                 Err(err) => {
                     self.status(&id, |s| s.error = Some(err.to_string())).await;
                     match err {
+                        Error::Budget => NEEDS_USER,
                         Error::RateLimited { retry_after } => retry_after,
                         Error::Unavailable(_) | Error::Auth(_) => NEEDS_USER,
                         Error::Partial(_) | Error::Other(_) => {

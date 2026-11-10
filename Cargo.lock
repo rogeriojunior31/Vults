@@ -7292,11 +7292,13 @@ dependencies = [
 name = "vults-connectors"
 version = "0.1.8"
 dependencies = [
+ "reqwest",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "tokio",
  "vults-core",
+ "vults-secrets",
 ]
 
 [[package]]
@@ -7308,6 +7310,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "ts-rs",
+ "url",
  "vults-protocol",
 ]
 

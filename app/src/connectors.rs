@@ -10,6 +10,48 @@ use vults_connectors::{Runtime, Status, Update};
 
 use crate::{paths, settings};
 
+static GITEA_CONFIG: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+#[tauri::command]
+pub async fn gitea_connection(window: tauri::Webview) -> Result<vults_connectors::gitea::Connection, String> {
+    crate::settings_page(&window)?;
+    tauri::async_runtime::spawn_blocking(|| {
+        let _guard = GITEA_CONFIG
+            .lock()
+            .map_err(|_| "Could not read the Gitea connection.")?;
+        vults_connectors::gitea::connection()
+    })
+    .await
+    .map_err(|_| "Could not read the Gitea connection.".to_string())?
+}
+
+#[tauri::command]
+pub async fn set_gitea_connection(
+    app: AppHandle,
+    window: tauri::Webview,
+    base_url: String,
+    token: String,
+    generation: String,
+    clear: bool,
+) -> Result<vults_connectors::gitea::Connection, String> {
+    crate::settings_page(&window)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = GITEA_CONFIG
+            .lock()
+            .map_err(|_| "Could not save the Gitea connection.")?;
+        if chosen(&app).get("gitea").copied().unwrap_or(false) {
+            return Err("Turn off Gitea before changing its connection.".into());
+        }
+        if clear {
+            vults_connectors::gitea::clear(&generation)
+        } else {
+            vults_connectors::gitea::save(&base_url, &token, &generation)
+        }
+    })
+    .await
+    .map_err(|_| "Could not save the Gitea connection.".to_string())?
+}
+
 #[derive(Debug)]
 pub struct Connectors {
     runtime: Runtime,
@@ -192,6 +234,10 @@ pub fn connectors_refresh(state: tauri::State<'_, Connectors>) {
 #[tauri::command]
 pub fn connector_enable(app: AppHandle, window: tauri::Webview, id: String, on: bool) -> Result<(), String> {
     crate::settings_page(&window)?;
+    let _guard = (id == "gitea")
+        .then(|| GITEA_CONFIG.try_lock())
+        .transpose()
+        .map_err(|_| "Could not save the Gitea connection.")?;
     if !app.state::<Connectors>().runtime.ids().any(|known| known == id) {
         return Err("Unknown connector.".into());
     }
