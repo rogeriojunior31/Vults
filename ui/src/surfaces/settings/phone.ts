@@ -1,6 +1,7 @@
 // Settings → Phone (plan-zeca L2): answering cards from a paired phone, how it reaches this
 // computer, pairing by QR, and the phones paired.
 import { Bridge, type Pairing, type PhoneEvent, type PhoneSettings } from "../../bridge";
+import { failure } from "../../errors";
 import { el } from "../../dom";
 import { locale, t } from "../../i18n";
 import { button, confirmed, row, toggle } from "./pieces";
@@ -96,7 +97,7 @@ export function phonePage(): HTMLElement[] {
     message = null;
     Bridge.setPhoneTransport(transport.value as PhoneSettings["transport"])
       .then(() => refreshPhone(rerender))
-      .catch((e) => said(String(e), true));
+      .catch((e) => said(failure(t("Could not change how the phone reaches this computer."), e), true));
   });
   rows.push(row(t("How the phone reaches this computer"), t("Through a relay on the internet, or straight over your network or tailnet."), transport));
   const direct = p.transport === "direct";
@@ -108,7 +109,7 @@ export function phonePage(): HTMLElement[] {
   const save = () =>
     (direct ? Bridge.setPhoneListen(input.value) : Bridge.setPhoneRelay(input.value))
       .then(() => said(t("Saved.")))
-      .catch((e) => said(String(e), true));
+      .catch((e) => said(failure(t("Could not save the address."), e), true));
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") void save();
   });
@@ -150,7 +151,7 @@ export function phonePage(): HTMLElement[] {
               }, 1000);
               rerender();
             })
-            .catch((e) => said(String(e), true));
+            .catch((e) => said(failure(t("Could not start pairing."), e), true));
         },
         true,
       ),
@@ -171,7 +172,7 @@ export function phonePage(): HTMLElement[] {
             : confirmed(t("Revoke"), t("Nothing this phone signs is accepted after this."), t("Revoke phone"), () =>
                 Bridge.phoneRevoke(d.id)
                   .then(() => said(t("Revoked: nothing it signs is taken now.")))
-                  .catch((e) => said(String(e), true)),
+                  .catch((e) => said(failure(t("Could not revoke the phone. It can still answer cards."), e), true)),
               ),
         ),
       )

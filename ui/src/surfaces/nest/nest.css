@@ -1974,6 +1974,7 @@ button.touched-row:hover,
   font-size: 12px;
   color: var(--error-text);
 }
+.conn-waiting .conn-refused { color: var(--error-text); }
 .conn-row.seen .conn-row-words strong { color: var(--fg-dim); }
 /* The prototype's GitHub view: a count on each tab (red when Actions fail), the repository filter,
    the checks one by one, a bar while they run, and the command to copy. */

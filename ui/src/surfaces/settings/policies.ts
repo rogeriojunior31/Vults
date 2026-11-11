@@ -7,6 +7,7 @@ import {
   type PolicyPreview,
   type PolicyRow,
 } from "../../bridge";
+import { failure } from "../../errors";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { button, confirmed, diff } from "./pieces";
@@ -50,7 +51,7 @@ export async function refreshPolicies(render: () => void): Promise<void> {
     policies = await Bridge.policiesList();
   } catch (e) {
     policies = [];
-    message = { text: String(e), error: true };
+    message = { text: failure(t("Could not read your policies."), e), error: true };
   }
   render();
 }
@@ -114,7 +115,7 @@ function editor(render: () => void): HTMLElement {
             render();
           },
           (e) => {
-            message = { text: String(e), error: true };
+            message = { text: failure(t("Could not check the policy."), e), error: true };
             render();
           },
         );
@@ -135,7 +136,7 @@ function editor(render: () => void): HTMLElement {
                   void refreshPolicies(render);
                 },
                 (e) => {
-                  message = { text: String(e), error: true };
+                  message = { text: failure(t("Could not accept the policy. Nothing changed."), e), error: true };
                   render();
                 },
               );
@@ -186,7 +187,7 @@ function policyCard(p: PolicyRow, render: () => void): HTMLElement {
             void refreshPolicies(render);
           },
           (e) => {
-            message = { text: String(e), error: true };
+            message = { text: failure(t("Could not revoke the policy. It still applies."), e), error: true };
             render();
           },
         ),

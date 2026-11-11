@@ -1,5 +1,6 @@
 import { createDictationNavigation, DICTATION_SETTINGS, dictationSetting, dictationSettingAbout, type DictationSetting } from "../nest/dictation/navigation";
 import { VOICE_MODEL_LABELS } from "../../voice-command-readiness";
+import { failure } from "../../errors";
 import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
 import { applyTheme, DEFAULT_THEME } from "../../theme";
@@ -55,7 +56,7 @@ const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; ic
   { id: "approvals", label: tk("Approvals"), group: "work", icon: "list" },
   { id: "projects", label: tk("Projects"), group: "work", icon: "folder" },
   { id: "activity", label: tk("Activity"), group: "system", icon: "bars" },
-  { id: "connectors", label: tk("Connectors"), group: "system", icon: "plug" },
+  { id: "connectors", label: tk("Connections"), group: "system", icon: "plug" },
   { id: "phone", label: tk("Phone"), group: "system", icon: "phone" },
   { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
@@ -658,7 +659,7 @@ async function refresh(kind: InstallAgent): Promise<void> {
   try {
     panel.status = await Bridge.installStatus(kind);
   } catch (e) {
-    panel.message = { text: String(e), error: true };
+    panel.message = { text: failure(t("Could not read this agent's setup."), e), error: true };
     // Unreadable: that is for the Agents page to say.
     if (!navigated) {
       navigated = true;
@@ -690,7 +691,7 @@ async function preview(kind: InstallAgent, install: boolean): Promise<void> {
   try {
     panel.pending = { install, preview: await Bridge.installPreview(kind, install) };
   } catch (e) {
-    panel.message = { text: String(e), error: true };
+    panel.message = { text: failure(t("Could not prepare the review."), e), error: true };
   }
   await refresh(kind);
 }
@@ -706,7 +707,7 @@ async function apply(kind: InstallAgent): Promise<void> {
     const done = plugin ? (install ? t("Plugin installed.") : t("Plugin removed.")) : install ? t("Hooks installed.") : t("Hooks removed.");
     panel.message = { text: backup ? t("{done} Backup: {path}", { done, path: backup }) : done, error: false };
   } catch (e) {
-    panel.message = { text: String(e), error: true };
+    panel.message = { text: failure(t("Could not write the file."), e), error: true };
   }
   await refresh(kind);
 }
@@ -924,7 +925,7 @@ async function refreshConnectors(): Promise<void> {
 
 function connectorsPage(): HTMLElement[] {
   return [
-    el("h1", { text: t("Connectors") }),
+    el("h1", { text: t("Connections") }),
     el("p", { class: "lede", text: t("News from outside services on the island. Each one is off until you switch it on.") }),
     ...(presence === "paused" ? [el("p", { class: "note", text: t("Paused: connectors do not check anything until you pick another presence in General.") })] : []),
     ...CONNECTORS.map((c) => {
@@ -1757,7 +1758,7 @@ function voiceRows(): HTMLElement[] {
           try {
             await Bridge.voiceDownload(m.id);
           } catch (e) {
-            voiceError = String(e);
+            voiceError = failure(t("Could not download the model."), e);
           }
           downloading.delete(m.id);
           await refreshVoice();
@@ -1798,7 +1799,7 @@ function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): 
       confirmed(t("Remove"), t("The key leaves the system keyring. This provider stops working until you save a key again."), t("Remove key"), () =>
         Bridge.apiKeyClear(p.id)
           .then(() => done(t("Key removed from the keyring.")))
-          .catch((e) => done(String(e), true)),
+          .catch((e) => done(failure(t("Could not remove the key."), e), true)),
       ),
     ];
   }
@@ -1811,7 +1812,7 @@ function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): 
   const save = () => {
     Bridge.apiKeySet(p.id, input.value)
       .then(() => done(t("Saved. Choose the API in the chat to use it.")))
-      .catch((e) => done(String(e), true));
+      .catch((e) => done(failure(t("Could not save the key."), e), true));
   };
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") save();
@@ -1909,7 +1910,7 @@ function webRows(): HTMLElement[] {
     void Bridge.setWebEngine(engine.value as WebEngine)
       .then(() => refreshApi())
       .catch((e) => {
-        webMessage = { text: String(e), error: true };
+        webMessage = { text: failure(t("Could not change the search engine."), e), error: true };
         void refreshApi();
       });
   });
@@ -1923,7 +1924,7 @@ function webRows(): HTMLElement[] {
     const save = () =>
       Bridge.setSearxngUrl(input.value)
         .then(() => said(t("Saved.")))
-        .catch((e) => said(String(e), true));
+        .catch((e) => said(failure(t("Could not save the address."), e), true));
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void save();
     });
@@ -1936,7 +1937,7 @@ function webRows(): HTMLElement[] {
         confirmed(t("Remove"), t("The key leaves the system keyring. Web search stops working until you save a key again."), t("Remove key"), () =>
           Bridge.clearWebKey(w.engine)
             .then(() => said(t("Key removed from the keyring.")))
-            .catch((e) => said(String(e), true)),
+            .catch((e) => said(failure(t("Could not remove the key."), e), true)),
         ),
       ),
     );
@@ -1950,7 +1951,7 @@ function webRows(): HTMLElement[] {
     const save = () =>
       Bridge.setWebKey(w.engine, input.value)
         .then(() => said(t("Saved.")))
-        .catch((e) => said(String(e), true));
+        .catch((e) => said(failure(t("Could not save the key."), e), true));
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void save();
     });

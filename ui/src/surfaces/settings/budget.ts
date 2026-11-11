@@ -1,5 +1,6 @@
 // Settings alone owns the daily budget; Activity reads its figures (ADR 0031).
 import type { SpendToday } from "../../bridge";
+import { failure } from "../../errors";
 import { el } from "../../dom";
 import { t } from "../../i18n";
 import { row } from "./pieces";
@@ -47,7 +48,7 @@ export function createBudget(backend: BudgetBackend) {
       loaded = { ...loaded!, budget: typed === "" ? null : cents / 100 };
       draft = null;
       message = t("Saved.");
-    }, error => { failed = true; message = String(error); }).finally(() => {
+    }, error => { failed = true; message = failure(t("Could not save the budget."), error); }).finally(() => {
       saving = false;
       draw();
       if (focused && document.activeElement === document.body && save.isConnected) save.focus({ preventScroll: true });
@@ -88,7 +89,7 @@ export function createBudget(backend: BudgetBackend) {
       if (mine !== asked) return;
       loading = false;
       failed = true;
-      message = String(error);
+      message = failure(t("Could not read the budget."), error);
       draw();
     });
   };

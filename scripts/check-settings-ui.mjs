@@ -206,12 +206,12 @@ button("Clear history…").fire("click");
 assert.ok(page().textContent.includes("This can't be undone."));
 button("Cancel").fire("click");
 assert.deepEqual(writes, [], "Navigation, disclosures, draft restoration and cancel never write settings or clear history");
-for (const label of ["Dictation", "Approvals", "Projects", "Connectors", "Phone", "Flock & Zeca", "About"]) {
+for (const label of ["Dictation", "Approvals", "Projects", "Connections", "Phone", "Flock & Zeca", "About"]) {
   await go(label);
   assert.equal(page().querySelectorAll("h1").length, 1, `${label} keeps one page heading`);
   assert.ok(page().querySelector(".settings-heading"));
 }
-await go("Connectors");
+await go("Connections");
 assert.ok(page().textContent.includes("Last successful GitHub CLI account: maintainer on github.com."), "GitHub settings identify the last successful account and host from the connector poll");
 const gitlabCard = page().querySelectorAll("section.card").find(card => card.querySelector(".card-title")?.textContent === "GitLab");
 assert.ok(gitlabCard, "GitLab is an explicit registered connector");
