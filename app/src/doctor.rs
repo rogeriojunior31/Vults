@@ -84,6 +84,11 @@ fn version(exe: &Path) -> Option<String> {
     // A group of its own, so a timeout takes what it relaunched too (a CLI may re-exec node).
     #[cfg(unix)]
     std::os::unix::process::CommandExt::process_group(&mut cmd, 0);
+    #[cfg(windows)]
+    let mut owned = vults_platform::windows_process::DiagnosticProcess::spawn(&mut cmd).ok()?;
+    #[cfg(windows)]
+    let child = owned.child_mut();
+    #[cfg(not(windows))]
     let mut child = cmd.spawn().ok()?;
     // Read on a thread until stdout closes: a child that inherits it must not hold us past the
     // deadline either.
@@ -300,5 +305,134 @@ mod tests {
         assert_eq!(find_in("fixture", std::ffi::OsStr::new("relative")), None);
         std::fs::remove_file(shim).unwrap();
         std::fs::remove_dir(dir).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "private Windows process fixture, invoked by the doctor descendant test"]
+    fn windows_doctor_process_child() {
+        use std::io::Write;
+        use std::os::windows::io::AsRawHandle;
+        use std::os::windows::process::CommandExt;
+        let Some(dir) = std::env::var_os("VULTS_DOCTOR_FIXTURE_DIR").map(PathBuf::from) else {
+            return;
+        };
+        let role = std::env::var("VULTS_DOCTOR_FIXTURE_ROLE").unwrap_or_default();
+        if role.starts_with("parent") {
+            if role != "parent" {
+                #[link(name = "kernel32")]
+                unsafe extern "system" {
+                    fn SetHandleInformation(handle: *mut std::ffi::c_void, mask: u32, flags: u32) -> i32;
+                }
+                // SAFETY: only this private fixture's stdout loses inheritance. Otherwise a
+                // Windows child can retain the pipe even after redirecting its own stdout.
+                assert_ne!(
+                    unsafe { SetHandleInformation(std::io::stdout().as_raw_handle(), 1, 0) },
+                    0
+                );
+            }
+            let child = Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "doctor::tests::windows_doctor_process_child",
+                    "--nocapture",
+                ])
+                .env("VULTS_DOCTOR_FIXTURE_ROLE", "worker")
+                .stdin(Stdio::null())
+                .stdout(if role == "parent" {
+                    Stdio::inherit()
+                } else {
+                    Stdio::null()
+                })
+                .stderr(Stdio::null())
+                .creation_flags(0x0800_0000)
+                .spawn()
+                .unwrap();
+            drop(child);
+            let until = Instant::now() + Duration::from_secs(2);
+            while std::fs::metadata(dir.join("heartbeat")).map_or(true, |m| m.len() == 0)
+                && Instant::now() < until
+            {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            println!("fixture 1.0");
+            if role == "parent-failure" {
+                std::process::exit(7);
+            }
+        } else {
+            let until = Instant::now() + Duration::from_secs(20);
+            let mut tick = 0u64;
+            while Instant::now() < until && !dir.join("stop").exists() {
+                let mut heartbeat = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(dir.join("heartbeat"))
+                    .unwrap();
+                writeln!(heartbeat, "{tick}").unwrap();
+                tick += 1;
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            let _ = std::fs::write(dir.join("stopped"), "done");
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_doctor_timeout_does_not_leave_a_relaunched_worker_alive() {
+        windows_doctor_owned_tree("parent", false);
+    }
+    #[cfg(windows)]
+    #[test]
+    fn windows_doctor_completion_and_failure_also_stop_relaunched_workers() {
+        windows_doctor_owned_tree("parent-success", true);
+        windows_doctor_owned_tree("parent-failure", false);
+    }
+    #[cfg(windows)]
+    fn windows_doctor_owned_tree(role: &str, success: bool) {
+        let dir = std::env::temp_dir().join(format!(
+            "vults doctor tree {} {}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let shim = dir.join("fixture.cmd");
+        let exe = std::env::current_exe().unwrap();
+        std::fs::write(&shim,format!("@echo off\r\nset \"VULTS_DOCTOR_FIXTURE_DIR={}\"\r\nset \"VULTS_DOCTOR_FIXTURE_ROLE={role}\"\r\n\"{}\" --ignored --exact doctor::tests::windows_doctor_process_child --nocapture\r\n",dir.display(),exe.display())).unwrap();
+        let started = Instant::now();
+        let result = version(&shim);
+        std::thread::sleep(Duration::from_millis(100));
+        let heartbeat = || {
+            (0..20).find_map(|_| {
+                let value = std::fs::metadata(dir.join("heartbeat"))
+                    .ok()
+                    .map(|m| m.len())
+                    .filter(|n| *n > 0);
+                if value.is_none() {
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                value
+            })
+        };
+        let first = heartbeat();
+        std::thread::sleep(Duration::from_millis(200));
+        let second = heartbeat();
+        // Stop the private fixture even when this regression fails on the old implementation.
+        std::fs::write(dir.join("stop"), "stop").unwrap();
+        let until = Instant::now() + Duration::from_secs(2);
+        while first != second && !dir.join("stopped").exists() && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(result.is_some(), success);
+        assert!(started.elapsed() < Duration::from_secs(6));
+        assert!(first.is_some(), "the private descendant must have started");
+        assert_eq!(
+            first, second,
+            "a diagnostic must stop its owned descendants, not only the launcher"
+        );
     }
 }

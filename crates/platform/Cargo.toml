@@ -38,7 +38,7 @@ vults-peer.workspace = true
 tokio.workspace = true
 windows-core = "0.62"
 arboard = { version = "3.7", default-features = false }
-windows = { workspace = true, features = ["Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_RemoteDesktop", "Win32_UI_Accessibility", "Win32_System_Diagnostics_ToolHelp", "Win32_System_WinRT", "Data_Xml_Dom", "UI_Notifications", "Foundation", "Foundation_Collections", "Media_Control", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Shell", "Win32_Storage_FileSystem", "Win32_System_Registry", "ApplicationModel_Core", "Management_Deployment", "Win32_Devices_FunctionDiscovery", "Win32_System_Variant"] }
+windows = { workspace = true, features = ["Win32_System_JobObjects", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_RemoteDesktop", "Win32_UI_Accessibility", "Win32_System_Diagnostics_ToolHelp", "Win32_System_WinRT", "Data_Xml_Dom", "UI_Notifications", "Foundation", "Foundation_Collections", "Media_Control", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_UI_Shell", "Win32_Storage_FileSystem", "Win32_System_Registry", "ApplicationModel_Core", "Management_Deployment", "Win32_Devices_FunctionDiscovery", "Win32_System_Variant"] }
 
 [lints]
 workspace = true
