@@ -2103,6 +2103,19 @@ button.touched-row:hover,
   border-bottom: 1px solid var(--chrome-line);
   background: var(--float);
 }
+/* A short window keeps its height for the page: the Flock tab's count already says who needs you,
+   and the Flock itself lists and answers them. */
+@media (max-height: 480px) { .nest-need { display: none; } }
+/* Narrow: the title bar keeps every control but drops the model name and plan usage beside the
+   executor, so the controls fit in two rows instead of three. */
+@media (max-width: 600px) {
+  .nest-chat .chat-titlebar :is(.engine-model, .model-usage) { display: none; }
+}
+/* Narrow: Activity's parts scroll sideways without a scrollbar track; a tab cut at the edge says there is more. */
+@media (max-width: 600px) {
+  .nest-activity > .nest-subs { scrollbar-width: none; }
+  .nest-activity > .nest-subs::-webkit-scrollbar { display: none; }
+}
 /* The prototype's small tags: a glyph and a name, as in its tagged strip. */
 .nest-need .need-tag {
   gap: 5px;
