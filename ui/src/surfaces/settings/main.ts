@@ -747,7 +747,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
       ? el("p", {
           class: "note warn",
           text: s.otherHookPath
-            ? t("These hooks run another copy of the hook, at {path}. Update them to use this app's own.", { path: s.otherHookPath })
+            ? t("These hooks still point to another copy of Vults, at {path}. Update them so they report to this app.", { path: s.otherHookPath })
             : kind === "claude"
               ? t("These hooks are from an older version. Update them to answer Claude Code's questions from the island.")
               : kind === "opencode"
@@ -907,7 +907,7 @@ function agentsPage(): HTMLElement[] {
     el("h1", { text: t("Agents") }),
     el("p", {
       class: "lede",
-      text: t("Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept."),
+      text: t("Vults learns what your agents do through small entries it adds to their settings, called hooks. Before any change you see exactly what changes, and a dated backup is kept; other tools' hooks stay."),
     }),
     ...agentCards(),
     disclosure(t("What each agent can do"),

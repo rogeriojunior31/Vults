@@ -101,7 +101,7 @@ export function phonePage(): HTMLElement[] {
       .then(() => refreshPhone(rerender))
       .catch((e) => said(failure(t("Could not change how the phone reaches this computer."), e), true));
   });
-  rows.push(row(t("How the phone reaches this computer"), t("Through a relay on the internet, or straight over your network or tailnet."), transport));
+  rows.push(row(t("How the phone reaches this computer"), t("Through a relay on the internet, or straight over your own network (a local or private one, such as a tailnet)."), transport));
   const direct = p.transport === "direct";
   const input = document.createElement("input");
   input.className = "field";

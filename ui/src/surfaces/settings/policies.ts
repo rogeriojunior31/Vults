@@ -204,7 +204,7 @@ export function policiesSection(render: () => void): HTMLElement[] {
     el("p", {
       class: "lede",
       text: t(
-        "A policy answers cards for you, in a folder or everywhere: what to allow, deny or always ask. You write it, see it as a diff and accept it with a click. A destructive action always asks, a deny beats an allow, an allow reaches only the session's folder, and every answer goes to the audit log.",
+        "A policy answers cards for you, in a folder or everywhere: what to allow, deny or always ask. You write it, see it as a diff and accept it with a click. A destructive action always asks; when a policy both allows and denies something, deny wins; an allow reaches only the session's folder; and every answer goes to the audit log.",
       ),
     }),
     message
