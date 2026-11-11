@@ -7,7 +7,7 @@ import { AGENTS } from "../../agents.gen";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { approvalFolder, approvalRuleFolder, agentName, badgeOf, lastDiff, needsYou, questionBody, skipButton, statusText } from "../../island/views";
+import { approvalFolder, approvalRuleFolder, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
 import { usageLabel, usageLevel } from "../../cost";
 
 export interface FlockActions {
@@ -762,7 +762,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         detail === "session" ? null : costChip(s),
         ask ? el("div", { class: "card-side" },
           ask.queue > 1 ? el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) }) : null,
-          question ? null : fid(skipButton(ask.request, skipCard), "act:skip")) : null,
+          question ? null : fid(laterButton(ask.request, skipCard), "act:skip")) : null,
       ),
       question ? null : words ? el("p", { class: "card-words", text: words }) : null,
       ticker,

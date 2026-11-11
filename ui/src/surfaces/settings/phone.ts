@@ -14,6 +14,8 @@ let countdown = 0;
 /** The QR's "within N s" line: the timer updates it alone, so the fields around keep their text. */
 let countdownLine: HTMLElement | null = null;
 let rerender: () => void = () => {};
+/** A button that cannot work yet is disabled, not pressed into an error. */
+const unless = (off: boolean, b: HTMLButtonElement): HTMLButtonElement => { b.disabled = off; return b; };
 /** The last read failed: the page says so, with a retry, instead of ending at its title. */
 let phoneFailed = false;
 
@@ -129,7 +131,7 @@ export function phonePage(): HTMLElement[] {
       ready
         ? t("Shows a code to scan with the phone, good for two minutes.")
         : t("Turn the phone on and set how it reaches this computer first."),
-      button(
+      unless(!ready, button(
         t("Pair"),
         () => {
           if (!ready) {
@@ -154,7 +156,7 @@ export function phonePage(): HTMLElement[] {
             .catch((e) => said(failure(t("Could not start pairing."), e), true));
         },
         true,
-      ),
+      )),
     ),
   );
   if (pairing) rows.push(qrRow(pairing));

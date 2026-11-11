@@ -1671,6 +1671,8 @@ export default {
   "gh isn't logged in: run `gh auth login` in a terminal": "gh 未登录：请在终端中运行 `gh auth login`。",
   "The GitHub CLI (gh) isn't installed": "未安装 GitHub CLI (gh)。",
   "GitHub took too long to answer": "GitHub 响应时间过长。",
+  "Later": "稍后",
+  "Skip for now. The request keeps waiting.": "暂时跳过。请求会继续等待。",
   "No agent session yet": "还没有智能体会话",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "在终端中启动 Claude Code、Codex 或其他智能体，它的鸟就会落在线上。当它需要权限时，卡片会出现在这里。",
   "Set up agents": "设置智能体",

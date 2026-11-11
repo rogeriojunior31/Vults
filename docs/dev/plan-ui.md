@@ -1915,6 +1915,10 @@ local until every row is done.
 | DR8 First run and help | The empty Flock shows Zeca on the wire beside the next step; About and the pages that name the docs link to them; a copy pass replaces jargon a non-programmer meets first (hooks, Traces, tailnet) with plain sentences, keeping the technical term once | A first-run profile reaches Agents and back with no unexplained term on the way |
 | DR9 Acceptance | Walk every page with the real profile and example data in Dark, Light and Noite Paulista; reproduce failed reads on Projects and Phone; rerun the critique | Score and remaining items recorded here |
 
+DR4 note: the Nest card shows no countdown. The view model carries no arrival time, and counting
+from when the Nest first drew the card would show more time than remains when the Nest opens late.
+It needs the core to expose the remaining time first; the island keeps its own countdown.
+
 Decisions for the maintainer, not taken in this branch: whether Audit moves closer to the card it
 records, whether the footer (Zeca, Open terminal, Back to the island) stays on every Nest page,
 and whether Inter is bundled. The Linux pass (KWin and Wayland placement, input region, meeting

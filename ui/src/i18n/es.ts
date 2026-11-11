@@ -1671,6 +1671,8 @@ export default {
   "gh isn't logged in: run `gh auth login` in a terminal": "gh no ha iniciado sesión: ejecuta `gh auth login` en una terminal.",
   "The GitHub CLI (gh) isn't installed": "La CLI de GitHub (gh) no está instalada.",
   "GitHub took too long to answer": "GitHub tardó demasiado en responder.",
+  "Later": "Más tarde",
+  "Skip for now. The request keeps waiting.": "Omitir por ahora. La solicitud sigue esperando.",
   "No agent session yet": "Aún no hay sesiones de agentes",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicia Claude Code, Codex u otro agente en una terminal y su pájaro se posa en el cable. Cuando necesite un permiso, la tarjeta aparece aquí.",
   "Set up agents": "Configurar agentes",

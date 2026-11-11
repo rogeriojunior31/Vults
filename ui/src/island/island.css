@@ -3730,6 +3730,7 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .card-skip { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg-dim); cursor: pointer; }
 .card-skip:hover { background: var(--raised); color: var(--fg); }
 .card-head > .card-skip { margin-left: auto; }
+.card-skip.later { width: auto; min-width: 28px; padding: 0 10px; color: var(--fg-dim); font: 500 var(--text-s)/1 var(--font); }
 .need-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
 .needs-skip-all { min-height: 28px; padding: 4px 8px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; }
 .needs-skip-all:hover { background: var(--raised); color: var(--fg); }

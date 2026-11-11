@@ -307,6 +307,13 @@ function askZeca(actions: CardActions): HTMLElement[] {
   ];
 }
 
+/** Skip on a card, in words: an icon alone read as Deny or dismiss. The request keeps waiting. */
+export function laterButton(request: string, skip: (request: string) => void): HTMLElement {
+  const b = el("button", { class: "card-skip later", text: t("Later"), onclick: () => skip(request) });
+  b.title = t("Skip for now. The request keeps waiting.");
+  return b;
+}
+
 export function skipButton(request: string, skip: (request: string) => void, label = t("Skip for now")): HTMLElement {
   const b = el("button", { class: "card-skip", onclick: () => skip(request) }, icon("close", 14));
   b.title = label;
@@ -351,7 +358,7 @@ function sessionBody(
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
       const parts: (HTMLElement | null)[] = [
-        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, skipButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
+        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, laterButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
         el("div", { class: "ask-what ask-scope", text: t("Working folder: {path}", { path: operationFolder ?? t("Not reported") }) }),
@@ -620,7 +627,7 @@ export function questionBody(s: SessionView, approval: ApprovalView, actions: Ca
     "div",
     { class: "question-card" },
     el("div", { class: "card-head" }, who(s, t("asks you"), q.header ? el("span", { class: "chip", text: q.header }) : null), count,
-      skipButton(approval.request, request => {
+      laterButton(approval.request, request => {
         if (sent) return;
         sent = true;
         if (p.other !== null) actions.keyboard(false);

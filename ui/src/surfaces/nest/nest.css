@@ -1393,6 +1393,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   align-items: center;
   gap: 6px;
 }
+.app-card-actions.decision-actions button { min-height: 38px; padding-inline: 14px; }
 .nest-flock-tab .primary .kbd {
   border-color: color-mix(in srgb, var(--on-accent) 40%, transparent);
 }
