@@ -926,6 +926,8 @@ assert.deepEqual(weekEffects, [], "Retrying the recap never clears, exports or c
 const populatedWeek = { ...recap.week, turns: 4, active_secs: 120, steps: 12, added: 8, removed: 2, files: 2,
   allowed: 0, denied: 0, answered: 0, longest_secs: 60, agents: [["codex", 4]], days: [120, 0, 0, 0, 0, 0, 0] };
 weekUI.refresh(); weekReads.at(-1).resolve({ ...recap, week: populatedWeek, previous: { ...populatedWeek, turns: 2, active_secs: 60 } }); await tick();
+assert.ok(weekPage.textContent.includes("Too little the week before to compare.") && !weekPage.textContent.includes("compared with the previous week"), "A thin week before is no baseline for a percent");
+weekUI.refresh(); weekReads.at(-1).resolve({ ...recap, week: populatedWeek, previous: { ...populatedWeek, turns: 6, active_secs: 60 } }); await tick();
 assert.ok(weekPage.textContent.includes("+100% compared with the previous week"));
 assert.ok(weekPage.textContent.includes("The previous week's value was zero."));
 assert.ok(weekPage.textContent.includes("Turns by agent"));

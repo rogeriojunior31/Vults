@@ -304,7 +304,7 @@ does not change the permission checks. Collapsing a card never grants access.
   could be steering it. Add `deny` lines to a policy for what must never run.
 
 The chat says each answer given this way (*Allowed by your policy*, *Denied by your policy*, *Ran
-with full access*), and the audit log keeps it. Its chip, beside the model (red with full access),
+with full access*), and the audit log keeps it. Its chip, beside the model (amber with a warning sign under full access),
 shows the choice; from there you can only give access back. More access is given in Settings.
 
 ## Files

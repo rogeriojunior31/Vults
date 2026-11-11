@@ -65,7 +65,7 @@ primeiro ali), onde você o responde. As Configurações continuam uma página p
 config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
 menu mantém a aba em que você está: **Room** é a janela, **Full** a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
-**Alt+1** a **Alt+5** escolhem uma aba nessa ordem (Chat oculto é ignorado). Embaixo, **Zeca on · optional** / **Zeca off** liga e
+**Alt+1** a **Alt+5** escolhem uma aba nessa ordem (Chat oculto é ignorado). Embaixo, **Zeca on** / **Zeca off** liga e
 desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.

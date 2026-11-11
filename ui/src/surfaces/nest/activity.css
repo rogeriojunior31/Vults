@@ -10,7 +10,6 @@
 .activity-heading p { max-width: 720px; margin: 6px 0 0; color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
 /* A short window spends its first view on the records, not on what the page is. */
 @media (max-height: 480px) { .nest-part .activity-heading p { display: none; } }
-.activity-eyebrow { margin-bottom: 8px; color: var(--fg-dim); font-size: 11px; }
 .activity-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; overflow: hidden; margin: 0 0 20px; border: 0; border-radius: 0; background: transparent; }
 /* Records' totals: one quiet line, so the first record shows in a short window. */
 .activity-summary:has(> .activity-summary-label) { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; margin: 0 0 4px; padding: 0; overflow: visible; }

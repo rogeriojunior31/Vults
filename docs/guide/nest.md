@@ -66,7 +66,7 @@ answer it. Settings stays a page of its own there: it is the only one that chang
 agent's config, a key, a policy or a phone, and it never shows an agent's text. The menu keeps
 the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
-pill. **Alt+1** to **Alt+5** pick a tab in that order (hidden Chat is skipped). At the bottom, **Zeca on · optional** / **Zeca off**
+pill. **Alt+1** to **Alt+5** pick a tab in that order (hidden Chat is skipped). At the bottom, **Zeca on** / **Zeca off**
 switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.

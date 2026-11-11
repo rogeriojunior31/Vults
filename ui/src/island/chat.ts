@@ -2644,8 +2644,12 @@ export class ChatPanel {
     this.accessButton.hidden = api;
     this.accessButton.disabled = this.accessSaving;
     this.accessButton.classList.toggle("full", this.access === "full");
-    this.accessButton.replaceChildren(el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
-    this.accessButton.title = this.opts.specialist ? t("Access for this profile") : t("Who answers Zeca's cards in this chat.");
+    // Full access is a mode, not an error: it carries the warning shape and says what it means.
+    const full = this.access === "full";
+    this.accessButton.replaceChildren(...(full ? [icon("warning", 12, 2)] : []), el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
+    this.accessButton.title = full
+      ? t("Full access: commands and edits run without a card. Destructive ones, and what a policy denies or asks first, still ask.")
+      : this.opts.specialist ? t("Access for this profile") : t("Who answers Zeca's cards in this chat.");
     this.accessMenu.classList.toggle("on", this.accessOpen && !api);
     if (!this.accessOpen) { this.accessConfirm = false; return; }
     this.accessMenu.replaceChildren(

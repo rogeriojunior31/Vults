@@ -744,14 +744,22 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       ...(!board && refreshError ? [viewState("error", t("Connections could not update. Try again."))] : []),
       ...(chips ? [chips] : []),
       ...body,
-      ...(zecaFace ? [] : pending).map(c => el("section", { class: "conn-waiting" },
-        el("h3", { text: c.name }),
-        el("p", { text: t("{name} is on; its card shows after its first check.", { name: c.name }) }),
-        status.get(c.id)?.error ? el("p", { class: "conn-refused", text: connectorError(status.get(c.id)!.error!) })
-          : status.get(c.id)?.overBudget ? el("p", { class: "conn-status stale", text: t("Daily request limit reached. Checks resume when the budget resets.") }) : null,
-        el("div", { class: "conn-actions" },
-          fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),
-          fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), `manage:${c.id}`)))),
+      ...(zecaFace ? [] : pending).map(c => {
+        // A first check that failed says so, with the fix at hand: never "is on" beside a red error.
+        const error = status.get(c.id)?.error ?? null;
+        const fix = error && error.includes("gh auth login") ? "gh auth login" : error && error.includes("glab auth login") ? "glab auth login --hostname gitlab.com" : null;
+        const copy = fix ? fid(copyTextButton(fix, "outline", t("Copy {command}", { command: fix })), `copy-fix:${c.id}`) : null;
+        copy?.prepend(el("code", { class: "conn-fix", text: fix! }));
+        return el("section", { class: "conn-waiting" },
+          el("h3", { text: c.name }),
+          el("p", { text: error ? t("{name} is on, but its first check failed.", { name: c.name }) : t("{name} is on; its card shows after its first check.", { name: c.name }) }),
+          error ? (() => { const p = el("p", { class: "conn-refused", text: connectorError(error) }); p.setAttribute("role", "status"); return p; })()
+            : status.get(c.id)?.overBudget ? el("p", { class: "conn-status stale", text: t("Daily request limit reached. Checks resume when the budget resets.") }) : null,
+          el("div", { class: "conn-actions" },
+            copy,
+            fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : error ? t("Check again") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),
+            fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), `manage:${c.id}`)));
+      }),
       ...(!zecaFace && !board && add ? [add] : []),
       ...(!board && !add && !pending.length && !statusFailed ? [viewState("loading", t("Checking connections…"))] : []),
     );

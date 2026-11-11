@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 9392871a02d4 -->
+<!-- source: 71363be852d8 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -341,8 +341,8 @@ orientação não muda as verificações de permissão. Recolher um cartão nunc
   política para o que nunca deve rodar.
 
 O chat diz cada resposta dada assim (*Allowed by your policy*, *Denied by your policy*, *Ran with
-full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (vermelho com acesso
-total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é dado em Settings.
+full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (âmbar com um sinal de aviso
+no acesso total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é dado em Settings.
 
 <a id="files"></a>
 

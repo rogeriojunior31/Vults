@@ -1,9 +1,10 @@
 # Atividade
-<!-- source: c91bd0dd3750 -->
+<!-- source: 5eee1a040417 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
-zerada é informada explicitamente. Um histórico ilegível gera erro com nova tentativa, nunca uma
+zerada é informada explicitamente, e uma semana anterior com menos de cinco turnos é pouco para
+comparar: nenhuma porcentagem é mostrada contra ela. Um histórico ilegível gera erro com nova tentativa, nunca uma
 tela vazia. **History settings** abre Configurações; retenção e limpeza do histórico ficam lá.
 A imagem do resumo tem sua própria opção de exportação **Hide project names**.
 

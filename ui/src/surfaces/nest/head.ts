@@ -347,7 +347,9 @@ export function createNestFoot(on: NestFootActions): NestFoot {
   terminal.disabled = true;
   const island = el("button", { class: "foot-island", onclick: on.island });
   const relabel = () => {
-    zecaButton.textContent = zeca ? t("Zeca on · optional") : t("Zeca off");
+    zecaButton.textContent = zeca ? t("Zeca on") : t("Zeca off");
+    // The switch says what a click does; Zeca is optional, which the title says.
+    zecaButton.title = zeca ? t("Zeca is optional: a click turns him off. The flock keeps working.") : t("Turn Zeca on");
     zecaButton.setAttribute("aria-pressed", String(zeca));
     lookButton.replaceChildren(icon("pencil", 14));
     lookButton.title = t("Zeca's look");
@@ -390,6 +392,8 @@ export function createNestFoot(on: NestFootActions): NestFoot {
     },
     setTerminal: (can) => {
       terminal.disabled = !can;
+      // Disabled says why: no session in front, or one whose terminal cannot be brought up.
+      terminal.title = can ? "" : t("No session in front with a terminal to bring up");
     },
     relabel,
   };

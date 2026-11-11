@@ -162,11 +162,12 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .chat-titlebar .chat-head > * > .place:hover {
   background: var(--raised);
 }
-/* Full access is never quiet in the title bar either: error color, with an outline as its shape. */
+/* Full access is never quiet in the title bar either, but it is a mode, not a failure: the
+   warning's color and icon, with an outline as its shape. */
 .chat-titlebar .chat-head > .access-box > .place.access.full {
-  color: var(--error-text);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--error-text) 45%, transparent);
-  background: color-mix(in srgb, var(--error-text) 10%, var(--float));
+  color: var(--warn);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, var(--float));
 }
 /* With the conversations' column open, its New conversation is the one New. */
 @media (min-width: 900px) {
@@ -1472,8 +1473,8 @@ body.still .detail-content.detail-enter { animation: none; }
 }
 .touched-head {
   margin: 0 0 8px;
-  font: 600 11px var(--font);
-  color: var(--fg-muted);
+  font: 600 12px var(--font);
+  color: var(--fg-dim);
 }
 .touched-row {
   display: flex;
@@ -1802,17 +1803,20 @@ button.touched-row:hover,
   margin-top: 4px;
 }
 .nest-add h3 {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--fg-muted);
+  color: var(--fg);
 }
+/* Rows inside the panel, divided by a line: a card inside a card would draw two frames. */
 .nest-add-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.nest-add h3 + .nest-add-row {
+  border-top: 0;
 }
 .nest-add-row p {
   flex: 1;
@@ -2362,6 +2366,7 @@ button.touched-row:hover,
 .lane-foot .primary { min-height: 30px; padding: 2px 12px; font-size: 12px; }
 .lane-foot .primary:disabled { opacity: 0.5; cursor: default; }
 .lane-note { color: var(--fg-dim); font-size: 12px; line-height: 1.4; }
+.conn-actions .conn-fix { margin-right: 6px; font: 12px var(--mono); }
 .flock-list .roost-cards { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; padding: 8px; }
 .flock-list .roost-cards.empty { display: block; }
 .flock-list .roost-card { flex: none; width: 100%; padding: 10px; text-align: left; }
@@ -2842,7 +2847,10 @@ button.touched-row:hover,
 .agent-preview-detail { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding-left: 24px; border-left: 1px solid var(--border); }
 .agent-preview-detail h2 { font-size: 20px; margin: 0; }
 .agent-preview-detail .agent-preview-hero { align-self: center; }
-.agent-preview-detail > .btn:not(.primary) { background: transparent; border: 1px solid var(--control-border); }
+/* One primary (open the chat); the others read as a quiet list of actions, not a stack of pills. */
+.agent-preview-detail > .btn:not(.primary) { justify-content: flex-start; min-height: 32px; margin: -6px 0 0; padding: 4px 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg-dim); font-weight: 500; text-align: left; }
+.agent-preview-detail > .btn:not(.primary):hover { background: var(--raised); color: var(--fg); }
+.agent-preview-detail > .btn.primary + .btn:not(.primary) { margin-top: 0; }
 .agent-preview-detail details { border-top: 1px solid var(--border); padding-top: 12px; }
 .agent-preview summary { color: var(--fg-dim); cursor: pointer; font-size: var(--text-s); }
 .agent-preview details p { margin-top: 8px; white-space: pre-wrap; }

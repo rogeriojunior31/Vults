@@ -20,7 +20,7 @@
 .record-duration { color: var(--fg); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
 .record-who { color: var(--fg); font-size: 12px; font-weight: 550; }
 .record-what { min-width: 0; color: var(--fg); font-weight: 550; overflow-wrap: anywhere; }
-.record-status { padding: 3px 7px; border-radius: 6px; background: var(--raised); color: var(--fg-dim); font-size: 11px; line-height: 1.4; }
+.record-status { padding: 2px 7px; border-radius: 6px; background: var(--raised); color: var(--fg-dim); font-size: 12px; line-height: 1.4; }
 .record-status.passing { background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
 .record-status.failing { background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error-text); }
 .record-target { grid-column: 1 / -1; padding: 10px 12px; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }

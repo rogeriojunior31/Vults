@@ -3477,9 +3477,14 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 .place.access[hidden] {
   display: none;
 }
-/* Full access is never quiet: the chip says it in the error's color. */
+/* Full access is never quiet, but it is a mode, not a failure: the warning's color and shape, as
+   Settings › Approvals says it. */
 .place.access.full {
-  color: var(--error-text);
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+}
+.place.access.full svg:first-child {
+  flex: none;
 }
 .access-menu {
   box-sizing: border-box;
