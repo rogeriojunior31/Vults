@@ -23,7 +23,7 @@ export const CONNECTORS: ConnectorInfo[] = [
     name: "GitLab",
     about: tk("Your open merge requests, review requests, diff sizes, reviewers and individual pipeline jobs on GitLab.com, plus default-branch checks and releases from 10 recently active contributed projects. Uses your GitLab CLI (glab) login. Read only. Sign in with glab auth login --hostname gitlab.com."),
   },
-  { id: "gitea", name: "Gitea", about: tk("Your open pull requests and review requests on your Gitea instance. Read only; checks, approvals and merges are not supported. Configure the HTTPS base URL and an access token, then turn it on.") },
+  { id: "gitea", name: "Gitea", about: tk("Your open pull requests, reviews, head-commit checks, Actions jobs, default branches and releases on your Gitea instance. Uses the URL and access token saved below. Read only; larger polls slow down to stay within the daily request budget.") },
 ];
 
 const ERRORS = [

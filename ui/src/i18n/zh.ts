@@ -1,8 +1,9 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Your open pull requests, reviews, head-commit checks, Actions jobs, default branches and releases on your Gitea instance. Uses the URL and access token saved below. Read only; larger polls slow down to stay within the daily request budget.": "查看 Gitea 实例中的拉取请求、审查、当前提交检查、Actions 作业、默认分支和发布。使用下方保存的地址和访问令牌。仅支持读取；较大的轮询会降低频率，以遵守每日请求限额。",
+  "Turn off Gitea before editing. Use read:user, read:issue and read:repository; repositories with Actions also need read:actions. Saving does not enable the connector.": "编辑前请关闭 Gitea。使用 read:user、read:issue 和 read:repository 权限；启用 Actions 的仓库还需要 read:actions。保存不会启用连接器。",
   "Your open merge requests, review requests, diff sizes, reviewers and individual pipeline jobs on GitLab.com, plus default-branch checks and releases from 10 recently active contributed projects. Uses your GitLab CLI (glab) login. Read only. Sign in with glab auth login --hostname gitlab.com.": "查看 GitLab.com 上你打开的合并请求、审查请求、差异大小、审查者和各个流水线作业，以及最近活跃的 10 个已贡献项目的默认分支检查和发布。使用 GitLab CLI (glab) 登录。仅支持读取。请运行 glab auth login --hostname gitlab.com 登录。",
   "Pipelines": "流水线",
-  "Your open pull requests and review requests on your Gitea instance. Read only; checks, approvals and merges are not supported. Configure the HTTPS base URL and an access token, then turn it on.": "查看 Gitea 实例中你打开的拉取请求和审查请求。仅支持读取，不支持检查、批准或合并。配置 HTTPS 基础地址和访问令牌后再启用。",
   "Gitea returned incomplete or invalid data. The previous snapshot is kept.": "Gitea 返回了不完整或无效的数据。保留之前的快照。",
   "Could not read Gitea. Check the connection and try again.": "无法读取 Gitea。请检查连接后重试。",
   "Check the Gitea URL and token in Settings.": "请在设置中检查 Gitea 地址和令牌。",
@@ -20,7 +21,6 @@ export default {
   "Use HTTPS, including the port and subfolder when needed. Do not append /api/v1.": "使用 HTTPS，按需包含端口和子目录。请勿追加 /api/v1。",
   "Gitea access token": "Gitea 访问令牌",
   "Stored only in the OS keyring. Leave blank to keep the saved token for the same URL. Changing the URL requires a token.": "仅保存在系统密钥环中。留空可保留同一地址的已存令牌。更改地址时必须提供令牌。",
-  "Turn off Gitea before editing. Use a token with read:user, read:issue and read:repository scopes. Saving does not enable the connector.": "编辑前请关闭 Gitea。使用具有 read:user、read:issue 和 read:repository 权限的令牌。保存不会启用连接器。",
   "Last successful Gitea account: {account} on {host}.": "上次成功访问的 Gitea 账户：{host} 上的 {account}。",
   "Allow opening registered Start Menu and Microsoft Store apps by name. Names stay local and ambiguous matches require a choice. Windows checks the app registration before opening. Spoken command lines, URLs and file arguments are unsupported.": "允许按名称打开已注册的开始菜单和 Microsoft Store 应用。名称保留在本地，匹配不明确时需要选择。Windows 会在打开前检查应用注册信息。不支持口述的命令行、网址或文件参数。",
   "Pause compatible playing media during dictation and resume it afterwards only if unchanged. Leave it is the Windows default. Uses local media controls independently of Now playing. Per-player volume reduction is unavailable.": "听写时暂停兼容的正在播放的媒体，仅在状态未改变时恢复播放。Windows 默认不更改播放状态。此功能使用本地媒体控制，不依赖正在播放功能。不支持降低单个播放器的音量。",

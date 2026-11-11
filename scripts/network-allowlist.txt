@@ -45,3 +45,7 @@ crates/connectors/src/gitlab.rs  glab, one bounded read-only GitLab.com GraphQL 
 crates/connectors/src/gitlab_tests.rs  test-only glab argument/environment inspection without spawning it; transport fixtures launch the current test executable offline
 crates/connectors/src/gitea.rs  Gitea user and open pull-request searches; URL/token binding in the OS keyring, independent default-off switch, per-GET budget/trace, TLS verification, no proxy or redirects, bounded response/deadline, no remote writes
 crates/connectors/src/gitea_tests.rs  private loopback HTTP fixtures with synthetic credentials only; no external service, real account or OS credential access
+crates/connectors/src/gitea/dashboard.rs  Gitea dashboard orchestration: bounded read-only PR, branch and release requests, all through the parent credential-bound per-request gate; no remote writes
+crates/connectors/src/gitea/checks.rs  Gitea commit statuses and Actions runs/jobs, exact head/run/attempt binding and complete bounded pages through the parent gate; no remote writes
+crates/connectors/src/gitea/reviews.rs  Gitea review history through the parent gate, bounded complete pages and stale/dismissed approval handling; no remote writes
+crates/connectors/src/gitea/dashboard_tests.rs  private loopback API fixtures with synthetic credentials; no live account, OS keyring writes or external requests

@@ -44,17 +44,17 @@ impl SafeUrl {
 
     /// Only links under this particular user's service base; no global host allowlist change.
     pub fn for_service(raw: &str, base: &str) -> Option<Self> {
+        if raw.len() > MAX_LEN {
+            return None;
+        }
         let base = Self::service_base(base)?;
         let suffix = raw.strip_prefix(&base)?;
-        if raw.len() > MAX_LEN
+        let canonical = url::Url::parse(raw).ok()?;
+        if canonical.as_str() != raw
+            || canonical.query().is_some()
+            || canonical.fragment().is_some()
             || suffix.is_empty()
-            || suffix.split('/').any(|part| {
-                part.is_empty()
-                    || matches!(part, "." | "..")
-                    || !part
-                        .bytes()
-                        .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
-            })
+            || suffix.split('/').any(|part| !service_segment(part))
         {
             return None;
         }
@@ -82,6 +82,38 @@ impl SafeUrl {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+}
+
+fn service_segment(part: &str) -> bool {
+    let mut bytes = Vec::new();
+    let mut index = 0;
+    while index < part.len() {
+        if part.as_bytes()[index] == b'%' {
+            let Some(hex) = part.get(index + 1..index + 3) else {
+                return false;
+            };
+            if !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return false;
+            }
+            let Ok(byte) = u8::from_str_radix(hex, 16) else {
+                return false;
+            };
+            bytes.push(byte);
+            index += 3;
+        } else {
+            bytes.push(part.as_bytes()[index]);
+            index += 1;
+        }
+    }
+    let Ok(decoded) = String::from_utf8(bytes) else {
+        return false;
+    };
+    !decoded
+        .chars()
+        .any(|c| c.is_control() || c.is_whitespace() || matches!(c, '\\' | '?' | '#' | '%'))
+        && decoded
+            .split('/')
+            .all(|p| !p.is_empty() && !matches!(p, "." | ".."))
 }
 
 impl fmt::Display for SafeUrl {
@@ -119,6 +151,32 @@ mod tests {
             assert!(SafeUrl::for_service(bad, &base).is_none(), "{bad}");
         }
         assert!(SafeUrl::parse("https://git.example.com:8443/team/a").is_none());
+    }
+
+    #[test]
+    fn scoped_release_tags_allow_encoded_names_without_encoded_traversal() {
+        let base = "https://git.example.com:8443/team/";
+        for path in ["me/app/releases/tag/v1%2Ftest", "me/app/releases/tag/%C3%A9"] {
+            assert!(
+                SafeUrl::for_service(&format!("{base}{path}"), base).is_some(),
+                "{path}"
+            );
+        }
+        for path in [
+            "me/app/%2e%2e/x",
+            "me/app/%2F..%2Fx",
+            "me/app/%255C",
+            "me/app/%00",
+            "me/app/%5c",
+            "me/app/%2f%2fevil",
+            "me/app/%GG",
+            "me/app/%C3%28",
+        ] {
+            assert!(
+                SafeUrl::for_service(&format!("{base}{path}"), base).is_none(),
+                "{path}"
+            );
+        }
     }
 
     #[test]

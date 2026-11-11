@@ -1,5 +1,5 @@
 //! Read-only Gitea API access, with an atomic keyring host/token binding.
-use crate::{Connector, Error, Event, Facts, Gate, Group, Level, Poll, Row, Snapshot, Story, StoryKind};
+use crate::{Connector, Error, Event, Gate, Poll, Row, Snapshot};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
@@ -11,6 +11,11 @@ use std::{
 };
 use vults_core::SafeUrl;
 
+mod dashboard;
+#[cfg(test)]
+use dashboard::insert;
+use dashboard::{board, diff, read};
+
 #[derive(Debug)]
 pub struct Gitea;
 pub const INVALID: &str = "Gitea returned incomplete or invalid data. The previous snapshot is kept.";
@@ -18,7 +23,6 @@ pub const FAILED: &str = "Could not read Gitea. Check the connection and try aga
 pub const AUTH: &str = "Check the Gitea URL and token in Settings.";
 const MAX_BYTES: usize = 1024 * 1024;
 const MAX_PAGES: usize = 5;
-const LIMIT: usize = 50;
 static EPOCH: AtomicU64 = AtomicU64::new(0);
 static META: RwLock<Option<Connection>> = RwLock::new(None);
 
@@ -33,6 +37,26 @@ pub struct Connection {
 struct Credential {
     connection: Connection,
     token: String,
+    #[cfg(test)]
+    #[serde(skip)]
+    fixture_base: Option<String>,
+}
+impl Credential {
+    fn new(connection: Connection, token: String) -> Self {
+        Self {
+            connection,
+            token,
+            #[cfg(test)]
+            fixture_base: None,
+        }
+    }
+    fn api_base(&self) -> &str {
+        #[cfg(test)]
+        if let Some(base) = &self.fixture_base {
+            return base;
+        }
+        &self.connection.base_url
+    }
 }
 fn credential() -> Result<Option<Credential>, String> {
     let Some(raw) = vults_secrets::get(vults_secrets::Secret::Gitea)
@@ -106,11 +130,8 @@ fn persist(base: String, token: String) -> Result<Connection, String> {
         base_url: base,
         generation,
     };
-    let value = serde_json::to_string(&Credential {
-        connection: connection.clone(),
-        token,
-    })
-    .map_err(|_| "Could not save the Gitea connection.")?;
+    let value = serde_json::to_string(&Credential::new(connection.clone(), token))
+        .map_err(|_| "Could not save the Gitea connection.")?;
     vults_secrets::set(vults_secrets::Secret::Gitea, &value)
         .map_err(|_| "Could not save the Gitea connection.")?;
     *META.write().map_err(|_| "Could not save the Gitea connection.")? = Some(connection.clone());
@@ -144,8 +165,21 @@ impl Connector for Gitea {
     fn id(&self) -> &'static str {
         "gitea"
     }
-    fn interval(&self, _: &Snapshot) -> Duration {
-        Duration::from_secs(300)
+    fn interval(&self, snapshot: &Snapshot) -> Duration {
+        let floor = if snapshot.values().any(|v| v["ci"] == "running") {
+            60
+        } else {
+            300
+        };
+        Duration::from_secs(
+            floor.max(
+                snapshot
+                    .get("meta:poll")
+                    .and_then(|v| v["requests"].as_u64())
+                    .unwrap_or(0)
+                    .saturating_mul(36),
+            ),
+        )
     }
     fn poll(&self) -> Poll<'_> {
         Box::pin(async { Err(Error::Budget) })
@@ -171,9 +205,20 @@ impl Connector for Gitea {
                 .timeout(Duration::from_secs(15))
                 .build()
                 .map_err(|_| Error::Other(FAILED.into()))?;
-            tokio::time::timeout(Duration::from_secs(60), read(&client, &c, &*gate, epoch))
+            let counted = Counted {
+                gate: &*gate,
+                requests: std::sync::atomic::AtomicUsize::new(0),
+            };
+            let result = tokio::time::timeout(Duration::from_secs(60), read(&client, &c, &counted, epoch))
                 .await
-                .map_err(|_| Error::Other(FAILED.into()))?
+                .map_err(|_| Error::Other(FAILED.into()))?;
+            result.map(|mut snapshot| {
+                snapshot.insert(
+                    "meta:poll".into(),
+                    json!({"requests":counted.requests.load(Ordering::SeqCst)}),
+                );
+                snapshot
+            })
         })
     }
     fn board(&self, s: &Snapshot) -> Option<Vec<Row>> {
@@ -187,7 +232,18 @@ impl Connector for Gitea {
     }
     fn watching(&self, s: &Snapshot) -> usize {
         s.values()
-            .filter_map(|v| Some((v["repo"].as_str()?, v["number"].as_u64()?)))
+            .filter_map(|v| {
+                let number = v["number"].as_u64();
+                Some((
+                    v["repo"].as_str()?,
+                    number,
+                    if number.is_some() {
+                        "pr"
+                    } else {
+                        v["group"].as_str()?
+                    },
+                ))
+            })
             .collect::<std::collections::BTreeSet<_>>()
             .len()
     }
@@ -195,27 +251,23 @@ impl Connector for Gitea {
         if before.get("meta") != after.get("meta") {
             return Vec::new();
         }
-        after
-            .iter()
-            .filter(|(key, item)| item["group"] == "review" && !before.contains_key(*key))
-            .map(|(key, item)| {
-                let name = format!("{}#{}", item["repo"].as_str().unwrap_or_default(), item["number"]);
-                Event {
-                    connector: "gitea".into(),
-                    key: format!("{key}:requested"),
-                    topic: None,
-                    level: Level::Info,
-                    title: format!("Review requested · {name}"),
-                    detail: item["title"].as_str().unwrap_or_default().into(),
-                    url: item["url"].as_str().map(str::to_owned),
-                    story: Some(Story {
-                        kind: StoryKind::ReviewRequested,
-                        name,
-                        branch: None,
-                    }),
-                }
-            })
-            .collect()
+        diff(before, after)
+    }
+}
+struct Counted<'a> {
+    gate: &'a dyn Gate,
+    requests: std::sync::atomic::AtomicUsize,
+}
+impl Gate for Counted<'_> {
+    fn allow(&self, id: &str) -> bool {
+        if !self.gate.allow(id) {
+            return false;
+        }
+        self.requests.fetch_add(1, Ordering::SeqCst);
+        true
+    }
+    fn done(&self, id: &str, ok: bool, took: Duration) {
+        self.gate.done(id, ok, took);
     }
 }
 fn invalid() -> Error {
@@ -238,6 +290,18 @@ async fn get(
     epoch: u64,
     path: &str,
 ) -> Result<(Value, Option<usize>), Error> {
+    request(client, c, gate, epoch, path, false)
+        .await?
+        .ok_or_else(invalid)
+}
+async fn request(
+    client: &reqwest::Client,
+    c: &Credential,
+    gate: &dyn Gate,
+    epoch: u64,
+    path: &str,
+    missing_ok: bool,
+) -> Result<Option<(Value, Option<usize>)>, Error> {
     if EPOCH.load(Ordering::SeqCst) != epoch || !gate.allow("gitea") {
         return Err(Error::Budget);
     }
@@ -251,7 +315,7 @@ async fn get(
             .map_err(|_| Error::Auth(AUTH.into()))?;
         authorization.set_sensitive(true);
         let mut response = client
-            .get(format!("{}api/v1/{path}", c.connection.base_url))
+            .get(format!("{}api/v1/{path}", c.api_base()))
             .header(reqwest::header::AUTHORIZATION, authorization)
             .header(reqwest::header::ACCEPT, "application/json")
             .send()
@@ -259,6 +323,7 @@ async fn get(
             .map_err(|_| Error::Other(FAILED.into()))?;
         match response.status().as_u16() {
             200 => {}
+            404 if missing_ok => return Ok(None),
             401 | 403 => return Err(Error::Auth(AUTH.into())),
             429 => {
                 return Err(Error::RateLimited {
@@ -298,7 +363,10 @@ async fn get(
             }
             bytes.extend_from_slice(&chunk);
         }
-        Ok((serde_json::from_slice(&bytes).map_err(|_| invalid())?, total))
+        Ok(Some((
+            serde_json::from_slice(&bytes).map_err(|_| invalid())?,
+            total,
+        )))
     }
     .await;
     request.ok = result.is_ok();
@@ -307,127 +375,6 @@ async fn get(
     }
     result
 }
-async fn read(
-    client: &reqwest::Client,
-    c: &Credential,
-    gate: &dyn Gate,
-    epoch: u64,
-) -> Result<Snapshot, Error> {
-    let (user, _) = get(client, c, gate, epoch, "user").await?;
-    let login = user["login"]
-        .as_str()
-        .filter(|s| segment(s))
-        .ok_or_else(invalid)?;
-    let mut s = Snapshot::from([(
-        "meta".into(),
-        json!({"login":login,"base":c.connection.base_url,"generation":c.connection.generation}),
-    )]);
-    for (group, filter) in [("yours", "created=true"), ("review", "review_requested=true")] {
-        let mut seen = 0;
-        let mut total = None;
-        for page in 1..=MAX_PAGES {
-            let (value, count) = get(
-                client,
-                c,
-                gate,
-                epoch,
-                &format!("repos/issues/search?state=open&type=pulls&{filter}&limit={LIMIT}&page={page}"),
-            )
-            .await?;
-            let count = count.filter(|n| *n <= LIMIT * MAX_PAGES).ok_or_else(invalid)?;
-            if total.is_some_and(|previous| previous != count) {
-                return Err(invalid());
-            }
-            total = Some(count);
-            let rows = value
-                .as_array()
-                .filter(|rows| rows.len() <= LIMIT)
-                .ok_or_else(invalid)?;
-            for row in rows {
-                insert(&mut s, row, group, login, &c.connection)?;
-            }
-            seen += rows.len();
-            if seen > count || (rows.is_empty() && seen != count) {
-                return Err(invalid());
-            }
-            if seen == count {
-                break;
-            }
-            if page == MAX_PAGES {
-                return Err(invalid());
-            }
-        }
-    }
-    if EPOCH.load(Ordering::SeqCst) != epoch {
-        return Err(Error::Budget);
-    }
-    Ok(s)
-}
-fn segment(s: &str) -> bool {
-    !s.is_empty()
-        && s.len() <= 255
-        && !matches!(s, "." | "..")
-        && s.bytes()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b'-' | b'.'))
-}
-fn insert(s: &mut Snapshot, v: &Value, group: &str, login: &str, c: &Connection) -> Result<(), Error> {
-    let repo = v["repository"]["full_name"]
-        .as_str()
-        .filter(|s| s.split('/').count() == 2 && s.split('/').all(segment))
-        .ok_or_else(invalid)?;
-    let number = v["number"]
-        .as_u64()
-        .filter(|n| *n > 0 && *n <= u32::MAX as u64)
-        .ok_or_else(invalid)?;
-    let title = v["title"]
-        .as_str()
-        .filter(|s| !s.is_empty() && s.len() <= 4096 && !s.chars().any(char::is_control))
-        .ok_or_else(invalid)?;
-    if v["state"] != "open" || !v["pull_request"].is_object() {
-        return Err(invalid());
-    }
-    let url = format!("{}{repo}/pulls/{number}", c.base_url);
-    if SafeUrl::for_service(&url, &c.base_url).is_none() {
-        return Err(invalid());
-    }
-    let key = format!("gitea:{}:{login}:{group}:{repo}#{number}:item", c.generation);
-    let rank = s.len();
-    if s.insert(key,json!({"group":group,"repo":repo,"number":number,"title":title,"url":url,"author":v["user"]["login"].as_str().filter(|s| segment(s)),"rank":rank})).is_some() { return Err(invalid()); }
-    Ok(())
-}
-fn board(s: &Snapshot) -> Vec<Row> {
-    let mut rows: Vec<_> = s
-        .iter()
-        .filter_map(|(key, v)| {
-            let group = match v["group"].as_str()? {
-                "yours" => Group::Yours,
-                "review" => Group::ToReview,
-                _ => return None,
-            };
-            Some((
-                v["rank"].as_u64()?,
-                Row {
-                    item: key.clone(),
-                    group,
-                    name: format!("{}#{}", v["repo"].as_str()?.rsplit('/').next()?, v["number"]),
-                    title: v["title"].as_str()?.into(),
-                    checks: None,
-                    review: None,
-                    url: v["url"].as_str().map(str::to_owned),
-                    head: None,
-                    facts: Facts {
-                        repo: v["repo"].as_str().map(str::to_owned),
-                        author: v["author"].as_str().map(str::to_owned),
-                        ..Facts::default()
-                    },
-                },
-            ))
-        })
-        .collect();
-    rows.sort_by_key(|(rank, _)| *rank);
-    rows.into_iter().map(|(_, row)| row).collect()
-}
-
 #[cfg(test)]
 #[path = "gitea_tests.rs"]
 mod tests;

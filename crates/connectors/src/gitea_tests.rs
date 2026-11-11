@@ -12,6 +12,7 @@ fn credentials_cannot_be_reused_for_a_different_host_port_or_subfolder() {
         Some(Credential {
             connection: config(),
             token: "synthetic-token".into(),
+            fixture_base: None,
         })
     };
     assert_eq!(
@@ -148,10 +149,11 @@ async fn server(replies: Vec<(u16, String, String)>) -> (Credential, tokio::task
     (
         Credential {
             connection: Connection {
-                base_url: format!("http://{address}/team/"),
+                base_url: "https://git.example.com:8443/team/".into(),
                 generation: "fixture".into(),
             },
             token: "synthetic-token".into(),
+            fixture_base: Some(format!("http://{address}/team/")),
         },
         task,
     )
@@ -174,25 +176,31 @@ fn gate(left: usize) -> Budget {
 #[tokio::test]
 async fn loopback_poll_admits_every_get_and_uses_fixed_filters() {
     let (c, task) = server(vec![
-        (200, String::new(), json!({"login":"me"}).to_string()),
+        (200, String::new(), json!({"login":"me","id":1}).to_string()),
         (200, "X-Total-Count: 0\r\n".into(), "[]".into()),
         (200, "X-Total-Count: 0\r\n".into(), "[]".into()),
+        (200, String::new(), json!({"ok":true,"data":[]}).to_string()),
     ])
     .await;
-    let gate = gate(3);
+    let gate = gate(4);
     let s = read(&client(), &c, &gate, EPOCH.load(Ordering::SeqCst))
         .await
         .unwrap();
     let requests = task.await.unwrap();
-    assert_eq!(requests.len(), 3);
-    assert!(requests[1].contains("created=true&limit=50&page=1"));
-    assert!(requests[2].contains("review_requested=true&limit=50&page=1"));
+    assert_eq!(requests.len(), 4);
+    assert!(requests[1].contains("created=true&limit=100&page=1"));
+    assert!(requests[2].contains("review_requested=true&limit=100&page=1"));
     assert!(board(&s).is_empty());
-    assert_eq!(*gate.results.lock().unwrap(), [true, true, true]);
+    assert_eq!(*gate.results.lock().unwrap(), [true, true, true, true]);
 }
 #[tokio::test]
 async fn budget_refusal_between_requests_never_publishes_a_partial_snapshot() {
-    let (c, task) = server(vec![(200, String::new(), json!({"login":"me"}).to_string())]).await;
+    let (c, task) = server(vec![(
+        200,
+        String::new(),
+        json!({"login":"me","id":1}).to_string(),
+    )])
+    .await;
     let gate = gate(1);
     assert_eq!(
         read(&client(), &c, &gate, EPOCH.load(Ordering::SeqCst)).await,
@@ -231,7 +239,7 @@ async fn errors_are_sanitized_and_redirects_are_not_followed() {
 #[tokio::test]
 async fn missing_total_count_and_oversized_bodies_are_not_empty_successes() {
     let (c, task) = server(vec![
-        (200, String::new(), json!({"login":"me"}).to_string()),
+        (200, String::new(), json!({"login":"me","id":1}).to_string()),
         (200, String::new(), "[]".into()),
     ])
     .await;
@@ -257,6 +265,7 @@ async fn obsolete_configuration_and_closed_gate_do_not_attempt_http() {
             generation: "test".into(),
         },
         token: "synthetic-token".into(),
+        fixture_base: None,
     };
     let gate = gate(1);
     assert_eq!(
