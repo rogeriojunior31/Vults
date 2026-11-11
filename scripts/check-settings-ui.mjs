@@ -197,7 +197,7 @@ await go("General");
 assert.equal(detail("Keyboard shortcuts").open, true, "Disclosures stay open across navigation");
 await go("Agents");
 assert.equal(detail("What each agent can do").open, false, "The duplicate diagnostic list is disclosed on demand");
-await go("Activity");
+await go("History and budget");
 assert.equal(page().querySelector(".week"), null);
 assert.equal(page().querySelector(".activity-grid"), null, "Settings does not duplicate the weekly dashboard");
 assert.ok(page().textContent.includes("Keep a history"));
@@ -207,12 +207,12 @@ button("Clear history…").fire("click");
 assert.ok(page().textContent.includes("This can't be undone."));
 button("Cancel").fire("click");
 assert.deepEqual(writes, [], "Navigation, disclosures, draft restoration and cancel never write settings or clear history");
-for (const label of ["Dictation", "Approvals", "Projects", "Connections", "Phone", "Flock & Zeca", "About"]) {
+for (const label of ["Dictation", "Approvals", "Projects", "Connection setup", "Phone", "Flock & Zeca", "About"]) {
   await go(label);
   assert.equal(page().querySelectorAll("h1").length, 1, `${label} keeps one page heading`);
   assert.ok(page().querySelector(".settings-heading"));
 }
-await go("Connections");
+await go("Connection setup");
 assert.ok(page().textContent.includes("Last successful GitHub CLI account: maintainer on github.com."), "GitHub settings identify the last successful account and host from the connector poll");
 const gitlabCard = page().querySelectorAll("section.card").find(card => card.querySelector(".card-title")?.textContent === "GitLab");
 assert.ok(gitlabCard, "GitLab is an explicit registered connector");
@@ -267,11 +267,11 @@ assert.equal(widget().disabled, false);
 console.log("check-settings-ui: segmented selection and dropdown rollback survive pending repaint");
 
 // The real Settings entry owns budget writes; drafts and pending state survive repaint.
-await go("Activity");
+await go("History and budget");
 const budgetInput = () => page().querySelector(".budget-input");
 assert.equal(budgetInput().value, "2");
 budgetInput().value = "5.25"; budgetInput().fire("input");
-await go("General"); await go("Activity");
+await go("General"); await go("History and budget");
 assert.equal(budgetInput().value, "5.25", "Navigating back retains the unsaved budget");
 button("Save").fire("click"); await tick();
 assert.deepEqual(writes.at(-1), ["budgetSet", 525]);
@@ -859,7 +859,7 @@ console.log('check-settings-ui: Gitea keeps drafts, clears tokens, serializes sa
 for (const [label, call, failed] of [
   ["Projects", "projectsList", "Could not read your project choices."],
   ["Phone", "phoneSettings", "Could not read the phone settings."],
-  ["Connections", "connectorsStatus", "Could not read which connections are on."],
+  ["Connection setup", "connectorsStatus", "Could not read which connections are on."],
 ]) {
   globalThis.failReads = new Set([call]);
   await go(label); await tick(); await tick();

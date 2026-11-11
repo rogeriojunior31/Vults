@@ -53,10 +53,10 @@ const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; ic
   { id: "chat", label: tk("Chat & voice"), group: "experience", icon: "chat" },
   { id: "flock", label: tk("Flock & Zeca"), group: "experience", icon: "flock" },
   { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
-  { id: "approvals", label: tk("Approvals"), group: "work", icon: "list" },
+  { id: "approvals", label: tk("Approvals"), group: "work", icon: "check" },
   { id: "projects", label: tk("Projects"), group: "work", icon: "folder" },
-  { id: "activity", label: tk("Activity"), group: "system", icon: "bars" },
-  { id: "connectors", label: tk("Connections"), group: "system", icon: "plug" },
+  { id: "activity", label: tk("History and budget"), group: "system", icon: "bars" },
+  { id: "connectors", label: tk("Connection setup"), group: "system", icon: "plug" },
   { id: "phone", label: tk("Phone"), group: "system", icon: "phone" },
   { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
@@ -932,7 +932,7 @@ async function refreshConnectors(): Promise<void> {
 
 function connectorsPage(): HTMLElement[] {
   return [
-    el("h1", { text: t("Connections") }),
+    el("h1", { text: t("Connection setup") }),
     el("p", { class: "lede", text: t("News from outside services on the island. Each one is off until you switch it on.") }),
     ...(presence === "paused" ? [el("p", { class: "note", text: t("Paused: connectors do not check anything until you pick another presence in General.") })] : []),
     ...(connectorsFailed
@@ -2248,7 +2248,7 @@ function render(): void {
             : page === "projects"
               ? projectsPage()
             : page === "activity"
-              ? [el("h1", { text: t("Activity") }),
+              ? [el("h1", { text: t("History and budget") }),
                 el("p", { class: "lede", text: t("Choose what stays on this computer. Recaps and records are in Activity.") }),
                 el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week"))),
                 budget.element,

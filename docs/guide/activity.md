@@ -7,7 +7,7 @@ opens Settings; history retention and clearing stay there. The recap image has i
 **Hide project names** export option.
 
 The Nest's **Activity → Week** shows what your agents did: a week's recap and the last year as a
-grid. **Settings → Activity** keeps the history and daily budget controls and an
+grid. **Settings → History and budget** keeps the history and daily budget controls and an
 **Open Activity** button; the recap and calendar have one home in the Nest. Activity is counted on this computer,
 from a local history that Vults keeps as your agents work.
 
@@ -62,7 +62,7 @@ Native validation example with synthetic totals; these figures are not the reade
 Subscription costs are shown at API prices; they are not an extra charge to your plan.
 Missing measurements stay unknown. Existing spend history remains readable.
 
-**Budget settings** opens **Settings → Activity**, the only place to edit the daily budget.
+**Budget settings** opens **Settings → History and budget**, the only place to edit the daily budget.
 Enter US dollars, from $0.01 to $10,000, or leave it empty for no budget. Saving disables the
 controls until the write finishes; a failed write keeps your draft for another attempt.
 At 80% Vults notifies you; once spent, it notifies you again and starts no new session until

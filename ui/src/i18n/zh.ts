@@ -1684,6 +1684,8 @@ export default {
   "1 session · {working} working": "1 个会话 · {working} 个在工作",
   "{n} sessions · {working} working": "{n} 个会话 · {working} 个在工作",
   "{agent} · no metrics yet": "{agent} · 暂无指标",
+  "History and budget": "历史与预算",
+  "Connection setup": "连接设置",
   "No agent session yet": "还没有智能体会话",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "在终端中启动 Claude Code、Codex 或其他智能体，它的鸟就会落在线上。当它需要权限时，卡片会出现在这里。",
   "Set up agents": "设置智能体",

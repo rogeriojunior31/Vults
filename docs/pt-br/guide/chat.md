@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 241dc51c2149 -->
+<!-- source: 199f9749ed50 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -189,7 +189,7 @@ O que é salvo é o que o chat mostra: suas mensagens e os nomes dos arquivos qu
 respostas do Zeca, erros e paradas; nunca a resposta a um card (o log de auditoria guarda essas) e
 nunca uma regra *Always in this chat*, então uma conversa aberta de novo pergunta como uma nova
 perguntaria. As 200 mais recentes ficam guardadas, no mesmo `vults.sqlite` local do histórico de
-atividade; **Settings → Activity → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
+atividade; **Settings → History and budget → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
 ser aberta de novo.
 
 <a id="what-zeca-knows"></a>

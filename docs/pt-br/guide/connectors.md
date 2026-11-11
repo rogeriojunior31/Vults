@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 6a4482c484f6 -->
+<!-- source: 42c00ce50100 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -12,7 +12,7 @@ ligá-lo em **Settings → Connectors**.
 
 ## Gitea
 
-Em **Settings > Connections**, informe a URL base HTTPS da sua instância (incluindo porta ou
+Em **Settings > Connection setup**, informe a URL base HTTPS da sua instância (incluindo porta ou
 subpasta, por exemplo `https://git.example.com:8443/team/`) e um token com os escopos
 `read:user`, `read:issue` e `read:repository`, além de `read:actions` para repositórios com Actions.
 Não acrescente `/api/v1`. Salve a conexão e
@@ -60,7 +60,7 @@ própria real fica pendente até que uma instância esteja disponível.
 
 O conector do GitLab é somente leitura e oferece suporte ao **GitLab.com**. Instale a CLI do GitLab
 (`glab`), entre com `glab auth login --hostname gitlab.com` e ative **GitLab** em
-**Settings > Connections**. O Vults usa o login da CLI sem ler nem salvar seu token.
+**Settings > Connection setup**. O Vults usa o login da CLI sem ler nem salvar seu token.
 
 Uma consulta verifica seus merge requests abertos, pedidos da sua revisão e o pipeline de cada
 commit atual. Os detalhes incluem linhas adicionadas/removidas, quantidade de arquivos alterados,

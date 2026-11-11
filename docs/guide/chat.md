@@ -173,7 +173,7 @@ said, with each file sent kept only as a label: a text file by its name, a docum
 What is saved is what the chat shows: your messages and the names of the files you sent, Zeca's
 replies, errors and stops; never a card's answer (the audit log keeps those) and never an
 *Always in this chat* rule, so a conversation opened again asks as a new one would. The newest 200
-are kept, in the same local `vults.sqlite` as the activity history; **Settings → Activity →
+are kept, in the same local `vults.sqlite` as the activity history; **Settings → History and budget →
 Clear history** removes them all. A conversation whose folder is gone can't be opened again.
 
 <a id="memory"></a>

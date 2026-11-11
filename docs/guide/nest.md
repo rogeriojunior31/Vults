@@ -310,7 +310,7 @@ What this computer keeps, read only here:
   ([Zeca's memory](memory.md#project-memory)). **Preferences ↗** opens **Settings → Projects**.
 - **History**: each finished turn of your agents, counts only. Search the loaded
   records by project, agent or status; **Clear filters** restores the list.
-- **Cost**: what the agents cost today and the **daily budget** set in **Settings → Activity**,
+- **Cost**: what the agents cost today and the **daily budget** set in **Settings → History and budget**,
   your plans' usage windows and what the agents cost over the last two weeks, against that budget,
   and by roost. **Budget settings** opens the budget editor
   ([Cost and a daily budget](activity.md#cost-and-a-daily-budget)).

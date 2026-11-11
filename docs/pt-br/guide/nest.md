@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 75b349dac1a6 -->
+<!-- source: 648c3a0a6931 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -275,7 +275,7 @@ O que este computador guarda, só lido aqui:
 - **History**: cada turno terminado dos seus agentes, só contagens. Busque nos registros
   carregados por projeto, agente ou estado; **Limpar filtros** restaura a lista.
 - **Cost**: quanto os agentes custaram hoje e o **orçamento diário** definido em
-  **Settings → Activity**, as janelas de uso dos seus planos e o custo das últimas duas semanas,
+  **Settings → History and budget**, as janelas de uso dos seus planos e o custo das últimas duas semanas,
   frente a esse orçamento, e por roost. **Configurar orçamento** abre o editor do orçamento
   ([Custo e orçamento diário](activity.md#cost-and-a-daily-budget)).
 - **Traces**: o trabalho do próprio Zeca, cada turno do chat com o modelo, os tokens e o custo, e

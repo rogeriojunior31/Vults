@@ -10,7 +10,7 @@ Connectors put news from outside services on the island. Each one is off until y
 
 ## Gitea
 
-In **Settings > Connections**, enter your instance's HTTPS base URL (including its port or
+In **Settings > Connection setup**, enter your instance's HTTPS base URL (including its port or
 subfolder, for example `https://git.example.com:8443/team/`) and an access token with
 `read:user`, `read:issue` and `read:repository` scopes, plus `read:actions` for repositories
 using Actions. Do not append `/api/v1`. Save the
@@ -54,7 +54,7 @@ self-hosted instance remains pending until an instance is available.
 
 The GitLab connector is read only and supports **GitLab.com**. Install the GitLab CLI (`glab`),
 sign in with `glab auth login --hostname gitlab.com`, then enable **GitLab** in
-**Settings > Connections**. Vults uses the CLI's login without reading or saving its token.
+**Settings > Connection setup**. Vults uses the CLI's login without reading or saving its token.
 
 One query checks your open merge requests, requests for your review and each current head pipeline.
 Details include added/removed lines, changed-file counts, reviewers and up to 30 individual jobs

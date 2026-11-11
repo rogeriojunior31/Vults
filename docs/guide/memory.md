@@ -15,7 +15,7 @@ the Nest's Chat shows only *Zeca's memory is off…*, **By project** shows no me
 refused. Turning it off stops the writing and keeps what was written.
 
 What Zeca remembers is a git repository of small Markdown files in `~/.local/share/vults/memory/`,
-each change a commit. **Settings → Activity → Clear history** removes the journal and what derives
+each change a commit. **Settings → History and budget → Clear history** removes the journal and what derives
 from it, but not that folder ([what it removes](activity.md#the-history)): to erase his facts,
 delete it.
 

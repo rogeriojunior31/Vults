@@ -1684,6 +1684,8 @@ export default {
   "1 session · {working} working": "1 sessão · {working} trabalhando",
   "{n} sessions · {working} working": "{n} sessões · {working} trabalhando",
   "{agent} · no metrics yet": "{agent} · ainda sem métricas",
+  "History and budget": "Histórico e orçamento",
+  "Connection setup": "Configurar conexões",
   "No agent session yet": "Nenhuma sessão de agente ainda",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicie o Claude Code, o Codex ou outro agente em um terminal e o pássaro dele pousa no fio. Quando ele precisar de uma permissão, o cartão aparece aqui.",
   "Set up agents": "Configurar agentes",
