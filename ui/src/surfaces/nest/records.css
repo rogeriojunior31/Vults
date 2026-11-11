@@ -1,0 +1,64 @@
+/* The records (History, Cost, Traces, Audit): read in the Nest and, for the Audit, in Settings > Approvals. */
+.records { display: flex; flex-direction: column; gap: 16px; }
+.records-content { display: contents; }
+.records-content > .activity-heading { order: -2; margin-bottom: 0; }
+.records-content > .activity-summary { order: -1; margin-bottom: 0; }
+.records-search { display: flex; align-items: center; gap: 8px; }
+.records-search input { flex: 1; min-width: 0; min-height: 36px; padding: 6px 10px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--input); color: var(--fg); font: 13px var(--font); }
+.records-search button { flex-shrink: 0; min-height: 36px; }
+.records-search input:focus { border-color: var(--focus-border); box-shadow: var(--focus-shadow); outline: none; }
+.record-group, .usage-section { overflow: hidden; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--panel); }
+.records-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--fg); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.record-count { flex: none; color: var(--fg-dim); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
+.record { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 16px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.record-group > .record:last-child, .usage-section > .record:last-child { border-bottom: 0; }
+.record-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.record-title, .record-context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
+.record-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; text-align: right; }
+.record-when, .record-meta { color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.record-when { font-size: 11px; }
+.record-duration { color: var(--fg); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+.record-who { color: var(--fg); font-size: 12px; font-weight: 550; }
+.record-what { min-width: 0; color: var(--fg); font-weight: 550; overflow-wrap: anywhere; }
+.record-status { padding: 3px 7px; border-radius: 6px; background: var(--raised); color: var(--fg-dim); font-size: 11px; line-height: 1.4; }
+.record-status.passing { background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
+.record-status.failing { background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error-text); }
+.record-target { grid-column: 1 / -1; padding: 10px 12px; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.record.child { margin-left: 24px; border-left: 1px solid var(--control-border); }
+/* Audit is a ledger, not a stack of cards: one panel per decider, rows divided by a line. The command
+   leads in plain text; the mark says allowed or denied by shape, not color alone. */
+.records.audit .record-group { border: 1px solid var(--border); background: var(--panel); }
+.records.audit .record-group > .record { margin: 0; border-radius: 0; border-bottom: 1px solid var(--border); background: transparent; }
+.records.audit .record-group > .record:last-child { border-bottom: 0; }
+.record.audit-row { grid-template-columns: 20px minmax(0, 1fr) auto; gap: 6px 12px; padding: 12px 16px; }
+.audit-mark { display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: var(--raised); color: var(--fg-dim); }
+.audit-mark.allowed { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+.audit-mark.denied { background: color-mix(in srgb, var(--error) 14%, transparent); color: var(--error-text); }
+.audit-mark.other::before { content: ""; width: 8px; height: 2px; border-radius: 1px; background: currentColor; }
+.audit-row .record-target { display: -webkit-box; overflow: hidden; padding: 0; background: none; font: 13px/1.5 var(--mono); white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.audit-row .record-body { gap: 6px; }
+.audit-row .record-target.empty { color: var(--fg-dim); font-family: inherit; }
+.audit-recorded > summary { width: fit-content; color: var(--fg-dim); font-size: 12px; cursor: pointer; }
+.audit-recorded > summary:hover { color: var(--fg); }
+.audit-recorded > code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.records.audit .audit-filters > .activity-stat { margin: -4px -8px; padding: 4px 8px; border: 0; border-radius: var(--radius-control); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.records.audit .audit-filters > .activity-stat:hover { background: var(--raised); }
+.records.audit .audit-filters > .activity-stat[aria-pressed="true"] { background: var(--raised); box-shadow: inset 0 -2px 0 var(--fg); }
+.records.audit .audit-filters > .activity-stat:focus-visible { outline: 2px solid var(--focus-border); outline-offset: 2px; }
+.usage-section .record { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.usage-section > .board-empty { padding: 12px 16px; }
+.usage-bar { position: relative; flex: 1; align-self: center; min-width: 80px; max-width: 340px; height: 8px; overflow: hidden; border-radius: 999px; background: var(--raised); }
+.usage-mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--warn); }
+.usage-fill { display: block; height: 100%; border-radius: inherit; background: var(--mark-fill); }
+.usage-fill.over, .usage-fill.warning { background: var(--warn); }
+.usage-fill.critical { background: var(--error); }
+.usage-status { color: var(--fg-dim); font-size: 11px; }
+.usage-status.warning { color: var(--warn); }
+.usage-status.critical { color: var(--error-text); }
+@media (max-width: 600px) {
+  .record { gap: 8px; padding: 12px; }
+  .record-title { align-items: flex-start; }
+  .record-aside { max-width: 100px; }
+  .record.child { margin-left: 12px; }
+  .records-head { padding: 12px; }
+}

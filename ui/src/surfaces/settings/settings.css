@@ -6,6 +6,9 @@
 @import "../../themes.css";
 @import "./pages.css";
 @import "../nest/head.css";
+@import "../nest/activity.css";
+@import "../nest/view-state.css";
+@import "../nest/records.css";
 
 .gitea-connection .field { width: min(100%, 36rem); }
 

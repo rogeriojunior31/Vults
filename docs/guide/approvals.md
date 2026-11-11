@@ -114,6 +114,16 @@ ask tool WebFetch
   policy is a row in your local database: another program running as you could add one, as it could
   change any of your files.
 
+## What was answered
+
+Under the policies, **Settings → Approvals** shows the audit log: every card's answer and who gave
+it, grouped by who decided (you, your phone, an Always rule, a policy, the chat's full access).
+Each row leads with the command as it was asked, marked ✓ allowed, ✗ denied or – neither (sent to
+the terminal, expired, hooks installed); **As recorded** shows the stored text when it was shortened,
+such as a PowerShell launcher around the command. The figures on top add up to the total, and each
+one filters the list. The same log is under **Activity → Audit** in the Nest, with a **Rules and
+policies** button back here.
+
 ## More than one at a time
 
 Requests wait in line, each for its own agent. The card shows the first one with **1 of 3**, under

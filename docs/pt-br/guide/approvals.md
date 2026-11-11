@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 845a5ba2e463 -->
+<!-- source: e22e05c38a10 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -126,6 +126,18 @@ ask tool WebFetch
   roda (um `Makefile`, um `.envrc`, os scripts do `package.json`). Uma
   política é uma linha no seu banco de dados local: outro programa rodando como você poderia
   adicionar uma, como poderia mudar qualquer arquivo seu.
+
+<a id="what-was-answered"></a>
+
+## O que foi respondido
+
+Embaixo das políticas, **Settings → Approvals** mostra o log de auditoria: a resposta de cada card e
+quem a deu, agrupadas por quem decidiu (você, seu telefone, uma regra Always, uma política, o acesso
+total do chat). Cada linha começa pelo comando como foi pedido, marcado com ✓ permitido, ✗ negado ou
+– nenhum dos dois (enviado ao terminal, expirado, hooks instalados); **As recorded** mostra o texto
+guardado quando ele foi encurtado, como um lançador do PowerShell em volta do comando. Os números no
+topo somam o total, e cada um filtra a lista. O mesmo log fica em **Activity → Audit** no Nest, com
+um botão **Rules and policies** que volta para cá.
 
 <a id="more-than-one-at-a-time"></a>
 

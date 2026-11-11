@@ -98,6 +98,7 @@ const nest = createNest(
       usage: () => Bridge.nestUsage(),
       traces: () => Bridge.nestTraces(),
       audit: () => Bridge.nestAudit(),
+      rules: () => void Bridge.openSettings("approvals"),
     },
     week: {
       activity: (monday) => Bridge.activity(monday),

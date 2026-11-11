@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: b3bdbad85630 -->
+<!-- source: c91bd0dd3750 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -24,10 +24,12 @@ O Nest organiza Atividade em sete telas, com o mesmo estilo de navegação e res
 - **History**: turnos concluídos agrupados por projeto, com resultado, agente, contagens e duração.
 - **Cost**: orçamento de hoje, janelas dos planos, custo e tokens das últimas duas semanas e custo por projeto.
 - **Traces**: turnos do chat do Zeca e suas chamadas de ferramentas, com estado, tempo e contagens de tokens disponíveis.
-- **Audit**: quem respondeu, o resultado e o comando ou alvo completo, agrupados por projeto.
+- **Audit**: quem respondeu e o resultado, agrupados por quem decidiu, cada linha começando pelo comando
+  como foi pedido; os números somam e filtram a lista. O mesmo log fica em **Settings → Approvals**
+  ([O que foi respondido](approvals.md#what-was-answered)).
 
 Histórico e Auditoria mostram os 200 registros mais recentes. Seus resumos descrevem os registros
-carregados naquela tela, e a busca filtra a lista sem alterar esses totais. Os títulos dos projetos
+carregados naquela tela, e a busca filtra a lista sem alterar esses totais. Os títulos dos grupos
 mostram a quantidade de registros encontrados. Navegar, buscar e redimensionar não modificam o histórico guardado.
 
 A prévia compacta de **Week** na ilha usa o mesmo estilo de resumo: a semana e suas datas no topo,

@@ -3,6 +3,7 @@ import { VOICE_MODEL_LABELS } from "../../voice-command-readiness";
 import { failure } from "../../errors";
 import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
+import { createAudit } from "../nest/records";
 import { applyTheme, DEFAULT_THEME } from "../../theme";
 import { ISLAND_WIDTHS, restoreWidth, saveWidth, watchWidth } from "../../island/geometry";
 // Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
@@ -413,8 +414,15 @@ function approvalsPage(): HTMLElement[] {
         )
       : el("section", { class: "card" }, el("p", { class: "note", text: t("No Always rule. Every agent permission asks.") }))]),
     ...policiesSection(render),
+    // The log sits under what makes its answers: what a rule or a policy above did shows here.
+    el("h2", { text: t("What was answered") }),
+    el("p", { class: "lede", text: t("Every card's answer and who gave it: you, your phone, a rule or a policy above, or the chat's access. Kept 90 days, never changed.") }),
+    answersLog.element,
   ];
 }
+
+/** The audit log, read when Approvals opens; it keeps its filter and search while the page repaints. */
+const answersLog = createAudit(() => Bridge.nestAudit(), undefined, false);
 
 let activity: Activity | null = null;
 let clearing = false;
@@ -2191,6 +2199,7 @@ function choosePage(next: Page): void {
   if (next === "approvals") {
     void refreshRules();
     void refreshPolicies(() => page === "approvals" && render());
+    answersLog.refresh();
   }
   if (next === "projects") void refreshProjects();
   if (next === "activity") {
@@ -2514,6 +2523,7 @@ void refreshRules();
 void refreshPolicies(() => {
   if (page === "approvals") render();
 });
+if (page === "approvals") answersLog.refresh();
 void refreshProjects();
 void refreshApi();
 void getVersion()

@@ -247,7 +247,7 @@ export function createNest(
       return costPart(backend.spend, usage, () => backend.settings("activity"));
     })(),
     traces: createTraces(backend.records.traces),
-    audit: createAudit(backend.records.audit, backend.records.query),
+    audit: createAudit(backend.records.audit, backend.records.query, true, backend.records.rules),
   };
 
   // Chat: the conversation, and Zeca's memory beside it when asked for.

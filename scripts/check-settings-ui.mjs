@@ -107,7 +107,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "spendToday": budgetReads++; return { usd: 1, tokens: 100, budget: 2, subscription: true };
       case "budgetSet": writes.push([name, ...args]); return new Promise((resolve, reject) => pendingBudgets.push({ resolve, reject }));
       case "nestIsFull": return false;
-      case "monitors": case "rulesList": case "policiesList": case "agentsDoctor": return [];
+      case "monitors": case "rulesList": case "policiesList": case "agentsDoctor": case "nestAudit": return [];
       case "connectorsStatus": return [{ id: "github", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "maintainer", host: "github.com" }, { id: "gitlab", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "reviewer", host: "gitlab.com" }];
       case "projectPrefs": return {};
       case "installStatus": return { installed: false, hookReady: true, statusLine: "ours", configPath: "/home/example/agent.json" };

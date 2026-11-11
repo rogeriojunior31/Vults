@@ -14,6 +14,7 @@ import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
 import { money, usageLabel, usageLevel, usageWindowName } from "../../cost";
 import { viewState } from "./view-state";
+import { icon } from "../../island/icons";
 
 export interface RecordsBackend {
   history(): Promise<HistoryView>;
@@ -21,9 +22,11 @@ export interface RecordsBackend {
   traces(): Promise<TraceRow[]>;
   audit(): Promise<AuditRow[]>;
   query?: (tab: "history" | "audit", query?: string) => Promise<string>;
+  /** Opens the rules and policies the log records (Settings > Approvals). */
+  rules?: () => void;
 }
 
-const AGENT: Record<string, string> = { ...NAME_BY_ID, other: tk("Another tool") };
+const AGENT: Record<string, string> = { ...NAME_BY_ID, other: tk("Another tool"), zeca: tk("Zeca's chat") };
 
 const agentName = (a: string) => (a in AGENT ? t(AGENT[a]) : a);
 
@@ -100,6 +103,12 @@ function heading(title: string, about: string): HTMLElement {
   return el("header", { class: "activity-heading" }, el("div", {}, el("h2", { text: title }), el("p", { text: about })));
 }
 
+/** A heading with one action at its side. */
+function withAction(head: HTMLElement, action: HTMLElement | null): HTMLElement {
+  if (action) head.append(action);
+  return head;
+}
+
 function summary(...values: [string, string][]): HTMLElement {
   return el("div", { class: "activity-summary" },
     span(t("Summary of loaded records"), "activity-summary-label"),
@@ -142,28 +151,52 @@ function turnLine(r: TurnRow): HTMLElement {
   ]);
 }
 
+/** Who decided, in the order the log groups them: people first, then what answers for them. */
+const ACTORS = ["human", "phone", "rule", "policy", "full-access", "system"];
+
+type AuditKind = "allowed" | "denied" | "other";
+const ALLOWS = ["allow", "always-allow", "allow-in-conversation"];
+const kindOf = (act: string): AuditKind => (ALLOWS.includes(act) ? "allowed" : act === "deny" ? "denied" : "other");
+
+/** The command as a person reads it. Some records keep it as JSON wrote it (doubled backslashes,
+ *  escaped quotes), and a PowerShell launcher wraps the one-line command that was really asked.
+ *  Display only: the row keeps the stored text too. */
+export function readableTarget(stored: string): string {
+  let text = stored;
+  // Escaped only when every backslash is part of an escape: a real path keeps its single ones.
+  if (/\\[\\"]/.test(text) && !text.replace(/\\[\\"]/g, "").includes("\\")) text = text.replace(/\\(["\\])/g, "$1");
+  const launcher = text.match(/^((?:[^·\n]+ · )?)"?[^"\s]*(?:pwsh|powershell)(?:\.exe)?"?\s+(?:-\w+\s+)*?-Command\s+(['"])([^\n]*)\2\s*$/i);
+  return launcher ? launcher[1] + launcher[3] : text;
+}
+
 function auditLine(r: AuditRow): HTMLElement {
   const act = r.act in ACT ? t(ACT[r.act]) : r.act;
-  const positive =
-    r.act === "allow" ||
-    r.act === "always-allow" ||
-    r.act === "allow-in-conversation";
+  const kind = kindOf(r.act);
+  // The stored target already names its tool (as the card showed it); only a bare one gets it put in front.
+  const stored = r.tool && !r.target.startsWith(`${r.tool} · `) ? [r.tool, r.target].filter(Boolean).join(" · ") : r.target;
+  const shown = readableTarget(stored);
+  // A record without a command still leads with a line, so the row never starts blank.
+  const command = shown.trim()
+    ? el("code", { class: "record-target", text: shown })
+    : el("span", { class: "record-target empty", text: t("No command recorded") });
+  command.title = stored;
+  const mark = el("span", { class: `audit-mark ${kind}` }, kind === "allowed" ? icon("check", 13, 2.4) : kind === "denied" ? icon("close", 13, 2.4) : null);
+  mark.setAttribute("aria-hidden", "true");
   return line([
+    mark,
     el("div", { class: "record-body" },
-      el("div", { class: "record-title" }, span(r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor, "record-who"),
-        span(act, `record-status ${positive ? "passing" : r.act === "deny" ? "failing" : ""}`)),
-      span([agentName(r.agent), r.project].filter(Boolean).join(" · "), "record-meta"),
+      command,
+      el("div", { class: "record-context" },
+        span(act, `record-status ${kind === "allowed" ? "passing" : kind === "denied" ? "failing" : ""}`),
+        span([agentName(r.agent), r.project].filter(Boolean).join(" · "), "record-meta"),
+        r.consent !== null ? span(t("Policy accepted as #{id}", { id: r.consent }), "record-meta") : null,
+      ),
+      shown !== stored
+        ? el("details", { class: "audit-recorded" }, el("summary", { text: t("As recorded") }), el("code", { text: stored }))
+        : null,
     ),
     span(when(r.at * 1000), "record-when"),
-    el("code", {
-      class: "record-target",
-      // The stored target already names its tool (as the card showed it); only a bare one gets it put in front.
-      text: r.tool && !r.target.startsWith(`${r.tool} · `) ? [r.tool, r.target].filter(Boolean).join(" · ") : r.target,
-    }),
-    r.consent !== null
-      ? span(t("Policy accepted as #{id}", { id: r.consent }), "record-meta")
-      : null,
-  ]);
+  ], "audit-row");
 }
 
 function traceLine(r: TraceRow): HTMLElement {
@@ -297,7 +330,7 @@ function tab<T>(
   draw: (v: T, query: string) => HTMLElement[],
   searchable = false,
   query?: RecordsBackend["query"],
-): { element: HTMLElement; refresh: () => void; flush: () => Promise<void> } {
+): { element: HTMLElement; refresh: () => void; flush: () => Promise<void>; repaint: () => void } {
   const element = el("div", { class: `records ${cls}` });
   const content = el("div", { class: "records-content" });
   const status = el("div", { class: "records-state" });
@@ -389,7 +422,7 @@ function tab<T>(
       },
     );
   };
-  return { element, refresh, flush: async () => {
+  return { element, refresh, repaint: paint, flush: async () => {
     await restored;
     // Retry a failed save without requiring the user to change their search first.
     saved = saved.catch(async () => { if (query) await query(cls as "history" | "audit", search.value); });
@@ -397,11 +430,11 @@ function tab<T>(
   } };
 }
 
-function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => HTMLElement, query: string): HTMLElement[] {
+function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => HTMLElement, query: string, by: (r: T) => string = r => r.project || t("No project")): HTMLElement[] {
   const groups = new Map<string, HTMLElement[]>();
   for (const row of rows) {
     const node = draw(row);
-    const project = row.project || t("No project");
+    const project = by(row);
     // The project is shown once, on the group: a search for it still finds its rows.
     if (query && ![project, node.textContent ?? ""].some((text) => text.toLocaleLowerCase(locale()).includes(query))) continue;
     const entries = groups.get(project) ?? [];
@@ -410,7 +443,7 @@ function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => H
   }
   return groups.size
     ? [...groups].map(([project, entries]) => el("section", { class: "record-group" },
-        el("h4", { class: "records-head" }, span(project, ""), span(entries.length === 1 ? t("1 record") : t("{n} records", { n: entries.length }), "record-count")), ...entries))
+        el("h3", { class: "records-head" }, span(project, ""), span(entries.length === 1 ? t("1 record") : t("{n} records", { n: entries.length }), "record-count")), ...entries))
     : [viewState("empty", t("No results"), t("No records match. Clear filters to see all records."))];
 }
 
@@ -458,22 +491,37 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
   ]);
 }
 
-export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"]) {
-  return tab("audit", load, (rows, query) => {
+export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"], title = true, rules?: () => void) {
+  let only: AuditKind | null = null;
+  let view: ReturnType<typeof tab<AuditRow[]>> | null = null;
+  // The figures add up to the total, and each one filters the list to its rows.
+  const figure = (value: number, label: string, kind: AuditKind | null) => {
+    const b = el("button", { class: "activity-stat", onclick: () => { only = only === kind ? null : kind; view?.repaint(); } },
+      el("strong", { text: String(value) }), span(label, ""));
+    b.setAttribute("aria-pressed", String(only === kind));
+    return b;
+  };
+  const order = (r: AuditRow) => { const i = ACTORS.indexOf(r.actor); return i < 0 ? ACTORS.length : i; };
+  view = tab("audit", load, (rows, query) => {
+    const count = (kind: AuditKind) => rows.filter(row => kindOf(row.act) === kind).length;
+    const shown = rows.filter(row => !only || kindOf(row.act) === only).sort((a, b) => order(a) - order(b) || b.at - a.at);
     return [
-      heading(t("Audit"), t(
+      title ? withAction(heading(t("Audit"), t(
           "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
-        )),
-      summary(
-        [String(rows.length), t("Audit entries")],
-        [String(rows.filter(row => ["allow", "always-allow", "allow-in-conversation"].includes(row.act)).length), t("Allowed")],
-        [String(rows.filter(row => row.act === "deny").length), t("Denied")],
-      ),
+        )), rules ? el("button", { class: "btn", text: t("Rules and policies"), onclick: rules }) : null) : null,
+      rows.length ? Object.assign(el("div", { class: "activity-summary audit-filters" },
+        span(t("Filter the log"), "activity-summary-label"),
+        figure(rows.length, t("Audit entries"), null),
+        figure(count("allowed"), t("Allowed"), "allowed"),
+        figure(count("denied"), t("Denied"), "denied"),
+        figure(count("other"), t("Not allowed or denied"), "other"),
+      ), { role: "group" }) : null,
       ...(rows.length
-        ? groupedRows(rows, auditLine, query)
+        ? groupedRows(shown, auditLine, query, r => (r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor))
         : [
             viewState("empty", t("No card was answered yet."), t("Permission answers will appear here. Opening this view answers nothing.")),
           ]),
-    ];
+    ].filter((n): n is HTMLElement => n !== null);
   }, true, query);
+  return view;
 }
