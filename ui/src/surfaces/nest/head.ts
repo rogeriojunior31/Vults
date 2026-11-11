@@ -185,7 +185,9 @@ export function createNestHead(on: NestHeadActions): NestHead {
   ) => {
     // The title and label keep the word where a narrow window shows the icon alone.
     b.title = word;
-    b.setAttribute("aria-label", n > 0 ? `${word} ${n}` : word);
+    // A count says what it counts: on Flock, the sessions that need you.
+    const counted = id === "flock" ? (n === 1 ? t("Flock, 1 session needs you") : t("Flock, {n} sessions need you", { n })) : `${word} ${n}`;
+    b.setAttribute("aria-label", n > 0 ? counted : word);
     b.replaceChildren(
       icon(TAB_ICONS[id], 15),
       el("span", { class: "nav-label", text: word }),

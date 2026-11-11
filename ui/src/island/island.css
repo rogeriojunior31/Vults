@@ -376,7 +376,7 @@ body.still .compact.needs::after {
   background: var(--mark-fill);
   color: var(--on-accent);
 }
-/* Tabs are icons only, with their name on hover: the island stays quiet. */
+/* Tabs name themselves beside their icon, so the island reads without hovering; the gear stays an icon. */
 .tabs {
   display: flex;
   justify-content: space-between;
@@ -399,6 +399,18 @@ body.still .compact.needs::after {
   transition:
     background-color var(--motion-fast) var(--ease-out),
     color var(--motion-fast) var(--ease-out);
+}
+.tab-label {
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.tab-gear .tab-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 .tab-count {
   padding: 1px 4px;

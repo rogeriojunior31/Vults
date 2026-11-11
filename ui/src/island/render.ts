@@ -950,10 +950,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // The tab lit for it: the chat's drop zone is the chat's, every connector is Connections.
     const view = chat.isOpen() ? "chat" : boardShown ? "connections" : (quickShown ?? "flock");
     // The prototype's Quick: the tabs as icons spread across the island, a count where it matters.
-    const tab = (name: string, glyph: IconName, label: string, go: () => void, count = 0) => {
-      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
+    // Each tab names itself beside its icon (the gear stays an icon); a count says what it counts.
+    const tab = (name: string, glyph: IconName, label: string, go: () => void, count = 0, counted = "") => {
+      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), el("span", { class: "tab-label", text: label }), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
       b.title = label;
-      b.setAttribute("aria-label", count > 0 ? `${label} ${count}` : label);
+      b.setAttribute("aria-label", count > 0 ? counted || `${label} ${count}` : label);
       b.setAttribute("aria-pressed", String(name === view));
       return b;
     };
@@ -985,6 +986,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           else render(raw);
         },
         needs,
+        needs === 1 ? t("Flock, 1 session needs you") : t("Flock, {n} sessions need you", { n: needs }),
       ),
       // The chat and its drop zone are Zeca's (ADR 0018).
       ...(zecaShown()
@@ -1086,6 +1088,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const paused = presenceNow() === "paused";
     const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? t("Agents ask in their terminals") : zecaShown() ? t("Nothing running") : t("Start an agent and it lands here");
     const vults = compactScene.slots();
+    // A session that needs you leads the pill's name, whoever is in front: a screen reader hears
+    // what waits, not the session that happens to be first.
+    const urgent = paused ? [] : shown.filter(needsYou);
+    const lead = urgent.length === 1 ? t("{project} needs you", { project: urgent[0].project || agentName(urgent[0]) })
+      : urgent.length > 1 ? t("{n} sessions need you, first {project}", { n: urgent.length, project: urgent[0].project || agentName(urgent[0]) }) : "";
     const name = song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running");
     const failed = shown.filter((s) => s.status === "failed" || s.attention === "failed").length;
     const overflow = shown.filter(s => s !== front).slice(compactPerched);
@@ -1097,7 +1104,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (compactMore.hidden && fsm.mode === "compact" && document.activeElement === compactMore) compact.focus({ preventScroll: true });
     compact.setAttribute(
       "aria-label",
-      [name, detail, moreLabel, failed ? (failed === 1 ? t("1 failed") : t("{n} failed", { n: failed })) : "", alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "),
+      [lead, ...(lead ? [] : [name, detail]), moreLabel, failed ? (failed === 1 ? t("1 failed") : t("{n} failed", { n: failed })) : "", alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "),
     );
     // Someone needs you: the pill's border pulses amber.
     // Not while paused: every card is answered in its terminal then.
