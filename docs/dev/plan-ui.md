@@ -1950,3 +1950,26 @@ states the chat's access instead of "every permission asks"; a request's reason 
 with Deny and Allow in short windows; folders are shortened with one formatter (full path in the
 tooltip and copy); the Flock's profiles are Specialists throughout and speech models say what they
 are before naming whisper.cpp; the Nest counts "requests waiting" and plan meters name their level.
+
+The fifth critique (24/40, by a reviewer told the open decisions above were not binding and
+product changes were welcome) found a safety gap and four product items, all delivered on the
+branch and checked in the running app:
+
+- The Allow shortcut (and Y in the island) allowed a destructive request; now the Allow key works
+  only where Allow is the bright button, the button shows "click" in the key's place, and Deny keeps
+  its key. The flock no longer flies over a card that holds a decision.
+- Audit reads as a ledger: the command as it was asked leads each row (the stored text under "As
+  recorded"), a mark says allowed, denied or neither, rows group by who decided, and the figures
+  add up and filter. It now also sits in Settings > Approvals under the rules and policies it
+  records (one of the maintainer decisions above, taken), with the Nest's Audit linking back.
+- The core lists every waiting permission; the Flock shows "Waiting for you" when two or more wait,
+  each row answerable on its own, ticked plain requests allowed together, destructive and cut ones
+  kept to their own card.
+- One presentation menu replaces the size switch, full screen and mute in the island's and the
+  Nest's headers (ADR 0021 history); decision cards drop Ask Zeca (it stays in the Zeca tab); a
+  running command reads "Running a command" as a status.
+- Smaller items: footer wording, Week baselines, full access as amber with a warning sign, a quiet
+  list of Specialist actions, Connections' failed first check with the login command to copy.
+
+Still open: the Linux pass, the footer and Inter decisions, and the Nest countdown (core arrival
+time).
