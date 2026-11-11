@@ -118,7 +118,7 @@ export function phonePage(): HTMLElement[] {
       direct
         ? t("This computer's address on your network or tailnet, and a port. The phone must reach it.")
         : t("Its address. You can run your own (see The phone's relay in the docs); plain http only on a network you trust."),
-      el("div", { class: "inline" }, input, button(t("Save"), () => void save(), true)),
+      el("div", { class: "inline" }, input, button(t("Save"), () => void save())),
     ),
   );
   const ready = p.on && (direct ? p.listen : p.relay);

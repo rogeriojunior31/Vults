@@ -2402,6 +2402,17 @@ button.touched-row:hover,
 }
 
 @media (max-height: 480px) { .nest-flock-tab .flock-stage { display: none; } }
+/* A short window keeps Deny and Allow in sight: the request scrolls above them, they stay at the foot. */
+@media (max-height: 480px) {
+  .flock-selected .focus-block { padding-block: 8px 0; }
+  .flock-selected .focus-block > :last-child { margin-bottom: 8px; }
+  .flock-back { min-height: 28px; margin-top: 4px; }
+  .flock-selected .decision-actions {
+    position: sticky; bottom: 0; z-index: 1;
+    padding-block: 8px;
+    border-top: 1px solid var(--border); background: var(--float);
+  }
+}
 
 @media (max-height: 480px) {
   .nest-chat:has(.approval-queue.on) .chat-titlebar { flex-wrap: nowrap; padding: 4px 8px; gap: 4px; }

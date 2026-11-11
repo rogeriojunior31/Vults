@@ -724,7 +724,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: approvalFolder(s, ask) || t("this folder") });
     return el(
       "div",
-      { class: "app-card-actions" },
+      { class: "app-card-actions decision-actions" },
       fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), "act:deny"),
       fid(el("button", { class: destructive ? "outline danger" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), kbd(keys.allow)), "act:allow"),
       always,

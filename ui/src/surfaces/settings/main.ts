@@ -992,8 +992,8 @@ Bridge.onModelPrices(status => { priceStatus = status; priceUpdates = status.ena
 function generalPage(): HTMLElement[] {
   return [
     el("h1", { text: t("General") }),
+    el("h2", { class: "settings-group-title", text: t("Appearance") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Appearance") }),
       row(t("Mini and Quick width"), t("Shared width, limited to the available screen space."),
         dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
           if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
@@ -1013,8 +1013,8 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Sound and notifications") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Sound and notifications") }),
       row(
         t("Sounds"),
         t("Short 8-bit blips when a session needs you, finishes or fails, and for connector news."),
@@ -1058,8 +1058,8 @@ function generalPage(): HTMLElement[] {
         }),
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Island") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Island") }),
       row(
         t("Presence"),
         t("Choose how Vults stays visible. A card always opens the island with its sound."),
@@ -1137,8 +1137,8 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
       row(
         t("Start with the desktop"),
         t("Opens Vults when you log in."),
