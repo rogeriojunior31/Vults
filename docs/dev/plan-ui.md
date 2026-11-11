@@ -1992,3 +1992,13 @@ checked in the running app:
   hour's scale; "As recorded" and the volume slider reach 24 px.
 
 Still open: the Linux pass, the footer and Inter decisions.
+
+The seventh critique (27/40; Error Prevention 4/4) found the command hidden under the decision bar
+at 480 x 360, one request shown four times on Flock, time shown only at the end, and copy traps.
+Delivered and checked in the running app: in short windows the answers sit under the command, never
+over it; the queue leads the session list and its sessions are not repeated below; every waiting
+request shows its clock in the island's words (quiet, amber at 30 s, red at 10 s) and a session
+whose request went back reads "Asking in its terminal" until its next step; "Neste card", "N
+requests waiting" on the island, meters named by agent, empty metrics as one line; Activity drops
+its Audit tab (the log stays in Approvals, as chosen). Not taken: answering from a queue row (the
+card stays the one place), Mini text (ADR 0021), a shorter filter label.
