@@ -1071,7 +1071,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
       totals.title = t("Session input includes cached tokens; this is cumulative consumption, separate from current context.");
       consumption.push(el("section", {}, el("header", { class: "session-section-head" }, el("h3", { text: t("Session consumption") })), totals));
     }
-    return [metrics, health, ...consumption, recent, changes];
+    // Three "Not reported" cells say nothing the line under them does not: show only the line.
+    const known = [runningTime(s), sessionCost(s), contextUsed(s)].some(value => value !== t("Not reported"));
+    return [...(known ? [metrics] : []), health, ...consumption, recent, changes];
   };
 
   const zecaPane = (s: SessionView): HTMLElement[] => [

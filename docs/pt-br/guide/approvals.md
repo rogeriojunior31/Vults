@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 5709d5b58a7e -->
+<!-- source: a788aeae2fb7 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -142,7 +142,7 @@ topo somam o total, e cada um filtra a lista. No Nest, **Activity → Audit** co
 
 ## Mais de um ao mesmo tempo
 
-Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro com **1 of 3**, embaixo
+Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro com **3 requests waiting**, embaixo
 de um ponto por sessão na cor do agente. Responda um e o próximo aparece.
 
 Para responder primeiro um que está mais atrás, clique em **Open** na notificação dele (no *Panel*)

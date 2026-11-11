@@ -125,7 +125,7 @@ one filters the list. In the Nest, **Activity → Audit** counts the answers kep
 
 ## More than one at a time
 
-Requests wait in line, each for its own agent. The card shows the first one with **1 of 3**, under
+Requests wait in line, each for its own agent. The card shows the first one with **3 requests waiting**, under
 a dot per session in its agent's color. Answer one and the next comes up.
 
 To answer one further back first, click **Open** on its notification (in *Panel*) or its bird in

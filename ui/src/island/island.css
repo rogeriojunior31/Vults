@@ -400,6 +400,10 @@ body.still .compact.needs::after {
     background-color var(--motion-fast) var(--ease-out),
     color var(--motion-fast) var(--ease-out);
 }
+.usage-agent {
+  color: var(--fg-dim);
+  font-size: 11px;
+}
 .tab-label {
   font-size: 12px;
   line-height: 1;

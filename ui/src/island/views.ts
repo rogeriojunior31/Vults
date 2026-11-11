@@ -366,7 +366,7 @@ function sessionBody(
       const operationFolder = approvalFolder(s, approval);
       always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: approval.tool, project: operationFolder || t("this folder") });
       const ruleFolder = approvalRuleFolder(s, approval);
-      const queue = approval.queue > 1 ? el("span", { class: "queue", text: t("1 of {n}", { n: approval.queue }) }) : null;
+      const queue = approval.queue > 1 ? el("span", { class: "queue", text: t("{n} requests waiting", { n: approval.queue }) }) : null;
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
       const parts: (HTMLElement | null)[] = [
@@ -718,6 +718,8 @@ export function usageMeters(windows: UsageWindow[], nowSecs: number): HTMLElemen
         "span",
         { class: "agent-usage" },
         el("span", { class: `dot ${agent}` }),
+        // Each plan says whose it is: "Claude 5h 19%", not a bare figure.
+        el("span", { class: "usage-agent", text: (NAME_BY_KIND[agent as keyof typeof NAME_BY_KIND] ?? agent).split(" ")[0] }),
         ...live.filter((w) => w.agent === agent).map((w) => meter(w)),
       ),
     ),

@@ -1829,7 +1829,6 @@ export default {
   "{sessions} sessions · 1 needs you": "{sessions} sesiones · 1 te necesita",
   "{sessions} sessions · {needs} need you": "{sessions} sesiones · {needs} te necesitan",
   "Command palette (Ctrl+K)": "Paleta de comandos (Ctrl+K)",
-  "1 of {n}": "1 de {n}",
   "No changes kept for this session yet.": "Aún no hay cambios guardados de esta sesión.",
   "The change shown": "El cambio mostrado",
   "Back to the card": "Volver a la tarjeta",

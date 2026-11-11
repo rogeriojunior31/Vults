@@ -1829,7 +1829,6 @@ export default {
   "{sessions} sessions · 1 needs you": "{sessions} 个会话 · 1 个需要你",
   "{sessions} sessions · {needs} need you": "{sessions} 个会话 · {needs} 个需要你",
   "Command palette (Ctrl+K)": "命令面板 (Ctrl+K)",
-  "1 of {n}": "第 1 个，共 {n} 个",
   "No changes kept for this session yet.": "这个会话还没有保存的更改。",
   "The change shown": "显示的更改",
   "Back to the card": "返回卡片",
