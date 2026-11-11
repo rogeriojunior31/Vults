@@ -9,7 +9,7 @@ import {
 } from "../../bridge";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
-import { button, diff } from "./pieces";
+import { button, confirmed, diff } from "./pieces";
 
 const ERRORS: Record<PolicyError["kind"], string> = {
   "unknown-word": tk("Line {line}: start it with allow, deny, ask, project or agents."),
@@ -175,8 +175,8 @@ function policyCard(p: PolicyRow, render: () => void): HTMLElement {
         review = null;
         render();
       }),
-      button(t("Revoke"), () => {
-        void Bridge.policyRevoke(p.consent).then(
+      confirmed(t("Revoke"), t("Cards this policy answered ask you again."), t("Revoke policy"), () =>
+        Bridge.policyRevoke(p.consent).then(
           () => {
             message = {
               text: t("Policy revoked. Its cards ask again."),
@@ -188,8 +188,8 @@ function policyCard(p: PolicyRow, render: () => void): HTMLElement {
             message = { text: String(e), error: true };
             render();
           },
-        );
-      }),
+        ),
+      ),
     ),
     el("pre", { class: "policy-text", text: p.text }),
   );

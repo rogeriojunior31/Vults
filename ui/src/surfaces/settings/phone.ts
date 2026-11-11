@@ -3,7 +3,7 @@
 import { Bridge, type Pairing, type PhoneEvent, type PhoneSettings } from "../../bridge";
 import { el } from "../../dom";
 import { locale, t } from "../../i18n";
-import { button, row, toggle } from "./pieces";
+import { button, confirmed, row, toggle } from "./pieces";
 
 let phone: PhoneSettings | null = null;
 let message: { text: string; error: boolean } | null = null;
@@ -13,14 +13,18 @@ let countdown = 0;
 /** The QR's "within N s" line: the timer updates it alone, so the fields around keep their text. */
 let countdownLine: HTMLElement | null = null;
 let rerender: () => void = () => {};
+/** The last read failed: the page says so, with a retry, instead of ending at its title. */
+let phoneFailed = false;
 
 /** Reads the phone's settings again; `render` draws the page when it is the one open. */
 export async function refreshPhone(render: () => void): Promise<void> {
   rerender = render;
   try {
     phone = await Bridge.phoneSettings();
+    phoneFailed = false;
   } catch {
     phone = null;
+    phoneFailed = true;
   }
   rerender();
 }
@@ -61,7 +65,16 @@ export function phonePage(): HTMLElement[] {
       text: t("Answer cards from your phone while you are away from the desk. The phone only decides; this computer does what you chose. Approving needs your fingerprint or face on the phone; denying does not."),
     }),
   ];
-  if (!phone) return head;
+  if (!phone) {
+    const state = el(
+      "section",
+      { class: "card read-state" },
+      el("p", { class: phoneFailed ? "note error" : "note", text: phoneFailed ? t("Could not read the phone settings. Whether a phone can answer cards is unknown until this is read.") : t("Reading the phone settings…") }),
+      phoneFailed ? button(t("Try again"), () => void refreshPhone(rerender)) : null,
+    );
+    state.setAttribute("role", phoneFailed ? "alert" : "status");
+    return [...head, state];
+  }
   const p = phone;
   const rows: HTMLElement[] = [
     row(
@@ -155,11 +168,11 @@ export function phonePage(): HTMLElement[] {
             : t("Paired on {date}", { date: new Date(d.pairedAt * 1000).toLocaleDateString(locale(), { dateStyle: "medium" }) }),
           d.revoked
             ? el("span")
-            : button(t("Revoke"), () => {
+            : confirmed(t("Revoke"), t("Nothing this phone signs is accepted after this."), t("Revoke phone"), () =>
                 Bridge.phoneRevoke(d.id)
                   .then(() => said(t("Revoked: nothing it signs is taken now.")))
-                  .catch((e) => said(String(e), true));
-              }),
+                  .catch((e) => said(String(e), true)),
+              ),
         ),
       )
     : [el("div", { class: "row" }, el("p", { class: "note", text: t("No phone paired yet.") }))];

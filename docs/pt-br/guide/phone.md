@@ -1,5 +1,5 @@
 # O telefone
-<!-- source: 775a2b01f3ea -->
+<!-- source: f8a16b4e8756 -->
 
 Um telefone que você pareia pode responder aos cards que esperam por você enquanto está longe da
 mesa. Ele só decide: este computador continua fazendo o que você escolheu, e a ilha também mantém
@@ -52,5 +52,5 @@ conseguir guardar que uma resposta foi usada, a resposta é descartada e o card 
 
 ## Como revogar
 
-**Revoke** ao lado de um telefone e nada do que ele assinar vale a partir dali. Um telefone revogado
+**Revoke** ao lado de um telefone, confirme, e nada do que ele assinar vale a partir dali. Um telefone revogado
 fica na lista e não consegue parear de novo com as mesmas chaves.

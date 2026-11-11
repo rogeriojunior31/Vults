@@ -56,7 +56,7 @@ the request to its terminal. On timeout, the normal terminal fallback still appl
 
 A policy answers cards for you: you write it in **Settings → Approvals → Policies**, see it as a
 diff against the one in place, and accept it with a click. One policy per project folder, plus one
-for everywhere; a newer one replaces the older. **Revoke** turns it off at once, and its cards ask
+for everywhere; a newer one replaces the older. **Revoke** asks once more, then turns it off at once, and its cards ask
 again. Policy **allow** remains limited to Claude Code. Other agents now show their operation
 folder when provided; widening automatic allows still requires separate per-agent verification.
 For Codex, OpenCode, Qwen Code and Copilot CLI a policy can deny or ask. Agents whose permissions

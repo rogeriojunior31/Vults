@@ -124,6 +124,48 @@ export function disclosure(title: string, ...content: HTMLElement[]): HTMLDetail
   return details;
 }
 
+/** A removal that asks first, in place: its effect, Cancel (focused) and the removal itself. The
+ *  first click runs nothing, and a held Enter lands on Cancel, never on the removal. */
+export function confirmed(label: string, effect: string, confirm: string, run: () => void | Promise<void>): HTMLElement {
+  const wrap = el("div", { class: "confirm" });
+  const idle = (): HTMLButtonElement => {
+    const start = button(label, arm);
+    wrap.classList.remove("armed");
+    wrap.replaceChildren(start);
+    return start;
+  };
+  const arm = () => {
+    const about = el("p", { class: "confirm-effect", text: effect });
+    about.id = `confirm-${++confirms}`;
+    const cancel = button(t("Cancel"), () => idle().focus());
+    const go: HTMLButtonElement = el("button", {
+      class: "btn danger",
+      text: confirm,
+      onclick: () => {
+        if (go.disabled) return;
+        go.disabled = cancel.disabled = true;
+        void Promise.resolve()
+          .then(run)
+          .finally(() => {
+            if (wrap.isConnected) idle();
+          });
+      },
+    });
+    go.setAttribute("aria-describedby", about.id);
+    wrap.classList.add("armed");
+    wrap.replaceChildren(about, el("div", { class: "actions" }, cancel, go));
+    cancel.focus();
+  };
+  wrap.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !wrap.classList.contains("armed")) return;
+    e.stopPropagation();
+    idle().focus();
+  });
+  idle();
+  return wrap;
+}
+let confirms = 0;
+
 export function button(text: string, onclick: () => void, primary = false): HTMLButtonElement {
   return el("button", { class: primary ? "btn primary" : "btn", text, onclick });
 }

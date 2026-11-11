@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: e7c89d097dbf -->
+<!-- source: f7f135506925 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -334,7 +334,7 @@ orientação não muda as verificações de permissão. Recolher um cartão nunc
 - **Your policies**: as [políticas](approvals.md#policies) que você aceitou respondem as chamadas do
   chat como respondem as do Claude Code na ilha. Um deny nega, um allow permite (chamadas do Claude
   Code, dentro da pasta da conversa), o resto pergunta.
-- **Full access**: tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
+- **Full access**: as Configurações pedem que você confirme antes; depois tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
   pergunta, o que uma política nega é negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
   fora (uma página web, um fetch, uma ferramenta MCP), os cards dela voltam a perguntar até ela
   acabar: as palavras de uma página podem estar conduzindo a conversa. Adicione linhas `deny` a uma

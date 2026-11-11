@@ -15,7 +15,7 @@ import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
 import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
-import { button, diff, disclosure, row, saveSetting, toggle } from "./pieces";
+import { button, confirmed, diff, disclosure, row, saveSetting, toggle } from "./pieces";
 import { policiesSection, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
 import { createMeetingAssets } from "./meeting-assets";
@@ -314,8 +314,28 @@ let monitors: { name: string; label: string }[] = [];
 let version = "";
 let settingsPath = "";
 let dataPath = "";
-let rules: Rule[] = [];
-let projects: Record<string, ProjectPrefs> = {};
+/** Null until read: an unread list is unknown, never "nothing". A failed read keeps the last one. */
+let rules: Rule[] | null = null;
+let rulesFailed = false;
+let rulesNote: string | null = null;
+let projects: Record<string, ProjectPrefs> | null = null;
+let projectsFailed = false;
+let projectsNote: string | null = null;
+/** Full access waits for a second, explicit click before it is saved. */
+let askingFull = false;
+let accessNote: string | null = null;
+
+/** A list that is being read, or could not be: the page says so instead of showing it empty. */
+function readState(failed: boolean, reading: string, failure: string, retry: () => void): HTMLElement {
+  const card = el(
+    "section",
+    { class: "card read-state" },
+    el("p", { class: failed ? "note error" : "note", text: failed ? failure : reading }),
+    failed ? button(t("Try again"), retry) : null,
+  );
+  card.setAttribute("role", failed ? "alert" : "status");
+  return card;
+}
 let apiProviders: ApiProvider[] = [];
 let apiSelected = "";
 /** Provider id → its live model list, or why it couldn't be had. */
@@ -329,8 +349,9 @@ let webMessage: { text: string; error: boolean } | null = null;
 async function refreshRules(): Promise<void> {
   try {
     rules = await Bridge.rulesList();
+    rulesFailed = false;
   } catch {
-    rules = [];
+    rulesFailed = true;
   }
   if (page === "approvals") render();
 }
@@ -343,7 +364,15 @@ function approvalsPage(): HTMLElement[] {
       class: "lede",
       text: t("Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder."),
     }),
-    rules.length
+    ...(rulesFailed
+      ? [readState(true, "", t("Could not read your always-allowed permissions. What is allowed is unknown until this is read."), () => void refreshRules())]
+      : []),
+    ...(rulesNote ? [el("p", { class: "note error", text: rulesNote })] : []),
+    ...(!rules
+      ? rulesFailed
+        ? []
+        : [readState(false, t("Reading your always-allowed permissions…"), "", () => {})]
+      : [rules.length
       ? el(
           "section",
           { class: "card rows" },
@@ -357,13 +386,22 @@ function approvalsPage(): HTMLElement[] {
                 el("div", { class: "row-title", text: r.target }),
                 el("div", { class: "row-about", text: `${AGENTS.find(a => a.kind === r.agent)?.name ?? r.agent} · ${name(r.cwd)} · ${r.cwd}` }),
               ),
-              button(t("Remove"), () => {
-                void Bridge.ruleRemove(i).then(refreshRules);
-              }),
+              confirmed(t("Remove"), t("This permission asks again on its next request."), t("Remove permission"), () =>
+                Bridge.ruleRemove(i).then(
+                  () => {
+                    rulesNote = null;
+                    return refreshRules();
+                  },
+                  () => {
+                    rulesNote = t("Could not remove the permission. It still applies.");
+                    render();
+                  },
+                ),
+              ),
             ),
           ),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: t("Nothing is always allowed. Every permission asks.") })),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("Nothing is always allowed. Every permission asks.") }))]),
     ...policiesSection(render),
   ];
 }
@@ -399,8 +437,9 @@ const activityActions: Pick<ActivityActions, "history" | "confirmClear" | "clear
 async function refreshProjects(): Promise<void> {
   try {
     projects = await Bridge.projectsList();
+    projectsFailed = false;
   } catch {
-    projects = {};
+    projectsFailed = true;
   }
   if (page === "projects") render();
 }
@@ -408,9 +447,10 @@ async function refreshProjects(): Promise<void> {
 /** Mute, pin and hide, per project folder: set from a session's quick actions on the island. */
 function projectsPage(): HTMLElement[] {
   const name = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
-  const folders = Object.keys(projects).sort((a, b) => name(a).localeCompare(name(b)));
+  const known = projects ?? {};
+  const folders = Object.keys(known).sort((a, b) => name(a).localeCompare(name(b)));
   const set = (cwd: string, change: ProjectPrefs) => async (on: boolean) => {
-    const next = { ...projects[cwd], ...Object.fromEntries(Object.keys(change).map((k) => [k, on])) };
+    const next = { ...known[cwd], ...Object.fromEntries(Object.keys(change).map((k) => [k, on])) };
     await Bridge.projectSet(cwd, next);
     await refreshProjects();
   };
@@ -422,12 +462,20 @@ function projectsPage(): HTMLElement[] {
       class: "lede",
       text: t("Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it."),
     }),
-    folders.length
+    ...(projectsFailed
+      ? [readState(true, "", t("Could not read your project choices. They still apply; this page cannot show them."), () => void refreshProjects())]
+      : []),
+    ...(projectsNote ? [el("p", { class: "note error", text: projectsNote })] : []),
+    ...(!projects
+      ? projectsFailed
+        ? []
+        : [readState(false, t("Reading your project choices…"), "", () => {})]
+      : [folders.length
       ? el(
           "section",
           { class: "card rows" },
           ...folders.map((cwd) => {
-            const p = projects[cwd];
+            const p = known[cwd];
             return el(
               "div",
               { class: "row" },
@@ -446,20 +494,27 @@ function projectsPage(): HTMLElement[] {
                   ],
                   p.species ?? null,
                   async (species) => {
-                    await Bridge.projectSet(cwd, { ...projects[cwd], species: species ?? undefined });
+                    await Bridge.projectSet(cwd, { ...known[cwd], species: species ?? undefined });
                     await refreshProjects();
                   },
                 ),
-                button(t("Forget"), () => {
-                  void Bridge.projectSet(cwd, {})
-                    .catch(() => {})
-                    .finally(() => void refreshProjects());
-                }),
+                confirmed(t("Forget"), t("Mute, pin, hide and bird choices for this project are cleared."), t("Forget project"), () =>
+                  Bridge.projectSet(cwd, {}).then(
+                    () => {
+                      projectsNote = null;
+                      return refreshProjects();
+                    },
+                    () => {
+                      projectsNote = t("Could not forget the project. Its choices still apply.");
+                      render();
+                    },
+                  ),
+                ),
               ),
             );
           }),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: t("No project has a choice yet. Every session shows, in the order it arrived, with its sounds.") })),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("No project has a choice yet. Every session shows, in the order it arrived, with its sounds.") }))]),
   ];
 }
 
@@ -467,11 +522,46 @@ function projectsPage(): HTMLElement[] {
 
 
 /** A row of choices, one on. */
-function segmented<T>(choices: { value: T; label: string }[], current: T, change: (v: T) => Promise<void>): HTMLElement {
+/** Full access, asked: what it stops asking, Cancel (focused) and the grant. */
+function fullAccessConfirm(warning: string): HTMLElement {
+  const about = el("p", { class: "note warn", text: warning });
+  about.id = "full-access-effect";
+  const stop = () => {
+    askingFull = false;
+    render();
+  };
+  const grant = el("button", { class: "btn danger", text: t("Turn on full access") });
+  grant.setAttribute("aria-describedby", about.id);
+  grant.onclick = () => {
+    grant.disabled = true;
+    Bridge.setChatAccess("full").then(
+      () => {
+        chatAccess = "full";
+        askingFull = false;
+        render();
+      },
+      () => {
+        askingFull = false;
+        accessNote = t("Could not turn on full access. Zeca's cards still ask as before.");
+        render();
+      },
+    );
+  };
+  const box = el("div", { class: "row access-confirm" }, el("div", { class: "row-text" }, about), el("div", { class: "actions" }, button(t("Cancel"), stop), grant));
+  box.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    e.stopPropagation();
+    stop();
+  });
+  return box;
+}
+
+function segmented<T>(choices: { value: T; label: string }[], current: T, change: (v: T) => Promise<void>, gate?: (v: T) => boolean): HTMLElement {
   const box = el("div", { class: "segmented" });
   const buttons = choices.map(c => {
     const button = el("button", { text: c.label, onclick: () => {
       if (button.getAttribute("aria-pressed") === "true" || box.getAttribute("aria-busy") === "true") return;
+      if (gate && !gate(c.value)) return;
       const before = choices[buttons.findIndex(button => button.getAttribute("aria-pressed") === "true")]?.value ?? current;
       paint(c.value);
       saveSetting(box, () => change(c.value), () => paint(before));
@@ -1526,19 +1616,28 @@ function chatPage(): HTMLElement[] {
           async (v) => {
             await Bridge.setChatAccess(v);
             chatAccess = v;
+            askingFull = false;
+            accessNote = null;
             render();
+          },
+          // Full access is asked first, below, with what it stops asking; nothing is saved by this click.
+          (v) => {
+            if (v !== "full") return true;
+            askingFull = true;
+            accessNote = null;
+            render();
+            document.querySelector<HTMLElement>(".access-confirm .btn")?.focus();
+            return false;
           },
         ),
         t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
       ),
-      ...(chatAccess === "full"
-        ? [
-            el("p", {
-              class: "note warn",
-              text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."),
-            }),
-          ]
-        : []),
+      ...(askingFull && chatAccess !== "full"
+        ? [fullAccessConfirm(t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."))]
+        : chatAccess === "full"
+          ? [el("p", { class: "note warn", text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") })]
+          : []),
+      ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
     el("h2", { text: t("Memory") }),
     el(
@@ -1693,11 +1792,11 @@ function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): 
     return [
       t("{provider} API key", { provider: p.label }),
       t("Saved in the system keyring."),
-      button(t("Remove"), () => {
+      confirmed(t("Remove"), t("The key leaves the system keyring. This provider stops working until you save a key again."), t("Remove key"), () =>
         Bridge.apiKeyClear(p.id)
           .then(() => done(t("Key removed from the keyring.")))
-          .catch((e) => done(String(e), true));
-      }),
+          .catch((e) => done(String(e), true)),
+      ),
     ];
   }
   const input = document.createElement("input");
@@ -1831,11 +1930,11 @@ function webRows(): HTMLElement[] {
       row(
         t("Search key"),
         t("Saved in the system keyring."),
-        button(t("Remove"), () => {
+        confirmed(t("Remove"), t("The key leaves the system keyring. Web search stops working until you save a key again."), t("Remove key"), () =>
           Bridge.clearWebKey(w.engine)
             .then(() => said(t("Key removed from the keyring.")))
-            .catch((e) => said(String(e), true));
-        }),
+            .catch((e) => said(String(e), true)),
+        ),
       ),
     );
   } else {

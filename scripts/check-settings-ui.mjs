@@ -850,3 +850,34 @@ giteaClear.fire('click'); await tick(); assert.deepEqual(giteaWrites[2],['https:
 finishGitea({baseUrl:'',generation:''}); await tick();
 assert.equal(giteaUrl.value,''); assert.ok(giteaClear.disabled);
 console.log('check-settings-ui: Gitea keeps drafts, clears tokens, serializes saves and requires a separate activation');
+
+// A removal asks in place: the first click runs nothing, Cancel and Escape back out, the second click runs once.
+const piecesBundle = await build({ configFile: false, root: ui, logLevel: "silent", build: {
+  write: false, minify: false, lib: { entry: `${ui}src/surfaces/settings/pieces.ts`, formats: ["es"] },
+} });
+const piecesChunk = piecesBundle[0].output.find(part => part.type === "chunk");
+const { confirmed } = await import(`data:text/javascript;base64,${Buffer.from(piecesChunk.code).toString("base64")}`);
+let removals = 0, finishRemoval;
+const removal = confirmed("Remove", "This permission asks again on its next request.", "Remove permission", () => { removals++; return new Promise(resolve => { finishRemoval = resolve; }); });
+document.body.append(removal);
+const removalButtons = () => removal.querySelectorAll("button");
+assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+removalButtons()[0].fire("click");
+assert.equal(removals, 0, "The first click only asks");
+assert.deepEqual(removalButtons().map(b => b.textContent), ["Cancel", "Remove permission"]);
+assert.equal(document.activeElement.textContent, "Cancel", "Cancel takes the focus, so a held Enter cannot confirm");
+assert.ok(removal.textContent.includes("This permission asks again on its next request."));
+assert.ok(removalButtons()[1].getAttribute("aria-describedby"), "The removal is described by its effect");
+removalButtons()[0].fire("click");
+assert.equal(removals, 0); assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+assert.equal(document.activeElement.textContent, "Remove", "Cancel returns the focus to the action");
+removalButtons()[0].fire("click"); removal.fire("keydown", { key: "Escape" });
+assert.equal(removals, 0); assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+removal.fire("keydown", { key: "Escape" });
+removalButtons()[0].fire("click"); const armed = removalButtons()[1];
+armed.fire("click"); armed.fire("click"); await tick();
+assert.equal(removals, 1, "A repeated click cannot run the removal twice");
+assert.ok(removalButtons().every(b => b.disabled), "Both buttons wait for the removal");
+finishRemoval(); await tick(); await tick();
+assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+console.log('check-settings-ui: a removal asks first, cancels by button or Escape and runs once');

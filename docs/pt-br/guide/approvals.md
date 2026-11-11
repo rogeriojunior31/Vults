@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 74c3c2fdec2f -->
+<!-- source: 14c36dfb8beb -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -64,7 +64,7 @@ o retorno normal ao terminal continua valendo.
 
 Uma política responde cards por você: você a escreve em **Settings → Approvals → Policies**, vê como
 um diff contra a que está em vigor e aceita com um clique. Uma política por pasta de projeto, mais
-uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na hora, e os cards
+uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** pergunta mais uma vez e então desliga na hora, e os cards
 dela voltam a perguntar. O **allow** de políticas continua limitado ao Claude Code. Os outros
 agentes agora mostram a pasta da operação quando ela é informada; ampliar permissões automáticas
 ainda exige validação separada por agente. Para Codex, OpenCode, Qwen Code e Copilot CLI uma política

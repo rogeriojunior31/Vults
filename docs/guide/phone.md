@@ -42,5 +42,5 @@ same rule as on the island ([Approving](approvals.md#answering)).
 
 ## Revoking
 
-**Revoke** beside a phone and nothing it signs is taken from then on. A revoked phone stays in the
+**Revoke** beside a phone, confirm, and nothing it signs is taken from then on. A revoked phone stays in the
 list and cannot pair again under the same keys.
