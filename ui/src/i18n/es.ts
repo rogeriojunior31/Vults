@@ -1680,6 +1680,8 @@ export default {
   "{n} agents need an update.": "{n} agentes necesitan una actualización.",
   "Documentation": "Documentación",
   "Could not open the documentation.": "No se pudo abrir la documentación.",
+  "No voice model is installed yet, so the shortcut records nothing.": "Todavía no hay ningún modelo de voz instalado, así que el atajo no graba nada.",
+  "Choose a voice model": "Elegir un modelo de voz",
   "No agent session yet": "Aún no hay sesiones de agentes",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicia Claude Code, Codex u otro agente en una terminal y su pájaro se posa en el cable. Cuando necesite un permiso, la tarjeta aparece aquí.",
   "Set up agents": "Configurar agentes",

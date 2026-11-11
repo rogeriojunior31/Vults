@@ -202,6 +202,15 @@ window.matchMedia = () => ({ matches: true });
 const measured = createDictationHistory({ load: async () => ({ retention: "30", rows: [], today: { words: 45, secs: 10, count: 1 } }), remove: async () => {}, clear: async () => {}, again: async () => {} }, () => {});
 measured.refresh(); await tick();
 assert.ok(!all(measured.element).some(n => n.className === "dictation-summary"), "Wide history does not duplicate Activity statistics");
+for (const installed of [false, true]) {
+  let opened = 0;
+  const ready = createDictationHistory({ load: async () => ({ retention: "30", rows: [], today: null }), remove: async () => {}, clear: async () => {}, again: async () => {}, voiceInstalled: async () => installed }, () => { opened++; });
+  ready.refresh(); await tick(); await tick();
+  const line = all(ready.element).find(n => n.className === "dictation-readiness");
+  assert.ok(line, "The hero carries the readiness line");
+  assert.equal(line.hidden, installed, installed ? "With a voice model the line stays hidden" : "Without a voice model the hero says the shortcut records nothing");
+  if (!installed) { line.children.find(n => n.tag === "button").listeners.click?.({}); assert.equal(opened, 1, "The line opens dictation settings"); }
+}
 delete window.matchMedia;
 const css = readFileSync(`${root}src/surfaces/nest/nest.css`, "utf8");
 assert.match(css, /#nest\s*>\s*\[role="tabpanel"\]\[hidden\][^{]*\{[^}]*display:\s*none/,

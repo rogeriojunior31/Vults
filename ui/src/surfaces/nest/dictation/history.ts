@@ -12,6 +12,8 @@ export interface DictationBackend {
   remove(id: number): Promise<void>;
   clear(): Promise<void>;
   again(id: number): Promise<void>;
+  /** Whether a local voice model is installed: the shortcut transcribes nothing without one. */
+  voiceInstalled?(): Promise<boolean>;
 }
 
 export function createDictationHistory(backend: DictationBackend, settings: () => void, commandsOnly = false, explore?: () => void) {
@@ -21,6 +23,14 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
   const about = el("p");
   const configure = el("button", { onclick: settings });
   const shortcutKeys = el("div", { class: "dictation-keycaps" });
+  // Shown only when no voice model is installed: the hero would otherwise promise a shortcut that records nothing.
+  let voiceMissing = false;
+  const readinessText = el("span");
+  const readinessAction = el("button", { onclick: settings });
+  const readiness = el("p", { class: "dictation-readiness" }, icon("warning", 14, 2), readinessText, readinessAction);
+  readiness.setAttribute("role", "status");
+  readiness.hidden = true;
+  void backend.voiceInstalled?.().then((installed) => { voiceMissing = !installed; paint(); }, () => {});
   const shortcutAbout = el("p");
   const heroTitle = el("h3");
   const wave = el("div", { class: "dictation-shortcut-wave" });
@@ -30,7 +40,7 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
     bar.style.height = `${16 + Math.round(Math.abs(Math.sin(i * .79) * Math.cos(i * .19)) * 84)}%`;
     wave.append(bar);
   }
-  const hero = el("section", { class: "dictation-hero" }, el("div", { class: "dictation-shortcut" }, el("div", { class: "dictation-shortcut-copy" }, heroTitle, shortcutKeys, shortcutAbout), wave));
+  const hero = el("section", { class: "dictation-hero" }, el("div", { class: "dictation-shortcut" }, el("div", { class: "dictation-shortcut-copy" }, heroTitle, shortcutKeys, shortcutAbout, readiness), wave));
   let boundKeys: Record<string, string> = {};
   const search = el("input", { class: "dictation-search" });
   search.type = "search";
@@ -81,6 +91,9 @@ export function createDictationHistory(backend: DictationBackend, settings: () =
     const binding = boundKeys[commandsOnly ? "talk-command" : "talk"]?.trim();
     shortcutKeys.replaceChildren(...(binding ? binding.split("+").map(key => el("kbd", { text: key })) : [el("span", { text: t("Not bound") })]));
     shortcutKeys.setAttribute("aria-label", binding || t("Not bound"));
+    readiness.hidden = !voiceMissing;
+    readinessText.textContent = t("No voice model is installed yet, so the shortcut records nothing.");
+    readinessAction.textContent = t("Choose a voice model");
     configure.textContent = commandsOnly ? t("Command settings") : t("Dictation settings");
     maintenanceTitle.textContent = t("History options");
     maintenance.hidden = commandsOnly;

@@ -87,6 +87,7 @@ const nest = createNest(
       },
       statistics: Bridge.dictationStatistics,
       load: Bridge.dictationHistory, remove: Bridge.dictationDelete,
+      voiceInstalled: () => Bridge.voiceStatus().then((s) => s.models.some((m) => m.installed)),
       clear: Bridge.dictationClear, again: Bridge.dictationPasteAgain,
       words: Bridge.dictationWords, change: Bridge.changeDictationWords, trySentence: Bridge.dictationTry,
     },

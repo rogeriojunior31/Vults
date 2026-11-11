@@ -2449,6 +2449,8 @@ button.touched-row:hover,
   .nest-chat:has(.approval-queue.on) .nest-memory-toggle span { display: none; }
 }
 
+/* No voice model yet: the hero says so, in the warning role, with the way to fix it. */
+.meeting-check.meeting-unavailable .meeting-workflow, .meeting-check.meeting-unavailable .meeting-preparation { display: none; }
 /* Dictation keeps the shared frame; only the transcript column scrolls. */
 .nest-pane.nest-dictation-pane { padding: 0; display: flex; overflow: hidden; }
 .dictation-area { display: flex; flex: 1; min-width: 0; min-height: 0; }
