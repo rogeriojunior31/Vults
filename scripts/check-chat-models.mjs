@@ -1121,6 +1121,12 @@ for (const specialist of [false, true]) {
   const control = nodes(access.element).find(node => node.classList.contains("access"));
   control.click();
   nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  assert.deepEqual(choices, [], "Picking full access only asks; nothing is saved yet");
+  nodes(access.element).find(node => node.classList.contains("access-cancel")).click();
+  assert.deepEqual(choices, [], "Cancel saves nothing");
+  assert.ok(!nodes(access.element).some(node => node.dataset.choice === "access:grant-full"), "Cancel closes the question and keeps the menu");
+  nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  nodes(access.element).find(node => node.dataset.choice === "access:grant-full").click();
   assert.equal(control.disabled, true, "The access picker waits for persistence");
   assert.ok(control.textContent.includes("Asks first"), "A pending increase does not claim authority");
   nodes(access.element).find(node => node.dataset.choice === "access:policies").click();
@@ -1129,6 +1135,7 @@ for (const specialist of [false, true]) {
   assert.ok(control.textContent.includes("Asks first"));
   assert.ok(access.element.textContent.includes("Your previous choice is still active"));
   nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  nodes(access.element).find(node => node.dataset.choice === "access:grant-full").click();
   requests[1].resolve(); await tick();
   assert.ok(control.textContent.includes("Full access"));
   assert.equal(redirects, 0, "Increasing companion or specialist access stays in Chat");

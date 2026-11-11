@@ -298,7 +298,7 @@ does not change the permission checks. Collapsing a card never grants access.
 - **Your policies**: the [policies](approvals.md#policies) you accepted answer the chat's calls as
   they answer Claude Code's on the island. A deny denies, an allow allows (Claude Code's calls,
   inside the conversation's folder), the rest asks.
-- **Full access**: Settings asks you to confirm it first; then everything runs with no card, but a destructive command (`rm`, a forced push)
+- **Full access**: choosing it, in Settings or in the chat's menu, asks you to confirm first; then everything runs with no card, but a destructive command (`rm`, a forced push)
   still asks, what a policy denies is denied and what a policy asks first still asks. Once the conversation has read content
   from outside (a web page, a fetch, an MCP tool), its cards ask again until it ends: a page's words
   could be steering it. Add `deny` lines to a policy for what must never run.

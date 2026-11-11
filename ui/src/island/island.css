@@ -3467,6 +3467,11 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
   box-sizing: border-box;
   width: 260px;
 }
+.access-confirm { display: grid; gap: 8px; margin-top: 4px; padding: 8px 10px; border-top: 1px solid var(--border); }
+.access-confirm-about { display: flex; gap: 6px; margin: 0; color: var(--warn); font-size: var(--text-s); line-height: 1.5; }
+.access-confirm-about > svg { flex: none; margin-top: 2px; }
+.access-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.access-confirm .access-grant { color: var(--error-text); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--error-text) 45%, transparent); }
 .menu .access-item {
   display: flex;
   flex-direction: column;
