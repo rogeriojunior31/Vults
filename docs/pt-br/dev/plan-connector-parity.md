@@ -1,9 +1,12 @@
 # Paridade do GitLab e Gitea
-<!-- source: c0e71c9bb7f4 -->
+<!-- source: c3df8ade1927 -->
 
 Solicitado em 2026-11-10. O GitHub é a referência de comportamento. Entregar os recursos nativos
 equivalentes com a mesma confirmação, escopo, auditoria e tratamento de falhas. Não anunciar recursos
 pendentes. O Notion vem depois desse trabalho, sem substituí-lo. Manter cobertura do GitHub e Linux.
+
+2026-11-11: a expansão fica adiada a pedido do usuário enquanto a validação funcional do Windows
+tem prioridade. CP1/CP2 estão integrados pelas PRs #414–#417; não iniciar Notion durante esta pausa.
 
 <a id="delivery-sequence"></a>
 ## Sequência de entrega

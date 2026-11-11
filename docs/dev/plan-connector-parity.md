@@ -4,6 +4,9 @@ Requested 2026-11-10. GitHub is the behavior reference. Deliver equivalent nativ
 with the same confirmation, scope, audit and failure behavior. Do not advertise pending features.
 Notion follows this work; it does not replace it. Keep GitHub and Linux regression coverage.
 
+2026-11-11: further expansion is deferred at the user's request while Windows functional validation
+takes priority. CP1/CP2 are integrated through PRs #414–#417; do not start Notion during this pause.
+
 ## Delivery sequence
 
 | Slice | GitLab | Gitea | Acceptance |

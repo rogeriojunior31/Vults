@@ -60,6 +60,8 @@ pub mod save;
 #[path = "windows/notifications.rs"]
 pub mod notifications;
 #[cfg(windows)]
+pub mod windows_process;
+#[cfg(windows)]
 pub mod windows_session;
 #[cfg(windows)]
 pub mod windows_shortcuts;
