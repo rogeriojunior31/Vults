@@ -2447,10 +2447,16 @@ button.touched-row:hover,
   .flock-back { min-height: 28px; margin-top: 4px; }
   .flock-selected .decision-actions {
     position: sticky; bottom: 0; z-index: 1;
+    flex-wrap: wrap;
     padding-block: 8px;
     border-top: 1px solid var(--border); background: var(--float);
   }
+  .flock-selected .decision-actions > :is(.decision-scope, .decision-why) { display: flex; flex: 1 0 100%; }
+  .flock-selected .focus-block :is(.rule-scope, .ask-why) { display: none; }
+  .flock-selected .decision-actions { row-gap: 4px; }
 }
+.decision-scope, .decision-why { display: none; min-width: 0; color: var(--fg-dim); font-size: var(--text-s); overflow-wrap: anywhere; }
+.decision-why { align-items: center; gap: 6px; color: var(--warn); }
 
 @media (max-height: 480px) {
   .nest-chat:has(.approval-queue.on) .chat-titlebar { flex-wrap: nowrap; padding: 4px 8px; gap: 4px; }

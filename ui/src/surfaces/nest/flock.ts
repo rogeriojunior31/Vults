@@ -7,7 +7,7 @@ import { AGENTS } from "../../agents.gen";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { approvalFolder, approvalRuleFolder, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
+import { approvalFolder, approvalRuleFolder, shortPath, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
 import { icon } from "../../island/icons";
 import { usageLabel, usageLevel } from "../../cost";
 
@@ -727,9 +727,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
       ? fid(el("button", { class: "outline", text: t("Always allow"), onclick: answer("always") }), "act:always")
       : null;
     if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: approvalFolder(s, ask) || t("this folder") });
+    // In a short window the reason and folder ride in the fixed bar, so the scope is in view with Deny and
+    // Allow; elsewhere these copies are display:none and the card's own lines are the ones read.
+    const folder = approvalFolder(s, ask);
+    const scope = folder ? Object.assign(el("span", { class: "decision-scope", text: t("Working folder: {path}", { path: shortPath(folder) }) }), { title: folder }) : null;
+    const why = destructive ? el("span", { class: "decision-why" }, icon("warning", 13, 2), el("span", { text: t("Destructive: no policy ever allows it") })) : null;
     return el(
       "div",
       { class: "app-card-actions decision-actions" },
+      why,
+      scope,
       fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), "act:deny"),
       fid(el("button", { class: destructive ? "outline danger" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), kbd(keys.allow)), "act:allow"),
       always,
@@ -788,7 +795,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
             permission.why === "destructive" ? icon("warning", 13, 2) : null,
             el("span", { text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
         : null,
-      permission ? el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ?? t("Not reported") }) }) : null,
+      permission ? Object.assign(el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ? shortPath(approvalFolder(s, permission)!) : t("Not reported") }) }), { title: approvalFolder(s, permission) ?? "" }) : null,
       question ? questionNode(s, question) : null,
       permission ? permissionActions(s, permission) : null,
       el(

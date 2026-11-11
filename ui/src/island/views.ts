@@ -31,6 +31,15 @@ const STATUS_TEXT: Record<SessionView["status"], string> = {
 
 /** The folder the offered action uses, shared by island and Room approvals. */
 export const approvalFolder = (s: SessionView, ask: ApprovalView): string | null => ask.cwd === undefined ? s.cwd : ask.cwd;
+
+/** A folder short enough to read beside a decision: the home folder as ~ and the middle folded,
+ *  keeping the last two folders that name the project. The full path stays in the title. */
+export function shortPath(path: string): string {
+  const sep = path.includes("\\") ? "\\" : "/";
+  const home = path.replace(/^(?:[A-Za-z]:[\\/]Users[\\/][^\\/]+|\/(?:home|Users)\/[^/]+)(?=[\\/]|$)/, "~");
+  const parts = home.split(/[\\/]/).filter((part, i) => part || i === 0);
+  return parts.length <= 4 ? home : [parts[0], "…", ...parts.slice(-2)].join(sep);
+}
 export const approvalRuleFolder = (s: SessionView, ask: ApprovalView): boolean => {
   const folder = approvalFolder(s, ask);
   return folder != null && (folder.startsWith("/") || /^[A-Za-z]:[\\/]/.test(folder));
@@ -361,7 +370,7 @@ function sessionBody(
         el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, laterButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
-        el("div", { class: "ask-what ask-scope", text: t("Working folder: {path}", { path: operationFolder ?? t("Not reported") }) }),
+        Object.assign(el("div", { class: "ask-what ask-scope", text: t("Working folder: {path}", { path: operationFolder ? shortPath(operationFolder) : t("Not reported") }) }), { title: operationFolder ?? "" }),
         // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
         approval.why
           ? el("div", { class: `ask-why ${approval.why}` },
