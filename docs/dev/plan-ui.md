@@ -1973,3 +1973,22 @@ branch and checked in the running app:
 
 Still open: the Linux pass, the footer and Inter decisions, and the Nest countdown (core arrival
 time).
+
+The sixth critique (26/40) found that a request could expire in the Nest without a word, that the
+waiting line and the card answered the same request side by side, and smaller items. Delivered and
+checked in the running app:
+
+- The core view gives each waiting card its deadline (`expires_at`, from its arrival and the wall
+  clock), so the Nest counts to the same moment as the island however late it opened; the card and
+  its row show the clock in the last half minute, and an expired request leaves "No answer in
+  time" with Open terminal. The hook's deadline is unchanged (not paused while looked at).
+- The waiting line is a queue: rows open their request in the card, the one place a single request
+  is answered; "Answer several" is an explicit mode for plain requests only.
+- Mini's spoken name leads with who needs you; Quick's tabs show their names; the Flock count says
+  what it counts. Mini keeps no visible text (ADR 0021).
+- The audit log lives in Settings > Approvals only; Activity's Audit points there with its count.
+  Manage connections appears once; connector errors show commands as code; Traces reads "Rastros";
+  saving the week's image is secondary; the Flock's headings step up; the week's chart keeps an
+  hour's scale; "As recorded" and the volume slider reach 24 px.
+
+Still open: the Linux pass, the footer and Inter decisions.
