@@ -1895,3 +1895,27 @@ and settings tabs, and Dictation's Styles and Diagnostics, which were not captur
 bird on the wire for the empty Flock, a confirmation for Gitea's Remove connection, a failed-read
 state for Connectors, and the page length of Settings in short windows (Dictation still scrolls
 about twenty screens at 480 x 360).
+
+### Design refresh, second pass - plan
+
+The second critique of the running app (2026-11-11, 25/40, up from 22/40) left the items below.
+Each row is one commit on `feat/ui-design-refresh`, validated in the running app with a copy of
+the maintainer's profile and with example sessions, at 1180 x 820 and 480 x 360. The branch stays
+local until every row is done.
+
+| Row | Scope | Done when |
+| --- | --- | --- |
+| DR1 Records precision | Audit names the tool once and shows paths as stored; Cost shows unmeasured tokens as unknown, not 0, and says "at API prices" once; By project shows no bar over "No project yet"; Dictation statistics drops cards that only say Unknown | Each value on Audit, Cost, By project and Dictation statistics is either measured or labelled unknown |
+| DR2 Records signal | The "Summary of loaded records" strip and three stat cards become one summary line; short windows show a record in the first view; History stops repeating the project name on every row | At 480 x 360 the first record of History, Audit and Cost is visible without scrolling |
+| DR3 Language and naming | Known connector errors (gh, glab, Gitea) go through the UI catalog; one noun for connections across the Nest and Settings; Quick has one name in each language; Gitea's form copy matches its layout; raw `String(e)` messages become a sentence with the technical text under Technical details | No English sentence on a pt-BR page in the captures; check-i18n passes |
+| DR4 Decision controls | Nest Deny and Allow are 38 px; skip reads as "Later" with its effect; Pair is disabled with its reason until ready; the Nest card shows the same last-30-seconds countdown as the island | A card in the Nest and in Quick offers the same decision with the same information |
+| DR5 Chat header | Recipient, executor and access stay in the header; folder and profile move to one disclosure; one New; full access is marked wherever it is on | At 480 x 360 the transcript keeps at least 40 px, as DESIGN.md requires, with an empty draft |
+| DR6 Accessibility | Destructive and warning notes carry an icon as well as color; every control has a name (Dictation History and Dictionary); `.look` and `.look-chip` focus differs from hover; reduced motion covers island classes inside the Nest; the selected Activity tab stays in view at 480 px | Keyboard pass over the changed controls; renderer checks cover the names |
+| DR7 Leftovers from the first pass | Gitea Remove connection uses the shared confirmation; Connectors shows a failed read instead of every switch off; Agents states how many need an update; Week leads with a measured figure; Settings > Dictation highlights the model for the spoken language; Meetings puts its actions below the title | Each page matches its siblings in the captures |
+| DR8 First run and help | The empty Flock shows Zeca on the wire beside the next step; About and the pages that name the docs link to them; a copy pass replaces jargon a non-programmer meets first (hooks, Traces, tailnet) with plain sentences, keeping the technical term once | A first-run profile reaches Agents and back with no unexplained term on the way |
+| DR9 Acceptance | Walk every page with the real profile and example data in Dark, Light and Noite Paulista; reproduce failed reads on Projects and Phone; rerun the critique | Score and remaining items recorded here |
+
+Decisions for the maintainer, not taken in this branch: whether Audit moves closer to the card it
+records, whether the footer (Zeca, Open terminal, Back to the island) stays on every Nest page,
+and whether Inter is bundled. The Linux pass (KWin and Wayland placement, input region, meeting
+capture) needs the maintainer's desktop; this branch is validated on the Windows preview build.
