@@ -787,8 +787,12 @@ body.still .compact.needs::after {
   color: var(--fg-muted);
 }
 .ask-why.destructive {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--warn);
 }
+.ask-why > svg { flex: none; }
 .diff {
   display: inline-flex;
   gap: 5px;
@@ -2589,6 +2593,11 @@ button.ghost:hover {
 .look:focus-visible {
   background: color-mix(in srgb, var(--fg) 8%, transparent);
   outline: none;
+}
+.look-chip:focus-visible,
+.look:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .look.on {
   border-color: color-mix(in srgb, var(--fg) 35%, transparent);

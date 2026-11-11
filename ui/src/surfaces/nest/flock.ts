@@ -8,6 +8,7 @@ import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
 import { approvalFolder, approvalRuleFolder, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
+import { icon } from "../../island/icons";
 import { usageLabel, usageLevel } from "../../cost";
 
 export interface FlockActions {
@@ -776,10 +777,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
           )
         : null,
       permission?.why
-        ? el("p", {
-            class: `ask-why ${permission.why}`,
-            text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this"),
-          })
+        ? el("p", { class: `ask-why ${permission.why}` },
+            permission.why === "destructive" ? icon("warning", 13, 2) : null,
+            el("span", { text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
         : null,
       permission ? el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ?? t("Not reported") }) }) : null,
       question ? questionNode(s, question) : null,

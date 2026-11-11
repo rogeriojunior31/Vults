@@ -564,6 +564,8 @@ export function createNest(
     void placeSaved.catch(() => {});
   };
 
+  // A narrower window can push the selected part out of the strip: bring it back.
+  window.addEventListener("resize", () => subButtons.find((b) => b.dataset.sub === sub)?.scrollIntoView({ block: "nearest", inline: "nearest" }));
   function showSub(id: Sub): void {
     sub = id;
     for (const s of SUBS) subPanes[s].hidden = s !== id;

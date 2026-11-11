@@ -526,7 +526,7 @@ function projectsPage(): HTMLElement[] {
 /** A row of choices, one on. */
 /** Full access, asked: what it stops asking, Cancel (focused) and the grant. */
 function fullAccessConfirm(warning: string): HTMLElement {
-  const about = el("p", { class: "note warn", text: warning });
+  const about = el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: warning }));
   about.id = "full-access-effect";
   const stop = () => {
     askingFull = false;
@@ -1639,7 +1639,7 @@ function chatPage(): HTMLElement[] {
       ...(askingFull && chatAccess !== "full"
         ? [fullAccessConfirm(t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."))]
         : chatAccess === "full"
-          ? [el("p", { class: "note warn", text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") })]
+          ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") }))]
           : []),
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),

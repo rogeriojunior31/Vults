@@ -364,10 +364,9 @@ function sessionBody(
         el("div", { class: "ask-what ask-scope", text: t("Working folder: {path}", { path: operationFolder ?? t("Not reported") }) }),
         // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
         approval.why
-          ? el("div", {
-              class: `ask-why ${approval.why}`,
-              text: approval.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this"),
-            })
+          ? el("div", { class: `ask-why ${approval.why}` },
+              approval.why === "destructive" ? icon("warning", 13, 2) : null,
+              el("span", { text: approval.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
           : null,
         el(
           "div",

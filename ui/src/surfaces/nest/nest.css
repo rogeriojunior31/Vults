@@ -2398,6 +2398,14 @@ button.touched-row:hover,
 .flock-welcome p { margin: 8px 0 0; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); }
 .flock-welcome .primary { margin-top: 16px; }
 .session-files .touched { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  #nest *,
+  #nest *::before,
+  #nest *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
 .session-recent .activity-row { min-width: 0; }
 .session-recent .activity-row strong { overflow-wrap: anywhere; }
 @media (max-width: 760px) {
