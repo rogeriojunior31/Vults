@@ -1866,3 +1866,32 @@ hashes match their reviewed translations. No dependency or permission rule chang
 branch is based on current main without conflicts. Native development remains open; fresh desktop
 visual acceptance and a current screenshot are still pending with no available computer-use
 surface. Preserve this limitation in the PR checklist rather than claiming automated visual QA.
+
+### Design refresh - 2026-11-11
+
+A running-app review of every Settings page, Nest route and Quick, at 1180 x 820 and 480 x 360 in
+Dark and English, with an isolated profile and four example sessions replayed through the hook
+relay (two waiting requests, one destructive). Delivered on `feat/ui-design-refresh`:
+
+- The empty Flock says what brings a bird to the wire and opens Settings at Agents; Agents leads
+  with the agents found on this computer and folds the others.
+- Approvals, Projects and Phone show reading and failed-read states with a retry instead of an
+  empty state. Remove, Forget and Revoke ask in place through one component; Full access shows
+  what it stops asking and waits for a second click.
+- Settings uses one 760 px reading column, one section-heading pattern and a stable scrollbar
+  gutter; the eight longest descriptions keep their effect in view and fold the rest under More.
+- In windows up to 480 px high, Deny and Allow stay at the foot of the Flock card.
+- Font sizes sit on the role scale (11, 12, 13, 15, 18, 20, 24); the working folder on a card is
+  readable in the Nest and wraps in Quick.
+
+Native checks performed on the Windows preview build: every page above in both sizes (no page
+overflows horizontally), the Full access and Forget confirmations (first click saves nothing,
+Cancel and Escape back out), a failed read on Approvals, and the destructive card at 480 x 360.
+`scripts/check-settings-ui.mjs` covers the confirmation component.
+
+Still required: the same pass on Linux (the primary target) and in the Light and SP Night themes;
+failed reads on Projects and Phone in the app (only Approvals was reproduced); Quick's Chat, Week
+and settings tabs, and Dictation's Styles and Diagnostics, which were not captured. Not done: a
+bird on the wire for the empty Flock, a confirmation for Gitea's Remove connection, a failed-read
+state for Connectors, and the page length of Settings in short windows (Dictation still scrolls
+about twenty screens at 480 x 360).

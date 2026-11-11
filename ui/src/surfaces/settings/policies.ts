@@ -57,6 +57,7 @@ export async function refreshPolicies(render: () => void): Promise<void> {
 
 function editor(render: () => void): HTMLElement {
   const area = el("textarea", { class: "policy-editor" });
+  area.setAttribute("aria-label", t("Policy text"));
   area.spellcheck = false;
   area.value = draft ?? "";
   area.rows = 10;

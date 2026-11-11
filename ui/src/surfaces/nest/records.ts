@@ -416,7 +416,7 @@ export function createHistory(load: () => Promise<HistoryView>, query?: RecordsB
     return [
       heading(t("History"), h.on
           ? t(
-              "Each finished turn of your agents, counted on this computer. The week's recap and the year's grid are in Settings, Activity.",
+              "Each finished turn of your agents, counted on this computer. The week's recap and the year's grid are in Week.",
             )
           : t(
               "Settings, Activity keeps no history now: turn it on there to see your agents' turns here.",

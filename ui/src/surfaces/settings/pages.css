@@ -215,6 +215,8 @@ code {
   background: color-mix(in srgb, var(--ok) 14%, transparent);
   color: var(--ok);
 }
+/* Light: the darker green needs a paler tint under it to keep the text floor. */
+[data-theme="light"] .badge.ok { background: color-mix(in srgb, var(--ok) 8%, transparent); }
 .badge.warn {
   background: color-mix(in srgb, var(--warn) 14%, transparent);
   color: var(--warn);
@@ -225,7 +227,7 @@ code {
 }
 .badge.off {
   background: color-mix(in srgb, var(--fg) 6%, transparent);
-  color: var(--fg-muted);
+  color: var(--fg-dim);
 }
 
 .actions {
@@ -487,6 +489,7 @@ code {
   font-weight: 600;
   color: var(--fg-bright);
 }
+.diff:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .diff {
   margin: 0;
   max-height: 300px;

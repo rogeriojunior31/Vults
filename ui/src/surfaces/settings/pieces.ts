@@ -177,5 +177,9 @@ export function diff(text: string): HTMLElement {
     const kind = line.startsWith("+++") || line.startsWith("---") ? "meta" : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : line.startsWith("@@") ? "hunk" : "";
     pre.append(el("span", { class: `dl ${kind}`, text: `${line}\n` }));
   }
+  // The diff is what the user approves: it takes the focus so the keyboard can scroll all of it.
+  pre.tabIndex = 0;
+  pre.setAttribute("role", "region");
+  pre.setAttribute("aria-label", t("Configuration diff"));
   return pre;
 }

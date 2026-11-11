@@ -740,7 +740,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const words = s.skipped || (detail === "session" && !ask && !ended) ? null : ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
     const question = ask && ask.questions.length ? ask : null;
     const permission = ask && !question ? ask : null;
-    const command = permission ? [permission.tool, permission.full ?? permission.target].filter(Boolean).join(" · ") : null;
+    // The target already names its tool; only the uncut command needs it put back in front (as on the island).
+    const command = permission ? (permission.full ? `${permission.tool} · ${permission.full}` : permission.target) : null;
     const tag = el("span", { class: "agent-tag" }, el("span", { class: "agent-dot" }), el("span", { text: agentName(s) }));
     tag.style.color = colorOf(s.agent);
     tag.title = agentName(s);
@@ -972,7 +973,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const overview = (s: SessionView): HTMLElement[] => {
     const go = (id: Detail) => { detail = id; remember(); draw(); };
     const metric = (label: string, value: string, extra: HTMLElement | null = null) =>
-      el("div", { class: "session-metric" }, el("dt", { text: label }), el("dd", { text: value }), extra);
+      el("div", { class: "session-metric" }, el("dt", { text: label }), el("dd", { class: value === t("Not reported") || value === t("Price unavailable") ? "unknown" : "", text: value }), extra);
     const metrics = el("dl", { class: "session-metrics" },
       metric(responseTime(s) ? t("Model response time") : t("Running time"), runningTime(s)),
       metric(t("Cost so far"), sessionCost(s)),
