@@ -61,7 +61,7 @@ gtk = "0.18"
 
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.39"
-windows-core = "0.62"
+windows-core = "0.100"
 
 [features]
 voice-vulkan = ["vults-voice/vulkan"]
