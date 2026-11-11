@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 76d2b57613dc -->
+<!-- source: b65ff307f826 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -14,7 +14,7 @@ e um botão
 **Open Activity**; o resumo e o calendário ficam no Nest. Tudo é contado neste
 computador, a partir de um histórico local que o Vults guarda enquanto os seus agentes trabalham.
 
-O Nest organiza Atividade em sete telas, com o mesmo estilo de navegação e resumo:
+O Nest organiza Atividade em seis telas, com o mesmo estilo de navegação e resumo:
 
 - **Week**: totais, tempo por dia, a grade anual e um resumo para salvar. Selecione um dia para
   ler a duração exata; **Como a atividade é contada** explica as regras de contagem.
@@ -25,9 +25,9 @@ O Nest organiza Atividade em sete telas, com o mesmo estilo de navegação e res
 - **History**: turnos concluídos agrupados por projeto, com resultado, agente, contagens e duração.
 - **Cost**: orçamento de hoje, janelas dos planos, custo e tokens das últimas duas semanas e custo por projeto.
 - **Traces**: turnos do chat do Zeca e suas chamadas de ferramentas, com estado, tempo e contagens de tokens disponíveis.
-- **Audit**: quantas respostas o log guarda e a última, com **Open in Approvals**: o log em si fica
-  em **Settings → Approvals**, junto das regras e políticas cujas respostas ele registra
-  ([O que foi respondido](approvals.md#what-was-answered)).
+
+O log da resposta de cada card não fica aqui: ele está em **Settings → Approvals**, junto das regras
+e políticas cujas respostas ele registra ([O que foi respondido](approvals.md#what-was-answered)).
 
 O Histórico, como o log de auditoria em Aprovações, mostra os 200 registros mais recentes. Seus resumos descrevem os registros
 carregados naquela tela, e a busca filtra a lista sem alterar esses totais. Os títulos dos grupos

@@ -447,6 +447,9 @@ export function createNest(
   const subButtons = SUBS.map((id) => {
     const b = el("button", { class: "nest-sub", onclick: () => showSub(id) });
     b.dataset.sub = id;
+    // The audit log lives in Settings > Approvals: Activity no longer offers it as a tab. The route
+    // stays, so a saved place or a link still lands on the pointer to it.
+    if (id === "audit") b.hidden = true;
     return b;
   });
   const part = (id: Sub) => {

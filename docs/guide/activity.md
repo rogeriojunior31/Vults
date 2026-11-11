@@ -12,7 +12,7 @@ grid. **Settings → History and budget** keeps the history and daily budget con
 **Open Activity** button; the recap and calendar have one home in the Nest. Activity is counted on this computer,
 from a local history that Vults keeps as your agents work.
 
-The Nest groups Activity into seven views, with the same navigation and summary style:
+The Nest groups Activity into six views, with the same navigation and summary style:
 
 - **Week**: totals, time per day, the yearly grid and a recap to save. Select a day to read its
   exact duration; **How activity is counted** explains the counting rules.
@@ -22,9 +22,9 @@ The Nest groups Activity into seven views, with the same navigation and summary 
 - **History**: finished turns grouped by project, with the result, agent, counts and duration.
 - **Cost**: today's budget, plan windows, the last two weeks of cost and tokens, and cost by project.
 - **Traces**: Zeca's chat turns and their tool calls, with status, time and available token counts.
-- **Audit**: how many answers the log keeps and the last one, with **Open in Approvals**: the log
-  itself is in **Settings → Approvals**, beside the rules and policies whose answers it records
-  ([What was answered](approvals.md#what-was-answered)).
+
+The log of every card's answer is not here: it is in **Settings → Approvals**, beside the rules
+and policies whose answers it records ([What was answered](approvals.md#what-was-answered)).
 
 History, like the audit log in Approvals, shows the latest 200 records. Their summaries describe the records loaded in
 that view, and searching filters the list without changing those totals. Group headings show
