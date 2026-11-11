@@ -1935,3 +1935,12 @@ labels that still carry the metaphor or jargon ("on the wire", "By roost", "Trac
 dictation's work area not saying when no voice model is installed, Meetings drawing its stepper on
 platforms that cannot record, the 480 x 360 Nest spending most of its height on header, attention
 strip and footer, and the Activity and Connections split between the Nest and Settings.
+
+After the final critique (2026-11-11), the four items it left open were delivered on the same
+branch: dictation's work area says when no voice model is installed and Meetings shows only the
+reason on a platform that cannot record; the flock's data labels are plain ("4 sessions · 1
+working", "By project", "no metrics yet") while the scene keeps the birds; windows up to 480 px
+high fold the attention strip and the narrow Chat bar fits in two rows; Settings names its pages
+"History and budget" and "Connection setup", leaving Activity and Connections to the Nest. Each
+was checked in the running app on the Windows preview build. The Linux pass and the three
+maintainer decisions above remain.
