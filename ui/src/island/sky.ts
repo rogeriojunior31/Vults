@@ -16,8 +16,8 @@ export type SkyPerch = { x: number; y: number; scale: number };
 export type SkyBox = {
   left: number; top: number; width: number; height: number; radius: number;
   /** The cards in the sky's coordinates: a visitor passes behind them, never over their text,
-   *  and the flock behind a connector's card among them (`Sky.boardRect`). */
-  cards?: { left: number; top: number; width: number; height: number; radius: number }[];
+   *  and the flock behind a connector's card and every card holding a decision. */
+  cards?: { left: number; top: number; width: number; height: number; radius: number; decision?: boolean }[];
 };
 /**
  * A species whose signature happens in the air (Rüppell's climbs higher, the lesser yellow-headed
@@ -101,9 +101,10 @@ export class Sky {
   private anchors = new Map<string, SkyPerch>();
   private box: SkyBox = { left: 0, top: 0, width: WIDTH, height: 40, radius: 14 };
   private colors: Record<string, string> | null = null;
-  /** The open connector's card, from `box.cards`: the flock passes behind it, as a visitor does.
-   *  Only that card: over the overview's cards the flock still flies in front. */
-  private board: NonNullable<SkyBox["cards"]>[number] | null = null;
+  /** The open connector's card and the cards holding a decision, from `box.cards`: the flock passes
+   *  behind them, as a visitor does, so a bird never crosses Allow or Deny. Over the overview's
+   *  other cards the flock still flies in front. */
+  private shields: NonNullable<SkyBox["cards"]> = [];
 
   constructor(private readonly changed: () => void) {
     this.canvas.className = "scene flock-sky";
@@ -275,7 +276,8 @@ export class Sky {
   place(anchors: Map<string, SkyPerch>, box: SkyBox): void {
     this.anchors = anchors;
     this.box = box;
-    this.board = this.boardRect(box);
+    const board = this.boardRect(box);
+    this.shields = (box.cards ?? []).filter((c) => c === board || c.decision);
     const now = Clock.now();
     for (const [id, f] of this.birds) {
       const at = anchors.get(id);
@@ -296,7 +298,7 @@ export class Sky {
   }
 
   /** Which of the box's cards is a connector's card (render.ts measures them all alike). */
-  private boardRect(box: SkyBox): Sky["board"] {
+  private boardRect(box: SkyBox): NonNullable<SkyBox["cards"]>[number] | null {
     const el = box.cards?.length ? this.canvas.parentElement?.querySelector(".board") : null;
     if (!el) return null;
     const r = el.getBoundingClientRect(), sky = this.canvas.getBoundingClientRect();
@@ -342,9 +344,9 @@ export class Sky {
     ctx.roundRect(b.left * this.dpr, b.top * this.dpr, b.width * this.dpr, b.height * this.dpr,
       [0, 0, b.radius * this.dpr, b.radius * this.dpr]);
     ctx.clip();
-    // The flock (sessions and scouts) passes behind a connector's card, never over its text.
+    // The flock (sessions and scouts) passes behind a connector's card and a decision, never over them.
     ctx.save();
-    if (this.board) behind(ctx, [this.board], this.canvas, this.dpr);
+    if (this.shields.length) behind(ctx, this.shields, this.canvas, this.dpr);
     for (const [id, f] of this.birds) {
       if (calm) {
         if (f.airborne) { f.airborne = false; changed = true; }

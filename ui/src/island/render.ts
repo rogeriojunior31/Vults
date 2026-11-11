@@ -1554,7 +1554,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       const c = card.getBoundingClientRect();
       const kind = card.classList.contains("board") ? "board" : "card";
       if (!radius.has(kind)) radius.set(kind, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
-      out.push({ left: c.left - sky.left, top: c.top - sky.top, width: c.width, height: c.height, radius: radius.get(kind)! });
+      // A card that answers something (Allow/Deny, a question's choices): the flock passes behind it.
+      const decision = kind === "card" && card.querySelector(".actions .btn, .question-card .choice") !== null;
+      out.push({ left: c.left - sky.left, top: c.top - sky.top, width: c.width, height: c.height, radius: radius.get(kind)!, decision });
     }
     return out;
   }
