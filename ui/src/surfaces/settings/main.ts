@@ -368,6 +368,12 @@ function approvalsPage(): HTMLElement[] {
       class: "lede",
       text: t("Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder."),
     }),
+    // What answers without a card is not only these rules: Zeca's chat access says so here too.
+    ...(chatAccess === "ask" ? [] : [el("section", { class: "card read-state" },
+      el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: chatAccess === "full"
+        ? t("Zeca's chat runs with full access: its commands and edits run without a card. Destructive commands, and what a policy denies or asks first, still ask.")
+        : t("Zeca's chat follows your policies: what they allow runs without a card.") })),
+      button(t("Chat & voice"), () => choosePage("chat")))]),
     ...(rulesFailed
       ? [readState(true, "", t("Could not read your always-allowed permissions. What is allowed is unknown until this is read."), () => void refreshRules())]
       : []),
@@ -405,7 +411,7 @@ function approvalsPage(): HTMLElement[] {
             ),
           ),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: t("Nothing is always allowed. Every permission asks.") }))]),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("No Always rule. Every agent permission asks.") }))]),
     ...policiesSection(render),
   ];
 }
@@ -2485,7 +2491,7 @@ Bridge.onSettings((s) => {
   // The chat's own picker gave some access back.
   if (s.chatAccess !== undefined && s.chatAccess !== chatAccess) {
     chatAccess = s.chatAccess;
-    if (page === "chat") render();
+    if (page === "chat" || page === "approvals") render();
   }
   if (s.dndUntil !== undefined) {
     dndUntil = s.dndUntil;

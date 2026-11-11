@@ -220,7 +220,7 @@ export function policiesSection(render: () => void): HTMLElement[] {
           { class: "card" },
           el("p", {
             class: "note",
-            text: t("No policy. Every card asks you."),
+            text: t("No policy. Your agents' cards ask you."),
           }),
         )
       : null,
