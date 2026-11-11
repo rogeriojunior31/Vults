@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 648c3a0a6931 -->
+<!-- source: d9ad9189f914 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -340,7 +340,7 @@ abrem o único lugar que liga um conector ([Conectores](connectors.md)).
 <a id="agent-profiles"></a>
 ## Perfis de agentes
 
-Abra **Bando > Perfis de agentes** para consultar os perfis integrados de Desenvolvedor, Revisor e
+Abra **Bando > Especialistas** para consultar os perfis integrados de Desenvolvedor, Revisor e
 Pesquisador. Escolha um cartão para ler suas instruções e a revisão explícita. **Criar perfil** abre
 um editor próprio em branco: informe seu nome e suas instruções sem escolher ou copiar um perfil
 integrado. **Criar uma cópia** continua disponível nos perfis integrados e preenche o mesmo editor

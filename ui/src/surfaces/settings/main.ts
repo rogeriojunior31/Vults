@@ -1740,7 +1740,7 @@ function voiceRows(): HTMLElement[] {
   const named = (code: string) => LANGUAGES.find((l) => l.value === code)?.label ?? code;
   const language = row(
     t("Language you speak"),
-    t("Telling whisper the language makes short phrases far more reliable than detecting it."),
+    t("Telling the speech model your language makes short phrases far more reliable than detecting it."),
     dropdown<string | null>(
       [
         { value: null, label: status.system ? t("System ({name})", { name: named(status.system) }) : t("System") },
@@ -1783,7 +1783,7 @@ function voiceRows(): HTMLElement[] {
         // The model that suits the spoken language: Base is weak outside English.
         !status.models.some((x) => x.installed) && m.id === (/^(en|auto)/.test(status.language ?? status.system ?? "en") ? "base" : "small"),
       );
-    return row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} from the whisper.cpp models on Hugging Face, checked before use", { size: mb }), control);
+    return row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} speech model, downloaded and checked before use (whisper.cpp, from Hugging Face)", { size: mb }), control);
   });
   return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
 }

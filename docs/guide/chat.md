@@ -395,7 +395,7 @@ from outside.
 
 ## Agent profiles
 
-Open **Flock → Agent profiles** to create an agent, copy a template, or edit a custom agent.
+Open **Flock → Specialists** to create an agent, copy a template, or edit a custom agent.
 The animated bird, instructions and searchable pinned skills belong to the profile. Skills guide
 behavior; they never grant tools or permissions. Save records the content and execution defaults
 locally without starting a model. **Conversation defaults** changes a template's preferences without
@@ -464,7 +464,7 @@ another window, change its profile identity or close a running turn's approval c
 
 ### GitHub for Developer and Reviewer
 
-In **Flock → Agent profiles**, select **Developer** or **Reviewer**, enter one exact repository as
+In **Flock → Specialists**, select **Developer** or **Reviewer**, enter one exact repository as
 `owner/name`, then click **Enable GitHub**. The GitHub connector must already be enabled and have
 request budget available. The saved grant shows its account and host before you start a turn.
 Each profile is independent, starts disabled and works with Zeca off. Copies inherit no grant.

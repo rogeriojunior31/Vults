@@ -611,7 +611,7 @@ export function createNest(
   }
   const relabel = () => {
     recipientPicker.setAttribute("aria-label", t("Recipient"));
-    profilesLink.textContent = t("Agent profiles");
+    profilesLink.textContent = t("Specialists");
     profiles.relabel();
     const subWords: Record<Sub, string> = {
       week: t("Week"),

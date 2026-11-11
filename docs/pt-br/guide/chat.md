@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 199f9749ed50 -->
+<!-- source: 9392871a02d4 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -450,7 +450,7 @@ lido de fora.
 
 ## Perfis de agentes
 
-Abra **Bando → Perfis de agentes** para criar um agente, copiar um modelo ou editar um agente
+Abra **Bando → Especialistas** para criar um agente, copiar um modelo ou editar um agente
 personalizado. O urubu animado, as instruções e as skills fixadas com busca pertencem ao perfil.
 Skills orientam o comportamento; nunca concedem ferramentas ou permissões. Salvar registra o
 conteúdo e os padrões de execução localmente, sem iniciar um modelo. **Padrões da conversa** altera
@@ -526,7 +526,7 @@ de um turno em andamento.
 
 ### GitHub para Desenvolvedor e Revisor
 
-Em **Bando → Perfis de agentes**, selecione **Desenvolvedor** ou **Revisor**, informe um repositório
+Em **Bando → Especialistas**, selecione **Desenvolvedor** ou **Revisor**, informe um repositório
 exato como `owner/name` e clique em **Ativar GitHub**. A conexão GitHub já deve estar ligada e ter
 saldo de requisições. A autorização salva mostra conta e host antes de iniciar um turno. Cada perfil
 é independente, começa desligado e funciona com Zeca desligado. Cópias não herdam autorização.

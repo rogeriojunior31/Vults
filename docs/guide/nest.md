@@ -88,7 +88,7 @@ its unsaved text and selection during an unrelated update.
 
 ## Agent profiles
 
-Open **Flock > Agent profiles** to inspect the built-in Developer, Reviewer and Researcher profiles.
+Open **Flock > Specialists** to inspect the built-in Developer, Reviewer and Researcher profiles.
 Choose a card to read its instructions and explicit revision. **Create profile** opens a dedicated
 blank editor: enter your own name and instructions without choosing or copying a preset.
 **Create a copy** remains available on built-in profiles and fills the same editor with that
