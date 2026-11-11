@@ -279,6 +279,7 @@ pub fn run() {
             runtime::alert_open,
             runtime::alert_dismiss,
             runtime::board_open,
+            open_docs,
             runtime::board_merge,
             connectors::connectors_status,
             connectors::connector_zeca_tools,
@@ -1220,6 +1221,16 @@ fn listen_shortcuts(app: &AppHandle) {
 #[tauri::command]
 fn first_name() -> Option<String> {
     vults_chat::user::first_name()
+}
+
+/// About's Documentation link: the browser opens the one fixed address, never a page's own URL.
+#[tauri::command]
+fn open_docs<R: tauri::Runtime>(app: AppHandle<R>, webview: tauri::Webview<R>) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    settings_page(&webview)?;
+    app.opener()
+        .open_url(vults_brand::DOCS_URL, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// The island's gear button, or a link to one section (`agents`, `chat`…).

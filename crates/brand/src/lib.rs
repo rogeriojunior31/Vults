@@ -8,6 +8,8 @@ pub const SLUG: &str = "vults";
 /// Display name: window titles, tray, user-facing text.
 pub const NAME: &str = "Vults";
 pub const BUNDLE_ID: &str = "io.github.rogeriojunior31.vults";
+/// The published user documentation (README.md links the same address).
+pub const DOCS_URL: &str = "https://rogeriojunior31.github.io/en/docs/vults/";
 /// Prefix of every environment variable the app reads.
 pub const ENV_PREFIX: &str = "VULTS_";
 /// Name of the hook binary the agents run, without the platform extension.

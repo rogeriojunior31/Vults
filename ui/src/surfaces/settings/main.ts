@@ -1975,6 +1975,9 @@ function webRows(): HTMLElement[] {
 
 // ── About ────────────────────────────────────────────────────────────────────
 
+/** What opening the documentation said, when it failed. */
+let aboutNote: string | null = null;
+
 function aboutPage(): HTMLElement[] {
   return [
     el("h1", { text: t("About") }),
@@ -1988,6 +1991,11 @@ function aboutPage(): HTMLElement[] {
         el("div", { class: "card-title", text: "Vults" }),
         el("p", { class: "row-about", text: t("A friendly flock watching your coding agents. MIT licensed; no telemetry.") }),
         version ? el("p", { class: "note", text: t("Version {version}", { version }) }) : null,
+        el("div", { class: "actions about-actions" }, button(t("Documentation"), () => {
+          aboutNote = null;
+          Bridge.openDocs().catch((e) => { aboutNote = failure(t("Could not open the documentation."), e); render(); });
+        })),
+        aboutNote ? el("p", { class: "note error", text: aboutNote }) : null,
       ),
     ),
     el(

@@ -1678,6 +1678,8 @@ export default {
   "Reading your connections…": "Lendo suas conexões…",
   "1 agent needs an update.": "1 agente precisa de atualização.",
   "{n} agents need an update.": "{n} agentes precisam de atualização.",
+  "Documentation": "Documentação",
+  "Could not open the documentation.": "Não foi possível abrir a documentação.",
   "No agent session yet": "Nenhuma sessão de agente ainda",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicie o Claude Code, o Codex ou outro agente em um terminal e o pássaro dele pousa no fio. Quando ele precisar de uma permissão, o cartão aparece aqui.",
   "Set up agents": "Configurar agentes",

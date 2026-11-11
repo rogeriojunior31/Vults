@@ -278,6 +278,7 @@ code {
 .confirm .actions { flex-wrap: wrap; }
 .read-state { align-items: flex-start; gap: 12px; }
 .note.with-icon { display: flex; align-items: flex-start; gap: 8px; }
+.about-actions { justify-content: flex-start; margin-top: 8px; }
 .note.with-icon > svg { flex: none; margin-top: 2px; }
 .read-state .note { margin: 0; }
 .read-state .btn { align-self: flex-start; }

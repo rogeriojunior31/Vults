@@ -1678,6 +1678,8 @@ export default {
   "Reading your connections…": "正在读取你的连接…",
   "1 agent needs an update.": "1 个智能体需要更新。",
   "{n} agents need an update.": "{n} 个智能体需要更新。",
+  "Documentation": "文档",
+  "Could not open the documentation.": "无法打开文档。",
   "No agent session yet": "还没有智能体会话",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "在终端中启动 Claude Code、Codex 或其他智能体，它的鸟就会落在线上。当它需要权限时，卡片会出现在这里。",
   "Set up agents": "设置智能体",
