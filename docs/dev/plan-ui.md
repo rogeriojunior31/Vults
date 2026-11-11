@@ -1923,3 +1923,15 @@ Decisions for the maintainer, not taken in this branch: whether Audit moves clos
 records, whether the footer (Zeca, Open terminal, Back to the island) stays on every Nest page,
 and whether Inter is bundled. The Linux pass (KWin and Wayland placement, input region, meeting
 capture) needs the maintainer's desktop; this branch is validated on the Windows preview build.
+
+DR9 acceptance (2026-11-11, Windows preview build): every page walked with a copy of the
+maintainer's profile (Noite Paulista, pt-BR) and with example sessions in Dark and Light, at
+1180 x 820 and 480 x 360. No page scrolls horizontally, no visible text is under 4.5:1, and every
+font size is on the scale except the single-glyph 9px badges. Failed reads on Approvals were
+reproduced in the app; Projects, Phone and Connections are covered by check-settings-ui. The final
+critique scored 26/40 (22 before the first pass, 25 after it) and found full access granted in one
+click from the chat's own menu; that path now asks like Settings. Open after this branch: data
+labels that still carry the metaphor or jargon ("on the wire", "By roost", "Traces", "Step 0"),
+dictation's work area not saying when no voice model is installed, Meetings drawing its stepper on
+platforms that cannot record, the 480 x 360 Nest spending most of its height on header, attention
+strip and footer, and the Activity and Connections split between the Nest and Settings.
