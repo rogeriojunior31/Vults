@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 03bac43a3c59 -->
+<!-- source: 3755b2882a8c -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -175,7 +175,9 @@ O Nest conta até o mesmo momento que a ilha, não importa quando abriu: um card
 linha dele em **Waiting for you** mostram o mesmo relógio. Quando um que ele mostrava volta sem resposta,
 **Flock** diz *No answer in time: storefront asks in its terminal now.*, com **Open terminal**
 quando ele pode ser trazido, até você dispensar o aviso, e a sessão diz *Asking in its terminal*
-até o próximo passo.
+até o próximo passo. Até lá o card dela guarda o pedido, *Request that went back to the terminal*,
+com o comando que ele pergunta lá; quando o Vults não consegue trazer esse terminal, o card diz a
+pasta em que ele roda, com **Copy folder**.
 
 Enquanto espera, um card sobe uma escada, para que um card que você perdeu chegue até você:
 

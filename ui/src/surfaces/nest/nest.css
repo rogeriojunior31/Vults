@@ -1328,6 +1328,35 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   gap: 8px;
   margin-top: 16px;
 }
+/* A request that went back to the terminal unanswered: what it asks there, in the card's own
+   command box, under a quiet amber heading (it is waiting on you, but not here). */
+.returned-request {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.returned-request h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+}
+.returned-request .command {
+  margin-top: 8px;
+}
+.returned-request .rule-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 8px;
+}
+.nest-flock-tab .returned-folder {
+  min-height: 24px;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--fg);
+}
 .rule-scope {
   margin: 10px 0 0;
   font-size: var(--text-s);
@@ -2473,6 +2502,8 @@ button.touched-row:hover,
   }
   .flock-selected .decision-actions > :is(.decision-scope, .decision-why) { display: flex; flex: 1 0 100%; }
   .flock-selected .focus-block :is(.rule-scope, .ask-why) { display: none; }
+  /* With no decision there is no bar to carry it: the terminal's folder stays. */
+  .flock-selected .focus-block .returned-request .rule-scope { display: flex; }
   .flock-selected .decision-actions { row-gap: 4px; }
 }
 .decision-scope, .decision-why { display: none; min-width: 0; color: var(--fg-dim); font-size: var(--text-s); overflow-wrap: anywhere; }

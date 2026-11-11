@@ -155,7 +155,9 @@ The Nest counts to the same moment as the island, however late it opened: a card
 its row in **Waiting for you** show the same clock. When one it showed goes back unanswered, **Flock** says
 *No answer in time: storefront asks in its terminal now.*, with **Open terminal** when it can be
 brought up, until you dismiss it, and the session reads *Asking in its terminal* until its next
-step.
+step. Until then its card keeps the request, *Request that went back to the terminal*, with the
+command it asks there; when Vults cannot bring that terminal up, the card names the folder it runs
+in, with **Copy folder**.
 
 While it waits, a card climbs a ladder, so a card you missed reaches you:
 

@@ -1881,10 +1881,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     window.clearTimeout(expiryTimer);
     const box = card?.querySelector<HTMLElement>(".expiry");
     if (!box || !cardOnScreen) return;
-    const expiresAt = typeof cardOnScreen.expires_at === "number"
-      ? cardOnScreen.expires_at
-      : ((requestSeen.get(cardOnScreen.request) ?? Clock.now()) + EXPIRES_MS) / 1000;
-    const left = secondsLeft(expiresAt, Clock.now());
+    // `expires_at` is wall-clock Unix seconds; the island's own Clock is monotonic.
+    const left = typeof cardOnScreen.expires_at === "number"
+      ? secondsLeft(cardOnScreen.expires_at)
+      : secondsLeft(((requestSeen.get(cardOnScreen.request) ?? Clock.now()) + EXPIRES_MS) / 1000, Clock.now());
     if (!box.classList.contains("on")) {
       box.classList.add("on");
       // It adds a line to the card: the island grows with it.

@@ -288,12 +288,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
   // A request this tab showed that nobody answered in time: it says so, with its terminal at hand,
   // instead of vanishing. Kept a minute and a half, or until dismissed.
-  const shownRequests = new Set<string>(), noted = new Set<string>();
+  const shownRequests = new Map<string, ApprovalView>(), noted = new Set<string>();
   // A session whose request went back unanswered asks in its terminal until its next step: the core
-  // calls it working again, but it waits on you there. The step count at expiry says when it moved on.
-  const asking = new Map<string, number>();
-  const stateText = (s: SessionView): string =>
-    s.status === "working" && asking.get(key(s)) === s.step_count ? t("Asking in its terminal") : statusText(s);
+  // calls it working again, but it waits on you there. The step count at expiry says when it moved on;
+  // the request is kept so its card still shows what the terminal asks.
+  const asking = new Map<string, { step: number; ask: ApprovalView | undefined }>();
+  const askedThere = (s: SessionView) => {
+    const a = asking.get(key(s));
+    return s.status === "working" && a?.step === s.step_count ? a : null;
+  };
+  const stateText = (s: SessionView): string => askedThere(s) ? t("Asking in its terminal") : statusText(s);
   let expiredNotes: { request: string; agent: string; session: string; at: number }[] = [];
   const expiredBox = el("section", { class: "expired-notes" });
   expiredBox.hidden = true;
@@ -786,6 +790,31 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
   };
 
+  /** A request nobody answered in time stays on its session's card until the next step: what the
+   *  terminal now asks, and where that terminal is when Vults cannot bring it up. */
+  const returnedRequest = (s: SessionView): HTMLElement | null => {
+    const ask = askedThere(s)?.ask;
+    if (!ask || ask.questions.length) return null;
+    const command = ask.full ? `${ask.tool} · ${ask.full}` : ask.target;
+    const folder = approvalFolder(s, ask);
+    const copy = (text: string) => () => void navigator.clipboard?.writeText(text).catch(() => {});
+    return el(
+      "section",
+      { class: "returned-request" },
+      el("h4", { text: t("Request that went back to the terminal") }),
+      el("div", { class: "command" },
+        el("code", { text: command }),
+        fid(el("button", { class: "outline", text: t("Copy"), onclick: copy(command) }), "act:returned-copy")),
+      el("p", { class: "rule-scope" },
+        el("span", { text: s.raise === true
+          ? t("Answer it in its terminal.")
+          : t("Answer it in the terminal where {agent} runs, in {path}.", { agent: agentName(s), path: folder ? shortPath(folder) : t("its folder") }) }),
+        s.raise !== true && folder
+          ? fid(el("button", { class: "ghost returned-folder", text: t("Copy folder"), onclick: copy(folder) }), "act:returned-folder")
+          : null),
+    );
+  };
+
   /** The session in front: its state, what it is doing or asks, and what can be done from here. */
   const card = (v: ViewModel, s: SessionView) => {
     const ask = v.approval && v.approval.agent === s.agent && v.approval.session === s.id ? v.approval : null;
@@ -842,6 +871,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       permission ? Object.assign(el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ? shortPath(approvalFolder(s, permission)!) : t("Not reported") }) }), { title: approvalFolder(s, permission) ?? "" }) : null,
       question ? questionNode(s, question) : null,
       permission ? permissionActions(s, permission) : null,
+      ask ? null : returnedRequest(s),
       el(
         "div",
         { class: "app-card-actions" },
@@ -1278,16 +1308,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
   }
 
   function drawExpired(v: ViewModel): void {
-    for (const w of v.waiting ?? []) shownRequests.add(w.request);
-    if (v.approval) shownRequests.add(v.approval.request);
+    for (const w of v.waiting ?? []) shownRequests.set(w.request, w);
+    if (v.approval) shownRequests.set(v.approval.request, v.approval);
     const now = Date.now();
     for (const e of v.ended ?? []) {
       if (e.outcome !== "expired" || noted.has(e.request) || !shownRequests.has(e.request)) continue;
       noted.add(e.request);
       expiredNotes.unshift({ request: e.request, agent: e.agent, session: e.session, at: now });
       const session = v.sessions.find(s => s.agent === e.agent && s.id === e.session);
-      if (session) asking.set(key(session), session.step_count);
+      if (session) asking.set(key(session), { step: session.step_count, ask: shownRequests.get(e.request) });
     }
+    // Answered or expired, a request is not shown again: only the ones still waiting are kept.
+    const live = new Set([...(v.waiting ?? []).map(w => w.request), v.approval?.request]);
+    for (const r of shownRequests.keys()) if (!live.has(r) && noted.has(r)) shownRequests.delete(r);
     expiredNotes = expiredNotes.filter(n => now - n.at < EXPIRED_KEPT_MS).slice(0, 3);
     expiredBox.hidden = !expiredNotes.length;
     expiredBox.replaceChildren(...expiredNotes.map(n => {

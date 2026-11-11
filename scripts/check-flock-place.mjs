@@ -495,5 +495,11 @@ console.log('check-flock-place: metric provenance, separate read ages and cumula
   assert.equal(nodes(part.element).filter(node => node.className === "expired-note").length, 1, "A request the tab never showed is not noted");
   const listed = nodes(part.element).filter(node => (node.className ?? "").startsWith("roost-sub")).map(node => node.textContent);
   assert.ok(listed.includes("Asking in its terminal"), "A session whose request went back unanswered says it asks in its terminal");
-  console.log("check-flock-place: shared deadline always shown, a noted expiry and the session asking in its terminal");
+  part.update({ ...view, approval: null, front: { agent: "claude", id: "two" }, sessions: [session, { ...two, status: "working", attention: "info", card: false }], waiting: [], ended: [] }); await tick();
+  const returned = nodes(part.element).find(node => node.className === "returned-request");
+  assert.ok(returned && returned.textContent.includes("Request that went back to the terminal") && nodes(returned).some(node => node.tag === "code" && node.textContent === view.approval.target),
+    "Its card keeps what the terminal now asks");
+  part.update({ ...view, approval: null, front: { agent: "claude", id: "two" }, sessions: [session, { ...two, status: "working", attention: "info", card: false, step_count: two.step_count + 1 }], waiting: [], ended: [] }); await tick();
+  assert.equal(nodes(part.element).filter(node => node.className === "returned-request").length, 0, "The next step ends it");
+  console.log("check-flock-place: shared deadline always shown, a noted expiry, the session asking in its terminal and its card keeping the request");
 }
