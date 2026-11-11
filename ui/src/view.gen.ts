@@ -262,7 +262,13 @@ why?: AskWhy | null,
 /**
  * The reminders it has earned by waiting (the attention ladder): one more sound each.
  */
-reminders?: number, };
+reminders?: number,
+/**
+ * When it goes back to its terminal, in Unix seconds (the hook's deadline less a grace), so
+ * every surface counts down to the same moment however late it opened. None until the app has
+ * told the core the wall clock.
+ */
+expires_at?: number, };
 
 export type EndedView = { request: string, agent: AgentKind, session: string, outcome: Outcome, };
 

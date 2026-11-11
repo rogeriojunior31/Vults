@@ -59,6 +59,10 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
+/** A card's deadline shows in its last half minute, as on the island. */
+const DEADLINE_SHOWN_S = 30;
+/** How long a request that went back to its terminal unanswered stays noted on the tab. */
+const EXPIRED_KEPT_MS = 90_000;
 const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
 
 const AGENT_COLOR: Record<AgentKind, string> = {
@@ -259,7 +263,41 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const lane = el("section", { class: "waiting-lane" });
   lane.hidden = true;
   const laneTicked = new Set<string>(), laneSent = new Set<string>();
-  const list = el("section", { class: "flock-list" }, toolbar, lane, roosts);
+  // The deadline (the core's expires_at, the same moment the island counts to) shows in the last
+  // half minute; one timer moves every clock on the tab, without a redraw.
+  const deadline = (expiresAt: number | null | undefined): HTMLElement | null => {
+    if (typeof expiresAt !== "number") return null;
+    const node = el("span", { class: "deadline" });
+    node.dataset.expires = String(expiresAt);
+    paintDeadline(node);
+    if (ticking === null) {
+      ticking = setInterval(tickDeadlines, 1000);
+      // A test run (Node) must not be held open by the clock.
+      (ticking as unknown as { unref?: () => void }).unref?.();
+    }
+    return node;
+  };
+  function paintDeadline(node: HTMLElement): void {
+    const left = Math.max(0, Math.ceil(Number(node.dataset.expires) - Date.now() / 1000));
+    node.hidden = left > DEADLINE_SHOWN_S;
+    const text = t("Back to the terminal in {time}", { time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` });
+    if (node.textContent !== text) node.textContent = text;
+    node.classList.toggle("urgent", left <= 10);
+  }
+  // Runs only while a clock is on the tab, and stops with the last one.
+  let ticking: ReturnType<typeof setInterval> | null = null;
+  const tickDeadlines = () => {
+    const nodes = [...element.querySelectorAll<HTMLElement>(".deadline")];
+    for (const node of nodes) paintDeadline(node);
+    if (!nodes.length && ticking !== null) { clearInterval(ticking); ticking = null; }
+  };
+  // A request this tab showed that nobody answered in time: it says so, with its terminal at hand,
+  // instead of vanishing. Kept a minute and a half, or until dismissed.
+  const shownRequests = new Set<string>(), noted = new Set<string>();
+  let expiredNotes: { request: string; agent: string; session: string; at: number }[] = [];
+  const expiredBox = el("section", { class: "expired-notes" });
+  expiredBox.hidden = true;
+  const list = el("section", { class: "flock-list" }, toolbar, expiredBox, lane, roosts);
   const focusBlock = el("section", { class: "focus-block" });
   const detailTabs = el("nav", { class: "detail-tabs" });
   detailTabs.setAttribute("role", "tablist");
@@ -782,6 +820,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         detail === "session" ? null : costChip(s),
         ask ? el("div", { class: "card-side" },
           ask.queue > 1 ? el("span", { class: "q-of", text: t("{n} requests waiting", { n: ask.queue }) }) : null,
+          question ? null : deadline(ask.expires_at),
           question ? null : fid(laterButton(ask.request, skipCard), "act:skip")) : null,
       ),
       question ? null : words ? el("p", { class: "card-words", text: words }) : null,
@@ -1052,6 +1091,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     clear.hidden = !search.value && !onlyNeeds && !status;
     drawFilters(v.sessions);
     drawLane(v);
+    drawExpired(v);
     element.classList.toggle("choosing-session", choosing || !front);
     back.hidden = !front;
 
@@ -1205,7 +1245,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
       return el("li", { class: `lane-row${destructive ? " destructive" : ""}` },
         tick ?? Object.assign(el("span", { class: "lane-tick-none" }, destructive ? icon("warning", 13, 2) : null), { title: destructive ? t("Destructive: answer it on its own") : t("Only the full command can be allowed: open it") }),
         el("div", { class: "lane-body" }, open, command,
-          el("span", { class: "lane-scope", text: destructive ? t("Destructive: no policy ever allows it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) })),
+          el("span", { class: "lane-scope", text: destructive ? t("Destructive: no policy ever allows it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) }),
+          deadline(w.expires_at)),
         // A cut command is answered on its own card, where the whole of it shows (core ignores it here).
         w.cut
           ? el("div", { class: "lane-actions" }, fid(el("button", { class: "outline", text: t("Open"), onclick: () => session && on.focus(session) }), `lane:open:${w.request}`))
@@ -1224,6 +1265,30 @@ export function createFlock(on: FlockActions & FlockAsk): {
       // The note shows once something is ticked: what the one click will and will not do.
       el("footer", { class: "lane-foot" }, allowTicked, ticked.length ? el("span", { class: "lane-note", text: t("Unselected requests keep waiting. Destructive ones are answered on their own.") }) : null),
     );
+  }
+
+  function drawExpired(v: ViewModel): void {
+    for (const w of v.waiting ?? []) shownRequests.add(w.request);
+    if (v.approval) shownRequests.add(v.approval.request);
+    const now = Date.now();
+    for (const e of v.ended ?? []) {
+      if (e.outcome !== "expired" || noted.has(e.request) || !shownRequests.has(e.request)) continue;
+      noted.add(e.request);
+      expiredNotes.unshift({ request: e.request, agent: e.agent, session: e.session, at: now });
+    }
+    expiredNotes = expiredNotes.filter(n => now - n.at < EXPIRED_KEPT_MS).slice(0, 3);
+    expiredBox.hidden = !expiredNotes.length;
+    expiredBox.replaceChildren(...expiredNotes.map(n => {
+      const session = v.sessions.find(s => s.agent === n.agent && s.id === n.session) ?? null;
+      const name = session ? session.project || agentName(session) : n.agent;
+      return el("div", { class: "expired-note" },
+        icon("warning", 13, 2),
+        el("span", { text: t("No answer in time: {project} asks in its terminal now.", { project: name }) }),
+        session?.raise === true ? fid(el("button", { class: "outline", text: t("Open terminal"), onclick: () => on.jump(session) }), `expired:open:${n.request}`) : null,
+        fid(el("button", { class: "ghost expired-dismiss", onclick: () => { expiredNotes = expiredNotes.filter(x => x.request !== n.request); draw(); } }, icon("close", 12, 2)), `expired:close:${n.request}`));
+    }));
+    expiredBox.setAttribute("role", "status");
+    for (const b of expiredBox.querySelectorAll<HTMLElement>(".expired-dismiss")) b.setAttribute("aria-label", t("Dismiss"));
   }
 
   function drawFilters(sessions: SessionView[]): void {

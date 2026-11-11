@@ -291,6 +291,11 @@ pub struct ApprovalView {
     /// The reminders it has earned by waiting (the attention ladder): one more sound each.
     #[cfg_attr(test, ts(as = "Option<u32>", optional))]
     pub reminders: u32,
+    /// When it goes back to its terminal, in Unix seconds (the hook's deadline less a grace), so
+    /// every surface counts down to the same moment however late it opened. None until the app has
+    /// told the core the wall clock.
+    #[cfg_attr(test, ts(type = "number", optional = nullable))]
+    pub expires_at: Option<i64>,
 }
 
 impl State {
@@ -383,6 +388,14 @@ impl State {
                 })
                 .flatten(),
             reminders: p.reminders,
+            expires_at: self.clock.map(|(at, unix)| {
+                let deadline = p.since + crate::PENDING_TTL;
+                let secs = |d: std::time::Duration| i64::try_from(d.as_secs()).unwrap_or(i64::MAX);
+                match deadline.checked_duration_since(at) {
+                    Some(ahead) => unix.saturating_add(secs(ahead)),
+                    None => unix.saturating_sub(secs(at.saturating_duration_since(deadline))),
+                }
+            }),
         }
     }
 

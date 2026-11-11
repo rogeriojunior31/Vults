@@ -468,3 +468,22 @@ console.log('check-flock-place: metric provenance, separate read ages and cumula
   assert.equal(nodes(runPart.element).filter(node => (node.className ?? "").startsWith("roost-sub")).length, 1, "Search still finds a session by its command");
   console.log("check-flock-place: a running command reads as work in the list and stays searchable");
 }
+{
+  // The core's deadline shows in the last half minute, in the card and the line; a request this tab
+  // showed that nobody answered in time is noted with its terminal, not dropped in silence.
+  const soon = Math.floor(Date.now() / 1000) + 20, later = Math.floor(Date.now() / 1000) + 90;
+  const part = createFlock({ ...backend, loadPlace: async () => null });
+  const two = { ...session, id: "two", project: "Beta", raise: true };
+  const waiting = [{ ...view.approval, expires_at: soon }, { ...view.approval, request: "late", session: "two", project: "Beta", expires_at: later }];
+  part.update({ ...view, approval: waiting[0], sessions: [session, two], waiting }); await tick();
+  const clocks = nodes(part.element).filter(node => (node.className ?? "").startsWith("deadline"));
+  assert.ok(clocks.some(node => !node.hidden && node.textContent.startsWith("Back to the terminal in 0:")), "A card in its last half minute shows its clock");
+  assert.ok(clocks.some(node => node.hidden), "A card with time left keeps its clock hidden");
+  part.update({ ...view, approval: null, sessions: [session, two], waiting: [], ended: [{ request: "late", agent: "claude", session: "two", outcome: "expired" }] }); await tick();
+  const note = nodes(part.element).find(node => node.className === "expired-note");
+  assert.ok(note && note.textContent.includes("No answer in time: Beta asks in its terminal now."), "An expired request the tab showed is said once");
+  assert.ok(nodes(note).some(node => node.tag === "button" && node.textContent === "Open terminal"), "Its terminal is at hand");
+  part.update({ ...view, approval: null, sessions: [session, two], waiting: [], ended: [{ request: "never-shown", agent: "claude", session: "two", outcome: "expired" }] }); await tick();
+  assert.equal(nodes(part.element).filter(node => node.className === "expired-note").length, 1, "A request the tab never showed is not noted");
+  console.log("check-flock-place: shared deadline in the last half minute and a noted, recoverable expiry");
+}

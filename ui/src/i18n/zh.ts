@@ -1746,6 +1746,8 @@ export default {
   "Full access: commands and edits run without a card. Destructive ones, and what a policy denies or asks first, still ask.": "完全访问：命令和编辑无需卡片即可运行。破坏性操作，以及策略拒绝或要求先询问的内容，仍会询问。",
   "{name} is on, but its first check failed.": "{name} 已开启，但首次检查失败。",
   "Copy {command}": "复制 {command}",
+  "Back to the terminal in {time}": "{time} 后回到终端",
+  "No answer in time: {project} asks in its terminal now.": "未及时回答：{project} 现在在其终端中询问。",
   "No agent session yet": "还没有智能体会话",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "在终端中启动 Claude Code、Codex 或其他智能体，它的鸟就会落在线上。当它需要权限时，卡片会出现在这里。",
   "Set up agents": "设置智能体",

@@ -150,6 +150,11 @@ A request waits as long as its agent does (a little under two minutes); meanwhil
 to the terminal in 0:25*, and then the terminal asks as if Vults were not there. If you answer in the
 terminal instead, the card says so and goes away.
 
+The Nest counts to the same moment: in its last 30 seconds a card on **Flock** and its row in
+**Waiting for you** show *Back to the terminal in 0:25*, however late the Nest opened. When one it
+showed goes back unanswered, **Flock** says *No answer in time: storefront asks in its terminal
+now.*, with **Open terminal** when it can be brought up, until you dismiss it.
+
 While it waits, a card climbs a ladder, so a card you missed reaches you:
 
 1. It opens the island, with its sound (in *Panel*, with a desktop notification too, if

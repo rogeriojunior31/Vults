@@ -2367,6 +2367,18 @@ button.touched-row:hover,
 .lane-foot .primary:disabled { opacity: 0.5; cursor: default; }
 .lane-note { color: var(--fg-dim); font-size: 12px; line-height: 1.4; }
 .conn-actions .conn-fix { margin-right: 6px; font: 12px var(--mono); }
+/* A card's last half minute: the clock the island shows, amber, red in its last ten seconds. */
+.deadline { color: var(--warn); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deadline.urgent { color: var(--error-text); font-weight: 600; }
+.deadline[hidden] { display: none; }
+/* A request nobody answered in time: said once, with its terminal at hand. */
+.expired-notes { flex: none; display: flex; flex-direction: column; gap: 4px; margin: 0 8px 4px; }
+.expired-notes[hidden] { display: none; }
+.expired-note { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border)); border-radius: var(--radius-control); background: color-mix(in srgb, var(--warn) 6%, var(--panel)); color: var(--fg); font-size: 12px; line-height: 1.4; }
+.expired-note > svg { flex: none; color: var(--warn); }
+.expired-note > span { flex: 1; min-width: 0; }
+.expired-note .outline { min-height: 26px; padding: 2px 8px; font-size: 12px; }
+.expired-note .expired-dismiss { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; color: var(--fg-dim); }
 .flock-list .roost-cards { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; padding: 8px; }
 .flock-list .roost-cards.empty { display: block; }
 .flock-list .roost-card { flex: none; width: 100%; padding: 10px; text-align: left; }

@@ -1746,6 +1746,8 @@ export default {
   "Full access: commands and edits run without a card. Destructive ones, and what a policy denies or asks first, still ask.": "Acceso total: los comandos y las ediciones se ejecutan sin tarjeta. Los destructivos, y lo que una política deniega o pregunta antes, siguen preguntando.",
   "{name} is on, but its first check failed.": "{name} está activado, pero su primera comprobación falló.",
   "Copy {command}": "Copiar {command}",
+  "Back to the terminal in {time}": "Vuelve a la terminal en {time}",
+  "No answer in time: {project} asks in its terminal now.": "Sin respuesta a tiempo: {project} ahora pregunta en su terminal.",
   "No agent session yet": "Aún no hay sesiones de agentes",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicia Claude Code, Codex u otro agente en una terminal y su pájaro se posa en el cable. Cuando necesite un permiso, la tarjeta aparece aquí.",
   "Set up agents": "Configurar agentes",

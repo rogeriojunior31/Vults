@@ -229,6 +229,22 @@ fn the_view_lists_every_waiting_permission_in_line_order() {
 }
 
 #[test]
+fn a_waiting_card_says_when_it_goes_back_to_its_terminal() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    // No wall clock yet: no deadline to show.
+    assert_eq!(s.view().approval.unwrap().expires_at, None);
+    let later = now + Duration::from_secs(10);
+    visible(&mut s, Input::Clock(1_000_000), later);
+    let ttl = i64::try_from(PENDING_TTL.as_secs()).unwrap();
+    // Counted from when the card arrived, not from when the clock was told: the same moment for
+    // every surface, however late it opened.
+    assert_eq!(s.view().approval.unwrap().expires_at, Some(1_000_000 - 10 + ttl));
+    assert_eq!(s.view().waiting[0].expires_at, Some(1_000_000 - 10 + ttl));
+}
+
+#[test]
 fn every_waiting_card_expires_on_its_own_deadline() {
     let mut s = State::default();
     let now = Instant::now();
