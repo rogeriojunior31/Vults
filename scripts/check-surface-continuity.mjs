@@ -1759,6 +1759,37 @@ console.log("check-surface-continuity: scoped specialist file chooser, duplicate
 }
 console.log("check-surface-continuity: per-profile GitHub enable/disable, exact repository/version, persist-before-display, duplicate guard and failed-save draft retention");
 
+// Cached service grants are independent per profile/provider and retain failed-save drafts.
+{
+ const writes=[],changed=[];
+ const profile=id=>({id,built_in:true,revision:1,title:id==="developer"?"Developer":"Reviewer",about:"Changes",species:"atratus",look:"none",instructions:"Pinned",skills:[],skill_catalog:[],access:"ask",connector_snapshots:{},state:{version:0,archived:false,defaults:{executor:"api",model:null,effort:null}}});
+ const profiles=createProfiles(async()=>[profile("developer"),profile("reviewer")],()=>{},undefined,undefined,undefined,p=>changed.push(p),undefined,undefined,
+  (...args)=>new Promise((resolve,reject)=>writes.push({args,resolve,reject})));
+ document.body.replaceChildren(profiles.element);profiles.visible(true);await tick();
+ const field=provider=>profiles.element.querySelectorAll("fieldset").find(n=>n.textContent.includes(provider==="gitlab"?"Cached GitLab snapshot":"Cached Gitea snapshot"));
+ const repository=provider=>field(provider).querySelector("input");
+ const click=(provider,text)=>{const button=nodes(field(provider)).find(n=>n.tagName==="BUTTON"&&n.textContent===text);assert.ok(button);button.click();};
+ repository("gitlab").value="team/sub/app";click("gitlab","Enable cached read");click("gitlab","Enable cached read");
+ assert.equal(writes.length,1);assert.deepEqual(writes[0].args,["developer","gitlab",0,true,"team/sub/app"]);
+ assert.ok(!field("gitlab").textContent.includes("Enabled for"));
+ writes[0].reject("stale");await tick();assert.equal(repository("gitlab").value,"team/sub/app");assert.ok(profiles.element.textContent.includes("Could not update cached connector access"));
+ click("gitlab","Enable cached read");writes[1].resolve({version:1,enabled:true,repository:"team/sub/app",host:"gitlab.com",account:"alice",namespace:"alice@42"});await tick();
+ assert.equal(repository("gitlab").disabled,true);assert.equal(repository("gitea").value,"");
+ profiles.select("reviewer");assert.equal(repository("gitlab").value,"");
+ repository("gitea").value="me/app";click("gitea","Enable cached read");assert.deepEqual(writes[2].args,["reviewer","gitea",0,true,"me/app"]);
+ writes[2].resolve({version:1,enabled:true,repository:"me/app",host:"https://git.example.com/",account:"alice",namespace:"gen:alice@1"});await tick();
+ assert.equal(repository("gitlab").disabled,false);
+ profiles.select("developer");click("gitlab","Disable cached read");assert.deepEqual(writes[3].args,["developer","gitlab",1,false,"team/sub/app"]);
+ writes[3].resolve({version:2,enabled:false,repository:"team/sub/app",host:"gitlab.com",account:"alice",namespace:"alice@42"});await tick();
+ assert.equal(changed.at(-1).connector_snapshots.gitlab.enabled,false);assert.equal(repository("gitlab").disabled,false);
+ profiles.visible(false);profiles.element.remove();
+ const identity={name:"Developer",revision:1,species:"atratus",look:"none",snapshots:{gitlab:{version:1,enabled:true,repository:"team/sub/app",host:"gitlab.com",account:"alice",namespace:"alice@42"}}};
+ const panel=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard:()=>{},saveDraft:async()=>{}},()=>{},{window:"nest",specialist:identity});
+ assert.ok(panel.element.textContent.includes("GitLab: team/sub/app"));assert.ok(panel.element.textContent.includes("Cached read only."));
+ panel.setProfileSnapshots({});assert.ok(!panel.element.textContent.includes("GitLab: team/sub/app"));panel.toggle(false);
+}
+console.log("check-surface-continuity: cached connector grants keep profile/provider scope, versions, failed drafts, duplicate guards and chat notices independent");
+
 // Selecting Codex in conversation setup must reach native admission as Codex.
 {
  const writes=[];const identity={name:"Developer",revision:1,species:"atratus",look:"none",state:{version:0,archived:false,defaults:{executor:"claude",model:null,effort:null}}};

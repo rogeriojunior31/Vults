@@ -16,6 +16,7 @@ export interface AgentWorkspaceBackend {
   state(profile: string, version: number, change: AgentStateChange): Promise<AgentProfileState>;
   access(profile: string, access: ChatAccess): Promise<void>;
   github?: (profile:string,version:number,enabled:boolean,repository:string)=>Promise<AgentGithubGrant>;
+  snapshot?: typeof import("../../bridge").Bridge.setSpecialistSnapshot;
   open(profile: AgentProfile): Promise<void>;
   changed(profile: AgentProfile): void;
   reload(): void;
@@ -319,6 +320,32 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
           el("label",{},el("span",{text:t("GitHub repository")}),repository),
           el("p",{class:"note",text:t("Only this repository. Writes require approval. This agent does not inherit Zeca's GitHub access.")}),
           ...(grant.enabled?[el("p",{class:"note",text:t("Enabled for {account} on {host}",{account:grant.account,host:grant.host})})]:[]),toggle));
+      }
+      if (backend?.snapshot && ["developer", "reviewer"].includes(agent.id)) {
+        for (const provider of ["gitlab", "gitea"] as const) {
+          const grant = agent.connector_snapshots?.[provider] ?? { version: 0, enabled: false, repository: "", host: "", account: "", namespace: "" };
+          const repository = el("input"); repository.value = grant.repository;
+          repository.placeholder = provider === "gitlab" ? "group/subgroup/project" : "owner/name";
+          repository.disabled = grant.enabled;
+          const label = provider === "gitlab" ? t("GitLab repository") : t("Gitea repository");
+          repository.setAttribute("aria-label", label);
+          const toggle = button(grant.enabled ? t("Disable cached read") : t("Enable cached read"), () => {
+            if (pending) return;
+            busy(true); feedback.textContent = "";
+            void backend.snapshot!(agent.id, provider, grant.version, !grant.enabled, repository.value.trim()).then(snapshot => {
+              (agent.connector_snapshots ??= {})[provider] = snapshot;
+              backend.changed(agent); busy(false); paintDetail();
+            }, () => {
+              busy(false); repository.disabled = grant.enabled;
+              feedback.textContent = t("Could not update cached connector access. Check the connector's latest sync, account and repository, then try again.");
+            });
+          });
+          detail.append(el("fieldset", { class: "agent-preview-defaults" },
+            el("legend", { text: provider === "gitlab" ? t("Cached GitLab snapshot") : t("Cached Gitea snapshot") }),
+            el("label", {}, el("span", { text: label }), repository),
+            el("p", { class: "note", text: t("Only this repository's cached board. No live reads or writes. This profile's access is independent from Zeca and other profiles.") }),
+            ...(grant.enabled ? [el("p", { class: "note", text: t("Enabled for {account} on {host}", { account: grant.account, host: grant.host }) })] : []), toggle));
+        }
       }
       if(backend && agent.executor!=="claude")detail.append(el("p",{class:"note",text:t("API agents use their own messages and selected files. CLI agents use an isolated runtime.")}));
       detail.append(el("details", {}, el("summary", { text: t("Instructions") }), el("p", { text: agent.built_in ? t(agent.instructions) : agent.instructions })),

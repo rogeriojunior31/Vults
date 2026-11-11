@@ -10,6 +10,7 @@ export function createProfiles(
   openChat?: (profile: AgentProfile) => void | Promise<void>, changed?: (profile: AgentProfile) => void,
   setState?: AgentWorkspaceBackend["state"],
   setGithub?: AgentWorkspaceBackend["github"],
+  setSnapshot?: AgentWorkspaceBackend["snapshot"],
 ) {
   const element = el("section", { class: "agent-profiles" });
   let workspace: ReturnType<typeof createAgentWorkspace> | null = null;
@@ -20,7 +21,7 @@ export function createProfiles(
   let selected: string | null = null;
   const unavailable = () => Promise.reject("unavailable");
   const backend: AgentWorkspaceBackend = {
-    save: save ?? unavailable, state: setState ?? unavailable, access: setAccess ?? unavailable, github:setGithub,
+    save: save ?? unavailable, state: setState ?? unavailable, access: setAccess ?? unavailable, github:setGithub, snapshot:setSnapshot,
     open: async profile => { await openChat?.(profile); }, reload: refresh, changed: profile => changed?.(profile),
   };
   const draw = () => {

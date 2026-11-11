@@ -21,6 +21,7 @@ pub struct View {
     access: crate::settings::ChatAccess,
     state: ProfileState,
     github: crate::specialist_github::Grant,
+    connector_snapshots: std::collections::BTreeMap<String, crate::specialist_snapshots::Grant>,
     providers: Vec<vults_chat::providers::Provider>,
 }
 
@@ -40,6 +41,7 @@ impl From<Profile> for View {
             access: crate::settings::ChatAccess::Ask,
             state: ProfileState::default(),
             github: Default::default(),
+            connector_snapshots: Default::default(),
             providers: vults_chat::providers::PROVIDERS.to_vec(),
         }
     }
@@ -137,6 +139,7 @@ pub async fn agent_profiles(app: tauri::AppHandle, window: tauri::Webview) -> Re
                 access: crate::settings::specialist_chat_access(&app_for_access, p.id),
                 state: ProfileState::default(),
                 github: crate::specialist_github::current(&app_for_access, p.id),
+                connector_snapshots: crate::specialist_snapshots::current_all(&app_for_access, p.id),
                 providers: vults_chat::providers::PROVIDERS.to_vec(),
             })
             .collect();
@@ -149,6 +152,8 @@ pub async fn agent_profiles(app: tauri::AppHandle, window: tauri::Webview) -> Re
         for profile in &mut profiles {
             profile.state = store.agent_profile_state(&profile.id).map_err(error)?;
             profile.github = crate::specialist_github::current(&app_for_access, &profile.id);
+            profile.connector_snapshots =
+                crate::specialist_snapshots::current_all(&app_for_access, &profile.id);
         }
         Ok(profiles)
     })

@@ -68,7 +68,7 @@ impl Source for AppHandle {
         })
     }
 }
-fn packet(view: &Value, provider: &str, current: impl Fn(&str) -> bool) -> Result<Value, String> {
+pub(crate) fn packet(view: &Value, provider: &str, current: impl Fn(&str) -> bool) -> Result<Value, String> {
     if !PROVIDERS.contains(&provider) {
         return Err("Unknown snapshot provider.".into());
     }
@@ -154,10 +154,21 @@ impl Tool for Snapshot {
             if !input.as_object().is_some_and(|v| v.is_empty()) {
                 return Err("This snapshot tool takes no arguments.".into());
             }
-            self.source.read(self.provider).and_then(|value| {
-                serde_json::to_string(&value).map_err(|_| "Could not encode the connector snapshot.".into())
-            })
+            self.source.read(self.provider).and_then(encode)
         })
+    }
+}
+pub(crate) fn encode(mut value: Value) -> Result<String, String> {
+    loop {
+        let text = serde_json::to_string(&value).map_err(|_| "Could not encode the connector snapshot.")?;
+        if text.len() <= vults_chat::tools::MAX_RESULT {
+            return Ok(text);
+        }
+        if value["rows"].as_array_mut().and_then(Vec::pop).is_none() {
+            return Err("The connector snapshot metadata exceeds the chat limit.".into());
+        }
+        value["truncated"] = json!(true);
+        value["coverage"] = json!("partial-byte-or-row-limit");
     }
 }
 pub(crate) fn tools(app: &AppHandle) -> Tools {

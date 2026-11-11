@@ -84,6 +84,7 @@ export interface NestBackend {
   profileSave?: typeof import("../../bridge").Bridge.agentProfileSave;
   profileState?: typeof import("../../bridge").Bridge.agentProfileStateSet;
   profileGithub?: typeof import("../../bridge").Bridge.setSpecialistGithub;
+  profileSnapshot?: typeof import("../../bridge").Bridge.setSpecialistSnapshot;
   profileAccess?: typeof import("../../bridge").Bridge.setSpecialistChatAccess;
   profileChat?: import("./specialist").SpecialistChatBackend;
   chat: ChatBackend;
@@ -379,7 +380,7 @@ export function createNest(
         const existing = profilePanels.get(selectedProfile.id);
         if (existing) next = existing;
         else {
-          const identity = { github:selectedProfile.github, name: selectedProfile.title, builtIn: selectedProfile.built_in, revision: selectedProfile.revision, latestRevision: selectedProfile.revision, state: selectedProfile.state, providers: selectedProfile.providers, species: selectedProfile.species, look: selectedProfile.look };
+          const identity = { github:selectedProfile.github, snapshots:selectedProfile.connector_snapshots, name: selectedProfile.title, builtIn: selectedProfile.built_in, revision: selectedProfile.revision, latestRevision: selectedProfile.revision, state: selectedProfile.state, providers: selectedProfile.providers, species: selectedProfile.species, look: selectedProfile.look };
           let panel: ChatPanel | undefined;
           const adapter = specialistBackend(backend.profileChat, selectedProfile, identity);
           adapter.setAccess = async access => { await backend.profileAccess?.(selectedProfile.id, access); selectedProfile.access = access; profiles.updateAccess(selectedProfile.id, access); };
@@ -395,6 +396,7 @@ export function createNest(
         next.setProfileRevision(selectedProfile.revision);
         next.setProfileState(selectedProfile.state);
         next.setProfileGithub(selectedProfile.github);
+        next.setProfileSnapshots(selectedProfile.connector_snapshots);
       }
       await next.restore();
       if (profile) next.setFolders(last?.sessions.flatMap(s => s.cwd ? [{cwd:s.cwd,project:s.project}] : []) ?? [], null);
@@ -485,9 +487,10 @@ export function createNest(
     profilePanels.get(profile.id)?.setProfileRevision(profile.revision);
     profilePanels.get(profile.id)?.setProfileState(profile.state);
     profilePanels.get(profile.id)?.setProfileGithub(profile.github);
+    profilePanels.get(profile.id)?.setProfileSnapshots(profile.connector_snapshots);
     if (activeProfile?.id === profile.id) activeProfile = profile;
     fillRecipients();
-  }, backend.profileState, backend.profileGithub);
+  }, backend.profileState, backend.profileGithub, backend.profileSnapshot);
   const panes: Record<Tab, HTMLElement> = {
     flock: el("div", { class: "nest-pane nest-flock-pane" }, flock.element, profiles.element),
     chat: chatPane,

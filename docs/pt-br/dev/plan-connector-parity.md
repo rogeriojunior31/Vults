@@ -1,5 +1,5 @@
 # Paridade do GitLab e Gitea
-<!-- source: 4c059fa37dcc -->
+<!-- source: c0e71c9bb7f4 -->
 
 Solicitado em 2026-11-10. O GitHub é a referência de comportamento. Entregar os recursos nativos
 equivalentes com a mesma confirmação, escopo, auditoria e tratamento de falhas. Não anunciar recursos
@@ -11,7 +11,7 @@ pendentes. O Notion vem depois desse trabalho, sem substituí-lo. Manter cobertu
 | Etapa | GitLab | Gitea | Aceitação |
 | --- | --- | --- | --- |
 | CP1: painel completo | Implementado com limites documentados | Implementado com limites documentados | Tamanho dos diffs, revisores, pedidos de alteração, jobs/checks do mesmo commit, branches padrão, releases, sem notícias repetidas |
-| CP2: snapshot no chat | Companheiro implementado; permissões por perfil pendentes | Companheiro implementado; permissões por perfil pendentes | Permissões independentes em Settings/perfil, leitura do cache no API Chat e realtime, sem nova consulta de rede |
+| CP2: snapshot no chat | Implementado | Implementado | Permissões independentes em Settings/perfil, leitura do cache no API Chat e realtime, sem nova consulta de rede |
 | CP3: leituras ao vivo | Pendente | Pendente | Conta, repositório/busca, issues/PRs, comentários/reviews, diff/arquivos, execuções/jobs/logs de CI e regras de branch; paginação explícita e limitada |
 | CP4: escritas em issues | Pendente | Pendente | Criar/editar, comentários e suas edições, rótulos, responsáveis, fechar/reabrir; prévia humana, revalidação e leitura de confirmação auditada |
 | CP5: escritas em pull requests | Pendente | Pendente | Criar/editar, rascunho/pronto, solicitar revisores, reviews e comentários em linhas vinculados ao commit revisado |
@@ -60,6 +60,15 @@ ocultação de segredos e JSON válido e limitado. As duas ferramentas cabem jun
 da voz em tempo real. O WebView nativo verifica gravação/leitura reais pelo backend, recusa pela ilha
 e pontos de clique dos dois controles em quatro escalas emuladas. Essa etapa não herda nem implementa
 permissões por perfil ou ações ao vivo.
+
+As permissões CP2 dos perfis agora vinculam repositório, host, ID da conta e versão, além da geração
+da credencial do Gitea. Os testes cobrem isolamento de provedor/perfil, permissões substituídas, nomes
+de usuário reutilizados, filtro de repositório, reconexão e JSON limitado após incluir o escopo.
+A consulta do GitLab com ID global foi validada sem credenciais no GitLab.com em 2026-11-11:
+complexidade 196/200. O Windows usa CLI simulada local: uma consulta, nenhuma consulta extra para
+permissões, gravação/leitura reais, recusa de versão antiga e janela não autorizada, revogação com o
+conector desligado, pontos de clique dos dois controles e preservação após falha em quatro escalas
+emuladas. Não há chamada de provedor/modelo.
 
 O Gitea ainda precisa de uma instância real de teste. Simulações e escalas emuladas da interface não
 substituem permissões reais, DPI/entrada físicos do Windows nem aceitação das regras de merge ao vivo.

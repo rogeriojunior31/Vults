@@ -374,6 +374,7 @@ export type AgentRow = {
 export type ConversationView = { id: number; title: string; provider: ChatProvider; label: string; folder: string | null; updatedMs: number; current: boolean };
 export type SpecialistConversationView = ConversationView & { profileTitle: string; profileRevision: number };
 export type AgentGithubGrant = { version:number; enabled:boolean; repository:string; host:string; account:string };
+export type AgentSnapshotGrant = AgentGithubGrant & { namespace: string };
 export type SpecialistCurrent = { choice?: AgentDefaults | null; generation: number; conversation: OpenedConversation | null; draft: ChatDraft; profileTitle: string; profileRevision: number; profileSpecies: string; profileLook: string };
 export type SpecialistChatEvent = { profile: string; delta: ChatDelta };
 export type SpecialistChatSync = { profile: string; sync: ChatSync };
@@ -515,6 +516,7 @@ export interface AgentSkill { id: string; revision: number; title: string; conte
 
 export interface AgentProfile {
   github?: AgentGithubGrant;
+  connector_snapshots?: Record<string, AgentSnapshotGrant>;
   built_in: boolean;
   id: string;
   revision: number;
@@ -541,6 +543,7 @@ export const Bridge = {
   agentProfileStateSet: (profile: string, version: number, change: AgentStateChange) => invoke<AgentProfileState>("agent_profile_state_set", { profile, version, change }),
   onAgentProfileState(cb: (event: {profile: string; state: AgentProfileState}) => void): void { void listen<{profile: string; state: AgentProfileState}>("agent-profile-state", e => cb(e.payload)); },
   setSpecialistGithub: (profile:string,version:number,enabled:boolean,repository:string) => invoke<AgentGithubGrant>("set_specialist_github",{profile,version,enabled,repository}),
+  setSpecialistSnapshot: (profile: string, provider: string, version: number, enabled: boolean, repository: string) => invoke<AgentSnapshotGrant>("set_specialist_snapshot", { profile, provider, version, enabled, repository }),
   setSpecialistChatAccess: (profile: string, access: ChatAccess) => invoke<void>("set_specialist_chat_access", { profile, access }),
   onView(cb: (v: ViewModel) => void): void {
     void listen<ViewModel>("view", (e) => cb(e.payload));

@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: a459ffd1ac72 -->
+<!-- source: 95c398eb7403 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -105,8 +105,24 @@ Os resultados identificam o provedor e `source.mode: cached_snapshot`; a atualiz
 desconhecida. Incluem as linhas em cache de MRs/PRs, revisores, checks/jobs, branches e releases, com
 segredos ocultados. O resultado mantém JSON válido no limite de 16 KiB do chat; `truncated` e
 `coverage` indicam linhas omitidas. As atividades entram nos rastros existentes do chat. Esses controles
-não liberam escritas remotas, leituras ao vivo, comandos CLI nem acesso de especialistas. Permissões
-independentes por perfil continuam pendentes.
+não liberam escritas remotas, leituras ao vivo, comandos CLI nem acesso de especialistas.
+
+<a id="profile-snapshot-permissions"></a>
+### Permissões de snapshots por perfil
+
+Developer e Reviewer têm controles separados de **Snapshot do GitLab em cache** e **Snapshot do
+Gitea em cache** nos perfis de agentes. Informe o caminho de um repositório e ative sua leitura em
+cache. É necessário um primeiro painel completo, não vazio e sincronizado com sucesso para identificar
+a conta. O GitLab aceita subgrupos; o Gitea usa `owner/name`. É possível revogar mesmo com o conector desligado.
+
+Cada permissão vincula perfil, serviço, repositório, host, ID da conta e uma versão que muda a cada
+alteração. O Gitea também vincula a geração da credencial. O perfil recebe apenas as linhas em cache
+do repositório escolhido nos chats por API compatíveis; não herda permissões do companheiro nem de
+outros perfis. Perfis arquivados, sessões pausadas/bloqueadas, conectores desligados, contas/conexões
+alteradas e permissões revogadas ou substituídas recusam leituras. Reativar não restaura uma instância
+antiga da ferramenta. O cabeçalho do chat mostra repositório e conta e explica quando o executor não
+pode usar essas ferramentas. Não há novas leituras ao vivo nem ações remotas. A atualização do snapshot
+do GitLab com ID da conta estabelece uma nova referência uma vez.
 
 ## GitHub
 

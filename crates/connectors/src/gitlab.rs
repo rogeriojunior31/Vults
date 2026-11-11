@@ -19,7 +19,7 @@ const AUTH: &str = "Sign in to GitLab.com with glab auth login --hostname gitlab
 const FAILED: &str = "Could not read GitLab. Check glab and try again.";
 const QUERY: &str = r#"query VultsReadOnly {
   currentUser {
-    username
+    id username
     contributedProjects(first: 10, sort: LATEST_ACTIVITY_DESC) {
       nodes { fullPath archived
         repository { rootRef lastCommit { sha title committedDate
@@ -223,7 +223,14 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
         })
         .ok_or_else(|| Error::Partial(INVALID.into()))?;
-    let mut snapshot = Snapshot::from([("meta:account".into(), json!({"login":login,"schema":2}))]);
+    let id = user["id"]
+        .as_str()
+        .and_then(|s| s.strip_prefix("gid://gitlab/User/"))
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|id| *id > 0 && *id <= i64::MAX as u64)
+        .ok_or_else(invalid)?;
+    let namespace = format!("{login}@{id}");
+    let mut snapshot = Snapshot::from([("meta:account".into(), json!({"login":login,"id":id,"schema":3}))]);
     for (field, prefix) in [
         ("authoredMergeRequests", "mr"),
         ("reviewRequestedMergeRequests", "review"),
@@ -289,14 +296,14 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
                 "author":text(&row["author"]["username"],255),"oid":head,"ci":ci,"approved":approved,"changes":changes,"rank":rank,
                 "size":size,"reviewers":reviewers,"runs":runs,"updated":row["updatedAt"]});
             if snapshot
-                .insert(format!("{prefix}:{login}:{repo}!{number}:item"), item)
+                .insert(format!("{prefix}:{namespace}:{repo}!{number}:item"), item)
                 .is_some()
             {
                 return Err(Error::Partial(INVALID.into()));
             }
         }
     }
-    projects(&mut snapshot, &user["contributedProjects"], login)?;
+    projects(&mut snapshot, &user["contributedProjects"], &namespace)?;
     Ok(snapshot)
 }
 fn invalid() -> Error {
