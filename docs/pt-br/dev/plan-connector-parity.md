@@ -1,5 +1,5 @@
 # Paridade do GitLab e Gitea
-<!-- source: 6b245a9586ed -->
+<!-- source: 4c059fa37dcc -->
 
 Solicitado em 2026-11-10. O GitHub é a referência de comportamento. Entregar os recursos nativos
 equivalentes com a mesma confirmação, escopo, auditoria e tratamento de falhas. Não anunciar recursos
@@ -11,7 +11,7 @@ pendentes. O Notion vem depois desse trabalho, sem substituí-lo. Manter cobertu
 | Etapa | GitLab | Gitea | Aceitação |
 | --- | --- | --- | --- |
 | CP1: painel completo | Implementado com limites documentados | Implementado com limites documentados | Tamanho dos diffs, revisores, pedidos de alteração, jobs/checks do mesmo commit, branches padrão, releases, sem notícias repetidas |
-| CP2: snapshot no chat | Pendente | Pendente | Permissões independentes em Settings/perfil, leitura do cache no API Chat e realtime, sem nova consulta de rede |
+| CP2: snapshot no chat | Companheiro implementado; permissões por perfil pendentes | Companheiro implementado; permissões por perfil pendentes | Permissões independentes em Settings/perfil, leitura do cache no API Chat e realtime, sem nova consulta de rede |
 | CP3: leituras ao vivo | Pendente | Pendente | Conta, repositório/busca, issues/PRs, comentários/reviews, diff/arquivos, execuções/jobs/logs de CI e regras de branch; paginação explícita e limitada |
 | CP4: escritas em issues | Pendente | Pendente | Criar/editar, comentários e suas edições, rótulos, responsáveis, fechar/reabrir; prévia humana, revalidação e leitura de confirmação auditada |
 | CP5: escritas em pull requests | Pendente | Pendente | Criar/editar, rascunho/pronto, solicitar revisores, reviews e comentários em linhas vinculados ao commit revisado |
@@ -53,6 +53,13 @@ divergentes, ausência de cobertura do Actions e páginas incompletas. Reviews u
 A frequência das consultas considera a quantidade de requisições. Simulações no WebView nativo
 cobrem abas Actions/Releases e pontos de clique dos jobs com falha em 100%, 125%, 150% e 200%,
 incluindo uma área de 480 por 360.
+
+Os testes CP2 do companheiro cobrem escolhas independentes desligadas por padrão, revogação por
+chamada, separação de provedores, troca da geração de credenciais do Gitea, recusa de argumentos,
+ocultação de segredos e JSON válido e limitado. As duas ferramentas cabem junto às leituras existentes
+da voz em tempo real. O WebView nativo verifica gravação/leitura reais pelo backend, recusa pela ilha
+e pontos de clique dos dois controles em quatro escalas emuladas. Essa etapa não herda nem implementa
+permissões por perfil ou ações ao vivo.
 
 O Gitea ainda precisa de uma instância real de teste. Simulações e escalas emuladas da interface não
 substituem permissões reais, DPI/entrada físicos do Windows nem aceitação das regras de merge ao vivo.

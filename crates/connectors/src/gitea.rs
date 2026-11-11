@@ -154,6 +154,15 @@ pub fn clear(expected: &str) -> Result<Connection, String> {
     Ok(Connection::default())
 }
 /// In-memory metadata only: the runtime's owner loop must never block on the OS keyring.
+pub fn current_snapshot_item(item: &str) -> bool {
+    META.read()
+        .ok()
+        .and_then(|meta| {
+            meta.as_ref()
+                .map(|meta| item.starts_with(&format!("gitea:{}:", meta.generation)))
+        })
+        .unwrap_or(false)
+}
 pub fn trusted_link(item: &str, raw: &str) -> Option<SafeUrl> {
     let meta = META.read().ok()?;
     let meta = meta.as_ref()?;

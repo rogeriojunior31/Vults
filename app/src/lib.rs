@@ -3,6 +3,7 @@
 
 mod audit;
 mod chat;
+mod connector_snapshots;
 mod connectors;
 mod context;
 mod continuation;
@@ -280,6 +281,7 @@ pub fn run() {
             connectors::connectors_status,
             connectors::connector_zeca_tools,
             connectors::set_connector_zeca_snapshot,
+            connector_snapshots::set_connector_snapshot,
             connectors::set_connector_zeca_work_item,
             connectors::connector_enable,
             connectors::gitea_connection,

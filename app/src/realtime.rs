@@ -292,6 +292,7 @@ async fn run_with_audio(
     let source: Arc<dyn crate::flock_tools::Source> = Arc::new(app.clone());
     #[allow(unused_mut)]
     let mut tools = crate::flock_tools::realtime(source);
+    tools.extend(crate::connector_snapshots::tools(&app));
     #[cfg(target_os = "linux")]
     consultation::offer(
         app.clone(),

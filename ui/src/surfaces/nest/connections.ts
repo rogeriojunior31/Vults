@@ -18,6 +18,7 @@ import type { CheckState, RowView, Said, ViewModel } from "../../view.gen";
 export interface ConnectionsActions {
   zecaTools?: () => Promise<ConnectorZecaTools>;
   setSnapshot?: (on: boolean) => Promise<void>;
+  setCachedSnapshot?: (provider: string, on: boolean) => Promise<void>;
   setWorkItem?: (on: boolean) => Promise<void>;
   traces?: () => void;
   loadPlace?: () => Promise<ConnectionsPlace | null>;
@@ -135,6 +136,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   let toolsReading = false;
   let toolsFailed = false;
   let snapshotSaving = false;
+  const cachedPending = new Map<string, boolean>();
+  const cachedFailed = new Set<string>();
   let snapshotChoice: boolean | null = null;
   let snapshotFailed = false;
   let workItemSaving = false;
@@ -380,7 +383,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   };
 
   const readTools = () => {
-    if (!actions.zecaTools || toolsReading || snapshotSaving || workItemSaving) return;
+    if (!actions.zecaTools || toolsReading || snapshotSaving || workItemSaving || cachedPending.size) return;
     const mine = ++toolsAsked;
     toolsReading = true;
     void actions.zecaTools().then(next => {
@@ -393,8 +396,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
   };
   const toolView = (enabled: boolean): HTMLElement[] => {
     const retry = () => fid(el("button", { class: "outline", text: t("Try again"), onclick: readTools }), "act:tools-retry");
-    const failure = toolsFailed ? viewState("error", t("Could not load Zeca's GitHub tools."), tools ? t("The last loaded view is kept and may be out of date.") : undefined, retry()) : null;
-    if (!tools) return [failure ?? viewState("loading", t("Reading GitHub tool settings…"))];
+    const failure = toolsFailed ? viewState("error", t("Could not load Zeca's connector tools."), tools ? t("The last loaded view is kept and may be out of date.") : undefined, retry()) : null;
+    if (!tools) return [failure ?? viewState("loading", t("Reading connector tool settings…"))];
     const control = fid(el("input", { class: "toggle" }), "act:snapshot");
     control.type = "checkbox"; control.checked = snapshotChoice ?? tools.snapshot;
     control.disabled = snapshotSaving || !actions.setSnapshot;
@@ -438,13 +441,43 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
     const workItem = row("github_work_item", t("Read repositories, issues, pull requests, checks and Actions through your GitHub connection. Issue, pull request and Actions changes always show an approval card and are checked again before they run."), t("Reads and approved changes"), workItemControl,
       t("Recorded calls in the last 24 hours: {n}. Last recorded use: {when}.", { n: tools.liveReadCalls, when: workItemLast }));
     workItem.append(workItemFeedback);
+    const cached = (["gitlab", "gitea"] as const).map(provider => {
+      const control = fid(el("input", { class: "toggle" }), `act:snapshot:${provider}`);
+      control.type = "checkbox";
+      control.checked = cachedPending.get(provider) ?? tools?.cachedSnapshots?.[provider] === true;
+      control.disabled = !actions.setCachedSnapshot || cachedPending.has(provider);
+      control.setAttribute("aria-busy", String(cachedPending.has(provider)));
+      control.setAttribute("aria-label", provider === "gitlab" ? t("Let Zeca read the GitLab snapshot") : t("Let Zeca read the Gitea snapshot"));
+      const feedback = el("p", { class: `conn-tool-feedback${cachedFailed.has(provider) ? " error" : ""}`, text: cachedPending.has(provider) ? t("Saving…") : cachedFailed.has(provider) ? t("Could not save. Your previous choice is restored. Try again.") : "" });
+      feedback.setAttribute("role", cachedFailed.has(provider) ? "alert" : "status");
+      control.addEventListener("change", () => {
+        if (!actions.setCachedSnapshot || cachedPending.has(provider)) return;
+        const next = control.checked;
+        cachedPending.set(provider, next); cachedFailed.delete(provider); ++toolsAsked; toolsReading = false;
+        void actions.setCachedSnapshot(provider, next).then(() => {
+          if (tools) (tools.cachedSnapshots ??= {})[provider] = next;
+        }, () => {
+          cachedFailed.add(provider);
+        }).finally(() => { cachedPending.delete(provider); draw(); });
+        draw();
+      });
+      const usage = tools?.cachedSnapshotUsage?.[provider];
+      const last = usage?.lastUsed == null ? t("Never recorded") : ago(usage.lastUsed / 1000, Date.now() / 1000);
+      const entry = row(`${provider}_snapshot`, provider === "gitlab"
+        ? t("Reads the cached GitLab board in API chat and realtime voice. No new network request. Freshness is unknown; live actions and specialist access are not enabled.")
+        : t("Reads the cached Gitea board in API chat and realtime voice. No new network request. Freshness is unknown; live actions and specialist access are not enabled."), t("Reads"), control,
+        t("Recorded calls in the last 24 hours: {n}. Last recorded use: {when}.", { n: usage?.calls ?? 0, when: last }));
+      entry.append(feedback);
+      return entry;
+    });
     return [
       ...(failure ? [failure] : []),
-      el("p", { class: "conn-tool-intro", text: t("Control Zeca's GitHub tools in supported API chats. The cached snapshot is also available in realtime voice. CLI command access is managed separately in Chat.") }),
+      el("p", { class: "conn-tool-intro", text: t("Control Zeca's connector tools in supported API chats. Cached snapshots also work in realtime voice and require Zeca and their connector to be on. CLI command access is managed separately in Chat.") }),
       ...(!enabled ? [el("p", { class: "conn-status", text: t("GitHub is off. Turn on the connector in Settings to receive snapshots.") })] : []),
       ...(!actions.zeca() ? [el("p", { class: "conn-status", text: t("Zeca is off. Your tool choice is kept for when he is turned on.") })] : []),
       snapshot,
       workItem,
+      ...cached,
       row("github_pull_request_merge", t("Proposes a merge of the exact commit after checking reviews, checks and branch rules. Every merge needs its own approval. Branch deletion is separate."), t("Reads and approved changes")),
       el("div", { class: "conn-tool-footer" }, el("p", { text: t("Cached reads use no network budget. Live GitHub tools and connector polling share a limit of {n} per 24 hours.", { n: tools.budget }) }),
         fid(el("button", { class: "outline", text: t("Open traces"), onclick: () => actions.traces?.() }), "act:tool-traces")),
