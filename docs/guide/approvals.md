@@ -133,6 +133,12 @@ To answer one further back first, click **Open** on its notification (in *Panel*
 the corner widget: its card comes to the front, keeping its own deadline. Muted and hidden projects
 ([per project](island.md#per-project-mute-pin-hide)) still get their cards and sounds.
 
+In the Nest, when two or more permissions wait, **Waiting for you** sits above the sessions on
+**Flock**: one row per request with its project, command and folder, and its own **Deny** and
+**Allow**. Tick plain requests and **Allow selected** allows just those; the rest keep waiting. A
+destructive request has no tick (it is answered on its own, as on its card), and one whose command
+was cut offers only **Open**, so you see the whole of it first.
+
 A question half answered starts over when another card comes in front of it. A card whose agent
 moved on is not brought forward, but a subagent working in parallel does not take a card away. When
 one agent asks for two calls at once, answering the first leaves the second waiting.

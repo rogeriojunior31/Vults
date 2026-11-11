@@ -1,6 +1,6 @@
 // Flock keeps core's selected session and permission owner across its wire, list and details.
 import type { Answer, Diff, FlockPlace, Hush, ProjectPref, UsageWindow } from "../../bridge";
-import type { AgentKind, SessionView, TouchedView, ViewModel } from "../../view.gen";
+import type { AgentKind, ApprovalView, SessionView, TouchedView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
 import { t, locale } from "../../i18n";
 import { AGENTS } from "../../agents.gen";
@@ -255,7 +255,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
   clear.hidden = true;
   const filters = el("div", { class: "flock-filters" });
   const toolbar = el("div", { class: "flock-toolbar" }, title, el("div", { class: "app-search" }, search), filters, clear);
-  const list = el("section", { class: "flock-list" }, toolbar, roosts);
+  // The line of waiting permissions (drawLane): answered requests leave it before the next view.
+  const lane = el("section", { class: "waiting-lane" });
+  lane.hidden = true;
+  const laneTicked = new Set<string>(), laneSent = new Set<string>();
+  const list = el("section", { class: "flock-list" }, toolbar, lane, roosts);
   const focusBlock = el("section", { class: "focus-block" });
   const detailTabs = el("nav", { class: "detail-tabs" });
   detailTabs.setAttribute("role", "tablist");
@@ -1046,6 +1050,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     needs.setAttribute("aria-label", attention === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: attention }));
     clear.hidden = !search.value && !onlyNeeds && !status;
     drawFilters(v.sessions);
+    drawLane(v);
     element.classList.toggle("choosing-session", choosing || !front);
     back.hidden = !front;
 
@@ -1163,6 +1168,62 @@ export function createFlock(on: FlockActions & FlockAsk): {
       },
     );
   };
+
+  /** The line of waiting permissions, when more than one waits: each shows its command, project and
+   *  folder before it is answered, and each answer is a click (ADR 0004). Ticking rows lets one click
+   *  allow several, never a destructive or cut one, and leaves the rest waiting (DESIGN.md). */
+  function drawLane(v: ViewModel): void {
+    // A sent answer hides its row until the view drops it; one that left the line is forgotten.
+    for (const request of [...laneSent]) if (!(v.waiting ?? []).some(w => w.request === request)) laneSent.delete(request);
+    const rows = (v.waiting ?? []).filter(w => !laneSent.has(w.request));
+    for (const request of [...laneTicked]) if (!rows.some(w => w.request === request)) laneTicked.delete(request);
+    lane.hidden = rows.length < 2;
+    if (lane.hidden) { lane.replaceChildren(); return; }
+    const batchable = (w: ApprovalView) => w.why !== "destructive" && !w.cut;
+    const answer = (requests: string[], d: "allow" | "deny") => {
+      for (const request of requests) { laneSent.add(request); laneTicked.delete(request); on.decide(request, d); }
+      draw();
+    };
+    const row = (w: ApprovalView) => {
+      const session = v.sessions.find(s => s.agent === w.agent && s.id === w.session) ?? null;
+      const who = session ? agentName(session) : AGENTS.find(a => a.kind === w.agent)?.name ?? w.agent;
+      const destructive = w.why === "destructive";
+      const tick = batchable(w) ? fid(el("input", { class: "lane-tick" }), `lane:tick:${w.request}`) as HTMLInputElement : null;
+      if (tick) {
+        tick.type = "checkbox";
+        tick.checked = laneTicked.has(w.request);
+        tick.setAttribute("aria-label", t("Select {project} for Allow selected", { project: w.project || who }));
+        tick.addEventListener("change", () => { if (tick.checked) laneTicked.add(w.request); else laneTicked.delete(w.request); draw(); });
+      }
+      const what = w.full ? `${w.tool} · ${w.full}` : w.target;
+      const command = Object.assign(el("code", { class: "lane-command", text: what }), { title: what });
+      const folder = w.cwd === undefined ? session?.cwd ?? null : w.cwd;
+      const open = el("button", { class: "lane-open", onclick: () => session && on.focus(session) },
+        el("strong", { text: w.project || who }), el("span", { text: who }));
+      open.title = t("Show this session");
+      return el("li", { class: `lane-row${destructive ? " destructive" : ""}` },
+        tick ?? Object.assign(el("span", { class: "lane-tick-none" }, destructive ? icon("warning", 13, 2) : null), { title: destructive ? t("Destructive: answer it on its own") : t("Only the full command can be allowed: open it") }),
+        el("div", { class: "lane-body" }, open, command,
+          el("span", { class: "lane-scope", text: destructive ? t("Destructive: no policy ever allows it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) })),
+        // A cut command is answered on its own card, where the whole of it shows (core ignores it here).
+        w.cut
+          ? el("div", { class: "lane-actions" }, fid(el("button", { class: "outline", text: t("Open"), onclick: () => session && on.focus(session) }), `lane:open:${w.request}`))
+          : el("div", { class: "lane-actions" },
+              fid(el("button", { class: "outline", text: t("Deny"), onclick: () => answer([w.request], "deny") }), `lane:deny:${w.request}`),
+              fid(el("button", { class: destructive ? "outline danger" : "outline", text: t("Allow"), onclick: () => answer([w.request], "allow") }), `lane:allow:${w.request}`)),
+      );
+    };
+    const ticked = rows.filter(w => laneTicked.has(w.request) && batchable(w)).map(w => w.request);
+    const allowTicked = fid(el("button", { class: "primary", text: ticked.length ? t("Allow selected ({n})", { n: ticked.length }) : t("Allow selected"), onclick: () => ticked.length && answer(ticked, "allow") }), "lane:allow-selected");
+    (allowTicked as HTMLButtonElement).disabled = !ticked.length;
+    const list = el("ul", { class: "lane-rows" }, ...rows.map(row));
+    lane.replaceChildren(
+      el("header", { class: "lane-head" }, el("h3", { text: t("Waiting for you") }), el("span", { class: "attention-count", text: String(rows.length) })),
+      list,
+      // The note shows once something is ticked: what the one click will and will not do.
+      el("footer", { class: "lane-foot" }, allowTicked, ticked.length ? el("span", { class: "lane-note", text: t("Unselected requests keep waiting. Destructive ones are answered on their own.") }) : null),
+    );
+  }
 
   function drawFilters(sessions: SessionView[]): void {
     const pick = (word: string, value: FlockPlace["status"], count: number) => {

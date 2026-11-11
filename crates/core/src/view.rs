@@ -15,6 +15,11 @@ pub struct ViewModel {
     pub chat: crate::chat::ChatView,
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
+    /// Every permission card waiting, in line order (deferred ones included): a surface can show
+    /// the line and answer any of them, each still by a click (ADR 0004). Questions are left out:
+    /// they are answered on their own card.
+    #[cfg_attr(test, ts(as = "Option<Vec<ApprovalView>>", optional))]
+    pub waiting: Vec<ApprovalView>,
     pub alerts: Vec<AlertView>,
     /// Actionable items, including deferred offers; surfaces only choose their presentation.
     #[cfg_attr(test, ts(as = "Option<Vec<crate::attention::AttentionItem>>", optional))]
@@ -338,6 +343,49 @@ impl State {
             .or_else(|| self.ordered().first().map(|s| &s.key))
     }
 
+    /// A waiting card as the surfaces draw it.
+    fn approval_view(&self, p: &crate::Pending) -> ApprovalView {
+        ApprovalView {
+            request: p.request.0.clone(),
+            agent: p.session.agent,
+            session: p.session.session_id.clone(),
+            project: self
+                .sessions
+                .get(&p.session)
+                .map(|s| s.project.clone())
+                .unwrap_or_default(),
+            tool: p.tool.clone(),
+            target: p.target.clone(),
+            cwd: p.cwd.clone(),
+            description: p.ask.description.clone(),
+            full: p.ask.full.clone(),
+            cut: p.ask.cut,
+            added: p.ask.added,
+            removed: p.ask.removed,
+            questions: p.questions.clone(),
+            queue: self.pending.len(),
+            why: p
+                .questions
+                .is_empty()
+                .then(|| {
+                    let s = self.sessions.get(&p.session);
+                    crate::policies::why_ask(
+                        &self.policies,
+                        &crate::policies::Call {
+                            agent: p.session.agent,
+                            root: s.and_then(|s| s.root.as_deref()),
+                            cwd: p.cwd.as_deref(),
+                            tool: &p.tool,
+                            target: &p.target,
+                            ask: &p.ask,
+                        },
+                    )
+                })
+                .flatten(),
+            reminders: p.reminders,
+        }
+    }
+
     pub fn view(&self) -> ViewModel {
         let sessions = self.ordered();
         let species = crate::flock::species(
@@ -452,45 +500,13 @@ impl State {
                 .max()
                 .unwrap_or(Attention::Quiet),
             sessions,
-            approval: self.active_card().map(|p| ApprovalView {
-                request: p.request.0.clone(),
-                agent: p.session.agent,
-                session: p.session.session_id.clone(),
-                project: self
-                    .sessions
-                    .get(&p.session)
-                    .map(|s| s.project.clone())
-                    .unwrap_or_default(),
-                tool: p.tool.clone(),
-                target: p.target.clone(),
-                cwd: p.cwd.clone(),
-                description: p.ask.description.clone(),
-                full: p.ask.full.clone(),
-                cut: p.ask.cut,
-                added: p.ask.added,
-                removed: p.ask.removed,
-                questions: p.questions.clone(),
-                queue: self.pending.len(),
-                why: p
-                    .questions
-                    .is_empty()
-                    .then(|| {
-                        let s = self.sessions.get(&p.session);
-                        crate::policies::why_ask(
-                            &self.policies,
-                            &crate::policies::Call {
-                                agent: p.session.agent,
-                                root: s.and_then(|s| s.root.as_deref()),
-                                cwd: p.cwd.as_deref(),
-                                tool: &p.tool,
-                                target: &p.target,
-                                ask: &p.ask,
-                            },
-                        )
-                    })
-                    .flatten(),
-                reminders: p.reminders,
-            }),
+            approval: self.active_card().map(|p| self.approval_view(p)),
+            waiting: self
+                .pending
+                .iter()
+                .filter(|p| p.questions.is_empty())
+                .map(|p| self.approval_view(p))
+                .collect(),
             ended: self
                 .ended
                 .iter()

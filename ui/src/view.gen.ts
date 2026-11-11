@@ -12,7 +12,13 @@ export type AlertLevel = "info" | "ok" | "warn" | "error";
 
 export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses" | "west-coast" | "fitted-cap" | "mountain-hat" | "headband" | "dreads" | "front-knot" | "durag" | "crown" | "bucket-hat" | "clock-chain" | "headphones" | "shutter-shades" | "chrome-chain" | "eye-patch";
 
-export type ViewModel = { chat?: ChatView, sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
+export type ViewModel = { chat?: ChatView, sessions: Array<SessionView>, approval: ApprovalView | null,
+/**
+ * Every permission card waiting, in line order (deferred ones included): a surface can show
+ * the line and answer any of them, each still by a click (ADR 0004). Questions are left out:
+ * they are answered on their own card.
+ */
+waiting?: Array<ApprovalView>, alerts: Array<AlertView>,
 /**
  * Actionable items, including deferred offers; surfaces only choose their presentation.
  */

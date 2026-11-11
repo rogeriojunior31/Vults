@@ -215,6 +215,20 @@ fn a_second_request_waits_its_turn() {
 }
 
 #[test]
+fn the_view_lists_every_waiting_permission_in_line_order() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("b", "r2"), now);
+    let waiting: Vec<_> = s.view().waiting.into_iter().map(|w| w.request).collect();
+    assert_eq!(waiting, vec!["r1".to_string(), "r2".to_string()]);
+    // Answering one from the line takes it out; the other stays, still unanswered.
+    visible(&mut s, decide("r2", Decision::Allow), now);
+    let waiting: Vec<_> = s.view().waiting.into_iter().map(|w| w.request).collect();
+    assert_eq!(waiting, vec!["r1".to_string()]);
+}
+
+#[test]
 fn every_waiting_card_expires_on_its_own_deadline() {
     let mut s = State::default();
     let now = Instant::now();
