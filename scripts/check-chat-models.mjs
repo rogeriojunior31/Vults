@@ -912,7 +912,7 @@ for (const surface of ["island", "nest"]) {
   assert.ok(activity.textContent.includes("Running"));
   chat.receive({ kind: "activity", event: { type: "end", id: "read", ok: false } }); flush();
   assert.ok(tool.textContent.includes("Failed"));
-  const request = (id, target) => ({ kind: "permission", id, tool: "Bash", target, full: target, description: null, added: 0, removed: 0, always: false, outside: null });
+  const request = (id, target) => ({ kind: "permission", id, tool: "Bash", target, full: target, description: null, added: 0, removed: 0, always: true, outside: null });
   chat.receive(request("first", "git status"));
   const first = nodes(chat.element).find(n => n.classList.contains("ask"));
   const staleAllow = nodes(first).find(n => n.tag === "button" && n.textContent === "Allow");
@@ -929,6 +929,14 @@ for (const surface of ["island", "nest"]) {
   assert.ok(receipt && !receipt.open, "Answered commands become closed receipts, with details retained");
   assert.equal(chat.answerWaiting(false), true);
   assert.deepEqual(decisions, [["second", "allow"], ["first", "deny"]]);
+  chat.receive({ ...request("guarded", "rm -rf build"), always: false });
+  const guardedCard = nodes(chat.element).find(n => n.classList.contains("ask") && n.textContent.includes("rm -rf build"));
+  assert.ok(guardedCard.textContent.includes("click"), "Where Deny is the bright button, Allow shows a click instead of its key");
+  assert.equal(chat.answerWaiting(true), true, "The Allow key is taken, so it reaches no other surface");
+  assert.deepEqual(decisions, [["second", "allow"], ["first", "deny"]], "The Allow key never allows a card that only a click allows");
+  assert.equal(chat.answerWaiting(false), true);
+  assert.deepEqual(decisions.at(-1), ["guarded", "deny"], "Deny still answers from the keyboard");
+  decisions.pop();
   chat.receive(request("cancelled", "must never run"));
   chat.receive({ kind: "done" });
   assert.equal(chat.answerWaiting(true), false, "Even an unexpected successful end expires its pending cards");

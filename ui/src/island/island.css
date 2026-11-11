@@ -2211,6 +2211,24 @@ button.ghost:hover {
 .btn.primary .kbd {
   border-color: color-mix(in srgb, var(--on-accent) 40%, transparent);
 }
+/* Where only a click allows, the key's place says so; a refused key press answers on the button. */
+.kbd.click-only {
+  border-style: dashed;
+}
+.allow-by-click.key-refused {
+  animation: key-refused 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.allow-by-click.key-refused .click-only {
+  opacity: 1;
+}
+@keyframes key-refused {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error) 0%, transparent); }
+  30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .allow-by-click.key-refused { animation: none; outline: 2px solid var(--error); outline-offset: 2px; }
+}
 
 /* ── Chat polish ── */
 .segmented {

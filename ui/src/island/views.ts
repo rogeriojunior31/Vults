@@ -11,6 +11,7 @@ import { presenceNow } from "./fsm";
 import { usageLabel } from "../cost";
 import { zecaShown } from "./flock";
 import { type Ticker, tickerSteps } from "./ticker";
+import { clickOnly } from "./allow-key";
 
 export const AGENT_NAME: Readonly<Record<AgentKind, string>> = { ...NAME_BY_KIND, other: "Agent" };
 /** What a session's agent is called: another tool goes by its own name. */
@@ -161,7 +162,6 @@ function button(
 function kbd(keys: string | undefined): Node | null {
   return keys ? el("span", { class: "kbd", text: keys }) : null;
 }
-
 function jumpButton(
   s: SessionView,
   actions: CardActions,
@@ -384,7 +384,9 @@ function sessionBody(
           // Destructive: Deny is the bright one, so a reflex click is the safe one; the buttons
           // keep their places. It offers no Always: no rule ever answers it (ADR 0004).
           button(t("Deny"), destructive ? "primary" : "secondary", answer("deny"), kbd(actions.keys.deny)),
-          button(t("Allow"), destructive ? "secondary danger" : "primary", answer("allow"), kbd(actions.keys.allow)),
+          destructive
+            ? (() => { const b = button(t("Allow"), "secondary danger", answer("allow"), clickOnly()); b.classList.add("allow-by-click"); return b; })()
+            : button(t("Allow"), "primary", answer("allow"), kbd(actions.keys.allow)),
           ruleFolder && !approval.cut && !destructive ? always : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),

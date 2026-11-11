@@ -44,6 +44,7 @@ import { createPalette, paletteItems } from "../palette";
 import { sizeSwitch } from "../sizes";
 import { CONNECTORS } from "../connectors";
 import { createNow, nowItems } from "./now";
+import { allowsByKey, refuseAllowKey } from "./allow-key";
 import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, skipButton, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
@@ -2141,6 +2142,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (chat.answerWaiting(allow)) return;
     // Y / N answer a permission; a question needs its own choice.
     if (cardOnScreen && cardOnScreen.questions.length === 0) {
+      if (allow && !allowsByKey(cardOnScreen)) { refuseAllowKey(card); return; }
       const { request } = cardOnScreen;
       cardOnScreen = null;
       cardActions.decide(request, allow ? "allow" : "deny");
@@ -2191,6 +2193,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     else if (k === "ArrowUp" || k === "k") walk(-1);
     else if (k === "Enter" && inFront && !cardOnScreen) actions.jump(inFront.agent, inFront.id);
     else if (k === "m" && inFront) openMenu(key(inFront));
+    else if (k === "y" && cardOnScreen && cardOnScreen.questions.length === 0 && !allowsByKey(cardOnScreen)) refuseAllowKey(card);
     else if ((k === "y" || k === "n") && cardOnScreen && cardOnScreen.questions.length === 0) {
       const { request } = cardOnScreen;
       cardOnScreen = null;

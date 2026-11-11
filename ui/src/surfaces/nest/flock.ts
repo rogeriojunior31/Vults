@@ -8,6 +8,7 @@ import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
 import { approvalFolder, approvalRuleFolder, shortPath, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
+import { allowsByKey, clickOnly, refuseAllowKey } from "../../island/allow-key";
 import { icon } from "../../island/icons";
 import { usageLabel, usageLevel } from "../../cost";
 
@@ -738,7 +739,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       why,
       scope,
       fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), "act:deny"),
-      fid(el("button", { class: destructive ? "outline danger" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), kbd(keys.allow)), "act:allow"),
+      fid(el("button", { class: destructive ? "outline danger allow-by-click" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), destructive ? clickOnly() : kbd(keys.allow)), "act:allow"),
       always,
     );
   };
@@ -1253,6 +1254,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       const ask = view?.approval;
       if (!active || !element.isConnected || element.offsetParent === null || focusBlock.offsetParent === null || !ask || ask.request !== onScreen || ask.questions.length) return false;
       if (sent === ask.request) return true;
+      if (allow && !allowsByKey(ask)) { refuseAllowKey(element); return true; }
       sent = ask.request;
       on.decide(ask.request, allow ? "allow" : "deny");
       return true;

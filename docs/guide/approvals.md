@@ -48,7 +48,9 @@ the request to its terminal. On timeout, the normal terminal fallback still appl
   **Always allow**: a rule would only see its start.
 - A destructive command (`rm -rf`, a forced push) always asks: its card says so in orange, makes
   **Deny** the bright button, outlines **Allow** in red and offers no **Always allow**. No rule or
-  policy ever answers it, even a rule saved before.
+  policy ever answers it, even a rule saved before. Only a click allows it: in place of the key,
+  **Allow** shows *click*, and the Allow shortcut (or **Y**) only flashes the button. **Deny**
+  still takes its key. The same holds in Zeca's chat wherever **Deny** is the bright button.
 - Only you answer: with a click or a shortcut now, or earlier with **Always allow** or a
   [policy](#policies) you accepted. No timer or default ever approves anything.
 

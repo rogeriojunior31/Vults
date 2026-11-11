@@ -15,6 +15,7 @@ import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDel
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
+import { clickOnly, refuseAllowKey } from "./allow-key";
 import { renderFull } from "./markdown";
 import { copyTextButton } from "../clipboard";
 import { locale, t, tk } from "../i18n";
@@ -1560,6 +1561,8 @@ export class ChatPanel {
       }
     }
     if (!waiting) return false;
+    // Where Deny is the bright button (destructive, or steered by outside content), only a click allows.
+    if (allow && (!waiting.always || waiting.outside)) { refuseAllowKey(node); return true; }
     this.answer(waiting, allow ? "allow" : "deny");
     return true;
   }
@@ -2064,7 +2067,9 @@ export class ChatPanel {
             "div",
             { class: "actions" },
             button(t("Deny"), !m.always || m.outside ? "primary" : "secondary", "deny", this.keys.deny),
-            button(t("Allow"), !m.always || m.outside ? "secondary" : "primary", "allow", this.keys.allow),
+            !m.always || m.outside
+              ? (() => { const b = button(t("Allow"), "secondary allow-by-click", "allow", undefined); b.append(clickOnly()); return b; })()
+              : button(t("Allow"), "primary", "allow", this.keys.allow),
             m.always ? el("details", { class: "ask-more" }, el("summary", { class: "btn secondary", text: t("More choices") }), always) : null,
           ),
     );

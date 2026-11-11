@@ -1711,6 +1711,8 @@ export default {
   "{n}d": "{n}d",
   "{n}h": "{n}h",
   "{span} {pct}% · {level}": "{span} {pct}% · {level}",
+  "click": "clic",
+  "Allow it with a click. The shortcut does not run this request.": "Permítelo con un clic. El atajo no ejecuta esta solicitud.",
   "No agent session yet": "Aún no hay sesiones de agentes",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicia Claude Code, Codex u otro agente en una terminal y su pájaro se posa en el cable. Cuando necesite un permiso, la tarjeta aparece aquí.",
   "Set up agents": "Configurar agentes",

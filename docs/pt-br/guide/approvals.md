@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 14c36dfb8beb -->
+<!-- source: 845a5ba2e463 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -54,7 +54,9 @@ o retorno normal ao terminal continua valendo.
   caracteres, não oferece **Always allow**: uma regra só veria o começo dele.
 - Um comando destrutivo (`rm -rf`, um push forçado) sempre pergunta: o card dele diz isso em laranja,
   deixa **Deny** como o botão claro, contorna **Allow** em vermelho e não oferece **Always allow**.
-  Nenhuma regra ou política o responde, nem uma regra salva antes.
+  Nenhuma regra ou política o responde, nem uma regra salva antes. Só um clique o permite: no lugar
+  da tecla, **Allow** mostra *click*, e o atalho de Allow (ou **Y**) só faz o botão piscar. **Deny**
+  continua com a tecla dele. O mesmo vale no chat do Zeca sempre que **Deny** é o botão claro.
 - Só você responde: com um clique ou um atalho agora, ou antes com **Always allow** ou uma
   [política](#policies) que você aceitou. Nenhum timer ou padrão aprova nada, nunca.
 
