@@ -710,9 +710,12 @@ await tick();
 assert.ok(gitlabUI.element.textContent.includes("Merge requests"));
 assert.ok(gitlabUI.element.textContent.includes("Your merge requests"));
 assert.ok(!gitlabUI.element.textContent.includes("Squash and merge"));
-assert.ok(!gitlabUI.element.querySelector('[data-fid="tab:runs"]'));
-assert.ok(!gitlabUI.element.querySelector('[data-fid="tab:rels"]'));
-console.log("check-surface-continuity: GitLab uses merge-request labels and offers no unsupported merge, Actions or Releases tab");
+assert.ok(gitlabUI.element.querySelector('[data-fid="tab:runs"]'));
+assert.ok(gitlabUI.element.querySelector('[data-fid="tab:rels"]'));
+assert.ok(gitlabUI.element.textContent.includes("Pipelines"));
+assert.equal(gitlabUI.element.querySelector('.nest-add'),null,'Off connectors do not consume the active board detail area');
+assert.ok(gitlabUI.element.querySelector('[data-fid="act:manage"]'),'Managing other connections stays available');
+console.log("check-surface-continuity: GitLab uses merge-request/pipeline labels and keeps mutations disabled");
 const giteaUI = createConnections({ status: async () => [], refresh: async () => {},
   onMerged() {}, merge: async () => { throw Error("Gitea must stay read only"); }, settings() {}, open() {}, zeca: () => null });
 giteaUI.update({ boards: [{ connector: "gitea", rows: [{ ...mergeRow, name: "app#7", item: "gitea:generation:alice:yours:team/app#7:item", merge: false, checks: null, review: null }] }] });

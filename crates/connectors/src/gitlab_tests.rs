@@ -3,10 +3,14 @@ use super::*;
 fn response() -> Value {
     let head = "a".repeat(40);
     json!({"data":{"currentUser":{"username":"alice",
+        "contributedProjects":{"nodes":[]},
         "authoredMergeRequests":{"pageInfo":{"hasNextPage":false},"nodes":[{
             "iid":"7","title":"Fix window placement","webUrl":"https://gitlab.com/team/sub/app/-/merge_requests/7",
             "sourceBranch":"fix/placement","diffHeadSha":head,"draft":false,"approved":true,"approvalsRequired":1,
-            "author":{"username":"alice"},"project":{"fullPath":"team/sub/app"},"headPipeline":{"status":"SUCCESS","sha":head}
+            "updatedAt":"2026-11-10T12:00:00.123Z","diffStatsSummary":{"additions":12,"deletions":4,"fileCount":2},
+            "reviewers":{"pageInfo":{"hasNextPage":false},"nodes":[]},
+            "approvedBy":{"pageInfo":{"hasNextPage":false},"nodes":[]},
+            "author":{"username":"alice"},"project":{"fullPath":"team/sub/app"},"headPipeline":{"status":"SUCCESS","sha":head,"jobs":{"pageInfo":{"hasNextPage":false},"nodes":[{"name":"Unit tests","status":"SUCCESS"}]}}
         }]},"reviewRequestedMergeRequests":{"pageInfo":{"hasNextPage":false},"nodes":[]}
     }}})
 }
@@ -24,11 +28,146 @@ fn reads_subgroups_and_never_offers_a_merge() {
     assert_eq!(rows[0].review, Some(Review::Approved));
     assert_eq!(rows[0].head, None);
     assert_eq!(
+        rows[0].facts.diff,
+        Some(Diff {
+            added: 12,
+            removed: 4,
+            files: 2
+        })
+    );
+    assert_eq!(
+        rows[0].facts.runs,
+        vec![Run {
+            name: "Unit tests".into(),
+            state: RunState::Passed
+        }]
+    );
+    assert!(rows[0].facts.updated.is_some());
+    assert_eq!(
         GitLab.identity(&snapshot),
         Some(("alice".into(), "gitlab.com".into()))
     );
     assert_eq!(GitLab.watching(&snapshot), 1);
     assert!(diff(&snapshot, &snapshot).is_empty());
+}
+
+fn project_row() -> Value {
+    let sha = "a".repeat(40);
+    json!({"fullPath":"team/sub/app","archived":false,"repository":{"rootRef":"main","lastCommit":{"sha":sha,
+        "title":"Fix the default branch","committedDate":"2026-11-10T12:00:00+00:00",
+        "latestPipeline":{"sha":sha,"status":"FAILED","jobs":{"pageInfo":{"hasNextPage":false},"nodes":[{"name":"Build","status":"FAILED"},{"name":"Deploy","status":"MANUAL"}]}}}},
+        "releases":{"nodes":[{"name":"Version one","tagName":"v1/test","releasedAt":"2026-11-10T10:00:00Z","upcomingRelease":false}]}})
+}
+#[test]
+fn default_branches_releases_and_changes_requested_share_the_complete_board() {
+    let mut v = response();
+    v["data"]["currentUser"]["contributedProjects"]["nodes"] = json!([project_row()]);
+    v["data"]["currentUser"]["authoredMergeRequests"]["nodes"][0]["reviewers"]["nodes"] = json!([
+        {"username":"bob","mergeRequestInteraction":{"approved":false,"reviewState":"REQUESTED_CHANGES"}},
+        {"username":"carol","mergeRequestInteraction":{"approved":true,"reviewState":"APPROVED"}}]);
+    let snapshot = parse(&v).unwrap();
+    let rows = board(&snapshot);
+    assert_eq!(rows.len(), 3);
+    assert_eq!(GitLab.watching(&snapshot), 3);
+    assert_eq!(rows[0].review, Some(Review::Changes));
+    assert_eq!(rows[0].facts.reviewers[0].said, Said::Changes);
+    assert_eq!(rows[0].facts.reviewers[1].said, Said::Approved);
+    assert_eq!(rows[1].group, Group::Branches);
+    assert_eq!(rows[1].checks, Some(Checks::Failing));
+    assert_eq!(rows[1].facts.runs[1].state, RunState::Waiting);
+    assert_eq!(rows[2].group, Group::Releases);
+    assert_eq!(rows[2].facts.release, Some(Release::Latest));
+    assert_eq!(
+        rows[2].url.as_deref(),
+        Some("https://gitlab.com/team/sub/app/-/releases/v1%2Ftest")
+    );
+    assert!(rows.iter().all(|r| r.head.is_none()));
+    let events = diff(&parse(&response()).unwrap(), &snapshot);
+    assert_eq!(events.len(), 2);
+    assert!(events.iter().any(|e| {
+        e.story
+            .as_ref()
+            .is_some_and(|s| s.kind == StoryKind::ChangesRequested)
+    }));
+    assert!(events.iter().any(|e| {
+        e.story
+            .as_ref()
+            .is_some_and(|s| s.kind == StoryKind::ChecksFailed && s.branch.as_deref() == Some("main"))
+    }));
+    assert!(diff(&snapshot, &snapshot).is_empty());
+}
+#[test]
+fn missing_or_paginated_details_do_not_silently_claim_complete_coverage() {
+    for mutation in 0..7 {
+        let mut v = response();
+        let mr = &mut v["data"]["currentUser"]["authoredMergeRequests"]["nodes"][0];
+        match mutation {
+            0 => mr["reviewers"]["pageInfo"]["hasNextPage"] = json!(true),
+            1 => mr["headPipeline"]["jobs"]["pageInfo"]["hasNextPage"] = json!(true),
+            2 => mr["headPipeline"]["jobs"]["nodes"][0]["status"] = json!("FUTURE_STATE"),
+            3 => mr["headPipeline"]["jobs"] = Value::Null,
+            4 => mr["diffStatsSummary"]["additions"] = json!(-1),
+            5 => {
+                mr["reviewers"]["nodes"] = json!([{"username":"bob","mergeRequestInteraction":{"approved":false,"reviewState":"FUTURE_STATE"}}])
+            }
+            _ => v["data"]["currentUser"]["contributedProjects"] = Value::Null,
+        };
+        assert!(matches!(parse(&v), Err(Error::Partial(_))), "{mutation}");
+    }
+}
+#[test]
+fn stale_jobs_archived_projects_empty_repositories_and_upcoming_releases_stay_truthful() {
+    let mut v = response();
+    let mr = &mut v["data"]["currentUser"]["authoredMergeRequests"]["nodes"][0];
+    mr["headPipeline"]["sha"] = json!("b".repeat(40));
+    assert!(board(&parse(&v).unwrap())[0].facts.runs.is_empty());
+    let mut p = project_row();
+    p["archived"] = json!(true);
+    v["data"]["currentUser"]["contributedProjects"]["nodes"] = json!([p]);
+    assert_eq!(board(&parse(&v).unwrap()).len(), 1);
+    p = project_row();
+    p["repository"] = Value::Null;
+    p["releases"]["nodes"][0]["upcomingRelease"] = json!(true);
+    v["data"]["currentUser"]["contributedProjects"]["nodes"] = json!([p]);
+    let rows = board(&parse(&v).unwrap());
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[1].group, Group::Releases);
+    assert_eq!(
+        rows[1].facts.release, None,
+        "A future public release is not a draft"
+    );
+}
+
+#[test]
+fn unassigned_approvers_and_nullable_review_state_are_reported_without_replaying_old_news() {
+    let mut v = response();
+    let mr = &mut v["data"]["currentUser"]["authoredMergeRequests"]["nodes"][0];
+    mr["reviewers"]["nodes"] =
+        json!([{"username":"bob","mergeRequestInteraction":{"approved":false,"reviewState":null}}]);
+    mr["approvedBy"]["nodes"] = json!([{"username":"dana"}]);
+    let snapshot = parse(&v).unwrap();
+    let rows = board(&snapshot);
+    assert_eq!(
+        rows[0].facts.reviewers,
+        vec![
+            Reviewer {
+                login: "bob".into(),
+                said: Said::Waiting
+            },
+            Reviewer {
+                login: "dana".into(),
+                said: Said::Approved
+            }
+        ]
+    );
+    let before = Snapshot::from([("meta:account".into(), json!({"login":"alice"}))]);
+    assert!(
+        diff(&before, &snapshot).is_empty(),
+        "The old snapshot format is rebaselined once"
+    );
+    v["data"]["currentUser"]["authoredMergeRequests"]["nodes"][0]["approvedBy"]["pageInfo"]["hasNextPage"] =
+        json!(true);
+    assert!(matches!(parse(&v), Err(Error::Partial(_))));
 }
 #[test]
 fn partial_errors_overflow_and_invalid_links_never_replace_a_snapshot() {
@@ -74,7 +213,8 @@ fn changed_commits_and_repeated_review_requests_are_distinct_news() {
     let mut value = response();
     let row = &mut value["data"]["currentUser"]["authoredMergeRequests"]["nodes"][0];
     row["diffHeadSha"] = json!("b".repeat(40));
-    row["headPipeline"] = json!({"sha":"b".repeat(40),"status":"FAILED"});
+    row["headPipeline"]["sha"] = json!("b".repeat(40));
+    row["headPipeline"]["status"] = json!("FAILED");
     let after = parse(&value).unwrap();
     let events = diff(&before, &after);
     assert_eq!(events.len(), 1);

@@ -1,5 +1,7 @@
 // es: English sentence → translation (see index.ts).
 export default {
+  "Your open merge requests, review requests, diff sizes, reviewers and individual pipeline jobs on GitLab.com, plus default-branch checks and releases from 10 recently active contributed projects. Uses your GitLab CLI (glab) login. Read only. Sign in with glab auth login --hostname gitlab.com.": "Tus merge requests abiertos, solicitudes de revisión, tamaños de diffs, revisores y trabajos individuales de pipelines en GitLab.com, además de comprobaciones de la rama predeterminada y versiones de 10 proyectos con contribuciones y actividad reciente. Usa tu sesión de GitLab CLI (glab). Solo lectura. Inicia sesión con glab auth login --hostname gitlab.com.",
+  "Pipelines": "Pipelines",
   "Your open pull requests and review requests on your Gitea instance. Read only; checks, approvals and merges are not supported. Configure the HTTPS base URL and an access token, then turn it on.": "Tus pull requests abiertos y solicitudes de revisión en tu instancia de Gitea. Solo lectura; no admite comprobaciones, aprobaciones ni fusiones. Configura la URL base HTTPS y un token de acceso, y luego actívalo.",
   "Gitea returned incomplete or invalid data. The previous snapshot is kept.": "Gitea devolvió datos incompletos o inválidos. Se conservan los datos anteriores.",
   "Could not read Gitea. Check the connection and try again.": "No se pudo consultar Gitea. Comprueba la conexión e inténtalo de nuevo.",
@@ -2303,7 +2305,6 @@ export default {
   "Audio app": "Aplicación de audio",
   "Enable voice commands, Media voice commands and Now playing, then refresh while media is playing.": "Activa los comandos de voz, los comandos de voz multimedia y En reproducción; después actualiza mientras se reproduce contenido.",
   "Could not verify the audio link. Refresh and choose again.": "No se pudo verificar el vínculo de audio. Actualiza y elige de nuevo.",
-  "Your open merge requests, review requests and head-pipeline status on GitLab.com. Uses your GitLab CLI (glab) login. Read only; up to 50 items per group. Sign in with glab auth login --hostname gitlab.com.": "Tus merge requests abiertos, solicitudes de revisión y estado del pipeline del commit actual en GitLab.com. Usa tu sesión de la CLI de GitLab (glab). Solo lectura; hasta 50 elementos por grupo. Inicia sesión con glab auth login --hostname gitlab.com.",
   "The GitLab CLI (glab) is not installed.": "La CLI de GitLab (glab) no está instalada.",
   "Sign in to GitLab.com with glab auth login --hostname gitlab.com.": "Inicia sesión en GitLab.com con glab auth login --hostname gitlab.com.",
   "GitLab did not respond in time.": "GitLab no respondió a tiempo.",

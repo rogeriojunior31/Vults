@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: b7f27c459c53 -->
+<!-- source: 0a1c7f1a301c -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -46,18 +46,30 @@ O conector do GitLab é somente leitura e oferece suporte ao **GitLab.com**. Ins
 **Settings > Connectors**. O Vults usa o login da CLI sem ler nem salvar seu token.
 
 Uma consulta verifica seus merge requests abertos, pedidos da sua revisão e o pipeline de cada
-commit atual. Ela roda a cada cinco minutos, ou a cada minuto enquanto um pipeline está rodando.
+commit atual. Os detalhes incluem linhas adicionadas/removidas, quantidade de arquivos alterados,
+revisores e até 30 jobs individuais do pipeline desse mesmo commit. Pedidos de alteração têm
+prioridade sobre uma aprovação agregada. Jobs manuais ficam aguardando; jobs cancelados ou ignorados
+nunca são apresentados como aprovados.
+
+A mesma consulta lê pipelines da branch padrão e a última release dos dez projetos mais recentemente
+ativos nos quais você contribuiu. Projetos arquivados ficam de fora. As abas **Pipelines** e
+**Releases** mostram essas linhas; releases públicas futuras não são confundidas com rascunhos.
+A atualização para esse snapshot mais completo estabelece uma nova referência uma vez, sem repetir
+notícias antigas.
+
+Ela roda a cada cinco minutos, ou a cada minuto enquanto um pipeline está rodando.
 A primeira consulta bem-sucedida registra a referência inicial; pedidos de revisão posteriores,
 falhas/recuperações de pipeline e aprovações exigidas geram alertas. As configurações mostram a conta
 da última consulta bem-sucedida. Trocar de conta estabelece uma nova referência e substitui as linhas
 anteriores.
 
 O card de Conexões usa **Merge requests**, com links para o GitLab. Não oferece merge nem outras
-escritas remotas. Pipelines da branch padrão, logs de jobs, releases e instâncias próprias ficam fora
-desta primeira versão. Pipeline ausente, ignorado, cancelado, agendado, manual ou de outro commit é
+escritas remotas. Logs de jobs ao vivo, ferramentas de chat, escritas e instâncias próprias seguem
+pendentes no trabalho de paridade. Pipeline ausente, ignorado, cancelado, agendado, manual ou de outro commit é
 desconhecido, não aprovado. A ausência de aprovações obrigatórias não inventa uma aprovação.
 
-Cada grupo tem limite de 50 itens. Se houver outra página, dados ausentes ou erros do GraphQL, o Vults
+Cada grupo de merge requests tem limite de 50 itens, com até 20 revisores solicitados e 20 aprovadores, e 30 jobs por
+pipeline. Se houver outra página de detalhes, dados ausentes ou erros do GraphQL, o Vults
 mantém o último retrato completo e mostra um erro. Também limita a saída da CLI e o tempo de espera,
 espaça novas tentativas após erros e respeita limites do serviço. Cada consulta usa a opção independente
 do conector, seu orçamento diário de 3.000 consultas e um rastro local; o Vults pausado ou bloqueado não

@@ -547,7 +547,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       if (repo && !repos.includes(repo)) repo = null;
       const mine = board.rows.filter((r) => !repo || r.facts.repo === repo);
       const count = (id: Tab) => mine.filter(TABS[id]).length;
-      const selectedTab = ["gitlab", "gitea"].includes(board.connector) && (tab === "runs" || tab === "rels") ? null : tab;
+      const selectedTab = board.connector === "gitea" && (tab === "runs" || tab === "rels") ? null : tab;
       const shown: Tab = selectedTab ?? (count("inbox") ? "inbox" : "prs");
       const fresh = mine.filter((r) => needs(r) && !isSeen(board.connector, r)).length;
       const failing = mine.filter((r) => r.group === "branches" && r.checks === "failing").length;
@@ -659,8 +659,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
           { class: "nest-subs conn-tabs" },
           tabButton("inbox", t("Inbox"), fresh ? t("{n} new", { n: fresh }) : null),
           tabButton("prs", board.connector === "gitlab" ? t("Merge requests") : t("Pull requests"), String(count("prs"))),
-          ...(["gitlab", "gitea"].includes(board.connector) ? [] : [
-            tabButton("runs", t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),
+          ...(board.connector === "gitea" ? [] : [
+            tabButton("runs", board.connector === "gitlab" ? t("Pipelines") : t("Actions"), failing ? t("{n} failing", { n: failing }) : String(count("runs")), failing > 0),
             tabButton("rels", t("Releases"), String(count("rels"))),
           ]),
         ),
@@ -722,7 +722,7 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         el("div", { class: "conn-actions" },
           fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),
           fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), `manage:${c.id}`)))),
-      ...(!zecaFace && add ? [add] : []),
+      ...(!zecaFace && !board && add ? [add] : []),
       ...(!board && !add && !pending.length && !statusFailed ? [viewState("loading", t("Checking connections…"))] : []),
     );
     element.setAttribute("aria-busy", String(refreshing));

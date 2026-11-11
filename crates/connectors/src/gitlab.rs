@@ -1,6 +1,7 @@
 //! Read-only GitLab.com snapshots through the user's authenticated CLI.
 use crate::{
-    Checks, Connector, Error, Event, Facts, Group, Level, Poll, Review, Row, Snapshot, Story, StoryKind,
+    Checks, Connector, Diff, Error, Event, Facts, Group, Level, Poll, Release, Review, Reviewer, Row, Run,
+    RunState, Said, Snapshot, Story, StoryKind,
 };
 use serde_json::{Value, json};
 use std::{process::Stdio, time::Duration};
@@ -19,6 +20,13 @@ const FAILED: &str = "Could not read GitLab. Check glab and try again.";
 const QUERY: &str = r#"query VultsReadOnly {
   currentUser {
     username
+    contributedProjects(first: 10, sort: LATEST_ACTIVITY_DESC) {
+      nodes { fullPath archived
+        repository { rootRef lastCommit { sha title committedDate
+          latestPipeline { ...PipelineDetails } } }
+        releases(first: 1, sort: RELEASED_AT_DESC) { nodes { name tagName releasedAt upcomingRelease } }
+      }
+    }
     authoredMergeRequests(first: 50, state: opened, sort: UPDATED_DESC) {
       pageInfo { hasNextPage }
       nodes { ...Request }
@@ -30,10 +38,23 @@ const QUERY: &str = r#"query VultsReadOnly {
   }
 }
 fragment Request on MergeRequest {
-  iid title webUrl sourceBranch diffHeadSha approved approvalsRequired
+  iid title webUrl sourceBranch diffHeadSha approved approvalsRequired updatedAt
+  diffStatsSummary { additions deletions fileCount }
+  reviewers(first: 20) {
+    pageInfo { hasNextPage }
+    nodes { username mergeRequestInteraction { approved reviewState } }
+  }
+  approvedBy(first: 20) { pageInfo { hasNextPage } nodes { username } }
   author { username }
   project { fullPath }
-  headPipeline { status sha }
+  headPipeline { ...PipelineDetails }
+}
+fragment PipelineDetails on Pipeline {
+  status sha
+  jobs(first: 30, retried: false) {
+    pageInfo { hasNextPage }
+    nodes { name status }
+  }
 }"#;
 
 impl Connector for GitLab {
@@ -64,8 +85,19 @@ impl Connector for GitLab {
     }
     fn watching(&self, snapshot: &Snapshot) -> usize {
         snapshot
-            .values()
-            .filter_map(|row| Some((row["repo"].as_str()?, row["number"].as_u64()?)))
+            .iter()
+            .filter_map(|(key, row)| {
+                let number = row["number"].as_u64();
+                Some((
+                    row["repo"].as_str()?,
+                    number,
+                    if number.is_some() {
+                        "mr"
+                    } else {
+                        key.split_once(':')?.0
+                    },
+                ))
+            })
             .collect::<std::collections::BTreeSet<_>>()
             .len()
     }
@@ -191,7 +223,7 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
         })
         .ok_or_else(|| Error::Partial(INVALID.into()))?;
-    let mut snapshot = Snapshot::from([("meta:account".into(), json!({"login":login}))]);
+    let mut snapshot = Snapshot::from([("meta:account".into(), json!({"login":login,"schema":2}))]);
     for (field, prefix) in [
         ("authoredMergeRequests", "mr"),
         ("reviewRequestedMergeRequests", "review"),
@@ -240,8 +272,22 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
                 None => return Err(Error::Partial(INVALID.into())),
             };
             let approved = approved && required.is_some_and(|count| count > 0);
+            let reviewers = reviewers(&row["reviewers"], &row["approvedBy"])?;
+            let changes = reviewers.iter().any(|r| r["said"] == "changes");
+            let stats = &row["diffStatsSummary"];
+            let size = if stats.is_null() {
+                Value::Null
+            } else {
+                json!({"added":count(&stats["additions"])?,"removed":count(&stats["deletions"])?,"files":count(&stats["fileCount"]) ?})
+            };
+            let runs = if head.is_some() && pipeline["sha"].as_str() == head {
+                runs(pipeline)?
+            } else {
+                Vec::new()
+            };
             let item = json!({"repo":repo,"number":number,"title":title,"url":url,"branch":text(&row["sourceBranch"],1024),
-                "author":text(&row["author"]["username"],255),"oid":head,"ci":ci,"approved":approved,"rank":rank});
+                "author":text(&row["author"]["username"],255),"oid":head,"ci":ci,"approved":approved,"changes":changes,"rank":rank,
+                "size":size,"reviewers":reviewers,"runs":runs,"updated":row["updatedAt"]});
             if snapshot
                 .insert(format!("{prefix}:{login}:{repo}!{number}:item"), item)
                 .is_some()
@@ -250,7 +296,143 @@ fn answer(success: bool, stdout: &[u8], stderr: &[u8]) -> Result<Snapshot, Error
             }
         }
     }
+    projects(&mut snapshot, &user["contributedProjects"], login)?;
     Ok(snapshot)
+}
+fn invalid() -> Error {
+    Error::Partial(INVALID.into())
+}
+fn count(value: &Value) -> Result<u32, Error> {
+    value.as_u64().and_then(|n| n.try_into().ok()).ok_or_else(invalid)
+}
+fn connection(value: &Value, limit: usize) -> Result<&Vec<Value>, Error> {
+    if value["pageInfo"]["hasNextPage"] != false {
+        return Err(invalid());
+    }
+    value["nodes"]
+        .as_array()
+        .filter(|rows| rows.len() <= limit)
+        .ok_or_else(invalid)
+}
+fn reviewers(value: &Value, approvals: &Value) -> Result<Vec<Value>, Error> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut result = connection(value, 20)?
+        .iter()
+        .map(|v| {
+            let login = text(&v["username"], 255).ok_or_else(invalid)?;
+            if !seen.insert(login) {
+                return Err(invalid());
+            }
+            let interaction = &v["mergeRequestInteraction"];
+            let approved = interaction["approved"].as_bool().ok_or_else(invalid)?;
+            let said = match interaction["reviewState"].as_str() {
+                Some("REQUESTED_CHANGES") => "changes",
+                Some("APPROVED") if approved => "approved",
+                None if approved => "approved",
+                None => "waiting",
+                Some("UNREVIEWED" | "REVIEW_STARTED" | "UNAPPROVED") if !approved => "waiting",
+                Some("REVIEWED") if !approved => "commented",
+                _ => return Err(invalid()),
+            };
+            Ok(json!({"login":login,"said":said}))
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+    let mut approved_seen = std::collections::BTreeSet::new();
+    for user in connection(approvals, 20)? {
+        let login = text(&user["username"], 255).ok_or_else(invalid)?;
+        if !approved_seen.insert(login) {
+            return Err(invalid());
+        }
+        if let Some(existing) = result.iter_mut().find(|r| r["login"] == login) {
+            if existing["said"] != "changes" {
+                existing["said"] = json!("approved");
+            }
+        } else {
+            result.push(json!({"login":login,"said":"approved"}));
+        }
+    }
+    Ok(result)
+}
+fn runs(pipeline: &Value) -> Result<Vec<Value>, Error> {
+    if pipeline.is_null() {
+        return Ok(Vec::new());
+    }
+    connection(&pipeline["jobs"], 30)?
+        .iter()
+        .map(|v| {
+            let name = text(&v["name"], 1024).ok_or_else(invalid)?;
+            let state = match v["status"].as_str() {
+                Some("SUCCESS") => "passed",
+                Some("FAILED") => "failed",
+                Some("RUNNING" | "PREPARING" | "CANCELING") => "running",
+                Some(
+                    "CREATED"
+                    | "PENDING"
+                    | "WAITING_FOR_RESOURCE"
+                    | "WAITING_FOR_CALLBACK"
+                    | "MANUAL"
+                    | "SCHEDULED",
+                ) => "waiting",
+                Some("SKIPPED" | "CANCELED") => "skipped",
+                _ => return Err(invalid()),
+            };
+            Ok(json!({"name":name,"state":state}))
+        })
+        .collect()
+}
+fn projects(snapshot: &mut Snapshot, value: &Value, login: &str) -> Result<(), Error> {
+    let nodes = value["nodes"]
+        .as_array()
+        .filter(|v| v.len() <= 10)
+        .ok_or_else(invalid)?;
+    let mut seen = std::collections::BTreeSet::new();
+    for (rank, p) in nodes.iter().enumerate() {
+        let repo = text(&p["fullPath"], 1024)
+            .filter(|p| project(p))
+            .ok_or_else(invalid)?;
+        if !seen.insert(repo) {
+            return Err(invalid());
+        }
+        if p["archived"].as_bool().ok_or_else(invalid)? {
+            continue;
+        }
+        let repository = &p["repository"];
+        if !repository.is_null() && !repository.is_object() {
+            return Err(invalid());
+        }
+        if let Some(branch) = repository["rootRef"].as_str() {
+            let c = &repository["lastCommit"];
+            let sha = c["sha"].as_str().filter(|s| commit(s)).ok_or_else(invalid)?;
+            let pipeline = &c["latestPipeline"];
+            if pipeline["sha"] == sha {
+                let ci = pipeline_state(pipeline["status"].as_str());
+                snapshot.insert(format!("branch:{login}:{repo}:item"),json!({"repo":repo,"branch":branch,"oid":sha,
+                    "title":text(&c["title"],4096).ok_or_else(invalid)?,"url":format!("https://gitlab.com/{repo}/-/commit/{sha}"),
+                    "ci":ci,"runs":runs(pipeline)?,"updated":c["committedDate"],"rank":rank}));
+            }
+        }
+        let releases = p["releases"]["nodes"]
+            .as_array()
+            .filter(|v| v.len() <= 1)
+            .ok_or_else(invalid)?;
+        if let Some(r) = releases.first() {
+            let tag = text(&r["tagName"], 255).ok_or_else(invalid)?;
+            let upcoming = r["upcomingRelease"].as_bool().ok_or_else(invalid)?;
+            let encoded: String = tag
+                .bytes()
+                .map(|b| {
+                    if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
+                        char::from(b).to_string()
+                    } else {
+                        format!("%{b:02X}")
+                    }
+                })
+                .collect();
+            snapshot.insert(format!("release:{login}:{repo}:item"),json!({"repo":repo,"tag":tag,"title":text(&r["name"],4096).unwrap_or(tag),
+                "url":format!("https://gitlab.com/{repo}/-/releases/{encoded}"),"upcoming":upcoming,"updated":r["releasedAt"],"rank":rank}));
+        }
+    }
+    Ok(())
 }
 fn text(value: &Value, limit: usize) -> Option<&str> {
     value
@@ -286,14 +468,16 @@ fn board(snapshot: &Snapshot) -> Vec<Row> {
         .iter()
         .filter_map(|(key, item)| {
             let (kind, _) = key.split_once(':')?;
-            let name = format!(
-                "{}!{}",
-                item["repo"].as_str()?.rsplit('/').next()?,
-                item["number"].as_u64()?
-            );
+            let short = item["repo"].as_str()?.rsplit('/').next()?;
+            let name = match kind {
+                "mr" | "review" => format!("{short}!{}", item["number"].as_u64()?),
+                _ => short.into(),
+            };
             let group = match kind {
                 "mr" => Group::Yours,
                 "review" => Group::ToReview,
+                "branch" => Group::Branches,
+                "release" => Group::Releases,
                 _ => return None,
             };
             Some((
@@ -310,7 +494,11 @@ fn board(snapshot: &Snapshot) -> Vec<Row> {
                         Some("running") => Some(Checks::Running),
                         _ => None,
                     },
-                    review: (kind == "mr" && item["approved"] == true).then_some(Review::Approved),
+                    review: if item["changes"] == true {
+                        Some(Review::Changes)
+                    } else {
+                        (kind == "mr" && item["approved"] == true).then_some(Review::Approved)
+                    },
                     url: item["url"].as_str().map(str::to_owned),
                     // This connector reads only. A passing pipeline never offers a merge action.
                     head: None,
@@ -318,6 +506,48 @@ fn board(snapshot: &Snapshot) -> Vec<Row> {
                         repo: item["repo"].as_str().map(str::to_owned),
                         branch: item["branch"].as_str().map(str::to_owned),
                         author: item["author"].as_str().map(str::to_owned),
+                        diff: item["size"].is_object().then(|| Diff {
+                            added: item["size"]["added"].as_u64().unwrap_or(0) as u32,
+                            removed: item["size"]["removed"].as_u64().unwrap_or(0) as u32,
+                            files: item["size"]["files"].as_u64().unwrap_or(0) as u32,
+                        }),
+                        updated: item["updated"].as_str().and_then(crate::timestamp::parse),
+                        reviewers: item["reviewers"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .filter_map(|r| {
+                                Some(Reviewer {
+                                    login: r["login"].as_str()?.into(),
+                                    said: match r["said"].as_str()? {
+                                        "approved" => Said::Approved,
+                                        "changes" => Said::Changes,
+                                        "commented" => Said::Commented,
+                                        "waiting" => Said::Waiting,
+                                        _ => return None,
+                                    },
+                                })
+                            })
+                            .collect(),
+                        runs: item["runs"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .filter_map(|r| {
+                                Some(Run {
+                                    name: r["name"].as_str()?.into(),
+                                    state: match r["state"].as_str()? {
+                                        "passed" => RunState::Passed,
+                                        "failed" => RunState::Failed,
+                                        "running" => RunState::Running,
+                                        "waiting" => RunState::Waiting,
+                                        "skipped" => RunState::Skipped,
+                                        _ => return None,
+                                    },
+                                })
+                            })
+                            .collect(),
+                        release: (kind == "release" && item["upcoming"] == false).then_some(Release::Latest),
                         ..Facts::default()
                     },
                 },
@@ -339,7 +569,11 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
         let Some((kind, _)) = key.split_once(':') else {
             continue;
         };
-        let name = format!("{}!{}", item["repo"].as_str().unwrap_or_default(), item["number"]);
+        let name = if kind == "branch" {
+            item["repo"].as_str().unwrap_or_default().to_owned()
+        } else {
+            format!("{}!{}", item["repo"].as_str().unwrap_or_default(), item["number"])
+        };
         let previous = before.get(key);
         let mut push = |news: &str, topic: Option<&str>, level, story_kind: StoryKind| {
             events.push(Event {
@@ -362,14 +596,14 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                 story: Some(Story {
                     kind: story_kind,
                     name: name.clone(),
-                    branch: None,
+                    branch: (kind == "branch").then(|| item["branch"].as_str().unwrap_or_default().into()),
                 }),
             })
         };
         if kind == "review" && previous.is_none() {
             push("requested", None, Level::Info, StoryKind::ReviewRequested);
         }
-        if kind != "mr" {
+        if kind != "mr" && kind != "branch" {
             continue;
         }
         if previous.is_some_and(|was| was["oid"] != item["oid"] || was["ci"] != item["ci"])
@@ -392,7 +626,17 @@ fn diff(before: &Snapshot, after: &Snapshot) -> Vec<Event> {
                 _ => {}
             }
         }
-        if item["approved"] == true && previous.is_none_or(|was| was["approved"] != true) {
+        if item["changes"] == true && previous.is_none_or(|was| was["changes"] != true) {
+            push(
+                "changes",
+                Some("review"),
+                Level::Warn,
+                StoryKind::ChangesRequested,
+            );
+        } else if item["changes"] != true
+            && item["approved"] == true
+            && previous.is_none_or(|was| was["approved"] != true || was["changes"] == true)
+        {
             push("approved", Some("review"), Level::Ok, StoryKind::Approved);
         }
     }

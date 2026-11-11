@@ -50,6 +50,7 @@
 .nest-activity > .nest-subs > .nest-sub.on, .conn-tabs > .nest-sub.on { background: transparent; box-shadow: inset 0 -2px var(--mark); }
 @media (max-height: 480px) {
   .nest-pane.nest-connections { gap: 6px; padding: 10px 14px; }
+  .nest-connections .conn-body { flex-basis: min(220px, 50vh); min-height: min(220px, 50vh); }
   .nest-connections .activity-heading { margin: 0; }
   .nest-connections .conn-toolbar { gap: 6px; }
   .nest-connections .conn-source { gap: 6px; }
