@@ -776,7 +776,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
           : null,
         detail === "session" ? null : costChip(s),
         ask ? el("div", { class: "card-side" },
-          ask.queue > 1 ? el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) }) : null,
+          ask.queue > 1 ? el("span", { class: "q-of", text: t("{n} requests waiting", { n: ask.queue }) }) : null,
           question ? null : fid(laterButton(ask.request, skipCard), "act:skip")) : null,
       ),
       question ? null : words ? el("p", { class: "card-words", text: words }) : null,

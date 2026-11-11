@@ -8,6 +8,7 @@ import { el } from "../dom";
 import { locale, t, tk } from "../i18n";
 import { icon, type IconName } from "./icons";
 import { presenceNow } from "./fsm";
+import { usageLabel } from "../cost";
 import { zecaShown } from "./flock";
 import { type Ticker, tickerSteps } from "./ticker";
 
@@ -363,7 +364,7 @@ function sessionBody(
       const operationFolder = approvalFolder(s, approval);
       always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: approval.tool, project: operationFolder || t("this folder") });
       const ruleFolder = approvalRuleFolder(s, approval);
-      const queue = approval.queue > 1 ? el("span", { class: "queue", text: `1 of ${approval.queue}` }) : null;
+      const queue = approval.queue > 1 ? el("span", { class: "queue", text: t("1 of {n}", { n: approval.queue }) }) : null;
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
       const parts: (HTMLElement | null)[] = [
@@ -694,7 +695,7 @@ export function settledCard(s: SessionView, how: Settled, target: string, perch:
 
 /** A window's length the way people say it: "5h", "7d". */
 function span(minutes: number): string {
-  return minutes % 1440 === 0 ? `${minutes / 1440}d` : `${Math.round(minutes / 60)}h`;
+  return minutes % 1440 === 0 ? t("{n}d", { n: minutes / 1440 }) : t("{n}h", { n: Math.round(minutes / 60) });
 }
 
 /**
@@ -721,13 +722,19 @@ export function usageMeters(windows: UsageWindow[], nowSecs: number): HTMLElemen
 
 function meter(w: UsageWindow): HTMLElement {
   const level = w.used_percent >= 90 ? " high" : w.used_percent >= 70 ? " warn" : "";
-  const m = el("span", { class: `meter${level}`, text: `${span(w.minutes)} ${w.used_percent}%` });
+  // 70% and above says its level in words too, not only by color.
+  const m = el("span", { class: `meter${level}`, text: level ? t("{span} {pct}% · {level}", { span: span(w.minutes), pct: w.used_percent, level: usageLabel(w.used_percent) }) : `${span(w.minutes)} ${w.used_percent}%` });
+  m.setAttribute("role", "meter");
+  m.setAttribute("aria-valuemin", "0");
+  m.setAttribute("aria-valuemax", "100");
+  m.setAttribute("aria-valuenow", String(w.used_percent));
   const resets = w.resets_at
     ? new Date(w.resets_at * 1000).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" })
     : null;
   m.title = resets
     ? t("{agent}: {pct}% of the {span} limit used. Resets {when}.", { agent: AGENT_NAME[w.agent], pct: w.used_percent, span: span(w.minutes), when: resets })
     : t("{agent}: {pct}% of the {span} limit used.", { agent: AGENT_NAME[w.agent], pct: w.used_percent, span: span(w.minutes) });
+  m.setAttribute("aria-label", m.title);
   return m;
 }
 
