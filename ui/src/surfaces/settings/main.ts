@@ -2194,6 +2194,8 @@ function choosePage(next: Page): void {
   }
   if (next === "chat") void refreshApi();
   if (next === "phone") void refreshPhone(renderPhone);
+  // Read again on the way in, like Projects and Phone: a stale or failed read is never shown as fresh.
+  if (next === "connectors") void refreshConnectors();
   if (next === "dictation" && !dictationTool() && microphones === null && !microphonesFailed) void refreshMicrophones();
   render();
 }

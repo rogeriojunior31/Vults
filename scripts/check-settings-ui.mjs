@@ -85,6 +85,7 @@ const settings = { dictationCommands: true, dictationCommandChat: false, dictati
 globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   if (name.startsWith("on")) return cb => { events[name] = cb; };
   return async (...args) => {
+    if (globalThis.failReads?.has(name)) throw new Error("simulated failure");
     switch (name) {
       case "appSettings": return initialSettings;
       case "windowsShortcuts": return globalThis.settingsTestWindowsBindings ?? null;
@@ -853,6 +854,23 @@ giteaClear.fire('click'); giteaClear.fire('click'); await tick(); assert.deepEqu
 finishGitea({baseUrl:'',generation:''}); await tick();
 assert.equal(giteaUrl.value,''); assert.ok(giteaClear.disabled);
 console.log('check-settings-ui: Gitea keeps drafts, clears tokens, serializes saves and requires a separate activation');
+
+// A list that cannot be read says so, with a retry, instead of looking empty or off.
+for (const [label, call, failed] of [
+  ["Projects", "projectsList", "Could not read your project choices."],
+  ["Phone", "phoneSettings", "Could not read the phone settings."],
+  ["Connections", "connectorsStatus", "Could not read which connections are on."],
+]) {
+  globalThis.failReads = new Set([call]);
+  await go(label); await tick(); await tick();
+  assert.ok(page().textContent.includes(failed), `${label} says its read failed`);
+  const retryButton = page().querySelectorAll("button").find(b => b.textContent === "Try again");
+  assert.ok(retryButton, `${label} offers Try again`);
+  globalThis.failReads = new Set();
+  retryButton.fire("click"); await tick(); await tick();
+  assert.ok(!page().textContent.includes(failed), `${label} recovers on Try again`);
+}
+console.log('check-settings-ui: Projects, Phone and Connections show a failed read with a retry and recover');
 
 // A removal asks in place: the first click runs nothing, Cancel and Escape back out, the second click runs once.
 const piecesBundle = await build({ configFile: false, root: ui, logLevel: "silent", build: {
