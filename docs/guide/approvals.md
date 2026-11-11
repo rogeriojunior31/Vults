@@ -146,13 +146,13 @@ one agent asks for two calls at once, answering the first leaves the second wait
 ## When nobody answers
 
 A request waits as long as its agent does (a little under two minutes); meanwhile the terminal says
-*Waiting for your answer in Vults*. During the last 30 seconds the card counts down, *Goes back
-to the terminal in 0:25*, and then the terminal asks as if Vults were not there. If you answer in the
-terminal instead, the card says so and goes away.
+*Waiting for your answer in Vults*. The card shows how long is left from the start, *Goes back to
+the terminal in 1:12* over a thin bar, quiet at first, amber in the last 30 seconds and red in the
+last ten; then the terminal asks as if Vults were not there. If you answer in the terminal instead,
+the card says so and goes away.
 
-The Nest counts to the same moment, however late it opened: a card on **Flock** and its row in
-**Waiting for you** always show *Goes back to the terminal in 1:12*, quiet at first, amber in the
-last 30 seconds and red in the last ten. When one it showed goes back unanswered, **Flock** says
+The Nest counts to the same moment as the island, however late it opened: a card on **Flock** and
+its row in **Waiting for you** show the same clock. When one it showed goes back unanswered, **Flock** says
 *No answer in time: storefront asks in its terminal now.*, with **Open terminal** when it can be
 brought up, until you dismiss it, and the session reads *Asking in its terminal* until its next
 step.

@@ -11,6 +11,7 @@ import { approvalFolder, approvalRuleFolder, shortPath, agentName, badgeOf, last
 import { allowsByKey, clickOnly, refuseAllowKey } from "../../island/allow-key";
 import { icon } from "../../island/icons";
 import { usageLabel, usageLevel } from "../../cost";
+import { paintClock, secondsLeft } from "../../deadline";
 
 export interface FlockActions {
   loadPlace?: () => Promise<FlockPlace | null>;
@@ -59,8 +60,6 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
-/** A card's clock turns amber in its last half minute, as the island's countdown shows. */
-const DEADLINE_SHOWN_S = 30;
 /** How long a request that went back to its terminal unanswered stays noted on the tab. */
 const EXPIRED_KEPT_MS = 90_000;
 const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
@@ -278,14 +277,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     }
     return node;
   };
-  function paintDeadline(node: HTMLElement): void {
-    const left = Math.max(0, Math.ceil(Number(node.dataset.expires) - Date.now() / 1000));
-    // Always there, quiet; amber in the last half minute, red in the last ten seconds.
-    const text = t("Goes back to the terminal in {time}", { time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` });
-    if (node.textContent !== text) node.textContent = text;
-    node.classList.toggle("soon", left <= DEADLINE_SHOWN_S);
-    node.classList.toggle("urgent", left <= 10);
-  }
+  // Always there, quiet; amber in the last half minute, red in the last ten seconds.
+  const paintDeadline = (node: HTMLElement) => paintClock(node, secondsLeft(Number(node.dataset.expires)));
   // Runs only while a clock is on the tab, and stops with the last one.
   let ticking: ReturnType<typeof setInterval> | null = null;
   const tickDeadlines = () => {

@@ -9,6 +9,7 @@
 // overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
+import { DEADLINE_SOON_S, DEADLINE_URGENT_S, paintClock, secondsLeft } from "../deadline";
 import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Flock, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
@@ -137,8 +138,6 @@ const JUMP_NOTE_MS = 2600;
  *  the server's decision deadline less a second's grace. Counted from when the island saw it, at
  *  most a moment after the hook's line was read. */
 const EXPIRES_MS = 107_000;
-/** The card counts down over the last part of that. */
-const EXPIRY_SHOWN_MS = 30_000;
 /** How long the card says what became of a permission before the next thing shows. */
 const SETTLED_MS: Record<Settled, number> = { allow: 700, deny: 700, answered: 700, released: 1600, terminal: 1600, expired: 2600 };
 /** How core says a card ended, as the settled card shows it (a rule's answer reads as an Allow). */
@@ -1876,24 +1875,26 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     cardSig = sig;
   }
 
-  /** The countdown on the permission card, in its last half minute. */
+  /** The permission card's clock, there from the start: the core's `expires_at`, the moment the
+   *  Nest counts to as well. Without it (an older core), counted from when the island saw it. */
   function tickExpiry(): void {
     window.clearTimeout(expiryTimer);
     const box = card?.querySelector<HTMLElement>(".expiry");
     if (!box || !cardOnScreen) return;
-    const left = (requestSeen.get(cardOnScreen.request) ?? Clock.now()) + EXPIRES_MS - Clock.now();
-    const on = left < EXPIRY_SHOWN_MS;
-    if (box.classList.contains("on") !== on) {
-      box.classList.toggle("on", on);
-      // It adds two lines to the card: the island grows with it.
+    const expiresAt = typeof cardOnScreen.expires_at === "number"
+      ? cardOnScreen.expires_at
+      : ((requestSeen.get(cardOnScreen.request) ?? Clock.now()) + EXPIRES_MS) / 1000;
+    const left = secondsLeft(expiresAt, Clock.now());
+    if (!box.classList.contains("on")) {
+      box.classList.add("on");
+      // It adds a line to the card: the island grows with it.
       reshape(fsm.mode);
     }
-    if (on) {
-      const secs = Math.max(0, Math.ceil(left / 1000));
-      box.querySelector(".expiry-text")!.textContent = t("Goes back to the terminal in {time}", { time: `0:${String(secs).padStart(2, "0")}` });
-      box.querySelector<HTMLElement>(".expiry-bar")!.style.width = `${Math.max(0, (left / EXPIRY_SHOWN_MS) * 100)}%`;
-    }
-    expiryTimer = window.setTimeout(tickExpiry, on ? 1000 : Math.max(1000, left - EXPIRY_SHOWN_MS));
+    paintClock(box.querySelector<HTMLElement>(".expiry-text")!, left);
+    box.classList.toggle("soon", left <= DEADLINE_SOON_S);
+    box.classList.toggle("urgent", left <= DEADLINE_URGENT_S);
+    box.querySelector<HTMLElement>(".expiry-bar")!.style.width = `${Math.min(100, (left * 1000 / EXPIRES_MS) * 100)}%`;
+    if (left > 0) expiryTimer = window.setTimeout(tickExpiry, 1000);
   }
 
   /** Ignore stale controls until core replaces the card after an answer or Skip. */

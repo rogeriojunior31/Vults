@@ -937,16 +937,35 @@ body.still .compact.needs::after {
 .expiry.on {
   display: flex;
 }
+/* There from the start and quiet; amber in the last half minute, red in the last ten seconds. */
 .expiry-text {
   font-size: var(--text-s);
-  color: var(--warn);
+  color: var(--fg-dim);
   font-variant-numeric: tabular-nums;
+}
+.expiry-text.soon {
+  color: var(--warn);
+}
+.expiry-text.urgent {
+  color: var(--error-text);
+  font-weight: 600;
 }
 .expiry-bar {
   height: 2px;
   border-radius: 2px;
+  background: color-mix(in srgb, var(--fg-dim) 45%, transparent);
+  transition: width 1s linear, background-color 0.3s ease-out;
+}
+.expiry.soon .expiry-bar {
   background: var(--warn);
-  transition: width 1s linear;
+}
+.expiry.urgent .expiry-bar {
+  background: var(--error-text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .expiry-bar {
+    transition: none;
+  }
 }
 .code.dim {
   color: var(--fg-dim);
