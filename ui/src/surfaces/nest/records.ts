@@ -133,9 +133,10 @@ function turnLine(r: TurnRow): HTMLElement {
     .join(" · ");
   return line([
     el("div", { class: "record-body" },
-      el("div", { class: "record-title" }, span(r.project || t("No project"), "record-what"),
+      // The group above names the project: the row leads with the agent and what its turn did.
+      el("div", { class: "record-title" }, span(agentName(r.agent), "record-what"),
         span(r.failed ? t("Failed") : t("Done"), `record-status ${r.failed ? "failing" : "passing"}`)),
-      el("div", { class: "record-context" }, span(agentName(r.agent), "record-who"), span(counts, "record-meta")),
+      counts ? el("div", { class: "record-context" }, span(counts, "record-meta")) : null,
     ),
     el("div", { class: "record-aside" }, span(duration(r.secs), "record-duration"), span(when(r.end * 1000), "record-when")),
   ]);
@@ -400,8 +401,9 @@ function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => H
   const groups = new Map<string, HTMLElement[]>();
   for (const row of rows) {
     const node = draw(row);
-    if (query && !node.textContent?.toLocaleLowerCase(locale()).includes(query)) continue;
     const project = row.project || t("No project");
+    // The project is shown once, on the group: a search for it still finds its rows.
+    if (query && ![project, node.textContent ?? ""].some((text) => text.toLocaleLowerCase(locale()).includes(query))) continue;
     const entries = groups.get(project) ?? [];
     entries.push(node);
     groups.set(project, entries);
