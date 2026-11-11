@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: c8cda79df9e7 -->
+<!-- source: 5709d5b58a7e -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -151,9 +151,9 @@ Projetos silenciados ou ocultos ([por projeto](island.md#per-project-mute-pin-hi
 recebendo seus cards e sons.
 
 No Nest, quando duas ou mais permissões esperam, **Waiting for you** fica acima das sessões em
-**Flock**: uma linha por pedido, com projeto, comando, pasta (ou por que é destrutivo) e, nos
-últimos 30 segundos, o relógio dele. Uma linha abre o pedido no card, o único lugar onde um pedido
-sozinho é respondido; a que está no card diz *In the card*. **Answer several** marca pedidos comuns,
+**Flock**: uma linha por pedido, com projeto, comando, pasta (ou por que é destrutivo) e o
+relógio dele. Uma linha abre o pedido no card, o único lugar onde um pedido
+sozinho é respondido; a que está no card diz isso. **Answer several** marca pedidos comuns,
 e **Allow selected** permite só esses; o resto continua esperando. Um pedido destrutivo, ou um cujo
 comando foi cortado, não tem marcação: é respondido no card, onde ele aparece inteiro.
 
@@ -170,10 +170,12 @@ terminal diz *Waiting for your answer in Vults*. Nos últimos 30 segundos o card
 regressiva, *Goes back to the terminal in 0:25*, e então o terminal pergunta como se o Vults não
 estivesse ali. Se você responder no terminal, o card avisa e some.
 
-O Nest conta até o mesmo momento: nos últimos 30 segundos, um card em **Flock** e a linha dele em
-**Waiting for you** mostram *Back to the terminal in 0:25*, não importa quando o Nest abriu. Quando
-um que ele mostrava volta sem resposta, **Flock** diz *No answer in time: storefront asks in its
-terminal now.*, com **Open terminal** quando ele pode ser trazido, até você dispensar o aviso.
+O Nest conta até o mesmo momento, não importa quando abriu: um card em **Flock** e a linha dele em
+**Waiting for you** sempre mostram *Goes back to the terminal in 1:12*, discreto no começo, âmbar
+nos últimos 30 segundos e vermelho nos últimos dez. Quando um que ele mostrava volta sem resposta,
+**Flock** diz *No answer in time: storefront asks in its terminal now.*, com **Open terminal**
+quando ele pode ser trazido, até você dispensar o aviso, e a sessão diz *Asking in its terminal*
+até o próximo passo.
 
 Enquanto espera, um card sobe uma escada, para que um card que você perdeu chegue até você:
 

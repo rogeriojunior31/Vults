@@ -59,7 +59,7 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
-/** A card's deadline shows in its last half minute, as on the island. */
+/** A card's clock turns amber in its last half minute, as the island's countdown shows. */
 const DEADLINE_SHOWN_S = 30;
 /** How long a request that went back to its terminal unanswered stays noted on the tab. */
 const EXPIRED_KEPT_MS = 90_000;
@@ -280,9 +280,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
   function paintDeadline(node: HTMLElement): void {
     const left = Math.max(0, Math.ceil(Number(node.dataset.expires) - Date.now() / 1000));
-    node.hidden = left > DEADLINE_SHOWN_S;
-    const text = t("Back to the terminal in {time}", { time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` });
+    // Always there, quiet; amber in the last half minute, red in the last ten seconds.
+    const text = t("Goes back to the terminal in {time}", { time: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` });
     if (node.textContent !== text) node.textContent = text;
+    node.classList.toggle("soon", left <= DEADLINE_SHOWN_S);
     node.classList.toggle("urgent", left <= 10);
   }
   // Runs only while a clock is on the tab, and stops with the last one.
@@ -295,6 +296,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
   // A request this tab showed that nobody answered in time: it says so, with its terminal at hand,
   // instead of vanishing. Kept a minute and a half, or until dismissed.
   const shownRequests = new Set<string>(), noted = new Set<string>();
+  // A session whose request went back unanswered asks in its terminal until its next step: the core
+  // calls it working again, but it waits on you there. The step count at expiry says when it moved on.
+  const asking = new Map<string, number>();
+  const stateText = (s: SessionView): string =>
+    s.status === "working" && asking.get(key(s)) === s.step_count ? t("Asking in its terminal") : statusText(s);
   let expiredNotes: { request: string; agent: string; session: string; at: number }[] = [];
   const expiredBox = el("section", { class: "expired-notes" });
   expiredBox.hidden = true;
@@ -555,7 +561,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       ...[...scene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
         const s = byKey.get(slot.key);
         if (!s) return [];
-        const label = [s.project || agentName(s), agentName(s), statusText(s)].join(" · ");
+        const label = [s.project || agentName(s), agentName(s), stateText(s)].join(" · ");
         const b = fid(el("button", { class: `habitat-bird${front && key(front) === slot.key ? " front" : ""}`, onclick: () => on.focus(s) }), `bird:${slot.key}`);
         menuOn(b, s);
         b.style.left = `${slot.x - 4}px`;
@@ -605,10 +611,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
     menuOn(b, s);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
-    b.title = [s.project || agentName(s), s.branch, agentName(s), statusText(s)].filter(Boolean).join(" · ");
+    b.title = [s.project || agentName(s), s.branch, agentName(s), stateText(s)].filter(Boolean).join(" · ");
     b.append(
       el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
-      el("div", { class: `roost-sub ${tone(s)}`, text: statusText(s) }),
+      el("div", { class: `roost-sub ${tone(s)}`, text: stateText(s) }),
       ...(s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null
         ? [el("div", { class: "roost-agent", text: t("{agent} · no metrics yet", { agent: agentName(s) }) })]
         : [
@@ -810,7 +816,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         { class: "app-card-head" },
         tag,
         s.editor ? el("span", { class: "ed-chip", text: s.editor }) : null,
-        el("span", { class: "card-verb card-state", text: statusText(s) }),
+        el("span", { class: "card-verb card-state", text: stateText(s) }),
         // Working: its subagents, steps so far and cost at API prices, as the prototype's head says.
         s.status === "working" && s.subagents > 0
           ? el("span", { class: "card-verb", text: s.subagents === 1 ? t("+1 subagent") : t("+{n} subagents", { n: s.subagents }) })
@@ -988,7 +994,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       [t("Provider"), s.metric_info?.provider],
       [t("Pricing provider"), s.metric_info?.price_provider],
       [t("Editor"), s.editor],
-      [t("Status"), statusText(s)],
+      [t("Status"), stateText(s)],
       [t("Cost so far"), sessionCost(s)],
       [responseTime(s) ? t("Model response time") : t("Running time"), runningTime(s)],
       [t("Cost source"), s.metric_info?.cost_source === "catalog" ? t("API price estimate") : s.metric_info?.cost_source === "agent-estimate" ? t("Estimated by agent") : s.metric_info?.cost_source === "agent" ? t("Reported by agent") : null],
@@ -1091,14 +1097,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
     needs.setAttribute("aria-label", attention === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: attention }));
     clear.hidden = !search.value && !onlyNeeds && !status;
     drawFilters(v.sessions);
-    drawLane(v);
+    const queued = drawLane(v);
     drawExpired(v);
     element.classList.toggle("choosing-session", choosing || !front);
     back.hidden = !front;
 
+    // The queue above already lists the sessions it holds: the list below does not repeat them
+    // (unless you asked for "Needs you", which is that list on purpose).
+    const listed = onlyNeeds ? shown : shown.filter(s => !queued.has(key(s)));
     roosts.replaceChildren(
-      ...(shown.length
-        ? shown.map((s) => roost(s, !!front && key(front) === key(s)))
+      ...(listed.length
+        ? listed.map((s) => roost(s, !!front && key(front) === key(s)))
+        : shown.length
+        ? [el("div", { class: "filtered-note" }, el("p", { text: t("Every session here waits for you: they are in the queue above.") }))]
         : [
             el(
               "div",
@@ -1216,13 +1227,13 @@ export function createFlock(on: FlockActions & FlockAsk): {
    *  place a single request is answered. "Answer several" is an explicit mode: tick plain requests and
    *  one click allows them, never a destructive or cut one, and the rest keep waiting (ADR 0004,
    *  DESIGN.md's batch rule). */
-  function drawLane(v: ViewModel): void {
+  function drawLane(v: ViewModel): Set<string> {
     // A sent answer hides its row until the view drops it; one that left the line is forgotten.
     for (const request of [...laneSent]) if (!(v.waiting ?? []).some(w => w.request === request)) laneSent.delete(request);
     const rows = (v.waiting ?? []).filter(w => !laneSent.has(w.request));
     for (const request of [...laneTicked]) if (!rows.some(w => w.request === request)) laneTicked.delete(request);
     lane.hidden = rows.length < 2;
-    if (lane.hidden) { lane.replaceChildren(); laneBatch = false; return; }
+    if (lane.hidden) { lane.replaceChildren(); laneBatch = false; return new Set(); }
     const batchable = (w: ApprovalView) => w.why !== "destructive" && !w.cut;
     const canBatch = rows.filter(batchable).length >= 2;
     if (!canBatch) laneBatch = false;
@@ -1268,6 +1279,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       el("ul", { class: "lane-rows" }, ...rows.map(row)),
       ...(foot ? [foot] : []),
     );
+    return new Set(rows.map(w => `${w.agent}:${w.session}`));
   }
 
   function drawExpired(v: ViewModel): void {
@@ -1278,6 +1290,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
       if (e.outcome !== "expired" || noted.has(e.request) || !shownRequests.has(e.request)) continue;
       noted.add(e.request);
       expiredNotes.unshift({ request: e.request, agent: e.agent, session: e.session, at: now });
+      const session = v.sessions.find(s => s.agent === e.agent && s.id === e.session);
+      if (session) asking.set(key(session), session.step_count);
     }
     expiredNotes = expiredNotes.filter(n => now - n.at < EXPIRED_KEPT_MS).slice(0, 3);
     expiredBox.hidden = !expiredNotes.length;

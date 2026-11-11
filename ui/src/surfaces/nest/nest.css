@@ -2380,8 +2380,9 @@ button.touched-row:hover,
 .lane-foot .primary:disabled { opacity: 0.5; cursor: default; }
 .lane-note { color: var(--fg-dim); font-size: 12px; line-height: 1.4; }
 .conn-actions .conn-fix { margin-right: 6px; font: 12px var(--mono); }
-/* A card's last half minute: the clock the island shows, amber, red in its last ten seconds. */
-.deadline { color: var(--warn); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* A card's clock: always there and quiet, amber in its last half minute, red in its last ten seconds. */
+.deadline { color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deadline.soon { color: var(--warn); }
 .deadline.urgent { color: var(--error-text); font-weight: 600; }
 .deadline[hidden] { display: none; }
 /* A request nobody answered in time: said once, with its terminal at hand. */

@@ -442,6 +442,8 @@ console.log('check-flock-place: metric provenance, separate read ages and cumula
   lanePart.update({ ...view, approval: waiting[0], sessions: [session, two, three, four], waiting }); await tick();
   const lane = () => nodes(lanePart.element).find(node => node.className === "waiting-lane");
   assert.equal(lane().hidden, false, "Two or more waiting requests show the line");
+  const listedIds = nodes(lanePart.element).filter(node => (node.className ?? "").startsWith("roost-card")).map(node => node.textContent);
+  assert.ok(!listedIds.some(text => text.includes("Beta") || text.includes("Gamma")), "Sessions in the queue are not listed again below it");
   assert.ok(!nodes(lane()).some(node => node.tag === "button" && (node.textContent === "Allow" || node.textContent === "Deny")), "The line answers no single request: the card does");
   assert.ok(lane().textContent.includes("cmd c") && lane().textContent.includes("Destructive: answer it in its card"), "Each row shows what it asks");
   assert.ok(nodes(lane()).find(node => node.className === "lane-row current")?.textContent.includes("In the card"), "The request in the card is marked in words");
@@ -482,13 +484,16 @@ console.log('check-flock-place: metric provenance, separate read ages and cumula
   const waiting = [{ ...view.approval, expires_at: soon }, { ...view.approval, request: "late", session: "two", project: "Beta", expires_at: later }];
   part.update({ ...view, approval: waiting[0], sessions: [session, two], waiting }); await tick();
   const clocks = nodes(part.element).filter(node => (node.className ?? "").startsWith("deadline"));
-  assert.ok(clocks.some(node => !node.hidden && node.textContent.startsWith("Back to the terminal in 0:")), "A card in its last half minute shows its clock");
-  assert.ok(clocks.some(node => node.hidden), "A card with time left keeps its clock hidden");
-  part.update({ ...view, approval: null, sessions: [session, two], waiting: [], ended: [{ request: "late", agent: "claude", session: "two", outcome: "expired" }] }); await tick();
+  assert.ok(clocks.every(node => !node.hidden && node.textContent.startsWith("Goes back to the terminal in ")), "Every waiting request shows its clock, in the island's words");
+  assert.ok(clocks.some(node => node.classList.contains("soon")) && clocks.some(node => !node.classList.contains("soon")), "Only the last half minute turns amber");
+  // As the core leaves it after an expiry: working again, its card gone.
+  part.update({ ...view, approval: null, sessions: [session, { ...two, status: "working", attention: "info", card: false }], waiting: [], ended: [{ request: "late", agent: "claude", session: "two", outcome: "expired" }] }); await tick();
   const note = nodes(part.element).find(node => node.className === "expired-note");
   assert.ok(note && note.textContent.includes("No answer in time: Beta asks in its terminal now."), "An expired request the tab showed is said once");
   assert.ok(nodes(note).some(node => node.tag === "button" && node.textContent === "Open terminal"), "Its terminal is at hand");
-  part.update({ ...view, approval: null, sessions: [session, two], waiting: [], ended: [{ request: "never-shown", agent: "claude", session: "two", outcome: "expired" }] }); await tick();
+  part.update({ ...view, approval: null, sessions: [session, { ...two, status: "working", attention: "info", card: false }], waiting: [], ended: [{ request: "never-shown", agent: "claude", session: "two", outcome: "expired" }] }); await tick();
   assert.equal(nodes(part.element).filter(node => node.className === "expired-note").length, 1, "A request the tab never showed is not noted");
-  console.log("check-flock-place: shared deadline in the last half minute and a noted, recoverable expiry");
+  const listed = nodes(part.element).filter(node => (node.className ?? "").startsWith("roost-sub")).map(node => node.textContent);
+  assert.ok(listed.includes("Asking in its terminal"), "A session whose request went back unanswered says it asks in its terminal");
+  console.log("check-flock-place: shared deadline always shown, a noted expiry and the session asking in its terminal");
 }

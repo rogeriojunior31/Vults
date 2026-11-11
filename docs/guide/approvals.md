@@ -133,9 +133,9 @@ the corner widget: its card comes to the front, keeping its own deadline. Muted 
 ([per project](island.md#per-project-mute-pin-hide)) still get their cards and sounds.
 
 In the Nest, when two or more permissions wait, **Waiting for you** sits above the sessions on
-**Flock**: one row per request with its project, command, folder (or why it is destructive) and,
-in its last half minute, its clock. A row opens its request in the card, the one place a single
-request is answered; the one in the card says *In the card*. **Answer several** ticks plain
+**Flock**: one row per request with its project, command, folder (or why it is destructive) and
+its clock. A row opens its request in the card, the one place a single
+request is answered; the one in the card says so. **Answer several** ticks plain
 requests, and **Allow selected** allows just those; the rest keep waiting. A destructive request
 or one whose command was cut has no tick: it is answered in its card, where the whole of it shows.
 
@@ -150,10 +150,12 @@ A request waits as long as its agent does (a little under two minutes); meanwhil
 to the terminal in 0:25*, and then the terminal asks as if Vults were not there. If you answer in the
 terminal instead, the card says so and goes away.
 
-The Nest counts to the same moment: in its last 30 seconds a card on **Flock** and its row in
-**Waiting for you** show *Back to the terminal in 0:25*, however late the Nest opened. When one it
-showed goes back unanswered, **Flock** says *No answer in time: storefront asks in its terminal
-now.*, with **Open terminal** when it can be brought up, until you dismiss it.
+The Nest counts to the same moment, however late it opened: a card on **Flock** and its row in
+**Waiting for you** always show *Goes back to the terminal in 1:12*, quiet at first, amber in the
+last 30 seconds and red in the last ten. When one it showed goes back unanswered, **Flock** says
+*No answer in time: storefront asks in its terminal now.*, with **Open terminal** when it can be
+brought up, until you dismiss it, and the session reads *Asking in its terminal* until its next
+step.
 
 While it waits, a card climbs a ladder, so a card you missed reaches you:
 
