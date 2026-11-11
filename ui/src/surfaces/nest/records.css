@@ -62,3 +62,7 @@
   .record.child { margin-left: 12px; }
   .records-head { padding: 12px; }
 }
+.audit-pointer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--panel); }
+.audit-pointer > p:first-child { margin: 0; color: var(--fg); font-size: 14px; font-weight: 600; }
+.audit-pointer > .record-meta { margin: 0; }
+.audit-pointer > .btn { margin-left: auto; }

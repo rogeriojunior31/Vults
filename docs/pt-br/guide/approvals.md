@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 465c0905e7ae -->
+<!-- source: c8cda79df9e7 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -136,8 +136,7 @@ quem a deu, agrupadas por quem decidiu (você, seu telefone, uma regra Always, u
 total do chat). Cada linha começa pelo comando como foi pedido, marcado com ✓ permitido, ✗ negado ou
 – nenhum dos dois (enviado ao terminal, expirado, hooks instalados); **As recorded** mostra o texto
 guardado quando ele foi encurtado, como um lançador do PowerShell em volta do comando. Os números no
-topo somam o total, e cada um filtra a lista. O mesmo log fica em **Activity → Audit** no Nest, com
-um botão **Rules and policies** que volta para cá.
+topo somam o total, e cada um filtra a lista. No Nest, **Activity → Audit** conta as respostas guardadas e as abre aqui.
 
 <a id="more-than-one-at-a-time"></a>
 

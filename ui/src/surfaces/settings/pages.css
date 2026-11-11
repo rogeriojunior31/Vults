@@ -93,7 +93,8 @@ h1 {
 }
 .lede {
   margin: -6px 0 6px;
-  max-width: 72ch;
+  /* ch is a digit's width: 64ch keeps a line near 90 letters of this small text. */
+  max-width: 64ch;
   font-size: var(--text-s);
   line-height: 1.65;
   color: var(--fg-dim);

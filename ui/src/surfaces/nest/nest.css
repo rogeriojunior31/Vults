@@ -1150,8 +1150,8 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .flock-toolbar h2 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 550;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: -0.2px;
   white-space: nowrap;
 }
@@ -1950,6 +1950,10 @@ button.touched-row:hover,
   color: var(--error-text);
 }
 .conn-waiting .conn-refused { color: var(--error-text); }
+.conn-refused code { padding: 1px 5px; border-radius: 5px; background: var(--raised); color: var(--fg); font: 12px var(--mono); }
+/* Explanations keep a reading measure, not the window's width. */
+.nest-connections .nest-add-row p, .conn-waiting > p { max-width: 72ch; }
+.nest-connections .nest-add-row p { margin-right: auto; }
 .conn-row.seen .conn-row-words strong { color: var(--fg-dim); }
 /* The prototype's GitHub view: a count on each tab (red when Actions fail), the repository filter,
    the checks one by one, a bar while they run, and the command to copy. */
@@ -2408,7 +2412,7 @@ button.touched-row:hover,
 .session-metric dd { margin: 6px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .session-metric dd.unknown { color: var(--fg-dim); font-size: var(--text-m); line-height: 27px; }
 .session-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 8px; }
-.session-section-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.session-section-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
 .workspace-head .outline { flex: none; white-space: nowrap; }
 .workspace-head h3 { min-width: 0; }
 /* The empty flock: one pane, with the next step, in place of a list of nothing and a blank detail. */

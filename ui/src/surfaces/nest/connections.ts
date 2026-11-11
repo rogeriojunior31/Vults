@@ -5,7 +5,7 @@ import { sidePanel } from "./panels";
 // detail beside them: its facts, each check, a command to copy. Only connectors that exist are
 // offered (ADR 0011), and only what each row holds is shown; turning one on stays in Settings.
 import type { BoardView, ConnectorStatus, ConnectionsPlace, ConnectorZecaTools } from "../../bridge";
-import { CONNECTORS, connectorError } from "../../connectors";
+import { CONNECTORS, connectorError, withCode } from "../../connectors";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { copyTextButton } from "../../clipboard";
@@ -753,12 +753,11 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
         return el("section", { class: "conn-waiting" },
           el("h3", { text: c.name }),
           el("p", { text: error ? t("{name} is on, but its first check failed.", { name: c.name }) : t("{name} is on; its card shows after its first check.", { name: c.name }) }),
-          error ? (() => { const p = el("p", { class: "conn-refused", text: connectorError(error) }); p.setAttribute("role", "status"); return p; })()
+          error ? (() => { const p = el("p", { class: "conn-refused" }, ...withCode(connectorError(error))); p.setAttribute("role", "status"); return p; })()
             : status.get(c.id)?.overBudget ? el("p", { class: "conn-status stale", text: t("Daily request limit reached. Checks resume when the budget resets.") }) : null,
           el("div", { class: "conn-actions" },
             copy,
-            fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : error ? t("Check again") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`),
-            fid(el("button", { class: "outline", text: t("Manage connections"), onclick: actions.settings }), `manage:${c.id}`)));
+            fid(el("button", { class: "outline", text: refreshing ? t("Checking…") : error ? t("Check again") : t("↻ Refresh"), onclick: poll }), `refresh:${c.id}`)));
       }),
       ...(!zecaFace && !board && add ? [add] : []),
       ...(!board && !add && !pending.length && !statusFailed ? [viewState("loading", t("Checking connections…"))] : []),

@@ -2,6 +2,7 @@
 // (docs/contributing/connectors.md). The id must match `Connector::id()`.
 
 import { t, tk } from "./i18n";
+import { el } from "./dom";
 
 export interface ConnectorInfo {
   id: string;
@@ -46,6 +47,11 @@ const ERRORS = [
   tk("GitLab returned incomplete or invalid data. The previous snapshot is kept."),
   tk("GitLab returned more than 50 items in a group. The previous snapshot is kept."),
 ];
+/** A sentence with `code` in backticks, as nodes: the command shows as code, not as raw marks. */
+export function withCode(text: string): Node[] {
+  return text.split("`").map((part, i) => (i % 2 ? el("code", { text: part }) : document.createTextNode(part)));
+}
+
 export function connectorError(error: string): string {
   if (ERRORS.includes(error)) return t(error);
   const limited = /^rate limited, retrying in (\d+)s$/.exec(error);

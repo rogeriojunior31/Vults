@@ -31,8 +31,9 @@ export const WEEK_CSS = `
 .recap-card .share-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 16px 0; border-top: 1px solid var(--border); }
 .recap-card .share-row strong { display: block; font-size: 12px; font-weight: 550; }
 .recap-card .share-row small { color: var(--fg-dim); font-size: 11px; }
-.recap-card > .btn { width: 100%; min-height: 36px; margin-top: 8px; border: 0; border-radius: var(--radius-control); background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 600; }
-.recap-card > .btn:hover { background: var(--mark-fill); }
+/* Saving the recap is a secondary action: the week's figures lead the page. */
+.recap-card > .btn { width: 100%; min-height: 36px; margin-top: 8px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: transparent; color: var(--fg); font-size: 12px; font-weight: 600; }
+.recap-card > .btn:hover { background: var(--raised); }
 .recap-card .note { margin-top: 12px; }
 .card-head .card-title { font-size: 14px; font-weight: 600; }
 @media (max-width: 760px) {

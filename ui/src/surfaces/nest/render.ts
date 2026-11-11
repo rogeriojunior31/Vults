@@ -27,7 +27,7 @@ import { viewState } from "./view-state";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRecent } from "./recent";
 import {
-  createAudit,
+  createAuditPointer,
   createHistory,
   createTraces,
   createUsage,
@@ -247,7 +247,7 @@ export function createNest(
       return costPart(backend.spend, usage, () => backend.settings("activity"));
     })(),
     traces: createTraces(backend.records.traces),
-    audit: createAudit(backend.records.audit, backend.records.query, true, backend.records.rules),
+    audit: createAuditPointer(backend.records.audit, backend.records.rules),
   };
 
   // Chat: the conversation, and Zeca's memory beside it when asked for.

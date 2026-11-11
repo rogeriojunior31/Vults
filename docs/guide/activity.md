@@ -22,11 +22,11 @@ The Nest groups Activity into seven views, with the same navigation and summary 
 - **History**: finished turns grouped by project, with the result, agent, counts and duration.
 - **Cost**: today's budget, plan windows, the last two weeks of cost and tokens, and cost by project.
 - **Traces**: Zeca's chat turns and their tool calls, with status, time and available token counts.
-- **Audit**: who answered and the result, grouped by who decided, each row led by the command as it was
-  asked; the figures add up and filter the list. The same log is in **Settings → Approvals**
+- **Audit**: how many answers the log keeps and the last one, with **Open in Approvals**: the log
+  itself is in **Settings → Approvals**, beside the rules and policies whose answers it records
   ([What was answered](approvals.md#what-was-answered)).
 
-History and Audit show the latest 200 records. Their summaries describe the records loaded in
+History, like the audit log in Approvals, shows the latest 200 records. Their summaries describe the records loaded in
 that view, and searching filters the list without changing those totals. Group headings show
 the number of matching records. Navigation, search and resizing do not modify the stored history.
 

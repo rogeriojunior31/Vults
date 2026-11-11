@@ -103,12 +103,6 @@ function heading(title: string, about: string): HTMLElement {
   return el("header", { class: "activity-heading" }, el("div", {}, el("h2", { text: title }), el("p", { text: about })));
 }
 
-/** A heading with one action at its side. */
-function withAction(head: HTMLElement, action: HTMLElement | null): HTMLElement {
-  if (action) head.append(action);
-  return head;
-}
-
 function summary(...values: [string, string][]): HTMLElement {
   return el("div", { class: "activity-summary" },
     span(t("Summary of loaded records"), "activity-summary-label"),
@@ -491,7 +485,7 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
   ]);
 }
 
-export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"], title = true, rules?: () => void) {
+export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"], title = true) {
   let only: AuditKind | null = null;
   let view: ReturnType<typeof tab<AuditRow[]>> | null = null;
   // The figures add up to the total, and each one filters the list to its rows.
@@ -506,9 +500,9 @@ export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBack
     const count = (kind: AuditKind) => rows.filter(row => kindOf(row.act) === kind).length;
     const shown = rows.filter(row => !only || kindOf(row.act) === only).sort((a, b) => order(a) - order(b) || b.at - a.at);
     return [
-      title ? withAction(heading(t("Audit"), t(
+      title ? heading(t("Audit"), t(
           "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
-        )), rules ? el("button", { class: "btn", text: t("Rules and policies"), onclick: rules }) : null) : null,
+        )) : null,
       rows.length ? Object.assign(el("div", { class: "activity-summary audit-filters" },
         span(t("Filter the log"), "activity-summary-label"),
         figure(rows.length, t("Audit entries"), null),
@@ -524,4 +518,19 @@ export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBack
     ].filter((n): n is HTMLElement => n !== null);
   }, true, query);
   return view;
+}
+
+/** Activity's Audit, now a pointer: the log lives in Settings > Approvals, beside the rules and
+ *  policies whose answers it records. It still says how much the log holds, and the last answer. */
+export function createAuditPointer(load: () => Promise<AuditRow[]>, rules?: () => void) {
+  return tab("audit", load, (rows) => {
+    const last = rows.reduce<AuditRow | null>((a, r) => (!a || r.at > a.at ? r : a), null);
+    return [
+      heading(t("Audit"), t("The log of every answer is in Settings › Approvals, beside the rules and policies whose answers it records.")),
+      el("section", { class: "audit-pointer" },
+        el("p", { text: rows.length === 1 ? t("1 answer kept") : t("{n} answers kept", { n: rows.length }) }),
+        last ? el("p", { class: "record-meta", text: t("Last: {when}", { when: when(last.at * 1000) }) }) : null,
+        rules ? el("button", { class: "btn primary", text: t("Open in Approvals"), onclick: rules }) : null),
+    ];
+  });
 }

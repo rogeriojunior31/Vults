@@ -121,8 +121,7 @@ it, grouped by who decided (you, your phone, an Always rule, a policy, the chat'
 Each row leads with the command as it was asked, marked ✓ allowed, ✗ denied or – neither (sent to
 the terminal, expired, hooks installed); **As recorded** shows the stored text when it was shortened,
 such as a PowerShell launcher around the command. The figures on top add up to the total, and each
-one filters the list. The same log is under **Activity → Audit** in the Nest, with a **Rules and
-policies** button back here.
+one filters the list. In the Nest, **Activity → Audit** counts the answers kept and opens them here.
 
 ## More than one at a time
 
