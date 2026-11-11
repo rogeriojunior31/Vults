@@ -12,7 +12,8 @@ Connectors put news from outside services on the island. Each one is off until y
 
 In **Settings > Connectors**, enter your instance's HTTPS base URL (including its port or
 subfolder, for example `https://git.example.com:8443/team/`) and an access token with
-`read:user`, `read:issue` and `read:repository` scopes. Do not append `/api/v1`. Save the
+`read:user`, `read:issue` and `read:repository` scopes, plus `read:actions` for repositories
+using Actions. Do not append `/api/v1`. Save the
 connection, then switch **Gitea** on separately. No CLI installation is required.
 
 The URL and token are stored together in the OS keyring. The token never enters settings files or snapshots.
@@ -20,19 +21,31 @@ Settings can display the URL but never reads back the token. A blank token retai
 one only for the same URL. Turn Gitea off before editing or removing the connection; changing
 the URL requires a token. HTTP and untrusted TLS certificates are unsupported.
 
-Every five minutes, Vults reads your account, your open pull requests and requests for your
-review. Each GET has its own network admission, daily budget charge and local trace. The first
-complete poll establishes a baseline; later new review requests produce alerts. Changing the
-connection or account starts a new baseline. The Connections page has pull-request links scoped
-to your configured instance. It is read only: no checks, approval status, Actions, releases,
-merges or built-in Gitea chat tools in this version.
+Vults reads your account, open pull requests and review requests, including diff sizes, requested
+users/teams, review decisions and individual checks. Native Actions jobs are bound to the exact
+commit, run and attempt. Stale, dismissed or wrong-head approvals do not become current approvals;
+active requested changes remain visible. Review ordering uses submission time, not creation ID.
 
-Each group is bounded to five pages of at most 50 items. Missing or changing total counts,
+Default-branch checks and the latest release are read from ten recently updated owned/contributed
+repositories. Actions and Releases have their own tabs. Drafts and prereleases keep their native
+state. Links stay under the configured HTTPS instance, including ports, subfolders and encoded tags.
+Remote writes, merges and built-in Gitea chat tools remain pending in the parity work.
+
+Each GET has its own network admission, daily budget charge and local trace. Normal small polls
+wait five minutes; active checks may refresh sooner. Larger polls wait at least 36 seconds per
+request from the preceding complete poll, reserving room below the existing 3,000/day hard gate.
+Manual refreshes also use that gate. The first complete poll establishes a baseline; later review,
+CI and approval changes become alerts. Connection/account or snapshot-format changes rebaseline.
+
+Complete PR/review/check/Actions lists are bounded to five pages of at most 100 items. Missing or changing total counts,
 duplicate entries, incomplete data, failed requests and exhausted budgets never replace the last
 complete snapshot with partial results. The client verifies TLS, follows no redirects, ignores
 proxy environment settings, caps each response at 1 MiB and each poll at one minute. Last account,
 sync time and errors appear in Settings. Snapshots in `connectors/gitea.json` contain titles,
 repository names, links and account metadata, without credentials.
+
+Unknown, canceled and skipped results never become successful jobs. Missing Actions API coverage
+cannot yield a passing summary. A failed or budget-refused enrichment never publishes a partial board.
 
 Validation uses synthetic local API fixtures and renderer checks. Acceptance against a real
 self-hosted instance remains pending until an instance is available.

@@ -1,5 +1,5 @@
 # Paridade do GitLab e Gitea
-<!-- source: 4970c1516374 -->
+<!-- source: 6b245a9586ed -->
 
 Solicitado em 2026-11-10. O GitHub é a referência de comportamento. Entregar os recursos nativos
 equivalentes com a mesma confirmação, escopo, auditoria e tratamento de falhas. Não anunciar recursos
@@ -10,7 +10,7 @@ pendentes. O Notion vem depois desse trabalho, sem substituí-lo. Manter cobertu
 
 | Etapa | GitLab | Gitea | Aceitação |
 | --- | --- | --- | --- |
-| CP1: painel completo | Implementado com limites documentados | Pendente | Tamanho dos diffs, revisores, pedidos de alteração, jobs/checks do mesmo commit, branches padrão, releases, sem notícias repetidas |
+| CP1: painel completo | Implementado com limites documentados | Implementado com limites documentados | Tamanho dos diffs, revisores, pedidos de alteração, jobs/checks do mesmo commit, branches padrão, releases, sem notícias repetidas |
 | CP2: snapshot no chat | Pendente | Pendente | Permissões independentes em Settings/perfil, leitura do cache no API Chat e realtime, sem nova consulta de rede |
 | CP3: leituras ao vivo | Pendente | Pendente | Conta, repositório/busca, issues/PRs, comentários/reviews, diff/arquivos, execuções/jobs/logs de CI e regras de branch; paginação explícita e limitada |
 | CP4: escritas em issues | Pendente | Pendente | Criar/editar, comentários e suas edições, rótulos, responsáveis, fechar/reabrir; prévia humana, revalidação e leitura de confirmação auditada |
@@ -46,6 +46,13 @@ somente Settings ativa, uma consulta limitada produz linhas de MR/branch padrão
 continua desabilitado. Limites e pontos de clique foram verificados em escalas emuladas de 100%, 125%,
 150% e 200%. Em janelas baixas, o detalhe mantém espaço rolável; convites para conectores desligados
 não espremem mais o painel ativo. A tela vazia e Gerenciar conexões continuam oferecendo a configuração.
+
+Simulações locais do Gitea cobrem leituras completas de PRs/reviews/status/Actions/branches/releases,
+autorização por requisição, enriquecimento sem duplicação, IDs de conta inválidos, commits/tentativas
+divergentes, ausência de cobertura do Actions e páginas incompletas. Reviews usam a hora de envio.
+A frequência das consultas considera a quantidade de requisições. Simulações no WebView nativo
+cobrem abas Actions/Releases e pontos de clique dos jobs com falha em 100%, 125%, 150% e 200%,
+incluindo uma área de 480 por 360.
 
 O Gitea ainda precisa de uma instância real de teste. Simulações e escalas emuladas da interface não
 substituem permissões reais, DPI/entrada físicos do Windows nem aceitação das regras de merge ao vivo.

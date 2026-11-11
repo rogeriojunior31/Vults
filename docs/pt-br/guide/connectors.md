@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 0a1c7f1a301c -->
+<!-- source: 84be4a3f52c3 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -14,7 +14,8 @@ ligá-lo em **Settings → Connectors**.
 
 Em **Settings > Connectors**, informe a URL base HTTPS da sua instância (incluindo porta ou
 subpasta, por exemplo `https://git.example.com:8443/team/`) e um token com os escopos
-`read:user`, `read:issue` e `read:repository`. Não acrescente `/api/v1`. Salve a conexão e
+`read:user`, `read:issue` e `read:repository`, além de `read:actions` para repositórios com Actions.
+Não acrescente `/api/v1`. Salve a conexão e
 depois ative **Gitea** separadamente. Não é necessário instalar uma CLI.
 
 A URL e o token são armazenados juntos no cofre do sistema. O token nunca entra nas configurações ou snapshots.
@@ -22,19 +23,35 @@ As configurações mostram a URL, mas nunca leem o token de volta. Um token vazi
 somente para a mesma URL. Desative o Gitea antes de editar ou remover a conexão; alterar a URL
 exige um token. HTTP e certificados TLS não confiáveis não são suportados.
 
-A cada cinco minutos, o Vults lê sua conta, seus pull requests abertos e os pedidos da sua revisão.
-Cada GET passa por uma autorização de rede, contabilização no limite diário e registro local próprios.
-A primeira consulta completa estabelece a referência; novos pedidos de revisão posteriores geram
-alertas. Alterar a conexão ou a conta estabelece uma nova referência. A página Connections mostra
-links de pull requests restritos à instância configurada. Esta versão é somente leitura: não inclui
-checks, estado de aprovações, Actions, releases, merges nem ferramentas Gitea integradas ao chat.
+O Vults lê sua conta, pull requests abertos e pedidos de revisão, incluindo tamanho dos diffs,
+usuários/equipes solicitados, decisões de review e checks individuais. Jobs nativos de Actions ficam
+vinculados ao commit, execução e tentativa exatos. Aprovações obsoletas, dispensadas ou de outro commit
+não viram aprovações atuais; pedidos de alteração ativos continuam visíveis. Reviews são ordenados
+pelo horário de envio, não pelo ID de criação.
 
-Cada grupo fica limitado a cinco páginas de até 50 itens. Contagens totais ausentes ou variáveis,
+Checks da branch padrão e a última release vêm dos dez repositórios próprios/com contribuição
+atualizados mais recentemente. Actions e Releases têm abas próprias. Rascunhos e pré-releases
+mantêm seu estado nativo. Os links ficam restritos à instância HTTPS configurada, incluindo portas,
+subpastas e tags codificadas. Escritas remotas, merges e ferramentas Gitea no chat seguem pendentes
+no trabalho de paridade.
+
+Cada GET passa por autorização de rede, limite diário e registro local próprios. Consultas pequenas
+normalmente esperam cinco minutos; checks ativos podem atualizar antes. Consultas maiores esperam
+pelo menos 36 segundos por requisição da última consulta completa, reservando margem abaixo do limite
+de 3.000/dia. Atualizações manuais usam o mesmo limite. A primeira consulta completa estabelece a
+referência; mudanças posteriores de review, CI e aprovações geram alertas. Mudanças de conexão/conta ou
+formato do snapshot estabelecem nova referência.
+
+Listas completas de PR/review/check/Actions ficam limitadas a cinco páginas de até 100 itens. Contagens totais ausentes ou variáveis,
 entradas duplicadas, dados incompletos, falhas e limites esgotados nunca substituem o último
 snapshot completo por dados parciais. O cliente verifica TLS, não segue redirecionamentos, ignora
 proxies do ambiente e limita cada resposta a 1 MiB e cada consulta a um minuto. A última conta,
 hora da sincronização e erros aparecem nas configurações. Os snapshots em `connectors/gitea.json`
 contêm títulos, nomes de repositórios, links e metadados da conta, sem credenciais.
+
+Resultados desconhecidos, cancelados ou ignorados nunca viram jobs aprovados. Cobertura ausente da
+API de Actions não produz um resumo aprovado. Falhas ou limites durante o enriquecimento nunca
+publicam um painel parcial.
 
 A validação usa uma API local simulada e verificações da interface. A aceitação em uma instância
 própria real fica pendente até que uma instância esteja disponível.

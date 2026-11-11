@@ -8,7 +8,7 @@ Notion follows this work; it does not replace it. Keep GitHub and Linux regressi
 
 | Slice | GitLab | Gitea | Acceptance |
 | --- | --- | --- | --- |
-| CP1: complete dashboard | Implemented with documented bounds | Pending | Diff sizes, reviewers, changes requested, head-bound jobs/checks, default branches, releases, no repeated news |
+| CP1: complete dashboard | Implemented with documented bounds | Implemented with documented bounds | Diff sizes, reviewers, changes requested, head-bound jobs/checks, default branches, releases, no repeated news |
 | CP2: cached chat snapshot | Pending | Pending | Independent Settings/profile permissions, scoped cached reads in API Chat and realtime, no new network request |
 | CP3: live reads | Pending | Pending | Account, repository/search, issues/PRs, comments/reviews, diff/files, CI runs/jobs/logs and branch rules; explicit bounded pagination |
 | CP4: issue writes | Pending | Pending | Create/edit, comments and comment edits, labels, assignees, close/reopen; human preview, revalidation and audited readback |
@@ -42,6 +42,12 @@ is Settings-only, one bounded query produces MR/default-branch/release rows, and
 Renderer bounds and hit tests cover 100%, 125%, 150% and 200%. In short windows, the detail retains
 scrollable space; off-connector invitations no longer compress an active board. The empty state
 and Manage connections still expose connector setup.
+
+Gitea loopback fixtures cover complete PR/review/status/Actions/branch/release reads, per-request
+admissions, enrichment deduplication, invalid account IDs, mismatched commits/attempts, missing Actions
+coverage and incomplete pages. Review decisions use submission time. Background cadence accounts
+for each poll's request count. Native WebView renderer fixtures cover Actions/Releases tabs and
+failed-job hit tests at 100%, 125%, 150% and 200%, including a 480 by 360 viewport.
 
 Gitea still needs a real test instance. Synthetic fixtures and renderer scale emulation do not replace
 real permissions, physical Windows DPI/input or live merge-policy acceptance.

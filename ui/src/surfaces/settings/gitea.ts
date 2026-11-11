@@ -50,7 +50,7 @@ export function createGitea(native: Native) {
   const form = el("div", { class: "gitea-connection" },
     row(t("Gitea base URL"), t("Use HTTPS, including the port and subfolder when needed. Do not append /api/v1."), url),
     row(t("Gitea access token"), t("Stored only in the OS keyring. Leave blank to keep the saved token for the same URL. Changing the URL requires a token."), token),
-    el("p", { class: "note", text: t("Turn off Gitea before editing. Use a token with read:user, read:issue and read:repository scopes. Saving does not enable the connector.") }),
+    el("p", { class: "note", text: t("Turn off Gitea before editing. Use read:user, read:issue and read:repository; repositories with Actions also need read:actions. Saving does not enable the connector.") }),
     el("div", { class: "head-right" }, save, clear, retry), status);
   let language = locale();
   function relabel() {
@@ -62,7 +62,7 @@ export function createGitea(native: Native) {
     rows[0].querySelector<HTMLElement>(".row-about")!.textContent = t("Use HTTPS, including the port and subfolder when needed. Do not append /api/v1.");
     rows[1].querySelector<HTMLElement>(".row-title")!.textContent = t("Gitea access token");
     rows[1].querySelector<HTMLElement>(".row-about")!.textContent = t("Stored only in the OS keyring. Leave blank to keep the saved token for the same URL. Changing the URL requires a token.");
-    form.querySelector<HTMLElement>("p.note")!.textContent = t("Turn off Gitea before editing. Use a token with read:user, read:issue and read:repository scopes. Saving does not enable the connector.");
+    form.querySelector<HTMLElement>("p.note")!.textContent = t("Turn off Gitea before editing. Use read:user, read:issue and read:repository; repositories with Actions also need read:actions. Saving does not enable the connector.");
   }
   return {
     context(onPage: boolean, on: boolean) {

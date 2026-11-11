@@ -722,9 +722,9 @@ giteaUI.update({ boards: [{ connector: "gitea", rows: [{ ...mergeRow, name: "app
 await tick();
 assert.ok(giteaUI.element.textContent.includes("Pull requests"));
 assert.ok(!giteaUI.element.textContent.includes("Squash and merge"));
-assert.ok(!giteaUI.element.querySelector('[data-fid="tab:runs"]'));
-assert.ok(!giteaUI.element.querySelector('[data-fid="tab:rels"]'));
-console.log("check-surface-continuity: Gitea offers pull requests without unsupported mutations, Actions or Releases");
+assert.ok(giteaUI.element.querySelector('[data-fid="tab:runs"]'));
+assert.ok(giteaUI.element.querySelector('[data-fid="tab:rels"]'));
+console.log("check-surface-continuity: Gitea exposes Actions and Releases while keeping mutations disabled");
 connections.update({ boards: [{ connector: "github", rows: [mergeRow] }] });
 document.body.replaceChildren(connections.element); await tick();
 connections.element.querySelector(".conn-row").fire("click");
