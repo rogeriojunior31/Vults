@@ -444,7 +444,7 @@ export class ChatPanel {
   /** The provider's CLI did not list its models the last time it was asked. */
   private modelsFailed: Partial<Record<ChatProvider, boolean>> = {};
   private readonly historyButton = el("button", { class: "ghost history" });
-  private readonly newButton = el("button", { class: "ghost", onclick: () => this.ask("new") });
+  private readonly newButton = el("button", { class: "ghost chat-new", onclick: () => this.ask("new") });
   private readonly historyMenu = el("div", { class: "menu history-menu" });
   private readonly log = el("div", { class: "log" });
   private following = true;

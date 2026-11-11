@@ -161,6 +161,16 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .chat-titlebar .chat-head > * > .place:hover {
   background: var(--raised);
 }
+/* Full access is never quiet in the title bar either: error color, with an outline as its shape. */
+.chat-titlebar .chat-head > .access-box > .place.access.full {
+  color: var(--error-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--error-text) 45%, transparent);
+  background: color-mix(in srgb, var(--error-text) 10%, var(--float));
+}
+/* With the conversations' column open, its New conversation is the one New. */
+@media (min-width: 900px) {
+  .nest-chat:not(.no-recent) .chat-titlebar .chat-head > .chat-new { display: none; }
+}
 /* At the window's right, the pickers' menus open leftwards: from their left edge they would run
    past it. */
 .chat-titlebar .chat-head .menu {
