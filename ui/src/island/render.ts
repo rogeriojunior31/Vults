@@ -41,7 +41,7 @@ import { connectionsCard, mergeEnded, mergeSig, mergeStarted, staleNote } from "
 import { onSeen, seenSig, unseen } from "./seen";
 import { settingsQuick, weekQuick, type QuickPage, type QuickSettings } from "./quick";
 import { createPalette, paletteItems } from "../palette";
-import { sizeSwitch } from "../sizes";
+import { sizeMenu } from "../sizes";
 import { CONNECTORS } from "../connectors";
 import { createNow, nowItems } from "./now";
 import { allowsByKey, refuseAllowKey } from "./allow-key";
@@ -1005,14 +1005,6 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       gear,
     );
     const soundOn = Sound.isEnabled();
-    const sound = el(
-      "button",
-      { class: "icon-btn", onclick: () => actions.setSounds(!soundOn) },
-      icon(soundOn ? "sound" : "mute", 14, 1.6),
-    );
-    sound.title = t("Mute");
-    sound.setAttribute("aria-label", t("Mute"));
-    sound.setAttribute("aria-pressed", String(!soundOn));
     // Shown only while do not disturb lasts: a click ends it.
     const moon = raw.dnd ? el("button", { class: "icon-btn dnd", onclick: () => actions.endDnd?.() }, icon("moon", 14)) : null;
     if (moon) moon.title = t("Do not disturb is on: no sounds or notifications. Click to end it.");
@@ -1022,18 +1014,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     search.setAttribute("aria-label", t("Command palette (Ctrl+K)"));
     // Ctrl+K waits for a card or a connector's card to be read: so does the button.
     if (cardWaits || boardOpen) search.disabled = true;
-    // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
     const nestTab = view === "settings" || view === "now" ? "flock" : view;
-    const sizes = sizeSwitch(
+    // Size and sounds in one menu: Mini folds, as the fold button did; Room and Full take what the
+    // island shows to the Nest (from the gear's view, Room is Settings itself in the Nest).
+    const sizes = sizeMenu(
       "quick",
-      // From the gear's view, Room is Settings itself in the Nest.
       (s) => (s === "mini" ? foldNow() : view === "settings" && s === "room" ? actions.openSettings(quickPage === "general" ? undefined : quickPage) : actions.setSize?.(s, nestTab)),
-      fsm.pinned && !held ? ["mini"] : [],
-      ["mini", "quick", "room"],
+      { off: fsm.pinned && !held ? ["mini"] : [], sound: { on: soundOn, set: (on) => actions.setSounds(on) }, fullClass: "island-fullscreen" },
     );
-    const full = el("button", { class: "icon-btn island-fullscreen", onclick: () => actions.setSize?.("full", nestTab) }, icon("fullscreen", 14, 1.6));
-    full.title = t("Full: the Nest on the whole screen; Esc goes back");
-    full.setAttribute("aria-label", t("Full"));
     const mark = el("img", { class: "app-mark" });
     mark.src = "/icon.png";
     mark.alt = "";
@@ -1047,7 +1035,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         "div",
         { class: "header" },
         el("div", { class: "header-brand" }, mark, el("span", { class: "app-logo", text: "vults" })),
-        el("div", { class: "header-actions" }, moon, sound, search, sizes, full),
+        el("div", { class: "header-actions" }, moon, search, sizes),
       ),
       tabs,
       sub,

@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: fc69d3003a6d -->
+<!-- source: 1bba4fb1d01b -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -73,7 +73,7 @@ Ligue-o de volta no mesmo lugar; sem reiniciar, nos dois casos.
 
 ![A ilha compacta: o Zeca com a sessão da frente, e vults com seus selos](../../assets/island-compact-flock.png)
 
-**Compacta** (o **Mini** do seletor de tamanho), a ilha é uma pequena pílula sem texto, só o bando:
+**Compacta** (o **Mini** do menu de apresentação), a ilha é uma pequena pílula sem texto, só o bando:
 o Zeca à esquerda com a sessão da frente, até oito vults espalhados pelo fio e, embaixo, uma linha
 fina por plano com o uso dele, nas cores dos medidores de uso (âmbar a partir de 70%, vermelho a
 partir de 90%). Para as sessões, as cores significam o
@@ -94,10 +94,12 @@ ficam no fio enquanto toca música. A resposta concluída continua disponível d
 verde some.
 
 **Clique** em qualquer outro ponto da pílula para abrir a ilha. Ela se recolhe 15 segundos depois que o ponteiro sai (uma
-linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O seletor de tamanho no canto
-superior direito muda o quanto você vê, mantendo o que você olhava: **Mini** recolhe na hora para a
-pílula, **Quick** é a ilha, **Room** abre o [Nest](nest.md) no que a ilha mostra (o bando, o chat,
-as suas conexões ou esta semana; as Settings a partir da engrenagem) e o botão de tela cheia ao lado o abre na tela toda. Enquanto um card espera, ele
+linha fina embaixo faz a contagem; voltar com o ponteiro cancela). O menu de apresentação no canto
+superior direito (ele mostra o tamanho em uso, como **Quick**) muda o quanto você vê, mantendo o que
+você olhava: **Mini** recolhe na hora para a pílula, **Quick** é a ilha, **Room** abre o
+[Nest](nest.md) no que a ilha mostra (o bando, o chat, as suas conexões ou esta semana; as Settings a
+partir da engrenagem) e **Full** o abre na tela toda. Cada um diz o que é no menu, e **Sounds** liga
+ou desliga os sons. Enquanto um card espera, ele
 ocupa o lugar do bando. **Settings → General → Fold the island** define a
 espera.
 
@@ -230,8 +232,8 @@ e as notificações do Windows são silenciosas porque o Vults já controla a po
 
 ![A ilha aberta em repouso: o bando, cada sessão com seu nome, e um chip para cada uma que pede um olhar](../../assets/island-busy-flock.png)
 
-Aberta, a ilha tem no cabeçalho a marca e o nome, o botão de som, a busca (a paleta, como
-**Ctrl+K**), o seletor de tamanho e o botão de tela cheia. Embaixo ficam as abas:
+Aberta, a ilha tem no cabeçalho a marca e o nome, a busca (a paleta, como **Ctrl+K**) e o menu de
+apresentação (tamanho e sons). Embaixo ficam as abas:
 
 - **Flock**, com quantas sessões precisam de você;
 - **Chat**, a conversa compacta do Zeca, com motor, pasta, anexos e microfone;
@@ -254,7 +256,7 @@ e o rascunho da pergunta. **Activity** e **Connections** no rodapé do Now abrem
 [Nest](nest.md). Voltar dessas telas para o Quick abre o Now; o Chat volta para o Chat.
 Os chips das sessões que precisam de você ficam abaixo das abas sobre o Chat e as Settings.
 A música e o uso dos seus planos ficam numa linha abaixo das abas.
-Embaixo, na largura toda da ilha (cerca de 500 px na tela, o **Quick** do seletor de tamanho):
+Embaixo, na largura toda da ilha (cerca de 500 px na tela, o **Quick** do menu de apresentação):
 
 - **em repouso, o bando**: o vult de cada sessão num fio, com o dobro do tamanho, o nome do projeto
   embaixo (numa caixa para a que está na frente) e `!` quando precisa de você (até seis; além disso,

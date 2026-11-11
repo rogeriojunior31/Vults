@@ -378,8 +378,11 @@ for (const width of [480, 760, 900, 1180]) {
     await nest.chat.flushDraft();
     const questionSnapshot = structuredClone(draft);
     const questionDraft = nest.chat.element.querySelector("textarea").value;
-    const ask = page.querySelector('[data-fid="act:ask"]');
-    assert.ok(ask, "The selected session retains its Ask Zeca action");
+    assert.equal(page.querySelector('[data-fid="act:ask"]'), null, "While a decision waits, the card offers only its answers");
+    const detailBefore = page.querySelector('.detail-tab[aria-selected="true"]')?.id;
+    page.querySelector("#nest-detail-zeca").click(); await tick();
+    const ask = page.querySelector('[data-fid="act:ask-pane"]');
+    assert.ok(ask, "The selected session retains its Ask Zeca action in the Zeca tab");
     ask.click(); await tick(); await tick();
     assert.equal(nest.current(), "chat");
     assert.deepEqual(preparations.at(-1), ["nest", undefined]);
@@ -388,6 +391,7 @@ for (const width of [480, 760, 900, 1180]) {
     assert.deepEqual(actions, [], "A session question never resets, sends or answers its permission");
     nest.chat.restoreDraft(questionSnapshot); await nest.chat.flushDraft();
     nest.open("flock");
+    if (detailBefore) { page.querySelector(`#${detailBefore}`).click(); await tick(); }
     const beforeDictation = voiceCalls.length;
     nest.shortcut("talk"); nest.shortcut("talk-up"); await tick();
     assert.equal(nest.current(), "flock", "The dictation shortcut never opens Chat");

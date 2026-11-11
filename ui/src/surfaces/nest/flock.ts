@@ -807,7 +807,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
         "div",
         { class: "app-card-actions" },
         s.raise === true ? fid(el("button", { class: "outline", text: t("Open terminal"), onclick: () => on.jump(s) }), "act:jump") : null,
-        zeca ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
+        // While a decision waits the card offers only its answers; asking Zeca stays in the Zeca tab.
+        zeca && !permission && !question ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
       ),
       // No card for it: it asks in its terminal (its card expired or went there, or it has none).
       s.skipped && s.waiting ? el("div", { class: "skipped-card" },

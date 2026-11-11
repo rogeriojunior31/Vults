@@ -63,7 +63,7 @@ Turn him back on in the same place; no restart either way.
 
 ![The compact island: Zeca with the session in front, and vults with their badges](../assets/island-compact-flock.png)
 
-**Compact** (the size switch's **Mini**), the island is a small pill with no text, only the flock:
+**Compact** (the presentation menu's **Mini**), the island is a small pill with no text, only the flock:
 Zeca on the left with the session in front, up to eight vults spread along the wire, and under it a
 hairline per plan showing its usage, in the usage meters' colors (amber from 70%, red from 90%).
 For sessions, colors mean the
@@ -82,10 +82,12 @@ with reduced motion or paused animation, birds stay perched; idle birds also sta
 music plays. The finished reply remains available after the green mark goes.
 
 **Click** anywhere else on the pill to open the island. It folds back 15 seconds after the pointer leaves (a thin line
-at the bottom counts down; coming back cancels it). The size switch at the top right
-changes how much you see, keeping what you were looking at: **Mini** folds it to the pill at once,
-**Quick** is the island, **Room** opens the [Nest](nest.md) on what the island shows (the flock, the
-chat, your connections or this week; Settings from the gear), and the full-screen button beside it opens it on the whole screen. While
+at the bottom counts down; coming back cancels it). The presentation menu at the top right
+(it names the size in use, such as **Quick**) changes how much you see, keeping what you were looking
+at: **Mini** folds it to the pill at once, **Quick** is the island, **Room** opens the [Nest](nest.md)
+on what the island shows (the flock, the chat, your connections or this week; Settings from the
+gear), and **Full** opens it on the whole screen. Each one says what it is in the menu, and
+**Sounds** turns the sounds on or off. While
 a card waits, it takes the flock's place. **Settings → General →
 Fold the island** sets the wait.
 
@@ -205,8 +207,8 @@ silent because Vults already owns the sound policy.
 
 ![The open island at rest: the flock, every session named, and a chip for each one that needs a look](../assets/island-busy-flock.png)
 
-Open, the island's header has its mark and name, a sound toggle, the search (the palette, as
-**Ctrl+K**), the size switch and the full-screen button. Under it, its tabs are:
+Open, the island's header has its mark and name, the search (the palette, as **Ctrl+K**) and the
+presentation menu (size and sounds). Under it, its tabs are:
 
 - **Flock**, with how many sessions need you;
 - **Chat**, Zeca's compact conversation, with its engine, folder, attachments and microphone;
@@ -228,7 +230,7 @@ bring any deferred card back by its request. Cards keep their original deadline 
 [Nest](nest.md). Returning from those views to Quick opens Now; Chat returns to Chat.
 The chips of sessions that need you stay under the tabs over Chat and Settings.
 The song and your plans' usage take a line under the tabs.
-Below, the island's whole width (about 500 px on screen, the size switch's **Quick**):
+Below, the island's whole width (about 500 px on screen, the presentation menu's **Quick**):
 
 - **at rest, the flock**: every session's vult on one wire, twice its size, its project's name under
   it (boxed for the one in front) and `!` when it needs you (up to six; past that, five stay and
