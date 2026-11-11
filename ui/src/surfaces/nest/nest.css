@@ -458,7 +458,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   display: flex;
   align-items: center;
   gap: 8px;
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .conn-detail h3 {
@@ -488,7 +488,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .conn-row { margin-bottom: 4px; transition: background-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out); }
 .conn-row > svg { margin-top: 3px; }
 .conn-row-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
-.conn-seen { font-size: 10px; color: var(--fg-dim); }
+.conn-seen { font-size: 11px; color: var(--fg-dim); }
 .conn-context { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 16px; font: 11px/1.6 var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-dim); }
 .conn-check-list { margin-top: 20px; border-top: 1px solid var(--border); }
 .conn-check-list > summary { display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; color: var(--fg); font-size: 12px; }
@@ -512,7 +512,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   .nest-connections { gap: 6px; }
   .nest-connections .conn-head { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
   .nest-connections .conn-actions { width: auto; }
-  .nest-connections .conn-head h2 { font-size: 16px; }
+  .nest-connections .conn-head h2 { font-size: var(--text-l); }
   .nest-connections .conn-status { margin-top: 2px; }
 }
 /* The whole window is the chat: none of the island's card around it. */
@@ -591,7 +591,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .nest-chat .msg-engine {
   color: var(--fg-muted);
-  font-size: 11.5px;
+  font-size: var(--text-s);
 }
 /* The code's head as a bar over it: its language at the left, Copy at the right. */
 .nest-chat .codeblock {
@@ -792,7 +792,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-bright);
-  font-size: 16px;
+  font-size: var(--text-l);
   font-weight: 600;
 }
 .roost-tree {
@@ -900,13 +900,13 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .memory-debrief {
   margin: 0 0 4px;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 .memory-night-line,
 .memory-rate,
 .memory-note {
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 .memory-note {
@@ -946,7 +946,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   border-radius: 8px;
   background: color-mix(in srgb, var(--fg) 4%, transparent);
   font-family: var(--mono, monospace);
-  font-size: 11.5px;
+  font-size: var(--text-s);
   white-space: pre;
 }
 .roost-cost { margin: 2px 0; font-size: 12px; color: var(--fg-muted); }
@@ -1359,7 +1359,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .rule-scope {
   margin: 10px 0 0;
-  font-size: 10px;
+  font-size: var(--text-s);
   color: var(--fg-dim);
 }
 /* The prototype's two buttons: a light primary and a bordered outline. */
@@ -1483,7 +1483,7 @@ body.still .detail-content.detail-enter { animation: none; }
 .diff-toolbar .outline {
   min-height: 29px;
   padding: 5px 8px;
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 .diff-caption {
@@ -1578,11 +1578,11 @@ button.touched-row:hover,
 .diff-row.hunk {
   background: color-mix(in srgb, var(--info) 4%, transparent);
   color: var(--info);
-  font-size: 10px;
+  font-size: 11px;
 }
 .detail-footnote {
   margin: 12px 0 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   color: var(--fg-dim);
 }
@@ -1602,14 +1602,14 @@ button.touched-row:hover,
 }
 .detail-content .activity-row time {
   margin-top: 2px;
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .detail-content .activity-row strong {
   font-weight: 500;
 }
 .detail-content .activity-row > span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ok);
 }
 .context-dl {
@@ -1635,7 +1635,7 @@ button.touched-row:hover,
   padding: 10px 20px;
   border-top: 1px solid var(--border);
   background: var(--chrome);
-  font-size: 9px;
+  font-size: 11px;
   color: var(--fg-dim);
 }
 .usage-card[hidden] {
@@ -1718,7 +1718,7 @@ button.touched-row:hover,
   .focus-block {
     padding: 12px 14px;
   }
-  .card-name { margin-bottom: 6px; font-size: 16px; }
+  .card-name { margin-bottom: 6px; font-size: var(--text-l); }
   .app-card-head { font-size: 11px; }
   .app-card .command {
     margin-top: 8px;
@@ -1845,12 +1845,12 @@ button.touched-row:hover,
 }
 .nest-add-row p {
   flex: 1;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 .nest-add-row strong {
   display: block;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 /* The card's ticker, quiet flag and changes, as the prototype draws them (wave 1). */
@@ -1883,7 +1883,7 @@ button.touched-row:hover,
   border: 1px solid var(--border);
   border-radius: 4px;
   background: none;
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
   cursor: pointer;
 }
@@ -1919,7 +1919,7 @@ button.touched-row:hover,
   border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
   border-radius: 5px;
   background: none;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--warn);
   cursor: pointer;
 }
@@ -1933,7 +1933,7 @@ button.touched-row:hover,
   border: 0;
   border-top: 1px solid var(--border);
   background: none;
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-muted);
   text-align: left;
   cursor: pointer;
@@ -2048,7 +2048,7 @@ button.touched-row:hover,
 .conn-check span:last-child {
   flex: none;
   margin-left: auto;
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .conn-cmd {
@@ -2060,7 +2060,7 @@ button.touched-row:hover,
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg-deep);
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .conn-cmd::before {
@@ -2077,7 +2077,7 @@ button.touched-row:hover,
 }
 .conn-cmd button {
   flex: none;
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .conn-cmd button:hover {
@@ -2196,7 +2196,7 @@ button.touched-row:hover,
 }
 .nest-menu-head {
   padding: 4px 8px 6px;
-  font: 500 10px var(--mono);
+  font: 500 11px var(--mono);
   letter-spacing: 0.6px;
   text-transform: uppercase;
   color: var(--fg-muted);
@@ -2398,7 +2398,7 @@ button.touched-row:hover,
   .flock-toolbar h2 { width: auto; align-self: center; }
   .flock-filters { width: 100%; }
   .session-metrics { gap: 8px; }
-  .session-metric dd { font-size: 16px; }
+  .session-metric dd { font-size: var(--text-l); }
 }
 
 @media (max-height: 480px) { .nest-flock-tab .flock-stage { display: none; } }
@@ -2704,7 +2704,7 @@ button.touched-row:hover,
 .agent-profile-detail { background: transparent; border: 0; padding: 0; min-width: 0; }
 .agent-profile-hero { display: flex; align-items: center; gap: 20px; padding: 8px 0 20px; }
 .agent-profile-identity { min-width: 0; }
-.agent-profile-identity h3 { margin: 0 0 8px; font-size: 22px; overflow-wrap: anywhere; }
+.agent-profile-identity h3 { margin: 0 0 8px; font-size: 20px; overflow-wrap: anywhere; }
 .agent-profile-identity > .note { margin: 0 0 16px; color: var(--fg-dim); font-size: var(--text-s); }
 .agent-profile-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .agent-profile-detail-actions .agent-profile-edit { border: 1px solid var(--control-border); background: transparent; }

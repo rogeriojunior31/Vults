@@ -354,7 +354,7 @@ function sessionBody(
         el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, skipButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
-        el("div", { class: "ask-what", text: t("Working folder: {path}", { path: operationFolder ?? t("Not reported") }) }),
+        el("div", { class: "ask-what ask-scope", text: t("Working folder: {path}", { path: operationFolder ?? t("Not reported") }) }),
         // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
         approval.why
           ? el("div", {
