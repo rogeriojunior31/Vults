@@ -268,13 +268,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
     choosing = true; element.classList.add("choosing-session"); search.focus();
   } });
   // No session at all: say what brings a bird here and where to set it up, instead of an empty pane.
-  const welcome = el(
-    "section",
-    { class: "flock-welcome" },
-    el("h3", { text: t("No agent session yet") }),
-    el("p", { text: t("Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.") }),
-    on.setup ? el("button", { class: "primary", text: t("Set up agents"), onclick: () => on.setup?.() }) : null,
-  );
+  const welcomeTitle = el("h3");
+  const welcomeText = el("p");
+  const welcomeSetup = on.setup ? el("button", { class: "primary", onclick: () => on.setup?.() }) : null;
+  const welcome = el("section", { class: "flock-welcome" }, welcomeTitle, welcomeText, welcomeSetup);
   welcome.hidden = true;
   const selected = el("section", { class: "flock-selected" }, back, body, welcome);
   const workspace = el("div", { class: "flock-workspace" }, list, selected);
@@ -778,13 +775,13 @@ export function createFlock(on: FlockActions & FlockAsk): {
             fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), "act:copy"),
           )
         : null,
-      permission ? el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ?? t("Not reported") }) }) : null,
       permission?.why
         ? el("p", {
             class: `ask-why ${permission.why}`,
             text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this"),
           })
         : null,
+      permission ? el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ?? t("Not reported") }) }) : null,
       question ? questionNode(s, question) : null,
       permission ? permissionActions(s, permission) : null,
       el(
@@ -1168,6 +1165,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     heading.textContent = t("The flock, together");
     title.textContent = t("Sessions");
     back.textContent = t("Back to sessions");
+    welcomeTitle.textContent = t("No agent session yet");
+    welcomeText.textContent = t("Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.");
+    if (welcomeSetup) welcomeSetup.textContent = t("Set up agents");
     search.placeholder = t("Find a session…");
     search.setAttribute("aria-label", t("Find a session…"));
     needs.replaceChildren(el("span", { text: t("Needs you") }), needsCount);
