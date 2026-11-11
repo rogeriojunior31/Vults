@@ -89,7 +89,8 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }),
       small ? el("small", { text: small }) : null, change ? el("small", { class: "stat-delta", text: change }) : null);
   const dictated = metric(a.dictatedWords == null ? t("Unknown") : a.dictatedWords.toLocaleString(locale()), t("Dictated words"));
-  if (!w.turns) return [heading, el("div", { class: "activity-summary" }, dictated), lede, viewState("empty", w.headline), gridCard(a, view, on)];
+  // A quiet week leads with what was measured; an unknown count adds nothing to it.
+  if (!w.turns) return [heading, ...(a.dictatedWords == null ? [] : [el("div", { class: "activity-summary" }, dictated)]), lede, viewState("empty", w.headline), gridCard(a, view, on)];
   const previous = a.previous;
   const delta = (now: number, before: number | undefined) => !previous?.turns || before === undefined
     ? t("No recorded baseline for comparison.")
@@ -133,7 +134,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     el(
       "div",
       { class: "activity-summary" },
-      dictated,
+      a.dictatedWords == null ? null : dictated,
       metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) }), delta(w.active_secs, previous?.active_secs)),
       metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps }), delta(w.turns, previous?.turns)),
       metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files }), delta(w.added + w.removed, previous ? previous.added + previous.removed : undefined)),
@@ -146,6 +147,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
           : t("{allowed} allowed · {denied} denied", { allowed: w.allowed, denied: w.denied }),
         delta(w.allowed + w.denied + w.answered, previous ? previous.allowed + previous.denied + previous.answered : undefined),
       ),
+      a.dictatedWords == null ? dictated : null,
     ),
     // The period and its totals answer first; the counting policy can stay nearby without
     // interrupting the scan.

@@ -846,7 +846,10 @@ gitea.context(true,false); giteaToken.value='retry-token'; giteaSave.fire('click
 failGitea('Could not save the Gitea connection.'); await tick();
 assert.ok(gitea.element.textContent.includes('Could not save the Gitea connection.'));
 assert.equal(giteaToken.value,'');
-giteaClear.fire('click'); await tick(); assert.deepEqual(giteaWrites[2],['https://git.example.com/team/','','second',true]);
+giteaClear.fire('click'); await tick(); assert.equal(giteaWrites.length,2,'Remove connection asks before removing');
+assert.equal(document.activeElement.textContent,'Cancel','Cancel takes the focus while removal is asked');
+document.activeElement.fire('click'); await tick(); assert.equal(giteaWrites.length,2,'Cancel removes nothing');
+giteaClear.fire('click'); giteaClear.fire('click'); await tick(); assert.deepEqual(giteaWrites[2],['https://git.example.com/team/','','second',true]);
 finishGitea({baseUrl:'',generation:''}); await tick();
 assert.equal(giteaUrl.value,''); assert.ok(giteaClear.disabled);
 console.log('check-settings-ui: Gitea keeps drafts, clears tokens, serializes saves and requires a separate activation');

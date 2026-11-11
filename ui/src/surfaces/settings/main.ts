@@ -191,6 +191,9 @@ let page: Page = linked ?? "general";
 let navigated = linked !== null;
 const panels = new Map<InstallAgent, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
 let connectorStatus = new Map<string, ConnectorStatus>();
+/** Read once at least, and whether the last read failed: until then a switch is unknown, not off. */
+let connectorsRead = false;
+let connectorsFailed = false;
 let sounds = true;
 /** Percent, as the slider shows it: a repaint mid-drag keeps the drag. */
 let volume = 50;
@@ -885,7 +888,9 @@ function agentCards(): HTMLElement[] {
     return known.has(a.kind) || !!p?.status?.installed || !!p?.status?.error || !!p?.message || !!p?.pending;
   };
   const found = listed.filter(here), others = listed.filter((a) => !here(a));
+  const due = listed.filter((a) => panels.get(a.kind)?.status?.outdated).length;
   return [
+    ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))] : []),
     ...(found.length
       ? found.map((a) => agentCard(a.kind, a.name))
       : [el("section", { class: "card" }, el("p", { class: "note", text: t("No supported agent was found on this computer. Install one, then open this page again.") }))]),
@@ -917,8 +922,10 @@ function agentsPage(): HTMLElement[] {
 async function refreshConnectors(): Promise<void> {
   try {
     connectorStatus = new Map((await Bridge.connectorsStatus()).map((c) => [c.id, c]));
+    connectorsRead = true;
+    connectorsFailed = false;
   } catch {
-    // Shown as "not running" below.
+    connectorsFailed = true;
   }
   if (page === "connectors") render();
 }
@@ -928,12 +935,16 @@ function connectorsPage(): HTMLElement[] {
     el("h1", { text: t("Connections") }),
     el("p", { class: "lede", text: t("News from outside services on the island. Each one is off until you switch it on.") }),
     ...(presence === "paused" ? [el("p", { class: "note", text: t("Paused: connectors do not check anything until you pick another presence in General.") })] : []),
+    ...(connectorsFailed
+      ? [readState(true, "", t("Could not read which connections are on. Their switches stay as they are until this is read."), () => void refreshConnectors())]
+      : !connectorsRead ? [readState(false, t("Reading your connections…"), "", () => {})] : []),
     ...CONNECTORS.map((c) => {
       const st = connectorStatus.get(c.id);
       const control = toggle(st?.enabled ?? false, async (on) => {
         await Bridge.connectorEnable(c.id, on);
         await refreshConnectors();
       });
+      if (!connectorsRead) control.disabled = true;
       control.setAttribute("aria-label", c.name);
       const state = !st?.enabled
         ? badge(t("Off"), "off")
@@ -1763,7 +1774,8 @@ function voiceRows(): HTMLElement[] {
           downloading.delete(m.id);
           await refreshVoice();
         },
-        !status.models.some((x) => x.installed) && m.id === "base",
+        // The model that suits the spoken language: Base is weak outside English.
+        !status.models.some((x) => x.installed) && m.id === (/^(en|auto)/.test(status.language ?? status.system ?? "en") ? "base" : "small"),
       );
     return row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} from the whisper.cpp models on Hugging Face, checked before use", { size: mb }), control);
   });
