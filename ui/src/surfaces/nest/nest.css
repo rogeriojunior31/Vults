@@ -2454,16 +2454,21 @@ button.touched-row:hover,
 }
 
 @media (max-height: 480px) { .nest-flock-tab .flock-stage { display: none; } }
-/* A short window keeps Deny and Allow in sight: the request scrolls above them, they stay at the foot. */
+/* A short window shows the command and its answers together, never one over the other: the answers
+   sit right under the command (not pinned over it), and the rest of the card gives way first. The
+   words shrink to a line, the waiting count goes (the line above counts), and a long command
+   scrolls in its own box. */
 @media (max-height: 480px) {
   .flock-selected .focus-block { padding-block: 8px 0; }
   .flock-selected .focus-block > :last-child { margin-bottom: 8px; }
   .flock-back { min-height: 28px; margin-top: 4px; }
+  .flock-selected .focus-block:has(.decision-actions) .card-words { display: -webkit-box; overflow: hidden; margin-block: 6px 0; font-size: 13px; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+  .flock-selected .focus-block:has(.decision-actions) .q-of { display: none; }
+  .flock-selected .focus-block:has(.decision-actions) .command { margin-top: 8px; padding-block: 6px; }
+  .flock-selected .focus-block:has(.decision-actions) .command code { max-height: 3.4em; overflow-y: auto; }
   .flock-selected .decision-actions {
-    position: sticky; bottom: 0; z-index: 1;
     flex-wrap: wrap;
     padding-block: 8px;
-    border-top: 1px solid var(--border); background: var(--float);
   }
   .flock-selected .decision-actions > :is(.decision-scope, .decision-why) { display: flex; flex: 1 0 100%; }
   .flock-selected .focus-block :is(.rule-scope, .ask-why) { display: none; }
