@@ -540,7 +540,8 @@ export function createNest(
   function paintPortrait(): void {
     const voice = tab === "dictation" ? dictationArea.character() : null;
     dictationArea.perch.hidden = !voice || !zecaOn;
-    const destination = voice?.element ?? portraitButton.querySelector(".perch")!;
+    const welcome = tab === "flock" && !profilesShown && zecaOn ? flock.element.querySelector<HTMLElement>(".flock-welcome:not([hidden]) .flock-welcome-perch") : null;
+    const destination = voice?.element ?? welcome ?? portraitButton.querySelector(".perch")!;
     // Only the visible conversation owns this canvas; voice feedback never opens another surface.
     if (portrait.canvas.parentElement !== destination) destination.append(portrait.canvas);
     const available = voice ? zecaOn : zecaOn || !!activeProfile;
@@ -548,7 +549,7 @@ export function createNest(
     portraitButton.setAttribute("aria-label", t("Greet {name}", { name }));
     portraitButton.title = t("Greet {name}", { name });
     portrait.setActive(available && !document.hidden && !last?.locked
-      && root.isConnected && portraitSpace.matches && (!!voice || tab === "chat"
+      && root.isConnected && portraitSpace.matches && (!!voice || !!welcome || tab === "chat"
         && !(portraitNarrow.matches && !memoryPane.hidden)
         && (wide.matches || !chatPane.classList.contains("recent-open"))));
     portrait.update([], null, available ? { clip: voice?.clip ?? chat.clip(Clock.now()), agent: voice ? "other" : chat.agent(), immediate: !!voice, set: voice ? undefined : chat.specialistAppearance() ?? undefined } : null);
@@ -730,6 +731,7 @@ export function createNest(
     foot.setTerminal(!!f && f.raise !== false);
     flock.setActive(tab === "flock" && !profilesShown && !document.hidden && !v.locked);
     flock.update(v);
+    if (mounted) paintPortrait();
     connections.update(v);
     paintNeeds();
     // A moving flock may move By project; it reads the repositories, so not on every view.

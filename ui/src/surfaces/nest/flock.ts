@@ -272,7 +272,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const welcomeTitle = el("h3");
   const welcomeText = el("p");
   const welcomeSetup = on.setup ? el("button", { class: "primary", onclick: () => on.setup?.() }) : null;
-  const welcome = el("section", { class: "flock-welcome" }, welcomeTitle, welcomeText, welcomeSetup);
+  // The Nest lends Zeca's portrait to this perch while the flock is empty (render.ts, paintPortrait).
+  const welcomePerch = el("span", { class: "perch flock-welcome-perch" });
+  welcomePerch.setAttribute("aria-hidden", "true");
+  const welcome = el("section", { class: "flock-welcome" }, welcomePerch, el("div", { class: "flock-welcome-text" }, welcomeTitle, welcomeText, welcomeSetup));
   welcome.hidden = true;
   const selected = el("section", { class: "flock-selected" }, back, body, welcome);
   const workspace = el("div", { class: "flock-workspace" }, list, selected);

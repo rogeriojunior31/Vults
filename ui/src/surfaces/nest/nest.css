@@ -2392,7 +2392,11 @@ button.touched-row:hover,
 .nest-flock-tab.no-sessions .flock-workspace { display: block; overflow-y: auto; }
 .nest-flock-tab.no-sessions :is(.flock-list, .flock-back) { display: none; }
 .nest-flock-tab.no-sessions .flock-selected { display: block; }
-.flock-welcome { max-width: 520px; padding: 24px; }
+.flock-welcome { display: flex; align-items: flex-start; gap: 20px; max-width: 640px; padding: 24px; }
+.flock-welcome-perch { position: relative; flex: none; width: 112px; height: 108px; }
+.flock-welcome-perch:empty { display: none; }
+.flock-welcome-text { min-width: 0; }
+@media (max-width: 600px) { .flock-welcome-perch { display: none; } }
 .flock-welcome[hidden] { display: none; }
 .flock-welcome h3 { margin: 0; color: var(--fg); font: 600 var(--text-l)/1.4 var(--font); }
 .flock-welcome p { margin: 8px 0 0; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); }
