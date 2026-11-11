@@ -136,7 +136,7 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
       { class: "activity-summary" },
       a.dictatedWords == null ? null : dictated,
       metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) }), delta(w.active_secs, previous?.active_secs)),
-      metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps }), delta(w.turns, previous?.turns)),
+      metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), w.steps === 1 ? t("1 step") : t("{n} steps", { n: w.steps }), delta(w.turns, previous?.turns)),
       metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files }), delta(w.added + w.removed, previous ? previous.added + previous.removed : undefined)),
       metric(
         String(w.allowed + w.denied + w.answered),

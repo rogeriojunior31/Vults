@@ -227,7 +227,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const sky = el("div", { class: "habitat-sky" }, scene.canvas, badges);
   const heading = el("strong");
   const roosts = el("div", { class: "roost-cards" });
-  // The prototype's count by the heading: who is out on a web sortie, who sits on the wire.
+  // The count by the heading: how many sessions, and how many work.
   const summary = el("span", { class: "habitat-summary" });
   const habitat = el(
     "section",
@@ -565,8 +565,12 @@ export function createFlock(on: FlockActions & FlockAsk): {
     b.append(
       el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
       el("div", { class: `roost-sub ${tone(s)}`, text: statusText(s) }),
-      el("div", { class: "roost-agent", text: t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
-      el("div", { class: "roost-context", text: s.context_percent == null && s.context_tokens == null ? t("Context not reported") : s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) }),
+      ...(s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null
+        ? [el("div", { class: "roost-agent", text: t("{agent} · no metrics yet", { agent: agentName(s) }) })]
+        : [
+            el("div", { class: "roost-agent", text: t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
+            el("div", { class: "roost-context", text: s.context_percent == null && s.context_tokens == null ? t("Context not reported") : s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) }),
+          ]),
     );
     const meter = contextMeter(s);
     if (meter) b.append(meter);
@@ -1049,9 +1053,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ]),
     );
     roosts.classList.toggle("empty", !shown.length);
-    // With less motion nobody flies: they all sit on the wire.
-    const out = calmNow() ? 0 : v.sessions.filter((s) => s.status === "working" && s.activity === "web").length;
-    summary.textContent = v.sessions.length ? t("{out} in flight · {on} on the wire", { out, on: v.sessions.length - out }) : "";
+    // The scene shows who flies; the count says it plainly.
+    const working = v.sessions.filter((s) => s.status === "working").length;
+    summary.textContent = !v.sessions.length ? "" : v.sessions.length === 1
+      ? t("1 session · {working} working", { working })
+      : t("{n} sessions · {working} working", { n: v.sessions.length, working });
     body.hidden = !front;
     const none = v.sessions.length === 0;
     welcome.hidden = !none;

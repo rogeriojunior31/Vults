@@ -284,7 +284,7 @@ function usageBody(u: UsageView): HTMLElement[] {
         : null,
     ),
     el("section", { class: "usage-section" },
-      el("h4", { class: "records-head", text: t("By roost") }),
+      el("h4", { class: "records-head", text: t("By project") }),
       ...roosts,
     ),
   ];
