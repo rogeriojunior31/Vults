@@ -38,7 +38,7 @@
 .audit-row .record-target { display: -webkit-box; overflow: hidden; padding: 0; background: none; font: 13px/1.5 var(--mono); white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .audit-row .record-body { gap: 6px; }
 .audit-row .record-target.empty { color: var(--fg-dim); font-family: inherit; }
-.audit-recorded > summary { width: fit-content; color: var(--fg-dim); font-size: 12px; cursor: pointer; }
+.audit-recorded > summary { display: flex; align-items: center; min-height: 24px; width: fit-content; color: var(--fg-dim); font-size: 12px; cursor: pointer; }
 .audit-recorded > summary:hover { color: var(--fg); }
 .audit-recorded > code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .records.audit .audit-filters > .activity-stat { margin: -4px -8px; padding: 4px 8px; border: 0; border-radius: var(--radius-control); color: inherit; font: inherit; text-align: left; cursor: pointer; }

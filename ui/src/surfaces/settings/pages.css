@@ -467,6 +467,8 @@ code {
 }
 .slider {
   width: 140px;
+  /* The thumb stays small; the hit area is a full 24 px row. */
+  height: 24px;
   margin: 0;
   accent-color: var(--accent);
   cursor: pointer;

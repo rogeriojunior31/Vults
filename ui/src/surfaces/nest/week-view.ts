@@ -99,7 +99,8 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     : previous.turns < 5 ? t("Too little the week before to compare.")
     : before === 0 ? t("The previous week's value was zero.") : t("{change}% compared with the previous week", { change: `${now >= before ? "+" : ""}${Math.round((now - before) / before * 100)}` });
   const names = weekdays();
-  const top = Math.max(1, ...w.days);
+  // An hour is the least a full bar means: a minute's day stays a sliver, not a tower.
+  const top = Math.max(3600, ...w.days);
   // A week with turns but no time counted has no busiest day: nothing is picked until asked.
   const busiest = Math.max(...w.days) > 0 ? w.days.indexOf(Math.max(...w.days)) : null;
   const shown = day ?? busiest;
@@ -108,7 +109,8 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     { class: "week-chart" },
     ...w.days.map((secs, d) => {
       const fill = el("div", { class: "bar-fill" });
-      fill.style.height = `${Math.round((secs / top) * 100)}%`;
+      // A day with any time keeps a visible sliver; a day with none is only the baseline.
+      fill.style.height = secs ? `${Math.max(4, Math.round((secs / top) * 100))}%` : "0%";
       const total = !secs ? "—" : secs < 60 ? t("<1 min") : secs < 3600
         ? t("{m} min", { m: Math.floor(secs / 60) })
         : t("{h} h", { h: (secs / 3600).toLocaleString(locale(), { maximumFractionDigits: 1 }) });
