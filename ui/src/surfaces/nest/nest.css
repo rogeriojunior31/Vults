@@ -2375,6 +2375,15 @@ button.touched-row:hover,
 .session-section-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
 .workspace-head .outline { flex: none; white-space: nowrap; }
 .workspace-head h3 { min-width: 0; }
+/* The empty flock: one pane, with the next step, in place of a list of nothing and a blank detail. */
+.nest-flock-tab.no-sessions .flock-workspace { display: block; overflow-y: auto; }
+.nest-flock-tab.no-sessions :is(.flock-list, .flock-back) { display: none; }
+.nest-flock-tab.no-sessions .flock-selected { display: block; }
+.flock-welcome { max-width: 520px; padding: 24px; }
+.flock-welcome[hidden] { display: none; }
+.flock-welcome h3 { margin: 0; color: var(--fg); font: 600 var(--text-l)/1.4 var(--font); }
+.flock-welcome p { margin: 8px 0 0; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); }
+.flock-welcome .primary { margin-top: 16px; }
 .session-files .touched { margin-top: 0; }
 .session-recent .activity-row { min-width: 0; }
 .session-recent .activity-row strong { overflow-wrap: anywhere; }

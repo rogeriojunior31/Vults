@@ -40,6 +40,8 @@ export interface FlockActions {
   openFolder: (s: SessionView) => void;
   /** Mute, pin or hide the session's project, or undo it (kept by folder). */
   projectPref: (s: SessionView, pref: ProjectPref, on: boolean) => void;
+  /** Settings, at the agents' hooks: the empty flock's next step. */
+  setup?: () => void;
 }
 
 /** What the tab adds for itself: the Chat, with a question about a session (only with Zeca on). */
@@ -265,7 +267,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const back = el("button", { class: "outline flock-back", text: t("Back to sessions"), onclick: () => {
     choosing = true; element.classList.add("choosing-session"); search.focus();
   } });
-  const selected = el("section", { class: "flock-selected" }, back, body);
+  // No session at all: say what brings a bird here and where to set it up, instead of an empty pane.
+  const welcome = el(
+    "section",
+    { class: "flock-welcome" },
+    el("h3", { text: t("No agent session yet") }),
+    el("p", { text: t("Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.") }),
+    on.setup ? el("button", { class: "primary", text: t("Set up agents"), onclick: () => on.setup?.() }) : null,
+  );
+  welcome.hidden = true;
+  const selected = el("section", { class: "flock-selected" }, back, body, welcome);
   const workspace = el("div", { class: "flock-workspace" }, list, selected);
   const element = el("div", { class: "nest-flock-tab" }, habitat, workspace, usage);
 
@@ -1041,6 +1052,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const out = calmNow() ? 0 : v.sessions.filter((s) => s.status === "working" && s.activity === "web").length;
     summary.textContent = v.sessions.length ? t("{out} in flight · {on} on the wire", { out, on: v.sessions.length - out }) : "";
     body.hidden = !front;
+    const none = v.sessions.length === 0;
+    welcome.hidden = !none;
+    element.classList.toggle("no-sessions", none);
     // Expanded changes cannot hide a permission or a question arriving for this session.
     if (!front || waits(front) || v.approval) {
       focusDiff = false;

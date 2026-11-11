@@ -211,6 +211,7 @@ export function createNest(
   chat.element.querySelector(".log-box")?.prepend(chat.perchSlot);
   const flock = createFlock({
     ...backend.flock,
+    setup: () => backend.settings("agents"),
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
     ask: (s) => {
       void askCompanion(t("What is {project} doing now?", { project: s.project || agentName(s) }));
