@@ -84,8 +84,11 @@ body.dictation-caption-open { padding-bottom: var(--dictation-caption-space); }
 #settings .row-text { flex: 1; min-width: 0; }
 #settings .row-title { font-size: 13px; font-weight: 550; }
 #settings :is(.row-about, .row-more) { max-width: 64ch; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-#settings .row-more summary { width: fit-content; padding: 2px 0; font-size: 12px; }
+#settings .row-more summary { width: fit-content; padding: 5px 0; font-size: 12px; }
 #settings .row-more p { padding-left: 12px; border-left: 2px solid var(--border); }
+/* A disclosure of the page itself keeps the page column; only its text keeps the reading measure. */
+#settings .page > .row-more { max-width: 760px; }
+#settings .page > .row-more p { max-width: 68ch; }
 #settings .row > code { font-size: 11.5px; }
 #settings :is(.actions, .head-right) { flex-wrap: wrap; }
 #settings .actions { justify-content: flex-start; }

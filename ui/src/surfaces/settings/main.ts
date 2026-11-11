@@ -460,8 +460,9 @@ function projectsPage(): HTMLElement[] {
     el("h1", { text: t("Projects") }),
     el("p", {
       class: "lede",
-      text: t("Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it."),
+      text: t("Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird."),
     }),
+    el("details", { class: "row-more" }, el("summary", { text: t("What each choice does") }), el("p", { text: t("Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it.") })),
     ...(projectsFailed
       ? [readState(true, "", t("Could not read your project choices. They still apply; this page cannot show them."), () => void refreshProjects())]
       : []),
@@ -1051,11 +1052,12 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Notifications"),
-        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you. In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
+        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you."),
         toggle(notifications, async (on) => {
           await Bridge.setNotifications(on);
           notifications = on;
         }),
+        t("In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
       ),
     ),
     el("h2", { class: "settings-group-title", text: t("Island") }),
@@ -1100,7 +1102,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Corner widget"),
-        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you. A click opens the island, on the card when one waits; it never answers one."),
+        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you."),
         dropdown(
           [
             { value: null as Corner | null, label: t("Off") },
@@ -1115,6 +1117,7 @@ function generalPage(): HTMLElement[] {
             widget = c;
           },
         ),
+        t("A click opens the island, on the card when one waits; it never answers one."),
       ),
       row(
         t("Screen"),
@@ -1329,10 +1332,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
             await Bridge.setDictationGesture("doubleTap", on);
             dictationDoubleTap = on; dictationDoubleTapChanged = true;
           })),
-        row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it. English, Portuguese and Spanish; works on X11 and Wayland."), toggle(dictationCancelByVoice, async on => {
+        row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it."), toggle(dictationCancelByVoice, async on => {
           await Bridge.setDictationProcessing("cancelByVoice", on);
           dictationCancelByVoice = on; dictationCancelByVoiceChanged = true;
-        })),
+        }), t("English, Portuguese and Spanish; works on X11 and Wayland.")),
         el("p", { class: "hint", text: t("Independent dictation only, checked after recording stops. To dictate a sentence ending in a cancel phrase, turn this off.") }),
         el("p", { class: "hint", text: t("Changes apply to the next dictation. The global Cancel voice shortcut always works. Space and Esc require an available X11 key listener.") }),
       ),
@@ -1386,14 +1389,14 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       el("section", { class: "card rows" },
         el("p", { class: "dictation-command-routing", text: !dictationCommands ? t("Voice commands are off. Dictation keeps its own shortcut.")
           : dictationCommandChat ? t("Unrecognized phrases may be sent to the current Chat.") : t("Unrecognized phrases stay local.") }),
-        row(t("When it is not a command"), t("Sending to Zeca uses the current Chat conversation and its model, access rules and budget. Zeca must be on and Chat idle, with no unsent text or attachments. Refused commands and ambiguous names stay local."), (() => {
+        row(t("When it is not a command"), t("Sending to Zeca uses the current Chat conversation and its model, access rules and budget."), (() => {
           const control = dropdown([{ value: false, label: t("Say so on the island") }, { value: true, label: t("Send it to Zeca as a message") }], dictationCommandChat, async on => {
             await Bridge.setDictationCommands("chat", on);
             dictationCommandChat = on; dictationCommandChatChanged = true;
           });
           (control as HTMLSelectElement).disabled = !dictationCommands;
           return control;
-        })()),
+        })(), t("Zeca must be on and Chat idle, with no unsent text or attachments. Refused commands and ambiguous names stay local.")),
       ),
     ] : []),
     ...(dictationSection === "words" ? [
@@ -1439,10 +1442,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         })),
       ),
       disclosure(t("Advanced processing"), el("section", { class: "card rows" },
-        row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in dictation preview and final text. Voice commands preserve repetitions in names. Sound annotations and standalone silence phrases are still removed when this is off."), toggle(dictationCutRepeats, async on => {
+        row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in dictation preview and final text."), toggle(dictationCutRepeats, async on => {
           await Bridge.setDictationProcessing("cutRepeats", on);
           dictationCutRepeats = on; dictationCutRepeatsChanged = true;
-        })),
+        }), t("Voice commands preserve repetitions in names. Sound annotations and standalone silence phrases are still removed when this is off.")),
         row(t("Retry empty dictation with Base"), t("Retry once only when the selected model returns no text, speech was detected and a different Base model is already installed. Shows retry feedback and never downloads a model."), toggle(dictationRetryBase, async on => {
           await Bridge.setDictationProcessing("retryBase", on);
           dictationRetryBase = on; dictationRetryBaseChanged = true;
@@ -1496,10 +1499,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       ),
       el("h2", { text: t("Terminals & sessions") }),
       el("section", { class: "card rows" },
-        row(t("Spoken code"), t("In recognized terminals or sessions, join identifier chunks around spoken dot, slash, underscore, dash and colon in English, Portuguese or Spanish. Other apps keep their text. Changes apply to the next dictation."), toggle(dictationSpokenCode, async on => {
+        row(t("Spoken code"), t("In recognized terminals or sessions, join identifier chunks around spoken dot, slash, underscore, dash and colon in English, Portuguese or Spanish."), toggle(dictationSpokenCode, async on => {
           await Bridge.setDictationProcessing("spokenCode", on);
           dictationSpokenCode = on; dictationSpokenCodeChanged = true;
-        })),
+        }), t("Other apps keep their text. Changes apply to the next dictation.")),
         el("p", { class: "hint", text: t("Preserves case and existing punctuation; never adds an ending period. This changes text only and never submits it.") }),
       ),
     ] : []),
@@ -2077,11 +2080,12 @@ function flockPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         t("The flock draws from"),
-        t("Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world. Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way."),
+        t("Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world."),
         segmented(FLOCKS.map((f) => ({ ...f, label: t(f.label) })), flock, async (f) => {
           await Bridge.setFlock(f);
           flock = f;
         }),
+        t("Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way."),
       ),
       row(
         t("Rare visitors"),
@@ -2106,7 +2110,7 @@ function flockPage(): HTMLElement[] {
       ),
       row(
         t("Look"),
-        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them. Only Zeca wears it; the flock keeps its feathers."),
+        t("Only Zeca wears it; the flock keeps its feathers."),
         el(
           "div",
           { class: "look-control" },
@@ -2119,6 +2123,7 @@ function flockPage(): HTMLElement[] {
             paint();
           }),
         ),
+        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them."),
       ),
     ),
     el("p", {
