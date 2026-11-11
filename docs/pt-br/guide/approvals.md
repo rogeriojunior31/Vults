@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 4d4609d519c8 -->
+<!-- source: 465c0905e7ae -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -152,10 +152,11 @@ Projetos silenciados ou ocultos ([por projeto](island.md#per-project-mute-pin-hi
 recebendo seus cards e sons.
 
 No Nest, quando duas ou mais permissões esperam, **Waiting for you** fica acima das sessões em
-**Flock**: uma linha por pedido, com projeto, comando e pasta, e o próprio **Deny** e **Allow**.
-Marque pedidos comuns e **Allow selected** permite só esses; o resto continua esperando. Um pedido
-destrutivo não tem marcação (é respondido sozinho, como no card dele), e um cujo comando foi cortado
-só oferece **Open**, para você ver o comando inteiro antes.
+**Flock**: uma linha por pedido, com projeto, comando, pasta (ou por que é destrutivo) e, nos
+últimos 30 segundos, o relógio dele. Uma linha abre o pedido no card, o único lugar onde um pedido
+sozinho é respondido; a que está no card diz *In the card*. **Answer several** marca pedidos comuns,
+e **Allow selected** permite só esses; o resto continua esperando. Um pedido destrutivo, ou um cujo
+comando foi cortado, não tem marcação: é respondido no card, onde ele aparece inteiro.
 
 Uma pergunta respondida pela metade recomeça quando outro card vem para a frente dela. Um card cujo
 agente seguiu adiante não vem para a frente, mas um subagente trabalhando em paralelo não tira um

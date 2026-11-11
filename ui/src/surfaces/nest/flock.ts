@@ -263,6 +263,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const lane = el("section", { class: "waiting-lane" });
   lane.hidden = true;
   const laneTicked = new Set<string>(), laneSent = new Set<string>();
+  let laneBatch = false;
   // The deadline (the core's expires_at, the same moment the island counts to) shows in the last
   // half minute; one timer moves every clock on the tab, without a redraw.
   const deadline = (expiresAt: number | null | undefined): HTMLElement | null => {
@@ -1210,60 +1211,62 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
   };
 
-  /** The line of waiting permissions, when more than one waits: each shows its command, project and
-   *  folder before it is answered, and each answer is a click (ADR 0004). Ticking rows lets one click
-   *  allow several, never a destructive or cut one, and leaves the rest waiting (DESIGN.md). */
+  /** The line of waiting permissions, when more than one waits: a queue. Each row shows the request
+   *  (project, command, folder or why it is destructive, its clock) and opens it in the card, the one
+   *  place a single request is answered. "Answer several" is an explicit mode: tick plain requests and
+   *  one click allows them, never a destructive or cut one, and the rest keep waiting (ADR 0004,
+   *  DESIGN.md's batch rule). */
   function drawLane(v: ViewModel): void {
     // A sent answer hides its row until the view drops it; one that left the line is forgotten.
     for (const request of [...laneSent]) if (!(v.waiting ?? []).some(w => w.request === request)) laneSent.delete(request);
     const rows = (v.waiting ?? []).filter(w => !laneSent.has(w.request));
     for (const request of [...laneTicked]) if (!rows.some(w => w.request === request)) laneTicked.delete(request);
     lane.hidden = rows.length < 2;
-    if (lane.hidden) { lane.replaceChildren(); return; }
+    if (lane.hidden) { lane.replaceChildren(); laneBatch = false; return; }
     const batchable = (w: ApprovalView) => w.why !== "destructive" && !w.cut;
-    const answer = (requests: string[], d: "allow" | "deny") => {
-      for (const request of requests) { laneSent.add(request); laneTicked.delete(request); on.decide(request, d); }
-      draw();
-    };
+    const canBatch = rows.filter(batchable).length >= 2;
+    if (!canBatch) laneBatch = false;
     const row = (w: ApprovalView) => {
       const session = v.sessions.find(s => s.agent === w.agent && s.id === w.session) ?? null;
       const who = session ? agentName(session) : AGENTS.find(a => a.kind === w.agent)?.name ?? w.agent;
       const destructive = w.why === "destructive";
-      const tick = batchable(w) ? fid(el("input", { class: "lane-tick" }), `lane:tick:${w.request}`) as HTMLInputElement : null;
+      const current = v.approval?.request === w.request;
+      const what = w.full ? `${w.tool} · ${w.full}` : w.target;
+      const folder = w.cwd === undefined ? session?.cwd ?? null : w.cwd;
+      const tick = laneBatch && batchable(w) ? fid(el("input", { class: "lane-tick" }), `lane:tick:${w.request}`) as HTMLInputElement : null;
       if (tick) {
         tick.type = "checkbox";
         tick.checked = laneTicked.has(w.request);
         tick.setAttribute("aria-label", t("Select {project} for Allow selected", { project: w.project || who }));
         tick.addEventListener("change", () => { if (tick.checked) laneTicked.add(w.request); else laneTicked.delete(w.request); draw(); });
       }
-      const what = w.full ? `${w.tool} · ${w.full}` : w.target;
-      const command = Object.assign(el("code", { class: "lane-command", text: what }), { title: what });
-      const folder = w.cwd === undefined ? session?.cwd ?? null : w.cwd;
-      const open = el("button", { class: "lane-open", onclick: () => session && on.focus(session) },
-        el("strong", { text: w.project || who }), el("span", { text: who }));
-      open.title = t("Show this session");
-      return el("li", { class: `lane-row${destructive ? " destructive" : ""}` },
-        tick ?? Object.assign(el("span", { class: "lane-tick-none" }, destructive ? icon("warning", 13, 2) : null), { title: destructive ? t("Destructive: answer it on its own") : t("Only the full command can be allowed: open it") }),
-        el("div", { class: "lane-body" }, open, command,
-          el("span", { class: "lane-scope", text: destructive ? t("Destructive: no policy ever allows it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) }),
-          deadline(w.expires_at)),
-        // A cut command is answered on its own card, where the whole of it shows (core ignores it here).
-        w.cut
-          ? el("div", { class: "lane-actions" }, fid(el("button", { class: "outline", text: t("Open"), onclick: () => session && on.focus(session) }), `lane:open:${w.request}`))
-          : el("div", { class: "lane-actions" },
-              fid(el("button", { class: "outline", text: t("Deny"), onclick: () => answer([w.request], "deny") }), `lane:deny:${w.request}`),
-              fid(el("button", { class: destructive ? "outline danger" : "outline", text: t("Allow"), onclick: () => answer([w.request], "allow") }), `lane:allow:${w.request}`)),
-      );
+      // The whole row opens the request in the card, where it is answered with its command in full.
+      const open = fid(el("button", { class: "lane-open", onclick: () => session && on.focus(session) },
+        el("span", { class: "lane-who" }, destructive ? icon("warning", 13, 2) : null, el("strong", { text: w.project || who }), el("span", { text: who }), current ? el("span", { class: "lane-here", text: t("In the card") }) : null),
+        Object.assign(el("code", { class: "lane-command", text: what }), { title: what }),
+        el("span", { class: "lane-scope", text: destructive ? t("Destructive: answer it in its card") : w.cut ? t("Only the full command can be allowed: open it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) }),
+        deadline(w.expires_at)), `lane:open:${w.request}`);
+      open.title = current ? t("In the card now") : t("Open in the card");
+      if (current) open.setAttribute("aria-current", "true");
+      return el("li", { class: `lane-row${destructive ? " destructive" : ""}${current ? " current" : ""}${laneBatch ? " batch" : ""}` },
+        laneBatch ? tick ?? el("span", { class: "lane-tick-none" }) : null, open);
     };
     const ticked = rows.filter(w => laneTicked.has(w.request) && batchable(w)).map(w => w.request);
-    const allowTicked = fid(el("button", { class: "primary", text: ticked.length ? t("Allow selected ({n})", { n: ticked.length }) : t("Allow selected"), onclick: () => ticked.length && answer(ticked, "allow") }), "lane:allow-selected");
-    (allowTicked as HTMLButtonElement).disabled = !ticked.length;
-    const list = el("ul", { class: "lane-rows" }, ...rows.map(row));
+    const allowTicked = () => {
+      for (const request of ticked) { laneSent.add(request); laneTicked.delete(request); on.decide(request, "allow"); }
+      laneBatch = false;
+      draw();
+    };
+    const toggle = canBatch ? fid(el("button", { class: "ghost lane-mode", text: laneBatch ? t("Cancel") : t("Answer several"), onclick: () => { laneBatch = !laneBatch; laneTicked.clear(); draw(); } }), "lane:mode") : null;
+    const foot = laneBatch
+      ? el("footer", { class: "lane-foot" },
+          Object.assign(fid(el("button", { class: "primary", text: ticked.length ? t("Allow selected ({n})", { n: ticked.length }) : t("Allow selected"), onclick: () => { if (ticked.length) allowTicked(); } }), "lane:allow-selected"), { disabled: !ticked.length }),
+          el("span", { class: "lane-note", text: t("Unselected requests keep waiting. Destructive ones are answered on their own.") }))
+      : null;
     lane.replaceChildren(
-      el("header", { class: "lane-head" }, el("h3", { text: t("Waiting for you") }), el("span", { class: "attention-count", text: String(rows.length) })),
-      list,
-      // The note shows once something is ticked: what the one click will and will not do.
-      el("footer", { class: "lane-foot" }, allowTicked, ticked.length ? el("span", { class: "lane-note", text: t("Unselected requests keep waiting. Destructive ones are answered on their own.") }) : null),
+      el("header", { class: "lane-head" }, el("h3", { text: t("Waiting for you") }), el("span", { class: "attention-count", text: String(rows.length) }), el("span", { class: "lane-spacer" }), toggle),
+      el("ul", { class: "lane-rows" }, ...rows.map(row)),
+      ...(foot ? [foot] : []),
     );
   }
 

@@ -432,29 +432,34 @@ assert.ok(tokenOnly.element.textContent.includes('Session consumption'), 'Native
 assert.ok(!tokenOnly.element.textContent.includes('Metrics are not available for this agent yet.'));
 console.log('check-flock-place: metric provenance, separate read ages and cumulative consumption without invented context');
 {
-  // The waiting line: each request answered from its row by a click; ticked rows allowed together,
-  // never a destructive or cut one, and the unticked ones keep waiting.
-  const laneDecisions = [];
-  const lanePart = createFlock({ ...backend, loadPlace: async () => null, decide: (...args) => laneDecisions.push(args) });
+  // The waiting line is a queue: rows open their request in the card and answer nothing; "Answer
+  // several" ticks plain requests only, and one click allows just those.
+  const laneDecisions = [], focused = [];
+  const lanePart = createFlock({ ...backend, loadPlace: async () => null, decide: (...args) => laneDecisions.push(args), focus: s => focused.push(s?.id) });
   const ask = (request, extra = {}) => ({ ...view.approval, request, target: `cmd ${request}`, ...extra });
   const two = { ...session, id: "two", project: "Beta" }, three = { ...session, id: "three", project: "Gamma" }, four = { ...session, id: "four", project: "Delta" };
   const waiting = [ask("a"), ask("b", { session: "two", project: "Beta" }), ask("c", { session: "three", project: "Gamma", why: "destructive" }), ask("d", { session: "four", project: "Delta", cut: true })];
-  lanePart.update({ ...view, sessions: [session, two, three, four], waiting }); await tick();
-  const lane = nodes(lanePart.element).find(node => node.className === "waiting-lane");
-  assert.equal(lane.hidden, false, "Two or more waiting requests show the line");
-  const ticks = nodes(lane).filter(node => node.className === "lane-tick");
+  lanePart.update({ ...view, approval: waiting[0], sessions: [session, two, three, four], waiting }); await tick();
+  const lane = () => nodes(lanePart.element).find(node => node.className === "waiting-lane");
+  assert.equal(lane().hidden, false, "Two or more waiting requests show the line");
+  assert.ok(!nodes(lane()).some(node => node.tag === "button" && (node.textContent === "Allow" || node.textContent === "Deny")), "The line answers no single request: the card does");
+  assert.ok(lane().textContent.includes("cmd c") && lane().textContent.includes("Destructive: answer it in its card"), "Each row shows what it asks");
+  assert.ok(nodes(lane()).find(node => node.className === "lane-row current")?.textContent.includes("In the card"), "The request in the card is marked in words");
+  nodes(lane()).filter(node => node.className === "lane-open")[2].listeners.click();
+  assert.deepEqual(focused, ["three"], "A row opens its request in the card");
+  assert.equal(nodes(lane()).filter(node => node.className === "lane-tick").length, 0, "No ticks until Answer several");
+  nodes(lane()).find(node => node.tag === "button" && node.textContent === "Answer several").listeners.click();
+  const ticks = nodes(lane()).filter(node => node.className === "lane-tick");
   assert.equal(ticks.length, 2, "Only plain requests can be ticked: not a destructive or a cut one");
-  assert.ok(lane.textContent.includes("cmd c") && lane.textContent.includes("Destructive: no policy ever allows it"), "Each row shows what it asks before an answer");
-  const allowSelected = () => nodes(lanePart.element).find(node => node.tag === "button" && node.textContent.startsWith("Allow selected"));
+  const allowSelected = () => nodes(lane()).find(node => node.tag === "button" && node.textContent.startsWith("Allow selected"));
   assert.equal(allowSelected().disabled, true, "Nothing ticked allows nothing");
   ticks[1].checked = true; ticks[1].listeners.change();
   allowSelected().listeners.click();
   assert.deepEqual(laneDecisions, [["b", "allow"]], "Only the ticked request is allowed; the rest keep waiting");
-  const cutRow = nodes(lanePart.element).filter(node => node.className === "lane-row").find(node => node.textContent.includes("cmd d"));
-  assert.ok(!nodes(cutRow).some(node => node.tag === "button" && (node.textContent === "Allow" || node.textContent === "Deny")), "A cut request is answered on its own card");
+  assert.equal(nodes(lane()).filter(node => node.className === "lane-tick").length, 0, "Allowing leaves the batch mode");
   lanePart.update({ ...view, sessions: [session], waiting: [ask("a")] }); await tick();
-  assert.equal(nodes(lanePart.element).find(node => node.className === "waiting-lane").hidden, true, "One waiting request is the card itself: no line");
-  console.log("check-flock-place: waiting line rows, explicit per-row and ticked answers, destructive and cut requests kept to their own card");
+  assert.equal(lane().hidden, true, "One waiting request is the card itself: no line");
+  console.log("check-flock-place: waiting line as a queue, rows open the card, explicit Answer several for plain requests only");
 }
 {
   // A running command is not a status: the row says what kind of work it is, and search still finds the command.
