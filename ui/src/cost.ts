@@ -27,13 +27,13 @@ export function usageLabel(percent: number): string {
 }
 
 /** Today's recorded spend; subscriptions are priced at API rates, not charged again. */
-export function spentLine(today: SpendToday): string {
+export function spentLine(today: SpendToday, plan = true): string {
   const spent = money(today.usd);
   let line =
     today.budget !== null
       ? t("Today the agents cost {spent} of your {budget}.", { spent, budget: money(today.budget) })
       : t("Today the agents cost {spent}.", { spent });
-  if (today.subscription) line += " " + t("On a subscription this is at API prices: your plan does not charge it.");
+  if (plan && today.subscription) line += " " + t("On a subscription this is at API prices: your plan does not charge it.");
   return line;
 }
 

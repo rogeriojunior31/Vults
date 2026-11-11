@@ -10,6 +10,7 @@ import { WEEK_CSS } from "../week-view";
 export function createDictationStatistics(load: (period: DictationPeriod) => Promise<DictationStatistics>, settings: () => void) {
   const element = el("div", { class: "nest-dictation-statistics" });
   const page = settingsPage(element, activityCss + WEEK_CSS + stateCss + `
+    .card[hidden], .activity-summary[hidden] { display: none; }
     .stats-periods { display: flex; flex-wrap: wrap; gap: 6px; }
     .stats-periods button, .stats-actions button { min-height: var(--control); padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--raised); color: var(--fg); cursor: pointer; font: inherit; }
     .stats-periods button[aria-pressed="true"] { background: var(--mark-fill); color: var(--on-accent); }
@@ -77,6 +78,7 @@ export function createDictationStatistics(load: (period: DictationPeriod) => Pro
       : loading ? [viewState("loading", t("Reading dictation statistics…"))] : []));
     figures.replaceChildren(); chart.replaceChildren(); apps.replaceChildren();
     chart.hidden = apps.hidden = !value || !value.usage.count;
+    figures.hidden = !!value && !value.usage.count && !failed && !loading;
     note.textContent = t("Time saved estimates typing at 45 words per minute. Speed is zero below one second of measured audio. Replay does not add usage.");
     if (value) {
       const known = value.usage.count > 0;

@@ -161,6 +161,12 @@ assert.deepEqual(figures(auditSummary.element), ["2", "1", "1"]);
 assert.ok(auditSummary.element.textContent.includes("git diff -- src/file.ts"));
 assert.ok(auditSummary.element.textContent.includes("Policy accepted as #37"));
 assert.equal(nodes(auditSummary.element).find(node => node.className === "record-count").textContent, "2 records");
+const auditNamed = createAudit(async () => [
+  { project: "Alpha", agent: "claude", at: 102, actor: "human", act: "deny", tool: "Bash", target: "Bash · rm -rf dist", consent: null },
+]);
+auditNamed.refresh(); await tick();
+const auditTargets = nodes(auditNamed.element).filter(node => node.className === "record-target").map(node => node.textContent);
+assert.deepEqual(auditTargets, ["Bash · rm -rf dist"], "A target that already names its tool is printed as stored, not as Bash · Bash");
 
 const traces = createTraces(async () => [
   { kind: "chat", name: "chat model", status: "ok", startMs: 100, ms: 1500, child: false, input: 100, output: 30, costUsd: 0.5 },

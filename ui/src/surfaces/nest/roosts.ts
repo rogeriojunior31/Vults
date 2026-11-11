@@ -289,7 +289,7 @@ export function createRoosts(backend: RoostsBackend): { element: HTMLElement; re
                 }),
               ),
             ]
-        : [viewState("empty", t("No projects yet"), t("No roosts yet: a roost is a repository an agent session works in."))]),
+        : [viewState("empty", t("No agent is working in a project now"), t("A project shows here while an agent session works in its repository."))]),
     );
     if (returning) (failed ? retry : search.hidden ? title : search).focus({ preventScroll: true });
   };

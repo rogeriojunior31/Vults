@@ -156,7 +156,8 @@ function auditLine(r: AuditRow): HTMLElement {
     span(when(r.at * 1000), "record-when"),
     el("code", {
       class: "record-target",
-      text: [r.tool, r.target].filter(Boolean).join(" · "),
+      // The stored target already names its tool (as the card showed it); only a bare one gets it put in front.
+      text: r.tool && !r.target.startsWith(`${r.tool} · `) ? [r.tool, r.target].filter(Boolean).join(" · ") : r.target,
     }),
     r.consent !== null
       ? span(t("Policy accepted as #{id}", { id: r.consent }), "record-meta")
@@ -258,7 +259,7 @@ function usageBody(u: UsageView): HTMLElement[] {
   return [
     summary(
       [money(u.days.reduce((n, day) => n + day.usd, 0)), t("Recorded cost · last two weeks")],
-      [tokens(u.days.reduce((n, day) => n + day.tokens, 0)), t("Tokens · last two weeks")],
+      [u.days.reduce((n, day) => n + day.tokens, 0) || !u.days.some((day) => day.usd > 0) ? tokens(u.days.reduce((n, day) => n + day.tokens, 0)) : t("Unknown"), t("Tokens · last two weeks")],
       [String(u.windows.length), t("Plan windows")],
     ),
     el("section", { class: "usage-section" },

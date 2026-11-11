@@ -138,7 +138,8 @@ function costPart(
   let asked = 0;
   const draw = (error?: unknown) => {
     spend.replaceChildren(
-      ...(loaded ? [el("p", { text: spentLine(loaded) }),
+      // The Cost list below says once that a subscription is priced, not charged.
+      ...(loaded ? [el("p", { text: spentLine(loaded, false) }),
         ...(loaded.budget !== null && loaded.usd >= loaded.budget
           ? [el("p", { text: t("Today's budget is spent: Vults starts no new session until tomorrow.") })] : [])] : []),
       ...(error !== undefined ? [viewState("error", t("Could not load {name}.", { name: t("Cost") }),
