@@ -44,17 +44,26 @@ sign in with `glab auth login --hostname gitlab.com`, then enable **GitLab** in
 **Settings > Connectors**. Vults uses the CLI's login without reading or saving its token.
 
 One query checks your open merge requests, requests for your review and each current head pipeline.
+Details include added/removed lines, changed-file counts, reviewers and up to 30 individual jobs
+from that exact head pipeline. Requested changes take priority over an aggregate approval. Manual
+jobs remain waiting; canceled/skipped jobs never become successful jobs.
+
+The same query reads default-branch pipelines and the latest release from the ten most recently
+active projects you contributed to. Archived projects are excluded. **Pipelines** and **Releases**
+tabs show those rows; future public releases are not mislabeled as drafts. Upgrading to this richer
+snapshot establishes a new baseline once, without replaying old news.
 It runs every five minutes, or every minute while a pipeline is running. The first successful check
 records a baseline; later review requests, pipeline failures/recoveries and required approvals become
 alerts. The account from the last successful check is shown in Settings. Changing accounts starts a
 new baseline and replaces the old account's rows.
 
 The Connections card uses **Merge requests**, with links back to GitLab. It offers no merge or other
-remote write. Default-branch pipelines, job logs, releases and self-managed instances are outside this
-first version. A missing, skipped, canceled, scheduled, manual or mismatched-commit pipeline is unknown,
+remote write. Live job logs, chat tools, writes and self-managed instances remain pending in the parity
+work. A missing, skipped, canceled, scheduled, manual or mismatched-commit pipeline is unknown,
 not passing. Having no required approvals does not invent an approval.
 
-Each group is limited to 50 items. If GitLab reports another page, missing data or GraphQL errors,
+Each merge-request group is limited to 50 items, requested reviewers and approvers to 20 each, and jobs to 30 per
+pipeline. If GitLab reports another detail page, missing data or GraphQL errors,
 Vults keeps the previous complete snapshot and shows an error. It also bounds CLI output and waiting
 time, backs off on errors and respects rate limits. Each poll uses the connector's independent switch,
 3,000-request daily budget and local request trace; paused or locked Vults makes no new poll.

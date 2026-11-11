@@ -1,5 +1,7 @@
 // zh: English sentence → translation (see index.ts).
 export default {
+  "Your open merge requests, review requests, diff sizes, reviewers and individual pipeline jobs on GitLab.com, plus default-branch checks and releases from 10 recently active contributed projects. Uses your GitLab CLI (glab) login. Read only. Sign in with glab auth login --hostname gitlab.com.": "查看 GitLab.com 上你打开的合并请求、审查请求、差异大小、审查者和各个流水线作业，以及最近活跃的 10 个已贡献项目的默认分支检查和发布。使用 GitLab CLI (glab) 登录。仅支持读取。请运行 glab auth login --hostname gitlab.com 登录。",
+  "Pipelines": "流水线",
   "Your open pull requests and review requests on your Gitea instance. Read only; checks, approvals and merges are not supported. Configure the HTTPS base URL and an access token, then turn it on.": "查看 Gitea 实例中你打开的拉取请求和审查请求。仅支持读取，不支持检查、批准或合并。配置 HTTPS 基础地址和访问令牌后再启用。",
   "Gitea returned incomplete or invalid data. The previous snapshot is kept.": "Gitea 返回了不完整或无效的数据。保留之前的快照。",
   "Could not read Gitea. Check the connection and try again.": "无法读取 Gitea。请检查连接后重试。",
@@ -2303,7 +2305,6 @@ export default {
   "Audio app": "音频应用",
   "Enable voice commands, Media voice commands and Now playing, then refresh while media is playing.": "启用语音命令、媒体语音命令和正在播放，然后在媒体播放时刷新。",
   "Could not verify the audio link. Refresh and choose again.": "无法验证音频关联。请刷新后重新选择。",
-  "Your open merge requests, review requests and head-pipeline status on GitLab.com. Uses your GitLab CLI (glab) login. Read only; up to 50 items per group. Sign in with glab auth login --hostname gitlab.com.": "GitLab.com 上你创建的开放合并请求、待你审核的请求和当前提交的流水线状态。使用 GitLab CLI (glab) 登录。只读，每组最多 50 项。请运行 glab auth login --hostname gitlab.com 登录。",
   "The GitLab CLI (glab) is not installed.": "未安装 GitLab CLI (glab)。",
   "Sign in to GitLab.com with glab auth login --hostname gitlab.com.": "请运行 glab auth login --hostname gitlab.com 登录 GitLab.com。",
   "GitLab did not respond in time.": "GitLab 未及时响应。",

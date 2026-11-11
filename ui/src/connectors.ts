@@ -21,7 +21,7 @@ export const CONNECTORS: ConnectorInfo[] = [
   {
     id: "gitlab",
     name: "GitLab",
-    about: tk("Your open merge requests, review requests and head-pipeline status on GitLab.com. Uses your GitLab CLI (glab) login. Read only; up to 50 items per group. Sign in with glab auth login --hostname gitlab.com."),
+    about: tk("Your open merge requests, review requests, diff sizes, reviewers and individual pipeline jobs on GitLab.com, plus default-branch checks and releases from 10 recently active contributed projects. Uses your GitLab CLI (glab) login. Read only. Sign in with glab auth login --hostname gitlab.com."),
   },
   { id: "gitea", name: "Gitea", about: tk("Your open pull requests and review requests on your Gitea instance. Read only; checks, approvals and merges are not supported. Configure the HTTPS base URL and an access token, then turn it on.") },
 ];
