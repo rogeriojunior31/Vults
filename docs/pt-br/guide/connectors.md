@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 84be4a3f52c3 -->
+<!-- source: a459ffd1ac72 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -32,7 +32,7 @@ pelo horário de envio, não pelo ID de criação.
 Checks da branch padrão e a última release vêm dos dez repositórios próprios/com contribuição
 atualizados mais recentemente. Actions e Releases têm abas próprias. Rascunhos e pré-releases
 mantêm seu estado nativo. Os links ficam restritos à instância HTTPS configurada, incluindo portas,
-subpastas e tags codificadas. Escritas remotas, merges e ferramentas Gitea no chat seguem pendentes
+subpastas e tags codificadas. Escritas remotas, merges e ferramentas Gitea ao vivo no chat seguem pendentes
 no trabalho de paridade.
 
 Cada GET passa por autorização de rede, limite diário e registro local próprios. Consultas pequenas
@@ -81,7 +81,7 @@ da última consulta bem-sucedida. Trocar de conta estabelece uma nova referênci
 anteriores.
 
 O card de Conexões usa **Merge requests**, com links para o GitLab. Não oferece merge nem outras
-escritas remotas. Logs de jobs ao vivo, ferramentas de chat, escritas e instâncias próprias seguem
+escritas remotas. Logs de jobs ao vivo, ferramentas de chat ao vivo, escritas e instâncias próprias seguem
 pendentes no trabalho de paridade. Pipeline ausente, ignorado, cancelado, agendado, manual ou de outro commit é
 desconhecido, não aprovado. A ausência de aprovações obrigatórias não inventa uma aprovação.
 
@@ -91,6 +91,22 @@ mantém o último retrato completo e mostra um erro. Também limita a saída da 
 espaça novas tentativas após erros e respeita limites do serviço. Cada consulta usa a opção independente
 do conector, seu orçamento diário de 3.000 consultas e um rastro local; o Vults pausado ou bloqueado não
 inicia novas consultas. Os testes locais não comprovam a aceitação com uma conta ou serviço real.
+
+<a id="cached-gitlab-and-gitea-chat-reads"></a>
+## Leituras em cache do GitLab e Gitea no chat
+
+Em **Room > Connections > Para o Zeca**, ative `gitlab_snapshot` ou `gitea_snapshot` separadamente.
+Ambos vêm desligados e exigem o Zeca e o respectivo conector ligados. Chats por API do companheiro
+compatíveis e voz em tempo real leem o painel existente sem executar CLI, acessar o cofre, consultar
+a rede ou consumir orçamento. Cada chamada verifica novamente permissão, pausa e bloqueio.
+Reconectar o Gitea recusa linhas da geração anterior até que um novo painel completo esteja disponível.
+
+Os resultados identificam o provedor e `source.mode: cached_snapshot`; a atualização é explicitamente
+desconhecida. Incluem as linhas em cache de MRs/PRs, revisores, checks/jobs, branches e releases, com
+segredos ocultados. O resultado mantém JSON válido no limite de 16 KiB do chat; `truncated` e
+`coverage` indicam linhas omitidas. As atividades entram nos rastros existentes do chat. Esses controles
+não liberam escritas remotas, leituras ao vivo, comandos CLI nem acesso de especialistas. Permissões
+independentes por perfil continuam pendentes.
 
 ## GitHub
 

@@ -29,7 +29,7 @@ active requested changes remain visible. Review ordering uses submission time, n
 Default-branch checks and the latest release are read from ten recently updated owned/contributed
 repositories. Actions and Releases have their own tabs. Drafts and prereleases keep their native
 state. Links stay under the configured HTTPS instance, including ports, subfolders and encoded tags.
-Remote writes, merges and built-in Gitea chat tools remain pending in the parity work.
+Remote writes, merges and live Gitea chat tools remain pending in the parity work.
 
 Each GET has its own network admission, daily budget charge and local trace. Normal small polls
 wait five minutes; active checks may refresh sooner. Larger polls wait at least 36 seconds per
@@ -71,7 +71,7 @@ alerts. The account from the last successful check is shown in Settings. Changin
 new baseline and replaces the old account's rows.
 
 The Connections card uses **Merge requests**, with links back to GitLab. It offers no merge or other
-remote write. Live job logs, chat tools, writes and self-managed instances remain pending in the parity
+remote write. Live job logs, live chat tools, writes and self-managed instances remain pending in the parity
 work. A missing, skipped, canceled, scheduled, manual or mismatched-commit pipeline is unknown,
 not passing. Having no required approvals does not invent an approval.
 
@@ -81,6 +81,20 @@ Vults keeps the previous complete snapshot and shows an error. It also bounds CL
 time, backs off on errors and respects rate limits. Each poll uses the connector's independent switch,
 3,000-request daily budget and local request trace; paused or locked Vults makes no new poll.
 No personal account or live-service acceptance is claimed by the offline fixture tests.
+
+## Cached GitLab and Gitea chat reads
+
+In **Room > Connections > For Zeca**, enable `gitlab_snapshot` or `gitea_snapshot` separately.
+Both are off by default and require Zeca and their connector to be on. Supported companion API
+chats and realtime voice can read the existing board without a CLI call, keyring access, network
+request or budget charge. Each call rechecks permission, pause and lock state. Reconnecting Gitea
+rejects rows from the previous credential generation until a fresh complete board is available.
+
+Results identify their provider and `source.mode: cached_snapshot`; freshness is explicitly unknown.
+They contain the cached MR/PR, reviewer, check/job, branch and release rows, with secrets redacted.
+The result stays valid JSON within the chat's 16 KiB limit; `truncated` and `coverage` identify omitted
+rows. Tool activity is recorded in the existing chat traces. These controls grant no remote writes,
+live reads, CLI command access or specialist access. Independent profile grants remain pending.
 
 ## GitHub
 

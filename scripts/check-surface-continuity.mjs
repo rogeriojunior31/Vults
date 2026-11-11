@@ -1498,12 +1498,13 @@ console.log("check-surface-continuity: repeated export privacy changes and stand
 
 {
   storage.delete("vults.connections-query");
-  const reads = [], writes = [], liveWrites = [], places = [];
+  const reads = [], writes = [], liveWrites = [], cachedWrites = [], places = [];
   let openedTraces = 0, settingsOpens = 0, remoteActions = 0;
   const panel = createConnections({
     status: async () => [{ id: "github", enabled: true, lastOk: 100, error: null, watching: 1, overBudget: false }],
     zecaTools: () => new Promise((resolve, reject) => reads.push({ resolve, reject })),
     setSnapshot: on => new Promise((resolve, reject) => writes.push({ on, resolve, reject })),
+    setCachedSnapshot: (provider,on) => new Promise((resolve,reject)=>cachedWrites.push({provider,on,resolve,reject})),
     setWorkItem: on => new Promise((resolve, reject) => liveWrites.push({ on, resolve, reject })),
     savePlace: async place => { places.push(place); },
     traces: () => { openedTraces++; },
@@ -1515,7 +1516,7 @@ console.log("check-surface-continuity: repeated export privacy changes and stand
   panel.update({ boards: [{ connector: "github", rows: [row] }] }); await tick();
   action("row:org/alpha#7").click(); await tick();
   action("face:zeca").click(); await tick();
-  assert.ok(page.textContent.includes("Reading GitHub tool settings"));
+  assert.ok(page.textContent.includes("Reading connector tool settings"));
   assert.equal(remoteActions, 0, "Opening tool settings makes no GitHub request");
   reads[0].reject(new Error("Read failed")); await tick();
   assert.ok(page.textContent.includes("Could not load"));
@@ -1527,7 +1528,18 @@ console.log("check-surface-continuity: repeated export privacy changes and stand
   assert.ok(page.textContent.includes("Branch deletion is separate."));
   assert.ok(!page.textContent.includes("Merging through Zeca is not available yet"));
   assert.ok(!page.textContent.includes("Creating or editing GitHub issues through Zeca is not available yet."));
-  assert.equal(page.querySelectorAll("input").length, 2, "Only the implemented cached and live read tools have switches");
+  assert.equal(page.querySelectorAll("input").length, 4, "GitLab and Gitea have independent cached switches beside existing GitHub tools");
+  assert.equal(action("act:snapshot:gitlab").checked,false);
+  assert.equal(action("act:snapshot:gitea").checked,false);
+  const cachedStale=action("act:snapshot:gitlab");cachedStale.checked=true;cachedStale.fire("change");cachedStale.fire("change");await tick();
+  assert.equal(cachedWrites.length,1);assert.equal(cachedWrites[0].provider,"gitlab");
+  assert.equal(action("act:snapshot:gitlab").disabled,true);assert.equal(action("act:snapshot:gitlab").checked,true);
+  panel.refresh();await tick();assert.equal(reads.length,2,"Refresh cannot replace a pending service permission");
+  assert.equal(action("act:snapshot:gitea").checked,false);
+  cachedWrites[0].reject(new Error("Disk full"));await tick();assert.equal(action("act:snapshot:gitlab").checked,false);
+  assert.ok(page.textContent.includes("previous choice"));
+  action("act:snapshot:gitea").checked=true;action("act:snapshot:gitea").fire("change");await tick();
+  cachedWrites[1].resolve();await tick();assert.equal(action("act:snapshot:gitea").checked,true);assert.equal(action("act:snapshot:gitlab").checked,false);
   const stale = action("act:snapshot"); stale.checked = false; stale.fire("change"); stale.fire("change"); await tick();
   assert.equal(writes.length, 1); assert.equal(writes[0].on, false);
   assert.equal(action("act:snapshot").disabled, true);

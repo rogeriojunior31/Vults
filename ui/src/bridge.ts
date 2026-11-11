@@ -184,7 +184,7 @@ export type Flock = "brazil" | "americas" | "world";
 /** A reply to one question: a choice or the user's own words, or several for a multi-select. */
 export type Answer = string | string[];
 
-export interface ConnectorZecaTools { snapshot: boolean; calls: number; lastUsed: number | null; workItem: boolean; liveReadCalls: number; liveReadLastUsed: number | null; budget: number }
+export interface ConnectorZecaTools { cachedSnapshots?: Record<string, boolean>; cachedSnapshotUsage?: Record<string, { calls: number; lastUsed: number | null }>; snapshot: boolean; calls: number; lastUsed: number | null; workItem: boolean; liveReadCalls: number; liveReadLastUsed: number | null; budget: number }
 
 export interface ConnectorStatus {
   id: string;
@@ -605,6 +605,7 @@ export const Bridge = {
   },
   connectorZecaTools: () => invoke<ConnectorZecaTools>("connector_zeca_tools"),
   setConnectorZecaSnapshot: (on: boolean) => invoke<void>("set_connector_zeca_snapshot", { on }),
+  setConnectorSnapshot: (provider: string, on: boolean) => invoke<void>("set_connector_snapshot", { provider, on }),
   setConnectorZecaWorkItem: (on: boolean) => invoke<void>("set_connector_zeca_work_item", { on }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
   giteaConnection: () => invoke<{ baseUrl: string; generation: string }>("gitea_connection"),

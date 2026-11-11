@@ -149,6 +149,7 @@ const nest = createNest(
     connections: {
       zecaTools: Bridge.connectorZecaTools,
       setSnapshot: Bridge.setConnectorZecaSnapshot,
+      setCachedSnapshot: Bridge.setConnectorSnapshot,
       setWorkItem: Bridge.setConnectorZecaWorkItem,
       loadPlace: Bridge.connectionsPlace,
       savePlace: Bridge.connectionsPlaceSet,

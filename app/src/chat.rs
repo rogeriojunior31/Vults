@@ -1008,6 +1008,7 @@ async fn send(
     // The API chat reads the flock through Zeca's own tools (Z9); the CLIs bring theirs.
     if api_companion_tools_enabled(companion, chat.provider(), chat.api().0.supports_tools) {
         let mut tools = crate::flock_tools::all(source.clone());
+        tools.extend(crate::connector_snapshots::tools(&app));
         tools.extend(crate::recall::tools(&app));
         tools.extend(crate::memory::tools(&app, chat.folder()));
         // The web only while the user has it on: off, the model is never offered it (Z7).

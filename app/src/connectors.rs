@@ -304,6 +304,8 @@ pub async fn github_calendar(app: AppHandle) -> GithubGrid {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZecaTools {
+    cached_snapshots: BTreeMap<String, bool>,
+    cached_snapshot_usage: BTreeMap<String, CachedSnapshotUsage>,
     snapshot: bool,
     calls: usize,
     last_used: Option<i64>,
@@ -311,6 +313,12 @@ pub struct ZecaTools {
     live_read_calls: usize,
     live_read_last_used: Option<i64>,
     budget: usize,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CachedSnapshotUsage {
+    calls: usize,
+    last_used: Option<i64>,
 }
 
 fn tool_surface(label: &str) -> bool {
@@ -322,11 +330,17 @@ pub async fn connector_zeca_tools(app: AppHandle, window: tauri::Webview) -> Res
     if !tool_surface(window.label()) {
         return Err("Invalid tool settings surface.".into());
     }
-    let (snapshot, work_item) = app
+    let (snapshot, work_item, cached_snapshots) = app
         .state::<settings::SettingsState>()
         .0
         .lock()
-        .map(|s| (s.zeca_github_snapshot, s.zeca_github_work_item))
+        .map(|s| {
+            (
+                s.zeca_github_snapshot,
+                s.zeca_github_work_item,
+                s.zeca_connector_snapshots.clone(),
+            )
+        })
         .map_err(|_| "settings are busy")?;
     tauri::async_runtime::spawn_blocking(move || {
         let store = vults_store::Store::open(&crate::history::dir()).map_err(|e| e.to_string())?;
@@ -378,8 +392,23 @@ pub async fn connector_zeca_tools(app: AppHandle, window: tauri::Webview) -> Res
         }
         live_read_starts.sort_unstable();
         let since = crate::traces::now_ms().saturating_sub(24 * 3600 * 1000);
+        let mut cached_snapshot_usage = BTreeMap::new();
+        for provider in crate::connector_snapshots::PROVIDERS {
+            let calls = store
+                .span_starts("execute_tool", &format!("execute_tool {provider}_snapshot"), 0)
+                .map_err(|e| e.to_string())?;
+            cached_snapshot_usage.insert(
+                provider.into(),
+                CachedSnapshotUsage {
+                    calls: calls.iter().filter(|start| **start >= since).count(),
+                    last_used: calls.last().copied(),
+                },
+            );
+        }
         let live_read_last_used = live_read_starts.last().copied();
         Ok(ZecaTools {
+            cached_snapshots,
+            cached_snapshot_usage,
             snapshot,
             calls: starts.iter().filter(|start| **start >= since).count(),
             last_used: starts.last().copied(),
