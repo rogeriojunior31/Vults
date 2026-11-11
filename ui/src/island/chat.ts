@@ -3,7 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { applyActivity, emptyActivity, readActivity } from "./chat-activity";
-import type { AgentGithubGrant, SpecialistFiles, AgentDefaults, AgentProfileState, AgentProvider, ChatActivity, ChatActivityEvent } from "../bridge";
+import type { AgentGithubGrant, AgentSnapshotGrant, SpecialistFiles, AgentDefaults, AgentProfileState, AgentProvider, ChatActivity, ChatActivityEvent } from "../bridge";
 import { Clock } from "../clock";
 import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
 import { NAME_BY_KIND } from "../agents";
@@ -158,7 +158,7 @@ export interface MemorySaid {
 export interface ChatPanelOptions {
   /** The window's label, to tell its own actions from the other window's. */
   window: "island" | "nest";
-  specialist?: { github?: AgentGithubGrant; name: string; builtIn?: boolean; revision: number; latestRevision?: number; state?: AgentProfileState; choice?: AgentDefaults | null; providers?: AgentProvider[]; species: string; look: string };
+  specialist?: { github?: AgentGithubGrant; snapshots?: Record<string, AgentSnapshotGrant>; name: string; builtIn?: boolean; revision: number; latestRevision?: number; state?: AgentProfileState; choice?: AgentDefaults | null; providers?: AgentProvider[]; species: string; look: string };
   /** How a reply is drawn: the island's light Markdown, or the Nest's full one. */
   render?: (text: string) => DocumentFragment;
 }
@@ -748,6 +748,9 @@ export class ChatPanel {
 
   setProfileGithub(github: AgentGithubGrant | undefined): void {
     if (this.opts.specialist) { this.opts.specialist.github=github; this.paintHead(); }
+  }
+  setProfileSnapshots(snapshots: Record<string, AgentSnapshotGrant> | undefined): void {
+    if (this.opts.specialist) { this.opts.specialist.snapshots = snapshots; this.paintHead(); }
   }
 
   setProfileRevision(revision: number): void {
@@ -2682,9 +2685,12 @@ export class ChatPanel {
     const attach = this.element.querySelector<HTMLButtonElement>(".attach");
     if (attach) attach.disabled = this.navigating || this.profileBlocked() || attach.dataset.picking === "true";
     this.newButton.disabled = this.navigating || !!this.historyPending || !!profile?.state && (profile.state.archived || this.specialistChoiceSaving);
-    this.profileNotice.hidden = !blocked && !profile?.github?.enabled && (!profile || !profile.latestRevision || profile.revision === profile.latestRevision);
+    const snapshots = Object.entries(profile?.snapshots ?? {}).filter(([provider, grant]) => ["gitlab", "gitea"].includes(provider) && grant.enabled);
+    this.profileNotice.hidden = !blocked && !profile?.github?.enabled && !snapshots.length && (!profile || !profile.latestRevision || profile.revision === profile.latestRevision);
     this.profileNotice.textContent = blocked || (profile && profile.latestRevision && profile.revision !== profile.latestRevision ? t("This conversation uses profile revision {revision}. Start a new conversation to use revision {latest}.", { revision: profile.revision, latest: profile.latestRevision! }) : "");
     if (profile?.github?.enabled) this.profileNotice.textContent += (this.profileNotice.textContent ? " " : "") + t("GitHub: {repository} · {account} on {host}. Writes require approval.",{repository:profile.github.repository,account:profile.github.account,host:profile.github.host});
+    for (const [provider, grant] of snapshots) this.profileNotice.textContent += (this.profileNotice.textContent ? " " : "") + t("{provider}: {repository} · {account} on {host}. Cached read only.", { provider: provider === "gitlab" ? "GitLab" : "Gitea", repository: grant.repository, account: grant.account, host: grant.host });
+    if (snapshots.length && (this.provider !== "api" || profile?.providers?.find(p => p.label === this.api.label)?.local)) this.profileNotice.textContent += " " + t("Cached connector tools require a supported API provider.");
     if (profile?.github?.enabled && this.provider === "api" && profile.providers?.find(p=>p.label===this.api.label)?.local)
       this.profileNotice.textContent += " " + t("This provider does not support GitHub tools.");
     if (this.opts.specialist) {

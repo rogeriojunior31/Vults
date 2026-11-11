@@ -1023,7 +1023,14 @@ async fn send(
         let tools = profile
             .as_ref()
             .filter(|_| chat.provider() != Provider::ClaudeApi || chat.api().0.supports_tools)
-            .map(|p| crate::specialist_github::tools(&app, &profile_access_key(p)))
+            .map(|p| {
+                let key = profile_access_key(p);
+                let mut tools = crate::specialist_github::tools(&app, &key);
+                if api_companion_tools_enabled(true, chat.provider(), chat.api().0.supports_tools) {
+                    tools.extend(crate::specialist_snapshots::tools(&app, &key));
+                }
+                tools
+            })
             .unwrap_or_default();
         chat.set_tools(tools);
     }

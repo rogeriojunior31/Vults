@@ -9,7 +9,7 @@ Notion follows this work; it does not replace it. Keep GitHub and Linux regressi
 | Slice | GitLab | Gitea | Acceptance |
 | --- | --- | --- | --- |
 | CP1: complete dashboard | Implemented with documented bounds | Implemented with documented bounds | Diff sizes, reviewers, changes requested, head-bound jobs/checks, default branches, releases, no repeated news |
-| CP2: cached chat snapshot | Companion implemented; profile grants pending | Companion implemented; profile grants pending | Independent Settings/profile permissions, scoped cached reads in API Chat and realtime, no new network request |
+| CP2: cached chat snapshot | Implemented | Implemented | Independent Settings/profile permissions, scoped cached reads in API Chat and realtime, no new network request |
 | CP3: live reads | Pending | Pending | Account, repository/search, issues/PRs, comments/reviews, diff/files, CI runs/jobs/logs and branch rules; explicit bounded pagination |
 | CP4: issue writes | Pending | Pending | Create/edit, comments and comment edits, labels, assignees, close/reopen; human preview, revalidation and audited readback |
 | CP5: pull-request writes | Pending | Pending | Create/edit, draft/ready, reviewer requests, reviews and inline comments bound to the reviewed head |
@@ -54,6 +54,14 @@ Gitea credential-generation changes, argument rejection, redaction and valid bou
 cached tools fit alongside the existing realtime reads. Native Windows WebView checks cover actual
 backend save/readback and rejection from the island, plus both controls' hit tests at four emulated
 scales. Profile grants and live actions are not inherited or implemented by this slice.
+
+CP2 profile grants now bind repository, host, account ID and permission version, plus Gitea credential
+generation. Tests cover provider/profile isolation, replaced grants, reused usernames, repository
+filtering, reconnection and bounded JSON after adding scope metadata. The GitLab query including
+the user Global ID was checked against GitLab.com without credentials on 2026-11-11: 196/200 complexity.
+Native Windows checks use an offline CLI fixture: one poll, zero additional grant queries, actual
+save/readback, stale-version and unauthorized-surface refusal, revocation while off, both controls'
+hit tests and failed-save draft retention at four emulated scales. No provider/model call is used.
 
 Gitea still needs a real test instance. Synthetic fixtures and renderer scale emulation do not replace
 real permissions, physical Windows DPI/input or live merge-policy acceptance.

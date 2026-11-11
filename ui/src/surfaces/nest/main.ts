@@ -110,6 +110,7 @@ const nest = createNest(
     profileState: Bridge.agentProfileStateSet,
     profileAccess: Bridge.setSpecialistChatAccess,
     profileGithub: Bridge.setSpecialistGithub,
+    profileSnapshot: Bridge.setSpecialistSnapshot,
     profileChat: {
       current: Bridge.specialistChatCurrent,
       choice: Bridge.specialistChatChoiceSet,

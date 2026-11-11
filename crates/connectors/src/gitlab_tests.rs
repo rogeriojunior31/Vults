@@ -2,7 +2,7 @@ use super::*;
 
 fn response() -> Value {
     let head = "a".repeat(40);
-    json!({"data":{"currentUser":{"username":"alice",
+    json!({"data":{"currentUser":{"id":"gid://gitlab/User/42","username":"alice",
         "contributedProjects":{"nodes":[]},
         "authoredMergeRequests":{"pageInfo":{"hasNextPage":false},"nodes":[{
             "iid":"7","title":"Fix window placement","webUrl":"https://gitlab.com/team/sub/app/-/merge_requests/7",
@@ -277,6 +277,30 @@ fn account_changes_and_zero_required_approvals_do_not_invent_news() {
     );
     value["data"]["currentUser"]["authoredMergeRequests"]["nodes"][0]["approvalsRequired"] = json!(0);
     assert_eq!(board(&parse(&value).unwrap())[0].review, None);
+}
+
+#[test]
+fn reused_usernames_get_new_snapshot_keys_and_unknown_user_ids_fail_closed() {
+    let before = parse(&response()).unwrap();
+    let mut value = response();
+    value["data"]["currentUser"]["id"] = json!("gid://gitlab/User/43");
+    let after = parse(&value).unwrap();
+    assert!(diff(&before, &after).is_empty());
+    assert!(
+        before
+            .keys()
+            .filter(|key| !key.starts_with("meta:"))
+            .all(|key| !after.contains_key(key))
+    );
+    for id in [
+        Value::Null,
+        json!("gid://gitlab/Project/42"),
+        json!("gid://gitlab/User/0"),
+        json!("gid://gitlab/User/18446744073709551615"),
+    ] {
+        value["data"]["currentUser"]["id"] = id;
+        assert!(matches!(parse(&value), Err(Error::Partial(_))));
+    }
 }
 
 #[test]

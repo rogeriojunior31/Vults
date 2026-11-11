@@ -51,6 +51,7 @@ mod settings;
 mod shortcut_settings;
 mod sleep;
 mod specialist_github;
+mod specialist_snapshots;
 mod spend;
 mod traces;
 mod tray;
@@ -253,6 +254,7 @@ pub fn run() {
             profiles::agent_profile_state_set,
             profiles::set_specialist_chat_access,
             specialist_github::set_specialist_github,
+            specialist_snapshots::set_specialist_snapshot,
             runtime::projects_list,
             runtime::project_set,
             open::editor_found,

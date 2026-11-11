@@ -94,7 +94,22 @@ Results identify their provider and `source.mode: cached_snapshot`; freshness is
 They contain the cached MR/PR, reviewer, check/job, branch and release rows, with secrets redacted.
 The result stays valid JSON within the chat's 16 KiB limit; `truncated` and `coverage` identify omitted
 rows. Tool activity is recorded in the existing chat traces. These controls grant no remote writes,
-live reads, CLI command access or specialist access. Independent profile grants remain pending.
+live reads, CLI command access or specialist access.
+
+### Profile snapshot permissions
+
+Developer and Reviewer have separate **Cached GitLab snapshot** and **Cached Gitea snapshot**
+controls in their agent profiles. Enter one repository path, then enable its cached read. A first
+successful, non-empty connector board is required to identify the account. GitLab accepts subgroup
+paths; Gitea uses `owner/name`. Disabling access works even with the connector off.
+
+Each grant binds the profile, service, repository, host, account ID and a changing permission version.
+Gitea also binds the credential generation. The profile receives only the selected repository's
+cached rows in supported API chats; it inherits no companion or other profile permissions. Archived
+profiles, paused/locked sessions, disabled connectors, changed accounts/connections and revoked or
+replaced grants reject reads. Enabling again cannot revive an older tool instance. The chat header
+shows the selected repository and account and explains when the executor cannot use these tools.
+This adds no live reads or remote actions. GitLab's account-ID snapshot upgrade rebaselines once.
 
 ## GitHub
 

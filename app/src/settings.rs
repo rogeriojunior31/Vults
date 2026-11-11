@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 49;
+const VERSION: u32 = 50;
 
 /// The `data-theme` of every window. The three SP Night themes come from the sp-night palette.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
@@ -41,6 +41,10 @@ pub struct Settings {
     /// Independent default-off cached reads for GitLab and Gitea in supported companion chats.
     #[serde(default)]
     pub zeca_connector_snapshots: BTreeMap<String, bool>,
+    /// Repository/account-bound cached grants, independent for each built-in specialist and service.
+    #[serde(default)]
+    pub specialist_connector_snapshots:
+        BTreeMap<String, BTreeMap<String, crate::specialist_snapshots::Grant>>,
     /// Live GitHub tools, with a human card for writes; off by default.
     #[serde(default)]
     pub zeca_github_work_item: bool,
@@ -385,6 +389,7 @@ impl Default for Settings {
             connectors: BTreeMap::new(),
             zeca_github_snapshot: true,
             zeca_connector_snapshots: BTreeMap::new(),
+            specialist_connector_snapshots: BTreeMap::new(),
             zeca_github_work_item: false,
             sounds: true,
             volume: volume(),
@@ -2507,6 +2512,7 @@ mod tests {
             connectors: BTreeMap::from([("github".into(), true)]),
             zeca_github_snapshot: true,
             zeca_connector_snapshots: BTreeMap::new(),
+            specialist_connector_snapshots: BTreeMap::new(),
             zeca_github_work_item: false,
             sounds: false,
             volume: 50,
