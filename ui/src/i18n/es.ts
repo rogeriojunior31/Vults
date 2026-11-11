@@ -1737,6 +1737,7 @@ export default {
   "Presentation": "Presentación",
   "On: cards and finished turns chime": "Activados: las tarjetas y los turnos terminados suenan",
   "Off: Vults stays silent": "Desactivados: Vults se queda en silencio",
+  "Running a command": "Ejecutando un comando",
   "No agent session yet": "Aún no hay sesiones de agentes",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicia Claude Code, Codex u otro agente en una terminal y su pájaro se posa en el cable. Cuando necesite un permiso, la tarjeta aparece aquí.",
   "Set up agents": "Configurar agentes",

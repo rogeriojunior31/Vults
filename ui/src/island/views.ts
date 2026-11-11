@@ -54,6 +54,8 @@ export const statusWords = (status: SessionView["status"]): string => t(STATUS_T
 export function statusText(s: SessionView): string {
   // A quiet bird says so in place of its step, which is not news any more.
   if (s.status === "working" && s.silent) return s.silent === "loud" ? t("No news for 15 min") : t("No news for 5 min");
+  // A command is not a status: the chip says what kind of work it is; the steps keep the command itself.
+  if (s.status === "working" && s.step && s.activity === "run") return t("Running a command");
   return s.status === "working" && s.step ? s.step : t(STATUS_TEXT[s.status]);
 }
 

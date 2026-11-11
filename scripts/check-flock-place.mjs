@@ -456,3 +456,15 @@ console.log('check-flock-place: metric provenance, separate read ages and cumula
   assert.equal(nodes(lanePart.element).find(node => node.className === "waiting-lane").hidden, true, "One waiting request is the card itself: no line");
   console.log("check-flock-place: waiting line rows, explicit per-row and ticked answers, destructive and cut requests kept to their own card");
 }
+{
+  // A running command is not a status: the row says what kind of work it is, and search still finds the command.
+  const runPart = createFlock({ ...backend, loadPlace: async () => null });
+  const running = { ...session, status: "working", attention: "info", card: false, activity: "run", step: "Running S=/c/Users/me/AppData/Local/Temp/build.sh" };
+  runPart.update({ ...view, approval: null, sessions: [running] }); await tick();
+  const sub = nodes(runPart.element).find(node => (node.className ?? "").startsWith("roost-sub"));
+  assert.equal(sub.textContent, "Running a command", "The list row speaks of the work, not the raw command");
+  const input = nodes(runPart.element).find(node => node.tag === "input");
+  input.value = "build.sh"; input.listeners.input();
+  assert.equal(nodes(runPart.element).filter(node => (node.className ?? "").startsWith("roost-sub")).length, 1, "Search still finds a session by its command");
+  console.log("check-flock-place: a running command reads as work in the list and stays searchable");
+}
