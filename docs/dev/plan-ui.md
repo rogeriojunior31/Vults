@@ -1944,3 +1944,9 @@ high fold the attention strip and the narrow Chat bar fits in two rows; Settings
 "History and budget" and "Connection setup", leaving Activity and Connections to the Nest. Each
 was checked in the running app on the Windows preview build. The Linux pass and the three
 maintainer decisions above remain.
+
+The fourth critique (26/40) found five more items, all delivered on the branch: Approvals now
+states the chat's access instead of "every permission asks"; a request's reason and folder ride
+with Deny and Allow in short windows; folders are shortened with one formatter (full path in the
+tooltip and copy); the Flock's profiles are Specialists throughout and speech models say what they
+are before naming whisper.cpp; the Nest counts "requests waiting" and plan meters name their level.
