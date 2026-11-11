@@ -407,6 +407,8 @@ body.still .compact.needs::after {
   color: var(--warn);
   font: 9px var(--mono);
 }
+/* Light: on the raised selected tab the darker amber needs a paler tint to keep 4.5:1. */
+[data-theme="light"] .tab-count { background: color-mix(in srgb, var(--warn) 5%, transparent); }
 .tab:hover {
   background: var(--float);
   color: var(--fg);
