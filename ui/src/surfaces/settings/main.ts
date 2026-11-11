@@ -630,7 +630,7 @@ function agentStatus(s: InstallStatus): HTMLElement {
   return badge(t("Installed"), "ok");
 }
 
-function agentCard(kind: InstallAgent, name: string): HTMLElement {
+function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement {
   const { status: s, message, pending } = panels.get(kind)!;
   const notice = message ? el("p", { class: message.error ? "note error" : "note ok", text: message.text }) : null;
   if (!s) return el("section", { class: "card" }, el("div", { class: "card-title", text: name }), notice);
@@ -762,7 +762,8 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
                   ? s.outdated ? t("Update plugin…") : s.installed ? t("Reinstall plugin…") : t("Install plugin…")
                   : s.outdated ? t("Update hooks…") : s.installed ? t("Reinstall hooks…") : t("Install hooks…"),
                 () => void preview(kind, true),
-                !s.installed || s.outdated || usageHelp !== null,
+                // An agent that is not on this computer has nothing due: its install stays a plain button.
+                (found && !s.installed) || s.outdated || usageHelp !== null,
               ),
         ),
     review,
@@ -770,8 +771,35 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
 }
 
 /** What each agent can do (W1): built once, asked again each time the page is opened. */
-const doctor = createDoctor((fresh) => Bridge.agentsDoctor(fresh));
+const doctor = createDoctor((fresh) => Bridge.agentsDoctor(fresh), (rows) => {
+  const found = rows.filter((r) => r.path !== null).map((r) => r.id).sort().join(" ");
+  if (present !== null && [...present].sort().join(" ") === found) return;
+  present = new Set(found ? found.split(" ") : []);
+  // A review in progress keeps its place: the grouping follows on the next paint.
+  if (page === "agents" && ![...panels.values()].some((p) => p.pending)) render();
+});
+/** The agents the doctor found on this computer; null until it answered. */
+let present: Set<string> | null = null;
 let doctorAsked = false;
+
+/** The agents on this computer first, each with the step that is due; the others fold away. Before
+ *  the doctor answers, or if its check fails, every agent shows as it always did. */
+function agentCards(): HTMLElement[] {
+  const listed = AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message);
+  const known = present;
+  if (!known) return listed.map((a) => agentCard(a.kind, a.name));
+  const here = (a: (typeof AGENTS)[number]) => {
+    const p = panels.get(a.kind);
+    return known.has(a.kind) || !!p?.status?.installed || !!p?.status?.error || !!p?.message || !!p?.pending;
+  };
+  const found = listed.filter(here), others = listed.filter((a) => !here(a));
+  return [
+    ...(found.length
+      ? found.map((a) => agentCard(a.kind, a.name))
+      : [el("section", { class: "card" }, el("p", { class: "note", text: t("No supported agent was found on this computer. Install one, then open this page again.") }))]),
+    ...(others.length ? [disclosure(t("Agents not found on this computer"), ...others.map((a) => agentCard(a.kind, a.name, false)))] : []),
+  ];
+}
 
 function agentsPage(): HTMLElement[] {
   if (!doctorAsked) {
@@ -784,9 +812,7 @@ function agentsPage(): HTMLElement[] {
       class: "lede",
       text: t("Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept."),
     }),
-    ...AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message).map((a) =>
-      agentCard(a.kind, a.name),
-    ),
+    ...agentCards(),
     disclosure(t("What each agent can do"),
       el("p", { class: "note", text: t("What this computer has of each agent, and what it can do with Vults: what the router and your policies lean on.") }),
       doctor.element,

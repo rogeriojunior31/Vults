@@ -1613,6 +1613,8 @@ export default {
   "Manage connections": "Gerenciar conexões",
   "Put this session in front": "Colocar esta sessão na frente",
   "Review its card": "Revisar o card",
+  "Agents not found on this computer": "Agentes não encontrados neste computador",
+  "No supported agent was found on this computer. Install one, then open this page again.": "Nenhum agente compatível foi encontrado neste computador. Instale um e abra esta página de novo.",
   "No agent session yet": "Nenhuma sessão de agente ainda",
   "Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.": "Inicie o Claude Code, o Codex ou outro agente em um terminal e o pássaro dele pousa no fio. Quando ele precisar de uma permissão, o cartão aparece aqui.",
   "Set up agents": "Configurar agentes",
