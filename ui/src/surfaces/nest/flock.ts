@@ -608,19 +608,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
     b.title = [s.project || agentName(s), s.branch, agentName(s), stateText(s)].filter(Boolean).join(" · ");
+    // Two lines: the name and its state, then what it has done. What the agent did not report is
+    // left out, not printed as "Not reported".
+    const done = s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null
+      ? t("{agent} · no metrics yet", { agent: agentName(s) })
+      : [s.elapsed_ms == null
+          ? t("{agent} · Step {step}", { agent: agentName(s), step: s.step_count })
+          : t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }),
+        s.context_percent == null && s.context_tokens == null ? null
+          : s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) })]
+        .filter(Boolean).join(" · ");
     b.append(
-      el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
-      el("div", { class: `roost-sub ${tone(s)}`, text: stateText(s) }),
-      ...(s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null
-        ? [el("div", { class: "roost-agent", text: t("{agent} · no metrics yet", { agent: agentName(s) }) })]
-        // What the agent did not report is left out of the row, not printed as "Not reported".
-        : [
-            el("div", { class: "roost-agent", text: s.elapsed_ms == null
-              ? t("{agent} · Step {step}", { agent: agentName(s), step: s.step_count })
-              : t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
-            ...(s.context_percent == null && s.context_tokens == null ? [] : [
-              el("div", { class: "roost-context", text: s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) })]),
-          ]),
+      el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), el("span", { class: `roost-sub ${tone(s)}`, text: stateText(s) }), marker(needsYou(s))),
+      el("div", { class: "roost-agent", text: done }),
     );
     const meter = contextMeter(s);
     if (meter) b.append(meter);

@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 19a62ebf310a -->
+<!-- source: f0412a836f82 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -95,9 +95,9 @@ atalhos executa uma ação. Voltar de Activity ou Connections para o Quick abre 
 O bando fica num fio, com o triplo do tamanho, e o nome do projeto sob cada ave. Ao abrir o Nest,
 ele já está pousado; só uma sessão que começa com ele aberto chega voando. Uma ave com um pedido
 destrutivo leva um triângulo vermelho maior, e uma cujo pedido voltou sem resposta ao terminal, um
-pequeno terminal, até o próximo passo. Embaixo, uma lista de sessões mostra o estado, o agente, o
-número do passo e o tempo em execução e o uso de contexto que o agente informa (omitidos quando ele
-não informa) de cada projeto. Selecione uma ave ou linha (ou use **↑ ↓**) para trazer a
+pequeno terminal, até o próximo passo. Embaixo, uma lista de sessões dá duas linhas a cada
+projeto: o nome e o estado, depois o agente, o número do passo e o tempo em execução e o uso de
+contexto que o agente informa (omitidos quando ele não informa). Selecione uma ave ou linha (ou use **↑ ↓**) para trazer a
 sessão para a frente. Passe o mouse para ver projeto, branch, agente e estado completos. O clique
 direito, a tecla de menu ou **Shift+F10** abre as ações rápidas existentes: terminal, pasta,
 Activity, último diff, foco, silenciar, fixar e esconder. Um card aguardando mantém a própria

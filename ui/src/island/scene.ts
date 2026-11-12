@@ -140,8 +140,8 @@ export const HABITAT_SCENE: SceneLayout = {
 /** The Nest's Flock (ADR 0021, the prototype's stage): the flock at 3x on one wire across the
  *  pane, one bird over each roost card (`Scene.resize` sets the width and the places). */
 export const NEST_HABITAT_W = 440;
-export const NEST_HABITAT_H = 150;
-export const NEST_HABITAT_WIRE = 140;
+export const NEST_HABITAT_H = 126;
+export const NEST_HABITAT_WIRE = 116;
 export const NEST_HABITAT_SCENE: SceneLayout = {
   width: NEST_HABITAT_W,
   height: NEST_HABITAT_H,
