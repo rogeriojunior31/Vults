@@ -2002,3 +2002,16 @@ whose request went back reads "Asking in its terminal" until its next step; "Nes
 requests waiting" on the island, meters named by agent, empty metrics as one line; Activity drops
 its Audit tab (the log stays in Approvals, as chosen). Not taken: answering from a queue row (the
 card stays the one place), Mini text (ADR 0021), a shorter filter label.
+
+The eighth critique (26/40) found the island card hiding its clock until the last 30 s on a clock
+of its own, an expiry that left the card with no command and no way on, the waiting count said five
+times, an audit that counted hook installs as answers, and a flock still flying in when the Nest
+opened. Delivered and checked in the running app: the island and the Nest share one clock on the
+core's `expires_at`, shown from the start; a request that went back unanswered stays on its card
+("Request that went back to the terminal", with **Copy folder** where the terminal cannot be
+raised) until the next step; the count lives on the Flock badge, the Needs you filter and the
+queue; rows leave out what was not reported, and an idle session says "No steps or changes yet";
+the audit filters Answers, Back to the terminal and Setup changes and groups by day; the flock is
+perched when the Nest opens, a destructive request wears a larger red triangle and a returned one a
+small terminal. Not taken: keeping a card alive after the hook's deadline (the hook has stopped
+waiting), Deny selected, the chat header's six controls.
