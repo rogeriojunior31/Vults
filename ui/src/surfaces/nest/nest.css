@@ -2029,7 +2029,9 @@ button.touched-row:hover,
 .conn-refused code { padding: 1px 5px; border-radius: 5px; background: var(--raised); color: var(--fg); font: 12px var(--mono); }
 /* Explanations keep a reading measure, not the window's width. */
 .nest-connections .nest-add-row p, .conn-waiting > p { max-width: 72ch; }
-.nest-connections .nest-add-row p { margin-right: auto; }
+/* The action stays beside the words it acts on, not across an empty card. */
+.nest-connections .nest-add-row { gap: 24px; }
+.nest-connections .nest-add-row p { flex: 0 1 64ch; }
 .conn-row.seen .conn-row-words strong { color: var(--fg-dim); }
 /* The prototype's GitHub view: a count on each tab (red when Actions fail), the repository filter,
    the checks one by one, a bar while they run, and the command to copy. */

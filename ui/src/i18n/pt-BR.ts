@@ -1763,6 +1763,7 @@ export default {
   "Every card's answer and who gave it: you, your phone, a rule or a policy below, or the chat's access. Kept 90 days, never changed.": "A resposta de cada card e quem a deu: você, seu telefone, uma regra ou política abaixo, ou o acesso do chat. Guardado por 90 dias, nunca alterado.",
   "What answers without a card": "O que responde sem card",
   "Every answer a card got, and what answers without one.": "Cada resposta que um card recebeu, e o que responde sem card.",
+  "Answer the card first; Now opens after it.": "Responda o card primeiro; Agora abre depois dele.",
   "Always allowed": "Sempre permitido",
   "Always allowed ({n})": "Sempre permitido ({n})",
   "Policies ({n})": "Políticas ({n})",

@@ -1763,6 +1763,7 @@ export default {
   "Every card's answer and who gave it: you, your phone, a rule or a policy below, or the chat's access. Kept 90 days, never changed.": "每张卡片的回答以及回答者：你、你的手机、下方的规则或策略，或聊天的访问权限。保留 90 天，从不更改。",
   "What answers without a card": "无需卡片即可回答的内容",
   "Every answer a card got, and what answers without one.": "每张卡片得到的回答，以及无需卡片即可回答的内容。",
+  "Answer the card first; Now opens after it.": "请先回答卡片；之后才能打开“现在”。",
   "Always allowed": "始终允许",
   "Always allowed ({n})": "始终允许（{n}）",
   "Policies ({n})": "策略（{n}）",

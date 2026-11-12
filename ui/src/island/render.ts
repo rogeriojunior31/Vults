@@ -9,7 +9,7 @@
 // overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import { DEADLINE_SOON_S, DEADLINE_URGENT_S, REQUEST_MS as EXPIRES_MS, paintClock, secondsLeft } from "../deadline";
+import { DEADLINE_SOON_S, DEADLINE_URGENT_S, REQUEST_MS as EXPIRES_MS, deadlineText, paintClock, secondsLeft } from "../deadline";
 import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Flock, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
@@ -1006,6 +1006,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       (() => {
         const b = tab("now", "list", t("Now"), () => openQuick("now"), nowItems(last, zecaShown()).filter(i => i.level === "needs-you" || i.level === "failed").length);
         b.disabled = cardWaits;
+        // Greyed with a count on it reads as broken: say why it waits.
+        if (cardWaits) b.title = t("Answer the card first; Now opens after it.");
         return b;
       })(),
       gear,
@@ -1899,8 +1901,15 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     box.classList.toggle("soon", left <= DEADLINE_SOON_S);
     box.classList.toggle("urgent", left <= DEADLINE_URGENT_S);
     box.querySelector<HTMLElement>(".expiry-bar")!.style.width = `${Math.min(100, (left * 1000 / EXPIRES_MS) * 100)}%`;
+    // The clock is read once at each threshold it crosses, not every second.
+    const step = left <= DEADLINE_URGENT_S ? 2 : left <= DEADLINE_SOON_S ? 1 : 0;
+    if (step && (expirySaid?.request !== cardOnScreen.request || expirySaid.step < step)) {
+      expirySaid = { request: cardOnScreen.request, step };
+      polite.textContent = `${cardOnScreen.project || cardOnScreen.agent} · ${deadlineText(left)}`;
+    }
     if (left > 0) expiryTimer = window.setTimeout(tickExpiry, 1000);
   }
+  let expirySaid: { request: string; step: number } | null = null;
 
   /** Ignore stale controls until core replaces the card after an answer or Skip. */
   let actedLast: string | null = null;

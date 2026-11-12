@@ -720,7 +720,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
 
   /** Every file the session changed, the latest first; one whose diff is still kept opens it. */
-  const touchedList = (s: SessionView, files: TouchedView[], limit = files.length): HTMLElement => {
+  const touchedList = (s: SessionView, files: TouchedView[], limit = files.length, titled = true): HTMLElement => {
     const rows = [...files].reverse().slice(0, limit).map((f) => {
       // A file only the folder's look saw has no lines to count: a command wrote it.
       const counts = f.outside
@@ -746,7 +746,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     return el(
       "section",
       { class: "touched" },
-      el("h3", { class: "touched-head", text: t("Files changed in this session ({n})", { n: files.length }) }),
+      titled ? el("h3", { class: "touched-head", text: t("Files changed in this session ({n})", { n: files.length }) }) : null,
       ...rows,
     );
   };
@@ -1112,9 +1112,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
       el("header", { class: "session-section-head" }, el("h3", { text: t("Recent steps") }), allSteps), ...activity(s).slice(0, 4));
     const files = s.touched ?? [];
     const changes = el("section", { class: "session-files" },
-      el("header", { class: "session-section-head" }, el("h3", { text: t("Changed files") }),
+      // One title for the section: it carries the count the list would repeat under it.
+      el("header", { class: "session-section-head" }, el("h3", { text: files.length ? t("Files changed in this session ({n})", { n: files.length }) : t("Changed files") }),
         fid(el("button", { class: "outline", text: t("See the changes"), onclick: () => go("diff") }), "act:overview-changes")),
-      files.length ? touchedList(s, files, 4) : el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }));
+      files.length ? touchedList(s, files, 4, false) : el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }));
     const health = el("p", { class: "detail-footnote", text: metricsHealth(s) });
     const consumption: HTMLElement[] = [];
     const info = s.metric_info;
