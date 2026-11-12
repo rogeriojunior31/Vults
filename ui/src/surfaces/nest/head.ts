@@ -76,11 +76,9 @@ export interface NestHead {
   relabel: () => void;
 }
 
-/** The header's flock line, each case a whole sentence. */
-function flockLine({ sessions, needs }: NestCounts): string {
-  if (sessions === 1) return needs > 0 ? t("1 session · 1 needs you") : t("1 session");
-  if (needs === 0) return t("{sessions} sessions", { sessions });
-  return needs === 1 ? t("{sessions} sessions · 1 needs you", { sessions }) : t("{sessions} sessions · {needs} need you", { sessions, needs });
+/** The header's flock line. Who needs you is the Flock tab's badge to say, once. */
+function flockLine({ sessions }: NestCounts): string {
+  return sessions === 1 ? t("1 session") : t("{sessions} sessions", { sessions });
 }
 
 export function createNestHead(on: NestHeadActions): NestHead {

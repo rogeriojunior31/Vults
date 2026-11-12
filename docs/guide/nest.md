@@ -54,7 +54,7 @@ In a short Chat window, the composer uses less space and the empty conversation'
 suggestions scroll if needed. This applies to wide windows too, keeping the title
 bar's controls and the footer reachable.
 
-When there is room, the header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
+When there is room, the header counts the flock (*4 sessions*; who needs you is the **Flock** tab's badge) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
 (a click ends it), the search (the palette, as **Ctrl+K**) and the presentation menu: it names the
 size in use and holds the four sizes, each with what it is, and **Sounds**. The same header holds five tabs in this order: **Flock**, **Chat**, **Dictation**,

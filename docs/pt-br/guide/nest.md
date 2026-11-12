@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 94e1e55a00cb -->
+<!-- source: b17eae25671e -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -53,7 +53,7 @@ Em uma janela baixa do Chat, o compositor ocupa menos espaço e as sugestões da
 conversa vazia rolam quando necessário. Isso também vale para janelas largas,
 mantendo os controles do cabeçalho e o rodapé acessíveis.
 
-Quando há espaço, o cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
+Quando há espaço, o cabeçalho conta o bando (*4 sessions*; quem precisa de você fica no badge da aba **Flock**) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
 dura (um clique o encerra), a busca (a paleta, como **Ctrl+K**) e o menu de apresentação: ele mostra
 o tamanho em uso e traz os quatro tamanhos, cada um com o que é, e **Sounds**. O mesmo cabeçalho traz cinco abas nesta ordem: **Bando**, **Chat**, **Ditado**,

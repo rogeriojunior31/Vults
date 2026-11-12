@@ -473,7 +473,11 @@ console.log('check-flock-place: metric provenance, separate read ages and cumula
   const input = nodes(runPart.element).find(node => node.tag === "input");
   input.value = "build.sh"; input.listeners.input();
   assert.equal(nodes(runPart.element).filter(node => (node.className ?? "").startsWith("roost-sub")).length, 1, "Search still finds a session by its command");
-  console.log("check-flock-place: a running command reads as work in the list and stays searchable");
+  input.value = ""; input.listeners.input();
+  runPart.update({ ...view, approval: null, sessions: [{ ...running, step_count: 3, elapsed_ms: null, context_percent: null, context_tokens: null }] }); await tick();
+  const rowText = nodes(runPart.element).filter(node => /^roost-(agent|context)/.test(node.className ?? "")).map(node => node.textContent);
+  assert.deepEqual(rowText, ["Claude Code · Step 3"], "A row leaves out what the agent did not report");
+  console.log("check-flock-place: a running command reads as work in the list and stays searchable; unreported metrics stay out of the row");
 }
 {
   // The core's deadline shows in the last half minute, in the card and the line; a request this tab

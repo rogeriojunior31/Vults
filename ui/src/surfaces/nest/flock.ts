@@ -614,9 +614,13 @@ export function createFlock(on: FlockActions & FlockAsk): {
       el("div", { class: `roost-sub ${tone(s)}`, text: stateText(s) }),
       ...(s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null
         ? [el("div", { class: "roost-agent", text: t("{agent} · no metrics yet", { agent: agentName(s) }) })]
+        // What the agent did not report is left out of the row, not printed as "Not reported".
         : [
-            el("div", { class: "roost-agent", text: t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
-            el("div", { class: "roost-context", text: s.context_percent == null && s.context_tokens == null ? t("Context not reported") : s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) }),
+            el("div", { class: "roost-agent", text: s.elapsed_ms == null
+              ? t("{agent} · Step {step}", { agent: agentName(s), step: s.step_count })
+              : t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
+            ...(s.context_percent == null && s.context_tokens == null ? [] : [
+              el("div", { class: "roost-context", text: s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) })]),
           ]),
     );
     const meter = contextMeter(s);
@@ -847,8 +851,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ? el("span", { class: "card-verb", text: s.step_count === 1 ? t("1 step") : t("{n} steps", { n: s.step_count }) })
           : null,
         detail === "session" ? null : costChip(s),
+        // How many wait is the queue's to say (it shows from two on), not each card's.
         ask ? el("div", { class: "card-side" },
-          ask.queue > 1 ? el("span", { class: "q-of", text: t("{n} requests waiting", { n: ask.queue }) }) : null,
           question ? null : deadline(ask.expires_at),
           question ? null : fid(laterButton(ask.request, skipCard), "act:skip")) : null,
       ),
@@ -1096,7 +1100,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
     }
     // Three "Not reported" cells say nothing the line under them does not: show only the line.
     const known = [runningTime(s), sessionCost(s), contextUsed(s)].some(value => value !== t("Not reported"));
-    return [...(known ? [metrics] : []), health, ...consumption, recent, changes];
+    // Nothing done yet: one line instead of two empty sections.
+    const blank = !tickerSteps(s).length && !files.length
+      ? el("p", { class: "detail-footnote", text: t("No steps or changes yet.") })
+      : null;
+    return [...(known ? [metrics] : []), health, ...consumption, ...(blank ? [blank] : [recent, changes])];
   };
 
   const zecaPane = (s: SessionView): HTMLElement[] => [
