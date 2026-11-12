@@ -14,6 +14,7 @@ import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
 import { money, usageLabel, usageLevel, usageWindowName } from "../../cost";
 import { viewState } from "./view-state";
+import { day } from "../../day";
 import { icon } from "../../island/icons";
 
 export interface RecordsBackend {
@@ -145,12 +146,14 @@ function turnLine(r: TurnRow): HTMLElement {
   ]);
 }
 
-/** Who decided, in the order the log groups them: people first, then what answers for them. */
-const ACTORS = ["human", "phone", "rule", "policy", "full-access", "system"];
-
-type AuditKind = "allowed" | "denied" | "other";
+/** Three things the log keeps, each with its filter: an answer someone or something gave, a card
+ *  nobody answered here (it went to the terminal), and a change to how the agents ask. */
+type AuditKind = "answered" | "unanswered" | "setup";
+const UNANSWERED = ["release", "expire"];
+const SETUP = ["config-install", "config-remove", "external-write", "audit-cleared"];
+const kindOf = (act: string): AuditKind => (UNANSWERED.includes(act) ? "unanswered" : SETUP.includes(act) ? "setup" : "answered");
 const ALLOWS = ["allow", "always-allow", "allow-in-conversation"];
-const kindOf = (act: string): AuditKind => (ALLOWS.includes(act) ? "allowed" : act === "deny" ? "denied" : "other");
+const markOf = (act: string) => (ALLOWS.includes(act) ? "allowed" : act === "deny" ? "denied" : "other");
 
 /** The command as a person reads it. Some records keep it as JSON wrote it (doubled backslashes,
  *  escaped quotes), and a PowerShell launcher wraps the one-line command that was really asked.
@@ -165,7 +168,7 @@ export function readableTarget(stored: string): string {
 
 function auditLine(r: AuditRow): HTMLElement {
   const act = r.act in ACT ? t(ACT[r.act]) : r.act;
-  const kind = kindOf(r.act);
+  const kind = markOf(r.act);
   // The stored target already names its tool (as the card showed it); only a bare one gets it put in front.
   const stored = r.tool && !r.target.startsWith(`${r.tool} · `) ? [r.tool, r.target].filter(Boolean).join(" · ") : r.target;
   const shown = readableTarget(stored);
@@ -182,14 +185,15 @@ function auditLine(r: AuditRow): HTMLElement {
       command,
       el("div", { class: "record-context" },
         span(act, `record-status ${kind === "allowed" ? "passing" : kind === "denied" ? "failing" : ""}`),
-        span([agentName(r.agent), r.project].filter(Boolean).join(" · "), "record-meta"),
+        // The day is the group's; who decided leads the row's own line.
+        span([r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor, agentName(r.agent), r.project].filter(Boolean).join(" · "), "record-meta"),
         r.consent !== null ? span(t("Policy accepted as #{id}", { id: r.consent }), "record-meta") : null,
       ),
       shown !== stored
         ? el("details", { class: "audit-recorded" }, el("summary", { text: t("As recorded") }), el("code", { text: stored }))
         : null,
     ),
-    span(when(r.at * 1000), "record-when"),
+    span(new Date(r.at * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }), "record-when"),
   ], "audit-row");
 }
 
@@ -495,10 +499,9 @@ export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBack
     b.setAttribute("aria-pressed", String(only === kind));
     return b;
   };
-  const order = (r: AuditRow) => { const i = ACTORS.indexOf(r.actor); return i < 0 ? ACTORS.length : i; };
   view = tab("audit", load, (rows, query) => {
     const count = (kind: AuditKind) => rows.filter(row => kindOf(row.act) === kind).length;
-    const shown = rows.filter(row => !only || kindOf(row.act) === only).sort((a, b) => order(a) - order(b) || b.at - a.at);
+    const shown = rows.filter(row => !only || kindOf(row.act) === only).sort((a, b) => b.at - a.at);
     return [
       title ? heading(t("Audit"), t(
           "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
@@ -506,12 +509,12 @@ export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBack
       rows.length ? Object.assign(el("div", { class: "activity-summary audit-filters" },
         span(t("Filter the log"), "activity-summary-label"),
         figure(rows.length, t("Audit entries"), null),
-        figure(count("allowed"), t("Allowed"), "allowed"),
-        figure(count("denied"), t("Denied"), "denied"),
-        figure(count("other"), t("Not allowed or denied"), "other"),
+        figure(count("answered"), t("Answered"), "answered"),
+        figure(count("unanswered"), t("Back to the terminal"), "unanswered"),
+        figure(count("setup"), t("Setup changes"), "setup"),
       ), { role: "group" }) : null,
       ...(rows.length
-        ? groupedRows(shown, auditLine, query, r => (r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor))
+        ? groupedRows(shown, auditLine, query, r => day(r.at * 1000))
         : [
             viewState("empty", t("No card was answered yet."), t("Permission answers will appear here. Opening this view answers nothing.")),
           ]),

@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 3755b2882a8c -->
+<!-- source: 6ed656c7970b -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -131,12 +131,15 @@ ask tool WebFetch
 
 ## O que foi respondido
 
-Embaixo das políticas, **Settings → Approvals** mostra o log de auditoria: a resposta de cada card e
-quem a deu, agrupadas por quem decidiu (você, seu telefone, uma regra Always, uma política, o acesso
-total do chat). Cada linha começa pelo comando como foi pedido, marcado com ✓ permitido, ✗ negado ou
-– nenhum dos dois (enviado ao terminal, expirado, hooks instalados); **As recorded** mostra o texto
-guardado quando ele foi encurtado, como um lançador do PowerShell em volta do comando. Os números no
-topo somam o total, e cada um filtra a lista.
+Embaixo das políticas, **Settings → Approvals** mostra o log de auditoria, agrupado por dia, do mais
+novo para o mais antigo. Ele guarda três coisas, e os números no topo contam cada uma e filtram a
+lista para ela: **Answered** (a resposta de cada card: ✓ permitido, ✗ negado, ou uma pergunta
+respondida), **Back to the terminal** (um card enviado para lá ou que ninguém respondeu a tempo) e
+**Setup changes** (hooks instalados ou removidos, uma mudança de fora na configuração de um agente).
+Cada linha começa pelo comando como foi pedido, depois quem decidiu (você, seu telefone, uma regra
+Always, uma política, o acesso total do chat, ou o próprio Vults), o agente e o projeto; **As
+recorded** mostra o texto guardado quando ele foi encurtado, como um lançador do PowerShell em volta
+do comando.
 
 <a id="more-than-one-at-a-time"></a>
 

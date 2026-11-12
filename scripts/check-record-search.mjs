@@ -157,17 +157,21 @@ assert.equal(nodes(history.element).find(node => node.className === "record-coun
 const auditSummary = createAudit(async () => [
   { project: "Alpha", agent: "codex", at: 100, actor: "policy", act: "allow", tool: "Bash", target: "git diff -- src/file.ts", consent: 37 },
   { project: "Alpha", agent: "codex", at: 101, actor: "human", act: "deny", tool: "Bash", target: "rm secret.txt", consent: null },
+  { project: "Beta", agent: "claude", at: 102, actor: "system", act: "expire", tool: "Bash", target: "npm ci", consent: null },
+  { project: "", agent: "claude", at: 103, actor: "human", act: "config-install", tool: "", target: "config · ~/.claude/settings.json", consent: null },
 ]);
 auditSummary.refresh(); await tick();
-assert.deepEqual(figures(auditSummary.element), ["2", "1", "1", "0"], "Audit figures add up to the total");
+assert.deepEqual(figures(auditSummary.element), ["4", "2", "1", "1"], "Answers, requests that went back to the terminal and setup changes add up to the total");
 assert.ok(auditSummary.element.textContent.includes("git diff -- src/file.ts"));
 assert.ok(auditSummary.element.textContent.includes("Policy accepted as #37"));
-assert.deepEqual(nodes(auditSummary.element).filter(node => node.className === "records-head").map(node => node.children[0].textContent), ["You", "A policy"], "The log groups by who decided, people first");
+assert.equal(count(auditSummary.element, "records-head"), 1, "The log groups by day, not by who decided");
+assert.match(nodes(auditSummary.element).find(node => node.className === "records-head").children[0].textContent, /19(69|70)/, "Its heading is the day");
+assert.ok(nodes(auditSummary.element).some(node => node.className === "record-meta" && node.textContent.startsWith("A policy · ")), "Who decided leads the row's line");
 nodes(auditSummary.element).filter(node => node.className === "activity-stat")[2].listeners.click();
 assert.equal(count(auditSummary.element, "record audit-row"), 1, "A figure filters the log to its rows");
-assert.ok(auditSummary.element.textContent.includes("rm secret.txt") && !auditSummary.element.textContent.includes("git diff -- src/file.ts"));
+assert.ok(auditSummary.element.textContent.includes("npm ci") && !auditSummary.element.textContent.includes("git diff -- src/file.ts"));
 nodes(auditSummary.element).filter(node => node.className === "activity-stat")[2].listeners.click();
-assert.equal(count(auditSummary.element, "record audit-row"), 2, "Pressing it again shows every row");
+assert.equal(count(auditSummary.element, "record audit-row"), 4, "Pressing it again shows every row");
 const wrapped = createAudit(async () => [{ project: "", agent: "zeca", at: 103, actor: "full-access", act: "allow", tool: "Bash", target: String.raw`"C:\\Users\\me\\pwsh.exe" -Command 'gh run list --limit 10'`, consent: null }]);
 wrapped.refresh(); await tick();
 assert.deepEqual(nodes(wrapped.element).filter(node => node.className === "record-target").map(node => node.textContent), ["Bash · gh run list --limit 10"], "The log leads with the command that was asked, not its launcher");
