@@ -2015,3 +2015,16 @@ the audit filters Answers, Back to the terminal and Setup changes and groups by 
 perched when the Nest opens, a destructive request wears a larger red triangle and a returned one a
 small terminal. Not taken: keeping a card alive after the hook's deadline (the hook has stopped
 waiting), Deny selected, the chat header's six controls.
+
+The ninth critique (24/40) found that a request gone back to its terminal lived only in the Nest
+tab that watched it expire: any other surface, or a Nest opened later, said the session was
+working. Delivered and checked in the running app: the core keeps the returned request on its
+session until the session's next event (`SessionView.returned`), so the island's bird, Quick's Now,
+the screen reader and every Nest say it asks in its terminal; with two or more waiting, the row in
+front of Waiting for you answers its request and the card beside it keeps the context (J and K
+walk the line; a narrow window keeps the answers in the card); the Nest's text floor is 12 px, rows
+read in two lines and the habitat gives up empty sky; each state has its posture (waiting spreads
+its wings over a perch that burns down with the request's time, returned leans in asking, finished
+dozes), with marks about 16 px across; Settings → Approvals opens on the audit log, with Always
+rules and policies behind one line each. Not taken: opening a narrow Nest on the queue instead of
+the card (the tested priority keeps a new request's card in front), a separate history tab.
