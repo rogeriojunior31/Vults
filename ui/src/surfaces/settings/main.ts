@@ -18,7 +18,7 @@ import { AGENTS as REGISTRY } from "../../agents";
 import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
 import { button, confirmed, diff, disclosure, row, saveSetting, toggle } from "./pieces";
-import { policiesSection, refreshPolicies } from "./policies";
+import { policiesSection, policyCount, policyEditing, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
 import { createMeetingAssets } from "./meeting-assets";
 import { createRealtimeSettings } from "./realtime";
@@ -363,18 +363,33 @@ async function refreshRules(): Promise<void> {
 
 function approvalsPage(): HTMLElement[] {
   const name = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
+  // What answers without a card, each behind one line: the log is what people come here to read.
+  const group = (id: string, title: string, open: boolean, ...body: (HTMLElement | null)[]) => {
+    const d = el("details", { class: "approvals-group" }, el("summary", { text: title }), ...body);
+    d.dataset.setting = id;
+    d.open = open;
+    return d;
+  };
+  const ruleCount = rules?.length;
   return [
     el("h1", { text: t("Approvals") }),
+    el("p", { class: "lede", text: t("Every answer a card got, and what answers without one.") }),
+    // What answers without a card is not only these rules: Zeca's chat access says so here too.
+    ...(chatAccess === "ask" ? [] : [el("div", { class: "approvals-banner" },
+      icon("warning", 14, 2),
+      el("span", { text: chatAccess === "full"
+        ? t("Zeca's chat runs with full access: its commands and edits run without a card. Destructive commands, and what a policy denies or asks first, still ask.")
+        : t("Zeca's chat follows your policies: what they allow runs without a card.") }),
+      button(t("Chat & voice"), () => choosePage("chat")))]),
+    el("h2", { text: t("What was answered") }),
+    el("p", { class: "lede", text: t("Every card's answer and who gave it: you, your phone, a rule or a policy below, or the chat's access. Kept 90 days, never changed.") }),
+    answersLog.element,
+    el("h2", { text: t("What answers without a card") }),
+    group("approvals-rules", ruleCount === undefined ? t("Always allowed") : t("Always allowed ({n})", { n: ruleCount }), !!rulesNote || rulesFailed,
     el("p", {
       class: "lede",
       text: t("Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder."),
     }),
-    // What answers without a card is not only these rules: Zeca's chat access says so here too.
-    ...(chatAccess === "ask" ? [] : [el("section", { class: "card read-state" },
-      el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: chatAccess === "full"
-        ? t("Zeca's chat runs with full access: its commands and edits run without a card. Destructive commands, and what a policy denies or asks first, still ask.")
-        : t("Zeca's chat follows your policies: what they allow runs without a card.") })),
-      button(t("Chat & voice"), () => choosePage("chat")))]),
     ...(rulesFailed
       ? [readState(true, "", t("Could not read your always-allowed permissions. What is allowed is unknown until this is read."), () => void refreshRules())]
       : []),
@@ -412,12 +427,8 @@ function approvalsPage(): HTMLElement[] {
             ),
           ),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: t("No Always rule. Every agent permission asks.") }))]),
-    ...policiesSection(render),
-    // The log sits under what makes its answers: what a rule or a policy above did shows here.
-    el("h2", { text: t("What was answered") }),
-    el("p", { class: "lede", text: t("Every card's answer and who gave it: you, your phone, a rule or a policy above, or the chat's access. Kept 90 days, never changed.") }),
-    answersLog.element,
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("No Always rule. Every agent permission asks.") }))])),
+    group("approvals-policies", t("Policies ({n})", { n: policyCount() }), policyEditing(), ...policiesSection(render, false)),
   ];
 }
 

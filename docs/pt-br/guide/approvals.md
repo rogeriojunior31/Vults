@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 6358e29ceeec -->
+<!-- source: 9ea02621358c -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -50,7 +50,7 @@ o retorno normal ao terminal continua valendo.
   cobre `cargo test && rm -rf build`, nem o mesmo comando em outro projeto. Esses pedidos são
   respondidos sem card, e o passo diz *always allowed*; um pedido idêntico que já espera também é
   respondido. **Settings → Approvals** lista todas as
-  regras, e **Remove** tira uma delas. Um comando com mais de uma linha, ou com mais de 300
+  regras em **Always allowed**, e **Remove** tira uma delas. Um comando com mais de uma linha, ou com mais de 300
   caracteres, não oferece **Always allow**: uma regra só veria o começo dele.
 - Um comando destrutivo (`rm -rf`, um push forçado) sempre pergunta: o card dele diz isso em laranja,
   deixa **Deny** como o botão claro, contorna **Allow** em vermelho e não oferece **Always allow**.
@@ -131,7 +131,9 @@ ask tool WebFetch
 
 ## O que foi respondido
 
-Embaixo das políticas, **Settings → Approvals** mostra o log de auditoria, agrupado por dia, do mais
+**Settings → Approvals** abre no log de auditoria; as regras e políticas que respondem sem card vêm
+depois, cada uma atrás de uma linha que abre (**Always allowed**, **Policies**), e um aviso no topo
+diz quando o chat do Zeca tem acesso total ou segue suas políticas. O log fica agrupado por dia, do mais
 novo para o mais antigo. Ele guarda três coisas, e os números no topo contam cada uma e filtram a
 lista para ela: **Answers** (a resposta de cada card: ✓ permitido, ✗ negado, ou uma pergunta
 respondida), **Back to the terminal** (um card enviado para lá ou que ninguém respondeu a tempo) e

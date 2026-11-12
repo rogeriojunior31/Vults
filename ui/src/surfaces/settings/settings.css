@@ -94,6 +94,17 @@ body.dictation-caption-open { padding-bottom: var(--dictation-caption-space); }
 #settings .row-more p { padding-left: 12px; border-left: 2px solid var(--border); }
 /* A disclosure of the page itself keeps the page column; only its text keeps the reading measure. */
 #settings .page > .row-more { max-width: 760px; }
+/* Approvals: the log first; what answers without a card sits behind one line each. */
+#settings .approvals-banner { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border)); border-radius: var(--radius-control); background: color-mix(in srgb, var(--warn) 6%, var(--panel)); font-size: var(--text-s); line-height: 1.45; }
+#settings .approvals-banner > svg { flex: none; color: var(--warn); }
+#settings .approvals-banner > span { flex: 1; min-width: 0; }
+#settings .approvals-banner > .btn { flex: none; }
+#settings .approvals-group { max-width: 760px; border-top: 1px solid var(--border); }
+#settings .approvals-group:last-child { border-bottom: 1px solid var(--border); }
+#settings .approvals-group > summary { padding: 12px 0; color: var(--fg); font-size: var(--text-l); font-weight: 600; cursor: pointer; }
+#settings .approvals-group[open] > summary { padding-bottom: 8px; }
+#settings .approvals-group[open] { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+#settings .approvals-group .lede { margin: 0; max-width: 64ch; }
 #settings .page > .row-more p { max-width: 68ch; }
 #settings .row > code { font-size: var(--text-s); }
 #settings :is(.actions, .head-right) { flex-wrap: wrap; }

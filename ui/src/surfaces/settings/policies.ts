@@ -198,9 +198,13 @@ function policyCard(p: PolicyRow, render: () => void): HTMLElement {
 }
 
 /** The section, under the Always rules. */
-export function policiesSection(render: () => void): HTMLElement[] {
+/** How many policies hold, and whether one is being written: its disclosure opens for the editor. */
+export const policyCount = (): number => policies.length;
+export const policyEditing = (): boolean => draft !== null;
+
+export function policiesSection(render: () => void, titled = true): HTMLElement[] {
   return [
-    el("h2", { text: t("Policies") }),
+    titled ? el("h2", { text: t("Policies") }) : null,
     el("p", {
       class: "lede",
       text: t(

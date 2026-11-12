@@ -43,7 +43,7 @@ the request to its terminal. On timeout, the normal terminal fallback still appl
   and exact command, file or URL, in the same project folder. `cargo test` does not cover
   `cargo test && rm -rf build`, nor the same command in another project. Those requests are answered
   without a card, and the step says *always allowed*; an identical request already waiting is
-  answered too. **Settings → Approvals** lists every rule, and
+  answered too. **Settings → Approvals** lists every rule under **Always allowed**, and
   **Remove** takes one away. A command of more than one line, or over 300 characters, offers no
   **Always allow**: a rule would only see its start.
 - A destructive command (`rm -rf`, a forced push) always asks: its card says so in orange, makes
@@ -116,7 +116,9 @@ ask tool WebFetch
 
 ## What was answered
 
-Under the policies, **Settings → Approvals** shows the audit log, grouped by day, newest first. It
+**Settings → Approvals** opens on the audit log, grouped by day, newest first; the rules and policies
+that answer without a card follow it, each behind one line that opens (**Always allowed**,
+**Policies**), and a warning on top says when Zeca's chat has full access or follows your policies. It
 keeps three things, and the figures on top count each and filter the list to it: **Answers** (every
 card's answer: ✓ allowed, ✗ denied, or a question answered), **Back to the terminal** (a card sent
 there or nobody answered in time) and **Setup changes** (hooks installed or removed, an outside
