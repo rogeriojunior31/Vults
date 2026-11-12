@@ -1050,9 +1050,33 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .habitat-sky .badge {
   pointer-events: none;
 }
+/* Over a bird three times its size, a state's mark is drawn larger too: about 16 px across. */
+.habitat-sky .badge:is(.approval, .question, .finished, .failed) {
+  transform: scale(1.8);
+}
+/* A waiting request's clock on its bird's perch: the lit wire shortens as its time runs out. */
+.habitat-sky .perch-clock {
+  position: absolute;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  pointer-events: none;
+}
+.habitat-sky .perch-clock > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--warn) 70%, var(--fg));
+  transition: width 1s linear;
+}
+.habitat-sky .perch-clock:is(.soon, .destructive) > i { background: var(--warn); }
+.habitat-sky .perch-clock:is(.urgent, .destructive.soon) > i { background: var(--error); }
+@media (prefers-reduced-motion: reduce) {
+  .habitat-sky .perch-clock > i { transition: none; }
+}
 /* A destructive request: the same triangle, in red, and larger, so it reads before the card. */
 .habitat-sky .badge.approval.destructive {
-  transform: scale(1.35);
+  transform: scale(2.3);
 }
 .habitat-sky .badge.approval.destructive::after {
   background: var(--error);

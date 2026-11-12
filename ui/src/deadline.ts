@@ -2,6 +2,10 @@
 // `expires_at`, so the two never disagree by a second.
 import { t } from "./i18n";
 
+/** A permission goes back to its terminal this long after it arrived: the core's `PENDING_TTL`,
+ *  the server's decision deadline less a second's grace. */
+export const REQUEST_MS = 107_000;
+
 /** The clock turns amber in the last half minute and red in the last ten seconds. */
 export const DEADLINE_SOON_S = 30;
 export const DEADLINE_URGENT_S = 10;

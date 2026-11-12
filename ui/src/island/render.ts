@@ -9,7 +9,7 @@
 // overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
-import { DEADLINE_SOON_S, DEADLINE_URGENT_S, paintClock, secondsLeft } from "../deadline";
+import { DEADLINE_SOON_S, DEADLINE_URGENT_S, REQUEST_MS as EXPIRES_MS, paintClock, secondsLeft } from "../deadline";
 import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Flock, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
@@ -134,10 +134,6 @@ const MAX_ALERTS = 3;
 const STATUS_EVERY_MS = 5000;
 /** How long "couldn't find the terminal" stays on the card. */
 const JUMP_NOTE_MS = 2600;
-/** A permission goes back to its terminal this long after it arrived: the core's `PENDING_TTL`,
- *  the server's decision deadline less a second's grace. Counted from when the island saw it, at
- *  most a moment after the hook's line was read. */
-const EXPIRES_MS = 107_000;
 /** How long the card says what became of a permission before the next thing shows. */
 const SETTLED_MS: Record<Settled, number> = { allow: 700, deny: 700, answered: 700, released: 1600, terminal: 1600, expired: 2600 };
 /** How core says a card ended, as the settled card shows it (a rule's answer reads as an Allow). */

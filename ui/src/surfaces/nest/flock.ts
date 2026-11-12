@@ -11,7 +11,7 @@ import { approvalFolder, approvalRuleFolder, shortPath, agentName, badgeOf, last
 import { allowsByKey, clickOnly, refuseAllowKey } from "../../island/allow-key";
 import { icon } from "../../island/icons";
 import { usageLabel, usageLevel } from "../../cost";
-import { paintClock, secondsLeft } from "../../deadline";
+import { DEADLINE_SOON_S, DEADLINE_URGENT_S, REQUEST_MS, paintClock, secondsLeft } from "../../deadline";
 
 export interface FlockActions {
   loadPlace?: () => Promise<FlockPlace | null>;
@@ -156,7 +156,7 @@ function integrationLimits(s: SessionView): string[] {
 
 const inStatus = (s: SessionView, status: FlockPlace["status"]) =>
   status === "failed" ? s.status === "failed" || s.attention === "failed"
-    : status === "working" ? (s.status === "working" || s.status === "thinking") && !s.silent
+    : status === "working" ? (s.status === "working" || s.status === "thinking") && !s.silent && !s.returned
     : status === "quiet" ? !!s.silent || ["idle", "finished", "ratelimited"].includes(s.status) : true;
 
 const calmNow = () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.classList.contains("still");
@@ -268,26 +268,45 @@ export function createFlock(on: FlockActions & FlockAsk): {
   let laneBatch = false;
   // The deadline (the core's expires_at, the same moment the island counts to) shows in the last
   // half minute; one timer moves every clock on the tab, without a redraw.
+  const tick = () => {
+    if (ticking !== null) return;
+    ticking = setInterval(tickDeadlines, 1000);
+    // A test run (Node) must not be held open by the clock.
+    (ticking as unknown as { unref?: () => void }).unref?.();
+  };
   const deadline = (expiresAt: number | null | undefined): HTMLElement | null => {
     if (typeof expiresAt !== "number") return null;
     const node = el("span", { class: "deadline" });
     node.dataset.expires = String(expiresAt);
     paintDeadline(node);
-    if (ticking === null) {
-      ticking = setInterval(tickDeadlines, 1000);
-      // A test run (Node) must not be held open by the clock.
-      (ticking as unknown as { unref?: () => void }).unref?.();
-    }
+    tick();
     return node;
+  };
+  /** The same clock drawn on the bird's perch: a lit stretch of wire that shortens to nothing,
+   *  amber then red as the island's words turn. Decoration: the words say it to a screen reader. */
+  const perchClock = (expiresAt: number, destructive: boolean): HTMLElement => {
+    const node = el("span", { class: `perch-clock${destructive ? " destructive" : ""}` }, el("i"));
+    node.setAttribute("aria-hidden", "true");
+    node.dataset.expires = String(expiresAt);
+    paintPerch(node);
+    tick();
+    return node;
+  };
+  const paintPerch = (node: HTMLElement) => {
+    const left = secondsLeft(Number(node.dataset.expires));
+    (node.children[0] as HTMLElement).style.width = `${Math.min(100, (left * 1000 / REQUEST_MS) * 100).toFixed(1)}%`;
+    node.classList.toggle("soon", left <= DEADLINE_SOON_S);
+    node.classList.toggle("urgent", left <= DEADLINE_URGENT_S);
   };
   // Always there, quiet; amber in the last half minute, red in the last ten seconds.
   const paintDeadline = (node: HTMLElement) => paintClock(node, secondsLeft(Number(node.dataset.expires)));
   // Runs only while a clock is on the tab, and stops with the last one.
   let ticking: ReturnType<typeof setInterval> | null = null;
   const tickDeadlines = () => {
-    const nodes = [...element.querySelectorAll<HTMLElement>(".deadline")];
+    const nodes = [...element.querySelectorAll<HTMLElement>(".deadline")], perches = [...element.querySelectorAll<HTMLElement>(".perch-clock")];
     for (const node of nodes) paintDeadline(node);
-    if (!nodes.length && ticking !== null) { clearInterval(ticking); ticking = null; }
+    for (const node of perches) paintPerch(node);
+    if (!nodes.length && !perches.length && ticking !== null) { clearInterval(ticking); ticking = null; }
   };
   // A request nobody answered in time is the core's to remember (`SessionView.returned`) until the
   // session moves on, so a tab opened later says the same. A note dismissed here stays dismissed.
@@ -572,7 +591,13 @@ export function createFlock(on: FlockActions & FlockAsk): {
           badge.style.left = `${slot.x + slot.width - 8}px`;
           badge.style.top = `${Math.max(4, (heads.get(slot.key) ?? 40) - 36)}px`;
         }
-        return badge ? [b, badge] : [b];
+        const perch = ask && typeof ask.expires_at === "number" ? perchClock(ask.expires_at, destructive) : null;
+        if (perch) {
+          perch.style.left = `${slot.x - 6}px`;
+          perch.style.width = `${slot.width + 12}px`;
+          perch.style.top = `${NEST_HABITAT_WIRE - 1}px`;
+        }
+        return [b, ...(badge ? [badge] : []), ...(perch ? [perch] : [])];
       }),
       ...(columns > 0 && v.sessions.length > columns
         ? [el("span", { class: `habitat-more${v.sessions.slice(columns).some(needsYou) ? " needs" : ""}`, text: `+${v.sessions.length - columns}` })]
@@ -1159,7 +1184,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
     roosts.classList.toggle("empty", !shown.length);
     // The scene shows who flies; the count says it plainly.
-    const working = v.sessions.filter((s) => s.status === "working").length;
+    // One asking in its terminal is waiting on you, not working.
+    const working = v.sessions.filter((s) => s.status === "working" && !s.returned).length;
     summary.textContent = !v.sessions.length ? "" : v.sessions.length === 1
       ? t("1 session · {working} working", { working })
       : t("{n} sessions · {working} working", { n: v.sessions.length, working });

@@ -141,9 +141,11 @@ while reading profiles; open one to review its card in the Flock. A failed catal
 ## Flock
 
 The flock sits on one wire, three times its size, with a project name under each bird. Opening the
-Nest finds it already perched; only a session that starts while it is open flies in. A bird with a
-destructive request wears a larger red triangle, and one whose request went back to its terminal
-unanswered a small terminal, until its next step. Below it, a session list gives each project two
+Nest finds it already perched; only a session that starts while it is open flies in. Each state has
+its posture: a bird waiting on a request spreads its wings over a lit stretch of wire that shortens
+with the request's time, amber then red (red from the start for a destructive one, which also wears
+a larger red triangle); one whose request went back to its terminal unanswered leans in, asking,
+with a small terminal by its head until its next step; a finished one shows its end, then dozes off. Below it, a session list gives each project two
 lines: its name and state, then its agent, step number, and the running time and context use its
 agent reports (left out when it reports none). Select a bird or row (or use **↑ ↓**) to put that session in front. Hover for the complete
 project, branch, agent and state. A right click, the menu key or **Shift+F10** opens the existing

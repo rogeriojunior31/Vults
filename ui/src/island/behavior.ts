@@ -40,6 +40,10 @@ export function idleClip(): string {
 }
 
 export function clipFor(s: SessionView): string {
+  // Its request went back to its terminal: it keeps asking there, head cocked, until it moves on.
+  if (s.returned) return "question";
+  // A finished turn shows its end, then rests like an idle bird: it dozes off on its own time.
+  if (s.status === "finished" && s.rested === true) return clipFor({ ...s, status: "idle" });
   if (s.status === "idle") return music ? "court" : sunning() ? "sun" : "idle";
   if (s.status !== "working") return BY_STATUS[s.status] ?? "idle";
   return s.activity ? BY_ACTIVITY[s.activity] : "run";
@@ -56,6 +60,8 @@ const EMOTE: Partial<Record<SessionView["status"], string>> = {
 };
 
 export function emoteFor(s: SessionView): string | null {
+  // The terminal badge says where it asks; a bubble over it would say it twice.
+  if (s.returned) return null;
   if ((s.status === "idle" || s.status === "finished") && s.rested === false) return "done";
   if (s.status === "finished" && s.rested === true) return null;
   if (s.status === "idle" && music) return "music";
