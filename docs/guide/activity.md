@@ -1,17 +1,18 @@
 # Activity
 
 Week compares its figures with the preceding calendar week, shows recorded turns by agent and
-labels the year by month and weekday. A missing or zero comparison baseline is stated explicitly.
+labels the year by month and weekday. A missing or zero comparison baseline is stated explicitly, and a week before with fewer than
+five turns is too little to compare: no percentage is shown against it.
 An unreadable history is an error with retry, never an empty dashboard. **History settings**
 opens Settings; history retention and clearing stay there. The recap image has its own
 **Hide project names** export option.
 
 The Nest's **Activity → Week** shows what your agents did: a week's recap and the last year as a
-grid. **Settings → Activity** keeps the history and daily budget controls and an
+grid. **Settings → History and budget** keeps the history and daily budget controls and an
 **Open Activity** button; the recap and calendar have one home in the Nest. Activity is counted on this computer,
 from a local history that Vults keeps as your agents work.
 
-The Nest groups Activity into seven views, with the same navigation and summary style:
+The Nest groups Activity into six views, with the same navigation and summary style:
 
 - **Week**: totals, time per day, the yearly grid and a recap to save. Select a day to read its
   exact duration; **How activity is counted** explains the counting rules.
@@ -21,10 +22,12 @@ The Nest groups Activity into seven views, with the same navigation and summary 
 - **History**: finished turns grouped by project, with the result, agent, counts and duration.
 - **Cost**: today's budget, plan windows, the last two weeks of cost and tokens, and cost by project.
 - **Traces**: Zeca's chat turns and their tool calls, with status, time and available token counts.
-- **Audit**: who answered, the result and the complete command or target, grouped by project.
 
-History and Audit show the latest 200 records. Their summaries describe the records loaded in
-that view, and searching filters the list without changing those totals. Project headings show
+The log of every card's answer is not here: it is in **Settings → Approvals**, beside the rules
+and policies whose answers it records ([What was answered](approvals.md#what-was-answered)).
+
+History, like the audit log in Approvals, shows the latest 200 records. Their summaries describe the records loaded in
+that view, and searching filters the list without changing those totals. Group headings show
 the number of matching records. Navigation, search and resizing do not modify the stored history.
 
 The island's compact **Week** preview uses the same summary style: the week and its dates at the
@@ -62,7 +65,7 @@ Native validation example with synthetic totals; these figures are not the reade
 Subscription costs are shown at API prices; they are not an extra charge to your plan.
 Missing measurements stay unknown. Existing spend history remains readable.
 
-**Budget settings** opens **Settings → Activity**, the only place to edit the daily budget.
+**Budget settings** opens **Settings → History and budget**, the only place to edit the daily budget.
 Enter US dollars, from $0.01 to $10,000, or leave it empty for no budget. Saving disables the
 controls until the write finishes; a failed write keeps your draft for another attempt.
 At 80% Vults notifies you; once spent, it notifies you again and starts no new session until

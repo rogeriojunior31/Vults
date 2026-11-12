@@ -1,9 +1,10 @@
 // Settings → Phone (plan-zeca L2): answering cards from a paired phone, how it reaches this
 // computer, pairing by QR, and the phones paired.
 import { Bridge, type Pairing, type PhoneEvent, type PhoneSettings } from "../../bridge";
+import { failure } from "../../errors";
 import { el } from "../../dom";
 import { locale, t } from "../../i18n";
-import { button, row, toggle } from "./pieces";
+import { button, confirmed, row, toggle } from "./pieces";
 
 let phone: PhoneSettings | null = null;
 let message: { text: string; error: boolean } | null = null;
@@ -13,14 +14,20 @@ let countdown = 0;
 /** The QR's "within N s" line: the timer updates it alone, so the fields around keep their text. */
 let countdownLine: HTMLElement | null = null;
 let rerender: () => void = () => {};
+/** A button that cannot work yet is disabled, not pressed into an error. */
+const unless = (off: boolean, b: HTMLButtonElement): HTMLButtonElement => { b.disabled = off; return b; };
+/** The last read failed: the page says so, with a retry, instead of ending at its title. */
+let phoneFailed = false;
 
 /** Reads the phone's settings again; `render` draws the page when it is the one open. */
 export async function refreshPhone(render: () => void): Promise<void> {
   rerender = render;
   try {
     phone = await Bridge.phoneSettings();
+    phoneFailed = false;
   } catch {
     phone = null;
+    phoneFailed = true;
   }
   rerender();
 }
@@ -61,7 +68,16 @@ export function phonePage(): HTMLElement[] {
       text: t("Answer cards from your phone while you are away from the desk. The phone only decides; this computer does what you chose. Approving needs your fingerprint or face on the phone; denying does not."),
     }),
   ];
-  if (!phone) return head;
+  if (!phone) {
+    const state = el(
+      "section",
+      { class: "card read-state" },
+      el("p", { class: phoneFailed ? "note error" : "note", text: phoneFailed ? t("Could not read the phone settings. Whether a phone can answer cards is unknown until this is read.") : t("Reading the phone settings…") }),
+      phoneFailed ? button(t("Try again"), () => void refreshPhone(rerender)) : null,
+    );
+    state.setAttribute("role", phoneFailed ? "alert" : "status");
+    return [...head, state];
+  }
   const p = phone;
   const rows: HTMLElement[] = [
     row(
@@ -83,9 +99,9 @@ export function phonePage(): HTMLElement[] {
     message = null;
     Bridge.setPhoneTransport(transport.value as PhoneSettings["transport"])
       .then(() => refreshPhone(rerender))
-      .catch((e) => said(String(e), true));
+      .catch((e) => said(failure(t("Could not change how the phone reaches this computer."), e), true));
   });
-  rows.push(row(t("How the phone reaches this computer"), t("Through a relay on the internet, or straight over your network or tailnet."), transport));
+  rows.push(row(t("How the phone reaches this computer"), t("Through a relay on the internet, or straight over your own network (a local or private one, such as a tailnet)."), transport));
   const direct = p.transport === "direct";
   const input = document.createElement("input");
   input.className = "field";
@@ -95,7 +111,7 @@ export function phonePage(): HTMLElement[] {
   const save = () =>
     (direct ? Bridge.setPhoneListen(input.value) : Bridge.setPhoneRelay(input.value))
       .then(() => said(t("Saved.")))
-      .catch((e) => said(String(e), true));
+      .catch((e) => said(failure(t("Could not save the address."), e), true));
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") void save();
   });
@@ -105,7 +121,7 @@ export function phonePage(): HTMLElement[] {
       direct
         ? t("This computer's address on your network or tailnet, and a port. The phone must reach it.")
         : t("Its address. You can run your own (see The phone's relay in the docs); plain http only on a network you trust."),
-      el("div", { class: "inline" }, input, button(t("Save"), () => void save(), true)),
+      el("div", { class: "inline" }, input, button(t("Save"), () => void save())),
     ),
   );
   const ready = p.on && (direct ? p.listen : p.relay);
@@ -115,7 +131,7 @@ export function phonePage(): HTMLElement[] {
       ready
         ? t("Shows a code to scan with the phone, good for two minutes.")
         : t("Turn the phone on and set how it reaches this computer first."),
-      button(
+      unless(!ready, button(
         t("Pair"),
         () => {
           if (!ready) {
@@ -137,10 +153,10 @@ export function phonePage(): HTMLElement[] {
               }, 1000);
               rerender();
             })
-            .catch((e) => said(String(e), true));
+            .catch((e) => said(failure(t("Could not start pairing."), e), true));
         },
         true,
-      ),
+      )),
     ),
   );
   if (pairing) rows.push(qrRow(pairing));
@@ -155,11 +171,11 @@ export function phonePage(): HTMLElement[] {
             : t("Paired on {date}", { date: new Date(d.pairedAt * 1000).toLocaleDateString(locale(), { dateStyle: "medium" }) }),
           d.revoked
             ? el("span")
-            : button(t("Revoke"), () => {
+            : confirmed(t("Revoke"), t("Nothing this phone signs is accepted after this."), t("Revoke phone"), () =>
                 Bridge.phoneRevoke(d.id)
                   .then(() => said(t("Revoked: nothing it signs is taken now.")))
-                  .catch((e) => said(String(e), true));
-              }),
+                  .catch((e) => said(failure(t("Could not revoke the phone. It can still answer cards."), e), true)),
+              ),
         ),
       )
     : [el("div", { class: "row" }, el("p", { class: "note", text: t("No phone paired yet.") }))];

@@ -215,6 +215,36 @@ fn a_second_request_waits_its_turn() {
 }
 
 #[test]
+fn the_view_lists_every_waiting_permission_in_line_order() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, requested("b", "r2"), now);
+    let waiting: Vec<_> = s.view().waiting.into_iter().map(|w| w.request).collect();
+    assert_eq!(waiting, vec!["r1".to_string(), "r2".to_string()]);
+    // Answering one from the line takes it out; the other stays, still unanswered.
+    visible(&mut s, decide("r2", Decision::Allow), now);
+    let waiting: Vec<_> = s.view().waiting.into_iter().map(|w| w.request).collect();
+    assert_eq!(waiting, vec!["r1".to_string()]);
+}
+
+#[test]
+fn a_waiting_card_says_when_it_goes_back_to_its_terminal() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    // No wall clock yet: no deadline to show.
+    assert_eq!(s.view().approval.unwrap().expires_at, None);
+    let later = now + Duration::from_secs(10);
+    visible(&mut s, Input::Clock(1_000_000), later);
+    let ttl = i64::try_from(PENDING_TTL.as_secs()).unwrap();
+    // Counted from when the card arrived, not from when the clock was told: the same moment for
+    // every surface, however late it opened.
+    assert_eq!(s.view().approval.unwrap().expires_at, Some(1_000_000 - 10 + ttl));
+    assert_eq!(s.view().waiting[0].expires_at, Some(1_000_000 - 10 + ttl));
+}
+
+#[test]
 fn every_waiting_card_expires_on_its_own_deadline() {
     let mut s = State::default();
     let now = Instant::now();
@@ -413,6 +443,56 @@ fn the_card_expires_with_the_hook() {
         vec![Effect::ReleasePermission(rid("r1"))]
     );
     assert!(s.pending.is_empty());
+}
+
+#[test]
+fn an_expired_card_stays_the_terminals_question_until_the_session_moves_on() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, Input::Tick, now + PENDING_TTL);
+    let returned = |s: &State| {
+        s.view()
+            .sessions
+            .into_iter()
+            .find(|v| v.id == "a")
+            .and_then(|v| v.returned)
+    };
+    let r = returned(&s).expect("kept after the hook stopped waiting");
+    assert_eq!(r.target, "Bash · cargo test");
+    // It still waits on the user: no surface may call it quiet.
+    let v = s.view();
+    assert_eq!(v.sessions[0].attention, Attention::NeedsYou);
+    assert!(v.inbox.iter().any(|i| i.level == Attention::NeedsYou
+        && matches!(&i.source, crate::attention::AttentionSource::Session { session } if session.id == "a")));
+    // A gone transport keeps it the same way.
+    visible(&mut s, requested("b", "r2"), now + PENDING_TTL);
+    visible(
+        &mut s,
+        Input::RequestGone { request: rid("r2") },
+        now + PENDING_TTL,
+    );
+    assert!(
+        s.view()
+            .sessions
+            .iter()
+            .any(|v| v.id == "b" && v.returned.is_some())
+    );
+    // The next step means it was answered in the terminal.
+    let step = AgentEvent::ToolStarted(Step {
+        activity: Activity::Run,
+        tool: "Bash".into(),
+        detail: Some("cargo test".into()),
+    });
+    visible(&mut s, agent("a", step), now + PENDING_TTL);
+    assert!(returned(&s).is_none());
+    // So does a turn that ends.
+    visible(
+        &mut s,
+        agent("b", AgentEvent::Stopped { message: None }),
+        now + PENDING_TTL,
+    );
+    assert!(s.view().sessions.iter().all(|v| v.returned.is_none()));
 }
 
 #[test]

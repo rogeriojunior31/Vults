@@ -18,7 +18,8 @@ export const WEEK_CSS = `
 .week-chart { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; height: 180px; margin-top: 24px; }
 .day-column { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; padding: 6px 4px; border: 0; border-radius: var(--radius-control); background: none; color: var(--fg-dim); cursor: pointer; font: inherit; transition: background-color var(--motion-fast) var(--ease-out); }
 .day-column:hover, .day-column[aria-pressed="true"] { background: var(--raised); }
-.bar-track { display: flex; align-items: flex-end; flex: 1; width: 100%; max-width: 28px; min-height: 0; border-radius: 6px; background: var(--raised); }
+/* An empty day is a baseline, not a grey bar that reads as data. */
+.bar-track { display: flex; align-items: flex-end; flex: 1; width: 100%; max-width: 28px; min-height: 0; border-radius: 6px; box-shadow: inset 0 -2px 0 var(--raised); }
 .bar-fill { width: 100%; border-radius: 6px; background: var(--fg-muted); transition: height var(--motion-enter) var(--ease-out), background-color var(--motion-fast) var(--ease-out); }
 .day-column:hover .bar-fill, .day-column[aria-pressed="true"] .bar-fill { background: var(--mark-fill); }
 .day-column span { font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -30,8 +31,9 @@ export const WEEK_CSS = `
 .recap-card .share-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 16px 0; border-top: 1px solid var(--border); }
 .recap-card .share-row strong { display: block; font-size: 12px; font-weight: 550; }
 .recap-card .share-row small { color: var(--fg-dim); font-size: 11px; }
-.recap-card > .btn { width: 100%; min-height: 36px; margin-top: 8px; border: 0; border-radius: var(--radius-control); background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 600; }
-.recap-card > .btn:hover { background: var(--mark-fill); }
+/* Saving the recap is a secondary action: the week's figures lead the page. */
+.recap-card > .btn { width: 100%; min-height: 36px; margin-top: 8px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: transparent; color: var(--fg); font-size: 12px; font-weight: 600; }
+.recap-card > .btn:hover { background: var(--raised); }
 .recap-card .note { margin-top: 12px; }
 .card-head .card-title { font-size: 14px; font-weight: 600; }
 @media (max-width: 760px) {
@@ -75,7 +77,6 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     el(
       "div",
       {},
-      el("div", { class: "activity-eyebrow", text: t("Activity / on this computer") }),
       el("h2", { text: i === 0 ? t("This week") : weekLabel(w.monday, w.sunday) }),
       i === 0 ? el("p", { text: weekLabel(w.monday, w.sunday) }) : null,
     ),
@@ -89,13 +90,17 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     el("div", { class: "activity-stat" }, el("strong", { text: value }), el("span", { text: label }),
       small ? el("small", { text: small }) : null, change ? el("small", { class: "stat-delta", text: change }) : null);
   const dictated = metric(a.dictatedWords == null ? t("Unknown") : a.dictatedWords.toLocaleString(locale()), t("Dictated words"));
-  if (!w.turns) return [heading, el("div", { class: "activity-summary" }, dictated), lede, viewState("empty", w.headline), gridCard(a, view, on)];
+  // A quiet week leads with what was measured; an unknown count adds nothing to it.
+  if (!w.turns) return [heading, ...(a.dictatedWords == null ? [] : [el("div", { class: "activity-summary" }, dictated)]), lede, viewState("empty", w.headline), gridCard(a, view, on)];
   const previous = a.previous;
+  // A week with only a few turns is no baseline: a percent against it would only alarm.
   const delta = (now: number, before: number | undefined) => !previous?.turns || before === undefined
     ? t("No recorded baseline for comparison.")
+    : previous.turns < 5 ? t("Too little the week before to compare.")
     : before === 0 ? t("The previous week's value was zero.") : t("{change}% compared with the previous week", { change: `${now >= before ? "+" : ""}${Math.round((now - before) / before * 100)}` });
   const names = weekdays();
-  const top = Math.max(1, ...w.days);
+  // An hour is the least a full bar means: a minute's day stays a sliver, not a tower.
+  const top = Math.max(3600, ...w.days);
   // A week with turns but no time counted has no busiest day: nothing is picked until asked.
   const busiest = Math.max(...w.days) > 0 ? w.days.indexOf(Math.max(...w.days)) : null;
   const shown = day ?? busiest;
@@ -104,7 +109,8 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     { class: "week-chart" },
     ...w.days.map((secs, d) => {
       const fill = el("div", { class: "bar-fill" });
-      fill.style.height = `${Math.round((secs / top) * 100)}%`;
+      // A day with any time keeps a visible sliver; a day with none is only the baseline.
+      fill.style.height = secs ? `${Math.max(4, Math.round((secs / top) * 100))}%` : "0%";
       const total = !secs ? "—" : secs < 60 ? t("<1 min") : secs < 3600
         ? t("{m} min", { m: Math.floor(secs / 60) })
         : t("{h} h", { h: (secs / 3600).toLocaleString(locale(), { maximumFractionDigits: 1 }) });
@@ -133,9 +139,9 @@ export function nestWeek(a: Activity | null, view: ActivityView, on: Pick<Activi
     el(
       "div",
       { class: "activity-summary" },
-      dictated,
+      a.dictatedWords == null ? null : dictated,
       metric(duration(w.active_secs), t("with your agents"), t("Longest turn: {time}", { time: duration(w.longest_secs) }), delta(w.active_secs, previous?.active_secs)),
-      metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), t("{n} steps", { n: w.steps }), delta(w.turns, previous?.turns)),
+      metric(String(w.turns), w.turns === 1 ? t("turn") : t("turns"), w.steps === 1 ? t("1 step") : t("{n} steps", { n: w.steps }), delta(w.turns, previous?.turns)),
       metric(`+${w.added} −${w.removed}`, t("lines changed"), w.files === 1 ? t("1 file") : t("{n} files", { n: w.files }), delta(w.added + w.removed, previous ? previous.added + previous.removed : undefined)),
       metric(
         String(w.allowed + w.denied + w.answered),

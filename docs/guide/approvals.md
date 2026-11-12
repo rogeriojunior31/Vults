@@ -43,12 +43,14 @@ the request to its terminal. On timeout, the normal terminal fallback still appl
   and exact command, file or URL, in the same project folder. `cargo test` does not cover
   `cargo test && rm -rf build`, nor the same command in another project. Those requests are answered
   without a card, and the step says *always allowed*; an identical request already waiting is
-  answered too. **Settings → Approvals** lists every rule, and
+  answered too. **Settings → Approvals** lists every rule under **Always allowed**, and
   **Remove** takes one away. A command of more than one line, or over 300 characters, offers no
   **Always allow**: a rule would only see its start.
 - A destructive command (`rm -rf`, a forced push) always asks: its card says so in orange, makes
   **Deny** the bright button, outlines **Allow** in red and offers no **Always allow**. No rule or
-  policy ever answers it, even a rule saved before.
+  policy ever answers it, even a rule saved before. Only a click allows it: in place of the key,
+  **Allow** shows *click*, and the Allow shortcut (or **Y**) only flashes the button. **Deny**
+  still takes its key. The same holds in Zeca's chat wherever **Deny** is the bright button.
 - Only you answer: with a click or a shortcut now, or earlier with **Always allow** or a
   [policy](#policies) you accepted. No timer or default ever approves anything.
 
@@ -56,7 +58,7 @@ the request to its terminal. On timeout, the normal terminal fallback still appl
 
 A policy answers cards for you: you write it in **Settings → Approvals → Policies**, see it as a
 diff against the one in place, and accept it with a click. One policy per project folder, plus one
-for everywhere; a newer one replaces the older. **Revoke** turns it off at once, and its cards ask
+for everywhere; a newer one replaces the older. **Revoke** asks once more, then turns it off at once, and its cards ask
 again. Policy **allow** remains limited to Claude Code. Other agents now show their operation
 folder when provided; widening automatic allows still requires separate per-agent verification.
 For Codex, OpenCode, Qwen Code and Copilot CLI a policy can deny or ask. Agents whose permissions
@@ -112,14 +114,37 @@ ask tool WebFetch
   policy is a row in your local database: another program running as you could add one, as it could
   change any of your files.
 
+## What was answered
+
+**Settings → Approvals** opens on the audit log, grouped by day, newest first; the rules and policies
+that answer without a card follow it, each behind one line that opens (**Always allowed**,
+**Policies**), and a warning on top says when Zeca's chat has full access or follows your policies. It
+keeps three things, and the figures on top count each and filter the list to it: **Answers** (every
+card's answer: ✓ allowed, ✗ denied, or a question answered), **Back to the terminal** (a card sent
+there or nobody answered in time) and **Setup changes** (hooks installed or removed, an outside
+change to an agent's config). Each row leads with the command as it was asked, then who decided
+(you, your phone, an Always rule, a policy, the chat's full access, or Vults itself), the agent and
+the project; **As recorded** shows the stored text when it was shortened, such as a PowerShell
+launcher around the command.
+
 ## More than one at a time
 
-Requests wait in line, each for its own agent. The card shows the first one with **1 of 3**, under
+Requests wait in line, each for its own agent. The card shows the first one with **3 requests waiting**, under
 a dot per session in its agent's color. Answer one and the next comes up.
 
 To answer one further back first, click **Open** on its notification (in *Panel*) or its bird in
 the corner widget: its card comes to the front, keeping its own deadline. Muted and hidden projects
 ([per project](island.md#per-project-mute-pin-hide)) still get their cards and sounds.
+
+In the Nest, when two or more permissions wait, **Waiting for you** sits above the sessions on
+**Flock**: one row per request with its project, command, folder (or why it is destructive) and
+its clock. The row in front is where you answer it: it opens to the whole command, its folder or
+why it is destructive, and **Deny**, **Allow**, **Always allow** and **Later**, while the card
+beside it keeps the session's context. Click another row, or press **J** and **K**, to bring that
+request to the front; the global keys answer the one in front. In a narrow window the card answers
+instead, since the line is not beside it. **Answer several** ticks plain requests, and
+**Allow selected** allows just those; the rest keep waiting. A destructive request or one whose
+command was cut has no tick: it is answered on its own, where the whole of it shows.
 
 A question half answered starts over when another card comes in front of it. A card whose agent
 moved on is not brought forward, but a subagent working in parallel does not take a card away. When
@@ -128,9 +153,19 @@ one agent asks for two calls at once, answering the first leaves the second wait
 ## When nobody answers
 
 A request waits as long as its agent does (a little under two minutes); meanwhile the terminal says
-*Waiting for your answer in Vults*. During the last 30 seconds the card counts down, *Goes back
-to the terminal in 0:25*, and then the terminal asks as if Vults were not there. If you answer in the
-terminal instead, the card says so and goes away.
+*Waiting for your answer in Vults*. The card shows how long is left from the start, *Goes back to
+the terminal in 1:12* over a thin bar, quiet at first, amber in the last 30 seconds and red in the
+last ten; then the terminal asks as if Vults were not there. If you answer in the terminal instead,
+the card says so and goes away.
+
+The Nest counts to the same moment as the island, however late it opened: a card on **Flock** and
+its row in **Waiting for you** show the same clock. A request that goes back unanswered is kept
+until the session's next step or the end of its turn, wherever you look and however late you open
+it: **Flock** says *No answer in time: storefront asks in its terminal now.*, with **Open terminal**
+when it can be brought up, until you dismiss it; the session reads *Asking in its terminal*, its
+bird wears a small terminal, and Quick's **Now** lists *storefront asks in its terminal*. Its card
+keeps the request, *Request that went back to the terminal*, with the command it asks there; when
+Vults cannot bring that terminal up, the card names the folder it runs in, with **Copy folder**.
 
 While it waits, a card climbs a ladder, so a card you missed reaches you:
 

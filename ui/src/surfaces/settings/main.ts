@@ -1,7 +1,9 @@
 import { createDictationNavigation, DICTATION_SETTINGS, dictationSetting, dictationSettingAbout, type DictationSetting } from "../nest/dictation/navigation";
 import { VOICE_MODEL_LABELS } from "../../voice-command-readiness";
+import { failure } from "../../errors";
 import { dictationStatus } from "../../island/dictation";
 import { sidePanel } from "../nest/panels";
+import { createAudit } from "../nest/records";
 import { applyTheme, DEFAULT_THEME } from "../../theme";
 import { ISLAND_WIDTHS, restoreWidth, saveWidth, watchWidth } from "../../island/geometry";
 // Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
@@ -15,8 +17,8 @@ import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
 import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
-import { button, diff, disclosure, row, saveSetting, toggle } from "./pieces";
-import { policiesSection, refreshPolicies } from "./policies";
+import { button, confirmed, diff, disclosure, row, saveSetting, toggle } from "./pieces";
+import { policiesSection, policyCount, policyEditing, refreshPolicies } from "./policies";
 import { createDoctor } from "./doctor";
 import { createMeetingAssets } from "./meeting-assets";
 import { createRealtimeSettings } from "./realtime";
@@ -52,10 +54,10 @@ const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; ic
   { id: "chat", label: tk("Chat & voice"), group: "experience", icon: "chat" },
   { id: "flock", label: tk("Flock & Zeca"), group: "experience", icon: "flock" },
   { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
-  { id: "approvals", label: tk("Approvals"), group: "work", icon: "list" },
+  { id: "approvals", label: tk("Approvals"), group: "work", icon: "check" },
   { id: "projects", label: tk("Projects"), group: "work", icon: "folder" },
-  { id: "activity", label: tk("Activity"), group: "system", icon: "bars" },
-  { id: "connectors", label: tk("Connectors"), group: "system", icon: "plug" },
+  { id: "activity", label: tk("History and budget"), group: "system", icon: "bars" },
+  { id: "connectors", label: tk("Connection setup"), group: "system", icon: "plug" },
   { id: "phone", label: tk("Phone"), group: "system", icon: "phone" },
   { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
@@ -190,6 +192,9 @@ let page: Page = linked ?? "general";
 let navigated = linked !== null;
 const panels = new Map<InstallAgent, Panel>(AGENTS.map((a) => [a.kind, { status: null, message: null, pending: null }]));
 let connectorStatus = new Map<string, ConnectorStatus>();
+/** Read once at least, and whether the last read failed: until then a switch is unknown, not off. */
+let connectorsRead = false;
+let connectorsFailed = false;
 let sounds = true;
 /** Percent, as the slider shows it: a repaint mid-drag keeps the drag. */
 let volume = 50;
@@ -314,8 +319,28 @@ let monitors: { name: string; label: string }[] = [];
 let version = "";
 let settingsPath = "";
 let dataPath = "";
-let rules: Rule[] = [];
-let projects: Record<string, ProjectPrefs> = {};
+/** Null until read: an unread list is unknown, never "nothing". A failed read keeps the last one. */
+let rules: Rule[] | null = null;
+let rulesFailed = false;
+let rulesNote: string | null = null;
+let projects: Record<string, ProjectPrefs> | null = null;
+let projectsFailed = false;
+let projectsNote: string | null = null;
+/** Full access waits for a second, explicit click before it is saved. */
+let askingFull = false;
+let accessNote: string | null = null;
+
+/** A list that is being read, or could not be: the page says so instead of showing it empty. */
+function readState(failed: boolean, reading: string, failure: string, retry: () => void): HTMLElement {
+  const card = el(
+    "section",
+    { class: "card read-state" },
+    el("p", { class: failed ? "note error" : "note", text: failed ? failure : reading }),
+    failed ? button(t("Try again"), retry) : null,
+  );
+  card.setAttribute("role", failed ? "alert" : "status");
+  return card;
+}
 let apiProviders: ApiProvider[] = [];
 let apiSelected = "";
 /** Provider id → its live model list, or why it couldn't be had. */
@@ -329,21 +354,51 @@ let webMessage: { text: string; error: boolean } | null = null;
 async function refreshRules(): Promise<void> {
   try {
     rules = await Bridge.rulesList();
+    rulesFailed = false;
   } catch {
-    rules = [];
+    rulesFailed = true;
   }
   if (page === "approvals") render();
 }
 
 function approvalsPage(): HTMLElement[] {
   const name = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
+  // What answers without a card, each behind one line: the log is what people come here to read.
+  const group = (id: string, title: string, open: boolean, ...body: (HTMLElement | null)[]) => {
+    const d = el("details", { class: "approvals-group" }, el("summary", { text: title }), ...body);
+    d.dataset.setting = id;
+    d.open = open;
+    return d;
+  };
+  const ruleCount = rules?.length;
   return [
     el("h1", { text: t("Approvals") }),
+    el("p", { class: "lede", text: t("Every answer a card got, and what answers without one.") }),
+    // What answers without a card is not only these rules: Zeca's chat access says so here too.
+    ...(chatAccess === "ask" ? [] : [el("div", { class: "approvals-banner" },
+      icon("warning", 14, 2),
+      el("span", { text: chatAccess === "full"
+        ? t("Zeca's chat runs with full access: its commands and edits run without a card. Destructive commands, and what a policy denies or asks first, still ask.")
+        : t("Zeca's chat follows your policies: what they allow runs without a card.") }),
+      button(t("Chat & voice"), () => choosePage("chat")))]),
+    el("h2", { text: t("What was answered") }),
+    el("p", { class: "lede", text: t("Every card's answer and who gave it: you, your phone, a rule or a policy below, or the chat's access. Kept 90 days, never changed.") }),
+    answersLog.element,
+    el("h2", { text: t("What answers without a card") }),
+    group("approvals-rules", ruleCount === undefined ? t("Always allowed") : t("Always allowed ({n})", { n: ruleCount }), !!rulesNote || rulesFailed,
     el("p", {
       class: "lede",
       text: t("Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder."),
     }),
-    rules.length
+    ...(rulesFailed
+      ? [readState(true, "", t("Could not read your always-allowed permissions. What is allowed is unknown until this is read."), () => void refreshRules())]
+      : []),
+    ...(rulesNote ? [el("p", { class: "note error", text: rulesNote })] : []),
+    ...(!rules
+      ? rulesFailed
+        ? []
+        : [readState(false, t("Reading your always-allowed permissions…"), "", () => {})]
+      : [rules.length
       ? el(
           "section",
           { class: "card rows" },
@@ -357,16 +412,28 @@ function approvalsPage(): HTMLElement[] {
                 el("div", { class: "row-title", text: r.target }),
                 el("div", { class: "row-about", text: `${AGENTS.find(a => a.kind === r.agent)?.name ?? r.agent} · ${name(r.cwd)} · ${r.cwd}` }),
               ),
-              button(t("Remove"), () => {
-                void Bridge.ruleRemove(i).then(refreshRules);
-              }),
+              confirmed(t("Remove"), t("This permission asks again on its next request."), t("Remove permission"), () =>
+                Bridge.ruleRemove(i).then(
+                  () => {
+                    rulesNote = null;
+                    return refreshRules();
+                  },
+                  () => {
+                    rulesNote = t("Could not remove the permission. It still applies.");
+                    render();
+                  },
+                ),
+              ),
             ),
           ),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: t("Nothing is always allowed. Every permission asks.") })),
-    ...policiesSection(render),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("No Always rule. Every agent permission asks.") }))])),
+    group("approvals-policies", t("Policies ({n})", { n: policyCount() }), policyEditing(), ...policiesSection(render, false)),
   ];
 }
+
+/** The audit log, read when Approvals opens; it keeps its filter and search while the page repaints. */
+const answersLog = createAudit(() => Bridge.nestAudit(), undefined, false);
 
 let activity: Activity | null = null;
 let clearing = false;
@@ -399,8 +466,9 @@ const activityActions: Pick<ActivityActions, "history" | "confirmClear" | "clear
 async function refreshProjects(): Promise<void> {
   try {
     projects = await Bridge.projectsList();
+    projectsFailed = false;
   } catch {
-    projects = {};
+    projectsFailed = true;
   }
   if (page === "projects") render();
 }
@@ -408,9 +476,10 @@ async function refreshProjects(): Promise<void> {
 /** Mute, pin and hide, per project folder: set from a session's quick actions on the island. */
 function projectsPage(): HTMLElement[] {
   const name = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd;
-  const folders = Object.keys(projects).sort((a, b) => name(a).localeCompare(name(b)));
+  const known = projects ?? {};
+  const folders = Object.keys(known).sort((a, b) => name(a).localeCompare(name(b)));
   const set = (cwd: string, change: ProjectPrefs) => async (on: boolean) => {
-    const next = { ...projects[cwd], ...Object.fromEntries(Object.keys(change).map((k) => [k, on])) };
+    const next = { ...known[cwd], ...Object.fromEntries(Object.keys(change).map((k) => [k, on])) };
     await Bridge.projectSet(cwd, next);
     await refreshProjects();
   };
@@ -420,14 +489,23 @@ function projectsPage(): HTMLElement[] {
     el("h1", { text: t("Projects") }),
     el("p", {
       class: "lede",
-      text: t("Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird. Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it."),
+      text: t("Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird."),
     }),
-    folders.length
+    el("details", { class: "row-more" }, el("summary", { text: t("What each choice does") }), el("p", { text: t("Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it.") })),
+    ...(projectsFailed
+      ? [readState(true, "", t("Could not read your project choices. They still apply; this page cannot show them."), () => void refreshProjects())]
+      : []),
+    ...(projectsNote ? [el("p", { class: "note error", text: projectsNote })] : []),
+    ...(!projects
+      ? projectsFailed
+        ? []
+        : [readState(false, t("Reading your project choices…"), "", () => {})]
+      : [folders.length
       ? el(
           "section",
           { class: "card rows" },
           ...folders.map((cwd) => {
-            const p = projects[cwd];
+            const p = known[cwd];
             return el(
               "div",
               { class: "row" },
@@ -446,20 +524,27 @@ function projectsPage(): HTMLElement[] {
                   ],
                   p.species ?? null,
                   async (species) => {
-                    await Bridge.projectSet(cwd, { ...projects[cwd], species: species ?? undefined });
+                    await Bridge.projectSet(cwd, { ...known[cwd], species: species ?? undefined });
                     await refreshProjects();
                   },
                 ),
-                button(t("Forget"), () => {
-                  void Bridge.projectSet(cwd, {})
-                    .catch(() => {})
-                    .finally(() => void refreshProjects());
-                }),
+                confirmed(t("Forget"), t("Mute, pin, hide and bird choices for this project are cleared."), t("Forget project"), () =>
+                  Bridge.projectSet(cwd, {}).then(
+                    () => {
+                      projectsNote = null;
+                      return refreshProjects();
+                    },
+                    () => {
+                      projectsNote = t("Could not forget the project. Its choices still apply.");
+                      render();
+                    },
+                  ),
+                ),
               ),
             );
           }),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: t("No project has a choice yet. Every session shows, in the order it arrived, with its sounds.") })),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("No project has a choice yet. Every session shows, in the order it arrived, with its sounds.") }))]),
   ];
 }
 
@@ -467,11 +552,46 @@ function projectsPage(): HTMLElement[] {
 
 
 /** A row of choices, one on. */
-function segmented<T>(choices: { value: T; label: string }[], current: T, change: (v: T) => Promise<void>): HTMLElement {
+/** Full access, asked: what it stops asking, Cancel (focused) and the grant. */
+function fullAccessConfirm(warning: string): HTMLElement {
+  const about = el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: warning }));
+  about.id = "full-access-effect";
+  const stop = () => {
+    askingFull = false;
+    render();
+  };
+  const grant = el("button", { class: "btn danger", text: t("Turn on full access") });
+  grant.setAttribute("aria-describedby", about.id);
+  grant.onclick = () => {
+    grant.disabled = true;
+    Bridge.setChatAccess("full").then(
+      () => {
+        chatAccess = "full";
+        askingFull = false;
+        render();
+      },
+      () => {
+        askingFull = false;
+        accessNote = t("Could not turn on full access. Zeca's cards still ask as before.");
+        render();
+      },
+    );
+  };
+  const box = el("div", { class: "row access-confirm" }, el("div", { class: "row-text" }, about), el("div", { class: "actions" }, button(t("Cancel"), stop), grant));
+  box.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    e.stopPropagation();
+    stop();
+  });
+  return box;
+}
+
+function segmented<T>(choices: { value: T; label: string }[], current: T, change: (v: T) => Promise<void>, gate?: (v: T) => boolean): HTMLElement {
   const box = el("div", { class: "segmented" });
   const buttons = choices.map(c => {
     const button = el("button", { text: c.label, onclick: () => {
       if (button.getAttribute("aria-pressed") === "true" || box.getAttribute("aria-busy") === "true") return;
+      if (gate && !gate(c.value)) return;
       const before = choices[buttons.findIndex(button => button.getAttribute("aria-pressed") === "true")]?.value ?? current;
       paint(c.value);
       saveSetting(box, () => change(c.value), () => paint(before));
@@ -567,7 +687,7 @@ async function refresh(kind: InstallAgent): Promise<void> {
   try {
     panel.status = await Bridge.installStatus(kind);
   } catch (e) {
-    panel.message = { text: String(e), error: true };
+    panel.message = { text: failure(t("Could not read this agent's setup."), e), error: true };
     // Unreadable: that is for the Agents page to say.
     if (!navigated) {
       navigated = true;
@@ -599,7 +719,7 @@ async function preview(kind: InstallAgent, install: boolean): Promise<void> {
   try {
     panel.pending = { install, preview: await Bridge.installPreview(kind, install) };
   } catch (e) {
-    panel.message = { text: String(e), error: true };
+    panel.message = { text: failure(t("Could not prepare the review."), e), error: true };
   }
   await refresh(kind);
 }
@@ -615,7 +735,7 @@ async function apply(kind: InstallAgent): Promise<void> {
     const done = plugin ? (install ? t("Plugin installed.") : t("Plugin removed.")) : install ? t("Hooks installed.") : t("Hooks removed.");
     panel.message = { text: backup ? t("{done} Backup: {path}", { done, path: backup }) : done, error: false };
   } catch (e) {
-    panel.message = { text: String(e), error: true };
+    panel.message = { text: failure(t("Could not write the file."), e), error: true };
   }
   await refresh(kind);
 }
@@ -630,7 +750,7 @@ function agentStatus(s: InstallStatus): HTMLElement {
   return badge(t("Installed"), "ok");
 }
 
-function agentCard(kind: InstallAgent, name: string): HTMLElement {
+function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement {
   const { status: s, message, pending } = panels.get(kind)!;
   const notice = message ? el("p", { class: message.error ? "note error" : "note ok", text: message.text }) : null;
   if (!s) return el("section", { class: "card" }, el("div", { class: "card-title", text: name }), notice);
@@ -652,7 +772,7 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
       ? el("p", {
           class: "note warn",
           text: s.otherHookPath
-            ? t("These hooks run another copy of the hook, at {path}. Update them to use this app's own.", { path: s.otherHookPath })
+            ? t("These hooks still point to another copy of Vults, at {path}. Update them so they report to this app.", { path: s.otherHookPath })
             : kind === "claude"
               ? t("These hooks are from an older version. Update them to answer Claude Code's questions from the island.")
               : kind === "opencode"
@@ -762,7 +882,8 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
                   ? s.outdated ? t("Update plugin…") : s.installed ? t("Reinstall plugin…") : t("Install plugin…")
                   : s.outdated ? t("Update hooks…") : s.installed ? t("Reinstall hooks…") : t("Install hooks…"),
                 () => void preview(kind, true),
-                !s.installed || s.outdated || usageHelp !== null,
+                // An agent that is not on this computer has nothing due: its install stays a plain button.
+                (found && !s.installed) || s.outdated || usageHelp !== null,
               ),
         ),
     review,
@@ -770,8 +891,37 @@ function agentCard(kind: InstallAgent, name: string): HTMLElement {
 }
 
 /** What each agent can do (W1): built once, asked again each time the page is opened. */
-const doctor = createDoctor((fresh) => Bridge.agentsDoctor(fresh));
+const doctor = createDoctor((fresh) => Bridge.agentsDoctor(fresh), (rows) => {
+  const found = rows.filter((r) => r.path !== null).map((r) => r.id).sort().join(" ");
+  if (present !== null && [...present].sort().join(" ") === found) return;
+  present = new Set(found ? found.split(" ") : []);
+  // A review in progress keeps its place: the grouping follows on the next paint.
+  if (page === "agents" && ![...panels.values()].some((p) => p.pending)) render();
+});
+/** The agents the doctor found on this computer; null until it answered. */
+let present: Set<string> | null = null;
 let doctorAsked = false;
+
+/** The agents on this computer first, each with the step that is due; the others fold away. Before
+ *  the doctor answers, or if its check fails, every agent shows as it always did. */
+function agentCards(): HTMLElement[] {
+  const listed = AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message);
+  const known = present;
+  if (!known) return listed.map((a) => agentCard(a.kind, a.name));
+  const here = (a: (typeof AGENTS)[number]) => {
+    const p = panels.get(a.kind);
+    return known.has(a.kind) || !!p?.status?.installed || !!p?.status?.error || !!p?.message || !!p?.pending;
+  };
+  const found = listed.filter(here), others = listed.filter((a) => !here(a));
+  const due = listed.filter((a) => panels.get(a.kind)?.status?.outdated).length;
+  return [
+    ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))] : []),
+    ...(found.length
+      ? found.map((a) => agentCard(a.kind, a.name))
+      : [el("section", { class: "card" }, el("p", { class: "note", text: t("No supported agent was found on this computer. Install one, then open this page again.") }))]),
+    ...(others.length ? [disclosure(t("Agents not found on this computer"), ...others.map((a) => agentCard(a.kind, a.name, false)))] : []),
+  ];
+}
 
 function agentsPage(): HTMLElement[] {
   if (!doctorAsked) {
@@ -782,11 +932,9 @@ function agentsPage(): HTMLElement[] {
     el("h1", { text: t("Agents") }),
     el("p", {
       class: "lede",
-      text: t("Vults hears your agents through hooks in their config. Every change shows you the exact diff and takes a dated backup first; hooks from other tools are kept."),
+      text: t("Vults learns what your agents do through small entries it adds to their settings, called hooks. Before any change you see exactly what changes, and a dated backup is kept; other tools' hooks stay."),
     }),
-    ...AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message).map((a) =>
-      agentCard(a.kind, a.name),
-    ),
+    ...agentCards(),
     disclosure(t("What each agent can do"),
       el("p", { class: "note", text: t("What this computer has of each agent, and what it can do with Vults: what the router and your policies lean on.") }),
       doctor.element,
@@ -799,23 +947,29 @@ function agentsPage(): HTMLElement[] {
 async function refreshConnectors(): Promise<void> {
   try {
     connectorStatus = new Map((await Bridge.connectorsStatus()).map((c) => [c.id, c]));
+    connectorsRead = true;
+    connectorsFailed = false;
   } catch {
-    // Shown as "not running" below.
+    connectorsFailed = true;
   }
   if (page === "connectors") render();
 }
 
 function connectorsPage(): HTMLElement[] {
   return [
-    el("h1", { text: t("Connectors") }),
+    el("h1", { text: t("Connection setup") }),
     el("p", { class: "lede", text: t("News from outside services on the island. Each one is off until you switch it on.") }),
     ...(presence === "paused" ? [el("p", { class: "note", text: t("Paused: connectors do not check anything until you pick another presence in General.") })] : []),
+    ...(connectorsFailed
+      ? [readState(true, "", t("Could not read which connections are on. Their switches stay as they are until this is read."), () => void refreshConnectors())]
+      : !connectorsRead ? [readState(false, t("Reading your connections…"), "", () => {})] : []),
     ...CONNECTORS.map((c) => {
       const st = connectorStatus.get(c.id);
       const control = toggle(st?.enabled ?? false, async (on) => {
         await Bridge.connectorEnable(c.id, on);
         await refreshConnectors();
       });
+      if (!connectorsRead) control.disabled = true;
       control.setAttribute("aria-label", c.name);
       const state = !st?.enabled
         ? badge(t("Off"), "off")
@@ -876,8 +1030,8 @@ Bridge.onModelPrices(status => { priceStatus = status; priceUpdates = status.ena
 function generalPage(): HTMLElement[] {
   return [
     el("h1", { text: t("General") }),
+    el("h2", { class: "settings-group-title", text: t("Appearance") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Appearance") }),
       row(t("Mini and Quick width"), t("Shared width, limited to the available screen space."),
         dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
           if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
@@ -897,8 +1051,8 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Sound and notifications") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Sound and notifications") }),
       row(
         t("Sounds"),
         t("Short 8-bit blips when a session needs you, finishes or fails, and for connector news."),
@@ -935,15 +1089,16 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Notifications"),
-        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you. In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
+        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you."),
         toggle(notifications, async (on) => {
           await Bridge.setNotifications(on);
           notifications = on;
         }),
+        t("In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Island") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Island") }),
       row(
         t("Presence"),
         t("Choose how Vults stays visible. A card always opens the island with its sound."),
@@ -984,7 +1139,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Corner widget"),
-        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you. A click opens the island, on the card when one waits; it never answers one."),
+        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you."),
         dropdown(
           [
             { value: null as Corner | null, label: t("Off") },
@@ -999,6 +1154,7 @@ function generalPage(): HTMLElement[] {
             widget = c;
           },
         ),
+        t("A click opens the island, on the card when one waits; it never answers one."),
       ),
       row(
         t("Screen"),
@@ -1021,8 +1177,8 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
     el("section", { class: "card rows" },
-      el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
       row(
         t("Start with the desktop"),
         t("Opens Vults when you log in."),
@@ -1213,10 +1369,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
             await Bridge.setDictationGesture("doubleTap", on);
             dictationDoubleTap = on; dictationDoubleTapChanged = true;
           })),
-        row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it. English, Portuguese and Spanish; works on X11 and Wayland."), toggle(dictationCancelByVoice, async on => {
+        row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it."), toggle(dictationCancelByVoice, async on => {
           await Bridge.setDictationProcessing("cancelByVoice", on);
           dictationCancelByVoice = on; dictationCancelByVoiceChanged = true;
-        })),
+        }), t("English, Portuguese and Spanish; works on X11 and Wayland.")),
         el("p", { class: "hint", text: t("Independent dictation only, checked after recording stops. To dictate a sentence ending in a cancel phrase, turn this off.") }),
         el("p", { class: "hint", text: t("Changes apply to the next dictation. The global Cancel voice shortcut always works. Space and Esc require an available X11 key listener.") }),
       ),
@@ -1270,14 +1426,14 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       el("section", { class: "card rows" },
         el("p", { class: "dictation-command-routing", text: !dictationCommands ? t("Voice commands are off. Dictation keeps its own shortcut.")
           : dictationCommandChat ? t("Unrecognized phrases may be sent to the current Chat.") : t("Unrecognized phrases stay local.") }),
-        row(t("When it is not a command"), t("Sending to Zeca uses the current Chat conversation and its model, access rules and budget. Zeca must be on and Chat idle, with no unsent text or attachments. Refused commands and ambiguous names stay local."), (() => {
+        row(t("When it is not a command"), t("Sending to Zeca uses the current Chat conversation and its model, access rules and budget."), (() => {
           const control = dropdown([{ value: false, label: t("Say so on the island") }, { value: true, label: t("Send it to Zeca as a message") }], dictationCommandChat, async on => {
             await Bridge.setDictationCommands("chat", on);
             dictationCommandChat = on; dictationCommandChatChanged = true;
           });
           (control as HTMLSelectElement).disabled = !dictationCommands;
           return control;
-        })()),
+        })(), t("Zeca must be on and Chat idle, with no unsent text or attachments. Refused commands and ambiguous names stay local.")),
       ),
     ] : []),
     ...(dictationSection === "words" ? [
@@ -1323,10 +1479,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         })),
       ),
       disclosure(t("Advanced processing"), el("section", { class: "card rows" },
-        row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in dictation preview and final text. Voice commands preserve repetitions in names. Sound annotations and standalone silence phrases are still removed when this is off."), toggle(dictationCutRepeats, async on => {
+        row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in dictation preview and final text."), toggle(dictationCutRepeats, async on => {
           await Bridge.setDictationProcessing("cutRepeats", on);
           dictationCutRepeats = on; dictationCutRepeatsChanged = true;
-        })),
+        }), t("Voice commands preserve repetitions in names. Sound annotations and standalone silence phrases are still removed when this is off.")),
         row(t("Retry empty dictation with Base"), t("Retry once only when the selected model returns no text, speech was detected and a different Base model is already installed. Shows retry feedback and never downloads a model."), toggle(dictationRetryBase, async on => {
           await Bridge.setDictationProcessing("retryBase", on);
           dictationRetryBase = on; dictationRetryBaseChanged = true;
@@ -1380,10 +1536,10 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       ),
       el("h2", { text: t("Terminals & sessions") }),
       el("section", { class: "card rows" },
-        row(t("Spoken code"), t("In recognized terminals or sessions, join identifier chunks around spoken dot, slash, underscore, dash and colon in English, Portuguese or Spanish. Other apps keep their text. Changes apply to the next dictation."), toggle(dictationSpokenCode, async on => {
+        row(t("Spoken code"), t("In recognized terminals or sessions, join identifier chunks around spoken dot, slash, underscore, dash and colon in English, Portuguese or Spanish."), toggle(dictationSpokenCode, async on => {
           await Bridge.setDictationProcessing("spokenCode", on);
           dictationSpokenCode = on; dictationSpokenCodeChanged = true;
-        })),
+        }), t("Other apps keep their text. Changes apply to the next dictation.")),
         el("p", { class: "hint", text: t("Preserves case and existing punctuation; never adds an ending period. This changes text only and never submits it.") }),
       ),
     ] : []),
@@ -1500,19 +1656,28 @@ function chatPage(): HTMLElement[] {
           async (v) => {
             await Bridge.setChatAccess(v);
             chatAccess = v;
+            askingFull = false;
+            accessNote = null;
             render();
+          },
+          // Full access is asked first, below, with what it stops asking; nothing is saved by this click.
+          (v) => {
+            if (v !== "full") return true;
+            askingFull = true;
+            accessNote = null;
+            render();
+            document.querySelector<HTMLElement>(".access-confirm .btn")?.focus();
+            return false;
           },
         ),
         t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
       ),
-      ...(chatAccess === "full"
-        ? [
-            el("p", {
-              class: "note warn",
-              text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."),
-            }),
-          ]
-        : []),
+      ...(askingFull && chatAccess !== "full"
+        ? [fullAccessConfirm(t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."))]
+        : chatAccess === "full"
+          ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") }))]
+          : []),
+      ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
     el("h2", { text: t("Memory") }),
     el(
@@ -1594,7 +1759,7 @@ function voiceRows(): HTMLElement[] {
   const named = (code: string) => LANGUAGES.find((l) => l.value === code)?.label ?? code;
   const language = row(
     t("Language you speak"),
-    t("Telling whisper the language makes short phrases far more reliable than detecting it."),
+    t("Telling the speech model your language makes short phrases far more reliable than detecting it."),
     dropdown<string | null>(
       [
         { value: null, label: status.system ? t("System ({name})", { name: named(status.system) }) : t("System") },
@@ -1629,14 +1794,15 @@ function voiceRows(): HTMLElement[] {
           try {
             await Bridge.voiceDownload(m.id);
           } catch (e) {
-            voiceError = String(e);
+            voiceError = failure(t("Could not download the model."), e);
           }
           downloading.delete(m.id);
           await refreshVoice();
         },
-        !status.models.some((x) => x.installed) && m.id === "base",
+        // The model that suits the spoken language: Base is weak outside English.
+        !status.models.some((x) => x.installed) && m.id === (/^(en|auto)/.test(status.language ?? status.system ?? "en") ? "base" : "small"),
       );
-    return row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} from the whisper.cpp models on Hugging Face, checked before use", { size: mb }), control);
+    return row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} speech model, downloaded and checked before use (whisper.cpp, from Hugging Face)", { size: mb }), control);
   });
   return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
 }
@@ -1667,11 +1833,11 @@ function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): 
     return [
       t("{provider} API key", { provider: p.label }),
       t("Saved in the system keyring."),
-      button(t("Remove"), () => {
+      confirmed(t("Remove"), t("The key leaves the system keyring. This provider stops working until you save a key again."), t("Remove key"), () =>
         Bridge.apiKeyClear(p.id)
           .then(() => done(t("Key removed from the keyring.")))
-          .catch((e) => done(String(e), true));
-      }),
+          .catch((e) => done(failure(t("Could not remove the key."), e), true)),
+      ),
     ];
   }
   const input = document.createElement("input");
@@ -1683,7 +1849,7 @@ function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): 
   const save = () => {
     Bridge.apiKeySet(p.id, input.value)
       .then(() => done(t("Saved. Choose the API in the chat to use it.")))
-      .catch((e) => done(String(e), true));
+      .catch((e) => done(failure(t("Could not save the key."), e), true));
   };
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") save();
@@ -1781,7 +1947,7 @@ function webRows(): HTMLElement[] {
     void Bridge.setWebEngine(engine.value as WebEngine)
       .then(() => refreshApi())
       .catch((e) => {
-        webMessage = { text: String(e), error: true };
+        webMessage = { text: failure(t("Could not change the search engine."), e), error: true };
         void refreshApi();
       });
   });
@@ -1795,7 +1961,7 @@ function webRows(): HTMLElement[] {
     const save = () =>
       Bridge.setSearxngUrl(input.value)
         .then(() => said(t("Saved.")))
-        .catch((e) => said(String(e), true));
+        .catch((e) => said(failure(t("Could not save the address."), e), true));
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void save();
     });
@@ -1805,11 +1971,11 @@ function webRows(): HTMLElement[] {
       row(
         t("Search key"),
         t("Saved in the system keyring."),
-        button(t("Remove"), () => {
+        confirmed(t("Remove"), t("The key leaves the system keyring. Web search stops working until you save a key again."), t("Remove key"), () =>
           Bridge.clearWebKey(w.engine)
             .then(() => said(t("Key removed from the keyring.")))
-            .catch((e) => said(String(e), true));
-        }),
+            .catch((e) => said(failure(t("Could not remove the key."), e), true)),
+        ),
       ),
     );
   } else {
@@ -1822,7 +1988,7 @@ function webRows(): HTMLElement[] {
     const save = () =>
       Bridge.setWebKey(w.engine, input.value)
         .then(() => said(t("Saved.")))
-        .catch((e) => said(String(e), true));
+        .catch((e) => said(failure(t("Could not save the key."), e), true));
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void save();
     });
@@ -1833,6 +1999,9 @@ function webRows(): HTMLElement[] {
 }
 
 // ── About ────────────────────────────────────────────────────────────────────
+
+/** What opening the documentation said, when it failed. */
+let aboutNote: string | null = null;
 
 function aboutPage(): HTMLElement[] {
   return [
@@ -1847,6 +2016,11 @@ function aboutPage(): HTMLElement[] {
         el("div", { class: "card-title", text: "Vults" }),
         el("p", { class: "row-about", text: t("A friendly flock watching your coding agents. MIT licensed; no telemetry.") }),
         version ? el("p", { class: "note", text: t("Version {version}", { version }) }) : null,
+        el("div", { class: "actions about-actions" }, button(t("Documentation"), () => {
+          aboutNote = null;
+          Bridge.openDocs().catch((e) => { aboutNote = failure(t("Could not open the documentation."), e); render(); });
+        })),
+        aboutNote ? el("p", { class: "note error", text: aboutNote }) : null,
       ),
     ),
     el(
@@ -1952,11 +2126,12 @@ function flockPage(): HTMLElement[] {
       { class: "card rows" },
       row(
         t("The flock draws from"),
-        t("Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world. Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way."),
+        t("Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world."),
         segmented(FLOCKS.map((f) => ({ ...f, label: t(f.label) })), flock, async (f) => {
           await Bridge.setFlock(f);
           flock = f;
         }),
+        t("Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way."),
       ),
       row(
         t("Rare visitors"),
@@ -1981,7 +2156,7 @@ function flockPage(): HTMLElement[] {
       ),
       row(
         t("Look"),
-        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them. Only Zeca wears it; the flock keeps its feathers."),
+        t("Only Zeca wears it; the flock keeps its feathers."),
         el(
           "div",
           { class: "look-control" },
@@ -1994,6 +2169,7 @@ function flockPage(): HTMLElement[] {
             paint();
           }),
         ),
+        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them."),
       ),
     ),
     el("p", {
@@ -2034,6 +2210,7 @@ function choosePage(next: Page): void {
   if (next === "approvals") {
     void refreshRules();
     void refreshPolicies(() => page === "approvals" && render());
+    answersLog.refresh();
   }
   if (next === "projects") void refreshProjects();
   if (next === "activity") {
@@ -2043,6 +2220,8 @@ function choosePage(next: Page): void {
   }
   if (next === "chat") void refreshApi();
   if (next === "phone") void refreshPhone(renderPhone);
+  // Read again on the way in, like Projects and Phone: a stale or failed read is never shown as fresh.
+  if (next === "connectors") void refreshConnectors();
   if (next === "dictation" && !dictationTool() && microphones === null && !microphonesFailed) void refreshMicrophones();
   render();
 }
@@ -2095,7 +2274,7 @@ function render(): void {
             : page === "projects"
               ? projectsPage()
             : page === "activity"
-              ? [el("h1", { text: t("Activity") }),
+              ? [el("h1", { text: t("History and budget") }),
                 el("p", { class: "lede", text: t("Choose what stays on this computer. Recaps and records are in Activity.") }),
                 el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week"))),
                 budget.element,
@@ -2332,7 +2511,7 @@ Bridge.onSettings((s) => {
   // The chat's own picker gave some access back.
   if (s.chatAccess !== undefined && s.chatAccess !== chatAccess) {
     chatAccess = s.chatAccess;
-    if (page === "chat") render();
+    if (page === "chat" || page === "approvals") render();
   }
   if (s.dndUntil !== undefined) {
     dndUntil = s.dndUntil;
@@ -2355,6 +2534,7 @@ void refreshRules();
 void refreshPolicies(() => {
   if (page === "approvals") render();
 });
+if (page === "approvals") answersLog.refresh();
 void refreshProjects();
 void refreshApi();
 void getVersion()

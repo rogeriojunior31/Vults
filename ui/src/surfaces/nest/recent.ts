@@ -3,6 +3,7 @@ import type { ConversationView } from "../../bridge";
 import { el } from "../../dom";
 import { locale, t } from "../../i18n";
 import { viewState } from "./view-state";
+import { day } from "../../day";
 
 export interface RecentActions {
   list: () => Promise<ConversationView[]>;
@@ -16,17 +17,6 @@ export interface RecentActions {
 /** Keep the initial list short; filtering searches every loaded conversation. */
 const SHOWN = 30;
 const QUERY = "vults.recent-query";
-
-function day(ms: number): string {
-  const date = new Date(ms);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return t("Today");
-  if (date.toDateString() === yesterday.toDateString()) return t("Yesterday");
-  return date.toLocaleDateString(locale(), date.getFullYear() === today.getFullYear()
-    ? { month: "long", day: "numeric" } : { year: "numeric", month: "long", day: "numeric" });
-}
 
 export function createRecent(on: RecentActions): { element: HTMLElement; refresh: () => void; clear: () => void } {
   const back = on.close ? el("button", { class: "nest-recent-back", onclick: on.close }) : null;

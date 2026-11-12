@@ -1,6 +1,6 @@
 //! The Nest's records (`docs/dev/plan-zeca.md` W11): its History, Usage, Traces and Audit tabs. Each
 //! only reads what this computer already keeps (`vults.sqlite`, the plans' usage), and only for the
-//! Nest's window.
+//! Nest's window (Audit also for Settings, beside the rules it records).
 
 use serde::Serialize;
 use tauri::AppHandle;
@@ -20,6 +20,15 @@ fn nest_only(window: &tauri::Webview) -> Result<(), String> {
         Ok(())
     } else {
         Err("only the Nest can do this".into())
+    }
+}
+
+/// The Audit is also read beside the rules it records, in Settings > Approvals.
+fn nest_or_settings(window: &tauri::Webview) -> Result<(), String> {
+    if window.label() == crate::NEST || window.label() == crate::SETTINGS {
+        Ok(())
+    } else {
+        Err("only the Nest or Settings can do this".into())
     }
 }
 
@@ -102,7 +111,7 @@ pub struct AuditLine {
 
 #[tauri::command]
 pub async fn nest_audit(window: tauri::Webview) -> Result<Vec<AuditLine>, String> {
-    nest_only(&window)?;
+    nest_or_settings(&window)?;
     let lines = blocking(|| open()?.audit(LIMIT).map_err(|e| e.to_string())).await?;
     Ok(lines
         .into_iter()

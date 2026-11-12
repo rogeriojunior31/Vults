@@ -9,6 +9,7 @@
 // overview for its card (what is open on GitHub).
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
+import { DEADLINE_SOON_S, DEADLINE_URGENT_S, REQUEST_MS as EXPIRES_MS, deadlineText, paintClock, secondsLeft } from "../deadline";
 import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Flock, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
@@ -41,9 +42,10 @@ import { connectionsCard, mergeEnded, mergeSig, mergeStarted, staleNote } from "
 import { onSeen, seenSig, unseen } from "./seen";
 import { settingsQuick, weekQuick, type QuickPage, type QuickSettings } from "./quick";
 import { createPalette, paletteItems } from "../palette";
-import { sizeSwitch } from "../sizes";
+import { sizeMenu } from "../sizes";
 import { CONNECTORS } from "../connectors";
 import { createNow, nowItems } from "./now";
+import { allowsByKey, refuseAllowKey } from "./allow-key";
 import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, skipButton, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
@@ -132,12 +134,6 @@ const MAX_ALERTS = 3;
 const STATUS_EVERY_MS = 5000;
 /** How long "couldn't find the terminal" stays on the card. */
 const JUMP_NOTE_MS = 2600;
-/** A permission goes back to its terminal this long after it arrived: the core's `PENDING_TTL`,
- *  the server's decision deadline less a second's grace. Counted from when the island saw it, at
- *  most a moment after the hook's line was read. */
-const EXPIRES_MS = 107_000;
-/** The card counts down over the last part of that. */
-const EXPIRY_SHOWN_MS = 30_000;
 /** How long the card says what became of a permission before the next thing shows. */
 const SETTLED_MS: Record<Settled, number> = { allow: 700, deny: 700, answered: 700, released: 1600, terminal: 1600, expired: 2600 };
 /** How core says a card ended, as the settled card shows it (a rule's answer reads as an Allow). */
@@ -374,7 +370,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   root.after(urgent, polite);
   const announce = (s: SessionView, card: boolean) => {
     const region = card ? urgent : polite;
-    region.textContent = `${s.project || agentName(s)} · ${statusText(s)}`;
+    const name = s.project || agentName(s);
+    // Its card gone (answered, or back to its terminal), the urgent line about it is stale.
+    if (!card && urgent.textContent?.startsWith(`${name} · `)) urgent.textContent = "";
+    region.textContent = `${name} · ${statusText(s)}`;
   };
 
   /** The view as drawn: empty while paused. */
@@ -780,6 +779,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const silences = new Map<string, NonNullable<SessionView["silent"]>>();
   /** When each session was first seen: the wire keeps that order, so birds don't shuffle. */
   const firstSeen = new Map<string, number>();
+  /** Sessions whose request went back to their terminal, so the move is said once. */
+  const backThere = new Set<string>();
 
   function cues(v: ViewModel): void {
     const now = Clock.now();
@@ -789,6 +790,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       if (fresh) {
         firstSeen.set(k, now);
         if (primed) fsm.reveal(now);
+      }
+      // A request going back to its terminal changes no status, yet it is news: say where it asks now.
+      if (!!s.returned !== backThere.has(k)) {
+        if (s.returned) { backThere.add(k); if (primed && !fresh) announce(s, false); } else backThere.delete(k);
       }
       if (statuses.get(k) === s.status) continue;
       statuses.set(k, s.status);
@@ -949,10 +954,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     // The tab lit for it: the chat's drop zone is the chat's, every connector is Connections.
     const view = chat.isOpen() ? "chat" : boardShown ? "connections" : (quickShown ?? "flock");
     // The prototype's Quick: the tabs as icons spread across the island, a count where it matters.
-    const tab = (name: string, glyph: IconName, label: string, go: () => void, count = 0) => {
-      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
+    // Each tab names itself beside its icon (the gear stays an icon); a count says what it counts.
+    const tab = (name: string, glyph: IconName, label: string, go: () => void, count = 0, counted = "") => {
+      const b = el("button", { class: `tab${name === view ? " on" : ""}`, onclick: go }, icon(glyph, 15, 1.6), el("span", { class: "tab-label", text: label }), ...(count > 0 ? [el("span", { class: "tab-count", text: String(count) })] : []));
       b.title = label;
-      b.setAttribute("aria-label", count > 0 ? `${label} ${count}` : label);
+      b.setAttribute("aria-label", count > 0 ? counted || `${label} ${count}` : label);
       b.setAttribute("aria-pressed", String(name === view));
       return b;
     };
@@ -984,6 +990,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           else render(raw);
         },
         needs,
+        needs === 1 ? t("Flock, 1 session needs you") : t("Flock, {n} sessions need you", { n: needs }),
       ),
       // The chat and its drop zone are Zeca's (ADR 0018).
       ...(zecaShown()
@@ -999,19 +1006,13 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       (() => {
         const b = tab("now", "list", t("Now"), () => openQuick("now"), nowItems(last, zecaShown()).filter(i => i.level === "needs-you" || i.level === "failed").length);
         b.disabled = cardWaits;
+        // Greyed with a count on it reads as broken: say why it waits.
+        if (cardWaits) b.title = t("Answer the card first; Now opens after it.");
         return b;
       })(),
       gear,
     );
     const soundOn = Sound.isEnabled();
-    const sound = el(
-      "button",
-      { class: "icon-btn", onclick: () => actions.setSounds(!soundOn) },
-      icon(soundOn ? "sound" : "mute", 14, 1.6),
-    );
-    sound.title = t("Mute");
-    sound.setAttribute("aria-label", t("Mute"));
-    sound.setAttribute("aria-pressed", String(!soundOn));
     // Shown only while do not disturb lasts: a click ends it.
     const moon = raw.dnd ? el("button", { class: "icon-btn dnd", onclick: () => actions.endDnd?.() }, icon("moon", 14)) : null;
     if (moon) moon.title = t("Do not disturb is on: no sounds or notifications. Click to end it.");
@@ -1021,18 +1022,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     search.setAttribute("aria-label", t("Command palette (Ctrl+K)"));
     // Ctrl+K waits for a card or a connector's card to be read: so does the button.
     if (cardWaits || boardOpen) search.disabled = true;
-    // Mini folds, as the fold button did; Room and Full take what the island shows to the Nest.
     const nestTab = view === "settings" || view === "now" ? "flock" : view;
-    const sizes = sizeSwitch(
+    // Size and sounds in one menu: Mini folds, as the fold button did; Room and Full take what the
+    // island shows to the Nest (from the gear's view, Room is Settings itself in the Nest).
+    const sizes = sizeMenu(
       "quick",
-      // From the gear's view, Room is Settings itself in the Nest.
       (s) => (s === "mini" ? foldNow() : view === "settings" && s === "room" ? actions.openSettings(quickPage === "general" ? undefined : quickPage) : actions.setSize?.(s, nestTab)),
-      fsm.pinned && !held ? ["mini"] : [],
-      ["mini", "quick", "room"],
+      { off: fsm.pinned && !held ? ["mini"] : [], sound: { on: soundOn, set: (on) => actions.setSounds(on) }, fullClass: "island-fullscreen" },
     );
-    const full = el("button", { class: "icon-btn island-fullscreen", onclick: () => actions.setSize?.("full", nestTab) }, icon("fullscreen", 14, 1.6));
-    full.title = t("Full: the Nest on the whole screen; Esc goes back");
-    full.setAttribute("aria-label", t("Full"));
     const mark = el("img", { class: "app-mark" });
     mark.src = "/icon.png";
     mark.alt = "";
@@ -1046,7 +1043,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         "div",
         { class: "header" },
         el("div", { class: "header-brand" }, mark, el("span", { class: "app-logo", text: "vults" })),
-        el("div", { class: "header-actions" }, moon, sound, search, sizes, full),
+        el("div", { class: "header-actions" }, moon, search, sizes),
       ),
       tabs,
       sub,
@@ -1097,6 +1094,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const paused = presenceNow() === "paused";
     const detail = song ? (song.artist ?? "") : front ? statusText(front) : paused ? t("Agents ask in their terminals") : zecaShown() ? t("Nothing running") : t("Start an agent and it lands here");
     const vults = compactScene.slots();
+    // A session that needs you leads the pill's name, whoever is in front: a screen reader hears
+    // what waits, not the session that happens to be first.
+    const urgent = paused ? [] : shown.filter(needsYou);
+    const lead = urgent.length === 1 ? t("{project} needs you", { project: urgent[0].project || agentName(urgent[0]) })
+      : urgent.length > 1 ? t("{n} sessions need you, first {project}", { n: urgent.length, project: urgent[0].project || agentName(urgent[0]) }) : "";
     const name = song ? `♪ ${song.title}` : front ? front.project || agentName(front) : paused ? t("Paused") : zecaShown() ? "Zeca" : t("Nothing running");
     const failed = shown.filter((s) => s.status === "failed" || s.attention === "failed").length;
     const overflow = shown.filter(s => s !== front).slice(compactPerched);
@@ -1108,7 +1110,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (compactMore.hidden && fsm.mode === "compact" && document.activeElement === compactMore) compact.focus({ preventScroll: true });
     compact.setAttribute(
       "aria-label",
-      [name, detail, moreLabel, failed ? (failed === 1 ? t("1 failed") : t("{n} failed", { n: failed })) : "", alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "),
+      [lead, ...(lead ? [] : [name, detail]), moreLabel, failed ? (failed === 1 ? t("1 failed") : t("{n} failed", { n: failed })) : "", alerts ? t("{n} new", { n: alerts }) : ""].filter(Boolean).join(" · "),
     );
     // Someone needs you: the pill's border pulses amber.
     // Not while paused: every card is answered in its terminal then.
@@ -1553,7 +1555,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       const c = card.getBoundingClientRect();
       const kind = card.classList.contains("board") ? "board" : "card";
       if (!radius.has(kind)) radius.set(kind, parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0);
-      out.push({ left: c.left - sky.left, top: c.top - sky.top, width: c.width, height: c.height, radius: radius.get(kind)! });
+      // A card that answers something (Allow/Deny, a question's choices): the flock passes behind it.
+      const decision = kind === "card" && card.querySelector(".actions .btn, .question-card .choice") !== null;
+      out.push({ left: c.left - sky.left, top: c.top - sky.top, width: c.width, height: c.height, radius: radius.get(kind)!, decision });
     }
     return out;
   }
@@ -1878,25 +1882,34 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     cardSig = sig;
   }
 
-  /** The countdown on the permission card, in its last half minute. */
+  /** The permission card's clock, there from the start: the core's `expires_at`, the moment the
+   *  Nest counts to as well. Without it (an older core), counted from when the island saw it. */
   function tickExpiry(): void {
     window.clearTimeout(expiryTimer);
     const box = card?.querySelector<HTMLElement>(".expiry");
     if (!box || !cardOnScreen) return;
-    const left = (requestSeen.get(cardOnScreen.request) ?? Clock.now()) + EXPIRES_MS - Clock.now();
-    const on = left < EXPIRY_SHOWN_MS;
-    if (box.classList.contains("on") !== on) {
-      box.classList.toggle("on", on);
-      // It adds two lines to the card: the island grows with it.
+    // `expires_at` is wall-clock Unix seconds; the island's own Clock is monotonic.
+    const left = typeof cardOnScreen.expires_at === "number"
+      ? secondsLeft(cardOnScreen.expires_at)
+      : secondsLeft(((requestSeen.get(cardOnScreen.request) ?? Clock.now()) + EXPIRES_MS) / 1000, Clock.now());
+    if (!box.classList.contains("on")) {
+      box.classList.add("on");
+      // It adds a line to the card: the island grows with it.
       reshape(fsm.mode);
     }
-    if (on) {
-      const secs = Math.max(0, Math.ceil(left / 1000));
-      box.querySelector(".expiry-text")!.textContent = t("Goes back to the terminal in {time}", { time: `0:${String(secs).padStart(2, "0")}` });
-      box.querySelector<HTMLElement>(".expiry-bar")!.style.width = `${Math.max(0, (left / EXPIRY_SHOWN_MS) * 100)}%`;
+    paintClock(box.querySelector<HTMLElement>(".expiry-text")!, left);
+    box.classList.toggle("soon", left <= DEADLINE_SOON_S);
+    box.classList.toggle("urgent", left <= DEADLINE_URGENT_S);
+    box.querySelector<HTMLElement>(".expiry-bar")!.style.width = `${Math.min(100, (left * 1000 / EXPIRES_MS) * 100)}%`;
+    // The clock is read once at each threshold it crosses, not every second.
+    const step = left <= DEADLINE_URGENT_S ? 2 : left <= DEADLINE_SOON_S ? 1 : 0;
+    if (step && (expirySaid?.request !== cardOnScreen.request || expirySaid.step < step)) {
+      expirySaid = { request: cardOnScreen.request, step };
+      polite.textContent = `${cardOnScreen.project || cardOnScreen.agent} · ${deadlineText(left)}`;
     }
-    expiryTimer = window.setTimeout(tickExpiry, on ? 1000 : Math.max(1000, left - EXPIRY_SHOWN_MS));
+    if (left > 0) expiryTimer = window.setTimeout(tickExpiry, 1000);
   }
+  let expirySaid: { request: string; step: number } | null = null;
 
   /** Ignore stale controls until core replaces the card after an answer or Skip. */
   let actedLast: string | null = null;
@@ -2141,6 +2154,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (chat.answerWaiting(allow)) return;
     // Y / N answer a permission; a question needs its own choice.
     if (cardOnScreen && cardOnScreen.questions.length === 0) {
+      if (allow && !allowsByKey(cardOnScreen)) { refuseAllowKey(card); return; }
       const { request } = cardOnScreen;
       cardOnScreen = null;
       cardActions.decide(request, allow ? "allow" : "deny");
@@ -2191,6 +2205,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     else if (k === "ArrowUp" || k === "k") walk(-1);
     else if (k === "Enter" && inFront && !cardOnScreen) actions.jump(inFront.agent, inFront.id);
     else if (k === "m" && inFront) openMenu(key(inFront));
+    else if (k === "y" && cardOnScreen && cardOnScreen.questions.length === 0 && !allowsByKey(cardOnScreen)) refuseAllowKey(card);
     else if ((k === "y" || k === "n") && cardOnScreen && cardOnScreen.questions.length === 0) {
       const { request } = cardOnScreen;
       cardOnScreen = null;

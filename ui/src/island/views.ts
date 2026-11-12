@@ -8,8 +8,10 @@ import { el } from "../dom";
 import { locale, t, tk } from "../i18n";
 import { icon, type IconName } from "./icons";
 import { presenceNow } from "./fsm";
+import { usageLabel } from "../cost";
 import { zecaShown } from "./flock";
 import { type Ticker, tickerSteps } from "./ticker";
+import { clickOnly } from "./allow-key";
 
 export const AGENT_NAME: Readonly<Record<AgentKind, string>> = { ...NAME_BY_KIND, other: "Agent" };
 /** What a session's agent is called: another tool goes by its own name. */
@@ -31,6 +33,15 @@ const STATUS_TEXT: Record<SessionView["status"], string> = {
 
 /** The folder the offered action uses, shared by island and Room approvals. */
 export const approvalFolder = (s: SessionView, ask: ApprovalView): string | null => ask.cwd === undefined ? s.cwd : ask.cwd;
+
+/** A folder short enough to read beside a decision: the home folder as ~ and the middle folded,
+ *  keeping the last two folders that name the project. The full path stays in the title. */
+export function shortPath(path: string): string {
+  const sep = path.includes("\\") ? "\\" : "/";
+  const home = path.replace(/^(?:[A-Za-z]:[\\/]Users[\\/][^\\/]+|\/(?:home|Users)\/[^/]+)(?=[\\/]|$)/, "~");
+  const parts = home.split(/[\\/]/).filter((part, i) => part || i === 0);
+  return parts.length <= 4 ? home : [parts[0], "…", ...parts.slice(-2)].join(sep);
+}
 export const approvalRuleFolder = (s: SessionView, ask: ApprovalView): boolean => {
   const folder = approvalFolder(s, ask);
   return folder != null && (folder.startsWith("/") || /^[A-Za-z]:[\\/]/.test(folder));
@@ -41,8 +52,12 @@ export const statusWords = (status: SessionView["status"]): string => t(STATUS_T
 
 /** Working shows what it is doing; any other state shows the state itself. */
 export function statusText(s: SessionView): string {
+  // Its request went back unanswered: the agent asks in its terminal, whatever its status says.
+  if (s.returned) return t("Asking in its terminal");
   // A quiet bird says so in place of its step, which is not news any more.
   if (s.status === "working" && s.silent) return s.silent === "loud" ? t("No news for 15 min") : t("No news for 5 min");
+  // A command is not a status: the chip says what kind of work it is; the steps keep the command itself.
+  if (s.status === "working" && s.step && s.activity === "run") return t("Running a command");
   return s.status === "working" && s.step ? s.step : t(STATUS_TEXT[s.status]);
 }
 
@@ -50,7 +65,7 @@ export function statusText(s: SessionView): string {
 /** A session that wants you now: its state asks for you, or a card of its waits. One test for the
  *  island's badges and counts and the Nest's *Needs you*. */
 export const needsYou = (s: SessionView): boolean => s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true;
-export const statusClass = (s: SessionView): string => (s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status);
+export const statusClass = (s: SessionView): string => s.returned ? "approval" : s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status;
 
 /** Statuses that need a look, worn as a badge on the wire. */
 export const BADGE: Partial<Record<SessionView["status"], string>> = {
@@ -60,9 +75,10 @@ export const BADGE: Partial<Record<SessionView["status"], string>> = {
   failed: "failed",
 };
 
-/** A bird's badge: its state's, or a quiet bird's flag (grey, then amber when loud). */
+/** A bird's badge: a request gone back to its terminal, its state's, or a quiet bird's flag (grey, then amber when loud). */
 export function badgeOf(s: SessionView | undefined): string | undefined {
   if (!s) return undefined;
+  if (s.returned) return "returned";
   if ((s.status === "idle" || s.status === "finished") && s.rested !== undefined) return s.rested === false ? "finished" : undefined;
   return BADGE[s.status] ?? (s.silent ? `silent ${s.silent}` : undefined);
 }
@@ -151,7 +167,6 @@ function button(
 function kbd(keys: string | undefined): Node | null {
   return keys ? el("span", { class: "kbd", text: keys }) : null;
 }
-
 function jumpButton(
   s: SessionView,
   actions: CardActions,
@@ -307,6 +322,13 @@ function askZeca(actions: CardActions): HTMLElement[] {
   ];
 }
 
+/** Skip on a card, in words: an icon alone read as Deny or dismiss. The request keeps waiting. */
+export function laterButton(request: string, skip: (request: string) => void): HTMLElement {
+  const b = el("button", { class: "card-skip later", text: t("Later"), onclick: () => skip(request) });
+  b.title = t("Skip for now. The request keeps waiting.");
+  return b;
+}
+
 export function skipButton(request: string, skip: (request: string) => void, label = t("Skip for now")): HTMLElement {
   const b = el("button", { class: "card-skip", onclick: () => skip(request) }, icon("close", 14));
   b.title = label;
@@ -347,20 +369,19 @@ function sessionBody(
       const operationFolder = approvalFolder(s, approval);
       always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: approval.tool, project: operationFolder || t("this folder") });
       const ruleFolder = approvalRuleFolder(s, approval);
-      const queue = approval.queue > 1 ? el("span", { class: "queue", text: `1 of ${approval.queue}` }) : null;
+      const queue = approval.queue > 1 ? el("span", { class: "queue", text: t("{n} requests waiting", { n: approval.queue }) }) : null;
       // The whole command when the target had to cut it; the tool stays in front of it.
       const what = approval.full ? `${approval.tool} · ${approval.full}` : approval.target;
       const parts: (HTMLElement | null)[] = [
-        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, skipButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
+        el("div", { class: "card-head" }, who(s, t("needs your permission"), diff), queue, laterButton(approval.request, request => { if (!sent) { sent = true; actions.skip(request); } })),
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
-        el("div", { class: "ask-what", text: t("Working folder: {path}", { path: operationFolder ?? t("Not reported") }) }),
+        Object.assign(el("div", { class: "ask-what ask-scope", text: t("Working folder: {path}", { path: operationFolder ? shortPath(operationFolder) : t("Not reported") }) }), { title: operationFolder ?? "" }),
         // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
         approval.why
-          ? el("div", {
-              class: `ask-why ${approval.why}`,
-              text: approval.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this"),
-            })
+          ? el("div", { class: `ask-why ${approval.why}` },
+              approval.why === "destructive" ? icon("warning", 13, 2) : null,
+              el("span", { text: approval.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
           : null,
         el(
           "div",
@@ -368,7 +389,9 @@ function sessionBody(
           // Destructive: Deny is the bright one, so a reflex click is the safe one; the buttons
           // keep their places. It offers no Always: no rule ever answers it (ADR 0004).
           button(t("Deny"), destructive ? "primary" : "secondary", answer("deny"), kbd(actions.keys.deny)),
-          button(t("Allow"), destructive ? "secondary danger" : "primary", answer("allow"), kbd(actions.keys.allow)),
+          destructive
+            ? (() => { const b = button(t("Allow"), "secondary danger", answer("allow"), clickOnly()); b.classList.add("allow-by-click"); return b; })()
+            : button(t("Allow"), "primary", answer("allow"), kbd(actions.keys.allow)),
           ruleFolder && !approval.cut && !destructive ? always : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
@@ -620,7 +643,7 @@ export function questionBody(s: SessionView, approval: ApprovalView, actions: Ca
     "div",
     { class: "question-card" },
     el("div", { class: "card-head" }, who(s, t("asks you"), q.header ? el("span", { class: "chip", text: q.header }) : null), count,
-      skipButton(approval.request, request => {
+      laterButton(approval.request, request => {
         if (sent) return;
         sent = true;
         if (p.other !== null) actions.keyboard(false);
@@ -679,7 +702,7 @@ export function settledCard(s: SessionView, how: Settled, target: string, perch:
 
 /** A window's length the way people say it: "5h", "7d". */
 function span(minutes: number): string {
-  return minutes % 1440 === 0 ? `${minutes / 1440}d` : `${Math.round(minutes / 60)}h`;
+  return minutes % 1440 === 0 ? t("{n}d", { n: minutes / 1440 }) : t("{n}h", { n: Math.round(minutes / 60) });
 }
 
 /**
@@ -698,6 +721,8 @@ export function usageMeters(windows: UsageWindow[], nowSecs: number): HTMLElemen
         "span",
         { class: "agent-usage" },
         el("span", { class: `dot ${agent}` }),
+        // Each plan says whose it is: "Claude 5h 19%", not a bare figure.
+        el("span", { class: "usage-agent", text: (NAME_BY_KIND[agent as keyof typeof NAME_BY_KIND] ?? agent).split(" ")[0] }),
         ...live.filter((w) => w.agent === agent).map((w) => meter(w)),
       ),
     ),
@@ -706,13 +731,19 @@ export function usageMeters(windows: UsageWindow[], nowSecs: number): HTMLElemen
 
 function meter(w: UsageWindow): HTMLElement {
   const level = w.used_percent >= 90 ? " high" : w.used_percent >= 70 ? " warn" : "";
-  const m = el("span", { class: `meter${level}`, text: `${span(w.minutes)} ${w.used_percent}%` });
+  // 70% and above says its level in words too, not only by color.
+  const m = el("span", { class: `meter${level}`, text: level ? t("{span} {pct}% · {level}", { span: span(w.minutes), pct: w.used_percent, level: usageLabel(w.used_percent) }) : `${span(w.minutes)} ${w.used_percent}%` });
+  m.setAttribute("role", "meter");
+  m.setAttribute("aria-valuemin", "0");
+  m.setAttribute("aria-valuemax", "100");
+  m.setAttribute("aria-valuenow", String(w.used_percent));
   const resets = w.resets_at
     ? new Date(w.resets_at * 1000).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" })
     : null;
   m.title = resets
     ? t("{agent}: {pct}% of the {span} limit used. Resets {when}.", { agent: AGENT_NAME[w.agent], pct: w.used_percent, span: span(w.minutes), when: resets })
     : t("{agent}: {pct}% of the {span} limit used.", { agent: AGENT_NAME[w.agent], pct: w.used_percent, span: span(w.minutes) });
+  m.setAttribute("aria-label", m.title);
   return m;
 }
 

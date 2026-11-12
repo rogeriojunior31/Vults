@@ -1,14 +1,17 @@
 // Flock keeps core's selected session and permission owner across its wire, list and details.
 import type { Answer, Diff, FlockPlace, Hush, ProjectPref, UsageWindow } from "../../bridge";
-import type { AgentKind, SessionView, TouchedView, ViewModel } from "../../view.gen";
+import type { AgentKind, ApprovalView, SessionView, TouchedView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
 import { t, locale } from "../../i18n";
 import { AGENTS } from "../../agents.gen";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { approvalFolder, approvalRuleFolder, agentName, badgeOf, lastDiff, needsYou, questionBody, skipButton, statusText } from "../../island/views";
+import { approvalFolder, approvalRuleFolder, shortPath, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
+import { allowsByKey, clickOnly, refuseAllowKey } from "../../island/allow-key";
+import { icon } from "../../island/icons";
 import { usageLabel, usageLevel } from "../../cost";
+import { DEADLINE_SOON_S, DEADLINE_URGENT_S, REQUEST_MS, paintClock, secondsLeft } from "../../deadline";
 
 export interface FlockActions {
   loadPlace?: () => Promise<FlockPlace | null>;
@@ -40,6 +43,8 @@ export interface FlockActions {
   openFolder: (s: SessionView) => void;
   /** Mute, pin or hide the session's project, or undo it (kept by folder). */
   projectPref: (s: SessionView, pref: ProjectPref, on: boolean) => void;
+  /** Settings, at the agents' hooks: the empty flock's next step. */
+  setup?: () => void;
 }
 
 /** What the tab adds for itself: the Chat, with a question about a session (only with Zeca on). */
@@ -55,7 +60,7 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
-const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s)].filter(Boolean).join(" ").toLowerCase();
+const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
 
 const AGENT_COLOR: Record<AgentKind, string> = {
   claude: "var(--agent-claude)",
@@ -106,7 +111,8 @@ function metricsHealth(s: SessionView): string {
   if (!isHermes(s) && !["claude", "codex", "opencode", "qwen", "copilot"].includes(s.agent) && !["kimi","droid","cursor","antigravity"].includes(s.agent_name ?? "")) return t("Metrics are not available for this agent yet.");
   if (s.cost_failed) return t("The local cost could not be read. Context and time retain their last reports.");
   if (s.metrics_failed) return t("Local session metrics could not be read. Check Settings → Agents.");
-  const busy = s.status === "working" || s.status === "thinking";
+  // Asking in its terminal, it reports nothing new: that is no fault of its status line.
+  const busy = !s.returned && (s.status === "working" || s.status === "thinking");
   if (s.agent === "claude" && busy && (s.metrics_checked_age_secs ?? s.event_age_secs ?? 0) > 30)
     return t("No recent metrics. Check the Claude status line in Settings → Agents.");
   if (!["hermes","cursor","antigravity"].includes(s.agent_name ?? "") && s.agent !== "claude" && (s.metrics_checked_age_secs ?? 0) > 15)
@@ -150,7 +156,7 @@ function integrationLimits(s: SessionView): string[] {
 
 const inStatus = (s: SessionView, status: FlockPlace["status"]) =>
   status === "failed" ? s.status === "failed" || s.attention === "failed"
-    : status === "working" ? (s.status === "working" || s.status === "thinking") && !s.silent
+    : status === "working" ? (s.status === "working" || s.status === "thinking") && !s.silent && !s.returned
     : status === "quiet" ? !!s.silent || ["idle", "finished", "ratelimited"].includes(s.status) : true;
 
 const calmNow = () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.classList.contains("still");
@@ -220,11 +226,13 @@ export function createFlock(on: FlockActions & FlockAsk): {
   shortcut: (allow: boolean) => boolean;
 } {
   const scene = new Scene(NEST_HABITAT_SCENE);
+  // Opening the Nest finds the flock already perched; only a session that starts later flies in.
+  scene.settle();
   const badges = el("div", { class: "badges" });
   const sky = el("div", { class: "habitat-sky" }, scene.canvas, badges);
   const heading = el("strong");
   const roosts = el("div", { class: "roost-cards" });
-  // The prototype's count by the heading: who is out on a web sortie, who sits on the wire.
+  // The count by the heading: how many sessions, and how many work.
   const summary = el("span", { class: "habitat-summary" });
   const habitat = el(
     "section",
@@ -251,7 +259,63 @@ export function createFlock(on: FlockActions & FlockAsk): {
   clear.hidden = true;
   const filters = el("div", { class: "flock-filters" });
   const toolbar = el("div", { class: "flock-toolbar" }, title, el("div", { class: "app-search" }, search), filters, clear);
-  const list = el("section", { class: "flock-list" }, toolbar, roosts);
+  // The line of waiting permissions (drawLane): answered requests leave it before the next view.
+  const lane = el("section", { class: "waiting-lane" });
+  lane.hidden = true;
+  const laneTicked = new Set<string>(), laneSent = new Set<string>();
+  // The request the line answers in its row in front (two or more waiting), and the line's order for J and K.
+  let laneDecides: string | null = null, laneOrder: SessionView[] = [];
+  let laneBatch = false;
+  // The deadline (the core's expires_at, the same moment the island counts to) shows in the last
+  // half minute; one timer moves every clock on the tab, without a redraw.
+  const tick = () => {
+    if (ticking !== null) return;
+    ticking = setInterval(tickDeadlines, 1000);
+    // A test run (Node) must not be held open by the clock.
+    (ticking as unknown as { unref?: () => void }).unref?.();
+  };
+  const deadline = (expiresAt: number | null | undefined): HTMLElement | null => {
+    if (typeof expiresAt !== "number") return null;
+    const node = el("span", { class: "deadline" });
+    node.dataset.expires = String(expiresAt);
+    paintDeadline(node);
+    tick();
+    return node;
+  };
+  /** The same clock drawn on the bird's perch: a lit stretch of wire that shortens to nothing,
+   *  amber then red as the island's words turn. Decoration: the words say it to a screen reader. */
+  const perchClock = (expiresAt: number, destructive: boolean): HTMLElement => {
+    const node = el("span", { class: `perch-clock${destructive ? " destructive" : ""}` }, el("i"));
+    node.setAttribute("aria-hidden", "true");
+    node.dataset.expires = String(expiresAt);
+    paintPerch(node);
+    tick();
+    return node;
+  };
+  const paintPerch = (node: HTMLElement) => {
+    const left = secondsLeft(Number(node.dataset.expires));
+    (node.children[0] as HTMLElement).style.width = `${Math.min(100, (left * 1000 / REQUEST_MS) * 100).toFixed(1)}%`;
+    node.classList.toggle("soon", left <= DEADLINE_SOON_S);
+    node.classList.toggle("urgent", left <= DEADLINE_URGENT_S);
+  };
+  // Always there, quiet; amber in the last half minute, red in the last ten seconds.
+  const paintDeadline = (node: HTMLElement) => paintClock(node, secondsLeft(Number(node.dataset.expires)));
+  // Runs only while a clock is on the tab, and stops with the last one.
+  let ticking: ReturnType<typeof setInterval> | null = null;
+  const tickDeadlines = () => {
+    const nodes = [...element.querySelectorAll<HTMLElement>(".deadline")], perches = [...element.querySelectorAll<HTMLElement>(".perch-clock")];
+    for (const node of nodes) paintDeadline(node);
+    for (const node of perches) paintPerch(node);
+    if (!nodes.length && !perches.length && ticking !== null) { clearInterval(ticking); ticking = null; }
+  };
+  // A request nobody answered in time is the core's to remember (`SessionView.returned`) until the
+  // session moves on, so a tab opened later says the same. A note dismissed here stays dismissed.
+  const dismissed = new Set<string>();
+  const returnedKey = (s: SessionView) => s.returned ? `${key(s)}:${s.returned.tool}:${s.returned.target}` : "";
+  const stateText = (s: SessionView): string => statusText(s);
+  const expiredBox = el("section", { class: "expired-notes" });
+  expiredBox.hidden = true;
+  const list = el("section", { class: "flock-list" }, toolbar, expiredBox, lane, roosts);
   const focusBlock = el("section", { class: "focus-block" });
   const detailTabs = el("nav", { class: "detail-tabs" });
   detailTabs.setAttribute("role", "tablist");
@@ -265,7 +329,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const back = el("button", { class: "outline flock-back", text: t("Back to sessions"), onclick: () => {
     choosing = true; element.classList.add("choosing-session"); search.focus();
   } });
-  const selected = el("section", { class: "flock-selected" }, back, body);
+  // No session at all: say what brings a bird here and where to set it up, instead of an empty pane.
+  const welcomeTitle = el("h3");
+  const welcomeText = el("p");
+  const welcomeSetup = on.setup ? el("button", { class: "primary", onclick: () => on.setup?.() }) : null;
+  // The Nest lends Zeca's portrait to this perch while the flock is empty (render.ts, paintPortrait).
+  const welcomePerch = el("span", { class: "perch flock-welcome-perch" });
+  welcomePerch.setAttribute("aria-hidden", "true");
+  const welcome = el("section", { class: "flock-welcome" }, welcomePerch, el("div", { class: "flock-welcome-text" }, welcomeTitle, welcomeText, welcomeSetup));
+  welcome.hidden = true;
+  const selected = el("section", { class: "flock-selected" }, back, body, welcome);
   const workspace = el("div", { class: "flock-workspace" }, list, selected);
   const element = el("div", { class: "nest-flock-tab" }, habitat, workspace, usage);
 
@@ -499,7 +572,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
       ...[...scene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
         const s = byKey.get(slot.key);
         if (!s) return [];
-        const label = [s.project || agentName(s), agentName(s), statusText(s)].join(" · ");
+        // A destructive request and one that went back to its terminal each have their own mark.
+        const ask = (v.waiting ?? []).find(w => w.agent === s.agent && w.session === s.id) ?? (v.approval?.agent === s.agent && v.approval.session === s.id ? v.approval : null);
+        const destructive = ask?.why === "destructive" && !ask.questions.length;
+        const returned = !!s.returned;
+        const label = [s.project || agentName(s), agentName(s), stateText(s), destructive ? t("Destructive: no policy ever allows it") : null].filter(Boolean).join(" · ");
         const b = fid(el("button", { class: `habitat-bird${front && key(front) === slot.key ? " front" : ""}`, onclick: () => on.focus(s) }), `bird:${slot.key}`);
         menuOn(b, s);
         b.style.left = `${slot.x - 4}px`;
@@ -509,12 +586,18 @@ export function createFlock(on: FlockActions & FlockAsk): {
         b.setAttribute("aria-label", label);
         b.setAttribute("aria-pressed", String(!!front && key(front) === slot.key));
         const kind = badgeOf(s);
-        const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
+        const badge = kind ? el("span", { class: `badge ${kind}${destructive ? " destructive" : ""}` }, returned ? icon("terminal", 10, 2.4) : null) : null;
         if (badge) {
           badge.style.left = `${slot.x + slot.width - 8}px`;
           badge.style.top = `${Math.max(4, (heads.get(slot.key) ?? 40) - 36)}px`;
         }
-        return badge ? [b, badge] : [b];
+        const perch = ask && typeof ask.expires_at === "number" ? perchClock(ask.expires_at, destructive) : null;
+        if (perch) {
+          perch.style.left = `${slot.x - 6}px`;
+          perch.style.width = `${slot.width + 12}px`;
+          perch.style.top = `${NEST_HABITAT_WIRE - 1}px`;
+        }
+        return [b, ...(badge ? [badge] : []), ...(perch ? [perch] : [])];
       }),
       ...(columns > 0 && v.sessions.length > columns
         ? [el("span", { class: `habitat-more${v.sessions.slice(columns).some(needsYou) ? " needs" : ""}`, text: `+${v.sessions.length - columns}` })]
@@ -549,12 +632,20 @@ export function createFlock(on: FlockActions & FlockAsk): {
     menuOn(b, s);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
-    b.title = [s.project || agentName(s), s.branch, agentName(s), statusText(s)].filter(Boolean).join(" · ");
+    b.title = [s.project || agentName(s), s.branch, agentName(s), stateText(s)].filter(Boolean).join(" · ");
+    // Two lines: the name and its state, then what it has done. What the agent did not report is
+    // left out, not printed as "Not reported".
+    const done = s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null
+      ? t("{agent} · no metrics yet", { agent: agentName(s) })
+      : [s.elapsed_ms == null
+          ? t("{agent} · Step {step}", { agent: agentName(s), step: s.step_count })
+          : t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }),
+        s.context_percent == null && s.context_tokens == null ? null
+          : s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) })]
+        .filter(Boolean).join(" · ");
     b.append(
-      el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), marker(needsYou(s))),
-      el("div", { class: `roost-sub ${tone(s)}`, text: statusText(s) }),
-      el("div", { class: "roost-agent", text: t("{agent} · Step {step} · {time}", { agent: agentName(s), step: s.step_count, time: runningTime(s) }) }),
-      el("div", { class: "roost-context", text: s.context_percent == null && s.context_tokens == null ? t("Context not reported") : s.context_percent == null ? contextUsed(s) : t("Context used: {percent}%", { percent: Math.round(s.context_percent) }) }),
+      el("div", { class: "roost-label" }, el("strong", { text: s.project || agentName(s) }), el("span", { class: `roost-sub ${tone(s)}`, text: stateText(s) }), marker(needsYou(s))),
+      el("div", { class: "roost-agent", text: done }),
     );
     const meter = contextMeter(s);
     if (meter) b.append(meter);
@@ -629,7 +720,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   };
 
   /** Every file the session changed, the latest first; one whose diff is still kept opens it. */
-  const touchedList = (s: SessionView, files: TouchedView[], limit = files.length): HTMLElement => {
+  const touchedList = (s: SessionView, files: TouchedView[], limit = files.length, titled = true): HTMLElement => {
     const rows = [...files].reverse().slice(0, limit).map((f) => {
       // A file only the folder's look saw has no lines to count: a command wrote it.
       const counts = f.outside
@@ -655,7 +746,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     return el(
       "section",
       { class: "touched" },
-      el("h3", { class: "touched-head", text: t("Files changed in this session ({n})", { n: files.length }) }),
+      titled ? el("h3", { class: "touched-head", text: t("Files changed in this session ({n})", { n: files.length }) }) : null,
       ...rows,
     );
   };
@@ -697,7 +788,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
 
   /** Deny, Allow and Always on the permission in front, as the island draws them (ADR 0004:
    *  destructive makes Deny the bright one and offers no Always). */
-  const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>): HTMLElement => {
+  const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>, at = "act"): HTMLElement => {
     onScreen = ask.request;
     const answer = (d: "allow" | "deny" | "always") => () => {
       if (sent === ask.request) return;
@@ -708,15 +799,66 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const kbd = (k: string | undefined) => (k ? el("span", { class: "kbd", text: k }) : null);
     const destructive = ask.why === "destructive";
     const always = approvalRuleFolder(s, ask) && !ask.cut && !destructive
-      ? fid(el("button", { class: "outline", text: t("Always allow"), onclick: answer("always") }), "act:always")
+      ? fid(el("button", { class: "ghost", text: t("Always allow"), onclick: answer("always") }), `${at}:always`)
       : null;
     if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: approvalFolder(s, ask) || t("this folder") });
+    // In a short window the reason and folder ride in the fixed bar, so the scope is in view with Deny and
+    // Allow; elsewhere these copies are display:none and the card's own lines are the ones read.
+    const folder = approvalFolder(s, ask);
+    const scope = folder ? Object.assign(el("span", { class: "decision-scope", text: t("Working folder: {path}", { path: shortPath(folder) }) }), { title: folder }) : null;
+    const why = destructive ? el("span", { class: "decision-why" }, icon("warning", 13, 2), el("span", { text: t("Destructive: no policy ever allows it") })) : null;
     return el(
       "div",
-      { class: "app-card-actions" },
-      fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), "act:deny"),
-      fid(el("button", { class: destructive ? "outline danger" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), kbd(keys.allow)), "act:allow"),
+      { class: "app-card-actions decision-actions" },
+      why,
+      scope,
+      fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), `${at}:deny`),
+      fid(el("button", { class: destructive ? "outline danger allow-by-click" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), destructive ? clickOnly() : kbd(keys.allow)), `${at}:allow`),
       always,
+    );
+  };
+
+  /** What a permission asks and its answers, the same in the card and in the line's row in front
+   *  (DESIGN.md: the command, folder and scope before the answer). */
+  const decision = (s: SessionView, permission: ApprovalView, at: string): (HTMLElement | null)[] => {
+    const command = permission.full ? `${permission.tool} · ${permission.full}` : permission.target;
+    const folder = approvalFolder(s, permission);
+    return [
+      el("div", { class: "command" },
+        el("code", { text: command }),
+        fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), `${at}:copy`)),
+      permission.why
+        ? el("p", { class: `ask-why ${permission.why}` },
+            permission.why === "destructive" ? icon("warning", 13, 2) : null,
+            el("span", { text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
+        : null,
+      Object.assign(el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) }), { title: folder ?? "" }),
+      permissionActions(s, permission, at),
+    ];
+  };
+
+  /** A request nobody answered in time stays on its session's card until the next step: what the
+   *  terminal now asks, and where that terminal is when Vults cannot bring it up. */
+  const returnedRequest = (s: SessionView): HTMLElement | null => {
+    const ask = s.returned;
+    if (!ask) return null;
+    const command = ask.full ? `${ask.tool} · ${ask.full}` : ask.target;
+    const folder = ask.cwd ?? s.cwd;
+    const copy = (text: string) => () => void navigator.clipboard?.writeText(text).catch(() => {});
+    return el(
+      "section",
+      { class: "returned-request" },
+      el("h4", { text: ask.question ? t("Question that went back to the terminal") : t("Request that went back to the terminal") }),
+      ask.question ? null : el("div", { class: "command" },
+        el("code", { text: command }),
+        fid(el("button", { class: "outline", text: t("Copy"), onclick: copy(command) }), "act:returned-copy")),
+      el("p", { class: "rule-scope" },
+        el("span", { text: s.raise === true
+          ? t("Answer it in its terminal.")
+          : t("Answer it in the terminal where {agent} runs, in {path}.", { agent: agentName(s), path: folder ? shortPath(folder) : t("its folder") }) }),
+        s.raise !== true && folder
+          ? fid(el("button", { class: "ghost returned-folder", text: t("Copy folder"), onclick: copy(folder) }), "act:returned-folder")
+          : null),
     );
   };
 
@@ -729,7 +871,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const words = s.skipped || (detail === "session" && !ask && !ended) ? null : ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
     const question = ask && ask.questions.length ? ask : null;
     const permission = ask && !question ? ask : null;
-    const command = permission ? [permission.tool, permission.full ?? permission.target].filter(Boolean).join(" · ") : null;
+    // With two or more waiting, the line answers the one in front; on a narrow window, where the
+    // line is out of sight beside the card, the card keeps it (CSS shows one of the two).
+    const laneOwns = !!permission && laneDecides === permission.request;
     const tag = el("span", { class: "agent-tag" }, el("span", { class: "agent-dot" }), el("span", { text: agentName(s) }));
     tag.style.color = colorOf(s.agent);
     tag.title = agentName(s);
@@ -742,7 +886,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         { class: "app-card-head" },
         tag,
         s.editor ? el("span", { class: "ed-chip", text: s.editor }) : null,
-        el("span", { class: "card-verb card-state", text: statusText(s) }),
+        el("span", { class: "card-verb card-state", text: stateText(s) }),
         // Working: its subagents, steps so far and cost at API prices, as the prototype's head says.
         s.status === "working" && s.subagents > 0
           ? el("span", { class: "card-verb", text: s.subagents === 1 ? t("+1 subagent") : t("+{n} subagents", { n: s.subagents }) })
@@ -751,35 +895,24 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ? el("span", { class: "card-verb", text: s.step_count === 1 ? t("1 step") : t("{n} steps", { n: s.step_count }) })
           : null,
         detail === "session" ? null : costChip(s),
-        ask ? el("div", { class: "card-side" },
-          ask.queue > 1 ? el("span", { class: "q-of", text: t("1 of {n}", { n: ask.queue }) }) : null,
-          question ? null : fid(skipButton(ask.request, skipCard), "act:skip")) : null,
+        // How many wait is the queue's to say (it shows from two on), not each card's.
+        ask ? el("div", { class: `card-side${laneOwns ? " lane-owned" : ""}` },
+          question ? null : deadline(ask.expires_at),
+          question ? null : fid(laterButton(ask.request, skipCard), "act:skip")) : null,
       ),
       question ? null : words ? el("p", { class: "card-words", text: words }) : null,
       ticker,
       silenceOf(s),
-      command
-        ? el(
-            "div",
-            { class: "command" },
-            el("code", { text: command }),
-            fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), "act:copy"),
-          )
-        : null,
-      permission ? el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ?? t("Not reported") }) }) : null,
-      permission?.why
-        ? el("p", {
-            class: `ask-why ${permission.why}`,
-            text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this"),
-          })
-        : null,
+      laneOwns ? el("p", { class: "rule-scope lane-pointer", text: t("Answer it in Waiting for you, beside this card.") }) : null,
+      permission ? el("div", { class: `decision-block${laneOwns ? " lane-owned" : ""}` }, ...decision(s, permission, "act")) : null,
       question ? questionNode(s, question) : null,
-      permission ? permissionActions(s, permission) : null,
+      ask ? null : returnedRequest(s),
       el(
         "div",
         { class: "app-card-actions" },
         s.raise === true ? fid(el("button", { class: "outline", text: t("Open terminal"), onclick: () => on.jump(s) }), "act:jump") : null,
-        zeca ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
+        // While a decision waits the card offers only its answers; asking Zeca stays in the Zeca tab.
+        zeca && !permission && !question ? fid(el("button", { class: "outline", text: t("Ask Zeca"), onclick: () => on.ask(s) }), "act:ask") : null,
       ),
       // No card for it: it asks in its terminal (its card expired or went there, or it has none).
       s.skipped && s.waiting ? el("div", { class: "skipped-card" },
@@ -919,7 +1052,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       [t("Provider"), s.metric_info?.provider],
       [t("Pricing provider"), s.metric_info?.price_provider],
       [t("Editor"), s.editor],
-      [t("Status"), statusText(s)],
+      [t("Status"), stateText(s)],
       [t("Cost so far"), sessionCost(s)],
       [responseTime(s) ? t("Model response time") : t("Running time"), runningTime(s)],
       [t("Cost source"), s.metric_info?.cost_source === "catalog" ? t("API price estimate") : s.metric_info?.cost_source === "agent-estimate" ? t("Estimated by agent") : s.metric_info?.cost_source === "agent" ? t("Reported by agent") : null],
@@ -961,7 +1094,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const overview = (s: SessionView): HTMLElement[] => {
     const go = (id: Detail) => { detail = id; remember(); draw(); };
     const metric = (label: string, value: string, extra: HTMLElement | null = null) =>
-      el("div", { class: "session-metric" }, el("dt", { text: label }), el("dd", { text: value }), extra);
+      el("div", { class: "session-metric" }, el("dt", { text: label }), el("dd", { class: value === t("Not reported") || value === t("Price unavailable") ? "unknown" : "", text: value }), extra);
     const metrics = el("dl", { class: "session-metrics" },
       metric(responseTime(s) ? t("Model response time") : t("Running time"), runningTime(s)),
       metric(t("Cost so far"), sessionCost(s)),
@@ -979,9 +1112,10 @@ export function createFlock(on: FlockActions & FlockAsk): {
       el("header", { class: "session-section-head" }, el("h3", { text: t("Recent steps") }), allSteps), ...activity(s).slice(0, 4));
     const files = s.touched ?? [];
     const changes = el("section", { class: "session-files" },
-      el("header", { class: "session-section-head" }, el("h3", { text: t("Changed files") }),
+      // One title for the section: it carries the count the list would repeat under it.
+      el("header", { class: "session-section-head" }, el("h3", { text: files.length ? t("Files changed in this session ({n})", { n: files.length }) : t("Changed files") }),
         fid(el("button", { class: "outline", text: t("See the changes"), onclick: () => go("diff") }), "act:overview-changes")),
-      files.length ? touchedList(s, files, 4) : el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }));
+      files.length ? touchedList(s, files, 4, false) : el("p", { class: "detail-footnote", text: t("No changes kept for this session yet.") }));
     const health = el("p", { class: "detail-footnote", text: metricsHealth(s) });
     const consumption: HTMLElement[] = [];
     const info = s.metric_info;
@@ -996,7 +1130,13 @@ export function createFlock(on: FlockActions & FlockAsk): {
       totals.title = t("Session input includes cached tokens; this is cumulative consumption, separate from current context.");
       consumption.push(el("section", {}, el("header", { class: "session-section-head" }, el("h3", { text: t("Session consumption") })), totals));
     }
-    return [metrics, health, ...consumption, recent, changes];
+    // Three "Not reported" cells say nothing the line under them does not: show only the line.
+    const known = [runningTime(s), sessionCost(s), contextUsed(s)].some(value => value !== t("Not reported"));
+    // Nothing done yet: one line instead of two empty sections.
+    const blank = !tickerSteps(s).length && !files.length
+      ? el("p", { class: "detail-footnote", text: t("No steps or changes yet.") })
+      : null;
+    return [...(known ? [metrics] : []), health, ...consumption, ...(blank ? [blank] : [recent, changes])];
   };
 
   const zecaPane = (s: SessionView): HTMLElement[] => [
@@ -1022,12 +1162,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
     needs.setAttribute("aria-label", attention === 1 ? t("1 session needs you") : t("{n} sessions need you", { n: attention }));
     clear.hidden = !search.value && !onlyNeeds && !status;
     drawFilters(v.sessions);
+    const queued = drawLane(v);
+    drawExpired(v);
     element.classList.toggle("choosing-session", choosing || !front);
     back.hidden = !front;
 
+    // The queue above already lists the sessions it holds: the list below does not repeat them
+    // (unless you asked for "Needs you", which is that list on purpose).
+    const listed = onlyNeeds ? shown : shown.filter(s => !queued.has(key(s)));
     roosts.replaceChildren(
-      ...(shown.length
-        ? shown.map((s) => roost(s, !!front && key(front) === key(s)))
+      ...(listed.length
+        ? listed.map((s) => roost(s, !!front && key(front) === key(s)))
+        : shown.length
+        ? [el("div", { class: "filtered-note" }, el("p", { text: t("Every session here waits for you: they are in the queue above.") }))]
         : [
             el(
               "div",
@@ -1037,10 +1184,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
           ]),
     );
     roosts.classList.toggle("empty", !shown.length);
-    // With less motion nobody flies: they all sit on the wire.
-    const out = calmNow() ? 0 : v.sessions.filter((s) => s.status === "working" && s.activity === "web").length;
-    summary.textContent = v.sessions.length ? t("{out} in flight · {on} on the wire", { out, on: v.sessions.length - out }) : "";
+    // The scene shows who flies; the count says it plainly.
+    // One asking in its terminal is waiting on you, not working.
+    const working = v.sessions.filter((s) => s.status === "working" && !s.returned).length;
+    summary.textContent = !v.sessions.length ? "" : v.sessions.length === 1
+      ? t("1 session · {working} working", { working })
+      : t("{n} sessions · {working} working", { n: v.sessions.length, working });
     body.hidden = !front;
+    const none = v.sessions.length === 0;
+    welcome.hidden = !none;
+    element.classList.toggle("no-sessions", none);
     // Expanded changes cannot hide a permission or a question arriving for this session.
     if (!front || waits(front) || v.approval) {
       focusDiff = false;
@@ -1135,6 +1288,93 @@ export function createFlock(on: FlockActions & FlockAsk): {
     );
   };
 
+  /** The line of waiting permissions, when more than one waits: a queue. Each row shows the request
+   *  (project, command, folder or why it is destructive, its clock) and opens it in the card, the one
+   *  place a single request is answered. "Answer several" is an explicit mode: tick plain requests and
+   *  one click allows them, never a destructive or cut one, and the rest keep waiting (ADR 0004,
+   *  DESIGN.md's batch rule). */
+  function drawLane(v: ViewModel): Set<string> {
+    // A sent answer hides its row until the view drops it; one that left the line is forgotten.
+    for (const request of [...laneSent]) if (!(v.waiting ?? []).some(w => w.request === request)) laneSent.delete(request);
+    const rows = (v.waiting ?? []).filter(w => !laneSent.has(w.request));
+    for (const request of [...laneTicked]) if (!rows.some(w => w.request === request)) laneTicked.delete(request);
+    lane.hidden = rows.length < 2;
+    laneDecides = null; laneOrder = [];
+    if (lane.hidden) { lane.replaceChildren(); laneBatch = false; return new Set(); }
+    const batchable = (w: ApprovalView) => w.why !== "destructive" && !w.cut;
+    const canBatch = rows.filter(batchable).length >= 2;
+    if (!canBatch) laneBatch = false;
+    const row = (w: ApprovalView) => {
+      const session = v.sessions.find(s => s.agent === w.agent && s.id === w.session) ?? null;
+      const who = session ? agentName(session) : AGENTS.find(a => a.kind === w.agent)?.name ?? w.agent;
+      const destructive = w.why === "destructive";
+      const current = v.approval?.request === w.request;
+      // The row in front is where it is answered: its command whole, its folder or why, its answers.
+      const decides = current && !laneBatch && !!session && !v.approval?.questions.length;
+      if (decides) laneDecides = w.request;
+      const what = w.full ? `${w.tool} · ${w.full}` : w.target;
+      const folder = w.cwd === undefined ? session?.cwd ?? null : w.cwd;
+      const tick = laneBatch && batchable(w) ? fid(el("input", { class: "lane-tick" }), `lane:tick:${w.request}`) as HTMLInputElement : null;
+      if (tick) {
+        tick.type = "checkbox";
+        tick.checked = laneTicked.has(w.request);
+        tick.setAttribute("aria-label", t("Select {project} for Allow selected", { project: w.project || who }));
+        tick.addEventListener("change", () => { if (tick.checked) laneTicked.add(w.request); else laneTicked.delete(w.request); draw(); });
+      }
+      // The whole row opens the request in the card, where it is answered with its command in full.
+      const open = fid(el("button", { class: "lane-open", onclick: () => session && on.focus(session) },
+        el("span", { class: "lane-who" }, destructive ? icon("warning", 13, 2) : null, el("strong", { text: w.project || who }), el("span", { text: who }), deadline(w.expires_at)),
+        Object.assign(el("code", { class: "lane-command", text: what }), { title: what }),
+        el("span", { class: "lane-scope", text: destructive ? t("Destructive: no policy ever allows it") : w.cut ? t("Only the full command can be allowed: open it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) })), `lane:open:${w.request}`);
+      open.title = current ? t("Answering this one") : t("Answer this one");
+      if (current) open.setAttribute("aria-current", "true");
+      const body = decides && session && v.approval
+        ? el("div", { class: "lane-decide" }, ...decision(session, v.approval, "lane-act"),
+            fid(laterButton(w.request, skipCard), "lane-act:skip"))
+        : null;
+      return el("li", { class: `lane-row${destructive ? " destructive" : ""}${current ? " current" : ""}${decides ? " deciding" : ""}${laneBatch ? " batch" : ""}` },
+        laneBatch ? tick ?? el("span", { class: "lane-tick-none" }) : null, open, body);
+    };
+    const ticked = rows.filter(w => laneTicked.has(w.request) && batchable(w)).map(w => w.request);
+    const allowTicked = () => {
+      for (const request of ticked) { laneSent.add(request); laneTicked.delete(request); on.decide(request, "allow"); }
+      laneBatch = false;
+      draw();
+    };
+    const toggle = canBatch ? fid(el("button", { class: "ghost lane-mode", text: laneBatch ? t("Cancel") : t("Answer several"), onclick: () => { laneBatch = !laneBatch; laneTicked.clear(); draw(); } }), "lane:mode") : null;
+    const foot = laneBatch
+      ? el("footer", { class: "lane-foot" },
+          Object.assign(fid(el("button", { class: "primary", text: ticked.length ? t("Allow selected ({n})", { n: ticked.length }) : t("Allow selected"), onclick: () => { if (ticked.length) allowTicked(); } }), "lane:allow-selected"), { disabled: !ticked.length }),
+          el("span", { class: "lane-note", text: t("Unselected requests keep waiting. Destructive ones are answered on their own.") }))
+      : null;
+    lane.replaceChildren(
+      el("header", { class: "lane-head" }, el("h3", { text: t("Waiting for you") }), el("span", { class: "attention-count", text: String(rows.length) }),
+        el("span", { class: "lane-keys", text: t("J and K move through the line") }), el("span", { class: "lane-spacer" }), toggle),
+      el("ul", { class: "lane-rows" }, ...rows.map(row)),
+      ...(foot ? [foot] : []),
+    );
+    laneOrder = rows.flatMap(w => v.sessions.find(s => s.agent === w.agent && s.id === w.session) ?? []);
+    return new Set(rows.map(w => `${w.agent}:${w.session}`));
+  }
+
+  function drawExpired(v: ViewModel): void {
+    const asking = v.sessions.filter(s => s.returned);
+    const live = new Set(asking.map(returnedKey));
+    for (const k of [...dismissed]) if (!live.has(k)) dismissed.delete(k);
+    const notes = asking.filter(s => !dismissed.has(returnedKey(s))).slice(0, 3);
+    expiredBox.hidden = !notes.length;
+    expiredBox.replaceChildren(...notes.map(session => {
+      const k = returnedKey(session);
+      return el("div", { class: "expired-note" },
+        icon("warning", 13, 2),
+        el("span", { text: t("No answer in time: {project} asks in its terminal now.", { project: session.project || agentName(session) }) }),
+        session.raise === true ? fid(el("button", { class: "outline", text: t("Open terminal"), onclick: () => on.jump(session) }), `expired:open:${key(session)}`) : null,
+        fid(el("button", { class: "ghost expired-dismiss", onclick: () => { dismissed.add(k); draw(); } }, icon("close", 12, 2)), `expired:close:${key(session)}`));
+    }));
+    expiredBox.setAttribute("role", "status");
+    for (const b of expiredBox.querySelectorAll<HTMLElement>(".expired-dismiss")) b.setAttribute("aria-label", t("Dismiss"));
+  }
+
   function drawFilters(sessions: SessionView[]): void {
     const pick = (word: string, value: FlockPlace["status"], count: number) => {
       const b = fid(el("button", { class: "session-filter", onclick: () => {
@@ -1153,6 +1393,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     heading.textContent = t("The flock, together");
     title.textContent = t("Sessions");
     back.textContent = t("Back to sessions");
+    welcomeTitle.textContent = t("No agent session yet");
+    welcomeText.textContent = t("Start Claude Code, Codex or another agent in a terminal and its bird lands on the wire. When it needs a permission, the card appears here.");
+    if (welcomeSetup) welcomeSetup.textContent = t("Set up agents");
     search.placeholder = t("Find a session…");
     search.setAttribute("aria-label", t("Find a session…"));
     needs.replaceChildren(el("span", { text: t("Needs you") }), needsCount);
@@ -1187,6 +1430,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   document.addEventListener("visibilitychange", armWorkspace);
   window.addEventListener("keydown", (e) => {
     if (!active || !view || (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable], .detail-tabs")) return;
+    // J and K walk the line of waiting requests: the one in front is the one its answers and the
+    // global keys reach.
+    if ((e.key === "j" || e.key === "k") && !e.ctrlKey && !e.altKey && !e.metaKey && laneOrder.length > 1 && !lane.hidden) {
+      const front = frontOf(view);
+      const at = front ? laneOrder.findIndex((s) => key(s) === key(front)) : -1;
+      const next = laneOrder[at < 0 ? 0 : (at + (e.key === "j" ? 1 : -1) + laneOrder.length) % laneOrder.length];
+      e.preventDefault();
+      on.focus(next);
+      return;
+    }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     const rows = visible(view);
     if (!rows.length) return;
@@ -1222,6 +1475,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
       const ask = view?.approval;
       if (!active || !element.isConnected || element.offsetParent === null || focusBlock.offsetParent === null || !ask || ask.request !== onScreen || ask.questions.length) return false;
       if (sent === ask.request) return true;
+      if (allow && !allowsByKey(ask)) { refuseAllowKey(element); return true; }
       sent = ask.request;
       on.decide(ask.request, allow ? "allow" : "deny");
       return true;

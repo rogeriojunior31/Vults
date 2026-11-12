@@ -116,7 +116,7 @@ meant to steer whatever reads them.
   turning on a request on the user's behalf ([0019](0019-requests-on-the-users-behalf.md)).
   Commands check the label of the webview that called, never the window's (`settings_page`,
   `policies::from_settings`). The two webviews share the origin's storage, which Settings never reads. Settings shows no agent's text: its frame holds tab names and counts,
-  the size switch, sound, full screen, and a footer that switches Zeca and brings up the terminal of
+  the presentation menu (the four sizes and sounds), and a footer that switches Zeca and brings up the terminal of
   the session in front (it keeps only who that session is). Its pages are General, Agents, Chat &
   voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca and About. N3 Dictation
   configuration uses this webview under its own tab, outside the global Settings sidebar.
@@ -195,3 +195,4 @@ meant to steer whatever reads them.
 - 2026-10-21: Profile-bound conversation records retain their own immutable snapshot across profile edits, rename, restart and reopen. The current Zeca Chat does not expose these records or reinterpret them as companion conversations; no profile Chat button or recipient selector is enabled in this storage slice.
 - 2026-10-21: The first specialist runtime is Claude Code only, with a fixed brief and no automatic companion context or MCP. No recipient selector, profile Chat action or specialist conversation reopening is enabled by this runtime-only slice; the existing Nest and Quick remain on their current conversation owner.
 - 2026-10-21: Native profile conversation restoration preserves the saved model, effort, session and profile snapshot rather than current profile edits or companion settings. Turn preflight rejects mismatched recipients, sources and unsupported voice/mention/source overrides. The existing Chat UI still refuses profile records until it can present and preserve these owners across surfaces.
+- 2026-11-11: The island's and the Nest's headers trade the size switch, the full-screen button and the sound toggle for one presentation menu. It names the size in use and lists the four sizes, each with what it is, and the sounds; the sizes and their behavior are unchanged.

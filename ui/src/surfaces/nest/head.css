@@ -44,7 +44,7 @@
   flex: 1;
 }
 .session-count {
-  font: 11px var(--mono);
+  font: 500 12px var(--font);
   color: var(--fg-dim);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;

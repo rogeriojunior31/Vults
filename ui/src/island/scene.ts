@@ -140,8 +140,8 @@ export const HABITAT_SCENE: SceneLayout = {
 /** The Nest's Flock (ADR 0021, the prototype's stage): the flock at 3x on one wire across the
  *  pane, one bird over each roost card (`Scene.resize` sets the width and the places). */
 export const NEST_HABITAT_W = 440;
-export const NEST_HABITAT_H = 150;
-export const NEST_HABITAT_WIRE = 140;
+export const NEST_HABITAT_H = 126;
+export const NEST_HABITAT_WIRE = 116;
 export const NEST_HABITAT_SCENE: SceneLayout = {
   width: NEST_HABITAT_W,
   height: NEST_HABITAT_H,
@@ -285,6 +285,13 @@ export class Scene {
     this.schedule(0);
   }
 
+  /** The flock is already there: the next update that has sessions puts them on their perches
+   *  instead of flying them in (a window that opens onto running sessions). */
+  settle(): void {
+    this.settling = true;
+  }
+  private settling = false;
+
   /** Starts or stops drawing; clips are timed by the clock, so they pick up where they are. */
   setActive(on: boolean): void {
     if (on === this.active) return;
@@ -342,7 +349,8 @@ export class Scene {
   ): void {
     const now = Clock.now();
     const { width, zeca, vults, skyTop, flights, reflow } = this.layout;
-    const fly = flights && !calm();
+    const fly = flights && !calm() && !this.settling;
+    if (sessions.length) this.settling = false;
 
     if (zeca) {
       const who = focus ?? talking;

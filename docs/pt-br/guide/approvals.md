@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 74c3c2fdec2f -->
+<!-- source: 9ea02621358c -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -50,11 +50,13 @@ o retorno normal ao terminal continua valendo.
   cobre `cargo test && rm -rf build`, nem o mesmo comando em outro projeto. Esses pedidos são
   respondidos sem card, e o passo diz *always allowed*; um pedido idêntico que já espera também é
   respondido. **Settings → Approvals** lista todas as
-  regras, e **Remove** tira uma delas. Um comando com mais de uma linha, ou com mais de 300
+  regras em **Always allowed**, e **Remove** tira uma delas. Um comando com mais de uma linha, ou com mais de 300
   caracteres, não oferece **Always allow**: uma regra só veria o começo dele.
 - Um comando destrutivo (`rm -rf`, um push forçado) sempre pergunta: o card dele diz isso em laranja,
   deixa **Deny** como o botão claro, contorna **Allow** em vermelho e não oferece **Always allow**.
-  Nenhuma regra ou política o responde, nem uma regra salva antes.
+  Nenhuma regra ou política o responde, nem uma regra salva antes. Só um clique o permite: no lugar
+  da tecla, **Allow** mostra *click*, e o atalho de Allow (ou **Y**) só faz o botão piscar. **Deny**
+  continua com a tecla dele. O mesmo vale no chat do Zeca sempre que **Deny** é o botão claro.
 - Só você responde: com um clique ou um atalho agora, ou antes com **Always allow** ou uma
   [política](#policies) que você aceitou. Nenhum timer ou padrão aprova nada, nunca.
 
@@ -64,7 +66,7 @@ o retorno normal ao terminal continua valendo.
 
 Uma política responde cards por você: você a escreve em **Settings → Approvals → Policies**, vê como
 um diff contra a que está em vigor e aceita com um clique. Uma política por pasta de projeto, mais
-uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** desliga na hora, e os cards
+uma para todo lugar; uma mais nova substitui a mais velha. **Revoke** pergunta mais uma vez e então desliga na hora, e os cards
 dela voltam a perguntar. O **allow** de políticas continua limitado ao Claude Code. Os outros
 agentes agora mostram a pasta da operação quando ela é informada; ampliar permissões automáticas
 ainda exige validação separada por agente. Para Codex, OpenCode, Qwen Code e Copilot CLI uma política
@@ -125,17 +127,43 @@ ask tool WebFetch
   política é uma linha no seu banco de dados local: outro programa rodando como você poderia
   adicionar uma, como poderia mudar qualquer arquivo seu.
 
+<a id="what-was-answered"></a>
+
+## O que foi respondido
+
+**Settings → Approvals** abre no log de auditoria; as regras e políticas que respondem sem card vêm
+depois, cada uma atrás de uma linha que abre (**Always allowed**, **Policies**), e um aviso no topo
+diz quando o chat do Zeca tem acesso total ou segue suas políticas. O log fica agrupado por dia, do mais
+novo para o mais antigo. Ele guarda três coisas, e os números no topo contam cada uma e filtram a
+lista para ela: **Answers** (a resposta de cada card: ✓ permitido, ✗ negado, ou uma pergunta
+respondida), **Back to the terminal** (um card enviado para lá ou que ninguém respondeu a tempo) e
+**Setup changes** (hooks instalados ou removidos, uma mudança de fora na configuração de um agente).
+Cada linha começa pelo comando como foi pedido, depois quem decidiu (você, seu telefone, uma regra
+Always, uma política, o acesso total do chat, ou o próprio Vults), o agente e o projeto; **As
+recorded** mostra o texto guardado quando ele foi encurtado, como um lançador do PowerShell em volta
+do comando.
+
 <a id="more-than-one-at-a-time"></a>
 
 ## Mais de um ao mesmo tempo
 
-Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro com **1 of 3**, embaixo
+Os pedidos esperam em fila, cada um pelo seu agente. O card mostra o primeiro com **3 requests waiting**, embaixo
 de um ponto por sessão na cor do agente. Responda um e o próximo aparece.
 
 Para responder primeiro um que está mais atrás, clique em **Open** na notificação dele (no *Panel*)
 ou no pássaro dele no widget do canto: o card dele vai para a frente, mantendo o próprio prazo.
 Projetos silenciados ou ocultos ([por projeto](island.md#per-project-mute-pin-hide)) continuam
 recebendo seus cards e sons.
+
+No Nest, quando duas ou mais permissões esperam, **Waiting for you** fica acima das sessões em
+**Flock**: uma linha por pedido, com projeto, comando, pasta (ou por que é destrutivo) e o
+relógio dele. A linha da frente é onde você responde: ela abre o comando inteiro, a pasta ou por
+que é destrutivo, e **Deny**, **Allow**, **Always allow** e **Later**, enquanto o card ao lado
+guarda o contexto da sessão. Clique em outra linha, ou aperte **J** e **K**, para trazer aquele
+pedido para a frente; os atalhos globais respondem o da frente. Numa janela estreita o card
+responde, já que a fila não fica ao lado dele. **Answer several** marca pedidos comuns, e
+**Allow selected** permite só esses; o resto continua esperando. Um pedido destrutivo, ou um cujo
+comando foi cortado, não tem marcação: é respondido sozinho, onde ele aparece inteiro.
 
 Uma pergunta respondida pela metade recomeça quando outro card vem para a frente dela. Um card cujo
 agente seguiu adiante não vem para a frente, mas um subagente trabalhando em paralelo não tira um
@@ -146,9 +174,20 @@ card. Quando um agente pede duas chamadas de uma vez, responder a primeira deixa
 ## Quando ninguém responde
 
 Um pedido espera enquanto o agente dele espera (um pouco menos de dois minutos); enquanto isso, o
-terminal diz *Waiting for your answer in Vults*. Nos últimos 30 segundos o card faz uma contagem
-regressiva, *Goes back to the terminal in 0:25*, e então o terminal pergunta como se o Vults não
-estivesse ali. Se você responder no terminal, o card avisa e some.
+terminal diz *Waiting for your answer in Vults*. O card mostra desde o começo quanto tempo falta,
+*Goes back to the terminal in 1:12* sobre uma barra fina, discreto no começo, âmbar nos últimos 30
+segundos e vermelho nos últimos dez; então o terminal pergunta como se o Vults não estivesse ali. Se
+você responder no terminal, o card avisa e some.
+
+O Nest conta até o mesmo momento que a ilha, não importa quando abriu: um card em **Flock** e a
+linha dele em **Waiting for you** mostram o mesmo relógio. Um pedido que volta sem resposta fica
+guardado até o próximo passo da sessão ou o fim da vez dela, onde quer que você olhe e não importa
+quando abriu: **Flock** diz *No answer in time: storefront asks in its terminal now.*, com
+**Open terminal** quando ele pode ser trazido, até você dispensar o aviso; a sessão diz
+*Asking in its terminal*, o pássaro dela ganha um pequeno terminal, e o **Now** do Quick lista
+*storefront asks in its terminal*. O card dela guarda o pedido, *Request that went back to the
+terminal*, com o comando que ele pergunta lá; quando o Vults não consegue trazer esse terminal, o
+card diz a pasta em que ele roda, com **Copy folder**.
 
 Enquanto espera, um card sobe uma escada, para que um card que você perdeu chegue até você:
 

@@ -173,7 +173,7 @@ said, with each file sent kept only as a label: a text file by its name, a docum
 What is saved is what the chat shows: your messages and the names of the files you sent, Zeca's
 replies, errors and stops; never a card's answer (the audit log keeps those) and never an
 *Always in this chat* rule, so a conversation opened again asks as a new one would. The newest 200
-are kept, in the same local `vults.sqlite` as the activity history; **Settings → Activity →
+are kept, in the same local `vults.sqlite` as the activity history; **Settings → History and budget →
 Clear history** removes them all. A conversation whose folder is gone can't be opened again.
 
 <a id="memory"></a>
@@ -298,13 +298,13 @@ does not change the permission checks. Collapsing a card never grants access.
 - **Your policies**: the [policies](approvals.md#policies) you accepted answer the chat's calls as
   they answer Claude Code's on the island. A deny denies, an allow allows (Claude Code's calls,
   inside the conversation's folder), the rest asks.
-- **Full access**: everything runs with no card, but a destructive command (`rm`, a forced push)
+- **Full access**: choosing it, in Settings or in the chat's menu, asks you to confirm first; then everything runs with no card, but a destructive command (`rm`, a forced push)
   still asks, what a policy denies is denied and what a policy asks first still asks. Once the conversation has read content
   from outside (a web page, a fetch, an MCP tool), its cards ask again until it ends: a page's words
   could be steering it. Add `deny` lines to a policy for what must never run.
 
 The chat says each answer given this way (*Allowed by your policy*, *Denied by your policy*, *Ran
-with full access*), and the audit log keeps it. Its chip, beside the model (red with full access),
+with full access*), and the audit log keeps it. Its chip, beside the model (amber with a warning sign under full access),
 shows the choice; from there you can only give access back. More access is given in Settings.
 
 ## Files
@@ -395,7 +395,7 @@ from outside.
 
 ## Agent profiles
 
-Open **Flock → Agent profiles** to create an agent, copy a template, or edit a custom agent.
+Open **Flock → Specialists** to create an agent, copy a template, or edit a custom agent.
 The animated bird, instructions and searchable pinned skills belong to the profile. Skills guide
 behavior; they never grant tools or permissions. Save records the content and execution defaults
 locally without starting a model. **Conversation defaults** changes a template's preferences without
@@ -464,7 +464,7 @@ another window, change its profile identity or close a running turn's approval c
 
 ### GitHub for Developer and Reviewer
 
-In **Flock → Agent profiles**, select **Developer** or **Reviewer**, enter one exact repository as
+In **Flock → Specialists**, select **Developer** or **Reviewer**, enter one exact repository as
 `owner/name`, then click **Enable GitHub**. The GitHub connector must already be enabled and have
 request budget available. The saved grant shows its account and host before you start a turn.
 Each profile is independent, starts disabled and works with Zeca off. Copies inherit no grant.

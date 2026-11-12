@@ -1,7 +1,7 @@
 // One agent workspace renders production data or an explicitly marked, local-only design preview.
 import type { AgentGithubGrant, AgentDefaults, AgentPreferenceEdit, AgentProfile, AgentProfileEdit, AgentProfileState, AgentProvider, AgentStateChange, ChatAccess } from "../../bridge";
 import { el } from "../../dom";
-import { t } from "../../i18n";
+import { t, tk } from "../../i18n";
 import { SPECIES, speciesSet } from "../../character/flock";
 import { dress, LOOK_GROUPS } from "../../character/looks";
 import { drawFrame, frameAt } from "../../character/sprites";
@@ -89,7 +89,7 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
     : error === "brief" ? t("The profile and pinned skills must fit within 32768 bytes.")
     : error === "limit" ? t("You can save up to 100 custom profiles.")
     : error === "appearance" ? t("Choose an available species and accessory.")
-    : error === "archived" ? t("This agent is archived. Restore it before sending a new message.")
+    : error === "archived" ? t("This specialist is archived. Restore it before sending a new message.")
     : t("Could not save the profile. Your draft is preserved.");
   const busy = (value: boolean) => {
     pending = value;
@@ -117,7 +117,7 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
       if (!document.body.classList.contains("still") && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) scene.react("hello");
     });
     node.className = "agent-profile-character agent-preview-hero";
-    node.setAttribute("aria-label", t("Greet {name}", { name: nameOf(agent) || t("Create agent") }));
+    node.setAttribute("aria-label", t("Greet {name}", { name: nameOf(agent) || t("Create specialist") }));
     node.append(scene.canvas);
     node.addEventListener("pointerenter", () => scene.lookAt("front"));
     node.addEventListener("pointerleave", () => scene.lookAt(null)); return node;
@@ -155,7 +155,7 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
       }), provider,
       modelField,
       effort,
-      el("p", { class: "note", text: backend?t("Defaults apply to new conversations. GitHub access is selected separately for each agent."):t("Use these defaults for new conversations. You can choose another executor or model in Chat.") }));
+      el("p", { class: "note", text: backend?t("Defaults apply to new conversations. GitHub access is selected separately for each specialist."):t("Use these defaults for new conversations. You can choose another executor or model in Chat.") }));
   };
   // Keep each model field with its defaults form rather than a shared mutable selection.
   const defaultFields = (agent: Example) => {
@@ -187,12 +187,12 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
     const search = el("input"); search.type = "search"; search.value = skillQuery; search.placeholder = t("Search skills"); search.setAttribute("aria-label", t("Search skills"));
     search.addEventListener("input", () => { skillQuery = search.value; paint(); }); paint();
     return el("section", { class: "agent-preview-skills" }, el("div", { class: "agent-preview-section-heading" }, el("h3", { text: t("Pinned skills") }), count),
-      el("p", { class: "note", text: t("Skills guide the agent. They do not enable tools or increase access.") }), picked, search, content);
+      el("p", { class: "note", text: t("Skills guide the specialist. They do not enable tools or increase access.") }), picked, search, content);
   };
   const editor = (agent: Example) => {
     const error = el("p", { class: "agent-preview-error", text: saveError }); error.setAttribute("role", "alert");
     const form = el("form", { class: "agent-preview-editor" });
-    const name = field(t("Agent name"), agent.title, value => { agent.title = value; }); name.querySelector("input")!.required = true;
+    const name = field(t("Specialist name"), agent.title, value => { agent.title = value; }); name.querySelector("input")!.required = true;
     const instructions = field(t("Instructions"), agent.instructions, value => { agent.instructions = value; }, true); instructions.querySelector("textarea")!.required = true;
     const appearance = el("section", { class: "agent-preview-appearance" }, portrait(agent),
       select(t("Species"), SPECIES.map(s => [s.id, t(s.name)]), agent.species, value => { agent.species = value; scene.update([], null, { clip: "idle", agent: "other", set: dress(speciesSet(value), agent.look) }); }),
@@ -220,7 +220,7 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
       }, failure => { pending = false; saveError = errorText(failure); draw(); });
     });
     form.append(el("div", { class: "agent-preview-editor-grid" },
-      el("div", { class: "agent-preview-fields" }, el("h2", { text: defaultsOnly?t("Conversation defaults"):t("Make this agent yours") }), ...(defaultsOnly?[portrait(agent),el("h3",{text:agent.built_in?t(agent.title):agent.title})]:[name,instructions,skills(agent)])),
+      el("div", { class: "agent-preview-fields" }, el("h2", { text: defaultsOnly?t("Conversation defaults"):t("Make this specialist yours") }), ...(defaultsOnly?[portrait(agent),el("h3",{text:agent.built_in?t(agent.title):agent.title})]:[name,instructions,skills(agent)])),
       el("aside", {}, ...(defaultsOnly?[]:[appearance]), defaultFields(agent), ...(backend?[el("p",{class:"note",text:t("Permissions are managed separately in Chat.")})]:[access]))),
       el("footer", { class: "agent-preview-save" }, error, save, button(t("Cancel"), () => { if(pending)return; draft = null; saveError=""; draw(); backend?.reload(); })));
     return form;
@@ -289,15 +289,15 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
     const paintDetail = () => {
       const agent = examples.find(a => a.id === selected);
       detail.replaceChildren(); if (!agent) return;
-      const edit = button(agent.built_in ? t("Create a copy") : t("Edit agent"), () => begin(agent)); edit.dataset.previewEdit = "true";
-      detail.append(portrait(agent), el("h2", { text: nameOf(agent) }), el("p", { class: "note", text: agent.about === "Custom agent profile" ? t("Custom agent profile") : t(agent.about) }),
+      const edit = button(agent.built_in ? t("Create a copy") : t("Edit specialist"), () => begin(agent)); edit.dataset.previewEdit = "true";
+      detail.append(portrait(agent), el("h2", { text: nameOf(agent) }), el("p", { class: "note", text: agent.about === "Custom agent profile" ? t("Custom specialist") : t(agent.about) }),
         el("p", { class: "note", text: agent.built_in?t("Built-in profile · Revision {revision}",{revision:agent.revision}):t("Custom profile · Revision {revision}",{revision:agent.revision}) }),
         el("div", { class: "agent-preview-tags" }, el("span", { text: executorName(agent) }), el("span", { text: agent.model || t("Default model") }), el("span", { text: accessName(agent.access) })),
-        button(agent.archived ? t("Restore agent") : backend?t("Open specialist chat"):t("Open preview chat"), () => { if (agent.archived) {changeState(agent,{action:"archive",archived:false});return;}
+        button(agent.archived ? t("Restore specialist") : backend?t("Open specialist chat"):t("Open preview chat"), () => { if (agent.archived) {changeState(agent,{action:"archive",archived:false});return;}
           if(backend){if(pending)return;busy(true);feedback.textContent="";void backend.open(agent).then(()=>busy(false),error=>{busy(false);feedback.textContent=String(error);});return;}
           chatFor = agent.id; draw(); }, true), ...(agent.archived ? [] : [edit]));
       detail.querySelectorAll<HTMLButtonElement>("button").forEach(control=>{if(control.textContent===t("Open specialist chat"))control.classList.add("agent-profile-chat-open");});
-      if (!agent.built_in && !agent.archived) detail.append(button(t("Archive agent"), () => changeState(agent,{action:"archive",archived:true})));
+      if (!agent.built_in && !agent.archived) detail.append(button(t("Archive specialist"), () => changeState(agent,{action:"archive",archived:true})));
       if(backend && agent.archived) detail.append(button(t("View conversations"),()=>{if(!pending)void backend.open(agent).catch(error=>{feedback.textContent=String(error);});}));
       if(backend && agent.built_in)detail.append(button(t("Conversation defaults"),()=>begin(agent,true)));
       if(backend && !agent.archived){
@@ -318,7 +318,7 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
         });
         detail.append(el("fieldset",{class:"agent-preview-defaults"},el("legend",{text:"GitHub"}),
           el("label",{},el("span",{text:t("GitHub repository")}),repository),
-          el("p",{class:"note",text:t("Only this repository. Writes require approval. This agent does not inherit Zeca's GitHub access.")}),
+          el("p",{class:"note",text:t("Only this repository. Writes require approval. This specialist does not inherit Zeca's GitHub access.")}),
           ...(grant.enabled?[el("p",{class:"note",text:t("Enabled for {account} on {host}",{account:grant.account,host:grant.host})})]:[]),toggle));
       }
       if (backend?.snapshot && ["developer", "reviewer"].includes(agent.id)) {
@@ -347,7 +347,7 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
             ...(grant.enabled ? [el("p", { class: "note", text: t("Enabled for {account} on {host}", { account: grant.account, host: grant.host }) })] : []), toggle));
         }
       }
-      if(backend && agent.executor!=="claude")detail.append(el("p",{class:"note",text:t("API agents use their own messages and selected files. CLI agents use an isolated runtime.")}));
+      if(backend && agent.executor!=="claude")detail.append(el("p",{class:"note",text:t("API specialists use their own messages and selected files. CLI specialists use an isolated runtime.")}));
       detail.append(el("details", {}, el("summary", { text: t("Instructions") }), el("p", { text: agent.built_in ? t(agent.instructions) : agent.instructions })),
         el("details", {}, el("summary", { text: t("Pinned skills") }), ...agent.skills.map(s => el("p", { text: `${t(s.title)} · ${t("Revision {revision}",{revision:s.revision})}` }))));
       detail.append(feedback);
@@ -365,16 +365,16 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
           choice.className = "agent-preview-card"; choice.dataset.example = agent.id; choice.setAttribute("aria-pressed", String(selected === agent.id));
           choice.append(face(agent), el("strong", { text: nameOf(agent) }), el("span", { text: executorName(agent) }), el("small", { text: agent.archived ? t("Archived") : agent.built_in ? t("Template") : t("Skills: {n}", { n: agent.skills.length }) })); grid.append(choice);
         }
-        results.append(el("h2", { text: builtIn ? t("Templates") : t("Your agents") }), grid);
+        results.append(el("h2", { text: builtIn ? t("Templates") : t("Your specialists") }), grid);
       }
-      if (!matches.length) results.append(el("p", { class: "note", text: t("No matching agents. Try another search or create an agent.") }));
+      if (!matches.length) results.append(el("p", { class: "note", text: t("No matching specialists. Try another search or create one.") }));
       paintDetail();
     };
-    const search = el("input"); search.type = "search"; search.value = query; search.placeholder = t("Search agents"); search.setAttribute("aria-label", t("Search agents"));
+    const search = el("input"); search.type = "search"; search.value = query; search.placeholder = t("Search specialists"); search.setAttribute("aria-label", t("Search specialists"));
     search.addEventListener("input", () => { query = search.value; paintResults(); });
     const tabs = el("div", { class: "agent-preview-filters" });
-    for (const [id, label] of [["all", "All"], ["mine", "Your agents"], ["templates", "Templates"], ["archived", "Archived"]] as const) {
-      const choice = button(id === "all" ? t("All agents") : t(label), () => { filter = id; for (const child of tabs.querySelectorAll("button")) child.setAttribute("aria-pressed", String(child === choice)); paintResults(); });
+    for (const [id, label] of [["all", tk("All specialists")], ["mine", tk("Your specialists")], ["templates", tk("Templates")], ["archived", tk("Archived")]] as const) {
+      const choice = button(t(label), () => { filter = id; for (const child of tabs.querySelectorAll("button")) child.setAttribute("aria-pressed", String(child === choice)); paintResults(); });
       choice.setAttribute("aria-pressed", String(filter === id)); tabs.append(choice);
     }
     paintResults();
@@ -383,10 +383,10 @@ export function createAgentWorkspace(presets: AgentProfile[], back: () => void, 
   function draw() {
     scene.setActive(false);
     const agent = examples.find(a => a.id === chatFor);
-    root.replaceChildren(...(backend?[]:[el("div", { class: "agent-preview-banner" }, el("span", { text: t("Design preview. Examples stay here; your agents and settings are unchanged.") }))]),
-      el("header", { class: "agent-preview-heading" }, el("div", {}, el("h1", { text: draft ? t("Configure agent") : chatFor ? t("Chat") : t("Agents") }), el("p", { class: "note", text: t("Give each agent a role, a look and its own way of working.") })),
-        draft || chatFor ? null : button(t("Create agent"), () => begin(null), true),
-        button(chatFor ? t("Back to agents") : backend?t("Back to Flock"):t("Close preview"), () => { if (chatFor) { panels.get(chatFor)?.toggle(false); chatFor = null; draw(); } else { visible(false); back(); } })),
+    root.replaceChildren(...(backend?[]:[el("div", { class: "agent-preview-banner" }, el("span", { text: t("Design preview. Examples stay here; your specialists and settings are unchanged.") }))]),
+      el("header", { class: "agent-preview-heading" }, el("div", {}, el("h1", { text: draft ? t("Configure specialist") : chatFor ? t("Chat") : t("Specialists") }), el("p", { class: "note", text: t("Give each specialist a role, a look and its own way of working.") })),
+        draft || chatFor ? null : button(t("Create specialist"), () => begin(null), true),
+        button(chatFor ? t("Back to specialists") : backend?t("Back to Flock"):t("Close preview"), () => { if (chatFor) { panels.get(chatFor)?.toggle(false); chatFor = null; draw(); } else { visible(false); back(); } })),
       draft ? editor(draft) : agent ? chat(agent) : catalogue());
     if(pending)busy(true);
     motion();

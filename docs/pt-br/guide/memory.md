@@ -1,5 +1,5 @@
 # A memória do Zeca
-<!-- source: e4587cd8196f -->
+<!-- source: 6554c7a1843d -->
 
 O Zeca pode lembrar de você, dos seus projetos e do que os seus agentes fizeram. Essa memória fica
 desligada até você ligá-la, é guardada neste computador, e só você a escreve.
@@ -20,7 +20,7 @@ e o `/remember` é recusado. Desligá-la para a escrita e mantém o que já foi
 escrito.
 
 O que o Zeca lembra é um repositório git de pequenos arquivos Markdown em
-`~/.local/share/vults/memory/`, cada mudança um commit. **Settings → Activity → Clear history**
+`~/.local/share/vults/memory/`, cada mudança um commit. **Settings → History and budget → Clear history**
 apaga o diário e o que vem dele, mas não essa pasta ([o que ele apaga](activity.md#the-history)):
 para apagar os fatos dele, apague-a.
 

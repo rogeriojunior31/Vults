@@ -52,6 +52,8 @@ const PATHS = {
   mic: "M12 3.5a2.8 2.8 0 0 0-2.8 2.8v5.4a2.8 2.8 0 0 0 5.6 0V6.3A2.8 2.8 0 0 0 12 3.5zM6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.5",
   copy: "M9 9h10v11H9zM15 9V5a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3",
   retry: "M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4",
+  // A warning that must not rely on color alone (a destructive request, full access).
+  warning: "M12 4.5 3.5 19h17zM12 10v4.5M12 16.8v.2",
 } as const;
 
 export type IconName = keyof typeof PATHS;

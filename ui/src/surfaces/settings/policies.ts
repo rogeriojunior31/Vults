@@ -7,9 +7,10 @@ import {
   type PolicyPreview,
   type PolicyRow,
 } from "../../bridge";
+import { failure } from "../../errors";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
-import { button, diff } from "./pieces";
+import { button, confirmed, diff } from "./pieces";
 
 const ERRORS: Record<PolicyError["kind"], string> = {
   "unknown-word": tk("Line {line}: start it with allow, deny, ask, project or agents."),
@@ -50,13 +51,14 @@ export async function refreshPolicies(render: () => void): Promise<void> {
     policies = await Bridge.policiesList();
   } catch (e) {
     policies = [];
-    message = { text: String(e), error: true };
+    message = { text: failure(t("Could not read your policies."), e), error: true };
   }
   render();
 }
 
 function editor(render: () => void): HTMLElement {
   const area = el("textarea", { class: "policy-editor" });
+  area.setAttribute("aria-label", t("Policy text"));
   area.spellcheck = false;
   area.value = draft ?? "";
   area.rows = 10;
@@ -113,7 +115,7 @@ function editor(render: () => void): HTMLElement {
             render();
           },
           (e) => {
-            message = { text: String(e), error: true };
+            message = { text: failure(t("Could not check the policy."), e), error: true };
             render();
           },
         );
@@ -134,7 +136,7 @@ function editor(render: () => void): HTMLElement {
                   void refreshPolicies(render);
                 },
                 (e) => {
-                  message = { text: String(e), error: true };
+                  message = { text: failure(t("Could not accept the policy. Nothing changed."), e), error: true };
                   render();
                 },
               );
@@ -175,8 +177,8 @@ function policyCard(p: PolicyRow, render: () => void): HTMLElement {
         review = null;
         render();
       }),
-      button(t("Revoke"), () => {
-        void Bridge.policyRevoke(p.consent).then(
+      confirmed(t("Revoke"), t("Cards this policy answered ask you again."), t("Revoke policy"), () =>
+        Bridge.policyRevoke(p.consent).then(
           () => {
             message = {
               text: t("Policy revoked. Its cards ask again."),
@@ -185,24 +187,28 @@ function policyCard(p: PolicyRow, render: () => void): HTMLElement {
             void refreshPolicies(render);
           },
           (e) => {
-            message = { text: String(e), error: true };
+            message = { text: failure(t("Could not revoke the policy. It still applies."), e), error: true };
             render();
           },
-        );
-      }),
+        ),
+      ),
     ),
     el("pre", { class: "policy-text", text: p.text }),
   );
 }
 
 /** The section, under the Always rules. */
-export function policiesSection(render: () => void): HTMLElement[] {
+/** How many policies hold, and whether one is being written: its disclosure opens for the editor. */
+export const policyCount = (): number => policies.length;
+export const policyEditing = (): boolean => draft !== null;
+
+export function policiesSection(render: () => void, titled = true): HTMLElement[] {
   return [
-    el("h2", { text: t("Policies") }),
+    titled ? el("h2", { text: t("Policies") }) : null,
     el("p", {
       class: "lede",
       text: t(
-        "A policy answers cards for you, in a folder or everywhere: what to allow, deny or always ask. You write it, see it as a diff and accept it with a click. A destructive action always asks, a deny beats an allow, an allow reaches only the session's folder, and every answer goes to the audit log.",
+        "A policy answers cards for you, in a folder or everywhere: what to allow, deny or always ask. You write it, see it as a diff and accept it with a click. A destructive action always asks; when a policy both allows and denies something, deny wins; an allow reaches only the session's folder; and every answer goes to the audit log.",
       ),
     }),
     message
@@ -218,7 +224,7 @@ export function policiesSection(render: () => void): HTMLElement[] {
           { class: "card" },
           el("p", {
             class: "note",
-            text: t("No policy. Every card asks you."),
+            text: t("No policy. Your agents' cards ask you."),
           }),
         )
       : null,

@@ -12,7 +12,23 @@ export type AlertLevel = "info" | "ok" | "warn" | "error";
 
 export type Outfit = "auto" | "none" | "witch-hat" | "santa-hat" | "party-hat" | "bunny-ears" | "sunglasses" | "west-coast" | "fitted-cap" | "mountain-hat" | "headband" | "dreads" | "front-knot" | "durag" | "crown" | "bucket-hat" | "clock-chain" | "headphones" | "shutter-shades" | "chrome-chain" | "eye-patch";
 
-export type ViewModel = { chat?: ChatView, sessions: Array<SessionView>, approval: ApprovalView | null, alerts: Array<AlertView>,
+export type Returned = { tool: string, target: string, description: string | null, full: string | null,
+/**
+ * The folder it asked about: where to answer when no terminal can be raised.
+ */
+cwd: string | null,
+/**
+ * A question rather than a permission: there is no command to copy.
+ */
+question: boolean, };
+
+export type ViewModel = { chat?: ChatView, sessions: Array<SessionView>, approval: ApprovalView | null,
+/**
+ * Every permission card waiting, in line order (deferred ones included): a surface can show
+ * the line and answer any of them, each still by a click (ADR 0004). Questions are left out:
+ * they are answered on their own card.
+ */
+waiting?: Array<ApprovalView>, alerts: Array<AlertView>,
 /**
  * Actionable items, including deferred offers; surfaces only choose their presentation.
  */
@@ -151,7 +167,11 @@ step_at?: Array<number | null>,
 /**
  * How many steps the session has taken so far.
  */
-step_count: number, subagents: number,
+step_count: number,
+/**
+ * A request that went back to its terminal: the agent asks there until it moves on.
+ */
+returned?: Returned | null, subagents: number,
 /**
  * What it has cost so far at API prices, when its agent says: a subscription is not charged it.
  */
@@ -256,7 +276,13 @@ why?: AskWhy | null,
 /**
  * The reminders it has earned by waiting (the attention ladder): one more sound each.
  */
-reminders?: number, };
+reminders?: number,
+/**
+ * When it goes back to its terminal, in Unix seconds (the hook's deadline less a grace), so
+ * every surface counts down to the same moment however late it opened. None until the app has
+ * told the core the wall clock.
+ */
+expires_at?: number, };
 
 export type EndedView = { request: string, agent: AgentKind, session: string, outcome: Outcome, };
 

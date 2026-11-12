@@ -1,5 +1,5 @@
 // The Nest window's frame (ADR 0021), as the Living Flock prototype draws it: the header (the
-// mark, the flock line, sound, search, the size switch, full screen), the tabs with their icons and
+// mark, the flock line, search, the presentation menu with size and sounds), the tabs with their icons and
 // counts (Settings at the right), and the footer (Zeca, his look, the terminal, back to the island).
 // The Nest's page and Settings' draw the same one: they are two webviews of one window, and a tab
 // moves between them. It holds counts and words of its own, never an agent's text, so Settings may
@@ -14,7 +14,7 @@ import { icon as islandIcon, type IconName } from "../../island/icons";
 
 /** The prototype draws the frame's icons with a lighter stroke than the island's. */
 const icon = (name: IconName, size: number) => islandIcon(name, size, 1.6);
-import { sizeSwitch } from "../../sizes";
+import { sizeMenu } from "../../sizes";
 
 export type NestTab = "flock" | "chat" | "activity" | "connections" | "dictation";
 export const NEST_TABS: NestTab[] = [
@@ -76,11 +76,9 @@ export interface NestHead {
   relabel: () => void;
 }
 
-/** The header's flock line, each case a whole sentence. */
-function flockLine({ sessions, needs }: NestCounts): string {
-  if (sessions === 1) return needs > 0 ? t("1 session · 1 needs you") : t("1 session");
-  if (needs === 0) return t("{sessions} sessions", { sessions });
-  return needs === 1 ? t("{sessions} sessions · 1 needs you", { sessions }) : t("{sessions} sessions · {needs} need you", { sessions, needs });
+/** The header's flock line. Who needs you is the Flock tab's badge to say, once. */
+function flockLine({ sessions }: NestCounts): string {
+  return sessions === 1 ? t("1 session") : t("{sessions} sessions", { sessions });
 }
 
 export function createNestHead(on: NestHeadActions): NestHead {
@@ -93,10 +91,6 @@ export function createNestHead(on: NestHeadActions): NestHead {
   mark.src = "/icon.png";
   mark.alt = "";
   const line = el("span", { class: "session-count" });
-  const soundButton = el("button", {
-    class: "header-icon",
-    onclick: () => on.sound(!sound),
-  });
   const searchButton = on.search
     ? el(
         "button",
@@ -149,14 +143,6 @@ export function createNestHead(on: NestHeadActions): NestHead {
     extras.replaceChildren(...([np, moon] as (HTMLElement | null)[]).filter((e): e is HTMLElement => e !== null));
     if (had) extras.querySelector<HTMLElement>(`[data-action="${had}"]`)?.focus();
   };
-  const fullButton = el(
-    "button",
-    {
-      class: "header-icon nest-fullscreen",
-      onclick: () => on.size(full ? "room" : "full"),
-    },
-    icon("fullscreen", 14),
-  );
   const tab = (id: NestTab | "settings", click: () => void) => {
     const b = el("button", { class: "suite-tab", onclick: click });
     b.dataset.tab = id;
@@ -197,7 +183,9 @@ export function createNestHead(on: NestHeadActions): NestHead {
   ) => {
     // The title and label keep the word where a narrow window shows the icon alone.
     b.title = word;
-    b.setAttribute("aria-label", n > 0 ? `${word} ${n}` : word);
+    // A count says what it counts: on Flock, the sessions that need you.
+    const counted = id === "flock" ? (n === 1 ? t("Flock, 1 session needs you") : t("Flock, {n} sessions need you", { n })) : `${word} ${n}`;
+    b.setAttribute("aria-label", n > 0 ? counted : word);
     b.replaceChildren(
       icon(TAB_ICONS[id], 15),
       el("span", { class: "nav-label", text: word }),
@@ -222,29 +210,17 @@ export function createNestHead(on: NestHeadActions): NestHead {
     line.textContent = flockLine(counts);
     line.hidden = counts.sessions === 0;
   };
-  /** The toggles' state; their names stay, `aria-pressed` says the state. */
-  const restate = () => {
-    soundButton.replaceChildren(icon(sound ? "sound" : "mute", 14));
-    soundButton.setAttribute("aria-pressed", String(!sound));
-    fullButton.setAttribute("aria-pressed", String(full));
-  };
-  /** The switch, rebuilt only when the language or Full changes. In Full, Room shows pressed, as
-   * in the prototype, and still takes the click back to Room. */
+  /** The presentation menu (size and sounds), rebuilt when the language, Full or the sounds change. */
   const drawSizes = () => {
-    sizes.replaceChildren(sizeSwitch(full ? "full" : "room", on.size, [], ["mini", "quick", "room"]));
-    if (full) sizes.querySelector('[data-size="room"]')?.classList.add("on");
+    sizes.replaceChildren(sizeMenu(full ? "full" : "room", on.size, { sound: { on: sound, set: on.sound }, fullClass: "nest-fullscreen" }));
   };
+  const restate = drawSizes;
   const relabel = () => {
     recount();
-    soundButton.title = t("Mute");
-    soundButton.setAttribute("aria-label", t("Mute"));
     if (searchButton) {
       searchButton.title = t("Command palette (Ctrl+K)");
       searchButton.setAttribute("aria-label", t("Command palette (Ctrl+K)"));
     }
-    fullButton.title = t("Full: the Nest on the whole screen; Esc goes back");
-    fullButton.setAttribute("aria-label", t("Full"));
-    restate();
     drawSizes();
     nav.setAttribute("aria-label", t("The Nest's tabs"));
   };
@@ -258,10 +234,8 @@ export function createNestHead(on: NestHeadActions): NestHead {
     el("span", { class: "header-spacer" }),
     line,
     extras,
-    soundButton,
     ...(searchButton ? [searchButton] : []),
     sizes,
-    fullButton,
   );
   // No system title bar (ADR 0021): the header, where nothing else is, moves the window; a double
   // click fills the screen, as a title bar's would.
@@ -373,7 +347,9 @@ export function createNestFoot(on: NestFootActions): NestFoot {
   terminal.disabled = true;
   const island = el("button", { class: "foot-island", onclick: on.island });
   const relabel = () => {
-    zecaButton.textContent = zeca ? t("Zeca on · optional") : t("Zeca off");
+    zecaButton.textContent = zeca ? t("Zeca on") : t("Zeca off");
+    // The switch says what a click does; Zeca is optional, which the title says.
+    zecaButton.title = zeca ? t("Zeca is optional: a click turns him off. The flock keeps working.") : t("Turn Zeca on");
     zecaButton.setAttribute("aria-pressed", String(zeca));
     lookButton.replaceChildren(icon("pencil", 14));
     lookButton.title = t("Zeca's look");
@@ -416,6 +392,8 @@ export function createNestFoot(on: NestFootActions): NestFoot {
     },
     setTerminal: (can) => {
       terminal.disabled = !can;
+      // Disabled says why: no session in front, or one whose terminal cannot be brought up.
+      terminal.title = can ? "" : t("No session in front with a terminal to bring up");
     },
     relabel,
   };

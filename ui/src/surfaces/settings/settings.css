@@ -6,6 +6,9 @@
 @import "../../themes.css";
 @import "./pages.css";
 @import "../nest/head.css";
+@import "../nest/activity.css";
+@import "../nest/view-state.css";
+@import "../nest/records.css";
 
 .gitea-connection .field { width: min(100%, 36rem); }
 
@@ -15,7 +18,7 @@ body {
   height: 100%;
   background: transparent;
   color: var(--fg);
-  font: 13.5px/1.5 var(--font);
+  font: var(--text-m)/1.5 var(--font);
   -webkit-font-smoothing: antialiased;
 }
 /* The Nest's window is transparent (ADR 0021): the page draws its frame, as the Nest's does. */
@@ -57,7 +60,7 @@ body.dictation-caption-open { padding-bottom: var(--dictation-caption-space); }
   min-height: 38px;
   padding: 8px 12px;
   border-radius: var(--radius-control);
-  font-size: 13px;
+  font-size: var(--text-m);
   line-height: 1.4;
   transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
@@ -69,26 +72,54 @@ body.dictation-caption-open { padding-bottom: var(--dictation-caption-space); }
   padding: 28px clamp(20px, 4vw, 48px) 40px;
   background: var(--bg);
   scrollbar-width: thin;
+  /* A page that scrolls and one that does not keep the same column. */
+  scrollbar-gutter: stable;
 }
-#settings .page > * { flex: none; width: 100%; max-width: 960px; margin-inline: auto; box-sizing: border-box; }
+/* One reading column: a control stays within reach of the label it belongs to. */
+#settings .page > * { flex: none; width: 100%; max-width: 760px; margin-inline: auto; box-sizing: border-box; }
+/* A lede keeps the column's left edge but a reading measure: 64ch wide, its left margin where the
+   760px column starts (percentages here are of the page, which holds the column centred). */
+#settings .page > .lede { max-width: 64ch; margin-left: max(0px, calc((100% - 760px) / 2)); margin-right: auto; }
 #settings .settings-heading { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 #settings h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.6px; line-height: 1.3; }
-#settings .settings-heading .lede { margin: 0; max-width: 70ch; font-size: 13px; line-height: 1.6; }
-#settings h2 { margin-top: 12px; margin-bottom: -4px; font-size: 14px; font-weight: 600; }
+#settings .settings-heading .lede { margin: 0; max-width: 70ch; font-size: var(--text-m); line-height: 1.6; }
+#settings h2 { margin-top: 12px; margin-bottom: -4px; font-size: var(--text-l); font-weight: 600; }
 #settings .card { min-width: 0; gap: 12px; padding: 20px; background: var(--float); border-radius: var(--radius-card); }
 #settings .card.rows { gap: 0; padding: 0 20px; }
 #settings .row { min-width: 0; gap: 24px; padding: 16px 0; }
 #settings .row-text { flex: 1; min-width: 0; }
-#settings .row-title { font-size: 13px; font-weight: 550; }
-#settings :is(.row-about, .row-more) { max-width: 64ch; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-#settings .row-more summary { width: fit-content; padding: 2px 0; font-size: 12px; }
+#settings .row-title { font-size: var(--text-m); font-weight: 550; }
+#settings :is(.row-about, .row-more) { max-width: 64ch; font-size: var(--text-s); line-height: 1.6; overflow-wrap: anywhere; }
+#settings .row-more summary { width: fit-content; padding: 5px 0; font-size: var(--text-s); }
 #settings .row-more p { padding-left: 12px; border-left: 2px solid var(--border); }
-#settings .row > code { font-size: 11.5px; }
+/* A disclosure of the page itself keeps the page column; only its text keeps the reading measure. */
+#settings .page > .row-more { max-width: 760px; }
+/* Approvals: the log first; what answers without a card sits behind one line each. */
+#settings .approvals-banner { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border)); border-radius: var(--radius-control); background: color-mix(in srgb, var(--warn) 6%, var(--panel)); font-size: var(--text-s); line-height: 1.45; }
+#settings .approvals-banner > svg { flex: none; color: var(--warn); }
+#settings .approvals-banner > span { flex: 1; min-width: 0; }
+#settings .approvals-banner > .btn { flex: none; }
+#settings .approvals-group { max-width: 760px; border-top: 1px solid var(--border); }
+#settings .approvals-group:last-child { border-bottom: 1px solid var(--border); }
+#settings .approvals-group > summary { padding: 12px 0; color: var(--fg); font-size: var(--text-l); font-weight: 600; cursor: pointer; }
+#settings .approvals-group[open] > summary { padding-bottom: 8px; }
+#settings .approvals-group[open] { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+#settings .approvals-group .lede { margin: 0; max-width: 64ch; }
+#settings .page > .row-more p { max-width: 68ch; }
+#settings .row > code { font-size: var(--text-s); }
 #settings :is(.actions, .head-right) { flex-wrap: wrap; }
 #settings .actions { justify-content: flex-start; }
 #settings .review .actions { justify-content: flex-end; }
 #settings .btn { min-height: 34px; border-color: transparent; }
 #settings .btn:hover { border-color: transparent; }
+#settings .btn.danger { border-color: color-mix(in srgb, var(--error-text) 45%, transparent); }
+#settings .btn.danger:hover:not(:disabled) { border-color: var(--error-text); }
+/* A project's folder gets the whole line; its choices sit under it instead of squeezing the path. */
+#settings .row:has(> .project-choices) { flex-direction: column; align-items: stretch; gap: 12px; }
+#settings .row:has(> .project-choices) > .project-choices { justify-content: flex-start; max-width: none; }
+/* The resize handle stays inside the sidebar: outside it, the sidebar grew a horizontal scrollbar. */
+#settings .sidebar.flexible > .panel-handle { right: 0; width: 6px; }
+#settings .sidebar.flexible > .panel-handle::before { inset: 0 0 0 4px; }
 #settings .field { min-width: 0; min-height: 34px; border-radius: var(--radius-control); }
 #settings [data-setting="windows-player-audio"] select { width: 220px; max-width: 100%; }
 #settings .segmented { max-width: 100%; flex-wrap: wrap; border: 0; padding: 3px; border-radius: 10px; background: var(--raised); }
@@ -98,7 +129,7 @@ body.dictation-caption-open { padding-bottom: var(--dictation-caption-space); }
 #settings .toggle::after { width: 16px; height: 16px; }
 #settings .toggle:checked::after { transform: translateX(16px); }
 #settings .settings-disclosure { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--float); }
-#settings .settings-disclosure > summary { padding: 16px 20px; color: var(--fg); font-size: 13px; font-weight: 550; cursor: pointer; }
+#settings .settings-disclosure > summary { padding: 16px 20px; color: var(--fg); font-size: var(--text-m); font-weight: 550; cursor: pointer; }
 #settings .settings-disclosure > summary:hover { background: var(--panel); }
 #settings .settings-disclosure > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -4px; border-radius: var(--radius-card); }
 #settings .disclosure-body { display: flex; flex-direction: column; gap: 16px; padding: 0 20px 20px; }
@@ -123,12 +154,16 @@ body.still #settings .page-enter { animation: none; }
 }
 @media (max-width: 650px) {
   #settings .page { padding: 16px 14px 24px; }
-  #settings h1 { font-size: 21px; }
+  #settings h1 { font-size: 20px; }
   #settings .card { padding: 16px; }
   #settings .card.rows { padding: 0 16px; }
   #settings .disclosure-body { padding: 0 16px 16px; }
   #settings .settings-disclosure > summary { padding: 16px; }
   #settings .settings-page-picker { min-height: 36px; }
+  /* The picker above already names the page: the title stays for assistive technology only. */
+  #settings .settings-title-line { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #settings .settings-heading { gap: 0; padding-bottom: 0; border-bottom: 0; }
+  #settings .settings-heading:not(:has(.lede)) { display: contents; }
 }
 
 .budget-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -141,7 +176,8 @@ body.still #settings .page-enter { animation: none; }
 #settings .settings-title-line { display: flex; align-items: center; gap: 12px; }
 #settings .settings-title-line > svg { flex: none; color: var(--fg-dim); }
 
-#settings .card > .settings-group-title { margin: 0; padding: 14px 0 4px; font-size: var(--text-s); color: var(--fg-dim); }
+/* Notes that qualify a setting read as support, not as body text. */
+#settings :where(.hint) { margin: 0; max-width: 68ch; color: var(--fg-dim); font-size: var(--text-s); line-height: 1.6; }
 
 #settings .dictation-diagnostics { display: grid; gap: 16px; min-width: 0; }
 #settings .dictation-diagnostics h3 { font-size: var(--text-l); }

@@ -84,7 +84,7 @@ pub(crate) fn view(state: &State, boards: &[board::BoardView]) -> Vec<AttentionI
         {
             continue;
         }
-        let level = s.status.attention();
+        let level = s.attention();
         if matches!(level, Attention::NeedsYou | Attention::Failed)
             || (s.status == Status::Working && s.watch.level == Some(crate::silence::Silence::Loud))
         {

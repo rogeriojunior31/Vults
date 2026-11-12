@@ -75,7 +75,7 @@ function card(a: AgentRow): HTMLElement {
 }
 
 /** The list; `load(fresh)` asks the doctor (kept ten minutes unless `fresh`). */
-export function createDoctor(load: (fresh: boolean) => Promise<AgentRow[]>): { element: HTMLElement; refresh: () => void } {
+export function createDoctor(load: (fresh: boolean) => Promise<AgentRow[]>, seen?: (rows: AgentRow[]) => void): { element: HTMLElement; refresh: () => void } {
   const element = el("div", { class: "doctor" });
   let asked = 0;
   const show = (fresh: boolean) => {
@@ -85,6 +85,7 @@ export function createDoctor(load: (fresh: boolean) => Promise<AgentRow[]>): { e
       (rows) => {
         if (mine !== asked) return;
         element.replaceChildren(again(), ...rows.map(card));
+        seen?.(rows);
       },
       () => {
         if (mine !== asked) return;

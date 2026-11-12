@@ -38,25 +38,37 @@ export function createGitea(native: Native) {
     finally { busy = false; update(); }
   };
   const save = button(t("Save connection"), () => void write(false));
-  const clear = button(t("Remove connection"), () => void write(true));
+  // Removing asks first: the first click arms it and focuses Cancel; the second removes.
+  let removing = false;
+  const clear = button(t("Remove connection"), () => {
+    if (busy || enabled || !active || !current?.generation) return;
+    if (!removing) { removing = true; status.textContent = t("The Gitea URL and token are removed from this computer."); update(); cancel.focus(); return; }
+    removing = false;
+    void write(true);
+  });
+  const cancel = button(t("Cancel"), () => { removing = false; status.textContent = ""; update(); clear.focus(); });
   const retry = button(t("Reload connection"), () => void load());
   function update() {
     url.disabled = token.disabled = busy || enabled || !current;
     save.disabled = busy || enabled || !current;
     clear.disabled = busy || enabled || !current?.generation;
     retry.disabled = busy || enabled;
+    if (busy || enabled || !current?.generation) removing = false;
+    cancel.hidden = !removing;
+    clear.classList.toggle("danger", removing);
     form.setAttribute("aria-busy", String(busy));
   }
   const form = el("div", { class: "gitea-connection" },
     row(t("Gitea base URL"), t("Use HTTPS, including the port and subfolder when needed. Do not append /api/v1."), url),
     row(t("Gitea access token"), t("Stored only in the OS keyring. Leave blank to keep the saved token for the same URL. Changing the URL requires a token."), token),
     el("p", { class: "note", text: t("Turn off Gitea before editing. Use read:user, read:issue and read:repository; repositories with Actions also need read:actions. Saving does not enable the connector.") }),
-    el("div", { class: "head-right" }, save, clear, retry), status);
+    el("div", { class: "head-right" }, save, clear, cancel, retry), status);
+  form.addEventListener("keydown", (e) => { if (e.key === "Escape" && removing) { e.stopPropagation(); cancel.click(); } });
   let language = locale();
   function relabel() {
     if (language === locale()) return;
     language = locale();
-    save.textContent = t("Save connection"); clear.textContent = t("Remove connection"); retry.textContent = t("Reload connection");
+    save.textContent = t("Save connection"); clear.textContent = t("Remove connection"); cancel.textContent = t("Cancel"); retry.textContent = t("Reload connection");
     const rows = form.querySelectorAll<HTMLElement>(".row");
     rows[0].querySelector<HTMLElement>(".row-title")!.textContent = t("Gitea base URL");
     rows[0].querySelector<HTMLElement>(".row-about")!.textContent = t("Use HTTPS, including the port and subfolder when needed. Do not append /api/v1.");

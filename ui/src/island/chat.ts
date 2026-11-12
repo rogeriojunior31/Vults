@@ -15,6 +15,7 @@ import type { AgentKind, ApiStatus, ChatAccess, ChatEngines, ChatAnswer, ChatDel
 import { el } from "../dom";
 import { Sound } from "../sound";
 import { icon } from "./icons";
+import { clickOnly, refuseAllowKey } from "./allow-key";
 import { renderFull } from "./markdown";
 import { copyTextButton } from "../clipboard";
 import { locale, t, tk } from "../i18n";
@@ -435,6 +436,8 @@ export class ChatPanel {
   private readonly accessButton = el("button", { class: "place access" });
   private readonly accessMenu = el("div", { class: "menu access-menu" });
   private accessOpen = false;
+  /** Full access was picked in the menu and waits for its explicit grant. */
+  private accessConfirm = false;
   /** The picks for `picksFor`, by engine. */
   private picks: Record<string, ChatPick> = {};
   private picksFor: string | null | undefined = undefined;
@@ -444,7 +447,7 @@ export class ChatPanel {
   /** The provider's CLI did not list its models the last time it was asked. */
   private modelsFailed: Partial<Record<ChatProvider, boolean>> = {};
   private readonly historyButton = el("button", { class: "ghost history" });
-  private readonly newButton = el("button", { class: "ghost", onclick: () => this.ask("new") });
+  private readonly newButton = el("button", { class: "ghost chat-new", onclick: () => this.ask("new") });
   private readonly historyMenu = el("div", { class: "menu history-menu" });
   private readonly log = el("div", { class: "log" });
   private following = true;
@@ -1558,6 +1561,8 @@ export class ChatPanel {
       }
     }
     if (!waiting) return false;
+    // Where Deny is the bright button (destructive, or steered by outside content), only a click allows.
+    if (allow && (!waiting.always || waiting.outside)) { refuseAllowKey(node); return true; }
     this.answer(waiting, allow ? "allow" : "deny");
     return true;
   }
@@ -2062,7 +2067,9 @@ export class ChatPanel {
             "div",
             { class: "actions" },
             button(t("Deny"), !m.always || m.outside ? "primary" : "secondary", "deny", this.keys.deny),
-            button(t("Allow"), !m.always || m.outside ? "secondary" : "primary", "allow", this.keys.allow),
+            !m.always || m.outside
+              ? (() => { const b = button(t("Allow"), "secondary allow-by-click", "allow", undefined); b.append(clickOnly()); return b; })()
+              : button(t("Allow"), "primary", "allow", this.keys.allow),
             m.always ? el("details", { class: "ask-more" }, el("summary", { class: "btn secondary", text: t("More choices") }), always) : null,
           ),
     );
@@ -2607,16 +2614,44 @@ export class ChatPanel {
     );
   }
 
+  private saveAccess(id: ChatAccess): void {
+    if (!this.backend.setAccess) return;
+    this.accessSaving = true; this.accessFailure = false; this.accessConfirm = false; this.paintHead();
+    void this.backend.setAccess(id).then(() => {
+      this.access = id; this.accessOpen = false;
+    }, () => { this.accessFailure = true; this.accessOpen = true; }).finally(() => {
+      this.accessSaving = false; this.paintHead(); this.changed();
+    });
+  }
+
+  /** What full access stops asking, with Cancel (focused) and the grant: the same choice Settings asks. */
+  private accessConfirmBlock(): HTMLElement {
+    const about = el("p", { class: "access-confirm-about" }, icon("warning", 13, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") }));
+    about.id = "chat-full-access-effect";
+    const cancel = el("button", { class: "ghost access-cancel", text: t("Cancel"), onclick: () => { this.accessConfirm = false; this.paintHead(); this.accessButton.focus(); } });
+    const grant = el("button", { class: "ghost access-grant", text: t("Turn on full access"), onclick: () => this.saveAccess("full") });
+    grant.setAttribute("aria-describedby", about.id);
+    grant.dataset.choice = "access:grant-full";
+    cancel.disabled = grant.disabled = this.accessSaving;
+    const box = el("div", { class: "access-confirm" }, about, el("div", { class: "access-confirm-actions" }, cancel, grant));
+    box.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); cancel.click(); } });
+    return box;
+  }
+
   private paintAccess(api: boolean): void {
     const now = ACCESS.find((a) => a.id === this.access) ?? ACCESS[0];
     // The API chat runs nothing: there is nothing to answer.
     this.accessButton.hidden = api;
     this.accessButton.disabled = this.accessSaving;
     this.accessButton.classList.toggle("full", this.access === "full");
-    this.accessButton.replaceChildren(el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
-    this.accessButton.title = this.opts.specialist ? t("Access for this profile") : t("Who answers Zeca's cards in this chat.");
+    // Full access is a mode, not an error: it carries the warning shape and says what it means.
+    const full = this.access === "full";
+    this.accessButton.replaceChildren(...(full ? [icon("warning", 12, 2)] : []), el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
+    this.accessButton.title = full
+      ? t("Full access: commands and edits run without a card. Destructive ones, and what a policy denies or asks first, still ask.")
+      : this.opts.specialist ? t("Access for this profile") : t("Who answers Zeca's cards in this chat.");
     this.accessMenu.classList.toggle("on", this.accessOpen && !api);
-    if (!this.accessOpen) return;
+    if (!this.accessOpen) { this.accessConfirm = false; return; }
     this.accessMenu.replaceChildren(
       el("span", { class: "menu-label", text: t("Who answers the cards") }),
       ...ACCESS.map((a) => {
@@ -2624,18 +2659,20 @@ export class ChatPanel {
           class: `menu-item access-item${a.id === this.access ? " on" : ""}`,
           onclick: () => {
             if (this.accessSaving || !this.backend.setAccess) return;
-            if (a.id === this.access) { this.accessOpen = false; this.paintHead(); return; }
-            this.accessSaving = true; this.accessFailure = false; this.paintHead();
-            void this.backend.setAccess(a.id).then(() => {
-              this.access = a.id; this.accessOpen = false;
-            }, () => { this.accessFailure = true; this.accessOpen = true; }).finally(() => {
-              this.accessSaving = false; this.paintHead(); this.changed();
-            });
+            if (a.id === this.access) { this.accessOpen = false; this.accessConfirm = false; this.paintHead(); return; }
+            // Full access stops the cards: it is asked first, as in Settings, and nothing is saved yet.
+            if (a.id === "full") {
+              this.accessConfirm = true; this.accessFailure = false; this.paintHead();
+              this.accessMenu.querySelector<HTMLElement>(".access-confirm .access-cancel")?.focus();
+              return;
+            }
+            this.saveAccess(a.id);
           },
         }, el("span", { class: "access-name", text: t(a.label) }), el("span", { class: "access-about", text: t(a.about) }));
         button.disabled = this.accessSaving || !this.backend.setAccess;
         return this.choice(button, `access:${a.id}`, a.id === this.access);
       }),
+      ...(this.accessConfirm ? [this.accessConfirmBlock()] : []),
       ...(this.accessFailure ? [el("p", { class: "access-save-error", text: t("Could not save access. Your previous choice is still active.") })] : []),
     );
     this.accessMenu.querySelector(".access-save-error")?.setAttribute("role", "alert");

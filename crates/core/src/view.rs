@@ -15,6 +15,11 @@ pub struct ViewModel {
     pub chat: crate::chat::ChatView,
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
+    /// Every permission card waiting, in line order (deferred ones included): a surface can show
+    /// the line and answer any of them, each still by a click (ADR 0004). Questions are left out:
+    /// they are answered on their own card.
+    #[cfg_attr(test, ts(as = "Option<Vec<ApprovalView>>", optional))]
+    pub waiting: Vec<ApprovalView>,
     pub alerts: Vec<AlertView>,
     /// Actionable items, including deferred offers; surfaces only choose their presentation.
     #[cfg_attr(test, ts(as = "Option<Vec<crate::attention::AttentionItem>>", optional))]
@@ -158,6 +163,9 @@ pub struct SessionView {
     pub step_at: Vec<Option<i64>>,
     /// How many steps the session has taken so far.
     pub step_count: u32,
+    /// A request that went back to its terminal: the agent asks there until it moves on.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub returned: Option<crate::Returned>,
     pub subagents: u32,
     /// What it has cost so far at API prices, when its agent says: a subscription is not charged it.
     #[cfg_attr(test, ts(optional = nullable))]
@@ -286,6 +294,11 @@ pub struct ApprovalView {
     /// The reminders it has earned by waiting (the attention ladder): one more sound each.
     #[cfg_attr(test, ts(as = "Option<u32>", optional))]
     pub reminders: u32,
+    /// When it goes back to its terminal, in Unix seconds (the hook's deadline less a grace), so
+    /// every surface counts down to the same moment however late it opened. None until the app has
+    /// told the core the wall clock.
+    #[cfg_attr(test, ts(type = "number", optional = nullable))]
+    pub expires_at: Option<i64>,
 }
 
 impl State {
@@ -338,6 +351,57 @@ impl State {
             .or_else(|| self.ordered().first().map(|s| &s.key))
     }
 
+    /// A waiting card as the surfaces draw it.
+    fn approval_view(&self, p: &crate::Pending) -> ApprovalView {
+        ApprovalView {
+            request: p.request.0.clone(),
+            agent: p.session.agent,
+            session: p.session.session_id.clone(),
+            project: self
+                .sessions
+                .get(&p.session)
+                .map(|s| s.project.clone())
+                .unwrap_or_default(),
+            tool: p.tool.clone(),
+            target: p.target.clone(),
+            cwd: p.cwd.clone(),
+            description: p.ask.description.clone(),
+            full: p.ask.full.clone(),
+            cut: p.ask.cut,
+            added: p.ask.added,
+            removed: p.ask.removed,
+            questions: p.questions.clone(),
+            queue: self.pending.len(),
+            why: p
+                .questions
+                .is_empty()
+                .then(|| {
+                    let s = self.sessions.get(&p.session);
+                    crate::policies::why_ask(
+                        &self.policies,
+                        &crate::policies::Call {
+                            agent: p.session.agent,
+                            root: s.and_then(|s| s.root.as_deref()),
+                            cwd: p.cwd.as_deref(),
+                            tool: &p.tool,
+                            target: &p.target,
+                            ask: &p.ask,
+                        },
+                    )
+                })
+                .flatten(),
+            reminders: p.reminders,
+            expires_at: self.clock.map(|(at, unix)| {
+                let deadline = p.since + crate::PENDING_TTL;
+                let secs = |d: std::time::Duration| i64::try_from(d.as_secs()).unwrap_or(i64::MAX);
+                match deadline.checked_duration_since(at) {
+                    Some(ahead) => unix.saturating_add(secs(ahead)),
+                    None => unix.saturating_sub(secs(at.saturating_duration_since(deadline))),
+                }
+            }),
+        }
+    }
+
     pub fn view(&self) -> ViewModel {
         let sessions = self.ordered();
         let species = crate::flock::species(
@@ -371,8 +435,9 @@ impl State {
                     }),
                     // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
                     attention: match (s.status, s.watch.level) {
+                        _ if s.returned.is_some() => Attention::NeedsYou,
                         (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
-                        (status, _) => status.attention(),
+                        _ => s.attention(),
                     },
                     card: card == Some(&s.key),
                     waiting: !pending.is_empty(),
@@ -394,6 +459,7 @@ impl State {
                     touched: touched(s),
                     step_at: s.step_at.iter().copied().collect(),
                     step_count: s.step_count,
+                    returned: s.returned.clone(),
                     subagents: s.subagents,
                     cost_usd: s.cost_usd,
                     cost_estimated: s.cost_estimated,
@@ -452,45 +518,13 @@ impl State {
                 .max()
                 .unwrap_or(Attention::Quiet),
             sessions,
-            approval: self.active_card().map(|p| ApprovalView {
-                request: p.request.0.clone(),
-                agent: p.session.agent,
-                session: p.session.session_id.clone(),
-                project: self
-                    .sessions
-                    .get(&p.session)
-                    .map(|s| s.project.clone())
-                    .unwrap_or_default(),
-                tool: p.tool.clone(),
-                target: p.target.clone(),
-                cwd: p.cwd.clone(),
-                description: p.ask.description.clone(),
-                full: p.ask.full.clone(),
-                cut: p.ask.cut,
-                added: p.ask.added,
-                removed: p.ask.removed,
-                questions: p.questions.clone(),
-                queue: self.pending.len(),
-                why: p
-                    .questions
-                    .is_empty()
-                    .then(|| {
-                        let s = self.sessions.get(&p.session);
-                        crate::policies::why_ask(
-                            &self.policies,
-                            &crate::policies::Call {
-                                agent: p.session.agent,
-                                root: s.and_then(|s| s.root.as_deref()),
-                                cwd: p.cwd.as_deref(),
-                                tool: &p.tool,
-                                target: &p.target,
-                                ask: &p.ask,
-                            },
-                        )
-                    })
-                    .flatten(),
-                reminders: p.reminders,
-            }),
+            approval: self.active_card().map(|p| self.approval_view(p)),
+            waiting: self
+                .pending
+                .iter()
+                .filter(|p| p.questions.is_empty())
+                .map(|p| self.approval_view(p))
+                .collect(),
             ended: self
                 .ended
                 .iter()
@@ -721,6 +755,7 @@ pub(crate) mod ts {
             Activity::decl(&cfg),
             AlertLevel::decl(&cfg),
             Outfit::decl(&cfg),
+            crate::Returned::decl(&cfg),
             ViewModel::decl(&cfg),
             crate::chat::ChatView::decl(&cfg),
             crate::chat::ChatSuggestion::decl(&cfg),

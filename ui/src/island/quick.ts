@@ -157,8 +157,8 @@ const PAGES: { id: string; label: string }[] = [
   { id: "agents", label: tk("Agents") },
   { id: "approvals", label: tk("Approvals") },
   { id: "projects", label: tk("Projects") },
-  { id: "activity", label: tk("Activity") },
-  { id: "connectors", label: tk("Connectors") },
+  { id: "activity", label: tk("History and budget") },
+  { id: "connectors", label: tk("Connection setup") },
   { id: "phone", label: tk("Phone") },
   { id: "about", label: tk("About") },
 ];

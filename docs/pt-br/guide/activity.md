@@ -1,19 +1,20 @@
 # Atividade
-<!-- source: f993eed74d34 -->
+<!-- source: b65ff307f826 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
-zerada é informada explicitamente. Um histórico ilegível gera erro com nova tentativa, nunca uma
+zerada é informada explicitamente, e uma semana anterior com menos de cinco turnos é pouco para
+comparar: nenhuma porcentagem é mostrada contra ela. Um histórico ilegível gera erro com nova tentativa, nunca uma
 tela vazia. **History settings** abre Configurações; retenção e limpeza do histórico ficam lá.
 A imagem do resumo tem sua própria opção de exportação **Hide project names**.
 
 **Activity → Week** do Nest mostra o que os seus agentes fizeram: o resumo de uma semana e o último
-ano numa grade. **Settings → Activity** mantém os controles de histórico e de orçamento diário
+ano numa grade. **Settings → History and budget** mantém os controles de histórico e de orçamento diário
 e um botão
 **Open Activity**; o resumo e o calendário ficam no Nest. Tudo é contado neste
 computador, a partir de um histórico local que o Vults guarda enquanto os seus agentes trabalham.
 
-O Nest organiza Atividade em sete telas, com o mesmo estilo de navegação e resumo:
+O Nest organiza Atividade em seis telas, com o mesmo estilo de navegação e resumo:
 
 - **Week**: totais, tempo por dia, a grade anual e um resumo para salvar. Selecione um dia para
   ler a duração exata; **Como a atividade é contada** explica as regras de contagem.
@@ -24,10 +25,12 @@ O Nest organiza Atividade em sete telas, com o mesmo estilo de navegação e res
 - **History**: turnos concluídos agrupados por projeto, com resultado, agente, contagens e duração.
 - **Cost**: orçamento de hoje, janelas dos planos, custo e tokens das últimas duas semanas e custo por projeto.
 - **Traces**: turnos do chat do Zeca e suas chamadas de ferramentas, com estado, tempo e contagens de tokens disponíveis.
-- **Audit**: quem respondeu, o resultado e o comando ou alvo completo, agrupados por projeto.
 
-Histórico e Auditoria mostram os 200 registros mais recentes. Seus resumos descrevem os registros
-carregados naquela tela, e a busca filtra a lista sem alterar esses totais. Os títulos dos projetos
+O log da resposta de cada card não fica aqui: ele está em **Settings → Approvals**, junto das regras
+e políticas cujas respostas ele registra ([O que foi respondido](approvals.md#what-was-answered)).
+
+O Histórico, como o log de auditoria em Aprovações, mostra os 200 registros mais recentes. Seus resumos descrevem os registros
+carregados naquela tela, e a busca filtra a lista sem alterar esses totais. Os títulos dos grupos
 mostram a quantidade de registros encontrados. Navegar, buscar e redimensionar não modificam o histórico guardado.
 
 A prévia compacta de **Week** na ilha usa o mesmo estilo de resumo: a semana e suas datas no topo,
@@ -72,7 +75,7 @@ Exemplo de validação nativa com totais sintéticos; esses números não são o
 e projeto. Custos de assinatura aparecem a preços de API; não são uma cobrança adicional do plano.
 Medições ausentes continuam desconhecidas. O histórico de gastos existente continua legível.
 
-**Configurar orçamento** abre **Settings → Activity**, o único lugar para editar o orçamento diário.
+**Configurar orçamento** abre **Settings → History and budget**, o único lugar para editar o orçamento diário.
 Digite dólares, de $0,01 a $10.000, ou deixe vazio para não ter orçamento. Salvar desabilita os
 controles até a escrita terminar; uma falha mantém seu rascunho para outra tentativa.
 Em 80% o Vults avisa; quando acaba, avisa novamente e não inicia sessões novas até amanhã,

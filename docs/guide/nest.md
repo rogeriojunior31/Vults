@@ -45,7 +45,7 @@ the window stays open with an alert; try closing again. This also saves the Nest
 state when Settings is visible in the shared window. Closing does not answer a
 waiting permission or stop a run.
 
-The size switch and **Back to the island** wait for the Chat's initial draft to
+The presentation menu and **Back to the island** wait for the Chat's initial draft to
 restore and for pending saves. Repeated clicks while changing views share one
 attempt. If saving or changing the view fails, the Nest keeps the draft and shows
 an alert; try the same control again.
@@ -54,19 +54,19 @@ In a short Chat window, the composer uses less space and the empty conversation'
 suggestions scroll if needed. This applies to wide windows too, keeping the title
 bar's controls and the footer reachable.
 
-When there is room, the header counts the flock (*4 sessions · 1 needs you*) and holds the song your player is playing
+When there is room, the header counts the flock (*4 sessions*; who needs you is the **Flock** tab's badge) and holds the song your player is playing
 (with Now playing on; previous, play/pause and next beside it), the moon while do not disturb lasts
-(a click ends it), the sound, the search (the palette, as **Ctrl+K**), the size switch and the
-full-screen button. The same header holds five tabs in this order: **Flock**, **Chat**, **Dictation**,
+(a click ends it), the search (the palette, as **Ctrl+K**) and the presentation menu: it names the
+size in use and holds the four sizes, each with what it is, and **Sounds**. The same header holds five tabs in this order: **Flock**, **Chat**, **Dictation**,
 **Connections** and **Activity**. They show their icons, the number that needs you on **Flock** and the connectors' rows on **Connections**, and
 **Settings** at the right, which shows Settings in this same window, under the same tabs; a tab
 brings the Nest back. Over every tab but **Flock**, a tag for each session that needs you (or
 failed); a click opens **Flock** with it in front (a card that waits comes first there), where you
 answer it. Settings stays a page of its own there: it is the only one that changes an
-agent's config, a key, a policy or a phone, and it never shows an agent's text. The switch keeps
-the tab you are on: **Room** is the window, the full-screen button the whole screen (**Esc** goes
+agent's config, a key, a policy or a phone, and it never shows an agent's text. The menu keeps
+the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
-pill. **Alt+1** to **Alt+5** pick a tab in that order (hidden Chat is skipped). At the bottom, **Zeca on · optional** / **Zeca off**
+pill. **Alt+1** to **Alt+5** pick a tab in that order (hidden Chat is skipped). At the bottom, **Zeca on** / **Zeca off**
 switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.
@@ -88,7 +88,7 @@ its unsaved text and selection during an unrelated update.
 
 ## Agent profiles
 
-Open **Flock > Agent profiles** to inspect the built-in Developer, Reviewer and Researcher profiles.
+Open **Flock > Specialists** to inspect the built-in Developer, Reviewer and Researcher profiles.
 Choose a card to read its instructions and explicit revision. **Create profile** opens a dedicated
 blank editor: enter your own name and instructions without choosing or copying a preset.
 **Create a copy** remains available on built-in profiles and fills the same editor with that
@@ -140,9 +140,14 @@ while reading profiles; open one to review its card in the Flock. A failed catal
 
 ## Flock
 
-The flock sits on one wire, three times its size, with a project name under each bird. Below it,
-a session list shows each project's state, agent, step number, reported running time and context
-use. Select a bird or row (or use **↑ ↓**) to put that session in front. Hover for the complete
+The flock sits on one wire, three times its size, with a project name under each bird. Opening the
+Nest finds it already perched; only a session that starts while it is open flies in. Each state has
+its posture: a bird waiting on a request spreads its wings over a lit stretch of wire that shortens
+with the request's time, amber then red (red from the start for a destructive one, which also wears
+a larger red triangle); one whose request went back to its terminal unanswered leans in, asking,
+with a small terminal by its head until its next step; a finished one shows its end, then dozes off. Below it, a session list gives each project two
+lines: its name and state, then its agent, step number, and the running time and context use its
+agent reports (left out when it reports none). Select a bird or row (or use **↑ ↓**) to put that session in front. Hover for the complete
 project, branch, agent and state. A right click, the menu key or **Shift+F10** opens the existing
 quick actions: terminal, folder, Activity, last diff, focus, mute, pin and hide. A waiting card
 keeps its own session in front.
@@ -310,7 +315,7 @@ What this computer keeps, read only here:
   ([Zeca's memory](memory.md#project-memory)). **Preferences ↗** opens **Settings → Projects**.
 - **History**: each finished turn of your agents, counts only. Search the loaded
   records by project, agent or status; **Clear filters** restores the list.
-- **Cost**: what the agents cost today and the **daily budget** set in **Settings → Activity**,
+- **Cost**: what the agents cost today and the **daily budget** set in **Settings → History and budget**,
   your plans' usage windows and what the agents cost over the last two weeks, against that budget,
   and by roost. **Budget settings** opens the budget editor
   ([Cost and a daily budget](activity.md#cost-and-a-daily-budget)).

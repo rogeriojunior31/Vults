@@ -7,6 +7,7 @@
 @import "./head.css";
 @import "./activity.css";
 @import "./view-state.css";
+@import "./records.css";
 
 /* The chat panel's own ground: its code blocks and cards are drawn against it. */
 /* The window is transparent: the page draws the prototype's frame, rounded, with its border. */
@@ -132,7 +133,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   width: auto;
   gap: 5px;
   padding: 0 8px;
-  font-size: 11px;
+  font-size: var(--text-s);
 }
 .chat-titlebar .chat-head {
   display: flex;
@@ -160,6 +161,17 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .chat-titlebar .chat-head > .ghost:hover,
 .chat-titlebar .chat-head > * > .place:hover {
   background: var(--raised);
+}
+/* Full access is never quiet in the title bar either, but it is a mode, not a failure: the
+   warning's color and icon, with an outline as its shape. */
+.chat-titlebar .chat-head > .access-box > .place.access.full {
+  color: var(--warn);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, var(--float));
+}
+/* With the conversations' column open, its New conversation is the one New. */
+@media (min-width: 900px) {
+  .nest-chat:not(.no-recent) .chat-titlebar .chat-head > .chat-new { display: none; }
 }
 /* At the window's right, the pickers' menus open leftwards: from their left edge they would run
    past it. */
@@ -290,7 +302,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--raised);
-  font: 11px/1.5 var(--mono);
+  font: 12px/1.5 var(--mono);
 }
 .conn-head {
   display: flex;
@@ -300,7 +312,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .conn-status {
   margin: 6px 0 0;
-  font-size: 11px;
+  font-size: var(--text-s);
   line-height: 1.5;
   color: var(--fg-dim);
 }
@@ -394,7 +406,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--raised);
-  font: 11px/1.5 var(--mono);
+  font: 12px/1.5 var(--mono);
   color: var(--fg-dim);
 }
 .conn-tag.approved,
@@ -458,7 +470,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   display: flex;
   align-items: center;
   gap: 8px;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
 }
 .conn-detail h3 {
@@ -478,7 +490,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .conn-search-box > svg { flex: none; }
 .conn-search { width: 100%; min-width: 0; min-height: 34px; padding: 6px 0; box-sizing: border-box; border: 0; background: transparent; color: var(--fg); font: 13px var(--font); }
 .conn-search::placeholder { color: var(--fg-muted); }
-.conn-results { color: var(--fg-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.conn-results { color: var(--fg-dim); font-size: var(--text-s); font-variant-numeric: tabular-nums; }
 .conn-body { flex: 1 0 80px; min-height: 80px; grid-template-rows: minmax(0, 1fr); overflow: hidden; }
 .conn-body:not(:has(> .conn-detail)) { grid-template-columns: minmax(0, 1fr); }
 .conn-list, .conn-detail { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
@@ -488,8 +500,8 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .conn-row { margin-bottom: 4px; transition: background-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out); }
 .conn-row > svg { margin-top: 3px; }
 .conn-row-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
-.conn-seen { font-size: 10px; color: var(--fg-dim); }
-.conn-context { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 16px; font: 11px/1.6 var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-dim); }
+.conn-seen { font-size: var(--text-s); color: var(--fg-dim); }
+.conn-context { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 16px; font: 12px/1.6 var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-dim); }
 .conn-check-list { margin-top: 20px; border-top: 1px solid var(--border); }
 .conn-check-list > summary { display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; color: var(--fg); font-size: 12px; }
 .conn-check-list > summary::after { content: "+"; margin-left: auto; color: var(--fg-dim); }
@@ -512,7 +524,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   .nest-connections { gap: 6px; }
   .nest-connections .conn-head { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
   .nest-connections .conn-actions { width: auto; }
-  .nest-connections .conn-head h2 { font-size: 16px; }
+  .nest-connections .conn-head h2 { font-size: var(--text-l); }
   .nest-connections .conn-status { margin-top: 2px; }
 }
 /* The whole window is the chat: none of the island's card around it. */
@@ -591,7 +603,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .nest-chat .msg-engine {
   color: var(--fg-muted);
-  font-size: 11.5px;
+  font-size: var(--text-s);
 }
 /* The code's head as a bar over it: its language at the left, Copy at the right. */
 .nest-chat .codeblock {
@@ -614,7 +626,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   display: block;
   overflow: hidden;
   color: var(--fg-muted);
-  font: 11px var(--mono);
+  font: 12px var(--mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -792,7 +804,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-bright);
-  font-size: 16px;
+  font-size: var(--text-l);
   font-weight: 600;
 }
 .roost-tree {
@@ -810,7 +822,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .roost-branch { min-width: 0; color: var(--fg); overflow-wrap: anywhere; }
 .roost-part h4 {
   margin: 10px 0 2px;
-  font-size: 11px;
+  font-size: var(--text-s);
   font-weight: 600;
   color: var(--fg-muted);
   text-transform: uppercase;
@@ -857,7 +869,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .memory-heading-group p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg-dim); }
 .memory-part { min-width: 0; }
 .memory-part h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--fg); }
-.memory-count { flex: none; padding: 1px 6px; border-radius: 6px; background: var(--raised); font: 11px/1.5 var(--mono); color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.memory-count { flex: none; padding: 1px 6px; border-radius: 6px; background: var(--raised); font: 12px/1.5 var(--mono); color: var(--fg-dim); font-variant-numeric: tabular-nums; }
 .memory-proposals > h4 .memory-count { color: var(--warn); }
 .memory-state:empty { display: none; }
 .memory-state p { margin: 0 0 8px; font-size: 12px; line-height: 1.6; }
@@ -865,10 +877,10 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .memory .proposal { margin-bottom: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--float); }
 .memory .proposal-head { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
 .memory .proposal-place { color: var(--fg); font-weight: 600; overflow-wrap: anywhere; }
-.memory .proposal-source { color: var(--fg-dim); font-size: 11px; }
-.memory-folder { margin: 8px 0; color: var(--fg-dim); font: 11px/1.6 var(--mono); overflow-wrap: anywhere; }
+.memory .proposal-source { color: var(--fg-dim); font-size: var(--text-s); }
+.memory-folder { margin: 8px 0; color: var(--fg-dim); font: 12px/1.6 var(--mono); overflow-wrap: anywhere; }
 .memory .proposal-diff { display: grid; gap: 12px; margin: 16px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.memory-change-label { display: block; font: 11px/1.5 var(--font); color: var(--fg-dim); margin-bottom: 4px; }
+.memory-change-label { display: block; font: 12px/1.5 var(--font); color: var(--fg-dim); margin-bottom: 4px; }
 .memory-change p { margin: 0; padding-left: 10px; border-left: 2px solid currentColor; font: 12px/1.6 var(--font); }
 .memory .diff-old { color: var(--error-text); }
 .memory .diff-new { color: var(--ok); }
@@ -900,19 +912,19 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .memory-debrief {
   margin: 0 0 4px;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 .memory-night-line,
 .memory-rate,
 .memory-note {
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 .memory-note {
   color: var(--error-text);
 }
-.memory-used { color: var(--fg-dim); font-size: 11px; font-variant-numeric: tabular-nums; margin: 0 0 8px; }
+.memory-used { color: var(--fg-dim); font-size: var(--text-s); font-variant-numeric: tabular-nums; margin: 0 0 8px; }
 .memory-file ul { margin: 12px 0 0; padding-left: 18px; color: var(--fg); font-size: 12px; line-height: 1.6; }
 .memory-file li + li { margin-top: 8px; }
 .memory-commit {
@@ -933,7 +945,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .memory-commit-by {
   flex: none;
   color: var(--fg-muted);
-  font-size: 11px;
+  font-size: var(--text-s);
 }
 /* Sharing AGENTS.md with Claude Code: the diff shown before the click. */
 .roost-share {
@@ -946,58 +958,17 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   border-radius: 8px;
   background: color-mix(in srgb, var(--fg) 4%, transparent);
   font-family: var(--mono, monospace);
-  font-size: 11.5px;
+  font-size: var(--text-s);
   white-space: pre;
 }
 .roost-cost { margin: 2px 0; font-size: 12px; color: var(--fg-muted); }
 /* Records share a reading order: operation and result, context, then time and counts. */
-.records { display: flex; flex-direction: column; gap: 16px; }
-.records-content { display: contents; }
-.records-content > .activity-heading { order: -2; margin-bottom: 0; }
-.records-content > .activity-summary { order: -1; margin-bottom: 0; }
-.records-search { display: flex; align-items: center; gap: 8px; }
-.records-search input { flex: 1; min-width: 0; min-height: 36px; border-color: var(--control-border); background: var(--input); font-size: 13px; }
-.records-search button { flex-shrink: 0; min-height: 36px; }
-.records-search input:focus { border-color: var(--focus-border); box-shadow: var(--focus-shadow); outline: none; }
-.record-group, .usage-section { overflow: hidden; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--panel); }
-.records-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--fg); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
-.record-count { flex: none; color: var(--fg-dim); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
-.record { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 16px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
-.record-group > .record:last-child, .usage-section > .record:last-child { border-bottom: 0; }
-.record-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.record-title, .record-context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
-.record-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; text-align: right; }
-.record-when, .record-meta { color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
-.record-when { font-size: 11px; }
-.record-duration { color: var(--fg); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
-.record-who { color: var(--fg); font-size: 12px; font-weight: 550; }
-.record-what { min-width: 0; color: var(--fg); font-weight: 550; overflow-wrap: anywhere; }
-.record-status { padding: 3px 7px; border-radius: 6px; background: var(--raised); color: var(--fg-dim); font-size: 11px; line-height: 1.4; }
-.record-status.passing { background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--ok); }
-.record-status.failing { background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error-text); }
-.record-target { grid-column: 1 / -1; padding: 10px 12px; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
-.record.child { margin-left: 24px; border-left: 1px solid var(--control-border); }
-.usage-section .record { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.usage-section > .board-empty { padding: 12px 16px; }
-.usage-bar { position: relative; flex: 1; align-self: center; min-width: 80px; max-width: 340px; height: 8px; overflow: hidden; border-radius: 999px; background: var(--raised); }
-.usage-mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--warn); }
-.usage-fill { display: block; height: 100%; border-radius: inherit; background: var(--mark-fill); }
-.usage-fill.over, .usage-fill.warning { background: var(--warn); }
-.usage-fill.critical { background: var(--error); }
-.usage-status { color: var(--fg-dim); font-size: 11px; }
-.usage-status.warning { color: var(--warn); }
-.usage-status.critical { color: var(--error-text); }
 .nest-activity .nest-part:not(.nest-week-part) { padding: 20px 24px 24px; }
 @media (max-width: 600px) {
   .nest-subs { max-width: calc(100% - 32px); margin: 16px 16px 0; }
   .nest-activity .nest-part:not(.nest-week-part) { padding: 16px; }
   .nest-pane:not(.nest-flock-pane) { padding: 16px; }
   .cost-today, .conn-detail, .conn-waiting, .nest-connections .nest-add { padding: 16px; }
-  .record { gap: 8px; padding: 12px; }
-  .record-title { align-items: flex-start; }
-  .record-aside { max-width: 100px; }
-  .record.child { margin-left: 12px; }
-  .records-head { padding: 12px; }
 }
 /* The size switch, between the tabs and the gear. */
 /* The Flock (ADR 0021), with the Living Flock prototype's Panel measures: the stage edge to edge,
@@ -1024,7 +995,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   gap: 12px;
   padding: 12px 19px 0;
   color: var(--fg-dim);
-  font: 11px var(--font);
+  font: 12px var(--font);
 }
 .habitat-heading {
   display: flex;
@@ -1079,6 +1050,47 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .habitat-sky .badge {
   pointer-events: none;
 }
+/* Over a bird three times its size, a state's mark is drawn larger too: about 16 px across. */
+.habitat-sky .badge:is(.approval, .question, .finished, .failed) {
+  transform: scale(1.8);
+}
+/* A waiting request's clock on its bird's perch: the lit wire shortens as its time runs out. */
+.habitat-sky .perch-clock {
+  position: absolute;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  pointer-events: none;
+}
+.habitat-sky .perch-clock > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--warn) 70%, var(--fg));
+  transition: width 1s linear;
+}
+.habitat-sky .perch-clock:is(.soon, .destructive) > i { background: var(--warn); }
+.habitat-sky .perch-clock:is(.urgent, .destructive.soon) > i { background: var(--error); }
+@media (prefers-reduced-motion: reduce) {
+  .habitat-sky .perch-clock > i { transition: none; }
+}
+/* A destructive request: the same triangle, in red, and larger, so it reads before the card. */
+.habitat-sky .badge.approval.destructive {
+  transform: scale(2.3);
+}
+.habitat-sky .badge.approval.destructive::after {
+  background: var(--error);
+}
+/* Its request went back unanswered: a small terminal by its head, where it asks now. */
+.habitat-sky .badge.returned {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--warn);
+  color: var(--bg);
+}
 .habitat-sky .habitat-more {
   top: 6px;
   right: 0;
@@ -1127,8 +1139,9 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  font-size: 12px;
-  font-weight: 550;
+  flex: 1;
+  font-size: var(--text-l);
+  font-weight: 600;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -1136,14 +1149,19 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   font-size: 12px;
   color: var(--warn);
 }
+/* The state rides beside the name: the row reads in two lines. */
 .roost-sub {
   display: flex;
-  align-items: baseline;
+  flex: none;
+  align-items: center;
   gap: 6px;
-  padding-top: 6px;
-  font-size: 11px;
+  max-width: 55%;
+  overflow: hidden;
+  font-size: var(--text-s);
   line-height: 1.4;
   color: var(--fg-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .roost-sub::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .roost-sub:is(.tone-warn, .tone-ask) { color: var(--warn); }
@@ -1152,7 +1170,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .roost-agent {
   overflow: hidden;
   padding-top: 4px;
-  font: 11px/1.4 var(--font);
+  font: 12px/1.4 var(--font);
   color: var(--bird-color);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1162,7 +1180,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .filtered-note {
   padding: 4px 0 8px;
-  font-size: 11px;
+  font-size: var(--text-s);
   color: var(--fg-dim);
 }
 .filtered-note .outline {
@@ -1179,8 +1197,8 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .flock-toolbar h2 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 550;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: -0.2px;
   white-space: nowrap;
 }
@@ -1205,7 +1223,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
 }
 .attention-filter:hover { background: var(--raised); color: var(--fg); }
-.attention-count { min-width: 20px; padding: 2px 4px; border-radius: 999px; background: var(--raised); color: var(--fg); font-size: 11px; font-variant-numeric: tabular-nums; }
+.attention-count { min-width: 20px; padding: 2px 4px; border-radius: 999px; background: var(--raised); color: var(--fg); font-size: var(--text-s); font-variant-numeric: tabular-nums; }
 .attention-filter[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--warn) 30%, transparent);
   background: color-mix(in srgb, var(--warn) 7%, transparent);
@@ -1295,7 +1313,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   border: none;
   border-radius: 4px;
   background: var(--raised);
-  font: 11px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
 }
 .card-verb {
@@ -1317,7 +1335,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   border-radius: 9px;
   background: color-mix(in srgb, var(--tone) 18%, transparent);
   color: var(--tone);
-  font: 11px var(--mono);
+  font: 12px var(--mono);
   font-variant-numeric: tabular-nums;
 }
 .card-words {
@@ -1348,7 +1366,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   min-height: 28px;
   padding: 3px 6px;
   border: 0;
-  font-size: 11px;
+  font-size: var(--text-s);
 }
 .app-card-actions {
   display: flex;
@@ -1357,9 +1375,38 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   gap: 8px;
   margin-top: 16px;
 }
+/* A request that went back to the terminal unanswered: what it asks there, in the card's own
+   command box, under a quiet amber heading (it is waiting on you, but not here). */
+.returned-request {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.returned-request h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+}
+.returned-request .command {
+  margin-top: 8px;
+}
+.returned-request .rule-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 8px;
+}
+.nest-flock-tab .returned-folder {
+  min-height: 24px;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--fg);
+}
 .rule-scope {
   margin: 10px 0 0;
-  font-size: 10px;
+  font-size: var(--text-s);
   color: var(--fg-dim);
 }
 /* The prototype's two buttons: a light primary and a bordered outline. */
@@ -1393,6 +1440,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   align-items: center;
   gap: 6px;
 }
+.app-card-actions.decision-actions button { min-height: 38px; padding-inline: 14px; }
 .nest-flock-tab .primary .kbd {
   border-color: color-mix(in srgb, var(--on-accent) 40%, transparent);
 }
@@ -1451,7 +1499,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 }
 .detail-count {
   margin-left: 5px;
-  font: 11px var(--mono);
+  font: 12px var(--mono);
   font-variant-numeric: tabular-nums;
   color: var(--ok);
 }
@@ -1478,12 +1526,12 @@ body.still .detail-content.detail-enter { animation: none; }
   border-radius: 6px;
   background-color: var(--input);
   color: var(--fg);
-  font: 11px var(--mono);
+  font: 12px var(--mono);
 }
 .diff-toolbar .outline {
   min-height: 29px;
   padding: 5px 8px;
-  font-size: 10px;
+  font-size: var(--text-s);
   white-space: nowrap;
 }
 .diff-caption {
@@ -1492,7 +1540,7 @@ body.still .detail-content.detail-enter { animation: none; }
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
-  font: 11px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
 }
 /* Every file the session changed, under the diff shown: paths whole, counts aligned. */
@@ -1501,8 +1549,8 @@ body.still .detail-content.detail-enter { animation: none; }
 }
 .touched-head {
   margin: 0 0 8px;
-  font: 600 11px var(--font);
-  color: var(--fg-muted);
+  font: 600 12px var(--font);
+  color: var(--fg-dim);
 }
 .touched-row {
   display: flex;
@@ -1514,7 +1562,7 @@ body.still .detail-content.detail-enter { animation: none; }
   border: 0;
   border-radius: 6px;
   background: none;
-  font: 11px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
   text-align: left;
 }
@@ -1555,7 +1603,7 @@ button.touched-row:hover,
   gap: 13px;
   min-height: 26px;
   padding: 0 11px;
-  font: 11px/2.45 var(--mono);
+  font: 12px/2.45 var(--mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1578,11 +1626,11 @@ button.touched-row:hover,
 .diff-row.hunk {
   background: color-mix(in srgb, var(--info) 4%, transparent);
   color: var(--info);
-  font-size: 10px;
+  font-size: var(--text-s);
 }
 .detail-footnote {
   margin: 12px 0 0;
-  font-size: 10px;
+  font-size: var(--text-s);
   line-height: 1.7;
   color: var(--fg-dim);
 }
@@ -1602,14 +1650,14 @@ button.touched-row:hover,
 }
 .detail-content .activity-row time {
   margin-top: 2px;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
 }
 .detail-content .activity-row strong {
   font-weight: 500;
 }
 .detail-content .activity-row > span {
-  font-size: 10px;
+  font-size: var(--text-s);
   color: var(--ok);
 }
 .context-dl {
@@ -1624,7 +1672,7 @@ button.touched-row:hover,
 }
 .context-dl dd {
   margin: 0;
-  font: 11px var(--mono);
+  font: 12px var(--mono);
   overflow-wrap: anywhere;
 }
 .usage-card {
@@ -1635,7 +1683,7 @@ button.touched-row:hover,
   padding: 10px 20px;
   border-top: 1px solid var(--border);
   background: var(--chrome);
-  font-size: 9px;
+  font-size: var(--text-s);
   color: var(--fg-dim);
 }
 .usage-card[hidden] {
@@ -1718,8 +1766,8 @@ button.touched-row:hover,
   .focus-block {
     padding: 12px 14px;
   }
-  .card-name { margin-bottom: 6px; font-size: 16px; }
-  .app-card-head { font-size: 11px; }
+  .card-name { margin-bottom: 6px; font-size: var(--text-l); }
+  .app-card-head { font-size: var(--text-s); }
   .app-card .command {
     margin-top: 8px;
     padding: 6px 10px;
@@ -1793,9 +1841,9 @@ button.touched-row:hover,
 .nest-recent-row.current .nest-recent-title { font-weight: 600; }
 .nest-recent-title { grid-column: 1 / -1; color: var(--fg); }
 .nest-recent-title, .nest-recent-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nest-recent-meta, .nest-recent-time { font-size: 11px; color: var(--fg-dim); }
+.nest-recent-meta, .nest-recent-time { font-size: var(--text-s); color: var(--fg-dim); }
 .nest-recent-time { font-variant-numeric: tabular-nums; }
-.nest-recent-day { margin: 12px 10px 4px; font-size: 11px; font-weight: 500; color: var(--fg-muted); flex: none; }
+.nest-recent-day { margin: 12px 10px 4px; font-size: var(--text-s); font-weight: 500; color: var(--fg-muted); flex: none; }
 .nest-recent-status { font-size: 12px; color: var(--fg-dim); line-height: 1.5; }
 .nest-recent-status:empty, .nest-recent-status[hidden] { display: none; }
 .nest-recent-back { display: none; }
@@ -1831,26 +1879,29 @@ button.touched-row:hover,
   margin-top: 4px;
 }
 .nest-add h3 {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--fg-muted);
+  color: var(--fg);
 }
+/* Rows inside the panel, divided by a line: a card inside a card would draw two frames. */
 .nest-add-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.nest-add h3 + .nest-add-row {
+  border-top: 0;
 }
 .nest-add-row p {
   flex: 1;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 .nest-add-row strong {
   display: block;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 /* The card's ticker, quiet flag and changes, as the prototype draws them (wave 1). */
@@ -1883,7 +1934,7 @@ button.touched-row:hover,
   border: 1px solid var(--border);
   border-radius: 4px;
   background: none;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
   cursor: pointer;
 }
@@ -1901,7 +1952,7 @@ button.touched-row:hover,
   border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
   border-radius: 7px;
   background: color-mix(in srgb, var(--warn) 3%, transparent);
-  font-size: 11px;
+  font-size: var(--text-s);
   color: var(--warn);
 }
 .app-card .silence > span {
@@ -1919,7 +1970,7 @@ button.touched-row:hover,
   border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
   border-radius: 5px;
   background: none;
-  font-size: 10px;
+  font-size: var(--text-s);
   color: var(--warn);
   cursor: pointer;
 }
@@ -1933,7 +1984,7 @@ button.touched-row:hover,
   border: 0;
   border-top: 1px solid var(--border);
   background: none;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-muted);
   text-align: left;
   cursor: pointer;
@@ -1974,6 +2025,13 @@ button.touched-row:hover,
   font-size: 12px;
   color: var(--error-text);
 }
+.conn-waiting .conn-refused { color: var(--error-text); }
+.conn-refused code { padding: 1px 5px; border-radius: 5px; background: var(--raised); color: var(--fg); font: 12px var(--mono); }
+/* Explanations keep a reading measure, not the window's width. */
+.nest-connections .nest-add-row p, .conn-waiting > p { max-width: 72ch; }
+/* The action stays beside the words it acts on, not across an empty card. */
+.nest-connections .nest-add-row { gap: 24px; }
+.nest-connections .nest-add-row p { flex: 0 1 64ch; }
 .conn-row.seen .conn-row-words strong { color: var(--fg-dim); }
 /* The prototype's GitHub view: a count on each tab (red when Actions fail), the repository filter,
    the checks one by one, a bar while they run, and the command to copy. */
@@ -1982,7 +2040,7 @@ button.touched-row:hover,
   padding: 1px 6px;
   border-radius: 8px;
   background: var(--raised);
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-dim);
 }
 .conn-tabs .nest-sub b.hot {
@@ -2022,7 +2080,7 @@ button.touched-row:hover,
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: 11px;
+  font-size: var(--text-s);
 }
 .conn-check i {
   flex: none;
@@ -2048,7 +2106,7 @@ button.touched-row:hover,
 .conn-check span:last-child {
   flex: none;
   margin-left: auto;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
 }
 .conn-cmd {
@@ -2060,7 +2118,7 @@ button.touched-row:hover,
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg-deep);
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
 }
 .conn-cmd::before {
@@ -2077,7 +2135,7 @@ button.touched-row:hover,
 }
 .conn-cmd button {
   flex: none;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--fg-dim);
 }
 .conn-cmd button:hover {
@@ -2091,13 +2149,26 @@ button.touched-row:hover,
   border-bottom: 1px solid var(--chrome-line);
   background: var(--float);
 }
+/* A short window keeps its height for the page: the Flock tab's count already says who needs you,
+   and the Flock itself lists and answers them. */
+@media (max-height: 480px) { .nest-need { display: none; } }
+/* Narrow: the title bar keeps every control but drops the model name and plan usage beside the
+   executor, so the controls fit in two rows instead of three. */
+@media (max-width: 600px) {
+  .nest-chat .chat-titlebar :is(.engine-model, .model-usage) { display: none; }
+}
+/* Narrow: Activity's parts scroll sideways without a scrollbar track; a tab cut at the edge says there is more. */
+@media (max-width: 600px) {
+  .nest-activity > .nest-subs { scrollbar-width: none; }
+  .nest-activity > .nest-subs::-webkit-scrollbar { display: none; }
+}
 /* The prototype's small tags: a glyph and a name, as in its tagged strip. */
 .nest-need .need-tag {
   gap: 5px;
   max-width: 150px;
   padding: 2px 8px 2px 3px;
   border-radius: 11px;
-  font-size: 11px;
+  font-size: var(--text-s);
 }
 .nest-need .need-tag span {
   overflow: hidden;
@@ -2196,7 +2267,7 @@ button.touched-row:hover,
 }
 .nest-menu-head {
   padding: 4px 8px 6px;
-  font: 500 10px var(--mono);
+  font: 500 12px var(--mono);
   letter-spacing: 0.6px;
   text-transform: uppercase;
   color: var(--fg-muted);
@@ -2216,7 +2287,7 @@ button.touched-row:hover,
   background: var(--raised);
 }
 .habitat-summary {
-  font: 11px var(--font);
+  font: 12px var(--font);
   font-variant-numeric: tabular-nums;
   color: var(--fg-muted);
 }
@@ -2234,7 +2305,7 @@ button.touched-row:hover,
   padding: 3px 4px 3px 10px;
   border: 1px solid var(--control-border);
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--text-s);
 }
 .hdr-extras .np-controls {
   display: flex;
@@ -2309,7 +2380,7 @@ button.touched-row:hover,
   .conn-repo { flex: 1; min-width: 0; max-width: 100%; }
   .conn-row { flex-wrap: wrap; gap: 8px; }
   .conn-row-words { flex-basis: calc(100% - 28px); }
-  .conn-row > .conn-tag { margin-left: 24px; font-size: 11px; }
+  .conn-row > .conn-tag { margin-left: 24px; font-size: var(--text-s); }
   .conn-row-words strong { white-space: normal; overflow-wrap: anywhere; }
   .chat-titlebar .chat-head { min-width: 0; }
   .nest-chat .chat-head > .engine-box { flex: 0 1 auto; min-width: 0; max-width: calc(100% - 80px); }
@@ -2353,12 +2424,74 @@ button.touched-row:hover,
 .flock-filters { display: flex; flex-wrap: wrap; gap: 4px; }
 .session-filter { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; padding: 4px 6px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; }
 .session-filter:hover, .session-filter[aria-pressed="true"] { background: var(--raised); color: var(--fg); }
+/* The waiting line: every permission that waits, above the sessions, answered from its row. It takes
+   at most about two thirds of the column so the sessions stay in reach; the rows scroll inside it. */
+.waiting-lane { flex: none; display: flex; flex-direction: column; max-height: 62%; min-height: 0; margin: 0 8px 4px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border)); border-radius: var(--radius-card); background: color-mix(in srgb, var(--warn) 5%, var(--panel)); }
+.waiting-lane[hidden] { display: none; }
+.lane-head { display: flex; align-items: center; gap: 8px; padding: 8px 8px 6px 12px; }
+.lane-spacer { flex: 1; }
+.lane-mode { min-height: 26px; padding: 2px 8px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; }
+.lane-mode:hover { background: var(--raised); color: var(--fg); }
+.lane-head h3 { margin: 0; color: var(--fg); font-size: 13px; font-weight: 600; }
+.lane-rows { display: flex; flex-direction: column; min-height: 0; margin: 0; padding: 0 4px; overflow-y: auto; list-style: none; }
+.lane-row { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--border); }
+.lane-row.batch { grid-template-columns: 20px minmax(0, 1fr); gap: 0 4px; padding-left: 8px; }
+.lane-row:first-child { border-top: 0; }
+.lane-row + .lane-row { margin-top: 0; }
+.lane-tick { width: 16px; height: 16px; margin: 10px 0 0; accent-color: var(--fg); }
+.lane-tick-none { display: block; }
+.lane-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* The row is one button: it opens the request in the card. The one in the card now is marked. */
+.lane-open { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 8px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; text-align: left; }
+.lane-open:hover { background: var(--raised); }
+.lane-open:focus-visible { outline: 2px solid var(--focus-border); outline-offset: -2px; }
+.lane-row.current .lane-open { background: color-mix(in srgb, var(--fg) 6%, transparent); }
+.lane-who .deadline { flex: none; margin-left: auto; }
+.lane-who { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.lane-who > svg { flex: none; align-self: center; color: var(--warn); }
+.lane-who strong { overflow: hidden; color: var(--fg); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.lane-command { overflow: hidden; color: var(--fg); font: 12px/1.5 var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+.lane-scope { overflow: hidden; color: var(--fg-dim); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.lane-row.destructive .lane-scope { color: var(--warn); }
+/* The row in front answers its request: the card beside it keeps the context (steps, changes). */
+.lane-decide { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 10px; }
+.lane-decide .command { margin: 0; }
+.lane-decide :is(.ask-why, .rule-scope) { margin: 0; }
+.lane-decide .decision-actions { margin: 0; }
+.lane-decide .card-skip { align-self: flex-start; }
+.lane-row.deciding { background: color-mix(in srgb, var(--fg) 4%, transparent); border-radius: var(--radius-control); }
+.lane-keys { color: var(--fg-dim); font-size: 12px; }
+@media (min-width: 761px) {
+  .lane-row.deciding .lane-open :is(.lane-command, .lane-scope) { display: none; }
+  .flock-selected :is(.decision-block, .card-side).lane-owned { display: none; }
+}
+/* Narrow, the line and the card are not side by side: the card answers, the line only lists. */
+@media (max-width: 760px) {
+  .lane-decide, .lane-keys, .lane-pointer { display: none; }
+}
+.lane-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px 10px; border-top: 1px solid var(--border); }
+.lane-foot .primary { min-height: 30px; padding: 2px 12px; font-size: 12px; }
+.lane-foot .primary:disabled { opacity: 0.5; cursor: default; }
+.lane-note { color: var(--fg-dim); font-size: 12px; line-height: 1.4; }
+.conn-actions .conn-fix { margin-right: 6px; font: 12px var(--mono); }
+/* A card's clock: always there and quiet, amber in its last half minute, red in its last ten seconds. */
+.deadline { color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deadline.soon { color: var(--warn); }
+.deadline.urgent { color: var(--error-text); font-weight: 600; }
+.deadline[hidden] { display: none; }
+/* A request nobody answered in time: said once, with its terminal at hand. */
+.expired-notes { flex: none; display: flex; flex-direction: column; gap: 4px; margin: 0 8px 4px; }
+.expired-notes[hidden] { display: none; }
+.expired-note { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border)); border-radius: var(--radius-control); background: color-mix(in srgb, var(--warn) 6%, var(--panel)); color: var(--fg); font-size: 12px; line-height: 1.4; }
+.expired-note > svg { flex: none; color: var(--warn); }
+.expired-note > span { flex: 1; min-width: 0; }
+.expired-note .outline { min-height: 26px; padding: 2px 8px; font-size: 12px; }
+.expired-note .expired-dismiss { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; color: var(--fg-dim); }
 .flock-list .roost-cards { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; padding: 8px; }
 .flock-list .roost-cards.empty { display: block; }
 .flock-list .roost-card { flex: none; width: 100%; padding: 10px; text-align: left; }
-.flock-list .roost-label strong { font-size: 13px; }
-.flock-list .roost-agent { color: var(--fg-dim); margin-top: 6px; white-space: normal; font-size: 12px; line-height: 1.5; }
-.roost-context { color: var(--fg-muted); margin-top: 4px; font-size: 12px; }
+.flock-list .roost-label strong { font-size: var(--text-l); }
+.flock-list .roost-agent { color: var(--fg-dim); margin-top: 4px; font-size: var(--text-s); line-height: 1.5; }
 .session-context-meter { display: block; width: 100%; height: 5px; margin-top: 8px; accent-color: var(--fg-dim); }
 .session-context-meter::-webkit-meter-bar { background: var(--raised); border: 0; border-radius: 3px; }
 .session-context-meter::-webkit-meter-optimum-value { background: var(--fg-dim); border-radius: 3px; }
@@ -2371,11 +2504,33 @@ button.touched-row:hover,
 .session-metric { min-width: 0; }
 .session-metric dt { color: var(--fg-dim); font-size: 12px; }
 .session-metric dd { margin: 6px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.session-metric dd.unknown { color: var(--fg-dim); font-size: var(--text-m); line-height: 27px; }
 .session-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 8px; }
-.session-section-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.session-section-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
 .workspace-head .outline { flex: none; white-space: nowrap; }
 .workspace-head h3 { min-width: 0; }
+/* The empty flock: one pane, with the next step, in place of a list of nothing and a blank detail. */
+.nest-flock-tab.no-sessions .flock-workspace { display: block; overflow-y: auto; }
+.nest-flock-tab.no-sessions :is(.flock-list, .flock-back) { display: none; }
+.nest-flock-tab.no-sessions .flock-selected { display: block; }
+.flock-welcome { display: flex; align-items: flex-start; gap: 20px; max-width: 640px; padding: 24px; }
+.flock-welcome-perch { position: relative; flex: none; width: 112px; height: 108px; }
+.flock-welcome-perch:empty { display: none; }
+.flock-welcome-text { min-width: 0; }
+@media (max-width: 600px) { .flock-welcome-perch { display: none; } }
+.flock-welcome[hidden] { display: none; }
+.flock-welcome h3 { margin: 0; color: var(--fg); font: 600 var(--text-l)/1.4 var(--font); }
+.flock-welcome p { margin: 8px 0 0; color: var(--fg-dim); font: var(--text-m)/1.6 var(--font); }
+.flock-welcome .primary { margin-top: 16px; }
 .session-files .touched { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  #nest *,
+  #nest *::before,
+  #nest *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
 .session-recent .activity-row { min-width: 0; }
 .session-recent .activity-row strong { overflow-wrap: anywhere; }
 @media (max-width: 760px) {
@@ -2389,10 +2544,34 @@ button.touched-row:hover,
   .flock-toolbar h2 { width: auto; align-self: center; }
   .flock-filters { width: 100%; }
   .session-metrics { gap: 8px; }
-  .session-metric dd { font-size: 16px; }
+  .session-metric dd { font-size: var(--text-l); }
 }
 
 @media (max-height: 480px) { .nest-flock-tab .flock-stage { display: none; } }
+/* A short window shows the command and its answers together, never one over the other: the answers
+   sit right under the command (not pinned over it), and the rest of the card gives way first. The
+   words shrink to a line, the waiting count goes (the line above counts), and a long command
+   scrolls in its own box. */
+@media (max-height: 480px) {
+  .flock-selected .focus-block { padding-block: 8px 0; }
+  .flock-selected .focus-block > :last-child { margin-bottom: 8px; }
+  .flock-back { min-height: 28px; margin-top: 4px; }
+  .flock-selected .focus-block:has(.decision-actions) .card-words { display: -webkit-box; overflow: hidden; margin-block: 6px 0; font-size: 13px; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+  .flock-selected .focus-block:has(.decision-actions) .q-of { display: none; }
+  .flock-selected .focus-block:has(.decision-actions) .command { margin-top: 8px; padding-block: 6px; }
+  .flock-selected .focus-block:has(.decision-actions) .command code { max-height: 3.4em; overflow-y: auto; }
+  .flock-selected .decision-actions {
+    flex-wrap: wrap;
+    padding-block: 8px;
+  }
+  .flock-selected .decision-actions > :is(.decision-scope, .decision-why) { display: flex; flex: 1 0 100%; }
+  .flock-selected .focus-block :is(.rule-scope, .ask-why) { display: none; }
+  /* With no decision there is no bar to carry it: the terminal's folder stays. */
+  .flock-selected .focus-block .returned-request .rule-scope { display: flex; }
+  .flock-selected .decision-actions { row-gap: 4px; }
+}
+.decision-scope, .decision-why { display: none; min-width: 0; color: var(--fg-dim); font-size: var(--text-s); overflow-wrap: anywhere; }
+.decision-why { align-items: center; gap: 6px; color: var(--warn); }
 
 @media (max-height: 480px) {
   .nest-chat:has(.approval-queue.on) .chat-titlebar { flex-wrap: nowrap; padding: 4px 8px; gap: 4px; }
@@ -2404,6 +2583,8 @@ button.touched-row:hover,
   .nest-chat:has(.approval-queue.on) .nest-memory-toggle span { display: none; }
 }
 
+/* No voice model yet: the hero says so, in the warning role, with the way to fix it. */
+.meeting-check.meeting-unavailable .meeting-workflow, .meeting-check.meeting-unavailable .meeting-preparation { display: none; }
 /* Dictation keeps the shared frame; only the transcript column scrolls. */
 .nest-pane.nest-dictation-pane { padding: 0; display: flex; overflow: hidden; }
 .dictation-area { display: flex; flex: 1; min-width: 0; min-height: 0; }
@@ -2684,7 +2865,7 @@ button.touched-row:hover,
 .agent-profile-detail { background: transparent; border: 0; padding: 0; min-width: 0; }
 .agent-profile-hero { display: flex; align-items: center; gap: 20px; padding: 8px 0 20px; }
 .agent-profile-identity { min-width: 0; }
-.agent-profile-identity h3 { margin: 0 0 8px; font-size: 22px; overflow-wrap: anywhere; }
+.agent-profile-identity h3 { margin: 0 0 8px; font-size: 20px; overflow-wrap: anywhere; }
 .agent-profile-identity > .note { margin: 0 0 16px; color: var(--fg-dim); font-size: var(--text-s); }
 .agent-profile-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .agent-profile-detail-actions .agent-profile-edit { border: 1px solid var(--control-border); background: transparent; }
@@ -2731,7 +2912,7 @@ button.touched-row:hover,
 .conn-check-bar > i.running { background: var(--warn); }
 .conn-check-bar > i.waiting { background: var(--fg-dim); }
 .conn-check-bar > i.skipped { background: transparent; box-shadow: inset 0 0 0 1px var(--fg-muted); }
-.conn-check-bar > small { flex: none; color: var(--fg-dim); font: 11px/1 var(--font); }
+.conn-check-bar > small { flex: none; color: var(--fg-dim); font: 12px/1 var(--font); }
 @media (max-width: 600px) {
   .conn-row > .conn-row-side { flex-direction: row; align-items: center; flex-wrap: wrap; max-width: 100%; margin-left: 24px; }
 }
@@ -2743,7 +2924,7 @@ button.touched-row:hover,
 .conn-tool-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .conn-tool-title code { font: 12px var(--mono); overflow-wrap: anywhere; }
 .conn-tool-copy p, .conn-tool-intro, .conn-tool-footer p { margin: 8px 0; color: var(--fg-dim); font-size: 12px; line-height: 1.6; }
-.conn-tool-copy small { color: var(--fg-muted); font-size: 11px; }
+.conn-tool-copy small { color: var(--fg-muted); font-size: var(--text-s); }
 .conn-tool-actions { flex: none; }
 .conn-tool-feedback { flex-basis: 100%; margin: 0; font-size: 12px; }
 .conn-tool-feedback:empty { display: none; }
@@ -2792,7 +2973,10 @@ button.touched-row:hover,
 .agent-preview-detail { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding-left: 24px; border-left: 1px solid var(--border); }
 .agent-preview-detail h2 { font-size: 20px; margin: 0; }
 .agent-preview-detail .agent-preview-hero { align-self: center; }
-.agent-preview-detail > .btn:not(.primary) { background: transparent; border: 1px solid var(--control-border); }
+/* One primary (open the chat); the others read as a quiet list of actions, not a stack of pills. */
+.agent-preview-detail > .btn:not(.primary) { justify-content: flex-start; min-height: 32px; margin: -6px 0 0; padding: 4px 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg-dim); font-weight: 500; text-align: left; }
+.agent-preview-detail > .btn:not(.primary):hover { background: var(--raised); color: var(--fg); }
+.agent-preview-detail > .btn.primary + .btn:not(.primary) { margin-top: 0; }
 .agent-preview-detail details { border-top: 1px solid var(--border); padding-top: 12px; }
 .agent-preview summary { color: var(--fg-dim); cursor: pointer; font-size: var(--text-s); }
 .agent-preview details p { margin-top: 8px; white-space: pre-wrap; }
@@ -2827,7 +3011,7 @@ button.touched-row:hover,
 .agent-preview-chat .chat-head { flex-wrap: wrap; padding: 8px 0; overflow: visible; }
 .agent-preview-chat-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; }
 .agent-preview-chat-controls > label { flex: 1 1 104px; max-width: 180px; }
-.agent-preview-chat-controls > label > span { font-size: 11px; color: var(--fg-dim); }
+.agent-preview-chat-controls > label > span { font-size: var(--text-s); color: var(--fg-dim); }
 .agent-preview-chat-controls > button { flex: none; height: 34px; }
 .agent-preview-chat-controls input, .agent-preview-chat-controls select { font-size: var(--text-s); }
 .agent-preview-chat .chat-head .agent-preview-chat-controls > button:first-child { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

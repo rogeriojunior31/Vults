@@ -85,6 +85,7 @@ const settings = { dictationCommands: true, dictationCommandChat: false, dictati
 globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
   if (name.startsWith("on")) return cb => { events[name] = cb; };
   return async (...args) => {
+    if (globalThis.failReads?.has(name)) throw new Error("simulated failure");
     switch (name) {
       case "appSettings": return initialSettings;
       case "windowsShortcuts": return globalThis.settingsTestWindowsBindings ?? null;
@@ -106,7 +107,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "spendToday": budgetReads++; return { usd: 1, tokens: 100, budget: 2, subscription: true };
       case "budgetSet": writes.push([name, ...args]); return new Promise((resolve, reject) => pendingBudgets.push({ resolve, reject }));
       case "nestIsFull": return false;
-      case "monitors": case "rulesList": case "policiesList": case "agentsDoctor": return [];
+      case "monitors": case "rulesList": case "policiesList": case "agentsDoctor": case "nestAudit": return [];
       case "connectorsStatus": return [{ id: "github", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "maintainer", host: "github.com" }, { id: "gitlab", enabled: false, lastOk: null, error: null, watching: 0, overBudget: false, account: "reviewer", host: "gitlab.com" }];
       case "projectPrefs": return {};
       case "installStatus": return { installed: false, hookReady: true, statusLine: "ours", configPath: "/home/example/agent.json" };
@@ -196,7 +197,7 @@ await go("General");
 assert.equal(detail("Keyboard shortcuts").open, true, "Disclosures stay open across navigation");
 await go("Agents");
 assert.equal(detail("What each agent can do").open, false, "The duplicate diagnostic list is disclosed on demand");
-await go("Activity");
+await go("History and budget");
 assert.equal(page().querySelector(".week"), null);
 assert.equal(page().querySelector(".activity-grid"), null, "Settings does not duplicate the weekly dashboard");
 assert.ok(page().textContent.includes("Keep a history"));
@@ -206,12 +207,12 @@ button("Clear history…").fire("click");
 assert.ok(page().textContent.includes("This can't be undone."));
 button("Cancel").fire("click");
 assert.deepEqual(writes, [], "Navigation, disclosures, draft restoration and cancel never write settings or clear history");
-for (const label of ["Dictation", "Approvals", "Projects", "Connectors", "Phone", "Flock & Zeca", "About"]) {
+for (const label of ["Dictation", "Approvals", "Projects", "Connection setup", "Phone", "Flock & Zeca", "About"]) {
   await go(label);
   assert.equal(page().querySelectorAll("h1").length, 1, `${label} keeps one page heading`);
   assert.ok(page().querySelector(".settings-heading"));
 }
-await go("Connectors");
+await go("Connection setup");
 assert.ok(page().textContent.includes("Last successful GitHub CLI account: maintainer on github.com."), "GitHub settings identify the last successful account and host from the connector poll");
 const gitlabCard = page().querySelectorAll("section.card").find(card => card.querySelector(".card-title")?.textContent === "GitLab");
 assert.ok(gitlabCard, "GitLab is an explicit registered connector");
@@ -266,11 +267,11 @@ assert.equal(widget().disabled, false);
 console.log("check-settings-ui: segmented selection and dropdown rollback survive pending repaint");
 
 // The real Settings entry owns budget writes; drafts and pending state survive repaint.
-await go("Activity");
+await go("History and budget");
 const budgetInput = () => page().querySelector(".budget-input");
 assert.equal(budgetInput().value, "2");
 budgetInput().value = "5.25"; budgetInput().fire("input");
-await go("General"); await go("Activity");
+await go("General"); await go("History and budget");
 assert.equal(budgetInput().value, "5.25", "Navigating back retains the unsaved budget");
 button("Save").fire("click"); await tick();
 assert.deepEqual(writes.at(-1), ["budgetSet", 525]);
@@ -846,7 +847,58 @@ gitea.context(true,false); giteaToken.value='retry-token'; giteaSave.fire('click
 failGitea('Could not save the Gitea connection.'); await tick();
 assert.ok(gitea.element.textContent.includes('Could not save the Gitea connection.'));
 assert.equal(giteaToken.value,'');
-giteaClear.fire('click'); await tick(); assert.deepEqual(giteaWrites[2],['https://git.example.com/team/','','second',true]);
+giteaClear.fire('click'); await tick(); assert.equal(giteaWrites.length,2,'Remove connection asks before removing');
+assert.equal(document.activeElement.textContent,'Cancel','Cancel takes the focus while removal is asked');
+document.activeElement.fire('click'); await tick(); assert.equal(giteaWrites.length,2,'Cancel removes nothing');
+giteaClear.fire('click'); giteaClear.fire('click'); await tick(); assert.deepEqual(giteaWrites[2],['https://git.example.com/team/','','second',true]);
 finishGitea({baseUrl:'',generation:''}); await tick();
 assert.equal(giteaUrl.value,''); assert.ok(giteaClear.disabled);
 console.log('check-settings-ui: Gitea keeps drafts, clears tokens, serializes saves and requires a separate activation');
+
+// A list that cannot be read says so, with a retry, instead of looking empty or off.
+for (const [label, call, failed] of [
+  ["Projects", "projectsList", "Could not read your project choices."],
+  ["Phone", "phoneSettings", "Could not read the phone settings."],
+  ["Connection setup", "connectorsStatus", "Could not read which connections are on."],
+]) {
+  globalThis.failReads = new Set([call]);
+  await go(label); await tick(); await tick();
+  assert.ok(page().textContent.includes(failed), `${label} says its read failed`);
+  const retryButton = page().querySelectorAll("button").find(b => b.textContent === "Try again");
+  assert.ok(retryButton, `${label} offers Try again`);
+  globalThis.failReads = new Set();
+  retryButton.fire("click"); await tick(); await tick();
+  assert.ok(!page().textContent.includes(failed), `${label} recovers on Try again`);
+}
+console.log('check-settings-ui: Projects, Phone and Connections show a failed read with a retry and recover');
+
+// A removal asks in place: the first click runs nothing, Cancel and Escape back out, the second click runs once.
+const piecesBundle = await build({ configFile: false, root: ui, logLevel: "silent", build: {
+  write: false, minify: false, lib: { entry: `${ui}src/surfaces/settings/pieces.ts`, formats: ["es"] },
+} });
+const piecesChunk = piecesBundle[0].output.find(part => part.type === "chunk");
+const { confirmed } = await import(`data:text/javascript;base64,${Buffer.from(piecesChunk.code).toString("base64")}`);
+let removals = 0, finishRemoval;
+const removal = confirmed("Remove", "This permission asks again on its next request.", "Remove permission", () => { removals++; return new Promise(resolve => { finishRemoval = resolve; }); });
+document.body.append(removal);
+const removalButtons = () => removal.querySelectorAll("button");
+assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+removalButtons()[0].fire("click");
+assert.equal(removals, 0, "The first click only asks");
+assert.deepEqual(removalButtons().map(b => b.textContent), ["Cancel", "Remove permission"]);
+assert.equal(document.activeElement.textContent, "Cancel", "Cancel takes the focus, so a held Enter cannot confirm");
+assert.ok(removal.textContent.includes("This permission asks again on its next request."));
+assert.ok(removalButtons()[1].getAttribute("aria-describedby"), "The removal is described by its effect");
+removalButtons()[0].fire("click");
+assert.equal(removals, 0); assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+assert.equal(document.activeElement.textContent, "Remove", "Cancel returns the focus to the action");
+removalButtons()[0].fire("click"); removal.fire("keydown", { key: "Escape" });
+assert.equal(removals, 0); assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+removal.fire("keydown", { key: "Escape" });
+removalButtons()[0].fire("click"); const armed = removalButtons()[1];
+armed.fire("click"); armed.fire("click"); await tick();
+assert.equal(removals, 1, "A repeated click cannot run the removal twice");
+assert.ok(removalButtons().every(b => b.disabled), "Both buttons wait for the removal");
+finishRemoval(); await tick(); await tick();
+assert.deepEqual(removalButtons().map(b => b.textContent), ["Remove"]);
+console.log('check-settings-ui: a removal asks first, cancels by button or Escape and runs once');

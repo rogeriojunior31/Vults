@@ -2,6 +2,7 @@
 // (docs/contributing/connectors.md). The id must match `Connector::id()`.
 
 import { t, tk } from "./i18n";
+import { el } from "./dom";
 
 export interface ConnectorInfo {
   id: string;
@@ -23,7 +24,7 @@ export const CONNECTORS: ConnectorInfo[] = [
     name: "GitLab",
     about: tk("Your open merge requests, review requests, diff sizes, reviewers and individual pipeline jobs on GitLab.com, plus default-branch checks and releases from 10 recently active contributed projects. Uses your GitLab CLI (glab) login. Read only. Sign in with glab auth login --hostname gitlab.com."),
   },
-  { id: "gitea", name: "Gitea", about: tk("Your open pull requests, reviews, head-commit checks, Actions jobs, default branches and releases on your Gitea instance. Uses the URL and access token saved below. Read only; larger polls slow down to stay within the daily request budget.") },
+  { id: "gitea", name: "Gitea", about: tk("Your open pull requests, reviews, head-commit checks, Actions jobs, default branches and releases on your Gitea instance. Uses the URL and access token saved in Settings. Read only; larger polls slow down to stay within the daily request budget.") },
 ];
 
 const ERRORS = [
@@ -36,6 +37,9 @@ const ERRORS = [
   tk("Enter a valid HTTPS Gitea base URL without credentials, query or fragment."),
   tk("Enter a Gitea access token for this URL."),
   tk("Turn off Gitea before changing its connection."),
+  tk("gh isn't logged in: run `gh auth login` in a terminal"),
+  tk("The GitHub CLI (gh) isn't installed"),
+  tk("GitHub took too long to answer"),
   tk("The GitLab CLI (glab) is not installed."),
   tk("Sign in to GitLab.com with glab auth login --hostname gitlab.com."),
   tk("GitLab did not respond in time."),
@@ -43,6 +47,11 @@ const ERRORS = [
   tk("GitLab returned incomplete or invalid data. The previous snapshot is kept."),
   tk("GitLab returned more than 50 items in a group. The previous snapshot is kept."),
 ];
+/** A sentence with `code` in backticks, as nodes: the command shows as code, not as raw marks. */
+export function withCode(text: string): Node[] {
+  return text.split("`").map((part, i) => (i % 2 ? el("code", { text: part }) : document.createTextNode(part)));
+}
+
 export function connectorError(error: string): string {
   if (ERRORS.includes(error)) return t(error);
   const limited = /^rate limited, retrying in (\d+)s$/.exec(error);

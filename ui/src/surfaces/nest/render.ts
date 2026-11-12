@@ -27,7 +27,7 @@ import { viewState } from "./view-state";
 import { createMemory, type MemoryBackend } from "./memory";
 import { createRecent } from "./recent";
 import {
-  createAudit,
+  createAuditPointer,
   createHistory,
   createTraces,
   createUsage,
@@ -138,7 +138,8 @@ function costPart(
   let asked = 0;
   const draw = (error?: unknown) => {
     spend.replaceChildren(
-      ...(loaded ? [el("p", { text: spentLine(loaded) }),
+      // The Cost list below says once that a subscription is priced, not charged.
+      ...(loaded ? [el("p", { text: spentLine(loaded, false) }),
         ...(loaded.budget !== null && loaded.usd >= loaded.budget
           ? [el("p", { text: t("Today's budget is spent: Vults starts no new session until tomorrow.") })] : [])] : []),
       ...(error !== undefined ? [viewState("error", t("Could not load {name}.", { name: t("Cost") }),
@@ -211,6 +212,7 @@ export function createNest(
   chat.element.querySelector(".log-box")?.prepend(chat.perchSlot);
   const flock = createFlock({
     ...backend.flock,
+    setup: () => backend.settings("agents"),
     // Ask Zeca about a session: the Chat, with the question ready to finish or send.
     ask: (s) => {
       void askCompanion(t("What is {project} doing now?", { project: s.project || agentName(s) }));
@@ -245,7 +247,7 @@ export function createNest(
       return costPart(backend.spend, usage, () => backend.settings("activity"));
     })(),
     traces: createTraces(backend.records.traces),
-    audit: createAudit(backend.records.audit, backend.records.query),
+    audit: createAuditPointer(backend.records.audit, backend.records.rules),
   };
 
   // Chat: the conversation, and Zeca's memory beside it when asked for.
@@ -445,6 +447,9 @@ export function createNest(
   const subButtons = SUBS.map((id) => {
     const b = el("button", { class: "nest-sub", onclick: () => showSub(id) });
     b.dataset.sub = id;
+    // The audit log lives in Settings > Approvals: Activity no longer offers it as a tab. The route
+    // stays, so a saved place or a link still lands on the pointer to it.
+    if (id === "audit") b.hidden = true;
     return b;
   });
   const part = (id: Sub) => {
@@ -538,7 +543,8 @@ export function createNest(
   function paintPortrait(): void {
     const voice = tab === "dictation" ? dictationArea.character() : null;
     dictationArea.perch.hidden = !voice || !zecaOn;
-    const destination = voice?.element ?? portraitButton.querySelector(".perch")!;
+    const welcome = tab === "flock" && !profilesShown && zecaOn ? flock.element.querySelector<HTMLElement>(".flock-welcome:not([hidden]) .flock-welcome-perch") : null;
+    const destination = voice?.element ?? welcome ?? portraitButton.querySelector(".perch")!;
     // Only the visible conversation owns this canvas; voice feedback never opens another surface.
     if (portrait.canvas.parentElement !== destination) destination.append(portrait.canvas);
     const available = voice ? zecaOn : zecaOn || !!activeProfile;
@@ -546,7 +552,7 @@ export function createNest(
     portraitButton.setAttribute("aria-label", t("Greet {name}", { name }));
     portraitButton.title = t("Greet {name}", { name });
     portrait.setActive(available && !document.hidden && !last?.locked
-      && root.isConnected && portraitSpace.matches && (!!voice || tab === "chat"
+      && root.isConnected && portraitSpace.matches && (!!voice || !!welcome || tab === "chat"
         && !(portraitNarrow.matches && !memoryPane.hidden)
         && (wide.matches || !chatPane.classList.contains("recent-open"))));
     portrait.update([], null, available ? { clip: voice?.clip ?? chat.clip(Clock.now()), agent: voice ? "other" : chat.agent(), immediate: !!voice, set: voice ? undefined : chat.specialistAppearance() ?? undefined } : null);
@@ -562,6 +568,8 @@ export function createNest(
     void placeSaved.catch(() => {});
   };
 
+  // A narrower window can push the selected part out of the strip: bring it back.
+  window.addEventListener("resize", () => subButtons.find((b) => b.dataset.sub === sub)?.scrollIntoView({ block: "nearest", inline: "nearest" }));
   function showSub(id: Sub): void {
     sub = id;
     for (const s of SUBS) subPanes[s].hidden = s !== id;
@@ -606,7 +614,7 @@ export function createNest(
   }
   const relabel = () => {
     recipientPicker.setAttribute("aria-label", t("Recipient"));
-    profilesLink.textContent = t("Agent profiles");
+    profilesLink.textContent = t("Specialists");
     profiles.relabel();
     const subWords: Record<Sub, string> = {
       week: t("Week"),
@@ -726,6 +734,7 @@ export function createNest(
     foot.setTerminal(!!f && f.raise !== false);
     flock.setActive(tab === "flock" && !profilesShown && !document.hidden && !v.locked);
     flock.update(v);
+    if (mounted) paintPortrait();
     connections.update(v);
     paintNeeds();
     // A moving flock may move By project; it reads the repositories, so not on every view.

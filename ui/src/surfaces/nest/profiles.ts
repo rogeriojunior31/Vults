@@ -27,11 +27,11 @@ export function createProfiles(
   const draw = () => {
     if (workspace) {
       element.replaceChildren(workspace.element); workspace.visible(active);
-      if(failed)element.append(viewState("error",t("Could not load {name}.",{name:t("Agent profiles")}),undefined,
+      if(failed)element.append(viewState("error",t("Could not load {name}.",{name:t("Specialists")}),undefined,
         el("button",{class:"btn",text:t("Try again"),onclick:refresh})));
     }
     else element.replaceChildren(viewState(failed ? "error" : "loading",
-      failed ? t("Could not load {name}.", { name: t("Agent profiles") }) : t("Loading {name}…", { name: t("Agent profiles") }),
+      failed ? t("Could not load {name}.", { name: t("Specialists") }) : t("Loading {name}…", { name: t("Specialists") }),
       undefined, ...(failed ? [el("button", { class: "btn", text: t("Try again"), onclick: refresh })] : [])));
   };
   function refresh() {

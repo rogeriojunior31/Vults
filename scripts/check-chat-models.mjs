@@ -912,7 +912,7 @@ for (const surface of ["island", "nest"]) {
   assert.ok(activity.textContent.includes("Running"));
   chat.receive({ kind: "activity", event: { type: "end", id: "read", ok: false } }); flush();
   assert.ok(tool.textContent.includes("Failed"));
-  const request = (id, target) => ({ kind: "permission", id, tool: "Bash", target, full: target, description: null, added: 0, removed: 0, always: false, outside: null });
+  const request = (id, target) => ({ kind: "permission", id, tool: "Bash", target, full: target, description: null, added: 0, removed: 0, always: true, outside: null });
   chat.receive(request("first", "git status"));
   const first = nodes(chat.element).find(n => n.classList.contains("ask"));
   const staleAllow = nodes(first).find(n => n.tag === "button" && n.textContent === "Allow");
@@ -929,6 +929,14 @@ for (const surface of ["island", "nest"]) {
   assert.ok(receipt && !receipt.open, "Answered commands become closed receipts, with details retained");
   assert.equal(chat.answerWaiting(false), true);
   assert.deepEqual(decisions, [["second", "allow"], ["first", "deny"]]);
+  chat.receive({ ...request("guarded", "rm -rf build"), always: false });
+  const guardedCard = nodes(chat.element).find(n => n.classList.contains("ask") && n.textContent.includes("rm -rf build"));
+  assert.ok(guardedCard.textContent.includes("click"), "Where Deny is the bright button, Allow shows a click instead of its key");
+  assert.equal(chat.answerWaiting(true), true, "The Allow key is taken, so it reaches no other surface");
+  assert.deepEqual(decisions, [["second", "allow"], ["first", "deny"]], "The Allow key never allows a card that only a click allows");
+  assert.equal(chat.answerWaiting(false), true);
+  assert.deepEqual(decisions.at(-1), ["guarded", "deny"], "Deny still answers from the keyboard");
+  decisions.pop();
   chat.receive(request("cancelled", "must never run"));
   chat.receive({ kind: "done" });
   assert.equal(chat.answerWaiting(true), false, "Even an unexpected successful end expires its pending cards");
@@ -1121,6 +1129,12 @@ for (const specialist of [false, true]) {
   const control = nodes(access.element).find(node => node.classList.contains("access"));
   control.click();
   nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  assert.deepEqual(choices, [], "Picking full access only asks; nothing is saved yet");
+  nodes(access.element).find(node => node.classList.contains("access-cancel")).click();
+  assert.deepEqual(choices, [], "Cancel saves nothing");
+  assert.ok(!nodes(access.element).some(node => node.dataset.choice === "access:grant-full"), "Cancel closes the question and keeps the menu");
+  nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  nodes(access.element).find(node => node.dataset.choice === "access:grant-full").click();
   assert.equal(control.disabled, true, "The access picker waits for persistence");
   assert.ok(control.textContent.includes("Asks first"), "A pending increase does not claim authority");
   nodes(access.element).find(node => node.dataset.choice === "access:policies").click();
@@ -1129,6 +1143,7 @@ for (const specialist of [false, true]) {
   assert.ok(control.textContent.includes("Asks first"));
   assert.ok(access.element.textContent.includes("Your previous choice is still active"));
   nodes(access.element).find(node => node.dataset.choice === "access:full").click();
+  nodes(access.element).find(node => node.dataset.choice === "access:grant-full").click();
   requests[1].resolve(); await tick();
   assert.ok(control.textContent.includes("Full access"));
   assert.equal(redirects, 0, "Increasing companion or specialist access stays in Chat");

@@ -1866,3 +1866,165 @@ hashes match their reviewed translations. No dependency or permission rule chang
 branch is based on current main without conflicts. Native development remains open; fresh desktop
 visual acceptance and a current screenshot are still pending with no available computer-use
 surface. Preserve this limitation in the PR checklist rather than claiming automated visual QA.
+
+### Design refresh - 2026-11-11
+
+A running-app review of every Settings page, Nest route and Quick, at 1180 x 820 and 480 x 360 in
+Dark and English, with an isolated profile and four example sessions replayed through the hook
+relay (two waiting requests, one destructive). Delivered on `feat/ui-design-refresh`:
+
+- The empty Flock says what brings a bird to the wire and opens Settings at Agents; Agents leads
+  with the agents found on this computer and folds the others.
+- Approvals, Projects and Phone show reading and failed-read states with a retry instead of an
+  empty state. Remove, Forget and Revoke ask in place through one component; Full access shows
+  what it stops asking and waits for a second click.
+- Settings uses one 760 px reading column, one section-heading pattern and a stable scrollbar
+  gutter; the eight longest descriptions keep their effect in view and fold the rest under More.
+- In windows up to 480 px high, Deny and Allow stay at the foot of the Flock card.
+- Font sizes sit on the role scale (11, 12, 13, 15, 18, 20, 24); the working folder on a card is
+  readable in the Nest and wraps in Quick.
+
+Native checks performed on the Windows preview build: every page above in both sizes (no page
+overflows horizontally), the Full access and Forget confirmations (first click saves nothing,
+Cancel and Escape back out), a failed read on Approvals, and the destructive card at 480 x 360.
+`scripts/check-settings-ui.mjs` covers the confirmation component.
+
+Still required: the same pass on Linux (the primary target) and in the Light and SP Night themes;
+failed reads on Projects and Phone in the app (only Approvals was reproduced); Quick's Chat, Week
+and settings tabs, and Dictation's Styles and Diagnostics, which were not captured. Not done: a
+bird on the wire for the empty Flock, a confirmation for Gitea's Remove connection, a failed-read
+state for Connectors, and the page length of Settings in short windows (Dictation still scrolls
+about twenty screens at 480 x 360).
+
+### Design refresh, second pass - plan
+
+The second critique of the running app (2026-11-11, 25/40, up from 22/40) left the items below.
+Each row is one commit on `feat/ui-design-refresh`, validated in the running app with a copy of
+the maintainer's profile and with example sessions, at 1180 x 820 and 480 x 360. The branch stays
+local until every row is done.
+
+| Row | Scope | Done when |
+| --- | --- | --- |
+| DR1 Records precision | Audit names the tool once and shows paths as stored; Cost shows unmeasured tokens as unknown, not 0, and says "at API prices" once; By project shows no bar over "No project yet"; Dictation statistics drops cards that only say Unknown | Each value on Audit, Cost, By project and Dictation statistics is either measured or labelled unknown |
+| DR2 Records signal | The "Summary of loaded records" strip and three stat cards become one summary line; short windows show a record in the first view; History stops repeating the project name on every row | At 480 x 360 the first record of History, Audit and Cost is visible without scrolling |
+| DR3 Language and naming | Known connector errors (gh, glab, Gitea) go through the UI catalog; one noun for connections across the Nest and Settings; Quick has one name in each language; Gitea's form copy matches its layout; raw `String(e)` messages become a sentence with the technical text under Technical details | No English sentence on a pt-BR page in the captures; check-i18n passes |
+| DR4 Decision controls | Nest Deny and Allow are 38 px; skip reads as "Later" with its effect; Pair is disabled with its reason until ready; the Nest card shows the same last-30-seconds countdown as the island | A card in the Nest and in Quick offers the same decision with the same information |
+| DR5 Chat header | Recipient, executor and access stay in the header; folder and profile move to one disclosure; one New; full access is marked wherever it is on | At 480 x 360 the transcript keeps at least 40 px, as DESIGN.md requires, with an empty draft |
+| DR6 Accessibility | Destructive and warning notes carry an icon as well as color; every control has a name (Dictation History and Dictionary); `.look` and `.look-chip` focus differs from hover; reduced motion covers island classes inside the Nest; the selected Activity tab stays in view at 480 px | Keyboard pass over the changed controls; renderer checks cover the names |
+| DR7 Leftovers from the first pass | Gitea Remove connection uses the shared confirmation; Connectors shows a failed read instead of every switch off; Agents states how many need an update; Week leads with a measured figure; Settings > Dictation highlights the model for the spoken language; Meetings puts its actions below the title | Each page matches its siblings in the captures |
+| DR8 First run and help | The empty Flock shows Zeca on the wire beside the next step; About and the pages that name the docs link to them; a copy pass replaces jargon a non-programmer meets first (hooks, Traces, tailnet) with plain sentences, keeping the technical term once | A first-run profile reaches Agents and back with no unexplained term on the way |
+| DR9 Acceptance | Walk every page with the real profile and example data in Dark, Light and Noite Paulista; reproduce failed reads on Projects and Phone; rerun the critique | Score and remaining items recorded here |
+
+DR4 note: the Nest card shows no countdown. The view model carries no arrival time, and counting
+from when the Nest first drew the card would show more time than remains when the Nest opens late.
+It needs the core to expose the remaining time first; the island keeps its own countdown.
+
+Decisions for the maintainer, not taken in this branch: whether Audit moves closer to the card it
+records, whether the footer (Zeca, Open terminal, Back to the island) stays on every Nest page,
+and whether Inter is bundled. The Linux pass (KWin and Wayland placement, input region, meeting
+capture) needs the maintainer's desktop; this branch is validated on the Windows preview build.
+
+DR9 acceptance (2026-11-11, Windows preview build): every page walked with a copy of the
+maintainer's profile (Noite Paulista, pt-BR) and with example sessions in Dark and Light, at
+1180 x 820 and 480 x 360. No page scrolls horizontally, no visible text is under 4.5:1, and every
+font size is on the scale except the single-glyph 9px badges. Failed reads on Approvals were
+reproduced in the app; Projects, Phone and Connections are covered by check-settings-ui. The final
+critique scored 26/40 (22 before the first pass, 25 after it) and found full access granted in one
+click from the chat's own menu; that path now asks like Settings. Open after this branch: data
+labels that still carry the metaphor or jargon ("on the wire", "By roost", "Traces", "Step 0"),
+dictation's work area not saying when no voice model is installed, Meetings drawing its stepper on
+platforms that cannot record, the 480 x 360 Nest spending most of its height on header, attention
+strip and footer, and the Activity and Connections split between the Nest and Settings.
+
+After the final critique (2026-11-11), the four items it left open were delivered on the same
+branch: dictation's work area says when no voice model is installed and Meetings shows only the
+reason on a platform that cannot record; the flock's data labels are plain ("4 sessions · 1
+working", "By project", "no metrics yet") while the scene keeps the birds; windows up to 480 px
+high fold the attention strip and the narrow Chat bar fits in two rows; Settings names its pages
+"History and budget" and "Connection setup", leaving Activity and Connections to the Nest. Each
+was checked in the running app on the Windows preview build. The Linux pass and the three
+maintainer decisions above remain.
+
+The fourth critique (26/40) found five more items, all delivered on the branch: Approvals now
+states the chat's access instead of "every permission asks"; a request's reason and folder ride
+with Deny and Allow in short windows; folders are shortened with one formatter (full path in the
+tooltip and copy); the Flock's profiles are Specialists throughout and speech models say what they
+are before naming whisper.cpp; the Nest counts "requests waiting" and plan meters name their level.
+
+The fifth critique (24/40, by a reviewer told the open decisions above were not binding and
+product changes were welcome) found a safety gap and four product items, all delivered on the
+branch and checked in the running app:
+
+- The Allow shortcut (and Y in the island) allowed a destructive request; now the Allow key works
+  only where Allow is the bright button, the button shows "click" in the key's place, and Deny keeps
+  its key. The flock no longer flies over a card that holds a decision.
+- Audit reads as a ledger: the command as it was asked leads each row (the stored text under "As
+  recorded"), a mark says allowed, denied or neither, rows group by who decided, and the figures
+  add up and filter. It now also sits in Settings > Approvals under the rules and policies it
+  records (one of the maintainer decisions above, taken), with the Nest's Audit linking back.
+- The core lists every waiting permission; the Flock shows "Waiting for you" when two or more wait,
+  each row answerable on its own, ticked plain requests allowed together, destructive and cut ones
+  kept to their own card.
+- One presentation menu replaces the size switch, full screen and mute in the island's and the
+  Nest's headers (ADR 0021 history); decision cards drop Ask Zeca (it stays in the Zeca tab); a
+  running command reads "Running a command" as a status.
+- Smaller items: footer wording, Week baselines, full access as amber with a warning sign, a quiet
+  list of Specialist actions, Connections' failed first check with the login command to copy.
+
+Still open: the Linux pass, the footer and Inter decisions, and the Nest countdown (core arrival
+time).
+
+The sixth critique (26/40) found that a request could expire in the Nest without a word, that the
+waiting line and the card answered the same request side by side, and smaller items. Delivered and
+checked in the running app:
+
+- The core view gives each waiting card its deadline (`expires_at`, from its arrival and the wall
+  clock), so the Nest counts to the same moment as the island however late it opened; the card and
+  its row show the clock in the last half minute, and an expired request leaves "No answer in
+  time" with Open terminal. The hook's deadline is unchanged (not paused while looked at).
+- The waiting line is a queue: rows open their request in the card, the one place a single request
+  is answered; "Answer several" is an explicit mode for plain requests only.
+- Mini's spoken name leads with who needs you; Quick's tabs show their names; the Flock count says
+  what it counts. Mini keeps no visible text (ADR 0021).
+- The audit log lives in Settings > Approvals only; Activity's Audit points there with its count.
+  Manage connections appears once; connector errors show commands as code; Traces reads "Rastros";
+  saving the week's image is secondary; the Flock's headings step up; the week's chart keeps an
+  hour's scale; "As recorded" and the volume slider reach 24 px.
+
+Still open: the Linux pass, the footer and Inter decisions.
+
+The seventh critique (27/40; Error Prevention 4/4) found the command hidden under the decision bar
+at 480 x 360, one request shown four times on Flock, time shown only at the end, and copy traps.
+Delivered and checked in the running app: in short windows the answers sit under the command, never
+over it; the queue leads the session list and its sessions are not repeated below; every waiting
+request shows its clock in the island's words (quiet, amber at 30 s, red at 10 s) and a session
+whose request went back reads "Asking in its terminal" until its next step; "Neste card", "N
+requests waiting" on the island, meters named by agent, empty metrics as one line; Activity drops
+its Audit tab (the log stays in Approvals, as chosen). Not taken: answering from a queue row (the
+card stays the one place), Mini text (ADR 0021), a shorter filter label.
+
+The eighth critique (26/40) found the island card hiding its clock until the last 30 s on a clock
+of its own, an expiry that left the card with no command and no way on, the waiting count said five
+times, an audit that counted hook installs as answers, and a flock still flying in when the Nest
+opened. Delivered and checked in the running app: the island and the Nest share one clock on the
+core's `expires_at`, shown from the start; a request that went back unanswered stays on its card
+("Request that went back to the terminal", with **Copy folder** where the terminal cannot be
+raised) until the next step; the count lives on the Flock badge, the Needs you filter and the
+queue; rows leave out what was not reported, and an idle session says "No steps or changes yet";
+the audit filters Answers, Back to the terminal and Setup changes and groups by day; the flock is
+perched when the Nest opens, a destructive request wears a larger red triangle and a returned one a
+small terminal. Not taken: keeping a card alive after the hook's deadline (the hook has stopped
+waiting), Deny selected, the chat header's six controls.
+
+The ninth critique (24/40) found that a request gone back to its terminal lived only in the Nest
+tab that watched it expire: any other surface, or a Nest opened later, said the session was
+working. Delivered and checked in the running app: the core keeps the returned request on its
+session until the session's next event (`SessionView.returned`), so the island's bird, Quick's Now,
+the screen reader and every Nest say it asks in its terminal; with two or more waiting, the row in
+front of Waiting for you answers its request and the card beside it keeps the context (J and K
+walk the line; a narrow window keeps the answers in the card); the Nest's text floor is 12 px, rows
+read in two lines and the habitat gives up empty sky; each state has its posture (waiting spreads
+its wings over a perch that burns down with the request's time, returned leans in asking, finished
+dozes), with marks about 16 px across; Settings → Approvals opens on the audit log, with Always
+rules and policies behind one line each. Not taken: opening a narrow Nest on the queue instead of
+the card (the tested priority keeps a new request's card in front), a separate history tab.

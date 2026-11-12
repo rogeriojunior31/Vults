@@ -1,5 +1,5 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: e1a0b1efd036 -->
+<!-- source: 7dd1ee18899a -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
 0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
@@ -131,7 +131,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   e ligar uma requisição em nome do usuário ([0019](0019-requests-on-the-users-behalf.md)). Os
   comandos conferem o label da webview que chamou, nunca o da janela (`settings_page`,
   `policies::from_settings`). As duas webviews dividem o armazenamento da origem, que as Configurações nunca leem. As Configurações não mostram texto de nenhum agente: a moldura delas
-  tem nomes e contagens das abas, a troca de tamanho, som, tela cheia, e um rodapé que liga e
+  tem nomes e contagens das abas, o menu de apresentação (os quatro tamanhos e os sons), e um rodapé que liga e
   desliga o Zeca e traz à frente o terminal da sessão da frente (ela guarda só quem é essa sessão).
   As páginas são General, Agents, Chat & voice, Approvals, Projects, Activity, Connectors, Phone,
   Flock & Zeca e About. A configuração do Ditado na N3 usa essa webview sob sua própria aba,
@@ -222,3 +222,4 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
 - 2026-10-21: Os registros de conversas vinculadas a perfis mantêm seu próprio snapshot imutável após edições de perfil, renomeação, reinício e reabertura. O Chat atual do Zeca não expõe esses registros nem os reinterpreta como conversas do companheiro; nenhum botão de Chat do perfil ou seletor de destinatário é habilitado nesta etapa de armazenamento.
 - 2026-10-21: O primeiro runtime especializado é exclusivo do Claude Code, com briefing fixo e sem contexto automático ou MCP do companheiro. Nenhum seletor de destinatário, ação de Chat do perfil ou reabertura de conversa especializada é habilitado nesta etapa exclusiva de runtime; o Nest e o Quick existentes continuam com o responsável atual pela conversa.
 - 2026-10-21: A restauração nativa de conversas de perfil preserva o modelo, esforço, sessão e snapshot do perfil salvos, em vez das edições atuais do perfil ou configurações do companheiro. A verificação anterior ao turno rejeita destinatários e origens incompatíveis e substituições não suportadas por voz/menções/origem. A interface atual do Chat ainda recusa registros de perfil até poder apresentar e preservar esses responsáveis entre superfícies.
+- 2026-11-11: Os cabeçalhos da ilha e do Nest trocam o seletor de tamanho, o botão de tela cheia e o botão de som por um único menu de apresentação. Ele mostra o tamanho em uso e lista os quatro tamanhos, cada um com o que é, e os sons; os tamanhos e o comportamento deles não mudam.

@@ -14,6 +14,8 @@ import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
 import { money, usageLabel, usageLevel, usageWindowName } from "../../cost";
 import { viewState } from "./view-state";
+import { day } from "../../day";
+import { icon } from "../../island/icons";
 
 export interface RecordsBackend {
   history(): Promise<HistoryView>;
@@ -21,9 +23,11 @@ export interface RecordsBackend {
   traces(): Promise<TraceRow[]>;
   audit(): Promise<AuditRow[]>;
   query?: (tab: "history" | "audit", query?: string) => Promise<string>;
+  /** Opens the rules and policies the log records (Settings > Approvals). */
+  rules?: () => void;
 }
 
-const AGENT: Record<string, string> = { ...NAME_BY_ID, other: tk("Another tool") };
+const AGENT: Record<string, string> = { ...NAME_BY_ID, other: tk("Another tool"), zeca: tk("Zeca's chat") };
 
 const agentName = (a: string) => (a in AGENT ? t(AGENT[a]) : a);
 
@@ -133,35 +137,64 @@ function turnLine(r: TurnRow): HTMLElement {
     .join(" · ");
   return line([
     el("div", { class: "record-body" },
-      el("div", { class: "record-title" }, span(r.project || t("No project"), "record-what"),
+      // The group above names the project: the row leads with the agent and what its turn did.
+      el("div", { class: "record-title" }, span(agentName(r.agent), "record-what"),
         span(r.failed ? t("Failed") : t("Done"), `record-status ${r.failed ? "failing" : "passing"}`)),
-      el("div", { class: "record-context" }, span(agentName(r.agent), "record-who"), span(counts, "record-meta")),
+      counts ? el("div", { class: "record-context" }, span(counts, "record-meta")) : null,
     ),
     el("div", { class: "record-aside" }, span(duration(r.secs), "record-duration"), span(when(r.end * 1000), "record-when")),
   ]);
 }
 
+/** Three things the log keeps, each with its filter: an answer someone or something gave, a card
+ *  nobody answered here (it went to the terminal), and a change to how the agents ask. */
+type AuditKind = "answered" | "unanswered" | "setup";
+const UNANSWERED = ["release", "expire"];
+const SETUP = ["config-install", "config-remove", "external-write", "audit-cleared"];
+const kindOf = (act: string): AuditKind => (UNANSWERED.includes(act) ? "unanswered" : SETUP.includes(act) ? "setup" : "answered");
+const ALLOWS = ["allow", "always-allow", "allow-in-conversation"];
+const markOf = (act: string) => (ALLOWS.includes(act) ? "allowed" : act === "deny" ? "denied" : "other");
+
+/** The command as a person reads it. Some records keep it as JSON wrote it (doubled backslashes,
+ *  escaped quotes), and a PowerShell launcher wraps the one-line command that was really asked.
+ *  Display only: the row keeps the stored text too. */
+export function readableTarget(stored: string): string {
+  let text = stored;
+  // Escaped only when every backslash is part of an escape: a real path keeps its single ones.
+  if (/\\[\\"]/.test(text) && !text.replace(/\\[\\"]/g, "").includes("\\")) text = text.replace(/\\(["\\])/g, "$1");
+  const launcher = text.match(/^((?:[^·\n]+ · )?)"?[^"\s]*(?:pwsh|powershell)(?:\.exe)?"?\s+(?:-\w+\s+)*?-Command\s+(['"])([^\n]*)\2\s*$/i);
+  return launcher ? launcher[1] + launcher[3] : text;
+}
+
 function auditLine(r: AuditRow): HTMLElement {
   const act = r.act in ACT ? t(ACT[r.act]) : r.act;
-  const positive =
-    r.act === "allow" ||
-    r.act === "always-allow" ||
-    r.act === "allow-in-conversation";
+  const kind = markOf(r.act);
+  // The stored target already names its tool (as the card showed it); only a bare one gets it put in front.
+  const stored = r.tool && !r.target.startsWith(`${r.tool} · `) ? [r.tool, r.target].filter(Boolean).join(" · ") : r.target;
+  const shown = readableTarget(stored);
+  // A record without a command still leads with a line, so the row never starts blank.
+  const command = shown.trim()
+    ? el("code", { class: "record-target", text: shown })
+    : el("span", { class: "record-target empty", text: t("No command recorded") });
+  command.title = stored;
+  const mark = el("span", { class: `audit-mark ${kind}` }, kind === "allowed" ? icon("check", 13, 2.4) : kind === "denied" ? icon("close", 13, 2.4) : null);
+  mark.setAttribute("aria-hidden", "true");
   return line([
+    mark,
     el("div", { class: "record-body" },
-      el("div", { class: "record-title" }, span(r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor, "record-who"),
-        span(act, `record-status ${positive ? "passing" : r.act === "deny" ? "failing" : ""}`)),
-      span([agentName(r.agent), r.project].filter(Boolean).join(" · "), "record-meta"),
+      command,
+      el("div", { class: "record-context" },
+        span(act, `record-status ${kind === "allowed" ? "passing" : kind === "denied" ? "failing" : ""}`),
+        // The day is the group's; who decided leads the row's own line.
+        span([r.actor in ACTOR ? t(ACTOR[r.actor]) : r.actor, agentName(r.agent), r.project].filter(Boolean).join(" · "), "record-meta"),
+        r.consent !== null ? span(t("Policy accepted as #{id}", { id: r.consent }), "record-meta") : null,
+      ),
+      shown !== stored
+        ? el("details", { class: "audit-recorded" }, el("summary", { text: t("As recorded") }), el("code", { text: stored }))
+        : null,
     ),
-    span(when(r.at * 1000), "record-when"),
-    el("code", {
-      class: "record-target",
-      text: [r.tool, r.target].filter(Boolean).join(" · "),
-    }),
-    r.consent !== null
-      ? span(t("Policy accepted as #{id}", { id: r.consent }), "record-meta")
-      : null,
-  ]);
+    span(new Date(r.at * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }), "record-when"),
+  ], "audit-row");
 }
 
 function traceLine(r: TraceRow): HTMLElement {
@@ -258,7 +291,7 @@ function usageBody(u: UsageView): HTMLElement[] {
   return [
     summary(
       [money(u.days.reduce((n, day) => n + day.usd, 0)), t("Recorded cost · last two weeks")],
-      [tokens(u.days.reduce((n, day) => n + day.tokens, 0)), t("Tokens · last two weeks")],
+      [u.days.reduce((n, day) => n + day.tokens, 0) || !u.days.some((day) => day.usd > 0) ? tokens(u.days.reduce((n, day) => n + day.tokens, 0)) : t("Unknown"), t("Tokens · last two weeks")],
       [String(u.windows.length), t("Plan windows")],
     ),
     el("section", { class: "usage-section" },
@@ -282,7 +315,7 @@ function usageBody(u: UsageView): HTMLElement[] {
         : null,
     ),
     el("section", { class: "usage-section" },
-      el("h4", { class: "records-head", text: t("By roost") }),
+      el("h4", { class: "records-head", text: t("By project") }),
       ...roosts,
     ),
   ];
@@ -295,7 +328,7 @@ function tab<T>(
   draw: (v: T, query: string) => HTMLElement[],
   searchable = false,
   query?: RecordsBackend["query"],
-): { element: HTMLElement; refresh: () => void; flush: () => Promise<void> } {
+): { element: HTMLElement; refresh: () => void; flush: () => Promise<void>; repaint: () => void } {
   const element = el("div", { class: `records ${cls}` });
   const content = el("div", { class: "records-content" });
   const status = el("div", { class: "records-state" });
@@ -387,7 +420,7 @@ function tab<T>(
       },
     );
   };
-  return { element, refresh, flush: async () => {
+  return { element, refresh, repaint: paint, flush: async () => {
     await restored;
     // Retry a failed save without requiring the user to change their search first.
     saved = saved.catch(async () => { if (query) await query(cls as "history" | "audit", search.value); });
@@ -395,19 +428,20 @@ function tab<T>(
   } };
 }
 
-function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => HTMLElement, query: string): HTMLElement[] {
+function groupedRows<T extends { project: string }>(rows: T[], draw: (r: T) => HTMLElement, query: string, by: (r: T) => string = r => r.project || t("No project")): HTMLElement[] {
   const groups = new Map<string, HTMLElement[]>();
   for (const row of rows) {
     const node = draw(row);
-    if (query && !node.textContent?.toLocaleLowerCase(locale()).includes(query)) continue;
-    const project = row.project || t("No project");
+    const project = by(row);
+    // The project is shown once, on the group: a search for it still finds its rows.
+    if (query && ![project, node.textContent ?? ""].some((text) => text.toLocaleLowerCase(locale()).includes(query))) continue;
     const entries = groups.get(project) ?? [];
     entries.push(node);
     groups.set(project, entries);
   }
   return groups.size
     ? [...groups].map(([project, entries]) => el("section", { class: "record-group" },
-        el("h4", { class: "records-head" }, span(project, ""), span(entries.length === 1 ? t("1 record") : t("{n} records", { n: entries.length }), "record-count")), ...entries))
+        el("h3", { class: "records-head" }, span(project, ""), span(entries.length === 1 ? t("1 record") : t("{n} records", { n: entries.length }), "record-count")), ...entries))
     : [viewState("empty", t("No results"), t("No records match. Clear filters to see all records."))];
 }
 
@@ -416,7 +450,7 @@ export function createHistory(load: () => Promise<HistoryView>, query?: RecordsB
     return [
       heading(t("History"), h.on
           ? t(
-              "Each finished turn of your agents, counted on this computer. The week's recap and the year's grid are in Settings, Activity.",
+              "Each finished turn of your agents, counted on this computer. The week's recap and the year's grid are in Week.",
             )
           : t(
               "Settings, Activity keeps no history now: turn it on there to see your agents' turns here.",
@@ -455,22 +489,51 @@ export function createTraces(load: () => Promise<TraceRow[]>) {
   ]);
 }
 
-export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"]) {
-  return tab("audit", load, (rows, query) => {
+export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBackend["query"], title = true) {
+  let only: AuditKind | null = null;
+  let view: ReturnType<typeof tab<AuditRow[]>> | null = null;
+  // The figures add up to the total, and each one filters the list to its rows.
+  const figure = (value: number, label: string, kind: AuditKind | null) => {
+    const b = el("button", { class: "activity-stat", onclick: () => { only = only === kind ? null : kind; view?.repaint(); } },
+      el("strong", { text: String(value) }), span(label, ""));
+    b.setAttribute("aria-pressed", String(only === kind));
+    return b;
+  };
+  view = tab("audit", load, (rows, query) => {
+    const count = (kind: AuditKind) => rows.filter(row => kindOf(row.act) === kind).length;
+    const shown = rows.filter(row => !only || kindOf(row.act) === only).sort((a, b) => b.at - a.at);
     return [
-      heading(t("Audit"), t(
+      title ? heading(t("Audit"), t(
           "Who answered each card, and how: you, your phone, an Always rule or a policy you accepted. Kept 90 days, never changed.",
-        )),
-      summary(
-        [String(rows.length), t("Audit entries")],
-        [String(rows.filter(row => ["allow", "always-allow", "allow-in-conversation"].includes(row.act)).length), t("Allowed")],
-        [String(rows.filter(row => row.act === "deny").length), t("Denied")],
-      ),
+        )) : null,
+      rows.length ? Object.assign(el("div", { class: "activity-summary audit-filters" },
+        span(t("Filter the log"), "activity-summary-label"),
+        figure(rows.length, t("Audit entries"), null),
+        figure(count("answered"), t("Answers"), "answered"),
+        figure(count("unanswered"), t("Back to the terminal"), "unanswered"),
+        figure(count("setup"), t("Setup changes"), "setup"),
+      ), { role: "group" }) : null,
       ...(rows.length
-        ? groupedRows(rows, auditLine, query)
+        ? groupedRows(shown, auditLine, query, r => day(r.at * 1000))
         : [
             viewState("empty", t("No card was answered yet."), t("Permission answers will appear here. Opening this view answers nothing.")),
           ]),
-    ];
+    ].filter((n): n is HTMLElement => n !== null);
   }, true, query);
+  return view;
+}
+
+/** Activity's Audit, now a pointer: the log lives in Settings > Approvals, beside the rules and
+ *  policies whose answers it records. It still says how much the log holds, and the last answer. */
+export function createAuditPointer(load: () => Promise<AuditRow[]>, rules?: () => void) {
+  return tab("audit", load, (rows) => {
+    const last = rows.reduce<AuditRow | null>((a, r) => (!a || r.at > a.at ? r : a), null);
+    return [
+      heading(t("Audit"), t("The log of every answer is in Settings › Approvals, beside the rules and policies whose answers it records.")),
+      el("section", { class: "audit-pointer" },
+        el("p", { text: rows.length === 1 ? t("1 answer kept") : t("{n} answers kept", { n: rows.length }) }),
+        last ? el("p", { class: "record-meta", text: t("Last: {when}", { when: when(last.at * 1000) }) }) : null,
+        rules ? el("button", { class: "btn primary", text: t("Open in Approvals"), onclick: rules }) : null),
+    ];
+  });
 }

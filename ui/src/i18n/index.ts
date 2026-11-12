@@ -35,6 +35,9 @@ export const locale = (): string => (lang === "zh" ? "zh-CN" : lang);
  *  `t()` later: the check finds it here. */
 export const tk = (english: string): string => english;
 
+/** Whether the catalogs carry this English sentence: a backend message the UI already knows. */
+export const known = (english: string): boolean => english in CATALOGS["pt-BR"];
+
 export function t(english: string, vars?: Record<string, string | number>): string {
   const text = lang === "en" ? english : (CATALOGS[lang][english] ?? english);
   return vars ? text.replace(/\{(\w+)\}/g, (all, name: string) => (name in vars ? String(vars[name]) : all)) : text;

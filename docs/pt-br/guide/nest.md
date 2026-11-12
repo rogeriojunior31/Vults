@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 75b349dac1a6 -->
+<!-- source: df0d1eb905aa -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -44,7 +44,7 @@ falhar, a janela continua aberta com um aviso; tente fechar de novo. Isso també
 salva o estado do Nest quando as Configurações estão visíveis na janela compartilhada.
 Fechar não responde uma permissão pendente nem interrompe uma execução.
 
-O seletor de tamanho e **Back to the island** esperam a restauração inicial do
+O menu de apresentação e **Back to the island** esperam a restauração inicial do
 rascunho do Chat e os salvamentos pendentes. Cliques repetidos durante a troca de
 tela usam uma tentativa só. Se salvar ou mudar a tela falhar, o Nest mantém o
 rascunho e mostra um aviso; tente o mesmo controle de novo.
@@ -53,19 +53,19 @@ Em uma janela baixa do Chat, o compositor ocupa menos espaço e as sugestões da
 conversa vazia rolam quando necessário. Isso também vale para janelas largas,
 mantendo os controles do cabeçalho e o rodapé acessíveis.
 
-Quando há espaço, o cabeçalho conta o bando (*4 sessions · 1 needs you*) e traz a música que o seu player está tocando
+Quando há espaço, o cabeçalho conta o bando (*4 sessions*; quem precisa de você fica no badge da aba **Flock**) e traz a música que o seu player está tocando
 (com o Now playing ligado; anterior, tocar/pausar e próxima ao lado), a lua enquanto o não perturbe
-dura (um clique o encerra), o som, a busca (a paleta, como **Ctrl+K**), o seletor de tamanho e o
-botão de tela cheia. O mesmo cabeçalho traz cinco abas nesta ordem: **Bando**, **Chat**, **Ditado**,
+dura (um clique o encerra), a busca (a paleta, como **Ctrl+K**) e o menu de apresentação: ele mostra
+o tamanho em uso e traz os quatro tamanhos, cada um com o que é, e **Sounds**. O mesmo cabeçalho traz cinco abas nesta ordem: **Bando**, **Chat**, **Ditado**,
 **Conexões** e **Atividade**. Elas mostram seus ícones, o número que precisa de você em **Flock** e as linhas dos conectores em **Connections**, e
 **Settings** à direita, que mostra as Configurações nesta mesma janela, sob as mesmas abas; uma aba
 traz o Nest de volta. Sobre todas as abas menos **Flock**, uma etiqueta para cada sessão que precisa
 de você (ou que falhou); um clique abre **Flock** com ela na frente (um card que espera vem
 primeiro ali), onde você o responde. As Configurações continuam uma página própria ali: são a única que muda a
 config de um agente, uma chave, uma política ou um celular, e nunca mostram texto de agente. O
-seletor mantém a aba em que você está: **Room** é a janela, o botão de tela cheia a tela toda
+menu mantém a aba em que você está: **Room** é a janela, **Full** a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
-**Alt+1** a **Alt+5** escolhem uma aba nessa ordem (Chat oculto é ignorado). Embaixo, **Zeca on · optional** / **Zeca off** liga e
+**Alt+1** a **Alt+5** escolhem uma aba nessa ordem (Chat oculto é ignorado). Embaixo, **Zeca on** / **Zeca off** liga e
 desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.
@@ -92,9 +92,15 @@ atalhos executa uma ação. Voltar de Activity ou Connections para o Quick abre 
 
 ## Flock
 
-O bando fica num fio, com o triplo do tamanho, e o nome do projeto sob cada ave. Embaixo,
-uma lista de sessões mostra o estado, o agente, o número do passo, o tempo em execução informado
-e o uso de contexto de cada projeto. Selecione uma ave ou linha (ou use **↑ ↓**) para trazer a
+O bando fica num fio, com o triplo do tamanho, e o nome do projeto sob cada ave. Ao abrir o Nest,
+ele já está pousado; só uma sessão que começa com ele aberto chega voando. Cada estado tem sua
+postura: uma ave esperando um pedido abre as asas sobre um trecho aceso do fio que encurta com o
+tempo do pedido, âmbar e depois vermelho (vermelho desde o começo num pedido destrutivo, que também
+leva um triângulo vermelho maior); uma cujo pedido voltou sem resposta ao terminal se inclina,
+perguntando, com um pequeno terminal junto da cabeça até o próximo passo; uma que terminou mostra o
+fim e depois cochila. Embaixo, uma lista de sessões dá duas linhas a cada
+projeto: o nome e o estado, depois o agente, o número do passo e o tempo em execução e o uso de
+contexto que o agente informa (omitidos quando ele não informa). Selecione uma ave ou linha (ou use **↑ ↓**) para trazer a
 sessão para a frente. Passe o mouse para ver projeto, branch, agente e estado completos. O clique
 direito, a tecla de menu ou **Shift+F10** abre as ações rápidas existentes: terminal, pasta,
 Activity, último diff, foco, silenciar, fixar e esconder. Um card aguardando mantém a própria
@@ -275,7 +281,7 @@ O que este computador guarda, só lido aqui:
 - **History**: cada turno terminado dos seus agentes, só contagens. Busque nos registros
   carregados por projeto, agente ou estado; **Limpar filtros** restaura a lista.
 - **Cost**: quanto os agentes custaram hoje e o **orçamento diário** definido em
-  **Settings → Activity**, as janelas de uso dos seus planos e o custo das últimas duas semanas,
+  **Settings → History and budget**, as janelas de uso dos seus planos e o custo das últimas duas semanas,
   frente a esse orçamento, e por roost. **Configurar orçamento** abre o editor do orçamento
   ([Custo e orçamento diário](activity.md#cost-and-a-daily-budget)).
 - **Traces**: o trabalho do próprio Zeca, cada turno do chat com o modelo, os tokens e o custo, e
@@ -340,7 +346,7 @@ abrem o único lugar que liga um conector ([Conectores](connectors.md)).
 <a id="agent-profiles"></a>
 ## Perfis de agentes
 
-Abra **Bando > Perfis de agentes** para consultar os perfis integrados de Desenvolvedor, Revisor e
+Abra **Bando > Especialistas** para consultar os perfis integrados de Desenvolvedor, Revisor e
 Pesquisador. Escolha um cartão para ler suas instruções e a revisão explícita. **Criar perfil** abre
 um editor próprio em branco: informe seu nome e suas instruções sem escolher ou copiar um perfil
 integrado. **Criar uma cópia** continua disponível nos perfis integrados e preenche o mesmo editor

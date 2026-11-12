@@ -78,6 +78,12 @@
 .dictation-area .dictation-hero { margin-block: 20px 24px; }
 .dictation-area .dictation-shortcut { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .85fr); align-items: center; gap: 24px; min-height: 156px; padding: 24px; box-sizing: border-box; overflow: hidden; }
 .dictation-shortcut-copy { min-width: 0; display: grid; gap: 12px; }
+/* No voice model yet: the hero says so, in the warning role, with the way to fix it. */
+.dictation-area .dictation-shortcut-copy .dictation-readiness { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; margin: 0; color: var(--warn); font-size: var(--text-s); line-height: 1.5; }
+.dictation-area .dictation-readiness > svg { margin-top: 2px; }
+.dictation-area .dictation-readiness > button { grid-column: 2; justify-self: start; }
+.dictation-area .dictation-shortcut-copy .dictation-readiness[hidden] { display: none; }
+.dictation-area .dictation-readiness > svg { flex: none; }
 .dictation-shortcut-copy h3 { margin: 0; font: 600 var(--text-xl)/1.4 var(--font); text-wrap: balance; }
 .dictation-shortcut-copy .dictation-keycaps kbd { min-width: 30px; padding: 6px 12px; font: 600 var(--text-l)/1.5 var(--font); }
 .dictation-area .dictation-shortcut p { max-width: 48ch; margin: 0; }

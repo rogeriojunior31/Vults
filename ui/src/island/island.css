@@ -227,6 +227,14 @@ body.still .compact.needs::after {
 .badge.finished {
   background: var(--ok);
 }
+/* Its request went back to its terminal: a hollow amber box, the terminal where it asks now. */
+.badge.returned {
+  width: 9px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1.5px var(--warn), 0 0 0 2px var(--bg);
+}
 .badge.failed {
   border-radius: 1px;
   background: var(--error);
@@ -235,7 +243,7 @@ body.still .compact.needs::after {
 .keys-hint {
   margin-bottom: 6px;
   padding: 4px 14px;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
   text-align: center;
 }
@@ -248,7 +256,7 @@ body.still .compact.needs::after {
   background: var(--panel);
   border: 1px solid var(--hairline);
   border-radius: 20px;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 .digest > svg {
@@ -368,7 +376,7 @@ body.still .compact.needs::after {
 .header .size-switch .size {
   padding: 5px 7px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1;
   color: var(--fg-dim);
 }
@@ -376,7 +384,7 @@ body.still .compact.needs::after {
   background: var(--mark-fill);
   color: var(--on-accent);
 }
-/* Tabs are icons only, with their name on hover: the island stays quiet. */
+/* Tabs name themselves beside their icon, so the island reads without hovering; the gear stays an icon. */
 .tabs {
   display: flex;
   justify-content: space-between;
@@ -400,6 +408,22 @@ body.still .compact.needs::after {
     background-color var(--motion-fast) var(--ease-out),
     color var(--motion-fast) var(--ease-out);
 }
+.usage-agent {
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+.tab-label {
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.tab-gear .tab-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .tab-count {
   padding: 1px 4px;
   border-radius: 3px;
@@ -407,6 +431,8 @@ body.still .compact.needs::after {
   color: var(--warn);
   font: 9px var(--mono);
 }
+/* Light: on the raised selected tab the darker amber needs a paler tint to keep 4.5:1. */
+[data-theme="light"] .tab-count { background: color-mix(in srgb, var(--warn) 5%, transparent); }
 .tab:hover {
   background: var(--float);
   color: var(--fg);
@@ -731,7 +757,7 @@ body.still .compact.needs::after {
   --glow-on: 0.35;
 }
 .title.big {
-  font-size: 16px;
+  font-size: var(--text-l);
   font-weight: 600;
 }
 .over-zeca .card.focus {
@@ -758,12 +784,12 @@ body.still .compact.needs::after {
   user-select: text;
 }
 .sub {
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg-dim);
   line-height: 1.4;
 }
 .detail {
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--error-text);
   line-height: 1.4;
 }
@@ -783,16 +809,20 @@ body.still .compact.needs::after {
 }
 /* Why the card asks: a destructive action, or the user's own policy. */
 .ask-why {
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 .ask-why.destructive {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--warn);
 }
+.ask-why > svg { flex: none; }
 .diff {
   display: inline-flex;
   gap: 5px;
-  font: 600 11.5px var(--mono);
+  font: 600 var(--text-s) var(--mono);
 }
 .diff .add {
   color: var(--ok);
@@ -845,7 +875,7 @@ body.still .compact.needs::after {
   background: color-mix(in srgb, var(--fg) 6%, transparent);
   border: 1px solid transparent;
   text-align: left;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   transition: background 0.12s ease-out;
 }
 .choice:hover {
@@ -897,7 +927,7 @@ body.still .compact.needs::after {
   border: 1px solid var(--line);
   border-radius: 999px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   outline: none;
 }
 .other-input:focus {
@@ -915,16 +945,35 @@ body.still .compact.needs::after {
 .expiry.on {
   display: flex;
 }
+/* There from the start and quiet; amber in the last half minute, red in the last ten seconds. */
 .expiry-text {
-  font-size: 11.5px;
-  color: var(--warn);
+  font-size: var(--text-s);
+  color: var(--fg-dim);
   font-variant-numeric: tabular-nums;
+}
+.expiry-text.soon {
+  color: var(--warn);
+}
+.expiry-text.urgent {
+  color: var(--error-text);
+  font-weight: 600;
 }
 .expiry-bar {
   height: 2px;
   border-radius: 2px;
+  background: color-mix(in srgb, var(--fg-dim) 45%, transparent);
+  transition: width 1s linear, background-color 0.3s ease-out;
+}
+.expiry.soon .expiry-bar {
   background: var(--warn);
-  transition: width 1s linear;
+}
+.expiry.urgent .expiry-bar {
+  background: var(--error-text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .expiry-bar {
+    transition: none;
+  }
 }
 .code.dim {
   color: var(--fg-dim);
@@ -948,7 +997,7 @@ body.still .compact.needs::after {
   color: var(--warn);
 }
 .focus-body .hint {
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 
@@ -1026,7 +1075,7 @@ body.still .compact.needs::after {
   align-items: center;
   gap: 7px;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: var(--text-m);
 }
 .who .name {
   min-width: 0;
@@ -1041,7 +1090,7 @@ body.still .compact.needs::after {
   padding: 0 5px;
   border: 1px solid var(--hairline);
   border-radius: 4px;
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 16px;
   color: var(--fg-muted);
 }
@@ -1065,7 +1114,7 @@ body.still .compact.needs::after {
   margin-right: 6px;
 }
 .title {
-  font-size: 13.5px;
+  font-size: var(--text-m);
   color: var(--fg-bright);
   line-height: 1.35;
 }
@@ -1101,7 +1150,7 @@ body.still .compact.needs::after {
   gap: 7px;
   padding: 7px 13px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   font-weight: 500;
   transition:
     background-color var(--motion-fast) var(--ease-out),
@@ -1280,7 +1329,7 @@ body.still .compact.needs::after {
 }
 .diff-file {
   padding: 4px 10px 2px;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--fg-dim);
 }
 .diff-file:not(:first-child) {
@@ -1290,7 +1339,7 @@ body.still .compact.needs::after {
 .diff-gap {
   padding: 1px 0;
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--fg-muted);
   user-select: none;
 }
@@ -1315,7 +1364,7 @@ body.still .compact.needs::after {
   border-radius: 10px;
   background: color-mix(in srgb, var(--fg) 5%, transparent);
   color: var(--fg);
-  font-size: 12.5px;
+  font-size: var(--text-m);
   text-align: left;
   transition: background 0.12s ease-out;
 }
@@ -1354,7 +1403,7 @@ body.still .compact.needs::after {
   flex: none;
   width: 22px;
   text-align: right;
-  font: 10.5px var(--mono);
+  font: 11px var(--mono);
   color: var(--fg-muted);
 }
 .activity-row .text {
@@ -1407,7 +1456,7 @@ body.still .compact.needs::after {
 }
 .alert-title {
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg-bright);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1418,7 +1467,7 @@ body.still .compact.needs::after {
   color: var(--fg-muted);
 }
 .alert-detail {
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1440,7 +1489,7 @@ body.still .compact.needs::after {
   gap: 10px;
   padding: 0 8px;
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg-bright);
 }
 .board-rows {
@@ -1450,7 +1499,7 @@ body.still .compact.needs::after {
 }
 .board-label {
   padding: 8px 8px 3px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1491,7 +1540,7 @@ body.still .compact.needs::after {
   max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-dim);
 }
 .row-title {
@@ -1520,7 +1569,7 @@ body.still .compact.needs::after {
 }
 .board-empty {
   padding: 6px 8px 4px;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 /* The card kept after a failed poll: what it saw, said to be old, and why. */
@@ -1655,7 +1704,7 @@ body.still .compact.needs::after {
 }
 .saved-where {
   color: var(--fg-muted);
-  font-size: 10.5px;
+  font-size: 11px;
 }
 .saved-row .ghost.icon {
   display: inline-flex;
@@ -1664,7 +1713,7 @@ body.still .compact.needs::after {
 }
 .saved-row .ghost.danger {
   color: var(--error-text);
-  font-size: 11.5px;
+  font-size: var(--text-s);
 }
 .saved-row .rename {
   flex: 1;
@@ -1706,7 +1755,7 @@ body.still .compact.needs::after {
 .menu-label {
   padding: 3px 9px;
   color: var(--fg-muted);
-  font-size: 10.5px;
+  font-size: 11px;
 }
 /* The engine column, as the prototype groups it: a hint under each group, how each engine stands at
    its row's end (amber when it is not installed), and the way to Settings last. */
@@ -1717,14 +1766,14 @@ body.still .compact.needs::after {
   max-width: 210px;
   padding: 0 9px 4px;
   color: var(--fg-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.35;
 }
 .engine-row .engine-state {
   margin-left: auto;
   padding-left: 12px;
   color: var(--fg-muted);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 .engine-row .engine-state.off {
@@ -1834,7 +1883,7 @@ body.still .compact.needs::after {
   border-radius: 999px;
   background: var(--fg-bright);
   color: var(--on-accent);
-  font-size: 11.5px;
+  font-size: var(--text-s);
   font-weight: 600;
   transform: translateX(-50%);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
@@ -1897,7 +1946,7 @@ body.still .compact.needs::after {
   padding: 2px 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
   text-align: center;
 }
@@ -1938,7 +1987,7 @@ body.still .compact.needs::after {
   color: var(--fg-dim);
 }
 .ask .settled-label {
-  font-size: 12.5px;
+  font-size: var(--text-m);
 }
 /* Allow beside Deny, the same size, so the answer is never alone on a line of its own; Always, the
    rarer one, quieter on the line under them. */
@@ -2000,7 +2049,7 @@ body.still .compact.needs::after {
   padding: 2px 7px;
   border-radius: 6px;
   color: var(--fg-muted);
-  font-size: 11.5px;
+  font-size: var(--text-s);
 }
 .msg-tool:hover {
   background: color-mix(in srgb, var(--fg) 8%, transparent);
@@ -2101,7 +2150,7 @@ body.still .compact.needs::after {
   padding: 2px 9px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--fg) 7%, transparent);
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-dim);
 }
 .drop-body {
@@ -2197,13 +2246,31 @@ button.ghost:hover {
 .kbd {
   padding: 0 4px;
   border-radius: 4px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
   opacity: 0.55;
   border: 1px solid color-mix(in srgb, var(--fg) 40%, transparent);
 }
 .btn.primary .kbd {
   border-color: color-mix(in srgb, var(--on-accent) 40%, transparent);
+}
+/* Where only a click allows, the key's place says so; a refused key press answers on the button. */
+.kbd.click-only {
+  border-style: dashed;
+}
+.allow-by-click.key-refused {
+  animation: key-refused 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.allow-by-click.key-refused .click-only {
+  opacity: 1;
+}
+@keyframes key-refused {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error) 0%, transparent); }
+  30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .allow-by-click.key-refused { animation: none; outline: 2px solid var(--error); outline-offset: 2px; }
 }
 
 /* ── Chat polish ── */
@@ -2464,7 +2531,7 @@ button.ghost:hover {
   gap: 4px;
 }
 .typing-words {
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2532,12 +2599,12 @@ button.ghost:hover {
   align-items: center;
   justify-content: space-between;
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg-bright);
 }
 .looks-label {
   padding: 8px 0 3px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2573,7 +2640,7 @@ button.ghost:hover {
   background: color-mix(in srgb, var(--fg) 5%, transparent);
   color: var(--fg);
   font: inherit;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   font-weight: 500;
   cursor: pointer;
 }
@@ -2589,6 +2656,11 @@ button.ghost:hover {
 .look:focus-visible {
   background: color-mix(in srgb, var(--fg) 8%, transparent);
   outline: none;
+}
+.look-chip:focus-visible,
+.look:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .look.on {
   border-color: color-mix(in srgb, var(--fg) 35%, transparent);
@@ -2639,7 +2711,7 @@ button.ghost:hover {
 .quick-stat strong { color: var(--fg); font-size: 18px; font-weight: 550; letter-spacing: -0.4px; line-height: 1.3; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .quick-stat span { color: var(--fg-dim); font-size: 11px; }
 .quick-breakdown { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--panel); }
-.quick-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); }
+.quick-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); }
 .quick-week .quick-label { margin: 0; color: var(--fg-dim); font-size: 12px; font-weight: 550; letter-spacing: normal; text-transform: none; }
 .quick-projects { display: grid; gap: 8px; max-height: 128px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .quick-bar { display: grid; gap: 5px; min-width: 0; font-size: 12px; color: var(--fg); }
@@ -2676,7 +2748,7 @@ button.ghost:hover {
 }
 .quick-setting-text strong {
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: var(--text-m);
   color: var(--fg-bright);
 }
 .quick-setting-text span {
@@ -2702,7 +2774,7 @@ button.ghost:hover {
   border: 1px solid var(--border-hover);
   border-radius: 7px;
   background: var(--input);
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 .quick-pick-btn svg {
@@ -2728,7 +2800,7 @@ button.ghost:hover {
   padding: 6px 9px;
   border-radius: 5px;
   text-align: left;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 .quick-pick-item:hover {
@@ -2794,7 +2866,7 @@ button.ghost:hover {
 .palette-foot {
   margin: 0;
   padding: 4px 8px;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 
@@ -2975,7 +3047,7 @@ button.ghost:hover {
 }
 .overview .card.focus .who .name {
   flex: 1 0 100%;
-  font-size: 16px;
+  font-size: var(--text-l);
   font-weight: 700;
 }
 .overview .card.focus .who .agent {
@@ -2992,7 +3064,7 @@ button.ghost:hover {
   padding: 0 6px;
   border: 1px solid var(--focus-border);
   border-radius: 4px;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   line-height: 17px;
   color: var(--fg);
 }
@@ -3043,7 +3115,7 @@ button.ghost:hover {
   padding: 0 10px;
   border: 1px solid var(--control-border);
   border-radius: 7px;
-  font-size: 12.5px;
+  font-size: var(--text-m);
   color: var(--fg);
 }
 .qconn-chip.on {
@@ -3061,7 +3133,7 @@ button.ghost:hover {
   border-color: var(--focus-border);
 }
 .qconn-count {
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg-muted);
 }
 .qconn-rows {
@@ -3114,7 +3186,7 @@ button.ghost:hover {
   border: 1px solid var(--control-border);
   border-radius: 6px;
   background: var(--panel);
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg);
   white-space: nowrap;
   cursor: pointer;
@@ -3188,7 +3260,7 @@ button.ghost:hover {
   padding: 6px 2px;
 }
 .qconn-empty strong {
-  font-size: 13.5px;
+  font-size: var(--text-m);
   font-weight: 550;
   color: var(--fg-bright);
 }
@@ -3237,7 +3309,7 @@ button.ghost:hover {
   padding: 3px 8px;
   border: 1px solid var(--border-hover);
   border-radius: 6px;
-  font-size: 11.5px;
+  font-size: var(--text-s);
   color: var(--fg);
 }
 .qconn-tag.approved,
@@ -3448,14 +3520,24 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 .place.access[hidden] {
   display: none;
 }
-/* Full access is never quiet: the chip says it in the error's color. */
+/* Full access is never quiet, but it is a mode, not a failure: the warning's color and shape, as
+   Settings › Approvals says it. */
 .place.access.full {
-  color: var(--error-text);
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+}
+.place.access.full svg:first-child {
+  flex: none;
 }
 .access-menu {
   box-sizing: border-box;
   width: 260px;
 }
+.access-confirm { display: grid; gap: 8px; margin-top: 4px; padding: 8px 10px; border-top: 1px solid var(--border); }
+.access-confirm-about { display: flex; gap: 6px; margin: 0; color: var(--warn); font-size: var(--text-s); line-height: 1.5; }
+.access-confirm-about > svg { flex: none; margin-top: 2px; }
+.access-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.access-confirm .access-grant { color: var(--error-text); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--error-text) 45%, transparent); }
 .menu .access-item {
   display: flex;
   flex-direction: column;
@@ -3502,7 +3584,7 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
   border: 0;
   border-radius: 8px;
   background: transparent;
-  font-size: 12.5px;
+  font-size: var(--text-m);
 }
 #island .place.model.engine:hover,
 #island .place.model.engine[aria-expanded="true"] {
@@ -3630,7 +3712,7 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 }
 .chat .file-icon { display: grid; place-items: center; flex: none; width: 28px; height: 32px; color: var(--fg-dim); }
 .chat .file-info { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
-.chat .file-info small { color: var(--fg-dim); font: 10px var(--mono); }
+.chat .file-info small { color: var(--fg-dim); font: 11px var(--mono); }
 .chat .chip > button { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--fg-dim); }
 .chat .chip > button:hover { background: var(--float); color: var(--fg); }
 .chat-foot .menu.on { transform-origin: bottom center; }
@@ -3703,6 +3785,8 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .chat .ask-context > code { min-width: 0; font: 11px/1.6 var(--mono); overflow-wrap: anywhere; color: var(--fg); }
 .chat .ask > .code { margin: 0; padding: 12px; max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: 0; border-radius: var(--radius-control); background: var(--bg-deep); font: 12px/1.6 var(--mono); }
 .chat .ask .ask-what { color: var(--fg-dim); line-height: 1.6; }
+/* Where the request runs: support for the command above it, and a long path breaks rather than run off the card. */
+.ask-what.ask-scope { color: var(--fg-dim); font-size: var(--text-s); line-height: 1.5; overflow-wrap: anywhere; }
 .chat .ask .ask-outside { border-radius: var(--radius-control); background: color-mix(in srgb, var(--error-text) 9%, transparent); padding: 8px 10px; line-height: 1.5; }
 .chat .ask .actions { gap: 8px; margin-top: 0; }
 .chat .ask .actions > .btn { min-height: 38px; border: 0; }
@@ -3728,6 +3812,7 @@ body.still :is(.message-enter, .attachment-enter, .menu.on, .typing i,
 .card-skip { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg-dim); cursor: pointer; }
 .card-skip:hover { background: var(--raised); color: var(--fg); }
 .card-head > .card-skip { margin-left: auto; }
+.card-skip.later { width: auto; min-width: 28px; padding: 0 10px; color: var(--fg-dim); font: 500 var(--text-s)/1 var(--font); }
 .need-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
 .needs-skip-all { min-height: 28px; padding: 4px 8px; border-radius: var(--radius-control); color: var(--fg-dim); font-size: 12px; }
 .needs-skip-all:hover { background: var(--raised); color: var(--fg); }

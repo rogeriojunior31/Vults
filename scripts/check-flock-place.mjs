@@ -134,6 +134,14 @@ assert.deepEqual(decisions, []);
 assert.equal(guarded.shortcut(false), true);
 assert.equal(guarded.shortcut(false), true);
 assert.deepEqual(decisions, [["permission", "deny"]], "A visible card accepts one explicit decision");
+const destructiveDecisions = [];
+const destructive = createFlock({ ...backend, loadPlace: async () => null, decide: (...args) => destructiveDecisions.push(args) });
+destructive.update({ ...view, approval: { ...view.approval, why: "destructive" } }); await tick();
+assert.ok(button(destructive, "Allowclick"), "A destructive card shows a click in place of the Allow key");
+assert.equal(destructive.shortcut(true), true);
+assert.deepEqual(destructiveDecisions, [], "The Allow key never allows a destructive request");
+assert.equal(destructive.shortcut(false), true);
+assert.deepEqual(destructiveDecisions, [["permission", "deny"]], "Deny still answers a destructive request from the keyboard");
 guarded.update({ ...view, approval: null, sessions: [{ ...edits, status: "question", attention: "needs-you" }] });
 assert.equal(button(guarded, "Focus diff ↗").disabled, true, "A question waiting in its terminal also keeps the card visible");
 kept = { query: "", onlyNeeds: false, detail: "diff", change: null };
@@ -290,8 +298,8 @@ assert.equal(summaryUI.element.querySelector('.roost-cards').scrollTop, 100);
 assert.equal(summaryUI.element.querySelector('.flock-selected').scrollTop, 80);
 summaryUI.update({ ...summaryView, front: { agent: 'codex', id: 'unknown' } });
 metrics = summaryUI.element.querySelector('.session-metrics');
-assert.equal(metrics.textContent.split('Not reported').length - 1, 3);
-assert.equal(metrics.querySelector('.session-context-meter'), undefined, 'Unknown context has no invented bar');
+assert.ok(!metrics, 'Three unreported metrics leave only the line that says so, not three empty cells');
+assert.equal(summaryUI.element.querySelector('.flock-selected').querySelector('.session-context-meter'), undefined, 'Unknown context has no invented bar');
 summaryUI.update({ ...summaryView, sessions: [{ ...reported, elapsed_ms: 0, context_percent: 0, cost_usd: 0 }, unknown] });
 metrics = summaryUI.element.querySelector('.session-metrics');
 assert.ok(metrics.textContent.includes('0 s') && metrics.textContent.includes('≈$0.00') && metrics.textContent.includes('0%'));
@@ -423,3 +431,91 @@ tokenOnly.update(repoView({ ...nativeMetrics, id: 'droid/native', agent_name:'dr
 assert.ok(tokenOnly.element.textContent.includes('Session consumption'), 'Native consumption is visible even without cost/time/context');
 assert.ok(!tokenOnly.element.textContent.includes('Metrics are not available for this agent yet.'));
 console.log('check-flock-place: metric provenance, separate read ages and cumulative consumption without invented context');
+{
+  // The waiting line is a queue: the row in front answers its request (the card beside it keeps the
+  // context), the others open theirs; "Answer several" ticks plain requests only, and one click
+  // allows just those.
+  const laneDecisions = [], focused = [];
+  const lanePart = createFlock({ ...backend, loadPlace: async () => null, decide: (...args) => laneDecisions.push(args), focus: s => focused.push(s?.id) });
+  const ask = (request, extra = {}) => ({ ...view.approval, request, target: `cmd ${request}`, ...extra });
+  const two = { ...session, id: "two", project: "Beta" }, three = { ...session, id: "three", project: "Gamma" }, four = { ...session, id: "four", project: "Delta" };
+  const waiting = [ask("a"), ask("b", { session: "two", project: "Beta" }), ask("c", { session: "three", project: "Gamma", why: "destructive" }), ask("d", { session: "four", project: "Delta", cut: true })];
+  lanePart.update({ ...view, approval: waiting[0], sessions: [session, two, three, four], waiting }); await tick();
+  const lane = () => nodes(lanePart.element).find(node => node.className === "waiting-lane");
+  assert.equal(lane().hidden, false, "Two or more waiting requests show the line");
+  const listedIds = nodes(lanePart.element).filter(node => (node.className ?? "").startsWith("roost-card")).map(node => node.textContent);
+  assert.ok(!listedIds.some(text => text.includes("Beta") || text.includes("Gamma")), "Sessions in the queue are not listed again below it");
+  const answers = row => nodes(row).filter(node => node.tag === "button" && (node.textContent.startsWith("Allow") || node.textContent.startsWith("Deny")));
+  const rowsNow = () => nodes(lane()).filter(node => node.tag === "li");
+  assert.equal(rowsNow().filter(row => answers(row).length).length, 1, "Only the row in front answers");
+  assert.ok(rowsNow()[0].className.includes("deciding") && nodes(rowsNow()[0]).some(node => node.tag === "code" && node.textContent === "cmd a"), "It shows its command whole before its answers");
+  assert.ok(nodes(lanePart.element).some(node => (node.className ?? "").startsWith("decision-block lane-owned")), "The card beside it leaves the answer to the line");
+  assert.ok(lane().textContent.includes("cmd c") && lane().textContent.includes("Destructive: no policy ever allows it"), "Each row shows what it asks");
+  nodes(lane()).filter(node => node.className === "lane-open")[2].listeners.click();
+  assert.deepEqual(focused, ["three"], "A row opens its request in the card");
+  assert.equal(nodes(lane()).filter(node => node.className === "lane-tick").length, 0, "No ticks until Answer several");
+  nodes(lane()).find(node => node.tag === "button" && node.textContent === "Answer several").listeners.click();
+  const ticks = nodes(lane()).filter(node => node.className === "lane-tick");
+  assert.equal(ticks.length, 2, "Only plain requests can be ticked: not a destructive or a cut one");
+  const allowSelected = () => nodes(lane()).find(node => node.tag === "button" && node.textContent.startsWith("Allow selected"));
+  assert.equal(allowSelected().disabled, true, "Nothing ticked allows nothing");
+  ticks[1].checked = true; ticks[1].listeners.change();
+  allowSelected().listeners.click();
+  assert.deepEqual(laneDecisions, [["b", "allow"]], "Only the ticked request is allowed; the rest keep waiting");
+  assert.equal(nodes(lane()).filter(node => node.className === "lane-tick").length, 0, "Allowing leaves the batch mode");
+  answers(rowsNow()[0]).find(node => node.textContent.startsWith("Allow")).listeners.click();
+  assert.deepEqual(laneDecisions, [["b", "allow"], ["a", "allow"]], "The row in front answers its own request with a click");
+  lanePart.update({ ...view, sessions: [session], waiting: [ask("a")] }); await tick();
+  assert.equal(lane().hidden, true, "One waiting request is the card itself: no line");
+  console.log("check-flock-place: waiting line as a queue, its row in front answers, explicit Answer several for plain requests only");
+}
+{
+  // A running command is not a status: the row says what kind of work it is, and search still finds the command.
+  const runPart = createFlock({ ...backend, loadPlace: async () => null });
+  const running = { ...session, status: "working", attention: "info", card: false, activity: "run", step: "Running S=/c/Users/me/AppData/Local/Temp/build.sh" };
+  runPart.update({ ...view, approval: null, sessions: [running] }); await tick();
+  const sub = nodes(runPart.element).find(node => (node.className ?? "").startsWith("roost-sub"));
+  assert.equal(sub.textContent, "Running a command", "The list row speaks of the work, not the raw command");
+  const input = nodes(runPart.element).find(node => node.tag === "input");
+  input.value = "build.sh"; input.listeners.input();
+  assert.equal(nodes(runPart.element).filter(node => (node.className ?? "").startsWith("roost-sub")).length, 1, "Search still finds a session by its command");
+  input.value = ""; input.listeners.input();
+  runPart.update({ ...view, approval: null, sessions: [{ ...running, step_count: 3, elapsed_ms: null, context_percent: null, context_tokens: null }] }); await tick();
+  const rowText = nodes(runPart.element).filter(node => /^roost-(agent|context)/.test(node.className ?? "")).map(node => node.textContent);
+  assert.deepEqual(rowText, ["Claude Code · Step 3"], "A row leaves out what the agent did not report");
+  console.log("check-flock-place: a running command reads as work in the list and stays searchable; unreported metrics stay out of the row");
+}
+{
+  // The core's deadline shows in the last half minute, in the card and the line; a request this tab
+  // showed that nobody answered in time is noted with its terminal, not dropped in silence.
+  const soon = Math.floor(Date.now() / 1000) + 20, later = Math.floor(Date.now() / 1000) + 90;
+  const part = createFlock({ ...backend, loadPlace: async () => null });
+  const two = { ...session, id: "two", project: "Beta", raise: true };
+  const waiting = [{ ...view.approval, expires_at: soon }, { ...view.approval, request: "late", session: "two", project: "Beta", expires_at: later }];
+  part.update({ ...view, approval: waiting[0], sessions: [session, two], waiting }); await tick();
+  const clocks = nodes(part.element).filter(node => (node.className ?? "").startsWith("deadline"));
+  assert.ok(clocks.every(node => !node.hidden && node.textContent.startsWith("Goes back to the terminal in ")), "Every waiting request shows its clock, in the island's words");
+  assert.ok(clocks.some(node => node.classList.contains("soon")) && clocks.some(node => !node.classList.contains("soon")), "Only the last half minute turns amber");
+  // As the core leaves it after an expiry: its card gone, the request kept on the session.
+  const asked = { tool: view.approval.tool, target: view.approval.target, description: null, full: null, cwd: "/home/me/beta", question: false };
+  const there = { ...two, status: "working", attention: "needs-you", card: false, returned: asked };
+  part.update({ ...view, approval: null, sessions: [session, there], waiting: [], ended: [] }); await tick();
+  const note = nodes(part.element).find(node => node.className === "expired-note");
+  assert.ok(note && note.textContent.includes("No answer in time: Beta asks in its terminal now."), "A request gone back to its terminal is said");
+  assert.ok(nodes(note).some(node => node.tag === "button" && node.textContent === "Open terminal"), "Its terminal is at hand");
+  const listed = nodes(part.element).filter(node => (node.className ?? "").startsWith("roost-sub")).map(node => node.textContent);
+  assert.ok(listed.includes("Asking in its terminal"), "A session whose request went back unanswered says it asks in its terminal");
+  // A tab opened after the expiry says the same: the core remembers it, not the tab.
+  const late = createFlock({ ...backend, loadPlace: async () => null });
+  late.update({ ...view, approval: null, front: { agent: "claude", id: "two" }, sessions: [session, there], waiting: [], ended: [] }); await tick();
+  const returned = nodes(late.element).find(node => node.className === "returned-request");
+  assert.ok(returned && returned.textContent.includes("Request that went back to the terminal") && nodes(returned).some(node => node.tag === "code" && node.textContent === view.approval.target),
+    "A Nest opened later keeps what the terminal now asks");
+  assert.ok(nodes(late.element).some(node => node.className === "expired-note"), "And notes it");
+  const close = nodes(note).find(node => (node.className ?? "").includes("expired-dismiss"));
+  close.listeners.click(); await tick();
+  assert.equal(nodes(part.element).filter(node => node.className === "expired-note").length, 0, "A dismissed note stays dismissed");
+  late.update({ ...view, approval: null, front: { agent: "claude", id: "two" }, sessions: [session, { ...two, status: "working", attention: "quiet", card: false, returned: null }], waiting: [], ended: [] }); await tick();
+  assert.equal(nodes(late.element).filter(node => node.className === "returned-request" || node.className === "expired-note").length, 0, "The session moving on ends it");
+  console.log("check-flock-place: shared deadline always shown, a noted expiry, the session asking in its terminal and its card keeping the request");
+}

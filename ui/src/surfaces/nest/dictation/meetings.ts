@@ -176,8 +176,13 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
       step.classList.toggle("complete", index < stage);
     });
     workflow.setAttribute("aria-label", t("Meeting workflow"));
+    // A platform that cannot record shows the reason alone, not a workflow it cannot start.
+    const cannotRecord = value?.phase === "unsupported" && !transcript;
+    workflow.hidden = cannotRecord;
+    timer.hidden = cannotRecord;
+    element.classList.toggle("meeting-unavailable", cannotRecord);
     tabList.hidden = !transcript;
-    preparation.hidden = !!transcript;
+    preparation.hidden = !!transcript || cannotRecord;
     sourceTitle.textContent = t("Audio sources");
     sourceHint.textContent = t("Review the microphone and system audio before you start. Nothing records during this check.");
     sourceHint.hidden = !!value?.microphone && !!value?.monitor;
@@ -209,7 +214,7 @@ function createRecording(backend: MeetingBackend | undefined, configure: () => v
     }
     }
     sources.hidden = !value?.microphone || !!transcript;
-    about.hidden = !!transcript || captureActive; disclosure.hidden = !!transcript;
+    about.hidden = !!transcript || captureActive || (value?.phase === "unsupported" && !transcript); disclosure.hidden = !!transcript;
     fallback.hidden = !value?.fallback || !!transcript;
     fallback.textContent = t("The default output monitor was unavailable. Review the fallback monitor shown above.");
     model.hidden = !value?.modelId || !!transcript;

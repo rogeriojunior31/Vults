@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: e7c89d097dbf -->
+<!-- source: 71363be852d8 -->
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a
@@ -189,7 +189,7 @@ O que é salvo é o que o chat mostra: suas mensagens e os nomes dos arquivos qu
 respostas do Zeca, erros e paradas; nunca a resposta a um card (o log de auditoria guarda essas) e
 nunca uma regra *Always in this chat*, então uma conversa aberta de novo pergunta como uma nova
 perguntaria. As 200 mais recentes ficam guardadas, no mesmo `vults.sqlite` local do histórico de
-atividade; **Settings → Activity → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
+atividade; **Settings → History and budget → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
 ser aberta de novo.
 
 <a id="what-zeca-knows"></a>
@@ -334,15 +334,15 @@ orientação não muda as verificações de permissão. Recolher um cartão nunc
 - **Your policies**: as [políticas](approvals.md#policies) que você aceitou respondem as chamadas do
   chat como respondem as do Claude Code na ilha. Um deny nega, um allow permite (chamadas do Claude
   Code, dentro da pasta da conversa), o resto pergunta.
-- **Full access**: tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
+- **Full access**: ao escolher, nas Configurações ou no menu do chat, você confirma antes; depois tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
   pergunta, o que uma política nega é negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
   fora (uma página web, um fetch, uma ferramenta MCP), os cards dela voltam a perguntar até ela
   acabar: as palavras de uma página podem estar conduzindo a conversa. Adicione linhas `deny` a uma
   política para o que nunca deve rodar.
 
 O chat diz cada resposta dada assim (*Allowed by your policy*, *Denied by your policy*, *Ran with
-full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (vermelho com acesso
-total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é dado em Settings.
+full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (âmbar com um sinal de aviso
+no acesso total), mostra a escolha; dali você só pode devolver acesso. Mais acesso é dado em Settings.
 
 <a id="files"></a>
 
@@ -450,7 +450,7 @@ lido de fora.
 
 ## Perfis de agentes
 
-Abra **Bando → Perfis de agentes** para criar um agente, copiar um modelo ou editar um agente
+Abra **Bando → Especialistas** para criar um agente, copiar um modelo ou editar um agente
 personalizado. O urubu animado, as instruções e as skills fixadas com busca pertencem ao perfil.
 Skills orientam o comportamento; nunca concedem ferramentas ou permissões. Salvar registra o
 conteúdo e os padrões de execução localmente, sem iniciar um modelo. **Padrões da conversa** altera
@@ -526,7 +526,7 @@ de um turno em andamento.
 
 ### GitHub para Desenvolvedor e Revisor
 
-Em **Bando → Perfis de agentes**, selecione **Desenvolvedor** ou **Revisor**, informe um repositório
+Em **Bando → Especialistas**, selecione **Desenvolvedor** ou **Revisor**, informe um repositório
 exato como `owner/name` e clique em **Ativar GitHub**. A conexão GitHub já deve estar ligada e ter
 saldo de requisições. A autorização salva mostra conta e host antes de iniciar um turno. Cada perfil
 é independente, começa desligado e funciona com Zeca desligado. Cópias não herdam autorização.

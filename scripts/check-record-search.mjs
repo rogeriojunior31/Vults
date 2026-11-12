@@ -34,6 +34,8 @@ const chunk = bundles[0].output.find(part => part.type === "chunk");
 const { createHistory, createAudit, createTraces, createUsage } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const nodes = element => [element, ...element.children.flatMap(nodes)];
 const count = (element, cls) => nodes(element).filter(node => node.className === cls).length;
+// A record row, whatever extra class its kind adds (an Audit row is "record audit-row").
+const rows = element => nodes(element).filter(node => (node.className ?? "").split(" ")[0] === "record").length;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const turns = ["Alpha", "Beta"].map(project => ({
   project, agent: "claude", end: 100, secs: 5, steps: 1, commands: 0, files: 0, failed: project === "Beta",
@@ -72,7 +74,7 @@ const auditInput = nodes(audit.element).find(node => node.tag === "input");
 for (const query of ["git status", "denied", "you", "alpha", "bash"]) {
   auditInput.value = query;
   auditInput.listeners.input();
-  assert.equal(count(audit.element, "record"), 1, query);
+  assert.equal(count(audit.element, "record audit-row"), 1, query);
 }
 const empty = createHistory(async () => ({ on: false, turns: [] }));
 empty.refresh();
@@ -155,12 +157,31 @@ assert.equal(nodes(history.element).find(node => node.className === "record-coun
 const auditSummary = createAudit(async () => [
   { project: "Alpha", agent: "codex", at: 100, actor: "policy", act: "allow", tool: "Bash", target: "git diff -- src/file.ts", consent: 37 },
   { project: "Alpha", agent: "codex", at: 101, actor: "human", act: "deny", tool: "Bash", target: "rm secret.txt", consent: null },
+  { project: "Beta", agent: "claude", at: 102, actor: "system", act: "expire", tool: "Bash", target: "npm ci", consent: null },
+  { project: "", agent: "claude", at: 103, actor: "human", act: "config-install", tool: "", target: "config · ~/.claude/settings.json", consent: null },
 ]);
 auditSummary.refresh(); await tick();
-assert.deepEqual(figures(auditSummary.element), ["2", "1", "1"]);
+assert.deepEqual(figures(auditSummary.element), ["4", "2", "1", "1"], "Answers, requests that went back to the terminal and setup changes add up to the total");
 assert.ok(auditSummary.element.textContent.includes("git diff -- src/file.ts"));
 assert.ok(auditSummary.element.textContent.includes("Policy accepted as #37"));
-assert.equal(nodes(auditSummary.element).find(node => node.className === "record-count").textContent, "2 records");
+assert.equal(count(auditSummary.element, "records-head"), 1, "The log groups by day, not by who decided");
+assert.match(nodes(auditSummary.element).find(node => node.className === "records-head").children[0].textContent, /19(69|70)/, "Its heading is the day");
+assert.ok(nodes(auditSummary.element).some(node => node.className === "record-meta" && node.textContent.startsWith("A policy · ")), "Who decided leads the row's line");
+nodes(auditSummary.element).filter(node => node.className === "activity-stat")[2].listeners.click();
+assert.equal(count(auditSummary.element, "record audit-row"), 1, "A figure filters the log to its rows");
+assert.ok(auditSummary.element.textContent.includes("npm ci") && !auditSummary.element.textContent.includes("git diff -- src/file.ts"));
+nodes(auditSummary.element).filter(node => node.className === "activity-stat")[2].listeners.click();
+assert.equal(count(auditSummary.element, "record audit-row"), 4, "Pressing it again shows every row");
+const wrapped = createAudit(async () => [{ project: "", agent: "zeca", at: 103, actor: "full-access", act: "allow", tool: "Bash", target: String.raw`"C:\\Users\\me\\pwsh.exe" -Command 'gh run list --limit 10'`, consent: null }]);
+wrapped.refresh(); await tick();
+assert.deepEqual(nodes(wrapped.element).filter(node => node.className === "record-target").map(node => node.textContent), ["Bash · gh run list --limit 10"], "The log leads with the command that was asked, not its launcher");
+assert.ok(wrapped.element.textContent.includes(String.raw`"C:\\Users\\me\\pwsh.exe"`), "The stored command stays readable under As recorded");
+const auditNamed = createAudit(async () => [
+  { project: "Alpha", agent: "claude", at: 102, actor: "human", act: "deny", tool: "Bash", target: "Bash · rm -rf dist", consent: null },
+]);
+auditNamed.refresh(); await tick();
+const auditTargets = nodes(auditNamed.element).filter(node => node.className === "record-target").map(node => node.textContent);
+assert.deepEqual(auditTargets, ["Bash · rm -rf dist"], "A target that already names its tool is printed as stored, not as Bash · Bash");
 
 const traces = createTraces(async () => [
   { kind: "chat", name: "chat model", status: "ok", startMs: 100, ms: 1500, child: false, input: 100, output: 30, costUsd: 0.5 },
@@ -267,10 +288,10 @@ for (const [make, snapshot, rowsExpected] of [
   retry.focus(); retry.listeners.click(); retry.listeners.click();
   assert.equal(pending.length, 2, "A pending retry cannot duplicate a read");
   pending[1].resolve(snapshot); await tick();
-  assert.equal(count(part.element, "view-state error"), 0); assert.equal(count(part.element, "record"), rowsExpected);
+  assert.equal(count(part.element, "view-state error"), 0); assert.equal(rows(part.element), rowsExpected);
   const before = figures(part.element);
   part.refresh(); pending[2].reject(new Error("Refresh unavailable")); await tick();
-  assert.equal(count(part.element, "record"), rowsExpected);
+  assert.equal(rows(part.element), rowsExpected);
   assert.deepEqual(figures(part.element), before);
   assert.ok(part.element.textContent.includes("last loaded view is kept"));
   part.refresh(); const obsolete = pending.at(-1); part.refresh(); pending.at(-1).resolve(snapshot); await tick();
