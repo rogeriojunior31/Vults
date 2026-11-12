@@ -509,7 +509,7 @@ export function createAudit(load: () => Promise<AuditRow[]>, query?: RecordsBack
       rows.length ? Object.assign(el("div", { class: "activity-summary audit-filters" },
         span(t("Filter the log"), "activity-summary-label"),
         figure(rows.length, t("Audit entries"), null),
-        figure(count("answered"), t("Answered"), "answered"),
+        figure(count("answered"), t("Answers"), "answered"),
         figure(count("unanswered"), t("Back to the terminal"), "unanswered"),
         figure(count("setup"), t("Setup changes"), "setup"),
       ), { role: "group" }) : null,

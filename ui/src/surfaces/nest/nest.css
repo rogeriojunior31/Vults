@@ -1050,6 +1050,23 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .habitat-sky .badge {
   pointer-events: none;
 }
+/* A destructive request: the same triangle, in red, and larger, so it reads before the card. */
+.habitat-sky .badge.approval.destructive {
+  transform: scale(1.35);
+}
+.habitat-sky .badge.approval.destructive::after {
+  background: var(--error);
+}
+/* Its request went back unanswered: a small terminal by its head, where it asks now. */
+.habitat-sky .badge.returned {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--warn);
+  color: var(--bg);
+}
 .habitat-sky .habitat-more {
   top: 6px;
   right: 0;

@@ -117,7 +117,7 @@ ask tool WebFetch
 ## What was answered
 
 Under the policies, **Settings → Approvals** shows the audit log, grouped by day, newest first. It
-keeps three things, and the figures on top count each and filter the list to it: **Answered** (every
+keeps three things, and the figures on top count each and filter the list to it: **Answers** (every
 card's answer: ✓ allowed, ✗ denied, or a question answered), **Back to the terminal** (a card sent
 there or nobody answered in time) and **Setup changes** (hooks installed or removed, an outside
 change to an agent's config). Each row leads with the command as it was asked, then who decided

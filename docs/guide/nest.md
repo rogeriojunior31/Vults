@@ -140,9 +140,12 @@ while reading profiles; open one to review its card in the Flock. A failed catal
 
 ## Flock
 
-The flock sits on one wire, three times its size, with a project name under each bird. Below it,
-a session list shows each project's state, agent, step number, reported running time and context
-use. Select a bird or row (or use **↑ ↓**) to put that session in front. Hover for the complete
+The flock sits on one wire, three times its size, with a project name under each bird. Opening the
+Nest finds it already perched; only a session that starts while it is open flies in. A bird with a
+destructive request wears a larger red triangle, and one whose request went back to its terminal
+unanswered a small terminal, until its next step. Below it, a session list shows each project's
+state, agent, step number, and the running time and context use its agent reports (left out when
+it reports none). Select a bird or row (or use **↑ ↓**) to put that session in front. Hover for the complete
 project, branch, agent and state. A right click, the menu key or **Shift+F10** opens the existing
 quick actions: terminal, folder, Activity, last diff, focus, mute, pin and hide. A waiting card
 keeps its own session in front.

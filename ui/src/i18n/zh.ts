@@ -1757,6 +1757,7 @@ export default {
   "Open in Approvals": "在审批中打开",
   "Every session here waits for you: they are in the queue above.": "这里的每个会话都在等你：它们在上方的队列中。",
   "Asking in its terminal": "正在其终端中询问",
+  "Answers": "回答",
   "Back to the terminal": "退回终端",
   "Setup changes": "配置更改",
   "No steps or changes yet.": "还没有步骤或更改。",

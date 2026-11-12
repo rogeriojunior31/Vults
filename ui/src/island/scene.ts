@@ -285,6 +285,13 @@ export class Scene {
     this.schedule(0);
   }
 
+  /** The flock is already there: the next update that has sessions puts them on their perches
+   *  instead of flying them in (a window that opens onto running sessions). */
+  settle(): void {
+    this.settling = true;
+  }
+  private settling = false;
+
   /** Starts or stops drawing; clips are timed by the clock, so they pick up where they are. */
   setActive(on: boolean): void {
     if (on === this.active) return;
@@ -342,7 +349,8 @@ export class Scene {
   ): void {
     const now = Clock.now();
     const { width, zeca, vults, skyTop, flights, reflow } = this.layout;
-    const fly = flights && !calm();
+    const fly = flights && !calm() && !this.settling;
+    if (sessions.length) this.settling = false;
 
     if (zeca) {
       const who = focus ?? talking;

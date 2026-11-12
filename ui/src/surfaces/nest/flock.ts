@@ -227,6 +227,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   shortcut: (allow: boolean) => boolean;
 } {
   const scene = new Scene(NEST_HABITAT_SCENE);
+  // Opening the Nest finds the flock already perched; only a session that starts later flies in.
+  scene.settle();
   const badges = el("div", { class: "badges" });
   const sky = el("div", { class: "habitat-sky" }, scene.canvas, badges);
   const heading = el("strong");
@@ -558,7 +560,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
       ...[...scene.slots()].sort((a, b) => a.x - b.x).flatMap((slot) => {
         const s = byKey.get(slot.key);
         if (!s) return [];
-        const label = [s.project || agentName(s), agentName(s), stateText(s)].join(" · ");
+        // A destructive request and one that went back to its terminal each have their own mark.
+        const ask = (v.waiting ?? []).find(w => w.agent === s.agent && w.session === s.id) ?? (v.approval?.agent === s.agent && v.approval.session === s.id ? v.approval : null);
+        const destructive = ask?.why === "destructive" && !ask.questions.length;
+        const returned = !!askedThere(s);
+        const label = [s.project || agentName(s), agentName(s), stateText(s), destructive ? t("Destructive: answer it in its card") : null].filter(Boolean).join(" · ");
         const b = fid(el("button", { class: `habitat-bird${front && key(front) === slot.key ? " front" : ""}`, onclick: () => on.focus(s) }), `bird:${slot.key}`);
         menuOn(b, s);
         b.style.left = `${slot.x - 4}px`;
@@ -567,8 +573,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
         b.append(el("span", { class: "bird-name", text: s.project || agentName(s) }));
         b.setAttribute("aria-label", label);
         b.setAttribute("aria-pressed", String(!!front && key(front) === slot.key));
-        const kind = badgeOf(s);
-        const badge = kind ? el("span", { class: `badge ${kind}` }) : null;
+        const kind = returned ? "returned" : badgeOf(s);
+        const badge = kind ? el("span", { class: `badge ${kind}${destructive ? " destructive" : ""}` }, returned ? icon("terminal", 10, 2.4) : null) : null;
         if (badge) {
           badge.style.left = `${slot.x + slot.width - 8}px`;
           badge.style.top = `${Math.max(4, (heads.get(slot.key) ?? 40) - 36)}px`;
