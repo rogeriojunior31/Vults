@@ -374,7 +374,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   root.after(urgent, polite);
   const announce = (s: SessionView, card: boolean) => {
     const region = card ? urgent : polite;
-    region.textContent = `${s.project || agentName(s)} · ${statusText(s)}`;
+    const name = s.project || agentName(s);
+    // Its card gone (answered, or back to its terminal), the urgent line about it is stale.
+    if (!card && urgent.textContent?.startsWith(`${name} · `)) urgent.textContent = "";
+    region.textContent = `${name} · ${statusText(s)}`;
   };
 
   /** The view as drawn: empty while paused. */
@@ -780,6 +783,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const silences = new Map<string, NonNullable<SessionView["silent"]>>();
   /** When each session was first seen: the wire keeps that order, so birds don't shuffle. */
   const firstSeen = new Map<string, number>();
+  /** Sessions whose request went back to their terminal, so the move is said once. */
+  const backThere = new Set<string>();
 
   function cues(v: ViewModel): void {
     const now = Clock.now();
@@ -789,6 +794,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       if (fresh) {
         firstSeen.set(k, now);
         if (primed) fsm.reveal(now);
+      }
+      // A request going back to its terminal changes no status, yet it is news: say where it asks now.
+      if (!!s.returned !== backThere.has(k)) {
+        if (s.returned) { backThere.add(k); if (primed && !fresh) announce(s, false); } else backThere.delete(k);
       }
       if (statuses.get(k) === s.status) continue;
       statuses.set(k, s.status);

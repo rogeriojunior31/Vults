@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 2b9a1ece961f -->
+<!-- source: 6358e29ceeec -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -155,10 +155,13 @@ recebendo seus cards e sons.
 
 No Nest, quando duas ou mais permissões esperam, **Waiting for you** fica acima das sessões em
 **Flock**: uma linha por pedido, com projeto, comando, pasta (ou por que é destrutivo) e o
-relógio dele. Uma linha abre o pedido no card, o único lugar onde um pedido
-sozinho é respondido; a que está no card diz isso. **Answer several** marca pedidos comuns,
-e **Allow selected** permite só esses; o resto continua esperando. Um pedido destrutivo, ou um cujo
-comando foi cortado, não tem marcação: é respondido no card, onde ele aparece inteiro.
+relógio dele. A linha da frente é onde você responde: ela abre o comando inteiro, a pasta ou por
+que é destrutivo, e **Deny**, **Allow**, **Always allow** e **Later**, enquanto o card ao lado
+guarda o contexto da sessão. Clique em outra linha, ou aperte **J** e **K**, para trazer aquele
+pedido para a frente; os atalhos globais respondem o da frente. Numa janela estreita o card
+responde, já que a fila não fica ao lado dele. **Answer several** marca pedidos comuns, e
+**Allow selected** permite só esses; o resto continua esperando. Um pedido destrutivo, ou um cujo
+comando foi cortado, não tem marcação: é respondido sozinho, onde ele aparece inteiro.
 
 Uma pergunta respondida pela metade recomeça quando outro card vem para a frente dela. Um card cujo
 agente seguiu adiante não vem para a frente, mas um subagente trabalhando em paralelo não tira um
@@ -175,12 +178,14 @@ segundos e vermelho nos últimos dez; então o terminal pergunta como se o Vults
 você responder no terminal, o card avisa e some.
 
 O Nest conta até o mesmo momento que a ilha, não importa quando abriu: um card em **Flock** e a
-linha dele em **Waiting for you** mostram o mesmo relógio. Quando um que ele mostrava volta sem resposta,
-**Flock** diz *No answer in time: storefront asks in its terminal now.*, com **Open terminal**
-quando ele pode ser trazido, até você dispensar o aviso, e a sessão diz *Asking in its terminal*
-até o próximo passo. Até lá o card dela guarda o pedido, *Request that went back to the terminal*,
-com o comando que ele pergunta lá; quando o Vults não consegue trazer esse terminal, o card diz a
-pasta em que ele roda, com **Copy folder**.
+linha dele em **Waiting for you** mostram o mesmo relógio. Um pedido que volta sem resposta fica
+guardado até o próximo passo da sessão ou o fim da vez dela, onde quer que você olhe e não importa
+quando abriu: **Flock** diz *No answer in time: storefront asks in its terminal now.*, com
+**Open terminal** quando ele pode ser trazido, até você dispensar o aviso; a sessão diz
+*Asking in its terminal*, o pássaro dela ganha um pequeno terminal, e o **Now** do Quick lista
+*storefront asks in its terminal*. O card dela guarda o pedido, *Request that went back to the
+terminal*, com o comando que ele pergunta lá; quando o Vults não consegue trazer esse terminal, o
+card diz a pasta em que ele roda, com **Copy folder**.
 
 Enquanto espera, um card sobe uma escada, para que um card que você perdeu chegue até você:
 

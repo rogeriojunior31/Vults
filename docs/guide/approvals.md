@@ -136,10 +136,13 @@ the corner widget: its card comes to the front, keeping its own deadline. Muted 
 
 In the Nest, when two or more permissions wait, **Waiting for you** sits above the sessions on
 **Flock**: one row per request with its project, command, folder (or why it is destructive) and
-its clock. A row opens its request in the card, the one place a single
-request is answered; the one in the card says so. **Answer several** ticks plain
-requests, and **Allow selected** allows just those; the rest keep waiting. A destructive request
-or one whose command was cut has no tick: it is answered in its card, where the whole of it shows.
+its clock. The row in front is where you answer it: it opens to the whole command, its folder or
+why it is destructive, and **Deny**, **Allow**, **Always allow** and **Later**, while the card
+beside it keeps the session's context. Click another row, or press **J** and **K**, to bring that
+request to the front; the global keys answer the one in front. In a narrow window the card answers
+instead, since the line is not beside it. **Answer several** ticks plain requests, and
+**Allow selected** allows just those; the rest keep waiting. A destructive request or one whose
+command was cut has no tick: it is answered on its own, where the whole of it shows.
 
 A question half answered starts over when another card comes in front of it. A card whose agent
 moved on is not brought forward, but a subagent working in parallel does not take a card away. When
@@ -154,12 +157,13 @@ last ten; then the terminal asks as if Vults were not there. If you answer in th
 the card says so and goes away.
 
 The Nest counts to the same moment as the island, however late it opened: a card on **Flock** and
-its row in **Waiting for you** show the same clock. When one it showed goes back unanswered, **Flock** says
-*No answer in time: storefront asks in its terminal now.*, with **Open terminal** when it can be
-brought up, until you dismiss it, and the session reads *Asking in its terminal* until its next
-step. Until then its card keeps the request, *Request that went back to the terminal*, with the
-command it asks there; when Vults cannot bring that terminal up, the card names the folder it runs
-in, with **Copy folder**.
+its row in **Waiting for you** show the same clock. A request that goes back unanswered is kept
+until the session's next step or the end of its turn, wherever you look and however late you open
+it: **Flock** says *No answer in time: storefront asks in its terminal now.*, with **Open terminal**
+when it can be brought up, until you dismiss it; the session reads *Asking in its terminal*, its
+bird wears a small terminal, and Quick's **Now** lists *storefront asks in its terminal*. Its card
+keeps the request, *Request that went back to the terminal*, with the command it asks there; when
+Vults cannot bring that terminal up, the card names the folder it runs in, with **Copy folder**.
 
 While it waits, a card climbs a ladder, so a card you missed reaches you:
 

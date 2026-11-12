@@ -52,6 +52,8 @@ export const statusWords = (status: SessionView["status"]): string => t(STATUS_T
 
 /** Working shows what it is doing; any other state shows the state itself. */
 export function statusText(s: SessionView): string {
+  // Its request went back unanswered: the agent asks in its terminal, whatever its status says.
+  if (s.returned) return t("Asking in its terminal");
   // A quiet bird says so in place of its step, which is not news any more.
   if (s.status === "working" && s.silent) return s.silent === "loud" ? t("No news for 15 min") : t("No news for 5 min");
   // A command is not a status: the chip says what kind of work it is; the steps keep the command itself.
@@ -63,7 +65,7 @@ export function statusText(s: SessionView): string {
 /** A session that wants you now: its state asks for you, or a card of its waits. One test for the
  *  island's badges and counts and the Nest's *Needs you*. */
 export const needsYou = (s: SessionView): boolean => s.attention === "needs-you" || s.status === "approval" || s.status === "question" || s.waiting === true;
-export const statusClass = (s: SessionView): string => (s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status);
+export const statusClass = (s: SessionView): string => s.returned ? "approval" : s.status === "working" && s.silent === "loud" ? "silent-loud" : s.status;
 
 /** Statuses that need a look, worn as a badge on the wire. */
 export const BADGE: Partial<Record<SessionView["status"], string>> = {
@@ -73,9 +75,10 @@ export const BADGE: Partial<Record<SessionView["status"], string>> = {
   failed: "failed",
 };
 
-/** A bird's badge: its state's, or a quiet bird's flag (grey, then amber when loud). */
+/** A bird's badge: a request gone back to its terminal, its state's, or a quiet bird's flag (grey, then amber when loud). */
 export function badgeOf(s: SessionView | undefined): string | undefined {
   if (!s) return undefined;
+  if (s.returned) return "returned";
   if ((s.status === "idle" || s.status === "finished") && s.rested !== undefined) return s.rested === false ? "finished" : undefined;
   return BADGE[s.status] ?? (s.silent ? `silent ${s.silent}` : undefined);
 }

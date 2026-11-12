@@ -2414,13 +2414,29 @@ button.touched-row:hover,
 .lane-open:hover { background: var(--raised); }
 .lane-open:focus-visible { outline: 2px solid var(--focus-border); outline-offset: -2px; }
 .lane-row.current .lane-open { background: color-mix(in srgb, var(--fg) 6%, transparent); }
-.lane-here { flex: none; margin-left: auto; padding: 1px 6px; border-radius: 6px; background: var(--raised); color: var(--fg); font-size: 11px; }
+.lane-who .deadline { flex: none; margin-left: auto; }
 .lane-who { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .lane-who > svg { flex: none; align-self: center; color: var(--warn); }
 .lane-who strong { overflow: hidden; color: var(--fg); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .lane-command { overflow: hidden; color: var(--fg); font: 12px/1.5 var(--mono); text-overflow: ellipsis; white-space: nowrap; }
 .lane-scope { overflow: hidden; color: var(--fg-dim); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .lane-row.destructive .lane-scope { color: var(--warn); }
+/* The row in front answers its request: the card beside it keeps the context (steps, changes). */
+.lane-decide { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 10px; }
+.lane-decide .command { margin: 0; }
+.lane-decide :is(.ask-why, .rule-scope) { margin: 0; }
+.lane-decide .decision-actions { margin: 0; }
+.lane-decide .card-skip { align-self: flex-start; }
+.lane-row.deciding { background: color-mix(in srgb, var(--fg) 4%, transparent); border-radius: var(--radius-control); }
+.lane-keys { color: var(--fg-dim); font-size: 12px; }
+@media (min-width: 761px) {
+  .lane-row.deciding .lane-open :is(.lane-command, .lane-scope) { display: none; }
+  .flock-selected :is(.decision-block, .card-side).lane-owned { display: none; }
+}
+/* Narrow, the line and the card are not side by side: the card answers, the line only lists. */
+@media (max-width: 760px) {
+  .lane-decide, .lane-keys, .lane-pointer { display: none; }
+}
 .lane-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px 10px; border-top: 1px solid var(--border); }
 .lane-foot .primary { min-height: 30px; padding: 2px 12px; font-size: 12px; }
 .lane-foot .primary:disabled { opacity: 0.5; cursor: default; }

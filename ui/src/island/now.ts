@@ -70,6 +70,12 @@ export function createNow(on: NowActions): { element: HTMLElement; update(v: Vie
         case "session": {
           const session = view.sessions.find(x => x.agent === s.session.agent && x.id === s.session.id);
           if (!session) break;
+          if (session.returned) {
+            add(t("{project} asks in its terminal", { project: session.project || agentName(session) }),
+              [agentName(session), session.returned.description || session.returned.target].filter(Boolean).join(" · "),
+              "terminal", () => on.session(session));
+            break;
+          }
           add(session.project || agentName(session), [statusText(session), session.note || session.step].filter(Boolean).join(" · "),
             item.level === "failed" ? "close" : "moon", () => on.session(session));
           break;

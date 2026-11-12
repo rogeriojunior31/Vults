@@ -60,8 +60,6 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
-/** How long a request that went back to its terminal unanswered stays noted on the tab. */
-const EXPIRED_KEPT_MS = 90_000;
 const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
 
 const AGENT_COLOR: Record<AgentKind, string> = {
@@ -113,7 +111,8 @@ function metricsHealth(s: SessionView): string {
   if (!isHermes(s) && !["claude", "codex", "opencode", "qwen", "copilot"].includes(s.agent) && !["kimi","droid","cursor","antigravity"].includes(s.agent_name ?? "")) return t("Metrics are not available for this agent yet.");
   if (s.cost_failed) return t("The local cost could not be read. Context and time retain their last reports.");
   if (s.metrics_failed) return t("Local session metrics could not be read. Check Settings → Agents.");
-  const busy = s.status === "working" || s.status === "thinking";
+  // Asking in its terminal, it reports nothing new: that is no fault of its status line.
+  const busy = !s.returned && (s.status === "working" || s.status === "thinking");
   if (s.agent === "claude" && busy && (s.metrics_checked_age_secs ?? s.event_age_secs ?? 0) > 30)
     return t("No recent metrics. Check the Claude status line in Settings → Agents.");
   if (!["hermes","cursor","antigravity"].includes(s.agent_name ?? "") && s.agent !== "claude" && (s.metrics_checked_age_secs ?? 0) > 15)
@@ -264,6 +263,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const lane = el("section", { class: "waiting-lane" });
   lane.hidden = true;
   const laneTicked = new Set<string>(), laneSent = new Set<string>();
+  // The request the line answers in its row in front (two or more waiting), and the line's order for J and K.
+  let laneDecides: string | null = null, laneOrder: SessionView[] = [];
   let laneBatch = false;
   // The deadline (the core's expires_at, the same moment the island counts to) shows in the last
   // half minute; one timer moves every clock on the tab, without a redraw.
@@ -288,19 +289,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
     for (const node of nodes) paintDeadline(node);
     if (!nodes.length && ticking !== null) { clearInterval(ticking); ticking = null; }
   };
-  // A request this tab showed that nobody answered in time: it says so, with its terminal at hand,
-  // instead of vanishing. Kept a minute and a half, or until dismissed.
-  const shownRequests = new Map<string, ApprovalView>(), noted = new Set<string>();
-  // A session whose request went back unanswered asks in its terminal until its next step: the core
-  // calls it working again, but it waits on you there. The step count at expiry says when it moved on;
-  // the request is kept so its card still shows what the terminal asks.
-  const asking = new Map<string, { step: number; ask: ApprovalView | undefined }>();
-  const askedThere = (s: SessionView) => {
-    const a = asking.get(key(s));
-    return s.status === "working" && a?.step === s.step_count ? a : null;
-  };
-  const stateText = (s: SessionView): string => askedThere(s) ? t("Asking in its terminal") : statusText(s);
-  let expiredNotes: { request: string; agent: string; session: string; at: number }[] = [];
+  // A request nobody answered in time is the core's to remember (`SessionView.returned`) until the
+  // session moves on, so a tab opened later says the same. A note dismissed here stays dismissed.
+  const dismissed = new Set<string>();
+  const returnedKey = (s: SessionView) => s.returned ? `${key(s)}:${s.returned.tool}:${s.returned.target}` : "";
+  const stateText = (s: SessionView): string => statusText(s);
   const expiredBox = el("section", { class: "expired-notes" });
   expiredBox.hidden = true;
   const list = el("section", { class: "flock-list" }, toolbar, expiredBox, lane, roosts);
@@ -563,8 +556,8 @@ export function createFlock(on: FlockActions & FlockAsk): {
         // A destructive request and one that went back to its terminal each have their own mark.
         const ask = (v.waiting ?? []).find(w => w.agent === s.agent && w.session === s.id) ?? (v.approval?.agent === s.agent && v.approval.session === s.id ? v.approval : null);
         const destructive = ask?.why === "destructive" && !ask.questions.length;
-        const returned = !!askedThere(s);
-        const label = [s.project || agentName(s), agentName(s), stateText(s), destructive ? t("Destructive: answer it in its card") : null].filter(Boolean).join(" · ");
+        const returned = !!s.returned;
+        const label = [s.project || agentName(s), agentName(s), stateText(s), destructive ? t("Destructive: no policy ever allows it") : null].filter(Boolean).join(" · ");
         const b = fid(el("button", { class: `habitat-bird${front && key(front) === slot.key ? " front" : ""}`, onclick: () => on.focus(s) }), `bird:${slot.key}`);
         menuOn(b, s);
         b.style.left = `${slot.x - 4}px`;
@@ -573,7 +566,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
         b.append(el("span", { class: "bird-name", text: s.project || agentName(s) }));
         b.setAttribute("aria-label", label);
         b.setAttribute("aria-pressed", String(!!front && key(front) === slot.key));
-        const kind = returned ? "returned" : badgeOf(s);
+        const kind = badgeOf(s);
         const badge = kind ? el("span", { class: `badge ${kind}${destructive ? " destructive" : ""}` }, returned ? icon("terminal", 10, 2.4) : null) : null;
         if (badge) {
           badge.style.left = `${slot.x + slot.width - 8}px`;
@@ -770,7 +763,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
 
   /** Deny, Allow and Always on the permission in front, as the island draws them (ADR 0004:
    *  destructive makes Deny the bright one and offers no Always). */
-  const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>): HTMLElement => {
+  const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>, at = "act"): HTMLElement => {
     onScreen = ask.request;
     const answer = (d: "allow" | "deny" | "always") => () => {
       if (sent === ask.request) return;
@@ -781,7 +774,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const kbd = (k: string | undefined) => (k ? el("span", { class: "kbd", text: k }) : null);
     const destructive = ask.why === "destructive";
     const always = approvalRuleFolder(s, ask) && !ask.cut && !destructive
-      ? fid(el("button", { class: "outline", text: t("Always allow"), onclick: answer("always") }), "act:always")
+      ? fid(el("button", { class: "ghost", text: t("Always allow"), onclick: answer("always") }), `${at}:always`)
       : null;
     if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: approvalFolder(s, ask) || t("this folder") });
     // In a short window the reason and folder ride in the fixed bar, so the scope is in view with Deny and
@@ -794,25 +787,44 @@ export function createFlock(on: FlockActions & FlockAsk): {
       { class: "app-card-actions decision-actions" },
       why,
       scope,
-      fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), "act:deny"),
-      fid(el("button", { class: destructive ? "outline danger allow-by-click" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), destructive ? clickOnly() : kbd(keys.allow)), "act:allow"),
+      fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), `${at}:deny`),
+      fid(el("button", { class: destructive ? "outline danger allow-by-click" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), destructive ? clickOnly() : kbd(keys.allow)), `${at}:allow`),
       always,
     );
+  };
+
+  /** What a permission asks and its answers, the same in the card and in the line's row in front
+   *  (DESIGN.md: the command, folder and scope before the answer). */
+  const decision = (s: SessionView, permission: ApprovalView, at: string): (HTMLElement | null)[] => {
+    const command = permission.full ? `${permission.tool} · ${permission.full}` : permission.target;
+    const folder = approvalFolder(s, permission);
+    return [
+      el("div", { class: "command" },
+        el("code", { text: command }),
+        fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), `${at}:copy`)),
+      permission.why
+        ? el("p", { class: `ask-why ${permission.why}` },
+            permission.why === "destructive" ? icon("warning", 13, 2) : null,
+            el("span", { text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
+        : null,
+      Object.assign(el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) }), { title: folder ?? "" }),
+      permissionActions(s, permission, at),
+    ];
   };
 
   /** A request nobody answered in time stays on its session's card until the next step: what the
    *  terminal now asks, and where that terminal is when Vults cannot bring it up. */
   const returnedRequest = (s: SessionView): HTMLElement | null => {
-    const ask = askedThere(s)?.ask;
-    if (!ask || ask.questions.length) return null;
+    const ask = s.returned;
+    if (!ask) return null;
     const command = ask.full ? `${ask.tool} · ${ask.full}` : ask.target;
-    const folder = approvalFolder(s, ask);
+    const folder = ask.cwd ?? s.cwd;
     const copy = (text: string) => () => void navigator.clipboard?.writeText(text).catch(() => {});
     return el(
       "section",
       { class: "returned-request" },
-      el("h4", { text: t("Request that went back to the terminal") }),
-      el("div", { class: "command" },
+      el("h4", { text: ask.question ? t("Question that went back to the terminal") : t("Request that went back to the terminal") }),
+      ask.question ? null : el("div", { class: "command" },
         el("code", { text: command }),
         fid(el("button", { class: "outline", text: t("Copy"), onclick: copy(command) }), "act:returned-copy")),
       el("p", { class: "rule-scope" },
@@ -834,8 +846,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const words = s.skipped || (detail === "session" && !ask && !ended) ? null : ask?.description ?? (ended ? s.note : null) ?? (ticker ? null : (s.step ?? statusText(s)));
     const question = ask && ask.questions.length ? ask : null;
     const permission = ask && !question ? ask : null;
-    // The target already names its tool; only the uncut command needs it put back in front (as on the island).
-    const command = permission ? (permission.full ? `${permission.tool} · ${permission.full}` : permission.target) : null;
+    // With two or more waiting, the line answers the one in front; on a narrow window, where the
+    // line is out of sight beside the card, the card keeps it (CSS shows one of the two).
+    const laneOwns = !!permission && laneDecides === permission.request;
     const tag = el("span", { class: "agent-tag" }, el("span", { class: "agent-dot" }), el("span", { text: agentName(s) }));
     tag.style.color = colorOf(s.agent);
     tag.title = agentName(s);
@@ -858,29 +871,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
           : null,
         detail === "session" ? null : costChip(s),
         // How many wait is the queue's to say (it shows from two on), not each card's.
-        ask ? el("div", { class: "card-side" },
+        ask ? el("div", { class: `card-side${laneOwns ? " lane-owned" : ""}` },
           question ? null : deadline(ask.expires_at),
           question ? null : fid(laterButton(ask.request, skipCard), "act:skip")) : null,
       ),
       question ? null : words ? el("p", { class: "card-words", text: words }) : null,
       ticker,
       silenceOf(s),
-      command
-        ? el(
-            "div",
-            { class: "command" },
-            el("code", { text: command }),
-            fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), "act:copy"),
-          )
-        : null,
-      permission?.why
-        ? el("p", { class: `ask-why ${permission.why}` },
-            permission.why === "destructive" ? icon("warning", 13, 2) : null,
-            el("span", { text: permission.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
-        : null,
-      permission ? Object.assign(el("p", { class: "rule-scope", text: t("Working folder: {path}", { path: approvalFolder(s, permission) ? shortPath(approvalFolder(s, permission)!) : t("Not reported") }) }), { title: approvalFolder(s, permission) ?? "" }) : null,
+      laneOwns ? el("p", { class: "rule-scope lane-pointer", text: t("Answer it in Waiting for you, beside this card.") }) : null,
+      permission ? el("div", { class: `decision-block${laneOwns ? " lane-owned" : ""}` }, ...decision(s, permission, "act")) : null,
       question ? questionNode(s, question) : null,
-      permission ? permissionActions(s, permission) : null,
       ask ? null : returnedRequest(s),
       el(
         "div",
@@ -1272,6 +1272,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     const rows = (v.waiting ?? []).filter(w => !laneSent.has(w.request));
     for (const request of [...laneTicked]) if (!rows.some(w => w.request === request)) laneTicked.delete(request);
     lane.hidden = rows.length < 2;
+    laneDecides = null; laneOrder = [];
     if (lane.hidden) { lane.replaceChildren(); laneBatch = false; return new Set(); }
     const batchable = (w: ApprovalView) => w.why !== "destructive" && !w.cut;
     const canBatch = rows.filter(batchable).length >= 2;
@@ -1281,6 +1282,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
       const who = session ? agentName(session) : AGENTS.find(a => a.kind === w.agent)?.name ?? w.agent;
       const destructive = w.why === "destructive";
       const current = v.approval?.request === w.request;
+      // The row in front is where it is answered: its command whole, its folder or why, its answers.
+      const decides = current && !laneBatch && !!session && !v.approval?.questions.length;
+      if (decides) laneDecides = w.request;
       const what = w.full ? `${w.tool} · ${w.full}` : w.target;
       const folder = w.cwd === undefined ? session?.cwd ?? null : w.cwd;
       const tick = laneBatch && batchable(w) ? fid(el("input", { class: "lane-tick" }), `lane:tick:${w.request}`) as HTMLInputElement : null;
@@ -1292,14 +1296,17 @@ export function createFlock(on: FlockActions & FlockAsk): {
       }
       // The whole row opens the request in the card, where it is answered with its command in full.
       const open = fid(el("button", { class: "lane-open", onclick: () => session && on.focus(session) },
-        el("span", { class: "lane-who" }, destructive ? icon("warning", 13, 2) : null, el("strong", { text: w.project || who }), el("span", { text: who }), current ? el("span", { class: "lane-here", text: t("In the card") }) : null),
+        el("span", { class: "lane-who" }, destructive ? icon("warning", 13, 2) : null, el("strong", { text: w.project || who }), el("span", { text: who }), deadline(w.expires_at)),
         Object.assign(el("code", { class: "lane-command", text: what }), { title: what }),
-        el("span", { class: "lane-scope", text: destructive ? t("Destructive: answer it in its card") : w.cut ? t("Only the full command can be allowed: open it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) }),
-        deadline(w.expires_at)), `lane:open:${w.request}`);
-      open.title = current ? t("In the card now") : t("Open in the card");
+        el("span", { class: "lane-scope", text: destructive ? t("Destructive: no policy ever allows it") : w.cut ? t("Only the full command can be allowed: open it") : t("Working folder: {path}", { path: folder ? shortPath(folder) : t("Not reported") }) })), `lane:open:${w.request}`);
+      open.title = current ? t("Answering this one") : t("Answer this one");
       if (current) open.setAttribute("aria-current", "true");
-      return el("li", { class: `lane-row${destructive ? " destructive" : ""}${current ? " current" : ""}${laneBatch ? " batch" : ""}` },
-        laneBatch ? tick ?? el("span", { class: "lane-tick-none" }) : null, open);
+      const body = decides && session && v.approval
+        ? el("div", { class: "lane-decide" }, ...decision(session, v.approval, "lane-act"),
+            fid(laterButton(w.request, skipCard), "lane-act:skip"))
+        : null;
+      return el("li", { class: `lane-row${destructive ? " destructive" : ""}${current ? " current" : ""}${decides ? " deciding" : ""}${laneBatch ? " batch" : ""}` },
+        laneBatch ? tick ?? el("span", { class: "lane-tick-none" }) : null, open, body);
     };
     const ticked = rows.filter(w => laneTicked.has(w.request) && batchable(w)).map(w => w.request);
     const allowTicked = () => {
@@ -1314,37 +1321,28 @@ export function createFlock(on: FlockActions & FlockAsk): {
           el("span", { class: "lane-note", text: t("Unselected requests keep waiting. Destructive ones are answered on their own.") }))
       : null;
     lane.replaceChildren(
-      el("header", { class: "lane-head" }, el("h3", { text: t("Waiting for you") }), el("span", { class: "attention-count", text: String(rows.length) }), el("span", { class: "lane-spacer" }), toggle),
+      el("header", { class: "lane-head" }, el("h3", { text: t("Waiting for you") }), el("span", { class: "attention-count", text: String(rows.length) }),
+        el("span", { class: "lane-keys", text: t("J and K move through the line") }), el("span", { class: "lane-spacer" }), toggle),
       el("ul", { class: "lane-rows" }, ...rows.map(row)),
       ...(foot ? [foot] : []),
     );
+    laneOrder = rows.flatMap(w => v.sessions.find(s => s.agent === w.agent && s.id === w.session) ?? []);
     return new Set(rows.map(w => `${w.agent}:${w.session}`));
   }
 
   function drawExpired(v: ViewModel): void {
-    for (const w of v.waiting ?? []) shownRequests.set(w.request, w);
-    if (v.approval) shownRequests.set(v.approval.request, v.approval);
-    const now = Date.now();
-    for (const e of v.ended ?? []) {
-      if (e.outcome !== "expired" || noted.has(e.request) || !shownRequests.has(e.request)) continue;
-      noted.add(e.request);
-      expiredNotes.unshift({ request: e.request, agent: e.agent, session: e.session, at: now });
-      const session = v.sessions.find(s => s.agent === e.agent && s.id === e.session);
-      if (session) asking.set(key(session), { step: session.step_count, ask: shownRequests.get(e.request) });
-    }
-    // Answered or expired, a request is not shown again: only the ones still waiting are kept.
-    const live = new Set([...(v.waiting ?? []).map(w => w.request), v.approval?.request]);
-    for (const r of shownRequests.keys()) if (!live.has(r) && noted.has(r)) shownRequests.delete(r);
-    expiredNotes = expiredNotes.filter(n => now - n.at < EXPIRED_KEPT_MS).slice(0, 3);
-    expiredBox.hidden = !expiredNotes.length;
-    expiredBox.replaceChildren(...expiredNotes.map(n => {
-      const session = v.sessions.find(s => s.agent === n.agent && s.id === n.session) ?? null;
-      const name = session ? session.project || agentName(session) : n.agent;
+    const asking = v.sessions.filter(s => s.returned);
+    const live = new Set(asking.map(returnedKey));
+    for (const k of [...dismissed]) if (!live.has(k)) dismissed.delete(k);
+    const notes = asking.filter(s => !dismissed.has(returnedKey(s))).slice(0, 3);
+    expiredBox.hidden = !notes.length;
+    expiredBox.replaceChildren(...notes.map(session => {
+      const k = returnedKey(session);
       return el("div", { class: "expired-note" },
         icon("warning", 13, 2),
-        el("span", { text: t("No answer in time: {project} asks in its terminal now.", { project: name }) }),
-        session?.raise === true ? fid(el("button", { class: "outline", text: t("Open terminal"), onclick: () => on.jump(session) }), `expired:open:${n.request}`) : null,
-        fid(el("button", { class: "ghost expired-dismiss", onclick: () => { expiredNotes = expiredNotes.filter(x => x.request !== n.request); draw(); } }, icon("close", 12, 2)), `expired:close:${n.request}`));
+        el("span", { text: t("No answer in time: {project} asks in its terminal now.", { project: session.project || agentName(session) }) }),
+        session.raise === true ? fid(el("button", { class: "outline", text: t("Open terminal"), onclick: () => on.jump(session) }), `expired:open:${key(session)}`) : null,
+        fid(el("button", { class: "ghost expired-dismiss", onclick: () => { dismissed.add(k); draw(); } }, icon("close", 12, 2)), `expired:close:${key(session)}`));
     }));
     expiredBox.setAttribute("role", "status");
     for (const b of expiredBox.querySelectorAll<HTMLElement>(".expired-dismiss")) b.setAttribute("aria-label", t("Dismiss"));
@@ -1405,6 +1403,16 @@ export function createFlock(on: FlockActions & FlockAsk): {
   document.addEventListener("visibilitychange", armWorkspace);
   window.addEventListener("keydown", (e) => {
     if (!active || !view || (e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable], .detail-tabs")) return;
+    // J and K walk the line of waiting requests: the one in front is the one its answers and the
+    // global keys reach.
+    if ((e.key === "j" || e.key === "k") && !e.ctrlKey && !e.altKey && !e.metaKey && laneOrder.length > 1 && !lane.hidden) {
+      const front = frontOf(view);
+      const at = front ? laneOrder.findIndex((s) => key(s) === key(front)) : -1;
+      const next = laneOrder[at < 0 ? 0 : (at + (e.key === "j" ? 1 : -1) + laneOrder.length) % laneOrder.length];
+      e.preventDefault();
+      on.focus(next);
+      return;
+    }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     const rows = visible(view);
     if (!rows.length) return;
