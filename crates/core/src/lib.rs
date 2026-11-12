@@ -838,6 +838,34 @@ pub struct Session {
     pub context_tokens: Option<u64>,
     /// The repository its folder is in (`Input::Repo`).
     pub repo: Option<Repo>,
+    /// A request that went back to its terminal unanswered: the agent asks there now.
+    pub returned: Option<Returned>,
+}
+
+impl Session {
+    /// What its state asks of the user: a request gone back to its terminal still waits on them.
+    pub fn attention(&self) -> Attention {
+        if self.returned.is_some() {
+            Attention::NeedsYou
+        } else {
+            self.status.attention()
+        }
+    }
+}
+
+/// What a request that went back to its terminal asked, kept until the session moves on: without
+/// it every surface would say the session works while it waits on the user in its terminal.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct Returned {
+    pub tool: String,
+    pub target: String,
+    pub description: Option<String>,
+    pub full: Option<String>,
+    /// The folder it asked about: where to answer when no terminal can be raised.
+    pub cwd: Option<String>,
+    /// A question rather than a permission: there is no command to copy.
+    pub question: bool,
 }
 
 /// A session's repository, as its folder's `.git` claims it (an agent can write that file): good
@@ -1156,6 +1184,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             };
             record_end(state, &p, Outcome::Expired);
             settle(state, &p.session, now);
+            returned(state, &p);
             vec![
                 audited(state, &p, audit::Actor::System, audit::Act::Expire),
                 Effect::ReleasePermission(p.request),
@@ -1499,6 +1528,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             while let Some(p) = take_pending(state, |p| now.duration_since(p.since) >= PENDING_TTL) {
                 record_end(state, &p, Outcome::Expired);
                 settle(state, &p.session, now);
+                returned(state, &p);
                 effects.push(audited(state, &p, audit::Actor::System, audit::Act::Expire));
                 effects.push(Effect::ReleasePermission(p.request));
             }
@@ -1641,6 +1671,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         context_percent: None,
         context_tokens: None,
         repo: None,
+        returned: None,
     });
     session.process_gone = false;
     // The latest event knows best where the agent runs (it may have moved to another pane).
@@ -1669,11 +1700,12 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
     let look = (idle && session.turn.is_some())
         .then(|| folder(session, false))
         .flatten();
-    // A note belongs to the state it explains; anything that changes the state drops it.
+    // A note belongs to the state it explains; anything that changes the state drops it. The
+    // session's own news also means the terminal's question was answered there.
     if !matches!(event, AgentEvent::SubagentStarted | AgentEvent::SubagentStopped) {
         session.note = None;
+        session.returned = None;
     }
-
     match event {
         AgentEvent::SessionStarted => session.status = Status::Idle,
         AgentEvent::PromptSubmitted => {
@@ -2240,6 +2272,9 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
 /// A card goes on the line, and its offer into the ledger: answerable until the hook stops waiting.
 /// (A reused request id never gets here: `on_agent` sends it to the terminal first.)
 fn enqueue(state: &mut State, p: Pending) {
+    if let Some(s) = state.sessions.get_mut(&p.session) {
+        s.returned = None;
+    }
     state
         .ledger
         .offer(p.request.clone(), ledger::Binding::of(&p), p.since, PENDING_TTL);
@@ -2316,6 +2351,20 @@ fn record_end(state: &mut State, p: &Pending, outcome: Outcome) {
 fn settle(state: &mut State, key: &SessionKey, now: Instant) {
     if !state.pending.iter().any(|p| &p.session == key) {
         set_status(state, key, Status::Working, now);
+    }
+}
+
+/// A card's hook stopped waiting: its question is the terminal's now, until the session moves on.
+fn returned(state: &mut State, p: &Pending) {
+    if let Some(s) = state.sessions.get_mut(&p.session) {
+        s.returned = Some(Returned {
+            tool: p.tool.clone(),
+            target: p.target.clone(),
+            description: p.ask.description.clone(),
+            full: p.ask.full.clone(),
+            cwd: p.cwd.clone(),
+            question: !p.questions.is_empty(),
+        });
     }
 }
 

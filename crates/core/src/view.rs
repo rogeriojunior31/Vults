@@ -163,6 +163,9 @@ pub struct SessionView {
     pub step_at: Vec<Option<i64>>,
     /// How many steps the session has taken so far.
     pub step_count: u32,
+    /// A request that went back to its terminal: the agent asks there until it moves on.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub returned: Option<crate::Returned>,
     pub subagents: u32,
     /// What it has cost so far at API prices, when its agent says: a subscription is not charged it.
     #[cfg_attr(test, ts(optional = nullable))]
@@ -432,8 +435,9 @@ impl State {
                     }),
                     // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
                     attention: match (s.status, s.watch.level) {
+                        _ if s.returned.is_some() => Attention::NeedsYou,
                         (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
-                        (status, _) => status.attention(),
+                        _ => s.attention(),
                     },
                     card: card == Some(&s.key),
                     waiting: !pending.is_empty(),
@@ -455,6 +459,7 @@ impl State {
                     touched: touched(s),
                     step_at: s.step_at.iter().copied().collect(),
                     step_count: s.step_count,
+                    returned: s.returned.clone(),
                     subagents: s.subagents,
                     cost_usd: s.cost_usd,
                     cost_estimated: s.cost_estimated,
@@ -750,6 +755,7 @@ pub(crate) mod ts {
             Activity::decl(&cfg),
             AlertLevel::decl(&cfg),
             Outfit::decl(&cfg),
+            crate::Returned::decl(&cfg),
             ViewModel::decl(&cfg),
             crate::chat::ChatView::decl(&cfg),
             crate::chat::ChatSuggestion::decl(&cfg),

@@ -446,6 +446,56 @@ fn the_card_expires_with_the_hook() {
 }
 
 #[test]
+fn an_expired_card_stays_the_terminals_question_until_the_session_moves_on() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, requested("a", "r1"), now);
+    visible(&mut s, Input::Tick, now + PENDING_TTL);
+    let returned = |s: &State| {
+        s.view()
+            .sessions
+            .into_iter()
+            .find(|v| v.id == "a")
+            .and_then(|v| v.returned)
+    };
+    let r = returned(&s).expect("kept after the hook stopped waiting");
+    assert_eq!(r.target, "Bash · cargo test");
+    // It still waits on the user: no surface may call it quiet.
+    let v = s.view();
+    assert_eq!(v.sessions[0].attention, Attention::NeedsYou);
+    assert!(v.inbox.iter().any(|i| i.level == Attention::NeedsYou
+        && matches!(&i.source, crate::attention::AttentionSource::Session { session } if session.id == "a")));
+    // A gone transport keeps it the same way.
+    visible(&mut s, requested("b", "r2"), now + PENDING_TTL);
+    visible(
+        &mut s,
+        Input::RequestGone { request: rid("r2") },
+        now + PENDING_TTL,
+    );
+    assert!(
+        s.view()
+            .sessions
+            .iter()
+            .any(|v| v.id == "b" && v.returned.is_some())
+    );
+    // The next step means it was answered in the terminal.
+    let step = AgentEvent::ToolStarted(Step {
+        activity: Activity::Run,
+        tool: "Bash".into(),
+        detail: Some("cargo test".into()),
+    });
+    visible(&mut s, agent("a", step), now + PENDING_TTL);
+    assert!(returned(&s).is_none());
+    // So does a turn that ends.
+    visible(
+        &mut s,
+        agent("b", AgentEvent::Stopped { message: None }),
+        now + PENDING_TTL,
+    );
+    assert!(s.view().sessions.iter().all(|v| v.returned.is_none()));
+}
+
+#[test]
 fn the_session_moving_on_releases_its_card() {
     let mut s = State::default();
     let now = Instant::now();
