@@ -13,7 +13,7 @@ use vults_agent_config::HookEntry;
 use vults_core::AgentUpdate;
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, Claude, Dirs, hook_command};
+use crate::{Agent, Claude, Dirs, WindowsShell, shell_hook_command};
 
 #[derive(Debug)]
 pub struct Qwen;
@@ -67,7 +67,8 @@ impl Agent for Qwen {
             .iter()
             .map(|&(event, timeout)| HookEntry {
                 event,
-                command: hook_command(hook_exe, "qwen", event),
+                // `%ComSpec% /d /s /c` on Windows, or Git Bash when started from it.
+                command: shell_hook_command(WindowsShell::Cmd, hook_exe, "qwen", event),
                 timeout,
                 status_message: (event == "PermissionRequest").then_some(crate::WAITING),
             })
@@ -225,15 +226,20 @@ mod tests {
         let entries = Qwen.hook_entries(Path::new("/opt/vults-hook"));
         assert_eq!(entries.len(), EVENTS.len());
         let permission = entries.iter().find(|e| e.event == "PermissionRequest").unwrap();
+        let hook = if cfg!(windows) {
+            "/opt/vults-hook"
+        } else {
+            "'/opt/vults-hook'"
+        };
         assert_eq!(
             permission.command,
-            "'/opt/vults-hook' --agent qwen PermissionRequest"
+            format!("{hook} --agent qwen PermissionRequest")
         );
         assert_eq!(permission.timeout, 120);
         assert!(permission.status_message.is_some());
         // Nothing waits on PreToolUse: Qwen asks its questions before it.
         let pre = entries.iter().find(|e| e.event == "PreToolUse").unwrap();
-        assert_eq!(pre.command, "'/opt/vults-hook' --agent qwen PreToolUse");
+        assert_eq!(pre.command, format!("{hook} --agent qwen PreToolUse"));
         assert_eq!(pre.timeout, 10);
     }
 }

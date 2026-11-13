@@ -13,7 +13,7 @@ use vults_agent_config::toml::toml_edit::{Table, value};
 use vults_core::AgentUpdate;
 use vults_protocol::Event;
 
-use crate::{Dirs, TomlAgent, hook_command};
+use crate::{Dirs, TomlAgent, WindowsShell, shell_hook_command};
 
 /// The name its sessions go by, and the `--agent` its hooks run with.
 pub(crate) const NAME: &str = "kimi";
@@ -49,7 +49,9 @@ fn tables(hook_exe: &Path) -> Vec<Table> {
         .map(|&(event, timeout)| {
             let mut t = Table::new();
             t.insert("event", value(event));
-            t.insert("command", value(hook_command(hook_exe, NAME, event)));
+            // A shell subprocess: `%ComSpec% /c` on Windows.
+            let command = shell_hook_command(WindowsShell::Cmd, hook_exe, NAME, event);
+            t.insert("command", value(command));
             t.insert("timeout", value(timeout));
             t
         })
@@ -181,9 +183,14 @@ mod tests {
             &(KIMI.tables)(exe),
             crate::MARKER
         ));
+        let hook = if cfg!(windows) {
+            "/x/vults-hook"
+        } else {
+            "'/x/vults-hook'"
+        };
         assert!(
             doc.to_string()
-                .contains("command = \"'/x/vults-hook' --agent kimi PermissionRequest\"")
+                .contains(&format!("command = \"{hook} --agent kimi PermissionRequest\""))
         );
         config::remove_ours(&mut doc, KIMI.key, crate::MARKER);
         assert!(doc.to_string().contains("notify-send done"));

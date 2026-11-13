@@ -2,7 +2,7 @@
 //!
 //! It reads every hooks file in `~/.copilot/hooks/` (`$COPILOT_HOME/hooks/`), so ours is a file of
 //! our own, `vults.json`: `{"version": 1, "hooks": {"<event>": [{"type": "command", "bash": …,
-//! "timeoutSec": …}]}}` with camelCase events. What differs from Claude Code, read here as its:
+//! "timeoutSec": …}]}}` with camelCase events, plus a `powershell` command on Windows. What differs from Claude Code, read here as its:
 //! - the payload names neither its event nor in snake_case: each entry passes its event on the
 //!   command line, and `sessionId`, `toolName`, `toolArgs` / `toolInput` are copied over;
 //! - its tools and their arguments: `bash`, `view {path}`, `create {path, file_text}`,
@@ -19,7 +19,7 @@ use vults_agent_config::HookEntry;
 use vults_core::AgentUpdate;
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, Claude, Dirs, MARKER, hook_command};
+use crate::{Agent, Claude, Dirs, MARKER, WindowsShell, hook_command};
 
 /// The name its hooks run with.
 pub(crate) const NAME: &str = "copilot";
@@ -169,16 +169,25 @@ impl Agent for Copilot {
 
 impl Copilot {
     fn ours(&self, hook_exe: &Path) -> Value {
-        let hooks: Map<String, Value> = self
-            .hook_entries(hook_exe)
-            .into_iter()
-            .map(|h| {
-                let handler = json!({ "type": "command", "bash": h.command, "timeoutSec": h.timeout });
-                (h.event.to_string(), json!([handler]))
-            })
-            .collect();
-        json!({ "version": 1, "hooks": hooks })
+        ours(hook_exe, cfg!(windows))
     }
+}
+
+/// On Windows Copilot runs the `powershell` key (PowerShell 7), never `bash`. A `preToolUse` that
+/// fails denies the tool, hence `exit 0` after a hook that could not start.
+fn ours(hook_exe: &Path, windows: bool) -> Value {
+    let hooks: Map<String, Value> = EVENTS
+        .iter()
+        .map(|&(event, ours, timeout)| {
+            let mut handler = json!({ "type": "command", "bash": hook_command(hook_exe, NAME, ours), "timeoutSec": timeout });
+            if windows {
+                let command = crate::windows_shell_command(WindowsShell::PowerShell, hook_exe, NAME, ours);
+                handler["powershell"] = format!("{command}; exit 0").into();
+            }
+            (event.to_string(), json!([handler]))
+        })
+        .collect();
+    json!({ "version": 1, "hooks": hooks })
 }
 
 /// The lines a unified diff adds and removes, and whether it creates its file.
@@ -359,11 +368,17 @@ mod tests {
             Copilot.config_file(&Dirs::home_only(Path::new("/home/me"))),
             Path::new("/home/me/.copilot/hooks/vults.json")
         );
+        let bash = json!({ "type": "command", "bash": "'/opt/vults-hook' --agent copilot PermissionRequest", "timeoutSec": 120 });
+        assert_eq!(ours(exe, false)["hooks"]["permissionRequest"][0], bash);
+        let mut windows = bash.clone();
+        windows["powershell"] =
+            r"& 'C:\Users\First Last\vults-hook.exe' --agent copilot PermissionRequest; exit 0".into();
+        windows["bash"] = r"'C:/Users/First Last/vults-hook.exe' --agent copilot PermissionRequest".into();
+        if cfg!(windows) {
+            let spaced = Path::new(r"C:\Users\First Last\vults-hook.exe");
+            assert_eq!(ours(spaced, true)["hooks"]["permissionRequest"][0], windows);
+        }
         let ours = Copilot.install(&Value::Null, exe);
-        assert_eq!(
-            ours["hooks"]["permissionRequest"][0],
-            json!({ "type": "command", "bash": "'/opt/vults-hook' --agent copilot PermissionRequest", "timeoutSec": 120 })
-        );
         assert!(Copilot.installed(&ours) && Copilot.up_to_date(&ours, exe));
         assert!(Copilot.install_blocked(&Value::Null).is_none());
         assert!(Copilot.install_blocked(&ours).is_none());
