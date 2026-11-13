@@ -459,6 +459,9 @@ fn build_dev_hook() {
 
 fn install_hook_exe(app: &AppHandle) {
     let dest = hook_exe();
+    // What an earlier update moved aside, once no agent runs it any more.
+    #[cfg(windows)]
+    let _ = std::fs::remove_file(dest.with_extension("old"));
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|e| e.parent().map(PathBuf::from));
@@ -496,11 +499,65 @@ fn install_hook_exe(app: &AppHandle) {
     }
     // Copy beside and rename: an agent may be running the old hook right now.
     let temp = dest.with_extension("new");
-    if std::fs::copy(&src, &temp)
-        .and_then(|_| std::fs::rename(&temp, &dest))
-        .is_err()
-    {
+    if let Err(e) = std::fs::copy(&src, &temp).and_then(|_| replace(&temp, &dest)) {
         let _ = std::fs::remove_file(&temp);
-        tracing::warn!("could not install the hook relay");
+        tracing::warn!("could not install the hook relay: {e}");
+    }
+}
+
+/// `temp` in place of `dest`. Windows refuses to replace an executable that is running (an
+/// agent's status line runs the hook every few seconds) but lets it be renamed: the running copy
+/// moves aside and goes once nothing runs it, here or at the next start.
+fn replace(temp: &Path, dest: &Path) -> std::io::Result<()> {
+    match std::fs::rename(temp, dest) {
+        #[cfg(windows)]
+        Err(_) if dest.is_file() => {
+            let old = dest.with_extension("old");
+            let _ = std::fs::remove_file(&old);
+            std::fs::rename(dest, &old)?;
+            if let Err(e) = std::fs::rename(temp, dest) {
+                let _ = std::fs::rename(&old, dest);
+                return Err(e);
+            }
+            let _ = std::fs::remove_file(&old);
+            Ok(())
+        }
+        result => result,
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use std::os::windows::process::CommandExt;
+
+    #[test]
+    fn a_running_hook_is_replaced_and_its_old_copy_goes_once_it_exits() {
+        let dir = std::env::temp_dir().join(format!("vults-hook-replace-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let dest = dir.join(vults_brand::HOOK_EXE);
+        // Any executable stands for the hook; ping waits long enough to be running.
+        std::fs::copy(r"C:\Windows\System32\PING.EXE", &dest).unwrap();
+        let mut running = std::process::Command::new(&dest)
+            .args(["-n", "30", "127.0.0.1"])
+            .stdout(std::process::Stdio::null())
+            .creation_flags(0x0800_0000)
+            .spawn()
+            .unwrap();
+        let temp = dest.with_extension("new");
+        std::fs::write(&temp, b"the new hook").unwrap();
+        assert!(
+            std::fs::rename(&temp, &dest).is_err(),
+            "Windows refuses the plain rename"
+        );
+        super::replace(&temp, &dest).unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap(), b"the new hook");
+        assert!(!temp.exists());
+        let old = dest.with_extension("old");
+        assert!(old.exists(), "still running: it cannot go yet");
+        running.kill().unwrap();
+        running.wait().unwrap();
+        drop(running);
+        std::fs::remove_file(&old).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

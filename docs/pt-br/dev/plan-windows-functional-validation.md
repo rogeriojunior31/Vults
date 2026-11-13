@@ -1,5 +1,5 @@
 # Validação funcional do Windows
-<!-- source: f5bec764368c -->
+<!-- source: 8a697063f49f -->
 
 Prioridade alterada pelo usuário em 2026-11-11: estabilizar o comportamento existente no Windows
 antes de adicionar conectores ou outros recursos. Notion e a expansão dos conectores ficam adiados.
@@ -44,3 +44,85 @@ Os testes nativos do Windows cobrem stdout herdado, workers sem stdout, consulta
 launchers npm normais e caminhos com espaços. Passaram localmente 1.537 testes de workspace/evals,
 24 verificações da interface, fmt, clippy de workspace/todos os alvos sem avisos, checks estáticos e
 cargo-deny. Esses testes de processos não comprovam desktop físico, fala real nem aceitação completa do Windows.
+
+<a id="hook-commands-per-agent-shell-2026-11-13"></a>
+## Comandos dos hooks por shell do agente (2026-11-13)
+
+Antigravity, Droid, Kimi, Qwen, Cursor e Copilot recebiam o comando do Git Bash
+(`'C:/…/vults-hook.exe' --agent …`), e os shells deles no Windows leem essas aspas simples
+literalmente. Um workspace de teste (`.agents/hooks.json`) mostrou o agy 1.5.8 executando
+`cmd /s /c "<comando>"`, então as sessões dele nunca chegavam; o `|| exit 0` escondia a falha. Os
+outros shells vêm do código ou da documentação deles: Droid `%ComSpec% /d /s /c`, Kimi
+`%ComSpec% /c`, Qwen cmd (Git Bash sob MSYS), Cursor e Copilot PowerShell (a chave `powershell` do
+Copilot). Um caminho simples agora é escrito sem aspas, com barras normais, igual para cmd,
+PowerShell e Git Bash; os outros caminhos levam aspas conforme o shell. O teste nativo ignorado
+`windows_hooks_run_in_each_agents_shell` passa em cmd, Git Bash, PowerShell 5.1 e pwsh. Só o
+Antigravity rodou ao vivo; Cursor, Copilot, Droid, Kimi e Qwen não estavam instalados. O Qwen em
+modo cmd ainda não executa um hook cujo caminho tem espaço.
+
+<a id="console-windows-2026-11-13"></a>
+## Janelas de console (2026-11-13)
+
+O app de release é um processo GUI, então cada filho de console iniciado sem `CREATE_NO_WINDOW`
+ganhava uma janela: com o Windows Terminal como terminal padrão, uma janela do Terminal que ficava
+aberta enquanto o filho rodava. Abrir o 0.1.8 instalado mostrou uma aos 0,58 s, do
+`gh api graphql` (a primeira consulta do conector do GitHub), e de novo a cada consulta; os `git`
+de cada turno e o relay destacado do plugin do OpenCode faziam o mesmo. Com o `gh`, o git de
+`folder.rs` e o `windowsHide` do plugin corrigidos, o build de release da branch iniciou o `gh` aos
+0,6 s e não abriu nenhuma janela de console em 20 s.
+
+## `/continue` (2026-11-13)
+
+O `/continue` recusava toda sessão do Windows ("Vults can't tell whether that session is still
+open"): a checagem do processo lia `/proc` e era desconhecida nos outros sistemas, enquanto os hooks
+do Windows sempre mandam um PID. Agora usa a sonda da detecção de presença (processo do mesmo
+usuário, encerrado ou não), no Linux também.
+
+<a id="hook-update-while-it-runs-2026-11-13"></a>
+## Atualização do hook enquanto ele roda (2026-11-13)
+
+O Windows nega substituir um executável em execução, e a status line de um agente roda o hook a
+cada poucos segundos, então uma atualização do app podia deixar os agentes no hook antigo, só com
+uma linha no log. Um hook em execução ainda pode ser renomeado: a atualização o move para o lado
+como `vults-hook.old`, coloca o novo no lugar e apaga a cópia antiga assim que nada a executa,
+na hora ou na próxima abertura. Um teste nativo mantém uma cópia rodando, mostra o rename simples
+falhando e a substituição dando certo.
+
+<a id="chat-clis-own-their-process-tree-2026-11-13"></a>
+## Os CLIs do chat são donos da sua árvore de processos (2026-11-13)
+
+O Linux liga um CLI do chat ao app com `PR_SET_PDEATHSIG`, e os comandos de um agente ACP ao grupo
+de processos dele. O Windows só tinha `kill_on_drop`, que encerra o filho direto e nunca roda quando
+o app é morto: o node por trás de um shim `.cmd` do npm, ou um comando que um agente deixou rodando,
+continuava. O job que o diagnóstico dos agentes usava foi para o `vults-peer` (`job`), e cada CLI do
+chat (os turnos do Claude e do Codex, o `codex app-server`, os agentes ACP, as leituras de uso, as
+perguntas de texto) agora começa suspenso, entra num job próprio que encerra tudo ao fechar, e só
+então roda. Nos apps rodando, `IsProcessInJob` deu falso para os filhos `claude` e `codex` do 0.1.8
+instalado e verdadeiro para os da branch. Um teste inicia um shell que inicia um neto: um spawn
+comum o deixa rodando depois do drop, um com dono o encerra. No Windows, o que um CLI do chat
+iniciou agora termina com ele, como num agente ACP no Linux.
+
+<a id="smaller-windows-gaps-2026-11-13"></a>
+## Lacunas menores do Windows (2026-11-13)
+
+Cada uma é um commit próprio em `fix/windows-hook-shells`:
+
+| Lacuna | Correção | Evidência |
+| --- | --- | --- |
+| O Now Playing parava de vez depois que um player falhava ou travava | Pular esse player; manter a música nas leituras com falha; pedir o serviço de mídia de novo depois de três | Teste com o serviço de mídia nativo |
+| As superfícies ficavam paradas quando um monitor ou a barra de tarefas mudava | Ler monitores e áreas úteis a cada 2 s; reposicionar e atualizar a lista de Settings | Teste do layout neste desktop |
+| Ícone do tray estático, sem presets, menu nunca reconstruído, Chat visível com o Zeca desligado | As entradas do Linux, reconstruídas onde o Linux reconstrói; os frames do Zeca, parados com *Mostrar animações* desligado | Teste de decodificação dos frames; ainda não visto no tray |
+| Os toggles de Space-lock e Esc-cancel não faziam nada | Omitidos no Windows, a dica encurtada | Build e verificações da UI |
+| A conversa por voz e as respostas a agentes ofereciam configurações que falhavam | As páginas dizem por quê, como o Meetings | Build e verificações da UI; ainda não visto no app |
+| O especialista Codex perdia as variáveis de perfil e de sistema | Pastas de perfil na home isolada, variáveis de sistema mantidas | Teste nativo do isolamento (ele iniciava sem a mudança também) |
+| Desligar a voz e o microfone do Chat deixavam o ditado rodando; trocar a chave mantinha uma limpeza velha | As chamadas do Linux, no Windows também | Build |
+| O MCP do Zeca confiava na lista de um app que caiu | O pid ainda precisa ser este programa | Teste com outro programa vivo |
+| A imagem da semana ia para uma pasta Imagens não redirecionada | O diálogo Salvar do sistema, abrindo na pasta Imagens conhecida | Build |
+| Sem saudação pelo primeiro nome | O nome completo da conta (`NetUserGetInfo`) | Lido nesta conta |
+| Sem looks sazonais | A data local de hoje | Build |
+| A ilha do Panel ignorava uma barra de tarefas no topo | A borda pelo `SHAppBarMessage` | Teste da borda neste desktop |
+
+Ainda só no Linux, como trabalho maior: gravação de reuniões, conversa por voz, perguntas de
+agentes por MCP, ferramentas GitHub do especialista, digitação em terminais e na maioria dos apps,
+abas e panes de terminal no *Open terminal*, e a árvore de processos da status line anterior no
+timeout.

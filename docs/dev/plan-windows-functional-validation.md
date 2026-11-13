@@ -39,3 +39,74 @@ Native Windows tests cover inherited stdout, workers without stdout, failed and 
 normal npm launchers and paths with spaces. All 1,537 workspace/eval tests, 24 UI checks, fmt,
 workspace/all-target clippy with warnings denied, static checks and cargo-deny passed locally.
 These diagnostic process tests do not establish physical desktop, real-speech or complete Windows acceptance.
+
+## Hook commands per agent shell (2026-11-13)
+
+Antigravity, Droid, Kimi, Qwen, Cursor and Copilot were given the Git Bash command
+(`'C:/…/vults-hook.exe' --agent …`), and their Windows shells read those single quotes literally.
+A probe workspace (`.agents/hooks.json`) showed agy 1.5.8 running `cmd /s /c "<command>"`, so its
+sessions never arrived; `|| exit 0` hid the failure. The other shells come from their code or docs:
+Droid `%ComSpec% /d /s /c`, Kimi `%ComSpec% /c`, Qwen cmd (Git Bash under MSYS), Cursor and Copilot
+PowerShell (Copilot's `powershell` key). A plain path is now written unquoted with forward slashes,
+the same for cmd, PowerShell and Git Bash; other paths are quoted per shell. The ignored native test
+`windows_hooks_run_in_each_agents_shell` passes in cmd, Git Bash, PowerShell 5.1 and pwsh. Only
+Antigravity ran live; Cursor, Copilot, Droid, Kimi and Qwen were not installed. Qwen in cmd mode
+still cannot run a hook path with a space.
+
+## Console windows (2026-11-13)
+
+The release app is a GUI process, so each console child started without `CREATE_NO_WINDOW` got a
+window: with Windows Terminal as the default terminal, a Terminal window that stayed while the child
+ran. Launching the installed 0.1.8 showed one 0.58 s in, owned by `gh api graphql` (the GitHub
+connector's first poll), and again on each poll; the turn's `git` looks and the OpenCode plugin's
+detached relay did the same. With `gh`, `folder.rs`'s git and the plugin's `windowsHide` fixed, the
+branch's release build started `gh` at 0.6 s and opened no console window in 20 s.
+
+## `/continue` (2026-11-13)
+
+`/continue` refused every Windows session ("Vults can't tell whether that session is still open"):
+its process check read `/proc` and was unknown elsewhere, while Windows hooks always send a PID. It
+now uses the presence watcher's probe (same-user process, exited or not), on Linux too.
+
+## Hook update while it runs (2026-11-13)
+
+Windows denies replacing a running executable, and an agent's status line runs the hook every few
+seconds, so an app update could leave agents on the old hook with only a log line. A running hook
+can still be renamed: the update moves it aside as `vults-hook.old`, puts the new one in place, and
+removes the old copy once nothing runs it, then or at the next start. A native test holds a copy
+running, shows the plain rename failing and the replacement succeeding.
+
+## Chat CLIs own their process tree (2026-11-13)
+
+Linux ties a chat CLI to the app with `PR_SET_PDEATHSIG`, and an ACP agent's commands to its process
+group. Windows had only `kill_on_drop`, which ends the direct child and never runs when the app is
+killed: the node behind an npm `.cmd` shim, or a command an agent left running, ran on. The job the
+agent doctor used moved to `vults-peer` (`job`), and every chat CLI (Claude and Codex turns, `codex
+app-server`, ACP agents, usage reads, text questions) now starts suspended, joins a kill-on-close
+job of its own, then runs. In the running apps, `IsProcessInJob` read false for the installed 0.1.8's
+`claude` and `codex` children and true for the branch's. A test starts a shell that starts a
+grandchild: a plain spawn leaves it running after the drop, an owned one ends it. On Windows, what a
+chat CLI started now ends with it, as with an ACP agent on Linux.
+
+## Smaller Windows gaps (2026-11-13)
+
+Each is its own commit on `fix/windows-hook-shells`:
+
+| Gap | Fix | Evidence |
+| --- | --- | --- |
+| Now Playing stopped for good after one player failed or hung | Skip that player; keep the song through failed reads; ask for the media service again after three | Native media service test |
+| Surfaces stayed put when a monitor or the taskbar changed | Read monitors and work areas every 2 s; place again and refresh Settings' list | Layout test on this desktop |
+| Static tray icon, no presets, menu never rebuilt, Chat shown with Zeca off | Linux's entries, rebuilt where Linux does; Zeca's frames, still when *Show animations* is off | Frame decode test; not seen in the tray yet |
+| Space lock and Esc cancel toggles did nothing | Left out on Windows, the hint trimmed | UI build and checks |
+| Voice conversation and agent answers offered setups that failed | Their pages say why, like Meetings | UI build and checks; not seen in the app yet |
+| Codex specialist lost the profile and system variables | Profile folders in the isolated home, system variables kept | Native isolation test (it started without the change too) |
+| Voice off and the Chat microphone left dictation running; key changes kept a stale cleanup | The Linux calls, on Windows too | Build |
+| Zeca's MCP trusted a crashed app's snapshot | The pid must still be this program | Test with a live other program |
+| The week's image went to an unredirected Pictures | The system Save dialog, starting in the known Pictures folder | Build |
+| No first-name greeting | The account's full name (`NetUserGetInfo`) | Read on this account |
+| No seasonal looks | Today's local date | Build |
+| The Panel island ignored a taskbar at the top | `SHAppBarMessage` edge | Edge test on this desktop |
+
+Still Linux-only, as larger work: meeting recording, voice conversation, agent questions over MCP,
+specialist GitHub tools, typing into terminals and most apps, terminal tabs and panes for *Open
+terminal*, and the previous status line's process tree on timeout.

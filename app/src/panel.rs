@@ -48,7 +48,13 @@ pub fn place(app: &AppHandle) -> Place {
         Presence::Panel if panel_side() != vults_platform::linux::Side::Top => Dock::Bottom,
         _ => Dock::Top,
     };
-    #[cfg(not(target_os = "linux"))]
+    // By the taskbar's tray: at the top when the taskbar is there, else the bottom.
+    #[cfg(windows)]
+    let dock = match presence {
+        Presence::Panel if vults_platform::windows_displays::taskbar_at_top() != Some(true) => Dock::Bottom,
+        _ => Dock::Top,
+    };
+    #[cfg(not(any(target_os = "linux", windows)))]
     let dock = match presence {
         Presence::Panel => Dock::Bottom,
         _ => Dock::Top,

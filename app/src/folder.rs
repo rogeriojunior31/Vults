@@ -88,7 +88,11 @@ fn git(dir: &Path, args: &[&str]) -> Option<String> {
 }
 
 fn git_raw(dir: &Path, args: &[&str], input: Option<Vec<u8>>, cap: usize) -> Option<Vec<u8>> {
-    let mut child = Command::new("git")
+    let mut git = Command::new("git");
+    // The app has no console: without this each look at a turn opens a console window.
+    #[cfg(windows)]
+    std::os::windows::process::CommandExt::creation_flags(&mut git, 0x0800_0000);
+    let mut child = git
         .arg("-C")
         .arg(dir)
         .args(["-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null"])

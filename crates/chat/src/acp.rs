@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-use tokio::process::{Child, ChildStdin, ChildStdout};
+use tokio::process::{ChildStdin, ChildStdout};
 use vults_agents::driver::{
     AgentDriver, Ask, BoxFuture, EndReason, Event, Input, Interrupter, Sink, Spec, Usage,
 };
@@ -486,7 +486,7 @@ struct Conn {
     /// Its process group (the agent and the commands it started), ended with it. Unix only.
     #[cfg_attr(not(unix), allow(dead_code))]
     group: Option<u32>,
-    _child: Child,
+    _child: crate::OwnedChild,
     stdin: ChildStdin,
     lines: Lines<BufReader<ChildStdout>>,
     next_id: u64,
@@ -526,7 +526,8 @@ impl Conn {
         // Its own process group: a command it left running goes with it.
         #[cfg(unix)]
         cmd.process_group(0);
-        let mut child = cmd.spawn().map_err(|e| match e.kind() {
+        // Its own job on Windows, for the same reason.
+        let mut child = crate::spawn_owned(&mut cmd).map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => format!("{} isn't installed.", agent.title),
             _ => format!("Can't start {}: {e}", agent.title),
         })?;

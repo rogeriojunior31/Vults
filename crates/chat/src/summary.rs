@@ -103,11 +103,11 @@ pub(crate) async fn run(
     if *cancel.borrow() || cancel.has_changed().is_err() {
         return Err("Text consultation cancelled.".into());
     }
-    let child = cmd.spawn().map_err(|e| format!("Can't start text client: {e}"))?;
+    let child = crate::spawn_owned(&mut cmd).map_err(|e| format!("Can't start text client: {e}"))?;
     run_child(child, text, cancel).await
 }
 async fn run_child(
-    mut child: tokio::process::Child,
+    mut child: crate::OwnedChild,
     text: &str,
     cancel: &mut watch::Receiver<bool>,
 ) -> Result<String, String> {
@@ -203,7 +203,7 @@ mod tests {
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::null());
-            let child = crate::dies_with_app(&mut cmd).spawn().unwrap();
+            let child = crate::spawn_owned(crate::dies_with_app(&mut cmd)).unwrap();
             let pid = child.id().unwrap();
             let (stop, mut cancel) = watch::channel(false);
             let worker = tokio::spawn(async move { run_child(child, "", &mut cancel).await });

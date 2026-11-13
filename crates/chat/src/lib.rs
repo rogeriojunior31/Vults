@@ -91,6 +91,60 @@ pub(crate) fn dies_with_app(cmd: &mut tokio::process::Command) -> &mut tokio::pr
     cmd.kill_on_drop(true)
 }
 
+/// A CLI the app started, read as a [`tokio::process::Child`]. On Windows it runs in a job of its
+/// own: what it starts (the node behind an npm shim, a command an agent left running) ends with it
+/// when it is dropped, and when the app dies, as `dies_with_app` and ACP's process group do on
+/// Linux.
+#[derive(Debug)]
+pub(crate) struct OwnedChild {
+    // Dropped first: kill_on_drop ends the CLI, then the job closes on the rest of its tree.
+    child: tokio::process::Child,
+    #[cfg(windows)]
+    _job: Option<vults_peer::job::TreeJob>,
+}
+
+impl std::ops::Deref for OwnedChild {
+    type Target = tokio::process::Child;
+    fn deref(&self) -> &Self::Target {
+        &self.child
+    }
+}
+
+impl std::ops::DerefMut for OwnedChild {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.child
+    }
+}
+
+/// `cmd.spawn()`, and on Windows the job: the CLI starts suspended and joins it before it runs, so
+/// nothing it starts escapes. A job that cannot be made leaves the CLI running as before.
+pub(crate) fn spawn_owned(cmd: &mut tokio::process::Command) -> std::io::Result<OwnedChild> {
+    #[cfg(windows)]
+    {
+        use vults_peer::job;
+        let tree = job::TreeJob::new();
+        cmd.creation_flags(job::SUSPENDED_NO_WINDOW);
+        let mut child = cmd.spawn()?;
+        let tree = tree
+            .ok()
+            .filter(|tree| child.raw_handle().is_some_and(|h| tree.assign(h).is_ok()));
+        let resumed = child
+            .id()
+            .ok_or_else(|| std::io::Error::other("The CLI exited before it started."))
+            .and_then(job::resume_suspended);
+        if let Err(e) = resumed {
+            let _ = child.start_kill();
+            return Err(e);
+        }
+        Ok(OwnedChild { child, _job: tree })
+    }
+    #[cfg(not(windows))]
+    Ok(OwnedChild { child: cmd.spawn()? })
+}
+
+#[cfg(all(test, windows))]
+mod owned_child_tests;
+
 /// A turn thinking this long (not counting time spent waiting for the user) is stuck.
 const TURN_TIMEOUT: Duration = Duration::from_secs(600);
 /// A permission nobody answers is a no.

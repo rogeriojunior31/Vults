@@ -169,12 +169,30 @@ pub fn keep_flock(view: &vults_core::ViewModel) {
     });
 }
 
-/// Does the app that wrote the snapshot still run? On Linux, that pid must still be this program:
-/// after a crash or a reboot another process may have the number.
+/// Does the app that wrote the snapshot still run? That pid must still be this program: after a
+/// crash or a reboot another process may have the number.
+#[cfg(windows)]
 fn alive(pid: u64) -> bool {
-    if !cfg!(target_os = "linux") {
-        return true;
-    }
+    let own = std::env::current_exe().unwrap_or_default();
+    // Windows paths ignore case.
+    u32::try_from(pid)
+        .ok()
+        .and_then(vults_peer::process_image)
+        .is_some_and(|exe| exe.to_string_lossy().eq_ignore_ascii_case(&own.to_string_lossy()))
+}
+
+#[cfg(not(any(target_os = "linux", windows)))]
+fn alive(_: u64) -> bool {
+    true
+}
+
+#[cfg(target_os = "linux")]
+fn alive(pid: u64) -> bool {
+    linux_alive(pid)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_alive(pid: u64) -> bool {
     let Ok(exe) = std::fs::read_link(format!("/proc/{pid}/exe")) else {
         return false;
     };
@@ -612,7 +630,21 @@ mod tests {
         assert!(alive(u64::from(std::process::id())));
         if cfg!(target_os = "linux") {
             assert!(!alive(1), "pid 1 is init, not Vults");
-            assert!(!alive(u64::from(u32::MAX)));
+        }
+        assert!(!alive(u64::from(u32::MAX)));
+        // Another program of this user's, alive: not the app.
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            let mut other = std::process::Command::new(r"C:\Windows\System32\PING.EXE")
+                .args(["-n", "30", "127.0.0.1"])
+                .stdout(std::process::Stdio::null())
+                .creation_flags(0x0800_0000)
+                .spawn()
+                .unwrap();
+            assert!(!alive(u64::from(other.id())));
+            let _ = other.kill();
+            let _ = other.wait();
         }
     }
 

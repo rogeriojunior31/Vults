@@ -18,45 +18,70 @@ async fn manager() -> Result<Manager, String> {
         .map_err(text)
 }
 
+async fn player(session: &Session) -> Result<Player, String> {
+    let status = match session.GetPlaybackInfo().and_then(|info| info.PlaybackStatus()) {
+        Ok(Playback::Playing) => Status::Playing,
+        Ok(Playback::Paused) => Status::Paused,
+        _ => Status::Stopped,
+    };
+    let properties = tokio::time::timeout(
+        Duration::from_secs(2),
+        session.TryGetMediaPropertiesAsync().map_err(text)?,
+    )
+    .await
+    .map_err(|_| "The media player did not respond.".to_string())?
+    .map_err(text)?;
+    Ok(Player {
+        name: session.SourceAppUserModelId().map_err(text)?.to_string(),
+        title: properties.Title().map_err(text)?.to_string(),
+        artist: Some(properties.Artist().map_err(text)?.to_string()),
+        status,
+    })
+}
+
 async fn players(manager: &Manager) -> Result<Vec<Player>, String> {
-    let mut players = Vec::new();
     let sessions: Vec<_> = manager.GetSessions().map_err(text)?.into_iter().collect();
+    let mut players = Vec::new();
     for session in sessions {
-        let status = match session.GetPlaybackInfo().and_then(|info| info.PlaybackStatus()) {
-            Ok(Playback::Playing) => Status::Playing,
-            Ok(Playback::Paused) => Status::Paused,
-            _ => Status::Stopped,
-        };
-        let properties = tokio::time::timeout(
-            Duration::from_secs(2),
-            session.TryGetMediaPropertiesAsync().map_err(text)?,
-        )
-        .await
-        .map_err(|_| "The media player did not respond.".to_string())?
-        .map_err(text)?;
-        players.push(Player {
-            name: session.SourceAppUserModelId().map_err(text)?.to_string(),
-            title: properties.Title().map_err(text)?.to_string(),
-            artist: Some(properties.Artist().map_err(text)?.to_string()),
-            status,
-        });
+        // One player that hangs or fails must not hide the others.
+        if let Ok(player) = player(&session).await {
+            players.push(player);
+        }
     }
     Ok(players)
 }
 
+/// Reads in a row that fail before the media service is asked for again.
+const RETRIES: u32 = 3;
+
+/// Only a service that never answers at the start is an error: a failed read later keeps the song
+/// on screen and tries again, and the service is asked for again when it keeps failing (it
+/// restarts with Explorer and with updates).
 pub async fn watch(on_change: impl Fn(Option<NowPlaying>)) -> Result<(), String> {
-    let manager = manager().await?;
+    let mut manager = manager().await?;
     let mut shown: Option<NowPlaying> = None;
     let mut first = true;
+    let mut failures = 0;
     loop {
-        let now = pick(
-            &players(&manager).await?,
-            shown.as_ref().map(|now| now.player.as_str()),
-        );
-        if first || now != shown {
-            on_change(now.clone());
-            shown = now;
-            first = false;
+        match players(&manager).await {
+            Ok(players) => {
+                failures = 0;
+                let now = pick(&players, shown.as_ref().map(|now| now.player.as_str()));
+                if first || now != shown {
+                    on_change(now.clone());
+                    shown = now;
+                    first = false;
+                }
+            }
+            Err(_) => {
+                failures += 1;
+                if failures >= RETRIES
+                    && let Ok(again) = self::manager().await
+                {
+                    manager = again;
+                    failures = 0;
+                }
+            }
         }
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
