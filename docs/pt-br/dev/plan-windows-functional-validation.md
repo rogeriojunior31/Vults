@@ -1,5 +1,5 @@
 # Validação funcional do Windows
-<!-- source: f5bec764368c -->
+<!-- source: b921e84d2660 -->
 
 Prioridade alterada pelo usuário em 2026-11-11: estabilizar o comportamento existente no Windows
 antes de adicionar conectores ou outros recursos. Notion e a expansão dos conectores ficam adiados.
@@ -44,3 +44,29 @@ Os testes nativos do Windows cobrem stdout herdado, workers sem stdout, consulta
 launchers npm normais e caminhos com espaços. Passaram localmente 1.537 testes de workspace/evals,
 24 verificações da interface, fmt, clippy de workspace/todos os alvos sem avisos, checks estáticos e
 cargo-deny. Esses testes de processos não comprovam desktop físico, fala real nem aceitação completa do Windows.
+
+<a id="hook-commands-per-agent-shell-2026-11-13"></a>
+## Comandos dos hooks por shell do agente (2026-11-13)
+
+Antigravity, Droid, Kimi, Qwen, Cursor e Copilot recebiam o comando do Git Bash
+(`'C:/…/vults-hook.exe' --agent …`), e os shells deles no Windows leem essas aspas simples
+literalmente. Um workspace de teste (`.agents/hooks.json`) mostrou o agy 1.5.8 executando
+`cmd /s /c "<comando>"`, então as sessões dele nunca chegavam; o `|| exit 0` escondia a falha. Os
+outros shells vêm do código ou da documentação deles: Droid `%ComSpec% /d /s /c`, Kimi
+`%ComSpec% /c`, Qwen cmd (Git Bash sob MSYS), Cursor e Copilot PowerShell (a chave `powershell` do
+Copilot). Um caminho simples agora é escrito sem aspas, com barras normais, igual para cmd,
+PowerShell e Git Bash; os outros caminhos levam aspas conforme o shell. O teste nativo ignorado
+`windows_hooks_run_in_each_agents_shell` passa em cmd, Git Bash, PowerShell 5.1 e pwsh. Só o
+Antigravity rodou ao vivo; Cursor, Copilot, Droid, Kimi e Qwen não estavam instalados. O Qwen em
+modo cmd ainda não executa um hook cujo caminho tem espaço.
+
+<a id="console-windows-2026-11-13"></a>
+## Janelas de console (2026-11-13)
+
+O app de release é um processo GUI, então cada filho de console iniciado sem `CREATE_NO_WINDOW`
+ganhava uma janela: com o Windows Terminal como terminal padrão, uma janela do Terminal que ficava
+aberta enquanto o filho rodava. Abrir o 0.1.8 instalado mostrou uma aos 0,58 s, do
+`gh api graphql` (a primeira consulta do conector do GitHub), e de novo a cada consulta; os `git`
+de cada turno e o relay destacado do plugin do OpenCode faziam o mesmo. Com o `gh`, o git de
+`folder.rs` e o `windowsHide` do plugin corrigidos, o build de release da branch iniciou o `gh` aos
+0,6 s e não abriu nenhuma janela de console em 20 s.

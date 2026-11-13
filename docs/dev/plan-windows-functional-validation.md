@@ -39,3 +39,25 @@ Native Windows tests cover inherited stdout, workers without stdout, failed and 
 normal npm launchers and paths with spaces. All 1,537 workspace/eval tests, 24 UI checks, fmt,
 workspace/all-target clippy with warnings denied, static checks and cargo-deny passed locally.
 These diagnostic process tests do not establish physical desktop, real-speech or complete Windows acceptance.
+
+## Hook commands per agent shell (2026-11-13)
+
+Antigravity, Droid, Kimi, Qwen, Cursor and Copilot were given the Git Bash command
+(`'C:/…/vults-hook.exe' --agent …`), and their Windows shells read those single quotes literally.
+A probe workspace (`.agents/hooks.json`) showed agy 1.5.8 running `cmd /s /c "<command>"`, so its
+sessions never arrived; `|| exit 0` hid the failure. The other shells come from their code or docs:
+Droid `%ComSpec% /d /s /c`, Kimi `%ComSpec% /c`, Qwen cmd (Git Bash under MSYS), Cursor and Copilot
+PowerShell (Copilot's `powershell` key). A plain path is now written unquoted with forward slashes,
+the same for cmd, PowerShell and Git Bash; other paths are quoted per shell. The ignored native test
+`windows_hooks_run_in_each_agents_shell` passes in cmd, Git Bash, PowerShell 5.1 and pwsh. Only
+Antigravity ran live; Cursor, Copilot, Droid, Kimi and Qwen were not installed. Qwen in cmd mode
+still cannot run a hook path with a space.
+
+## Console windows (2026-11-13)
+
+The release app is a GUI process, so each console child started without `CREATE_NO_WINDOW` got a
+window: with Windows Terminal as the default terminal, a Terminal window that stayed while the child
+ran. Launching the installed 0.1.8 showed one 0.58 s in, owned by `gh api graphql` (the GitHub
+connector's first poll), and again on each poll; the turn's `git` looks and the OpenCode plugin's
+detached relay did the same. With `gh`, `folder.rs`'s git and the plugin's `windowsHide` fixed, the
+branch's release build started `gh` at 0.6 s and opened no console window in 20 s.
