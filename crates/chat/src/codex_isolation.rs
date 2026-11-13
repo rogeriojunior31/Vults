@@ -156,6 +156,41 @@ pub(crate) fn qualify(config: &Value, has_service: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// What a Windows process needs to start at all (the system folder, the shell, executable
+/// extensions, a temp folder) comes back after `env_clear`; the user's profile folders point
+/// into the isolated home, as `HOME` does.
+const WINDOWS_SYSTEM: &[&str] = &[
+    "SystemRoot",
+    "SystemDrive",
+    "windir",
+    "ComSpec",
+    "PATHEXT",
+    "TEMP",
+    "TMP",
+    "OS",
+    "PROCESSOR_ARCHITECTURE",
+    "NUMBER_OF_PROCESSORS",
+    "ProgramData",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "CommonProgramFiles",
+];
+
+fn windows_env(command: &mut Command, home: &std::path::Path) {
+    if !cfg!(windows) {
+        return;
+    }
+    for name in WINDOWS_SYSTEM {
+        if let Some(value) = std::env::var_os(name) {
+            command.env(name, value);
+        }
+    }
+    command
+        .env("USERPROFILE", home)
+        .env("APPDATA", home.join("AppData").join("Roaming"))
+        .env("LOCALAPPDATA", home.join("AppData").join("Local"));
+}
+
 pub(crate) fn prepare(spec: &Spec, command: &mut Command) -> Result<(), String> {
     let root = spec
         .state_dir
@@ -191,6 +226,7 @@ pub(crate) fn prepare(spec: &Spec, command: &mut Command) -> Result<(), String> 
         .env("CODEX_HOME", root)
         .env("XDG_CONFIG_HOME", home.join(".config"))
         .env("XDG_DATA_HOME", home.join(".local/share"));
+    windows_env(command, &home);
     command.arg("--strict-config");
     for option in [
         "cli_auth_credentials_store=\"ephemeral\"",
@@ -255,6 +291,16 @@ mod tests {
                 .get_envs()
                 .any(|(k, v)| k == "CODEX_HOME" && v == Some(spec.state_dir.as_ref().unwrap().as_os_str()))
         );
+        // On Windows the profile folders are the isolated home's too, never the user's.
+        if cfg!(windows) {
+            let home = spec.state_dir.as_ref().unwrap().join("home");
+            assert!(
+                cmd.as_std()
+                    .get_envs()
+                    .any(|(k, v)| k == "USERPROFILE" && v == Some(home.as_os_str()))
+            );
+            assert!(cmd.as_std().get_envs().any(|(k, _)| k == "SystemRoot"));
+        }
         assert!(!spec.state_dir.as_ref().unwrap().join("auth.json").exists());
         std::fs::write(spec.state_dir.as_ref().unwrap().join("config.toml"), "unwanted").unwrap();
         assert!(prepare(&spec, &mut Command::new("codex")).is_err());
@@ -326,14 +372,16 @@ mod tests {
                 .get_envs()
                 .any(|(key, value)| key == "OPENAI_API_KEY" && value.is_some())
         );
-        let mut child = command
-            .current_dir(&project)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .kill_on_drop(true)
-            .spawn()
-            .unwrap();
+        // Owned as the app owns it: on Windows its own children hold the folder until they end.
+        let mut child = crate::spawn_owned(
+            command
+                .current_dir(&project)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .kill_on_drop(true),
+        )
+        .unwrap();
         let mut stdin = child.stdin.take().unwrap();
         let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
         for request in [
@@ -366,7 +414,14 @@ mod tests {
         qualify(&reply["result"], true).unwrap();
         child.kill().await.unwrap();
         let _ = child.wait().await;
+        drop(child);
         assert!(!spec.state_dir.unwrap().join("auth.json").exists());
-        std::fs::remove_dir_all(root).unwrap();
+        // Windows releases a dead process's files a moment after it ends.
+        for _ in 0..50 {
+            if std::fs::remove_dir_all(&root).is_ok() || !root.exists() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
     }
 }
