@@ -31,6 +31,18 @@ pub fn layout() -> Vec<[i32; 8]> {
     out
 }
 
+/// Whether the taskbar sits at the top of its screen (Windows 10 allows it); none when unknown.
+pub fn taskbar_at_top() -> Option<bool> {
+    use windows::Win32::UI::Shell::{ABE_TOP, ABM_GETTASKBARPOS, APPBARDATA, SHAppBarMessage};
+    let mut data = APPBARDATA {
+        cbSize: std::mem::size_of::<APPBARDATA>() as u32,
+        ..Default::default()
+    };
+    // SAFETY: `data` has its required size; the call only fills it in.
+    let found = unsafe { SHAppBarMessage(ABM_GETTASKBARPOS, &mut data) };
+    (found != 0).then_some(data.uEdge == ABE_TOP)
+}
+
 /// Calls `changed` from a thread of its own each time the layout differs from the last one read.
 pub fn on_monitors_changed(changed: impl Fn() + Send + 'static) {
     std::thread::spawn(move || {
@@ -49,6 +61,12 @@ pub fn on_monitors_changed(changed: impl Fn() + Send + 'static) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_taskbar_edge_is_read() {
+        // This desktop has a taskbar; which edge is the user's choice.
+        assert!(super::taskbar_at_top().is_some());
+    }
+
     #[test]
     fn the_desktop_has_a_monitor_with_its_work_area_inside() {
         let layout = super::layout();
