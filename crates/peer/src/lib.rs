@@ -12,6 +12,8 @@ pub use unix::*;
 pub mod requester;
 
 #[cfg(windows)]
+pub mod job;
+#[cfg(windows)]
 mod windows;
 #[cfg(windows)]
 pub use self::windows::*;

@@ -75,3 +75,15 @@ seconds, so an app update could leave agents on the old hook with only a log lin
 can still be renamed: the update moves it aside as `vults-hook.old`, puts the new one in place, and
 removes the old copy once nothing runs it, then or at the next start. A native test holds a copy
 running, shows the plain rename failing and the replacement succeeding.
+
+## Chat CLIs own their process tree (2026-11-13)
+
+Linux ties a chat CLI to the app with `PR_SET_PDEATHSIG`, and an ACP agent's commands to its process
+group. Windows had only `kill_on_drop`, which ends the direct child and never runs when the app is
+killed: the node behind an npm `.cmd` shim, or a command an agent left running, ran on. The job the
+agent doctor used moved to `vults-peer` (`job`), and every chat CLI (Claude and Codex turns, `codex
+app-server`, ACP agents, usage reads, text questions) now starts suspended, joins a kill-on-close
+job of its own, then runs. In the running apps, `IsProcessInJob` read false for the installed 0.1.8's
+`claude` and `codex` children and true for the branch's. A test starts a shell that starts a
+grandchild: a plain spawn leaves it running after the drop, an owned one ends it. On Windows, what a
+chat CLI started now ends with it, as with an ACP agent on Linux.

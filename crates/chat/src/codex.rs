@@ -47,16 +47,17 @@ async fn run(
     stop: &Stop,
 ) -> Result<EndReason, String> {
     let mut cmd = command(spec, turn, session.as_deref());
-    let mut child = crate::dies_with_app(&mut cmd)
-        .current_dir(&spec.dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => "The Codex CLI isn't installed.".to_string(),
-            _ => format!("Can't start Codex: {e}"),
-        })?;
+    let mut child = crate::spawn_owned(
+        crate::dies_with_app(&mut cmd)
+            .current_dir(&spec.dir)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null()),
+    )
+    .map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => "The Codex CLI isn't installed.".to_string(),
+        _ => format!("Can't start Codex: {e}"),
+    })?;
     let mut lines = BufReader::new(child.stdout.take().ok_or("no stdout")?).lines();
     let mut said = false;
     loop {

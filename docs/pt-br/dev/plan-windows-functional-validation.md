@@ -1,5 +1,5 @@
 # Validação funcional do Windows
-<!-- source: 6727022a97fa -->
+<!-- source: 83e376d05cdf -->
 
 Prioridade alterada pelo usuário em 2026-11-11: estabilizar o comportamento existente no Windows
 antes de adicionar conectores ou outros recursos. Notion e a expansão dos conectores ficam adiados.
@@ -87,3 +87,17 @@ uma linha no log. Um hook em execução ainda pode ser renomeado: a atualizaçã
 como `vults-hook.old`, coloca o novo no lugar e apaga a cópia antiga assim que nada a executa,
 na hora ou na próxima abertura. Um teste nativo mantém uma cópia rodando, mostra o rename simples
 falhando e a substituição dando certo.
+
+<a id="chat-clis-own-their-process-tree-2026-11-13"></a>
+## Os CLIs do chat são donos da sua árvore de processos (2026-11-13)
+
+O Linux liga um CLI do chat ao app com `PR_SET_PDEATHSIG`, e os comandos de um agente ACP ao grupo
+de processos dele. O Windows só tinha `kill_on_drop`, que encerra o filho direto e nunca roda quando
+o app é morto: o node por trás de um shim `.cmd` do npm, ou um comando que um agente deixou rodando,
+continuava. O job que o diagnóstico dos agentes usava foi para o `vults-peer` (`job`), e cada CLI do
+chat (os turnos do Claude e do Codex, o `codex app-server`, os agentes ACP, as leituras de uso, as
+perguntas de texto) agora começa suspenso, entra num job próprio que encerra tudo ao fechar, e só
+então roda. Nos apps rodando, `IsProcessInJob` deu falso para os filhos `claude` e `codex` do 0.1.8
+instalado e verdadeiro para os da branch. Um teste inicia um shell que inicia um neto: um spawn
+comum o deixa rodando depois do drop, um com dono o encerra. No Windows, o que um CLI do chat
+iniciou agora termina com ele, como num agente ACP no Linux.
