@@ -3040,7 +3040,7 @@ pub async fn api_providers(app: AppHandle) -> ApiProviders {
 pub async fn api_provider_set(app: AppHandle, provider: String) -> Result<(), String> {
     let p = self::provider(&provider)?;
     settings::edit(&app, |s| s.api_provider = p.id.to_string())?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cleanup::invalidate(&app);
     crate::meetings::summary::invalidate(&app);
     announce(&app).await;
@@ -3057,7 +3057,7 @@ pub async fn api_model_set(app: AppHandle, provider: String, model: String) -> R
     settings::edit(&app, |s| {
         s.api_models.insert(p.id.to_string(), model);
     })?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cleanup::invalidate(&app);
     crate::meetings::summary::invalidate(&app);
     announce(&app).await;
@@ -3110,7 +3110,7 @@ pub async fn api_key_set(
     })
     .await
     .map_err(|_| "Can't save the key.".to_string())??;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cleanup::invalidate(&app);
     crate::meetings::summary::invalidate(&app);
     tracing::info!(provider = p.id, "api key saved");
@@ -3130,7 +3130,7 @@ pub async fn api_key_clear(window: tauri::Webview, app: AppHandle, provider: Str
     })
     .await
     .map_err(|_| "Can't remove the key.".to_string())??;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cleanup::invalidate(&app);
     crate::meetings::summary::invalidate(&app);
     tracing::info!(provider = p.id, "api key removed");
