@@ -1244,7 +1244,10 @@ async function refreshMicrophones(): Promise<void> {
 
 function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[] {
   if (dictationSection === "conversation") return [el("h1", { text: t("Talk with Zeca") }), realtimeSettings.element];
-  if (dictationSection === "agents") return [el("h1", { text: t("Agents") }), questionAgents.element];
+  // The questions channel (MCP) is Linux-only: Windows shows why, never an installer it lacks.
+  if (dictationSection === "agents") return [el("h1", { text: t("Agents") }), windowsShortcuts.supported()
+    ? el("p", { class: "hint", text: t("Spoken answers for agents are available on Linux only.") })
+    : questionAgents.element];
   if (dictationSection === "meetings") return [el("h1", { text: t("Meeting settings") }), meetingSettings.element, meetingAssets.element];
   if (dictationSection === "styles") return [el("h1", { text: t("Styles") }), cleanupSettings.element];
   if (dictationSection === "diagnostics") return [el("h1", { text: t("Diagnostics") }), dictationDoctor.element];
@@ -2246,7 +2249,7 @@ function render(): void {
   const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
   const focus = drawn === place && active && root.contains(active) && active.dataset.setting ? active : null;
   const editable = focus && (focus.tagName === "TEXTAREA" || (focus.tagName === "INPUT" && !["checkbox", "range"].includes(focus.type))) && !focus.readOnly;
-  questionAgents.visible(page === "dictation" && !dictationTool() && !document.hidden);
+  questionAgents.visible(page === "dictation" && !dictationTool() && !document.hidden && !windowsShortcuts.supported());
   questionAgents.relabel();
   meetingAssets.visible(page === "dictation" && !dictationTool() && !document.hidden);
   realtimeSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);
@@ -2553,7 +2556,7 @@ window.setInterval(() => {
 window.addEventListener("pagehide", () => { playerAudio.context(false, dictationCommands && dictationCommandMedia && nowPlaying); realtimeSettings.visible(false); questionAgents.visible(false); dictationDoctor.visible(false); meetingAssets.visible(false); meetingSettings.visible(false); });
 document.addEventListener("visibilitychange", () => {
   playerAudio.context(page === "dictation" && dictationSection === "commands" && windowsShortcuts.supported() && !document.hidden, dictationCommands && dictationCommandMedia && nowPlaying);
-  questionAgents.visible(page === "dictation" && !dictationTool() && !document.hidden);
+  questionAgents.visible(page === "dictation" && !dictationTool() && !document.hidden && !windowsShortcuts.supported());
   meetingAssets.visible(page === "dictation" && !dictationTool() && !document.hidden);
   realtimeSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);
   meetingSettings.visible(page === "dictation" && !dictationTool() && !document.hidden);

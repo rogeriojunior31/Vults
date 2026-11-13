@@ -626,7 +626,7 @@ export const Bridge = {
   /** Zeca on or off: off, no chat, mic or talk shortcut; the flock keeps working. */
   setZeca: (on: boolean) => invoke<void>("set_zeca", { on }),
   /** Build capability only; this does not inspect model files or microphone readiness. */
-  voiceConversationOptions: () => invoke<{ semantic: boolean }>("voice_conversation_options"),
+  voiceConversationOptions: () => invoke<{ available: boolean; semantic: boolean }>("voice_conversation_options"),
   voiceConversationRoutes: () => invoke<VoiceRoutes>("voice_conversation_routes"),
   voiceConversationStart: (autoFinish = false, route?: VoiceRouteSelection, semantic = false, followUp = false) => invoke<VoiceConversation>("voice_conversation_start", { autoFinish, route, semantic, followUp }),
   voiceConversationStatus: (id: string) => invoke<VoiceConversation>("voice_conversation_status", { id }),

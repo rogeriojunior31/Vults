@@ -447,6 +447,8 @@ export default {
   "Finish recording": "完成录音",
   "Voice conversation settings": "语音对话设置",
   "Voice conversation is unavailable.": "语音对话不可用。",
+  "Voice conversation is available on Linux only.": "语音对话仅在 Linux 上可用。",
+  "Spoken answers for agents are available on Linux only.": "为智能体语音作答仅在 Linux 上可用。",
   "Starting microphone…": "正在启动麦克风…",
   "Recording… Finish when you are done.": "正在录音…说完后请点击完成。",
   "Zeca is responding…": "Zeca 正在回复…",

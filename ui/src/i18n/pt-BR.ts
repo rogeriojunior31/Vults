@@ -447,6 +447,8 @@ export default {
   "Finish recording": "Finalizar gravação",
   "Voice conversation settings": "Configurações da conversa por voz",
   "Voice conversation is unavailable.": "A conversa por voz está indisponível.",
+  "Voice conversation is available on Linux only.": "A conversa por voz só está disponível no Linux.",
+  "Spoken answers for agents are available on Linux only.": "Respostas faladas para agentes só estão disponíveis no Linux.",
   "Starting microphone…": "Iniciando microfone…",
   "Recording… Finish when you are done.": "Gravando… Finalize quando terminar de falar.",
   "Zeca is responding…": "O Zeca está respondendo…",
