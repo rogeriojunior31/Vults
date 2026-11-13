@@ -67,3 +67,11 @@ branch's release build started `gh` at 0.6 s and opened no console window in 20 
 `/continue` refused every Windows session ("Vults can't tell whether that session is still open"):
 its process check read `/proc` and was unknown elsewhere, while Windows hooks always send a PID. It
 now uses the presence watcher's probe (same-user process, exited or not), on Linux too.
+
+## Hook update while it runs (2026-11-13)
+
+Windows denies replacing a running executable, and an agent's status line runs the hook every few
+seconds, so an app update could leave agents on the old hook with only a log line. A running hook
+can still be renamed: the update moves it aside as `vults-hook.old`, puts the new one in place, and
+removes the old copy once nothing runs it, then or at the next start. A native test holds a copy
+running, shows the plain rename failing and the replacement succeeding.

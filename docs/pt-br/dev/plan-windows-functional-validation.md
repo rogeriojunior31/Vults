@@ -1,5 +1,5 @@
 # Validação funcional do Windows
-<!-- source: 0c12b7ed399f -->
+<!-- source: 6727022a97fa -->
 
 Prioridade alterada pelo usuário em 2026-11-11: estabilizar o comportamento existente no Windows
 antes de adicionar conectores ou outros recursos. Notion e a expansão dos conectores ficam adiados.
@@ -77,3 +77,13 @@ O `/continue` recusava toda sessão do Windows ("Vults can't tell whether that s
 open"): a checagem do processo lia `/proc` e era desconhecida nos outros sistemas, enquanto os hooks
 do Windows sempre mandam um PID. Agora usa a sonda da detecção de presença (processo do mesmo
 usuário, encerrado ou não), no Linux também.
+
+<a id="hook-update-while-it-runs-2026-11-13"></a>
+## Atualização do hook enquanto ele roda (2026-11-13)
+
+O Windows nega substituir um executável em execução, e a status line de um agente roda o hook a
+cada poucos segundos, então uma atualização do app podia deixar os agentes no hook antigo, só com
+uma linha no log. Um hook em execução ainda pode ser renomeado: a atualização o move para o lado
+como `vults-hook.old`, coloca o novo no lugar e apaga a cópia antiga assim que nada a executa,
+na hora ou na próxima abertura. Um teste nativo mantém uma cópia rodando, mostra o rename simples
+falhando e a substituição dando certo.
