@@ -1374,9 +1374,12 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           dictationCancelByVoice = on; dictationCancelByVoiceChanged = true;
         }), t("English, Portuguese and Spanish; works on X11 and Wayland.")),
         el("p", { class: "hint", text: t("Independent dictation only, checked after recording stops. To dictate a sentence ending in a cancel phrase, turn this off.") }),
-        el("p", { class: "hint", text: t("Changes apply to the next dictation. The global Cancel voice shortcut always works. Space and Esc require an available X11 key listener.") }),
+        // Windows holds and releases through its own hotkeys: no listener sees Space or Esc.
+        el("p", { class: "hint", text: windowsShortcuts.supported()
+          ? t("Changes apply to the next dictation. The global Cancel voice shortcut always works.")
+          : t("Changes apply to the next dictation. The global Cancel voice shortcut always works. Space and Esc require an available X11 key listener.") }),
       ),
-      (() => {
+      ...(windowsShortcuts.supported() ? [] : [(() => {
         const keys = disclosure(t("X11 recording keys"),
           row(t("Space locks recording"), t("X11 only. Space keeps recording after you release the talk shortcut. When off, Space behaves like other typing and can discard a held recording."), (() => {
             const control = toggle(dictationSpaceLock, async on => {
@@ -1397,7 +1400,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         );
         keys.dataset.setting = "dictation-x11-keys";
         return keys;
-      })(),
+      })()]),
     ] : []),
     ...(dictationSection === "commands" ? [
       el("section", { class: "card rows" },
