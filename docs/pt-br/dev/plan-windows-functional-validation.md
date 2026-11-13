@@ -1,5 +1,5 @@
 # Validação funcional do Windows
-<!-- source: b921e84d2660 -->
+<!-- source: 0c12b7ed399f -->
 
 Prioridade alterada pelo usuário em 2026-11-11: estabilizar o comportamento existente no Windows
 antes de adicionar conectores ou outros recursos. Notion e a expansão dos conectores ficam adiados.
@@ -70,3 +70,10 @@ aberta enquanto o filho rodava. Abrir o 0.1.8 instalado mostrou uma aos 0,58 s, 
 de cada turno e o relay destacado do plugin do OpenCode faziam o mesmo. Com o `gh`, o git de
 `folder.rs` e o `windowsHide` do plugin corrigidos, o build de release da branch iniciou o `gh` aos
 0,6 s e não abriu nenhuma janela de console em 20 s.
+
+## `/continue` (2026-11-13)
+
+O `/continue` recusava toda sessão do Windows ("Vults can't tell whether that session is still
+open"): a checagem do processo lia `/proc` e era desconhecida nos outros sistemas, enquanto os hooks
+do Windows sempre mandam um PID. Agora usa a sonda da detecção de presença (processo do mesmo
+usuário, encerrado ou não), no Linux também.

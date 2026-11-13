@@ -61,3 +61,9 @@ ran. Launching the installed 0.1.8 showed one 0.58 s in, owned by `gh api graphq
 connector's first poll), and again on each poll; the turn's `git` looks and the OpenCode plugin's
 detached relay did the same. With `gh`, `folder.rs`'s git and the plugin's `windowsHide` fixed, the
 branch's release build started `gh` at 0.6 s and opened no console window in 20 s.
+
+## `/continue` (2026-11-13)
+
+`/continue` refused every Windows session ("Vults can't tell whether that session is still open"):
+its process check read `/proc` and was unknown elsewhere, while Windows hooks always send a PID. It
+now uses the presence watcher's probe (same-user process, exited or not), on Linux too.

@@ -248,12 +248,10 @@ fn ended(agent: AgentKind, session: &str, failure: Option<&str>) -> vults_core::
     }
 }
 
+/// The presence watcher's probe: unknown (another user's process, an unreadable one) is `None`,
+/// which refuses. A recycled PID reads as open, which refuses too.
 fn alive(pid: u32) -> Option<bool> {
-    if cfg!(target_os = "linux") {
-        Some(Path::new(&format!("/proc/{pid}")).exists())
-    } else {
-        None
-    }
+    crate::session_presence::probe(pid).map(|birth| birth.is_some())
 }
 
 async fn within_budget(app: &AppHandle) -> Result<(), String> {
@@ -582,14 +580,26 @@ mod tests {
         assert!(patch(&injected).is_none(), "an injected header is no card");
         assert!(patch(&serde_json::json!([])).is_none());
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     #[test]
     fn a_live_process_is_told_from_a_gone_one() {
         // This test's own process: alive, so a session it ran would be refused.
         assert_eq!(alive(std::process::id()), Some(true));
+        #[cfg(target_os = "linux")]
         let mut child = std::process::Command::new("true").spawn().unwrap();
+        #[cfg(windows)]
+        let mut child = {
+            use std::os::windows::process::CommandExt;
+            std::process::Command::new("cmd.exe")
+                .args(["/d", "/c", "exit 0"])
+                .creation_flags(0x0800_0000)
+                .spawn()
+                .unwrap()
+        };
         let pid = child.id();
         child.wait().unwrap();
+        // Windows keeps an exited process until its last handle closes.
+        drop(child);
         assert_eq!(alive(pid), Some(false), "gone once it exited and was reaped");
     }
     #[test]
