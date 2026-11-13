@@ -10,7 +10,7 @@ publish.workspace = true
 libc.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-windows = { workspace = true, features = ["Win32_System_Diagnostics_ToolHelp", "Win32_System_JobObjects"] }
+windows = { workspace = true, features = ["Win32_System_Diagnostics_ToolHelp", "Win32_System_JobObjects", "Win32_NetworkManagement_NetManagement"] }
 
 [lints]
 workspace = true
