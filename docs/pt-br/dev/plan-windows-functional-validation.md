@@ -1,5 +1,5 @@
 # Validação funcional do Windows
-<!-- source: 83e376d05cdf -->
+<!-- source: 8a697063f49f -->
 
 Prioridade alterada pelo usuário em 2026-11-11: estabilizar o comportamento existente no Windows
 antes de adicionar conectores ou outros recursos. Notion e a expansão dos conectores ficam adiados.
@@ -101,3 +101,28 @@ então roda. Nos apps rodando, `IsProcessInJob` deu falso para os filhos `claude
 instalado e verdadeiro para os da branch. Um teste inicia um shell que inicia um neto: um spawn
 comum o deixa rodando depois do drop, um com dono o encerra. No Windows, o que um CLI do chat
 iniciou agora termina com ele, como num agente ACP no Linux.
+
+<a id="smaller-windows-gaps-2026-11-13"></a>
+## Lacunas menores do Windows (2026-11-13)
+
+Cada uma é um commit próprio em `fix/windows-hook-shells`:
+
+| Lacuna | Correção | Evidência |
+| --- | --- | --- |
+| O Now Playing parava de vez depois que um player falhava ou travava | Pular esse player; manter a música nas leituras com falha; pedir o serviço de mídia de novo depois de três | Teste com o serviço de mídia nativo |
+| As superfícies ficavam paradas quando um monitor ou a barra de tarefas mudava | Ler monitores e áreas úteis a cada 2 s; reposicionar e atualizar a lista de Settings | Teste do layout neste desktop |
+| Ícone do tray estático, sem presets, menu nunca reconstruído, Chat visível com o Zeca desligado | As entradas do Linux, reconstruídas onde o Linux reconstrói; os frames do Zeca, parados com *Mostrar animações* desligado | Teste de decodificação dos frames; ainda não visto no tray |
+| Os toggles de Space-lock e Esc-cancel não faziam nada | Omitidos no Windows, a dica encurtada | Build e verificações da UI |
+| A conversa por voz e as respostas a agentes ofereciam configurações que falhavam | As páginas dizem por quê, como o Meetings | Build e verificações da UI; ainda não visto no app |
+| O especialista Codex perdia as variáveis de perfil e de sistema | Pastas de perfil na home isolada, variáveis de sistema mantidas | Teste nativo do isolamento (ele iniciava sem a mudança também) |
+| Desligar a voz e o microfone do Chat deixavam o ditado rodando; trocar a chave mantinha uma limpeza velha | As chamadas do Linux, no Windows também | Build |
+| O MCP do Zeca confiava na lista de um app que caiu | O pid ainda precisa ser este programa | Teste com outro programa vivo |
+| A imagem da semana ia para uma pasta Imagens não redirecionada | O diálogo Salvar do sistema, abrindo na pasta Imagens conhecida | Build |
+| Sem saudação pelo primeiro nome | O nome completo da conta (`NetUserGetInfo`) | Lido nesta conta |
+| Sem looks sazonais | A data local de hoje | Build |
+| A ilha do Panel ignorava uma barra de tarefas no topo | A borda pelo `SHAppBarMessage` | Teste da borda neste desktop |
+
+Ainda só no Linux, como trabalho maior: gravação de reuniões, conversa por voz, perguntas de
+agentes por MCP, ferramentas GitHub do especialista, digitação em terminais e na maioria dos apps,
+abas e panes de terminal no *Open terminal*, e a árvore de processos da status line anterior no
+timeout.

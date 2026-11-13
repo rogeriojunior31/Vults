@@ -87,3 +87,26 @@ job of its own, then runs. In the running apps, `IsProcessInJob` read false for 
 `claude` and `codex` children and true for the branch's. A test starts a shell that starts a
 grandchild: a plain spawn leaves it running after the drop, an owned one ends it. On Windows, what a
 chat CLI started now ends with it, as with an ACP agent on Linux.
+
+## Smaller Windows gaps (2026-11-13)
+
+Each is its own commit on `fix/windows-hook-shells`:
+
+| Gap | Fix | Evidence |
+| --- | --- | --- |
+| Now Playing stopped for good after one player failed or hung | Skip that player; keep the song through failed reads; ask for the media service again after three | Native media service test |
+| Surfaces stayed put when a monitor or the taskbar changed | Read monitors and work areas every 2 s; place again and refresh Settings' list | Layout test on this desktop |
+| Static tray icon, no presets, menu never rebuilt, Chat shown with Zeca off | Linux's entries, rebuilt where Linux does; Zeca's frames, still when *Show animations* is off | Frame decode test; not seen in the tray yet |
+| Space lock and Esc cancel toggles did nothing | Left out on Windows, the hint trimmed | UI build and checks |
+| Voice conversation and agent answers offered setups that failed | Their pages say why, like Meetings | UI build and checks; not seen in the app yet |
+| Codex specialist lost the profile and system variables | Profile folders in the isolated home, system variables kept | Native isolation test (it started without the change too) |
+| Voice off and the Chat microphone left dictation running; key changes kept a stale cleanup | The Linux calls, on Windows too | Build |
+| Zeca's MCP trusted a crashed app's snapshot | The pid must still be this program | Test with a live other program |
+| The week's image went to an unredirected Pictures | The system Save dialog, starting in the known Pictures folder | Build |
+| No first-name greeting | The account's full name (`NetUserGetInfo`) | Read on this account |
+| No seasonal looks | Today's local date | Build |
+| The Panel island ignored a taskbar at the top | `SHAppBarMessage` edge | Edge test on this desktop |
+
+Still Linux-only, as larger work: meeting recording, voice conversation, agent questions over MCP,
+specialist GitHub tools, typing into terminals and most apps, terminal tabs and panes for *Open
+terminal*, and the previous status line's process tree on timeout.
