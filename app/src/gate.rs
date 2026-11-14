@@ -1,7 +1,7 @@
 //! The network gate (ADR 0019; docs/safety.md): every request the app makes on its own, without a
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
-//! polls, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
+//! polls, the update notice's look at the releases list, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
 //! summary, the memory's suggestions, Zeca's sleep, opted-in dictation clean-up, meeting summaries
 //! and tool-free voice consultations.
 //! Nothing of the trace leaves the machine. `scripts/check-network.sh` keeps any other
@@ -58,6 +58,9 @@ pub const VOICE_CONSULTATION: &str = "voice-consultation";
 pub const VOICE_CONSULTATION_BUDGET: usize = 20;
 pub const VOICE_CODEX_CONSULTATION: &str = "voice-codex-consultation";
 pub const VOICE_CODEX_CONSULTATION_BUDGET: usize = 20;
+/// The update notice (FF4): one look at the releases list a day; a few more for *Check now*.
+pub const UPDATE: &str = "update";
+pub const UPDATE_BUDGET: usize = 4;
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -100,6 +103,7 @@ pub fn budget(feature: &str) -> usize {
     match feature {
         USAGE | CLAUDE_USAGE => USAGE_BUDGET,
         MODEL_PRICES => 120,
+        UPDATE => UPDATE_BUDGET,
         WEB => WEB_BUDGET,
         PHONE => PHONE_BUDGET,
         JOURNAL => JOURNAL_BUDGET,
@@ -133,6 +137,8 @@ pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
         s.dictation_cleanup && s.dictation_cleanup_budget.is_some()
     } else if feature == MODEL_PRICES {
         s.price_updates
+    } else if feature == UPDATE {
+        s.update_consent.allows_checks()
     } else if feature == CLAUDE_USAGE {
         s.claude_usage
     } else if feature == USAGE {
@@ -305,6 +311,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(USAGE);
         features.push(CLAUDE_USAGE);
         features.push(MODEL_PRICES);
+        features.push(UPDATE);
         features.push(WEB);
         features.push(PHONE);
         features.push(JOURNAL);
@@ -717,6 +724,19 @@ mod tests {
         s.price_updates = true;
         assert!(switched_on(&s, MODEL_PRICES));
         assert_eq!(budget(MODEL_PRICES), 120);
+        // The update look only after the user's yes; asked or refused is not a yes.
+        use crate::update::rules::Consent;
+        for consent in [Consent::Unasked, Consent::Asked { at_ms: 1 }, Consent::No] {
+            s.update_consent = consent;
+            assert!(!switched_on(&s, UPDATE), "{consent:?}");
+        }
+        s.connectors.insert(UPDATE.into(), true);
+        assert!(
+            !switched_on(&s, UPDATE),
+            "a connector named like it never opens it"
+        );
+        s.update_consent = Consent::Yes;
+        assert!(switched_on(&s, UPDATE) && budget(UPDATE) == UPDATE_BUDGET);
         s.codex_usage = Some(false);
         assert!(!switched_on(&s, USAGE) && !switched_on(&s, "github"));
         s.codex_usage = Some(true);

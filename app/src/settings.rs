@@ -216,6 +216,9 @@ pub struct Settings {
     /// Automatic refresh of the public model-price catalog, never session data.
     #[serde(default)]
     pub price_updates: bool,
+    /// May Vults look at its releases on GitHub (FF4)? Nothing is requested before a yes.
+    #[serde(default)]
+    pub update_consent: crate::update::rules::Consent,
     /// The chat's Claude Code and Codex read the user's own setup (their `CLAUDE.md`, skills,
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
@@ -454,6 +457,7 @@ impl Default for Settings {
             codex_usage: None,
             claude_usage: false,
             price_updates: false,
+            update_consent: crate::update::rules::Consent::Unasked,
             native_chat: true,
             chat_access: ChatAccess::Ask,
             specialist_access: BTreeMap::new(),
@@ -929,6 +933,14 @@ pub fn price_updates(app: &AppHandle) -> bool {
         .0
         .lock()
         .is_ok_and(|s| s.price_updates)
+}
+
+pub fn update_consent(app: &AppHandle) -> crate::update::rules::Consent {
+    app.state::<SettingsState>()
+        .0
+        .lock()
+        .map(|s| s.update_consent)
+        .unwrap_or_default()
 }
 
 #[tauri::command]
@@ -2577,6 +2589,7 @@ mod tests {
             codex_usage: None,
             claude_usage: false,
             price_updates: false,
+            update_consent: crate::update::rules::Consent::Unasked,
             native_chat: true,
             chat_access: ChatAccess::Ask,
             specialist_access: BTreeMap::new(),
