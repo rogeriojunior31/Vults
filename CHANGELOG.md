@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Improve compact Chat navigation, accessible turn announcements, Recent keyboard focus, recipient and Memory recovery, scoped Flock permission disclosure and folder-copy feedback.
+
 - Keep idle and completed-response sessions in Flock instead of expiring them after 10/30 minutes. Confirm local owner exits separately from activity, preserve pending cards, and distinguish Hermes Desktop runtime cleanup/reset from durable conversation closure.
 
 

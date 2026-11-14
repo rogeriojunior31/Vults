@@ -368,6 +368,9 @@ export class ChatPanel {
   private activityTimer: number | undefined;
   private replyBreak = false;
   private readonly approvalQueue = el("div", { class: "approval-queue" });
+  /** Announce lifecycle events, never streaming tokens or transcript redraws. */
+  private readonly announcement = el("div", { class: "sr-only" });
+  private announcementTimer: number | undefined;
   /** The rendered messages, one node per message. */
   private nodes: HTMLElement[] = [];
   private readonly appeared = new WeakSet<Message>();
@@ -410,8 +413,12 @@ export class ChatPanel {
   private readonly recipient = el("span", { class: "chat-recipient" });
   private readonly place = el("button", { class: "place" });
   /** The CLI reads the user's own setup (Settings → Chat): shown for the conversation it began. */
-  /** An icon, not words: the head is narrow (its title and label say what it means). */
-  private readonly setup = el("span", { class: "setup" }, icon("person", 12, 2));
+  private readonly setup = el("button", { class: "setup" }, icon("person", 12, 2));
+  private readonly setupExplanation = el("p", { class: "setup-explanation" });
+  private readonly setupSettings = el("button", { class: "btn setup-settings" });
+  private readonly setupMenu = el("div", { class: "menu setup-menu" }, this.setupExplanation, this.setupSettings);
+  private readonly setupBox = el("div", { class: "setup-box" }, this.setup, this.setupMenu);
+  private setupOpen = false;
   /** The switch as it is now; the badge keeps what the conversation started with. */
   private nativeSetting = true;
   private native = true;
@@ -510,7 +517,16 @@ export class ChatPanel {
       this.paintUsage();
     });
     window.addEventListener?.("resize", () => this.sizeMentions());
-    this.setup.setAttribute("role", "img");
+    this.setup.type = "button";
+    this.setupMenu.tabIndex = 0;
+    this.setupExplanation.tabIndex = 0;
+    this.setup.addEventListener("click", () => {
+      const open = !this.setupOpen;
+      this.closeMenus();
+      this.setupOpen = open;
+      this.paintHead(); this.changed();
+    });
+    this.setupSettings.addEventListener("click", () => { this.closeMenus(); this.backend.openSettings?.(); });
     this.input.addEventListener("keydown", (e) => {
       if (e.isComposing || e.keyCode === 229) return;
       if (e.shiftKey && (e.key === "Enter" || e.key === "Tab")) { this.closeMentions(); return; }
@@ -548,6 +564,7 @@ export class ChatPanel {
     this.input.addEventListener("keyup", (e) => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) this.findMentions(); });
     this.place.addEventListener("click", () => {
       if (this.navigating || this.started || this.provider === "api") return;
+      this.setupOpen = false;
       this.menuOpen = !this.menuOpen;
       this.modelOpen = this.accessOpen = this.historyOpen = false;
       this.paintHead();
@@ -556,6 +573,7 @@ export class ChatPanel {
     this.historyButton.append(icon("list", 14, 2));
     this.historyButton.addEventListener("click", () => {
       if (this.busy || this.navigating || this.historyPending || this.specialistChoiceSaving) return;
+      this.setupOpen = false;
       this.historyOpen = !this.historyOpen;
       this.menuOpen = this.modelOpen = this.accessOpen = false;
       this.renaming = this.deleting = null;
@@ -565,12 +583,14 @@ export class ChatPanel {
     });
     this.accessButton.addEventListener("click", () => {
       if (this.provider === "api") return;
+      this.setupOpen = false;
       this.accessOpen = !this.accessOpen;
       this.menuOpen = this.modelOpen = this.historyOpen = false;
       this.paintHead();
       this.changed();
     });
     this.modelButton.addEventListener("click", () => {
+      this.setupOpen = false;
       if (this.opts.specialist) {
         if (this.started || this.navigating || this.historyPending || this.specialistChoiceSaving) return;
         this.modelOpen = !this.modelOpen;
@@ -625,6 +645,7 @@ export class ChatPanel {
       });
       menu.addEventListener("keydown", event => {
         if (event.isComposing || event.keyCode === 229 || (event.target as HTMLElement)?.matches("input, textarea")) return;
+        if ((event.target as HTMLElement)?.closest?.(".setup-explanation")) return;
         if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
         const buttons = [...menu.querySelectorAll<HTMLButtonElement>("button")].filter(button => !button.disabled);
         if (!buttons.length) return;
@@ -654,6 +675,10 @@ export class ChatPanel {
     };
     this.log.tabIndex = 0;
     this.log.setAttribute("role", "region");
+    this.announcement.setAttribute("role", "status");
+    this.announcement.setAttribute("aria-live", "polite");
+    this.announcement.setAttribute("aria-atomic", "true");
+    document.addEventListener("visibilitychange", () => { if (document.hidden) this.clearAnnouncement(); });
     this.log.addEventListener("wheel", pauseFollow, { passive: true });
     this.log.addEventListener("touchmove", pauseFollow, { passive: true });
     this.log.addEventListener("pointerdown", pauseFollow);
@@ -685,7 +710,7 @@ export class ChatPanel {
       el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu),
       el("div", { class: "place-box" }, this.place, this.menu),
       el("div", { class: "access-box" }, this.accessButton, this.accessMenu),
-      this.setup,
+      this.setupBox,
       el("div", { class: "history-box" }, this.historyButton, this.historyMenu),
       ...(this.backend.openNest ? [this.nestButton()] : []),
       this.newButton,
@@ -704,10 +729,10 @@ export class ChatPanel {
           el("div", { class: "composer-tools" }, this.mic, this.send)),
       ),
       compact ? null : this.composerHint,
-      compact ? el("div", { class: "chat-foot" }, el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu), el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setup) : null,
+      compact ? el("div", { class: "chat-foot" }, el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu), el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setupBox) : null,
     );
     this.drop.prepend(dashes());
-    this.element.append(this.perchSlot, main, this.drop);
+    this.element.append(this.perchSlot, main, this.drop, this.announcement);
     this.relabel();
     void this.restore().catch(() => {});
   }
@@ -725,7 +750,11 @@ export class ChatPanel {
     this.chips.setAttribute("role", "group");
     this.chips.setAttribute("aria-label", t("Attachments"));
     this.setup.setAttribute("aria-label", t("Your setup"));
-    this.setup.title = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
+    this.setup.title = t("Your setup");
+    this.setupMenu.setAttribute("aria-label", t("Your setup"));
+    this.setupExplanation.textContent = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
+    this.setupSettings.textContent = t("Open Chat settings");
+    this.setupSettings.hidden = !this.backend.openSettings;
     this.historyButton.title = t("Conversations");
     if (this.opts.window === "island") {
       this.newButton.replaceChildren(icon("plus", 14, 2));
@@ -1302,11 +1331,39 @@ export class ChatPanel {
   }
   private enabled = true;
 
+  private clearAnnouncement(): void {
+    window.clearTimeout(this.announcementTimer);
+    this.announcementTimer = undefined;
+    this.announcement.textContent = "";
+  }
+
+  private announce(text: string): void {
+    this.clearAnnouncement();
+    if (!this.open || document.hidden || !this.element.isConnected || this.element.offsetParent === null) return;
+    // A separate update lets repeated lifecycle messages be announced again.
+    this.announcementTimer = window.setTimeout(() => {
+      this.announcementTimer = undefined;
+      if (this.open && !document.hidden && this.element.isConnected && this.element.offsetParent !== null)
+        this.announcement.textContent = text;
+    }, 80);
+  }
+
+  private announceReply(): void {
+    let start = this.messages.length - 1;
+    while (start >= 0 && this.messages[start].who !== "you") start--;
+    const reply = this.messages.slice(start + 1)
+      .flatMap(message => message.who === "zeca" && !message.error && message.text.trim() ? [message.text] : [])
+      .join("\n\n");
+    this.announce([t("{name} finished replying.", { name: this.recipientName() }), reply].filter(Boolean).join("\n\n"));
+  }
+
   toggle(open = !this.open): void {
     if (open && !this.enabled) return;
     if (!open) {
       this.cancelVoice();
       this.clearReaction();
+      this.clearAnnouncement();
+      this.setupOpen = false;
     }
     if (open === this.open) return;
     this.open = open;
@@ -1318,6 +1375,11 @@ export class ChatPanel {
     this.backend.keyboard(open);
     if (open) queueMicrotask(() => this.input.focus());
     this.paintHead();
+    if (open) {
+      const pending = this.pendingAsk();
+      if (pending) this.announce(t("{name} needs your permission for {tool}.", { name: this.recipientName(), tool: pending.tool }));
+      else if (this.busy) this.announce(t("{name} is replying.", { name: this.recipientName() }));
+    }
     this.changed();
   }
 
@@ -1465,6 +1527,7 @@ export class ChatPanel {
         always,
         outside,
       });
+      this.announce(t("{name} needs your permission for {tool}.", { name: this.recipientName(), tool }));
       Sound.play("approval");
     } else if (d.kind === "tool") {
       this.replyBreak = true;
@@ -1490,6 +1553,9 @@ export class ChatPanel {
         this.messages.push({ who: "zeca", text: REFERENCE_ERRORS.has(d.message) ? t(d.message) : d.message, error: true, retry: turn });
       if (d.kind === "stopped")
         this.messages.push({ who: "note", text: t("Stopped.") });
+      if (d.kind === "error") this.announce(t("Chat error. Review the message in the conversation."));
+      else if (d.kind === "stopped") this.announce(t("Stopped."));
+      else if (d.kind === "done" && turn) this.announceReply();
       for (const message of this.messages) if (message.who === "activity") message.ended = true;
       // Anything still waiting is a no now: it can't be answered any more.
       for (const m of this.messages)
@@ -1528,8 +1594,10 @@ export class ChatPanel {
       this.messages.push({ who: "you", text: s.text, files: s.files, mentions: s.mentions });
       this.busy = true;
       this.turnSince = Clock.now();
+      this.announce(t("{name} is replying.", { name: this.recipientName() }));
       this.started = true;
       this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
+      this.setupOpen = false;
       this.paint();
       this.toEnd();
       this.changed();
@@ -1648,6 +1716,7 @@ export class ChatPanel {
         this.messages.push({ who: "you", text, files: [] });
         const said = MEMORY_SAID.has(answer.said) ? t(answer.said) : answer.said;
         this.messages.push({ who: "zeca", text: answer.detail ? `${said}\n${answer.detail}` : said });
+        this.announceReply();
         this.paint();
         this.toEnd();
         return;
@@ -1666,7 +1735,9 @@ export class ChatPanel {
     this.searching = false;
     this.busy = true;
     this.turnSince = Clock.now();
+    this.announce(t("{name} is replying.", { name: this.recipientName() }));
     this.started = true;
+    this.setupOpen = false;
     this.menuOpen = false;
     this.modelOpen = false;
     this.accessOpen = false;
@@ -1733,6 +1804,8 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider, draft?: ChatDraft | null): void {
+    this.setupOpen = false;
+    this.clearAnnouncement();
     this.historyRead++; this.historyPending = null; this.historyError = this.historyReadError = ""; this.renaming = this.deleting = null; this.renameDraft = null;
     this.cancelVoice();
     this.clearReaction();
@@ -2131,6 +2204,8 @@ export class ChatPanel {
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    if (!preserveLive) this.setupOpen = false;
+    if (!preserveLive) this.clearAnnouncement();
     this.historyRead++; this.historyPending = null; this.historyError = this.historyReadError = ""; this.renaming = this.deleting = null; this.renameDraft = null;
     this.specialistChoiceRequest++;this.specialistChoiceSaving=false;
     if (clearDraft) this.cancelVoice();
@@ -2684,8 +2759,12 @@ export class ChatPanel {
       { id: "model", menu: this.modelMenu, trigger: this.modelButton, name: t("Model") },
       { id: "access", menu: this.accessMenu, trigger: this.accessButton, name: t("Who answers the cards") },
       { id: "history", menu: this.historyMenu, trigger: this.historyButton, name: t("Conversations") },
+      { id: "setup", menu: this.setupMenu, trigger: this.setup, name: t("Your setup") },
     ];
   }
+
+  /** Nest may place this panel's existing controls in its own header. */
+  dismissMenus(returnFocus = false): boolean { return this.closeMenus(returnFocus); }
 
   private closeMenus(returnFocus = false): boolean {
     if (this.mentionMenu.classList.contains("on")) {
@@ -2696,6 +2775,7 @@ export class ChatPanel {
     const open = this.menuPanels().find(({ menu }) => menu.classList.contains("on"));
     if (!open) return false;
     this.menuOpen = this.modelOpen = this.accessOpen = this.historyOpen = false;
+    this.setupOpen = false;
     this.renaming = this.deleting = null;
     this.paintHead();
     if (returnFocus) open.trigger.focus();
@@ -2749,6 +2829,10 @@ export class ChatPanel {
     this.place.hidden = api;
     this.place.disabled = this.profileBlocked();
     this.setup.hidden = api || !this.native || !!this.opts.specialist;
+    this.setupBox.hidden = this.setup.hidden;
+    if (this.setup.hidden) this.setupOpen = false;
+    this.setup.setAttribute("aria-expanded", String(this.setupOpen));
+    this.setupMenu.classList.toggle("on", this.setupOpen);
     this.paintModel(api);
     this.paintAccess(api);
     this.place.classList.toggle("fixed", this.started);

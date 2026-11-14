@@ -28,6 +28,9 @@ this document defines how the UI presents them.
 - Keep species, accessories, palettes and sprite proportions from the existing
   character renderer. Scale pixel art with integer drawing scales and
   `image-rendering: pixelated`; do not stretch a bird to fill a card.
+- With no sessions, the Nest's habitat keeps its heading while its empty sky recedes.
+  The existing welcome bird, explanation and agent setup action lead the empty state.
+  Populated habitats retain their scene and bird positions.
 - Reuse the existing icon vocabulary and font stack. Do not introduce a second
   icon set, downloaded font, component framework or theme for a prototype.
 
@@ -196,6 +199,16 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
 - Use a short header for recipient, executor, conversation history and creation.
   Group source, context and memory controls together; avoid duplicating them above
   and below the transcript.
+- In Nest windows at most 760 px wide and 560 px high, keep conversation history,
+  recipient, executor and access in one row. Conversation options disclose the title,
+  folder, profile context, New and Memory using their existing controls. Opening them
+  does not shrink the transcript or composer; Escape closes an inner picker first,
+  then the options, returning focus. Taller or wider windows restore the full header
+  without changing drafts, recipients or the controls' owners.
+- Recent keeps the search and list available while another operation blocks New
+  and switching to a different conversation. Explain that wait visibly without
+  assuming Zeca is the recipient. When compact Recent hides the history toggle,
+  reclaim its header column while preserving recipient, executor and access.
 - Keep an editable draft, attachments and Send visible. The Nest and Quick composer use one
   rounded writing row, with attachment on the left and microphone/Send on the right. The Nest
   rests near 52-54 px high; multiline drafts grow within their bounds and files stay above it. Quick provides at least
@@ -216,6 +229,15 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   Reactions communicate presence and never grant approval authority.
 - With Zeca off, preserve the independent flock, records, costs and other surfaces.
   New specialist Chat behavior must follow its agreed capability contract.
+- Memory-off guidance opens the Memory section of the existing Chat & voice
+  preferences, with a return to Memory in the Nest and no automatic activation.
+  Unknown write or Undo failures describe an unconfirmed result; technical detail
+  stays in a disclosure. Recovery refreshes the current memory without replaying
+  the change, and stale reads keep mutation controls disabled.
+- The inherited Claude Code/Codex setup explanation is a keyboard-accessible Chat
+  control. Its panel retains the existing scope explanation and links to Chat
+  preferences. In short windows the explanation scrolls while its settings action
+  stays accessible; Escape closes the inner panel before conversation options.
 
 ## Agents and integrations
 

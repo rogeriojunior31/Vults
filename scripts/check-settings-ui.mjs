@@ -158,10 +158,13 @@ events.onSettings({ dictationCommands: false, dictationCommandChat: true, dictat
 initialSettingsReady(settings);
 await tick();
 if (initialRoute) {
-  assert.equal(root.querySelector('[data-dictation-section="commands"]')?.open, true,
-    "A cold command-settings link opens its disclosure before any settings event");
+  if (initialRoute === "chatmemory") {
+    assert.equal(document.activeElement.dataset.chatSection,"memory","A cold Memory link focuses the existing section");
+    assert.equal(location.hash.replace(/^#/,""),"chatmemory");
+  } else assert.equal(root.querySelector('[data-dictation-section="commands"]')?.open, true,
+      "A cold command-settings link opens its disclosure before any settings event");
   assert.equal(writes.length, 0, "Opening a linked preference never grants a capability");
-  console.log("check-settings-ui: cold Windows command-settings link opens the requested disclosure without writes");
+  console.log("check-settings-ui: cold preference link opens its exact destination without writes");
   process.exit(0);
 }
 const page = () => root.querySelector("main.page");
@@ -193,6 +196,17 @@ assert.equal(document.activeElement.value, "unsaved-example", "An unrelated refr
 assert.equal(document.activeElement.selectionStart, 3);
 assert.equal(document.activeElement.selectionEnd, 9);
 assert.equal(detail("Your Claude Code and Codex setup").open, true);
+const beforeMemoryNavigation = writes.length;
+events.onSettingsSection("chatmemory");await tick();
+assert.equal(location.hash,"chatmemory");
+assert.equal(document.activeElement.dataset.chatSection,"memory","A memory link focuses the existing Memory section");
+events.onSettings({sounds:false});await tick();
+assert.equal(document.activeElement.dataset.chatSection,"memory","Settings refresh retains focus on the linked heading");
+assert.ok(button("Back to Chat"));button("Back to Chat").fire("click");
+assert.equal(routes.at(-1),"memory");
+routes.pop();
+assert.equal(writes.length,beforeMemoryNavigation,"Memory deep links never enable or save a preference");
+console.log("check-settings-ui: Memory deep link selects/focuses the existing section and returns to Nest without writes");
 await go("General");
 assert.equal(detail("Keyboard shortcuts").open, true, "Disclosures stay open across navigation");
 await go("Agents");

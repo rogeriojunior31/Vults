@@ -34,6 +34,7 @@ class Element {
   get options() { return this.children.filter(node => node.tagName === "OPTION"); }
   get firstElementChild() { return this.children[0] ?? null; }
   get lastElementChild() { return this.children.at(-1) ?? null; }
+  get childNodes() { return this.children; }
   get isConnected() { return this === document.body || !!this.parentElement?.isConnected; }
   get offsetParent() { return this.isConnected && !this.hidden && this.parentElement?.offsetParent !== null ? this.parentElement ?? this : null; }
   removeEventListener(event, fn) { this.listeners[event] = (this.listeners[event] ?? []).filter(f => f !== fn); }
@@ -80,10 +81,11 @@ globalThis.window = { innerWidth: 480, innerHeight: 640,
   setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
   addEventListener: (event, fn) => (windowEvents[event] ??= []).push(fn),
   matchMedia: query => ({ get matches() {
-    const rule = query.match(/(min|max)-(width|height):\s*(\d+)px/);
-    if (!rule) return false;
-    const value = rule[2] === "width" ? window.innerWidth : window.innerHeight;
-    return rule[1] === "min" ? value >= Number(rule[3]) : value <= Number(rule[3]);
+    const rules = [...query.matchAll(/(min|max)-(width|height):\s*(\d+)px/g)];
+    return rules.length > 0 && rules.every(rule => {
+      const value = rule[2] === "width" ? window.innerWidth : window.innerHeight;
+      return rule[1] === "min" ? value >= Number(rule[3]) : value <= Number(rule[3]);
+    });
   }, addEventListener: (_event, fn) => mediaChanges.push({ query, fn }) }),
 };
 globalThis.matchMedia = window.matchMedia;
@@ -250,7 +252,7 @@ for (const width of [480, 760, 900, 1180]) {
       assert.equal(specialistInput.getAttribute("aria-label"), "Message Reviewer…");
       assert.equal(sharedMain.querySelector(".attach"), null);
       assert.equal(page.querySelector(".model").disabled, true, "The specialist executor stays isolated");
-      page.querySelector(".chat-controls").querySelectorAll(".place").find(n=>n.tagName==="BUTTON"&&!n.classList.contains("model")&&!n.classList.contains("access")).click();
+      page.querySelector(".chat-titlebar").querySelectorAll(".place").find(n=>n.tagName==="BUTTON"&&!n.classList.contains("model")&&!n.classList.contains("access")).click();
       const projectChoice=nodes(page).find(n=>n.dataset.choice==="folder:/work/alpha");
       assert.ok(projectChoice,"A specialist can explicitly choose a project before the first turn");projectChoice.click();
       specialistInput.value = "Review this change"; specialistInput.fire("input");
@@ -306,7 +308,7 @@ for (const width of [480, 760, 900, 1180]) {
       assert.equal(specialistInput.readOnly,false,"API specialists can send without inheriting companion capabilities");
       assert.ok(page.querySelector(".model").textContent.includes("ollama"));
       assert.ok(sharedMain.querySelector(".chat-caption").textContent.includes("selected files"));
-      assert.equal(page.querySelector(".chat-controls").querySelectorAll(".place").find(n=>n.tagName==="BUTTON"&&!n.classList.contains("model")&&!n.classList.contains("access")).hidden,true,"API specialists cannot read a project");
+      assert.equal(page.querySelector(".chat-titlebar").querySelectorAll(".place").find(n=>n.tagName==="BUTTON"&&!n.classList.contains("model")&&!n.classList.contains("access")).hidden,true,"API specialists cannot read a project");
       assert.equal(specialistInput.value,"","New conversations clear the former project's draft");
       specialistInput.value="API question";specialistInput.fire("input");specialistInput.fire("keydown",{key:"Enter",preventDefault(){}});await tick();
       assert.deepEqual(specialistCalls.at(-1),["reviewer","API question",8,null,[]]);
@@ -318,6 +320,64 @@ for (const width of [480, 760, 900, 1180]) {
 
       recipient.value = "zeca"; recipient.fire("change"); await tick(); await tick();
       console.log("check-surface-continuity: specialists share the Chat tab/composer, scoped generation, approval shortcuts, Zeca-off and retained isolated transcripts/drafts");
+      const recipientFailure = page.querySelector(".chat-recipient-error");
+      backend.profiles = async () => { throw new Error("Raw profile transport failure"); };
+      recipient.fire("focus"); await tick();
+      assert.equal(recipientFailure.hidden, false);
+      assert.equal(recipient.value, "zeca");
+      assert.ok(recipientFailure.querySelector("p").textContent.includes("Your current conversation stays open"));
+      assert.equal(recipientFailure.querySelector("details").open, false, "Technical failure detail starts collapsed");
+      backend.profiles = async () => [specialist];
+      recipientFailure.querySelector("button").click(); await tick();
+      assert.equal(recipientFailure.hidden, true, "An explicit retry recovers recipient loading");
+      saveFails = true;
+      nest.chat.input.value = "Retained after switch failure"; nest.chat.input.fire("input"); await tick();
+      recipient.value = "reviewer"; recipient.fire("change"); await tick(); await tick();
+      assert.equal(recipient.value, "zeca", "A failed draft save keeps the original recipient");
+      assert.equal(sharedMain.querySelector("textarea").value, "Retained after switch failure");
+      assert.equal(recipientFailure.hidden, false);
+      assert.ok(recipientFailure.querySelector("p").textContent.includes("Could not open this conversation"));
+      saveFails = false;
+      recipientFailure.querySelector("button").click(); await tick(); await tick();
+      assert.equal(recipient.value, "reviewer");
+      assert.equal(recipientFailure.hidden, true);
+      let rejectOldRecipients;
+      backend.profiles = () => new Promise((_, reject) => { rejectOldRecipients = reject; });
+      recipient.fire("focus");
+      recipient.value = "zeca"; recipient.fire("change"); await tick(); await tick();
+      rejectOldRecipients(new Error("Obsolete recipient read")); await tick();
+      assert.equal(recipientFailure.hidden, true, "A late list failure cannot replace a successful recipient switch");
+      backend.profiles = async () => [specialist];
+      nest.chat.input.value = "Unsent"; nest.chat.input.fire("input"); await tick();
+      console.log("check-surface-continuity: recipient errors preserve conversation/draft, disclose details, retry explicitly and ignore obsolete reads");
+      const header = page.querySelector(".chat-titlebar"), options = page.querySelector(".nest-chat-options");
+      const optionsBody = page.querySelector(".nest-chat-options-body");
+      const originalFolder = header.querySelector(".place-box"), originalMemory = page.querySelector(".nest-memory-toggle");
+      const originalHead = page.querySelector(".chat-controls").firstElementChild;
+      const beforeHeaderActions = [...actions];
+      const resizeHeader = (w, h) => { window.innerWidth = w; window.innerHeight = h; for (const change of mediaChanges.filter(item => item.query === "(max-width: 760px) and (max-height: 560px)")) change.fn(); };
+      resizeHeader(480,360);
+      assert.equal(options.hidden,false); assert.equal(options.open,false);
+      assert.ok(optionsBody.contains(originalFolder)); assert.ok(optionsBody.contains(originalMemory));
+      assert.ok(!optionsBody.contains(header.querySelector(".model")),"Executor stays visible outside secondary options");
+      nest.chat.dismissMenus(); options.open=true;
+      header.fire("keydown",{key:"Escape",preventDefault(){},stopPropagation(){}});
+      assert.equal(options.open,false); assert.equal(document.activeElement,options.querySelector("summary"));
+      options.open=true; originalFolder.querySelector("button").focus();
+      resizeHeader(1000,720);
+      assert.equal(options.hidden,true); assert.equal(originalFolder.parentElement,originalHead);
+      assert.equal(document.activeElement,originalFolder.querySelector("button"),"Resizing preserves focus on the actual control");
+      resizeHeader(480,360);
+      assert.equal(options.open,true,"A focused secondary control remains accessible on compacting");
+      recipient.value="reviewer";recipient.fire("change");await tick();await tick();
+      assert.ok(optionsBody.querySelector(".place-box"));
+      assert.equal(originalFolder.parentElement,originalHead,"Switching recipients restores the previous header's controls");
+      recipient.value="zeca";recipient.fire("change");await tick();await tick();
+      assert.equal(optionsBody.querySelector(".place-box"),originalFolder,"Returning reuses the original folder control");
+      assert.equal(nest.chat.input.value,"Unsent");assert.deepEqual(actions,beforeHeaderActions);
+      resizeHeader(480,640);
+      assert.equal(options.hidden,true,"Narrow but tall Chat keeps the complete header");
+      console.log("check-surface-continuity: short Chat moves real secondary controls, preserves draft/focus/recipient owners and dismisses options without actions");
       const reads = [];
       const originalSpend = readSpend;
       readSpend = () => new Promise((resolve, reject) => reads.push({ resolve, reject }));
@@ -685,19 +745,42 @@ assert.ok(recent.element.textContent.includes("Old login failure"));
 assert.equal(search.value, "legacy"); assert.equal(document.activeElement, search);
 const recreatedRecent = createRecent({ list: async () => rows, open() {}, fresh() {}, busy: () => false });
 assert.equal(recreatedRecent.element.querySelector("input").value, "legacy", "Closing and recreating Nest keeps the local history search");
+const stableRetry=recent.element.querySelector(".nest-recent-status").querySelector("button");
+search.fire("input");
+assert.equal(recent.element.querySelector(".nest-recent-status").querySelector("button"),stableRetry,"Filtering does not recreate an unchanged error notice");
+stableRetry.focus();
 recent.element.querySelector(".nest-recent-status").querySelector("button").fire("click");
+document.activeElement=document.body;
 assert.equal(recent.element.querySelector(".nest-recent-status").querySelector("button").disabled, true);
+requests.at(-1).reject(new Error("Still offline"));await tick();
+assert.equal(document.activeElement,recent.element.querySelector(".nest-recent-status").querySelector("button"),"A failed retry restores focus to Retry");
+document.activeElement.fire("click");document.activeElement=document.body;
 requests.at(-1).resolve(rows); await tick();
+assert.equal(document.activeElement,search,"A successful retry returns to search when Retry disappears");
 assert.ok(!recent.element.textContent.includes("The last loaded list"));
 recentBusy = true; recent.refresh(); requests.at(-1).resolve(rows); await tick();
+const recentBusyNotice=recent.element.querySelector(".nest-recent-busy");
+assert.equal(recentBusyNotice.hidden,false);assert.equal(recentBusyNotice.getAttribute("role"),"status");
+assert.ok(recentBusyNotice.textContent.includes("current action"));assert.ok(!recentBusyNotice.textContent.includes("Zeca"),"The shared Recent view also serves specialist conversations");
+assert.equal(recent.element.querySelector(".nest-new-chat").disabled,true);
+assert.equal(search.value,"legacy","Busy feedback preserves the user's filter");
 recent.element.querySelector(".nest-recent-row").fire("click");
 assert.deepEqual(opened, [34], "Even an old row cannot switch conversations during a turn");
 recentBusy = false; search.value = ""; search.fire("input");
+assert.equal(recent.element.querySelector(".nest-recent-busy"),recentBusyNotice,"Updates retain one live-status node");
+assert.equal(recentBusyNotice.hidden,true);assert.equal(recent.element.querySelector(".nest-new-chat").disabled,false);
 recent.element.querySelectorAll("button").find(n => n.textContent === "Show more").fire("click");
 assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 35);
 recent.refresh(); const olderRequest = requests.at(-1); recent.refresh();
 requests.at(-1).resolve(rows); await tick(); olderRequest.reject(new Error("Obsolete")); await tick();
 assert.ok(!recent.element.textContent.includes("The last loaded list"));
+const disappearingRow=recent.element.querySelectorAll(".nest-recent-row")[0];disappearingRow.focus();
+recent.refresh();requests.at(-1).resolve(rows.filter(row=>String(row.id)!==disappearingRow.dataset.conversation));await tick();
+assert.equal(document.activeElement,search,"A removed focused conversation returns to search");
+const anotherRow=recent.element.querySelectorAll(".nest-recent-row")[0];anotherRow.focus();
+recent.refresh();const independentInput=new Element("input");document.body.append(independentInput);independentInput.focus();
+requests.at(-1).resolve(rows);await tick();
+assert.equal(document.activeElement,independentInput,"A late read never takes focus back from another control");
 console.log("check-surface-continuity: Recent local search, date groups, pagination, busy guard, retained query/focus, stale list/retry and response ordering");
 
 // Only the explicit second click merges; updates and retry never perform this action.
@@ -780,21 +863,49 @@ memory.refresh(); memoryReads.at(-1).resolve(memoryView); await tick();
 assert.equal(memoryButton("accept:7").disabled, true, "An external refresh cannot unlock a pending decision");
 decisions[0].reject("Cannot save this memory."); await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
 assert.ok(memory.element.textContent.includes("Cannot save this memory."));
-assert.equal(memoryButton("accept:7").disabled, false);
+assert.ok(memory.element.textContent.includes("Could not confirm the memory change."));
+assert.equal(Boolean(memory.element.querySelector(".view-state-detail").open),false,"Technical mutation detail starts collapsed");
+const writesBeforeReview = memoryWrites.length;
 assert.equal(document.activeElement, memoryButton("accept:7"), "The pending action regains focus after a failed write");
+memoryButton("review-memory").focus();memoryButton("review-memory").fire("click");document.activeElement=document.body; await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.equal(memoryWrites.length,writesBeforeReview,"Refreshing after an uncertain result never repeats a mutation");
+assert.equal(memoryButton("accept:7").disabled, false);
+assert.equal(document.activeElement, memoryButton("review-memory"), "Refreshing retains focus on the read-only recovery action");
 memory.refresh(); memoryReads.at(-1).reject(new Error("Offline")); await tick();
 assert.ok(memory.element.textContent.includes("The last loaded view may be out of date"));
 assert.ok(memory.element.textContent.includes("Concise answers"));
 assert.ok(memory.element.textContent.includes("Cannot save this memory."));
-memoryButton("retry").fire("click"); assert.equal(memoryButton("retry").disabled, true);
+assert.equal(memoryButton("accept:7").disabled,true,"Stale memory cannot be changed before a successful refresh");
+memoryButton("review-memory").fire("click"); assert.equal(memoryButton("review-memory").disabled, true);
 memoryReads.at(-1).resolve(memoryView); await tick();
 assert.ok(!memory.element.textContent.includes("The last loaded view"));
 memoryButton("accept:7").focus(); memoryButton("accept:7").fire("click"); document.activeElement = document.body; await tick();
 memoryView = { ...memoryView, pending: [] }; decisions[1].resolve(); await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
 assert.equal(memoryButton("accept:7"), null); assert.equal(document.activeElement.className, "memory-heading");
+assert.ok(memory.element.textContent.includes("Memory updated."));
 memory.refresh(); const obsolete = memoryReads.at(-1); memory.refresh();
 memoryReads.at(-1).resolve(memoryView); await tick(); obsolete.reject(new Error("Obsolete")); await tick();
 assert.ok(!memory.element.textContent.includes("The last loaded view"));
+memoryButton("undo:ours").fire("click"); await tick(); memoryReads.at(-1).resolve(memoryView); await tick();
+assert.ok(memory.element.textContent.includes("Memory change undone."));
+const memoryRoutes = [];
+const disabledMemory = createMemory({ load:async()=>({on:false}), decide:async()=>{throw Error("Unexpected mutation");},undo:async()=>{throw Error("Unexpected mutation");} },()=>memoryRoutes.push("chatmemory"));
+disabledMemory.refresh();await tick();
+disabledMemory.element.querySelector('[data-fid="memory-settings"]').fire("click");
+assert.deepEqual(memoryRoutes,["chatmemory"],"Memory off offers explicit navigation, never automatic activation");
+let undoFailed=true;const uncertainUndos=[];
+const undoMemory=createMemory({load:async()=>memoryView,decide:async()=>{},undo:async id=>{uncertainUndos.push(id);if(undoFailed)throw Error("Unknown undo result");}});
+undoMemory.refresh();await tick();
+undoMemory.element.querySelector('[data-fid="undo:ours"]').fire("click");await tick();await tick();
+assert.ok(undoMemory.element.textContent.includes("Could not confirm the undo."));
+undoMemory.element.querySelector('[data-fid="review-memory"]').fire("click");await tick();
+assert.deepEqual(uncertainUndos,["ours"],"An uncertain undo is never replayed by recovery");
+undoFailed=false;undoMemory.element.querySelector('[data-fid="undo:ours"]').fire("click");await tick();await tick();
+assert.ok(undoMemory.element.textContent.includes("Memory change undone."));
+const rejectedMemory=createMemory({load:async()=>({...memoryView,pending:[{id:9,op:"add",place:"user",old:"",new:"An unaccepted proposal",source:"tool"}]}),decide:async(_id,accept)=>{assert.equal(accept,false);},undo:async()=>{}});
+rejectedMemory.refresh();await tick();rejectedMemory.element.querySelector('[data-fid="reject:9"]').fire("click");await tick();await tick();
+assert.ok(rejectedMemory.element.textContent.includes("Memory proposal declined."));
+assert.ok(!rejectedMemory.element.textContent.includes("Memory updated."),"Declining a proposal never claims to have changed remembered facts");
 console.log("check-surface-continuity: Memory proposal/fact/history hierarchy, explicit decisions, pending guard across refresh, stale/error/retry, retained disclosures/scroll/focus and response ordering");
 
 // Connections searches the loaded snapshot and retains both reading panes through a poll.
@@ -1813,3 +1924,67 @@ console.log("check-surface-continuity: cached connector grants keep profile/prov
  panel.toggle(false);panel.element.remove();
 }
 console.log("check-surface-continuity: explicit Codex selection preserves executor/model/effort and never falls back to Claude");
+
+// Lifecycle announcements remain separate from token rendering and respect the visible owner.
+{
+ const setTimer = window.setTimeout, clearTimer = window.clearTimeout;
+ const queued = new Map(); let sequence = 90000;
+ window.setTimeout = (callback, delay) => { if (delay !== 80) return setTimer(callback, delay); const id = ++sequence; queued.set(id, callback); return id; };
+ window.clearTimeout = id => { if (!queued.delete(id)) clearTimer(id); };
+ const flush = () => { const callbacks = [...queued.values()]; queued.clear(); callbacks.forEach(fn => fn()); };
+ const actions = [];
+ const panel = new ChatPanel({ models:async()=>[], pick:async()=>({}), keyboard(){}, saveDraft:async()=>{}, decide:()=>actions.push("decide"), send:()=>actions.push("send") },()=>{},{window:"nest"});
+ document.body.append(panel.element); await tick(); panel.toggle(true);
+ const status = nodes(panel.element).find(n => n.className === "sr-only" && n.getAttribute("role") === "status");
+ assert.equal(status.getAttribute("aria-live"), "polite");
+ assert.equal(status.getAttribute("aria-atomic"), "true");
+ panel.input.focus(); const focus = document.activeElement;
+ panel.sync({kind:"sent",from:"island",provider:"claude",folder:null,text:"Question",files:[]}); flush();
+ assert.ok(status.textContent.includes("is replying"));
+ const startingStatus = status.textContent;
+ panel.receive({kind:"text",text:"First half "});
+ panel.receive({kind:"text",text:"second half"});
+ flush();
+ assert.equal(status.textContent,startingStatus,"Streaming tokens never change the announcement");
+ panel.receive({kind:"permission",id:"announce-request",tool:"Bash",target:"git status",full:null,description:null,added:0,removed:0,always:false,outside:null}); flush();
+ assert.ok(status.textContent.includes("needs your permission for Bash"));
+ assert.deepEqual(actions,[],"Announcements cannot answer or send");
+ panel.receive({kind:"done"}); flush();
+ assert.ok(status.textContent.includes("finished replying"));
+ assert.ok(status.textContent.includes("First half second half"));
+ assert.equal(document.activeElement,focus,"Updates preserve composer focus");
+ panel.receive({kind:"error",message:"Fixture error"}); flush();
+ assert.equal(status.textContent,"Chat error. Review the message in the conversation.");
+ panel.receive({kind:"stopped"}); panel.toggle(false); flush();
+ assert.equal(status.textContent,"","Closing cancels pending announcements");
+ panel.receive({kind:"error",message:"Hidden error"}); flush();
+ assert.equal(status.textContent,"","Hidden panels stay silent");
+ panel.toggle(true); panel.receive({kind:"error",message:"Old conversation"});
+ panel.sync({kind:"reset",from:"island",provider:"claude",generation:33}); flush();
+ assert.equal(status.textContent,"","A new conversation cancels obsolete announcements");
+ panel.toggle(false); panel.element.remove(); window.setTimeout=setTimer; window.clearTimeout=clearTimer;
+}
+console.log("check-surface-continuity: Chat announces start/completion/error/permission without tokens, side effects, focus theft or stale hidden announcements");
+
+for (const surface of ["island","nest"]) {
+ const effects=[];
+ const setupPanel=new ChatPanel({models:async()=>[],pick:async()=>({}),keyboard(){},openSettings:()=>effects.push("settings"),saveDraft:async()=>{},send:()=>effects.push("send"),decide:()=>effects.push("decide")},()=>{},{window:surface});
+ document.body.append(setupPanel.element);await tick();setupPanel.toggle(true);
+ const setup=setupPanel.element.querySelector(".setup"),help=setupPanel.element.querySelector(".setup-menu");
+ assert.equal(setup.tagName,"BUTTON");assert.equal(setup.getAttribute("aria-label"),"Your setup");
+ assert.equal(setup.getAttribute("aria-controls"),help.id);
+ setup.fire("keydown",{key:"ArrowDown",preventDefault(){}});await tick();
+ assert.equal(setup.getAttribute("aria-expanded"),"true");
+ assert.ok(help.textContent.includes("CLAUDE.md"));assert.ok(help.textContent.includes("already trust"));
+ assert.equal(document.activeElement,help.querySelector("button"));
+ setupPanel.element.fire("keydown",{key:"Escape",preventDefault(){},stopPropagation(){}});
+ assert.equal(setup.getAttribute("aria-expanded"),"false");assert.equal(document.activeElement,setup);
+ assert.deepEqual(effects,[],"Opening and dismissing setup help has no side effects");
+ setup.click();help.querySelector(".setup-settings").click();assert.deepEqual(effects,["settings"]);
+ setup.click();setupPanel.element.querySelector(".model").click();
+ assert.equal(help.classList.contains("on"),false,"Only one Chat picker can stay open");
+ setupPanel.dismissMenus();setup.click();setupPanel.toggle(false);
+ assert.equal(help.classList.contains("on"),false,"Closing Chat also closes its setup explanation");
+ setupPanel.element.remove();
+}
+console.log("check-surface-continuity: setup help is named/focusable, exposes scope, closes with Escape/focus return and only navigates on explicit settings action");

@@ -1,5 +1,7 @@
 # Conversando com o Zeca
-<!-- source: 71363be852d8 -->
+<!-- source: 027e394dd6e2 -->
+
+Em janelas baixas do Nest, **Opções** reúne título, pasta, configuração, Nova e Memória, enquanto destinatário, executor e acesso continuam visíveis. A ajuda de configuração leva às configurações do Chat. As conversas recentes explicam quando uma ação em andamento impede a troca; busca e foco de teclado são preservados ao atualizar ou recuperar a lista. Erros de destinatário mantêm o rascunho e oferecem uma nova tentativa explícita. O Chat anuncia mudanças de estado da resposta e das permissões aos leitores de tela sem anunciar cada token. Falhas na Memória oferecem atualização sem repetir uma decisão; quando desativada, ela abre a seção Memória das Configurações. Os cartões de permissão do Flock mostram a ferramenta e o projeto exatos antes de confirmar **Sempre permitir**, e a cópia da pasta informa sucesso ou falha.
 
 Abra a aba **Chat**, escolha **Chat…** no ícone da bandeja ou solte um arquivo na ilha. O Zeca tem um
 poleiro ao lado do chat: ele pensa enquanto a resposta vem, inclina a cabeça quando pergunta algo a

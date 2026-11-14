@@ -43,6 +43,13 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   overflow-wrap: anywhere;
   flex: none;
 }
+.chat-recipient-error { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; max-height: 30%; overflow: auto; font-size: var(--text-s); }
+.chat-recipient-error[hidden] { display: none; }
+.chat-recipient-error > p { flex: 1 1 220px; margin: 0; }
+.chat-recipient-error > details { flex: 1 0 100%; min-width: 0; color: var(--fg-dim); }
+.chat-recipient-error summary { cursor: pointer; }
+.chat-recipient-error summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.chat-recipient-error pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); }
 .nest-chat {
   flex: 1;
   min-height: 0;
@@ -1441,6 +1448,12 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   gap: 6px;
 }
 .app-card-actions.decision-actions button { min-height: 38px; padding-inline: 14px; }
+.decision-policy { flex: 1 0 100%; min-width: 0; color: var(--fg-dim); font-size: var(--text-s); }
+.decision-policy > summary { width: fit-content; min-height: 32px; align-content: center; cursor: pointer; color: var(--fg); }
+.decision-policy > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-control); }
+.decision-policy-body { display: grid; justify-items: start; gap: 8px; padding-block: 4px 8px; }
+.decision-policy-body p { margin: 0; overflow-wrap: anywhere; }
+.returned-request .rule-scope { overflow-wrap: anywhere; }
 .nest-flock-tab .primary .kbd {
   border-color: color-mix(in srgb, var(--on-accent) 40%, transparent);
 }
@@ -1846,6 +1859,8 @@ button.touched-row:hover,
 .nest-recent-day { margin: 12px 10px 4px; font-size: var(--text-s); font-weight: 500; color: var(--fg-muted); flex: none; }
 .nest-recent-status { font-size: 12px; color: var(--fg-dim); line-height: 1.5; }
 .nest-recent-status:empty, .nest-recent-status[hidden] { display: none; }
+.nest-recent-busy { flex: none; margin: 0; color: var(--fg-dim); font: var(--text-s)/1.5 var(--font); }
+.nest-recent-busy[hidden] { display: none; }
 .nest-recent-back { display: none; }
 /* With Memory open too, the conversation needs the room Recent would take, until it is wide. */
 @media (max-width: 1100px) {
@@ -2513,6 +2528,8 @@ button.touched-row:hover,
 .nest-flock-tab.no-sessions .flock-workspace { display: block; overflow-y: auto; }
 .nest-flock-tab.no-sessions :is(.flock-list, .flock-back) { display: none; }
 .nest-flock-tab.no-sessions .flock-selected { display: block; }
+.nest-flock-tab.no-sessions .habitat-sky { display: none; }
+.nest-flock-tab.no-sessions .flock-stage { padding-bottom: 12px; }
 .flock-welcome { display: flex; align-items: flex-start; gap: 20px; max-width: 640px; padding: 24px; }
 .flock-welcome-perch { position: relative; flex: none; width: 112px; height: 108px; }
 .flock-welcome-perch:empty { display: none; }
@@ -2850,6 +2867,44 @@ button.touched-row:hover,
 .nest-chat .chat-recipient-control > svg { position: absolute; right: 8px; pointer-events: none; color: var(--fg-dim); }
 .nest-chat .chat-recipient-picker { appearance: none; -webkit-appearance: none; height: 30px; min-height: 30px; max-width: 144px; min-width: 72px; box-sizing: border-box; padding: 4px 26px 4px 10px; border: 0; border-radius: var(--radius-control); background: var(--float); color: var(--fg); font: 500 12px/18px var(--font); cursor: pointer; }
 .nest-chat .chat-recipient-picker:hover { background: var(--raised); }
+
+/* A short Chat keeps its operational choices in one row. Secondary controls retain their owners. */
+.nest-chat-options[hidden] { display: none; }
+.short-chat-header { position: relative; display: grid; grid-template-columns: 30px minmax(72px, 1fr) minmax(0, 3fr) 30px; gap: 4px; padding: 4px 8px; min-height: 39px; }
+.short-chat-header .chat-head { order: 0; flex-wrap: nowrap; min-width: 0; gap: 4px; }
+.short-chat-header .chat-head > :is(.engine-box, .access-box) { flex: 1; min-width: 0; }
+.short-chat-header .chat-head > :is(.engine-box, .access-box) > .place { width: 100%; min-width: 0; max-width: 100%; padding-inline: 6px; overflow: hidden; }
+.short-chat-header .chat-head .engine-labels { min-width: 0; overflow: hidden; }
+.short-chat-header .chat-head .engine-name { overflow: hidden; text-overflow: ellipsis; }
+.short-chat-header .chat-recipient-control { min-width: 0; }
+.short-chat-header > .chat-recipient-control { grid-column: 2; grid-row: 1; }
+.short-chat-header .chat-head { grid-column: 3; grid-row: 1; }
+.short-chat-header > .nest-chat-options { grid-column: 4; grid-row: 1; }
+/* Recent supplies its own Back action; reclaim the hidden history-toggle column. */
+.nest-chat.recent-open .short-chat-header { grid-template-columns: minmax(72px, 1fr) minmax(0, 3fr) 30px; }
+.nest-chat.recent-open .short-chat-header > .chat-recipient-control { grid-column: 1; }
+.nest-chat.recent-open .short-chat-header .chat-head { grid-column: 2; }
+.nest-chat.recent-open .short-chat-header > .nest-chat-options { grid-column: 3; }
+.short-chat-header .chat-recipient-picker { min-width: 0; max-width: 100%; width: 100%; }
+.nest-chat-options > summary { list-style: none; cursor: pointer; }
+.nest-chat-options > summary::-webkit-details-marker { display: none; }
+.nest-chat-options > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.nest-chat-options[open] > summary { background: var(--raised); }
+.nest-chat-options-body { position: absolute; z-index: 25; top: 100%; inset-inline: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-height: calc(100dvh - 140px); overflow-y: auto; box-sizing: border-box; padding: 12px; border: 1px solid var(--border-hover); border-radius: var(--radius-control); background: var(--float); color: var(--fg); }
+.nest-chat-options-body > .chat-title { flex: 1 0 100%; white-space: normal; overflow-wrap: anywhere; }
+.nest-chat-options-body > .place-box { min-width: 0; flex: 1 1 180px; }
+.nest-chat-options-body .place-box > .place { width: 100%; min-height: 30px; text-align: start; }
+.nest-chat-options-body .place-box > .menu { position: static; max-width: 100%; width: 100%; min-width: 0; margin-top: 6px; }
+.nest-chat-options-body > .setup-box { flex: 1 1 180px; }
+.nest-chat-options-body .setup-menu { position: static; width: 100%; min-width: 0; max-width: 100%; max-height: 140px; margin-top: 6px; }
+.memory-success { color: var(--ok); }
+.nest-chat-options-body > .chat-new { min-height: 30px; }
+.nest-chat-options-body > .nest-memory-toggle { width: auto; padding-inline: 8px; }
+.nest-chat-options-body > .nest-memory-toggle span { display: inline; }
+@media (max-height: 480px) {
+  .nest-chat:has(.approval-queue.on) .short-chat-header { display: grid; }
+  .nest-chat:has(.approval-queue.on) .short-chat-header .chat-title { position: static; width: auto; height: auto; clip-path: none; }
+}
 .nest-chat .chat-recipient-picker:focus-visible { outline: 1px solid var(--fg-dim); outline-offset: 2px; }
 .chat .access-save-error { margin: 8px; font-size: var(--text-s); color: var(--error-text); }
 .agent-profiles { padding: 20px 24px; }

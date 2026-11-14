@@ -58,12 +58,13 @@ const BY: Record<MemoryView["history"][number]["by"], string> = {
   other: tk("Not written by Vults"),
 };
 
-export function createMemory(backend: MemoryBackend): { element: HTMLElement; refresh: () => void } {
+export function createMemory(backend: MemoryBackend, settings?: () => void): { element: HTMLElement; refresh: () => void } {
   const element = el("div", { class: "memory" });
   const disclosures = new Map<string, HTMLDetailsElement>();
   let asked = 0;
   let loaded: MemoryView | null = null;
-  let note: string | null = null;
+  let note: "saved" | "declined" | "undone" | null = null;
+  let mutationError: { undo: boolean; reason: string; known: boolean } | null = null;
   let failed = false;
   let loading = false;
   let acting = false;
@@ -75,22 +76,26 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
     return details;
   };
   const identify = <T extends HTMLElement>(node: T, id: string): T => { node.dataset.fid = id; return node; };
-  const action = (id: string, text: string, run: () => void, primary = false) => {
+  const action = (id: string, text: string, run: () => void, primary = false, needsFresh = true) => {
     const button = identify(el("button", { class: `btn${primary ? " primary" : ""}`, text, onclick: run }), id);
-    button.disabled = acting || loading;
+    button.disabled = acting || loading || needsFresh && failed;
     return button;
   };
   const count = (n: number) => el("span", { class: "memory-count", text: String(n) });
   const heading = (label: string, n: number) => el("h4", {}, el("span", { text: label }), count(n));
 
-  const act = (work: () => Promise<void>) => {
-    if (acting || loading) return;
+  const act = (work: () => Promise<void>, kind: "change" | "reject" | "undo" = "change") => {
+    if (acting || loading || failed) return;
     acting = true;
     note = null;
+    mutationError = null;
+    disclosures.delete("mutation-error");
     paint();
-    void Promise.resolve().then(work).catch((error: unknown) => {
-      const text = String(error);
-      note = ERRORS.has(text) ? t(text) : text;
+    void Promise.resolve().then(work).then(() => {
+      note = kind === "undo" ? "undone" : kind === "reject" ? "declined" : "saved";
+    }).catch((error: unknown) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      mutationError = { undo: kind === "undo", reason, known: ERRORS.has(reason) };
     }).then(() => refresh()).finally(() => { acting = false; paint(); });
   };
 
@@ -110,7 +115,7 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
         p.reason ? el("p", { class: "proposal-reason", text: p.reason }) : null,
         el("div", { class: "proposal-actions" },
           action(`accept:${p.id}`, p.op === "remove" ? t("Accept removal") : t("Remember"), () => act(() => backend.decide(p.id, true)), true),
-          action(`reject:${p.id}`, t("Turn down"), () => act(() => backend.decide(p.id, false)))));
+          action(`reject:${p.id}`, t("Turn down"), () => act(() => backend.decide(p.id, false), "reject"))));
     });
     const decided = v.accepted + v.rejected;
     return el("section", { class: "memory-part memory-proposals" },
@@ -130,14 +135,14 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
           identify(el("summary", { class: "memory-file-head" }, el("span", { text: place(f.place) }), count(f.facts.length)), `file:${f.path}`),
           el("div", { class: "memory-file-body" }, el("p", { class: "memory-used", text: usage }), progress,
             el("ul", {}, ...f.facts.map(text => el("li", { text }))))), nonempty.length === 1);
-      }) : [viewState("empty", t("Nothing yet."), t("Nothing yet. Type /remember in the chat, or accept what Zeca proposes."))]));
+      }) : [viewState("empty", t("Nothing yet."), t("Type /remember in the chat, or accept what Zeca proposes."))]));
   };
 
   const history = (v: MemoryView): HTMLDetailsElement | null => v.history.length ? keep("history", el("details", { class: "memory-part memory-history" },
     identify(el("summary", {}, el("span", { text: t("History") }), count(v.history.length)), "history"),
     ...v.history.map(c => el("div", { class: "memory-commit" },
       el("div", { class: "memory-commit-text" }, el("span", { class: "memory-commit-msg", text: c.message }), el("span", { class: "memory-commit-by", text: t(BY[c.by]) })),
-      c.by === "other" ? null : action(`undo:${c.id}`, t("Undo"), () => act(() => backend.undo(c.id))))))) : null;
+      c.by === "other" ? null : action(`undo:${c.id}`, t("Undo"), () => act(() => backend.undo(c.id), "undo")))))) : null;
 
   function paint(): void {
     const active = document.activeElement as HTMLElement | null;
@@ -150,10 +155,25 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
     state.setAttribute("role", "status");
     if (acting) state.append(el("p", { text: t("Saving…") }));
     else if (loading && !loaded) state.append(viewState("loading", t("Loading")));
-    if (note) state.append(el("p", { class: "memory-note", text: note }));
+    if (note) state.append(el("p", { class: "memory-note memory-success", text: note === "undone" ? t("Memory change undone.") : note === "declined" ? t("Memory proposal declined.") : t("Memory updated.") }));
+    if (mutationError) {
+      const review = t("Refresh the current memory and review it before trying the change again. Refreshing does not repeat the change.");
+      const errorPanel = viewState("error", mutationError.undo ? t("Could not confirm the undo.") : t("Could not confirm the memory change."),
+        mutationError.known ? `${t(mutationError.reason)} ${review}` : review,
+        action("review-memory", t("Refresh memory"), () => { void refresh(); }, false, false),
+        mutationError.known ? null : mutationError.reason);
+      const detail = errorPanel.querySelector<HTMLDetailsElement>("details");
+      if (detail) {
+        keep("mutation-error", detail);
+        const summary = detail.querySelector("summary");
+        if (summary) identify(summary, "mutation-detail");
+      }
+      state.append(errorPanel);
+    }
     if (failed) {
-      state.append(viewState("error", loaded ? t("Memory could not update. The last loaded view may be out of date.") : t("Memory could not load. Try again."), undefined,
-        action("retry", t("Try again"), () => { if (!loading && !acting) void refresh(); })));
+      const warning = loaded ? t("Memory could not update. The last loaded view may be out of date.") : t("Memory could not load. Try again.");
+      state.append(mutationError ? el("p", { class: "memory-note", text: warning })
+        : viewState("error", warning, undefined, action("retry", t("Try again"), () => { if (!loading && !acting) void refresh(); }, false, false)));
     }
     const parts: HTMLElement[] = [el("header", { class: "memory-heading-group" }, title,
       el("p", { text: t("Review what Zeca keeps for future conversations.") })), state];
@@ -163,7 +183,8 @@ export function createMemory(backend: MemoryBackend): { element: HTMLElement; re
       parts.push(pending(loaded), files(loaded));
       if (overnight) parts.push(keep("night", overnight));
       if (changes) parts.push(changes);
-    } else if (loaded) parts.push(viewState("empty", t("Zeca's memory is off. Turn it on in Settings, Chat & voice, Memory.")));
+    } else if (loaded) parts.push(viewState("empty", t("Zeca's memory is off. Turn it on in Settings, Chat & voice, Memory."), undefined,
+      settings ? action("memory-settings", t("Open memory settings"), settings, true, false) : null));
     element.setAttribute("aria-busy", String(acting || loading));
     element.replaceChildren(...parts);
     if (scroll !== undefined && element.parentElement) element.parentElement.scrollTop = scroll;

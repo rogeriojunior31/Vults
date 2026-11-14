@@ -1807,8 +1807,21 @@ body.still .compact.needs::after {
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--fg-muted);
-  cursor: default;
+  min-width: 30px;
+  min-height: 30px;
+  justify-content: center;
+  background: var(--float);
+  cursor: pointer;
 }
+.setup-box { position: relative; flex: none; }
+.setup-box[hidden] { display: none; }
+.setup:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.setup[aria-expanded="true"] { color: var(--fg); border-color: var(--border-hover); }
+.setup-menu { width: 300px; max-width: calc(100vw - 40px); max-height: min(240px, calc(100dvh - 120px)); box-sizing: border-box; }
+.setup-box > .setup-menu { left: auto; right: 0; }
+.setup-menu .setup-explanation { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; padding: 8px; white-space: normal; overflow-wrap: anywhere; font: var(--text-s)/1.6 var(--font); color: var(--fg-dim); }
+.setup-menu .setup-explanation:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.setup-menu .setup-settings { flex: none; min-height: 30px; margin: 0 8px 8px; }
 .place[hidden],
 .setup[hidden] {
   display: none;
@@ -3459,7 +3472,7 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 #island .chat-foot > .place-box { flex: 1; }
 #island .chat-foot > .place-box > .place { max-width: 100%; }
 #island .chat-foot .place { min-height: 28px; box-sizing: border-box; }
-#island .chat-foot > .setup { flex: none; }
+#island .chat-foot > .setup-box { flex: none; }
 /* The zone takes the whole chat, Zeca inside it at its left. */
 #island .drop-zone {
   inset: 4px;
