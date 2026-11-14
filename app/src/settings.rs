@@ -171,6 +171,10 @@ pub struct Settings {
     /// Desktop notifications: a session finished or failed, a card waiting.
     #[serde(default = "yes")]
     pub notifications: bool,
+    /// A finish makes no sound or reveal while its session's terminal is in front (FF3). Cards
+    /// always sound; where the active window cannot be read, nothing changes.
+    #[serde(default = "yes")]
+    pub quiet_when_watching: bool,
     /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0018).
     #[serde(default = "yes")]
     pub zeca: bool,
@@ -446,6 +450,7 @@ impl Default for Settings {
             visitors: true,
             presence: Default::default(),
             notifications: true,
+            quiet_when_watching: true,
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),
@@ -941,6 +946,13 @@ pub fn update_consent(app: &AppHandle) -> crate::update::rules::Consent {
         .lock()
         .map(|s| s.update_consent)
         .unwrap_or_default()
+}
+
+pub fn quiet_when_watching(app: &AppHandle) -> bool {
+    app.state::<SettingsState>()
+        .0
+        .lock()
+        .is_ok_and(|s| s.quiet_when_watching)
 }
 
 #[tauri::command]
@@ -2578,6 +2590,7 @@ mod tests {
             visitors: false,
             presence: crate::panel::Presence::Island,
             notifications: true,
+            quiet_when_watching: true,
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),

@@ -137,6 +137,10 @@ pub struct SessionView {
     /// Its project is muted: no sound for it here, no desktop notification.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub muted: bool,
+    /// Its terminal was in front when its turn ended (FF3): the finish needs no sound or reveal.
+    /// Never set while it holds a card, so a card always sounds and opens.
+    #[cfg_attr(test, ts(as = "Option<bool>", optional))]
+    pub watched: bool,
     /// Its project is pinned: it comes first on the wire.
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub pinned: bool,
@@ -449,6 +453,7 @@ impl State {
                     skipped: !pending.is_empty() && pending.iter().all(|p| p.skipped),
                     raise: raises(&s.terminal),
                     muted: self.prefs(s).mute,
+                    watched: self.watched.as_ref() == Some(&s.key) && pending.is_empty(),
                     pinned: self.prefs(s).pin,
                     silent: s.watch.level.filter(|_| s.status == Status::Working),
                     activity: s.activity,

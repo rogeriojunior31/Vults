@@ -240,9 +240,15 @@ credits never become USD and unknown context tiers do not receive guessed aggreg
 
 ### FF3 · Quiet finish when the session's terminal is in front
 `P1 · M · Needs: —` · [Spec](plan-field-fixes.md#ff3--quiet-finish-when-the-sessions-terminal-is-in-front)
-- [ ] App: from `vults_platform::focus::Tracker`, on change only, map the active window to a session
+2026-11-14, branch `feat/update-notice`: core and app done. Instead of tracking focus changes,
+the app reads the active window once when a turn ends (`read_watched` in `app/src/runtime.rs`,
+one reader at a time, off the runtime loop) and sends `Input::Watched`; the renderer's settle
+wait (1.5 s failed, 3 s done) covers the read. `Settings.quiet_when_watching`, on by default.
+A new prompt clears it; a session holding a card is never watched. UI, setting and docs wait
+for the design branch to merge.
+- [x] App: from `vults_platform::focus::Tracker`, on change only, map the active window to a session
   with `focus::session()`; send it to core as a plain input.
-- [ ] Core: keep `watched: Option<SessionKey>`; expose `SessionView.watched` (regenerate `view.gen.ts`).
+- [x] Core: keep `watched: Option<SessionKey>`; expose `SessionView.watched` (regenerate `view.gen.ts`).
 - [ ] UI: in `ui/src/island/render.ts` `cues()`, treat a watched session like a muted one for *done* and
   *fail* (no `Sound.play`, no `fsm.reveal`); cards keep their sound and reveal.
 - [ ] Setting in General › Notifications, on by default; strings in the four languages.
