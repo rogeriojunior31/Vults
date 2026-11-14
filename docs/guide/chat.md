@@ -1,5 +1,7 @@
 # Chatting with Zeca
 
+In short Nest windows, **Options** holds the title, folder, setup, New and Memory controls while the recipient, executor and access stay visible. Setup help links to Chat settings. Recent conversations explain when a running action blocks switching; search and keyboard focus survive refresh and recovery. Recipient errors retain your draft and offer an explicit retry. Chat announces turn and permission state changes to screen readers without announcing every token. Memory failures offer a refresh without repeating a decision; its disabled state opens the Memory section of Settings. Flock permission cards disclose the exact tool and project before confirming **Always allow**, and folder copying reports success or failure.
+
 Open the **Chat** tab, choose **Chat…** from the tray icon, or drop a file on the island. Zeca has a
 perch beside the chat: he thinks while the reply comes, tilts his head when he asks you
 something, and swallows the files you give him. Pick **Claude** or **Codex** in the engine control (or the
