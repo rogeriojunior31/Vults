@@ -1,3 +1,27 @@
 {
-  "buildPath": "code"
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "ui/src/island/island.css"
+        ],
+        "createdAt": "2026-11-13T21:03:34.683Z",
+        "reason": "Agent review: the existing .tick.current .tick-text shimmer marks the step in progress (source comment: only while the island is open). Preserve this activity feedback during the Memory and setup accessibility fixes."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "ui/src/island/island.css"
+        ],
+        "createdAt": "2026-11-13T21:24:49.688Z",
+        "reason": "Agent review: .chat .msg.zeca blockquote uses a neutral 2px --border-hover rule to identify actual Markdown quotations rendered by markdown.ts:104. It is semantic quote typography, not a colored accent on a card."
+      }
+    ]
+  }
 }

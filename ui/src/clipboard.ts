@@ -2,11 +2,12 @@
 import { el } from "./dom";
 import { t } from "./i18n";
 
-export function copyTextButton(text: string, className: string, name: string): HTMLButtonElement {
-  const label = el("span", { text: t("Copy") });
+export function copyTextButton(text: string, className: string, name: string, action = t("Copy")): HTMLButtonElement {
+  const label = el("span", { text: action });
   label.setAttribute("role", "status");
   const button = el("button", { class: className }, label);
   button.setAttribute("aria-label", name);
+  button.title = name;
   let copying = false;
   let timer: number | undefined;
   button.addEventListener("click", () => {
@@ -26,7 +27,7 @@ export function copyTextButton(text: string, className: string, name: string): H
     }).finally(() => {
       copying = false;
       button.setAttribute("aria-busy", "false");
-      timer = window.setTimeout(() => { label.textContent = t("Copy"); button.title = name; }, 2500);
+      timer = window.setTimeout(() => { label.textContent = action; button.title = name; }, 2500);
     });
   });
   return button;

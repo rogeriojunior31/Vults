@@ -218,7 +218,7 @@ export function createNest(
       void askCompanion(t("What is {project} doing now?", { project: s.project || agentName(s) }));
     },
   });
-  const memory = createMemory(backend.memory);
+  const memory = createMemory(backend.memory, () => backend.settings("chatmemory"));
   // A row's question for Zeca opens the Chat with it in the composer; nothing is sent.
   const connections = createConnections({
     ...backend.connections,
@@ -277,7 +277,7 @@ export function createNest(
     } else if (returnFocus) memoryButton.focus();
     if (mounted) paintPortrait();
   };
-  memoryButton.addEventListener("click", () => setMemory(memoryPane.hasAttribute("hidden")));
+  memoryButton.addEventListener("click", () => { setMemory(memoryPane.hasAttribute("hidden")); closeChatOptions(false); });
   memoryBack.addEventListener("click", () => setMemory(false, true));
   memoryButton.setAttribute("aria-pressed", "false");
   // Recent, beside the conversation in a wide window: the saved ones and a new one.
@@ -328,7 +328,37 @@ export function createNest(
   const recipientPicker = el("select", { class: "place chat-recipient-picker" });
   recipientPicker.setAttribute("aria-label", t("Recipient"));
   const recipientControl = el("div", { class: "chat-recipient-control" }, recipientPicker, icon("chevronDown", 11, 2));
-  const recipientError = el("p", { class: "nest-close-error" }); recipientError.hidden = true; recipientError.setAttribute("role", "alert");
+  const recipientErrorMessage = el("p");
+  recipientErrorMessage.setAttribute("role", "alert");
+  const recipientErrorDetail = el("pre");
+  const recipientErrorSummary = el("summary", { text: t("Technical details") });
+  const recipientErrorDetails = el("details", {}, recipientErrorSummary, recipientErrorDetail);
+  let recipientRetry: (() => void) | null = null;
+  let recipientErrorKind: "load" | "open" | null = null;
+  const recipientFailureMessage = (kind: "load" | "open") => kind === "load"
+    ? t("Could not load recipients. Your current conversation stays open.")
+    : t("Could not open this conversation. Your current conversation stays open.");
+  const recipientRetryButton = el("button", { class: "btn", text: t("Try again"), onclick: () => recipientRetry?.() });
+  const recipientError = el("div", { class: "nest-close-error chat-recipient-error" }, recipientErrorMessage, recipientRetryButton, recipientErrorDetails);
+  recipientError.hidden = true;
+  const clearRecipientError = () => {
+    recipientError.hidden = true;
+    recipientErrorMessage.textContent = "";
+    recipientErrorDetail.textContent = "";
+    recipientErrorDetails.open = false;
+    recipientRetry = null;
+    recipientErrorKind = null;
+    recipientRetryButton.disabled = false;
+    recipientError.setAttribute("aria-busy", "false");
+  };
+  const showRecipientError = (kind: "load" | "open", error: unknown, retry: () => void) => {
+    recipientErrorKind = kind;
+    recipientErrorMessage.textContent = recipientFailureMessage(kind);
+    recipientErrorDetail.textContent = String(error);
+    recipientErrorDetails.open = false;
+    recipientRetry = retry;
+    recipientError.hidden = false;
+  };
   const fillRecipients = () => {
     const zeca = el("option", { text: "Zeca" }); zeca.value = "zeca"; zeca.disabled = !zecaOn;
     recipientPicker.replaceChildren(zeca, ...[...recipientProfiles.values()].filter(profile => !profile.state?.archived || profile.id === activeProfile?.id).map(profile => {
@@ -336,26 +366,88 @@ export function createNest(
     }));
     recipientPicker.value = activeProfile?.id ?? "zeca";
   };
-  recipientPicker.addEventListener("focus", () => {
-    void backend.profiles?.().then(rows => { for (const profile of rows) rememberProfile(profile); fillRecipients(); }, error => { recipientError.textContent = String(error); recipientError.hidden = false; });
-  });
+  let profilesRequest = 0;
+  const loadRecipients = async () => {
+    if (!backend.profiles) return;
+    const mine = ++profilesRequest;
+    const selection = recipientRequest;
+    recipientRetryButton.disabled = true;
+    recipientError.setAttribute("aria-busy", "true");
+    try {
+      const rows = await backend.profiles();
+      if (mine !== profilesRequest || selection !== recipientRequest) return;
+      for (const profile of rows) rememberProfile(profile);
+      fillRecipients();
+      clearRecipientError();
+    } catch (error) {
+      if (mine !== profilesRequest || selection !== recipientRequest) return;
+      showRecipientError("load", error, () => { void loadRecipients(); });
+    } finally {
+      if (mine === profilesRequest) {
+        recipientRetryButton.disabled = false;
+        recipientError.setAttribute("aria-busy", "false");
+      }
+    }
+  };
+  recipientPicker.addEventListener("focus", () => { void loadRecipients(); });
   recipientPicker.addEventListener("change", () => { void selectRecipient(recipientProfiles.get(recipientPicker.value) ?? null); });
   const companionHead = chat.element.querySelector<HTMLElement>(".chat-head")!;
   panelHeads.set(chat, companionHead);
   const chatControls = el("div", { class: "chat-controls" }, companionHead);
+  const shortChat = window.matchMedia("(max-width: 760px) and (max-height: 560px)");
+  const optionsSummary = el("summary", { class: "chat-ico" }, icon("chevronDown", 14));
+  const optionsBody = el("div", { class: "nest-chat-options-body" });
+  const chatOptions = el("details", { class: "nest-chat-options" }, optionsSummary, optionsBody);
+  const chatTitlebar = el("header", { class: "chat-titlebar" }, recentButton, chatTitle, recipientControl, chatControls, memoryButton, chatOptions);
+  let controlHead = companionHead;
+  const headOrder = new WeakMap<HTMLElement, Node[]>();
+  function closeChatOptions(returnFocus: boolean): void {
+    chat.dismissMenus();
+    chatOptions.open = false;
+    if (returnFocus) optionsSummary.focus();
+  }
+  function restoreChatHeader(): void {
+    const order = headOrder.get(controlHead);
+    if (order) controlHead.replaceChildren(...order);
+    chatTitlebar.replaceChildren(recentButton, chatTitle, recipientControl, chatControls, memoryButton, chatOptions);
+    optionsBody.replaceChildren();
+  }
+  function arrangeChatHeader(): void {
+    const focused = document.activeElement as HTMLElement | null;
+    const wasOpen = chatOptions.open;
+    restoreChatHeader();
+    chatTitlebar.classList.toggle("short-chat-header", shortChat.matches);
+    chatOptions.hidden = !shortChat.matches;
+    if (shortChat.matches) {
+      const order = headOrder.get(controlHead) ?? [...controlHead.childNodes];
+      headOrder.set(controlHead, order);
+      // Move the actual controls; their drafts, owners and listeners stay intact.
+      optionsBody.append(chatTitle, ...order.filter(node => node instanceof HTMLElement
+        && node.matches(".place-box, .setup-box, .chat-new")), memoryButton);
+      chatOptions.open = wasOpen || !!focused && optionsBody.contains(focused);
+    } else chatOptions.open = false;
+    if (focused === optionsSummary && !shortChat.matches) recentButton.focus({ preventScroll: true });
+    else if (focused && chatTitlebar.contains(focused)) focused.focus({ preventScroll: true });
+  }
+  shortChat.addEventListener("change", arrangeChatHeader);
+  chatTitlebar.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || event.isComposing || event.keyCode === 229 || event.defaultPrevented) return;
+    if (chat.dismissMenus(true)) { event.preventDefault(); event.stopPropagation(); return; }
+    if (shortChat.matches && chatOptions.open) {
+      closeChatOptions(true); event.preventDefault(); event.stopPropagation();
+    }
+  });
+  optionsBody.addEventListener("click", event => {
+    if ((event.target as Element | null)?.closest(".chat-new")) closeChatOptions(false);
+  });
+  document.addEventListener("pointerdown", event => {
+    if (shortChat.matches && chatOptions.open && !chatOptions.contains(event.target as Node)) closeChatOptions(false);
+  });
   const chatMain = el("div", { class: "nest-chat-main" }, chat.element);
   const chatPane = el(
     "div",
     { class: "nest-chat" },
-    el(
-      "header",
-      { class: "chat-titlebar" },
-      recentButton,
-      chatTitle,
-      // The chat's pickers and buttons, moved once: they keep their listeners and repaint in place.
-      recipientControl, chatControls,
-      memoryButton,
-    ),
+    chatTitlebar,
     el(
       "div",
       { class: "nest-chat-body" },
@@ -366,10 +458,12 @@ export function createNest(
     ),
     recipientError,
   );
+  arrangeChatHeader();
 
   async function selectRecipient(profile: AgentProfile | null): Promise<boolean> {
     const mine = ++recipientRequest;
     const previous = chat;
+    clearRecipientError();
     recipientPicker.disabled = true;
     try {
       if (!profile && !zecaOn) throw new Error(t("Zeca is off (Settings → Flock & Zeca)."));
@@ -403,23 +497,27 @@ export function createNest(
       await next.restore();
       if (profile) next.setFolders(last?.sessions.flatMap(s => s.cwd ? [{cwd:s.cwd,project:s.project}] : []) ?? [], null);
       if (mine !== recipientRequest) return false;
+      restoreChatHeader();
       previous.toggle(false);
       chat = next; activeProfile = profile;
       recent.clear();
       chatTitle.textContent = t("New conversation");
-      chatControls.replaceChildren(panelHeads.get(chat)!);
+      controlHead = panelHeads.get(chat)!;
+      chatControls.replaceChildren(controlHead);
       chatMain.replaceChildren(chat.element);
       chat.element.querySelector(".log-box")?.prepend(chat.perchSlot);
       chat.perchSlot.append(portraitButton);
       memoryButton.hidden = !!profile; setMemory(false);
+      arrangeChatHeader();
       head.setZeca(zecaOn || !!profile);
-      recipientError.hidden = true;
+      clearRecipientError();
       fillRecipients();
       show("chat");
       return true;
     } catch (error) {
       if (mine !== recipientRequest) return false;
-      recipientError.textContent = String(error); recipientError.hidden = false; fillRecipients();
+      fillRecipients();
+      showRecipientError("open", error, () => { void selectRecipient(profile); });
       return false;
     } finally { if (mine === recipientRequest) recipientPicker.disabled = false; }
   }
@@ -591,6 +689,7 @@ export function createNest(
     if (!confirmed && tab === "dictation" && id !== "dictation") { dictationArea.beforeLeave(() => show(id, true)); return; }
     if (id === "chat" && !zecaOn && !activeProfile) id = "flock";
     tab = id;
+    if (id !== "chat") closeChatOptions(false);
     if (id !== "activity") rememberPlace();
     for (const k of TABS) panes[k].hidden = k !== id;
     head.set(id);
@@ -614,6 +713,13 @@ export function createNest(
   }
   const relabel = () => {
     recipientPicker.setAttribute("aria-label", t("Recipient"));
+    recipientRetryButton.textContent = t("Try again");
+    recipientErrorSummary.textContent = t("Technical details");
+    optionsSummary.title = t("Conversation options");
+    optionsSummary.setAttribute("aria-label", t("Conversation options"));
+    optionsBody.setAttribute("aria-label", t("Conversation options"));
+    optionsBody.setAttribute("role", "region");
+    if (recipientErrorKind) recipientErrorMessage.textContent = recipientFailureMessage(recipientErrorKind);
     profilesLink.textContent = t("Specialists");
     profiles.relabel();
     const subWords: Record<Sub, string> = {

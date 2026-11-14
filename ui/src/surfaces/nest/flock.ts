@@ -2,6 +2,7 @@
 import type { Answer, Diff, FlockPlace, Hush, ProjectPref, UsageWindow } from "../../bridge";
 import type { AgentKind, ApprovalView, SessionView, TouchedView, ViewModel } from "../../view.gen";
 import { el } from "../../dom";
+import { copyTextButton } from "../../clipboard";
 import { t, locale } from "../../i18n";
 import { AGENTS } from "../../agents.gen";
 import { assignSpecies } from "../../island/flock";
@@ -445,6 +446,18 @@ export function createFlock(on: FlockActions & FlockAsk): {
   let onScreen: string | null = null;
   /** A card answered once: a second click or key on it sends nothing. */
   let sent: string | null = null;
+  /** Keep policy disclosure state on the request, independently of lane/card redraws. */
+  let policyRequest: string | null = null;
+  const policyOpen = new Set<string>();
+  /** Reuse feedback nodes while session updates redraw the decision around them. */
+  const copyButtons = new Map<string, { text: string; action: string; name: string; button: HTMLButtonElement }>();
+  const copyButton = (text: string, className: string, name: string, id: string, action = t("Copy")) => {
+    const kept = copyButtons.get(id);
+    if (kept?.text === text && kept.action === action && kept.name === name) return kept.button;
+    const button = fid(copyTextButton(text, className, name, action), id);
+    copyButtons.set(id, { text, action, name, button });
+    return button;
+  };
   let onlyNeeds = false;
   let status: FlockPlace["status"] = null;
   let choosing = false;
@@ -798,10 +811,21 @@ export function createFlock(on: FlockActions & FlockAsk): {
     };
     const kbd = (k: string | undefined) => (k ? el("span", { class: "kbd", text: k }) : null);
     const destructive = ask.why === "destructive";
-    const always = approvalRuleFolder(s, ask) && !ask.cut && !destructive
-      ? fid(el("button", { class: "ghost", text: t("Always allow"), onclick: answer("always") }), `${at}:always`)
-      : null;
-    if (always) always.title = t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: approvalFolder(s, ask) || t("this folder") });
+    if (policyRequest !== ask.request) { policyRequest = ask.request; policyOpen.clear(); }
+    let always: HTMLDetailsElement | null = null;
+    if (approvalRuleFolder(s, ask) && !ask.cut && !destructive) {
+      const summary = fid(el("summary", { text: t("Always allow…") }), `${at}:always-options`);
+      always = el("details", { class: "decision-policy" }, summary,
+        el("div", { class: "decision-policy-body" },
+          el("p", { text: t("Allow this exact {tool} call in {project} from now on, without asking", { tool: ask.tool, project: approvalFolder(s, ask) || t("this folder") }) }),
+          fid(el("button", { class: "outline", text: t("Always allow"), onclick: answer("always") }), `${at}:always`)));
+      always.open = policyOpen.has(at);
+      always.addEventListener("toggle", () => {
+        if (always?.isConnected && policyRequest === ask.request) {
+          if (always.open) policyOpen.add(at); else policyOpen.delete(at);
+        }
+      });
+    }
     // In a short window the reason and folder ride in the fixed bar, so the scope is in view with Deny and
     // Allow; elsewhere these copies are display:none and the card's own lines are the ones read.
     const folder = approvalFolder(s, ask);
@@ -826,7 +850,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     return [
       el("div", { class: "command" },
         el("code", { text: command }),
-        fid(el("button", { class: "outline", text: t("Copy"), onclick: () => void navigator.clipboard?.writeText(command).catch(() => {}) }), `${at}:copy`)),
+        copyButton(command, "outline", t("Copy command"), `${at}:copy`)),
       permission.why
         ? el("p", { class: `ask-why ${permission.why}` },
             permission.why === "destructive" ? icon("warning", 13, 2) : null,
@@ -844,20 +868,19 @@ export function createFlock(on: FlockActions & FlockAsk): {
     if (!ask) return null;
     const command = ask.full ? `${ask.tool} · ${ask.full}` : ask.target;
     const folder = ask.cwd ?? s.cwd;
-    const copy = (text: string) => () => void navigator.clipboard?.writeText(text).catch(() => {});
     return el(
       "section",
       { class: "returned-request" },
       el("h4", { text: ask.question ? t("Question that went back to the terminal") : t("Request that went back to the terminal") }),
       ask.question ? null : el("div", { class: "command" },
         el("code", { text: command }),
-        fid(el("button", { class: "outline", text: t("Copy"), onclick: copy(command) }), "act:returned-copy")),
+        copyButton(command, "outline", t("Copy command"), "act:returned-copy")),
       el("p", { class: "rule-scope" },
         el("span", { text: s.raise === true
           ? t("Answer it in its terminal.")
-          : t("Answer it in the terminal where {agent} runs, in {path}.", { agent: agentName(s), path: folder ? shortPath(folder) : t("its folder") }) }),
+          : t("Answer it in the terminal where {agent} runs, in {path}.", { agent: agentName(s), path: folder || t("its folder") }) }),
         s.raise !== true && folder
-          ? fid(el("button", { class: "ghost returned-folder", text: t("Copy folder"), onclick: copy(folder) }), "act:returned-folder")
+          ? copyButton(folder, "ghost returned-folder", t("Copy folder"), "act:returned-folder", t("Copy folder"))
           : null),
     );
   };

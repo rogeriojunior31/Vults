@@ -181,10 +181,11 @@ window.addEventListener("keydown", (e) => {
     void Bridge.setSize("room", "settings");
   }
 });
-const asked = (section: string): Page | null => dictationSetting(section) ? "dictation" : PAGES.find((p) => p.id === section)?.id ?? null;
+const asked = (section: string): Page | null => section === "chatmemory" ? "chat" : dictationSetting(section) ? "dictation" : PAGES.find((p) => p.id === section)?.id ?? null;
 /** The page the app asked for (the tray's Set up agents…), else General until the agents are read:
  *  Agents when one has no hooks yet or older ones (`chooseStart`). */
-let focusDestination = dictationSetting(location.hash.slice(1)) !== null;
+let focusDestination = dictationSetting(location.hash.slice(1)) !== null || location.hash.slice(1) === "chatmemory";
+let chatSection: "memory" | null = location.hash.slice(1) === "chatmemory" ? "memory" : null;
 let dictationSection: DictationSetting = dictationSetting(location.hash.slice(1)) ?? "voice";
 const linked = asked(location.hash.slice(1));
 let page: Page = linked ?? "general";
@@ -1624,6 +1625,10 @@ function chatPage(): HTMLElement[] {
   }
   rows.push(message ? el("div", { class: "row" }, message) : null);
 
+  const memoryTitle = el("h2", { text: t("Memory") });
+  memoryTitle.dataset.chatSection = "memory";
+  memoryTitle.dataset.setting = "chat-memory-heading";
+  memoryTitle.tabIndex = -1;
   return [
     el("h1", { text: t("Chat & voice") }),
     ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock & Zeca): no chat or voice until you turn him back on.") })]),
@@ -1679,7 +1684,8 @@ function chatPage(): HTMLElement[] {
           : []),
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
-    el("h2", { text: t("Memory") }),
+    memoryTitle,
+    ...(chatSection === "memory" ? [button(t("Back to Chat"), () => void Bridge.openNest("memory"))] : []),
     el(
       "section",
       { class: "card rows" },
@@ -2201,10 +2207,11 @@ function chooseDictation(section: DictationSetting): void {
   choosePage("dictation");
 }
 
-function choosePage(next: Page): void {
+function choosePage(next: Page, section?: "memory"): void {
   page = next;
+  chatSection = next === "chat" ? section ?? null : null;
   navigated = true;
-  location.hash = next === "dictation" ? `dictation${dictationSection}` : next;
+  location.hash = next === "dictation" ? `dictation${dictationSection}` : chatSection === "memory" ? "chatmemory" : next;
   apiMessage = null;
   if (next === "agents") doctorAsked = false;
   if (next === "approvals") {
@@ -2233,7 +2240,7 @@ function render(): void {
   playerAudio.context(page === "dictation" && dictationSection === "commands" && windowsShortcuts.supported() && !document.hidden, dictationCommands && dictationCommandMedia && nowPlaying);
   const tool = page === "dictation" && dictationTool();
   const preferences = page === "dictation" && !tool;
-  const place = tool ? `dictation${dictationSection}` : page;
+  const place = tool ? `dictation${dictationSection}` : page === "chat" && chatSection === "memory" ? "chatmemory" : page;
   if (page === "activity") budget.relabel();
   const currentScroll = root.querySelector("main.page")?.scrollTop ?? 0;
   const sidebarScroll = root.querySelector(".sidebar")?.scrollTop ?? 0;
@@ -2349,7 +2356,12 @@ function render(): void {
       if (editable && focus.selectionStart !== null) next.setSelectionRange(focus.selectionStart, focus.selectionEnd);
     }
   }
-  if (focusDestination) { main.focus({ preventScroll: true }); focusDestination = false; }
+  if (focusDestination) {
+    const destination = page === "chat" && chatSection === "memory" ? main.querySelector<HTMLElement>('[data-chat-section="memory"]') : null;
+    destination?.scrollIntoView?.({ block: "start" });
+    (destination ?? main).focus({ preventScroll: true });
+    focusDestination = false;
+  }
   drawn = place;
   const logo = root.querySelector<HTMLImageElement>("img.logo");
   if (logo) logo.src = "/icon.png";
@@ -2448,7 +2460,7 @@ Bridge.onSettingsSection((section) => {
   if (p) {
     focusDestination = true;
     const selected = dictationSetting(section);
-    if (selected) chooseDictation(selected); else choosePage(p);
+    if (selected) chooseDictation(selected); else choosePage(p, section === "chatmemory" ? "memory" : undefined);
   }
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.

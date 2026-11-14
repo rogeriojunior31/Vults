@@ -21,6 +21,9 @@ const QUERY = "vults.recent-query";
 export function createRecent(on: RecentActions): { element: HTMLElement; refresh: () => void; clear: () => void } {
   const back = on.close ? el("button", { class: "nest-recent-back", onclick: on.close }) : null;
   const fresh = el("button", { class: "outline nest-new-chat", onclick: () => { if (!on.busy()) on.fresh(); } });
+  const busyNotice = el("p", { class: "nest-recent-busy" });
+  busyNotice.setAttribute("role", "status");
+  busyNotice.hidden = true;
   const search = el("input", { class: "nest-recent-search" });
   search.type = "search";
   try { search.value = localStorage.getItem(QUERY) ?? ""; } catch { /* Search still works without local storage. */ }
@@ -29,38 +32,50 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
   const status = el("div", { class: "nest-recent-status" });
   status.setAttribute("role", "status");
   const list = el("div", { class: "nest-recent-list" });
-  const element = el("aside", { class: "nest-recent" }, el("div", { class: "nest-recent-actions" }, back, fresh), search, head, status, list);
+  const element = el("aside", { class: "nest-recent" }, el("div", { class: "nest-recent-actions" }, back, fresh), busyNotice, search, head, status, list);
   let asked = 0;
   let rows: ConversationView[] | null = null;
   let failed = false;
   let expanded = false;
   let loading = false;
+  let statusKey = "";
+  let returning: string | null = null;
 
   const paint = () => {
     const active = document.activeElement as HTMLElement | null;
-    const focusedId = active && list.contains(active) ? active.dataset.conversation : null;
+    if (active && (list.contains(active) || status.contains(active))) returning = active.dataset.recentFocus ?? null;
+    else if (active && active !== document.body) returning = null;
     const scroll = list.scrollTop;
     list.setAttribute("aria-busy", String(loading));
     const busy = on.busy();
+    const busyMessage = busy ? t("Wait for the current action to finish before opening or starting another conversation.") : "";
+    // Keep one live node and avoid announcing the same explanation on every refresh.
+    if (busyNotice.textContent !== busyMessage) busyNotice.textContent = busyMessage;
+    busyNotice.hidden = !busy;
     const query = search.value.trim().toLocaleLowerCase(locale());
     const matches = (rows ?? []).filter(c => !query || [c.title, c.folder, c.label].filter(Boolean).join(" ").toLocaleLowerCase(locale()).includes(query))
       .sort((a, b) => b.updatedMs - a.updatedMs || b.id - a.id);
     const shown = expanded ? matches : matches.slice(0, SHOWN);
     fresh.textContent = t("+ New conversation");
     fresh.disabled = busy;
-    fresh.title = busy ? t("Wait for Zeca's reply to end") : "";
+    fresh.title = busyMessage;
     search.placeholder = t("Search conversations");
     search.setAttribute("aria-label", t("Search conversations"));
     element.setAttribute("aria-label", t("Recent"));
     if (back) back.textContent = t("Back to Chat");
     head.textContent = t("Recent");
-    status.replaceChildren();
-    status.hidden = !failed && (rows !== null || !loading);
-    if (failed) {
-      const retry = el("button", { class: "outline", text: loading ? t("Loading") : t("Try again"), onclick: () => { if (!loading) refresh(); } });
-      retry.disabled = loading;
-      status.append(viewState("error", rows ? t("Conversations could not update. The last loaded list may be out of date.") : t("Conversations could not load. Try again."), undefined, retry));
-    } else if (loading && rows === null) status.append(viewState("loading", t("Loading")));
+    const nextStatusKey = JSON.stringify([failed, loading, rows === null, locale()]);
+    if (nextStatusKey !== statusKey) {
+      statusKey = nextStatusKey;
+      status.replaceChildren();
+      status.hidden = !failed && (rows !== null || !loading);
+      if (failed) {
+        const retry = el("button", { class: "outline", text: loading ? t("Loading") : t("Try again"), onclick: () => { if (!loading) refresh(); } });
+        retry.disabled = loading;
+        retry.dataset.recentFocus = "retry";
+        status.append(viewState("error", rows ? t("Conversations could not update. The last loaded list may be out of date.") : t("Conversations could not load. Try again."), undefined, retry));
+      } else if (loading && rows === null) status.append(viewState("loading", t("Loading")));
+    }
     const parts: HTMLElement[] = [];
     let previousDay = "";
     for (const c of shown) {
@@ -74,6 +89,7 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
         el("time", { class: "nest-recent-time", text: new Date(c.updatedMs).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) }),
       );
       button.dataset.conversation = String(c.id);
+      button.dataset.recentFocus = `conversation:${c.id}`;
       if (c.current) button.setAttribute("aria-current", "true");
       button.disabled = busy && !c.current;
       button.title = [c.title || t("Untitled"), c.folder, c.label].filter(Boolean).join("\n");
@@ -86,7 +102,16 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
     if (!expanded && matches.length > SHOWN) parts.push(el("button", { class: "outline", text: t("Show more"), onclick: () => { expanded = true; paint(); list.querySelectorAll<HTMLElement>(".nest-recent-row")[SHOWN]?.focus(); } }));
     list.replaceChildren(...parts);
     list.scrollTop = scroll;
-    if (focusedId) list.querySelector<HTMLElement>(`[data-conversation="${focusedId}"]`)?.focus({ preventScroll: true });
+    if (returning) {
+      const next = element.querySelector<HTMLButtonElement>(`[data-recent-focus="${CSS.escape(returning)}"]`);
+      if (next && !next.disabled) {
+        next.focus({ preventScroll: true });
+        returning = null;
+      } else if (!loading) {
+        search.focus({ preventScroll: true });
+        returning = null;
+      }
+    }
   };
   search.addEventListener("input", () => { rememberQuery(); expanded = false; paint(); list.scrollTop = 0; });
   search.addEventListener("keydown", e => {
