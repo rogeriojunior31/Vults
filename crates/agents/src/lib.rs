@@ -180,6 +180,62 @@ pub fn hook_command(hook_exe: &Path, agent: &str, event: &str) -> String {
     format!("'{}' --agent {agent} {event}", exe.replace('\'', r"'\''"))
 }
 
+/// The shell an agent hands a hook's command line to on Windows. Elsewhere every agent runs
+/// hooks with a POSIX shell, and [`shell_hook_command`] is [`hook_command`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WindowsShell {
+    /// `cmd /c`: Antigravity, Droid, Kimi, and Qwen started outside Git Bash.
+    Cmd,
+    /// PowerShell: Cursor, and Copilot's `powershell` key.
+    PowerShell,
+}
+
+/// [`hook_command`] for an agent that runs hooks through `shell` on Windows.
+pub fn shell_hook_command(shell: WindowsShell, hook_exe: &Path, agent: &str, event: &str) -> String {
+    if cfg!(windows) {
+        windows_shell_command(shell, hook_exe, agent, event)
+    } else {
+        hook_command(hook_exe, agent, event)
+    }
+}
+
+pub(crate) fn windows_shell_command(
+    shell: WindowsShell,
+    hook_exe: &Path,
+    agent: &str,
+    event: &str,
+) -> String {
+    let exe = hook_exe.to_string_lossy();
+    let args = format!("--agent {agent} {event}");
+    // Unquoted, such a path reads the same to cmd, PowerShell and Git Bash: the hook runs
+    // whichever one the agent picks (Qwen's depends on how it was started).
+    if is_plain(&exe) {
+        return format!("{} {args}", exe.replace('\\', "/"));
+    }
+    match shell {
+        // A Windows path cannot hold `"`. Qwen's cmd mode still breaks here: Node escapes the
+        // quotes as `\"`, which cmd keeps.
+        WindowsShell::Cmd => format!("\"{}\" {args}", exe.replace('\\', "/")),
+        // A quoted string alone is an expression there: `&` runs it.
+        WindowsShell::PowerShell => format!("& '{}' {args}", exe.replace('\'', "''")),
+    }
+}
+
+/// No space and nothing any of the three shells reads specially.
+fn is_plain(path: &str) -> bool {
+    !path.is_empty()
+        && path
+            .chars()
+            .all(|c| c.is_alphanumeric() || matches!(c, '\\' | '/' | ':' | '.' | '-' | '_'))
+}
+
+/// An unquoted absolute Windows path, as [`windows_shell_command`] writes it.
+fn plain_windows_exe(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    let drive = bytes.len() > 3 && bytes[0].is_ascii_alphabetic() && &bytes[1..3] == b":/";
+    (drive || path.starts_with("//")) && is_plain(path)
+}
+
 // Codex uses the session's shell, which can be either cmd.exe or PowerShell.
 const WINDOWS_HOOK_PREFIX: &str = "powershell.exe -NoProfile -NonInteractive -Command \"& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('";
 
@@ -204,6 +260,19 @@ pub fn hook_exe_of(command: &str) -> Option<PathBuf> {
         let (_, quoted) = script.split_once(" | & '")?;
         let (exe, _) = quoted.rsplit_once("' --agent ")?;
         return Some(PathBuf::from(exe.replace("''", "'")));
+    }
+    if let Some(quoted) = command.strip_prefix("& '") {
+        let (exe, _) = quoted.split_once("' --agent ")?;
+        return Some(PathBuf::from(exe.replace("''", "'")));
+    }
+    if let Some(quoted) = command.strip_prefix('"') {
+        let (exe, _) = quoted.split_once("\" --agent ")?;
+        return Some(PathBuf::from(exe));
+    }
+    if let Some((exe, _)) = command.split_once(" --agent ")
+        && plain_windows_exe(exe)
+    {
+        return Some(PathBuf::from(exe));
     }
     let quoted = command.strip_prefix('\'')?;
     let end = quoted.find("' --agent ")?;
@@ -561,6 +630,123 @@ mod tests {
         }
     }
 
+    #[test]
+    fn windows_commands_fit_the_agents_shell() {
+        use WindowsShell::{Cmd, PowerShell};
+        let plain = Path::new(r"C:\Users\me\AppData\Local\vults\bin\vults-hook.exe");
+        for shell in [Cmd, PowerShell] {
+            let command = windows_shell_command(shell, plain, "droid", "Stop");
+            assert_eq!(
+                command,
+                "C:/Users/me/AppData/Local/vults/bin/vults-hook.exe --agent droid Stop"
+            );
+            assert_eq!(
+                hook_exe_of(&command),
+                Some(PathBuf::from(
+                    "C:/Users/me/AppData/Local/vults/bin/vults-hook.exe"
+                ))
+            );
+        }
+        let spaced = Path::new(r"C:\Users\O'Brien Last\vults-hook.exe");
+        let cmd = windows_shell_command(Cmd, spaced, "kimi", "Stop");
+        assert_eq!(cmd, r#""C:/Users/O'Brien Last/vults-hook.exe" --agent kimi Stop"#);
+        assert_eq!(
+            hook_exe_of(&cmd),
+            Some(PathBuf::from("C:/Users/O'Brien Last/vults-hook.exe"))
+        );
+        let ps = windows_shell_command(PowerShell, spaced, "cursor", "stop");
+        assert_eq!(
+            ps,
+            r"& 'C:\Users\O''Brien Last\vults-hook.exe' --agent cursor stop"
+        );
+        assert_eq!(hook_exe_of(&ps), Some(spaced.to_path_buf()));
+        for command in [cmd, ps] {
+            assert!(vults_agent_config::runs_ours(&command, MARKER));
+        }
+        // A UNC share is plain too; a bare or relative name is no hook path.
+        let unc = windows_shell_command(Cmd, Path::new(r"\\nas\home\vults-hook.exe"), "qwen", "Stop");
+        assert_eq!(
+            hook_exe_of(&unc),
+            Some(PathBuf::from("//nas/home/vults-hook.exe"))
+        );
+        assert_eq!(hook_exe_of("bin/vults-hook.exe --agent qwen Stop"), None);
+    }
+
+    /// Each command the installer writes, run as each agent's shell runs it, with the JSON on
+    /// stdin: from a plain folder and from one with a space and a quote.
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "set VULTS_TEST_HOOK to a built vults-hook.exe for native shell execution"]
+    fn windows_hooks_run_in_each_agents_shell() {
+        use std::io::Write;
+        use std::os::windows::process::CommandExt;
+        use std::process::{Command, Stdio};
+        let source = std::env::var_os("VULTS_TEST_HOOK").expect("VULTS_TEST_HOOK");
+        let bash = Path::new(r"C:\Program Files\Git\bin\bash.exe");
+        let pid = std::process::id();
+        for folder in [format!("vults-plain-{pid}"), format!("vults O'Brien {pid}")] {
+            let dir = std::env::temp_dir().join(folder);
+            std::fs::create_dir_all(&dir).unwrap();
+            let exe = dir.join("vults-hook.exe");
+            std::fs::copy(&source, &exe).unwrap();
+            let plain = is_plain(&exe.to_string_lossy());
+            let cmd = windows_shell_command(WindowsShell::Cmd, &exe, "droid", "Stop");
+            let ps = windows_shell_command(WindowsShell::PowerShell, &exe, "cursor", "stop");
+            // (what runs, the command line it gets)
+            let mut runs: Vec<(&str, Command)> = Vec::new();
+            for (name, verbatim) in [
+                // Antigravity and Droid.
+                ("cmd /d /s /c", format!("/d /s /c \"{cmd} || exit 0\"")),
+                // Kimi (Python's shell=True).
+                ("cmd /c", format!("/c \"{cmd}\"")),
+            ] {
+                let mut c = Command::new("cmd.exe");
+                c.raw_arg(verbatim);
+                runs.push((name, c));
+            }
+            // Qwen from Git Bash.
+            if bash.exists() {
+                let mut c = Command::new(bash);
+                c.args(["-c", &cmd]);
+                runs.push(("bash -c", c));
+            }
+            for shell in ["powershell.exe", "pwsh.exe"] {
+                // Cursor pipes its input in; Copilot runs the key as it is.
+                for script in [format!("$input | {ps}"), format!("{ps}; exit 0")] {
+                    let mut c = Command::new(shell);
+                    c.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
+                    runs.push((shell, c));
+                }
+                // The plain form is the same text for every shell.
+                if plain {
+                    let mut c = Command::new(shell);
+                    c.args(["-NoProfile", "-NonInteractive", "-Command", &cmd]);
+                    runs.push((shell, c));
+                }
+            }
+            for (name, mut process) in runs {
+                let spawned = process
+                    // A debug hook then never reaches the running app's pipe.
+                    .env("VULTS_HOOK_TEST_PIPE_SUFFIX", "agent-shells")
+                    .creation_flags(0x0800_0000)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn();
+                // pwsh is not on every machine.
+                let Ok(mut child) = spawned else { continue };
+                child.stdin.take().unwrap().write_all(b"{}").unwrap();
+                let output = child.wait_with_output().unwrap();
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                assert!(output.status.success(), "{name} in {}: {stderr}", dir.display());
+                assert!(output.stdout.is_empty(), "{name}: unexpected hook output");
+                assert!(stderr.is_empty(), "{name} in {}: {stderr}", dir.display());
+            }
+            std::fs::remove_file(exe).unwrap();
+            std::fs::remove_dir(dir).unwrap();
+        }
+    }
+
     #[cfg(windows)]
     #[test]
     #[ignore = "set VULTS_TEST_HOOK to a built vults-hook.exe for native shell execution"]
@@ -624,7 +810,12 @@ mod tests {
     #[test]
     fn hooks_from_another_folder_are_not_an_older_version() {
         use vults_agent_config::with_ours;
-        let (here, there) = (Path::new("/here/vults-hook"), Path::new("/there/vults-hook"));
+        // A Windows hook path always has its drive.
+        let (here, there) = if cfg!(windows) {
+            (Path::new("C:/here/vults-hook"), Path::new("C:/there/vults-hook"))
+        } else {
+            (Path::new("/here/vults-hook"), Path::new("/there/vults-hook"))
+        };
         for kind in [AgentKind::Claude, AgentKind::Codex, AgentKind::Qwen] {
             let a = agent(kind).unwrap();
             let elsewhere = with_ours(&serde_json::json!({}), &a.hook_entries(there), MARKER);
@@ -710,7 +901,11 @@ mod tests {
             }
         }
         use vults_agent_config as config;
-        let (old, new) = (Path::new("/old/vults-hook"), Path::new("/new/vults-hook"));
+        let (old, new) = if cfg!(windows) {
+            (Path::new("C:/old/vults-hook"), Path::new("C:/new/vults-hook"))
+        } else {
+            (Path::new("/old/vults-hook"), Path::new("/new/vults-hook"))
+        };
         let dir = std::env::temp_dir().join(format!("vults-agents-order-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
 

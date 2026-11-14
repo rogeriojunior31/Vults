@@ -42,7 +42,7 @@ impl Watcher {
 }
 
 /// Unknown errors never mean closed. A birth token prevents a recycled PID from keeping a ghost.
-fn probe(pid: u32) -> Option<Option<u64>> {
+pub(crate) fn probe(pid: u32) -> Option<Option<u64>> {
     if pid <= 1 {
         return None;
     }

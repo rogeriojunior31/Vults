@@ -2060,8 +2060,9 @@ fn keep_turn(turn: &core::turns::Turn) {
 fn today() -> Option<core::looks::Date> {
     #[cfg(target_os = "linux")]
     return vults_platform::linux::today().map(|(y, m, d)| core::looks::Date::new(y, m, d));
+    // The local day as the history dates its turns: the clock and the desktop's zone.
     #[cfg(not(target_os = "linux"))]
-    None
+    Some(crate::history::today())
 }
 
 /// A click on a session row: bring its terminal forward.

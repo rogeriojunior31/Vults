@@ -208,7 +208,7 @@ async fn fetch_vad() {
 /// Turns voice off: the mic goes from the island; downloaded models stay on disk.
 #[tauri::command]
 pub fn voice_off(app: AppHandle) -> Result<(), String> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cancel(&app, true);
     settings::edit(&app, |s| s.voice_model = None)?;
     let model = app
@@ -274,7 +274,7 @@ pub fn voice_start(
                 }),
             }
         });
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::dictation::cancel(&app, false);
     // A recording still going is dropped first, so its preview never shows in this one.
     cancel(&app);

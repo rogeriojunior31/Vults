@@ -137,6 +137,33 @@ pub fn process_image(pid: u32) -> Option<std::path::PathBuf> {
     }
 }
 
+/// The full name on this user's account (a local or Microsoft account's), as the account manager
+/// shows it; none when it is unset or cannot be read.
+pub fn full_name() -> Option<String> {
+    use windows::Win32::NetworkManagement::NetManagement::{NetApiBufferFree, NetUserGetInfo, USER_INFO_2};
+    use windows::core::{HSTRING, PCWSTR};
+    // Only a key to look the account up: what it finds is a display name, never trusted for access.
+    let user = HSTRING::from(std::env::var("USERNAME").ok()?);
+    let mut buf: *mut u8 = std::ptr::null_mut();
+    // SAFETY: valid strings for the call; on success Windows allocates `buf`, freed below.
+    let status = unsafe { NetUserGetInfo(PCWSTR::null(), &user, 2, &mut buf) };
+    if status != 0 || buf.is_null() {
+        return None;
+    }
+    // SAFETY: level 2 fills a USER_INFO_2 at `buf`; its strings live until the buffer is freed.
+    let name = unsafe {
+        let info = &*(buf as *const USER_INFO_2);
+        (!info.usri2_full_name.is_null())
+            .then(|| info.usri2_full_name.to_string().ok())
+            .flatten()
+    };
+    // SAFETY: `buf` came from NetUserGetInfo and is freed once.
+    unsafe {
+        let _ = NetApiBufferFree(Some(buf.cast()));
+    }
+    name.filter(|n| !n.trim().is_empty())
+}
+
 /// The SID this process runs as, as `S-1-5-21-…`.
 pub fn current_user_sid() -> Option<String> {
     // SAFETY: the pseudo-handle from GetCurrentProcess is always valid and needs no close.
@@ -259,6 +286,13 @@ mod process_tests {
                 String::from_utf8_lossy(&output.stderr)
             );
         }
+    }
+
+    #[test]
+    fn the_account_full_name_is_read_or_absent_never_blank() {
+        // Unset on some accounts; when there, never a blank string.
+        let name = super::full_name();
+        assert!(name.as_deref().is_none_or(|n| !n.trim().is_empty()));
     }
 
     #[test]

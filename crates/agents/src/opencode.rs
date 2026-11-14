@@ -119,7 +119,8 @@ function toolInput(args, tool) {{
 function run(event, payload) {{
   return new Promise((done) => {{
     try {{
-      const child = spawn(RELAY, ["--agent", "{NAME}", event], {{ stdio: ["pipe", "ignore", "ignore"], detached: true }});
+      // Detached on Windows means a console of its own: hidden, it opens no window per step.
+      const child = spawn(RELAY, ["--agent", "{NAME}", event], {{ stdio: ["pipe", "ignore", "ignore"], detached: true, windowsHide: true }});
       setTimeout(done, 2000).unref();
       child.on("error", () => done());
       child.on("exit", () => done());
@@ -136,7 +137,7 @@ function ask(args, payload) {{
   const result = new Promise((done) => {{
     try {{
       let out = "";
-      child = spawn(RELAY, ["--agent", "{NAME}", ...args], {{ stdio: ["pipe", "pipe", "ignore"] }});
+      child = spawn(RELAY, ["--agent", "{NAME}", ...args], {{ stdio: ["pipe", "pipe", "ignore"], windowsHide: true }});
       const limit = setTimeout(() => {{ try {{ child.kill(); }} catch {{}} }}, {wait_ms});
       limit.unref();
       child.stdout?.setEncoding("utf8");

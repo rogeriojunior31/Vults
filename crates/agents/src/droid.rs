@@ -13,7 +13,7 @@ use vults_agent_config::HookEntry;
 use vults_core::AgentUpdate;
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, Dirs, hook_command};
+use crate::{Agent, Dirs, WindowsShell, shell_hook_command};
 
 /// The name its sessions go by, and the `--agent` its hooks run with.
 pub(crate) const NAME: &str = "droid";
@@ -73,7 +73,8 @@ impl Agent for Droid {
             .iter()
             .map(|&(event, timeout)| HookEntry {
                 event,
-                command: hook_command(hook_exe, NAME, event),
+                // `%ComSpec% /d /s /c` on Windows, read from droid 1.10's bundled code.
+                command: shell_hook_command(WindowsShell::Cmd, hook_exe, NAME, event),
                 timeout,
                 status_message: None,
             })

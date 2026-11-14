@@ -498,6 +498,15 @@ pub fn run() {
             panel::apply(&handle);
             widget::apply(&handle);
             media::apply(&handle, settings::now_playing(&handle));
+            #[cfg(windows)]
+            {
+                use tauri::Emitter;
+                let app = handle.clone();
+                vults_platform::windows_displays::on_monitors_changed(move || {
+                    place_surfaces(&app);
+                    let _ = app.emit("monitors", ());
+                });
+            }
             #[cfg(target_os = "linux")]
             {
                 use tauri::Emitter;

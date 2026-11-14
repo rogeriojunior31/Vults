@@ -336,16 +336,17 @@ async fn run(
     // A new session counts from zero: its first totals are its first turn's.
     let fresh = id.is_none();
     let mut cmd = command(spec, turn, id.as_deref());
-    let mut child = crate::dies_with_app(&mut cmd)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        // Never read: a full pipe would stall the CLI mid-turn.
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => "The Claude CLI isn't installed.".to_string(),
-            _ => format!("Can't start Claude: {e}"),
-        })?;
+    let mut child = crate::spawn_owned(
+        crate::dies_with_app(&mut cmd)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            // Never read: a full pipe would stall the CLI mid-turn.
+            .stderr(Stdio::null()),
+    )
+    .map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => "The Claude CLI isn't installed.".to_string(),
+        _ => format!("Can't start Claude: {e}"),
+    })?;
     let mut stdin = child.stdin.take().ok_or("no stdin")?;
     let message = json!({ "type": "user", "message": { "role": "user", "content": prompt(turn, None) } });
     write(&mut stdin, &message).await?;

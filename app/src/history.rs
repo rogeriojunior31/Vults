@@ -363,24 +363,47 @@ fn image_name(name: &str) -> String {
 }
 
 /// Settings → Activity's *Save as image…*: the PNG the page drew, written only where the user
-/// picks in the desktop's own dialog (on Linux; elsewhere into the Pictures folder). The path it
-/// went to, `~` for home; none when the user cancelled.
+/// picks in the desktop's own dialog. The path it went to, `~` for home; none when the user
+/// cancelled.
 #[tauri::command]
-pub async fn save_recap_image(name: String, png: Vec<u8>) -> Result<Option<String>, String> {
+pub async fn save_recap_image(
+    app: tauri::AppHandle,
+    name: String,
+    png: Vec<u8>,
+) -> Result<Option<String>, String> {
     if png.len() > MAX_IMAGE || !png.starts_with(PNG_MAGIC) {
         return Err("not a PNG image".into());
     }
     let name = image_name(&name);
     #[cfg(target_os = "linux")]
-    let path = match vults_platform::save::png("Save the week as an image", &name).await {
-        Some(path) => path,
-        None => return Ok(None),
+    let path = {
+        let _ = app;
+        match vults_platform::save::png("Save the week as an image", &name).await {
+            Some(path) => path,
+            None => return Ok(None),
+        }
     };
     #[cfg(not(target_os = "linux"))]
     let path = {
-        let dir = crate::paths::home().join("Pictures");
-        std::fs::create_dir_all(&dir).map_err(|e| format!("can't make {}: {e}", dir.display()))?;
-        dir.join(&name)
+        use tauri::Manager;
+        use tauri_plugin_dialog::DialogExt;
+        // The Pictures folder Windows knows, wherever it was moved (OneDrive included).
+        let mut dialog = app
+            .dialog()
+            .file()
+            .set_title("Save the week as an image")
+            .set_file_name(&name)
+            .add_filter("PNG", &["png"]);
+        if let Ok(pictures) = app.path().picture_dir() {
+            dialog = dialog.set_directory(pictures);
+        }
+        let picked = tauri::async_runtime::spawn_blocking(move || dialog.blocking_save_file())
+            .await
+            .map_err(|e| e.to_string())?;
+        match picked.and_then(|p| p.into_path().ok()) {
+            Some(path) => path,
+            None => return Ok(None),
+        }
     };
     let shown = crate::paths::shown(&path);
     tauri::async_runtime::spawn_blocking(move || std::fs::write(&path, png))

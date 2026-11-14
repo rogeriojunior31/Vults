@@ -7,7 +7,7 @@ use std::process::Stdio;
 
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
-use tokio::process::{Child, ChildStdin, ChildStdout, Command};
+use tokio::process::{ChildStdin, ChildStdout, Command};
 
 use std::collections::HashMap;
 
@@ -18,7 +18,7 @@ use crate::{Turn, Usage, full, is_image, prompt, target};
 
 #[derive(Debug)]
 pub(crate) struct AppServer {
-    _child: Child,
+    _child: crate::OwnedChild,
     stdin: ChildStdin,
     lines: Lines<BufReader<ChildStdout>>,
     next_id: u64,
@@ -381,13 +381,14 @@ impl AppServer {
                 return Err("The Codex specialist login is unavailable.".into());
             }
         }
-        let mut child = crate::dies_with_app(&mut cmd)
-            .current_dir(work_dir)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        let mut child = crate::spawn_owned(
+            crate::dies_with_app(&mut cmd)
+                .current_dir(work_dir)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null()),
+        )
+        .map_err(|e| e.to_string())?;
         let stdin = child.stdin.take().ok_or("no stdin")?;
         let stdout = child.stdout.take().ok_or("no stdout")?;
         let mut server = Self {

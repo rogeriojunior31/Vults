@@ -30,6 +30,16 @@ use crate::{
     RunState, Said, Snapshot, Story, StoryKind,
 };
 
+/// `gh`, with no console window on Windows: the app has none, so each call would otherwise open
+/// one (a Terminal window, where that is the default terminal) for as long as it runs.
+fn gh() -> Command {
+    #[allow(unused_mut)]
+    let mut command = Command::new("gh");
+    #[cfg(windows)]
+    command.creation_flags(0x0800_0000);
+    command
+}
+
 #[derive(Debug)]
 pub struct GitHub;
 
@@ -128,7 +138,7 @@ impl Connector for GitHub {
 
     fn poll(&self) -> Poll<'_> {
         Box::pin(async {
-            let out = Command::new("gh")
+            let out = gh()
                 .args(["api", "graphql", "-f"])
                 .arg(format!("query={QUERY}"))
                 .kill_on_drop(true)
@@ -828,7 +838,7 @@ impl GithubApi for GhApi {
         path: &str,
         body: Option<Value>,
     ) -> Result<Value, Error> {
-        let mut command = Command::new("gh");
+        let mut command = gh();
         command.args(["api", "--method", method, path]);
         if path.contains("/merge-async") {
             command.args(["-H", "X-GitHub-Api-Version: 2026-03-10"]);
@@ -1314,7 +1324,7 @@ async fn gh_api_json(path: &str, limit: usize) -> Result<Value, Error> {
 }
 
 async fn gh_api_included(path: &str, limit: usize) -> Result<(bool, Vec<u8>, Vec<u8>), Error> {
-    let mut command = Command::new("gh");
+    let mut command = gh();
     command.args(["api", "-i", path]);
     run_bounded(command, limit).await
 }
@@ -1340,7 +1350,7 @@ fn response_body_and_next(response: &[u8]) -> Result<(&[u8], bool), Error> {
 }
 
 async fn gh_api(path: &str, accept: Option<&str>, limit: usize) -> Result<(bool, Vec<u8>, Vec<u8>), Error> {
-    let mut command = Command::new("gh");
+    let mut command = gh();
     command.args(["api", path]);
     if let Some(accept) = accept {
         command.args(["-H", &format!("Accept: {accept}")]);
@@ -1353,7 +1363,7 @@ async fn gh_api_partial(
     accept: Option<&str>,
     limit: usize,
 ) -> Result<(bool, Vec<u8>, Vec<u8>, bool), Error> {
-    let mut command = Command::new("gh");
+    let mut command = gh();
     command.args(["api", path]);
     if let Some(accept) = accept {
         command.args(["-H", &format!("Accept: {accept}")]);
@@ -1447,7 +1457,7 @@ async fn graphql(
     variables: &[(&str, &str, bool)],
     max_output: usize,
 ) -> Result<(bool, Vec<u8>, Vec<u8>), Error> {
-    let mut command = Command::new("gh");
+    let mut command = gh();
     command
         .args(["api", "graphql", "-f"])
         .arg(format!("query={query}"));
@@ -1873,7 +1883,7 @@ pub struct CalendarDay {
 
 /// Asks `gh` for the calendar: one query (1 point of the hourly budget), on the user's login.
 pub async fn calendar() -> Result<Calendar, Error> {
-    let out = Command::new("gh")
+    let out = gh()
         .args(["api", "graphql", "-f"])
         .arg(format!("query={CALENDAR}"))
         .kill_on_drop(true)

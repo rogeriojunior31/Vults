@@ -84,12 +84,15 @@ pub(super) fn visible(app: &AppHandle) -> bool {
 
 #[derive(Serialize)]
 pub struct Options {
+    /// Whether this platform can hold a conversation at all: the page then shows only why not.
+    available: bool,
     semantic: bool,
 }
 #[tauri::command]
 pub fn voice_conversation_options(window: tauri::Webview) -> Result<Options, String> {
     page(&window)?;
     Ok(Options {
+        available: cfg!(target_os = "linux"),
         semantic: cfg!(all(
             feature = "voice-semantic",
             target_os = "linux",

@@ -60,6 +60,8 @@ pub mod save;
 #[path = "windows/notifications.rs"]
 pub mod notifications;
 #[cfg(windows)]
+pub mod windows_displays;
+#[cfg(windows)]
 pub mod windows_process;
 #[cfg(windows)]
 pub mod windows_session;
@@ -69,6 +71,8 @@ pub mod windows_shortcuts;
 pub mod windows_surface;
 #[cfg(windows)]
 mod windows_time;
+#[cfg(windows)]
+pub mod windows_tray;
 
 /// The local UTC offset at `unix` (seconds east of UTC), from the desktop's time zone; none when
 /// it can't be read. Daylight saving included: it is the offset of that instant, not of today.

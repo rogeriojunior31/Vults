@@ -32,13 +32,13 @@ pub(crate) async fn read(dir: &Path) -> Result<Value, String> {
 }
 
 async fn read_command(cmd: &mut Command) -> Result<Value, String> {
-    let mut child = cmd
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .kill_on_drop(true)
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    let mut child = crate::spawn_owned(
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .kill_on_drop(true),
+    )
+    .map_err(|e| e.to_string())?;
     let mut stdin = child.stdin.take().ok_or("Claude usage: no stdin")?;
     let stdout = child.stdout.take().ok_or("Claude usage: no stdout")?;
     const ID: &str = "vults-account-usage";

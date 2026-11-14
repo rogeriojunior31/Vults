@@ -10,7 +10,8 @@
 //!   output as a decision, so the island sees finished steps, never steps starting. An edit comes
 //!   whole from `afterFileEdit` (its file and each replacement), read by nothing.
 //! - A hook runs in `~/.cursor`, not the project: the folder is `workspace_roots`.
-//! - Every command ends in `|| exit 0`, so a missing hook binary is never read as a failure.
+//! - Every command ends in `|| exit 0` (not on Windows), so a missing hook binary is never read
+//!   as a failure.
 
 use std::path::{Path, PathBuf};
 
@@ -19,7 +20,18 @@ use vults_agent_config::{HookEntry, flat};
 use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, Dirs, MARKER, hook_command};
+use crate::{Agent, Dirs, MARKER, WindowsShell, shell_hook_command};
+
+/// On Windows Cursor pipes the JSON into the command through PowerShell, whose 5.1 has no `||`;
+/// a missing hook there fails open, as only its permission hooks (not ours) read the outcome.
+fn command(hook_exe: &Path, event: &str) -> String {
+    let command = shell_hook_command(WindowsShell::PowerShell, hook_exe, NAME, event);
+    if cfg!(windows) {
+        command
+    } else {
+        format!("{command} || exit 0")
+    }
+}
 
 /// The name its sessions go by, and the `--agent` its hooks run with.
 pub(crate) const NAME: &str = "cursor";
@@ -94,7 +106,7 @@ impl Agent for Cursor {
             .iter()
             .map(|&(event, timeout)| HookEntry {
                 event,
-                command: format!("{} || exit 0", hook_command(hook_exe, NAME, event)),
+                command: command(hook_exe, event),
                 timeout,
                 status_message: None,
             })
@@ -297,7 +309,12 @@ mod tests {
         assert!(Cursor.installed(&next) && Cursor.up_to_date(&next, exe));
         assert_eq!(next["hooks"]["stop"][0], theirs);
         let cmd = next["hooks"]["stop"][1]["command"].as_str().unwrap();
-        assert_eq!(cmd, "'/x/vults-hook' --agent cursor stop || exit 0");
+        let expected = if cfg!(windows) {
+            "/x/vults-hook --agent cursor stop"
+        } else {
+            "'/x/vults-hook' --agent cursor stop || exit 0"
+        };
+        assert_eq!(cmd, expected);
         // No hook that Cursor reads as a decision.
         for decides in [
             "preToolUse",

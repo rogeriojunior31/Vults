@@ -5,7 +5,7 @@ import { t } from "../../../i18n";
 import { icon } from "../../../island/icons";
 
 export interface ConversationBackend {
-  options?(): Promise<{ semantic: boolean }>;
+  options?(): Promise<{ available?: boolean; semantic: boolean }>;
   routes?(): Promise<VoiceRoutes>;
   start(autoFinish: boolean, route?: VoiceRouteSelection, semantic?: boolean, followUp?: boolean): Promise<VoiceConversation>;
   status(id: string): Promise<VoiceConversation>;
@@ -58,6 +58,8 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
   const element = el("section", { class: "voice-conversation" }, el("header", { class: "dictation-heading" }, el("div", {}, el("h2", { class: "dictation-title" }, icon("chat", 18), title), about), el("div", { class: "voice-conversation-header-actions" }, settings)), stage, actions, content);
   let view: VoiceConversation | null = null, active = false, pending = false, epoch = 0;
   let semanticAvailable = false;
+  // A platform without conversation (Windows) shows only why, like Meetings, not a setup it cannot use.
+  let unsupported = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let failed: "start" | "status" | null = null;
   let copyState: "idle" | "done" | "failed" = "idle";
@@ -75,7 +77,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     stage.dataset.microphoneOpen = String(microphoneOpen);
     microphoneState.textContent = microphoneOpen ? t("Microphone open") : startingTurn || view?.phase === "starting" ? t("Starting microphone…") : t("Microphone off");
     microphoneIcon.replaceChildren(icon(view?.phase === "speaking" ? "sound" : view?.phase === "responding" || view?.phase === "transcribing" ? "chat" : "mic", 28));
-    stageTitle.textContent = !api ? t("Voice is unavailable")
+    stageTitle.textContent = !api || unsupported ? t("Voice is unavailable")
       : failed || view?.phase === "failed" ? t("Check voice setup")
       : startingTurn ? t("Getting ready")
       : view?.phase === "recording" ? t("Listening to you")
@@ -91,7 +93,8 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     about.textContent = t("Finish each recording to hear Zeca. Record another turn to continue the same conversation.");
     privacy.textContent = t("Microphone audio and cached flock context may go to OpenAI. API charges apply. Voice never answers permission cards.");
     start.textContent = view?.phase === "waiting" ? t("Record another turn") : t("Start recording"); finish.textContent = view?.phase === "speaking" || view?.phase === "interrupting" ? t("Stop response") : t("Finish recording"); cancel.textContent = view?.phase === "waiting" ? t("End conversation") : t("Cancel"); settings.textContent = t("Voice conversation settings");
-    start.disabled = !api || !active || pending || (running(view) && view?.phase !== "waiting") || (!running(view) && !route.ready());
+    actions.hidden = content.hidden = unsupported;
+    start.disabled = !api || unsupported || !active || pending || (running(view) && view?.phase !== "waiting") || (!running(view) && !route.ready());
     finish.disabled = !active || pending || (view?.phase !== "recording" && view?.phase !== "speaking");
     cancel.disabled = !active || !running(view);
     settings.disabled = pending || running(view);
@@ -119,6 +122,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     automaticTitle.textContent = t("Finish automatically after a pause");
     automaticNote.textContent = t("Off by default for each app run. Uses local GPU preview and the installed speech detector. If unavailable, use Finish recording. Each new turn still needs your click.");
     status.textContent = !api ? t("Voice conversation is unavailable.")
+      : unsupported ? t("Voice conversation is available on Linux only.")
       : startingTurn ? t("Starting microphone…")
       : view?.phase === "preparing" ? t("Preparing local semantic detection. Microphone is off.")
       : view?.phase === "starting" ? t("Starting microphone…")
@@ -221,7 +225,7 @@ export function createVoiceConversation(api: ConversationBackend | undefined, co
     active = on;
     if (on && api?.options) {
       const mine = epoch;
-      void api.options().then(value => { if (active && mine === epoch) { semanticAvailable = value.semantic; draw(); } }).catch(() => {});
+      void api.options().then(value => { if (active && mine === epoch) { semanticAvailable = value.semantic; unsupported = value.available === false; draw(); } }).catch(() => {});
     }
     if (!on) {
       ++epoch; clearTimeout(timer); setup.open = true; pending = false; route.leave(); semantic.checked = false; followUp.checked = false;

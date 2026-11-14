@@ -1,4 +1,5 @@
-//! The user's first name, from the full name on their account (GECOS on Linux), so Zeca can greet
+//! The user's first name, from the full name on their account (GECOS on Linux, the account's full
+//! name on Windows), so Zeca can greet
 //! them by it. Login handles never pass for a name: no name is better than "Hi, rogeradas".
 
 use std::sync::OnceLock;
@@ -51,7 +52,12 @@ fn full_name() -> Option<String> {
     Some(gecos.to_string_lossy().into_owned())
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(windows)]
+fn full_name() -> Option<String> {
+    vults_peer::full_name()
+}
+
+#[cfg(not(any(target_os = "linux", windows)))]
 fn full_name() -> Option<String> {
     None
 }

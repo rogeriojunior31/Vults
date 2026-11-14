@@ -22,7 +22,9 @@ use vults_agent_config::{HookEntry, named};
 use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
 use vults_protocol::{AgentKind, Event};
 
-use crate::{Agent, Dirs, MARKER, detail, hook_command, target};
+use crate::{Agent, Dirs, MARKER, WindowsShell, detail, shell_hook_command, target};
+
+const SHELL: WindowsShell = WindowsShell::Cmd;
 
 /// The name its sessions go by, and the `--agent` its hooks run with.
 pub(crate) const NAME: &str = "antigravity";
@@ -132,7 +134,8 @@ impl Agent for Antigravity {
             .iter()
             .map(|&(event, timeout)| HookEntry {
                 event,
-                command: format!("{} || exit 0", hook_command(hook_exe, NAME, event)),
+                // `cmd /s /c` on Windows (seen with agy 1.5.8), which reads `||` too.
+                command: format!("{} || exit 0", shell_hook_command(SHELL, hook_exe, NAME, event)),
                 timeout,
                 status_message: None,
             })
@@ -209,7 +212,12 @@ pub fn metrics_files(
     let saved_value = read_json(&previous)?;
     let saved = (!saved_value.as_object().is_some_and(|o| o.is_empty())).then_some(&saved_value);
     let (mut next, line) = if install {
-        status_line::install(&current, saved, &hook_command(hook, NAME, "--statusline"), MARKER)
+        status_line::install(
+            &current,
+            saved,
+            &shell_hook_command(SHELL, hook, NAME, "--statusline"),
+            MARKER,
+        )
     } else {
         status_line::uninstall(&current, saved, MARKER)
     };
@@ -454,24 +462,30 @@ mod tests {
 
     #[test]
     fn the_hooks_file_gets_one_key_that_never_blocks() {
-        let exe = Path::new("/opt/vults-hook");
+        // cmd on Windows, where single quotes are no quotes at all.
+        let (exe, hook, new) = if cfg!(windows) {
+            ("C:/opt/vults-hook", "C:/opt/vults-hook", "C:/new/vults-hook")
+        } else {
+            ("/opt/vults-hook", "'/opt/vults-hook'", "/new/vults-hook")
+        };
+        let (exe, new) = (Path::new(exe), Path::new(new));
         let file = json!({ "lint": { "PostToolUse": [ { "matcher": "run_command", "hooks": [ { "command": "./lint.sh" } ] } ] } });
         let installed = Antigravity.install(&file, exe);
         assert_eq!(installed["lint"], file["lint"]);
         assert_eq!(
             installed[KEY]["PreToolUse"],
             json!([{ "matcher": "*", "hooks": [{ "type": "command",
-                "command": "'/opt/vults-hook' --agent antigravity PreToolUse || exit 0", "timeout": 5 }] }])
+                "command": format!("{hook} --agent antigravity PreToolUse || exit 0"), "timeout": 5 }] }])
         );
         assert_eq!(
             installed[KEY]["Stop"],
-            json!([{ "type": "command", "command": "'/opt/vults-hook' --agent antigravity Stop || exit 0", "timeout": 5 }])
+            json!([{ "type": "command", "command": format!("{hook} --agent antigravity Stop || exit 0"), "timeout": 5 }])
         );
         assert!(Antigravity.installed(&installed));
         assert!(Antigravity.up_to_date(&installed, exe));
-        assert!(!Antigravity.up_to_date(&installed, Path::new("/new/vults-hook")));
+        assert!(!Antigravity.up_to_date(&installed, new));
         assert_eq!(
-            crate::other_hook(&Antigravity, &installed, Path::new("/new/vults-hook")),
+            crate::other_hook(&Antigravity, &installed, new),
             Some(exe.to_path_buf())
         );
         assert_eq!(Antigravity.uninstall(&installed), file);

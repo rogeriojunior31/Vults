@@ -35,6 +35,8 @@ zbus = { version = "5", default-features = false, features = ["tokio"] }
 
 [target.'cfg(windows)'.dependencies]
 vults-peer.workspace = true
+# The tray's frames, as on Linux.
+png = "0.18"
 tokio.workspace = true
 windows-core = "0.62"
 arboard = { version = "3.7", default-features = false }
