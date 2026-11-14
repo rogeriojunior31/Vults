@@ -55,6 +55,7 @@ mod specialist_snapshots;
 mod spend;
 mod traces;
 mod tray;
+pub mod update;
 mod usage;
 mod voice;
 pub mod voice_commands;
