@@ -211,11 +211,11 @@ added/removed lines, including script-written files that emitted no native patch
 `ipc` waits `ACK_TIMEOUT` (800 ms) for the ack, then the hook gives up; `runtime.rs` acks on
 `Effect::AckPermission` without checking whether that is already too late, so a card can show for a
 hook that left.
-- [ ] In `crates/ipc`, expose `ReplyHandle::is_gone()` (the channel's `is_closed()`).
-- [ ] In `app/src/runtime.rs` at `Effect::AckPermission`: if the handle is gone, or the pending offer's
+- [x] In `crates/ipc`, expose `ReplyHandle::is_gone()` (the channel's `is_closed()`).
+- [x] In `app/src/runtime.rs` at `Effect::AckPermission`: if the handle is gone, or the pending offer's
   `since` is older than `ACK_TIMEOUT`, do not ack; feed core an input that ends the offer without an
   answer (reuse the expiry path; never an `Intent`, so rule 2 stays untouched).
-- [ ] Core test: a late request yields no card left on screen; an on-time one still shows.
+- [x] Core test: a late request yields no card left on screen; an on-time one still shows.
 
 **Done when:** the test passes and a hook killed before the ack leaves no card in the running app.
 
@@ -1012,9 +1012,15 @@ that acceptance passes.
 
 ### FF4 · Update notice, asked for
 `P1 · M (four PRs) · Needs: —` · [Spec](plan-field-fixes.md#ff4--update-notice-asked-for)
-- [ ] FF4.1 pure rules with tests: this platform's tag prefix, no pre-releases, version order,
+2026-11-14, branch `feat/update-notice`: FF4.1 and FF4.2 implemented with tests. Rules in
+`app/src/update/rules.rs`; the request in `crates/chat/src/releases.rs` (allowlisted), behind
+`Settings.update_consent` (nothing before `Yes`), the `update` gate feature (4/day, traced),
+first look 30 s after launch, then at most daily, state in `update.json`, read by
+`update_status` and the `update-notice` event. Nothing asks for consent yet, so no request
+happens until FF4.3. `docs/safety.md` lists the request (both languages).
+- [x] FF4.1 pure rules with tests: this platform's tag prefix, no pre-releases, version order,
   `should_check` **at most daily** (rule 4), snooze 24 h, ask again after a day if unanswered.
-- [ ] FF4.2 a gate feature `update` in `app/src/gate.rs` (switch, small budget, trace); one
+- [x] FF4.2 a gate feature `update` in `app/src/gate.rs` (switch, small budget, trace); one
   unauthenticated GET of the releases list; add it to `scripts/network-allowlist.txt`.
 - [ ] FF4.3 consent asked once in the island; Settings › General › Updates with *Check now*; the notice
   card (version, notes, *Open release page*, *Later*); Zeca's badge only when nothing else waits.
