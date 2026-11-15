@@ -1,10 +1,7 @@
 # 0004. Rede, segredos e telemetria
-<!-- source: 65eac8e7e790 -->
+<!-- source: 7314ce3c3d04 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da antiga 0006 e da antiga 0016.
-Alterada em 2026-10-17 para a N3 V0.4: requisições a modelos no ditado, limites de loopback e
-gastos de voz em tempo real. São requisitos de implementação para V3, V5 e V6, não requisições
-habilitadas ou entregues.
 
 <a id="context"></a>
 
@@ -57,17 +54,17 @@ importa ao usuário, custa dinheiro ou cota, e poderia virar telemetria por acid
 ## Requisições a modelos no ditado
 
 Transcrição local, processamento pelo dicionário e comandos de voz determinísticos não chamam um modelo remoto.
-Os recursos opcionais de modelos da N3 abaixo são requisições separadas em nome do usuário, não
+Os recursos opcionais de modelos abaixo são requisições separadas em nome do usuário, não
 permissão para enviar uma transcrição só porque a gravação ou o Chat está ligado. Cada interruptor
 fica desligado por padrão e é alterado na webview das Configurações, com provedor, dados e limite
 explicados antes da ativação. Reutilizar o provedor do Chat não reutiliza o consentimento para
 outro recurso.
 
-| Recurso do portão | Fase | Dados enviados ao modelo escolhido | Limite em qualquer janela móvel de 24 horas | Quando desligado, esgotado ou indisponível |
-|---|---|---|---|---|
-| `dictation-cleanup` | V3 | O texto ditado e o contexto de vocabulário/estilo necessário para filtrar ou traduzir; sem áudio | 2.000 tentativas de requisição ao modelo, incluindo novas tentativas | Manter a transcrição local bruta; nunca respondê-la nem executá-la |
-| `meeting-summary` | V5 | A transcrição da reunião necessária ao resumo e às tarefas; sem áudio gravado | 20 tentativas de requisição ao modelo, incluindo novas tentativas | Manter a transcrição local; deixar o resumo por modelo indisponível |
-| `voice-realtime` | V6 / K8 | Áudio da conversa ao vivo e o contexto limitado da conversa informado nas Configurações | Um limite monetário positivo, com padrão de US$ 1; zero desabilita voz remota | Parar o áudio remoto e continuar em texto com uma explicação |
+| Recurso do portão | Dados enviados ao modelo escolhido | Limite em qualquer janela móvel de 24 horas | Quando desligado, esgotado ou indisponível |
+|---|---|---|---|
+| `dictation-cleanup` | O texto ditado e o contexto de vocabulário/estilo necessário para filtrar ou traduzir; sem áudio | 2.000 tentativas de requisição ao modelo, incluindo novas tentativas | Manter a transcrição local bruta; nunca respondê-la nem executá-la |
+| `meeting-summary` | A transcrição da reunião necessária ao resumo e às tarefas; sem áudio gravado | 20 tentativas de requisição ao modelo, incluindo novas tentativas | Manter a transcrição local; deixar o resumo por modelo indisponível |
+| `voice-realtime` | Áudio da conversa ao vivo e o contexto limitado da conversa informado nas Configurações | Um limite monetário positivo, com padrão de US$ 1; zero desabilita voz remota | Parar o áudio remoto e continuar em texto com uma explicação |
 
 - **Um portão, orçamentos separados.** Esses identificadores passam pelo portão do `app` antes
   de iniciar uma requisição ou conexão em tempo real. Tentativas, inclusive chamadas que falham
@@ -76,23 +73,20 @@ outro recurso.
   Trabalhos concorrentes compartilham a mesma cota. Orçamento ausente ou ilegível não pode
   conceder uma cota nova. Desligar um interruptor cancela o trabalho de modelo daquele recurso
   em andamento; a transcrição local continua utilizável.
-- **Tempo real reserva o gasto antes de enviar.** A V6 deve estender o portão atual, que conta
-  requisições, com contabilidade monetária e uma cota limitada de transmissão antes de executar
-  `voice-realtime`. Incluir reservas em andamento, reconciliar o uso informado e parar a
-  transmissão antes de esgotar a cota. Tarifas ausentes ou uso desconhecido não podem significar
-  custo zero ou áudio ilimitado; recusar mais áudio remoto quando não for possível estabelecer
-  uma cota restante segura. O valor no protótipo é um limite escolhido, não preço do provedor
-  nem comprovação de que a contabilidade já existe.
-- **Loopback não ignora consentimento nem cota (Q3).** Chamadas locais da N3 ao Ollama/LM Studio
+- **Tempo real reserva o gasto antes de enviar.** O `voice-realtime` só roda com contabilidade
+  monetária e uma cota limitada de transmissão: reservas em andamento contam, o uso informado é
+  reconciliado e a transmissão para antes de a cota acabar. Tarifas ausentes ou uso desconhecido
+  nunca significam custo zero ou áudio ilimitado; quando não dá para estabelecer uma cota restante
+  segura, o áudio remoto é recusado.
+- **Loopback não ignora consentimento nem cota.** Chamadas locais ao Ollama/LM Studio
   continuam usando o interruptor do recurso, a cota de requisições e o registro local pelo
-  portão. Não consomem orçamento monetário remoto. Isso substitui a proposta inicial de ignorar
-  todo o orçamento: trabalho de modelo local ainda precisa de um limite finito de requisições
-  sob este registro. Para ser considerado loopback, usar um endpoint com IP de loopback
+  portão. Não consomem orçamento monetário remoto, mas trabalho de modelo local ainda precisa de um
+  limite finito de requisições. Para ser considerado loopback, usar um endpoint com IP de loopback
   explicitamente validado, sem proxy nem redirecionamentos; o nome do provedor ou um hostname
   como `localhost` é insuficiente. Não tentar silenciosamente um provedor remoto. Esse contrato
   rege a conexão do Vults, não garante que um serviço local configurado independentemente não
   encaminhe dados para fora. O caminho existente de embeddings para lembranças não muda; ele
-  não autoriza uma nova requisição da N3 por fora do portão.
+  não autoriza uma nova requisição por fora do portão.
 - **Registrar operações, não o conteúdo do ditado.** Manter localmente recurso, provedor/modelo,
   classificação local/remota, tempos, resultado e uso/custo disponível. Nunca incluir áudio
   bruto, transcrição, conteúdo da área de transferência, chaves ou tokens de restauração num
@@ -106,8 +100,9 @@ outro recurso.
   limpeza por modelo; *Voz e áudio*, abaixo, continua regendo
   a escuta e o áudio.
 
-<a id="local-voice-commands-vc1"></a>
-## Comandos de voz locais (VC1)
+<a id="local-voice-commands"></a>
+
+## Comandos de voz locais
 
 Ditado e comandos reutilizam o modelo de transcrição de voz existente. O aplicativo interpreta
 comandos localmente usando frases suportadas e destinos atuais. Isso não exige provedor de texto
@@ -144,7 +139,7 @@ exceção para outras requisições de rede nem altera as regras gerais de conse
 ## Consequências
 
 - Um teste roda um dia com todos os recursos desligados e conta zero requisições.
-- Antes de entregar os recursos de modelos da N3, estender essa verificação a cada recurso,
+- A mesma verificação cobre cada recurso de modelo,
   incluindo endpoints locais. Cobrir limites exatos de cota, novas tentativas, reservas
   concorrentes, reinício, estado de orçamento ilegível, desligamento durante a transmissão e
   custo desconhecido em tempo real, além do retorno à transcrição bruta e registros sem seu
@@ -162,25 +157,14 @@ exceção para outras requisições de rede nem altera as regras gerais de conse
 
 ## Histórico
 
-- 2026-11-15: o FF4 entrega o aviso de atualização antes de qualquer instalador: uma pergunta na
-  ilha, um interruptor e *Check now* nas Configurações, uma olhada por dia na lista pública de versões
-  pelo gate (`update`, 4 por dia; `update-now` para o clique), um aviso com *Open release page* e
-  *Later*. Os builds do AUR o deixam de fora (`--no-default-features`). Instalações assinadas
-  continuam para depois da 0.2.0.
-
-- 2026-10-26: correção do responsável retira a proposta de rede para intenção antes da ativação;
-  transcrição de voz existente e reconhecimento local não precisam de provedor de texto separado.
-
-- 2026-10-26: a VC1 propôs inicialmente consentimento independente para comandos; substituído pela correção
-  acima antes da ativação.
-
-- 2026-10-17: a N3 V0.4 nomeia os três recursos de modelos com adesões independentes e seus
-  limites móveis. A Q3 mantém chamadas de loopback sob interruptor, cota e registro; só a
-  contabilidade monetária remota fica isenta. Tempo real exige contabilidade de gastos antes
-  que a implementação possa ser entregue.
-- antiga 0006, 2026-10-04: segredos só no chaveiro; sem telemetria; sair
-  da máquina é escolha do usuário.
-- antiga 0016, 2026-10-08: a checagem de atualização, pedida,
-  assinada, um canal por vez.
+- antiga 0006, 2026-10-04: segredos só no chaveiro; nenhuma telemetria; sair da máquina é escolha
+  do usuário.
+- antiga 0016, 2026-10-08: a checagem de atualização, pedida, assinada, um canal por vez.
+- 2026-10-17: a limpeza do ditado, os resumos de reuniões e a voz realtime são três opções separadas,
+  cada uma com seu limite; chamadas em loopback também contam, e o realtime exige controle de gastos.
+- 2026-10-26: comandos de voz não precisam de modelo de texto nem de rede: a transcrição existente é
+  comparada localmente.
+- 2026-11-15: a checagem de atualização sai só como aviso, nunca como instalador; os builds do AUR a
+  deixam de fora.
 - 2026-11-15: incorporar as regras de privacidade dos registros de voz e ditado (antigas 0028 e
-  antiga 0032), que foram aposentados, como *Voz e áudio*.
+  0032), que foram aposentados, como *Voz e áudio*.
