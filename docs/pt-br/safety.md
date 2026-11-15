@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: eebdfa7ffc69 -->
+<!-- source: a0fad5af35f0 -->
 
 O que o Vults promete:
 
@@ -117,7 +117,9 @@ O que ele guarda fica neste computador, nunca é enviado para lugar nenhum e est
   projeto, a ferramenta e o comando ou caminho exato, com tokens e valores `NOME=segredo` redigidos
   antes. Uma resposta dada no próprio terminal do agente não entra. Cada configuração de agente que
   o instalador escreve também fica. Uma linha nunca é alterada e nenhuma sai antes de 90 dias,
-  exceto pelo **Clear history**, que deixa uma linha: que você o limpou, e quando. Fica sempre
+  exceto pelo **Clear history**, que deixa uma linha: que você o limpou, e quando. Ele também
+  mantém o último recibo de um merge, rerun, cancelamento ou exclusão de branch no GitHub que o
+  GitHub pode ter feito, para a mesma escrita nunca ser enviada duas vezes. Fica sempre
   ligado.
 - **O que você aceita fica guardado para sempre.** Cada política que você aceita é uma linha nos
   consentimentos do `vults.sqlite`: quando, sobre o que é, as palavras que você aceitou e um SHA-256
@@ -152,6 +154,7 @@ qualquer lugar além do próprio app.
 | Uma sessão retomada (o `claude` ou o `codex app-server` na pasta existente dela) | Você, ao digitar `/continue <palavras>` no Chat; `/continue stop` para apenas essa execução | A CLI fala com o próprio serviço no seu login, no sandbox dela, cada comando perguntando antes | `app/src/continuation.rs`, `crates/chat/src/claude.rs`, `codex_server.rs` |
 | A leitura de uso do Codex (`account/rateLimits/read`, pelo `codex app-server`) | O app, a cada 5 minutos e meio minuto depois que uma janela reinicia, nunca com a tela bloqueada | **Settings → General → Codex usage**, pelo portão de rede (400 por dia) | `app/src/usage.rs` |
 | Leitura nativa da franquia do Claude (`get_usage`) | O app, a cada 5 minutos, nunca com a tela bloqueada; sem criar prompt de modelo ou sessão | **Settings → General → Claude usage**, independente e desligado por padrão, pelo portão de rede (400 por dia). Relatórios locais da linha de status continuam independentes | `app/src/usage.rs`, `crates/chat/src/claude_account.rs` |
+| Aviso de atualização | O app, cerca de 30 segundos após abrir e depois no máximo uma vez por dia | Perguntado uma vez na ilha ("May Vults look at its releases on GitHub?"), nada antes do seu sim; um único `GET` sem autenticação da lista fixa `https://api.github.com/repos/rogeriojunior31/Vults/releases`, sem credenciais, cookies ou dados de sessão, proxies ou redirecionamentos, limite de 2 MiB e 4 requisições por dia. Ele só avisa que existe uma versão mais nova: nada é baixado nem instalado | `app/src/update.rs`, `crates/chat/src/releases.rs` |
 | Catálogo público de preços dos modelos | O app, a cada 15 minutos ou quando você escolhe atualizar os preços | **Settings → General → Automatic model prices**, independente e desligado por padrão; endereço fixo `https://models.dev/api.json`, requisições condicionais, sem credenciais/dados de sessão, proxies ou redirecionamentos, limite de 16 MiB e 120 requisições por dia. O cache expira após 24 horas. Estimativas pelos preços atuais de API padrão são separadas do gasto nativo e das cobranças da assinatura | `app/src/pricing.rs`, `crates/chat/src/model_prices.rs` |
 | Um dia passado do diário do Zeca resumido (**Settings → Chat & voice → Memory → A summary of each day**, desligado até você ligar) | O app, numa passada de hora em hora: cada dia passado sem resumo desde que você ligou, até 3 por passada; pelo portão de rede (8 por dia) | O `claude` em que você entrou, o menor modelo dele, sem ferramentas e sem nenhuma das suas configurações | `crates/chat/src/summary.rs`, `app/src/journal.rs` |
 | Um embedding de um resumo do diário ou da sua mensagem, para lembrar (**Recall by meaning**, desligado até você ligar) | O app, na passada de hora em hora do diário para cada resumo sem um, e antes de cada mensagem do chat | Um Ollama em `127.0.0.1` com o `nomic-embed-text`, nunca por um proxy; nada sai do computador | `crates/chat/src/embed.rs`, `app/src/recall.rs` |

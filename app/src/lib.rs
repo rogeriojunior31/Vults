@@ -55,6 +55,7 @@ mod specialist_snapshots;
 mod spend;
 mod traces;
 mod tray;
+pub mod update;
 mod usage;
 mod voice;
 pub mod voice_commands;
@@ -311,6 +312,7 @@ pub fn run() {
             settings::set_price_updates,
             pricing::model_price_status,
             pricing::refresh_model_prices,
+            update::update_status,
             settings::set_native_chat,
             settings::set_dictation_insert,
             settings::set_dictation_caption,
@@ -545,6 +547,7 @@ pub fn run() {
             lock::start(&handle);
             // After the runtime too: its first read asks whether the screen is locked.
             pricing::start(&handle);
+            update::start(&handle);
             usage::start(&handle);
             journal::start(handle.clone());
             sleep::start(handle.clone());

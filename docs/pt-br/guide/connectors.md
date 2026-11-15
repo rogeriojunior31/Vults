@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 42c00ce50100 -->
+<!-- source: 188b05716f95 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -339,7 +339,9 @@ Antes de enviar um controle, o Vults grava atomicamente um recibo durável na au
 As variantes de reexecução compartilham um recibo por host, repositório imutável, execução e tentativa;
 o cancelamento usa um recibo separado. As reservas sobrevivem ao reinício. Controles aceitos,
 reservados ou incertos não podem ser reenviados naquela tentativa. Uma rejeição definitiva permite
-uma nova proposta com aprovação humana. O Vults relê o estado sem repetir o POST. Se a verificação
+uma nova proposta com aprovação humana. Um controle incerto ou interrompido também permite, 15
+minutos depois, quando uma leitura nova mostra a mesma tentativa ainda como a mais recente e no
+mesmo estado, ou seja, o controle não teve efeito; um aceito nunca permite. O Vults relê o estado sem repetir o POST. Se a verificação
 estiver pendente ou indisponível, consulte a execução mais recente no GitHub em vez de reenviar.
 
 <a id="safe-merge-and-branch-deletion"></a>
@@ -368,8 +370,9 @@ inspeção anterior; a releitura pode informar incerteza se o estado remoto muda
 `requestId` de uma solicitação assíncrona para consultar também seu resultado pendente ou com falha.
 Pedidos pendentes, na fila e incertos nunca são reenviados automaticamente. Recibos duráveis na
 auditoria bloqueiam merges duplicados para o mesmo ID de repositório, PR e SHA, entre métodos e
-reinícios. Só uma rejeição definitiva permite nova proposta; uma reserva ou recibo incerto exige
-inspeção no GitHub em vez de tentar novamente às cegas. Não há consultas em segundo plano.
+reinícios. Só uma rejeição definitiva permite nova proposta na hora. Uma reserva ou recibo incerto
+permite uma 15 minutos depois, e só quando uma leitura nova mostra o PR ainda aberto, fora da fila e
+no mesmo head (ou, para excluir uma branch, a branch ainda lá); um pedido aceito nunca permite. Não há consultas em segundo plano.
 
 `github_pull_request_delete_branch` é uma operação separada com aprovação humana após um merge
 verificado. Exige o SHA exato do PR mesclado. O Vults só apaga sua branch head inalterada no mesmo

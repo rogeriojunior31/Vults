@@ -135,6 +135,11 @@ raise?: boolean,
  */
 muted?: boolean,
 /**
+ * Its terminal was in front when its turn ended (FF3): the finish needs no sound or reveal.
+ * Never set while it holds a card, so a card always sounds and opens.
+ */
+watched?: boolean,
+/**
  * Its project is pinned: it comes first on the wire.
  */
 pinned?: boolean,

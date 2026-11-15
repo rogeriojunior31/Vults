@@ -294,6 +294,17 @@ async fn execute_using(
     let (method, path, body) = mutation(action, &before)?;
     let result = gated(gate, api.request(Some(host), method, &path, Some(body))).await;
     let after=inspect(gate,action,api,Some(host)).await.map_err(|error|Error::Other(format!("The pull request write outcome is uncertain because verification failed ({error}). Inspect GitHub before proposing a retry.")))?;
+    // A definite refusal, and the reread of the same target shows nothing landed: say why.
+    if same_target(action, &before, &after)
+        && !present(action, &after)
+        && let Err(error) = &result
+        && super::actions::definitely_rejected(error)
+    {
+        return Err(Error::Other(format!(
+            "GitHub refused the pull request change ({}). It was reread and is unchanged.",
+            vults_core::redact::secrets(&error.to_string())
+        )));
+    }
     if !same_target(action, &before, &after) || !present(action, &after) {
         return invalid(
             "The complete pull request change could not be verified on the approved refs and commit. Inspect GitHub before retrying.",
@@ -1189,6 +1200,98 @@ mod tests {
             }
             api.exhausted();
         }
+    }
+
+    #[tokio::test]
+    async fn each_github_error_on_a_pull_request_write_is_named_or_uncertain_never_resent() {
+        let action = edit();
+        let expected = preview(&action, pr()).await;
+        for (error, landed, says) in [
+            (Error::Auth("gh isn't logged in".into()), false, "GitHub refused"),
+            (
+                Error::RateLimited {
+                    retry_after: Duration::from_secs(900),
+                },
+                false,
+                "GitHub refused",
+            ),
+            (
+                Error::Other("gh: Not Found (HTTP 404)".into()),
+                false,
+                "Not Found (HTTP 404)",
+            ),
+            (
+                Error::Other("gh: Validation Failed (HTTP 422)".into()),
+                false,
+                "Validation Failed",
+            ),
+            (
+                Error::Other("gh: Conflict (HTTP 409)".into()),
+                false,
+                "could not be verified",
+            ),
+            (
+                Error::Other("gh: Server Error (HTTP 500)".into()),
+                false,
+                "could not be verified",
+            ),
+            (
+                Error::Other("error connecting to api.github.com".into()),
+                false,
+                "could not be verified",
+            ),
+            (Error::Other("gh: Bad Gateway (HTTP 502)".into()), true, ""),
+        ] {
+            let label = error.to_string();
+            let mut steps = reads(&action, pr(), false, false);
+            steps.push(step(
+                "PATCH",
+                "repos/org/repo/pulls/7",
+                Some(json!({"body":"Changed"})),
+                Err(error),
+            ));
+            let mut value = pr();
+            if landed {
+                value["body"] = json!("Changed");
+            }
+            steps.extend(reads(&action, value, false, true));
+            let api = Fake::new(steps);
+            let result = execute_using(&gate(), &action, &expected, &action.request_hash(), &api).await;
+            if landed {
+                assert_eq!(result.unwrap()["status"], "verified_after_error", "{label}");
+            } else {
+                let message = result.unwrap_err().to_string();
+                assert!(message.contains(says), "{label}: {message}");
+            }
+            api.exhausted();
+        }
+    }
+
+    #[tokio::test]
+    async fn a_lost_readback_after_a_pull_request_write_is_uncertain_never_resent() {
+        let action = edit();
+        let expected = preview(&action, pr()).await;
+        let mut steps = reads(&action, pr(), false, false);
+        steps.push(step(
+            "PATCH",
+            "repos/org/repo/pulls/7",
+            Some(json!({"body":"Changed"})),
+            Ok(json!({})),
+        ));
+        let mut readback = reads(&action, pr(), false, true);
+        readback.truncate(1);
+        readback[0].result = Err(Error::Other("error connecting to api.github.com".into()));
+        steps.extend(readback);
+        let api = Fake::new(steps);
+        let message = execute_using(&gate(), &action, &expected, &action.request_hash(), &api)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            message.contains("uncertain because verification failed"),
+            "{message}"
+        );
+        api.exhausted();
     }
 
     #[tokio::test]

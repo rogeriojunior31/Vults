@@ -66,6 +66,8 @@ impl EarlyMetrics {
 #[derive(Debug)]
 enum Msg {
     RefreshMetrics,
+    /// The session whose terminal was in front when a turn ended (FF3), read off this loop.
+    Watched(Option<core::SessionKey>),
     RequestGone {
         id: RequestId,
         reply: ReplyHandle,
@@ -1085,6 +1087,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 }
                 Some(Input::Repo { session, cwd, repo })
             }
+            Msg::Watched(session) => Some(Input::Watched(session)),
             Msg::Continuable { cwd, reply } => {
                 let _ = reply.send(state.continuable(&cwd, now));
                 continue;
@@ -1113,7 +1116,15 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                 core::reduce(&mut state, Input::Clock(unix), now);
             }
 
+            let ended = matches!(
+                &input,
+                Input::Agent(u) | Input::RunEnded(u)
+                    if matches!(u.event, core::AgentEvent::Stopped { .. } | core::AgentEvent::StopFailed { .. })
+            );
             let effects = core::reduce(&mut state, input, now);
+            if ended {
+                read_watched(&app, &state, &tx);
+            }
             if let Some((key, started)) = heard {
                 if let Some(report) = early_metrics.take(&key, now) {
                     core::reduce(&mut state, report.input(key.clone()), now);
@@ -1716,6 +1727,45 @@ pub async fn run_ended(app: &AppHandle, update: core::AgentUpdate) {
 
 /// Request context without doing process IO on the domain loop.
 #[cfg(any(target_os = "linux", windows))]
+/// FF3: one read of the active window when a turn ends, never a poll. The renderer waits a
+/// moment before a finish's cue, so the answer lands before it; a late or missing one stays loud.
+fn read_watched(app: &AppHandle, state: &core::State, tx: &mpsc::Sender<Msg>) {
+    #[cfg(any(target_os = "linux", windows))]
+    {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        // A stalled display server must not pile up one blocked reader per finish.
+        static BUSY: AtomicBool = AtomicBool::new(false);
+        if !crate::settings::quiet_when_watching(app) {
+            if state.watched.is_some() {
+                let _ = tx.try_send(Msg::Watched(None));
+            }
+            return;
+        }
+        if BUSY.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let sessions: Vec<_> = state
+            .sessions
+            .iter()
+            .map(|(key, session)| (key.clone(), session.terminal.clone()))
+            .collect();
+        let tx = tx.clone();
+        let spawned = std::thread::Builder::new()
+            .name("watched-focus".into())
+            .spawn(move || {
+                let watched = vults_platform::focus::read()
+                    .and_then(|window| vults_platform::focus::session(&window, &sessions).cloned());
+                BUSY.store(false, Ordering::Release);
+                let _ = tx.blocking_send(Msg::Watched(watched));
+            });
+        if spawned.is_err() {
+            BUSY.store(false, Ordering::Release);
+        }
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
+    let _ = (app, state, tx);
+}
+
 pub(crate) fn dictation_sessions(
     app: &AppHandle,
 ) -> std::sync::mpsc::Receiver<Vec<(core::SessionKey, vults_protocol::Terminal)>> {

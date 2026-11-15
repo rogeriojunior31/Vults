@@ -608,6 +608,10 @@ pub enum Input {
     /// a session, a card or a bird.
     Chat(AgentUpdate),
     Connector(Alert),
+    /// The session whose terminal is in front, read by the app from the active window when a
+    /// turn ends (FF3); `None` when it is another window, unknown or the setting is off. It only
+    /// quiets that session's finish in the renderer: a card always sounds and opens.
+    Watched(Option<SessionKey>),
     /// Its reply transport left. Expire the offer without a user decision.
     RequestGone {
         request: RequestId,
@@ -942,6 +946,8 @@ pub struct State {
     /// The latest monotonic time supplied to reduce; views never read the system clock.
     pub now: Option<Instant>,
     pub sessions: BTreeMap<SessionKey, Session>,
+    /// The session whose terminal the user was looking at when a turn last ended (FF3).
+    pub watched: Option<SessionKey>,
     /// Every permission or question waiting for a human, oldest first. The island shows the first; each one
     /// is answered only by its own click (or a rule), and each keeps its own deadline.
     pub pending: VecDeque<Pending>,
@@ -1029,7 +1035,21 @@ impl State {
 
 pub fn reduce(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
     state.now = Some(now);
+    // A new turn forgets where the user was looking: only a read at its own end may quiet it.
+    if let Input::Agent(u) = &input
+        && matches!(u.event, AgentEvent::PromptSubmitted)
+        && state.watched.as_ref() == Some(&u.session)
+    {
+        state.watched = None;
+    }
     let effects = apply(state, input, now);
+    if state
+        .watched
+        .as_ref()
+        .is_some_and(|k| !state.sessions.contains_key(k))
+    {
+        state.watched = None;
+    }
     for s in state.sessions.values_mut() {
         if matches!(s.status, Status::Idle | Status::Finished) {
             s.rest_since.get_or_insert(now);
@@ -1176,6 +1196,10 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                     s.cost_failed = false;
                 }
             }
+            Vec::new()
+        }
+        Input::Watched(session) => {
+            state.watched = session.filter(|k| state.sessions.contains_key(k));
             Vec::new()
         }
         Input::RequestGone { request } => {

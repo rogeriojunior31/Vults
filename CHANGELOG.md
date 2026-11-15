@@ -4,6 +4,10 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- An uncertain or interrupted GitHub merge, Actions rerun or cancel, or branch deletion can be proposed again 15 minutes later, when a fresh read shows it did not take effect; before, it stayed blocked for 90 days.
+
+- Clear history keeps the receipt of a GitHub merge, Actions rerun or cancel, or branch deletion that GitHub may have carried out, so the same write can no longer be sent a second time after clearing.
+
 - Improve compact Chat navigation, accessible turn announcements, Recent keyboard focus, recipient and Memory recovery, scoped Flock permission disclosure and folder-copy feedback.
 
 - Keep idle and completed-response sessions in Flock instead of expiring them after 10/30 minutes. Confirm local owner exits separately from activity, preserve pending cards, and distinguish Hermes Desktop runtime cleanup/reset from durable conversation closure.

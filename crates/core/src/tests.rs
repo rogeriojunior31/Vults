@@ -5994,3 +5994,55 @@ fn voice_commands_allow_only_navigation_and_project_preferences() {
         );
     }
 }
+
+fn watched_in_view(s: &State, id: &str) -> bool {
+    s.view().sessions.iter().any(|v| v.id == id && v.watched)
+}
+
+#[test]
+fn a_finish_while_its_terminal_is_in_front_is_marked_watched() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("b", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    assert!(!watched_in_view(&s, "a"), "unknown focus stays loud");
+    assert!(visible(&mut s, Input::Watched(Some(key("a"))), now).is_empty());
+    assert!(watched_in_view(&s, "a"));
+    assert!(!watched_in_view(&s, "b"), "only the session in front");
+    // Finishing elsewhere: the app reads another window and says so.
+    visible(&mut s, agent("b", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, Input::Watched(None), now);
+    assert!(!watched_in_view(&s, "a") && !watched_in_view(&s, "b"));
+}
+
+#[test]
+fn a_card_is_never_quieted_by_the_terminal_in_front() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, Input::Watched(Some(key("a"))), now);
+    visible(&mut s, requested("a", "r1"), now);
+    let v = s.view();
+    let a = v.sessions.iter().find(|v| v.id == "a").unwrap();
+    assert!(!a.watched, "a waiting card always sounds and opens");
+    assert_eq!(a.attention, Attention::NeedsYou);
+}
+
+#[test]
+fn a_new_turn_or_a_gone_session_forgets_the_watched_terminal() {
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    visible(&mut s, agent("a", AgentEvent::Stopped { message: None }), now);
+    visible(&mut s, Input::Watched(Some(key("a"))), now);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), now);
+    assert_eq!(s.watched, None);
+    assert!(!watched_in_view(&s, "a"));
+    visible(&mut s, Input::Watched(Some(key("a"))), now);
+    visible(&mut s, agent("a", AgentEvent::SessionEnded), now);
+    assert_eq!(s.watched, None);
+    // A session the flock does not know is never watched.
+    visible(&mut s, Input::Watched(Some(key("ghost"))), now);
+    assert_eq!(s.watched, None);
+}

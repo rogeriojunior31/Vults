@@ -211,11 +211,11 @@ added/removed lines, including script-written files that emitted no native patch
 `ipc` waits `ACK_TIMEOUT` (800 ms) for the ack, then the hook gives up; `runtime.rs` acks on
 `Effect::AckPermission` without checking whether that is already too late, so a card can show for a
 hook that left.
-- [ ] In `crates/ipc`, expose `ReplyHandle::is_gone()` (the channel's `is_closed()`).
-- [ ] In `app/src/runtime.rs` at `Effect::AckPermission`: if the handle is gone, or the pending offer's
+- [x] In `crates/ipc`, expose `ReplyHandle::is_gone()` (the channel's `is_closed()`).
+- [x] In `app/src/runtime.rs` at `Effect::AckPermission`: if the handle is gone, or the pending offer's
   `since` is older than `ACK_TIMEOUT`, do not ack; feed core an input that ends the offer without an
   answer (reuse the expiry path; never an `Intent`, so rule 2 stays untouched).
-- [ ] Core test: a late request yields no card left on screen; an on-time one still shows.
+- [x] Core test: a late request yields no card left on screen; an on-time one still shows.
 
 **Done when:** the test passes and a hook killed before the ack leaves no card in the running app.
 
@@ -240,9 +240,15 @@ credits never become USD and unknown context tiers do not receive guessed aggreg
 
 ### FF3 · Quiet finish when the session's terminal is in front
 `P1 · M · Needs: —` · [Spec](plan-field-fixes.md#ff3--quiet-finish-when-the-sessions-terminal-is-in-front)
-- [ ] App: from `vults_platform::focus::Tracker`, on change only, map the active window to a session
+2026-11-14, branch `feat/update-notice`: core and app done. Instead of tracking focus changes,
+the app reads the active window once when a turn ends (`read_watched` in `app/src/runtime.rs`,
+one reader at a time, off the runtime loop) and sends `Input::Watched`; the renderer's settle
+wait (1.5 s failed, 3 s done) covers the read. `Settings.quiet_when_watching`, on by default.
+A new prompt clears it; a session holding a card is never watched. UI, setting and docs wait
+for the design branch to merge.
+- [x] App: from `vults_platform::focus::Tracker`, on change only, map the active window to a session
   with `focus::session()`; send it to core as a plain input.
-- [ ] Core: keep `watched: Option<SessionKey>`; expose `SessionView.watched` (regenerate `view.gen.ts`).
+- [x] Core: keep `watched: Option<SessionKey>`; expose `SessionView.watched` (regenerate `view.gen.ts`).
 - [ ] UI: in `ui/src/island/render.ts` `cues()`, treat a watched session like a muted one for *done* and
   *fail* (no `Sound.play`, no `fsm.reveal`); cards keep their sound and reveal.
 - [ ] Setting in General › Notifications, on by default; strings in the four languages.
@@ -964,6 +970,16 @@ that acceptance passes.
 
 ### GH9 · GitHub release readiness
 `P1 · L · Needs: —` · [Spec](plan-github-luna.md#gh9--recovery-ui-documentation-and-release-readiness)
+2026-11-14, branch `feat/update-notice`: GH9-1 tests for GitHub errors (401, 403, rate limit, 404,
+405, 409, 422, 5xx, no connection) on the issue, pull request, Actions, merge and branch deletion
+writes; network loss and lost readbacks; an account switched between the write and its check.
+Fixed: Clear history deleted the merge/rerun receipts; a definite refusal on an issue or PR write
+now names GitHub's reason; app-level tests show a reservation left by a killed process
+blocks the same rerun or merge after restart. Plan item 7: an uncertain or abandoned receipt
+15 minutes old is reconciled when `prepare`'s fresh read shows the write did not take effect
+(`Store::reconcile_github_control`); accepted ones stay blocked. Fixed
+later the same day: a specialist's post-write grant check no longer turns a done write into an
+error; it keeps the outcome and drops the data read under the old access.
 - [ ] GH9-1 recovery: app restart mid-write, network loss, account switch and GitHub errors, each with
   a test.
 - [ ] GH9-2 a controlled test repository and an end-to-end run of the plan's flows.
@@ -1012,9 +1028,15 @@ that acceptance passes.
 
 ### FF4 · Update notice, asked for
 `P1 · M (four PRs) · Needs: —` · [Spec](plan-field-fixes.md#ff4--update-notice-asked-for)
-- [ ] FF4.1 pure rules with tests: this platform's tag prefix, no pre-releases, version order,
+2026-11-14, branch `feat/update-notice`: FF4.1 and FF4.2 implemented with tests. Rules in
+`app/src/update/rules.rs`; the request in `crates/chat/src/releases.rs` (allowlisted), behind
+`Settings.update_consent` (nothing before `Yes`), the `update` gate feature (4/day, traced),
+first look 30 s after launch, then at most daily, state in `update.json`, read by
+`update_status` and the `update-notice` event. Nothing asks for consent yet, so no request
+happens until FF4.3. `docs/safety.md` lists the request (both languages).
+- [x] FF4.1 pure rules with tests: this platform's tag prefix, no pre-releases, version order,
   `should_check` **at most daily** (rule 4), snooze 24 h, ask again after a day if unanswered.
-- [ ] FF4.2 a gate feature `update` in `app/src/gate.rs` (switch, small budget, trace); one
+- [x] FF4.2 a gate feature `update` in `app/src/gate.rs` (switch, small budget, trace); one
   unauthenticated GET of the releases list; add it to `scripts/network-allowlist.txt`.
 - [ ] FF4.3 consent asked once in the island; Settings › General › Updates with *Check now*; the notice
   card (version, notes, *Open release page*, *Later*); Zeca's badge only when nothing else waits.

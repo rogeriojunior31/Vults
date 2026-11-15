@@ -213,10 +213,26 @@ impl Tool for ScopedTool {
         Box::pin(async move {
             self.source.authorize(input).await?;
             let result = self.tool.call_approved(input, context).await?;
-            self.source.authorize(input).await?;
-            Ok(result)
+            match self.source.authorize(input).await {
+                Ok(()) => Ok(result),
+                Err(changed) => Ok(written_after_change(&result, &changed)),
+            }
         })
     }
+}
+
+/// The write already happened when the second check fails (a switched account, a spent budget,
+/// no network): an error would invite proposing it again. Keep only its outcome; what it read
+/// back was read under the old access and stays out.
+fn written_after_change(result: &str, changed: &str) -> String {
+    let outcome: Value = serde_json::from_str(result).unwrap_or(Value::Null);
+    serde_json::json!({
+        "status": outcome.get("status").cloned().unwrap_or_else(|| "uncertain".into()),
+        "verified": outcome.get("verified").cloned().unwrap_or(Value::Bool(false)),
+        "accessChanged": true,
+        "message": format!("The approved GitHub write was carried out; do not propose it again. Its details are not shown because GitHub access changed afterwards: {changed}"),
+    })
+    .to_string()
 }
 pub(crate) fn tools(app: &AppHandle, profile: &str) -> Tools {
     let grant = current(app, profile);
@@ -238,6 +254,32 @@ pub(crate) fn tools(app: &AppHandle, profile: &str) -> Tools {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_write_checked_after_access_changed_keeps_its_outcome_and_drops_its_data() {
+        let done = serde_json::json!({"status":"merged","verified":true,"pullRequest":{"title":"secret"}})
+            .to_string();
+        let out: Value =
+            serde_json::from_str(&super::written_after_change(&done, "account changed")).unwrap();
+        assert_eq!(out["status"], "merged");
+        assert_eq!(out["verified"], true);
+        assert_eq!(out["accessChanged"], true);
+        assert!(
+            out.get("pullRequest").is_none(),
+            "data read under the old access stays out"
+        );
+        assert!(
+            out["message"]
+                .as_str()
+                .unwrap()
+                .contains("do not propose it again")
+        );
+        // An answer that is not JSON never claims success.
+        let out: Value = serde_json::from_str(&super::written_after_change("done", "no network")).unwrap();
+        assert_eq!(
+            (out["status"].as_str(), out["verified"].as_bool()),
+            (Some("uncertain"), Some(false))
+        );
+    }
     use super::*;
     use serde_json::json;
     #[test]
