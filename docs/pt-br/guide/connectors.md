@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: 188b05716f95 -->
+<!-- source: d9a2c436ac51 -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -150,6 +150,23 @@ limite de requisições. O GitHub é verificado no máximo 3.000 vezes por dia; 
 exemplo, porque um repositório exige login via SAML), o Vults mantém o último snapshot completo e
 mostra um erro. Campos ausentes não são tratados como prova de que um pull request ou repositório
 não existe.
+
+<a id="check-access"></a>
+
+### Verificar acesso
+
+Quando o GitHub não responde como você espera, **Settings → Connection setup → GitHub → Check
+access** pergunta ao `gh` qual conta ele usa e, se você digitar um repositório como `dono/nome`, o que
+essa conta pode fazer lá. Ele separa: `gh` não instalado, não conectado, um login que o GitHub recusou
+(expirado ou revogado), o limite de requisições, uma organização que exige login único (SSO), uma
+leitura proibida e um repositório que não existe ou é privado para esta conta (o GitHub responde os
+dois do mesmo jeito). Para um repositório que ele consegue ler, diz se você pode enviar commits e se
+ele está arquivado.
+
+Funciona com o conector desligado, para explicar por que ligá-lo falha. Cada clique faz no máximo
+duas leituras, registradas no rastro como qualquer requisição, até 20 verificações por dia. Só a causa
+aparece: nunca o que o `gh` imprimiu, um token ou um cabeçalho. Quando a verificação falha, a última
+conta que funcionou é marcada como uma que pode não funcionar mais.
 
 <a id="the-github-card"></a>
 

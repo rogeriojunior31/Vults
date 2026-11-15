@@ -114,6 +114,26 @@ pub fn apply(app: &AppHandle) {
 }
 
 /// `enabled` is the user's switch: paused, a connector stays on in Settings without polling.
+/// GH1r: why GitHub access works or not, on the user's click in Settings. Works with the
+/// connector off, so it can explain why turning it on fails; traced and budgeted by the gate.
+#[tauri::command]
+pub async fn check_github_access(
+    app: AppHandle,
+    window: tauri::Webview,
+    repository: Option<String>,
+) -> Result<vults_connectors::github::diagnose::Diagnosis, String> {
+    crate::settings_page(&window)?;
+    let request = crate::gate::connector_request(&app, crate::gate::GITHUB_CHECK)
+        .ok_or("GitHub was checked many times today. Try again later.")?;
+    let result = vults_connectors::github::diagnose::diagnose(repository.as_deref()).await;
+    request.finish(
+        result
+            .as_ref()
+            .is_ok_and(|d| d.account == vults_connectors::github::diagnose::Access::Ready),
+    );
+    result.map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn connectors_status(
     app: AppHandle,

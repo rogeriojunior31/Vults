@@ -49,6 +49,9 @@ pub const SUGGEST_BUDGET: usize = 20;
 /// a later pass).
 pub const SLEEP: &str = "sleep";
 pub const SLEEP_BUDGET: usize = 4;
+/// Settings' *Check access* for GitHub (GH1r): a click, so no switch; up to two reads each.
+pub const GITHUB_CHECK: &str = "github-check";
+pub const GITHUB_CHECK_BUDGET: usize = 20;
 pub const CLEANUP: &str = "dictation-cleanup";
 pub const CLEANUP_BUDGET: usize = 2000;
 pub const MEETING_SUMMARY: &str = "meeting-summary";
@@ -103,6 +106,7 @@ pub fn budget(feature: &str) -> usize {
     match feature {
         USAGE | CLAUDE_USAGE => USAGE_BUDGET,
         MODEL_PRICES => 120,
+        GITHUB_CHECK => GITHUB_CHECK_BUDGET,
         UPDATE => UPDATE_BUDGET,
         WEB => WEB_BUDGET,
         PHONE => PHONE_BUDGET,
@@ -135,6 +139,8 @@ pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
         s.meeting_summary && s.meeting_summary_budget.is_some()
     } else if feature == CLEANUP {
         s.dictation_cleanup && s.dictation_cleanup_budget.is_some()
+    } else if feature == GITHUB_CHECK {
+        true
     } else if feature == MODEL_PRICES {
         s.price_updates
     } else if feature == UPDATE {
@@ -311,6 +317,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(USAGE);
         features.push(CLAUDE_USAGE);
         features.push(MODEL_PRICES);
+        features.push(GITHUB_CHECK);
         features.push(UPDATE);
         features.push(WEB);
         features.push(PHONE);
@@ -724,6 +731,13 @@ mod tests {
         s.price_updates = true;
         assert!(switched_on(&s, MODEL_PRICES));
         assert_eq!(budget(MODEL_PRICES), 120);
+        // GitHub's *Check access* is a click: no switch to wait for, but its own budget.
+        assert!(switched_on(&crate::settings::Settings::default(), GITHUB_CHECK));
+        assert_eq!(budget(GITHUB_CHECK), GITHUB_CHECK_BUDGET);
+        assert!(
+            !switched_on(&crate::settings::Settings::default(), "github"),
+            "the check never turns the connector on"
+        );
         // The update look only after the user's yes; asked or refused is not a yes.
         use crate::update::rules::Consent;
         for consent in [Consent::Unasked, Consent::Asked { at_ms: 1 }, Consent::No] {

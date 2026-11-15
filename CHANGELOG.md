@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- **Settings → Connection setup → GitHub → Check access** tells why GitHub access fails: `gh` missing, signed out, an expired or revoked login, the rate limit, single sign-on, a forbidden read or a repository this account cannot see, and for a repository whether you can push. It works with the connector off and never shows `gh`'s output or a token.
+
 - An uncertain or interrupted GitHub merge, Actions rerun or cancel, or branch deletion can be proposed again 15 minutes later, when a fresh read shows it did not take effect; before, it stayed blocked for 90 days.
 
 - Clear history keeps the receipt of a GitHub merge, Actions rerun or cancel, or branch deletion that GitHub may have carried out, so the same write can no longer be sent a second time after clearing.
