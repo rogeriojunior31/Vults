@@ -2483,4 +2483,7 @@ export default {
   "Could not update cached connector access. Check the connector's latest sync, account and repository, then try again.": "Não foi possível atualizar o acesso ao conector em cache. Confira a última sincronização, a conta e o repositório e tente novamente.",
   "{provider}: {repository} · {account} on {host}. Cached read only.": "{provider}: {repository} · {account} em {host}. Somente leitura em cache.",
   "Cached connector tools require a supported API provider.": "As ferramentas de conectores em cache exigem um provedor de API compatível.",
+  "Stay quiet when I am looking": "Ficar quieto quando eu estiver olhando",
+  "A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens.": "Uma sessão que termina ou falha enquanto o terminal dela está na frente não faz som, e a ilha fica onde está. Um card sempre toca e abre.",
+  "Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before.": "O Vults lê a janela ativa uma vez, quando um turno termina. No GNOME com Wayland, e para terminais no Windows, ele não consegue saber qual sessão está na frente, então todo término toca como antes.",
 } satisfies Record<string, string>;

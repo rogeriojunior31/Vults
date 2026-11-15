@@ -586,6 +586,8 @@ pub struct Public {
     pub visitors: bool,
     pub presence: crate::panel::Presence,
     pub notifications: bool,
+    #[serde(rename = "quietWhenWatching")]
+    pub quiet_when_watching: bool,
     pub zeca: bool,
     /// Activity's local history (the island's gear reads it here, without the history itself).
     pub history: bool,
@@ -660,6 +662,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         visitors: s.visitors,
         presence: s.presence,
         notifications: s.notifications,
+        quiet_when_watching: s.quiet_when_watching,
         zeca: s.zeca,
         history: s.history,
         widget: s.widget,
@@ -749,6 +752,13 @@ pub fn set_dnd(app: AppHandle, minutes: Option<u32>) -> Result<(), String> {
     tracing::info!(minutes, "do not disturb");
     let _ = app.emit("settings", serde_json::json!({ "dndUntil": until }));
     Ok(())
+}
+
+/// FF3: off, the runtime stops reading the active window when a turn ends.
+#[tauri::command]
+pub fn set_quiet_when_watching(app: AppHandle, window: tauri::Webview, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.quiet_when_watching = on)
 }
 
 /// Off withdraws what is shown; on weighs what is going on now.

@@ -309,6 +309,7 @@ let flock: Flock = "brazil";
 let visitors = true;
 let presence: Presence = "island";
 let notifications = true;
+let quietWhenWatching = true;
 /** Do not disturb until then (epoch seconds), or off. */
 let dndUntil: number | null = null;
 /** The lengths Settings offers, in minutes. */
@@ -1096,6 +1097,15 @@ function generalPage(): HTMLElement[] {
           notifications = on;
         }),
         t("In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
+      ),
+      row(
+        t("Stay quiet when I am looking"),
+        t("A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens."),
+        toggle(quietWhenWatching, async (on) => {
+          await Bridge.setQuietWhenWatching(on);
+          quietWhenWatching = on;
+        }),
+        t("Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before."),
       ),
     ),
     el("h2", { class: "settings-group-title", text: t("Island") }),
@@ -2437,6 +2447,7 @@ void Bridge.appSettings().then((s) => {
   visitors = s.visitors;
   presence = s.presence;
   notifications = s.notifications;
+  quietWhenWatching = s.quietWhenWatching ?? true;
   dndUntil = s.dndUntil;
   zeca = s.zeca;
   widget = s.widget;

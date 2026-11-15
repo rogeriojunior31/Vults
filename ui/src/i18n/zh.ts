@@ -2483,4 +2483,7 @@ export default {
   "Could not update cached connector access. Check the connector's latest sync, account and repository, then try again.": "无法更新缓存连接器访问权限。请检查连接器的最近同步、账号和仓库，然后重试。",
   "{provider}: {repository} · {account} on {host}. Cached read only.": "{provider}：{repository} · {host} 上的 {account}。仅读取缓存。",
   "Cached connector tools require a supported API provider.": "缓存连接器工具需要受支持的 API 提供商。",
+  "Stay quiet when I am looking": "我在看时保持安静",
+  "A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens.": "会话结束或失败时,如果它的终端正在前台,就不发声,岛也保持不动。卡片总会发声并打开。",
+  "Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before.": "Vults 只在一轮结束时读取一次当前活动窗口。在 Wayland 上的 GNOME 中,以及 Windows 上的终端,它无法判断哪个会话在前台,因此每次结束仍像以前一样发声。",
 } satisfies Record<string, string>;
