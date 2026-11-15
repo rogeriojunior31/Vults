@@ -125,6 +125,23 @@ export type MediaAction = "playpause" | "next" | "previous";
 /** One rate-limit window of a subscription, as its CLI reports it. */
 export interface ModelPriceStatus { enabled: boolean; checkedAt: number | null; stale: boolean; updating: boolean; failed: boolean }
 
+/** The update notice (FF4): asked for once, at most one look a day, never an install. */
+export type UpdateConsent = { state: "unasked" } | { state: "asked"; atMs: number } | { state: "yes" } | { state: "no" };
+export interface UpdateRelease { version: string; name: string; notes: string; url: string }
+export interface UpdateStatus {
+  /** False in distro packages: the feature is compiled out. */
+  available: boolean;
+  consent: UpdateConsent;
+  /** The island may ask its one question now. */
+  ask: boolean;
+  current: string | null;
+  checkedAtMs: number | null;
+  checking: boolean;
+  failed: boolean;
+  /** A newer release, not snoozed. */
+  notice: UpdateRelease | null;
+}
+
 export interface UsageWindow {
   agent: AgentKind;
   /** The window's length: 300 is 5 hours, 10080 a week. */
@@ -667,6 +684,13 @@ export const Bridge = {
   modelPriceStatus: () => invoke<ModelPriceStatus>("model_price_status"),
   refreshModelPrices: () => invoke<ModelPriceStatus>("refresh_model_prices"),
   onModelPrices: (cb: (status: ModelPriceStatus) => void) => { void listen<ModelPriceStatus>("model-prices", e => cb(e.payload)); },
+  updateStatus: () => invoke<UpdateStatus>("update_status"),
+  setUpdateChecks: (on: boolean) => invoke<UpdateStatus>("set_update_checks", { on }),
+  updateQuestionShown: () => invoke<void>("update_question_shown"),
+  updateLater: () => invoke<void>("update_later"),
+  openUpdatePage: () => invoke<void>("open_update_page"),
+  checkUpdateNow: () => invoke<UpdateStatus>("check_update_now"),
+  onUpdateNotice: (cb: (status: UpdateStatus) => void) => { void listen<UpdateStatus>("update-notice", e => cb(e.payload)); },
   dictationPermission: () => invoke<DictationPermission>("dictation_permission"),
   onDictationPermission: (cb: (state: DictationPermission) => void) => { void listen<DictationPermission>("dictation-permission", e => cb(e.payload)); },
   retryDictationPermission: () => invoke<void>("retry_dictation_permission"),
