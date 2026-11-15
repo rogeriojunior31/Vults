@@ -9,7 +9,7 @@ import { ISLAND_WIDTHS, restoreWidth, saveWidth, watchWidth } from "../../island
 // Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
-import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess, type DictationPermission, type DictationMusic, type Theme } from "../../bridge";
+import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess, type UpdateStatus, type DictationPermission, type DictationMusic, type Theme } from "../../bridge";
 import { SPECIES, speciesSet } from "../../character/flock";
 import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
@@ -210,6 +210,8 @@ let nowPlaying = false;
 let codexUsage = false;
 let claudeUsage = false;
 let priceUpdates = false;
+/** The update notice; null until read. Distro packages say it is not available. */
+let update: UpdateStatus | null = null;
 let priceStatus: import("../../bridge").ModelPriceStatus | null = null;
 let nativeChat = true;
 let dictationInsert = false;
@@ -314,6 +316,7 @@ let flock: Flock = "brazil";
 let visitors = true;
 let presence: Presence = "island";
 let notifications = true;
+let quietWhenWatching = true;
 /** Do not disturb until then (epoch seconds), or off. */
 let dndUntil: number | null = null;
 /** The lengths Settings offers, in minutes. */
@@ -1033,6 +1036,39 @@ function priceCatalogRow(): HTMLElement {
 }
 
 Bridge.onModelPrices(status => { priceStatus = status; priceUpdates = status.enabled; if (page === "general") render(); });
+Bridge.onUpdateNotice(status => { update = status; if (page === "general") render(); });
+
+/** What the last look found, in one sentence. */
+function updateState(u: UpdateStatus): string {
+  if (u.checking) return t("Looking for a new version…");
+  if (u.notice) return t("Vults {version} is available. You have {current}.", { version: u.notice.version, current: u.current ?? "?" });
+  if (u.failed) return t("The last look failed. Vults tries again tomorrow, or now with Check now.");
+  if (u.checkedAtMs != null) return t("You have the latest version, {current}. Checked {time}.", { current: u.current ?? "?", time: new Date(u.checkedAtMs).toLocaleString(locale()) });
+  return t("Not checked yet.");
+}
+
+function updatesSection(): HTMLElement[] {
+  const u = update;
+  if (!u?.available) return [];
+  const check = button(u.checking ? t("Checking…") : t("Check now"), () => {
+    check.disabled = true;
+    void Bridge.checkUpdateNow().then(status => { update = status; render(); }, () => { if (update) update = { ...update, checking: false, failed: true }; render(); });
+  });
+  check.disabled = u.checking;
+  const controls = el("div", { class: "actions" }, check);
+  if (u.notice) controls.append(button(t("Open release page"), () => void Bridge.openUpdatePage().catch(() => {})));
+  return [
+    el("h2", { class: "settings-group-title", text: t("Updates") }),
+    el("section", { class: "card rows" },
+      row(
+        t("Look for new versions"),
+        t("Once a day, Vults reads its public list of releases on GitHub and tells you when a newer version exists. Nothing about you is sent, and nothing is downloaded or installed."),
+        toggle(u.consent.state === "yes", async on => { update = await Bridge.setUpdateChecks(on); render(); }),
+      ),
+      row(t("Version"), updateState(u), controls),
+    ),
+  ];
+}
 
 function generalPage(): HTMLElement[] {
   return [
@@ -1102,6 +1138,15 @@ function generalPage(): HTMLElement[] {
           notifications = on;
         }),
         t("In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
+      ),
+      row(
+        t("Stay quiet when I am looking"),
+        t("A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens."),
+        toggle(quietWhenWatching, async (on) => {
+          await Bridge.setQuietWhenWatching(on);
+          quietWhenWatching = on;
+        }),
+        t("Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before."),
       ),
     ),
     el("h2", { class: "settings-group-title", text: t("Island") }),
@@ -1217,6 +1262,7 @@ function generalPage(): HTMLElement[] {
       ),
       priceCatalogRow(),
     ),
+    ...updatesSection(),
     disclosure(t("Keyboard shortcuts"), el(
       "section",
       { class: "card rows" },
@@ -2428,6 +2474,7 @@ void Bridge.appSettings().then((s) => {
   claudeUsage = s.claudeUsage ?? false;
   priceUpdates = s.priceUpdates ?? false;
   void Bridge.modelPriceStatus().then(status => { priceStatus = status; if (page === "general") render(); }, () => {});
+  void Bridge.updateStatus().then(status => { update = status; if (page === "general") render(); }, () => {});
   nativeChat = s.nativeChat;
   if (!dictationInsertChanged) dictationInsert = s.dictationInsert;
   dictationInsertAvailable = s.dictationInsertAvailable;
@@ -2444,6 +2491,7 @@ void Bridge.appSettings().then((s) => {
   visitors = s.visitors;
   presence = s.presence;
   notifications = s.notifications;
+  quietWhenWatching = s.quietWhenWatching ?? true;
   dndUntil = s.dndUntil;
   zeca = s.zeca;
   widget = s.widget;

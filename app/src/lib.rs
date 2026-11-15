@@ -314,6 +314,16 @@ pub fn run() {
             pricing::model_price_status,
             pricing::refresh_model_prices,
             update::update_status,
+            #[cfg(feature = "update-notice")]
+            update::set_update_checks,
+            #[cfg(feature = "update-notice")]
+            update::update_question_shown,
+            #[cfg(feature = "update-notice")]
+            update::update_later,
+            #[cfg(feature = "update-notice")]
+            update::open_update_page,
+            #[cfg(feature = "update-notice")]
+            update::check_update_now,
             settings::set_native_chat,
             settings::set_dictation_insert,
             settings::set_dictation_caption,
@@ -365,6 +375,7 @@ pub fn run() {
             settings::set_zeca_species,
             settings::set_visitors,
             settings::set_notifications,
+            settings::set_quiet_when_watching,
             settings::set_dnd,
             settings::set_zeca,
             panel::set_presence,

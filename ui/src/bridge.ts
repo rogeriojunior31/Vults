@@ -134,6 +134,23 @@ export interface GithubDiagnosis {
 
 export interface ModelPriceStatus { enabled: boolean; checkedAt: number | null; stale: boolean; updating: boolean; failed: boolean }
 
+/** The update notice (FF4): asked for once, at most one look a day, never an install. */
+export type UpdateConsent = { state: "unasked" } | { state: "asked"; atMs: number } | { state: "yes" } | { state: "no" };
+export interface UpdateRelease { version: string; name: string; notes: string; url: string }
+export interface UpdateStatus {
+  /** False in distro packages: the feature is compiled out. */
+  available: boolean;
+  consent: UpdateConsent;
+  /** The island may ask its one question now. */
+  ask: boolean;
+  current: string | null;
+  checkedAtMs: number | null;
+  checking: boolean;
+  failed: boolean;
+  /** A newer release, not snoozed. */
+  notice: UpdateRelease | null;
+}
+
 export interface UsageWindow {
   agent: AgentKind;
   /** The window's length: 300 is 5 hours, 10080 a week. */
@@ -647,7 +664,7 @@ export const Bridge = {
       ? invoke<void>("set_voice_realtime", { on, limitMicrousd, model })
       : Promise.reject(new Error("Invalid realtime voice budget.")),
   appSettings: () =>
-    invoke<{ questionAgents: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; claudeUsage: boolean; priceUpdates: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCommandMedia: boolean; dictationCommandApps: boolean; dictationCommandOutput: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ questionAgents: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; claudeUsage: boolean; priceUpdates: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCommandMedia: boolean; dictationCommandApps: boolean; dictationCommandOutput: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; quietWhenWatching: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -655,6 +672,7 @@ export const Bridge = {
   setDnd: (minutes: number | null) => invoke<void>("set_dnd", { minutes }),
   /** Desktop notifications (finished, failed, a card waiting): on or off. */
   setNotifications: (on: boolean) => invoke<void>("set_notifications", { on }),
+  setQuietWhenWatching: (on: boolean) => invoke<void>("set_quiet_when_watching", { on }),
   /** The presence preset: Island, Panel (by the tray), Quiet or Paused. Switches at once. */
   setPresence: (presence: Presence) => invoke<void>("set_presence", { presence }),
   /** Where the island is now, for its page on load. */
@@ -677,6 +695,13 @@ export const Bridge = {
   modelPriceStatus: () => invoke<ModelPriceStatus>("model_price_status"),
   refreshModelPrices: () => invoke<ModelPriceStatus>("refresh_model_prices"),
   onModelPrices: (cb: (status: ModelPriceStatus) => void) => { void listen<ModelPriceStatus>("model-prices", e => cb(e.payload)); },
+  updateStatus: () => invoke<UpdateStatus>("update_status"),
+  setUpdateChecks: (on: boolean) => invoke<UpdateStatus>("set_update_checks", { on }),
+  updateQuestionShown: () => invoke<void>("update_question_shown"),
+  updateLater: () => invoke<void>("update_later"),
+  openUpdatePage: () => invoke<void>("open_update_page"),
+  checkUpdateNow: () => invoke<UpdateStatus>("check_update_now"),
+  onUpdateNotice: (cb: (status: UpdateStatus) => void) => { void listen<UpdateStatus>("update-notice", e => cb(e.payload)); },
   dictationPermission: () => invoke<DictationPermission>("dictation_permission"),
   onDictationPermission: (cb: (state: DictationPermission) => void) => { void listen<DictationPermission>("dictation-permission", e => cb(e.payload)); },
   retryDictationPermission: () => invoke<void>("retry_dictation_permission"),

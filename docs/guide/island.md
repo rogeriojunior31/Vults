@@ -292,6 +292,19 @@ resets. No token of yours is read: each number comes from the CLI you logged int
   one of ours, which runs yours if you have one ([how](../reference/settings.md#agent-configs-vults-edits)).
   The numbers arrive after a session's first reply.
 
+## A new version
+
+Once, the open island asks: *May Vults look at its releases on GitHub?* With **Yes, once a day**,
+Vults reads the public list of its releases about 30 seconds after it starts and then at most once a
+day. With **No**, or in **Settings → General → Updates**, it never looks. Left unanswered, the
+question comes back the next day. Approvals, questions and a session that needs you always come
+first: the question and the notice wait for them.
+
+When a newer version is out, a dot lights on the compact island and the open island shows *Vults
+0.2.0 is available* with the first line of its notes. **Open release page** opens it on GitHub;
+**Later** hides that version for a day, and a newer one shows at once. Nothing is downloaded or
+installed. Packages your distribution updates (the AUR) have no update notice at all.
+
 ## Getting to a session
 
 Click a vult in the flock to open that session; it stays in front until you pick another or it
@@ -404,3 +417,11 @@ when the island opens or folds and when Zeca reacts to you. The speaker button o
 **Settings → General → Sounds**, turns them off; **Volume** sets how loud. A card that keeps waiting
 sounds again, and **Do not disturb** silences sounds and notifications for a while: see
 [When nobody answers](approvals.md#when-nobody-answers).
+
+When a session finishes or fails while you are looking at its terminal, you saw it end: it makes
+no sound and the island stays put; its bird still lands. Vults reads the active window once, as the
+turn ends, and only a terminal it can tie to that one session counts (a shared terminal server or
+a multiplexer does not). A card always sounds and opens. **Settings → General → Stay quiet when I am
+looking** turns this off. Where the desktop does not say which window is active (GNOME on
+Wayland), and on Windows, where a terminal window cannot yet be tied to one session, every finish
+sounds as before.

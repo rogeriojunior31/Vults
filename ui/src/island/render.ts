@@ -10,9 +10,11 @@
 // The two layers cross-fade; the black shape springs when it grows and eases when it shrinks.
 import { Clock } from "../clock";
 import { DEADLINE_SOON_S, DEADLINE_URGENT_S, REQUEST_MS as EXPIRES_MS, deadlineText, paintClock, secondsLeft } from "../deadline";
-import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Flock, Outcome, SessionRef, SessionView, UsageWindow, ViewModel } from "../bridge";
+import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, ApprovalView, Attention, ConnectorStatus, Diff, MediaAction, NowPlaying, Size, Presence, Flock, Outcome, SessionRef, SessionView, UpdateStatus, UsageWindow, ViewModel } from "../bridge";
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
+import { updateBox, updateShown, type UpdateActions } from "./update";
+import { settledCue } from "./cues";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
 import { DICTATION_HEIGHT, OPEN_ZOOM, miniHeight, miniSessions, miniWidth, quickBounds, quickPixels, restoreWidth, saveWidth, watchWidth, type IslandWidth } from "./geometry";
@@ -49,7 +51,8 @@ import { allowsByKey, refuseAllowKey } from "./allow-key";
 import { activityCard, agentName, badgeOf, diffCard, focusCard, greetingCard, menuCard, needsYou, settledCard, shownKeys, skipButton, statusText, usageMeters, type MenuActions, type Settled } from "./views";
 import { currentLang, t } from "../i18n";
 
-export interface Actions {
+/** The update notice (FF4) adds its question, *Later* and its release page. */
+export interface Actions extends UpdateActions {
   textQuestionDepart?(): void;
   chat: ChatBackend;
   decide(request: string, decision: "allow" | "deny"): void;
@@ -269,6 +272,7 @@ export interface Island {
   away(): void;
   /** What is playing; null when nothing is (or the setting is off). */
   setMedia(now: NowPlaying | null): void;
+  setUpdate(status: UpdateStatus | null): void;
   /** The subscriptions' usage windows, from the last read. */
   setUsage(windows: UsageWindow[]): void;
   chat: ChatPanel;
@@ -394,6 +398,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     return pausedAs;
   }
   let media: NowPlaying | null = null;
+  /** The update notice, and whether its question was already reported shown this time. */
+  let update: UpdateStatus | null = null;
+  let questionShown = false;
   let usage: UsageWindow[] = [];
   /** Who holds the keyboard: the chat, a question card's "Other" field, the island's keys. The
    *  island asks for it while any of them does, and gives it back once none does. */
@@ -820,16 +827,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // Still in that state after the wait: now it is news.
           if (statuses.get(k) !== status) return;
           announced.add(k);
-          // Quiet keeps only a card's sound (ADR 0021); the rest of the wire stays silent.
-          // Paused, a state that started settling before the pause stays silent too. A muted
-          // project is quiet at rest; its card keeps its sound (ADR 0021).
-          const preset = presenceNow();
+          // Read at the end of the wait: the app's look at the active window lands within it.
           const now = raw.sessions.find((x) => key(x) === k);
-          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) {
+          const { sound, reveal } = settledCue(now, presenceNow());
+          if (sound) {
             Sound.play(cue, !!now?.card);
             announce(now ?? s, !!now?.card);
           }
-          fsm.reveal(Clock.now());
+          if (reveal) fsm.reveal(Clock.now());
           render(raw);
         }, wait),
       );
@@ -1118,7 +1123,10 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     compact.classList.toggle("needs", needs);
     // A session failed (and none needs you): the edge stays red, still, until it is seen.
     compact.classList.toggle("failed", !needs && failed > 0);
-    newsDot.hidden = alerts === 0;
+    const release = updateVisible(raw) ? update?.notice : null;
+    if (release) compact.setAttribute("aria-label", `${compact.getAttribute("aria-label")} · ${t("Vults {version} is available", { version: release.version })}`);
+    newsDot.hidden = alerts === 0 && !release;
+    newsDot.classList.toggle("update", alerts === 0 && !!release);
     const plans = new Map<string, number>();
     // As the meters: a window that has reset says nothing until the next read.
     const nowSecs = Date.now() / 1000;
@@ -1501,6 +1509,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         ...(news && v.recap ? [recapBox(v.recap)] : []),
         ...(news && v.digest ? [digestBox(v.digest)] : []),
         ...(news && v.alerts.length ? [alertsBox(v.alerts)] : []),
+        ...(news && update && updateVisible(v) ? [updateBox(updateNow()!, actions, () => { if (!questionShown) { questionShown = true; actions.updateQuestionShown?.(); } })] : []),
       );
     }
     compact.classList.toggle("on", mode === "compact");
@@ -1990,6 +1999,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     return el("div", { class: "digest recap" }, icon("flock", 13), el("span", { class: "digest-text", text: r.text }), open, close);
   }
 
+  /** Once on screen, the question stays until answered; `asked` only decides whether a later run asks again. */
+  function updateNow(): UpdateStatus | null {
+    return update && questionShown && update.consent.state === "asked" ? { ...update, ask: true } : update;
+  }
+  function updateVisible(v: ViewModel): boolean { return updateShown(updateNow(), v, presenceNow() === "paused", chat.hasWaitingApproval()); }
+
   function alertsBox(alerts: AlertView[]): HTMLElement {
     const more = alerts.length - MAX_ALERTS;
     return el(
@@ -2313,6 +2328,12 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   onSeen(() => render(raw));
   // The hour turning brings the idle flock down at dusk, to sleep at night, and up by day.
   onDayPart(() => render(raw));
+  const setUpdate = (status: UpdateStatus | null) => {
+    update = status;
+    // Answered (here or in Settings): the question is done. Shown and unanswered, it stays.
+    if (status?.consent.state === "yes" || status?.consent.state === "no") questionShown = false;
+    render(raw);
+  };
   const setMedia = (now: NowPlaying | null) => {
     media = now;
     setMusic(!!now?.playing);
@@ -2358,7 +2379,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
       textQuestion = card;
       render(raw);
     },
-    render, openNow: () => { fsm.open(Clock.now()); openQuick("now"); }, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, settingsChanged: quickSettingsChanged, greet, chat, pointer, away, setMedia, setUsage,
+    render, openNow: () => { fsm.open(Clock.now()); openQuick("now"); }, last: () => raw, hold, shortcut, setKeys, setFoldAfter, setOpenOnHover, setPresence, setVisitors, setZeca, setLookSetting, openLooks, visitNow, jumpFailed, merged, settingsChanged: quickSettingsChanged, greet, chat, pointer, away, setMedia, setUsage, setUpdate,
     openMenu: (agent, id) => openMenu(`${agent}:${id}`),
     setEditor,
   };

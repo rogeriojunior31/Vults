@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 1bba4fb1d01b -->
+<!-- source: 7ecafa61a501 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -326,6 +326,21 @@ login.
   acrescenta uma nossa, que roda a sua se você tiver uma ([como](../reference/settings.md#agent-configs-vults-edits)).
   Os números chegam depois da primeira resposta de uma sessão.
 
+<a id="a-new-version"></a>
+
+## Uma versão nova
+
+Uma vez, a ilha aberta pergunta: *May Vults look at its releases on GitHub?* (o Vults pode olhar as
+versões dele no GitHub?). Com **Yes, once a day**, o Vults lê a lista pública das versões dele cerca
+de 30 segundos depois de abrir e, depois, no máximo uma vez por dia. Com **No**, ou em **Settings →
+General → Updates**, ele nunca olha. Sem resposta, a pergunta volta no dia seguinte. Aprovações,
+perguntas e uma sessão que precisa de você sempre vêm antes: a pergunta e o aviso esperam por elas.
+
+Quando sai uma versão mais nova, um ponto acende na ilha compacta e a ilha aberta mostra *Vults 0.2.0
+is available* com a primeira linha das notas. **Open release page** abre a página no GitHub; **Later**
+esconde essa versão por um dia, e uma mais nova aparece na hora. Nada é baixado nem instalado. Os
+pacotes que a sua distribuição atualiza (o AUR) não têm aviso de atualização.
+
 <a id="getting-to-a-session"></a>
 
 ## Chegando a uma sessão
@@ -450,3 +465,11 @@ conectores; outros mais suaves quando a ilha abre ou se recolhe e quando o Zeca 
 de alto-falante na ilha, ou **Settings → General → Sounds**, os desliga; **Volume** define o quão
 alto. Um card que continua esperando soa de novo, e o **Do not disturb** silencia sons e notificações
 por um tempo: veja [Quando ninguém responde](approvals.md#when-nobody-answers).
+
+Quando uma sessão termina ou falha enquanto você olha para o terminal dela, você viu o fim: ela não
+faz som e a ilha fica onde está; o pássaro dela ainda pousa. O Vults lê a janela ativa uma vez, no
+fim do turno, e só conta um terminal que ele consegue ligar àquela sessão (um servidor de terminal
+compartilhado ou um multiplexador não contam). Um card sempre soa e abre. **Settings → General →
+Stay quiet when I am looking** desliga isso. Onde o desktop não diz qual janela está ativa (GNOME no
+Wayland), e no Windows, onde uma janela de terminal ainda não pode ser ligada a uma única sessão, todo
+término soa como antes.
