@@ -1,5 +1,5 @@
-# 0003. O hook nunca bloqueia um agente
-<!-- source: 5416e1afec81 -->
+# 0001. O hook nunca bloqueia um agente
+<!-- source: 671cc132a2d1 -->
 
 **Status:** Aceita, 2026-10-04 (a regra existe desde o início do projeto).
 
@@ -25,4 +25,4 @@ pergunta no próprio terminal.
 
 - O hook usa só `std` e `serde_json`: inicia rápido e tem pouco para quebrar.
 - Recursos que precisariam que o agente esperasse por nós (parar, pausar) não podem ser feitos só
-  com o hook. Veja [0011](0011-only-actions-that-work.md).
+  com o hook. Veja [0006](0006-surfaces.md).

@@ -1,6 +1,6 @@
 //! Desktop notifications over D-Bus or Windows WinRT. Core decides what to show
 //! (`core::notify`); this only sends it, one notification per session (replaced in place), and
-//! hears the one action a notification has: *Open*. Never Allow or Deny (rule 2, ADR 0004).
+//! hears the one action a notification has: *Open*. Never Allow or Deny (rule 2, ADR 0002).
 
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;

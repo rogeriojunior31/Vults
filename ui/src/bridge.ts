@@ -9,7 +9,7 @@ import type { Activity, GithubGrid } from "./surfaces/settings/activity";
 import { installWindowsDrop, type FileDropTransport } from "./windows-drop";
 
 // The core's view, generated from crates/core (see `mod ts` in view.rs); the island imports it from here.
-/** The four sizes of attention (ADR 0021): the pill, the island, the Nest, the Nest on the whole screen. */
+/** The four sizes of attention (ADR 0006): the pill, the island, the Nest, the Nest on the whole screen. */
 export type Size = "mini" | "quick" | "room" | "full";
 export interface VoiceConversation {
   id: string;
@@ -218,7 +218,7 @@ export interface ConnectorStatus {
   lastOk: number | null;
   error: string | null;
   watching: number;
-  /** The network gate's daily budget for it is spent (ADR 0019): it waits. */
+  /** The network gate's daily budget for it is spent (ADR 0004): it waits. */
   overBudget: boolean;
   account: string | null;
   host: string | null;
@@ -247,7 +247,7 @@ export interface Rule {
 /** CLI execution engines, from the agents' registry. */
 export type { Engine } from "./agents.gen";
 
-/** A policy the user accepted (ADR 0004), as it stands. */
+/** A policy the user accepted (ADR 0002), as it stands. */
 export interface PolicyRow {
   consent: number;
   /** Its folder, with `~`; null holds everywhere. */
@@ -448,7 +448,7 @@ export type ChatSync =
 /** A click on the chat's card; `always` allows the same whole command until the conversation ends. */
 export type ChatAnswer = "allow" | "deny" | "always";
 
-/** Who answers the chat's cards (ADR 0004): a card, the user's policies, or full access. */
+/** Who answers the chat's cards (ADR 0002): a card, the user's policies, or full access. */
 export type ChatAccess = "ask" | "policies" | "full";
 
 export type ChatActivityEvent =
@@ -481,7 +481,7 @@ export type ChatDelta =
       outside: string | null;
     }
   | { kind: "allowed"; tool: string; target: string }
-  /** The user's own choice for the chat answered with no card (ADR 0004). */
+  /** The user's own choice for the chat answered with no card (ADR 0002). */
   | { kind: "settled"; tool: string; target: string; allow: boolean; by: "policy" | "full-access" }
   | { kind: "tool"; tool: string; outside: boolean }
   | { kind: "toolstate"; active: boolean }
@@ -872,7 +872,7 @@ export const Bridge = {
   onNestClose: (handler: (event: { preventDefault(): void }) => Promise<void>) => getCurrentWindow().onCloseRequested(handler),
   /** The Nest, at `tab` when given (a tab or Activity sub-tab id of `surfaces/nest/render.ts`). */
   openNest: (tab?: string, full?: boolean) => invoke<void>("open_nest_window", { tab: tab ?? null, full: full ?? null }),
-  /** The size switch (ADR 0021); `tab` keeps the place across it. */
+  /** The size switch (ADR 0006); `tab` keeps the place across it. */
   setSize: (size: Size, tab?: string) => invoke<void>("set_size", { size, tab: tab ?? null }),
   nestIsFull: () => invoke<boolean>("nest_is_full"),
   /** Resizes the Nest's window from that edge, the press held: it has no system frame to pull. */
@@ -884,13 +884,13 @@ export const Bridge = {
       /* no window */
     }
   },
-  /** Whether the Nest is open and in sight: the island steps aside meanwhile (ADR 0021). */
+  /** Whether the Nest is open and in sight: the island steps aside meanwhile (ADR 0006). */
   nestIsOpen: () => invoke<boolean>("nest_is_open"),
   onNestOpen(cb: (open: boolean) => void): void {
     void listen<boolean>("nest-open", (e) => cb(e.payload));
   },
   /** Whether the user is in the Nest (its window has the focus and shows the Nest, not Settings):
-   *  there the Nest answers the cards, and the island stays aside (ADR 0021). */
+   *  there the Nest answers the cards, and the island stays aside (ADR 0006). */
   nestHoldsCards: () => invoke<boolean>("nest_holds_cards"),
   onNestHolds(cb: (holds: boolean) => void): void {
     void listen<boolean>("nest-holds", (e) => cb(e.payload));

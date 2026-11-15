@@ -13,7 +13,7 @@ These were ADR 0020 until 2026-11-15; they are process, not architecture.
   green CI including Security, all recorded against the candidate's source revision. Choosing a
   version or passing automated tests does not complete a desktop acceptance gate.
 - Experimental features keep their opt-in and preview status until their own gates pass.
-- Linux first through 0.2.x, with Android as the one exception (ADR 0004); Windows and macOS betas
+- Linux first through 0.2.x, with Android as the one exception (ADR 0002); Windows and macOS betas
   may land late in 0.2.x. 1.0 means "done for Linux".
 - The next target and its open gates are in the [roadmap](ROADMAP.md).
 

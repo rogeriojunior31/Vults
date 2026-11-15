@@ -1,4 +1,4 @@
-//! The update notice's one request (FF4, ADR 0019): the public releases list of the app's own
+//! The update notice's one request (FF4, ADR 0004): the public releases list of the app's own
 //! repository. No credentials, cookies, proxy or redirects, and nothing about the user beyond what
 //! any HTTPS request carries. The app owns consent, cadence, admission and parsing.
 

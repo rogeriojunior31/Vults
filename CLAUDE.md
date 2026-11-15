@@ -35,8 +35,10 @@ Anything copied from older prototypes is cleaned before it is committed.
 ## Stack
 
 - Rust (edition 2024) for every backend crate and tool; TypeScript only to render the UI (Tauri 2).
-- Kotlin only for the Android shell, over the Rust core (ADR 0004).
-- No Swift, no Go.
+- Kotlin only for the Android shell, over the Rust core (ADR 0002).
+- No Swift, no Go, no Python sidecars: every extra runtime costs memory, start-up time,
+  packaging and safety. A model the app needs runs in Rust or not at all.
+- No GPL code in the binary; check each local engine's and model's license before adding it.
 
 ## Architecture
 
@@ -60,8 +62,8 @@ vults/
 │   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns, the audit log, consents, traces
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 │   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
-│   ├── zeca/             # Zeca's brain (ADR 0018): a read-only view of the flock, his memory in git; no vults-core
-│   ├── link/             # the paired phone (ADR 0004): pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
+│   ├── zeca/             # Zeca's brain (ADR 0005): a read-only view of the flock, his memory in git; no vults-core
+│   ├── link/             # the paired phone (ADR 0002): pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
 │   ├── relay/            # the phone's relay: store-and-forward of sealed envelopes (axum, Docker), and its client through the gate
 │   ├── evals/            # evals with cassettes (dev only): policy, redaction, prompts, injection; --features evals
 │   ├── spike/            # the spike kit (dev only): fake model, fake app, a terminal for TUIs; scripts/spike.sh records an agent
@@ -83,7 +85,7 @@ vults/
 Three layers, and a crate only depends on its own or a lower one (`scripts/check-layers.sh`, CI):
 **Core** (agents, sessions, decisions), **Connect** (connectors, chat, voice, media) and
 **Experience** (app, platform, ui). Zeca's body lives in Experience; his brain, when it lands, is a
-`zeca` crate in Connect (ADR 0018). He uses Chat, Voice and Connect, none of them knows about him,
+`zeca` crate in Connect (ADR 0005). He uses Chat, Voice and Connect, none of them knows about him,
 and he never answers a permission. See `docs/architecture.md`, *Layers*.
 
 ## Run
@@ -104,7 +106,7 @@ synchronously: `requestAnimationFrame` is paused while WebKit thinks the page is
 ## Priorities
 
 Linux first and only, until everything is refined; Windows and macOS come at the end. The one
-exception is the Android companion that answers cards (ADR 0004). Order of focus:
+exception is the Android companion that answers cards (ADR 0002). Order of focus:
 it works, the UI, the docs; distribution after.
 
 ## UI and prototypes
@@ -118,9 +120,10 @@ application.
 
 ## Rules that never bend
 
-Each rule has its reason in `docs/adr/`: 0003 for rule 1; 0004 for rule 2 (clicks, rules, policies,
-destructive calls, the phone and the chat's access); 0005 for rule 3; 0019 for rule 4 (the keyring,
-no telemetry, the update check and requests on the user's behalf). Changing one starts with an edit to
+Each rule has its reason in the ADR of the same number in `docs/adr/`: 0001 for rule 1; 0002 for
+rule 2 (clicks, rules, policies, destructive calls, voice, the phone and the chat's access); 0003
+for rule 3; 0004 for rule 4 (the keyring, no telemetry, voice and audio, the update check and
+requests on the user's behalf). Changing one starts with an edit to
 its living record, with a dated line in its *History* ([how to write one](docs/adr/README.md#writing-one)).
 
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.

@@ -247,7 +247,7 @@ pub fn voice_start(
     }
 
     crate::doctor::dictation::stop_mic(&app);
-    // The mic serves Zeca's chat only (ADR 0018).
+    // The mic serves Zeca's chat only (ADR 0005).
     if !crate::settings::zeca(&app) {
         return Err("Zeca is off (Settings → Flock & Zeca).".into());
     }

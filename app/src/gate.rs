@@ -1,4 +1,4 @@
-//! The network gate (ADR 0019; docs/safety.md): every request the app makes on its own, without a
+//! The network gate (ADR 0004; docs/safety.md): every request the app makes on its own, without a
 //! click at that moment, asks here first. Each feature has the user's switch, a budget over the
 //! last 24 hours, and a local trace of each request (a `request` span). Today: the connectors'
 //! polls, the update notice's look at the releases list, the Codex usage read, Zeca's web tools, the phone's relay, the journal's daily
@@ -615,7 +615,7 @@ mod tests {
     }
 
     /// The real gate in front of the real connector runtime and the real usage loop, for a whole
-    /// simulated day: with every switch off, neither a poll nor a read starts (ADR 0019's
+    /// simulated day: with every switch off, neither a poll nor a read starts (ADR 0004's
     /// consequence: the machine's count, not only the gate's).
     #[tokio::test(start_paused = true)]
     async fn a_day_with_every_feature_off_makes_no_request() {

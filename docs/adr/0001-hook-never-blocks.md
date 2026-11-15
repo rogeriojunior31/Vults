@@ -1,4 +1,4 @@
-# 0003. The hook never blocks an agent
+# 0001. The hook never blocks an agent
 
 **Status:** Accepted, 2026-10-04 (the rule dates from the start of the project).
 
@@ -18,4 +18,4 @@ terminal.
 
 - The hook is `std` and `serde_json` only: it starts fast and has little to break.
 - Features that would need the agent to wait for us (a stop, a pause) cannot be built on the hook
-  alone. See [0011](0011-only-actions-that-work.md).
+  alone. See [0006](0006-surfaces.md).

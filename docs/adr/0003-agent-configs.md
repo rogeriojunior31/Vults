@@ -1,7 +1,7 @@
-# 0005. Agent configs, and the agents we support
+# 0003. Agent configs, and the agents we support
 
 **Status:** Accepted, 2026-10-04 (the rule dates from the start of the project). Consolidated on
-2026-10-12 from 0029.
+2026-10-12 from former 0029.
 
 ## Context
 
@@ -36,5 +36,5 @@ hooks in an agent we drop must still be able to remove them.
 
 ## History
 
-- 0029, 2026-10-12: the list of supported agents, and how one is
+- former 0029, 2026-10-12: the list of supported agents, and how one is
   retired.

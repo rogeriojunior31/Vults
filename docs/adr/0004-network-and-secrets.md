@@ -1,6 +1,6 @@
-# 0019. Network, secrets and telemetry
+# 0004. Network, secrets and telemetry
 
-**Status:** Accepted, 2026-10-10. Consolidated on 2026-10-12 from 0006 and 0016.
+**Status:** Accepted, 2026-10-10. Consolidated on 2026-10-12 from former 0006 and former 0016.
 Amended on 2026-10-17 for N3 V0.4: dictation model requests, loopback limits and realtime spend.
 These are implementation requirements for V3, V5 and V6, not enabled or shipped requests.
 
@@ -84,22 +84,37 @@ it. Reusing Chat's provider does not reuse consent to a different feature.
   *Do not keep*. No trace is sent to a provider or used as telemetry.
 - **Failure preserves the local work.** Clean-up is a text filter without tools: refusal,
   timeout or invalid output uses the raw transcript and does not change the delivery guard in
-  [0032](0032-dictation-into-other-apps.md). Meeting transcription does not depend on summary
+  [0002](0002-permissions.md). Meeting transcription does not depend on summary
   consent. Remote voice consent does not enable follow-up listening or model clean-up;
-  [0028](0028-spoken-replies-through-a-realtime-model.md) still governs listening and audio.
+  *Voice and audio* below still governs listening and audio.
 
 ## Local voice commands (VC1)
 
 Dictation and commands reuse the existing speech transcription model. The app interprets command
 text locally using supported phrases and current targets. This needs no additional text-model
 provider, Claude integration, intent request budget or network feature. The separate default-off
-local action switches authorize only the typed actions in
-[0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1).
+local action switches authorize only the bounded, typed actions the
+[Dictation guide](../guide/dictation.md) lists; [0002](0002-permissions.md) bounds what voice may never do.
 
 The earlier `voice-command-intent` proposal is withdrawn before activation following the owner's
 scope correction. Existing optional transcript clean-up and unknown-speech Chat handoff retain
 their own consent and network gates; neither is required to run local commands. This correction
 creates no exemption for other network requests and changes none of the general consent rules.
+
+## Voice and audio
+
+- Speech to text runs on this computer (whisper.cpp, on the GPU through Vulkan when there is
+  one); models are downloaded from Settings and checked by SHA-256. No cloud transcription.
+- No wake word and no always-on microphone: the mic opens only when the user asks, including a
+  bounded follow-up they turned on.
+- Dictation and Chat audio stay in memory. Meetings may use a temporary file, deleted on success,
+  failure, cancellation and the next start; no audio archive is kept. Dictation history is text
+  only, with a retention choice and *Do not keep*. The clipboard is never written to disk.
+- Spoken replies, transcript clean-up and any other model call on audio or a transcript are
+  requests on the user's behalf, each with its own switch, budget and trace. Local voice commands
+  need none of them.
+- A desktop input grant's restore token is a secret, kept only in the keyring.
+- No GPL code in our binary: each local engine and model is checked for its license first.
 
 ## Consequences
 
@@ -132,7 +147,9 @@ creates no exemption for other network requests and changes none of the general 
 - 2026-10-17: N3 V0.4 names the three independently opted-in model features and their rolling
   limits. Q3 keeps loopback calls behind the switch, quota and trace; only remote monetary
   accounting is exempt. Realtime requires spend accounting before implementation can ship.
-- 0006, 2026-10-04: secrets only in the keyring; no telemetry;
+- former 0006, 2026-10-04: secrets only in the keyring; no telemetry;
   leaving the machine is the user's choice.
-- 0016, 2026-10-08: the update check, asked for, signed,
+- former 0016, 2026-10-08: the update check, asked for, signed,
   one channel at a time.
+- 2026-11-15: fold in the privacy rules of the voice and dictation records (former 0028 and former 0032),
+  which are retired, as *Voice and audio*.

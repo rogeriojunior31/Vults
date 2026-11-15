@@ -1,6 +1,6 @@
-# 0004. Who answers a permission
+# 0002. Who answers a permission
 
-**Status:** Accepted, 2026-10-04. Consolidated on 2026-10-12 from 0014, 0017, 0025 and 0026.
+**Status:** Accepted, 2026-10-04. Consolidated on 2026-10-12 from former 0014, former 0017, former 0025 and former 0026.
 
 ## Context
 
@@ -16,7 +16,7 @@ timer, a guess, a model or another program, nor from a message that merely claim
 - **An exact rule** the user saved: the same agent, folder, tool and target. `cargo test` does not
   allow `cargo test && rm -rf build`.
 - **A policy** the user wrote, saw as a diff and clicked to accept, like an agent config
-  ([0005](0005-agent-configs-backup-diff-click.md)). Policies class actions as read, external read,
+  ([0003](0003-agent-configs.md)). Policies class actions as read, external read,
   write, destructive, spend or external (`core::policy`), and a deny beats an allow.
 - **A paired Android phone's answer**, which counts as a click only when it passes these checks:
   - Pairing is a QR shown on the desktop: the phone's public key, the relay's URL and a one-time
@@ -29,8 +29,8 @@ timer, a guess, a model or another program, nor from a message that merely claim
     refused after `min(120 s, limits::SERVER_DECISION_TIMEOUT)`, with a counter per device.
   - The desktop stays the source of truth and the only one that acts; the phone only decides. A
     relay sees only encrypted envelopes; turning the phone on is a request on the user's behalf
-    ([0019](0019-requests-on-the-users-behalf.md)). On the desktop the island stays the only card
-    host ([0021](0021-four-sizes-one-nest.md)).
+    ([0004](0004-network-and-secrets.md)). On the desktop the island stays the only card
+    host ([0006](0006-surfaces.md)).
   - Kotlin is allowed for the Android shell only; its logic is the Rust core through UniFFI.
     Android is the one exception to "Linux first and only"; iOS and macOS come later on the same
     protocol.
@@ -61,6 +61,11 @@ Above all of these:
 - Nothing else answers. A test feeds every other input and checks that none answers; every new
   `Intent` joins it, with a case for each phone decision, valid and forged (no signature, a revoked
   device, an expired or reused offer, a binding that differs).
+- **Voice never answers a permission**, whatever was said or what a model made of it. No voice
+  path reaches `Decide` or `DecideAlways`. Dictated text is never typed, pasted or sent with Enter
+  into a session waiting on a card, nor queued to run after one is answered; a dictated question
+  draft is sent only by a separate click. Voice commands never touch a card, an agent's config, a
+  merge, an app's closing or a destructive operation.
 
 ## Consequences
 
@@ -75,13 +80,15 @@ Above all of these:
 
 ## History
 
-- 0014, 2026-10-10: accepted policies may answer; a deny beats
+- former 0014, 2026-10-10: accepted policies may answer; a deny beats
   an allow, destructive always asks, the audit log, the budget's hard stop.
-- 0017, 2026-10-10: a signed answer from a paired
+- former 0017, 2026-10-10: a signed answer from a paired
   phone counts as a click; Kotlin and Android as the one exception.
-- 0025, 2026-10-12: no *Always* rule answers a destructive
+- former 0025, 2026-10-12: no *Always* rule answers a destructive
   call.
-- 0026, 2026-10-12: who answers Zeca's chat cards
+- former 0026, 2026-10-12: who answers Zeca's chat cards
   is the user's choice.
 
 - 2026-10-22: At the maintainer's request, the Chat access picker may increase or decrease access directly. Keep the selected recipient explicit, persist before applying authority, and retain all policy, destructive-action and outside-content guards.
+- 2026-11-15: fold in the permission rules of the voice and dictation records (former 0028 and
+  former 0032), which are retired.

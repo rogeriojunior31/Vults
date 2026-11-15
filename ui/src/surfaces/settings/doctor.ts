@@ -1,4 +1,4 @@
-// Settings → Agents, what each agent can do (moved here by ADR 0021): for each agent Vults knows, what this computer has (its
+// Settings → Agents, what each agent can do (moved here by ADR 0006): for each agent Vults knows, what this computer has (its
 // CLI and version, its hooks) and what it can do with Vults: whether a card answers it, where its
 // questions go, what its diffs show, how a turn could be stopped, its own sandbox, and whether
 // Vults can start it. What the router and the policies will lean on, in the open.

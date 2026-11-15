@@ -1,4 +1,4 @@
-/* The size switch (ADR 0021): Mini, Quick, Room, Full, the one in use pressed. The Nest uses it too. */
+/* The size switch (ADR 0006): Mini, Quick, Room, Full, the one in use pressed. The Nest uses it too. */
 .size-switch {
   display: flex;
   gap: 1px;

@@ -1,5 +1,5 @@
 //! The client both ends use to reach a relay. The desktop's requests are made on the user's behalf
-//! (ADR 0019), so each one asks the app's network gate first: a closed gate means no request.
+//! (ADR 0004), so each one asks the app's network gate first: a closed gate means no request.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

@@ -1,5 +1,5 @@
 //! Quick actions that open a session's folder or a changed file: in VS Code when `code` is on the
-//! PATH, else the folder in the file manager (ADR 0011: where a terminal's window cannot be raised,
+//! PATH, else the folder in the file manager (ADR 0006: where a terminal's window cannot be raised,
 //! this is what works). The paths come from hook payloads, so no shell ever sees them: only an
 //! existing folder or file, by its absolute path, goes on as one argument.
 

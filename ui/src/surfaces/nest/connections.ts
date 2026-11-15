@@ -1,9 +1,9 @@
 import { sidePanel } from "./panels";
-// The Nest's Connections tab (ADR 0021), as the Living Flock prototype draws it: a chip for each
+// The Nest's Connections tab (ADR 0006), as the Living Flock prototype draws it: a chip for each
 // connector that is on, then the chosen one's head (when it last synced, a repository filter,
 // Refresh), its tabs (Inbox, Pull requests, Actions, Releases), its rows, and the row picked in
 // detail beside them: its facts, each check, a command to copy. Only connectors that exist are
-// offered (ADR 0011), and only what each row holds is shown; turning one on stays in Settings.
+// offered (ADR 0006), and only what each row holds is shown; turning one on stays in Settings.
 import type { BoardView, ConnectorStatus, ConnectionsPlace, ConnectorZecaTools } from "../../bridge";
 import { CONNECTORS, connectorError, withCode } from "../../connectors";
 import { el } from "../../dom";
@@ -513,8 +513,8 @@ export function createConnections(actions: ConnectionsActions & { zeca: () => Co
       asking = null;
     }
     const board = all.find((b) => b.connector === chosen) ?? null;
-    // Add a connection: only connectors that exist (ADR 0011) and are off. One that is on has its
-    // card; turning one on stays in Settings, the only window that may (ADR 0021).
+    // Add a connection: only connectors that exist (ADR 0006) and are off. One that is on has its
+    // card; turning one on stays in Settings, the only window that may (ADR 0006).
     // A card that exists means on, whatever an older status said.
     const hasCard = (id: string) => all.some((b) => b.connector === id);
     const isOn = (id: string) => hasCard(id) || status.get(id)?.enabled === true;

@@ -1,4 +1,4 @@
-//! The user's policies (ADR 0004): text they wrote, saw as a diff and
+//! The user's policies (ADR 0002): text they wrote, saw as a diff and
 //! accepted with a click, that answers a permission card for them. The app hands the core only
 //! policies whose consent stands (`vults_store::consents`); revoking one takes it out at once.
 //!
@@ -409,7 +409,7 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
 }
 
 /// Why a card asks, when there is more to say than "nothing allows it": the card shows it in one
-/// line (ADR 0021, the Quick card).
+/// line (ADR 0006, the Quick card).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
 #[cfg_attr(test, derive(ts_rs::TS))]
 #[serde(rename_all = "lowercase")]

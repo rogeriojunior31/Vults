@@ -1,6 +1,6 @@
 import { applyTheme, DEFAULT_THEME } from "../../theme";
 // The corner widget's window: the island's view in, a click out that brings the island up. It has
-// no commands of its own (ADR 0021).
+// no commands of its own (ADR 0006).
 import { Bridge } from "../../bridge";
 import { setZeca, setZecaLook, setZecaSpecies } from "../../island/flock";
 import { createWidget, WIDGET_H, WIDGET_W } from "./render";

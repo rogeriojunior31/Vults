@@ -23,7 +23,7 @@ export interface FlockActions {
   jump: (s: SessionView) => void;
   /** The Flock, on the card this session waits on. */
   review: (s: SessionView) => void;
-  /** Allow or Deny on a permission card: only a click (or its key) calls these (ADR 0004). */
+  /** Allow or Deny on a permission card: only a click (or its key) calls these (ADR 0002). */
   decide: (request: string, decision: "allow" | "deny") => void;
   /** Allow, and every identical request in this project from now on. */
   decideAlways: (request: string) => void;
@@ -344,7 +344,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   const element = el("div", { class: "nest-flock-tab" }, habitat, workspace, usage);
 
   // A right click on a bird or its card: the island's quick actions that work from here (ADR
-  // 0011). None answers a card: the card itself does.
+  // 0006). None answers a card: the card itself does.
   const menu = el("div", { class: "nest-menu" });
   menu.setAttribute("role", "menu");
   menu.hidden = true;
@@ -799,7 +799,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     return asked.node;
   };
 
-  /** Deny, Allow and Always on the permission in front, as the island draws them (ADR 0004:
+  /** Deny, Allow and Always on the permission in front, as the island draws them (ADR 0002:
    *  destructive makes Deny the bright one and offers no Always). */
   const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>, at = "act"): HTMLElement => {
     onScreen = ask.request;
@@ -1314,7 +1314,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
   /** The line of waiting permissions, when more than one waits: a queue. Each row shows the request
    *  (project, command, folder or why it is destructive, its clock) and opens it in the card, the one
    *  place a single request is answered. "Answer several" is an explicit mode: tick plain requests and
-   *  one click allows them, never a destructive or cut one, and the rest keep waiting (ADR 0004,
+   *  one click allows them, never a destructive or cut one, and the rest keep waiting (ADR 0002,
    *  DESIGN.md's batch rule). */
   function drawLane(v: ViewModel): Set<string> {
     // A sent answer hides its row until the view drops it; one that left the line is forgotten.

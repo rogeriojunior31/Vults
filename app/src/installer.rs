@@ -406,7 +406,7 @@ pub fn install_apply(
         .map_err(|e| e.to_string())
 }
 
-/// The audit log's line for a config the user's click wrote (ADR 0005).
+/// The audit log's line for a config the user's click wrote (ADR 0003).
 fn audit_config(agent: &str, install: bool, path: &std::path::Path) {
     use vults_core::audit::{Act, Actor, Audit};
     let act = if install {

@@ -4,7 +4,7 @@
 //! [`Notifier::update`] compares what the state calls for with what is already shown, and the app
 //! only sends the changes.
 //!
-//! A notification can only bring the island up ([`open`]); it never answers a card (ADR 0004).
+//! A notification can only bring the island up ([`open`]); it never answers a card (ADR 0002).
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -100,7 +100,7 @@ impl Notifier {
         } else if prefs.on && state.presence != Presence::Paused {
             self.missed.retain(|k, n| all.get(k) == Some(n));
             // Do not disturb holds back the news for a while (old by the time it ends); a card
-            // still notifies, as it still opens the island with its sound (ADR 0021).
+            // still notifies, as it still opens the island with its sound (ADR 0006).
             if state.dnd_until.is_some() {
                 self.missed.extend(
                     all.iter()
@@ -153,7 +153,7 @@ fn wanted(state: &State) -> BTreeMap<SessionKey, Notice> {
         .values()
         .filter_map(|s| {
             // A muted or hidden project tells nothing at rest; its waiting card is still news
-            // (ADR 0021: no preference leaves a card unseen).
+            // (ADR 0006: no preference leaves a card unseen).
             if !state.visible(s) {
                 return None;
             }

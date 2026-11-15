@@ -1,4 +1,4 @@
-// The size switch (ADR 0021), in the island's header and the Nest's: Mini, Quick, Room, Full. The
+// The size switch (ADR 0006), in the island's header and the Nest's: Mini, Quick, Room, Full. The
 // same work at the distance the user needs; changing size keeps the place.
 import type { Size } from "./bridge";
 import { el } from "./dom";

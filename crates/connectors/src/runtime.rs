@@ -19,7 +19,7 @@ const MAX_BACKOFF: Duration = Duration::from_secs(15 * 60);
 /// Missing tool or login: the user has to act, so check again only now and then.
 const NEEDS_USER: Duration = Duration::from_secs(10 * 60);
 
-/// The app's network gate (ADR 0019): asked before each request a connector makes on its own, and
+/// The app's network gate (ADR 0004): asked before each request a connector makes on its own, and
 /// told how it went. It holds the user's switch, a budget and the trace; the runtime has no other
 /// way out.
 pub trait Gate: Send + Sync {

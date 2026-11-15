@@ -1,4 +1,4 @@
-// The update notice on the island (FF4, ADR 0019): the one question, then the notice of a newer
+// The update notice on the island (FF4, ADR 0004): the one question, then the notice of a newer
 // version. Nothing here installs anything; the app opens only the release page it found.
 import type { UpdateStatus, ViewModel } from "../bridge";
 import { el } from "../dom";

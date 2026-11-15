@@ -110,7 +110,7 @@ CHANGELOG line. Every config write follows rule 3.
 ## Dictation
 
 - [ ] V5q · Speaker-disjoint annotated PT and EN material; labels stay a preview until the score passes · P1 · L
-- [ ] FF6 · A second local engine (Parakeet TDT 0.6B v3): ADR first, then engine choice, checked download, evals on both · P2 · L
+- [ ] FF6 · A second local engine (Parakeet TDT 0.6B v3): decide size, license and consent first, then engine choice, checked download, evals on both · P2 · L
 - [ ] FF7 · Compare the CAM++ export; manual speaker merge and line move in Saved meetings · P3 · M
 - [ ] FF9c · Names learned across meetings, behind the summary consent · P3 · M
 
@@ -133,7 +133,7 @@ CHANGELOG line. Every config write follows rule 3.
 ## Settings and distribution
 
 - [ ] FF4.5 · What's new after an update, 1 to 4 items per version, four languages, a CI check · P2 · M
-- [ ] UPD · Signed updater with channels, after a signing key exists (ADR 0019) · P2 · L
+- [ ] UPD · Signed updater with channels, after a signing key exists (ADR 0004) · P2 · L
 - [ ] LANG · More UI languages; Arabic needs a right-to-left pass first · P3 · M each
 - [ ] PKG · AppImage, Flatpak, macOS CI, Windows code signing · P3
 - [ ] X7 · macOS beta · P3 · L
@@ -152,7 +152,7 @@ CHANGELOG line. Every config write follows rule 3.
 - FF10 · Screen capture for agents (Screenshot portal to the clipboard): yes or no
 - FF11 · Zeca reacts to the machine: yes or no on tone
 - X9-GNOME · Ship a GNOME Shell extension or not
-- Wake word stays declined; reopening it needs an ADR
+- Wake word stays declined; reopening it is an edit to ADR 0004
 
 ## How to work a task
 

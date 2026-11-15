@@ -242,7 +242,7 @@ struct Asked {
 
 /// The cards waiting, and the turn running now: a card keeps the turn it came in, so a late click
 /// never files it under the next one. Then where the turn works, for what the user chose to
-/// answer before a card (ADR 0004).
+/// answer before a card (ADR 0002).
 #[derive(Debug, Default)]
 struct Waiting(
     std::sync::Mutex<HashMap<String, Asked>>,
@@ -396,9 +396,9 @@ fn settle_in_route(
     settle(policies, access, folder, agent, ask, outside)
 }
 
-/// What the user's choice answers before a card (ADR 0004). Their policies speak first, as on the
+/// What the user's choice answers before a card (ADR 0002). Their policies speak first, as on the
 /// island: a deny denies, an allow allows, an ask asks. Full access then allows the rest, but never
-/// a destructive call (ADR 0004), nor what a policy asks first, nor anything once the conversation
+/// a destructive call (ADR 0002), nor what a policy asks first, nor anything once the conversation
 /// read content from outside: a page's words could be steering the call.
 fn settle(
     policies: &[vults_core::policies::Active],
@@ -1392,7 +1392,7 @@ pub fn chat_decide(
     id: String,
     answer: ChatAnswer,
 ) {
-    // Like an agent's card, the chat's is answered on the island or in the Nest (ADR 0021).
+    // Like an agent's card, the chat's is answered on the island or in the Nest (ADR 0006).
     if !crate::runtime::card_host(&window) {
         return;
     }
@@ -1472,7 +1472,7 @@ pub fn chat_stop(state: tauri::State<'_, ChatState>) {
 /// Codex app-server a chat may keep alive.
 pub fn stop(app: &AppHandle) {
     end_turn(&app.state::<ChatState>());
-    // An open Nest stays (ADR 0021): it hides its Chat tab when it hears Zeca is off.
+    // An open Nest stays (ADR 0006): it hides its Chat tab when it hears Zeca is off.
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let state = app.state::<ChatState>();
@@ -4118,7 +4118,7 @@ mod tests {
             None,
             "a policy allows only Claude Code's calls"
         );
-        // Full access: the rest runs, but a destructive command still asks (ADR 0004), and what a
+        // Full access: the rest runs, but a destructive command still asks (ADR 0002), and what a
         // policy denies or asks first still does.
         assert_eq!(settled(&p, Full, Claude, &ls, false), Some((true, true)));
         assert_eq!(settled(&p, Full, Codex, &ls, false), Some((true, true)));

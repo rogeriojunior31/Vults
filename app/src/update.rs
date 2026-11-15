@@ -1,4 +1,4 @@
-//! The update notice (FF4, ADR 0019): asked for, at most daily, never an install. Once the user
+//! The update notice (FF4, ADR 0004): asked for, at most daily, never an install. Once the user
 //! said yes, the app looks at its releases list through the network gate about 30 s after launch
 //! and then once a day; what it found waits in `update.json` for the island to show. Distro
 //! packages build without the `update-notice` feature: then only `update_status` exists, saying

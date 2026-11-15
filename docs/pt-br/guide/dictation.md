@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 0008b2aed1c6 -->
+<!-- source: 63487db7abb4 -->
 
 As preferências permanentes ficam em uma única página de **Configurações > Ditado**. A área de trabalho **Ditado** reúne Histórico, Comandos de voz, Conversa por voz, Reuniões, Dicionário, Trechos, Estilos e Diagnóstico. As estatísticas ficam em **Atividade > Ditado**.
 
@@ -803,8 +803,8 @@ saída aplicados seguem a retenção do Histórico. Filtros com falha mantêm os
 local; registros antigos não inventam tradução. Tempos da limpeza são registrados quando ela é medida,
 inclusive na alternativa local; etapas sem medição continuam Desconhecidas. Resumos de reuniões e voz
 em tempo real continuam como recursos posteriores e separados. Ditado nunca responde a uma permissão
-de agente; veja as [regras de inserção](../adr/0032-dictation-into-other-apps.md) e as
-[regras de voz e gravação](../adr/0028-spoken-replies-through-a-realtime-model.md).
+de agente; veja as [regras de permissão](../adr/0002-permissions.md) e as
+[regras de voz e gravação](../adr/0004-network-and-secrets.md#voice-and-audio).
 
 <a id="check-styles-locally"></a>
 
@@ -1536,7 +1536,7 @@ confirmação do relay de que descarregou a resposta MCP no fluxo. Uma entrega i
 peça uma nova pergunta em vez de reenviar a resposta consumida. Perguntas/respostas não são copiadas
 para essa auditoria. Uma permissão já existente ou recém-chegada tem prioridade.
 
-Esse caminho implementa a [decisão de voz](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+Esse caminho implementa a [regra de permissão para rascunhos ditados](../adr/0002-permissions.md)
 com transcrição local, somente na memória. Ele não baixa modelo, usa limpeza por provedor,
 interpreta comandos de voz, copia/insere texto em outro lugar nem salva histórico de ditado. Um
 card de permissão nunca aceita ditado nem aprovação/negação falada. O ditado comum continua sem

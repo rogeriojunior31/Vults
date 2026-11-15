@@ -978,7 +978,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
   .cost-today, .conn-detail, .conn-waiting, .nest-connections .nest-add { padding: 16px; }
 }
 /* The size switch, between the tabs and the gear. */
-/* The Flock (ADR 0021), with the Living Flock prototype's Panel measures: the stage edge to edge,
+/* The Flock (ADR 0006), with the Living Flock prototype's Panel measures: the stage edge to edge,
    then Session details, the card at the left and its details at the right. */
 .nest-pane.nest-flock-pane {
   padding: 0;
@@ -1441,7 +1441,7 @@ body.dictation-caption-open #nest { padding-bottom: var(--dictation-caption-spac
 .nest-flock-tab .primary:hover {
   background: var(--fg-bright);
 }
-/* The card's Allow / Deny carry their keys, as on the island (ADR 0021). */
+/* The card's Allow / Deny carry their keys, as on the island (ADR 0006). */
 .app-card-actions button {
   display: inline-flex;
   align-items: center;

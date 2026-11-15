@@ -123,14 +123,14 @@ fn entries(app: &AppHandle) -> Vec<vults_platform::tray::Entry> {
     use vults_platform::tray::Entry;
     let now = crate::panel::presence(app);
     let lang = crate::settings::lang(app);
-    // No chat without Zeca (ADR 0018).
+    // No chat without Zeca (ADR 0005).
     let chat = crate::settings::zeca(app).then(|| Entry::Item {
         id: "chat",
         label: menu(lang, Menu::Chat).into(),
     });
     chat.into_iter()
         .chain([
-            // The Nest opens with Zeca off too (ADR 0021).
+            // The Nest opens with Zeca off too (ADR 0006).
             Entry::Item {
                 id: "nest",
                 label: menu(lang, Menu::Nest).into(),
@@ -269,7 +269,7 @@ fn tray_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let lang = crate::settings::lang(app);
     let now = crate::panel::presence(app);
     let mut items: Vec<Box<dyn IsMenuItem<tauri::Wry>>> = Vec::new();
-    // No chat without Zeca (ADR 0018).
+    // No chat without Zeca (ADR 0005).
     if crate::settings::zeca(app) {
         items.push(Box::new(MenuItem::with_id(
             app,
@@ -279,7 +279,7 @@ fn tray_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
             None::<&str>,
         )?));
     }
-    // The Nest opens with Zeca off too (ADR 0021).
+    // The Nest opens with Zeca off too (ADR 0006).
     items.push(Box::new(MenuItem::with_id(
         app,
         "nest",

@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 0ecef2b2713e -->
+<!-- source: 6c53c3c00ffb -->
 
 O que o Vults promete:
 
@@ -170,4 +170,4 @@ qualquer lugar além do próprio app.
 | Downloads opcionais dos modelos/runtime de reuniões | Você, depois de revisar fontes/licenças e confirmar em **Ditado > Configurações de reuniões**; sem início ou retomada automática | Revisão de uso único, válida por um minuto e vinculada ao manifesto e ao registro; o gate do app reserva cada tentativa HTTPS, incluindo redirecionamentos, no limite de 24 em qualquer janela de 24 horas. Rastros locais sem conteúdo; hashes/licenças fixos; a navegação mantém a tarefa explícita, cancelar ou encerrar a interrompe; nenhuma análise de falantes é ativada | `crates/voice/src/meeting/assets/download.rs`, `app/src/meeting_assets.rs`, `app/src/gate/meeting_assets.rs` |
 | O download do detector de fala (Silero VAD, menos de 1 MB) | O app, sozinho, fora do portão, enquanto a voz está ligada e ele falta | Um modelo de voz que você escolheu; do Hugging Face (`ggml-org/whisper-vad`), conferido pelo SHA-256 | `crates/voice/src/models.rs`, `app/src/voice.rs` |
 | O uso do plano do Claude Code | O Claude Code, que o entrega à nossa status line | Nenhuma requisição nossa | o hook |
-| A checagem de atualização | Ainda não existe (ADR 0019) | Vai ficar desligada até você ligar, pelo portão | — |
+| A checagem de atualização | Ainda não existe (ADR 0004) | Vai ficar desligada até você ligar, pelo portão | — |

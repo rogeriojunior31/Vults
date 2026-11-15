@@ -1,7 +1,7 @@
-# 0019. Rede, segredos e telemetria
-<!-- source: 8a07e482091d -->
+# 0004. Rede, segredos e telemetria
+<!-- source: 65eac8e7e790 -->
 
-**Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0006 e da 0016.
+**Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da antiga 0006 e da antiga 0016.
 Alterada em 2026-10-17 para a N3 V0.4: requisições a modelos no ditado, limites de loopback e
 gastos de voz em tempo real. São requisitos de implementação para V3, V5 e V6, não requisições
 habilitadas ou entregues.
@@ -101,9 +101,9 @@ outro recurso.
   um provedor ou usado como telemetria.
 - **Falhas preservam o trabalho local.** A limpeza é um filtro de texto sem ferramentas:
   recusa, tempo esgotado ou saída inválida usa a transcrição bruta e não altera a proteção de
-  entrega da [0032](0032-dictation-into-other-apps.md). A transcrição de reuniões não depende do
+  entrega da [0002](0002-permissions.md). A transcrição de reuniões não depende do
   consentimento para resumo. Consentir com voz remota não habilita escuta de resposta nem
-  limpeza por modelo; a [0028](0028-spoken-replies-through-a-realtime-model.md) continua regendo
+  limpeza por modelo; *Voz e áudio*, abaixo, continua regendo
   a escuta e o áudio.
 
 <a id="local-voice-commands-vc1"></a>
@@ -112,13 +112,32 @@ outro recurso.
 Ditado e comandos reutilizam o modelo de transcrição de voz existente. O aplicativo interpreta
 comandos localmente usando frases suportadas e destinos atuais. Isso não exige provedor de texto
 adicional, integração com Claude, orçamento de intenção ou recurso de rede. As opções locais
-separadas, desligadas por padrão, autorizam apenas as ações tipadas da
-[0032](0032-dictation-into-other-apps.md#natural-voice-commands-vc1).
+separadas, desligadas por padrão, autorizam apenas as ações tipadas e limitadas que o
+[guia de Ditado](../guide/dictation.md) lista; a [0002](0002-permissions.md) limita o que a voz nunca pode fazer.
 
 A proposta anterior `voice-command-intent` foi retirada antes da ativação após a correção de escopo
 do responsável. Limpeza opcional de transcrição e envio de fala desconhecida ao Chat mantêm seus
 consentimentos e portões próprios; nenhum é necessário para comandos locais. A correção não cria
 exceção para outras requisições de rede nem altera as regras gerais de consentimento.
+
+<a id="voice-and-audio"></a>
+
+## Voz e áudio
+
+- A fala vira texto neste computador (whisper.cpp, na GPU via Vulkan quando há uma); os modelos
+  são baixados pelas Configurações e conferidos por SHA-256. Nenhuma transcrição na nuvem.
+- Nenhuma palavra de ativação e nenhum microfone sempre ligado: o microfone só abre quando o
+  usuário pede, inclusive numa continuação limitada que ele ligou.
+- O áudio do ditado e do Chat fica na memória. Reuniões podem usar um arquivo temporário, apagado
+  no sucesso, na falha, no cancelamento e na próxima abertura; nenhum arquivo de áudio é guardado.
+  O histórico do ditado é só texto, com escolha de retenção e *Não guardar*. A área de
+  transferência nunca é gravada em disco.
+- Respostas faladas, limpeza de transcrição e qualquer outra chamada de modelo sobre áudio ou
+  transcrição são requisições em nome do usuário, cada uma com sua chave, orçamento e rastro.
+  Comandos de voz locais não precisam de nenhuma delas.
+- O token de restauração de uma permissão de entrada do desktop é um segredo, guardado só no
+  chaveiro.
+- Nenhum código GPL no nosso binário: cada motor e modelo local tem a licença conferida antes.
 
 <a id="consequences"></a>
 
@@ -159,7 +178,9 @@ exceção para outras requisições de rede nem altera as regras gerais de conse
   limites móveis. A Q3 mantém chamadas de loopback sob interruptor, cota e registro; só a
   contabilidade monetária remota fica isenta. Tempo real exige contabilidade de gastos antes
   que a implementação possa ser entregue.
-- 0006, 2026-10-04: segredos só no chaveiro; sem telemetria; sair
+- antiga 0006, 2026-10-04: segredos só no chaveiro; sem telemetria; sair
   da máquina é escolha do usuário.
-- 0016, 2026-10-08: a checagem de atualização, pedida,
+- antiga 0016, 2026-10-08: a checagem de atualização, pedida,
   assinada, um canal por vez.
+- 2026-11-15: incorporar as regras de privacidade dos registros de voz e ditado (antigas 0028 e
+  antiga 0032), que foram aposentados, como *Voz e áudio*.

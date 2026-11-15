@@ -1,7 +1,7 @@
-# 0021. Surfaces: one core, four sizes, a card answered where you are
+# 0006. Surfaces: one core, four sizes, a card answered where you are
 
-**Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from 0008, 0009, 0022, 0023, 0024
-and 0030. Amended on 2026-10-16: the Nest has no Tasks tab.
+**Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from former 0008, former 0009, former 0022, former 0023, former 0024
+and former 0030. Amended on 2026-10-16: the Nest has no Tasks tab.
 Amended on 2026-10-17 for N3 V0.3: the Dictation area and its feedback contract. These additions
 land with their feature phases; the decision does not claim production UI or native validation.
 
@@ -54,14 +54,14 @@ meant to steer whatever reads them.
   window). The Nest answers the flock's cards (Allow, Deny, Always allow, a question's choices,
   Reply in the terminal) on the Flock's card of the session in front, and its Chat's cards in the
   Chat, with the island's buttons and rules: destructive keeps Deny the bright one and offers no
-  Always ([0004](0004-a-human-answers-permissions.md)). The user is in the Nest when its window has
+  Always ([0002](0002-permissions.md)). The user is in the Nest when its window has
   the focus and shows the Nest, not Settings; then a card does not open the island, the Nest's
   need strip and sound say it waits, and Ctrl+Alt+Y/N answer the card on screen there. Anywhere
   else a card opens the island, so an agent never waits unseen. Going into the Nest folds an island
   that holds a card; leaving it brings the island back. Only these two answer: the app checks the
   webview behind each answer, and Settings, the widget and the palette never do. Every answer is
   still a click (or its key) by the user, and is audited. A paired phone
-  may also answer ([0004](0004-a-human-answers-permissions.md)).
+  may also answer ([0002](0002-permissions.md)).
 - **No presence mode leaves an acknowledged card unseen.** In *Island*, *Panel* and *Quiet* a
   pending card opens the island and plays its sound, or, in the Nest the user is in, shows in
   its need strip with its sound (*Quiet* only quiets what happens at rest). In
@@ -111,15 +111,20 @@ meant to steer whatever reads them.
   Settings, at a page when asked. Dictation configuration uses that same privileged webview
   while keeping the Dictation tab selected.
 - **Only Settings' webview holds the powers**: writing an agent's config
-  ([0005](0005-agent-configs-backup-diff-click.md)), saving or clearing a key, making or taking a
-  policy, pairing, revoking or reaching a phone ([0004](0004-a-human-answers-permissions.md)), and
-  turning on a request on the user's behalf ([0019](0019-requests-on-the-users-behalf.md)).
+  ([0003](0003-agent-configs.md)), saving or clearing a key, making or taking a
+  policy, pairing, revoking or reaching a phone ([0002](0002-permissions.md)), and
+  turning on a request on the user's behalf ([0004](0004-network-and-secrets.md)).
   Commands check the label of the webview that called, never the window's (`settings_page`,
   `policies::from_settings`). The two webviews share the origin's storage, which Settings never reads. Settings shows no agent's text: its frame holds tab names and counts,
   the presentation menu (the four sizes and sounds), and a footer that switches Zeca and brings up the terminal of
   the session in front (it keeps only who that session is). Its pages are General, Agents, Chat &
   voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca and About. N3 Dictation
   configuration uses this webview under its own tab, outside the global Settings sidebar.
+- **A surface offers only the actions that work.** The app reaches an agent only while a hook waits
+  and does not own a watched agent's process, so a menu shows what works on this desktop and says
+  when it cannot (*Open terminal* where a window cannot be raised offers the folder). *Stop* only
+  for an execution Vults started through a supported driver. Mute, pin and hide are kept per
+  project folder, because sessions come and go.
 
 ## Consequences
 
@@ -141,16 +146,16 @@ meant to steer whatever reads them.
 
 ## History
 
-- 0008, 2026-10-04: one core, many surfaces; the island is the
+- former 0008, 2026-10-04: one core, many surfaces; the island is the
   only card host.
-- 0009, 2026-10-04: no presence mode hides an acknowledged
+- former 0009, 2026-10-04: no presence mode hides an acknowledged
   card.
-- 0022, 2026-10-12: only Settings holds the powers (then as a
+- former 0022, 2026-10-12: only Settings holds the powers (then as a
   window of its own).
-- 0023, 2026-10-12: Settings becomes a webview of the
+- former 0023, 2026-10-12: Settings becomes a webview of the
   Nest's window; checks go by webview label.
-- 0024, 2026-10-12: the island steps aside while the Nest is open.
-- 0030, 2026-10-12: the Nest answers a card too, while the user is in it.
+- former 0024, 2026-10-12: the island steps aside while the Nest is open.
+- former 0030, 2026-10-12: the Nest answers a card too, while the user is in it.
 
 - 2026-10-15: Chat uses a wider Quick composition within the existing fixed overlay.
   Geometry accounts for zoom once and clamps to the viewport before measurement.
@@ -196,3 +201,4 @@ meant to steer whatever reads them.
 - 2026-10-21: The first specialist runtime is Claude Code only, with a fixed brief and no automatic companion context or MCP. No recipient selector, profile Chat action or specialist conversation reopening is enabled by this runtime-only slice; the existing Nest and Quick remain on their current conversation owner.
 - 2026-10-21: Native profile conversation restoration preserves the saved model, effort, session and profile snapshot rather than current profile edits or companion settings. Turn preflight rejects mismatched recipients, sources and unsupported voice/mention/source overrides. The existing Chat UI still refuses profile records until it can present and preserve these owners across surfaces.
 - 2026-11-11: The island's and the Nest's headers trade the size switch, the full-screen button and the sound toggle for one presentation menu. It names the size in use and lists the four sizes, each with what it is, and the sounds; the sizes and their behavior are unchanged.
+- 2026-11-15: fold in *Offer only the actions the agents allow* (former 0011), which is retired.
