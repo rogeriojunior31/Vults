@@ -1001,7 +1001,12 @@ error; it keeps the outcome and drops the data read under the old access.
 
 ### GH1r · Repository access diagnosis
 `P2 · M · Needs: —`
-- [ ] A user-triggered, budgeted check that tells no CLI, no login, expired auth, rate limit, SSO or
+2026-11-15, branch `feat/github-diagnosis`: *Check access* under GitHub in Settings ›
+Connection setup (`github/diagnose.rs`, `check_github_access`, gate feature `github-check`, 20 a
+day). Running app (Windows 11): no login in an isolated profile reads "gh is not signed in"; with
+the real `gh` config, the account, a writable repository and a missing one each read correctly;
+every check traced.
+- [x] A user-triggered, budgeted check that tells no CLI, no login, expired auth, rate limit, SSO or
   forbidden, and inaccessible repository apart; the last identity is kept but marked stale on failure.
 
 ### Later in Connections

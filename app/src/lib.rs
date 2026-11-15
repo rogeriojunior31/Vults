@@ -283,6 +283,7 @@ pub fn run() {
             open_docs,
             runtime::board_merge,
             connectors::connectors_status,
+            connectors::check_github_access,
             connectors::connector_zeca_tools,
             connectors::set_connector_zeca_snapshot,
             connector_snapshots::set_connector_snapshot,

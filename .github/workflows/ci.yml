@@ -56,6 +56,7 @@ jobs:
           node scripts/check-meeting-assets.mjs
           node scripts/check-project-search.mjs
           node scripts/check-surface-continuity.mjs
+          node scripts/check-github-access.mjs
           node scripts/check-update-notice.mjs
           node scripts/check-quiet-finish.mjs
           node scripts/check-text-questions.mjs

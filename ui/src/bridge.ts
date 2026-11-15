@@ -123,6 +123,15 @@ export interface MeetingAssetsStatus {
 export type MediaAction = "playpause" | "next" | "previous";
 
 /** One rate-limit window of a subscription, as its CLI reports it. */
+/** GH1r: why GitHub access works or not (`check_github_access`). Never gh's own words. */
+export type GithubAccess = "ready" | "noCli" | "signedOut" | "rejected" | "rateLimited" | "sso" | "forbidden" | "notFound" | "incomplete" | "failed";
+export interface GithubDiagnosis {
+  account: GithubAccess;
+  login: string | null;
+  host: string | null;
+  repository: { name: string; access: GithubAccess; push: boolean | null; archived: boolean | null; private: boolean | null } | null;
+}
+
 export interface ModelPriceStatus { enabled: boolean; checkedAt: number | null; stale: boolean; updating: boolean; failed: boolean }
 
 /** The update notice (FF4): asked for once, at most one look a day, never an install. */
@@ -628,6 +637,7 @@ export const Bridge = {
   setConnectorSnapshot: (provider: string, on: boolean) => invoke<void>("set_connector_snapshot", { provider, on }),
   setConnectorZecaWorkItem: (on: boolean) => invoke<void>("set_connector_zeca_work_item", { on }),
   connectorsStatus: () => invoke<ConnectorStatus[]>("connectors_status"),
+  checkGithubAccess: (repository: string | null) => invoke<GithubDiagnosis>("check_github_access", { repository }),
   giteaConnection: () => invoke<{ baseUrl: string; generation: string }>("gitea_connection"),
   setGiteaConnection: (baseUrl: string, token: string, generation: string, clear: boolean) => invoke<{ baseUrl: string; generation: string }>("set_gitea_connection", { baseUrl, token, generation, clear }),
   connectorEnable: (id: string, on: boolean) => invoke<void>("connector_enable", { id, on }),

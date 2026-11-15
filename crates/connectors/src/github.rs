@@ -4,6 +4,7 @@
 //! requests (checks one by one, reviewers, branch, size), reviews requested from them, and the
 //! checks on the default branch and the latest release of their recently pushed repositories.
 
+pub mod diagnose;
 mod merging;
 pub use merging::{MergeControl, MergeMethod, execute_merge_control, merge_status, prepare_merge_control};
 

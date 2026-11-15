@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 607562d60880 -->
+<!-- source: 0ecef2b2713e -->
 
 O que o Vults promete:
 
@@ -163,6 +163,7 @@ qualquer lugar além do próprio app.
 | A verificação de um conector (GitHub, pelo `gh`) | O app, no seu próprio ritmo | O interruptor de cada conector em **Settings → Connectors**, pelo portão de rede (3.000 por dia) | `crates/connectors/src/github.rs` |
 | Consulta do conector GitLab.com (pelo `glab`) | O app, na própria agenda | Opção independente do GitLab em **Settings > Connection setup**, gate de rede (3.000 por dia), uma consulta limitada e somente leitura; autenticação pela CLI, sem leitura de tokens nem escritas remotas | `crates/connectors/src/gitlab.rs` |
 | Conta, pull requests, reviews, checks, jobs do Actions, branches padrão e releases do Gitea | O app; consultas adaptadas à atividade e à quantidade de requisições | Opção independente do Gitea; cada GET passa pelo gate de rede (3.000 por dia), URL/token vinculados no cofre do sistema, apenas HTTPS verificado, sem redirecionamentos/proxies nem escritas remotas; paginação completa e limitada, vínculo ao commit/run/tentativa, resposta e duração limitadas | `crates/connectors/src/gitea.rs`, `crates/connectors/src/gitea/` |
+| O *Check access* do GitHub: a conta do `gh` e, se você indicar um, as permissões de um repositório (pelo `gh`) | Você, ao clicar em **Check access** no GitHub em **Settings → Connection setup** | Funciona com o conector desligado; no máximo duas leituras por clique, registradas no rastro, 20 verificações por dia; só a causa aparece, nunca a saída do `gh` ou um token | `crates/connectors/src/github/diagnose.rs`, `app/src/connectors.rs` |
 | O seu calendário de contribuições do GitHub (pelo `gh`) | Você, ao abrir a aba GitHub de **Settings → History and budget** | O conector do GitHub ligado | `crates/connectors/src/github.rs` |
 | Um squash merge do seu pull request (pelo `gh`), com uma linha no rastro local | Você, ao clicar em **Squash and merge** na linha dele nas Connections da ilha, e depois em **Merge** | O conector do GitHub ligado; só o seu próprio pull request, aprovado, com os checks passando | `crates/connectors/src/github.rs`, `app/src/connectors.rs` |
 | O download de um modelo de voz | Você, com um clique em **Dictation > Voice** | Nada até você clicar; do Hugging Face (`ggerganov/whisper.cpp`), conferido pelo SHA-256 | `crates/voice/src/models.rs` |

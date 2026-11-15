@@ -136,6 +136,20 @@ day; past that, **Settings → Connectors** says **Budget spent**. If GitHub ret
 (for example, a repository protected by SAML), Vults keeps the last complete snapshot and shows an
 error. It does not treat missing fields as proof that a pull request or repository is absent.
 
+### Check access
+
+When GitHub does not answer as you expect, **Settings → Connection setup → GitHub → Check access**
+asks `gh` which account it uses and, if you type a repository as `owner/name`, what that account may
+do there. It tells apart: `gh` not installed, not signed in, a login GitHub refused (expired or
+revoked), the rate limit, an organization that requires single sign-on, a read that is forbidden,
+and a repository that does not exist or is private to this account (GitHub answers both the same
+way). For a repository it reads, it says whether you can push and whether it is archived.
+
+It works with the connector off, so it can explain why turning it on fails. Each click makes at most
+two reads, traced like any request, up to 20 checks a day. Only the cause is shown: never what `gh`
+printed, a token or a header. When the check fails, the last account that worked is marked as one
+that may no longer work.
+
 ### The GitHub card
 
 Once GitHub has answered, **Now** in Quick gathers the rows that need an action. A row opens
