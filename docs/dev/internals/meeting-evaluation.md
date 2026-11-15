@@ -20,7 +20,7 @@ The reference also declares `language` (`en` or `pt`), `annotation` (`human`, `c
 independent verification of consent, annotation quality or a disjoint corpus split. Each turn has
 `startMs`, `endMs` and an anonymous integer `speaker`. Prediction `speaker: null` means unassigned
 activity; reference turns must have an identity. No recognized words, personal names or audio
-paths belong in these files. See the [synthetic examples](../../crates/spike/fixtures/meeting-eval/).
+paths belong in these files. See the [synthetic examples](../../../crates/spike/fixtures/meeting-eval).
 
 Times are half-open milliseconds on one source's own clock. Never concatenate microphone and
 system annotations or infer common identities from equal numeric labels. Files are limited to
@@ -114,7 +114,7 @@ substantially. The Portuguese reference has 133,901 speaker-ms because overlap c
 voice; its two voices collapse into one in the baseline. Neither result meets the provisional
 diagnostic target. Automatic speaker labels remain unavailable.
 
-The [content-free evidence](../../crates/spike/fixtures/meeting-human-calibration-2026-10-19.json)
+The [content-free evidence](../../../crates/spike/fixtures/meeting-human-calibration-2026-10-19.json)
 retains the frozen manifest, source/license attribution, model pins, timing and complete error
 components. Independent one-millisecond raster/exhaustive-label scoring agrees with the native
 and standalone Rust reports. CPU sessions used one intra/inter-op thread on a Ryzen 7 5700X3D;
@@ -158,7 +158,7 @@ The English prediction fingerprint is identical. In Portuguese, confused speaker
 English candidate does not. This is no production qualification: predicted coactivity can itself
 be wrong, and a correction developed after inspecting these clips needs separate evaluation.
 
-The [comparison evidence](../../crates/spike/fixtures/diarization-coactivity-2026-10-19.json)
+The [comparison evidence](../../../crates/spike/fixtures/diarization-coactivity-2026-10-19.json)
 preserves the original evidence hash and aggregate candidate reports. Native, standalone and
 independent millisecond raster/exhaustive mapping scores agree. A deterministic regression
 checks direct and intermediate forbidden merges. Native completion, late cancellation, active
@@ -220,7 +220,7 @@ speaker activity still counts once. Noise uses the deterministic generator/seed 
 They are not new human annotations, a language ranking or physical microphone/system validation.
 The Portuguese noise control also adds 17 missed speaker-ms when artificial gap filling is removed.
 
-The [refinement evidence](../../crates/spike/fixtures/diarization-refinements-2026-10-19.json)
+The [refinement evidence](../../../crates/spike/fixtures/diarization-refinements-2026-10-19.json)
 records frozen experiment plans, exact source/reference hashes, the rejected candidate, retained
 reports and controlled transformations. Native and standalone reports agree with independent
 millisecond raster/exhaustive mapping, including both new false-alarm counters. The former gap
@@ -263,7 +263,7 @@ IS1000a becomes 83.22%, IS1009a stays 61.09% and ES2004a becomes 35.41%. These c
 not establish actual acoustic causes without listening/annotation review. Portuguese retains
 its original report; no additional Portuguese annotation or recording was introduced.
 
-The [reference-audit evidence](../../crates/spike/fixtures/diarization-reference-audit-2026-10-19.json)
+The [reference-audit evidence](../../../crates/spike/fixtures/diarization-reference-audit-2026-10-19.json)
 retains the pre-inference plan, original evidence hash, seven reference fingerprints, download pins,
 aggregate reports and source/license attribution. Reproduce with the same crop preparation above,
 using the pinned `word_and_vocalsounds/rttms/train/IS1000a.rttm` and
@@ -347,7 +347,7 @@ so its additional missed time alone is not proof of lost phonetic content. Acous
 remains open; the English word-coverage regressions and controlled short-fragment loss already
 prevent accepting this profile.
 
-The [VAD evidence](../../crates/spike/fixtures/diarization-vad-evaluation-2026-10-19.json) retains
+The [VAD evidence](../../../crates/spike/fixtures/diarization-vad-evaluation-2026-10-19.json) retains
 the frozen plan, model/source/reference hashes, controlled recipes, all outcomes and aggregate
 resources. All ten known baseline reports reproduce prior fingerprints/components; 24 reports
 agree with standalone scoring and an independent millisecond raster/exhaustive mapping oracle.
@@ -413,7 +413,7 @@ missed speaker-ms despite lower false alarms. The C-ORAL utterance/pause caveat 
 English word-coverage regressions independently prevent acceptance. Neither a lower average DER
 nor the short-control improvement overrides these failures. No follow-up parameter sweep is run.
 
-The [meeting-frame evidence](../../crates/spike/fixtures/diarization-meeting-frames-2026-10-19.json)
+The [meeting-frame evidence](../../../crates/spike/fixtures/diarization-meeting-frames-2026-10-19.json)
 retains the frozen plan and its hash encoding, source/reference/model/code hashes, exact prior
 controlled recipes, aggregate reports, resource measurements and licenses. All 12 known baseline
 reports are unchanged; 26 native reports agree with standalone scoring and an independent

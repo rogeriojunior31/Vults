@@ -32,7 +32,7 @@ The birds act out what their sessions do: they read, peck the wire while editing
 web, and spread their wings when a permission waits (with a mark over the head; at dawn the resting
 birds open theirs to the sun, with no mark). New sessions fly in; ended ones fly off. Reduced
 motion keeps them on their perches. **Settings → Flock & Zeca** picks the species pool, Zeca's species and
-the rare visitors. [Animations](../ANIMATIONS.md) lists every clip.
+the rare visitors. [Animations](../contributing/animations.md) lists every clip.
 
 ### Zeca's seasonal looks
 
@@ -51,7 +51,7 @@ wire, permission and question cards, the Allow / Deny shortcuts, notifications, 
 presets. What goes with him:
 
 - The chat, its tab, files dropped on the island, the Nest's Chat, the tray's *Chat…*, the
-  Chat microphone. Independent [dictation](dictation.md#global-dictation-first-slice) and its
+  Chat microphone. Independent [dictation](dictation.md#dictate-into-any-app) and its
   shortcut stay available. The usage meters stay: they read your agents' subscriptions.
 - His hello at start-up.
 - His place on the wire: the session in front sits there as its own bird, and with nobody running
@@ -325,7 +325,7 @@ WezTerm pane navigation requires both `WEZTERM_PANE` and `WEZTERM_UNIX_SOCKET` f
 Vults uses only that same-user local socket, skips Lua configuration and never starts or discovers
 another server. An older session without the socket can still raise its window on supported
 desktops; otherwise **Open terminal** is unavailable until a hook event supplies the metadata.
-This is navigation only: direct WezTerm [dictation](dictation.md#exact-tmux-session-delivery) stays
+This is navigation only: direct WezTerm [dictation](dictation.md#where-the-text-goes) stays
 on the clipboard.
 
 When there is nothing to bring forward, the card says so. A session started in VS Code's or Cursor's
@@ -338,10 +338,10 @@ Global shortcuts work from any window:
   ([Approvals](approvals.md)).
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** put the next or previous session in front. A waiting card stays in
   front; the keys choose who comes after it.
-- **Ctrl+Alt+V**, held, starts [independent dictation](dictation.md#global-dictation-first-slice)
+- **Ctrl+Alt+V**, held, starts [independent dictation](dictation.md#dictate-into-any-app)
   in any focused app, including Vults. It never opens Chat; use its microphone button for draft input. **Ctrl+Alt+X** cancels voice;
   **Ctrl+Alt+B** copies the last dictation again.
-- **Ctrl+Alt+Z**, held for at least 300 ms, speaks a [local voice command](dictation.md#voice-commands-development-status)
+- **Ctrl+Alt+Z**, held for at least 300 ms, speaks a [local voice command](voice.md#voice-commands)
   for Vults, including with Zeca off. It never types into another app or answers a card.
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** and **Ctrl+Alt+3** switch to Mini, Quick and Room.
 - **Ctrl+K**, in the open island or the Nest, opens the [palette](nest.md).

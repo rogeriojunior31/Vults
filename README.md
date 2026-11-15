@@ -42,16 +42,16 @@ vulture: see who is working, who finished and who needs you. Dictate into other 
 | Follow several agents at once | A bird per session, project species, working/finished/failed/waiting states, session details and live diffs | [Flock](docs/guide/island.md) |
 | Handle interruptions from one place | Permission and question cards where supported, keyboard answers, exact Always rules, reviewed policies and an audit trail | [Approvals](docs/guide/approvals.md) |
 | Return to the right terminal | Jump to a session's pane or window; continue supported sessions in Chat with an owned Stop action | [Sessions and Chat](docs/guide/chat.md#continuing-a-session) |
-| Speak instead of typing in another app | Local global dictation, copy by default, optional supported insertion routes, cancel and copy-last shortcuts | [Dictation](docs/guide/dictation.md#global-dictation-first-slice) |
-| Make dictation fit your vocabulary | Dictionary, snippets, spoken code, per-app choices, optional model cleanup and translation styles | [Your words](docs/guide/dictation.md#your-words-processing) |
-| Control the flock and playback by voice | Separate command key, searchable examples, a non-executing phrase check and opt-in selected-player playback, computer audio and installed-app opening; bounded local grammar, with desktop acceptance still pending | [Voice commands](docs/guide/dictation.md#voice-commands-development-status) |
-| Find and manage what you dictated | Searchable local history, retention controls, usage statistics, microphone/model setup and diagnostics | [Dictation history](docs/guide/dictation.md#dictation-history) |
+| Speak instead of typing in another app | Local global dictation, copy by default, optional supported insertion routes, cancel and copy-last shortcuts | [Dictation](docs/guide/dictation.md#dictate-into-any-app) |
+| Make dictation fit your vocabulary | Dictionary, snippets, spoken code, per-app choices, optional model cleanup and translation styles | [Your words](docs/guide/dictation.md#your-words) |
+| Control the flock and playback by voice | Separate command key, searchable examples, a non-executing phrase check and opt-in selected-player playback, computer audio and installed-app opening; bounded local grammar, with desktop acceptance still pending | [Voice commands](docs/guide/voice.md#voice-commands) |
+| Find and manage what you dictated | Searchable local history, retention controls, usage statistics, microphone/model setup and diagnostics | [Dictation history](docs/guide/dictation.md#history) |
 | Ask for help without leaving your desktop | Zeca Chat through an existing Claude Code/Codex CLI login, an API or a local model; Markdown, files, saved conversations and access choices | [Chat](docs/guide/chat.md) |
 | Give a specialist a consistent role | Create or copy profiles with instructions, species, accessories and pinned skills; Claude Code or Codex specialist conversations inside Chat | [Agent profiles](docs/guide/chat.md#agent-profiles) |
 | Keep useful context across conversations | Optional local journal, recall and proposed facts that you review before keeping | [Memory](docs/guide/memory.md) |
 | Follow and act on GitHub work | Repository connections through your gh login, PRs, checks, reviews and explicitly confirmed write actions; scoped access for Developer/Reviewer profiles | [GitHub](docs/guide/connectors.md) |
-| Turn a meeting into searchable notes | Consented microphone/system-audio capture, local transcription, saved text, speaker labels, search and Markdown/SRT/VTT export; optional model summaries | [Meetings](docs/guide/dictation.md#meeting-recording) |
-| Talk with Zeca aloud | Separate voice conversation setup, manual turns and optional continuous microphone routes, with explicit API consent and budget | [Voice conversation](docs/guide/dictation.md#voice-conversation-settings) |
+| Turn a meeting into searchable notes | Consented microphone/system-audio capture, local transcription, saved text, speaker labels, search and Markdown/SRT/VTT export; optional model summaries | [Meetings](docs/guide/meetings.md) |
+| Talk with Zeca aloud | Separate voice conversation setup, manual turns and optional continuous microphone routes, with explicit API consent and budget | [Voice conversation](docs/guide/voice.md#talk-with-zeca) |
 | Review your week and spending | Project activity, available plan usage, costs, budgets and a shareable recap with project-name hiding | [Activity](docs/guide/activity.md) |
 | Fit Vults around your work | Mini, Quick, Room and full screen; dark (the default), light and three SP Night themes, four languages, notifications, optional media controls and Zeca on/off | [The Nest](docs/guide/nest.md) · [Settings](docs/reference/settings.md) |
 | Answer away from the desktop | Paired-phone approval protocol and relay, in preview; the Android companion remains unfinished | [Phone preview](docs/guide/phone.md) |
@@ -168,7 +168,7 @@ new UI still have native acceptance gates in the [active roadmap](docs/dev/ROADM
 | Work with Zeca and specialists | [Chat](docs/guide/chat.md) · [Memory](docs/guide/memory.md) |
 | Connect GitHub or review activity | [Connections](docs/guide/connectors.md) · [Activity](docs/guide/activity.md) |
 | Configure or troubleshoot | [Settings and files](docs/reference/settings.md) · [Safety](docs/safety.md) |
-| Follow development | [Changelog](CHANGELOG.md) · [Roadmap](docs/dev/ROADMAP.md) · [Architecture](docs/architecture.md) |
+| Follow development | [Changelog](CHANGELOG.md) · [Roadmap](docs/dev/ROADMAP.md) · [Architecture](docs/contributing/architecture.md) |
 
 [Read the published documentation online](https://rogeriojunior31.github.io/en/docs/vults/).
 It follows releases; guides in this checkout include development changes.

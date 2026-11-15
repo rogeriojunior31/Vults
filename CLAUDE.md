@@ -86,7 +86,7 @@ Three layers, and a crate only depends on its own or a lower one (`scripts/check
 **Core** (agents, sessions, decisions), **Connect** (connectors, chat, voice, media) and
 **Experience** (app, platform, ui). Zeca's body lives in Experience; his brain, when it lands, is a
 `zeca` crate in Connect (ADR 0005). He uses Chat, Voice and Connect, none of them knows about him,
-and he never answers a permission. See `docs/architecture.md`, *Layers*.
+and he never answers a permission. See `docs/contributing/architecture.md`, *Layers*.
 
 ## Run
 

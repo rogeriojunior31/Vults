@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: df0d1eb905aa -->
+<!-- source: 117279b6465e -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -402,7 +402,7 @@ falha de leitura oferece **Tentar novamente**, sem iniciar agentes nem fazer sol
 
 ## Ditado
 
-A quinta aba abre o [histórico de ditado](dictation.md#dictation-history), inclusive com o Zeca
+A quinta aba abre o [histórico de ditado](dictation.md#history), inclusive com o Zeca
 desligado. A navegação compartilhada reúne Histórico, Comandos de voz, Dicionário e Trechos com
 páginas separadas de configuração: Voz, Atalhos de teclado, Configurações dos comandos,
 Vocabulário, Estilos, Colagem, Privacidade e Diagnóstico. O editor compartilhado de modelo e idioma
@@ -410,4 +410,4 @@ de transcrição fica em Voz; o Chat oferece um link. A configuração mantém s
 as transcrições ficam no Nest. Estatísticas abre Atividade > Ditado. Janelas estreitas usam um seletor
 de página com rótulo; o conteúdo rola separadamente. Busca, detalhes, rascunhos e posição de leitura
 sobrevivem à troca de tamanho. Excluir transcrições mantém uso medido e preferências de Suas palavras.
-Veja o [processamento das suas palavras](dictation.md#your-words-processing).
+Veja o [processamento das suas palavras](dictation.md#your-words).

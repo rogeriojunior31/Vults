@@ -3,7 +3,7 @@
 
 Parts are palette-indexed pixel grids; clips are frames that stack parts at integer offsets,
 so a head pose or a blink is drawn once and reused. Each clip follows a real behavior
-(docs/ANIMATIONS.md). Run it after any change:
+(docs/contributing/animations.md). Run it after any change:
 
     design/mascots/zeca/zeca.py      # writes ui/src/character/zeca/zeca.json, clips.png, looks.png
                                      # and the tray icon's frames (app/icons/tray/)

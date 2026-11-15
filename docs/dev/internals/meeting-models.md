@@ -35,7 +35,7 @@ The three downloads total **46,647,585 bytes**, excluding HTTP overhead. The exp
 graph is 5,992,913 bytes, SHA-256 `220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079`.
 The expanded runtime library is 29,345,384 bytes, SHA-256
 `469849977cb60744ea160927e1a3a0643fd4c55c0aff743251c6d293402e334e`.
-The [compiled catalog](../../crates/voice/src/meeting/assets/catalog.rs) also pins the extracted
+The [compiled catalog](../../../crates/voice/src/meeting/assets/catalog.rs) also pins the extracted
 license/notice/privacy files. The complete bundle has ten files; supplied notices participate in
 its review fingerprint too.
 

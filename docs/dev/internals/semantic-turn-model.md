@@ -14,14 +14,14 @@ and the [pinned weights card](https://huggingface.co/pipecat-ai/smart-turn-v3/bl
 declare **BSD-2-Clause**. The earlier plan's Apache-2.0 description of these weights was incorrect.
 The graph is an unmodified int8 v3.0 export; later v3.1/v3.2 exports are not substituted automatically.
 Its [upstream license](https://github.com/pipecat-ai/smart-turn/blob/4786657e242dfe77dd138699ac564ee074a2a543/LICENSE)
-is retained in [SMART-TURN-LICENSE.txt](../../crates/voice/assets/semantic-turn/SMART-TURN-LICENSE.txt).
+is retained in [SMART-TURN-LICENSE.txt](../../../crates/voice/assets/semantic-turn/SMART-TURN-LICENSE.txt).
 No model weights are bundled with Vults.
 
 The Rust feature extractor is independently implemented and tested against
 [Transformers 4.57.1's WhisperFeatureExtractor](https://github.com/huggingface/transformers/blob/v4.57.1/src/transformers/models/whisper/feature_extraction_whisper.py)
 and its [audio utilities](https://github.com/huggingface/transformers/blob/v4.57.1/src/transformers/audio_utils.py).
 The reference code is Apache-2.0; its full license is retained in
-[TRANSFORMERS-LICENSE.txt](../../crates/voice/assets/semantic-turn/TRANSFORMERS-LICENSE.txt).
+[TRANSFORMERS-LICENSE.txt](../../../crates/voice/assets/semantic-turn/TRANSFORMERS-LICENSE.txt).
 The generated fixture arrays contain no model weights or newly recorded user audio.
 
 ## Pinned artifacts

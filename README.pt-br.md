@@ -1,4 +1,4 @@
-<!-- source: 04d8311740ae -->
+<!-- source: 3d23883ed882 -->
 <p align="center">
   <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-preto em 8 bits">
 </p>
@@ -46,16 +46,16 @@ O Zeca é opcional.
 | Acompanhar vários agentes | Um urubu por sessão, espécies por projeto, estados de trabalho/conclusão/falha/espera, detalhes e diffs ao vivo | [Bando](docs/pt-br/guide/island.md) |
 | Resolver interrupções em um lugar | Cartões de permissão e perguntas quando disponíveis, respostas pelo teclado, regras Sempre exatas, políticas revisadas e auditoria | [Aprovações](docs/pt-br/guide/approvals.md) |
 | Voltar ao terminal certo | Ir ao painel ou à janela da sessão; continuar sessões compatíveis no Chat com controle de parada próprio | [Sessões e Chat](docs/pt-br/guide/chat.md#continuing-a-session) |
-| Falar em vez de digitar em outro app | Ditado global local, cópia por padrão, rotas opcionais de inserção compatíveis, atalhos para cancelar e copiar o último texto | [Ditado](docs/pt-br/guide/dictation.md#global-dictation-first-slice) |
-| Adaptar o ditado ao seu vocabulário | Dicionário, trechos, código falado, escolhas por app e estilos opcionais de revisão e tradução por modelo | [Suas palavras](docs/pt-br/guide/dictation.md#your-words-processing) |
-| Controlar o bando e a reprodução por voz | Tecla separada, exemplos pesquisáveis, checagem de frases sem execução e controles opcionais do reprodutor, áudio do computador e abertura de aplicativos instalados; gramática local limitada, com validação no desktop ainda pendente | [Comandos de voz](docs/pt-br/guide/dictation.md#voice-commands-development-status) |
-| Encontrar e gerenciar o que ditou | Histórico local com busca, retenção, estatísticas de uso, configuração de microfone/modelo e diagnóstico | [Histórico de ditado](docs/pt-br/guide/dictation.md#dictation-history) |
+| Falar em vez de digitar em outro app | Ditado global local, cópia por padrão, rotas opcionais de inserção compatíveis, atalhos para cancelar e copiar o último texto | [Ditado](docs/pt-br/guide/dictation.md#dictate-into-any-app) |
+| Adaptar o ditado ao seu vocabulário | Dicionário, trechos, código falado, escolhas por app e estilos opcionais de revisão e tradução por modelo | [Suas palavras](docs/pt-br/guide/dictation.md#your-words) |
+| Controlar o bando e a reprodução por voz | Tecla separada, exemplos pesquisáveis, checagem de frases sem execução e controles opcionais do reprodutor, áudio do computador e abertura de aplicativos instalados; gramática local limitada, com validação no desktop ainda pendente | [Comandos de voz](docs/pt-br/guide/voice.md#voice-commands) |
+| Encontrar e gerenciar o que ditou | Histórico local com busca, retenção, estatísticas de uso, configuração de microfone/modelo e diagnóstico | [Histórico de ditado](docs/pt-br/guide/dictation.md#history) |
 | Pedir ajuda sem sair do desktop | Chat do Zeca pelo login existente da CLI Claude Code/Codex, API ou modelo local; Markdown, arquivos, conversas salvas e escolhas de acesso | [Chat](docs/pt-br/guide/chat.md) |
 | Dar um papel consistente a um especialista | Criar ou copiar perfis com instruções, espécies, acessórios e skills fixadas; conversas de especialistas Claude Code ou Codex dentro do Chat | [Perfis de agentes](docs/pt-br/guide/chat.md#agent-profiles) |
 | Preservar contexto entre conversas | Diário local opcional, recuperação de contexto e fatos propostos que você revisa antes de guardar | [Memória](docs/pt-br/guide/memory.md) |
 | Acompanhar e agir no GitHub | Repositórios pelo seu login no gh, PRs, checks, revisões e escritas confirmadas explicitamente; acesso limitado por escopo para Desenvolvedor/Revisor | [GitHub](docs/pt-br/guide/connectors.md) |
-| Transformar reuniões em notas pesquisáveis | Captura consentida de microfone/áudio do sistema, transcrição local, texto salvo, identificação manual de falantes, busca e exportação Markdown/SRT/VTT; resumos opcionais por modelo | [Reuniões](docs/pt-br/guide/dictation.md#meeting-recording) |
-| Conversar em voz alta com o Zeca | Configuração separada, turnos manuais e rotas opcionais de microfone contínuo, com consentimento explícito e orçamento de API | [Conversa por voz](docs/pt-br/guide/dictation.md#voice-conversation-settings) |
+| Transformar reuniões em notas pesquisáveis | Captura consentida de microfone/áudio do sistema, transcrição local, texto salvo, identificação manual de falantes, busca e exportação Markdown/SRT/VTT; resumos opcionais por modelo | [Reuniões](docs/pt-br/guide/meetings.md) |
+| Conversar em voz alta com o Zeca | Configuração separada, turnos manuais e rotas opcionais de microfone contínuo, com consentimento explícito e orçamento de API | [Conversa por voz](docs/pt-br/guide/voice.md#talk-with-zeca) |
 | Rever sua semana e seus gastos | Atividade por projeto, uso disponível dos planos, custos, orçamentos e resumo compartilhável com opção de ocultar nomes de projetos | [Atividade](docs/pt-br/guide/activity.md) |
 | Adaptar o Vults ao seu trabalho | Mini, Rápido, Sala e tela cheia; tema escuro (o padrão), claro e três temas SP Night, quatro idiomas, notificações, controles de mídia opcionais e Zeca ligado/desligado | [Ninho](docs/pt-br/guide/nest.md) · [Configurações](docs/pt-br/reference/settings.md) |
 | Responder longe do desktop | Protocolo de aprovação por celular pareado e relay, em prévia; o aplicativo Android ainda não está concluído | [Prévia do celular](docs/pt-br/guide/phone.md) |
@@ -182,7 +182,7 @@ as rotas de voz e a nova UI ainda têm validações nativas pendentes no [roadma
 | Trabalhar com Zeca e especialistas | [Chat](docs/pt-br/guide/chat.md) · [Memória](docs/pt-br/guide/memory.md) |
 | Conectar GitHub ou rever atividade | [Conexões](docs/pt-br/guide/connectors.md) · [Atividade](docs/pt-br/guide/activity.md) |
 | Configurar ou resolver problemas | [Configurações e arquivos](docs/pt-br/reference/settings.md) · [Segurança](docs/pt-br/safety.md) |
-| Acompanhar o desenvolvimento | [Changelog](CHANGELOG.md) · [Roadmap](docs/dev/ROADMAP.md) · [Arquitetura](docs/pt-br/architecture.md) |
+| Acompanhar o desenvolvimento | [Changelog](CHANGELOG.md) · [Roadmap](docs/dev/ROADMAP.md) · [Arquitetura](docs/pt-br/contributing/architecture.md) |
 
 [Leia a documentação publicada online](https://rogeriojunior31.github.io/pt-br/docs/vults/).
 Ela acompanha os lançamentos; os guias deste checkout incluem mudanças em desenvolvimento.
