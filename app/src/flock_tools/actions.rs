@@ -322,6 +322,47 @@ mod tests {
         assert_eq!(source.0.load(Ordering::SeqCst), 4);
     }
     #[test]
+    fn a_process_killed_after_the_reservation_still_blocks_the_same_control_after_restart() {
+        let dir = std::env::temp_dir().join(format!("vults-app-actions-restart-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let action = parse("github_actions_rerun_failed", &input()).unwrap();
+        let preview = json!({"source":{"host":"github.com","account":"person"},"binding":{"repositoryId":20,"identity":{"id":1}},"scope":{"kind":"failed-jobs-and-dependents"}});
+        let key = control_key(&action, &preview).unwrap();
+        {
+            // What execute commits before its POST; the Receipt's Drop never runs.
+            let mut store = vults_store::Store::open(&dir).unwrap();
+            let reservation = record("zeca", &action, &preview, "h", &key, "reserved", true);
+            assert!(store.reserve_github_control(1, &reservation).unwrap());
+        }
+        // After the restart, prepare rereads GitHub: the host may come back in another case.
+        let mut fresh = preview.clone();
+        fresh["source"]["host"] = json!("GitHub.com");
+        let again = parse("github_actions_rerun_run", &input()).unwrap();
+        let store = vults_store::Store::open(&dir).unwrap();
+        assert!(
+            store
+                .github_control_blocked(&control_key(&again, &fresh).unwrap())
+                .unwrap()
+        );
+        // A control never sent (no reservation, receipt false) blocks nothing.
+        let next = parse(
+            "github_actions_rerun_failed",
+            &json!({"repository":"org/repo","runId":12,"attempt":2,"headSha":"b".repeat(40)}),
+        )
+        .unwrap();
+        let next_key = control_key(&next, &preview).unwrap();
+        let mut store = store;
+        store
+            .append_audit(
+                2,
+                &record("zeca", &next, &preview, "h", &next_key, "not_sent", false),
+            )
+            .unwrap();
+        assert!(!store.github_control_blocked(&next_key).unwrap());
+        drop(store);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+    #[test]
     fn rerun_variants_share_a_receipt_and_cancel_has_an_independent_key() {
         let preview = json!({"source":{"host":"github.com","account":"person"},"binding":{"repositoryId":20,"identity":{"id":1}},"scope":{"kind":"selected-failed-job-and-dependents"}});
         let first = parse("github_actions_rerun_run", &input()).unwrap();

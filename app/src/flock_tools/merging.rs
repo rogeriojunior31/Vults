@@ -241,6 +241,41 @@ fn parse(operation: &str, input: &Value) -> Result<MergeControl, String> {
 mod tests {
     use super::*;
     use std::sync::atomic::AtomicUsize;
+    #[test]
+    fn a_process_killed_after_the_merge_reservation_still_blocks_it_after_restart() {
+        let dir = std::env::temp_dir().join(format!("vults-app-merge-restart-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let merge = |method| MergeControl::Merge {
+            repository: "org/repo".into(),
+            number: 7,
+            head_sha: "b".repeat(40),
+            method,
+        };
+        let preview = json!({"source":{"host":"github.com","account":"person"},"binding":{"repositoryId":20},"pullRequest":{"id":"PR7","headRefOid":"b".repeat(40)},"scope":{"mode":"direct_merge","bypassRules":false}});
+        let action = merge(vults_connectors::github::MergeMethod::Squash);
+        let key = action.control_key(&preview).unwrap();
+        {
+            let mut store = vults_store::Store::open(&dir).unwrap();
+            assert!(
+                store
+                    .reserve_github_control(
+                        1,
+                        &record("zeca", &action, &preview, "h", &key, "reserved", true)
+                    )
+                    .unwrap()
+            );
+        }
+        let store = vults_store::Store::open(&dir).unwrap();
+        // Another method for the same head is the same merge: still refused after the restart.
+        let other = merge(vults_connectors::github::MergeMethod::Rebase);
+        assert!(
+            store
+                .github_control_blocked(&other.control_key(&preview).unwrap())
+                .unwrap()
+        );
+        drop(store);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
     struct Writes(AtomicUsize);
     impl Source for Writes {
         fn view(&self) -> Option<Value> {

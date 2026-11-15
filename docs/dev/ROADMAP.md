@@ -974,7 +974,8 @@ that acceptance passes.
 405, 409, 422, 5xx, no connection) on the issue, pull request, Actions, merge and branch deletion
 writes; network loss and lost readbacks; an account switched between the write and its check.
 Fixed: Clear history deleted the merge/rerun receipts; a definite refusal on an issue or PR write
-now names GitHub's reason. Open: an app-level restart test (store-level only today); a
+now names GitHub's reason; app-level tests show a reservation left by a killed process
+blocks the same rerun or merge after restart. Open: a
 reconciled outcome for uncertain merges/reruns so they can be retried (plan item 7). Fixed
 later the same day: a specialist's post-write grant check no longer turns a done write into an
 error; it keeps the outcome and drops the data read under the old access.
