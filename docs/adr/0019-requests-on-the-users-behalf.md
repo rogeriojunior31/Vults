@@ -118,6 +118,11 @@ creates no exemption for other network requests and changes none of the general 
 
 ## History
 
+- 2026-11-15: FF4 ships the update notice before any installer: one question in the island,
+  a switch and *Check now* in Settings, one look a day at the public releases list through the
+  gate (`update`, 4 a day; `update-now` for the click), a notice with *Open release page* and
+  *Later*. AUR builds compile it out (`--no-default-features`). Signed installs remain after 0.2.0.
+
 - 2026-10-26: owner correction withdraws the unactivated command-intent network proposal;
   existing speech transcription plus local command matching needs no separate text provider.
 

@@ -292,6 +292,19 @@ resets. No token of yours is read: each number comes from the CLI you logged int
   one of ours, which runs yours if you have one ([how](../reference/settings.md#agent-configs-vults-edits)).
   The numbers arrive after a session's first reply.
 
+## A new version
+
+Once, the open island asks: *May Vults look at its releases on GitHub?* With **Yes, once a day**,
+Vults reads the public list of its releases about 30 seconds after it starts and then at most once a
+day. With **No**, or in **Settings → General → Updates**, it never looks. Left unanswered, the
+question comes back the next day. Approvals, questions and a session that needs you always come
+first: the question and the notice wait for them.
+
+When a newer version is out, a dot lights on the compact island and the open island shows *Vults
+0.2.0 is available* with the first line of its notes. **Open release page** opens it on GitHub;
+**Later** hides that version for a day, and a newer one shows at once. Nothing is downloaded or
+installed. Packages your distribution updates (the AUR) have no update notice at all.
+
 ## Getting to a session
 
 Click a vult in the flock to open that session; it stays in front until you pick another or it
